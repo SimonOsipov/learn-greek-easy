@@ -28,6 +28,8 @@ import * as fs from 'fs';
 
 import { test, expect } from '@playwright/test';
 
+import { getSupabaseStorageKey } from './helpers/supabase-test-client';
+
 // Storage state paths
 const LEARNER_AUTH = 'playwright/.auth/learner.json';
 const BEGINNER_AUTH = 'playwright/.auth/beginner.json';
@@ -424,17 +426,19 @@ test.describe('My Decks - Page Structure', () => {
 // ============================================================================
 
 /**
- * Helper function to read learner's auth state and extract access token
+ * Helper function to read learner's auth state and extract access token.
+ * Token is stored in the Supabase session localStorage key (sb-<ref>-auth-token).
  */
 function getLearnerAccessToken(): string | null {
   try {
+    const storageKey = getSupabaseStorageKey();
     const learnerAuthState = JSON.parse(fs.readFileSync(LEARNER_AUTH, 'utf-8'));
-    const learnerToken = learnerAuthState.origins?.[0]?.localStorage?.find(
-      (item: { name: string; value: string }) => item.name === 'auth-storage'
+    const sessionEntry = learnerAuthState.origins?.[0]?.localStorage?.find(
+      (item: { name: string; value: string }) => item.name === storageKey
     );
-    if (learnerToken) {
-      const authData = JSON.parse(learnerToken.value);
-      return authData?.state?.accessToken || null;
+    if (sessionEntry) {
+      const session = JSON.parse(sessionEntry.value);
+      return session?.access_token || null;
     }
   } catch {
     // File might not exist or be invalid
@@ -443,17 +447,19 @@ function getLearnerAccessToken(): string | null {
 }
 
 /**
- * Helper function to read beginner's auth state and extract access token
+ * Helper function to read beginner's auth state and extract access token.
+ * Token is stored in the Supabase session localStorage key (sb-<ref>-auth-token).
  */
 function getBeginnerAccessToken(): string | null {
   try {
+    const storageKey = getSupabaseStorageKey();
     const beginnerAuthState = JSON.parse(fs.readFileSync(BEGINNER_AUTH, 'utf-8'));
-    const beginnerToken = beginnerAuthState.origins?.[0]?.localStorage?.find(
-      (item: { name: string; value: string }) => item.name === 'auth-storage'
+    const sessionEntry = beginnerAuthState.origins?.[0]?.localStorage?.find(
+      (item: { name: string; value: string }) => item.name === storageKey
     );
-    if (beginnerToken) {
-      const authData = JSON.parse(beginnerToken.value);
-      return authData?.state?.accessToken || null;
+    if (sessionEntry) {
+      const session = JSON.parse(sessionEntry.value);
+      return session?.access_token || null;
     }
   } catch {
     // File might not exist or be invalid
@@ -626,7 +632,7 @@ test.describe('My Decks - Security & Access Control', () => {
 
       // Assert error response includes appropriate error detail
       const errorData = await response.json();
-      expect(errorData.detail).toBeDefined();
+      expect(errorData.error?.message).toBeDefined();
     });
   });
 });

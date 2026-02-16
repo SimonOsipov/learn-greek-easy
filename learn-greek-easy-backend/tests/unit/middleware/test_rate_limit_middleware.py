@@ -529,15 +529,6 @@ class TestGetRateConfig:
 
             assert config.limit == 10
 
-    def test_auth_refresh_gets_auth_config(self, middleware):
-        """Test that auth/refresh gets auth rate config."""
-        with patch("src.middleware.rate_limit.settings") as mock_settings:
-            mock_settings.rate_limit_auth_per_minute = 10
-
-            config = middleware._get_rate_config("/api/v1/auth/refresh")
-
-            assert config.limit == 10
-
     def test_general_endpoint_gets_general_config(self, middleware):
         """Test that general endpoints get general rate config."""
         with patch("src.middleware.rate_limit.settings") as mock_settings:

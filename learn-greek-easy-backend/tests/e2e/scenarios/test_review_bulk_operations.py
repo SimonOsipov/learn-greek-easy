@@ -13,6 +13,7 @@ from uuid import uuid4
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from tests.e2e.conftest import E2ETestCase, StudyEnvironment
 
@@ -490,6 +491,7 @@ class TestReviewHistoryFiltering(E2ETestCase):
     async def test_review_history_user_isolation(
         self,
         client: AsyncClient,
+        db_session: AsyncSession,
         populated_study_environment: StudyEnvironment,
     ) -> None:
         """Test that review history only shows current user's reviews."""
@@ -510,6 +512,7 @@ class TestReviewHistoryFiltering(E2ETestCase):
         second_session = await self.register_and_login(
             client,
             email=f"e2e_isolation_{uuid4().hex[:8]}@example.com",
+            db_session=db_session,
         )
 
         # Second user's history should be empty (or not include first user's)

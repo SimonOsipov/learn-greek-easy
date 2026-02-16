@@ -393,30 +393,62 @@ class TestDataConsistency(E2ETestCase):
             card_ids.append(card_response.json()["id"])
 
         # Step 3: Both users initialize and review
-        from src.core.security import create_access_token
+        from src.core.dependencies import get_current_user
+        from src.main import app
+        from tests.fixtures.auth import _get_override_function, _test_user_registry
 
-        token1, _ = create_access_token(user1.id)
-        token2, _ = create_access_token(user2.id)
+        # Create unique tokens for each user
+        token1 = f"test-user-{user1.id}"
+        token2 = f"test-user-{user2.id}"
+        _test_user_registry[token1] = user1
+        _test_user_registry[token2] = user2
+
+        # Set up single override function if not already set
+        if get_current_user not in app.dependency_overrides:
+            app.dependency_overrides[get_current_user] = _get_override_function()
+
         headers1 = {"Authorization": f"Bearer {token1}"}
         headers2 = {"Authorization": f"Bearer {token2}"}
 
-        for user_headers in [headers1, headers2]:
-            init_resp = await client.post(
-                f"/api/v1/study/initialize/{deck_id}",
-                headers=user_headers,
-            )
-            assert init_resp.status_code == 200
+        # User 1's requests
+        init_resp = await client.post(
+            f"/api/v1/study/initialize/{deck_id}",
+            headers=headers1,
+        )
+        assert init_resp.status_code == 200
 
-            review_resp = await client.post(
-                "/api/v1/reviews",
-                json={
-                    "card_id": card_ids[0],
-                    "quality": 4,
-                    "time_taken": 10,
-                },
-                headers=user_headers,
-            )
-            assert review_resp.status_code == 200
+        review_resp = await client.post(
+            "/api/v1/reviews",
+            json={
+                "card_id": card_ids[0],
+                "quality": 4,
+                "time_taken": 10,
+            },
+            headers=headers1,
+        )
+        assert review_resp.status_code == 200
+
+        # User 2's requests
+        init_resp = await client.post(
+            f"/api/v1/study/initialize/{deck_id}",
+            headers=headers2,
+        )
+        assert init_resp.status_code == 200
+
+        review_resp = await client.post(
+            "/api/v1/reviews",
+            json={
+                "card_id": card_ids[0],
+                "quality": 4,
+                "time_taken": 10,
+            },
+            headers=headers2,
+        )
+        assert review_resp.status_code == 200
+
+        # Clean up registry entries
+        _test_user_registry.pop(token1, None)
+        _test_user_registry.pop(token2, None)
 
         # Step 4: Verify data exists before deletion
         cards_count = await db_session.execute(
@@ -751,10 +783,12 @@ class TestDataIntegrityAfterCRUD(E2ETestCase):
         user1_session = await self.register_and_login(
             client,
             email="isolation_test_user1@example.com",
+            db_session=db_session,
         )
         user2_session = await self.register_and_login(
             client,
             email="isolation_test_user2@example.com",
+            db_session=db_session,
         )
 
         # User 1 initializes and reviews cards

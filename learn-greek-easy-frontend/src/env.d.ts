@@ -8,11 +8,9 @@ interface ImportMetaEnv {
   // Authentication
   readonly VITE_GOOGLE_CLIENT_ID: string;
 
-  // Auth0 Configuration
-  readonly VITE_AUTH0_DOMAIN?: string;
-  readonly VITE_AUTH0_CLIENT_ID?: string;
-  readonly VITE_AUTH0_AUDIENCE?: string;
-  readonly VITE_AUTH0_ENABLED?: string;
+  // Supabase Configuration
+  readonly VITE_SUPABASE_URL: string;
+  readonly VITE_SUPABASE_ANON_KEY: string;
 
   // Application Configuration
   readonly VITE_APP_NAME: string;

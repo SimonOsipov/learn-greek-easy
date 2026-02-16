@@ -42,8 +42,8 @@ describe('SecuritySection', () => {
     expect(screen.getByTestId('security-section')).toBeInTheDocument();
   });
 
-  it('should render change password section for auth0 users', () => {
-    mockAuthStore.user = { authProvider: 'auth0' };
+  it('should render change password section for email users', () => {
+    mockAuthStore.user = { authProvider: 'email' };
     renderSecuritySection();
     expect(screen.getByTestId('change-password-button')).toBeInTheDocument();
   });
@@ -69,16 +69,16 @@ describe('SecuritySection', () => {
   });
 
   describe('auth provider handling', () => {
-    it('should show password change button for auth0 (email/password) users', () => {
-      mockAuthStore.user = { authProvider: 'auth0' };
+    it('should show password change button for email (email/password) users', () => {
+      mockAuthStore.user = { authProvider: 'email' };
       renderSecuritySection();
 
       expect(screen.getByTestId('change-password-button')).toBeInTheDocument();
       expect(screen.queryByTestId('social-login-message')).not.toBeInTheDocument();
     });
 
-    it('should show social login message for google-oauth2 users', () => {
-      mockAuthStore.user = { authProvider: 'google-oauth2' };
+    it('should show social login message for google users', () => {
+      mockAuthStore.user = { authProvider: 'google' };
       renderSecuritySection();
 
       expect(screen.queryByTestId('change-password-button')).not.toBeInTheDocument();

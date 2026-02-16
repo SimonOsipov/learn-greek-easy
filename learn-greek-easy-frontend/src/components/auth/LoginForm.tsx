@@ -1,17 +1,17 @@
 /**
- * Auth0 Login Form Component
+ * Login Form Component
  *
- * Embedded login form using Auth0's authentication API.
+ * Embedded login form using Supabase authentication.
  * Users stay on our page - no redirects during email/password login.
  *
  * Features:
  * - Email/password login
  * - Password visibility toggle
- * - Remember me checkbox (UI only - Auth0 SDK handles token persistence)
+ * - Remember me checkbox (UI only - for future use)
  * - Forgot Password link
- * - Google login button (redirect-based)
+ * - Google login button (OAuth redirect-based)
  * - Loading states
- * - Error handling with Auth0 error mapping
+ * - Error handling with Supabase error mapping
  */
 
 import React, { useState } from 'react';
@@ -38,9 +38,9 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { determineUserRole } from '@/hooks/useAuth0Integration';
-import { loginWithAuth0, loginWithGoogle } from '@/lib/auth0WebAuth';
 import log from '@/lib/logger';
+import { supabase } from '@/lib/supabaseClient';
+import { authAPI } from '@/services/authAPI';
 import { useAuthStore } from '@/stores/authStore';
 import type { User } from '@/types/auth';
 
@@ -56,7 +56,24 @@ const loginSchema = z.object({
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
-export const Auth0LoginForm: React.FC = () => {
+/**
+ * Map Supabase error to user-friendly translated message
+ */
+const mapSupabaseError = (error: { message: string }, t: (key: string) => string): string => {
+  const msg = error.message.toLowerCase();
+  if (msg.includes('invalid login credentials') || msg.includes('invalid_credentials')) {
+    return t('login.errors.invalidCredentials');
+  }
+  if (msg.includes('email not confirmed')) {
+    return t('login.errors.requiresVerification');
+  }
+  if (msg.includes('too many requests')) {
+    return t('login.errors.tooManyAttempts');
+  }
+  return error.message;
+};
+
+export const LoginForm: React.FC = () => {
   const { t } = useTranslation('auth');
   const navigate = useNavigate();
   const location = useLocation();
@@ -89,9 +106,9 @@ export const Auth0LoginForm: React.FC = () => {
 
   /**
    * Handle form submission
-   * 1. Get Auth0 tokens via ROPG (Resource Owner Password Grant)
-   * 2. Exchange Auth0 access_token with backend
-   * 3. Update auth store with app tokens and user
+   * 1. Authenticate with Supabase via signInWithPassword
+   * 2. Fetch user profile from backend
+   * 3. Update auth store with user data
    * 4. Navigate to dashboard
    */
   const onSubmit = async (data: LoginFormData) => {
@@ -99,63 +116,49 @@ export const Auth0LoginForm: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      // Step 1: Get Auth0 tokens via ROPG
-      const auth0Result = await loginWithAuth0(data.email, data.password);
-      log.info('[Auth0LoginForm] Got Auth0 tokens, exchanging with backend');
-
-      // Step 2: Exchange Auth0 tokens with backend
-      // Send both access_token and id_token - the id_token contains email/profile claims
-      // that may not be present in the access_token (especially for custom API audiences)
-      const apiUrl = import.meta.env.VITE_API_URL || '';
-      const fullUrl = `${apiUrl}/api/v1/auth/auth0`;
-      log.info('[Auth0LoginForm] VITE_API_URL:', import.meta.env.VITE_API_URL);
-      log.info('[Auth0LoginForm] Fetching backend URL:', fullUrl);
-      const response = await fetch(fullUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          access_token: auth0Result.accessToken,
-          id_token: auth0Result.idToken,
-        }),
+      // Step 1: Authenticate with Supabase
+      log.info('[LoginForm] Attempting Supabase login');
+      const { data: authData, error } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password,
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const errorMessage =
-          errorData.detail ||
-          errorData.error?.message ||
-          'Authentication failed. Please try again.';
-        log.error('[Auth0LoginForm] Backend auth0 endpoint error:', errorMessage);
-        throw new Error(errorMessage);
+      if (error) {
+        log.error('[LoginForm] Supabase auth error:', error);
+        throw error;
       }
 
-      const backendData = await response.json();
+      if (!authData.user) {
+        throw new Error('Authentication failed - no user returned');
+      }
 
-      // Step 3: Transform backend response to frontend User type
-      // Extract Auth0 roles from backend response if available (may be forwarded from token)
-      const auth0Roles = (backendData.user?.auth0_roles as string[]) || [];
+      log.info('[LoginForm] Supabase login successful, fetching profile');
 
+      // Step 2: Fetch profile from backend to populate auth store
+      const profileResponse = await authAPI.getProfile();
+
+      // Step 3: Transform to User type and set in auth store
       const user: User = {
-        id: backendData.user?.id || '',
-        email: backendData.user?.email || '',
-        name: backendData.user?.full_name || backendData.user?.email?.split('@')[0] || 'User',
-        role: determineUserRole(backendData.user?.is_superuser, auth0Roles),
+        id: profileResponse.id,
+        email: profileResponse.email,
+        name: profileResponse.full_name || profileResponse.email.split('@')[0],
+        avatar: profileResponse.avatar_url || undefined,
+        role: profileResponse.is_superuser ? 'admin' : 'free',
         preferences: {
           language: 'en',
-          dailyGoal: backendData.user?.settings?.daily_goal || 20,
-          notifications: backendData.user?.settings?.email_notifications ?? true,
-          theme: 'light',
+          dailyGoal: profileResponse.settings?.daily_goal || 20,
+          notifications: profileResponse.settings?.email_notifications ?? true,
+          theme: profileResponse.settings?.theme || 'light',
         },
         stats: {
           streak: 0,
           wordsLearned: 0,
           totalXP: 0,
-          joinedDate: new Date(backendData.user?.created_at || Date.now()),
+          joinedDate: new Date(profileResponse.created_at),
         },
-        createdAt: new Date(backendData.user?.created_at || Date.now()),
-        updatedAt: new Date(backendData.user?.updated_at || Date.now()),
+        createdAt: new Date(profileResponse.created_at),
+        updatedAt: new Date(profileResponse.updated_at),
+        authProvider: profileResponse.auth_provider ?? undefined,
       };
 
       // Track with PostHog
@@ -163,54 +166,39 @@ export const Auth0LoginForm: React.FC = () => {
         posthog.identify(user.id, {
           email: user.email,
           created_at: user.createdAt.toISOString(),
-          auth_method: 'auth0_password',
         });
       }
       if (typeof posthog?.capture === 'function') {
         posthog.capture('user_logged_in', {
-          method: 'auth0_password',
+          method: 'email',
         });
       }
 
-      // Step 4: Update auth store with tokens and user
+      // Step 4: Update auth store
       useAuthStore.setState({
         user,
-        token: backendData.access_token,
-        refreshToken: backendData.refresh_token,
         isAuthenticated: true,
-        rememberMe: data.rememberMe,
         isLoading: false,
         error: null,
       });
 
-      // Store in sessionStorage as backup
-      sessionStorage.setItem('auth-token', backendData.access_token);
-
-      log.info('[Auth0LoginForm] Successfully authenticated via Auth0');
+      log.info('[LoginForm] Successfully authenticated via Supabase');
 
       // Navigate to destination
-      const from = (location.state as { from?: string })?.from || '/dashboard';
-      navigate(from, { replace: true });
+      const returnTo = (location.state as { from?: string })?.from || '/dashboard';
+      navigate(returnTo, { replace: true });
     } catch (err) {
       // Enhanced error logging for debugging
-      log.error('[Auth0LoginForm] Login error:', err);
-      log.error('[Auth0LoginForm] Error type:', err?.constructor?.name);
+      log.error('[LoginForm] Login error:', err);
       if (err instanceof Error) {
-        log.error('[Auth0LoginForm] Error message:', err.message);
-        log.error('[Auth0LoginForm] Error stack:', err.stack);
+        log.error('[LoginForm] Error message:', err.message);
       }
 
-      // Check if this is an Auth0 error key or a direct error message
-      const errorMessage = err instanceof Error ? err.message : 'auth0Error';
-
-      // Try to translate as Auth0 error key, fallback to direct message
-      const translatedError = t(`login.auth0.errors.${errorMessage}`, {
-        defaultValue: errorMessage.includes(' ')
-          ? errorMessage
-          : t('login.auth0.errors.auth0Error'),
-      });
-      setFormError(translatedError);
-      log.error('[Auth0LoginForm] Login failed:', errorMessage);
+      // Map Supabase error to translated message
+      const errorMessage =
+        err instanceof Error ? mapSupabaseError(err, t) : t('login.errors.loginFailed');
+      setFormError(errorMessage);
+      log.error('[LoginForm] Login failed:', errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -219,9 +207,23 @@ export const Auth0LoginForm: React.FC = () => {
   /**
    * Handle Google login
    */
-  const handleGoogleLogin = () => {
-    const returnTo = (location.state as { from?: string })?.from || '/dashboard';
-    loginWithGoogle(returnTo);
+  const handleGoogleLogin = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/callback`,
+        },
+      });
+
+      if (error) {
+        log.error('[LoginForm] Google OAuth error:', error);
+        setFormError(t('login.errors.loginFailed'));
+      }
+    } catch (err) {
+      log.error('[LoginForm] Google login error:', err);
+      setFormError(t('login.errors.loginFailed'));
+    }
   };
 
   // Helper to translate Zod error messages
@@ -366,7 +368,7 @@ export const Auth0LoginForm: React.FC = () => {
               data-testid="google-login-button"
             >
               <GoogleIcon />
-              {t('login.auth0.signInWithGoogle')}
+              {t('login.signInWithGoogle')}
             </Button>
 
             <p className="text-center text-sm text-muted-foreground">
@@ -408,4 +410,4 @@ const GoogleIcon = () => (
   </svg>
 );
 
-export default Auth0LoginForm;
+export default LoginForm;

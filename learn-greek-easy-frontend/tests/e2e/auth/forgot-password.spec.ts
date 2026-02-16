@@ -1,68 +1,43 @@
 /**
- * Auth0 Forgot Password E2E Tests
+ * Forgot Password E2E Tests
  *
- * Tests the Auth0 password reset form UI and interactions.
- * All tests skip if VITE_AUTH0_ENABLED is not 'true'.
+ * Tests the password reset form UI and interactions.
+ * Uses Supabase GoTrue API mocking for the success flow.
  *
  * Test coverage:
  * - Form display and elements
  * - Email validation
- * - Success confirmation screen
+ * - Success confirmation screen (mocked via the Supabase recover endpoint)
  * - Navigation back to login
  * - Try different email functionality
  */
 
 import { test, expect } from '@playwright/test';
 
-import {
-  isAuth0Enabled,
-  mockAuth0PasswordResetSuccess,
-  clearAuth0Mocks,
-} from '../helpers/auth0-helpers';
-
-test.describe('Auth0 Forgot Password', () => {
-  // Skip all tests if Auth0 is not enabled
-  test.beforeEach(async ({ page }) => {
-    if (!isAuth0Enabled()) {
-      test.skip();
-    }
-  });
-
+test.describe('Forgot Password', () => {
   // Override storageState to be empty (no auth) for forgot password tests
   test.use({ storageState: { cookies: [], origins: [] } });
 
-  // Clean up mocks after each test
+  // Clean up Supabase route mocks after each test
   test.afterEach(async ({ page }) => {
-    await clearAuth0Mocks(page);
+    await page.unroute('**/auth/v1/recover');
   });
 
   test.describe('Form Display', () => {
     test('should display forgot password form with all required elements', async ({ page }) => {
       await page.goto('/forgot-password');
 
-      // Wait for form to load
       await page.waitForSelector('[data-testid="forgot-password-card"]', {
         state: 'visible',
         timeout: 10000,
       });
 
-      // Verify card container
       await expect(page.getByTestId('forgot-password-card')).toBeVisible();
-
-      // Verify form exists
       await expect(page.getByTestId('forgot-password-form')).toBeVisible();
-
-      // Verify title and description
       await expect(page.getByTestId('forgot-password-title')).toBeVisible();
       await expect(page.getByTestId('forgot-password-description')).toBeVisible();
-
-      // Verify email input
       await expect(page.getByTestId('email-input')).toBeVisible();
-
-      // Verify submit button
       await expect(page.getByTestId('forgot-password-submit')).toBeVisible();
-
-      // Verify back to login button
       await expect(page.getByTestId('back-to-login-button')).toBeVisible();
     });
 
@@ -74,7 +49,6 @@ test.describe('Auth0 Forgot Password', () => {
         timeout: 10000,
       });
 
-      // Check email input has proper attributes
       const emailInput = page.getByTestId('email-input');
       await expect(emailInput).toHaveAttribute('type', 'email');
       await expect(emailInput).toHaveAttribute('autocomplete', 'email');
@@ -90,16 +64,12 @@ test.describe('Auth0 Forgot Password', () => {
         timeout: 10000,
       });
 
-      // Submit form without filling email
       await page.getByTestId('forgot-password-submit').click();
 
-      // Should show email validation error
       await expect(page.locator('#email-error')).toBeVisible();
     });
 
-    // Note: This test is skipped because HTML5 email validation
-    // intercepts invalid emails before Zod validation runs.
-    // The browser's native "Please enter a valid email" popup blocks form submission.
+    // Note: Skipped because HTML5 email validation intercepts before Zod runs
     test.skip('should show error for invalid email format', async ({ page }) => {
       await page.goto('/forgot-password');
 
@@ -108,13 +78,9 @@ test.describe('Auth0 Forgot Password', () => {
         timeout: 10000,
       });
 
-      // Fill invalid email
       await page.getByTestId('email-input').fill('notanemail');
-
-      // Submit form
       await page.getByTestId('forgot-password-submit').click();
 
-      // Should show email format error
       await expect(page.locator('#email-error')).toBeVisible();
     });
   });
@@ -130,16 +96,18 @@ test.describe('Auth0 Forgot Password', () => {
 
       const testEmail = 'test@example.com';
 
-      // Mock successful password reset
-      await mockAuth0PasswordResetSuccess(page);
+      // Mock successful Supabase password reset (GoTrue recover endpoint)
+      await page.route('**/auth/v1/recover', (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: '{}',
+        })
+      );
 
-      // Fill email
       await page.getByTestId('email-input').fill(testEmail);
-
-      // Submit form
       await page.getByTestId('forgot-password-submit').click();
 
-      // Should show success screen
       await expect(page.getByTestId('forgot-password-success-card')).toBeVisible({
         timeout: 10000,
       });
@@ -155,19 +123,21 @@ test.describe('Auth0 Forgot Password', () => {
         timeout: 10000,
       });
 
-      // Mock successful password reset
-      await mockAuth0PasswordResetSuccess(page);
+      await page.route('**/auth/v1/recover', (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: '{}',
+        })
+      );
 
-      // Fill and submit
       await page.getByTestId('email-input').fill('test@example.com');
       await page.getByTestId('forgot-password-submit').click();
 
-      // Wait for success screen
       await expect(page.getByTestId('forgot-password-success-card')).toBeVisible({
         timeout: 10000,
       });
 
-      // Try different email button should be visible
       await expect(page.getByTestId('try-different-email-button')).toBeVisible();
     });
 
@@ -179,22 +149,23 @@ test.describe('Auth0 Forgot Password', () => {
         timeout: 10000,
       });
 
-      // Mock successful password reset
-      await mockAuth0PasswordResetSuccess(page);
+      await page.route('**/auth/v1/recover', (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: '{}',
+        })
+      );
 
-      // Fill and submit
       await page.getByTestId('email-input').fill('test@example.com');
       await page.getByTestId('forgot-password-submit').click();
 
-      // Wait for success screen
       await expect(page.getByTestId('forgot-password-success-card')).toBeVisible({
         timeout: 10000,
       });
 
-      // Click try different email
       await page.getByTestId('try-different-email-button').click();
 
-      // Should return to form
       await expect(page.getByTestId('forgot-password-card')).toBeVisible();
       await expect(page.getByTestId('forgot-password-form')).toBeVisible();
     });
@@ -207,19 +178,21 @@ test.describe('Auth0 Forgot Password', () => {
         timeout: 10000,
       });
 
-      // Mock successful password reset
-      await mockAuth0PasswordResetSuccess(page);
+      await page.route('**/auth/v1/recover', (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: '{}',
+        })
+      );
 
-      // Fill and submit
       await page.getByTestId('email-input').fill('test@example.com');
       await page.getByTestId('forgot-password-submit').click();
 
-      // Wait for success screen
       await expect(page.getByTestId('forgot-password-success-card')).toBeVisible({
         timeout: 10000,
       });
 
-      // Back to login link should be visible
       await expect(page.getByTestId('back-to-login-link')).toBeVisible();
     });
   });
@@ -233,18 +206,10 @@ test.describe('Auth0 Forgot Password', () => {
         timeout: 10000,
       });
 
-      // Click back to login button
       await page.getByTestId('back-to-login-button').click();
 
-      // Should navigate to login page
       await page.waitForURL('/login');
       await expect(page.getByTestId('login-card')).toBeVisible();
     });
   });
-
-  // Note: Error handling tests removed - they relied on mocking Auth0 API responses
-  // which is not possible with real Auth0 authentication.
-
-  // Note: Form submission state tests removed - they relied on mocking with delayed
-  // responses which is not possible with real Auth0 authentication.
 });

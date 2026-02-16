@@ -155,6 +155,22 @@ class Settings(BaseSettings):
     )
 
     # =========================================================================
+    # Supabase Authentication
+    # =========================================================================
+    supabase_url: Optional[str] = Field(
+        default=None,
+        description="Supabase project URL (e.g., https://xxxx.supabase.co)",
+    )
+    supabase_secret_key: Optional[str] = Field(
+        default=None,
+        description="Supabase secret key for admin API operations (replaces legacy service_role key)",
+    )
+    supabase_jwks_cache_ttl: int = Field(
+        default=3600,
+        description="JWKS cache TTL in seconds for Supabase JWT verification",
+    )
+
+    # =========================================================================
     # Email (Future)
     # =========================================================================
     smtp_host: str = Field(default="smtp.gmail.com", description="SMTP server host")
@@ -585,6 +601,32 @@ class Settings(BaseSettings):
         This is used to determine whether the migration script can access the Management API.
         """
         return bool(self.auth0_domain and self.auth0_m2m_client_id and self.auth0_m2m_client_secret)
+
+    @property
+    def supabase_configured(self) -> bool:
+        """Check if Supabase Auth is properly configured."""
+        return bool(self.supabase_url and self.supabase_secret_key)
+
+    @property
+    def supabase_jwks_url(self) -> Optional[str]:
+        """Get Supabase JWKS URL for JWT verification."""
+        if self.supabase_url:
+            base = self.supabase_url.rstrip("/")
+            return f"{base}/auth/v1/.well-known/jwks.json"
+        return None
+
+    @property
+    def supabase_issuer(self) -> Optional[str]:
+        """Get Supabase JWT issuer URL."""
+        if self.supabase_url:
+            base = self.supabase_url.rstrip("/")
+            return f"{base}/auth/v1"
+        return None
+
+    @property
+    def supabase_admin_configured(self) -> bool:
+        """Check if Supabase Admin API is properly configured."""
+        return bool(self.supabase_url and self.supabase_secret_key)
 
     @property
     def elevenlabs_configured(self) -> bool:

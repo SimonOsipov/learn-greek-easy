@@ -41,7 +41,6 @@ from src.db.models import (  # noqa: F401
     Notification,
     NotificationType,
     PartOfSpeech,
-    RefreshToken,
     Review,
     ReviewRating,
     User,

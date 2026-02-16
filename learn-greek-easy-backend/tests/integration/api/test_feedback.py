@@ -207,11 +207,13 @@ class TestListFeedbackEndpoint:
         feedback = await FeedbackFactory.create(user_id=test_user.id)
         # User upvotes their own feedback
         await FeedbackVoteFactory.create(user_id=test_user.id, feedback_id=feedback.id)
-        # Commit and expire all to ensure fresh data on next query
-        # This is needed because the Feedback object was cached without votes,
-        # and selectinload won't re-run if the relationship is considered "loaded"
+        # Commit to save the data within the savepoint
+        # Note: With the current db_session fixture, commit() releases the savepoint
+        # but doesn't break the test because all data is still in the outer transaction
         await db_session.commit()
-        db_session.expire_all()
+        # Expire only the votes relationship to force reload from DB
+        # (expire_on_commit=False keeps objects cached in identity map, but we need fresh votes)
+        db_session.expire(feedback, ["votes"])
 
         response = await client.get(feedback_url, headers=auth_headers)
 

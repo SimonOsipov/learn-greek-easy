@@ -24,9 +24,11 @@ from collections.abc import Generator
 
 import pytest
 import pytest_asyncio
+from fastapi import FastAPI
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.models import CultureDeck, Deck, DeckLevel
+from src.main import app as fastapi_app
 from tests.factories.base import set_factory_session
 
 # =============================================================================
@@ -52,6 +54,26 @@ def bind_factory_session(db_session: AsyncSession) -> Generator[None, None, None
     set_factory_session(db_session)
     yield
     set_factory_session(None)
+
+
+# =============================================================================
+# FastAPI Application Fixture
+# =============================================================================
+
+
+@pytest.fixture
+def app() -> Generator[FastAPI, None, None]:
+    """Provide FastAPI application instance for dependency override tests.
+
+    Yields:
+        FastAPI: The application instance.
+
+    Note:
+        Dependency overrides are automatically cleared after each test.
+    """
+    yield fastapi_app
+    # Clean up any dependency overrides after test
+    fastapi_app.dependency_overrides.clear()
 
 
 # =============================================================================
@@ -491,6 +513,8 @@ async def localized_culture_deck(db_session: AsyncSession) -> CultureDeck:
 __all__ = [
     # Factory session binding
     "bind_factory_session",
+    # FastAPI app
+    "app",
     # URL fixtures
     "api_base_url",
     "auth_url",

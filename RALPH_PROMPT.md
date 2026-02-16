@@ -2,7 +2,7 @@
 
 ## Overview
 
-Automated execution of Vibe Kanban `inprogress` tasks through 4 mandatory quality gates (Architecture → Explore → Execution → QA Verify). Analyzes task dependencies to determine execution mode: **parallel** (multiple independent chains via agent teams) or **sequential** (single chain, team lead executes directly).
+Automated execution of Backlog `To Do` tasks through 4 mandatory quality gates (Architecture → Explore → Execution → QA Verify). Analyzes task dependencies to determine execution mode: **parallel** (multiple independent chains via agent teams) or **sequential** (single chain, team lead executes directly).
 
 ## Model Selection
 
@@ -20,7 +20,7 @@ Automated execution of Vibe Kanban `inprogress` tasks through 4 mandatory qualit
 | Edit code | `Edit(file_path=..., old_string=...)` | `Task(subagent_type=product-executor, prompt="Implement...")` |
 | Research | Multiple Grep/Read calls | `Task(subagent_type=Explore, prompt="Research how X works...")` |
 
-**Exception:** MCP tools (Vibe Kanban, git, gh) can be called directly.
+**Exception:** MCP tools (Backlog, git, gh) can be called directly.
 
 ### 2. NO Assumptions, NO Feature Cuts
 Never guess, assume, or reduce functionality. If unclear, ask the user.
@@ -46,7 +46,7 @@ All tasks share a single feature branch and PR. Git operations must be serialize
 ## Available MCP Servers
 | Server | Purpose | Usage |
 |--------|---------|-------|
-| **Vibe Kanban** | Task tracking | `mcp__vibe_kanban__*` - Project ID: `9cad311d-e4b4-4861-bf89-4fe6bad3ce8b` |
+| **Backlog** | Task tracking (MCP) | `mcp__backlog__*` |
 | **Context7** | Library docs | `mcp__context7__*` - ALWAYS check before writing library code |
 | **Playwright** | Visual verification, E2E, bug research | `mcp__playwright__*` - Use for QA verification |
 | **Sentry** | Error tracking, issue investigation | `mcp__sentry__*` - Check for production errors |
@@ -69,8 +69,14 @@ Reference before making changes to related areas:
 
 1. Check `.claude/handoff.yaml` for session continuity
 2. Study @CLAUDE.md for project conventions
-3. Query Vibe Kanban for all `inprogress` tasks (project: `9cad311d-e4b4-4861-bf89-4fe6bad3ce8b`)
-4. Read each task description to understand dependencies
+3. Query Backlog for all `To Do` tasks using `mcp__backlog__task_list` (use status="To Do")
+4. Read each task's FULL details using `mcp__backlog__task_view` to understand:
+   - Description (context)
+   - Acceptance Criteria (what needs to be done)
+   - Implementation Plan (how to do it)
+   - References (file paths, docs)
+   - Dependencies (blocking tasks)
+   - Implementation Notes (any additional context)
 5. **Build dependency graph** — identify which tasks depend on each other and which are independent
 6. **Determine chain count** — each independent subgraph becomes its own chain
 7. **Decide execution mode:**
@@ -119,23 +125,34 @@ Read the corresponding agent technical prompt file BEFORE executing the stage yo
 
 #### Stage 1: Architecture
 - Spawn a `product-architecture-spec` subagent via Task tool
-- Pass it the Vibe Kanban task description
-- If the task already has a detailed spec, the architect validates it and identifies file paths
-- If the spec is thin, the architect enhances it with implementation details
+- Pass it the FULL task details from Backlog (description, acceptance criteria, implementation plan, references)
+- If the task already has a detailed implementation plan, the architect validates it and identifies file paths
+- If the implementation plan is thin, the architect enhances it with:
+  - Data models and schemas
+  - API contracts
+  - File paths and locations
+  - Edge cases and error handling
 - The architect self-validates the plan (acceptance criteria coverage, edge cases, test strategy)
-- **DO NOT create subtasks** — return plan as text, update existing task in Vibe Kanban
+- **Update the task** in Backlog using `mcp__backlog__task_edit` to populate/enhance the implementation_plan field
+- **DO NOT create subtasks** — all architecture details go in the task's implementation_plan field
 - **Checkpoint:** `ARCHITECTURE_DONE`
 
 #### Stage 2: Explore Verification
 - Spawn an `Explore` subagent via Task tool
-- Pass it the architecture plan and verify all files mentioned exist
-- Verify patterns, imports, and placement locations
-- If gaps found, note them for execution
+- Pass it the implementation plan from the task and verify:
+  - All files mentioned exist
+  - Patterns, imports, and placement locations are correct
+  - Referenced files in the references field are accessible
+- If gaps found, update the task's implementation_notes field with findings
 - **Checkpoint:** `EXPLORE_DONE`
 
 #### Stage 3: Execution
 - Spawn a `product-executor` subagent via Task tool
-- Pass it the full implementation plan, file paths, and acceptance criteria
+- Pass it the COMPLETE task details:
+  - Acceptance criteria (what to implement)
+  - Implementation plan (how to implement)
+  - References (file paths and docs)
+  - Implementation notes (any explore findings)
 - The executor handles ALL file reads, edits, and creation
 - After executor finishes, run tests to verify:
   ```bash
@@ -149,10 +166,15 @@ Read the corresponding agent technical prompt file BEFORE executing the stage yo
 
 #### Stage 4: QA Verification
 - Spawn a `product-qa-spec` subagent via Task tool
-- Pass it the acceptance criteria and list of files changed
+- Pass it:
+  - Acceptance criteria (what was supposed to be done)
+  - Implementation plan (what the architecture specified)
+  - List of files changed
+  - Definition of Done items (if any in the task)
 - For backend-only tasks: verify tests pass, check model/schema correctness
 - For frontend tasks: use Playwright MCP to visually verify
 - If issues found: spawn executor to fix, then re-verify
+- Update task's implementation_notes with QA findings
 - **Checkpoint:** `QA_VERIFIED`
 
 After each task, pick the next one and repeat stages 1-4.
@@ -172,7 +194,7 @@ gh pr create --draft --title "[FEATURE] Name" --body "..." --label "skip-visual"
 gh pr edit --remove-label "skip-visual" && gh pr ready
 ```
 
-3. Update Vibe Kanban — move all tasks to `inreview`
+3. Update Backlog — move all tasks to `inreview` using `mcp__backlog__task_edit`
 
 4. Wait for deploy + smoke:
 ```bash
@@ -197,7 +219,7 @@ When tasks have independent subgraphs, spawn teammate agents for parallel execut
 ```
 Team Lead (you)
 ├── Orchestrates workflow, manages git/PR, assigns tasks
-├── Calls MCP tools directly (Vibe Kanban, git, gh)
+├── Calls MCP tools directly (Backlog, git, gh)
 │
 ├── chain-1 (general-purpose agent)
 │   └── Executes tasks in Chain 1 sequentially through all 4 stages
@@ -212,7 +234,7 @@ Team Lead (you)
 ### Phase 1: Team Setup
 
 1. Create team with `TeamCreate`
-2. Create internal task list with `TaskCreate` — one task per Vibe Kanban ticket
+2. Create internal task list with `TaskCreate` — one task per Backlog task
 3. Set up `blockedBy` dependencies using `TaskUpdate`
 4. **Spawn one teammate per chain** — iterate over chains and spawn each in parallel
 
@@ -226,10 +248,8 @@ Task(
   prompt="You are a chain executor in a Ralph workflow.
 
 PROJECT DIRECTORY: /home/dev/learn-greek-easy
-PROJECT ID (Vibe Kanban): 9cad311d-e4b4-4861-bf89-4fe6bad3ce8b
-
 Your assigned task chain (execute IN ORDER):
-[List of task IDs, titles, and Vibe Kanban task IDs]
+[List of task IDs, titles, and Backlog task IDs]
 
 For EACH task in your chain, execute these 4 stages in order.
 CRITICAL: You MUST use the specified subagent for each stage. Do NOT implement code directly.
@@ -255,23 +275,34 @@ If you cannot spawn a subagent (e.g., agent teams unavailable, tool errors), rea
 Read the file, internalize the instructions, then execute the stage following that agent's methodology.
 
 ## Stage 1: Architecture
+- Read the FULL task details from Backlog using `mcp__backlog__task_view`
 - Spawn a `product-architecture-spec` subagent via Task tool
-- Pass it the Vibe Kanban task description and ask it to review/enhance the architecture
-- If the task already has a detailed spec, the architect validates it and identifies file paths
-- If the spec is thin, the architect enhances it with implementation details and dependencies
+- Pass it all task fields: description, acceptance criteria, implementation plan, references
+- If the task already has a detailed implementation plan, the architect validates it and identifies file paths
+- If the implementation plan is thin, the architect enhances it with:
+  - Data models and schemas
+  - API contracts
+  - File paths and locations
+  - Edge cases and error handling
+- Update the task using `mcp__backlog__task_edit` to populate/enhance the implementation_plan field
 - The architect self-validates the plan (acceptance criteria coverage, edge cases, test strategy)
 - Send team lead: 'ARCHITECTURE_DONE for [TASK-ID]'
 
 ## Stage 2: Explore Verification
 - Spawn an `Explore` subagent via Task tool
-- Pass it the architecture plan and ask it to verify all files mentioned exist
+- Pass it the implementation plan and references from the task
+- Verify all files mentioned exist
 - Verify patterns, imports, and placement locations
-- If gaps found, note them for execution
+- If gaps found, update the task's implementation_notes field using `mcp__backlog__task_edit`
 - Send team lead: 'EXPLORE_DONE for [TASK-ID]'
 
 ## Stage 3: Execution
 - Spawn a `product-executor` subagent via Task tool
-- Pass it the full implementation plan, file paths, and acceptance criteria
+- Pass it the COMPLETE task details from Backlog:
+  - Acceptance criteria (what to implement)
+  - Implementation plan (how to implement)
+  - References (file paths and docs)
+  - Implementation notes (any explore findings)
 - The executor agent handles ALL file reads, edits, and creation
 - After the executor finishes, run tests yourself to verify:
   Backend: cd /home/dev/learn-greek-easy/learn-greek-easy-backend && poetry run pytest -x
@@ -281,10 +312,15 @@ Read the file, internalize the instructions, then execute the stage following th
 
 ## Stage 4: QA Verification
 - Spawn a `product-qa-spec` subagent via Task tool
-- Pass it the acceptance criteria and list of files changed
+- Pass it the complete task context:
+  - Acceptance criteria (what was supposed to be done)
+  - Implementation plan (what the architecture specified)
+  - Definition of Done items (if any)
+  - List of files changed
 - For backend-only tasks: QA agent verifies tests pass, checks model/schema correctness
 - For frontend tasks: QA agent uses Playwright MCP to visually verify
 - If issues found: spawn a `product-executor` to fix, then re-spawn QA to re-verify
+- Update task's implementation_notes with QA findings using `mcp__backlog__task_edit`
 - Send team lead: 'QA_VERIFIED for [TASK-ID]'
 
 After completing ALL tasks in your chain, send team lead: 'CHAIN_COMPLETE'
@@ -420,7 +456,7 @@ git checkout main && git pull origin main && git branch -d feature/[name]
 
 1. **Local tests green ≠ merge ready** — deploy + smoke tests must pass
 2. **Never mark tasks as `done`** — only QA can do that after merge
-3. **All tasks stay `inprogress`** until PR is marked ready, then move to `inreview`
+3. **All tasks stay `In Progress`** until PR is marked ready, then move to `In Review`
 4. Output `<promise>ALL_TASKS_COMPLETE</promise>` ONLY when deploy + smoke pass
 
 ---

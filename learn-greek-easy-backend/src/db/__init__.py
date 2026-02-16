@@ -9,7 +9,6 @@ from src.db.models import (
     Deck,
     DeckLevel,
     PartOfSpeech,
-    RefreshToken,
     Review,
     ReviewRating,
     User,
@@ -40,7 +39,6 @@ __all__ = [
     # Models - User
     "User",
     "UserSettings",
-    "RefreshToken",
     # Models - Content
     "Deck",
     "Card",

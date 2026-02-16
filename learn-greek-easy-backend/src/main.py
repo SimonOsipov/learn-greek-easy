@@ -362,7 +362,7 @@ async def api_status() -> dict:
         "app_version": settings.app_version,
         "environment": settings.app_env,
         "features": {
-            "auth0": True,  # Auth0 is now the only auth method
+            "supabase_auth": True,
             "email_notifications": settings.feature_email_notifications,
             "rate_limiting": settings.feature_rate_limiting,
             "background_tasks": settings.feature_background_tasks,
@@ -412,7 +412,7 @@ if settings.debug:
                 "headers": settings.cors_allow_headers,
             },
             "features": {
-                "auth0": True,  # Auth0 is now the only auth method
+                "supabase_auth": True,
                 "email_notifications": settings.feature_email_notifications,
                 "rate_limiting": settings.feature_rate_limiting,
                 "background_tasks": settings.feature_background_tasks,

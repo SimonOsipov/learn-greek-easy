@@ -25,18 +25,11 @@ from src.core.exceptions import (
     SeedForbiddenException,
     SeedUnauthorizedException,
 )
-from src.core.security import create_access_token, create_refresh_token
 from src.db.dependencies import get_db
 from src.db.models import NewsItem
 from src.repositories.user import UserRepository
 from src.schemas.seed import SeedRequest, SeedResultResponse, SeedStatusResponse
 from src.services.seed_service import SeedService
-
-
-class TestAuthRequest(BaseModel):
-    """Request model for test authentication."""
-
-    email: EmailStr
 
 
 class TestCreateUserRequest(BaseModel):
@@ -46,16 +39,15 @@ class TestCreateUserRequest(BaseModel):
     full_name: str = "E2E Test User"
 
 
-class TestAuthResponse(BaseModel):
-    """Response model for test authentication."""
+class TestCreateUserResponse(BaseModel):
+    """Response model for test user creation."""
 
     success: bool
-    access_token: str
-    refresh_token: str
-    token_type: str = "Bearer"
     user_id: str
     email: str
-    is_superuser: bool
+    full_name: str
+    supabase_id: str | None
+    is_superuser: bool = False
 
 
 router = APIRouter(
@@ -151,50 +143,9 @@ async def seed_all(
 
     service = SeedService(db)
 
-    # Handle optional truncation skip
-    if request and request.options and request.options.skip_truncate:
-        # Manual orchestration without truncate
-        users_result = await service.seed_users()
-        content_result = await service.seed_decks_and_cards()
-
-        # Create user-owned decks (My Decks feature)
-        user_decks_result = await service.seed_user_decks(users_result["users"])
-
-        # Get first user and deck for statistics/reviews
-        users = users_result.get("users", [])
-        decks = content_result.get("decks", [])
-
-        stats_result = {}
-        reviews_result = {}
-
-        if users and decks:
-            learner = next((u for u in users if "learner" in u.get("email", "")), None)
-            first_deck = decks[0] if decks else None
-
-            if learner and first_deck:
-                stats_result = await service.seed_card_statistics(
-                    user_id=learner["id"],
-                    deck_id=first_deck["id"],
-                    progress_percent=50,
-                )
-                # Get first card for reviews
-                cards = content_result.get("cards", [])
-                if cards:
-                    reviews_result = await service.seed_reviews(
-                        user_id=learner["id"],
-                        card_id=cards[0]["id"],
-                        review_count=5,
-                    )
-
-        result = {
-            "users": users_result,
-            "content": content_result,
-            "user_decks": user_decks_result,
-            "statistics": stats_result,
-            "reviews": reviews_result,
-        }
-    else:
-        result = await service.seed_all()
+    # Note: skip_truncate option is less relevant now since users are permanent
+    # Both paths call seed_all() which handles truncation (except for users)
+    result = await service.seed_all()
 
     duration_ms = (perf_counter() - start_time) * 1000
 
@@ -221,7 +172,7 @@ async def truncate_tables(
 
     Clears all data in FK-safe order:
     reviews -> card_statistics -> user_deck_progress ->
-    refresh_tokens -> user_settings -> cards -> users -> decks
+    user_settings -> cards -> users -> decks
 
     Returns:
         SeedResultResponse with truncation results and timing
@@ -235,45 +186,6 @@ async def truncate_tables(
     return SeedResultResponse(
         success=True,
         operation="truncate",
-        timestamp=datetime.now(timezone.utc),
-        duration_ms=duration_ms,
-        results=result,
-    )
-
-
-@router.post(
-    "/users",
-    response_model=SeedResultResponse,
-    summary="Seed users only",
-    description="Create test users without other data. "
-    "Creates 4 users: learner, beginner, advanced, admin.",
-    dependencies=[Depends(verify_seed_access)],
-)
-async def seed_users(
-    db: AsyncSession = Depends(get_db),
-) -> SeedResultResponse:
-    """Create test users without other data.
-
-    Creates 4 deterministic test users:
-    - e2e_learner@test.com: Regular learner with progress
-    - e2e_beginner@test.com: New user, no progress
-    - e2e_advanced@test.com: Advanced user
-    - e2e_admin@test.com: Admin user
-
-    All users have password: TestPassword123!
-
-    Returns:
-        SeedResultResponse with user creation results and timing
-    """
-    start_time = perf_counter()
-    service = SeedService(db)
-    result = await service.seed_users()
-    await db.commit()
-    duration_ms = (perf_counter() - start_time) * 1000
-
-    return SeedResultResponse(
-        success=True,
-        operation="users",
         timestamp=datetime.now(timezone.utc),
         duration_ms=duration_ms,
         results=result,
@@ -569,131 +481,73 @@ async def clear_news_items(
 
 
 @router.post(
-    "/auth",
-    response_model=TestAuthResponse,
-    summary="Get auth tokens for test user",
-    description="Generate authentication tokens for a seeded test user. "
-    "ONLY available when TEST_SEED_ENABLED=true and NOT in production. "
-    "This endpoint bypasses normal authentication for E2E testing.",
-    dependencies=[Depends(verify_seed_access)],
-)
-async def get_test_auth(
-    request: TestAuthRequest,
-    db: AsyncSession = Depends(get_db),
-) -> TestAuthResponse:
-    """Generate auth tokens for a test user by email.
-
-    This endpoint allows E2E tests to authenticate as seeded users without
-    going through Auth0 or the legacy login flow. It's gated behind the
-    same security checks as other seed endpoints.
-
-    Args:
-        request: Contains the email of the test user
-        db: Database session
-
-    Returns:
-        TestAuthResponse with access and refresh tokens
-
-    Raises:
-        HTTPException 404: If user not found
-        HTTPException 403: If seeding is disabled or in production
-    """
-    from fastapi import HTTPException
-
-    user_repo = UserRepository(db)
-    user = await user_repo.get_by_email(request.email)
-
-    if not user:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Test user not found: {request.email}. "
-            "Make sure to seed the database first with POST /api/v1/test/seed/all",
-        )
-
-    # Generate tokens for the test user
-    # create_access_token returns (token, expires_at)
-    # create_refresh_token returns (token, expires_at, token_id)
-    access_token, _ = create_access_token(user_id=user.id)
-    refresh_token, _, _ = create_refresh_token(user_id=user.id)
-
-    return TestAuthResponse(
-        success=True,
-        access_token=access_token,
-        refresh_token=refresh_token,
-        user_id=str(user.id),
-        email=user.email,
-        is_superuser=user.is_superuser,
-    )
-
-
-@router.post(
     "/create-user",
-    response_model=TestAuthResponse,
-    summary="Create test user and get auth tokens",
-    description="Create a new test user with custom email and return authentication tokens. "
-    "ONLY available when TEST_SEED_ENABLED=true and NOT in production. "
-    "This endpoint replaces the old /auth/register for E2E testing.",
+    response_model=TestCreateUserResponse,
+    summary="Create test user in Supabase Auth and app DB",
+    description="Create a new test user in both Supabase Auth and the application database. "
+    "ONLY available when TEST_SEED_ENABLED=true and NOT in production.",
     dependencies=[Depends(verify_seed_access)],
 )
 async def create_test_user(
     request: TestCreateUserRequest,
     db: AsyncSession = Depends(get_db),
-) -> TestAuthResponse:
-    """Create a test user and return auth tokens.
-
-    This endpoint creates a new user in the database and returns authentication
-    tokens, replacing the legacy /auth/register endpoint for E2E tests.
+) -> TestCreateUserResponse:
+    """Create a test user in Supabase Auth and app DB.
 
     Args:
         request: Contains email and optional full_name
         db: Database session
 
     Returns:
-        TestAuthResponse with access and refresh tokens
-
-    Raises:
-        HTTPException 409: If user with email already exists
-        HTTPException 403: If seeding is disabled or in production
+        TestCreateUserResponse with user data
     """
-    from fastapi import HTTPException
-
+    from src.core.supabase_admin import get_supabase_admin_client
     from src.db.models import User, UserSettings
 
-    user_repo = UserRepository(db)
-    existing_user = await user_repo.get_by_email(request.email)
+    admin_client = get_supabase_admin_client()
 
-    if existing_user:
-        raise HTTPException(
-            status_code=409,
-            detail=f"User with email {request.email} already exists.",
+    supabase_id = None
+    if admin_client:
+        # Idempotent: delete existing Supabase Auth user first
+        existing = await admin_client.list_users_by_email(request.email)
+        if existing:
+            await admin_client.delete_user(existing[0]["id"])
+        supabase_user = await admin_client.create_user(
+            email=request.email,
+            password="TestPassword123!",
+            email_confirm=True,
+            user_metadata={"full_name": request.full_name},
         )
+        supabase_id = supabase_user["id"]
 
-    # Create user directly in the database
-    user = User(
-        email=request.email,
-        full_name=request.full_name,
-        password_hash=None,  # No password for test users
-        is_active=True,
-    )
-    db.add(user)
-    await db.flush()  # Get user ID
+    # Check if app DB user exists
+    user_repo = UserRepository(db)
+    existing_db_user = await user_repo.get_by_email(request.email)
+    if existing_db_user:
+        existing_db_user.supabase_id = supabase_id
+        await db.flush()
+        user = existing_db_user
+    else:
+        user = User(
+            email=request.email,
+            full_name=request.full_name,
+            supabase_id=supabase_id,
+            is_superuser=False,
+            is_active=True,
+        )
+        db.add(user)
+        await db.flush()
+        user_settings = UserSettings(user_id=user.id, daily_goal=20, email_notifications=True)
+        db.add(user_settings)
 
-    # Create default user settings
-    settings = UserSettings(user_id=user.id)
-    db.add(settings)
     await db.commit()
 
-    # Generate tokens for the new user
-    access_token, _ = create_access_token(user_id=user.id)
-    refresh_token, _, _ = create_refresh_token(user_id=user.id)
-
-    return TestAuthResponse(
+    return TestCreateUserResponse(
         success=True,
-        access_token=access_token,
-        refresh_token=refresh_token,
         user_id=str(user.id),
         email=user.email,
-        is_superuser=user.is_superuser,
+        full_name=user.full_name or "",
+        supabase_id=supabase_id,
     )
 
 

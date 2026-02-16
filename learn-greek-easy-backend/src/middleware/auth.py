@@ -59,7 +59,6 @@ class AuthLoggingMiddleware:
     SENSITIVE_PATHS: list[str] = [
         "/api/v1/auth/logout",
         "/api/v1/auth/logout-all",
-        "/api/v1/auth/auth0",
     ]
 
     def __init__(self, app: ASGIApp) -> None:
@@ -201,13 +200,3 @@ class AuthLoggingMiddleware:
             "Auth endpoint accessed",
             extra=log_extra,
         )
-
-        # Additional warning for failed Auth0 auth attempts
-        if path == "/api/v1/auth/auth0" and status_code == 401:
-            logger.warning(
-                "Failed Auth0 authentication attempt",
-                extra={
-                    "client_ip": client_ip,
-                    "path": path,
-                },
-            )

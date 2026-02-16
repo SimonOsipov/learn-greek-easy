@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { useAuth0 } from '@auth0/auth0-react';
 import { Loader2 } from 'lucide-react';
 
-import { isAuth0Enabled } from '@/hooks/useAuth0Integration';
+import { supabase } from '@/lib/supabaseClient';
 import { useAppStore } from '@/stores/appStore';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -34,113 +33,67 @@ function AuthLoadingScreen() {
 }
 
 /**
- * RouteGuard for Auth0 authentication.
- * Uses Auth0's isLoading state to determine when auth is ready.
- * Refreshes user profile to get fresh presigned URLs for profile pictures.
+ * RouteGuard component that verifies authentication on app load
+ * using Supabase's onAuthStateChange listener.
+ *
+ * Subscribes to auth state changes and calls checkAuth() to sync
+ * the Zustand auth store with the current Supabase session.
+ * Shows a loading screen until the initial auth check completes.
  */
-function Auth0RouteGuard({ children }: RouteGuardProps) {
-  const { isLoading: auth0Loading, isAuthenticated: auth0Authenticated } = useAuth0();
+export const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
   const checkAuth = useAuthStore((state) => state.checkAuth);
-  const storeAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const setAuthInitialized = useAppStore((state) => state.setAuthInitialized);
-  const [isRefreshingProfile, setIsRefreshingProfile] = useState(false);
-  const hasRefreshedRef = useRef(false);
+  const [isInitializing, setIsInitializing] = useState(true);
+  const hasInitializedRef = useRef(false);
 
   useEffect(() => {
-    // Wait for Auth0 to finish loading
-    if (auth0Loading) return;
-
     const abortController = new AbortController();
 
-    const refreshProfile = async () => {
-      // If authenticated via Auth0 OR local store and haven't refreshed yet, fetch fresh profile
-      // Local store may have valid tokens even when Auth0 session has expired
-      if ((auth0Authenticated || storeAuthenticated) && !hasRefreshedRef.current) {
-        hasRefreshedRef.current = true;
-        setIsRefreshingProfile(true);
-        try {
-          await checkAuth({ signal: abortController.signal });
-        } catch {
-          // Profile refresh failed - user can still proceed with stale data
-          // No logging needed - error is visible in network tab and non-critical
-        } finally {
-          if (!abortController.signal.aborted) {
-            setIsRefreshingProfile(false);
-            setAuthInitialized();
-          }
-        }
-      } else {
-        // Not authenticated or already refreshed
-        setAuthInitialized();
-      }
-    };
-
-    refreshProfile();
-
-    return () => {
-      abortController.abort();
-    };
-  }, [auth0Loading, auth0Authenticated, storeAuthenticated, checkAuth, setAuthInitialized]);
-
-  if (auth0Loading || isRefreshingProfile) {
-    return <AuthLoadingScreen />;
-  }
-
-  return <>{children}</>;
-}
-
-/**
- * RouteGuard for legacy (non-Auth0) authentication.
- * Checks auth state by calling the backend.
- */
-function LegacyRouteGuard({ children }: RouteGuardProps) {
-  const { checkAuth } = useAuthStore();
-  const setAuthInitialized = useAppStore((state) => state.setAuthInitialized);
-  const [isChecking, setIsChecking] = useState(true);
-
-  useEffect(() => {
-    // Create AbortController for this effect - allows cancelling pending requests on cleanup
-    const abortController = new AbortController();
-
-    const verifyAuth = async () => {
+    const handleAuthEvent = async () => {
       try {
         await checkAuth({ signal: abortController.signal });
+      } catch {
+        // Auth check failed - non-critical, user proceeds as unauthenticated
       } finally {
-        // Only update state if the request wasn't aborted
-        // This prevents race conditions from React StrictMode double-invocation
-        if (!abortController.signal.aborted) {
-          setIsChecking(false);
+        if (!abortController.signal.aborted && !hasInitializedRef.current) {
+          hasInitializedRef.current = true;
+          setIsInitializing(false);
           setAuthInitialized();
         }
       }
     };
 
-    verifyAuth();
+    // Subscribe to Supabase auth state changes.
+    // The callback fires immediately with INITIAL_SESSION, then on
+    // SIGNED_IN, SIGNED_OUT, TOKEN_REFRESHED, USER_UPDATED events.
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'INITIAL_SESSION') {
+        // Initial session check on mount
+        handleAuthEvent();
+      } else if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+        // Session changed or user data updated - re-sync auth store
+        handleAuthEvent();
+      } else if (event === 'SIGNED_OUT') {
+        // User signed out - clear auth state
+        useAuthStore.setState({
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+        });
+      }
+    });
 
-    // Cleanup: abort any pending request when effect re-runs or component unmounts
     return () => {
       abortController.abort();
+      subscription.unsubscribe();
     };
   }, [checkAuth, setAuthInitialized]);
 
-  if (isChecking) {
+  if (isInitializing) {
     return <AuthLoadingScreen />;
   }
 
   return <>{children}</>;
-}
-
-/**
- * RouteGuard component that verifies authentication on app load.
- *
- * Uses Auth0 loading state when Auth0 is enabled, otherwise
- * uses the legacy auth check which calls the backend.
- */
-export const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
-  // Select the appropriate RouteGuard based on auth system
-  if (isAuth0Enabled()) {
-    return <Auth0RouteGuard>{children}</Auth0RouteGuard>;
-  }
-
-  return <LegacyRouteGuard>{children}</LegacyRouteGuard>;
 };

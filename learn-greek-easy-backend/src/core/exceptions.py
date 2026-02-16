@@ -257,107 +257,21 @@ class RateLimitException(BaseAPIException):
 
 
 # ============================================================================
-# Google OAuth Exceptions
+# Supabase Exceptions
 # ============================================================================
 
 
-class GoogleOAuthDisabledException(BaseAPIException):
-    """Google OAuth is not enabled or configured."""
+class SupabaseAdminError(BaseAPIException):
+    """Supabase Admin API operation failed."""
 
     def __init__(
         self,
-        detail: str = "Google OAuth is not enabled. Please use email/password authentication.",
-    ) -> None:
-        super().__init__(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=detail,
-            error_code="GOOGLE_OAUTH_DISABLED",
-        )
-
-
-class GoogleTokenInvalidException(BaseAPIException):
-    """Google ID token is invalid or could not be verified."""
-
-    def __init__(self, detail: str = "Invalid or expired Google token") -> None:
-        super().__init__(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=detail,
-            error_code="GOOGLE_TOKEN_INVALID",
-        )
-
-
-class AccountLinkingConflictException(BaseAPIException):
-    """Account linking conflict - email exists with different Google ID."""
-
-    def __init__(
-        self,
-        detail: str = "This email is already registered. Please login with your password to link your Google account.",
-    ) -> None:
-        super().__init__(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=detail,
-            error_code="ACCOUNT_LINKING_CONFLICT",
-        )
-
-
-# ============================================================================
-# Auth0 Exceptions
-# ============================================================================
-
-
-class Auth0DisabledException(BaseAPIException):
-    """Auth0 authentication is not enabled or configured."""
-
-    def __init__(
-        self,
-        detail: str = "Auth0 authentication is not enabled",
-    ) -> None:
-        super().__init__(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=detail,
-            error_code="AUTH0_DISABLED",
-        )
-
-
-class Auth0TokenExpiredException(BaseAPIException):
-    """Auth0 token has expired."""
-
-    def __init__(
-        self,
-        detail: str = "Auth0 token has expired",
-    ) -> None:
-        super().__init__(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=detail,
-            error_code="AUTH0_TOKEN_EXPIRED",
-        )
-
-
-class Auth0TokenInvalidException(BaseAPIException):
-    """Auth0 token is invalid or could not be verified."""
-
-    def __init__(
-        self,
-        detail: str = "Invalid Auth0 token",
-    ) -> None:
-        super().__init__(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=detail,
-            error_code="AUTH0_TOKEN_INVALID",
-        )
-
-
-class Auth0ManagementError(BaseAPIException):
-    """Auth0 Management API operation failed."""
-
-    def __init__(
-        self,
-        detail: str = "Auth0 Management API operation failed",
+        detail: str = "Supabase Admin API operation failed",
     ) -> None:
         super().__init__(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=detail,
-            error_code="AUTH0_MANAGEMENT_ERROR",
+            error_code="SUPABASE_ADMIN_ERROR",
         )
 
 

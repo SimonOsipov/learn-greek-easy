@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import posthog from 'posthog-js';
 import { useTranslation } from 'react-i18next';
@@ -15,167 +15,81 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { determineUserRole } from '@/hooks/useAuth0Integration';
 import log from '@/lib/logger';
 import { useAuthStore } from '@/stores/authStore';
-import type { User } from '@/types/auth';
+
+/** Timeout for waiting for Supabase to process OAuth tokens (ms) */
+const AUTH_TIMEOUT_MS = 10000;
 
 /**
- * Auth0 OAuth Callback Component
+ * Supabase OAuth Callback Component
  *
- * Handles the OAuth redirect from Auth0 after Google authentication.
- * Parses the URL hash fragment to extract tokens, exchanges them with
- * the backend, and stores the session.
+ * Handles the OAuth redirect from Supabase after Google authentication.
+ * Supabase client automatically detects tokens in the URL hash fragment
+ * and establishes a session. RouteGuard's onAuthStateChange listener
+ * then calls checkAuth() to sync the auth store.
+ *
+ * This component:
+ * 1. Checks for error params in the URL hash
+ * 2. Waits for auth store to become authenticated
+ * 3. Navigates to dashboard on success
+ * 4. Shows error UI on failure or timeout
  */
 export const Callback: React.FC = () => {
   const { t } = useTranslation('auth');
   const navigate = useNavigate();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [error, setError] = useState<string | null>(null);
-  const [isProcessing, setIsProcessing] = useState(true);
+  const hasNavigated = useRef(false);
 
+  // Check for OAuth error params in URL hash on mount
   useEffect(() => {
-    const processCallback = async () => {
-      try {
-        // Parse the URL hash fragment
-        const hash = window.location.hash.substring(1);
-        const params = new URLSearchParams(hash);
+    const hash = window.location.hash.substring(1);
+    const params = new URLSearchParams(hash);
+    const errorParam = params.get('error');
+    const errorDescription = params.get('error_description');
 
-        const accessToken = params.get('access_token');
-        const idToken = params.get('id_token');
-        const errorParam = params.get('error');
-        const errorDescription = params.get('error_description');
-        const state = params.get('state');
+    if (errorParam) {
+      log.error('[Callback] OAuth error:', errorParam, errorDescription);
+      setError(errorDescription || errorParam);
+    }
+  }, []);
 
-        // Handle Auth0 error response
-        if (errorParam) {
-          log.error('[Callback] Auth0 error:', errorParam, errorDescription);
-          setError(errorDescription || errorParam);
-          setIsProcessing(false);
-          return;
-        }
+  // Navigate to dashboard when authenticated
+  useEffect(() => {
+    if (isAuthenticated && !error && !hasNavigated.current) {
+      hasNavigated.current = true;
 
-        // Validate required tokens
-        if (!accessToken) {
-          log.error('[Callback] No access token in callback URL');
-          setError('No access token received from authentication provider');
-          setIsProcessing(false);
-          return;
-        }
-
-        log.info('[Callback] Processing OAuth callback with access token');
-
-        // Exchange Auth0 tokens for app tokens via backend
-        // Send both access_token and id_token - the id_token contains email/profile claims
-        const apiUrl = import.meta.env.VITE_API_URL || '';
-        const response = await fetch(`${apiUrl}/api/v1/auth/auth0`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            access_token: accessToken,
-            id_token: idToken,
-          }),
+      // Track OAuth login in PostHog
+      const user = useAuthStore.getState().user;
+      if (user && typeof posthog?.identify === 'function') {
+        posthog.identify(user.id, {
+          email: user.email,
+          created_at: user.createdAt.toISOString(),
         });
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          const errorMessage =
-            errorData.detail ||
-            errorData.error?.message ||
-            'Authentication failed. Please try again.';
-          log.error('[Callback] Backend auth0 endpoint error:', errorMessage);
-          throw new Error(errorMessage);
-        }
-
-        const data = await response.json();
-
-        // Transform backend response to frontend User type
-        // Extract Auth0 roles from backend response if available (may be forwarded from token)
-        const auth0Roles = (data.user?.auth0_roles as string[]) || [];
-
-        const user: User = {
-          id: data.user?.id || '',
-          email: data.user?.email || '',
-          name: data.user?.full_name || data.user?.email?.split('@')[0] || 'User',
-          avatar: data.user?.avatar_url || undefined,
-          role: determineUserRole(data.user?.is_superuser, auth0Roles),
-          preferences: {
-            language: 'en',
-            dailyGoal: data.user?.settings?.daily_goal || 20,
-            notifications: data.user?.settings?.email_notifications ?? true,
-            theme: 'light',
-          },
-          stats: {
-            streak: 0,
-            wordsLearned: 0,
-            totalXP: 0,
-            joinedDate: new Date(data.user?.created_at || Date.now()),
-          },
-          createdAt: new Date(data.user?.created_at || Date.now()),
-          updatedAt: new Date(data.user?.updated_at || Date.now()),
-        };
-
-        // Identify user in PostHog
-        if (typeof posthog?.identify === 'function') {
-          posthog.identify(user.id, {
-            email: user.email,
-            created_at: user.createdAt.toISOString(),
-            auth_method: 'auth0_google',
-          });
-        }
-        if (typeof posthog?.capture === 'function') {
-          posthog.capture('user_logged_in', {
-            method: 'auth0_google',
-          });
-        }
-
-        // Update auth store with tokens and user
-        useAuthStore.setState({
-          user,
-          token: data.access_token,
-          refreshToken: data.refresh_token,
-          isAuthenticated: true,
-          rememberMe: true, // OAuth users get persistent login
-          isLoading: false,
-          error: null,
-        });
-
-        // Store in sessionStorage as backup
-        sessionStorage.setItem('auth-token', data.access_token);
-
-        log.info('[Callback] Successfully authenticated via Auth0');
-
-        // Parse state to get returnTo path
-        let returnTo = '/dashboard';
-        if (state) {
-          try {
-            const stateData = JSON.parse(state);
-            if (stateData.returnTo) {
-              returnTo = stateData.returnTo;
-            }
-          } catch {
-            // Invalid state JSON, use default
-            log.warn('[Callback] Could not parse state parameter');
-          }
-        }
-
-        // Navigate to destination
-        navigate(returnTo, { replace: true });
-      } catch (err) {
-        log.error('[Callback] Error processing callback:', err);
-        setError(err instanceof Error ? err.message : 'Authentication failed');
-        setIsProcessing(false);
       }
-    };
+      if (typeof posthog?.capture === 'function') {
+        posthog.capture('user_logged_in', { method: 'oauth_google' });
+      }
 
-    processCallback();
-  }, [navigate]);
+      log.info('[Callback] Successfully authenticated via OAuth');
+      navigate('/dashboard', { replace: true });
+    }
+  }, [isAuthenticated, error, navigate]);
 
-  // Show loading state while processing
-  if (isProcessing && !error) {
-    return <PageLoader />;
-  }
+  // Timeout - show error if auth doesn't complete within threshold
+  useEffect(() => {
+    if (error) return;
+
+    const timer = setTimeout(() => {
+      if (!useAuthStore.getState().isAuthenticated && !hasNavigated.current) {
+        log.error('[Callback] Authentication timed out');
+        setError(t('callback.error.timeout', 'Authentication timed out. Please try again.'));
+      }
+    }, AUTH_TIMEOUT_MS);
+
+    return () => clearTimeout(timer);
+  }, [error, t]);
 
   // Show error state
   if (error) {
@@ -213,6 +127,6 @@ export const Callback: React.FC = () => {
     );
   }
 
-  // Fallback (should not reach here)
+  // Show loading while waiting for auth
   return <PageLoader />;
 };

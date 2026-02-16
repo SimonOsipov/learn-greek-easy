@@ -95,12 +95,9 @@ vi.mock('@/services/progressAPI', () => ({
 const resetAuthStore = () => {
   useAuthStore.setState({
     user: null,
-    token: null,
-    refreshToken: null,
     isAuthenticated: false,
     isLoading: false,
     error: null,
-    rememberMe: false,
   });
 };
 

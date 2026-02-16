@@ -111,7 +111,7 @@ async def reset_user_progress(
     - All learning progress and statistics
     - All review history
     - All XP and achievements
-    - The Auth0 account
+    - The Supabase account
 
     This action cannot be undone. The user will be logged out and
     their account will be permanently removed from the system.
@@ -128,7 +128,7 @@ async def delete_user_account(
     """Delete the current user's account and all data.
 
     This endpoint will permanently delete the user's account
-    and all associated data from both the database and Auth0.
+    and all associated data from both the database and Supabase.
 
     Args:
         current_user: Authenticated user (injected)
@@ -146,7 +146,7 @@ async def delete_user_account(
         service = UserDeletionService(db)
         result = await service.delete_account(
             user_id=current_user.id,
-            auth0_id=current_user.auth0_id,
+            supabase_id=current_user.supabase_id,
         )
 
         if not result.success:
@@ -163,13 +163,13 @@ async def delete_user_account(
                 detail="Failed to delete account. Please try again.",
             )
 
-        # Check for Auth0 partial failure (per PRD: return 500 if Auth0 fails)
-        if result.auth0_deleted is False:  # False = tried but failed, None = not attempted
+        # Check for Supabase partial failure (per PRD: return 500 if Supabase fails)
+        if result.supabase_deleted is False:  # False = tried but failed, None = not attempted
             logger.warning(
-                "Account deleted but Auth0 cleanup failed",
+                "Account deleted but Supabase cleanup failed",
                 extra={
                     "user_id": str(current_user.id),
-                    "auth0_error": result.error_message,
+                    "supabase_error": result.error_message,
                 },
             )
             raise HTTPException(
@@ -182,7 +182,7 @@ async def delete_user_account(
             extra={
                 "user_id": str(current_user.id),
                 "progress_deleted": result.progress_deleted,
-                "auth0_deleted": result.auth0_deleted,
+                "supabase_deleted": result.supabase_deleted,
             },
         )
         # Return None for 204 No Content - get_db auto-commits

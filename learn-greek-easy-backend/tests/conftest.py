@@ -36,22 +36,16 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # Import auth fixtures from fixtures package
-from tests.fixtures.auth import (  # User fixtures; Token fixtures; Header fixtures; Bundle fixtures; Error testing fixtures
-    access_token,
+from tests.fixtures.auth import (  # User fixtures; Header fixtures; Bundle fixtures; Error testing fixtures
     auth_headers,
     authenticated_superuser,
     authenticated_user,
-    expired_access_token,
-    expired_auth_headers,
+    invalid_auth_headers,
     invalid_token,
-    refresh_token_value,
     superuser_auth_headers,
-    superuser_tokens,
     test_inactive_user,
     test_superuser,
     test_user,
-    test_user_tokens,
-    test_verified_user,
     two_users,
 )
 
@@ -142,19 +136,13 @@ __all__ = [
     # Auth fixtures
     "test_user",
     "test_superuser",
-    "test_verified_user",
     "test_inactive_user",
     "two_users",
-    "test_user_tokens",
-    "superuser_tokens",
-    "access_token",
-    "refresh_token_value",
     "auth_headers",
     "superuser_auth_headers",
-    "expired_auth_headers",
     "authenticated_user",
     "authenticated_superuser",
-    "expired_access_token",
+    "invalid_auth_headers",
     "invalid_token",
     # Deck fixtures
     "DeckWithCards",
@@ -471,10 +459,10 @@ def test_settings() -> dict[str, Any]:
         "testing": True,
         "debug": True,
         "database_url": get_test_database_url(),
-        "jwt_secret": "test-secret-key-for-testing-only",
-        "jwt_algorithm": "HS256",
-        "access_token_expire_minutes": 30,
-        "refresh_token_expire_days": 30,
+        "supabase_url": "https://test.supabase.co",
+        "supabase_jwt_secret": "test-jwt-secret-for-supabase-testing",
+        "supabase_anon_key": "test-anon-key",
+        "supabase_secret_key": "test-secret-key",
     }
 
 

@@ -30,10 +30,6 @@ import type { TFunction } from 'i18next';
 const createPasswordSchema = (t: TFunction) =>
   z
     .object({
-      currentPassword: z
-        .string()
-        .min(1, t('security.validation.currentPasswordRequired'))
-        .min(8, t('security.validation.passwordMinLength')),
       newPassword: z
         .string()
         .min(1, t('security.validation.currentPasswordRequired'))
@@ -58,9 +54,9 @@ export const SecuritySection: React.FC = () => {
   const [showResetDialog, setShowResetDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  // Only auth0 (email/password) users can change password
-  // All other auth providers (google-oauth2, etc.) or undefined use social/OAuth login
-  const canChangePassword = user?.authProvider === 'auth0';
+  // Only email (email/password) users can change password
+  // All other auth providers (google, etc.) or undefined use social/OAuth login
+  const canChangePassword = user?.authProvider === 'email';
 
   const passwordSchema = createPasswordSchema(t);
 
@@ -73,7 +69,6 @@ export const SecuritySection: React.FC = () => {
   } = useForm<PasswordFormData>({
     resolver: zodResolver(passwordSchema),
     defaultValues: {
-      currentPassword: '',
       newPassword: '',
       confirmPassword: '',
     },
@@ -81,7 +76,7 @@ export const SecuritySection: React.FC = () => {
 
   const onPasswordChange = async (data: PasswordFormData) => {
     try {
-      await updatePassword(data.currentPassword, data.newPassword);
+      await updatePassword(data.newPassword);
 
       toast({
         title: t('security.changePassword.success'),
@@ -203,7 +198,7 @@ export const SecuritySection: React.FC = () => {
         </Card>
       </div>
 
-      {/* Password Change Dialog - only rendered for auth0 (email/password) users */}
+      {/* Password Change Dialog - only rendered for email (email/password) users */}
       {canChangePassword && (
         <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
           <DialogContent data-testid="password-dialog">
@@ -221,20 +216,6 @@ export const SecuritySection: React.FC = () => {
               onSubmit={handlePasswordSubmit(onPasswordChange)}
               className="space-y-4"
             >
-              <PasswordField
-                data-testid="current-password-input"
-                label={t('security.changePassword.currentPassword')}
-                name="currentPassword"
-                value={watchPassword('currentPassword')}
-                onChange={(value) =>
-                  registerPassword('currentPassword').onChange({ target: { value } })
-                }
-                error={passwordErrors.currentPassword?.message}
-                placeholder={t('security.changePassword.currentPasswordPlaceholder')}
-                required
-                autoComplete="current-password"
-              />
-
               <PasswordField
                 data-testid="new-password-input"
                 label={t('security.changePassword.newPassword')}

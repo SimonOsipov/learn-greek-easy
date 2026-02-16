@@ -1,47 +1,32 @@
 /**
- * Auth0 Login E2E Tests
+ * Login E2E Tests
  *
- * Tests the Auth0 login form UI and interactions.
- * All tests skip if VITE_AUTH0_ENABLED is not 'true'.
+ * Tests the login form UI and interactions.
  *
  * Test coverage:
  * - Form display and elements
  * - Email/password validation
  * - Password visibility toggle
  * - Navigation links (register, forgot password)
- * - Form submission states
- * - Error handling (mocked)
+ * - Remember Me checkbox
+ * - Google Login Button
  */
 
 import { test, expect } from '@playwright/test';
 
-import {
-  isAuth0Enabled,
-  AUTH0_TEST_USERS,
-  waitForAuth0Form,
-  clearAuth0Mocks,
-} from '../helpers/auth0-helpers';
+import { SEED_USERS } from '../helpers/auth-helpers';
 
-test.describe('Auth0 Login', () => {
-  // Skip all tests if Auth0 is not enabled
-  test.beforeEach(async ({ page }) => {
-    if (!isAuth0Enabled()) {
-      test.skip();
-    }
-  });
-
+test.describe('Login', () => {
   // Override storageState to be empty (no auth) for login tests
   test.use({ storageState: { cookies: [], origins: [] } });
-
-  // Clean up mocks after each test
-  test.afterEach(async ({ page }) => {
-    await clearAuth0Mocks(page);
-  });
 
   test.describe('Form Display', () => {
     test('should display login form with all required elements', async ({ page }) => {
       await page.goto('/login');
-      await waitForAuth0Form(page, 'login-form');
+      await page.waitForSelector('[data-testid="login-form"]', {
+        state: 'visible',
+        timeout: 10000,
+      });
 
       // Verify card container
       await expect(page.getByTestId('login-card')).toBeVisible();
@@ -70,7 +55,10 @@ test.describe('Auth0 Login', () => {
 
     test('should have proper form labels and accessibility attributes', async ({ page }) => {
       await page.goto('/login');
-      await waitForAuth0Form(page, 'login-form');
+      await page.waitForSelector('[data-testid="login-form"]', {
+        state: 'visible',
+        timeout: 10000,
+      });
 
       // Check email input has associated label
       const emailInput = page.getByTestId('email-input');
@@ -87,7 +75,10 @@ test.describe('Auth0 Login', () => {
   test.describe('Email Validation', () => {
     test('should show error for empty email on submit', async ({ page }) => {
       await page.goto('/login');
-      await waitForAuth0Form(page, 'login-form');
+      await page.waitForSelector('[data-testid="login-form"]', {
+        state: 'visible',
+        timeout: 10000,
+      });
 
       // Fill only password
       await page.getByTestId('password-input').fill('TestPassword123!');
@@ -101,19 +92,17 @@ test.describe('Auth0 Login', () => {
 
     // Note: This test is skipped because HTML5 email validation
     // intercepts invalid emails before Zod validation runs.
-    // The browser's native "Please enter a valid email" popup blocks form submission.
     test.skip('should show error for invalid email format', async ({ page }) => {
       await page.goto('/login');
-      await waitForAuth0Form(page, 'login-form');
+      await page.waitForSelector('[data-testid="login-form"]', {
+        state: 'visible',
+        timeout: 10000,
+      });
 
-      // Fill invalid email
       await page.getByTestId('email-input').fill('notanemail');
       await page.getByTestId('password-input').fill('TestPassword123!');
-
-      // Submit form
       await page.getByTestId('login-submit').click();
 
-      // Should show email format error
       await expect(page.locator('#email-error')).toBeVisible();
     });
   });
@@ -121,30 +110,28 @@ test.describe('Auth0 Login', () => {
   test.describe('Password Validation', () => {
     test('should show error for empty password on submit', async ({ page }) => {
       await page.goto('/login');
-      await waitForAuth0Form(page, 'login-form');
+      await page.waitForSelector('[data-testid="login-form"]', {
+        state: 'visible',
+        timeout: 10000,
+      });
 
-      // Fill only email
-      await page.getByTestId('email-input').fill(AUTH0_TEST_USERS.LEARNER.email);
-
-      // Submit form
+      await page.getByTestId('email-input').fill(SEED_USERS.LEARNER.email);
       await page.getByTestId('login-submit').click();
 
-      // Should show password validation error
       await expect(page.locator('#password-error')).toBeVisible();
     });
 
     test('should show error for password less than 8 characters', async ({ page }) => {
       await page.goto('/login');
-      await waitForAuth0Form(page, 'login-form');
+      await page.waitForSelector('[data-testid="login-form"]', {
+        state: 'visible',
+        timeout: 10000,
+      });
 
-      // Fill short password
-      await page.getByTestId('email-input').fill(AUTH0_TEST_USERS.LEARNER.email);
+      await page.getByTestId('email-input').fill(SEED_USERS.LEARNER.email);
       await page.getByTestId('password-input').fill('short');
-
-      // Submit form
       await page.getByTestId('login-submit').click();
 
-      // Should show password length error
       await expect(page.locator('#password-error')).toBeVisible();
     });
   });
@@ -152,7 +139,10 @@ test.describe('Auth0 Login', () => {
   test.describe('Password Visibility Toggle', () => {
     test('should toggle password visibility when clicking eye icon', async ({ page }) => {
       await page.goto('/login');
-      await waitForAuth0Form(page, 'login-form');
+      await page.waitForSelector('[data-testid="login-form"]', {
+        state: 'visible',
+        timeout: 10000,
+      });
 
       const passwordInput = page.getByTestId('password-input');
 
@@ -180,12 +170,13 @@ test.describe('Auth0 Login', () => {
   test.describe('Navigation', () => {
     test('should navigate to register page when clicking register link', async ({ page }) => {
       await page.goto('/login');
-      await waitForAuth0Form(page, 'login-form');
+      await page.waitForSelector('[data-testid="login-form"]', {
+        state: 'visible',
+        timeout: 10000,
+      });
 
-      // Click register link
       await page.getByTestId('register-link').click();
 
-      // Should navigate to register page
       await page.waitForURL('/register');
       await expect(page.getByTestId('register-card')).toBeVisible();
     });
@@ -194,29 +185,26 @@ test.describe('Auth0 Login', () => {
       page,
     }) => {
       await page.goto('/login');
-      await waitForAuth0Form(page, 'login-form');
+      await page.waitForSelector('[data-testid="login-form"]', {
+        state: 'visible',
+        timeout: 10000,
+      });
 
-      // Click forgot password link
       await page.getByText(/forgot password/i).click();
 
-      // Should navigate to forgot password page
       await page.waitForURL('/forgot-password');
       await expect(page.getByTestId('forgot-password-card')).toBeVisible();
     });
   });
 
-  // Note: Form submission state tests removed - they relied on mocking with delayed
-  // responses which is not possible with real Auth0 authentication.
-
-  // Note: Error handling tests removed - they relied on mocking Auth0 API responses
-  // which is not possible with real Auth0 authentication.
-
   test.describe('Remember Me', () => {
     test('should have remember me checkbox', async ({ page }) => {
       await page.goto('/login');
-      await waitForAuth0Form(page, 'login-form');
+      await page.waitForSelector('[data-testid="login-form"]', {
+        state: 'visible',
+        timeout: 10000,
+      });
 
-      // Find remember me checkbox
       const rememberMeCheckbox = page.locator('#remember');
       await expect(rememberMeCheckbox).toBeVisible();
 
@@ -234,46 +222,42 @@ test.describe('Auth0 Login', () => {
   test.describe('Google Login Button', () => {
     test('should have Google login button visible and enabled', async ({ page }) => {
       await page.goto('/login');
-      await waitForAuth0Form(page, 'login-form');
+      await page.waitForSelector('[data-testid="login-form"]', {
+        state: 'visible',
+        timeout: 10000,
+      });
 
       const googleButton = page.getByTestId('google-login-button');
 
-      // Button should be visible
       await expect(googleButton).toBeVisible();
-
-      // Button should be enabled
       await expect(googleButton).not.toBeDisabled();
-
-      // Button should contain Google text
       await expect(googleButton).toContainText(/google/i);
     });
 
     test('should initiate OAuth flow when clicking Google button', async ({ page }) => {
       await page.goto('/login');
-      await waitForAuth0Form(page, 'login-form');
+      await page.waitForSelector('[data-testid="login-form"]', {
+        state: 'visible',
+        timeout: 10000,
+      });
 
       const googleButton = page.getByTestId('google-login-button');
 
       // Set up navigation listener to detect OAuth redirect
       const navigationPromise = page.waitForURL(
-        (url) => url.hostname.includes('auth0') || url.hostname.includes('google'),
+        (url) => url.hostname.includes('supabase') || url.hostname.includes('google'),
         { timeout: 10000 }
       );
 
-      // Click the Google button
       await googleButton.click();
 
-      // Should navigate to Auth0 or Google OAuth domain
+      // Should navigate to Supabase or Google OAuth domain
       try {
         await navigationPromise;
-        // If we get here, OAuth redirect was initiated successfully
         const currentUrl = page.url();
-        expect(
-          currentUrl.includes('auth0') || currentUrl.includes('google')
-        ).toBe(true);
+        expect(currentUrl.includes('supabase') || currentUrl.includes('google')).toBe(true);
       } catch {
         // Navigation might be blocked in test environment - that's OK
-        // The important thing is the button is clickable and attempts to navigate
       }
     });
   });

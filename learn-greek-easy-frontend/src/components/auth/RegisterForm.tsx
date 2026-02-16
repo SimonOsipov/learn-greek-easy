@@ -1,7 +1,7 @@
 /**
- * Auth0 Registration Form Component
+ * Registration Form Component
  *
- * Embedded registration form using Auth0's authentication API.
+ * Embedded registration form using Supabase authentication.
  * Users stay on our page - no redirects during signup.
  *
  * State Machine:
@@ -23,9 +23,10 @@ import React, { useState } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeOff, Mail, ArrowLeft, RefreshCw } from 'lucide-react';
+import posthog from 'posthog-js';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 
 import { AuthLayout } from '@/components/auth/AuthLayout';
@@ -43,15 +44,18 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { signupWithAuth0, signupWithGoogle, changePassword } from '@/lib/auth0WebAuth';
 import log from '@/lib/logger';
+import { supabase } from '@/lib/supabaseClient';
+import { authAPI } from '@/services/authAPI';
+import { useAuthStore } from '@/stores/authStore';
+import type { User } from '@/types/auth';
 
 /** Form state machine states */
 type FormState = 'form' | 'verification' | 'error';
 
 /**
  * Registration form validation schema
- * Matches Auth0 password policy requirements
+ * Password validation requirements
  */
 const registerSchema = z
   .object({
@@ -70,8 +74,23 @@ const registerSchema = z
 
 type RegisterFormData = z.infer<typeof registerSchema>;
 
-export const Auth0RegisterForm: React.FC = () => {
+/**
+ * Map Supabase signup error to user-friendly translated message
+ */
+const mapSupabaseSignupError = (error: { message: string }, t: (key: string) => string): string => {
+  const msg = error.message.toLowerCase();
+  if (msg.includes('already registered') || msg.includes('already been registered')) {
+    return t('register.errors.emailExists');
+  }
+  if (msg.includes('password')) {
+    return t('register.errors.invalidPassword');
+  }
+  return error.message;
+};
+
+export const RegisterForm: React.FC = () => {
   const { t } = useTranslation('auth');
+  const navigate = useNavigate();
 
   // Form state machine
   const [formState, setFormState] = useState<FormState>('form');
@@ -119,17 +138,89 @@ export const Auth0RegisterForm: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      await signupWithAuth0(data.email, data.password, data.name);
-      setRegisteredEmail(data.email);
-      setFormState('verification');
-    } catch (err) {
-      const errorKey = err instanceof Error ? err.message : 'auth0Error';
-      // Map error key to translated message
-      const translatedError = t(`register.auth0.errors.${errorKey}`, {
-        defaultValue: t('register.auth0.errors.auth0Error'),
+      log.info('[RegisterForm] Attempting Supabase signup');
+      const { data: authData, error } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: {
+          data: { full_name: data.name },
+          emailRedirectTo: `${window.location.origin}/callback`,
+        },
       });
-      setFormError(translatedError);
-      log.error('[Auth0RegisterForm] Registration failed:', errorKey);
+
+      if (error) {
+        log.error('[RegisterForm] Supabase signup error:', error);
+        throw error;
+      }
+
+      setRegisteredEmail(data.email);
+
+      // If auto-confirm is off, show verification screen
+      if (authData.user && !authData.session) {
+        log.info('[RegisterForm] Email confirmation required');
+        setFormState('verification');
+        return;
+      }
+
+      // If auto-confirm is on (dev), user is logged in immediately
+      if (authData.session) {
+        log.info('[RegisterForm] Auto-confirmed, fetching profile');
+        // Fetch profile and set in store
+        const profileResponse = await authAPI.getProfile();
+        const user: User = {
+          id: profileResponse.id,
+          email: profileResponse.email,
+          name: profileResponse.full_name || profileResponse.email.split('@')[0],
+          avatar: profileResponse.avatar_url || undefined,
+          role: profileResponse.is_superuser ? 'admin' : 'free',
+          preferences: {
+            language: 'en',
+            dailyGoal: profileResponse.settings?.daily_goal || 20,
+            notifications: profileResponse.settings?.email_notifications ?? true,
+            theme: profileResponse.settings?.theme || 'light',
+          },
+          stats: {
+            streak: 0,
+            wordsLearned: 0,
+            totalXP: 0,
+            joinedDate: new Date(profileResponse.created_at),
+          },
+          createdAt: new Date(profileResponse.created_at),
+          updatedAt: new Date(profileResponse.updated_at),
+          authProvider: profileResponse.auth_provider ?? undefined,
+        };
+
+        // Track with PostHog
+        if (typeof posthog?.identify === 'function') {
+          posthog.identify(user.id, {
+            email: user.email,
+            created_at: user.createdAt.toISOString(),
+          });
+        }
+        if (typeof posthog?.capture === 'function') {
+          posthog.capture('user_signed_up', {
+            method: 'email',
+          });
+        }
+
+        useAuthStore.setState({
+          user,
+          isAuthenticated: true,
+          isLoading: false,
+          error: null,
+        });
+
+        log.info('[RegisterForm] Successfully registered and logged in');
+        navigate('/dashboard');
+        return;
+      }
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error
+          ? mapSupabaseSignupError(err, t)
+          : t('register.errors.registrationFailed');
+      setFormError(errorMessage);
+      log.error('[RegisterForm] Registration failed:', errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -137,19 +228,27 @@ export const Auth0RegisterForm: React.FC = () => {
 
   /**
    * Handle resend verification email
-   * Uses Auth0 password reset flow as a workaround
    */
   const handleResendEmail = async () => {
     setIsResending(true);
     setResendSuccess(false);
 
     try {
-      await changePassword(registeredEmail);
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: registeredEmail,
+      });
+
+      if (error) {
+        log.error('[RegisterForm] Resend failed:', error);
+        throw error;
+      }
+
       setResendSuccess(true);
       // Reset success message after 5 seconds
       setTimeout(() => setResendSuccess(false), 5000);
     } catch (err) {
-      log.error('[Auth0RegisterForm] Resend failed:', err);
+      log.error('[RegisterForm] Resend error:', err);
       // Don't show error - just silently fail and let user retry
     } finally {
       setIsResending(false);
@@ -159,8 +258,23 @@ export const Auth0RegisterForm: React.FC = () => {
   /**
    * Handle Google signup
    */
-  const handleGoogleSignup = () => {
-    signupWithGoogle('/dashboard');
+  const handleGoogleSignup = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/callback`,
+        },
+      });
+
+      if (error) {
+        log.error('[RegisterForm] Google OAuth error:', error);
+        setFormError(t('register.errors.registrationFailed'));
+      }
+    } catch (err) {
+      log.error('[RegisterForm] Google signup error:', err);
+      setFormError(t('register.errors.registrationFailed'));
+    }
   };
 
   /**
@@ -190,10 +304,10 @@ export const Auth0RegisterForm: React.FC = () => {
               <Mail className="h-8 w-8 text-blue-600" />
             </div>
             <CardTitle className="text-2xl font-bold" data-testid="verification-title">
-              {t('register.auth0.checkEmailTitle')}
+              {t('register.checkEmailTitle')}
             </CardTitle>
             <CardDescription className="text-base">
-              {t('register.auth0.checkEmailDescription')}
+              {t('register.checkEmailDescription')}
             </CardDescription>
             <p className="mt-2 font-medium text-foreground" data-testid="registered-email">
               {registeredEmail}
@@ -201,9 +315,7 @@ export const Auth0RegisterForm: React.FC = () => {
           </CardHeader>
 
           <CardContent className="space-y-4">
-            <p className="text-center text-sm text-muted-foreground">
-              {t('register.auth0.checkSpam')}
-            </p>
+            <p className="text-center text-sm text-muted-foreground">{t('register.checkSpam')}</p>
 
             {resendSuccess && (
               <div
@@ -211,7 +323,7 @@ export const Auth0RegisterForm: React.FC = () => {
                 role="status"
                 data-testid="resend-success"
               >
-                {t('register.auth0.resendSuccess')}
+                {t('register.resendSuccess')}
               </div>
             )}
 
@@ -225,12 +337,12 @@ export const Auth0RegisterForm: React.FC = () => {
               {isResending ? (
                 <>
                   <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                  {t('register.auth0.resendEmail')}
+                  {t('register.resendEmail')}
                 </>
               ) : (
                 <>
                   <RefreshCw className="mr-2 h-4 w-4" />
-                  {t('register.auth0.resendEmail')}
+                  {t('register.resendEmail')}
                 </>
               )}
             </Button>
@@ -244,7 +356,7 @@ export const Auth0RegisterForm: React.FC = () => {
               data-testid="start-over-button"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
-              {t('register.auth0.wrongEmail')}
+              {t('register.wrongEmail')}
             </Button>
 
             <p className="text-center text-sm text-muted-foreground">
@@ -463,7 +575,7 @@ export const Auth0RegisterForm: React.FC = () => {
               data-testid="google-signup-button"
             >
               <GoogleIcon />
-              {t('register.auth0.signUpWithGoogle')}
+              {t('register.signUpWithGoogle')}
             </Button>
 
             <p className="text-center text-sm text-muted-foreground">
@@ -505,4 +617,4 @@ const GoogleIcon = () => (
   </svg>
 );
 
-export default Auth0RegisterForm;
+export default RegisterForm;

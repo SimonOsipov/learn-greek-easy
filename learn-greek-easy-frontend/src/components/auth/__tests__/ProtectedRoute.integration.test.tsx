@@ -56,12 +56,9 @@ const setAuthenticatedUser = (email: string, role: 'free' | 'admin' = 'free') =>
       createdAt: new Date('2025-01-01'),
       updatedAt: new Date('2025-01-01'),
     },
-    token: 'mock-access-token',
-    refreshToken: 'mock-refresh-token',
     isAuthenticated: true,
     isLoading: false,
     error: null,
-    rememberMe: false,
   });
 };
 
@@ -92,12 +89,9 @@ describe('Protected Route Integration Tests', () => {
     // Reset auth store directly (don't call logout which uses API)
     useAuthStore.setState({
       user: null,
-      token: null,
-      refreshToken: null,
       isAuthenticated: false,
       isLoading: false,
       error: null,
-      rememberMe: false,
     });
 
     localStorage.clear();
@@ -435,16 +429,14 @@ describe('Protected Route Integration Tests', () => {
     });
 
     it('should verify auth state is cleared on logout', async () => {
-      // Set authenticated user state directly with rememberMe enabled
+      // Set authenticated user state directly
       setAuthenticatedUser('demo@learngreekeasy.com');
-      useAuthStore.setState({ rememberMe: true });
 
       // Verify user is authenticated
       await waitFor(() => {
         const authState = useAuthStore.getState();
         expect(authState.isAuthenticated).toBe(true);
         expect(authState.user).toBeTruthy();
-        expect(authState.token).toBeTruthy();
       });
 
       // Logout
@@ -454,7 +446,6 @@ describe('Protected Route Integration Tests', () => {
       const authState = useAuthStore.getState();
       expect(authState.isAuthenticated).toBe(false);
       expect(authState.user).toBeNull();
-      expect(authState.token).toBeNull();
     });
   });
 

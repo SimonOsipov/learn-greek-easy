@@ -1,7 +1,7 @@
 """Database models for Learn Greek Easy application.
 
 This module contains all SQLAlchemy models for the application:
-- User management (User, UserSettings, RefreshToken)
+- User management (User, UserSettings)
 - Content (Deck, Card)
 - Progress tracking (UserDeckProgress, CardStatistics, Review)
 - Feedback (Feedback, FeedbackVote)
@@ -193,9 +193,9 @@ class CardType(str, enum.Enum):
 
 
 class User(Base, TimestampMixin):
-    """User account model with authentication fields.
+    """User account model.
 
-    Supports both email/password and Google OAuth authentication.
+    Authentication is handled by Supabase Auth via the supabase_id field.
     """
 
     __tablename__ = "users"
@@ -213,10 +213,6 @@ class User(Base, TimestampMixin):
         index=True,
         nullable=False,
     )
-    password_hash: Mapped[str | None] = mapped_column(
-        String(255),
-        nullable=True,  # Nullable for OAuth users
-    )
 
     # Profile
     full_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -229,38 +225,14 @@ class User(Base, TimestampMixin):
     # Status flags
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     is_superuser: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    email_verified_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True,
-    )
 
-    # OAuth
-    google_id: Mapped[str | None] = mapped_column(
+    # Supabase Auth
+    supabase_id: Mapped[str | None] = mapped_column(
         String(255),
         unique=True,
         nullable=True,
         index=True,
-    )
-
-    # Auth0
-    auth0_id: Mapped[str | None] = mapped_column(
-        String(255),
-        unique=True,
-        nullable=True,
-        index=True,
-        comment="Auth0 user identifier (sub claim)",
-    )
-
-    # Tracking
-    last_login_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True,
-        comment="Timestamp of last successful login",
-    )
-    last_login_ip: Mapped[str | None] = mapped_column(
-        String(45),  # Supports both IPv4 and IPv6
-        nullable=True,
-        comment="IP address of last successful login",
+        comment="Supabase Auth user identifier (sub claim, UUID format)",
     )
 
     # Relationships (lazy="raise" to prevent accidental lazy loading)
@@ -270,11 +242,6 @@ class User(Base, TimestampMixin):
         lazy="raise",
         cascade="all, delete-orphan",
         uselist=False,  # One-to-one relationship
-    )
-    refresh_tokens: Mapped[List["RefreshToken"]] = relationship(
-        back_populates="user",
-        lazy="raise",
-        cascade="all, delete-orphan",
     )
     deck_progress: Mapped[List["UserDeckProgress"]] = relationship(
         back_populates="user",
@@ -382,47 +349,6 @@ class UserSettings(Base, TimestampMixin):
 
     def __repr__(self) -> str:
         return f"<UserSettings(user_id={self.user_id}, daily_goal={self.daily_goal})>"
-
-
-class RefreshToken(Base, TimestampMixin):
-    """JWT refresh token for session management."""
-
-    __tablename__ = "refresh_tokens"
-
-    # Primary key
-    id: Mapped[UUID] = mapped_column(
-        primary_key=True,
-        server_default=func.uuid_generate_v4(),
-    )
-
-    # Foreign key
-    user_id: Mapped[UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-
-    # Token data
-    token: Mapped[str] = mapped_column(
-        String(500),
-        unique=True,
-        nullable=False,
-        index=True,
-    )
-    expires_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        index=True,  # For cleanup queries
-    )
-
-    # Relationship
-    user: Mapped["User"] = relationship(
-        back_populates="refresh_tokens",
-        lazy="selectin",
-    )
-
-    def __repr__(self) -> str:
-        return f"<RefreshToken(id={self.id}, user_id={self.user_id})>"
 
 
 # ============================================================================

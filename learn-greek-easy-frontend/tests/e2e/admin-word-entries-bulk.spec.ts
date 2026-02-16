@@ -20,27 +20,29 @@
  * - e2e_admin: Admin user with superuser access
  */
 
-import { test, expect } from '@playwright/test';
 import * as fs from 'fs';
+
+import { test, expect } from '@playwright/test';
+
+import { getSupabaseStorageKey } from './helpers/supabase-test-client';
 
 // Storage state paths
 const ADMIN_AUTH = 'playwright/.auth/admin.json';
 
 /**
- * Helper to get admin access token from storage state file
- * This is needed because page.request doesn't automatically include
- * the Authorization header for authenticated API calls.
+ * Helper to get admin access token from storage state file.
+ * Token is stored in the Supabase session localStorage key (sb-<ref>-auth-token).
  */
 function getAdminAccessToken(): string | null {
   try {
+    const storageKey = getSupabaseStorageKey();
     const adminAuthState = JSON.parse(fs.readFileSync(ADMIN_AUTH, 'utf-8'));
-    const authStorageItem = adminAuthState.origins?.[0]?.localStorage?.find(
-      (item: { name: string; value: string }) => item.name === 'auth-storage'
+    const sessionEntry = adminAuthState.origins?.[0]?.localStorage?.find(
+      (item: { name: string; value: string }) => item.name === storageKey
     );
-    if (authStorageItem) {
-      const authData = JSON.parse(authStorageItem.value);
-      // Check both 'accessToken' and 'token' for compatibility
-      return authData?.state?.accessToken || authData?.state?.token || null;
+    if (sessionEntry) {
+      const session = JSON.parse(sessionEntry.value);
+      return session?.access_token || null;
     }
   } catch {
     // File might not exist or be invalid

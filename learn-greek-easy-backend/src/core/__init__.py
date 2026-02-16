@@ -1,19 +1,11 @@
-"""Core module containing security utilities, authentication, and algorithms.
+"""Core module containing authentication dependencies and algorithms.
 
 This module provides:
-- JWT token generation and validation
 - Authentication dependencies for FastAPI routes
 - SM-2 spaced repetition algorithm
 
-Legacy password hashing functions have been removed.
-All authentication now flows through Auth0.
-
 Example:
     from src.core import (
-        # JWT utilities
-        create_access_token,
-        create_refresh_token,
-        verify_token,
         # Auth dependencies
         get_current_user,
         get_current_superuser,
@@ -34,12 +26,6 @@ from src.core.posthog import (
     is_posthog_enabled,
     shutdown_posthog,
 )
-from src.core.security import (
-    create_access_token,
-    create_refresh_token,
-    extract_token_from_header,
-    verify_token,
-)
 from src.core.sm2 import (
     DEFAULT_EASINESS_FACTOR,
     LEARNING_REPETITIONS_THRESHOLD,
@@ -55,11 +41,6 @@ from src.core.sm2 import (
 )
 
 __all__ = [
-    # JWT token management (from security.py)
-    "create_access_token",
-    "create_refresh_token",
-    "verify_token",
-    "extract_token_from_header",
     # Authentication dependencies (from dependencies.py)
     "get_current_user",
     "get_current_superuser",

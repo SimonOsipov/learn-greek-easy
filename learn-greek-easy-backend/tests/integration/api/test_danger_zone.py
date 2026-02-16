@@ -293,13 +293,13 @@ class TestDeleteAccountEndpoint:
         """Test successful account deletion returns 204 and removes user."""
         user_id = user_with_progress.id
 
-        # Mock Auth0 client to avoid real Auth0 calls
+        # Mock Supabase client to avoid real Auth0 calls
         with patch(
-            "src.services.user_deletion_service.get_auth0_management_client"
+            "src.services.user_deletion_service.get_supabase_admin_client"
         ) as mock_get_client:
-            mock_auth0_client = MagicMock()
-            mock_auth0_client.delete_user = AsyncMock(return_value=True)
-            mock_get_client.return_value = mock_auth0_client
+            mock_supabase_client = MagicMock()
+            mock_supabase_client.delete_user = AsyncMock(return_value=True)
+            mock_get_client.return_value = mock_supabase_client
 
             response = await client.delete("/api/v1/users/me", headers=auth_headers)
 
@@ -346,11 +346,11 @@ class TestDeleteAccountEndpoint:
         user_before = (await db_session.execute(user_query)).scalar_one_or_none()
         assert user_before is not None
 
-        # Mock Auth0 client
+        # Mock Supabase client
         with patch(
-            "src.services.user_deletion_service.get_auth0_management_client"
+            "src.services.user_deletion_service.get_supabase_admin_client"
         ) as mock_get_client:
-            mock_get_client.return_value = None  # No Auth0 M2M configured
+            mock_get_client.return_value = None  # No Supabase admin configured
 
             response = await client.delete("/api/v1/users/me", headers=auth_headers)
 
@@ -362,32 +362,32 @@ class TestDeleteAccountEndpoint:
         assert user_after is None
 
     @pytest.mark.asyncio
-    async def test_auth0_failure_returns_500(
+    async def test_supabase_failure_returns_500(
         self,
         client: AsyncClient,
         auth_headers: dict,
         test_user: User,
         db_session: AsyncSession,
     ):
-        """Test that Auth0 failure returns 500 with specific message."""
+        """Test that Supabase failure returns 500 with specific message."""
         user_id = test_user.id
 
-        # Update user to have an auth0_id
-        test_user.auth0_id = "auth0|123456789"
+        # Update user to have a supabase_id
+        test_user.supabase_id = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
         await db_session.commit()
         await db_session.refresh(test_user)
 
-        # Mock Auth0 client to fail
+        # Mock Supabase admin client to fail
         with patch(
-            "src.services.user_deletion_service.get_auth0_management_client"
+            "src.services.user_deletion_service.get_supabase_admin_client"
         ) as mock_get_client:
-            from src.core.exceptions import Auth0ManagementError
+            from src.core.exceptions import SupabaseAdminError
 
-            mock_auth0_client = MagicMock()
-            mock_auth0_client.delete_user = AsyncMock(
-                side_effect=Auth0ManagementError("Failed to delete user from Auth0")
+            mock_supabase_client = MagicMock()
+            mock_supabase_client.delete_user = AsyncMock(
+                side_effect=SupabaseAdminError("Failed to delete user from Supabase")
             )
-            mock_get_client.return_value = mock_auth0_client
+            mock_get_client.return_value = mock_supabase_client
 
             with patch("src.services.user_deletion_service.sentry_sdk"):
                 response = await client.delete("/api/v1/users/me", headers=auth_headers)
@@ -399,37 +399,37 @@ class TestDeleteAccountEndpoint:
         response_text = str(data).lower()
         assert "contact support" in response_text, f"Expected 'contact support' in response: {data}"
 
-        # User should still be deleted locally despite Auth0 failure
+        # User should still be deleted locally despite Supabase failure
         db_session.expire_all()
         user_query = select(User).where(User.id == user_id)
         user = (await db_session.execute(user_query)).scalar_one_or_none()
-        assert user is None, "User should be deleted locally even if Auth0 fails"
+        assert user is None, "User should be deleted locally even if Supabase fails"
 
     @pytest.mark.asyncio
-    async def test_delete_without_auth0_id(
+    async def test_delete_without_supabase_id(
         self,
         client: AsyncClient,
         auth_headers: dict,
         test_user: User,
         db_session: AsyncSession,
     ):
-        """Test deletion succeeds for user without Auth0 identity."""
-        # Ensure user has no auth0_id
-        test_user.auth0_id = None
+        """Test deletion succeeds for user without Supabase identity."""
+        # Ensure user has no supabase_id
+        test_user.supabase_id = None
         await db_session.commit()
 
-        # Mock Auth0 client (should not be called)
+        # Mock Supabase admin client (should not be called)
         with patch(
-            "src.services.user_deletion_service.get_auth0_management_client"
+            "src.services.user_deletion_service.get_supabase_admin_client"
         ) as mock_get_client:
-            mock_auth0_client = MagicMock()
-            mock_get_client.return_value = mock_auth0_client
+            mock_supabase_client = MagicMock()
+            mock_get_client.return_value = mock_supabase_client
 
             response = await client.delete("/api/v1/users/me", headers=auth_headers)
 
         assert response.status_code == 204
-        # Auth0 delete should not be called
-        mock_auth0_client.delete_user.assert_not_called()
+        # Supabase delete should not be called
+        mock_supabase_client.delete_user.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_delete_clears_all_user_data(
@@ -442,9 +442,9 @@ class TestDeleteAccountEndpoint:
         """Test that all user data is cleared after deletion."""
         user_id = user_with_progress.id
 
-        # Mock Auth0 client
+        # Mock Supabase client
         with patch(
-            "src.services.user_deletion_service.get_auth0_management_client"
+            "src.services.user_deletion_service.get_supabase_admin_client"
         ) as mock_get_client:
             mock_get_client.return_value = None
 

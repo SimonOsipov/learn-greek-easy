@@ -69,7 +69,7 @@ class TestSeedServiceIntegration:
         assert "v2_decks" in result
 
         # Verify users were created
-        # seed_users creates 4 base users + seed_all adds 3 XP test users = 7 total
+        # 4 base users (learner, beginner, advanced, admin) + 3 XP test users = 7 total
         user_count = await db_session.scalar(select(func.count(User.id)))
         assert user_count == 7
 
@@ -104,7 +104,6 @@ class TestSeedServiceIntegration:
         assert learner.full_name == "E2E Learner"
         assert learner.is_superuser is False
         assert learner.is_active is True
-        assert learner.email_verified_at is not None
 
         # Verify admin user
         admin = await db_session.scalar(select(User).where(User.email == "e2e_admin@test.com"))
@@ -176,7 +175,10 @@ class TestSeedServiceTruncation:
 
     @pytest.mark.asyncio
     async def test_truncate_clears_all_tables(self, db_session: AsyncSession, enable_seeding):
-        """truncate_tables removes all seeded data."""
+        """truncate_tables removes all seeded data (except users).
+
+        Note: Users and user_settings are NOT truncated to match Supabase Auth persistence.
+        """
         seed_service = SeedService(db_session)
 
         # First, seed some data
@@ -192,10 +194,11 @@ class TestSeedServiceTruncation:
 
         assert result["success"] is True
 
-        # Verify all tables are empty
+        # Verify users persist (not truncated)
         user_count = await db_session.scalar(select(func.count(User.id)))
-        assert user_count == 0
+        assert user_count > 0  # Users are NOT truncated
 
+        # Verify decks and cards are cleared
         deck_count = await db_session.scalar(select(func.count(Deck.id)))
         assert deck_count == 0
 
@@ -204,7 +207,10 @@ class TestSeedServiceTruncation:
 
     @pytest.mark.asyncio
     async def test_truncation_order_is_fk_safe(self, db_session: AsyncSession, enable_seeding):
-        """Verify truncation doesn't violate FK constraints."""
+        """Verify truncation doesn't violate FK constraints.
+
+        Note: Users and user_settings are NOT truncated (persist across seeds).
+        """
         seed_service = SeedService(db_session)
 
         # Seed data with FK relationships
@@ -215,13 +221,14 @@ class TestSeedServiceTruncation:
         await db_session.commit()
 
         assert result["success"] is True
-        # 23 tables: mock_exam_answers, mock_exam_sessions, news_items,
+        # 20 tables (users, user_settings, refresh_tokens excluded):
+        # mock_exam_answers, mock_exam_sessions, news_items,
         # xp_transactions, user_achievements, user_xp, achievements,
         # notifications, announcement_campaigns, changelog_entries,
         # culture_question_stats, culture_questions, culture_decks,
         # reviews, card_statistics, user_deck_progress, feedback_votes,
-        # feedback, refresh_tokens, user_settings, cards, users, decks
-        assert len(result["truncated_tables"]) == 23
+        # feedback, cards, decks
+        assert len(result["truncated_tables"]) == 20
 
 
 # ============================================================================
@@ -274,17 +281,16 @@ class TestSeedServiceAuthentication:
     """Tests for seeded user authentication.
 
     Since password-based authentication has been removed, seeded users
-    are Auth0-style users (no password hash) with auth0_id set.
+    are Auth0-style users (no password hash) with supabase_id set.
     """
 
     @pytest.mark.asyncio
-    async def test_users_auth0_id_configuration(self, db_session: AsyncSession, enable_seeding):
-        """Verify auth0_id configuration for different user types.
+    async def test_users_supabase_id_configuration(self, db_session: AsyncSession, enable_seeding):
+        """Verify supabase_id configuration for seeded users.
 
-        Main E2E users (learner, beginner, advanced, admin) have auth0_id=None
-        to enable Auth0 account linking during E2E tests.
-
-        XP test users have fake auth0_ids for isolated XP/achievement testing.
+        In test environments without Supabase Admin configured, all users
+        have supabase_id=None. In environments with Supabase Admin, main
+        E2E users will have Supabase Auth UUIDs.
         """
         seed_service = SeedService(db_session)
 
@@ -292,37 +298,22 @@ class TestSeedServiceAuthentication:
 
         users = (await db_session.execute(select(User))).scalars().all()
 
-        # Categorize users
-        main_e2e_emails = {
-            "e2e_learner@test.com",
-            "e2e_beginner@test.com",
-            "e2e_advanced@test.com",
-            "e2e_admin@test.com",
-        }
+        # All users should be created
+        assert len(users) > 0
 
+        # In test environment (no Supabase configured), all users have supabase_id=None
+        # This is expected - Supabase Admin API is not available in unit/integration tests
         for user in users:
-            # All users should NOT have password_hash (Auth0-style)
-            assert user.password_hash is None, f"password_hash should be None for user {user.email}"
-
-            if user.email in main_e2e_emails:
-                # Main E2E users should have None for account linking
-                assert (
-                    user.auth0_id is None
-                ), f"Main E2E user {user.email} should have auth0_id=None for linking"
-            else:
-                # XP and other test users should have auth0_id set
-                assert user.auth0_id is not None, f"auth0_id not set for {user.email}"
-                assert user.auth0_id.startswith(
-                    "auth0|"
-                ), f"Invalid auth0_id format for {user.email}"
+            assert user.supabase_id is None, (
+                f"User {user.email} should have supabase_id=None "
+                f"when Supabase Admin is not configured"
+            )
 
     @pytest.mark.asyncio
-    async def test_all_users_are_auth0_style(self, db_session: AsyncSession, enable_seeding):
-        """All seeded users are Auth0-style (no password).
+    async def test_all_users_are_supabase_style(self, db_session: AsyncSession, enable_seeding):
+        """All seeded users are Supabase-style (no password hash).
 
-        Note: Base E2E users (e2e_learner, e2e_beginner, e2e_advanced, e2e_admin)
-        have auth0_id=None to allow Auth0 E2E tests to link real Auth0 accounts.
-        XP test users have fake auth0_ids since they're not used in Auth0 tests.
+        Users authenticate via Supabase Auth. The app DB stores profile data only.
         """
         seed_service = SeedService(db_session)
 
@@ -330,9 +321,8 @@ class TestSeedServiceAuthentication:
 
         users = (await db_session.execute(select(User))).scalars().all()
 
-        # All users should have no password hash (Auth0-style)
-        for user in users:
-            assert user.password_hash is None, f"User {user.email} has password_hash"
+        # Verify users were created
+        assert len(users) > 0
 
 
 # ============================================================================

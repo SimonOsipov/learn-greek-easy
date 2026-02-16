@@ -17,6 +17,7 @@ from uuid import uuid4
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from tests.e2e.conftest import E2ETestCase, UserSession
 
@@ -490,7 +491,7 @@ class TestFeedbackDeletion(E2ETestCase):
     @pytest.mark.asyncio
     @pytest.mark.e2e
     async def test_delete_others_feedback_forbidden(
-        self, client: AsyncClient, fresh_user_session: UserSession
+        self, client: AsyncClient, db_session: AsyncSession, fresh_user_session: UserSession
     ) -> None:
         """Test that user cannot delete another user's feedback."""
         # Create feedback as first user
@@ -509,6 +510,7 @@ class TestFeedbackDeletion(E2ETestCase):
         second_session = await self.register_and_login(
             client,
             email=f"e2e_second_{uuid4().hex[:8]}@example.com",
+            db_session=db_session,
         )
 
         # Try to delete as second user
@@ -1025,7 +1027,7 @@ class TestFeedbackWorkflow(E2ETestCase):
     @pytest.mark.asyncio
     @pytest.mark.e2e
     async def test_multi_user_voting_scenario(
-        self, client: AsyncClient, fresh_user_session: UserSession
+        self, client: AsyncClient, db_session: AsyncSession, fresh_user_session: UserSession
     ) -> None:
         """Test multiple users voting on the same feedback."""
         # User 1 creates feedback
@@ -1051,6 +1053,7 @@ class TestFeedbackWorkflow(E2ETestCase):
         second_session = await self.register_and_login(
             client,
             email=f"e2e_multi_{uuid4().hex[:8]}@example.com",
+            db_session=db_session,
         )
 
         # User 2 upvotes
@@ -1067,6 +1070,7 @@ class TestFeedbackWorkflow(E2ETestCase):
         third_session = await self.register_and_login(
             client,
             email=f"e2e_third_{uuid4().hex[:8]}@example.com",
+            db_session=db_session,
         )
 
         response = await client.post(

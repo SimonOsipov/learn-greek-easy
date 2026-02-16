@@ -1,4 +1,4 @@
-import { Suspense, useEffect, type ReactNode } from 'react';
+import { Suspense, useEffect } from 'react';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
@@ -17,9 +17,8 @@ import { LanguageProvider } from '@/contexts/LanguageContext';
 import { LayoutProvider } from '@/contexts/LayoutContext';
 import { NotificationProvider } from '@/contexts/NotificationContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
-import { isAuth0Enabled } from '@/hooks/useAuth0Integration';
 import { lazyWithRetry } from '@/lib/lazyWithRetry';
-import { Auth0ProviderWithNavigate, PostHogProvider } from '@/providers';
+import { PostHogProvider } from '@/providers';
 import { useAppStore, selectIsReady } from '@/stores/appStore';
 
 // ============================================================================
@@ -60,6 +59,9 @@ const ForgotPassword = lazyWithRetry(() =>
 );
 const Callback = lazyWithRetry(() =>
   import('@/pages/auth/Callback').then((m) => ({ default: m.Callback }))
+);
+const ResetPassword = lazyWithRetry(() =>
+  import('@/pages/auth/ResetPassword').then((m) => ({ default: m.ResetPassword }))
 );
 
 // Main dashboard and navigation pages
@@ -199,8 +201,13 @@ function AppContent() {
                 <Route path="/forgot-password" element={<ForgotPassword />} />
               </Route>
 
-              {/* OAuth callback route - handles Auth0 redirect with tokens in hash */}
+              {/* OAuth callback route - handles Supabase redirect with tokens in hash */}
               <Route path="/callback" element={<Callback />} />
+
+              {/* Password reset route - standalone (NOT inside PublicRoute) because
+                  Supabase fires SIGNED_IN before PASSWORD_RECOVERY, which would cause
+                  PublicRoute to redirect to dashboard before user can set password */}
+              <Route path="/reset-password" element={<ResetPassword />} />
 
               {/* Protected Routes - require authentication */}
               <Route element={<ProtectedRoute />}>
@@ -296,40 +303,24 @@ function AppContent() {
   );
 }
 
-/**
- * Conditional Auth0 Provider wrapper.
- * Wraps children with Auth0Provider when Auth0 is enabled.
- * Must be inside BrowserRouter for useNavigate to work.
- */
-function ConditionalAuth0Provider({ children }: { children: ReactNode }) {
-  if (!isAuth0Enabled()) {
-    return <>{children}</>;
-  }
-
-  return <Auth0ProviderWithNavigate>{children}</Auth0ProviderWithNavigate>;
-}
-
 function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
-          {/* Auth0Provider must be inside BrowserRouter for useNavigate */}
-          <ConditionalAuth0Provider>
-            <PostHogProvider>
-              <TooltipProvider>
-                <ThemeProvider>
-                  <LanguageProvider>
-                    <LayoutProvider>
-                      <NotificationProvider>
-                        <AppContent />
-                      </NotificationProvider>
-                    </LayoutProvider>
-                  </LanguageProvider>
-                </ThemeProvider>
-              </TooltipProvider>
-            </PostHogProvider>
-          </ConditionalAuth0Provider>
+          <PostHogProvider>
+            <TooltipProvider>
+              <ThemeProvider>
+                <LanguageProvider>
+                  <LayoutProvider>
+                    <NotificationProvider>
+                      <AppContent />
+                    </NotificationProvider>
+                  </LayoutProvider>
+                </LanguageProvider>
+              </ThemeProvider>
+            </TooltipProvider>
+          </PostHogProvider>
         </BrowserRouter>
       </QueryClientProvider>
     </ErrorBoundary>

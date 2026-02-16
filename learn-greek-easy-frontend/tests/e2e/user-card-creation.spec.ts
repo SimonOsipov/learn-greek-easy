@@ -17,6 +17,8 @@ import * as fs from 'fs';
 
 import { test, expect } from '@playwright/test';
 
+import { getSupabaseStorageKey } from './helpers/supabase-test-client';
+
 // Storage state paths
 const LEARNER_AUTH = 'playwright/.auth/learner.json';
 const BEGINNER_AUTH = 'playwright/.auth/beginner.json';
@@ -26,17 +28,19 @@ const BEGINNER_AUTH = 'playwright/.auth/beginner.json';
 // ============================================================================
 
 /**
- * Helper function to extract access token from auth state
+ * Helper function to extract access token from auth state.
+ * Token is stored in the Supabase session localStorage key (sb-<ref>-auth-token).
  */
 function getAccessToken(authPath: string): string | null {
   try {
+    const storageKey = getSupabaseStorageKey();
     const authState = JSON.parse(fs.readFileSync(authPath, 'utf-8'));
-    const tokenItem = authState.origins?.[0]?.localStorage?.find(
-      (item: { name: string; value: string }) => item.name === 'auth-storage'
+    const sessionEntry = authState.origins?.[0]?.localStorage?.find(
+      (item: { name: string; value: string }) => item.name === storageKey
     );
-    if (tokenItem) {
-      const authData = JSON.parse(tokenItem.value);
-      return authData?.state?.accessToken || null;
+    if (sessionEntry) {
+      const session = JSON.parse(sessionEntry.value);
+      return session?.access_token || null;
     }
   } catch {
     // File might not exist or be invalid
@@ -641,6 +645,6 @@ test.describe('User Card Creation - Authorization', () => {
 
     // Assert error response includes appropriate error detail
     const errorData = await updateResponse.json();
-    expect(errorData.detail).toBeDefined();
+    expect(errorData.error?.message).toBeDefined();
   });
 });

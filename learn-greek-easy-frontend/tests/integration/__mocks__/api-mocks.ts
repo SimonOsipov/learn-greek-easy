@@ -286,12 +286,9 @@ export const setupAuthenticatedUser = (useAuthStore: any) => {
       createdAt: new Date('2025-01-01'),
       updatedAt: new Date('2025-01-01'),
     },
-    token: 'mock-access-token',
-    refreshToken: 'mock-refresh-token',
     isAuthenticated: true,
     isLoading: false,
     error: null,
-    rememberMe: false,
   });
 };
 
@@ -299,12 +296,9 @@ export const setupAuthenticatedUser = (useAuthStore: any) => {
 export const clearAuthState = (useAuthStore: any) => {
   useAuthStore.setState({
     user: null,
-    token: null,
-    refreshToken: null,
     isAuthenticated: false,
     isLoading: false,
     error: null,
-    rememberMe: false,
   });
 };
 

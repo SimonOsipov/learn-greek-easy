@@ -138,11 +138,9 @@ export default defineConfig({
       VITE_ENVIRONMENT: 'test',
       // API URL - explicitly pass to ensure Vite exposes to client code
       VITE_API_URL: process.env.VITE_API_URL || 'http://localhost:8000',
-      // Auth0 configuration - map from CI secrets/env vars
-      VITE_AUTH0_ENABLED: process.env.AUTH0_E2E_TEST_PASSWORD ? 'true' : 'false',
-      VITE_AUTH0_DOMAIN: process.env.AUTH0_DOMAIN || '',
-      VITE_AUTH0_CLIENT_ID: process.env.AUTH0_CLIENT_ID || '',
-      VITE_AUTH0_AUDIENCE: process.env.AUTH0_AUDIENCE || '',
+      // Supabase config for authentication
+      VITE_SUPABASE_URL: process.env.VITE_SUPABASE_URL || 'http://localhost:54321',
+      VITE_SUPABASE_ANON_KEY: process.env.VITE_SUPABASE_ANON_KEY || '',
     },
   },
 });

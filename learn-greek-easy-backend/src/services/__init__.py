@@ -7,7 +7,6 @@ business rules validation, and domain logic.
 
 from src.services.achievement_service import AchievementService
 from src.services.announcement_service import AnnouncementService
-from src.services.auth_service import AuthService
 from src.services.card_error_admin_service import CardErrorAdminService
 from src.services.card_error_service import CardErrorService
 from src.services.card_generator_service import CardGeneratorService
@@ -29,7 +28,6 @@ from src.services.xp_service import XPService
 __all__ = [
     "AchievementService",
     "AnnouncementService",
-    "AuthService",
     "CardErrorAdminService",
     "CardErrorService",
     "CardGeneratorService",

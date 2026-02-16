@@ -29,7 +29,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.db.models import Card, Deck, User
 from tests.base import AuthenticatedTestCase
 from tests.factories.base import BaseFactory
-from tests.fixtures.auth import AuthTokens
 from tests.helpers.time import freeze_time
 
 # =============================================================================
@@ -43,12 +42,10 @@ class UserSession(NamedTuple):
     Attributes:
         user: User model instance or user-like object from API response
         headers: Authorization headers for HTTP requests
-        tokens: Optional AuthTokens container with access/refresh tokens
     """
 
     user: User | object  # Can be User or user-like object from API
     headers: dict[str, str]
-    tokens: AuthTokens | None = None
 
 
 class StudyEnvironment(NamedTuple):
@@ -139,70 +136,75 @@ class E2ETestCase(AuthenticatedTestCase):
         email: str | None = None,
         password: str | None = None,
         full_name: str = "E2E Test User",
+        db_session: AsyncSession | None = None,
     ) -> UserSession:
         """Create user via test seed endpoint and return authenticated session.
+
+        Uses token-based registry for authentication (no real Supabase tokens in tests).
 
         Args:
             client: AsyncClient instance
             email: User email (auto-generated if None)
             password: User password (unused, kept for API compatibility)
             full_name: User's display name
+            db_session: Optional DB session for setting up auth dependency override
 
         Returns:
             UserSession: Container with user info and auth headers
 
         Raises:
-            AssertionError: If user creation or auth fails
+            AssertionError: If user creation fails
         """
+        from src.core.dependencies import get_current_user
+        from src.main import app
+        from tests.fixtures.auth import _get_override_function, _test_user_registry
+
         if email is None:
             email = f"e2e_user_{uuid4().hex[:8]}@example.com"
 
-        # Create user and get auth tokens via test seed endpoint
+        # Create user via test seed endpoint
         response = await client.post(
             "/api/v1/test/seed/create-user",
             json={"email": email, "full_name": full_name},
         )
         assert response.status_code == 200, f"Create user failed: {response.text}"
-        token_data = response.json()
+        user_data = response.json()
 
-        headers = {"Authorization": f"Bearer {token_data['access_token']}"}
+        user_id = UUID(user_data["user_id"])
+
+        # Set up dependency override if db_session available
+        if db_session:
+            from sqlalchemy import select
+            from sqlalchemy.orm import selectinload
+
+            result = await db_session.execute(
+                select(User).options(selectinload(User.settings)).where(User.id == user_id)
+            )
+            db_user = result.scalar_one()
+
+            # Generate unique token and register user
+            token = f"test-e2e-user-{user_id}"
+            _test_user_registry[token] = db_user
+
+            # Set up single override function if not already set
+            if get_current_user not in app.dependency_overrides:
+                app.dependency_overrides[get_current_user] = _get_override_function()
+
+            headers = {"Authorization": f"Bearer {token}"}
+        else:
+            # Fallback for tests that don't provide db_session
+            headers = {"Authorization": "Bearer test-supabase-token"}
 
         # Create user-like object from response
         class UserInfo:
             """Lightweight user representation."""
 
             def __init__(self, data: dict) -> None:
-                self.id = UUID(data["user_id"])
+                self.id = user_id
                 self.email = data["email"]
                 self.full_name = full_name
 
-        return UserSession(user=UserInfo(token_data), headers=headers)
-
-    async def login_user(
-        self,
-        client: AsyncClient,
-        email: str,
-        password: str | None = None,
-    ) -> dict[str, str]:
-        """Get auth tokens for existing user via test seed endpoint.
-
-        Args:
-            client: AsyncClient instance
-            email: User email
-            password: User password (unused, kept for API compatibility)
-
-        Returns:
-            dict: Authorization headers
-
-        Raises:
-            AssertionError: If auth fails
-        """
-        resp = await client.post(
-            "/api/v1/test/seed/auth",
-            json={"email": email},
-        )
-        assert resp.status_code == 200, f"Test auth failed: {resp.text}"
-        return {"Authorization": f"Bearer {resp.json()['access_token']}"}
+        return UserSession(user=UserInfo(user_data), headers=headers)
 
     # -------------------------------------------------------------------------
     # Study Session Workflows
@@ -472,43 +474,64 @@ async def fresh_user_session(
 ) -> UserSession:
     """Create new user via test seed endpoint and return authenticated session.
 
-    This fixture creates a fresh user through the test seed API,
-    simulating user creation for E2E tests.
+    This fixture creates a fresh user through the test seed API and sets up
+    dependency override for authentication using token-based registry.
 
     Args:
         client: AsyncClient fixture
-        db_session: Database session (for transaction rollback)
+        db_session: Database session (for dependency override and transaction rollback)
 
     Returns:
         UserSession: Container with user info and auth headers
-
-    Example:
-        async def test_new_user_workflow(fresh_user_session):
-            assert fresh_user_session.user is not None
-            assert "Authorization" in fresh_user_session.headers
     """
+    from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
+
+    from src.core.dependencies import get_current_user
+    from src.main import app
+    from tests.fixtures.auth import _get_override_function, _test_user_registry
+
     email = f"e2e_fresh_{uuid4().hex[:8]}@example.com"
     full_name = "Fresh E2E User"
 
-    # Create user and get auth tokens via test seed endpoint
+    # Create user via test seed endpoint
     resp = await client.post(
         "/api/v1/test/seed/create-user",
         json={"email": email, "full_name": full_name},
     )
     assert resp.status_code == 200, f"Create user failed: {resp.text}"
-    token_data = resp.json()
+    user_data = resp.json()
 
-    headers = {"Authorization": f"Bearer {token_data['access_token']}"}
+    user_id = UUID(user_data["user_id"])
+
+    # Look up the DB user for dependency override
+    result = await db_session.execute(
+        select(User).options(selectinload(User.settings)).where(User.id == user_id)
+    )
+    db_user = result.scalar_one()
+
+    # Generate unique token and register user
+    token = f"test-fresh-user-{user_id}"
+    _test_user_registry[token] = db_user
+
+    # Set up single override function if not already set
+    if get_current_user not in app.dependency_overrides:
+        app.dependency_overrides[get_current_user] = _get_override_function()
 
     class UserInfo:
         """Lightweight user representation."""
 
         def __init__(self, data: dict) -> None:
-            self.id = UUID(data["user_id"])
+            self.id = user_id
             self.email = data["email"]
             self.full_name = full_name
 
-    return UserSession(user=UserInfo(token_data), headers=headers)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    yield UserSession(user=UserInfo(user_data), headers=headers)
+
+    # Cleanup: Remove user from registry
+    _test_user_registry.pop(token, None)
 
 
 @pytest_asyncio.fixture

@@ -82,9 +82,9 @@ class TestE2ETestCaseMethods(E2ETestCase):
 
     @pytest.mark.asyncio
     @pytest.mark.e2e
-    async def test_register_and_login(self, client: AsyncClient) -> None:
+    async def test_register_and_login(self, client: AsyncClient, db_session: AsyncSession) -> None:
         """Verify register_and_login creates valid user session."""
-        session = await self.register_and_login(client)
+        session = await self.register_and_login(client, db_session=db_session)
 
         assert session is not None
         assert session.user is not None
@@ -93,13 +93,16 @@ class TestE2ETestCaseMethods(E2ETestCase):
 
     @pytest.mark.asyncio
     @pytest.mark.e2e
-    async def test_register_with_custom_data(self, client: AsyncClient) -> None:
+    async def test_register_with_custom_data(
+        self, client: AsyncClient, db_session: AsyncSession
+    ) -> None:
         """Verify register_and_login accepts custom user data."""
         session = await self.register_and_login(
             client,
             email="custom_e2e@example.com",
             password="CustomPassword123!",
             full_name="Custom E2E User",
+            db_session=db_session,
         )
 
         assert session.user.email == "custom_e2e@example.com"
@@ -110,28 +113,15 @@ class TestE2ETestCaseMethods(E2ETestCase):
     async def test_browse_available_decks(
         self,
         client: AsyncClient,
+        db_session: AsyncSession,
         test_deck_a1,  # Fixture from global conftest
     ) -> None:
         """Verify browse_available_decks returns deck list."""
-        session = await self.register_and_login(client)
+        session = await self.register_and_login(client, db_session=db_session)
         decks = await self.browse_available_decks(client, session.headers)
 
         assert isinstance(decks, list)
         assert len(decks) >= 1  # At least the test_deck_a1
-
-    @pytest.mark.asyncio
-    @pytest.mark.e2e
-    async def test_login_user(
-        self,
-        client: AsyncClient,
-        test_user,  # Fixture from auth fixtures
-    ) -> None:
-        """Verify login_user works with existing user."""
-        headers = await self.login_user(client, test_user.email)
-
-        assert headers is not None
-        assert "Authorization" in headers
-        assert headers["Authorization"].startswith("Bearer ")
 
 
 class TestMinimalWorkflow(E2ETestCase):
@@ -142,6 +132,7 @@ class TestMinimalWorkflow(E2ETestCase):
     async def test_minimal_workflow_register_browse_study(
         self,
         client: AsyncClient,
+        db_session: AsyncSession,
         test_deck_a1,
     ) -> None:
         """Minimal E2E workflow: register -> browse -> setup study.
@@ -150,7 +141,7 @@ class TestMinimalWorkflow(E2ETestCase):
         a minimal but complete workflow through the API.
         """
         # Step 1: Register new user
-        session = await self.register_and_login(client)
+        session = await self.register_and_login(client, db_session=db_session)
         assert session.user is not None
 
         # Step 2: Browse available decks

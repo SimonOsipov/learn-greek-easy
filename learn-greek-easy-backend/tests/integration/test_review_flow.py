@@ -916,20 +916,20 @@ class TestUserIsolation:
         deck_with_cards: DeckWithCards,
         two_users: tuple[User, User],
         db_session,
+        app,
     ):
         """Test that users can only see their own reviews."""
-        from src.core.security import create_access_token
+        from src.core.dependencies import get_current_user
 
         user1, user2 = two_users
         card = deck_with_cards.cards[0]
 
-        # Create tokens for both users (function takes user_id directly, returns tuple)
-        user1_token, _ = create_access_token(user1.id)
-        user2_token, _ = create_access_token(user2.id)
-        user1_headers = {"Authorization": f"Bearer {user1_token}"}
-        user2_headers = {"Authorization": f"Bearer {user2_token}"}
+        # Use dependency overrides for authentication
+        user1_headers = {"Authorization": "Bearer test-token"}
+        user2_headers = {"Authorization": "Bearer test-token"}
 
         # User 1 submits a review
+        app.dependency_overrides[get_current_user] = lambda: user1
         user1_review = await client.post(
             "/api/v1/reviews",
             json={
@@ -950,6 +950,7 @@ class TestUserIsolation:
         assert user1_history.json()["total"] >= 1
 
         # User 2's history should NOT show User 1's review
+        app.dependency_overrides[get_current_user] = lambda: user2
         user2_history = await client.get(
             "/api/v1/reviews",
             headers=user2_headers,
@@ -958,6 +959,9 @@ class TestUserIsolation:
         # User 2 has no reviews
         assert user2_history.json()["total"] == 0
 
+        # Clean up
+        app.dependency_overrides.pop(get_current_user, None)
+
     @pytest.mark.asyncio
     async def test_user_statistics_are_isolated(
         self,
@@ -965,18 +969,20 @@ class TestUserIsolation:
         deck_with_cards: DeckWithCards,
         two_users: tuple[User, User],
         db_session,
+        app,
     ):
         """Test that users can only see their own statistics."""
-        from src.core.security import create_access_token
+        from src.core.dependencies import get_current_user
 
         user1, user2 = two_users
         card = deck_with_cards.cards[0]
 
-        # Create tokens for both users (function takes user_id directly, returns tuple)
-        user1_token, _ = create_access_token(user1.id)
-        user2_token, _ = create_access_token(user2.id)
-        user1_headers = {"Authorization": f"Bearer {user1_token}"}
-        user2_headers = {"Authorization": f"Bearer {user2_token}"}
+        # Use dependency overrides for authentication
+        user1_headers = {"Authorization": "Bearer test-token"}
+        user2_headers = {"Authorization": "Bearer test-token"}
+
+        # Set user 1 as current user
+        app.dependency_overrides[get_current_user] = lambda: user1
 
         # User 1 submits reviews
         for _ in range(3):
@@ -1000,6 +1006,7 @@ class TestUserIsolation:
         assert user1_stats.json()["total_reviews"] >= 3
 
         # User 2's stats should show 0 reviews
+        app.dependency_overrides[get_current_user] = lambda: user2
         user2_stats = await client.get(
             "/api/v1/study/stats",
             headers=user2_headers,
@@ -1007,3 +1014,6 @@ class TestUserIsolation:
         assert user2_stats.status_code == 200
         assert user2_stats.json()["reviews_today"] == 0
         assert user2_stats.json()["total_reviews"] == 0
+
+        # Clean up
+        app.dependency_overrides.pop(get_current_user, None)

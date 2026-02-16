@@ -3,13 +3,12 @@
 /**
  * Authentication API Service
  *
- * Provides methods for user authentication including:
- * - Token refresh
- * - Logout
- * - Profile retrieval
+ * Provides methods for user profile management including:
+ * - Profile retrieval and updates
+ * - User deletion
  *
- * Note: Login and registration are handled via Auth0.
- * See useAuth0Integration hook for Auth0-based authentication.
+ * Note: Login, registration, and session management are handled
+ * via Supabase Auth SDK. See supabaseClient.ts.
  */
 
 import { api, clearAuthTokens } from './api';
@@ -38,8 +37,7 @@ export interface UserProfileResponse {
   avatar_url: string | null;
   is_active: boolean;
   is_superuser: boolean;
-  email_verified_at: string | null;
-  auth_provider?: string | null; // e.g., 'auth0', 'google-oauth2'
+  auth_provider?: string | null; // e.g., 'email', 'google'
   created_at: string;
   updated_at: string;
   settings?: {

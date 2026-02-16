@@ -138,7 +138,6 @@ class TestGetWordEntryEndpoint:
         other_user = User(
             id=uuid4(),
             email="other_user@test.com",
-            password_hash="hashed_password",
             full_name="Other User",
             is_active=True,
         )
