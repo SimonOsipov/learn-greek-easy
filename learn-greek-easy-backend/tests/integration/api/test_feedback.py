@@ -211,6 +211,9 @@ class TestListFeedbackEndpoint:
         # Note: With the current db_session fixture, commit() releases the savepoint
         # but doesn't break the test because all data is still in the outer transaction
         await db_session.commit()
+        # Expire only the votes relationship to force reload from DB
+        # (expire_on_commit=False keeps objects cached in identity map, but we need fresh votes)
+        db_session.expire(feedback, ["votes"])
 
         response = await client.get(feedback_url, headers=auth_headers)
 
