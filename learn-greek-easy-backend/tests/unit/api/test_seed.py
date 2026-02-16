@@ -306,15 +306,12 @@ class TestSeedAllEndpoint:
 
             with patch("src.api.v1.test.seed.SeedService") as mock_service_class:
                 mock_service = AsyncMock()
-                mock_service.seed_users.return_value = {
-                    "users": [{"id": "123", "email": "e2e_learner@test.com"}]
+                mock_service.seed_all.return_value = {
+                    "success": True,
+                    "truncation": {"success": True},
+                    "users": {"users": [{"id": "123", "email": "e2e_learner@test.com"}]},
+                    "content": {"decks": [{"id": "456", "name": "A1"}]},
                 }
-                mock_service.seed_decks_and_cards.return_value = {
-                    "decks": [{"id": "456", "name": "A1"}],
-                    "cards": [{"id": "789"}],
-                }
-                mock_service.seed_card_statistics.return_value = {}
-                mock_service.seed_reviews.return_value = {}
                 mock_service_class.return_value = mock_service
 
                 response = client.post(
@@ -323,10 +320,8 @@ class TestSeedAllEndpoint:
                 )
 
                 assert response.status_code == 200
-                # Verify truncate was not called
-                mock_service.truncate_tables.assert_not_called()
-                mock_service.seed_users.assert_called_once()
-                mock_service.seed_decks_and_cards.assert_called_once()
+                # Verify seed_all was called
+                mock_service.seed_all.assert_called_once()
 
 
 # ============================================================================
@@ -371,51 +366,6 @@ class TestSeedTruncateEndpoint:
                 data = response.json()
                 assert data["success"] is True
                 assert data["operation"] == "truncate"
-
-
-# ============================================================================
-# POST /test/seed/users Endpoint Tests
-# ============================================================================
-
-
-class TestSeedUsersEndpoint:
-    """Tests for POST /test/seed/users."""
-
-    def test_returns_403_when_disabled(self, client: TestClient):
-        """Should return 403 when seeding is disabled."""
-        with patch("src.api.v1.test.seed.settings") as mock_settings:
-            mock_settings.is_production = False
-            mock_settings.test_seed_enabled = False
-
-            response = client.post("/test/seed/users")
-
-            assert response.status_code == 403
-
-    def test_seeds_users_successfully(self, client: TestClient):
-        """Should seed users and return results."""
-        mock_result = {
-            "users": [
-                {"email": "e2e_learner@test.com"},
-                {"email": "e2e_beginner@test.com"},
-            ]
-        }
-
-        with patch("src.api.v1.test.seed.settings") as mock_settings:
-            mock_settings.is_production = False
-            mock_settings.test_seed_enabled = True
-            mock_settings.seed_requires_secret = False
-
-            with patch("src.api.v1.test.seed.SeedService") as mock_service_class:
-                mock_service = AsyncMock()
-                mock_service.seed_users.return_value = mock_result
-                mock_service_class.return_value = mock_service
-
-                response = client.post("/test/seed/users")
-
-                assert response.status_code == 200
-                data = response.json()
-                assert data["success"] is True
-                assert data["operation"] == "users"
 
 
 # ============================================================================
@@ -531,11 +481,11 @@ class TestHeaderValidation:
 
             with patch("src.api.v1.test.seed.SeedService") as mock_service_class:
                 mock_service = AsyncMock()
-                mock_service.seed_users.return_value = {"users": []}
+                mock_service.truncate_tables.return_value = {"success": True}
                 mock_service_class.return_value = mock_service
 
                 client.post(
-                    "/test/seed/users",
+                    "/test/seed/truncate",
                     headers={"X-Test-Seed-Secret": "my-secret"},
                 )
 

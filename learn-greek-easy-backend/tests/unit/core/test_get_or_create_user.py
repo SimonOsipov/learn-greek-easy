@@ -3,7 +3,7 @@
 Tests cover:
 - Existing user returned without INSERT
 - New user created with default UserSettings
-- Email conflict detection and 409 response
+- Email-based upsert (updates supabase_id if email exists)
 - Missing email handled with placeholder
 - Race condition handling (concurrent first-login)
 - Settings relationship eagerly loaded
@@ -17,7 +17,6 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.dependencies import get_or_create_user
-from src.core.exceptions import ConflictException
 from src.core.supabase_auth import SupabaseUserClaims
 from src.db.models import User, UserSettings
 
@@ -178,19 +177,20 @@ class TestNewUser:
 
 
 # =============================================================================
-# Email Conflict Tests
+# Email-Based Upsert Tests
 # =============================================================================
 
 
-class TestEmailConflict:
-    """Tests for email uniqueness validation."""
+class TestEmailUpsert:
+    """Tests for email-based upsert behavior."""
 
     @pytest.mark.asyncio
-    async def test_email_conflict_raises_409(self, db_session: AsyncSession, sample_claims):
-        """Test that email conflict raises ConflictException."""
+    async def test_email_match_updates_supabase_id(self, db_session: AsyncSession, sample_claims):
+        """Test that user with same email gets supabase_id updated (upsert)."""
         # Create existing user with the same email but different supabase_id
+        old_supabase_id = str(uuid4())
         existing_user = User(
-            supabase_id=str(uuid4()),  # Different supabase_id
+            supabase_id=old_supabase_id,  # Different supabase_id
             email=sample_claims.email,  # Same email
             full_name="Other User",
             is_active=True,
@@ -207,12 +207,19 @@ class TestEmailConflict:
         db_session.add(existing_settings)
         await db_session.commit()
 
-        # Try to create user with same email
-        with pytest.raises(ConflictException) as exc_info:
-            await get_or_create_user(db_session, sample_claims)
+        # Call get_or_create_user with same email but different supabase_id
+        # Should update supabase_id (Supabase Auth is source of truth)
+        user = await get_or_create_user(db_session, sample_claims)
 
-        assert "email" in str(exc_info.value.detail).lower()
-        assert sample_claims.email in str(exc_info.value.detail)
+        # Verify same user returned (by ID)
+        assert user.id == existing_user.id
+        # Verify supabase_id was updated
+        assert user.supabase_id == sample_claims.supabase_id
+        assert user.supabase_id != old_supabase_id
+        # Verify email unchanged
+        assert user.email == sample_claims.email
+        # Verify settings relationship loaded
+        assert user.settings is not None
 
 
 # =============================================================================
@@ -280,37 +287,15 @@ class TestRaceConditions:
         assert user.settings is not None
 
     @pytest.mark.asyncio
-    async def test_race_condition_on_email_raises_conflict(
-        self, db_session: AsyncSession, sample_claims
-    ):
-        """Test IntegrityError from email uniqueness raises ConflictException."""
-        # Create a user with the same email but different supabase_id BEFORE the test
-        existing_user = User(
-            supabase_id=str(uuid4()),
-            email=sample_claims.email,
-            full_name="Existing User",
-            is_active=True,
-            is_superuser=False,
-        )
-        db_session.add(existing_user)
-        await db_session.flush()
+    async def test_unexpected_integrity_error_raises(self, db_session: AsyncSession, sample_claims):
+        """Test that unexpected IntegrityError is re-raised."""
 
-        existing_settings = UserSettings(
-            user_id=existing_user.id,
-            daily_goal=20,
-            email_notifications=True,
-        )
-        db_session.add(existing_settings)
-        await db_session.commit()
+        # Simulate an unexpected IntegrityError (not from supabase_id constraint)
+        # where re-query by supabase_id returns None
+        async def mock_flush_with_unexpected_error():
+            # Raise IntegrityError on an unexpected constraint
+            raise IntegrityError("unexpected constraint violation", None, None)
 
-        # Now simulate IntegrityError where re-query returns None
-        # (because the error was from email uniqueness, not supabase_id)
-        async def mock_flush_with_email_conflict():
-            # Raise IntegrityError
-            raise IntegrityError("duplicate key on email", None, None)
-
-        with patch.object(db_session, "flush", side_effect=mock_flush_with_email_conflict):
-            with pytest.raises(ConflictException) as exc_info:
+        with patch.object(db_session, "flush", side_effect=mock_flush_with_unexpected_error):
+            with pytest.raises(IntegrityError):
                 await get_or_create_user(db_session, sample_claims)
-
-            assert "email" in str(exc_info.value.detail).lower()

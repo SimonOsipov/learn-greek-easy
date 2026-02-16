@@ -143,50 +143,9 @@ async def seed_all(
 
     service = SeedService(db)
 
-    # Handle optional truncation skip
-    if request and request.options and request.options.skip_truncate:
-        # Manual orchestration without truncate
-        users_result = await service.seed_users()
-        content_result = await service.seed_decks_and_cards()
-
-        # Create user-owned decks (My Decks feature)
-        user_decks_result = await service.seed_user_decks(users_result["users"])
-
-        # Get first user and deck for statistics/reviews
-        users = users_result.get("users", [])
-        decks = content_result.get("decks", [])
-
-        stats_result = {}
-        reviews_result = {}
-
-        if users and decks:
-            learner = next((u for u in users if "learner" in u.get("email", "")), None)
-            first_deck = decks[0] if decks else None
-
-            if learner and first_deck:
-                stats_result = await service.seed_card_statistics(
-                    user_id=learner["id"],
-                    deck_id=first_deck["id"],
-                    progress_percent=50,
-                )
-                # Get first card for reviews
-                cards = content_result.get("cards", [])
-                if cards:
-                    reviews_result = await service.seed_reviews(
-                        user_id=learner["id"],
-                        card_id=cards[0]["id"],
-                        review_count=5,
-                    )
-
-        result = {
-            "users": users_result,
-            "content": content_result,
-            "user_decks": user_decks_result,
-            "statistics": stats_result,
-            "reviews": reviews_result,
-        }
-    else:
-        result = await service.seed_all()
+    # Note: skip_truncate option is less relevant now since users are permanent
+    # Both paths call seed_all() which handles truncation (except for users)
+    result = await service.seed_all()
 
     duration_ms = (perf_counter() - start_time) * 1000
 
@@ -227,45 +186,6 @@ async def truncate_tables(
     return SeedResultResponse(
         success=True,
         operation="truncate",
-        timestamp=datetime.now(timezone.utc),
-        duration_ms=duration_ms,
-        results=result,
-    )
-
-
-@router.post(
-    "/users",
-    response_model=SeedResultResponse,
-    summary="Seed users only",
-    description="Create test users without other data. "
-    "Creates 4 users: learner, beginner, advanced, admin.",
-    dependencies=[Depends(verify_seed_access)],
-)
-async def seed_users(
-    db: AsyncSession = Depends(get_db),
-) -> SeedResultResponse:
-    """Create test users without other data.
-
-    Creates 4 deterministic test users:
-    - e2e_learner@test.com: Regular learner with progress
-    - e2e_beginner@test.com: New user, no progress
-    - e2e_advanced@test.com: Advanced user
-    - e2e_admin@test.com: Admin user
-
-    All users have password: TestPassword123!
-
-    Returns:
-        SeedResultResponse with user creation results and timing
-    """
-    start_time = perf_counter()
-    service = SeedService(db)
-    result = await service.seed_users()
-    await db.commit()
-    duration_ms = (perf_counter() - start_time) * 1000
-
-    return SeedResultResponse(
-        success=True,
-        operation="users",
         timestamp=datetime.now(timezone.utc),
         duration_ms=duration_ms,
         results=result,

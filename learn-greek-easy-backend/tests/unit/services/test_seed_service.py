@@ -91,13 +91,6 @@ class TestSeedServiceGuards:
         assert "Database seeding not allowed" in str(exc_info.value)
 
     @pytest.mark.asyncio
-    async def test_seed_users_blocked_in_production(self, seed_service, mock_settings_cannot_seed):
-        """seed_users should raise RuntimeError in production."""
-        with pytest.raises(RuntimeError) as exc_info:
-            await seed_service.seed_users()
-
-        assert "Database seeding not allowed" in str(exc_info.value)
-
     @pytest.mark.asyncio
     async def test_seed_decks_and_cards_blocked_in_production(
         self, seed_service, mock_settings_cannot_seed
@@ -148,30 +141,30 @@ class TestSeedServiceTruncation:
     """Tests for table truncation."""
 
     def test_truncation_order_is_fk_safe(self):
-        """Verify truncation order respects FK constraints."""
+        """Verify truncation order respects FK constraints.
+
+        Note: users and user_settings are NOT truncated (persist across seeds).
+        """
         # Children must come before parents
         order = SeedService.TRUNCATION_ORDER
 
-        # reviews depends on users and cards
-        assert order.index("reviews") < order.index("users")
+        # Verify users/user_settings are NOT in truncation order
+        assert "users" not in order
+        assert "user_settings" not in order
+
+        # reviews depends on cards
         assert order.index("reviews") < order.index("cards")
 
-        # card_statistics depends on users and cards
-        assert order.index("card_statistics") < order.index("users")
+        # card_statistics depends on cards
         assert order.index("card_statistics") < order.index("cards")
 
-        # user_deck_progress depends on users and decks
-        assert order.index("user_deck_progress") < order.index("users")
+        # user_deck_progress depends on decks
         assert order.index("user_deck_progress") < order.index("decks")
-
-        # user_settings depends on users
-        assert order.index("user_settings") < order.index("users")
 
         # cards depends on decks
         assert order.index("cards") < order.index("decks")
 
-        # culture_question_stats depends on users and culture_questions
-        assert order.index("culture_question_stats") < order.index("users")
+        # culture_question_stats depends on culture_questions
         assert order.index("culture_question_stats") < order.index("culture_questions")
 
         # culture_questions depends on culture_decks
@@ -201,73 +194,6 @@ class TestSeedServiceTruncation:
 # ============================================================================
 # User Seeding Tests
 # ============================================================================
-
-
-class TestSeedServiceUsers:
-    """Tests for user seeding."""
-
-    @pytest.mark.asyncio
-    async def test_creates_four_test_users(self, seed_service, mock_db, mock_settings_can_seed):
-        """Verify 4 users are created with correct attributes."""
-        # Mock flush to assign IDs
-        call_count = 0
-
-        async def mock_flush():
-            nonlocal call_count
-            call_count += 1
-
-        mock_db.flush = mock_flush
-
-        result = await seed_service.seed_users()
-
-        assert result["success"] is True
-        assert len(result["users"]) == 4
-
-        # Check email addresses
-        emails = [u["email"] for u in result["users"]]
-        assert "e2e_learner@test.com" in emails
-        assert "e2e_beginner@test.com" in emails
-        assert "e2e_advanced@test.com" in emails
-        assert "e2e_admin@test.com" in emails
-
-    @pytest.mark.asyncio
-    async def test_admin_user_is_superuser(self, seed_service, mock_db, mock_settings_can_seed):
-        """Verify admin user has is_superuser=True."""
-        result = await seed_service.seed_users()
-
-        admin_user = next(u for u in result["users"] if u["email"] == "e2e_admin@test.com")
-        assert admin_user["is_superuser"] is True
-
-        # Other users should not be superusers
-        for user in result["users"]:
-            if user["email"] != "e2e_admin@test.com":
-                assert user["is_superuser"] is False
-
-    @pytest.mark.asyncio
-    async def test_password_is_returned(self, seed_service, mock_db, mock_settings_can_seed):
-        """Verify default password is returned for backward compatibility."""
-        result = await seed_service.seed_users()
-
-        assert "password" in result
-        assert result["password"] == SeedService.DEFAULT_PASSWORD
-
-    @pytest.mark.asyncio
-    async def test_users_have_supabase_id_in_response(
-        self, seed_service, mock_db, mock_settings_can_seed
-    ):
-        """Verify supabase_id field is included in response.
-
-        Main E2E users (learner, beginner, advanced, admin) have supabase_id=None
-        to enable Supabase account linking during E2E tests. This allows testing
-        the flow where an existing email account gets linked to Supabase.
-        """
-        result = await seed_service.seed_users()
-
-        for user in result["users"]:
-            # supabase_id should be in the response (even if None)
-            assert "supabase_id" in user
-            # Main E2E users should have None for account linking
-            assert user["supabase_id"] is None
 
 
 # ============================================================================
@@ -451,6 +377,12 @@ class TestSeedServiceOrchestration:
         mock_result = MagicMock()
         mock_result.fetchall.return_value = [(uuid4(),) for _ in range(10)]
         mock_result.fetchone.return_value = (uuid4(),)
+        # Mock scalar_one_or_none to return None (simulates no existing users)
+        mock_result.scalar_one_or_none.return_value = None
+        # Mock scalars().all() to return empty list (for user queries)
+        mock_scalars = MagicMock()
+        mock_scalars.all.return_value = []
+        mock_result.scalars.return_value = mock_scalars
         db.execute = AsyncMock(return_value=mock_result)
 
         return db

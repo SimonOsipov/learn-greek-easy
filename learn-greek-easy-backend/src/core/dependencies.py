@@ -53,7 +53,7 @@ async def get_or_create_user(db: AsyncSession, claims: SupabaseUserClaims) -> Us
 
     The function handles:
     - Existing user lookup by supabase_id
-    - Email uniqueness validation
+    - Email-based upsert (updates supabase_id if email exists)
     - New user creation with default UserSettings
     - Race condition handling (concurrent first-login requests)
 
@@ -63,10 +63,6 @@ async def get_or_create_user(db: AsyncSession, claims: SupabaseUserClaims) -> Us
 
     Returns:
         User: Existing or newly created user with settings relationship loaded
-
-    Raises:
-        ConflictException (409): If a user with the email already exists
-            with a different supabase_id (prevents account hijacking)
 
     Note:
         Uses db.flush() (not db.commit()) - the get_db() dependency
@@ -83,15 +79,21 @@ async def get_or_create_user(db: AsyncSession, claims: SupabaseUserClaims) -> Us
     if user is not None:
         return user
 
-    # 2. Email uniqueness check (if email provided)
-    # Prevents account hijacking: user A can't use user B's email
+    # 2. Check if user exists by email (upsert pattern)
+    # If user exists with same email but different supabase_id, update supabase_id
+    # (Supabase Auth is the source of truth for auth identity)
     if claims.email:
-        email_stmt = select(User.id).where(User.email == claims.email)
+        email_stmt = (
+            select(User).options(selectinload(User.settings)).where(User.email == claims.email)
+        )
         email_result = await db.execute(email_stmt)
-        if email_result.scalar_one_or_none() is not None:
-            raise ConflictException(
-                detail=f"A user with email {claims.email} already exists with a different account."
-            )
+        existing_by_email = email_result.scalar_one_or_none()
+
+        if existing_by_email is not None:
+            # Update supabase_id to match current Supabase Auth identity
+            existing_by_email.supabase_id = claims.supabase_id
+            await db.flush()
+            return existing_by_email
 
     # 3. Handle missing email (User.email is NOT NULL)
     # Supabase tokens always have email for email/password and OAuth flows.
@@ -122,10 +124,8 @@ async def get_or_create_user(db: AsyncSession, claims: SupabaseUserClaims) -> Us
         user = result.scalar_one_or_none()
         if user is not None:
             return user
-        # If still None, the IntegrityError was from email uniqueness, not supabase_id
-        raise ConflictException(
-            detail=f"A user with email {claims.email} already exists with a different account."
-        )
+        # Unexpected IntegrityError (should not happen with current logic)
+        raise
 
     # 5. Create default UserSettings
     new_settings = UserSettings(

@@ -10,7 +10,7 @@ All methods check settings.can_seed_database() before executing.
 """
 
 from datetime import date, datetime, timedelta, timezone
-from typing import Any, TypedDict
+from typing import Any, TypedDict, cast
 from uuid import UUID
 
 from sqlalchemy import delete, select, text, update
@@ -163,9 +163,7 @@ class SeedService:
         "user_deck_progress",
         "feedback_votes",
         "feedback",
-        "user_settings",
         "cards",
-        "users",
         "decks",
     ]
 
@@ -1859,158 +1857,6 @@ class SeedService:
     # =====================
     # User Seeding
     # =====================
-
-    async def _get_or_create_supabase_auth_user(self, email: str, full_name: str) -> str | None:
-        """Get existing Supabase Auth user or create if not exists.
-
-        For stable CI environments: uses existing Supabase users to avoid
-        deletion/recreation issues. Assumes password is already set correctly.
-
-        Returns:
-            Supabase UUID if user exists or was created successfully
-            None if Supabase is not configured or operation fails
-        """
-        from src.core.supabase_admin import get_supabase_admin_client
-
-        admin_client = get_supabase_admin_client()
-        if not admin_client:
-            return None
-
-        try:
-            # Check if user already exists in Supabase Auth
-            existing = await admin_client.list_users_by_email(email)
-            if existing:
-                supabase_id: str = existing[0]["id"]
-                logger.info(
-                    "Using existing Supabase Auth user",
-                    extra={
-                        "email_domain": email.split("@")[-1],
-                        "supabase_id_prefix": supabase_id[:8],
-                    },
-                )
-                return supabase_id
-
-            # Create new Supabase Auth user (first-time setup)
-            supabase_user = await admin_client.create_user(
-                email=email,
-                password=self.DEFAULT_PASSWORD,
-                email_confirm=True,
-                user_metadata={"full_name": full_name},
-            )
-            supabase_id = supabase_user["id"]
-            logger.info(
-                "Created new Supabase Auth user",
-                extra={"email_domain": email.split("@")[-1]},
-            )
-            return supabase_id
-        except Exception as e:
-            logger.warning(
-                "Failed to get/create Supabase Auth user, proceeding with DB-only",
-                extra={
-                    "email_domain": email.split("@")[-1],
-                    "error": str(e),
-                    "error_type": type(e).__name__,
-                },
-            )
-            return None
-
-    async def seed_users(self) -> dict[str, Any]:
-        """Create deterministic test users for E2E scenarios.
-
-        Uses existing Supabase Auth users (stable CI environment) or creates them
-        if they don't exist (first-time setup). Local DB users are recreated on
-        each seed to ensure clean state.
-
-        Test Users Created:
-        1. e2e_learner@test.com - Regular learner with progress
-        2. e2e_beginner@test.com - New user, no progress
-        3. e2e_advanced@test.com - Advanced user, high progress
-        4. e2e_admin@test.com - Admin user for admin tests
-
-        Password: TestPassword123! (assumed to be already set in Supabase)
-
-        Returns:
-            dict with 'users' list of created user data
-
-        Raises:
-            RuntimeError: If seeding not allowed
-        """
-        self._check_can_seed()
-
-        users_data: list[dict[str, str | bool]] = [
-            {
-                "email": "e2e_learner@test.com",
-                "full_name": "E2E Learner",
-                "is_superuser": False,
-                "is_active": True,
-            },
-            {
-                "email": "e2e_beginner@test.com",
-                "full_name": "E2E Beginner",
-                "is_superuser": False,
-                "is_active": True,
-            },
-            {
-                "email": "e2e_advanced@test.com",
-                "full_name": "E2E Advanced",
-                "is_superuser": False,
-                "is_active": True,
-            },
-            {
-                "email": "e2e_admin@test.com",
-                "full_name": "E2E Admin",
-                "is_superuser": True,
-                "is_active": True,
-            },
-        ]
-
-        created_users = []
-
-        for user_data in users_data:
-            email = str(user_data["email"])
-            full_name = str(user_data["full_name"])
-
-            # Get existing or create Supabase Auth user
-            supabase_id = await self._get_or_create_supabase_auth_user(
-                email=email,
-                full_name=full_name,
-            )
-
-            user = User(
-                email=email,
-                full_name=full_name,
-                supabase_id=supabase_id,
-                is_superuser=bool(user_data["is_superuser"]),
-                is_active=bool(user_data["is_active"]),
-            )
-            self.db.add(user)
-            await self.db.flush()
-
-            # Create user settings
-            user_settings = UserSettings(
-                user_id=user.id,
-                daily_goal=20,
-                email_notifications=True,
-            )
-            self.db.add(user_settings)
-
-            created_users.append(
-                {
-                    "id": str(user.id),
-                    "email": user.email,
-                    "full_name": user.full_name,
-                    "is_superuser": user.is_superuser,
-                    "supabase_id": user.supabase_id,
-                }
-            )
-
-        await self.db.flush()
-
-        return {
-            "success": True,
-            "users": created_users,
-            "password": self.DEFAULT_PASSWORD,
-        }
 
     # =====================
     # Content Seeding
@@ -4548,7 +4394,7 @@ class SeedService:
 
         Orchestrates complete seeding:
         1. Truncate all tables (clean slate)
-        2. Create test users
+        2. Query existing users (auto-provisioned on login, not seeded)
         3. Create system decks and cards
         3b. Create user-owned decks (My Decks feature)
         4. Create progress data for learner user
@@ -4571,8 +4417,58 @@ class SeedService:
         # Step 1: Truncate
         truncate_result = await self.truncate_tables()
 
-        # Step 2: Create users
-        users_result = await self.seed_users()
+        # Step 2: Get or create base test users
+        # In production: users auto-provisioned on login (will already exist)
+        # In test environments: create users if they don't exist
+        base_users_data = [
+            {"email": "e2e_learner@test.com", "full_name": "E2E Learner", "is_superuser": False},
+            {"email": "e2e_beginner@test.com", "full_name": "E2E Beginner", "is_superuser": False},
+            {"email": "e2e_advanced@test.com", "full_name": "E2E Advanced", "is_superuser": False},
+            {"email": "e2e_admin@test.com", "full_name": "E2E Admin", "is_superuser": True},
+        ]
+
+        created_users = []
+        for user_data in base_users_data:
+            # Check if user exists
+            result = await self.db.execute(select(User).where(User.email == user_data["email"]))
+            user = result.scalar_one_or_none()
+
+            if user is None:
+                # Create new user (test environment)
+                user = User(
+                    email=user_data["email"],
+                    full_name=user_data["full_name"],
+                    supabase_id=None,  # Will be set on first login
+                    is_superuser=user_data["is_superuser"],
+                    is_active=True,
+                )
+                self.db.add(user)
+                await self.db.flush()
+
+                # Create settings for new user
+                settings = UserSettings(
+                    user_id=user.id,
+                    daily_goal=20,
+                    email_notifications=True,
+                )
+                self.db.add(settings)
+                await self.db.flush()
+
+            created_users.append(
+                {
+                    "id": str(user.id),
+                    "email": user.email,
+                    "full_name": user.full_name or "Unknown",
+                    "is_superuser": user.is_superuser,
+                    "supabase_id": user.supabase_id,
+                }
+            )
+
+        users_result: dict[str, Any] = {
+            "success": True,
+            "users": created_users,
+            "password": self.DEFAULT_PASSWORD,
+        }
 
         # Step 3: Create content
         content_result = await self.seed_decks_and_cards()
@@ -4587,10 +4483,12 @@ class SeedService:
         # Find the learner user and A1 deck for detailed progress
         learner_id = None
         user_ids: list[UUID] = []
-        for user in users_result["users"]:
-            user_ids.append(UUID(user["id"]))
-            if user["email"] == "e2e_learner@test.com":
-                learner_id = UUID(user["id"])
+        users_list: list[dict[str, Any]] = cast(list[dict[str, Any]], users_result["users"])
+        user_dict: dict[str, Any]
+        for user_dict in users_list:
+            user_ids.append(UUID(user_dict["id"]))
+            if user_dict["email"] == "e2e_learner@test.com":
+                learner_id = UUID(user_dict["id"])
 
         a1_deck_id = None
         for deck in content_result["decks"]:
@@ -4635,25 +4533,40 @@ class SeedService:
         # Step 8: Seed achievement definitions
         achievements_result = await self.seed_achievements()
 
-        # Step 9: Create XP-specific test users for E2E testing
+        # Step 9: Create/update XP-specific test users for E2E testing
+        # Uses upsert pattern: get existing user or create new one
         xp_users_result: dict[str, Any] = {"success": True, "users": []}
 
+        # Helper to get or create user with settings
+        async def get_or_create_user(email: str, full_name: str) -> User:
+            result = await self.db.execute(select(User).where(User.email == email))
+            user = result.scalar_one_or_none()
+
+            if user is None:
+                # Create new user
+                user = User(
+                    email=email,
+                    full_name=full_name,
+                    supabase_id=None,
+                    is_superuser=False,
+                    is_active=True,
+                )
+                self.db.add(user)
+                await self.db.flush()
+
+                # Create settings for new user
+                settings = UserSettings(
+                    user_id=user.id,
+                    daily_goal=20,
+                    email_notifications=True,
+                )
+                self.db.add(settings)
+                await self.db.flush()
+
+            return user
+
         # XP Boundary User - 99 XP (1 XP away from level 2)
-        xp_boundary_user = User(
-            email="e2e_xp_boundary@test.com",
-            full_name="E2E XP Boundary",
-            supabase_id=None,
-            is_superuser=False,
-            is_active=True,
-        )
-        self.db.add(xp_boundary_user)
-        await self.db.flush()
-        xp_boundary_settings = UserSettings(
-            user_id=xp_boundary_user.id,
-            daily_goal=20,
-            email_notifications=True,
-        )
-        self.db.add(xp_boundary_settings)
+        xp_boundary_user = await get_or_create_user("e2e_xp_boundary@test.com", "E2E XP Boundary")
         await self.seed_user_xp(xp_boundary_user.id, 99, [])
         xp_users_result["users"].append(
             {
@@ -4664,21 +4577,7 @@ class SeedService:
         )
 
         # XP Mid User - 4100 XP (Level 7) with some achievements
-        xp_mid_user = User(
-            email="e2e_xp_mid@test.com",
-            full_name="E2E XP Mid",
-            supabase_id=None,
-            is_superuser=False,
-            is_active=True,
-        )
-        self.db.add(xp_mid_user)
-        await self.db.flush()
-        xp_mid_settings = UserSettings(
-            user_id=xp_mid_user.id,
-            daily_goal=20,
-            email_notifications=True,
-        )
-        self.db.add(xp_mid_settings)
+        xp_mid_user = await get_or_create_user("e2e_xp_mid@test.com", "E2E XP Mid")
         mid_achievements = [
             "streak_first_flame",
             "streak_warming_up",
@@ -4697,21 +4596,7 @@ class SeedService:
         )
 
         # XP Max User - 100000 XP (Level 15) with all achievements
-        xp_max_user = User(
-            email="e2e_xp_max@test.com",
-            full_name="E2E XP Max",
-            supabase_id=None,
-            is_superuser=False,
-            is_active=True,
-        )
-        self.db.add(xp_max_user)
-        await self.db.flush()
-        xp_max_settings = UserSettings(
-            user_id=xp_max_user.id,
-            daily_goal=20,
-            email_notifications=True,
-        )
-        self.db.add(xp_max_settings)
+        xp_max_user = await get_or_create_user("e2e_xp_max@test.com", "E2E XP Max")
         all_achievement_ids = [a.id for a in ACHIEVEMENT_DEFS]
         await self.seed_user_xp(xp_max_user.id, 100000, all_achievement_ids)
         xp_users_result["users"].append(

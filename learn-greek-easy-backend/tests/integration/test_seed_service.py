@@ -69,7 +69,7 @@ class TestSeedServiceIntegration:
         assert "v2_decks" in result
 
         # Verify users were created
-        # seed_users creates 4 base users + seed_all adds 3 XP test users = 7 total
+        # 4 base users (learner, beginner, advanced, admin) + 3 XP test users = 7 total
         user_count = await db_session.scalar(select(func.count(User.id)))
         assert user_count == 7
 
@@ -175,7 +175,10 @@ class TestSeedServiceTruncation:
 
     @pytest.mark.asyncio
     async def test_truncate_clears_all_tables(self, db_session: AsyncSession, enable_seeding):
-        """truncate_tables removes all seeded data."""
+        """truncate_tables removes all seeded data (except users).
+
+        Note: Users and user_settings are NOT truncated to match Supabase Auth persistence.
+        """
         seed_service = SeedService(db_session)
 
         # First, seed some data
@@ -191,10 +194,11 @@ class TestSeedServiceTruncation:
 
         assert result["success"] is True
 
-        # Verify all tables are empty
+        # Verify users persist (not truncated)
         user_count = await db_session.scalar(select(func.count(User.id)))
-        assert user_count == 0
+        assert user_count > 0  # Users are NOT truncated
 
+        # Verify decks and cards are cleared
         deck_count = await db_session.scalar(select(func.count(Deck.id)))
         assert deck_count == 0
 
@@ -203,7 +207,10 @@ class TestSeedServiceTruncation:
 
     @pytest.mark.asyncio
     async def test_truncation_order_is_fk_safe(self, db_session: AsyncSession, enable_seeding):
-        """Verify truncation doesn't violate FK constraints."""
+        """Verify truncation doesn't violate FK constraints.
+
+        Note: Users and user_settings are NOT truncated (persist across seeds).
+        """
         seed_service = SeedService(db_session)
 
         # Seed data with FK relationships
@@ -214,13 +221,14 @@ class TestSeedServiceTruncation:
         await db_session.commit()
 
         assert result["success"] is True
-        # 23 tables: mock_exam_answers, mock_exam_sessions, news_items,
+        # 20 tables (users, user_settings, refresh_tokens excluded):
+        # mock_exam_answers, mock_exam_sessions, news_items,
         # xp_transactions, user_achievements, user_xp, achievements,
         # notifications, announcement_campaigns, changelog_entries,
         # culture_question_stats, culture_questions, culture_decks,
         # reviews, card_statistics, user_deck_progress, feedback_votes,
-        # feedback, refresh_tokens, user_settings, cards, users, decks
-        assert len(result["truncated_tables"]) == 23
+        # feedback, cards, decks
+        assert len(result["truncated_tables"]) == 20
 
 
 # ============================================================================

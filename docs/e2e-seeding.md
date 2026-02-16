@@ -17,7 +17,6 @@ The seeding infrastructure provides deterministic test data for E2E tests, enabl
 | `/api/v1/test/seed/status` | GET | Check seeding availability (no auth) |
 | `/api/v1/test/seed/all` | POST | Full seed (truncate + create all) |
 | `/api/v1/test/seed/truncate` | POST | Truncate all tables |
-| `/api/v1/test/seed/users` | POST | Create test users only |
 | `/api/v1/test/seed/content` | POST | Create decks/cards only |
 | `/api/v1/test/seed/culture` | POST | Create culture decks/questions only |
 | `/api/v1/test/seed/mock-exams` | POST | Create mock exam history for learner |
@@ -28,18 +27,30 @@ The seeding infrastructure provides deterministic test data for E2E tests, enabl
 | `/api/v1/test/seed/danger-zone` | POST | Create danger zone test users |
 | `/api/v1/test/seed/admin-cards` | POST | Create vocabulary cards for admin E2E testing |
 
-## Test Users Created
+## Test Users
 
-| Email | Password | Role |
-|-------|----------|------|
-| e2e_learner@test.com | TestPassword123! | Regular user with progress |
-| e2e_beginner@test.com | TestPassword123! | New user, no progress |
-| e2e_advanced@test.com | TestPassword123! | Advanced user |
-| e2e_admin@test.com | TestPassword123! | Admin user |
+### Auto-Provisioned Users
 
-## Data Created
+Test users are **auto-provisioned on first login**, not created by seeding. Users persist across seed operations to match Supabase Auth behavior.
 
-- **4 Users**: Learner, Beginner, Advanced, Admin
+**Required Setup (One-time):**
+1. Manually create users in Supabase Auth Dashboard or via first login
+2. Users are auto-created in PostgreSQL on first authenticated request
+3. Users persist across `/seed/all` operations
+
+| Email | Password | Role | Notes |
+|-------|----------|------|-------|
+| e2e_learner@test.com | TestPassword123! | Regular user | Gets progress data from seeding |
+| e2e_beginner@test.com | TestPassword123! | New user | No progress data |
+| e2e_advanced@test.com | TestPassword123! | Advanced user | Gets advanced progress data |
+| e2e_admin@test.com | TestPassword123! | Admin | `is_superuser: true` |
+
+**Important:** If test users don't exist in Supabase Auth, they will be auto-created by seed_all() for test environments only.
+
+## Data Created by Seeding
+
+**Note:** Users are auto-provisioned (see Test Users section), NOT created by seeding.
+
 - **6 Decks**: A1, A2, B1, B2, C1, C2 (CEFR levels)
 - **60 Cards**: 10 Greek vocabulary cards per deck
 - **Card Statistics**: SM-2 spaced repetition states for learner
@@ -50,6 +61,7 @@ The seeding infrastructure provides deterministic test data for E2E tests, enabl
 - **125 Mock Exam Answers**: 25 answers per session
 - **3 News Sources**: 2 active, 1 inactive (for admin testing)
 - **4 Fetch History Entries**: 3 successful, 1 failed (for first news source)
+- **3 XP Test Users**: Boundary, Mid, Max (for XP system E2E testing)
 
 ### Mock Exam History
 
