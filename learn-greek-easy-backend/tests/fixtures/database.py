@@ -297,6 +297,10 @@ async def db_session(
     are contained within the savepoint and will be rolled back when
     the outer transaction is rolled back.
 
+    Note: Tests can call commit() once, but should not call it multiple times
+    or use expire_all() followed by additional API calls, as this may cause
+    MissingGreenlet errors due to savepoint management complexities.
+
     Args:
         db_engine: The test database engine fixture.
 
