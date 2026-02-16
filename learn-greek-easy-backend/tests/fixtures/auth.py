@@ -38,6 +38,7 @@ from sqlalchemy.orm import selectinload
 
 from src.core.dependencies import security_scheme
 from src.core.exceptions import UnauthorizedException
+from src.db.dependencies import get_db
 from src.db.models import User, UserSettings
 
 # =============================================================================
@@ -59,7 +60,9 @@ def _get_override_function():
 
     async def override_get_current_user(
         credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
+        db: AsyncSession = Depends(get_db),
     ):
+        """Override for get_current_user dependency in tests."""
         if not credentials:
             raise UnauthorizedException(
                 detail="Authentication required. Please provide a valid access token."
@@ -67,9 +70,14 @@ def _get_override_function():
 
         token = credentials.credentials
         user = _test_user_registry.get(token)
+
         if user is None:
             raise UnauthorizedException(detail="Invalid test token")
-        return user
+
+        # Reload from request's session to avoid cross-session issues
+        stmt = select(User).options(selectinload(User.settings)).where(User.id == user.id)
+        result = await db.execute(stmt)
+        return result.scalar_one()
 
     return override_get_current_user
 
