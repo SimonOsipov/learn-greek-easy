@@ -235,36 +235,36 @@ class TestRaceConditions:
         # 4. Request A tries to create user -> IntegrityError
         # 5. Request A re-queries and returns the user created by Request B
 
-        # We'll use a mock to simulate the IntegrityError once, then succeed
-        original_flush = db_session.flush
+        # First, create a user "from another request" before calling get_or_create_user
+        # We'll patch flush to raise IntegrityError on first call
+        other_user = User(
+            supabase_id=sample_claims.supabase_id,
+            email="other_request@example.com",
+            full_name="Other Request",
+            is_active=True,
+            is_superuser=False,
+        )
+        db_session.add(other_user)
+        await db_session.flush()
 
-        flush_count = 0
+        other_settings = UserSettings(
+            user_id=other_user.id,
+            daily_goal=20,
+            email_notifications=True,
+        )
+        db_session.add(other_settings)
+        await db_session.commit()
+
+        # Now call get_or_create_user - it should find the existing user
+        # We'll simulate the race by patching flush to raise IntegrityError
+        original_flush = db_session.flush
+        flush_called = False
 
         async def mock_flush_with_race():
-            nonlocal flush_count
-            flush_count += 1
-            if flush_count == 1:
-                # First flush attempt: simulate race condition
-                # Create the user "from another request"
-                other_user = User(
-                    supabase_id=sample_claims.supabase_id,
-                    email="other_request@example.com",
-                    full_name="Other Request",
-                    is_active=True,
-                    is_superuser=False,
-                )
-                db_session.add(other_user)
-                await original_flush()
-
-                other_settings = UserSettings(
-                    user_id=other_user.id,
-                    daily_goal=20,
-                    email_notifications=True,
-                )
-                db_session.add(other_settings)
-                await original_flush()
-
-                # Now raise IntegrityError
+            nonlocal flush_called
+            if not flush_called:
+                flush_called = True
+                # Raise IntegrityError to simulate race condition
                 raise IntegrityError("duplicate key", None, None)
             else:
                 # Subsequent flushes: normal behavior
@@ -276,6 +276,7 @@ class TestRaceConditions:
         # Verify we got the user created by "the other request"
         assert user is not None
         assert user.supabase_id == sample_claims.supabase_id
+        assert user.email == "other_request@example.com"
         assert user.settings is not None
 
     @pytest.mark.asyncio

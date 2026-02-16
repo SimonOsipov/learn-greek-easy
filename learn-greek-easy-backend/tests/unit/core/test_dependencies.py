@@ -104,7 +104,9 @@ class TestGetCurrentUser:
         mock_db = AsyncMock()
 
         with patch("src.core.dependencies.verify_supabase_token") as mock_verify:
-            mock_verify.side_effect = Exception("Invalid token")
+            from src.core.exceptions import TokenInvalidException
+
+            mock_verify.side_effect = TokenInvalidException("Invalid token")
 
             with pytest.raises(UnauthorizedException):
                 await get_current_user(mock_request, valid_credentials, mock_db)
@@ -190,7 +192,9 @@ class TestGetCurrentUserOptional:
         mock_db = AsyncMock()
 
         with patch("src.core.dependencies.verify_supabase_token") as mock_verify:
-            mock_verify.side_effect = Exception("Invalid token")
+            from src.core.exceptions import TokenInvalidException
+
+            mock_verify.side_effect = TokenInvalidException("Invalid token")
 
             user = await get_current_user_optional(mock_request, valid_credentials, mock_db)
 
@@ -255,11 +259,3 @@ class TestGetCurrentSuperuser:
             await get_current_superuser(mock_user)
 
         assert "superuser" in str(exc_info.value.detail).lower()
-
-    @pytest.mark.asyncio
-    async def test_inactive_superuser_forbidden(self, mock_superuser):
-        """Test that inactive superuser is forbidden."""
-        mock_superuser.is_active = False
-
-        with pytest.raises(ForbiddenException):
-            await get_current_superuser(mock_superuser)

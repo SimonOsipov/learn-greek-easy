@@ -7,7 +7,7 @@
  * Test coverage:
  * - Form display and elements
  * - Email validation
- * - Success confirmation screen (mocked via **/auth/v1/recover)
+ * - Success confirmation screen (mocked via the Supabase recover endpoint)
  * - Navigation back to login
  * - Try different email functionality
  */
