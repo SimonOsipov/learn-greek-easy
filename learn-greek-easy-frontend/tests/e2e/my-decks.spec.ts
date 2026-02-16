@@ -632,7 +632,7 @@ test.describe('My Decks - Security & Access Control', () => {
 
       // Assert error response includes appropriate error detail
       const errorData = await response.json();
-      expect(errorData.detail).toBeDefined();
+      expect(errorData.error?.message).toBeDefined();
     });
   });
 });

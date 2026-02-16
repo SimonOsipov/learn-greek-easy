@@ -645,6 +645,6 @@ test.describe('User Card Creation - Authorization', () => {
 
     // Assert error response includes appropriate error detail
     const errorData = await updateResponse.json();
-    expect(errorData.detail).toBeDefined();
+    expect(errorData.error?.message).toBeDefined();
   });
 });
