@@ -36,7 +36,7 @@ postgresql+asyncpg://postgres.{PROJECT_REF}:{DB_PASSWORD}@aws-0-eu-central-1.poo
 |-----------|-------|-------------|
 | Driver | `postgresql+asyncpg` | SQLAlchemy async driver for PostgreSQL |
 | Username | `postgres.{PROJECT_REF}` | Supabase project-specific username |
-| Password | `{DB_PASSWORD}` | Database password (from Railway env vars) |
+| Password | `{DB_PASSWORD}` | Database password (from Supabase Dashboard) |
 | Host | `aws-0-eu-central-1.pooler.supabase.com` | Supavisor session-mode pooler endpoint |
 | Port | `5432` | Session-mode pooler port |
 | Database | `postgres` | Default Supabase database name |
@@ -53,7 +53,7 @@ postgresql+asyncpg://postgres.nyiyljmtbnvykbpdjfjq:{DB_PASSWORD}@aws-1-eu-centra
 postgresql+asyncpg://postgres.qduwfsuybkqsginndguz:{DB_PASSWORD}@aws-1-eu-central-1.pooler.supabase.com:5432/postgres
 ```
 
-**Important**: Replace `{DB_PASSWORD}` with the actual password stored in Railway environment variables. Never commit credentials to version control.
+**Important**: Replace `{DB_PASSWORD}` with the actual database password from the Supabase Dashboard. Never commit credentials to version control.
 
 ## Pool Configuration
 
@@ -69,7 +69,7 @@ Both dev and prod environments are configured with identical pooler settings:
 
 ### Application Pool Configuration
 
-Application-side pooling (SQLAlchemy + asyncpg) is configured in `/home/dev/learn-greek-easy/learn-greek-easy-backend/src/database.py`:
+Application-side pooling (SQLAlchemy + asyncpg) is configured in `learn-greek-easy-backend/src/db/session.py`:
 
 ```python
 engine = create_async_engine(
@@ -134,19 +134,19 @@ SELECT 1 - ('[1,2,3]'::vector <=> '[1,2,3]'::vector) AS similarity;
 
 ## Environment Variables
 
-### Required Railway Environment Variables
+### Required Environment Variables
 
-Set in Railway dashboard for each environment (dev and prod):
+Set via `.env` file locally or Railway dashboard for deployed environments:
 
 | Variable | Format | Example | Notes |
 |----------|--------|---------|-------|
 | `DATABASE_URL` | `postgresql+asyncpg://...` | See connection string format | Async driver for application |
 
-**Security**: Database passwords are stored ONLY in Railway environment variables. Never commit credentials to git or hardcode in application code.
+**Security**: Database passwords are stored in `.env` file locally and Railway environment variables for deployed environments. Never commit credentials to git or hardcode in application code.
 
 ### Auto-Derived Configuration
 
-The following configuration is automatically derived by `/home/dev/learn-greek-easy/learn-greek-easy-backend/src/config.py`:
+The following configuration is automatically derived by `learn-greek-easy-backend/src/config.py`:
 
 ```python
 @property
@@ -161,15 +161,15 @@ def database_url_sync(self) -> str:
 
 Alembic uses a synchronous database connection via psycopg2 (not asyncpg). The migration path is:
 
-1. **Configuration** (`/home/dev/learn-greek-easy/learn-greek-easy-backend/src/config.py` line 637-639):
+1. **Configuration** (`learn-greek-easy-backend/src/config.py`):
    - `database_url_sync` derived from `DATABASE_URL` (removes `+asyncpg`)
 
-2. **Alembic Environment** (`/home/dev/learn-greek-easy/learn-greek-easy-backend/alembic/env.py` line 60):
+2. **Alembic Environment** (`learn-greek-easy-backend/alembic/env.py`):
    ```python
    config.set_main_option("sqlalchemy.url", settings.database_url_sync)
    ```
 
-3. **Engine Creation** (`/home/dev/learn-greek-easy/learn-greek-easy-backend/alembic/env.py` lines 142-146):
+3. **Engine Creation** (`learn-greek-easy-backend/alembic/env.py`):
    ```python
    connectable = engine_from_config(
        config.get_section(config.config_ini_section, {}),
@@ -182,7 +182,7 @@ Alembic uses a synchronous database connection via psycopg2 (not asyncpg). The m
 
 ### pgvector Index Filtering
 
-Alembic autogenerate ignores pgvector IVFFlat indexes to prevent false positives during `alembic check`. Filter is defined in `/home/dev/learn-greek-easy/learn-greek-easy-backend/alembic/env.py` (lines 96-119):
+Alembic autogenerate ignores pgvector IVFFlat indexes to prevent false positives during `alembic check`. Filter is defined in `learn-greek-easy-backend/alembic/env.py`:
 
 ```python
 def include_name(name: str | None, type_: str, parent_names: dict) -> bool:
@@ -419,12 +419,8 @@ engine.dispose()
 
 **Full Migration Report**: See [docs/migration-report-dbmig-03-02.md](migration-report-dbmig-03-02.md)
 
-**Next Steps**:
-1. DATABASE_URL cutover (update Railway backend env var to point to Supabase)
-2. Monitor backend logs after cutover
-3. Verify write operations (user registration, login, etc.)
-4. Keep Railway running 48+ hours as rollback option
-5. Clean up orphan supabase_ids (separate task)
+**Remaining**:
+- Clean up orphan supabase_ids (separate task)
 
 ---
 

@@ -197,7 +197,6 @@ If both Railway auto-deploy and GitHub Actions try to deploy:
 |---------|------------|-----|
 | Backend | DISABLED | DISABLED |
 | Frontend | DISABLED | DISABLED |
-| Postgres | Manual | Manual |
 | Redis | Manual | Manual |
 
 ### How to Disable Auto-Deploy

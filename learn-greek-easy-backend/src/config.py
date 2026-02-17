@@ -40,8 +40,7 @@ class Settings(BaseSettings):
     # Database
     # =========================================================================
     database_url: str = Field(
-        default="postgresql+asyncpg://postgres:postgres@localhost:5432/learn_greek_easy",
-        description="Database connection URL",
+        description="Database connection URL (required -- set DATABASE_URL in .env)",
     )
     database_pool_size: int = Field(default=20, description="Database connection pool size")
     database_max_overflow: int = Field(default=10, description="Max overflow connections")

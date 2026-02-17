@@ -57,7 +57,6 @@ Reference before making changes to related areas:
 - `docs/deployment-guide.md` - Sequential deploy, rollback, troubleshooting
 - `docs/e2e-seeding.md` - Test data seeding infrastructure
 - `docs/ci-cd-labels.md` - PR labels for test control
-- `docs/docker-reference.md` - Container names, ports, commands
 - `docs/pr-preview-deployments.md` - Preview environments
 - `learn-greek-easy-backend/docs/logging.md` - Logging architecture
 
