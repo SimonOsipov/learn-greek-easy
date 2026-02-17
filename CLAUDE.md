@@ -83,7 +83,7 @@ Required prod vars: `JWT_SECRET_KEY` (min 32 chars), `DATABASE_URL`, `CORS_ORIGI
 |-------|----------|
 | poetry not found | Use `/Users/samosipov/.local/bin/poetry` |
 | No module 'src' | Run from backend dir with `poetry run` |
-| DATABASE_URL not set | Set `DATABASE_URL` in `.env` -- see `.env.example` for Supabase dev template |
+| DATABASE_URL not set | Set `DATABASE_URL` in `.env` -- see `config.py` for required fields |
 
 ## Deployment
 
