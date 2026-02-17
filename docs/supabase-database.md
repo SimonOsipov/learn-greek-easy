@@ -362,76 +362,71 @@ with engine.connect() as conn:
 engine.dispose()
 ```
 
-## Schema Migration Results
+## Production Data Migration Status
 
-### Migration Summary
+### Migration Completion: 2026-02-17 08:10 UTC
 
-**Migration Date**: 2026-02-17
-**Alembic Version**: d9edd86a36e6 (head)
-**Migration Files Applied**: 68
-**Connection Method**: Direct connection (IPv6)
-**Status**: ✅ **COMPLETE** - Dev and Prod migrated successfully
+✅ **Production data successfully migrated from Railway to Supabase**
 
-| Environment | Project Ref | Tables | FKs | Indexes | Enums | Status |
-|-------------|-------------|--------|-----|---------|-------|--------|
-| **Dev** | nyiyljmtbnvykbpdjfjq | 27 | 32 | 124 | 14 | ✅ Complete |
-| **Prod** | qduwfsuybkqsginndguz | 27 | 32 | 124 | 14 | ✅ Complete |
+**Migration Summary**:
+- **Source**: Railway Production PostgreSQL
+- **Target**: Supabase Production (project ref: qduwfsuybkqsginndguz, Frankfurt)
+- **Method**: pg_dump + psql import with transaction wrapper
+- **Data Volume**: 7 users, 7 user_settings (14 total rows across 26 tables)
+- **Validation**: 100% row count match, 0 FK orphans, 0 unique constraint violations
 
-### Schema Verification
+**Row Counts by Table (Post-Migration)**:
 
-**Dev vs Prod Comparison**:
-| Metric | Dev | Prod | Match | Notes |
-|--------|-----|------|-------|-------|
-| Total Tables | 27 | 27 | ✅ | 26 app tables + alembic_version |
-| Foreign Keys | 32 | 32 | ✅ | All relationship constraints |
-| Indexes | 124 | 124 | ✅ | Including pgvector IVFFlat |
-| Enum Types | 14 | 14 | ✅ | All custom PostgreSQL enums |
-| Alembic Head | d9edd86a36e6 | d9edd86a36e6 | ✅ | Latest migration |
-| Column Counts | Identical | Identical | ✅ | Verified all 27 tables |
-| pgvector Columns | 2 | 2 | ✅ | cards, culture_questions |
+| Table | Rows |
+|-------|------|
+| users | 7 |
+| user_settings | 7 |
+| achievements | 0 |
+| announcement_campaigns | 0 |
+| card_error_reports | 0 |
+| card_records | 0 |
+| cards | 0 |
+| card_statistics | 0 |
+| changelog_entries | 0 |
+| culture_answer_history | 0 |
+| culture_decks | 0 |
+| culture_questions | 0 |
+| culture_question_stats | 0 |
+| decks | 0 |
+| feedback | 0 |
+| feedback_votes | 0 |
+| mock_exam_answers | 0 |
+| mock_exam_sessions | 0 |
+| news_items | 0 |
+| notifications | 0 |
+| reviews | 0 |
+| user_achievements | 0 |
+| user_deck_progress | 0 |
+| user_xp | 0 |
+| word_entries | 0 |
+| xp_transactions | 0 |
 
-**Database Size**:
-- Dev: Post-migration baseline established
-- Prod: 13 MB (post-migration, empty schema)
+**Validation Results**:
+- ✅ Row count match: 100% (26/26 tables)
+- ✅ FK integrity: 0 orphans across 32 relationships
+- ✅ Unique constraints: 0 duplicates across 13 constraints
+- ✅ Alembic version: d9edd86a36e6 (preserved)
+- ✅ IVFFlat index: idx_culture_questions_embedding valid
+- ✅ Application health: Backend responding normally
 
-### Key Findings
+**Known Issues**:
+- ⚠️ 2 orphan supabase_ids in public.users (e2e_learner@test.com, e2e_admin@test.com) - pre-existing data quality issue from Railway's custom auth system. Does not impact migration success. Cleanup task tracked separately.
 
-✅ **Successes**:
-- All 68 migrations applied successfully on both environments
-- Perfect schema parity between dev and prod
-- pgvector extension (v0.8.0) functional for embedding columns
-- uuid-ossp extension (v1.1) enabled for UUID generation
-- No code changes required - DATABASE_URL environment variable override used
-- Zero data loss (fresh databases)
+**Full Migration Report**: See [docs/migration-report-dbmig-03-02.md](migration-report-dbmig-03-02.md)
 
-⚠️ **Connection Format Issue**:
-- **Direct connection** (`db.PROJECT_REF.supabase.co`): ✅ Works
-- **Session pooler** (`aws-0-eu-central-1.pooler.supabase.com`): ❌ "Tenant or user not found" error
-- **Resolution**: Used direct connection for migrations
-- **Impact**: None - direct connection supports prepared statements and application pooling
+**Next Steps**:
+1. DATABASE_URL cutover (update Railway backend env var to point to Supabase)
+2. Monitor backend logs after cutover
+3. Verify write operations (user registration, login, etc.)
+4. Keep Railway running 48+ hours as rollback option
+5. Clean up orphan supabase_ids (separate task)
 
-### pgvector Columns
-
-| Table | Column | Type | Purpose |
-|-------|--------|------|---------|
-| culture_questions | embedding | Vector(1024) | Culture question embeddings for similarity search |
-| cards | embedding | Vector(1024) | Card embeddings for semantic matching |
-
-### Migration History
-
-**Initial State** (Pre-migration):
-- 0 application tables
-- pgvector 0.8.0 enabled
-- uuid-ossp 1.1 enabled
-- PostgreSQL 17.6
-
-**Final State** (Post-migration):
-- 27 tables (26 app + alembic_version)
-- All foreign key constraints created
-- All indexes created (including pgvector IVFFlat)
-- All enum types created
-
-**Pull Request**: [#287](https://github.com/SimonOsipov/learn-greek-easy/pull/287)
+---
 
 ## References
 
