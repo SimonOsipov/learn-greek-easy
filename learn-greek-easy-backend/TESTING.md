@@ -657,11 +657,9 @@ The CI pipeline (`.github/workflows/test.yml`):
 ```bash
 # Run tests as CI would
 poetry run pytest -n auto --cov=src --cov-report=xml --cov-fail-under=90
-
-# Run with PostgreSQL (ensure Docker is running)
-docker-compose up -d postgres
-poetry run pytest
 ```
+
+> **Note**: Database tests (integration, E2E) run in CI using ephemeral PostgreSQL service containers. No local database setup is required. Unit tests can be run locally without any database.
 
 ### Pre-commit Hooks
 
@@ -763,16 +761,11 @@ def deck_at_level(request, db_session):
 
 #### Tests fail with database errors
 
+Database tests (integration, E2E) require a running PostgreSQL instance. These tests are designed to run in CI where PostgreSQL service containers are automatically provisioned.
+
+To run only unit tests locally (no database required):
 ```bash
-# Ensure PostgreSQL is running
-docker-compose up -d postgres
-
-# Check connection
-docker exec -it learn-greek-postgres psql -U postgres -d test_learn_greek -c "SELECT 1"
-
-# Reset test database
-docker exec -it learn-greek-postgres psql -U postgres -c "DROP DATABASE IF EXISTS test_learn_greek"
-docker exec -it learn-greek-postgres psql -U postgres -c "CREATE DATABASE test_learn_greek"
+poetry run pytest -m unit
 ```
 
 #### Parallel tests fail randomly

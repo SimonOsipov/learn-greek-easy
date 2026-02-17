@@ -19,8 +19,8 @@
 cd /Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-backend && /Users/samosipov/.local/bin/poetry run <cmd>
 ```
 
-**Docker dev**: `docker-compose -f docker-compose.dev.yml up -d`
-**Docker prod**: `docker-compose up -d` (requires JWT_SECRET_KEY in .env)
+**Backend**: `cd learn-greek-easy-backend && poetry run uvicorn src.main:app --reload`
+**Frontend**: `cd learn-greek-easy-frontend && npm run dev`
 
 ## MCP Servers
 
@@ -73,9 +73,9 @@ curl -X POST http://localhost:8000/api/v1/test/seed/all
 
 ## Environment
 
-Dev ports: Frontend 5173, Backend 8000, PostgreSQL 5433, Redis 6379
+Dev ports: Frontend 5173, Backend 8000
 
-Required prod vars: `JWT_SECRET_KEY` (min 32 chars), `POSTGRES_PASSWORD`, `CORS_ORIGINS`
+Required prod vars: `JWT_SECRET_KEY` (min 32 chars), `DATABASE_URL`, `CORS_ORIGINS`
 
 ## Common Issues
 
@@ -83,8 +83,7 @@ Required prod vars: `JWT_SECRET_KEY` (min 32 chars), `POSTGRES_PASSWORD`, `CORS_
 |-------|----------|
 | poetry not found | Use `/Users/samosipov/.local/bin/poetry` |
 | No module 'src' | Run from backend dir with `poetry run` |
-| DB connection refused | `docker ps --filter "name=learn-greek-postgres"` |
-| Port 5433 vs 5432 | Dev uses 5433, prod uses 5432 |
+| DATABASE_URL not set | Set `DATABASE_URL` in `.env` -- see `.env.example` for Supabase dev template |
 
 ## Deployment
 
@@ -126,7 +125,6 @@ Update this file when features are merged, phases change, or key decisions are m
 - [Deployment Guide](docs/deployment-guide.md) - Sequential deploy, rollback, troubleshooting
 - [E2E Seeding](docs/e2e-seeding.md) - Test data seeding infrastructure
 - [CI/CD Labels](docs/ci-cd-labels.md) - PR labels for test control
-- [Docker Reference](docs/docker-reference.md) - Container names, ports, commands
 - [Railway Backend Privacy](docs/railway-backend-privacy.md) - Production setup
 - [PR Preview Deployments](docs/pr-preview-deployments.md) - Preview environments
 - [Logging](learn-greek-easy-backend/docs/logging.md) - Logging architecture and best practices

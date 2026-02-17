@@ -27,7 +27,11 @@ Browser-based performance testing for Learn Greek Easy using k6 with Chromium.
 
 3. **Start the application**:
    ```bash
-   docker-compose -f docker-compose.dev.yml up -d
+   # Terminal 1: Backend
+   cd learn-greek-easy-backend && poetry run uvicorn src.main:app --reload
+
+   # Terminal 2: Frontend
+   cd learn-greek-easy-frontend && npm run dev
    ```
 
 ### First Run
@@ -200,4 +204,3 @@ See [CI/CD Labels documentation](../docs/ci-cd-labels.md) for more details.
 ## Full Documentation
 
 For comprehensive documentation including architecture details, extending tests, and advanced configuration, see [Performance Testing Guide](../docs/performance-testing.md).
-

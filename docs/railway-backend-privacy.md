@@ -205,4 +205,4 @@ The backend might not be reachable:
 
 - [Deployment Guide](deployment-guide.md) - Full deployment procedures
 - [E2E Seeding](e2e-seeding.md) - Test data seeding (uses frontend proxy)
-- [Docker Reference](docker-reference.md) - Local development setup
+- [Supabase Database](supabase-database.md) - Database connectivity and configuration
