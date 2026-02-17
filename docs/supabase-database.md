@@ -362,6 +362,77 @@ with engine.connect() as conn:
 engine.dispose()
 ```
 
+## Schema Migration Results
+
+### Migration Summary
+
+**Migration Date**: 2026-02-17
+**Alembic Version**: d9edd86a36e6 (head)
+**Migration Files Applied**: 68
+**Connection Method**: Direct connection (IPv6)
+**Status**: ✅ **COMPLETE** - Dev and Prod migrated successfully
+
+| Environment | Project Ref | Tables | FKs | Indexes | Enums | Status |
+|-------------|-------------|--------|-----|---------|-------|--------|
+| **Dev** | nyiyljmtbnvykbpdjfjq | 27 | 32 | 124 | 14 | ✅ Complete |
+| **Prod** | qduwfsuybkqsginndguz | 27 | 32 | 124 | 14 | ✅ Complete |
+
+### Schema Verification
+
+**Dev vs Prod Comparison**:
+| Metric | Dev | Prod | Match | Notes |
+|--------|-----|------|-------|-------|
+| Total Tables | 27 | 27 | ✅ | 26 app tables + alembic_version |
+| Foreign Keys | 32 | 32 | ✅ | All relationship constraints |
+| Indexes | 124 | 124 | ✅ | Including pgvector IVFFlat |
+| Enum Types | 14 | 14 | ✅ | All custom PostgreSQL enums |
+| Alembic Head | d9edd86a36e6 | d9edd86a36e6 | ✅ | Latest migration |
+| Column Counts | Identical | Identical | ✅ | Verified all 27 tables |
+| pgvector Columns | 2 | 2 | ✅ | cards, culture_questions |
+
+**Database Size**:
+- Dev: Post-migration baseline established
+- Prod: 13 MB (post-migration, empty schema)
+
+### Key Findings
+
+✅ **Successes**:
+- All 68 migrations applied successfully on both environments
+- Perfect schema parity between dev and prod
+- pgvector extension (v0.8.0) functional for embedding columns
+- uuid-ossp extension (v1.1) enabled for UUID generation
+- No code changes required - DATABASE_URL environment variable override used
+- Zero data loss (fresh databases)
+
+⚠️ **Connection Format Issue**:
+- **Direct connection** (`db.PROJECT_REF.supabase.co`): ✅ Works
+- **Session pooler** (`aws-0-eu-central-1.pooler.supabase.com`): ❌ "Tenant or user not found" error
+- **Resolution**: Used direct connection for migrations
+- **Impact**: None - direct connection supports prepared statements and application pooling
+
+### pgvector Columns
+
+| Table | Column | Type | Purpose |
+|-------|--------|------|---------|
+| culture_questions | embedding | Vector(1024) | Culture question embeddings for similarity search |
+| cards | embedding | Vector(1024) | Card embeddings for semantic matching |
+
+### Migration History
+
+**Initial State** (Pre-migration):
+- 0 application tables
+- pgvector 0.8.0 enabled
+- uuid-ossp 1.1 enabled
+- PostgreSQL 17.6
+
+**Final State** (Post-migration):
+- 27 tables (26 app + alembic_version)
+- All foreign key constraints created
+- All indexes created (including pgvector IVFFlat)
+- All enum types created
+
+**Pull Request**: [#287](https://github.com/SimonOsipov/learn-greek-easy/pull/287)
+
 ## References
 
 - Supabase Connection Pooling: https://supabase.com/docs/guides/database/connecting-to-postgres#connection-pooler
