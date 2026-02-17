@@ -188,6 +188,7 @@ markers = [
     "sm2: SM-2 spaced repetition algorithm tests",
     "posthog: PostHog analytics integration tests",
     "sentry: Sentry error tracking integration tests",
+    "stripe: Stripe billing integration tests",
     "progress: Progress API service tests",
     "achievements: Achievement system tests",
     "no_parallel: Tests that cannot run in parallel (sequential only)",
