@@ -362,6 +362,35 @@ with engine.connect() as conn:
 engine.dispose()
 ```
 
+## Schema Migration Results
+
+### Development Environment Migration
+
+**Migration Date**: 2026-02-17
+**Alembic Version**: d9edd86a36e6 (head)
+**Migration Files Applied**: 68
+**Connection Method**: Direct connection (IPv6)
+
+| Metric | Count | Notes |
+|--------|-------|-------|
+| Total Tables | 27 | 26 application tables + alembic_version |
+| Foreign Keys | 32 | All relationship constraints created |
+| Indexes | 124 | Including pgvector IVFFlat indexes |
+| Enum Types | 14 | All custom PostgreSQL enums |
+
+**Key Findings**:
+- ✅ All migrations applied successfully without errors
+- ✅ pgvector extension (v0.8.0) used for embedding columns
+- ✅ uuid-ossp extension (v1.1) enabled for UUID generation
+- ⚠️ **Connection Format**: Direct connection (`db.PROJECT_REF.supabase.co`) worked, session pooler (`aws-0-eu-central-1.pooler.supabase.com`) returned "Tenant or user not found" error
+- ✅ No code changes required - DATABASE_URL environment variable override used
+
+**pgvector Columns**:
+- `culture_questions.embedding` - Vector(1024)
+- `cards.embedding` - Vector(1024)
+
+**Production Migration**: Pending (TASK-27 / DBMIG-02-02)
+
 ## References
 
 - Supabase Connection Pooling: https://supabase.com/docs/guides/database/connecting-to-postgres#connection-pooler
