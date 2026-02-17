@@ -45,12 +45,12 @@ postgresql+asyncpg://postgres.{PROJECT_REF}:{DB_PASSWORD}@aws-0-eu-central-1.poo
 
 **Development Environment:**
 ```
-postgresql+asyncpg://postgres.nyiyljmtbnvykbpdjfjq:{DB_PASSWORD}@aws-0-eu-central-1.pooler.supabase.com:5432/postgres
+postgresql+asyncpg://postgres.nyiyljmtbnvykbpdjfjq:{DB_PASSWORD}@aws-1-eu-central-1.pooler.supabase.com:5432/postgres
 ```
 
 **Production Environment:**
 ```
-postgresql+asyncpg://postgres.qduwfsuybkqsginndguz:{DB_PASSWORD}@aws-0-eu-central-1.pooler.supabase.com:5432/postgres
+postgresql+asyncpg://postgres.qduwfsuybkqsginndguz:{DB_PASSWORD}@aws-1-eu-central-1.pooler.supabase.com:5432/postgres
 ```
 
 **Important**: Replace `{DB_PASSWORD}` with the actual password stored in Railway environment variables. Never commit credentials to version control.

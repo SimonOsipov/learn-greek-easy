@@ -48,7 +48,11 @@ async def streak_reset_task() -> None:
 
     try:
         # Create dedicated engine for this scheduled task
-        engine = create_async_engine(settings.database_url, pool_pre_ping=True)
+        engine = create_async_engine(
+            settings.database_url,
+            pool_pre_ping=True,
+            connect_args={"ssl": "require"},
+        )
         async_session_factory = async_sessionmaker(
             engine, class_=AsyncSession, expire_on_commit=False
         )
@@ -294,7 +298,11 @@ async def stats_aggregate_task() -> None:
 
     try:
         # Create dedicated engine for this scheduled task
-        engine = create_async_engine(settings.database_url, pool_pre_ping=True)
+        engine = create_async_engine(
+            settings.database_url,
+            pool_pre_ping=True,
+            connect_args={"ssl": "require"},
+        )
         async_session_factory = async_sessionmaker(
             engine, class_=AsyncSession, expire_on_commit=False
         )
