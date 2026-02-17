@@ -131,3 +131,4 @@ Update this file when features are merged, phases change, or key decisions are m
 - [PR Preview Deployments](docs/pr-preview-deployments.md) - Preview environments
 - [Logging](learn-greek-easy-backend/docs/logging.md) - Logging architecture and best practices
 - [PreCompact Hook Setup](docs/precompact-hook-setup.md) - Session continuity configuration
+- [Supabase Database](docs/supabase-database.md) - Database credentials, connectivity, and migration guide
