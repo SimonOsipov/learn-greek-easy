@@ -12,6 +12,7 @@ from sqlalchemy import text
 from src.config import settings
 from src.core.logging import get_logger
 from src.core.redis import check_redis_health
+from src.core.stripe import get_stripe_client, is_stripe_configured
 from src.db.session import get_session_factory
 from src.schemas.health import (
     ComponentHealth,
@@ -23,6 +24,7 @@ from src.schemas.health import (
     MemoryHealth,
     ReadinessChecks,
     ReadinessResponse,
+    StripeHealth,
 )
 
 logger = get_logger(__name__)
@@ -149,6 +151,46 @@ def check_memory_health() -> MemoryHealth:
         )
 
 
+async def check_stripe_health(timeout: Optional[float] = None) -> StripeHealth:
+    """Check Stripe API connectivity.
+
+    Args:
+        timeout: Optional timeout in seconds (default: 5.0)
+
+    Returns:
+        StripeHealth: Stripe health status
+    """
+    if not is_stripe_configured():
+        return StripeHealth(
+            status="unconfigured",
+            message="Stripe secret key not configured",
+        )
+
+    timeout = timeout or 5.0
+
+    try:
+        client = get_stripe_client()
+        await asyncio.wait_for(
+            client.v1.accounts.retrieve_current_async(),
+            timeout=timeout,
+        )
+        return StripeHealth(
+            status="ok",
+            message="Stripe API reachable",
+        )
+    except asyncio.TimeoutError:
+        return StripeHealth(
+            status="error",
+            message=f"Stripe API timeout after {timeout}s",
+        )
+    except Exception as e:
+        logger.warning(f"Stripe health check failed: {e}")
+        return StripeHealth(
+            status="error",
+            message=f"Stripe API error: {str(e)}",
+        )
+
+
 async def get_health_status() -> Tuple[HealthResponse, int]:
     """
     Perform comprehensive health check of all components.
@@ -157,9 +199,10 @@ async def get_health_status() -> Tuple[HealthResponse, int]:
         Tuple of (HealthResponse, HTTP status code)
     """
     # Run all checks in parallel
-    db_check, redis_check = await asyncio.gather(
+    db_check, redis_check, stripe_check = await asyncio.gather(
         check_database_health(),
         check_redis_health_component(),
+        check_stripe_health(),
         return_exceptions=True,
     )
 
@@ -180,22 +223,32 @@ async def get_health_status() -> Tuple[HealthResponse, int]:
             message=f"Check failed: {str(redis_check)}",
         )
 
+    if isinstance(stripe_check, Exception):
+        logger.error("Stripe health check failed with exception", exc_info=stripe_check)
+        stripe_check = StripeHealth(
+            status="error",
+            message=f"Unexpected error: {str(stripe_check)}",
+        )
+
     # Get memory status (synchronous)
     memory_check = check_memory_health()
 
     # Determine overall status
     # Database is critical - if unhealthy, system is unhealthy
     # Redis is non-critical - if unhealthy, system is degraded
+    # Stripe is non-critical - if unhealthy, system is degraded
     # Memory warning doesn't affect overall status
 
-    # At this point, both checks are guaranteed to be ComponentHealth
+    # At this point, checks are guaranteed to be their respective types
     assert isinstance(db_check, ComponentHealth)
     assert isinstance(redis_check, ComponentHealth)
 
     if db_check.status == ComponentStatus.UNHEALTHY:
         overall_status = HealthStatus.UNHEALTHY
         http_status = 503
-    elif redis_check.status == ComponentStatus.UNHEALTHY:
+    elif redis_check.status == ComponentStatus.UNHEALTHY or (
+        isinstance(stripe_check, StripeHealth) and stripe_check.status == "error"
+    ):
         overall_status = HealthStatus.DEGRADED
         http_status = 200  # Degraded is still "okay" for basic health checks
     else:
@@ -212,6 +265,7 @@ async def get_health_status() -> Tuple[HealthResponse, int]:
             database=db_check,
             redis=redis_check,
             memory=memory_check,
+            stripe=stripe_check if isinstance(stripe_check, StripeHealth) else None,
         ),
     )
 
