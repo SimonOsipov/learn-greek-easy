@@ -3,6 +3,7 @@
 Tests cover:
 - check_database_health() with various scenarios
 - check_redis_health_component() status conversion
+- check_stripe_health() with various scenarios
 - check_memory_health() with different memory states
 - get_health_status() comprehensive health check
 - get_liveness_status() simple liveness check
@@ -14,7 +15,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.schemas.health import ComponentStatus, HealthStatus
+from src.schemas.health import ComponentStatus, HealthStatus, StripeHealth
 
 # ============================================================================
 # Test Fixtures
@@ -199,6 +200,123 @@ class TestCheckRedisHealthComponent:
 
 
 # ============================================================================
+# check_stripe_health() Tests
+# ============================================================================
+
+
+class TestCheckStripeHealth:
+    """Tests for check_stripe_health function."""
+
+    @pytest.mark.asyncio
+    async def test_check_stripe_health_unconfigured(self):
+        """Test Stripe health check when not configured."""
+        from src.services.health_service import check_stripe_health
+
+        with patch(
+            "src.services.health_service.is_stripe_configured",
+            return_value=False,
+        ):
+            result = await check_stripe_health()
+
+            assert result.status == "unconfigured"
+            assert "not configured" in result.message.lower()
+
+    @pytest.mark.asyncio
+    async def test_check_stripe_health_success(self):
+        """Test successful Stripe health check."""
+        from src.services.health_service import check_stripe_health
+
+        mock_stripe_client = MagicMock()
+        mock_stripe_client.v1.accounts.retrieve_current_async = AsyncMock()
+
+        with patch(
+            "src.services.health_service.is_stripe_configured",
+            return_value=True,
+        ):
+            with patch(
+                "src.services.health_service.get_stripe_client",
+                return_value=mock_stripe_client,
+            ):
+                result = await check_stripe_health()
+
+                assert result.status == "ok"
+                assert result.message == "Stripe API reachable"
+
+    @pytest.mark.asyncio
+    async def test_check_stripe_health_timeout(self):
+        """Test Stripe health check with timeout."""
+        from src.services.health_service import check_stripe_health
+
+        mock_stripe_client = MagicMock()
+
+        async def slow_retrieve():
+            await asyncio.sleep(10)
+
+        mock_stripe_client.v1.accounts.retrieve_current_async = slow_retrieve
+
+        with patch(
+            "src.services.health_service.is_stripe_configured",
+            return_value=True,
+        ):
+            with patch(
+                "src.services.health_service.get_stripe_client",
+                return_value=mock_stripe_client,
+            ):
+                result = await check_stripe_health(timeout=0.01)
+
+                assert result.status == "error"
+                assert "timeout" in result.message.lower()
+
+    @pytest.mark.asyncio
+    async def test_check_stripe_health_api_error(self):
+        """Test Stripe health check with API error."""
+        from src.services.health_service import check_stripe_health
+
+        mock_stripe_client = MagicMock()
+        mock_stripe_client.v1.accounts.retrieve_current_async = AsyncMock(
+            side_effect=Exception("Connection failed")
+        )
+
+        with patch(
+            "src.services.health_service.is_stripe_configured",
+            return_value=True,
+        ):
+            with patch(
+                "src.services.health_service.get_stripe_client",
+                return_value=mock_stripe_client,
+            ):
+                with patch("src.services.health_service.logger"):
+                    result = await check_stripe_health()
+
+                    assert result.status == "error"
+                    assert "Stripe API error" in result.message
+
+    @pytest.mark.asyncio
+    async def test_check_stripe_health_exception_handling(self):
+        """Test Stripe health check handles generic exceptions."""
+        from src.services.health_service import check_stripe_health
+
+        mock_stripe_client = MagicMock()
+        mock_stripe_client.v1.accounts.retrieve_current_async = AsyncMock(
+            side_effect=RuntimeError("Unexpected error")
+        )
+
+        with patch(
+            "src.services.health_service.is_stripe_configured",
+            return_value=True,
+        ):
+            with patch(
+                "src.services.health_service.get_stripe_client",
+                return_value=mock_stripe_client,
+            ):
+                with patch("src.services.health_service.logger"):
+                    result = await check_stripe_health()
+
+                    assert result.status == "error"
+                    assert "Unexpected error" in result.message
+
+
+# ============================================================================
 # check_memory_health() Tests
 # ============================================================================
 
@@ -266,161 +384,212 @@ class TestGetHealthStatus:
     """Tests for get_health_status function."""
 
     @pytest.mark.asyncio
-    async def test_get_health_status_all_healthy(self):
+    @patch("src.services.health_service.check_stripe_health")
+    @patch("src.services.health_service.check_memory_health")
+    @patch("src.services.health_service.check_redis_health_component")
+    @patch("src.services.health_service.check_database_health")
+    async def test_get_health_status_all_healthy(
+        self,
+        mock_db: MagicMock,
+        mock_redis: MagicMock,
+        mock_memory: MagicMock,
+        mock_stripe: MagicMock,
+    ):
         """Test health status when all components are healthy."""
         from src.schemas.health import ComponentHealth, MemoryHealth
         from src.services.health_service import get_health_status
 
-        mock_db_health = ComponentHealth(
+        mock_db.return_value = ComponentHealth(
             status=ComponentStatus.HEALTHY,
             latency_ms=5.0,
             message="Connection successful",
         )
-        mock_redis_health = ComponentHealth(
+        mock_redis.return_value = ComponentHealth(
             status=ComponentStatus.HEALTHY,
             latency_ms=2.0,
             message="PONG received",
         )
-        mock_memory_health = MemoryHealth(
+        mock_memory.return_value = MemoryHealth(
             status=ComponentStatus.HEALTHY,
             used_mb=128.0,
             percent=25.0,
             message="Memory usage normal",
         )
+        mock_stripe.return_value = StripeHealth(
+            status="ok",
+            message="Stripe API reachable",
+        )
 
-        with patch(
-            "src.services.health_service.check_database_health",
-            return_value=mock_db_health,
-        ):
-            with patch(
-                "src.services.health_service.check_redis_health_component",
-                return_value=mock_redis_health,
-            ):
-                with patch(
-                    "src.services.health_service.check_memory_health",
-                    return_value=mock_memory_health,
-                ):
-                    response, status_code = await get_health_status()
+        response, status_code = await get_health_status()
 
-                    assert response.status == HealthStatus.HEALTHY
-                    assert status_code == 200
+        assert response.status == HealthStatus.HEALTHY
+        assert status_code == 200
 
     @pytest.mark.asyncio
-    async def test_get_health_status_db_unhealthy_returns_503(self):
+    @patch("src.services.health_service.check_stripe_health")
+    @patch("src.services.health_service.check_memory_health")
+    @patch("src.services.health_service.check_redis_health_component")
+    @patch("src.services.health_service.check_database_health")
+    async def test_get_health_status_db_unhealthy_returns_503(
+        self,
+        mock_db: MagicMock,
+        mock_redis: MagicMock,
+        mock_memory: MagicMock,
+        mock_stripe: MagicMock,
+    ):
         """Test health status returns 503 when DB is unhealthy."""
         from src.schemas.health import ComponentHealth, MemoryHealth
         from src.services.health_service import get_health_status
 
-        mock_db_health = ComponentHealth(
+        mock_db.return_value = ComponentHealth(
             status=ComponentStatus.UNHEALTHY,
             latency_ms=None,
             message="Connection error",
         )
-        mock_redis_health = ComponentHealth(
+        mock_redis.return_value = ComponentHealth(
             status=ComponentStatus.HEALTHY,
             latency_ms=2.0,
             message="PONG received",
         )
-        mock_memory_health = MemoryHealth(
+        mock_memory.return_value = MemoryHealth(
             status=ComponentStatus.HEALTHY,
             used_mb=128.0,
             percent=25.0,
             message="Memory usage normal",
         )
+        mock_stripe.return_value = StripeHealth(
+            status="ok",
+            message="Stripe API reachable",
+        )
 
-        with patch(
-            "src.services.health_service.check_database_health",
-            return_value=mock_db_health,
-        ):
-            with patch(
-                "src.services.health_service.check_redis_health_component",
-                return_value=mock_redis_health,
-            ):
-                with patch(
-                    "src.services.health_service.check_memory_health",
-                    return_value=mock_memory_health,
-                ):
-                    response, status_code = await get_health_status()
+        response, status_code = await get_health_status()
 
-                    assert response.status == HealthStatus.UNHEALTHY
-                    assert status_code == 503
+        assert response.status == HealthStatus.UNHEALTHY
+        assert status_code == 503
 
     @pytest.mark.asyncio
-    async def test_get_health_status_redis_unhealthy_returns_degraded(self):
+    @patch("src.services.health_service.check_stripe_health")
+    @patch("src.services.health_service.check_memory_health")
+    @patch("src.services.health_service.check_redis_health_component")
+    @patch("src.services.health_service.check_database_health")
+    async def test_get_health_status_redis_unhealthy_returns_degraded(
+        self,
+        mock_db: MagicMock,
+        mock_redis: MagicMock,
+        mock_memory: MagicMock,
+        mock_stripe: MagicMock,
+    ):
         """Test health status returns degraded when Redis is unhealthy."""
         from src.schemas.health import ComponentHealth, MemoryHealth
         from src.services.health_service import get_health_status
 
-        mock_db_health = ComponentHealth(
+        mock_db.return_value = ComponentHealth(
             status=ComponentStatus.HEALTHY,
             latency_ms=5.0,
             message="Connection successful",
         )
-        mock_redis_health = ComponentHealth(
+        mock_redis.return_value = ComponentHealth(
             status=ComponentStatus.UNHEALTHY,
             latency_ms=None,
             message="Connection refused",
         )
-        mock_memory_health = MemoryHealth(
+        mock_memory.return_value = MemoryHealth(
             status=ComponentStatus.HEALTHY,
             used_mb=128.0,
             percent=25.0,
             message="Memory usage normal",
         )
+        mock_stripe.return_value = StripeHealth(
+            status="ok",
+            message="Stripe API reachable",
+        )
 
-        with patch(
-            "src.services.health_service.check_database_health",
-            return_value=mock_db_health,
-        ):
-            with patch(
-                "src.services.health_service.check_redis_health_component",
-                return_value=mock_redis_health,
-            ):
-                with patch(
-                    "src.services.health_service.check_memory_health",
-                    return_value=mock_memory_health,
-                ):
-                    response, status_code = await get_health_status()
+        response, status_code = await get_health_status()
 
-                    assert response.status == HealthStatus.DEGRADED
-                    assert status_code == 200  # Degraded is still OK for health checks
+        assert response.status == HealthStatus.DEGRADED
+        assert status_code == 200  # Degraded is still OK for health checks
 
     @pytest.mark.asyncio
-    async def test_get_health_status_handles_check_exceptions(self):
+    @patch("src.services.health_service.check_stripe_health")
+    @patch("src.services.health_service.check_memory_health")
+    @patch("src.services.health_service.check_redis_health_component")
+    @patch("src.services.health_service.check_database_health")
+    async def test_get_health_status_handles_check_exceptions(
+        self,
+        mock_db: MagicMock,
+        mock_redis: MagicMock,
+        mock_memory: MagicMock,
+        mock_stripe: MagicMock,
+    ):
         """Test health status handles exceptions from checks."""
         from src.schemas.health import ComponentHealth, MemoryHealth
         from src.services.health_service import get_health_status
 
-        mock_redis_health = ComponentHealth(
+        mock_db.side_effect = Exception("DB check failed")
+        mock_redis.return_value = ComponentHealth(
             status=ComponentStatus.HEALTHY,
             latency_ms=2.0,
             message="PONG received",
         )
-        mock_memory_health = MemoryHealth(
+        mock_memory.return_value = MemoryHealth(
             status=ComponentStatus.HEALTHY,
             used_mb=128.0,
             percent=25.0,
             message="Memory usage normal",
         )
+        mock_stripe.return_value = StripeHealth(
+            status="ok",
+            message="Stripe API reachable",
+        )
 
-        with patch(
-            "src.services.health_service.check_database_health",
-            side_effect=Exception("DB check failed"),
-        ):
-            with patch(
-                "src.services.health_service.check_redis_health_component",
-                return_value=mock_redis_health,
-            ):
-                with patch(
-                    "src.services.health_service.check_memory_health",
-                    return_value=mock_memory_health,
-                ):
-                    with patch("src.services.health_service.logger"):
-                        response, status_code = await get_health_status()
+        with patch("src.services.health_service.logger"):
+            response, status_code = await get_health_status()
 
-                        # Should handle exception gracefully
-                        assert response.status == HealthStatus.UNHEALTHY
-                        assert status_code == 503
+            # Should handle exception gracefully
+            assert response.status == HealthStatus.UNHEALTHY
+            assert status_code == 503
+
+    @pytest.mark.asyncio
+    @patch("src.services.health_service.check_stripe_health")
+    @patch("src.services.health_service.check_memory_health")
+    @patch("src.services.health_service.check_redis_health_component")
+    @patch("src.services.health_service.check_database_health")
+    async def test_get_health_status_stripe_error_returns_degraded(
+        self,
+        mock_db: MagicMock,
+        mock_redis: MagicMock,
+        mock_memory: MagicMock,
+        mock_stripe: MagicMock,
+    ):
+        """Test health status returns degraded when Stripe is unhealthy."""
+        from src.schemas.health import ComponentHealth, MemoryHealth
+        from src.services.health_service import get_health_status
+
+        mock_db.return_value = ComponentHealth(
+            status=ComponentStatus.HEALTHY,
+            latency_ms=5.0,
+            message="Connection successful",
+        )
+        mock_redis.return_value = ComponentHealth(
+            status=ComponentStatus.HEALTHY,
+            latency_ms=2.0,
+            message="PONG received",
+        )
+        mock_memory.return_value = MemoryHealth(
+            status=ComponentStatus.HEALTHY,
+            used_mb=128.0,
+            percent=25.0,
+            message="Memory usage normal",
+        )
+        mock_stripe.return_value = StripeHealth(
+            status="error",
+            message="Stripe API error: Connection failed",
+        )
+
+        response, status_code = await get_health_status()
+
+        assert response.status == HealthStatus.DEGRADED
+        assert status_code == 200  # Degraded is still OK for health checks
 
 
 # ============================================================================
