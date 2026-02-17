@@ -89,6 +89,12 @@ Reference before making changes to related areas:
 git checkout -b feature/[name] main
 ```
 
+10. **Move tasks to "In Progress"** — update all tasks that will be worked on:
+```
+For each task ID in the execution plan:
+  mcp__backlog__task_edit(id=task_id, status="In Progress")
+```
+
 **Chain count rules:**
 - Each independent subgraph in the dependency graph = one chain
 - A single task with no dependencies to other tasks = its own chain
@@ -194,11 +200,15 @@ gh pr create --draft --title "[FEATURE] Name" --body "..." --label "skip-visual"
 gh pr edit --remove-label "skip-visual" && gh pr ready
 ```
 
-3. Update Backlog — move all tasks to `inreview` using `mcp__backlog__task_edit`
-
-4. Wait for deploy + smoke:
+3. Wait for deploy + smoke:
 ```bash
 gh pr checks  # Required: deploy + smoke-tests pass
+```
+
+4. **Move all tasks to "Done"** — after deploy + smoke tests pass:
+```
+For each task ID:
+  mcp__backlog__task_edit(id=task_id, status="Done")
 ```
 
 5. Cleanup and complete:
@@ -206,7 +216,7 @@ gh pr checks  # Required: deploy + smoke-tests pass
 rm -f .claude/handoff.yaml
 ```
 
-6. Output `<promise>ALL_TASKS_COMPLETE</promise>`
+7. Output `<promise>ALL_TASKS_COMPLETE</promise>`
 
 ---
 
@@ -370,11 +380,15 @@ cd /home/dev/learn-greek-easy/learn-greek-easy-frontend && npm test -- --run
 gh pr edit --remove-label "skip-visual" && gh pr ready
 ```
 
-4. **Update Vibe Kanban** — move all tasks to `inreview`
-
-5. **Wait for deploy + smoke:**
+4. **Wait for deploy + smoke:**
 ```bash
 gh pr checks  # Required: deploy + smoke-tests pass
+```
+
+5. **Move all tasks to "Done"** — after deploy + smoke tests pass:
+```
+For each task ID:
+  mcp__backlog__task_edit(id=task_id, status="Done")
 ```
 
 6. **Shutdown teammates** via `SendMessage` with `type: "shutdown_request"`
@@ -384,7 +398,7 @@ gh pr checks  # Required: deploy + smoke-tests pass
 rm -f .claude/handoff.yaml
 ```
 
-8. Output `<promise>ALL_TASKS_COMPLETE</promise>`
+9. Output `<promise>ALL_TASKS_COMPLETE</promise>`
 
 ---
 
@@ -455,9 +469,10 @@ git checkout main && git pull origin main && git branch -d feature/[name]
 ## Completion Rules
 
 1. **Local tests green ≠ merge ready** — deploy + smoke tests must pass
-2. **Never mark tasks as `done`** — only QA can do that after merge
-3. **All tasks stay `In Progress`** until PR is marked ready, then move to `In Review`
-4. Output `<promise>ALL_TASKS_COMPLETE</promise>` ONLY when deploy + smoke pass
+2. **Task status transitions:**
+   - Start: "To Do" → "In Progress" (when ralph starts working on them)
+   - Complete: "In Progress" → "Done" (after deploy + smoke tests pass)
+3. Output `<promise>ALL_TASKS_COMPLETE</promise>` ONLY after moving tasks to "Done"
 
 ---
 
@@ -471,7 +486,7 @@ git checkout main && git pull origin main && git branch -d feature/[name]
 | Spawning teammates for a single dependency chain | Use sequential mode — execute directly |
 | Hardcoding chain count regardless of task graph | Let dependency graph determine chain count and mode |
 | Not coordinating git between chains | Team lead manages push/merge order |
-| Marking tasks `done` | Only QA can mark `done` after merge |
+| Skipping task status transitions | Move: To Do → In Progress → Done |
 | Not updating handoff during long runs | Update every 2-3 tasks |
 | Hiding/disabling features to "fix" bugs | Actually fix the bug, add missing data |
 | Assuming root cause without verification | Investigate thoroughly, verify with Playwright |
