@@ -48,6 +48,7 @@ def create_engine() -> AsyncEngine:
         "connect_args": {
             "server_settings": {"jit": "off"},  # Disable JIT for better performance
             "command_timeout": 60,  # Command timeout in seconds
+            "ssl": "require",  # Enforce SSL/TLS encryption
         },
     }
 
