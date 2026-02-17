@@ -518,6 +518,30 @@ class Settings(BaseSettings):
     )
 
     # =========================================================================
+    # Stripe Billing
+    # =========================================================================
+    stripe_secret_key: Optional[str] = Field(
+        default=None,
+        description="Stripe secret API key",
+    )
+    stripe_price_premium_monthly: Optional[str] = Field(
+        default=None,
+        description="Stripe Price ID for monthly premium plan",
+    )
+    stripe_price_premium_quarterly: Optional[str] = Field(
+        default=None,
+        description="Stripe Price ID for quarterly premium plan",
+    )
+    stripe_price_premium_semi_annual: Optional[str] = Field(
+        default=None,
+        description="Stripe Price ID for semi-annual premium plan",
+    )
+    stripe_price_founders_edition: Optional[str] = Field(
+        default=None,
+        description="Stripe Price ID for Founders Edition one-time purchase",
+    )
+
+    # =========================================================================
     # Business Logic
     # =========================================================================
     srs_initial_ease_factor: float = Field(default=2.5, description="Initial ease factor")
@@ -631,6 +655,11 @@ class Settings(BaseSettings):
     def elevenlabs_configured(self) -> bool:
         """Check if ElevenLabs is properly configured."""
         return bool(self.elevenlabs_api_key)
+
+    @property
+    def stripe_configured(self) -> bool:
+        """Check if Stripe is properly configured."""
+        return bool(self.stripe_secret_key)
 
     @property
     def database_url_sync(self) -> str:
