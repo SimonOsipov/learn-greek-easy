@@ -791,7 +791,17 @@ class TestInitializeDeckUnit:
             card_ids=card_ids,
         )
 
-        with patch("src.api.v1.study.SM2Service") as mock_class:
+        with (
+            patch("src.api.v1.study.DeckRepository") as mock_deck_repo_class,
+            patch("src.api.v1.study.SM2Service") as mock_class,
+        ):
+            mock_deck_repo = AsyncMock()
+            mock_deck = MagicMock()
+            mock_deck.is_active = True
+            mock_deck.is_premium = False
+            mock_deck_repo.get.return_value = mock_deck
+            mock_deck_repo_class.return_value = mock_deck_repo
+
             mock_service = AsyncMock()
             mock_service.initialize_deck_for_user.return_value = mock_result
             mock_class.return_value = mock_service
@@ -860,7 +870,17 @@ class TestInitializeDeckUnit:
             card_ids=new_card_ids,
         )
 
-        with patch("src.api.v1.study.SM2Service") as mock_class:
+        with (
+            patch("src.api.v1.study.DeckRepository") as mock_deck_repo_class,
+            patch("src.api.v1.study.SM2Service") as mock_class,
+        ):
+            mock_deck_repo = AsyncMock()
+            mock_deck = MagicMock()
+            mock_deck.is_active = True
+            mock_deck.is_premium = False
+            mock_deck_repo.get.return_value = mock_deck
+            mock_deck_repo_class.return_value = mock_deck_repo
+
             mock_service = AsyncMock()
             mock_service.initialize_deck_for_user.return_value = mock_result
             mock_class.return_value = mock_service
