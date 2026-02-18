@@ -159,6 +159,8 @@ class SeedService:
         "culture_question_stats",
         "culture_questions",
         "culture_decks",
+        # Webhook events (no FK dependencies)
+        "webhook_events",
         # Existing tables
         "reviews",
         "card_statistics",
@@ -166,6 +168,7 @@ class SeedService:
         "feedback_votes",
         "feedback",
         "cards",
+        "users",
         "decks",
     ]
 

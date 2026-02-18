@@ -37,6 +37,7 @@ from src.api.v1.progress import router as progress_router
 from src.api.v1.reviews import router as review_router
 from src.api.v1.study import router as study_router
 from src.api.v1.users import router as users_router
+from src.api.v1.webhooks import router as webhooks_router
 from src.api.v1.word_entries import router as word_entries_router
 from src.api.v1.xp import router as xp_router
 
@@ -191,6 +192,11 @@ v1_router.include_router(
     prefix="/word-entries",
     tags=["Word Entries"],
 )
+
+# =============================================================================
+# Webhook Routes (Stripe - no auth required)
+# =============================================================================
+v1_router.include_router(webhooks_router)
 
 # =============================================================================
 # Test Routes (non-production only)

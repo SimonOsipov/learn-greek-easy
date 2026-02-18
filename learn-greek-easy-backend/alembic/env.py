@@ -52,6 +52,8 @@ from src.db.models import (  # noqa: F401
     UserSettings,
     UserXP,
     VoteType,
+    WebhookEvent,
+    WebhookProcessingStatus,
     WordEntry,
     XPTransaction,
 )

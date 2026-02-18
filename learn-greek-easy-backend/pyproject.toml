@@ -142,6 +142,11 @@ ignore_missing_imports = true
 module = "src.core.posthog"
 disallow_untyped_calls = false
 
+# Stripe SDK has incomplete type stubs (Webhook.construct_event is untyped)
+[[tool.mypy.overrides]]
+module = "src.api.v1.webhooks"
+disallow_untyped_calls = false
+
 [tool.pytest.ini_options]
 # Minimum pytest version
 minversion = "8.0"

@@ -28,7 +28,7 @@ from pgvector.sqlalchemy import Vector
 from sqlalchemy import JSON, Boolean, Date, DateTime
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy import Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint, func, text
-from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.db.base import Base, TimestampMixin
@@ -213,6 +213,14 @@ class BillingCycle(str, enum.Enum):
     QUARTERLY = "quarterly"
     SEMI_ANNUAL = "semi_annual"
     LIFETIME = "lifetime"
+
+
+class WebhookProcessingStatus(str, enum.Enum):
+    """Processing status for Stripe webhook events."""
+
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    FAILED = "failed"
 
 
 # ============================================================================
@@ -2378,3 +2386,77 @@ class ChangelogEntry(Base, TimestampMixin):
 
     def __repr__(self) -> str:
         return f"<ChangelogEntry(id={self.id}, tag={self.tag}, title_en={self.title_en[:30] if self.title_en else ''})>"
+
+
+# ============================================================================
+# Stripe Webhook Models
+# ============================================================================
+
+
+class WebhookEvent(Base, TimestampMixin):
+    """Stripe webhook event for idempotency and audit logging.
+
+    Ensures duplicate webhook deliveries are detected and skipped.
+    Tracks processing status for debugging and monitoring.
+    """
+
+    __tablename__ = "webhook_events"
+
+    # Primary key
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True,
+        server_default=func.uuid_generate_v4(),
+    )
+
+    # Stripe event identifier (globally unique from Stripe)
+    event_id: Mapped[str] = mapped_column(
+        String(255),
+        unique=True,
+        index=True,
+        nullable=False,
+        comment="Stripe event ID (evt_xxx) - unique for idempotency",
+    )
+
+    # Event classification
+    event_type: Mapped[str] = mapped_column(
+        String(255),
+        index=True,
+        nullable=False,
+        comment="Stripe event type (e.g., customer.subscription.updated)",
+    )
+
+    # Raw webhook payload for audit/debugging
+    raw_payload: Mapped[dict] = mapped_column(
+        JSONB,
+        nullable=False,
+        comment="Complete Stripe webhook event payload",
+    )
+
+    # Processing tracking
+    processing_status: Mapped[WebhookProcessingStatus] = mapped_column(
+        nullable=False,
+        default=WebhookProcessingStatus.PROCESSING,
+        server_default=text("'PROCESSING'"),
+        index=True,
+        comment="Webhook processing status: processing, completed, failed",
+    )
+
+    # Error tracking
+    error_message: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Error message if processing failed",
+    )
+
+    # Processing completion timestamp
+    processed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="When webhook processing completed (success or failure)",
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<WebhookEvent(id={self.id}, event_id={self.event_id}, "
+            f"type={self.event_type}, status={self.processing_status})>"
+        )
