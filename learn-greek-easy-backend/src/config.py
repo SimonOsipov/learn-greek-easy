@@ -536,9 +536,9 @@ class Settings(BaseSettings):
         default=None,
         description="Stripe Price ID for semi-annual premium plan",
     )
-    stripe_price_founders_edition: Optional[str] = Field(
+    stripe_webhook_secret: Optional[str] = Field(
         default=None,
-        description="Stripe Price ID for Founders Edition one-time purchase",
+        description="Stripe webhook endpoint signing secret (whsec_...)",
     )
 
     # =========================================================================
