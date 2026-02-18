@@ -43,12 +43,23 @@ class MemoryHealth(BaseModel):
     message: str = Field(description="Human-readable status message")
 
 
+class StripeHealth(BaseModel):
+    """Stripe API connectivity status."""
+
+    status: str = Field(description="Stripe status: ok, error, or unconfigured")
+    message: str = Field(description="Human-readable status message")
+
+
 class HealthChecks(BaseModel):
     """Collection of component health checks."""
 
     database: ComponentHealth
     redis: ComponentHealth
     memory: MemoryHealth
+    stripe: Optional[StripeHealth] = Field(
+        default=None,
+        description="Stripe API connectivity status",
+    )
 
 
 class HealthResponse(BaseModel):
@@ -81,6 +92,10 @@ class HealthResponse(BaseModel):
                         "used_mb": 128.5,
                         "percent": 45.2,
                         "message": "Memory usage normal",
+                    },
+                    "stripe": {
+                        "status": "ok",
+                        "message": "Stripe API reachable",
                     },
                 },
             }
