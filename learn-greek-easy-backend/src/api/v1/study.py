@@ -12,8 +12,11 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.dependencies import get_current_user
+from src.core.exceptions import DeckNotFoundException
+from src.core.subscription import check_premium_deck_access, get_effective_access_level
 from src.db.dependencies import get_db
-from src.db.models import User
+from src.db.models import SubscriptionTier, User
+from src.repositories.deck import DeckRepository
 from src.repositories.review import ReviewRepository
 from src.schemas.sm2 import (
     CardInitializationRequest,
@@ -30,6 +33,7 @@ router = APIRouter(
     tags=["Study"],
     responses={
         401: {"description": "Not authenticated"},
+        403: {"description": "Premium subscription required"},
         404: {"description": "Deck not found"},
         422: {"description": "Validation error"},
     },
@@ -131,6 +135,8 @@ async def get_study_queue(
     Example:
         GET /api/v1/study/queue?limit=10&include_new=true&new_cards_limit=5&include_early_practice=true
     """
+    effective = get_effective_access_level(current_user)
+    exclude_premium = effective == SubscriptionTier.FREE
     service = SM2Service(db)
     request = StudyQueueRequest(
         deck_id=None,  # None indicates all decks
@@ -139,6 +145,7 @@ async def get_study_queue(
         new_cards_limit=new_cards_limit,
         include_early_practice=include_early_practice,
         early_practice_limit=early_practice_limit,
+        exclude_premium_decks=exclude_premium,
     )
     return await service.get_study_queue(current_user.id, request)
 
@@ -245,6 +252,11 @@ async def get_deck_study_queue(
     Example:
         GET /api/v1/study/queue/660e8400-e29b-41d4-a716-446655440001?limit=10&include_early_practice=true
     """
+    deck_repo = DeckRepository(db)
+    deck = await deck_repo.get(deck_id)
+    if not deck or not deck.is_active:
+        raise DeckNotFoundException(deck_id=str(deck_id))
+    check_premium_deck_access(current_user, deck)
     service = SM2Service(db)
     request = StudyQueueRequest(
         deck_id=deck_id,
@@ -405,6 +417,11 @@ async def initialize_cards(
             "card_ids": ["550e8400-e29b-41d4-a716-446655440000"]
         }
     """
+    deck_repo = DeckRepository(db)
+    deck = await deck_repo.get(request.deck_id)
+    if not deck:
+        raise DeckNotFoundException(deck_id=str(request.deck_id))
+    check_premium_deck_access(current_user, deck)
     service = SM2Service(db)
     return await service.initialize_cards_for_user(
         user_id=current_user.id,
@@ -466,6 +483,11 @@ async def initialize_deck(
     Example:
         POST /api/v1/study/initialize/660e8400-e29b-41d4-a716-446655440001
     """
+    deck_repo = DeckRepository(db)
+    deck = await deck_repo.get(deck_id)
+    if not deck:
+        raise DeckNotFoundException(deck_id=str(deck_id))
+    check_premium_deck_access(current_user, deck)
     service = SM2Service(db)
     return await service.initialize_deck_for_user(
         user_id=current_user.id,
