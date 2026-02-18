@@ -524,8 +524,12 @@ class TestCheckAchievementsTaskImplementation:
 
                         await check_achievements_task(user_id, db_url)
 
-                        # Verify create_async_engine was called with pool_pre_ping=True
-                        mock_engine_creator.assert_called_once_with(db_url, pool_pre_ping=True)
+                        # Verify create_async_engine was called with pool_pre_ping and connect_args
+                        mock_engine_creator.assert_called_once_with(
+                            db_url,
+                            pool_pre_ping=True,
+                            connect_args={},
+                        )
 
     @pytest.mark.asyncio
     async def test_check_achievements_logs_start_and_completion(self):
@@ -1308,8 +1312,12 @@ class TestRecalculateProgressTaskImplementation:
 
                             await recalculate_progress_task(user_id, deck_id, db_url)
 
-                            # Verify create_async_engine was called with pool_pre_ping=True
-                            mock_engine_creator.assert_called_once_with(db_url, pool_pre_ping=True)
+                            # Verify create_async_engine was called with pool_pre_ping and connect_args
+                            mock_engine_creator.assert_called_once_with(
+                                db_url,
+                                pool_pre_ping=True,
+                                connect_args={},
+                            )
 
     @pytest.mark.asyncio
     async def test_recalculate_progress_logs_old_vs_new_values(self):
@@ -1702,8 +1710,12 @@ class TestProcessCultureAnswerFullAsync:
                         db_url=db_url,
                     )
 
-                    # Verify create_async_engine was called with pool_pre_ping=True
-                    mock_engine_creator.assert_called_once_with(db_url, pool_pre_ping=True)
+                    # Verify create_async_engine was called with pool_pre_ping and connect_args
+                    mock_engine_creator.assert_called_once_with(
+                        db_url,
+                        pool_pre_ping=True,
+                        connect_args={},
+                    )
 
     @pytest.mark.asyncio
     async def test_process_culture_answer_full_async_logs_start(self):
