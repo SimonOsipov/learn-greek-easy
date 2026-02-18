@@ -279,8 +279,10 @@ class TestSubmitReviewUnit:
             patch("src.api.v1.reviews.CardRepository") as mock_card_repo_class,
             patch("src.api.v1.reviews.SM2Service") as mock_service_class,
         ):
+            mock_card = MagicMock()
+            mock_card.deck.is_premium = False
             mock_card_repo = AsyncMock()
-            mock_card_repo.get.return_value = MagicMock()
+            mock_card_repo.get.return_value = mock_card
             mock_card_repo_class.return_value = mock_card_repo
 
             mock_service = AsyncMock()
@@ -375,8 +377,10 @@ class TestSubmitReviewUnit:
             patch("src.api.v1.reviews.CardRepository") as mock_card_repo_class,
             patch("src.api.v1.reviews.SM2Service") as mock_service_class,
         ):
+            mock_card = MagicMock()
+            mock_card.deck.is_premium = False
             mock_card_repo = AsyncMock()
-            mock_card_repo.get.return_value = MagicMock()
+            mock_card_repo.get.return_value = mock_card
             mock_card_repo_class.return_value = mock_card_repo
 
             mock_service = AsyncMock()
@@ -467,7 +471,17 @@ class TestBulkReviewUnit:
             ],
         )
 
-        with patch("src.api.v1.reviews.SM2Service") as mock_class:
+        with (
+            patch("src.api.v1.reviews.DeckRepository") as mock_deck_repo_class,
+            patch("src.api.v1.reviews.SM2Service") as mock_class,
+        ):
+            mock_deck_repo = AsyncMock()
+            mock_deck = MagicMock()
+            mock_deck.is_active = True
+            mock_deck.is_premium = False
+            mock_deck_repo.get.return_value = mock_deck
+            mock_deck_repo_class.return_value = mock_deck_repo
+
             mock_service = AsyncMock()
             mock_service.process_bulk_reviews.return_value = mock_result
             mock_class.return_value = mock_service
@@ -520,7 +534,17 @@ class TestBulkReviewUnit:
             ],
         )
 
-        with patch("src.api.v1.reviews.SM2Service") as mock_class:
+        with (
+            patch("src.api.v1.reviews.DeckRepository") as mock_deck_repo_class,
+            patch("src.api.v1.reviews.SM2Service") as mock_class,
+        ):
+            mock_deck_repo = AsyncMock()
+            mock_deck = MagicMock()
+            mock_deck.is_active = True
+            mock_deck.is_premium = False
+            mock_deck_repo.get.return_value = mock_deck
+            mock_deck_repo_class.return_value = mock_deck_repo
+
             mock_service = AsyncMock()
             mock_service.process_bulk_reviews.return_value = mock_result
             mock_class.return_value = mock_service
@@ -632,7 +656,17 @@ class TestBulkReviewUnit:
             ],
         )
 
-        with patch("src.api.v1.reviews.SM2Service") as mock_class:
+        with (
+            patch("src.api.v1.reviews.DeckRepository") as mock_deck_repo_class,
+            patch("src.api.v1.reviews.SM2Service") as mock_class,
+        ):
+            mock_deck_repo = AsyncMock()
+            mock_deck = MagicMock()
+            mock_deck.is_active = True
+            mock_deck.is_premium = False
+            mock_deck_repo.get.return_value = mock_deck
+            mock_deck_repo_class.return_value = mock_deck_repo
+
             mock_service = AsyncMock()
             mock_service.process_bulk_reviews.return_value = mock_result
             mock_class.return_value = mock_service

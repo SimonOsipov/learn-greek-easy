@@ -5,7 +5,7 @@ For full integration tests, see tests/integration/api/test_study.py
 """
 
 from datetime import date
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
 import pytest
@@ -479,23 +479,32 @@ class TestGetDeckStudyQueueUnit:
             ],
         )
 
-        with patch("src.api.v1.study.SM2Service") as mock_class:
-            mock_service = AsyncMock()
-            mock_service.get_study_queue.return_value = mock_queue
-            mock_class.return_value = mock_service
+        mock_deck = MagicMock()
+        mock_deck.is_premium = False
+        mock_deck.is_active = True
 
-            response = await client.get(
-                f"/api/v1/study/queue/{deck_id}",
-                headers=auth_headers,
-            )
+        with patch("src.api.v1.study.DeckRepository") as mock_repo_class:
+            mock_repo = AsyncMock()
+            mock_repo.get.return_value = mock_deck
+            mock_repo_class.return_value = mock_repo
 
-            assert response.status_code == 200
-            data = response.json()
-            assert data["deck_id"] == str(deck_id)
-            assert data["deck_name"] == "Greek Basics A1"
-            assert data["total_due"] == 3
-            assert data["total_new"] == 2
-            assert len(data["cards"]) == 1
+            with patch("src.api.v1.study.SM2Service") as mock_class:
+                mock_service = AsyncMock()
+                mock_service.get_study_queue.return_value = mock_queue
+                mock_class.return_value = mock_service
+
+                response = await client.get(
+                    f"/api/v1/study/queue/{deck_id}",
+                    headers=auth_headers,
+                )
+
+                assert response.status_code == 200
+                data = response.json()
+                assert data["deck_id"] == str(deck_id)
+                assert data["deck_name"] == "Greek Basics A1"
+                assert data["total_due"] == 3
+                assert data["total_new"] == 2
+                assert len(data["cards"]) == 1
 
     @pytest.mark.asyncio
     async def test_get_deck_study_queue_not_found_returns_404(
@@ -548,26 +557,35 @@ class TestGetDeckStudyQueueUnit:
             cards=[],
         )
 
-        with patch("src.api.v1.study.SM2Service") as mock_class:
-            mock_service = AsyncMock()
-            mock_service.get_study_queue.return_value = mock_queue
-            mock_class.return_value = mock_service
+        mock_deck = MagicMock()
+        mock_deck.is_premium = False
+        mock_deck.is_active = True
 
-            response = await client.get(
-                f"/api/v1/study/queue/{deck_id}?limit=15&include_new=true&new_cards_limit=8",
-                headers=auth_headers,
-            )
+        with patch("src.api.v1.study.DeckRepository") as mock_repo_class:
+            mock_repo = AsyncMock()
+            mock_repo.get.return_value = mock_deck
+            mock_repo_class.return_value = mock_repo
 
-            assert response.status_code == 200
+            with patch("src.api.v1.study.SM2Service") as mock_class:
+                mock_service = AsyncMock()
+                mock_service.get_study_queue.return_value = mock_queue
+                mock_class.return_value = mock_service
 
-            # Verify service was called with correct parameters
-            mock_service.get_study_queue.assert_called_once()
-            call_args = mock_service.get_study_queue.call_args
-            request = call_args[0][1]
-            assert request.deck_id == deck_id
-            assert request.limit == 15
-            assert request.include_new is True
-            assert request.new_cards_limit == 8
+                response = await client.get(
+                    f"/api/v1/study/queue/{deck_id}?limit=15&include_new=true&new_cards_limit=8",
+                    headers=auth_headers,
+                )
+
+                assert response.status_code == 200
+
+                # Verify service was called with correct parameters
+                mock_service.get_study_queue.assert_called_once()
+                call_args = mock_service.get_study_queue.call_args
+                request = call_args[0][1]
+                assert request.deck_id == deck_id
+                assert request.limit == 15
+                assert request.include_new is True
+                assert request.new_cards_limit == 8
 
     @pytest.mark.asyncio
     async def test_get_deck_study_queue_with_early_practice_params(
@@ -586,25 +604,34 @@ class TestGetDeckStudyQueueUnit:
             cards=[],
         )
 
-        with patch("src.api.v1.study.SM2Service") as mock_class:
-            mock_service = AsyncMock()
-            mock_service.get_study_queue.return_value = mock_queue
-            mock_class.return_value = mock_service
+        mock_deck = MagicMock()
+        mock_deck.is_premium = False
+        mock_deck.is_active = True
 
-            response = await client.get(
-                f"/api/v1/study/queue/{deck_id}?include_early_practice=true&early_practice_limit=20",
-                headers=auth_headers,
-            )
+        with patch("src.api.v1.study.DeckRepository") as mock_repo_class:
+            mock_repo = AsyncMock()
+            mock_repo.get.return_value = mock_deck
+            mock_repo_class.return_value = mock_repo
 
-            assert response.status_code == 200
+            with patch("src.api.v1.study.SM2Service") as mock_class:
+                mock_service = AsyncMock()
+                mock_service.get_study_queue.return_value = mock_queue
+                mock_class.return_value = mock_service
 
-            # Verify service was called with correct parameters
-            mock_service.get_study_queue.assert_called_once()
-            call_args = mock_service.get_study_queue.call_args
-            request = call_args[0][1]
-            assert request.deck_id == deck_id
-            assert request.include_early_practice is True
-            assert request.early_practice_limit == 20
+                response = await client.get(
+                    f"/api/v1/study/queue/{deck_id}?include_early_practice=true&early_practice_limit=20",
+                    headers=auth_headers,
+                )
+
+                assert response.status_code == 200
+
+                # Verify service was called with correct parameters
+                mock_service.get_study_queue.assert_called_once()
+                call_args = mock_service.get_study_queue.call_args
+                request = call_args[0][1]
+                assert request.deck_id == deck_id
+                assert request.include_early_practice is True
+                assert request.early_practice_limit == 20
 
     @pytest.mark.asyncio
     async def test_get_deck_study_queue_invalid_early_practice_limit_returns_422(
@@ -651,25 +678,33 @@ class TestInitializeCardsUnit:
             card_ids=[card_id_1, card_id_2],
         )
 
-        with patch("src.api.v1.study.SM2Service") as mock_class:
-            mock_service = AsyncMock()
-            mock_service.initialize_cards_for_user.return_value = mock_result
-            mock_class.return_value = mock_service
+        mock_deck = MagicMock()
+        mock_deck.is_premium = False
 
-            response = await client.post(
-                "/api/v1/study/initialize",
-                json={
-                    "deck_id": str(deck_id),
-                    "card_ids": [str(card_id_1), str(card_id_2)],
-                },
-                headers=auth_headers,
-            )
+        with patch("src.api.v1.study.DeckRepository") as mock_repo_class:
+            mock_repo = AsyncMock()
+            mock_repo.get.return_value = mock_deck
+            mock_repo_class.return_value = mock_repo
 
-            assert response.status_code == 200
-            data = response.json()
-            assert data["initialized_count"] == 2
-            assert data["already_exists_count"] == 0
-            assert len(data["card_ids"]) == 2
+            with patch("src.api.v1.study.SM2Service") as mock_class:
+                mock_service = AsyncMock()
+                mock_service.initialize_cards_for_user.return_value = mock_result
+                mock_class.return_value = mock_service
+
+                response = await client.post(
+                    "/api/v1/study/initialize",
+                    json={
+                        "deck_id": str(deck_id),
+                        "card_ids": [str(card_id_1), str(card_id_2)],
+                    },
+                    headers=auth_headers,
+                )
+
+                assert response.status_code == 200
+                data = response.json()
+                assert data["initialized_count"] == 2
+                assert data["already_exists_count"] == 0
+                assert len(data["card_ids"]) == 2
 
     @pytest.mark.asyncio
     async def test_initialize_cards_deck_not_found_returns_404(
@@ -756,7 +791,17 @@ class TestInitializeDeckUnit:
             card_ids=card_ids,
         )
 
-        with patch("src.api.v1.study.SM2Service") as mock_class:
+        with (
+            patch("src.api.v1.study.DeckRepository") as mock_deck_repo_class,
+            patch("src.api.v1.study.SM2Service") as mock_class,
+        ):
+            mock_deck_repo = AsyncMock()
+            mock_deck = MagicMock()
+            mock_deck.is_active = True
+            mock_deck.is_premium = False
+            mock_deck_repo.get.return_value = mock_deck
+            mock_deck_repo_class.return_value = mock_deck_repo
+
             mock_service = AsyncMock()
             mock_service.initialize_deck_for_user.return_value = mock_result
             mock_class.return_value = mock_service
@@ -825,7 +870,17 @@ class TestInitializeDeckUnit:
             card_ids=new_card_ids,
         )
 
-        with patch("src.api.v1.study.SM2Service") as mock_class:
+        with (
+            patch("src.api.v1.study.DeckRepository") as mock_deck_repo_class,
+            patch("src.api.v1.study.SM2Service") as mock_class,
+        ):
+            mock_deck_repo = AsyncMock()
+            mock_deck = MagicMock()
+            mock_deck.is_active = True
+            mock_deck.is_premium = False
+            mock_deck_repo.get.return_value = mock_deck
+            mock_deck_repo_class.return_value = mock_deck_repo
+
             mock_service = AsyncMock()
             mock_service.initialize_deck_for_user.return_value = mock_result
             mock_class.return_value = mock_service

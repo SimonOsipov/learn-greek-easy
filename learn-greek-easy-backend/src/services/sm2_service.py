@@ -348,6 +348,7 @@ class SM2Service:
             user_id=user_id,
             deck_id=request.deck_id,
             limit=request.limit,
+            exclude_premium_decks=request.exclude_premium_decks,
         )
 
         logger.debug(
@@ -370,6 +371,7 @@ class SM2Service:
                     user_id=user_id,
                     deck_id=request.deck_id,
                     limit=remaining_slots,
+                    exclude_premium_decks=request.exclude_premium_decks,
                 )
 
                 logger.debug(
@@ -391,6 +393,7 @@ class SM2Service:
                     user_id=user_id,
                     deck_id=request.deck_id,
                     limit=ep_limit,
+                    exclude_premium_decks=request.exclude_premium_decks,
                 )
 
                 logger.debug(
@@ -513,6 +516,7 @@ class SM2Service:
         user_id: UUID,
         deck_id: UUID | None,
         limit: int,
+        exclude_premium_decks: bool = False,
     ) -> list[Card]:
         """Get cards the user hasn't studied yet.
 
@@ -523,6 +527,7 @@ class SM2Service:
             user_id: User ID
             deck_id: Optional deck filter
             limit: Maximum cards to return
+            exclude_premium_decks: Exclude cards from premium decks
 
         Returns:
             List of Card objects not yet studied by user
@@ -531,6 +536,7 @@ class SM2Service:
             user_id=user_id,
             deck_id=deck_id,
             limit=limit,
+            exclude_premium_decks=exclude_premium_decks,
         )
 
     async def get_study_stats(

@@ -306,6 +306,10 @@ class StudyQueueRequest(BaseModel):
         le=50,
         description="Maximum early practice cards to include",
     )
+    exclude_premium_decks: bool = Field(
+        default=False,
+        description="Exclude cards from premium decks (used for free-tier all-decks queue)",
+    )
 
 
 # ============================================================================

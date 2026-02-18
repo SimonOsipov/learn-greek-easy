@@ -487,23 +487,18 @@ class TestInitializeDeckEndpoint:
         assert data["already_exists_count"] == len(deck_with_cards.cards)
 
     @pytest.mark.asyncio
-    async def test_initialize_deck_nonexistent_returns_empty_result(
+    async def test_initialize_deck_nonexistent_returns_404(
         self,
         client: AsyncClient,
         auth_headers: dict,
     ):
-        """Test that non-existent deck returns empty result (graceful handling)."""
+        """Test that non-existent deck returns 404."""
         response = await client.post(
             "/api/v1/study/initialize/00000000-0000-0000-0000-000000000000",
             headers=auth_headers,
         )
 
-        # Service returns empty result for non-existent deck rather than 404
-        assert response.status_code == 200
-        data = response.json()
-        assert data["initialized_count"] == 0
-        assert data["already_exists_count"] == 0
-        assert data["card_ids"] == []
+        assert response.status_code == 404
 
     @pytest.mark.asyncio
     async def test_initialize_deck_response_fields(

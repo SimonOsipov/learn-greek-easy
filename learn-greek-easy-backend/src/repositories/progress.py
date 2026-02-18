@@ -227,6 +227,7 @@ class CardStatisticsRepository(BaseRepository[CardStatistics]):
         deck_id: UUID | None = None,
         *,
         limit: int = 20,
+        exclude_premium_decks: bool = False,
     ) -> list[CardStatistics]:
         """Get cards due for review today.
 
@@ -234,6 +235,7 @@ class CardStatisticsRepository(BaseRepository[CardStatistics]):
             user_id: User UUID
             deck_id: Optional deck filter
             limit: Max cards to return
+            exclude_premium_decks: Exclude cards from premium decks
 
         Returns:
             List of card statistics with card and deck info loaded
@@ -254,8 +256,17 @@ class CardStatisticsRepository(BaseRepository[CardStatistics]):
         )
 
         if deck_id is not None:
-            # Join with Card to filter by deck_id
             query = query.join(Card).where(Card.deck_id == deck_id)
+            if exclude_premium_decks:
+                query = query.join(Deck, Card.deck_id == Deck.id).where(
+                    Deck.is_premium == False  # noqa: E712
+                )
+        elif exclude_premium_decks:
+            query = (
+                query.join(Card)
+                .join(Deck, Card.deck_id == Deck.id)
+                .where(Deck.is_premium == False)  # noqa: E712
+            )
 
         result = await self.db.execute(query)
         return list(result.scalars().all())
@@ -266,6 +277,7 @@ class CardStatisticsRepository(BaseRepository[CardStatistics]):
         deck_id: UUID | None = None,
         *,
         limit: int = 10,
+        exclude_premium_decks: bool = False,
     ) -> list[CardStatistics]:
         """Get cards not yet due for early practice.
 
@@ -276,6 +288,7 @@ class CardStatisticsRepository(BaseRepository[CardStatistics]):
             user_id: User UUID
             deck_id: Optional deck filter
             limit: Max cards to return
+            exclude_premium_decks: Exclude cards from premium decks
 
         Returns:
             List of card statistics with card and deck info loaded
@@ -297,6 +310,16 @@ class CardStatisticsRepository(BaseRepository[CardStatistics]):
         # Apply deck filter if specified (join before limit)
         if deck_id is not None:
             query = query.join(Card).where(Card.deck_id == deck_id)
+            if exclude_premium_decks:
+                query = query.join(Deck, Card.deck_id == Deck.id).where(
+                    Deck.is_premium == False  # noqa: E712
+                )
+        elif exclude_premium_decks:
+            query = (
+                query.join(Card)
+                .join(Deck, Card.deck_id == Deck.id)
+                .where(Deck.is_premium == False)  # noqa: E712
+            )
 
         # Eager load relationships
         query = query.options(selectinload(CardStatistics.card).selectinload(Card.deck))
@@ -381,6 +404,7 @@ class CardStatisticsRepository(BaseRepository[CardStatistics]):
         user_id: UUID,
         deck_id: UUID | None = None,
         limit: int = 10,
+        exclude_premium_decks: bool = False,
     ) -> list[Card]:
         """Get cards that user hasn't studied yet.
 
@@ -391,6 +415,7 @@ class CardStatisticsRepository(BaseRepository[CardStatistics]):
             user_id: User UUID
             deck_id: Optional deck filter
             limit: Maximum cards to return
+            exclude_premium_decks: Exclude cards from premium decks
 
         Returns:
             List of Card objects not yet studied by user
@@ -417,6 +442,9 @@ class CardStatisticsRepository(BaseRepository[CardStatistics]):
 
         if deck_id is not None:
             query = query.where(Card.deck_id == deck_id)
+
+        if exclude_premium_decks:
+            query = query.where(Deck.is_premium == False)  # noqa: E712
 
         result = await self.db.execute(query)
         return list(result.scalars().all())
