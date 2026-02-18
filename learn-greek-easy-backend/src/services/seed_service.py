@@ -45,6 +45,8 @@ from src.db.models import (
     NotificationType,
     PartOfSpeech,
     Review,
+    SubscriptionStatus,
+    SubscriptionTier,
     User,
     UserAchievement,
     UserDeckProgress,
@@ -3807,6 +3809,8 @@ class SeedService:
                 supabase_id=user_data["supabase_id"],
                 is_superuser=user_data["is_superuser"],
                 is_active=user_data["is_active"],
+                subscription_tier=SubscriptionTier.FREE,
+                subscription_status=SubscriptionStatus.NONE,
             )
             self.db.add(user)
             await self.db.flush()
@@ -4441,6 +4445,8 @@ class SeedService:
                     supabase_id=None,  # Will be set on first login
                     is_superuser=user_data["is_superuser"],
                     is_active=True,
+                    subscription_tier=SubscriptionTier.FREE,
+                    subscription_status=SubscriptionStatus.NONE,
                 )
                 self.db.add(user)
                 await self.db.flush()
@@ -4550,6 +4556,8 @@ class SeedService:
                     supabase_id=None,
                     is_superuser=False,
                     is_active=True,
+                    subscription_tier=SubscriptionTier.FREE,
+                    subscription_status=SubscriptionStatus.NONE,
                 )
                 self.db.add(user)
                 await self.db.flush()
