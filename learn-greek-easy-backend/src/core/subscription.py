@@ -11,7 +11,7 @@ from src.core.exceptions import PremiumRequiredException
 from src.core.posthog import capture_event
 from src.db.models import Deck, SubscriptionStatus, SubscriptionTier, User
 
-__all__ = ["get_effective_access_level", "require_premium", "check_premium_deck_access"]
+__all__ = ["check_premium_deck_access", "get_effective_access_level", "require_premium"]
 
 _PREMIUM_STATUSES = frozenset(
     {

@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
 from src.core.dependencies import get_current_user
-from src.core.exceptions import CardNotFoundException
+from src.core.exceptions import CardNotFoundException, DeckNotFoundException
 from src.core.logging import get_logger
 from src.core.posthog import capture_event
 from src.core.redis import get_redis
@@ -486,8 +486,9 @@ async def submit_bulk_reviews(
     # Enforce premium deck access
     deck_repo = DeckRepository(db)
     deck = await deck_repo.get(request.deck_id)
-    if deck:
-        check_premium_deck_access(current_user, deck)
+    if not deck or not deck.is_active:
+        raise DeckNotFoundException(deck_id=str(request.deck_id))
+    check_premium_deck_access(current_user, deck)
 
     service = SM2Service(db)
 

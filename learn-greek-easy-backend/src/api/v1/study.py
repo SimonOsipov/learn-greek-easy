@@ -419,7 +419,7 @@ async def initialize_cards(
     """
     deck_repo = DeckRepository(db)
     deck = await deck_repo.get(request.deck_id)
-    if not deck:
+    if not deck or not deck.is_active:
         raise DeckNotFoundException(deck_id=str(request.deck_id))
     check_premium_deck_access(current_user, deck)
     service = SM2Service(db)

@@ -292,17 +292,15 @@ class TestSubmitBulkReviewsPremiumGating:
         assert response.status_code == 200
 
     @pytest.mark.asyncio
-    async def test_nonexistent_deck_id_skips_premium_gate_returns_200(
-        self, client: AsyncClient, auth_headers: dict
-    ):
-        """Non-existent deck_id (repo returns None) skips premium check, calls SM2Service.
+    async def test_nonexistent_deck_id_returns_404(self, client: AsyncClient, auth_headers: dict):
+        """Non-existent deck_id (repo returns None) returns 404.
 
-        The implementation uses: if deck: check_premium_deck_access(user, deck)
-        So when deck doesn't exist, the gate is skipped and the service handles it.
+        The implementation raises DeckNotFoundException when the deck does not exist,
+        closing the security gap where a free user could bypass the premium gate by
+        supplying an invalid deck_id.
         """
         deck_id = uuid4()
         card_id = uuid4()
-        mock_result = _make_bulk_result()
 
         with (
             patch("src.api.v1.reviews.DeckRepository") as mock_deck_repo_class,
@@ -313,7 +311,6 @@ class TestSubmitBulkReviewsPremiumGating:
             mock_deck_repo_class.return_value = mock_deck_repo
 
             mock_service = AsyncMock()
-            mock_service.process_bulk_reviews.return_value = mock_result
             mock_service_class.return_value = mock_service
 
             response = await client.post(
@@ -326,9 +323,8 @@ class TestSubmitBulkReviewsPremiumGating:
                 headers=auth_headers,
             )
 
-        # Should NOT raise 403 or 404 — service handles non-existent deck gracefully
-        assert response.status_code == 200
-        mock_service.process_bulk_reviews.assert_called_once()
+        assert response.status_code == 404
+        mock_service.process_bulk_reviews.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_bulk_premium_gate_blocks_before_sm2_service(
