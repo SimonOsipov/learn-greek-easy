@@ -60,7 +60,11 @@ async def check_achievements_task(user_id: UUID, db_url: str) -> None:
     engine = None
     try:
         # Create dedicated engine for this background task
-        engine = create_async_engine(db_url, pool_pre_ping=True, connect_args={"ssl": "require"})
+        engine = create_async_engine(
+            db_url,
+            pool_pre_ping=True,
+            connect_args={"ssl": "require"} if settings.is_production else {},
+        )
         async_session_factory = async_sessionmaker(
             engine, class_=AsyncSession, expire_on_commit=False
         )
@@ -268,7 +272,11 @@ async def recalculate_progress_task(
 
     try:
         # Create dedicated engine for this background task
-        engine = create_async_engine(db_url, pool_pre_ping=True, connect_args={"ssl": "require"})
+        engine = create_async_engine(
+            db_url,
+            pool_pre_ping=True,
+            connect_args={"ssl": "require"} if settings.is_production else {},
+        )
         async_session_factory = async_sessionmaker(
             engine, class_=AsyncSession, expire_on_commit=False
         )
@@ -401,7 +409,11 @@ async def process_answer_side_effects_task(
     engine = None
     try:
         # Create dedicated engine for this background task
-        engine = create_async_engine(db_url, pool_pre_ping=True, connect_args={"ssl": "require"})
+        engine = create_async_engine(
+            db_url,
+            pool_pre_ping=True,
+            connect_args={"ssl": "require"} if settings.is_production else {},
+        )
         async_session_factory = async_sessionmaker(
             engine, class_=AsyncSession, expire_on_commit=False
         )
@@ -622,7 +634,11 @@ async def process_culture_answer_full_async(
 
     try:
         # Create dedicated engine for this background task
-        engine = create_async_engine(db_url, pool_pre_ping=True, connect_args={"ssl": "require"})
+        engine = create_async_engine(
+            db_url,
+            pool_pre_ping=True,
+            connect_args={"ssl": "require"} if settings.is_production else {},
+        )
         async_session_factory = async_sessionmaker(
             engine, class_=AsyncSession, expire_on_commit=False
         )
@@ -841,7 +857,11 @@ async def check_culture_achievements_task(
     engine = None
     try:
         # Create dedicated engine for this background task
-        engine = create_async_engine(db_url, pool_pre_ping=True, connect_args={"ssl": "require"})
+        engine = create_async_engine(
+            db_url,
+            pool_pre_ping=True,
+            connect_args={"ssl": "require"} if settings.is_production else {},
+        )
         async_session_factory = async_sessionmaker(
             engine, class_=AsyncSession, expire_on_commit=False
         )
@@ -930,7 +950,11 @@ async def create_announcement_notifications_task(
 
     try:
         # Create dedicated engine for this background task
-        engine = create_async_engine(db_url, pool_pre_ping=True, connect_args={"ssl": "require"})
+        engine = create_async_engine(
+            db_url,
+            pool_pre_ping=True,
+            connect_args={"ssl": "require"} if settings.is_production else {},
+        )
         async_session_factory = async_sessionmaker(
             engine, class_=AsyncSession, expire_on_commit=False
         )
@@ -1064,7 +1088,11 @@ async def generate_audio_for_news_item_task(
 
     engine = None
     try:
-        engine = create_async_engine(db_url, pool_pre_ping=True, connect_args={"ssl": "require"})
+        engine = create_async_engine(
+            db_url,
+            pool_pre_ping=True,
+            connect_args={"ssl": "require"} if settings.is_production else {},
+        )
         async_session_factory = async_sessionmaker(
             engine, class_=AsyncSession, expire_on_commit=False
         )
