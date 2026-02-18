@@ -3,6 +3,7 @@
 This module provides:
 - Authentication dependencies for FastAPI routes
 - SM-2 spaced repetition algorithm
+- Subscription enforcement for premium feature gating
 
 Example:
     from src.core import (
@@ -14,6 +15,10 @@ Example:
         calculate_sm2,
         SM2Calculation,
         DEFAULT_EASINESS_FACTOR,
+        # Subscription gating
+        get_effective_access_level,
+        require_premium,
+        check_premium_deck_access,
     )
 """
 
@@ -38,6 +43,11 @@ from src.core.sm2 import (
     calculate_next_review_date,
     calculate_sm2,
     determine_status,
+)
+from src.core.subscription import (
+    check_premium_deck_access,
+    get_effective_access_level,
+    require_premium,
 )
 
 __all__ = [
@@ -64,4 +74,8 @@ __all__ = [
     "MASTERY_EF_THRESHOLD",
     "MASTERY_INTERVAL_THRESHOLD",
     "LEARNING_REPETITIONS_THRESHOLD",
+    # Subscription gating (from subscription.py)
+    "get_effective_access_level",
+    "require_premium",
+    "check_premium_deck_access",
 ]

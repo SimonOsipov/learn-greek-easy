@@ -91,12 +91,28 @@ class ForbiddenException(BaseAPIException):
 class PremiumRequiredException(BaseAPIException):
     """Premium subscription required."""
 
-    def __init__(self, detail: str = "Premium subscription required") -> None:
+    def __init__(
+        self,
+        detail: str = "Premium subscription required",
+        current_tier: str = "free",
+        required_tier: str = "premium",
+        trial_eligible: bool = False,
+        gate_type: str = "require_premium",
+        deck_id: str | None = None,
+    ) -> None:
+        extra = {
+            "required_tier": required_tier,
+            "current_tier": current_tier,
+            "trial_eligible": trial_eligible,
+        }
         super().__init__(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=detail,
             error_code="PREMIUM_REQUIRED",
+            extra=extra,
         )
+        self._gate_type = gate_type
+        self._deck_id = deck_id
 
 
 # ============================================================================
