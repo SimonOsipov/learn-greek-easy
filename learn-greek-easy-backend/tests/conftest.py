@@ -25,6 +25,13 @@ import os
 os.environ["TESTING"] = "true"
 os.environ["TEST_SEED_ENABLED"] = "true"
 os.environ["FEATURE_BACKGROUND_TASKS"] = "false"
+os.environ.setdefault(
+    "DATABASE_URL",
+    os.environ.get(
+        "TEST_DATABASE_URL",
+        "postgresql+asyncpg://postgres:postgres@localhost:5433/test_learn_greek",
+    ),
+)
 
 # flake8: noqa: E402 - imports must come after os.environ is set
 import asyncio
