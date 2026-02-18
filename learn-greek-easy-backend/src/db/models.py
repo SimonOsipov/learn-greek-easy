@@ -192,7 +192,6 @@ class SubscriptionTier(str, enum.Enum):
 
     FREE = "free"
     PREMIUM = "premium"
-    FOUNDERS = "founders"
 
 
 class SubscriptionStatus(str, enum.Enum):
