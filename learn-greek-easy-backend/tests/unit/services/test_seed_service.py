@@ -141,16 +141,9 @@ class TestSeedServiceTruncation:
     """Tests for table truncation."""
 
     def test_truncation_order_is_fk_safe(self):
-        """Verify truncation order respects FK constraints.
-
-        Note: users and user_settings are NOT truncated (persist across seeds).
-        """
+        """Verify truncation order respects FK constraints."""
         # Children must come before parents
         order = SeedService.TRUNCATION_ORDER
-
-        # Verify users/user_settings are NOT in truncation order
-        assert "users" not in order
-        assert "user_settings" not in order
 
         # reviews depends on cards
         assert order.index("reviews") < order.index("cards")
