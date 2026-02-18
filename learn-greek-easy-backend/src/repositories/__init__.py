@@ -19,6 +19,7 @@ from src.repositories.progress import CardStatisticsRepository, UserDeckProgress
 from src.repositories.review import ReviewRepository
 from src.repositories.session import SessionRepository
 from src.repositories.user import UserRepository, UserSettingsRepository
+from src.repositories.webhook_event import WebhookEventRepository
 from src.repositories.word_entry import WordEntryRepository
 
 __all__ = [
@@ -57,6 +58,8 @@ __all__ = [
     "MockExamRepository",
     # News Feed
     "NewsItemRepository",
+    # Webhook Event
+    "WebhookEventRepository",
     # Word Entry
     "WordEntryRepository",
 ]
