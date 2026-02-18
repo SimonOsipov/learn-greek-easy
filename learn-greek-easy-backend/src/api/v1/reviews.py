@@ -18,9 +18,11 @@ from src.core.exceptions import CardNotFoundException
 from src.core.logging import get_logger
 from src.core.posthog import capture_event
 from src.core.redis import get_redis
+from src.core.subscription import check_premium_deck_access
 from src.db.dependencies import get_db
 from src.db.models import User, UserSettings
 from src.repositories.card import CardRepository
+from src.repositories.deck import DeckRepository
 from src.repositories.review import ReviewRepository
 from src.schemas.review import (
     BulkReviewSubmit,
@@ -145,6 +147,7 @@ router = APIRouter(
     tags=["Reviews"],
     responses={
         401: {"description": "Not authenticated"},
+        403: {"description": "Premium subscription required"},
         422: {"description": "Validation error"},
     },
 )
@@ -329,6 +332,9 @@ async def submit_review(
     if card is None:
         raise CardNotFoundException(card_id=str(review.card_id))
 
+    # Enforce premium deck access
+    check_premium_deck_access(current_user, card.deck)
+
     # Get streak BEFORE processing review (for milestone tracking)
     review_repo = ReviewRepository(db)
     previous_streak = await review_repo.get_streak(current_user.id)
@@ -477,6 +483,12 @@ async def submit_bulk_reviews(
         UnauthorizedException (401): If not authenticated
         ValidationError (422): If request body validation fails (e.g., >100 reviews)
     """
+    # Enforce premium deck access
+    deck_repo = DeckRepository(db)
+    deck = await deck_repo.get(request.deck_id)
+    if deck:
+        check_premium_deck_access(current_user, deck)
+
     service = SM2Service(db)
 
     # Convert Pydantic models to dictionaries for the service
