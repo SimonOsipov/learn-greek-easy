@@ -187,6 +187,35 @@ class CardType(str, enum.Enum):
     ARTICLE = "article"
 
 
+class SubscriptionTier(str, enum.Enum):
+    """Subscription tier for user billing."""
+
+    FREE = "free"
+    PREMIUM = "premium"
+    FOUNDERS = "founders"
+
+
+class SubscriptionStatus(str, enum.Enum):
+    """Stripe subscription lifecycle status."""
+
+    NONE = "none"
+    TRIALING = "trialing"
+    ACTIVE = "active"
+    PAST_DUE = "past_due"
+    CANCELED = "canceled"
+    INCOMPLETE = "incomplete"
+    UNPAID = "unpaid"
+
+
+class BillingCycle(str, enum.Enum):
+    """Billing cycle frequency for subscriptions."""
+
+    MONTHLY = "monthly"
+    QUARTERLY = "quarterly"
+    SEMI_ANNUAL = "semi_annual"
+    LIFETIME = "lifetime"
+
+
 # ============================================================================
 # User Models
 # ============================================================================
@@ -233,6 +262,87 @@ class User(Base, TimestampMixin):
         nullable=True,
         index=True,
         comment="Supabase Auth user identifier (sub claim, UUID format)",
+    )
+
+    # Subscription & Billing
+    subscription_tier: Mapped[SubscriptionTier] = mapped_column(
+        nullable=False,
+        default=SubscriptionTier.FREE,
+        server_default=text("'free'"),
+        index=True,
+        comment="User subscription tier: free, premium, founders",
+    )
+    subscription_status: Mapped[SubscriptionStatus] = mapped_column(
+        nullable=False,
+        default=SubscriptionStatus.NONE,
+        server_default=text("'none'"),
+        index=True,
+        comment="Stripe subscription lifecycle status",
+    )
+    stripe_customer_id: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+        unique=True,
+        index=True,
+        comment="Stripe customer ID (cus_xxx)",
+    )
+    stripe_subscription_id: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+        unique=True,
+        index=True,
+        comment="Stripe subscription ID (sub_xxx)",
+    )
+    trial_start_date: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="When the user's trial period started",
+    )
+    trial_end_date: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="When the user's trial period ends/ended",
+    )
+    subscription_created_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="When the subscription was first created",
+    )
+    subscription_resubscribed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="When the user last resubscribed after cancellation",
+    )
+    subscription_current_period_end: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="End of current billing period (from Stripe)",
+    )
+    subscription_cancel_at_period_end: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        server_default=text("false"),
+        nullable=False,
+        comment="Whether subscription cancels at period end",
+    )
+    billing_cycle: Mapped[BillingCycle | None] = mapped_column(
+        nullable=True,
+        comment="Current billing cycle: monthly, quarterly, semi_annual, lifetime",
+    )
+    grandfathered_price_id: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+        comment="Stripe price ID locked in for grandfathered users",
+    )
+    grandfathered_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="When the user was grandfathered into their price",
+    )
+    grandfathered_amount: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+        comment="Grandfathered price amount in EUR cents",
     )
 
     # Relationships (lazy="raise" to prevent accidental lazy loading)
