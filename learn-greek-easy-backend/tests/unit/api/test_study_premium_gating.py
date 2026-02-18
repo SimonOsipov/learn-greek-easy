@@ -470,20 +470,9 @@ class TestInitializeDeckPremiumGating:
         assert response.status_code == 200
 
     @pytest.mark.asyncio
-    async def test_nonexistent_deck_skips_premium_check_proceeds_gracefully(
-        self, client: AsyncClient, auth_headers: dict
-    ):
-        """Non-existent deck (repo returns None) skips premium check, proceeds to service.
-
-        The implementation currently does: if deck: check_premium_deck_access(user, deck)
-        So for non-existent decks, no 403 is raised - the service handles it.
-        """
+    async def test_nonexistent_deck_returns_404(self, client: AsyncClient, auth_headers: dict):
+        """Non-existent deck (repo returns None) raises DeckNotFoundException (404)."""
         deck_id = uuid4()
-        mock_result = CardInitializationResult(
-            initialized_count=0,
-            already_exists_count=0,
-            card_ids=[],
-        )
 
         with patch("src.api.v1.study.DeckRepository") as mock_repo_class:
             mock_repo = AsyncMock()
@@ -492,7 +481,6 @@ class TestInitializeDeckPremiumGating:
 
             with patch("src.api.v1.study.SM2Service") as mock_service_class:
                 mock_service = AsyncMock()
-                mock_service.initialize_deck_for_user.return_value = mock_result
                 mock_service_class.return_value = mock_service
 
                 response = await client.post(
@@ -500,8 +488,8 @@ class TestInitializeDeckPremiumGating:
                     headers=auth_headers,
                 )
 
-        # Service is called (returns empty result for non-existent deck)
-        assert response.status_code == 200
+        assert response.status_code == 404
+        mock_service.initialize_deck_for_user.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_premium_user_active_can_initialize_premium_deck(
@@ -1124,29 +1112,16 @@ class TestServicePassthroughExcludePremiumDecks:
 
 @pytest.mark.unit
 class TestInitializeDeckNonExistentBehavior:
-    """Document and verify the behavior of initialize/{deck_id} for non-existent decks.
+    """Verify that initialize/{deck_id} returns 404 for non-existent/inactive decks.
 
-    The implementation currently does:
-        deck = await deck_repo.get(deck_id)
-        if deck:
-            check_premium_deck_access(current_user, deck)
-        # Then calls service regardless
-
-    So for non-existent decks, there's no 404 from the endpoint - the service handles it.
-    This test documents that behavior.
+    The implementation raises DeckNotFoundException (404) when the deck is None
+    or inactive, consistent with initialize_cards and get_deck_study_queue.
     """
 
     @pytest.mark.asyncio
-    async def test_nonexistent_deck_premium_check_skipped_service_called(
-        self, client: AsyncClient, auth_headers: dict
-    ):
-        """Non-existent deck bypasses premium check and calls service."""
+    async def test_nonexistent_deck_returns_404(self, client: AsyncClient, auth_headers: dict):
+        """Non-existent deck returns 404 and does not call service."""
         deck_id = uuid4()
-        mock_result = CardInitializationResult(
-            initialized_count=0,
-            already_exists_count=0,
-            card_ids=[],
-        )
 
         with patch("src.api.v1.study.DeckRepository") as mock_repo_class:
             mock_repo = AsyncMock()
@@ -1155,7 +1130,6 @@ class TestInitializeDeckNonExistentBehavior:
 
             with patch("src.api.v1.study.SM2Service") as mock_service_class:
                 mock_service = AsyncMock()
-                mock_service.initialize_deck_for_user.return_value = mock_result
                 mock_service_class.return_value = mock_service
 
                 response = await client.post(
@@ -1163,6 +1137,5 @@ class TestInitializeDeckNonExistentBehavior:
                     headers=auth_headers,
                 )
 
-        # Service is called even though deck doesn't exist
-        assert response.status_code == 200
-        mock_service.initialize_deck_for_user.assert_called_once()
+        assert response.status_code == 404
+        mock_service.initialize_deck_for_user.assert_not_called()

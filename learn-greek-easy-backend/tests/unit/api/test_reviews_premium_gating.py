@@ -4,7 +4,7 @@ Tests verify:
 - POST /reviews: Hard block (403) for free users on cards in premium decks
 - POST /reviews/bulk: Hard block (403) for free users when deck_id is premium
 - Premium users (ACTIVE/TRIALING/PAST_DUE) and superusers can submit reviews on premium decks
-- Non-existent deck_id in bulk endpoint silently skips the gate (no 404)
+- Non-existent or inactive deck_id in bulk endpoint raises DeckNotFoundException (404)
 - OpenAPI 403 documented at router level
 - card.deck selectin eager-load means no extra DB query for single review
 - DeckRepository.get is called exactly once for bulk review
@@ -53,6 +53,7 @@ def _make_deck(is_premium: bool = False) -> MagicMock:
     deck = MagicMock()
     deck.id = uuid4()
     deck.is_premium = is_premium
+    deck.is_active = True
     return deck
 
 
