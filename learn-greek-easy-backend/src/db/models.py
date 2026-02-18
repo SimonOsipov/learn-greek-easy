@@ -268,14 +268,14 @@ class User(Base, TimestampMixin):
     subscription_tier: Mapped[SubscriptionTier] = mapped_column(
         nullable=False,
         default=SubscriptionTier.FREE,
-        server_default=text("'free'"),
+        server_default=text("'FREE'"),
         index=True,
         comment="User subscription tier: free, premium, founders",
     )
     subscription_status: Mapped[SubscriptionStatus] = mapped_column(
         nullable=False,
         default=SubscriptionStatus.NONE,
-        server_default=text("'none'"),
+        server_default=text("'NONE'"),
         index=True,
         comment="Stripe subscription lifecycle status",
     )
