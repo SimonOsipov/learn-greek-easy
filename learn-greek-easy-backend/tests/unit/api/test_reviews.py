@@ -279,8 +279,10 @@ class TestSubmitReviewUnit:
             patch("src.api.v1.reviews.CardRepository") as mock_card_repo_class,
             patch("src.api.v1.reviews.SM2Service") as mock_service_class,
         ):
+            mock_card = MagicMock()
+            mock_card.deck.is_premium = False
             mock_card_repo = AsyncMock()
-            mock_card_repo.get.return_value = MagicMock()
+            mock_card_repo.get.return_value = mock_card
             mock_card_repo_class.return_value = mock_card_repo
 
             mock_service = AsyncMock()
@@ -375,8 +377,10 @@ class TestSubmitReviewUnit:
             patch("src.api.v1.reviews.CardRepository") as mock_card_repo_class,
             patch("src.api.v1.reviews.SM2Service") as mock_service_class,
         ):
+            mock_card = MagicMock()
+            mock_card.deck.is_premium = False
             mock_card_repo = AsyncMock()
-            mock_card_repo.get.return_value = MagicMock()
+            mock_card_repo.get.return_value = mock_card
             mock_card_repo_class.return_value = mock_card_repo
 
             mock_service = AsyncMock()
