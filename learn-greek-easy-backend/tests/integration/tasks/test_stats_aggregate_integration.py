@@ -42,6 +42,7 @@ class TestStatsAggregateTaskIntegration:
         test_db_url = get_test_database_url()
         with patch("src.tasks.scheduled.settings") as mock_settings:
             mock_settings.database_url = test_db_url
+            mock_settings.is_production = False
 
             # No reviews or mastery data - should complete without error
             await stats_aggregate_task()
@@ -69,6 +70,7 @@ class TestStatsAggregateTaskIntegration:
         test_db_url = get_test_database_url()
         with patch("src.tasks.scheduled.settings") as mock_settings:
             mock_settings.database_url = test_db_url
+            mock_settings.is_production = False
 
             # Test data is in DB but won't be counted (created today, not yesterday)
             # This tests that the task handles the presence of data gracefully
