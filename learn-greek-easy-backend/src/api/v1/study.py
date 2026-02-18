@@ -485,9 +485,8 @@ async def initialize_deck(
     """
     deck_repo = DeckRepository(db)
     deck = await deck_repo.get(deck_id)
-    if not deck:
-        raise DeckNotFoundException(deck_id=str(deck_id))
-    check_premium_deck_access(current_user, deck)
+    if deck:
+        check_premium_deck_access(current_user, deck)
     service = SM2Service(db)
     return await service.initialize_deck_for_user(
         user_id=current_user.id,
