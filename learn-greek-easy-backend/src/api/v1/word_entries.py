@@ -7,9 +7,10 @@ This module provides HTTP endpoints for word entry operations including:
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, BackgroundTasks, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.config import settings
 from src.core.dependencies import get_current_superuser, get_current_user
 from src.core.exceptions import DeckNotFoundException, ForbiddenException, NotFoundException
 from src.db.dependencies import get_db
@@ -20,6 +21,7 @@ from src.repositories.word_entry import WordEntryRepository
 from src.schemas.card_record import CardRecordResponse
 from src.schemas.word_entry import WordEntryBulkRequest, WordEntryBulkResponse, WordEntryResponse
 from src.services.card_generator_service import CardGeneratorService
+from src.tasks import generate_word_entry_audio_task, is_background_tasks_enabled
 
 router = APIRouter(
     # Note: prefix is set by parent router in v1/router.py
@@ -284,6 +286,7 @@ async def get_word_entry_cards(
 )
 async def bulk_upload_word_entries(
     request: WordEntryBulkRequest,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_superuser),
 ) -> WordEntryBulkResponse:
@@ -354,6 +357,18 @@ async def bulk_upload_word_entries(
 
     # Commit the transaction
     await db.commit()
+
+    if is_background_tasks_enabled():
+        for entry in entries:
+            background_tasks.add_task(
+                generate_word_entry_audio_task,
+                word_entry_id=entry.id,
+                lemma=entry.lemma,
+                examples=[
+                    {"id": ex.get("id"), "greek": ex.get("greek")} for ex in (entry.examples or [])
+                ],
+                db_url=settings.database_url,
+            )
 
     return WordEntryBulkResponse(
         deck_id=request.deck_id,
