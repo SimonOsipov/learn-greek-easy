@@ -255,3 +255,37 @@ export function trackAdminDeckDeleteFailed(properties: AdminDeckDeleteFailedProp
     posthog.capture('admin_deck_delete_failed', properties);
   }
 }
+
+export interface AdminWordEntryDetailOpenedProperties {
+  word_entry_id: string;
+  deck_id: string;
+  lemma: string;
+  part_of_speech: string | null;
+}
+
+export interface AdminWordEntryDetailTabSwitchedProperties {
+  word_entry_id: string;
+  tab: string;
+}
+
+/**
+ * Track when admin opens a word entry detail view.
+ */
+export function trackAdminWordEntryDetailOpened(
+  properties: AdminWordEntryDetailOpenedProperties
+): void {
+  if (typeof posthog?.capture === 'function') {
+    posthog.capture('admin_word_entry_detail_opened', properties);
+  }
+}
+
+/**
+ * Track when admin switches tabs in the word entry detail view.
+ */
+export function trackAdminWordEntryDetailTabSwitched(
+  properties: AdminWordEntryDetailTabSwitchedProperties
+): void {
+  if (typeof posthog?.capture === 'function') {
+    posthog.capture('admin_word_entry_detail_tab_switched', properties);
+  }
+}

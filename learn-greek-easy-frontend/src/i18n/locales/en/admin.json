@@ -145,6 +145,12 @@
     "loading": "Loading contents...",
     "createCard": "Create Card"
   },
+  "wordEntryDetail": {
+    "back": "Back",
+    "tabWordEntry": "Word Entry",
+    "tabCards": "Cards",
+    "placeholder": "Details will appear here"
+  },
   "cardDelete": {
     "title": "Permanently Delete Card",
     "titleQuestion": "Permanently Delete Question",
