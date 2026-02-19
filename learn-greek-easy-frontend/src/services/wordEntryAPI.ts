@@ -97,6 +97,24 @@ export interface WordEntryListResponse {
   word_entries: WordEntryResponse[];
 }
 
+export interface ExampleSentenceUpdatePayload {
+  id: string;
+  greek: string;
+  english?: string | null;
+  russian?: string | null;
+  context?: string | null;
+}
+
+export interface WordEntryInlineUpdatePayload {
+  translation_en?: string;
+  translation_en_plural?: string | null;
+  translation_ru?: string | null;
+  translation_ru_plural?: string | null;
+  pronunciation?: string | null;
+  gender?: string | null;
+  examples?: ExampleSentenceUpdatePayload[];
+}
+
 /**
  * Card type for V2 card records.
  * Matches backend CardType enum in src/db/models.py.
@@ -193,5 +211,46 @@ export const wordEntryAPI = {
    */
   getCardsByWordEntry: async (wordEntryId: string): Promise<CardRecordResponse[]> => {
     return api.get<CardRecordResponse[]>(`/api/v1/word-entries/${wordEntryId}/cards`);
+  },
+
+  /**
+   * Inline update of a word entry (admin only).
+   *
+   * Partial update for admin inline editing of a word entry.
+   * Requires superuser privileges.
+   *
+   * @param wordEntryId - UUID of the word entry
+   * @param payload - Fields to update
+   * @returns Updated WordEntryResponse
+   */
+  updateInline: async (
+    wordEntryId: string,
+    payload: WordEntryInlineUpdatePayload
+  ): Promise<WordEntryResponse> => {
+    return api.patch<WordEntryResponse>(`/api/v1/admin/word-entries/${wordEntryId}`, payload);
+  },
+
+  /**
+   * Generate audio for a specific part of a word entry (admin only).
+   *
+   * Triggers background audio generation for lemma or example sentence.
+   * Requires superuser privileges.
+   *
+   * @param wordEntryId - UUID of the word entry
+   * @param part - 'lemma' or 'example'
+   * @param exampleId - UUID of the example (required when part='example')
+   */
+  generatePartAudio: async (
+    wordEntryId: string,
+    part: 'lemma' | 'example',
+    exampleId?: string
+  ): Promise<void> => {
+    await api.post<{ message: string }>(
+      `/api/v1/admin/word-entries/${wordEntryId}/generate-audio`,
+      {
+        part,
+        example_id: exampleId ?? null,
+      }
+    );
   },
 };
