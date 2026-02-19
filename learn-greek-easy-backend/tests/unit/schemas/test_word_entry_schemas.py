@@ -20,6 +20,7 @@ from pydantic import ValidationError
 from src.db.models import PartOfSpeech
 from src.schemas.word_entry import (
     ExampleSentence,
+    ExampleSentenceResponse,
     GrammarData,
     WordEntryBase,
     WordEntryBulkCreate,
@@ -686,7 +687,7 @@ class TestWordEntryResponse:
             translation_ru="хороший",
             pronunciation="/ka'los/",
             grammar_data={"gender": "masculine"},
-            examples=[ExampleSentence(id="ex_mera1", greek="Καλή μέρα")],
+            examples=[ExampleSentenceResponse(id="ex_mera1", greek="Καλή μέρα")],
             audio_key="audio/kalos.mp3",
             is_active=True,
             created_at=now,
@@ -697,6 +698,90 @@ class TestWordEntryResponse:
         assert response.grammar_data == {"gender": "masculine"}
         assert len(response.examples) == 1
         assert response.audio_key == "audio/kalos.mp3"
+
+    def test_word_entry_response_includes_audio_url(self):
+        """Test audio_url field present on WordEntryResponse, defaults to None."""
+        now = datetime.now()
+        response = WordEntryResponse(
+            id=uuid4(),
+            deck_id=uuid4(),
+            lemma="test",
+            part_of_speech=PartOfSpeech.NOUN,
+            translation_en="test",
+            is_active=True,
+            created_at=now,
+            updated_at=now,
+        )
+        assert response.audio_url is None
+
+    def test_word_entry_response_audio_url_with_value(self):
+        """Test audio_url serializes correctly when provided."""
+        now = datetime.now()
+        response = WordEntryResponse(
+            id=uuid4(),
+            deck_id=uuid4(),
+            lemma="test",
+            part_of_speech=PartOfSpeech.NOUN,
+            translation_en="test",
+            audio_key="audio/word/test.mp3",
+            audio_url="https://s3.example.com/audio/word/test.mp3?signature=abc",
+            is_active=True,
+            created_at=now,
+            updated_at=now,
+        )
+        assert response.audio_url == "https://s3.example.com/audio/word/test.mp3?signature=abc"
+        assert response.audio_key == "audio/word/test.mp3"
+
+    def test_word_entry_response_examples_include_audio_url(self):
+        """Test examples in response have audio_url field via ExampleSentenceResponse."""
+        now = datetime.now()
+        response = WordEntryResponse(
+            id=uuid4(),
+            deck_id=uuid4(),
+            lemma="test",
+            part_of_speech=PartOfSpeech.NOUN,
+            translation_en="test",
+            examples=[
+                ExampleSentenceResponse(
+                    id="ex_test1",
+                    greek="Test sentence",
+                    audio_key="audio/example/test.mp3",
+                    audio_url="https://s3.example.com/audio/example/test.mp3?sig=xyz",
+                )
+            ],
+            is_active=True,
+            created_at=now,
+            updated_at=now,
+        )
+        assert len(response.examples) == 1
+        assert (
+            response.examples[0].audio_url
+            == "https://s3.example.com/audio/example/test.mp3?sig=xyz"
+        )
+        assert response.examples[0].audio_key == "audio/example/test.mp3"
+
+    def test_word_entry_response_examples_legacy_without_id(self):
+        """Test response deserializes legacy examples without id."""
+        now = datetime.now()
+        response = WordEntryResponse(
+            id=uuid4(),
+            deck_id=uuid4(),
+            lemma="test",
+            part_of_speech=PartOfSpeech.NOUN,
+            translation_en="test",
+            examples=[
+                ExampleSentenceResponse(
+                    greek="Legacy sentence without id",
+                    english="Translation",
+                )
+            ],
+            is_active=True,
+            created_at=now,
+            updated_at=now,
+        )
+        assert response.examples[0].id is None
+        assert response.examples[0].audio_url is None
+        assert response.examples[0].greek == "Legacy sentence without id"
 
 
 # ============================================================================
