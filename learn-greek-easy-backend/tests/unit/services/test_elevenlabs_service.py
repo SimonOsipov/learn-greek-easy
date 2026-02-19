@@ -655,3 +655,65 @@ class TestGenerateSpeech:
         ):
             with pytest.raises(ElevenLabsRateLimitError):
                 await service.generate_speech("text")
+
+    @pytest.mark.asyncio
+    async def test_generate_speech_with_voice_id_skips_list_voices(
+        self, mock_settings_configured: None
+    ) -> None:
+        """When voice_id provided, list_voices is NOT called."""
+        service = ElevenLabsService()
+        with patch.object(service, "_check_configured"):
+            with patch.object(service, "list_voices", new_callable=AsyncMock) as mock_list:
+                with patch.object(
+                    service, "_call_tts_api", new_callable=AsyncMock, return_value=b"audio"
+                ) as mock_tts:
+                    result = await service.generate_speech("text", voice_id="custom-voice-123")
+
+        mock_list.assert_not_called()
+        mock_tts.assert_called_once_with("text", "custom-voice-123", "custom", is_retry=False)
+        assert result == b"audio"
+
+    @pytest.mark.asyncio
+    async def test_generate_speech_with_voice_id_no_retry_on_404(
+        self, mock_settings_configured: None
+    ) -> None:
+        """When voice_id provided and 404 occurs, error propagates immediately without retry."""
+        service = ElevenLabsService()
+        with patch.object(service, "_check_configured"):
+            with patch.object(service, "list_voices", new_callable=AsyncMock) as mock_list:
+                with patch.object(
+                    service,
+                    "_call_tts_api",
+                    new_callable=AsyncMock,
+                    side_effect=ElevenLabsVoiceNotFoundError(voice_id="bad-id"),
+                ) as mock_tts:
+                    with pytest.raises(ElevenLabsVoiceNotFoundError):
+                        await service.generate_speech("text", voice_id="bad-id")
+
+        mock_tts.assert_called_once()  # No retry
+        mock_list.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_generate_speech_without_voice_id_uses_random(
+        self, mock_settings_configured: None
+    ) -> None:
+        """When voice_id not provided (default None), random voice selection is used."""
+        service = ElevenLabsService()
+        mock_voice = MagicMock()
+        mock_voice.voice_id = "random-voice-id"
+        mock_voice.name = "Random Voice"
+
+        with patch.object(service, "_check_configured"):
+            with patch.object(
+                service, "list_voices", new_callable=AsyncMock, return_value=[mock_voice]
+            ) as mock_list:
+                with patch(
+                    "src.services.elevenlabs_service.random.choice", return_value=mock_voice
+                ):
+                    with patch.object(
+                        service, "_call_tts_api", new_callable=AsyncMock, return_value=b"audio"
+                    ):
+                        result = await service.generate_speech("text")
+
+        mock_list.assert_called_once()  # list_voices WAS called
+        assert result == b"audio"
