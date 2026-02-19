@@ -377,4 +377,69 @@ describe('WordEntryContent', () => {
       expect(mockRefetch).toHaveBeenCalledOnce();
     });
   });
+
+  // ============================================
+  // Group 8: Audio status badges
+  // ============================================
+
+  describe('Audio status badges', () => {
+    it('lemma badge shows inline with pronunciation', () => {
+      renderComponent();
+      const pronunciationRow = screen.getByTestId('word-entry-content-pronunciation');
+      expect(pronunciationRow).toBeInTheDocument();
+      expect(pronunciationRow).toHaveTextContent('/spí·ti/');
+      expect(screen.getByTestId('audio-status-badge-lemma')).toBeInTheDocument();
+    });
+
+    it('shows standalone Lemma Audio row when pronunciation is null', () => {
+      (useWordEntry as Mock).mockReturnValue({
+        wordEntry: createMockWordEntry({ pronunciation: null }),
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn(),
+      });
+      renderComponent();
+      expect(screen.getByTestId('word-entry-content-pronunciation')).toBeInTheDocument();
+      expect(screen.getByTestId('audio-status-badge-lemma')).toBeInTheDocument();
+    });
+
+    it('renders per-example badges with correct testids', () => {
+      renderComponent();
+      expect(screen.getByTestId('audio-status-badge-example-0')).toBeInTheDocument();
+    });
+
+    it('audio-status-badge-lemma testid is present', () => {
+      renderComponent();
+      expect(screen.getByTestId('audio-status-badge-lemma')).toBeInTheDocument();
+    });
+
+    it('audio-status-badge-example-0 testid is present', () => {
+      renderComponent();
+      expect(screen.getByTestId('audio-status-badge-example-0')).toBeInTheDocument();
+    });
+
+    it('example badge is hidden when audio_status is undefined on example', () => {
+      (useWordEntry as Mock).mockReturnValue({
+        wordEntry: createMockWordEntry({
+          examples: [
+            {
+              id: 'ex-1',
+              greek: 'Το σπίτι είναι μεγάλο.',
+              english: 'The house is big.',
+              russian: null,
+              context: null,
+              audio_key: null,
+              audio_url: null,
+              // no audio_status
+            },
+          ],
+        }),
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn(),
+      });
+      renderComponent();
+      expect(screen.queryByTestId('audio-status-badge-example-0')).not.toBeInTheDocument();
+    });
+  });
 });

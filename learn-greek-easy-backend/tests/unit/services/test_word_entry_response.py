@@ -33,6 +33,7 @@ def sample_entry():
     entry.translation_en = "house"
     entry.translation_en_plural = None
     entry.translation_ru = "дом"
+    entry.translation_ru_plural = None
     entry.pronunciation = "spíti"
     entry.grammar_data = None
     entry.audio_key = "word-audio/spiti.mp3"
