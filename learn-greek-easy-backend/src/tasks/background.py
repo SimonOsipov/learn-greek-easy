@@ -1498,60 +1498,65 @@ async def generate_word_entry_part_audio_task(  # noqa: C901
     )
     session_maker = async_sessionmaker(engine, expire_on_commit=False)
 
-    async with session_maker() as session:
-        try:
-            from sqlalchemy import select
-
-            result = await session.execute(select(WordEntry).where(WordEntry.id == word_entry_id))
-            word_entry = result.scalar_one_or_none()
-            if word_entry is None:
-                return
-
-            s3_key = (
-                f"{WORD_AUDIO_S3_PREFIX}/{word_entry_id}.mp3"
-                if part == "lemma"
-                else f"{WORD_AUDIO_S3_PREFIX}/{word_entry_id}/{example_id}.mp3"
-            )
-
-            success = False
+    try:
+        async with session_maker() as session:
             try:
-                elevenlabs = get_elevenlabs_service()
-                audio_bytes = await elevenlabs.generate_speech(text, voice_id=WORD_AUDIO_VOICE_ID)
-                s3 = get_s3_service()
-                uploaded = s3.upload_object(s3_key, audio_bytes, "audio/mpeg")
-                success = uploaded
-            except Exception:
+                from sqlalchemy import select
+
+                result = await session.execute(
+                    select(WordEntry).where(WordEntry.id == word_entry_id)
+                )
+                word_entry = result.scalar_one_or_none()
+                if word_entry is None:
+                    return
+
+                s3_key = (
+                    f"{WORD_AUDIO_S3_PREFIX}/{word_entry_id}.mp3"
+                    if part == "lemma"
+                    else f"{WORD_AUDIO_S3_PREFIX}/{word_entry_id}/{example_id}.mp3"
+                )
+
                 success = False
+                try:
+                    elevenlabs = get_elevenlabs_service()
+                    audio_bytes = await elevenlabs.generate_speech(
+                        text, voice_id=WORD_AUDIO_VOICE_ID
+                    )
+                    s3 = get_s3_service()
+                    uploaded = s3.upload_object(s3_key, audio_bytes, "audio/mpeg")
+                    success = uploaded
+                except Exception:
+                    success = False
 
-            if part == "lemma":
-                if success:
-                    word_entry.audio_key = s3_key
-                    word_entry.audio_status = AudioStatus.READY
+                if part == "lemma":
+                    if success:
+                        word_entry.audio_key = s3_key
+                        word_entry.audio_status = AudioStatus.READY
+                    else:
+                        word_entry.audio_status = AudioStatus.FAILED
                 else:
-                    word_entry.audio_status = AudioStatus.FAILED
-            else:
-                if word_entry.examples:
-                    updated = []
-                    for ex in word_entry.examples:
-                        ex_copy = dict(ex)
-                        if ex_copy.get("id") == example_id:
-                            if success:
-                                ex_copy["audio_key"] = s3_key
-                                ex_copy["audio_status"] = "ready"
-                            else:
-                                ex_copy["audio_status"] = "failed"
-                        updated.append(ex_copy)
-                    word_entry.examples = updated
+                    if word_entry.examples:
+                        updated = []
+                        for ex in word_entry.examples:
+                            ex_copy = dict(ex)
+                            if ex_copy.get("id") == example_id:
+                                if success:
+                                    ex_copy["audio_key"] = s3_key
+                                    ex_copy["audio_status"] = "ready"
+                                else:
+                                    ex_copy["audio_status"] = "failed"
+                            updated.append(ex_copy)
+                        word_entry.examples = updated
 
-            # Clear audio_generating_since if no parts are still generating
-            if _should_clear_generating_since(word_entry, part, example_id):
-                word_entry.audio_generating_since = None
+                # Clear audio_generating_since if no parts are still generating
+                if _should_clear_generating_since(word_entry, part, example_id):
+                    word_entry.audio_generating_since = None
 
-            await session.commit()
-        except Exception:
-            await session.rollback()
-            raise
-        finally:
-            await session.close()
-
-    await engine.dispose()
+                await session.commit()
+            except Exception:
+                await session.rollback()
+                raise
+            finally:
+                await session.close()
+    finally:
+        await engine.dispose()

@@ -734,6 +734,7 @@
     "saving": "Saving...",
     "success": "Word entry updated",
     "error": "Failed to update word entry",
+    "notFound": "Word entry no longer exists.",
     "audioRegenWarning": "Saved, but audio regeneration could not start",
     "discardTitle": "Unsaved Changes",
     "discardMessage": "You have unsaved changes. Discard them?",

@@ -36,7 +36,7 @@ export function useUpdateWordEntry(options?: UseUpdateWordEntryOptions) {
       if (status === 404) {
         toast({
           title: t('wordEntryEdit.error'),
-          description: 'Word entry no longer exists.',
+          description: t('wordEntryEdit.notFound'),
           variant: 'destructive',
         });
       } else {

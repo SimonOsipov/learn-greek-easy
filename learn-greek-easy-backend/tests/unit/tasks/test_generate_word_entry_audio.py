@@ -787,7 +787,7 @@ class TestDbUpdate:
         assert mock_session.commit.call_count == 2
 
     async def test_task_all_skipped_no_db_update(self):
-        """When all items are skipped, no DB commit occurs."""
+        """When all items are skipped, task still commits twice (GENERATING status + final cleanup)."""
         word_entry_id = uuid4()
         word_entry = make_word_entry(
             lemma="σπίτι",

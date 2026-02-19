@@ -18,8 +18,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.models import Card, CardRecord, CardType, Deck, User
 
-# Mark all tests in this file as seed tests so they can be excluded from
-# standard runs with: pytest -m "not seed"
+# Mark all tests in this file as seed tests; can be excluded from
+# runs with: pytest -m "not seed"
 pytestmark = pytest.mark.seed
 
 # ============================================================================

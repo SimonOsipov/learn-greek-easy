@@ -268,7 +268,7 @@ class TestGenerateWordEntryAudioEndpoint:
         """
         captured_status = {}
 
-        async def capture_task(**kwargs):
+        async def capture_task(**_):
             # By the time the background task runs, audio_status was set and committed
             captured_status["called"] = True
 
