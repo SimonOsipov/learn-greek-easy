@@ -33,7 +33,8 @@ from src.core.exceptions import DeckNotFoundException
 from src.core.logging import get_logger
 from src.core.posthog import capture_event
 from src.core.sm2 import calculate_next_review_date, calculate_sm2
-from src.db.models import Card, CardStatus, Review
+from src.db.models import Card, CardStatus, Review, WordEntry
+from src.services.s3_service import get_s3_service
 
 if TYPE_CHECKING:
     from src.db.models import CardStatistics
@@ -301,7 +302,7 @@ class SM2Service:
     # Study Queue Methods
     # =========================================================================
 
-    async def get_study_queue(
+    async def get_study_queue(  # noqa: C901
         self,
         user_id: UUID,
         request: StudyQueueRequest,
@@ -487,6 +488,20 @@ class SM2Service:
                 )
             )
 
+        # Enrich cards with audio URLs from WordEntry records
+        enrichment = await self._enrich_cards_with_audio(queue_cards)
+        for queue_card in queue_cards:
+            data = enrichment.get(queue_card.card_id)
+            if data:
+                queue_card.audio_url = data["audio_url"]
+                queue_card.word_entry_id = data["word_entry_id"]
+                if queue_card.examples and data.get("examples_audio"):
+                    for example in queue_card.examples:
+                        ex_data = data["examples_audio"].get(example.greek)
+                        if ex_data:
+                            example.id = ex_data["id"]
+                            example.audio_url = ex_data["audio_url"]
+
         logger.info(
             "Study queue built successfully",
             extra={
@@ -538,6 +553,111 @@ class SM2Service:
             limit=limit,
             exclude_premium_decks=exclude_premium_decks,
         )
+
+    async def _enrich_cards_with_audio(  # noqa: C901
+        self,
+        cards: list[StudyQueueCard],
+    ) -> dict:
+        """Batch-enrich study queue cards with audio URLs from WordEntry records.
+
+        Uses a single batch query to look up WordEntry records matching cards by
+        (deck_id, lemma, part_of_speech). Returns a dict mapping card_id to
+        audio enrichment data.
+
+        Args:
+            cards: List of StudyQueueCard objects to enrich.
+
+        Returns:
+            Dict mapping card_id -> {audio_url, word_entry_id, examples_audio}
+        """
+        if not cards:
+            return {}
+
+        s3_service = get_s3_service()
+
+        # Fetch deck_ids for all cards in a single query
+        card_ids = [c.card_id for c in cards]
+        card_deck_query = select(Card.id, Card.deck_id).where(Card.id.in_(card_ids))
+        card_result = await self.db.execute(card_deck_query)
+        card_deck_ids: dict = {row[0]: row[1] for row in card_result.all()}
+
+        # Build lookup tuples: (deck_id, lemma, part_of_speech_value)
+        lookup_tuples: set = set()
+        for card in cards:
+            deck_id = card_deck_ids.get(card.card_id)
+            if deck_id and card.part_of_speech:
+                pos_val = (
+                    card.part_of_speech.value
+                    if hasattr(card.part_of_speech, "value")
+                    else str(card.part_of_speech)
+                )
+                lookup_tuples.add((deck_id, card.front_text, pos_val))
+
+        if not lookup_tuples:
+            return {}
+
+        # Batch query WordEntry records using OR conditions
+        from sqlalchemy import and_, or_
+
+        conditions = [
+            and_(
+                WordEntry.deck_id == deck_id,
+                WordEntry.lemma == lemma,
+                WordEntry.part_of_speech == pos,
+            )
+            for deck_id, lemma, pos in lookup_tuples
+        ]
+        we_query = select(WordEntry).where(or_(*conditions))
+        we_result = await self.db.execute(we_query)
+        word_entries = list(we_result.scalars().all())
+
+        # Build lookup map: (deck_id, lemma, pos_value) -> WordEntry
+        we_map: dict = {}
+        for word_entry in word_entries:
+            pos_val = (
+                word_entry.part_of_speech.value
+                if hasattr(word_entry.part_of_speech, "value")
+                else str(word_entry.part_of_speech)
+            )
+            we_map[(word_entry.deck_id, word_entry.lemma, pos_val)] = word_entry
+
+        # Build enrichment dict keyed by card_id
+        enrichment: dict = {}
+        for card in cards:
+            deck_id = card_deck_ids.get(card.card_id)
+            if not deck_id or not card.part_of_speech:
+                continue
+
+            pos_val = (
+                card.part_of_speech.value
+                if hasattr(card.part_of_speech, "value")
+                else str(card.part_of_speech)
+            )
+            we: Optional[WordEntry] = we_map.get((deck_id, card.front_text, pos_val))
+            if not we:
+                continue
+
+            # Generate word-level presigned URL
+            word_audio_url = s3_service.generate_presigned_url(we.audio_key)
+
+            # Build per-example enrichment using audio_key from each example
+            examples_audio: dict = {}
+            if we.examples:
+                for ex in we.examples:
+                    greek_text = ex.get("greek", "")
+                    if greek_text:
+                        examples_audio[greek_text] = {
+                            "id": ex.get("id"),
+                            "audio_url": s3_service.generate_presigned_url(ex.get("audio_key")),
+                        }
+
+            enrichment[card.card_id] = {
+                "audio_url": word_audio_url,
+                "word_entry_id": we.id,
+                "examples_audio": examples_audio,
+            }
+
+        return enrichment
 
     async def get_study_stats(
         self,

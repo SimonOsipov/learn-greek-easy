@@ -207,6 +207,14 @@ class StudyQueueCard(BaseModel):
         default=None,
         description="Adverb grammar data (comparison forms)",
     )
+    audio_url: Optional[str] = Field(
+        default=None,
+        description="Presigned URL for word pronunciation audio",
+    )
+    word_entry_id: Optional[UUID] = Field(
+        default=None,
+        description="Associated WordEntry UUID for analytics tracking",
+    )
     status: CardStatus = Field(
         ...,
         description="Current learning status",
