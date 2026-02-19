@@ -58,7 +58,11 @@ def mock_db_session():
     session.add = MagicMock()
     session.flush = AsyncMock()
     session.commit = AsyncMock()
-    session.execute = AsyncMock()
+    # Default execute result: empty iterables so _enrich_cards_with_audio short-circuits
+    mock_execute_result = MagicMock()
+    mock_execute_result.all.return_value = []
+    mock_execute_result.scalars.return_value.all.return_value = []
+    session.execute = AsyncMock(return_value=mock_execute_result)
     return session
 
 
