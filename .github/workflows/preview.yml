@@ -144,7 +144,8 @@ jobs:
         id: check
         run: |
           # Get changed files between PR base and head
-          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+          BASE_REF="${{ github.base_ref || 'main' }}"
+          CHANGED_FILES=$(git diff --name-only origin/${BASE_REF}...HEAD)
           echo "Changed files:"
           echo "$CHANGED_FILES"
 
