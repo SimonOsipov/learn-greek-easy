@@ -21,6 +21,7 @@ from src.repositories.word_entry import WordEntryRepository
 from src.schemas.card_record import CardRecordResponse
 from src.schemas.word_entry import WordEntryBulkRequest, WordEntryBulkResponse, WordEntryResponse
 from src.services.card_generator_service import CardGeneratorService
+from src.services.word_entry_response import word_entry_to_response
 from src.tasks import generate_word_entry_audio_task, is_background_tasks_enabled
 
 router = APIRouter(
@@ -127,7 +128,7 @@ async def get_word_entry(
     if deck.owner_id is not None and deck.owner_id != current_user.id:
         raise ForbiddenException(detail="You don't have permission to access this word entry")
 
-    return WordEntryResponse.model_validate(word_entry)
+    return word_entry_to_response(word_entry)
 
 
 @router.get(
@@ -376,5 +377,5 @@ async def bulk_upload_word_entries(
         updated_count=updated_count,
         cards_created=cards_created,
         cards_updated=cards_updated,
-        word_entries=[WordEntryResponse.model_validate(entry) for entry in entries],
+        word_entries=[word_entry_to_response(entry) for entry in entries],
     )

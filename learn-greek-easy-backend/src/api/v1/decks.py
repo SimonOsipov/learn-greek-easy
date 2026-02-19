@@ -27,7 +27,7 @@ from src.schemas.deck import (
     DeckUpdate,
     DeckWordEntriesResponse,
 )
-from src.schemas.word_entry import WordEntryResponse
+from src.services.word_entry_response import word_entry_to_response
 from src.tasks.background import invalidate_cache_task
 
 router = APIRouter(
@@ -755,7 +755,7 @@ async def list_deck_word_entries(
         total=total,
         page=page,
         page_size=page_size,
-        word_entries=[WordEntryResponse.model_validate(entry) for entry in word_entries],
+        word_entries=[word_entry_to_response(entry) for entry in word_entries],
     )
 
 
