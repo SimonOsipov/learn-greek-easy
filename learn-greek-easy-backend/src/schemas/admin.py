@@ -9,7 +9,7 @@ This module contains schemas for:
 """
 
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Literal, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -215,4 +215,22 @@ class WordEntryInlineUpdate(BaseModel):
     def check_at_least_one_field(self) -> "WordEntryInlineUpdate":
         if not self.model_dump(exclude_unset=True):
             raise ValueError("At least one field must be provided")
+        return self
+
+
+class GenerateWordEntryAudioRequest(BaseModel):
+    """Request schema for generating audio for a specific part of a word entry."""
+
+    part: Literal["lemma", "example"] = Field(
+        ..., description="Which part to generate audio for: 'lemma' or 'example'"
+    )
+    example_id: Optional[str] = Field(
+        default=None,
+        description="UUID of the example sentence. Required when part='example'.",
+    )
+
+    @model_validator(mode="after")
+    def validate_example_id(self) -> "GenerateWordEntryAudioRequest":
+        if self.part == "example" and not self.example_id:
+            raise ValueError("example_id is required when part is 'example'")
         return self

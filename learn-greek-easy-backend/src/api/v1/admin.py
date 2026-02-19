@@ -8,6 +8,7 @@ This module provides HTTP endpoints for admin operations including:
 All endpoints require superuser authentication.
 """
 
+from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
 
@@ -21,6 +22,7 @@ from src.core.exceptions import NotFoundException
 from src.core.logging import get_logger
 from src.db.dependencies import get_db
 from src.db.models import (
+    AudioStatus,
     Card,
     CardErrorCardType,
     CardErrorStatus,
@@ -41,6 +43,7 @@ from src.schemas.admin import (
     AdminDeckListResponse,
     AdminStatsResponse,
     ArticleCheckResponse,
+    GenerateWordEntryAudioRequest,
     PendingQuestionItem,
     PendingQuestionsResponse,
     QuestionApproveRequest,
@@ -90,6 +93,7 @@ from src.services.word_entry_response import word_entry_to_response
 from src.tasks import (
     create_announcement_notifications_task,
     generate_audio_for_news_item_task,
+    generate_word_entry_part_audio_task,
     is_background_tasks_enabled,
 )
 
@@ -1898,3 +1902,75 @@ async def update_word_entry_inline(
         },
     )
     return word_entry_to_response(word_entry)
+
+
+@router.post(
+    "/word-entries/{word_entry_id}/generate-audio",
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Generate audio for a word entry part",
+)
+async def generate_word_entry_audio(
+    word_entry_id: UUID,
+    request: GenerateWordEntryAudioRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> dict:
+    if not is_background_tasks_enabled() or not settings.elevenlabs_configured:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Audio generation is not available",
+        )
+
+    result = await db.execute(select(WordEntry).where(WordEntry.id == word_entry_id))
+    word_entry = result.scalar_one_or_none()
+    if word_entry is None:
+        raise NotFoundException(
+            resource="Word entry",
+            detail=f"Word entry with ID '{word_entry_id}' not found",
+        )
+
+    if request.part == "lemma":
+        text = word_entry.lemma
+        word_entry.audio_status = AudioStatus.GENERATING
+    else:
+        examples = word_entry.examples or []
+        example_dict = None
+        example_index = None
+        for idx, ex in enumerate(examples):
+            if ex.get("id") == request.example_id:
+                example_dict = ex
+                example_index = idx
+                break
+        if example_dict is None or example_index is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Example with ID '{request.example_id}' not found",
+            )
+        text = example_dict.get("greek", "")
+        updated_examples = list(examples)
+        updated_examples[example_index] = {**example_dict, "audio_status": "generating"}
+        word_entry.examples = updated_examples
+
+    word_entry.audio_generating_since = datetime.now(timezone.utc)
+    await db.commit()
+
+    background_tasks.add_task(
+        generate_word_entry_part_audio_task,
+        word_entry_id=word_entry_id,
+        part=request.part,
+        example_id=request.example_id,
+        text=text,
+        db_url=settings.database_url,
+    )
+
+    logger.info(
+        "Word entry audio generation scheduled",
+        extra={
+            "word_entry_id": str(word_entry_id),
+            "part": request.part,
+            "example_id": request.example_id,
+            "triggered_by": str(current_user.id),
+        },
+    )
+    return {"message": "Audio generation started"}

@@ -14,9 +14,14 @@ Usage:
         return response
 """
 
+from __future__ import annotations
+
 from datetime import datetime, timezone
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
+
+if TYPE_CHECKING:
+    from src.db.models import WordEntry
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
@@ -1437,3 +1442,116 @@ async def generate_word_entry_audio_task(  # noqa: C901
     finally:
         if engine is not None:
             await engine.dispose()
+
+
+def _should_clear_generating_since(
+    word_entry: "WordEntry",
+    completed_part: str,
+    completed_example_id: str | None,
+) -> bool:
+    """Check if all parts are done generating so audio_generating_since can be cleared."""
+    from src.db.models import AudioStatus
+
+    if completed_part != "lemma":
+        if word_entry.audio_status == AudioStatus.GENERATING:
+            return False
+
+    if word_entry.examples:
+        for ex in word_entry.examples:
+            ex_id = ex.get("id")
+            if completed_part == "example" and ex_id == completed_example_id:
+                continue
+            if ex.get("audio_status") == "generating":
+                return False
+    return True
+
+
+async def generate_word_entry_part_audio_task(  # noqa: C901
+    word_entry_id: UUID,
+    part: str,
+    text: str,
+    example_id: str | None,
+    db_url: str,
+) -> None:
+    """Generate TTS audio for exactly one part of a word entry (lemma or example).
+
+    Args:
+        word_entry_id: UUID of the word entry
+        part: "lemma" or "example"
+        text: Greek text to synthesize
+        example_id: UUID string of the example (None for lemma)
+        db_url: Database URL for creating dedicated connection
+    """
+    from src.db.models import AudioStatus, WordEntry
+    from src.services.elevenlabs_service import get_elevenlabs_service
+    from src.services.s3_service import get_s3_service
+
+    if not is_background_tasks_enabled():
+        return
+    if not settings.elevenlabs_configured:
+        return
+
+    engine = create_async_engine(
+        db_url,
+        pool_pre_ping=True,
+        connect_args={"ssl": "require"} if settings.is_production else {},
+    )
+    session_maker = async_sessionmaker(engine, expire_on_commit=False)
+
+    async with session_maker() as session:
+        try:
+            from sqlalchemy import select
+
+            result = await session.execute(select(WordEntry).where(WordEntry.id == word_entry_id))
+            word_entry = result.scalar_one_or_none()
+            if word_entry is None:
+                return
+
+            s3_key = (
+                f"{WORD_AUDIO_S3_PREFIX}/{word_entry_id}.mp3"
+                if part == "lemma"
+                else f"{WORD_AUDIO_S3_PREFIX}/{word_entry_id}/{example_id}.mp3"
+            )
+
+            success = False
+            try:
+                elevenlabs = get_elevenlabs_service()
+                audio_bytes = await elevenlabs.generate_speech(text, voice_id=WORD_AUDIO_VOICE_ID)
+                s3 = get_s3_service()
+                uploaded = s3.upload_object(s3_key, audio_bytes, "audio/mpeg")
+                success = uploaded
+            except Exception:
+                success = False
+
+            if part == "lemma":
+                if success:
+                    word_entry.audio_key = s3_key
+                    word_entry.audio_status = AudioStatus.READY
+                else:
+                    word_entry.audio_status = AudioStatus.FAILED
+            else:
+                if word_entry.examples:
+                    updated = []
+                    for ex in word_entry.examples:
+                        ex_copy = dict(ex)
+                        if ex_copy.get("id") == example_id:
+                            if success:
+                                ex_copy["audio_key"] = s3_key
+                                ex_copy["audio_status"] = "ready"
+                            else:
+                                ex_copy["audio_status"] = "failed"
+                        updated.append(ex_copy)
+                    word_entry.examples = updated
+
+            # Clear audio_generating_since if no parts are still generating
+            if _should_clear_generating_since(word_entry, part, example_id):
+                word_entry.audio_generating_since = None
+
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()
+
+    await engine.dispose()
