@@ -151,3 +151,53 @@ class TestWordEntryAudioUrlEndpoints:
         assert len(data["word_entries"]) == 1
         assert "audio_url" in data["word_entries"][0]
         assert data["word_entries"][0]["audio_url"] is not None
+
+    async def test_bulk_upload_response_includes_audio_url(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        deck_with_audio_entry,
+    ):
+        """POST /api/v1/word-entries/bulk response includes audio_url on each entry."""
+        deck, existing_entry = deck_with_audio_entry
+
+        with patch("src.services.word_entry_response.get_s3_service") as mock_get_s3:
+            mock_s3 = MagicMock()
+            mock_s3.generate_presigned_url.side_effect = lambda key: (
+                f"https://s3.example.com/presigned/{key}" if key else None
+            )
+            mock_get_s3.return_value = mock_s3
+
+            # Patch background tasks to prevent actual audio generation
+            with patch("src.api.v1.word_entries.is_background_tasks_enabled", return_value=False):
+                response = await client.post(
+                    "/api/v1/word-entries/bulk",
+                    json={
+                        "deck_id": str(deck.id),
+                        "word_entries": [
+                            {
+                                "lemma": "σπίτι",
+                                "part_of_speech": "noun",
+                                "translation_en": "house",
+                                "examples": [
+                                    {
+                                        "id": "ex_1",
+                                        "greek": "Το σπίτι μου",
+                                        "english": "My house",
+                                    }
+                                ],
+                            }
+                        ],
+                    },
+                    headers=superuser_auth_headers,
+                )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert len(data["word_entries"]) >= 1
+        # Verify audio_url field is present (may be null since audio_key set async)
+        assert "audio_url" in data["word_entries"][0]
+        assert "examples" in data["word_entries"][0]
+        # audio_url in each example should also be present
+        if data["word_entries"][0]["examples"]:
+            assert "audio_url" in data["word_entries"][0]["examples"][0]
