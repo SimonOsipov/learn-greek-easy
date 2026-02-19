@@ -7,6 +7,7 @@ import { I18nextProvider } from 'react-i18next';
 
 import { WordEntryContent } from '../WordEntryContent';
 import { useWordEntry } from '@/features/words/hooks/useWordEntry';
+import { useGenerateAudio } from '@/features/words/hooks';
 import i18n from '@/i18n';
 
 // ============================================
@@ -452,6 +453,95 @@ describe('WordEntryContent', () => {
       });
       renderComponent();
       expect(screen.queryByTestId('audio-status-badge-example-0')).not.toBeInTheDocument();
+    });
+  });
+
+  // ============================================
+  // Group 9: Audio Generate Buttons
+  // ============================================
+
+  describe('Audio Generate Buttons', () => {
+    it('shows Generate button for lemma with missing audio status', () => {
+      (useWordEntry as Mock).mockReturnValue({
+        wordEntry: createMockWordEntry({ audio_status: 'missing' }),
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn(),
+      });
+      renderComponent();
+      expect(screen.getByTestId('audio-generate-btn-lemma')).toBeInTheDocument();
+      expect(screen.getByTestId('audio-generate-btn-lemma')).toHaveTextContent('Generate');
+    });
+
+    it('shows Retry button for lemma with failed audio status', () => {
+      (useWordEntry as Mock).mockReturnValue({
+        wordEntry: createMockWordEntry({ audio_status: 'failed' }),
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn(),
+      });
+      renderComponent();
+      expect(screen.getByTestId('audio-generate-btn-lemma')).toHaveTextContent('Retry');
+    });
+
+    it('does not show generate button for lemma with ready audio status', () => {
+      // Default mock has audio_status: 'ready'
+      renderComponent();
+      expect(screen.queryByTestId('audio-generate-btn-lemma')).not.toBeInTheDocument();
+    });
+
+    it('shows Generate button for example with missing audio status', () => {
+      (useWordEntry as Mock).mockReturnValue({
+        wordEntry: createMockWordEntry({
+          examples: [
+            {
+              id: 'ex-1',
+              greek: 'Το σπίτι είναι μεγάλο.',
+              english: 'The house is big.',
+              russian: null,
+              context: null,
+              audio_key: null,
+              audio_url: null,
+              audio_status: 'missing' as const,
+            },
+          ],
+        }),
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn(),
+      });
+      renderComponent();
+      expect(screen.getByTestId('audio-generate-btn-example-0')).toBeInTheDocument();
+      expect(screen.getByTestId('audio-generate-btn-example-0')).toHaveTextContent('Generate');
+    });
+
+    it('does not show generate button for example with ready audio status', () => {
+      // Default mock has example audio_status: 'ready'
+      renderComponent();
+      expect(screen.queryByTestId('audio-generate-btn-example-0')).not.toBeInTheDocument();
+    });
+
+    it('clicking lemma generate button triggers mutation with correct params', () => {
+      const mockMutate = vi.fn();
+      (useGenerateAudio as Mock).mockReturnValue({
+        mutate: mockMutate,
+        isPending: false,
+        variables: undefined,
+      });
+      (useWordEntry as Mock).mockReturnValue({
+        wordEntry: createMockWordEntry({ audio_status: 'missing' }),
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn(),
+      });
+      renderComponent();
+      fireEvent.click(screen.getByTestId('audio-generate-btn-lemma'));
+      expect(mockMutate).toHaveBeenCalledOnce();
+      expect(mockMutate).toHaveBeenCalledWith({
+        wordEntryId: 'we-123',
+        part: 'lemma',
+        exampleId: undefined,
+      });
     });
   });
 });
