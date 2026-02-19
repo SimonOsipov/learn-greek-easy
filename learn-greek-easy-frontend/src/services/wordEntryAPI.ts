@@ -15,6 +15,8 @@ import { api } from './api';
 // Types
 // ============================================
 
+export type AudioStatus = 'ready' | 'missing' | 'generating' | 'failed';
+
 /**
  * Example sentence with multilingual translations.
  * Matches backend ExampleSentence schema.
@@ -27,6 +29,7 @@ export interface WordEntryExampleSentence {
   context?: string | null;
   audio_key?: string | null;
   audio_url?: string | null;
+  audio_status?: AudioStatus;
 }
 
 /**
@@ -67,6 +70,7 @@ export interface WordEntryResponse {
   examples: WordEntryExampleSentence[] | null;
   audio_key: string | null;
   audio_url: string | null;
+  audio_status: AudioStatus;
   is_active: boolean;
   created_at: string;
   updated_at: string;

@@ -713,5 +713,12 @@
       "adjectives": "Adj",
       "adverbs": "Adv"
     }
+  },
+  "audioStatus": {
+    "ready": "Ready",
+    "missing": "Missing",
+    "generating": "Generating...",
+    "failed": "Failed",
+    "lemmaAudio": "Lemma Audio"
   }
 }

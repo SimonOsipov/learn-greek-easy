@@ -725,5 +725,12 @@
       "adjectives": "Прил",
       "adverbs": "Нар"
     }
+  },
+  "audioStatus": {
+    "ready": "Готово",
+    "missing": "Отсутствует",
+    "generating": "Генерация...",
+    "failed": "Ошибка",
+    "lemmaAudio": "Аудио леммы"
   }
 }
