@@ -41,10 +41,12 @@ const createMockWordEntry = (overrides = {}) => ({
       context: 'everyday',
       audio_key: null,
       audio_url: null,
+      audio_status: 'ready' as const,
     },
   ],
   audio_key: null,
   audio_url: null,
+  audio_status: 'ready' as const,
   is_active: true,
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',
@@ -106,7 +108,7 @@ describe('WordEntryContent', () => {
       expect(screen.getByTestId('word-entry-content-pronunciation')).toHaveTextContent('/spí·ti/');
     });
 
-    it('omits pronunciation when null', () => {
+    it('shows standalone Lemma Audio row when pronunciation is null', () => {
       (useWordEntry as Mock).mockReturnValue({
         wordEntry: createMockWordEntry({ pronunciation: null }),
         isLoading: false,
@@ -114,7 +116,8 @@ describe('WordEntryContent', () => {
         refetch: vi.fn(),
       });
       renderComponent();
-      expect(screen.queryByTestId('word-entry-content-pronunciation')).not.toBeInTheDocument();
+      expect(screen.getByTestId('word-entry-content-pronunciation')).toBeInTheDocument();
+      expect(screen.getByTestId('audio-status-badge-lemma')).toBeInTheDocument();
     });
   });
 

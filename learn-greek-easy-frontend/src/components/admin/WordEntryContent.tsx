@@ -1,3 +1,5 @@
+import React from 'react';
+
 import { AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -6,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useWordEntry } from '@/features/words/hooks/useWordEntry';
 import type { WordEntryExampleSentence, WordEntryResponse } from '@/services/wordEntryAPI';
+
+import { AudioStatusBadge } from './AudioStatusBadge';
 
 interface WordEntryContentProps {
   wordEntryId: string;
@@ -55,11 +59,24 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
   );
 }
 
-function FieldRow({ label, value, testId }: { label: string; value: string; testId: string }) {
+function FieldRow({
+  label,
+  value,
+  testId,
+  suffix,
+}: {
+  label: string;
+  value: string;
+  testId: string;
+  suffix?: React.ReactNode;
+}) {
   return (
     <div data-testid={testId}>
       <dt className="text-sm text-muted-foreground">{label}</dt>
-      <dd className="mt-0.5 text-sm font-medium">{value}</dd>
+      <dd className="mt-0.5 flex items-center gap-2 text-sm font-medium">
+        {value}
+        {suffix}
+      </dd>
     </div>
   );
 }
@@ -83,12 +100,28 @@ function ContentFields({ wordEntry }: { wordEntry: WordEntryResponse }) {
   return (
     <div data-testid="word-entry-content-fields">
       <dl className="space-y-3">
-        {wordEntry.pronunciation && (
+        {wordEntry.pronunciation ? (
           <FieldRow
             label={t('wordEntryContent.pronunciation')}
             value={wordEntry.pronunciation}
             testId="word-entry-content-pronunciation"
+            suffix={
+              <AudioStatusBadge
+                status={wordEntry.audio_status}
+                data-testid="audio-status-badge-lemma"
+              />
+            }
           />
+        ) : (
+          <div data-testid="word-entry-content-pronunciation">
+            <dt className="text-sm text-muted-foreground">{t('audioStatus.lemmaAudio')}</dt>
+            <dd className="mt-0.5">
+              <AudioStatusBadge
+                status={wordEntry.audio_status}
+                data-testid="audio-status-badge-lemma"
+              />
+            </dd>
+          </div>
         )}
         {wordEntry.translation_en_plural && (
           <FieldRow
@@ -150,10 +183,16 @@ function ExampleCard({ example, index }: { example: WordEntryExampleSentence; in
       className="space-y-1.5 rounded-md border p-3"
       data-testid={`word-entry-content-example-${index}`}
     >
-      <div>
+      <div className="flex items-center justify-between">
         <span className="text-xs text-muted-foreground">{t('wordEntryContent.exampleGreek')}</span>
-        <p className="text-sm">{example.greek}</p>
+        {example.audio_status && (
+          <AudioStatusBadge
+            status={example.audio_status}
+            data-testid={`audio-status-badge-example-${index}`}
+          />
+        )}
       </div>
+      <p className="text-sm">{example.greek}</p>
       <div>
         <span className="text-xs text-muted-foreground">
           {t('wordEntryContent.exampleEnglish')}
