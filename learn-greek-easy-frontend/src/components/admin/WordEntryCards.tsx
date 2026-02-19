@@ -4,8 +4,16 @@ import { useTranslation } from 'react-i18next';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useWordEntry } from '@/features/words/hooks/useWordEntry';
 import { useWordEntryCards } from '@/features/words/hooks/useWordEntryCards';
-import type { CardRecordResponse, CardRecordType } from '@/services/wordEntryAPI';
+import type {
+  AudioStatus,
+  CardRecordResponse,
+  CardRecordType,
+  WordEntryResponse,
+} from '@/services/wordEntryAPI';
+
+import { AudioStatusBadge } from './AudioStatusBadge';
 
 interface WordEntryCardsProps {
   entryId: string;
@@ -21,6 +29,12 @@ const CARD_TYPE_DISPLAY_ORDER: CardRecordType[] = [
   'cloze',
   'sentence_translation',
 ];
+
+const AUDIO_CARD_TYPES = new Set<CardRecordType>([
+  'meaning_el_to_en',
+  'meaning_en_to_el',
+  'sentence_translation',
+]);
 
 interface CardTypeGroup {
   type: CardRecordType;
@@ -40,11 +54,31 @@ function groupCardsByType(cards: CardRecordResponse[]): CardTypeGroup[] {
   }));
 }
 
+function getCardAudioStatus(
+  card: CardRecordResponse,
+  wordEntry: WordEntryResponse | null
+): AudioStatus | null {
+  if (!wordEntry) return null;
+  if (card.card_type === 'meaning_el_to_en' || card.card_type === 'meaning_en_to_el') {
+    return wordEntry.audio_status ?? 'missing';
+  }
+  if (card.card_type === 'sentence_translation') {
+    const front = card.front_content as Record<string, unknown>;
+    const exampleId = typeof front.example_id === 'string' ? front.example_id : undefined;
+    if (!exampleId) return 'missing';
+    const example = wordEntry.examples?.find((ex) => ex.id === exampleId);
+    if (!example) return 'missing';
+    return example.audio_status ?? 'missing';
+  }
+  return null;
+}
+
 export function WordEntryCards({ entryId }: WordEntryCardsProps) {
   const { t } = useTranslation('admin');
   const { cards, isLoading, isError, refetch } = useWordEntryCards({
     wordEntryId: entryId,
   });
+  const { wordEntry } = useWordEntry({ wordId: entryId });
 
   if (isLoading) {
     return (
@@ -91,13 +125,19 @@ export function WordEntryCards({ entryId }: WordEntryCardsProps) {
           : t('wordEntryDetail.cardsSummary', { count: totalCards, types: typeCount })}
       </p>
       {groups.map((group) => (
-        <CardTypeSection key={group.type} group={group} />
+        <CardTypeSection key={group.type} group={group} wordEntry={wordEntry ?? null} />
       ))}
     </div>
   );
 }
 
-function CardTypeSection({ group }: { group: CardTypeGroup }) {
+function CardTypeSection({
+  group,
+  wordEntry,
+}: {
+  group: CardTypeGroup;
+  wordEntry: WordEntryResponse | null;
+}) {
   const { t } = useTranslation('admin');
   const label = t(`wordEntryDetail.cardType.${group.type}`);
 
@@ -111,15 +151,24 @@ function CardTypeSection({ group }: { group: CardTypeGroup }) {
         <span className="text-xs text-muted-foreground">({group.cards.length})</span>
       </div>
       <div className="space-y-2">
-        {group.cards.map((card) => (
-          <CardRecord key={card.id} card={card} />
-        ))}
+        {group.cards.map((card) => {
+          const audioStatus = AUDIO_CARD_TYPES.has(card.card_type)
+            ? getCardAudioStatus(card, wordEntry)
+            : null;
+          return <CardRecord key={card.id} card={card} audioStatus={audioStatus} />;
+        })}
       </div>
     </div>
   );
 }
 
-function CardRecord({ card }: { card: CardRecordResponse }) {
+function CardRecord({
+  card,
+  audioStatus,
+}: {
+  card: CardRecordResponse;
+  audioStatus: AudioStatus | null;
+}) {
   const { t } = useTranslation('admin');
   const front = card.front_content as Record<string, unknown>;
   const back = card.back_content as Record<string, unknown>;
@@ -144,6 +193,9 @@ function CardRecord({ card }: { card: CardRecordResponse }) {
           </span>
         )}
         <span>{card.variant_key}</span>
+        {audioStatus && (
+          <AudioStatusBadge status={audioStatus} data-testid={`card-audio-badge-${card.id}`} />
+        )}
       </div>
     </div>
   );
