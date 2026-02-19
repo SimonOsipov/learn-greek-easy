@@ -161,6 +161,25 @@
     "tabCards": "Карточки",
     "placeholder": "Подробности появятся здесь"
   },
+  "wordEntryContent": {
+    "pronunciation": "Произношение",
+    "translationEnPlural": "Перевод (EN множ.)",
+    "translationRu": "Перевод (RU)",
+    "gender": "Род",
+    "genderMasculine": "Мужской",
+    "genderFeminine": "Женский",
+    "genderNeuter": "Средний",
+    "examples": "Примеры",
+    "noExamples": "Нет примеров",
+    "exampleGreek": "Греческий",
+    "exampleEnglish": "Английский",
+    "exampleRussian": "Русский",
+    "exampleContext": "Контекст",
+    "notSet": "—",
+    "loading": "Загрузка словарной записи…",
+    "errorTitle": "Не удалось загрузить словарную запись",
+    "errorRetry": "Повторить"
+  },
   "cardDelete": {
     "title": "Безвозвратно удалить карточку",
     "titleQuestion": "Безвозвратно удалить вопрос",

@@ -151,6 +151,25 @@
     "tabCards": "Cards",
     "placeholder": "Details will appear here"
   },
+  "wordEntryContent": {
+    "pronunciation": "Pronunciation",
+    "translationEnPlural": "Translation (EN plural)",
+    "translationRu": "Translation (RU)",
+    "gender": "Gender",
+    "genderMasculine": "Masculine",
+    "genderFeminine": "Feminine",
+    "genderNeuter": "Neuter",
+    "examples": "Examples",
+    "noExamples": "No examples",
+    "exampleGreek": "Greek",
+    "exampleEnglish": "English",
+    "exampleRussian": "Russian",
+    "exampleContext": "Context",
+    "notSet": "—",
+    "loading": "Loading word entry…",
+    "errorTitle": "Failed to load word entry",
+    "errorRetry": "Retry"
+  },
   "cardDelete": {
     "title": "Permanently Delete Card",
     "titleQuestion": "Permanently Delete Question",
