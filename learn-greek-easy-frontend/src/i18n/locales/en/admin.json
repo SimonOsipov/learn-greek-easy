@@ -721,6 +721,12 @@
     "failed": "Failed",
     "lemmaAudio": "Lemma Audio"
   },
+  "audioGenerate": {
+    "generate": "Generate",
+    "retry": "Retry",
+    "success": "Audio generation started",
+    "error": "Failed to start audio generation"
+  },
   "wordEntryEdit": {
     "edit": "Edit",
     "save": "Save",
