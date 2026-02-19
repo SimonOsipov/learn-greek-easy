@@ -36,6 +36,7 @@ import { CardCreateModal } from './CardCreateModal';
 import { CardDeleteDialog } from './CardDeleteDialog';
 import { CardEditModal } from './CardEditModal';
 import { VocabularyCardCreateModal, VocabularyCardEditModal } from './vocabulary';
+import { WordEntryContent } from './WordEntryContent';
 
 interface DeckDetailModalProps {
   open: boolean;
@@ -355,9 +356,7 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
                     </TabsTrigger>
                   </TabsList>
                   <TabsContent value="entry" data-testid="word-entry-tab-content-entry">
-                    <p className="py-8 text-center text-muted-foreground">
-                      {t('wordEntryDetail.placeholder')}
-                    </p>
+                    <WordEntryContent wordEntryId={selectedWordEntry.id} />
                   </TabsContent>
                   <TabsContent value="cards" data-testid="word-entry-tab-content-cards">
                     <p className="py-8 text-center text-muted-foreground">

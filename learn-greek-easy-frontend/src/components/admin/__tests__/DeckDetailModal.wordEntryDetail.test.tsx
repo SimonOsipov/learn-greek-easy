@@ -51,6 +51,10 @@ vi.mock('../vocabulary', () => ({
   VocabularyCardEditModal: () => null,
 }));
 
+vi.mock('../WordEntryContent', () => ({
+  WordEntryContent: () => null,
+}));
+
 // ============================================
 // Factory Functions
 // ============================================
