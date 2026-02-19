@@ -58,6 +58,7 @@ class TestWordEntryBulkCreate:
             grammar_data={"voice": "active", "present_1s": "γράφω"},
             examples=[
                 ExampleSentence(
+                    id="ex_grafo1",
                     greek="Γράφω ένα γράμμα.",
                     english="I write a letter.",
                 )
@@ -264,8 +265,8 @@ class TestWordEntryBulkCreate:
             part_of_speech=PartOfSpeech.NOUN,
             translation_en="test",
             examples=[
-                ExampleSentence(greek="Γεια σου!", english="Hello!"),
-                ExampleSentence(greek="Καλημέρα", english="Good morning"),
+                ExampleSentence(id="ex_test1", greek="Γεια σου!", english="Hello!"),
+                ExampleSentence(id="ex_test2", greek="Καλημέρα", english="Good morning"),
             ],
         )
         assert len(entry.examples) == 2

@@ -38,6 +38,7 @@ WORD_ENTRY_NOUN = {
     },
     "examples": [
         {
+            "id": "ex_spiti1",
             "greek": "Το σπίτι μου είναι μικρό.",
             "english": "My house is small.",
             "russian": "Мой дом маленький.",

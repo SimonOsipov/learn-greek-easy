@@ -37,6 +37,7 @@ BULK_NOUN_ENTRY = {
     },
     "examples": [
         {
+            "id": "ex_spiti1",
             "greek": "Το σπίτι μου είναι μικρό.",
             "english": "My house is small.",
             "russian": "Мой дом маленький.",
@@ -86,6 +87,7 @@ CARD_GEN_ENTRY_WITH_EXAMPLES = {
     },
     "examples": [
         {
+            "id": "ex_dromos1",
             "greek": "Ο δρόμος είναι μεγάλος.",
             "english": "The road is big.",
             "russian": "Дорога большая.",

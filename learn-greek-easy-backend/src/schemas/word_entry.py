@@ -69,8 +69,8 @@ class ExampleSentence(BaseModel):
     Greek is required; English and Russian are optional.
     """
 
-    id: Optional[str] = Field(
-        default=None,
+    id: str = Field(
+        ...,
         min_length=1,
         max_length=50,
         pattern=r"^[a-zA-Z0-9_]+$",
@@ -96,6 +96,11 @@ class ExampleSentence(BaseModel):
         default=None,
         max_length=200,
         description="Optional context (e.g., 'formal', 'colloquial')",
+    )
+    audio_key: Optional[str] = Field(
+        default=None,
+        max_length=500,
+        description="S3 key for example sentence audio file",
     )
 
 
