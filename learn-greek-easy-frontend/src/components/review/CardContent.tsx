@@ -177,7 +177,13 @@ export function CardContent({ card, isFlipped }: CardContentProps) {
       {examples && examples.length > 0 && (
         <div className="flex flex-col gap-2">
           <SectionHeader title={t('grammar.examples.title')} />
-          <ExampleSentences key={card.id} examples={examples} isFlipped={isFlipped} />
+          <ExampleSentences
+            key={card.id}
+            examples={examples}
+            isFlipped={isFlipped}
+            wordEntryId={card.word_entry_id}
+            deckId={card.srData?.deckId}
+          />
         </div>
       )}
     </div>
