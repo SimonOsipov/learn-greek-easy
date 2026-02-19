@@ -55,6 +55,10 @@ vi.mock('../WordEntryContent', () => ({
   WordEntryContent: () => null,
 }));
 
+vi.mock('../WordEntryCards', () => ({
+  WordEntryCards: () => null,
+}));
+
 // ============================================
 // Factory Functions
 // ============================================
