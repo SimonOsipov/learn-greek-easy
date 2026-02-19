@@ -12,7 +12,7 @@ from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from src.db.models import DeckLevel
 
@@ -174,3 +174,45 @@ class AdminCultureQuestionsResponse(BaseModel):
     page: int
     page_size: int
     deck_id: UUID
+
+
+# ============================================================================
+# Word Entry Inline Update Schemas
+# ============================================================================
+
+
+class ExampleSentenceUpdate(BaseModel):
+    """Example sentence for inline word entry update.
+
+    Requires id + greek (minimum). System fields (audio_key, audio_status)
+    are preserved from existing data during merge.
+    """
+
+    id: str = Field(..., min_length=1, max_length=50)
+    greek: str = Field(..., min_length=1, max_length=1000)
+    english: Optional[str] = Field(default=None, max_length=1000)
+    russian: Optional[str] = Field(default=None, max_length=1000)
+    context: Optional[str] = Field(default=None, max_length=200)
+
+
+class WordEntryInlineUpdate(BaseModel):
+    """Schema for admin inline word entry update (PATCH).
+
+    Only exposes fields that are safe to edit inline.
+    Explicitly excludes: lemma, part_of_speech, is_active,
+    audio_key, audio_status, grammar_data (gender is top-level).
+    """
+
+    translation_en: Optional[str] = Field(default=None, min_length=1, max_length=500)
+    translation_en_plural: Optional[str] = Field(default=None, max_length=500)
+    translation_ru: Optional[str] = Field(default=None, max_length=500)
+    translation_ru_plural: Optional[str] = Field(default=None, max_length=500)
+    pronunciation: Optional[str] = Field(default=None, max_length=200)
+    gender: Optional[str] = Field(default=None, pattern="^(masculine|feminine|neuter)$")
+    examples: Optional[list[ExampleSentenceUpdate]] = None
+
+    @model_validator(mode="after")
+    def check_at_least_one_field(self) -> "WordEntryInlineUpdate":
+        if not self.model_dump(exclude_unset=True):
+            raise ValueError("At least one field must be provided")
+        return self

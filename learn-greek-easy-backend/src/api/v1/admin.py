@@ -34,6 +34,7 @@ from src.db.models import (
     User,
     WordEntry,
 )
+from src.repositories.word_entry import WordEntryRepository
 from src.schemas.admin import (
     AdminCultureQuestionItem,
     AdminCultureQuestionsResponse,
@@ -45,6 +46,7 @@ from src.schemas.admin import (
     QuestionApproveRequest,
     QuestionApproveResponse,
     UnifiedDeckItem,
+    WordEntryInlineUpdate,
 )
 from src.schemas.announcement import (
     AnnouncementCreate,
@@ -78,11 +80,13 @@ from src.schemas.news_item import (
     NewsItemWithCardResponse,
     NewsItemWithQuestionCreate,
 )
+from src.schemas.word_entry import WordEntryResponse
 from src.services.announcement_service import AnnouncementService
 from src.services.card_error_admin_service import CardErrorAdminService
 from src.services.changelog_service import ChangelogService
 from src.services.feedback_admin_service import FeedbackAdminService
 from src.services.news_item_service import NewsItemService
+from src.services.word_entry_response import word_entry_to_response
 from src.tasks import (
     create_announcement_notifications_task,
     generate_audio_for_news_item_task,
@@ -1836,3 +1840,61 @@ async def update_card_error(
         created_at=report.created_at,
         updated_at=report.updated_at,
     )
+
+
+# ============================================================================
+# Word Entry Inline Edit Endpoint
+# ============================================================================
+
+
+@router.patch(
+    "/word-entries/{word_entry_id}",
+    response_model=WordEntryResponse,
+    summary="Update word entry inline fields",
+    description="Partial update of word entry for admin inline editing.",
+)
+async def update_word_entry_inline(
+    word_entry_id: UUID,
+    update_data: WordEntryInlineUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> WordEntryResponse:
+    repo = WordEntryRepository(db)
+    word_entry = await repo.get(word_entry_id)
+    if word_entry is None:
+        raise NotFoundException(detail=f"Word entry {word_entry_id} not found")
+
+    provided = update_data.model_dump(exclude_unset=True)
+    gender = provided.pop("gender", None)
+    examples = provided.pop("examples", None)
+
+    for field, value in provided.items():
+        setattr(word_entry, field, value)
+
+    if gender is not None:
+        existing_gd = dict(word_entry.grammar_data or {})
+        existing_gd["gender"] = gender
+        word_entry.grammar_data = existing_gd
+
+    if examples is not None:
+        existing_by_id = {ex["id"]: ex for ex in (word_entry.examples or []) if "id" in ex}
+        merged = []
+        for ex_update in examples:
+            ex_dict = ex_update if isinstance(ex_update, dict) else ex_update.model_dump()
+            existing = existing_by_id.get(ex_dict["id"], {})
+            merged_ex = {**existing, **{k: v for k, v in ex_dict.items() if v is not None}}
+            merged.append(merged_ex)
+        word_entry.examples = merged
+
+    await db.commit()
+    await db.refresh(word_entry)
+
+    logger.info(
+        "Word entry updated inline",
+        extra={
+            "word_entry_id": str(word_entry_id),
+            "updated_fields": list(update_data.model_dump(exclude_unset=True).keys()),
+            "triggered_by": str(current_user.id),
+        },
+    )
+    return word_entry_to_response(word_entry)
