@@ -242,15 +242,20 @@ class ElevenLabsService:
         self,
         text: str,
         *,
+        voice_id: str | None = None,
         news_item_id: Optional[UUID] = None,
     ) -> bytes:
         """Generate Greek speech audio from text using ElevenLabs API.
 
-        Selects a random voice, calls TTS API, and retries once on 404
-        (stale voice cache) with a fresh voice selection.
+        If voice_id is provided, calls TTS directly without fetching the voice
+        list and without retrying on 404. If voice_id is None, selects a random
+        voice, calls TTS API, and retries once on 404 (stale voice cache) with
+        a fresh voice selection.
 
         Args:
             text: Greek text to convert to speech.
+            voice_id: Optional voice ID to use directly, skipping voice list
+                lookup. When provided, 404 errors are not retried.
             news_item_id: Optional UUID for logging context.
 
         Returns:
@@ -264,6 +269,22 @@ class ElevenLabsService:
             ElevenLabsAPIError: For other API errors.
         """
         self._check_configured()
+
+        # Direct voice_id path: skip list_voices, no retry on 404
+        if voice_id is not None:
+            logger.info(
+                "Using provided voice_id for TTS",
+                extra={
+                    "voice_id": voice_id,
+                    "text_length": len(text),
+                },
+            )
+            return await self._call_tts_api(
+                text,
+                voice_id,
+                "custom",
+                is_retry=False,
+            )
 
         voices = await self.list_voices()
         selected = random.choice(voices)

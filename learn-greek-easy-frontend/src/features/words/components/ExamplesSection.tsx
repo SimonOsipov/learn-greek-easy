@@ -9,6 +9,8 @@ import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { SpeakerButton } from '@/components/ui/SpeakerButton';
+import { trackExampleAudioPlayed, trackWordAudioFailed } from '@/lib/analytics';
 import { getLocalizedTranslation } from '@/lib/localeUtils';
 import type { WordEntryExampleSentence } from '@/services/wordEntryAPI';
 
@@ -19,13 +21,15 @@ import type { WordEntryExampleSentence } from '@/services/wordEntryAPI';
 export interface ExamplesSectionProps {
   /** Array of example sentences */
   examples: WordEntryExampleSentence[] | null;
+  wordEntryId?: string;
+  deckId?: string;
 }
 
 // ============================================
 // Component
 // ============================================
 
-export function ExamplesSection({ examples }: ExamplesSectionProps) {
+export function ExamplesSection({ examples, wordEntryId, deckId }: ExamplesSectionProps) {
   const { t, i18n } = useTranslation('review');
 
   // Handle empty/null examples
@@ -64,7 +68,31 @@ export function ExamplesSection({ examples }: ExamplesSectionProps) {
               )}
 
               {/* Greek sentence */}
-              <p className="text-lg font-medium text-foreground">{example.greek}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-lg font-medium text-foreground">{example.greek}</p>
+                {example.audio_url && (
+                  <SpeakerButton
+                    audioUrl={example.audio_url}
+                    size="sm"
+                    onPlay={() =>
+                      trackExampleAudioPlayed({
+                        word_entry_id: wordEntryId ?? '',
+                        example_id: example.id ?? '',
+                        context: 'reference',
+                        deck_id: deckId ?? '',
+                      })
+                    }
+                    onError={(error) =>
+                      trackWordAudioFailed({
+                        word_entry_id: wordEntryId ?? '',
+                        error,
+                        audio_type: 'example',
+                        context: 'reference',
+                      })
+                    }
+                  />
+                )}
+              </div>
 
               {/* Locale-appropriate translation */}
               {exampleTranslation && (

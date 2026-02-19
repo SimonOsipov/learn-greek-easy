@@ -9,13 +9,45 @@
  * - Multiple examples rendering
  */
 
+import userEvent from '@testing-library/user-event';
 import { render, screen } from '@testing-library/react';
 import i18n from 'i18next';
-import { describe, it, expect } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { WordEntryExampleSentence } from '@/services/wordEntryAPI';
 
 import { ExamplesSection } from '../ExamplesSection';
+
+// Mock SpeakerButton — captures callbacks and exposes via test buttons
+vi.mock('@/components/ui/SpeakerButton', () => ({
+  SpeakerButton: ({
+    audioUrl,
+    onPlay,
+    onError,
+  }: {
+    audioUrl: string | null | undefined;
+    onPlay?: () => void;
+    onError?: (error: string) => void;
+  }) => {
+    if (!audioUrl) return null;
+    return (
+      <>
+        <button data-testid="speaker-button" onClick={() => onPlay?.()}>
+          Speaker
+        </button>
+        <button data-testid="speaker-error-trigger" onClick={() => onError?.('play error')}>
+          Trigger Error
+        </button>
+      </>
+    );
+  },
+}));
+
+// Mock analytics module
+vi.mock('@/lib/analytics', () => ({
+  trackExampleAudioPlayed: vi.fn(),
+  trackWordAudioFailed: vi.fn(),
+}));
 
 // Mock example data
 const mockExamples: WordEntryExampleSentence[] = [
@@ -47,6 +79,10 @@ const exampleWithoutEnglish: WordEntryExampleSentence[] = [
     greek: 'Γεια σου!',
   },
 ];
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 describe('ExamplesSection', () => {
   describe('Section Header', () => {
@@ -170,6 +206,114 @@ describe('ExamplesSection', () => {
       render(<ExamplesSection examples={examplesWithoutRu} />);
       expect(screen.getByText('Hello!')).toBeInTheDocument();
       await i18n.changeLanguage('en'); // cleanup
+    });
+  });
+});
+
+// ============================================
+// Audio SpeakerButton Integration Tests
+// ============================================
+
+describe('ExamplesSection — Audio SpeakerButton integration (reference)', () => {
+  const examplesWithAudio: WordEntryExampleSentence[] = [
+    {
+      id: 'ex-1',
+      greek: 'Η γάτα κοιμάται.',
+      english: 'The cat sleeps.',
+      audio_url: 'https://cdn.example.com/ex1.mp3',
+    },
+    {
+      id: 'ex-2',
+      greek: 'Το σκυλί τρέχει.',
+      english: 'The dog runs.',
+      audio_url: 'https://cdn.example.com/ex2.mp3',
+    },
+  ];
+
+  const examplesMixed: WordEntryExampleSentence[] = [
+    {
+      id: 'ex-a',
+      greek: 'Με ήχο.',
+      english: 'With audio.',
+      audio_url: 'https://cdn.example.com/exa.mp3',
+    },
+    {
+      id: 'ex-b',
+      greek: 'Χωρίς ήχο.',
+      english: 'Without audio.',
+      audio_url: null,
+    },
+  ];
+
+  it('1. renders SpeakerButtons for examples with audio_url', () => {
+    render(<ExamplesSection examples={examplesWithAudio} wordEntryId="we-1" deckId="deck-1" />);
+
+    const buttons = screen.getAllByTestId('speaker-button');
+    expect(buttons).toHaveLength(2);
+  });
+
+  it('2. no SpeakerButtons when examples have no audio_url', () => {
+    render(<ExamplesSection examples={mockExamples} />);
+
+    expect(screen.queryByTestId('speaker-button')).not.toBeInTheDocument();
+  });
+
+  it('3. mixed examples — only examples with audio_url show button', () => {
+    render(<ExamplesSection examples={examplesMixed} wordEntryId="we-1" deckId="deck-1" />);
+
+    const buttons = screen.getAllByTestId('speaker-button');
+    expect(buttons).toHaveLength(1);
+  });
+
+  it('4. context badges remain visible alongside speaker buttons', () => {
+    const examplesWithContext: WordEntryExampleSentence[] = [
+      {
+        id: 'ex-c',
+        greek: 'Παράδειγμα.',
+        english: 'Example.',
+        context: 'formal',
+        audio_url: 'https://cdn.example.com/exc.mp3',
+      },
+    ];
+    render(<ExamplesSection examples={examplesWithContext} />);
+
+    expect(screen.getByText('formal')).toBeInTheDocument();
+    expect(screen.getByTestId('speaker-button')).toBeInTheDocument();
+  });
+
+  it('5. trackExampleAudioPlayed called with context: reference on play', async () => {
+    const { trackExampleAudioPlayed } = await import('@/lib/analytics');
+    const user = userEvent.setup();
+
+    render(
+      <ExamplesSection examples={[examplesWithAudio[0]]} wordEntryId="we-abc" deckId="deck-xyz" />
+    );
+
+    await user.click(screen.getByTestId('speaker-button'));
+
+    expect(trackExampleAudioPlayed).toHaveBeenCalledWith({
+      word_entry_id: 'we-abc',
+      example_id: 'ex-1',
+      context: 'reference',
+      deck_id: 'deck-xyz',
+    });
+  });
+
+  it('6. trackWordAudioFailed called with audio_type: example on error', async () => {
+    const { trackWordAudioFailed } = await import('@/lib/analytics');
+    const user = userEvent.setup();
+
+    render(
+      <ExamplesSection examples={[examplesWithAudio[0]]} wordEntryId="we-abc" deckId="deck-xyz" />
+    );
+
+    await user.click(screen.getByTestId('speaker-error-trigger'));
+
+    expect(trackWordAudioFailed).toHaveBeenCalledWith({
+      word_entry_id: 'we-abc',
+      error: 'play error',
+      audio_type: 'example',
+      context: 'reference',
     });
   });
 });

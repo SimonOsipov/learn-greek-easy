@@ -9,10 +9,44 @@
  * - isFlipped prop controls all translation visibility
  */
 
+import userEvent from '@testing-library/user-event';
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { trackExampleAudioPlayed, trackWordAudioFailed } from '@/lib/analytics';
 import type { Example } from '@/types/grammar';
+
+// Mock SpeakerButton for audio tests
+vi.mock('@/components/ui/SpeakerButton', () => ({
+  SpeakerButton: ({
+    audioUrl,
+    onPlay,
+    onError,
+  }: {
+    audioUrl: string | null | undefined;
+    size?: string;
+    onPlay?: () => void;
+    onError?: (error: string) => void;
+  }) => {
+    if (!audioUrl) return null;
+    return (
+      <>
+        <button data-testid="speaker-button" onClick={() => onPlay?.()}>
+          Speaker
+        </button>
+        <button data-testid="speaker-error-trigger" onClick={() => onError?.('play error')}>
+          Error
+        </button>
+      </>
+    );
+  },
+}));
+
+// Mock analytics for audio tests
+vi.mock('@/lib/analytics', () => ({
+  trackExampleAudioPlayed: vi.fn(),
+  trackWordAudioFailed: vi.fn(),
+}));
 
 // Mock i18n with configurable language
 let mockLanguage = 'en';
@@ -358,6 +392,143 @@ describe('ExampleSentences', () => {
 
       // Translations should not be buttons since they are no longer interactive
       expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    });
+  });
+});
+
+// ============================================================================
+// Audio SpeakerButton Integration Tests
+// ============================================================================
+
+const mockExampleWithAudio: Example[] = [
+  {
+    greek: 'Γράφω ένα γράμμα.',
+    english: 'I write a letter.',
+    russian: 'Я пишу письмо.',
+    id: 'ex-001',
+    audio_url: 'https://example.com/ex1.mp3',
+  },
+];
+
+const mockMixedExamples: Example[] = [
+  {
+    greek: 'Γράφω ένα γράμμα.',
+    english: 'I write a letter.',
+    russian: 'Я пишу письмо.',
+    id: 'ex-001',
+    audio_url: 'https://example.com/ex1.mp3',
+  },
+  {
+    greek: 'Αυτός γράφει κάθε μέρα.',
+    english: 'He writes every day.',
+    russian: 'Он пишет каждый день.',
+    // no audio_url
+  },
+];
+
+const mockExampleWithAudioAndTense: Example[] = [
+  {
+    greek: 'Έγραψα το βιβλίο.',
+    english: 'I wrote the book.',
+    russian: 'Я написал книгу.',
+    tense: 'past',
+    id: 'ex-tense',
+    audio_url: 'https://example.com/tense.mp3',
+  },
+];
+
+describe('ExampleSentences — Audio SpeakerButton integration', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('10. renders SpeakerButtons for examples with audio_url when isFlipped=true', () => {
+    render(
+      <ExampleSentences
+        examples={mockExampleWithAudio}
+        isFlipped={true}
+        wordEntryId="we-123"
+        deckId="deck-456"
+      />
+    );
+    expect(screen.getByTestId('speaker-button')).toBeInTheDocument();
+  });
+
+  it('11. NO SpeakerButtons when isFlipped=false, even if examples have audio_url', () => {
+    render(
+      <ExampleSentences
+        examples={mockExampleWithAudio}
+        isFlipped={false}
+        wordEntryId="we-123"
+        deckId="deck-456"
+      />
+    );
+    expect(screen.queryByTestId('speaker-button')).not.toBeInTheDocument();
+  });
+
+  it('12. mixed examples — only examples with audio_url show the button', () => {
+    render(
+      <ExampleSentences
+        examples={mockMixedExamples}
+        isFlipped={true}
+        wordEntryId="we-123"
+        deckId="deck-456"
+      />
+    );
+    // Only one of two examples has audio_url
+    expect(screen.getAllByTestId('speaker-button')).toHaveLength(1);
+  });
+
+  it('13. each SpeakerButton receives its own example audio_url (not word audio)', async () => {
+    const user = userEvent.setup();
+    render(
+      <ExampleSentences
+        examples={mockExampleWithAudio}
+        isFlipped={true}
+        wordEntryId="we-123"
+        deckId="deck-456"
+      />
+    );
+    await user.click(screen.getByTestId('speaker-button'));
+
+    expect(trackExampleAudioPlayed).toHaveBeenCalledWith({
+      word_entry_id: 'we-123',
+      example_id: 'ex-001',
+      context: 'review',
+      deck_id: 'deck-456',
+    });
+  });
+
+  it('14. TenseBadge remains properly positioned when speaker button is present', () => {
+    render(
+      <ExampleSentences
+        examples={mockExampleWithAudioAndTense}
+        isFlipped={true}
+        wordEntryId="we-123"
+        deckId="deck-456"
+      />
+    );
+    expect(screen.getByTestId('tense-badge')).toBeInTheDocument();
+    expect(screen.getByTestId('speaker-button')).toBeInTheDocument();
+  });
+
+  it('trackWordAudioFailed called with audio_type: example on error', async () => {
+    const user = userEvent.setup();
+    render(
+      <ExampleSentences
+        examples={mockExampleWithAudio}
+        isFlipped={true}
+        wordEntryId="we-123"
+        deckId="deck-456"
+      />
+    );
+    await user.click(screen.getByTestId('speaker-error-trigger'));
+
+    expect(trackWordAudioFailed).toHaveBeenCalledWith({
+      word_entry_id: 'we-123',
+      error: 'play error',
+      audio_type: 'example',
+      context: 'review',
     });
   });
 });

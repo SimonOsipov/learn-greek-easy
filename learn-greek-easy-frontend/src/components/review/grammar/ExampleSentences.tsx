@@ -3,6 +3,8 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Card, CardContent } from '@/components/ui/card';
+import { SpeakerButton } from '@/components/ui/SpeakerButton';
+import { trackExampleAudioPlayed, trackWordAudioFailed } from '@/lib/analytics';
 import { cn } from '@/lib/utils';
 import type { Example } from '@/types/grammar';
 
@@ -27,9 +29,16 @@ function getTenseSortIndex(tense: string | null | undefined): number {
 export interface ExampleSentencesProps {
   examples: Example[];
   isFlipped?: boolean;
+  wordEntryId?: string;
+  deckId?: string;
 }
 
-export function ExampleSentences({ examples, isFlipped = true }: ExampleSentencesProps) {
+export function ExampleSentences({
+  examples,
+  isFlipped = true,
+  wordEntryId,
+  deckId,
+}: ExampleSentencesProps) {
   const { t, i18n } = useTranslation('review');
 
   const getTranslation = (example: Example): string => {
@@ -62,10 +71,32 @@ export function ExampleSentences({ examples, isFlipped = true }: ExampleSentence
         return (
           <Card key={index}>
             <CardContent className="p-4">
-              {/* Greek - always visible, with optional tense badge */}
+              {/* Greek - always visible, with optional tense badge and audio button */}
               <div className="flex items-baseline gap-2">
                 <p className="text-base font-medium">{example.greek}</p>
                 {example.tense && <TenseBadge tense={example.tense} />}
+                {isFlipped && example.audio_url && (
+                  <SpeakerButton
+                    audioUrl={example.audio_url}
+                    size="sm"
+                    onPlay={() =>
+                      trackExampleAudioPlayed({
+                        word_entry_id: wordEntryId ?? '',
+                        example_id: example.id ?? '',
+                        context: 'review',
+                        deck_id: deckId ?? '',
+                      })
+                    }
+                    onError={(error) =>
+                      trackWordAudioFailed({
+                        word_entry_id: wordEntryId ?? '',
+                        error,
+                        audio_type: 'example',
+                        context: 'review',
+                      })
+                    }
+                  />
+                )}
               </div>
 
               {/* Translation - visible when card is flipped */}

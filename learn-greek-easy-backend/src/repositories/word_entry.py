@@ -1,5 +1,6 @@
 """Repository for WordEntry model with bulk upsert support."""
 
+from collections.abc import Sequence
 from uuid import UUID
 
 from sqlalchemy import func, or_, select
@@ -193,6 +194,44 @@ class WordEntryRepository(BaseRepository[WordEntry]):
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
 
+    @staticmethod
+    def _build_audio_key_lookup(
+        existing_rows: Sequence,
+    ) -> dict[tuple[str, str], dict[str, str]]:
+        """Build a lookup of existing audio keys keyed by (lemma, pos) -> {example_id: audio_key}."""
+        lookup: dict[tuple[str, str], dict[str, str]] = {}
+        for row in existing_rows:
+            pos_val = (
+                row.part_of_speech.value
+                if hasattr(row.part_of_speech, "value")
+                else row.part_of_speech
+            )
+            if not row.examples:
+                continue
+            audio_map = {
+                ex["id"]: ex["audio_key"]
+                for ex in row.examples
+                if ex.get("id") and ex.get("audio_key")
+            }
+            if audio_map:
+                lookup[(row.lemma, pos_val)] = audio_map
+        return lookup
+
+    @staticmethod
+    def _merge_audio_keys(
+        entry_with_deck: dict,
+        key: tuple[str, str],
+        existing_audio_keys: dict[tuple[str, str], dict[str, str]],
+    ) -> None:
+        """Merge existing audio_key values into incoming examples (in-place)."""
+        if key not in existing_audio_keys or not entry_with_deck.get("examples"):
+            return
+        audio_map = existing_audio_keys[key]
+        for example in entry_with_deck["examples"]:
+            ex_id = example.get("id")
+            if ex_id and ex_id in audio_map and not example.get("audio_key"):
+                example["audio_key"] = audio_map[ex_id]
+
     async def bulk_upsert(
         self,
         deck_id: UUID,
@@ -233,10 +272,13 @@ class WordEntryRepository(BaseRepository[WordEntry]):
             return [], 0, 0
 
         # Get existing entries to determine created vs updated count
-        existing_query = select(WordEntry.lemma, WordEntry.part_of_speech).where(
+        existing_query = select(
+            WordEntry.lemma, WordEntry.part_of_speech, WordEntry.examples
+        ).where(
             WordEntry.deck_id == deck_id,
         )
         existing_result = await self.db.execute(existing_query)
+        existing_rows = existing_result.all()
         existing_keys = {
             (
                 row.lemma,
@@ -246,8 +288,11 @@ class WordEntryRepository(BaseRepository[WordEntry]):
                     else row.part_of_speech
                 ),
             )
-            for row in existing_result.all()
+            for row in existing_rows
         }
+
+        # Build audio_key lookup: {(lemma, pos): {example_id: audio_key}}
+        existing_audio_keys = self._build_audio_key_lookup(existing_rows)
 
         # Prepare values with deck_id added to each entry
         values = []
@@ -266,6 +311,9 @@ class WordEntryRepository(BaseRepository[WordEntry]):
                 updated_count += 1
             else:
                 created_count += 1
+
+            # Merge audio_keys from existing examples into incoming examples
+            self._merge_audio_keys(entry_with_deck, key, existing_audio_keys)
 
             values.append(entry_with_deck)
 

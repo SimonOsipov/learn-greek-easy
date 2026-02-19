@@ -20,10 +20,13 @@ import { api } from './api';
  * Matches backend ExampleSentence schema.
  */
 export interface WordEntryExampleSentence {
+  id: string;
   greek: string;
   english?: string;
   russian?: string;
   context?: string | null;
+  audio_key?: string | null;
+  audio_url?: string | null;
 }
 
 /**
@@ -63,6 +66,7 @@ export interface WordEntryResponse {
   grammar_data: Record<string, unknown> | null;
   examples: WordEntryExampleSentence[] | null;
   audio_key: string | null;
+  audio_url: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;

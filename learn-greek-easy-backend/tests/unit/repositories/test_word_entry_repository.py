@@ -361,3 +361,156 @@ class TestWordEntryRepositoryBulkUpsert:
 
         # The updated_at should be newer
         assert entries[0].updated_at >= original_updated_at
+
+
+class TestBulkUpsertAudioKeyMerge:
+    """Test audio_key preservation during bulk upsert."""
+
+    @pytest.mark.asyncio
+    async def test_preserves_existing_audio_key(self, db_session: AsyncSession, sample_deck: Deck):
+        """Test that existing audio_key is preserved when incoming example has no audio_key."""
+        repo = WordEntryRepository(db_session)
+
+        # Create a WordEntry with an example that has an audio_key
+        existing_entry = WordEntry(
+            deck_id=sample_deck.id,
+            lemma="σπίτι",
+            part_of_speech=PartOfSpeech.NOUN,
+            translation_en="house",
+            examples=[
+                {"id": "ex1", "greek": "Το σπίτι είναι μεγάλο.", "audio_key": "audio/ex1.mp3"}
+            ],
+        )
+        db_session.add(existing_entry)
+        await db_session.commit()
+
+        # Upsert the same lemma/pos with example ex1 but NO audio_key
+        entries_data = [
+            {
+                "lemma": "σπίτι",
+                "part_of_speech": PartOfSpeech.NOUN,
+                "translation_en": "house",
+                "examples": [{"id": "ex1", "greek": "Το σπίτι είναι μεγάλο."}],
+            }
+        ]
+
+        entries, _, _ = await repo.bulk_upsert(sample_deck.id, entries_data)
+        await db_session.commit()
+
+        assert len(entries) == 1
+        assert len(entries[0].examples) == 1
+        assert entries[0].examples[0]["audio_key"] == "audio/ex1.mp3"
+
+    @pytest.mark.asyncio
+    async def test_new_example_has_null_audio_key(
+        self, db_session: AsyncSession, sample_deck: Deck
+    ):
+        """Test that a new example (different id) gets no audio_key carried over."""
+        repo = WordEntryRepository(db_session)
+
+        # Create a WordEntry with an example that has an audio_key
+        existing_entry = WordEntry(
+            deck_id=sample_deck.id,
+            lemma="σπίτι",
+            part_of_speech=PartOfSpeech.NOUN,
+            translation_en="house",
+            examples=[
+                {"id": "ex1", "greek": "Το σπίτι είναι μεγάλο.", "audio_key": "audio/ex1.mp3"}
+            ],
+        )
+        db_session.add(existing_entry)
+        await db_session.commit()
+
+        # Upsert with a NEW example id (ex2) that has no audio_key
+        entries_data = [
+            {
+                "lemma": "σπίτι",
+                "part_of_speech": PartOfSpeech.NOUN,
+                "translation_en": "house",
+                "examples": [{"id": "ex2", "greek": "Το σπίτι μου."}],
+            }
+        ]
+
+        entries, _, _ = await repo.bulk_upsert(sample_deck.id, entries_data)
+        await db_session.commit()
+
+        assert len(entries) == 1
+        assert len(entries[0].examples) == 1
+        assert entries[0].examples[0]["id"] == "ex2"
+        assert entries[0].examples[0].get("audio_key") is None
+
+    @pytest.mark.asyncio
+    async def test_explicit_audio_key_not_overwritten(
+        self, db_session: AsyncSession, sample_deck: Deck
+    ):
+        """Test that an incoming audio_key is not overwritten by the existing one."""
+        repo = WordEntryRepository(db_session)
+
+        # Create a WordEntry with an old audio_key
+        existing_entry = WordEntry(
+            deck_id=sample_deck.id,
+            lemma="σπίτι",
+            part_of_speech=PartOfSpeech.NOUN,
+            translation_en="house",
+            examples=[{"id": "ex1", "greek": "Το σπίτι είναι μεγάλο.", "audio_key": "old_key.mp3"}],
+        )
+        db_session.add(existing_entry)
+        await db_session.commit()
+
+        # Upsert with an explicit new audio_key on the same example id
+        entries_data = [
+            {
+                "lemma": "σπίτι",
+                "part_of_speech": PartOfSpeech.NOUN,
+                "translation_en": "house",
+                "examples": [
+                    {"id": "ex1", "greek": "Το σπίτι είναι μεγάλο.", "audio_key": "new_key.mp3"}
+                ],
+            }
+        ]
+
+        entries, _, _ = await repo.bulk_upsert(sample_deck.id, entries_data)
+        await db_session.commit()
+
+        assert len(entries) == 1
+        assert len(entries[0].examples) == 1
+        assert entries[0].examples[0]["audio_key"] == "new_key.mp3"
+
+    @pytest.mark.asyncio
+    async def test_removed_example_loses_audio_key(
+        self, db_session: AsyncSession, sample_deck: Deck
+    ):
+        """Test that an example not included in the upsert is replaced (not preserved)."""
+        repo = WordEntryRepository(db_session)
+
+        # Create a WordEntry with two examples, each with an audio_key
+        existing_entry = WordEntry(
+            deck_id=sample_deck.id,
+            lemma="σπίτι",
+            part_of_speech=PartOfSpeech.NOUN,
+            translation_en="house",
+            examples=[
+                {"id": "ex1", "greek": "Το σπίτι είναι μεγάλο.", "audio_key": "audio/ex1.mp3"},
+                {"id": "ex2", "greek": "Το σπίτι μου.", "audio_key": "audio/ex2.mp3"},
+            ],
+        )
+        db_session.add(existing_entry)
+        await db_session.commit()
+
+        # Upsert with only ex1 (ex2 is omitted)
+        entries_data = [
+            {
+                "lemma": "σπίτι",
+                "part_of_speech": PartOfSpeech.NOUN,
+                "translation_en": "house",
+                "examples": [{"id": "ex1", "greek": "Το σπίτι είναι μεγάλο."}],
+            }
+        ]
+
+        entries, _, _ = await repo.bulk_upsert(sample_deck.id, entries_data)
+        await db_session.commit()
+
+        assert len(entries) == 1
+        assert len(entries[0].examples) == 1
+        assert entries[0].examples[0]["id"] == "ex1"
+        assert entries[0].examples[0]["audio_key"] == "audio/ex1.mp3"

@@ -138,6 +138,15 @@ class Example(BaseModel):
         max_length=50,
         description="Verb tense (present, past, future, etc.) - for verbs only",
     )
+    id: Optional[str] = Field(
+        default=None,
+        max_length=100,
+        description="Example sentence identifier",
+    )
+    audio_url: Optional[str] = Field(
+        default=None,
+        description="Presigned URL for example audio pronunciation",
+    )
 
 
 # ============================================================================

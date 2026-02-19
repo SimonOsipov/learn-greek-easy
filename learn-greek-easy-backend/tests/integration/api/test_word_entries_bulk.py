@@ -37,6 +37,7 @@ BULK_NOUN_ENTRY = {
     },
     "examples": [
         {
+            "id": "ex_spiti1",
             "greek": "Το σπίτι μου είναι μικρό.",
             "english": "My house is small.",
             "russian": "Мой дом маленький.",
@@ -86,6 +87,7 @@ CARD_GEN_ENTRY_WITH_EXAMPLES = {
     },
     "examples": [
         {
+            "id": "ex_dromos1",
             "greek": "Ο δρόμος είναι μεγάλος.",
             "english": "The road is big.",
             "russian": "Дорога большая.",
@@ -936,7 +938,9 @@ class TestBulkUpsertCardGeneration:
         data = response.json()
         assert data["created_count"] == 2
         assert data["updated_count"] == 0
-        assert data["cards_created"] == 4
+        # δρόμος (noun with example id): 2 meaning + 2 sentence_translation = 4
+        # τρέχω (verb, no examples): 2 meaning = 2
+        assert data["cards_created"] == 6
         assert data["cards_updated"] == 0
 
     @pytest.mark.asyncio
@@ -963,7 +967,8 @@ class TestBulkUpsertCardGeneration:
         )
         assert first_response.status_code == 201
         first_data = first_response.json()
-        assert first_data["cards_created"] == 4
+        # δρόμος: 2 meaning + 2 sentence_translation; τρέχω: 2 meaning = 6 total
+        assert first_data["cards_created"] == 6
         assert first_data["cards_updated"] == 0
 
         # Second upload -- same data, should update
@@ -975,7 +980,7 @@ class TestBulkUpsertCardGeneration:
         assert second_response.status_code == 201
         second_data = second_response.json()
         assert second_data["cards_created"] == 0
-        assert second_data["cards_updated"] == 4
+        assert second_data["cards_updated"] == 6
 
     # ========================================================================
     # Card Generation - Database Verification Tests
@@ -1019,35 +1024,50 @@ class TestBulkUpsertCardGeneration:
         result = await db_session.execute(stmt)
         card_records = list(result.scalars().all())
 
-        # 2 entries x 2 card types = 4 total
-        assert len(card_records) == 4
+        # δρόμος (noun with example id): 2 meaning + 2 sentence_translation = 4
+        # τρέχω (verb, no examples): 2 meaning = 2
+        # Total: 6
+        assert len(card_records) == 6
 
         # Group by word_entry_id
         cards_by_entry = {}
         for cr in card_records:
             cards_by_entry.setdefault(str(cr.word_entry_id), []).append(cr)
 
+        entry_with_examples = next(e for e in data["word_entries"] if e["lemma"] == "δρόμος")
+        entry_without_examples = next(e for e in data["word_entries"] if e["lemma"] == "τρέχω")
+
         for we_id, cards in cards_by_entry.items():
-            assert len(cards) == 2
             card_types = {cr.card_type for cr in cards}
             assert CardType.MEANING_EL_TO_EN in card_types
             assert CardType.MEANING_EN_TO_EL in card_types
 
+            if we_id == entry_with_examples["id"]:
+                # δρόμος: 2 meaning + 2 sentence_translation
+                assert len(cards) == 4
+                assert CardType.SENTENCE_TRANSLATION in card_types
+            else:
+                # τρέχω: 2 meaning only
+                assert len(cards) == 2
+
             for cr in cards:
-                assert cr.variant_key == "default"
                 assert cr.tier == 1
                 assert cr.is_active is True
                 assert cr.deck_id == active_deck_for_card_gen.id
 
-                # Validate front_content structure
+                # Validate front_content structure (common to all card types)
                 assert "prompt" in cr.front_content
                 assert "main" in cr.front_content
                 assert "badge" in cr.front_content
                 assert "card_type" in cr.front_content
 
-                # Validate back_content structure
+                # Validate back_content structure (common to all card types)
                 assert "answer" in cr.back_content
                 assert "card_type" in cr.back_content
+
+                # Meaning cards use "default" variant_key
+                if cr.card_type in (CardType.MEANING_EL_TO_EN, CardType.MEANING_EN_TO_EL):
+                    assert cr.variant_key == "default"
 
         # Verify specific front/back content for el_to_en card of entry WITH examples
         entry_with_examples = next(e for e in data["word_entries"] if e["lemma"] == "δρόμος")
@@ -1107,14 +1127,19 @@ class TestBulkUpsertCardGeneration:
         # Find the entry without examples (τρέχω)
         entry_without_examples = next(e for e in data["word_entries"] if e["lemma"] == "τρέχω")
 
-        # Cards for entry WITH examples should have context populated
-        cards_with_examples = [
-            cr for cr in card_records if str(cr.word_entry_id) == entry_with_examples["id"]
+        # MEANING cards for entry WITH examples should have context populated.
+        # SENTENCE_TRANSLATION cards do not have a context field (they ARE the sentence).
+        meaning_cards_with_examples = [
+            cr
+            for cr in card_records
+            if str(cr.word_entry_id) == entry_with_examples["id"]
+            and cr.card_type in (CardType.MEANING_EL_TO_EN, CardType.MEANING_EN_TO_EL)
         ]
-        for cr in cards_with_examples:
+        assert len(meaning_cards_with_examples) == 2, "Expected 2 meaning cards for δρόμος"
+        for cr in meaning_cards_with_examples:
             context = cr.back_content.get("context")
             assert context is not None, (
-                f"context should be populated for entry with examples "
+                f"context should be populated for meaning card of entry with examples "
                 f"(card_type={cr.card_type})"
             )
             assert context["greek"] == "Ο δρόμος είναι μεγάλος."

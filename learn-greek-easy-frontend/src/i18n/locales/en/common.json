@@ -84,6 +84,11 @@
     "submit": "Submit",
     "retry": "Retry"
   },
+  "audio": {
+    "play": "Play audio",
+    "pause": "Pause audio",
+    "loading": "Loading audio"
+  },
   "navigation": {
     "back": "Back",
     "next": "Next",

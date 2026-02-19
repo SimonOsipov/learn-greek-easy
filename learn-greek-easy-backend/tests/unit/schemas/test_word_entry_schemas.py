@@ -20,8 +20,10 @@ from pydantic import ValidationError
 from src.db.models import PartOfSpeech
 from src.schemas.word_entry import (
     ExampleSentence,
+    ExampleSentenceResponse,
     GrammarData,
     WordEntryBase,
+    WordEntryBulkCreate,
     WordEntryCreate,
     WordEntryListResponse,
     WordEntryResponse,
@@ -40,6 +42,7 @@ class TestExampleSentence:
     def test_valid_example_with_all_fields(self):
         """Test valid example sentence with all fields provided."""
         example = ExampleSentence(
+            id="ex_test1",
             greek="Καλημέρα σας!",
             english="Good morning!",
             russian="Доброе утро!",
@@ -52,7 +55,7 @@ class TestExampleSentence:
 
     def test_valid_example_greek_only(self):
         """Test example with only required greek field."""
-        example = ExampleSentence(greek="Γεια σου!")
+        example = ExampleSentence(id="ex_test1", greek="Γεια σου!")
         assert example.greek == "Γεια σου!"
         assert example.english == ""
         assert example.russian == ""
@@ -60,53 +63,48 @@ class TestExampleSentence:
 
     def test_english_and_russian_default_to_empty_string(self):
         """Test that english and russian default to empty string."""
-        example = ExampleSentence(greek="Τι κάνεις;")
+        example = ExampleSentence(id="ex_test1", greek="Τι κάνεις;")
         assert example.english == ""
         assert example.russian == ""
 
     def test_context_optional(self):
         """Test context field is optional and defaults to None."""
-        example = ExampleSentence(greek="Ευχαριστώ")
+        example = ExampleSentence(id="ex_test1", greek="Ευχαριστώ")
         assert example.context is None
 
     def test_context_max_length(self):
         """Test context max length of 200 characters."""
         # Valid at boundary
-        example = ExampleSentence(greek="Test", context="a" * 200)
+        example = ExampleSentence(id="ex_test1", greek="Test", context="a" * 200)
         assert len(example.context) == 200
 
         # Over boundary rejected
         with pytest.raises(ValidationError) as exc_info:
-            ExampleSentence(greek="Test", context="a" * 201)
+            ExampleSentence(id="ex_test1", greek="Test", context="a" * 201)
         assert "string_too_long" in str(exc_info.value).lower()
 
     def test_greek_required(self):
         """Test that greek field is required."""
         with pytest.raises(ValidationError) as exc_info:
-            ExampleSentence(english="Hello")
+            ExampleSentence(id="ex_test1", english="Hello")
         assert "greek" in str(exc_info.value).lower()
 
     def test_empty_greek_rejected(self):
         """Test that empty greek string is rejected."""
         with pytest.raises(ValidationError) as exc_info:
-            ExampleSentence(greek="")
+            ExampleSentence(id="ex_test1", greek="")
         assert "string_too_short" in str(exc_info.value).lower()
 
     def test_greek_max_length(self):
         """Test greek max length of 1000 characters."""
         # Valid at boundary
-        example = ExampleSentence(greek="α" * 1000)
+        example = ExampleSentence(id="ex_test1", greek="α" * 1000)
         assert len(example.greek) == 1000
 
         # Over boundary rejected
         with pytest.raises(ValidationError) as exc_info:
-            ExampleSentence(greek="α" * 1001)
+            ExampleSentence(id="ex_test1", greek="α" * 1001)
         assert "string_too_long" in str(exc_info.value).lower()
-
-    def test_id_field_optional_defaults_to_none(self):
-        """Test that id field defaults to None when not provided."""
-        example = ExampleSentence(greek="Αυτό είναι ένα σπίτι.")
-        assert example.id is None
 
     def test_valid_id_accepted(self):
         """Test that a valid id string is accepted."""
@@ -151,15 +149,31 @@ class TestExampleSentence:
         assert example.russian == "Это дом."
         assert example.context == "Describing a building"
 
-    def test_existing_examples_without_id_still_valid(self):
-        """Test backward compatibility: examples without id field still validate."""
+    def test_example_sentence_requires_id(self):
+        """Test that ExampleSentence.id is required."""
+        with pytest.raises(ValidationError):
+            ExampleSentence(greek="Test.")
+
+    def test_example_sentence_audio_key_default_none(self):
+        """Test that audio_key defaults to None."""
+        example = ExampleSentence(id="ex_test1", greek="Test.")
+        assert example.audio_key is None
+
+    def test_example_sentence_audio_key_accepts_value(self):
+        """Test that audio_key accepts valid S3 key."""
         example = ExampleSentence(
-            greek="Αυτό είναι ένα σπίτι.",
-            english="This is a house.",
-            russian="Это дом.",
+            id="ex_test1", greek="Test.", audio_key="audio/examples/ex_test1.mp3"
         )
-        assert example.id is None
-        assert example.greek == "Αυτό είναι ένα σπίτι."
+        assert example.audio_key == "audio/examples/ex_test1.mp3"
+
+    def test_example_sentence_audio_key_max_length(self):
+        """Test audio_key max_length validation."""
+        # 501 chars rejected
+        with pytest.raises(ValidationError):
+            ExampleSentence(id="ex_test1", greek="Test.", audio_key="a" * 501)
+        # 500 chars accepted
+        example = ExampleSentence(id="ex_test1", greek="Test.", audio_key="a" * 500)
+        assert len(example.audio_key) == 500
 
 
 # ============================================================================
@@ -389,6 +403,7 @@ class TestWordEntryCreate:
             ),
             examples=[
                 ExampleSentence(
+                    id="ex_kalos1",
                     greek="Είναι καλός άνθρωπος.",
                     english="He is a good person.",
                 )
@@ -525,7 +540,7 @@ class TestWordEntryUpdate:
             translation_ru="хороший",
             pronunciation="/ka'los/",
             grammar_data=GrammarData(gender="masculine"),
-            examples=[ExampleSentence(greek="Καλή μέρα")],
+            examples=[ExampleSentence(id="ex_mera1", greek="Καλή μέρα")],
             audio_key="audio/kalos.mp3",
             is_active=True,
         )
@@ -672,7 +687,7 @@ class TestWordEntryResponse:
             translation_ru="хороший",
             pronunciation="/ka'los/",
             grammar_data={"gender": "masculine"},
-            examples=[ExampleSentence(greek="Καλή μέρα")],
+            examples=[ExampleSentenceResponse(id="ex_mera1", greek="Καλή μέρα")],
             audio_key="audio/kalos.mp3",
             is_active=True,
             created_at=now,
@@ -683,6 +698,90 @@ class TestWordEntryResponse:
         assert response.grammar_data == {"gender": "masculine"}
         assert len(response.examples) == 1
         assert response.audio_key == "audio/kalos.mp3"
+
+    def test_word_entry_response_includes_audio_url(self):
+        """Test audio_url field present on WordEntryResponse, defaults to None."""
+        now = datetime.now()
+        response = WordEntryResponse(
+            id=uuid4(),
+            deck_id=uuid4(),
+            lemma="test",
+            part_of_speech=PartOfSpeech.NOUN,
+            translation_en="test",
+            is_active=True,
+            created_at=now,
+            updated_at=now,
+        )
+        assert response.audio_url is None
+
+    def test_word_entry_response_audio_url_with_value(self):
+        """Test audio_url serializes correctly when provided."""
+        now = datetime.now()
+        response = WordEntryResponse(
+            id=uuid4(),
+            deck_id=uuid4(),
+            lemma="test",
+            part_of_speech=PartOfSpeech.NOUN,
+            translation_en="test",
+            audio_key="audio/word/test.mp3",
+            audio_url="https://s3.example.com/audio/word/test.mp3?signature=abc",
+            is_active=True,
+            created_at=now,
+            updated_at=now,
+        )
+        assert response.audio_url == "https://s3.example.com/audio/word/test.mp3?signature=abc"
+        assert response.audio_key == "audio/word/test.mp3"
+
+    def test_word_entry_response_examples_include_audio_url(self):
+        """Test examples in response have audio_url field via ExampleSentenceResponse."""
+        now = datetime.now()
+        response = WordEntryResponse(
+            id=uuid4(),
+            deck_id=uuid4(),
+            lemma="test",
+            part_of_speech=PartOfSpeech.NOUN,
+            translation_en="test",
+            examples=[
+                ExampleSentenceResponse(
+                    id="ex_test1",
+                    greek="Test sentence",
+                    audio_key="audio/example/test.mp3",
+                    audio_url="https://s3.example.com/audio/example/test.mp3?sig=xyz",
+                )
+            ],
+            is_active=True,
+            created_at=now,
+            updated_at=now,
+        )
+        assert len(response.examples) == 1
+        assert (
+            response.examples[0].audio_url
+            == "https://s3.example.com/audio/example/test.mp3?sig=xyz"
+        )
+        assert response.examples[0].audio_key == "audio/example/test.mp3"
+
+    def test_word_entry_response_examples_legacy_without_id(self):
+        """Test response deserializes legacy examples without id."""
+        now = datetime.now()
+        response = WordEntryResponse(
+            id=uuid4(),
+            deck_id=uuid4(),
+            lemma="test",
+            part_of_speech=PartOfSpeech.NOUN,
+            translation_en="test",
+            examples=[
+                ExampleSentenceResponse(
+                    greek="Legacy sentence without id",
+                    english="Translation",
+                )
+            ],
+            is_active=True,
+            created_at=now,
+            updated_at=now,
+        )
+        assert response.examples[0].id is None
+        assert response.examples[0].audio_url is None
+        assert response.examples[0].greek == "Legacy sentence without id"
 
 
 # ============================================================================
@@ -920,3 +1019,32 @@ class TestFieldValidators:
                 translation_en="test",
             )
         assert "lemma cannot be empty" in str(exc_info.value).lower()
+
+
+# ============================================================================
+# Test BulkCreateExampleId
+# ============================================================================
+
+
+class TestBulkCreateExampleId:
+    """Tests for WordEntryBulkCreate with required example id."""
+
+    def test_bulk_create_rejects_example_without_id(self):
+        """Test that bulk create rejects examples missing id."""
+        with pytest.raises(ValidationError):
+            WordEntryBulkCreate(
+                lemma="σπίτι",
+                part_of_speech=PartOfSpeech.NOUN,
+                translation_en="house",
+                examples=[ExampleSentence(greek="Test sentence.")],
+            )
+
+    def test_bulk_create_accepts_example_with_id(self):
+        """Test that bulk create accepts examples with valid id."""
+        entry = WordEntryBulkCreate(
+            lemma="σπίτι",
+            part_of_speech=PartOfSpeech.NOUN,
+            translation_en="house",
+            examples=[ExampleSentence(id="ex_test1", greek="Test sentence.")],
+        )
+        assert entry.examples[0].id == "ex_test1"

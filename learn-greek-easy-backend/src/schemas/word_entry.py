@@ -69,8 +69,8 @@ class ExampleSentence(BaseModel):
     Greek is required; English and Russian are optional.
     """
 
-    id: Optional[str] = Field(
-        default=None,
+    id: str = Field(
+        ...,
         min_length=1,
         max_length=50,
         pattern=r"^[a-zA-Z0-9_]+$",
@@ -96,6 +96,37 @@ class ExampleSentence(BaseModel):
         default=None,
         max_length=200,
         description="Optional context (e.g., 'formal', 'colloquial')",
+    )
+    audio_key: Optional[str] = Field(
+        default=None,
+        max_length=500,
+        description="S3 key for example sentence audio file",
+    )
+
+
+class ExampleSentenceResponse(BaseModel):
+    """Example sentence schema for API responses.
+
+    Keeps id optional for backward compatibility with legacy DB records
+    that may not have id populated. Adds audio_url for presigned URL
+    (populated by WAUD-03).
+    """
+
+    id: Optional[str] = Field(
+        default=None,
+        description="Stable example identifier",
+    )
+    greek: str = Field(..., description="Example sentence in Greek")
+    english: str = Field(default="", description="English translation")
+    russian: str = Field(default="", description="Russian translation")
+    context: Optional[str] = Field(default=None, description="Optional context")
+    audio_key: Optional[str] = Field(
+        default=None,
+        description="S3 key for example sentence audio file",
+    )
+    audio_url: Optional[str] = Field(
+        default=None,
+        description="Presigned URL for example sentence audio (populated by WAUD-03)",
     )
 
 
@@ -356,8 +387,12 @@ class WordEntryResponse(BaseModel):
     translation_ru: Optional[str] = None
     pronunciation: Optional[str] = None
     grammar_data: Optional[dict[str, Any]] = None  # Raw dict for response
-    examples: Optional[list[ExampleSentence]] = None
+    examples: Optional[list[ExampleSentenceResponse]] = None
     audio_key: Optional[str] = None
+    audio_url: Optional[str] = Field(
+        default=None,
+        description="Presigned URL for word entry audio (populated by WAUD-03)",
+    )
     is_active: bool
     created_at: datetime
     updated_at: datetime
