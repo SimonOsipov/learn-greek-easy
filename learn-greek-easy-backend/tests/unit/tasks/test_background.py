@@ -72,6 +72,7 @@ class TestModuleImports:
             "create_announcement_notifications_task",
             "generate_audio_for_news_item_task",
             "generate_word_entry_audio_task",
+            "generate_word_entry_part_audio_task",
             "invalidate_cache_task",
             "is_background_tasks_enabled",
             "log_analytics_task",

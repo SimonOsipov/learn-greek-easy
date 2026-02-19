@@ -538,6 +538,7 @@ class TestCardRecordResponse:
             word_entry_id=uuid4(),
             deck_id=uuid4(),
             card_type=CardType.MEANING_EL_TO_EN,
+            variant_key="meaning_el_to_en_t1",
             front_content={
                 "card_type": "meaning_el_to_en",
                 "prompt": "Translate",
@@ -564,6 +565,7 @@ class TestCardRecordResponse:
             deck_id = uuid4()
             card_type = CardType.CONJUGATION
             tier = 1
+            variant_key = "conjugation_t1"
             front_content = {
                 "card_type": "conjugation",
                 "prompt": "Conjugate",
@@ -588,6 +590,7 @@ class TestCardRecordResponse:
             word_entry_id=uuid4(),
             deck_id=uuid4(),
             card_type=CardType.DECLENSION,
+            variant_key="declension_t1",
             front_content={},
             back_content={},
             is_active=True,
@@ -605,6 +608,7 @@ class TestCardRecordResponse:
             word_entry_id=uuid4(),
             deck_id=uuid4(),
             card_type=CardType.CLOZE,
+            variant_key="cloze_t1",
             front_content={},
             back_content={},
             is_active=True,
@@ -621,6 +625,7 @@ class TestCardRecordResponse:
             word_entry_id=uuid4(),
             deck_id=uuid4(),
             card_type=CardType.MEANING_EL_TO_EN,
+            variant_key="meaning_el_to_en_t1",
             front_content={},
             back_content={},
             is_active=True,
@@ -1270,6 +1275,7 @@ class TestEdgeCases:
             word_entry_id=create.word_entry_id,
             deck_id=create.deck_id,
             card_type=create.card_type,
+            variant_key="cloze_t1",
             front_content=create.front_content.model_dump(),
             back_content=create.back_content.model_dump(),
             is_active=create.is_active,
