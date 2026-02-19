@@ -36,3 +36,6 @@ export type { UseQuestionLanguageResult } from './useQuestionLanguage';
 // Mock exam hooks
 export { useMockExamTimer } from './useMockExamTimer';
 export type { UseMockExamTimerOptions, UseMockExamTimerResult } from './useMockExamTimer';
+
+// Audio hooks
+export { useAudioPlayer } from './useAudioPlayer';
