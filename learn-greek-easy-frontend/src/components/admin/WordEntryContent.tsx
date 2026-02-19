@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 import { AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -10,6 +10,7 @@ import { useWordEntry } from '@/features/words/hooks/useWordEntry';
 import type { WordEntryExampleSentence, WordEntryResponse } from '@/services/wordEntryAPI';
 
 import { AudioStatusBadge } from './AudioStatusBadge';
+import { WordEntryEditForm } from './WordEntryEditForm';
 
 interface WordEntryContentProps {
   wordEntryId: string;
@@ -19,10 +20,22 @@ export function WordEntryContent({ wordEntryId }: WordEntryContentProps) {
   const { wordEntry, isLoading, isError, refetch } = useWordEntry({
     wordId: wordEntryId,
   });
+  const [isEditing, setIsEditing] = useState(false);
 
   if (isLoading) return <LoadingSkeleton />;
   if (isError || !wordEntry) return <ErrorState onRetry={refetch} />;
-  return <ContentFields wordEntry={wordEntry} />;
+
+  if (isEditing) {
+    return (
+      <WordEntryEditForm
+        wordEntry={wordEntry}
+        onSaveSuccess={() => setIsEditing(false)}
+        onCancel={() => setIsEditing(false)}
+      />
+    );
+  }
+
+  return <ContentFields wordEntry={wordEntry} onEdit={() => setIsEditing(true)} />;
 }
 
 function LoadingSkeleton() {
@@ -93,12 +106,23 @@ function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-function ContentFields({ wordEntry }: { wordEntry: WordEntryResponse }) {
+function ContentFields({
+  wordEntry,
+  onEdit,
+}: {
+  wordEntry: WordEntryResponse;
+  onEdit: () => void;
+}) {
   const { t } = useTranslation('admin');
   const gender = getGenderForNoun(wordEntry);
 
   return (
     <div data-testid="word-entry-content-fields">
+      <div className="mb-3 flex justify-end">
+        <Button variant="outline" size="sm" onClick={onEdit} data-testid="word-entry-edit-btn">
+          {t('wordEntryEdit.edit')}
+        </Button>
+      </div>
       <dl className="space-y-3">
         {wordEntry.pronunciation ? (
           <FieldRow

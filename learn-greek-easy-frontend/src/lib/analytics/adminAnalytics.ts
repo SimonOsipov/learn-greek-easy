@@ -289,3 +289,67 @@ export function trackAdminWordEntryDetailTabSwitched(
     posthog.capture('admin_word_entry_detail_tab_switched', properties);
   }
 }
+
+export interface AdminWordEntryEditStartedProperties {
+  word_entry_id: string;
+  lemma: string;
+}
+
+export interface AdminWordEntryEditSavedProperties {
+  word_entry_id: string;
+  lemma: string;
+  fields_changed: string[];
+}
+
+export interface AdminWordEntryEditCancelledProperties {
+  word_entry_id: string;
+  lemma: string;
+  had_unsaved_changes: boolean;
+}
+
+export interface AdminWordEntryAutoAudioRegenProperties {
+  word_entry_id: string;
+  parts: string[];
+}
+
+/**
+ * Track when admin starts editing a word entry inline.
+ */
+export function trackAdminWordEntryEditStarted(
+  properties: AdminWordEntryEditStartedProperties
+): void {
+  if (typeof posthog?.capture === 'function') {
+    posthog.capture('admin_word_entry_edit_started', properties);
+  }
+}
+
+/**
+ * Track when admin saves a word entry edit.
+ */
+export function trackAdminWordEntryEditSaved(properties: AdminWordEntryEditSavedProperties): void {
+  if (typeof posthog?.capture === 'function') {
+    posthog.capture('admin_word_entry_edit_saved', properties);
+  }
+}
+
+/**
+ * Track when admin cancels a word entry edit.
+ */
+export function trackAdminWordEntryEditCancelled(
+  properties: AdminWordEntryEditCancelledProperties
+): void {
+  if (typeof posthog?.capture === 'function') {
+    posthog.capture('admin_word_entry_edit_cancelled', properties);
+  }
+}
+
+/**
+ * Track when audio regeneration is triggered after a word entry edit.
+ */
+export function trackAdminWordEntryAutoAudioRegen(
+  properties: AdminWordEntryAutoAudioRegenProperties
+): void {
+  if (typeof posthog?.capture === 'function') {
+    posthog.capture('admin_word_entry_auto_audio_regen', properties);
+  }
+}
