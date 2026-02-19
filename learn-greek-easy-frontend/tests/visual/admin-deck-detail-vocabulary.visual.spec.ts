@@ -30,6 +30,7 @@ const mockVocabularyDeck = {
   item_count: 5,
   is_active: true,
   is_premium: false,
+  card_system: 'V1',
   created_at: '2026-01-01T00:00:00Z',
   owner_id: null,
   owner_name: null,
@@ -187,8 +188,12 @@ async function setupVocabularyDeckDetailMocks(page: any) {
     });
   });
 
-  // Mock vocabulary cards for deck detail
-  await page.route('**/api/v1/admin/vocabulary/decks/vocab-deck-001/cards*', (route: { fulfill: (options: { status: number; contentType: string; body: string }) => void }) => {
+  // Mock vocabulary cards for deck detail (V1 path: GET /api/v1/cards?deck_id=...)
+  await page.route('**/api/v1/cards*', (route: { request: () => { url: () => string }; fulfill: (options: { status: number; contentType: string; body: string }) => void }) => {
+    const url = route.request().url();
+    if (!url.includes('deck_id=vocab-deck-001')) {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ cards: [], total: 0, page: 1, page_size: 20, deck_id: '' }) });
+    }
     route.fulfill({
       status: 200,
       contentType: 'application/json',

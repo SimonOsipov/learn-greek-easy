@@ -814,6 +814,64 @@ export const adminAPI = {
   },
 
   /**
+   * List word entries for a V2 vocabulary deck
+   *
+   * Calls the word-entries endpoint and normalizes the response to the
+   * same AdminVocabularyCardsResponse shape so the component can render
+   * V2 decks without a second rendering path.
+   *
+   * @param deckId - UUID of the V2 vocabulary deck
+   * @param page - Page number (1-indexed)
+   * @param pageSize - Items per page
+   * @returns Paginated list normalized to AdminVocabularyCardsResponse
+   */
+  listWordEntries: async (
+    deckId: string,
+    page = 1,
+    pageSize = 20
+  ): Promise<AdminVocabularyCardsResponse> => {
+    const queryString = buildQueryString({ page, page_size: pageSize });
+    const raw = await api.get<{
+      deck_id: string;
+      total: number;
+      page: number;
+      page_size: number;
+      word_entries: Array<{
+        id: string;
+        deck_id: string;
+        lemma: string;
+        part_of_speech: PartOfSpeech | null;
+        translation_en: string;
+        translation_ru: string | null;
+        pronunciation: string | null;
+        level?: string | null;
+        created_at: string;
+        updated_at: string;
+      }>;
+    }>(`/api/v1/decks/${deckId}/word-entries${queryString}`);
+
+    return {
+      total: raw.total,
+      page: raw.page,
+      page_size: raw.page_size,
+      deck_id: raw.deck_id,
+      cards: raw.word_entries.map((entry) => ({
+        id: entry.id,
+        deck_id: entry.deck_id,
+        front_text: entry.lemma,
+        back_text_en: entry.translation_en,
+        back_text_ru: entry.translation_ru ?? null,
+        example_sentence: null,
+        pronunciation: entry.pronunciation ?? null,
+        part_of_speech: entry.part_of_speech,
+        level: (entry.level ?? null) as AdminVocabularyCard['level'],
+        created_at: entry.created_at,
+        updated_at: entry.updated_at,
+      })),
+    };
+  },
+
+  /**
    * List culture questions in a deck
    *
    * Admin-only endpoint that returns all questions in a deck.

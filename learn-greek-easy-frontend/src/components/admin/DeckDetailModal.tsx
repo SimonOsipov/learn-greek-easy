@@ -134,7 +134,10 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
 
     try {
       if (deck.type === 'vocabulary') {
-        const response = await adminAPI.listVocabularyCards(deck.id, page, pageSize);
+        const response =
+          deck.card_system === 'V2'
+            ? await adminAPI.listWordEntries(deck.id, page, pageSize)
+            : await adminAPI.listVocabularyCards(deck.id, page, pageSize);
         setCards(response.cards);
         setTotal(response.total);
         setQuestions([]);
@@ -221,6 +224,7 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
 
   const deckName = getDeckDisplayName(deck, locale);
   const isVocabulary = deck.type === 'vocabulary';
+  const isV2Vocabulary = isVocabulary && deck.card_system === 'V2';
   const itemCountKey = isVocabulary ? 'deckDetail.cardsCount' : 'deckDetail.questionsCount';
   const noItemsKey = isVocabulary ? 'deckDetail.noCards' : 'deckDetail.noQuestions';
 
@@ -247,16 +251,18 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
                 <DialogTitle data-testid="deck-detail-title">{deckName}</DialogTitle>
                 <DialogDescription>{t(itemCountKey, { count: total })}</DialogDescription>
               </div>
-              <Button
-                size="sm"
-                onClick={() =>
-                  isVocabulary ? setVocabularyCreateModalOpen(true) : setCreateModalOpen(true)
-                }
-                data-testid="create-card-btn"
-              >
-                <Plus className="mr-1 h-4 w-4" />
-                {t('deckDetail.createCard')}
-              </Button>
+              {!isV2Vocabulary && (
+                <Button
+                  size="sm"
+                  onClick={() =>
+                    isVocabulary ? setVocabularyCreateModalOpen(true) : setCreateModalOpen(true)
+                  }
+                  data-testid="create-card-btn"
+                >
+                  <Plus className="mr-1 h-4 w-4" />
+                  {t('deckDetail.createCard')}
+                </Button>
+              )}
             </div>
           </DialogHeader>
 
@@ -321,28 +327,32 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
                     <p className="truncate text-sm text-muted-foreground">{card.back_text_en}</p>
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedVocabularyCardId(card.id);
-                        setVocabularyEditModalOpen(true);
-                      }}
-                      data-testid={`vocabulary-card-edit-${card.id}`}
-                    >
-                      <Pencil className="h-4 w-4" />
-                      <span className="sr-only">{t('actions.edit')}</span>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteClick(card)}
-                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                      data-testid={`delete-card-${card.id}`}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      <span className="sr-only">{t('actions.delete')}</span>
-                    </Button>
+                    {!isV2Vocabulary && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedVocabularyCardId(card.id);
+                          setVocabularyEditModalOpen(true);
+                        }}
+                        data-testid={`vocabulary-card-edit-${card.id}`}
+                      >
+                        <Pencil className="h-4 w-4" />
+                        <span className="sr-only">{t('actions.edit')}</span>
+                      </Button>
+                    )}
+                    {!isV2Vocabulary && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteClick(card)}
+                        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        data-testid={`delete-card-${card.id}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">{t('actions.delete')}</span>
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}
