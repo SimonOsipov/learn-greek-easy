@@ -121,6 +121,8 @@ const transformStudyQueueCard = (card: StudyQueueCard, deckId: string): CardRevi
   adjective_data: card.adjective_data,
   adverb_data: card.adverb_data,
   back_text_ru: card.back_text_ru,
+  audio_url: card.audio_url,
+  word_entry_id: card.word_entry_id ?? undefined,
 
   // Spaced repetition data
   srData: {

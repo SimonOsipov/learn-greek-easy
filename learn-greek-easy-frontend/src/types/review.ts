@@ -32,6 +32,8 @@ export interface Card extends BaseCard {
   adjective_data?: AdjectiveData | null;
   adverb_data?: AdverbData | null;
   back_text_ru?: string | null;
+  audio_url?: string | null;
+  word_entry_id?: string;
 }
 
 /**

@@ -56,6 +56,8 @@ export interface StudyQueueCard {
   due_date: string | null;
   easiness_factor: number | null;
   interval: number | null;
+  audio_url: string | null;
+  word_entry_id: string | null;
 }
 
 /**

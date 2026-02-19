@@ -22,6 +22,10 @@ export type AnalyticsEventName =
   | 'culture_audio_started'
   | 'culture_audio_completed'
   | 'culture_audio_speed_changed'
+  // Word audio events
+  | 'word_audio_played'
+  | 'example_audio_played'
+  | 'word_audio_failed'
   // Engagement events
   | 'deck_selected'
   | 'streak_achieved'

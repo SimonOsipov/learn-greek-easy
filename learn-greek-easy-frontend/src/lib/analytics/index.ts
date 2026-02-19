@@ -149,3 +149,13 @@ export {
   trackCardErrorModalOpened,
   trackCardErrorModalClosed,
 } from './cardErrorAnalytics';
+export {
+  // Type interfaces
+  type WordAudioPlayedProperties,
+  type ExampleAudioPlayedProperties,
+  type WordAudioFailedProperties,
+  // Tracking functions
+  trackWordAudioPlayed,
+  trackExampleAudioPlayed,
+  trackWordAudioFailed,
+} from './audioAnalytics';
