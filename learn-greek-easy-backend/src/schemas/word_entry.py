@@ -128,6 +128,10 @@ class ExampleSentenceResponse(BaseModel):
         default=None,
         description="Presigned URL for example sentence audio (populated by WAUD-03)",
     )
+    audio_status: Optional[str] = Field(
+        default=None,
+        description="Audio generation status: ready, missing, generating, failed",
+    )
 
 
 # ============================================================================
@@ -392,6 +396,10 @@ class WordEntryResponse(BaseModel):
     audio_url: Optional[str] = Field(
         default=None,
         description="Presigned URL for word entry audio (populated by WAUD-03)",
+    )
+    audio_status: str = Field(
+        default="missing",
+        description="Audio generation status: ready, missing, generating, failed",
     )
     is_active: bool
     created_at: datetime
