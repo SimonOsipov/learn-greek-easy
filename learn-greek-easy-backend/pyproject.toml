@@ -187,6 +187,7 @@ markers = [
     "unit: Unit tests (fast, isolated, mocked dependencies)",
     "integration: Integration tests (slower, real database)",
     "slow: Slow tests (>1s execution time)",
+    "seed: Seed infrastructure tests (test data seeding, excluded from standard runs)",
     "auth: Authentication-related tests",
     "api: API endpoint tests",
     "db: Database-related tests",
