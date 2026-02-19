@@ -258,7 +258,13 @@ export function WordReferencePage() {
       {/* Gradient Header */}
       <div className="rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 p-6">
         {/* Back navigation */}
-        <Button asChild variant="ghost" size="sm" className="mb-4" data-testid="back-button">
+        <Button
+          asChild
+          variant="ghost"
+          size="sm"
+          className="mb-4 hover:bg-transparent"
+          data-testid="back-button"
+        >
           <Link to={`/decks/${deckId}`}>
             <ChevronLeft className="mr-1 h-4 w-4" />
             {t('deck:detail.goBack')}
@@ -287,6 +293,7 @@ export function WordReferencePage() {
           {wordEntry.audio_url && (
             <SpeakerButton
               audioUrl={wordEntry.audio_url}
+              className="hover:bg-transparent [&_svg]:size-6"
               onPlay={() =>
                 trackWordAudioPlayed({
                   word_entry_id: wordEntry.id,

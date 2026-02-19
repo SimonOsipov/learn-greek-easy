@@ -18,6 +18,7 @@ import i18n from '@/i18n';
 vi.mock('@/services/adminAPI', () => ({
   adminAPI: {
     listVocabularyCards: vi.fn(),
+    listWordEntries: vi.fn(),
     listCultureQuestions: vi.fn(),
     deleteVocabularyCard: vi.fn(),
     deleteCultureQuestion: vi.fn(),
@@ -110,7 +111,8 @@ const createWordEntry = (
 
 beforeEach(() => {
   vi.clearAllMocks();
-  (adminAPI.listVocabularyCards as Mock).mockResolvedValue({
+  // V2 decks now call listWordEntries (PR #297 fix)
+  (adminAPI.listWordEntries as Mock).mockResolvedValue({
     total: 2,
     page: 1,
     page_size: 20,
@@ -123,6 +125,14 @@ beforeEach(() => {
         part_of_speech: null,
       }),
     ],
+  });
+  // V1 decks still call listVocabularyCards
+  (adminAPI.listVocabularyCards as Mock).mockResolvedValue({
+    total: 1,
+    page: 1,
+    page_size: 20,
+    deck_id: 'deck-v1',
+    cards: [createWordEntry('card-1')],
   });
   (adminAPI.listCultureQuestions as Mock).mockResolvedValue({
     total: 0,

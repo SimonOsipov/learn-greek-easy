@@ -149,7 +149,10 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
 
     try {
       if (deck.type === 'vocabulary') {
-        const response = await adminAPI.listVocabularyCards(deck.id, page, pageSize);
+        const response =
+          deck.card_system === 'V2'
+            ? await adminAPI.listWordEntries(deck.id, page, pageSize)
+            : await adminAPI.listVocabularyCards(deck.id, page, pageSize);
         setCards(response.cards);
         setTotal(response.total);
         setQuestions([]);
