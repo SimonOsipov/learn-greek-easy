@@ -9,12 +9,44 @@
  * - Edge cases: missing grammar data, missing gender field, unknown gender
  */
 
+import userEvent from '@testing-library/user-event';
 import { render, screen } from '@testing-library/react';
 import i18n from 'i18next';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TooltipProvider } from '@/components/ui/tooltip';
 import type { WordEntryResponse } from '@/services/wordEntryAPI';
+
+// Mock SpeakerButton — captures callbacks and exposes via test buttons
+vi.mock('@/components/ui/SpeakerButton', () => ({
+  SpeakerButton: ({
+    audioUrl,
+    onPlay,
+    onError,
+  }: {
+    audioUrl: string | null | undefined;
+    onPlay?: () => void;
+    onError?: (error: string) => void;
+  }) => {
+    if (!audioUrl) return null;
+    return (
+      <>
+        <button data-testid="speaker-button" onClick={() => onPlay?.()}>
+          Speaker
+        </button>
+        <button data-testid="speaker-error-trigger" onClick={() => onError?.('play error')}>
+          Trigger Error
+        </button>
+      </>
+    );
+  },
+}));
+
+// Mock analytics module
+vi.mock('@/lib/analytics', () => ({
+  trackWordAudioPlayed: vi.fn(),
+  trackWordAudioFailed: vi.fn(),
+}));
 
 // Mock react-router-dom
 const mockUseParams = vi.fn();
@@ -191,6 +223,7 @@ function makeAdverb(): WordEntryResponse {
 // ============================================
 
 beforeEach(() => {
+  vi.clearAllMocks();
   mockUseParams.mockReturnValue({ deckId: 'test-deck-id', wordId: 'test-word-id' });
   mockUseWordEntryCards.mockReturnValue({
     cards: [],
@@ -604,6 +637,107 @@ describe('WordReferencePage', () => {
       renderPage();
 
       expect(screen.queryByTestId('word-reference-page')).not.toBeInTheDocument();
+    });
+  });
+});
+
+// ============================================
+// Audio SpeakerButton Integration Tests
+// ============================================
+
+describe('WordReferencePage — Audio SpeakerButton integration', () => {
+  function makeWordEntryWithAudio(overrides: Partial<WordEntryResponse> = {}): WordEntryResponse {
+    return {
+      id: 'word-1',
+      deck_id: 'deck-1',
+      lemma: 'γράφω',
+      part_of_speech: 'verb',
+      translation_en: 'to write',
+      translation_en_plural: null,
+      translation_ru: null,
+      translation_ru_plural: null,
+      pronunciation: 'gráfo',
+      grammar_data: null,
+      examples: null,
+      audio_key: 'audio/word-1.mp3',
+      audio_url: 'https://cdn.example.com/word-1.mp3',
+      is_active: true,
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z',
+      ...overrides,
+    };
+  }
+
+  it('1. renders SpeakerButton when wordEntry.audio_url is set', () => {
+    mockUseWordEntry.mockReturnValue({
+      wordEntry: makeWordEntryWithAudio(),
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    renderPage();
+
+    expect(screen.getByTestId('speaker-button')).toBeInTheDocument();
+  });
+
+  it('2. no SpeakerButton when wordEntry.audio_url is null', () => {
+    mockUseWordEntry.mockReturnValue({
+      wordEntry: makeWordEntryWithAudio({ audio_url: null }),
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    renderPage();
+
+    expect(screen.queryByTestId('speaker-button')).not.toBeInTheDocument();
+  });
+
+  it('3. trackWordAudioPlayed called with context: reference on play', async () => {
+    const { trackWordAudioPlayed } = await import('@/lib/analytics');
+    const user = userEvent.setup();
+
+    mockUseWordEntry.mockReturnValue({
+      wordEntry: makeWordEntryWithAudio(),
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    renderPage();
+
+    await user.click(screen.getByTestId('speaker-button'));
+
+    expect(trackWordAudioPlayed).toHaveBeenCalledWith({
+      word_entry_id: 'word-1',
+      lemma: 'γράφω',
+      part_of_speech: 'verb',
+      context: 'reference',
+      deck_id: 'test-deck-id',
+    });
+  });
+
+  it('4. trackWordAudioFailed called with audio_type: word on error', async () => {
+    const { trackWordAudioFailed } = await import('@/lib/analytics');
+    const user = userEvent.setup();
+
+    mockUseWordEntry.mockReturnValue({
+      wordEntry: makeWordEntryWithAudio(),
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    renderPage();
+
+    await user.click(screen.getByTestId('speaker-error-trigger'));
+
+    expect(trackWordAudioFailed).toHaveBeenCalledWith({
+      word_entry_id: 'word-1',
+      error: 'play error',
+      audio_type: 'word',
+      context: 'reference',
     });
   });
 });

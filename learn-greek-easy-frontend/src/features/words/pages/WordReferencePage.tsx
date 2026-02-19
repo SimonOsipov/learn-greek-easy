@@ -24,7 +24,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SpeakerButton } from '@/components/ui/SpeakerButton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { trackWordAudioFailed, trackWordAudioPlayed } from '@/lib/analytics';
 import { getLocalizedTranslation } from '@/lib/localeUtils';
 import type { AdjectiveData, AdverbData, NounDataAny, NounGender, VerbData } from '@/types/grammar';
 
@@ -277,10 +279,34 @@ export function WordReferencePage() {
         </div>
 
         {/* Greek word (lemma) */}
-        <h1 className="text-4xl font-bold text-foreground sm:text-5xl">
-          {article && <span className="mr-2 font-normal text-muted-foreground">{article}</span>}
-          {wordEntry.lemma}
-        </h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-4xl font-bold text-foreground sm:text-5xl">
+            {article && <span className="mr-2 font-normal text-muted-foreground">{article}</span>}
+            {wordEntry.lemma}
+          </h1>
+          {wordEntry.audio_url && (
+            <SpeakerButton
+              audioUrl={wordEntry.audio_url}
+              onPlay={() =>
+                trackWordAudioPlayed({
+                  word_entry_id: wordEntry.id,
+                  lemma: wordEntry.lemma,
+                  part_of_speech: wordEntry.part_of_speech ?? null,
+                  context: 'reference',
+                  deck_id: deckId ?? '',
+                })
+              }
+              onError={(error) =>
+                trackWordAudioFailed({
+                  word_entry_id: wordEntry.id,
+                  error,
+                  audio_type: 'word',
+                  context: 'reference',
+                })
+              }
+            />
+          )}
+        </div>
 
         {/* Pronunciation */}
         {wordEntry.pronunciation && (
@@ -295,7 +321,7 @@ export function WordReferencePage() {
       {renderGrammarSection()}
 
       {/* Examples Section */}
-      <ExamplesSection examples={wordEntry.examples} />
+      <ExamplesSection examples={wordEntry.examples} wordEntryId={wordEntry.id} deckId={deckId} />
 
       {/* Notes Section (if available) */}
       {notes && (
