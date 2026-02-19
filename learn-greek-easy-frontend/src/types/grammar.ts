@@ -205,4 +205,5 @@ export interface Example {
   english: string;
   russian: string;
   tense?: string | null;
+  audio_url?: string | null;
 }
