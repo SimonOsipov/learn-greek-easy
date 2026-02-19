@@ -159,7 +159,27 @@
     "back": "Назад",
     "tabWordEntry": "Словарная запись",
     "tabCards": "Карточки",
-    "placeholder": "Подробности появятся здесь"
+    "placeholder": "Подробности появятся здесь",
+    "cardsLoading": "Загрузка карточек…",
+    "cardsEmpty": "Для этой словарной записи не созданы карточки",
+    "cardsError": "Не удалось загрузить карточки",
+    "cardsRetry": "Повторить",
+    "cardsSummary": "{{count}} карточек, {{types}} типов",
+    "cardsSummarySingularType": "{{count}} карточек, 1 тип",
+    "cardFront": "Лицевая сторона",
+    "cardBack": "Оборотная сторона",
+    "cardTier": "Уровень",
+    "cardVariant": "Вариант",
+    "cardType": {
+      "meaning_el_to_en": "Греческий → Английский",
+      "meaning_en_to_el": "Английский → Греческий",
+      "article": "Артикль",
+      "plural_form": "Множественное число",
+      "conjugation": "Спряжение",
+      "declension": "Склонение",
+      "cloze": "Заполнение пропусков",
+      "sentence_translation": "Перевод предложения"
+    }
   },
   "wordEntryContent": {
     "pronunciation": "Произношение",

@@ -149,7 +149,27 @@
     "back": "Back",
     "tabWordEntry": "Word Entry",
     "tabCards": "Cards",
-    "placeholder": "Details will appear here"
+    "placeholder": "Details will appear here",
+    "cardsLoading": "Loading cards…",
+    "cardsEmpty": "No cards have been generated for this word entry",
+    "cardsError": "Failed to load cards",
+    "cardsRetry": "Retry",
+    "cardsSummary": "{{count}} cards across {{types}} types",
+    "cardsSummarySingularType": "{{count}} cards across 1 type",
+    "cardFront": "Front",
+    "cardBack": "Back",
+    "cardTier": "Tier",
+    "cardVariant": "Variant",
+    "cardType": {
+      "meaning_el_to_en": "Greek → English",
+      "meaning_en_to_el": "English → Greek",
+      "article": "Article",
+      "plural_form": "Plural Form",
+      "conjugation": "Conjugation",
+      "declension": "Declension",
+      "cloze": "Cloze",
+      "sentence_translation": "Sentence Translation"
+    }
   },
   "wordEntryContent": {
     "pronunciation": "Pronunciation",

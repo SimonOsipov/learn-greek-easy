@@ -343,6 +343,7 @@ class CardRecordResponse(BaseModel):
     deck_id: UUID
     card_type: CardType
     tier: Optional[int] = None
+    variant_key: str
     front_content: dict = Field(
         ...,
         description="Card front content as raw dict",

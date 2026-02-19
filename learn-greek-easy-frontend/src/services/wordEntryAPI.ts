@@ -118,6 +118,7 @@ export interface CardRecordResponse {
   deck_id: string;
   card_type: CardRecordType;
   tier: number | null;
+  variant_key: string;
   front_content: Record<string, unknown>;
   back_content: Record<string, unknown>;
   is_active: boolean;
