@@ -22,7 +22,7 @@ export function PartOfSpeechBadge({ partOfSpeech, className }: PartOfSpeechBadge
 
   return (
     <Badge
-      className={cn(config.bgClass, config.textClass, className)}
+      className={cn(config.bgClass, config.textClass, 'pointer-events-none', className)}
       data-testid="part-of-speech-badge"
     >
       {t(`grammar.partOfSpeech.${partOfSpeech}`)}
