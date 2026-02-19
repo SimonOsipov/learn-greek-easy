@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
 
 import { AlertCircle } from 'lucide-react';
+import posthog from 'posthog-js';
 import { useTranslation } from 'react-i18next';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useGenerateAudio } from '@/features/words/hooks';
 import { useWordEntry } from '@/features/words/hooks/useWordEntry';
 import type { WordEntryExampleSentence, WordEntryResponse } from '@/services/wordEntryAPI';
 
+import { AudioGenerateButton } from './AudioGenerateButton';
 import { AudioStatusBadge } from './AudioStatusBadge';
 import { WordEntryEditForm } from './WordEntryEditForm';
 
@@ -21,6 +24,9 @@ export function WordEntryContent({ wordEntryId }: WordEntryContentProps) {
     wordId: wordEntryId,
   });
   const [isEditing, setIsEditing] = useState(false);
+
+  const generateAudioMutation = useGenerateAudio();
+  const { isPending, variables: pendingVariables } = generateAudioMutation;
 
   if (isLoading) return <LoadingSkeleton />;
   if (isError || !wordEntry) return <ErrorState onRetry={refetch} />;
@@ -35,7 +41,36 @@ export function WordEntryContent({ wordEntryId }: WordEntryContentProps) {
     );
   }
 
-  return <ContentFields wordEntry={wordEntry} onEdit={() => setIsEditing(true)} />;
+  const handleGenerateClick = (part: 'lemma' | 'example', exampleId?: string) => {
+    if (typeof posthog?.capture === 'function') {
+      posthog.capture('admin_audio_generation_triggered', {
+        word_entry_id: wordEntry.id,
+        deck_id: wordEntry.deck_id,
+        part_type: part,
+        example_id: exampleId ?? null,
+        action:
+          part === 'lemma'
+            ? wordEntry.audio_status === 'failed'
+              ? 'retry'
+              : 'generate'
+            : wordEntry.examples?.find((e) => e.id === exampleId)?.audio_status === 'failed'
+              ? 'retry'
+              : 'generate',
+        lemma: wordEntry.lemma,
+      });
+    }
+    generateAudioMutation.mutate({ wordEntryId: wordEntry.id, part, exampleId });
+  };
+
+  return (
+    <ContentFields
+      wordEntry={wordEntry}
+      onEdit={() => setIsEditing(true)}
+      onGenerateClick={handleGenerateClick}
+      isPending={isPending}
+      pendingVariables={pendingVariables}
+    />
+  );
 }
 
 function LoadingSkeleton() {
@@ -109,9 +144,17 @@ function capitalize(s: string): string {
 function ContentFields({
   wordEntry,
   onEdit,
+  onGenerateClick,
+  isPending,
+  pendingVariables,
 }: {
   wordEntry: WordEntryResponse;
   onEdit: () => void;
+  onGenerateClick: (part: 'lemma' | 'example', exampleId?: string) => void;
+  isPending: boolean;
+  pendingVariables:
+    | { wordEntryId: string; part: 'lemma' | 'example'; exampleId?: string }
+    | undefined;
 }) {
   const { t } = useTranslation('admin');
   const gender = getGenderForNoun(wordEntry);
@@ -130,19 +173,37 @@ function ContentFields({
             value={wordEntry.pronunciation}
             testId="word-entry-content-pronunciation"
             suffix={
-              <AudioStatusBadge
-                status={wordEntry.audio_status}
-                data-testid="audio-status-badge-lemma"
-              />
+              <div className="flex items-center gap-2">
+                <AudioStatusBadge
+                  status={wordEntry.audio_status}
+                  data-testid="audio-status-badge-lemma"
+                />
+                <AudioGenerateButton
+                  status={wordEntry.audio_status}
+                  onClick={() => onGenerateClick('lemma')}
+                  isLoading={
+                    isPending && pendingVariables?.part === 'lemma' && !pendingVariables?.exampleId
+                  }
+                  data-testid="audio-generate-btn-lemma"
+                />
+              </div>
             }
           />
         ) : (
           <div data-testid="word-entry-content-pronunciation">
             <dt className="text-sm text-muted-foreground">{t('audioStatus.lemmaAudio')}</dt>
-            <dd className="mt-0.5">
+            <dd className="mt-0.5 flex items-center gap-2">
               <AudioStatusBadge
                 status={wordEntry.audio_status}
                 data-testid="audio-status-badge-lemma"
+              />
+              <AudioGenerateButton
+                status={wordEntry.audio_status}
+                onClick={() => onGenerateClick('lemma')}
+                isLoading={
+                  isPending && pendingVariables?.part === 'lemma' && !pendingVariables?.exampleId
+                }
+                data-testid="audio-generate-btn-lemma"
               />
             </dd>
           </div>
@@ -169,12 +230,29 @@ function ContentFields({
           />
         )}
       </dl>
-      <ExamplesSection examples={wordEntry.examples} />
+      <ExamplesSection
+        examples={wordEntry.examples}
+        onGenerateClick={onGenerateClick}
+        isPending={isPending}
+        pendingVariables={pendingVariables}
+      />
     </div>
   );
 }
 
-function ExamplesSection({ examples }: { examples: WordEntryExampleSentence[] | null }) {
+function ExamplesSection({
+  examples,
+  onGenerateClick,
+  isPending,
+  pendingVariables,
+}: {
+  examples: WordEntryExampleSentence[] | null;
+  onGenerateClick: (part: 'lemma' | 'example', exampleId?: string) => void;
+  isPending: boolean;
+  pendingVariables:
+    | { wordEntryId: string; part: 'lemma' | 'example'; exampleId?: string }
+    | undefined;
+}) {
   const { t } = useTranslation('admin');
   const hasExamples = examples && examples.length > 0;
 
@@ -191,7 +269,14 @@ function ExamplesSection({ examples }: { examples: WordEntryExampleSentence[] | 
       {hasExamples && (
         <div className="space-y-3">
           {examples.map((example, index) => (
-            <ExampleCard key={example.id || index} example={example} index={index} />
+            <ExampleCard
+              key={example.id || index}
+              example={example}
+              index={index}
+              onGenerateClick={onGenerateClick}
+              isPending={isPending}
+              pendingVariables={pendingVariables}
+            />
           ))}
         </div>
       )}
@@ -199,7 +284,21 @@ function ExamplesSection({ examples }: { examples: WordEntryExampleSentence[] | 
   );
 }
 
-function ExampleCard({ example, index }: { example: WordEntryExampleSentence; index: number }) {
+function ExampleCard({
+  example,
+  index,
+  onGenerateClick,
+  isPending,
+  pendingVariables,
+}: {
+  example: WordEntryExampleSentence;
+  index: number;
+  onGenerateClick: (part: 'lemma' | 'example', exampleId?: string) => void;
+  isPending: boolean;
+  pendingVariables:
+    | { wordEntryId: string; part: 'lemma' | 'example'; exampleId?: string }
+    | undefined;
+}) {
   const { t } = useTranslation('admin');
 
   return (
@@ -210,10 +309,18 @@ function ExampleCard({ example, index }: { example: WordEntryExampleSentence; in
       <div className="flex items-center justify-between">
         <span className="text-xs text-muted-foreground">{t('wordEntryContent.exampleGreek')}</span>
         {example.audio_status && (
-          <AudioStatusBadge
-            status={example.audio_status}
-            data-testid={`audio-status-badge-example-${index}`}
-          />
+          <div className="flex items-center gap-2">
+            <AudioStatusBadge
+              status={example.audio_status}
+              data-testid={`audio-status-badge-example-${index}`}
+            />
+            <AudioGenerateButton
+              status={example.audio_status}
+              onClick={() => onGenerateClick('example', example.id)}
+              isLoading={isPending && pendingVariables?.exampleId === example.id}
+              data-testid={`audio-generate-btn-example-${index}`}
+            />
+          </div>
         )}
       </div>
       <p className="text-sm">{example.greek}</p>

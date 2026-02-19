@@ -6,3 +6,5 @@ export { useWordEntryCards } from './useWordEntryCards';
 export type { UseWordEntryCardsOptions, UseWordEntryCardsResult } from './useWordEntryCards';
 export { useUpdateWordEntry } from './useUpdateWordEntry';
 export type { UseUpdateWordEntryOptions } from './useUpdateWordEntry';
+export { useGenerateAudio } from './useGenerateAudio';
+export type { GenerateAudioParams } from './useGenerateAudio';

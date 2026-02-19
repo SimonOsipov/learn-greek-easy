@@ -17,6 +17,18 @@ vi.mock('@/features/words/hooks/useWordEntry', () => ({
   useWordEntry: vi.fn(),
 }));
 
+vi.mock('@/features/words/hooks', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/features/words/hooks')>();
+  return {
+    ...actual,
+    useGenerateAudio: vi.fn(() => ({
+      mutate: vi.fn(),
+      isPending: false,
+      variables: undefined,
+    })),
+  };
+});
+
 // ============================================
 // Factory Functions
 // ============================================
