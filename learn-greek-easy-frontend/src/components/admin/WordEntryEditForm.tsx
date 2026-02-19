@@ -118,11 +118,7 @@ export function WordEntryEditForm({ wordEntry, onSaveSuccess, onCancel }: WordEn
     getValues,
   } = form;
 
-  const updateWordEntry = useUpdateWordEntry({
-    onSuccess: (updated) => {
-      onSaveSuccess(updated);
-    },
-  });
+  const updateWordEntry = useUpdateWordEntry();
 
   const onSubmit = useCallback(
     async (data: WordEntryEditFormData) => {
