@@ -18,6 +18,7 @@ Usage:
         return await get_all_users()
 """
 
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import Depends, Header, Request
@@ -35,10 +36,11 @@ from src.core.exceptions import (
     UnauthorizedException,
 )
 from src.core.logging import bind_log_context
+from src.core.posthog import capture_event
 from src.core.sentry import set_user_context
 from src.core.supabase_auth import SupabaseUserClaims, verify_supabase_token
 from src.db.dependencies import get_db
-from src.db.models import User, UserSettings
+from src.db.models import SubscriptionStatus, User, UserSettings
 
 # HTTPBearer security scheme with auto_error=False
 # This allows us to handle missing auth gracefully for optional auth endpoints
@@ -101,12 +103,16 @@ async def get_or_create_user(db: AsyncSession, claims: SupabaseUserClaims) -> Us
     user_email = claims.email or f"{claims.supabase_id}@supabase.placeholder"
 
     # 4. Create new user with IntegrityError handling for race conditions
+    now = datetime.now(timezone.utc)
     new_user = User(
         supabase_id=claims.supabase_id,
         email=user_email,
         full_name=claims.full_name,
         is_active=True,
         is_superuser=False,
+        subscription_status=SubscriptionStatus.TRIALING,
+        trial_start_date=now,
+        trial_end_date=now + timedelta(days=14),
     )
     db.add(new_user)
     try:
@@ -138,6 +144,16 @@ async def get_or_create_user(db: AsyncSession, claims: SupabaseUserClaims) -> Us
 
     # 6. Reload user with settings relationship
     await db.refresh(new_user, ["settings"])
+    capture_event(
+        distinct_id=str(new_user.id),
+        event="trial_started",
+        properties={
+            "trial_duration_days": 14,
+            "trial_start_date": now.isoformat(),
+            "trial_end_date": (now + timedelta(days=14)).isoformat(),
+        },
+        user_email=new_user.email,
+    )
     return new_user
 
 
