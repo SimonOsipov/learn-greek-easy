@@ -9,7 +9,11 @@ from unittest.mock import patch
 
 import pytest
 
-from src.core.billing_utils import price_id_to_billing_cycle, stripe_status_to_subscription_status
+from src.core.billing_utils import (
+    billing_cycle_to_price_id,
+    price_id_to_billing_cycle,
+    stripe_status_to_subscription_status,
+)
 from src.db.models import BillingCycle, SubscriptionStatus
 
 
@@ -143,4 +147,55 @@ class TestStripeStatusToSubscriptionStatus:
     def test_none_returns_none(self):
         """None input should return None."""
         result = stripe_status_to_subscription_status(None)
+        assert result is None
+
+
+@pytest.mark.unit
+@pytest.mark.stripe
+class TestBillingCycleToPriceId:
+    """Tests for billing_cycle_to_price_id."""
+
+    @patch("src.core.billing_utils.settings")
+    def test_monthly_returns_monthly_price_id(self, mock_settings):
+        mock_settings.stripe_price_premium_monthly = "price_monthly_123"
+        mock_settings.stripe_price_premium_quarterly = "price_quarterly_456"
+        mock_settings.stripe_price_premium_semi_annual = "price_semi_789"
+
+        result = billing_cycle_to_price_id(BillingCycle.MONTHLY)
+        assert result == "price_monthly_123"
+
+    @patch("src.core.billing_utils.settings")
+    def test_quarterly_returns_quarterly_price_id(self, mock_settings):
+        mock_settings.stripe_price_premium_monthly = "price_monthly_123"
+        mock_settings.stripe_price_premium_quarterly = "price_quarterly_456"
+        mock_settings.stripe_price_premium_semi_annual = "price_semi_789"
+
+        result = billing_cycle_to_price_id(BillingCycle.QUARTERLY)
+        assert result == "price_quarterly_456"
+
+    @patch("src.core.billing_utils.settings")
+    def test_semi_annual_returns_semi_annual_price_id(self, mock_settings):
+        mock_settings.stripe_price_premium_monthly = "price_monthly_123"
+        mock_settings.stripe_price_premium_quarterly = "price_quarterly_456"
+        mock_settings.stripe_price_premium_semi_annual = "price_semi_789"
+
+        result = billing_cycle_to_price_id(BillingCycle.SEMI_ANNUAL)
+        assert result == "price_semi_789"
+
+    @patch("src.core.billing_utils.settings")
+    def test_lifetime_returns_none(self, mock_settings):
+        mock_settings.stripe_price_premium_monthly = "price_monthly_123"
+        mock_settings.stripe_price_premium_quarterly = "price_quarterly_456"
+        mock_settings.stripe_price_premium_semi_annual = "price_semi_789"
+
+        result = billing_cycle_to_price_id(BillingCycle.LIFETIME)
+        assert result is None
+
+    @patch("src.core.billing_utils.settings")
+    def test_unconfigured_setting_returns_none(self, mock_settings):
+        mock_settings.stripe_price_premium_monthly = None
+        mock_settings.stripe_price_premium_quarterly = "price_quarterly_456"
+        mock_settings.stripe_price_premium_semi_annual = "price_semi_789"
+
+        result = billing_cycle_to_price_id(BillingCycle.MONTHLY)
         assert result is None
