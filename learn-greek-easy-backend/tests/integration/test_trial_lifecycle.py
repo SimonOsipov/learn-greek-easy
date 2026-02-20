@@ -18,9 +18,10 @@ from httpx import AsyncClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.dependencies import get_current_user
+from src.core.dependencies import get_current_user, get_or_create_user
 from src.core.exceptions import PremiumRequiredException
 from src.core.subscription import check_premium_deck_access, get_effective_access_level
+from src.core.supabase_auth import SupabaseUserClaims
 from src.db.models import (
     CardSystemVersion,
     Deck,
@@ -408,3 +409,99 @@ class TestTrialExpirationTaskIntegration:
             mock_settings.is_production = False
             # Should not raise
             await trial_expiration_task()
+
+
+# ===========================================================================
+# Class 5: TestGetOrCreateUserTrialActivation
+# ===========================================================================
+
+
+@pytest.mark.asyncio
+class TestGetOrCreateUserTrialActivation:
+    """get_or_create_user sets trial fields on first signup (real DB)."""
+
+    async def test_new_user_signup_activates_trial(self, db_session: AsyncSession):
+        """get_or_create_user creates new user with TRIALING status and 14-day trial."""
+        claims = SupabaseUserClaims(
+            supabase_id=str(uuid4()),
+            email=f"trial_integ_{uuid4().hex[:8]}@example.com",
+            full_name="Trial Integration User",
+        )
+        with patch("src.core.dependencies.capture_event"):
+            user = await get_or_create_user(db_session, claims)
+
+        assert user.subscription_status == SubscriptionStatus.TRIALING
+        assert user.trial_start_date is not None
+        assert user.trial_end_date is not None
+        assert user.subscription_tier == SubscriptionTier.FREE
+        diff = user.trial_end_date - user.trial_start_date
+        assert 13 <= diff.days <= 14
+
+    async def test_new_user_has_premium_access(self, db_session: AsyncSession):
+        """Newly created user (active trial) gets PREMIUM from get_effective_access_level."""
+        claims = SupabaseUserClaims(
+            supabase_id=str(uuid4()),
+            email=f"trial_premium_{uuid4().hex[:8]}@example.com",
+            full_name="Trial Premium User",
+        )
+        with patch("src.core.dependencies.capture_event"):
+            user = await get_or_create_user(db_session, claims)
+
+        assert get_effective_access_level(user) == SubscriptionTier.PREMIUM
+
+    async def test_existing_user_not_re_trialed(self, db_session: AsyncSession):
+        """Calling get_or_create_user again for existing user does NOT reset trial fields."""
+        claims = SupabaseUserClaims(
+            supabase_id=str(uuid4()),
+            email=f"trial_retrial_{uuid4().hex[:8]}@example.com",
+            full_name="Trial Retrial User",
+        )
+        with patch("src.core.dependencies.capture_event"):
+            user_first = await get_or_create_user(db_session, claims)
+
+        original_trial_end = user_first.trial_end_date
+
+        # Second call: returns existing user, does NOT reset trial
+        with patch("src.core.dependencies.capture_event") as mock_capture:
+            user_second = await get_or_create_user(db_session, claims)
+
+        assert user_second.id == user_first.id
+        assert user_second.trial_end_date == original_trial_end
+        mock_capture.assert_not_called()
+
+    async def test_full_trial_lifecycle(self, db_session: AsyncSession):
+        """End-to-end: new user → PREMIUM → trial expires → FREE → SQL cleans to NONE."""
+        claims = SupabaseUserClaims(
+            supabase_id=str(uuid4()),
+            email=f"trial_lifecycle_{uuid4().hex[:8]}@example.com",
+            full_name="Lifecycle User",
+        )
+        # Step 1: Create user — trial active
+        with patch("src.core.dependencies.capture_event"):
+            user = await get_or_create_user(db_session, claims)
+
+        assert get_effective_access_level(user) == SubscriptionTier.PREMIUM
+
+        # Step 2: Simulate trial expiry by setting trial_end_date to past
+        user.trial_end_date = datetime.now(timezone.utc) - timedelta(days=1)
+        await db_session.flush()
+
+        assert get_effective_access_level(user) == SubscriptionTier.FREE
+
+        # Step 3: Run the expiry SQL (same as trial_expiration_task UPDATE phase)
+        await db_session.execute(
+            text(
+                """
+                UPDATE users
+                SET subscription_status = 'NONE',
+                    updated_at = NOW()
+                WHERE subscription_status = 'TRIALING'
+                  AND trial_end_date < NOW()
+                  AND stripe_subscription_id IS NULL
+            """
+            )
+        )
+
+        await db_session.refresh(user)
+        assert user.subscription_status == SubscriptionStatus.NONE
+        assert get_effective_access_level(user) == SubscriptionTier.FREE
