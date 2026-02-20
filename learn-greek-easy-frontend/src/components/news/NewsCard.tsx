@@ -55,6 +55,8 @@ export const NewsCard: React.FC<NewsCardProps> = ({
   const hasQuestion = article.card_id !== null && article.deck_id !== null;
 
   const [resetKey, setResetKey] = useState(0);
+  const [showError, setShowError] = useState(false);
+  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const stopFn = useCallback(() => {
     setResetKey((k) => k + 1);
   }, []);
@@ -106,11 +108,19 @@ export const NewsCard: React.FC<NewsCardProps> = ({
       error_type: 'load_failed',
       page: pageName,
     });
+
+    setShowError(true);
+    if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+    errorTimeoutRef.current = setTimeout(() => {
+      setShowError(false);
+      setResetKey((k) => k + 1);
+    }, 1500);
   }, [article.id, pageName]);
 
   useEffect(() => {
     return () => {
       clearActivePlayer(stopFnRef.current);
+      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
     };
   }, []);
 
@@ -193,7 +203,19 @@ export const NewsCard: React.FC<NewsCardProps> = ({
       {/* Action Buttons - only show if news has associated question */}
       {hasQuestion && (
         <div className="absolute bottom-0 left-0 right-0 z-20 flex flex-col gap-2 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-3 pt-8 sm:flex-row">
-          <div className="min-w-0 flex-[1.7]">
+          <div
+            className={cn(
+              'relative min-w-0 flex-[1.7] transition-opacity duration-300',
+              showError && 'opacity-60'
+            )}
+          >
+            {showError && (
+              <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+                <span className="text-xs text-red-300" aria-live="polite">
+                  {t('dashboard.news.buttons.audioError')}
+                </span>
+              </div>
+            )}
             <WaveformPlayer
               key={resetKey}
               variant="news-mini"

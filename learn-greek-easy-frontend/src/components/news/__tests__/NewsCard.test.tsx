@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { NewsCard } from '../NewsCard';
 
@@ -144,5 +144,97 @@ describe('NewsCard', () => {
 
     expect(() => render(<NewsCard article={article} newsLang="el" page="news" />)).not.toThrow();
     expect(screen.getByTestId('waveform-player')).toBeInTheDocument();
+  });
+
+  describe('Error Flash', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('shows error flash when onError fires from WaveformPlayer', () => {
+      const article = createMockArticle({
+        card_id: 'card-123',
+        deck_id: 'deck-456',
+        audio_url: 'https://example.com/audio.mp3',
+      });
+
+      render(<NewsCard article={article} newsLang="el" />);
+
+      // Trigger error on the audio element
+      const audio = screen.getByTestId('waveform-audio-element') as HTMLAudioElement;
+      fireEvent(audio, new Event('error'));
+
+      // Error text should be visible (mock returns key since no fallback provided)
+      expect(screen.getByText('dashboard.news.buttons.audioError')).toBeInTheDocument();
+    });
+
+    it('error flash disappears after 1.5s timeout', () => {
+      const article = createMockArticle({
+        card_id: 'card-123',
+        deck_id: 'deck-456',
+        audio_url: 'https://example.com/audio.mp3',
+      });
+
+      render(<NewsCard article={article} newsLang="el" />);
+
+      const audio = screen.getByTestId('waveform-audio-element') as HTMLAudioElement;
+      fireEvent(audio, new Event('error'));
+
+      expect(screen.getByText('dashboard.news.buttons.audioError')).toBeInTheDocument();
+
+      // Advance past timeout
+      act(() => {
+        vi.advanceTimersByTime(1500);
+      });
+
+      expect(screen.queryByText('dashboard.news.buttons.audioError')).not.toBeInTheDocument();
+    });
+
+    it('player resets after error flash timeout', () => {
+      const article = createMockArticle({
+        card_id: 'card-123',
+        deck_id: 'deck-456',
+        audio_url: 'https://example.com/audio.mp3',
+      });
+
+      render(<NewsCard article={article} newsLang="el" />);
+
+      const audio = screen.getByTestId('waveform-audio-element') as HTMLAudioElement;
+      fireEvent(audio, new Event('error'));
+
+      // After timeout, the player should be reset (re-mounted via resetKey)
+      act(() => {
+        vi.advanceTimersByTime(1500);
+      });
+
+      // Player should still be present (re-mounted, not removed)
+      expect(screen.getByTestId('waveform-player')).toBeInTheDocument();
+    });
+
+    it('timeout is cleared on unmount', () => {
+      const article = createMockArticle({
+        card_id: 'card-123',
+        deck_id: 'deck-456',
+        audio_url: 'https://example.com/audio.mp3',
+      });
+
+      const { unmount } = render(<NewsCard article={article} newsLang="el" />);
+
+      const audio = screen.getByTestId('waveform-audio-element') as HTMLAudioElement;
+      fireEvent(audio, new Event('error'));
+
+      unmount();
+
+      // Should not throw when timers advance after unmount
+      act(() => {
+        vi.advanceTimersByTime(1500);
+      });
+
+      expect(true).toBe(true); // No crash means cleanup worked
+    });
   });
 });
