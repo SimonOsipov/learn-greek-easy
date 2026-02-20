@@ -85,6 +85,10 @@ export {
   type NewsPagePaginatedProperties,
   type NewsPageArticleClickedProperties,
   type NewsPageQuestionsClickedProperties,
+  type NewsAudioPlayStartedProperties,
+  type NewsAudioPlayCompletedProperties,
+  type NewsAudioPlayPausedProperties,
+  type NewsAudioErrorProperties,
   // Tracking functions
   trackNewsArticleClicked,
   trackNewsQuestionsButtonClicked,
@@ -94,6 +98,10 @@ export {
   trackNewsPageArticleClicked,
   trackNewsPageQuestionsClicked,
   trackNewsPageSeeAllClicked,
+  trackNewsAudioPlayStarted,
+  trackNewsAudioPlayCompleted,
+  trackNewsAudioPlayPaused,
+  trackNewsAudioError,
 } from './newsAnalytics';
 export {
   // Type interfaces
