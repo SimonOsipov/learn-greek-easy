@@ -349,6 +349,7 @@ class MockExamRepository(BaseRepository[MockExamSession]):
             select(CultureQuestion)
             .join(CultureDeck, CultureQuestion.deck_id == CultureDeck.id)
             .where(CultureDeck.is_active == True)  # noqa: E712
+            .where(CultureQuestion.news_item_id.is_(None))
         )
 
         # Exclude specific questions if provided
