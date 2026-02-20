@@ -184,7 +184,10 @@ export const useAuthStore = create<AuthState>()(
           return;
         }
 
-        set({ isLoading: true });
+        const { isAuthenticated } = get();
+        if (!isAuthenticated) {
+          set({ isLoading: true });
+        }
 
         try {
           const profileResponse = await authAPI.getProfile({ signal });
