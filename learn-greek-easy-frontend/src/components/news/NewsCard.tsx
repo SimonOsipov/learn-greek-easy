@@ -234,7 +234,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({
           <Button
             variant="default"
             size="sm"
-            className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
+            className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 sm:h-auto"
             onClick={handleQuestionsClick}
             aria-label={t(
               'dashboard.news.buttons.questionsLabel',
