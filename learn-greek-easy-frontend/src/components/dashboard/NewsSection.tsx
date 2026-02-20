@@ -89,7 +89,7 @@ export const NewsSection: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {items.map((item) => (
-            <NewsCard key={item.id} article={item} newsLang={newsLang} />
+            <NewsCard key={item.id} article={item} newsLang={newsLang} page="dashboard" />
           ))}
         </div>
       )}

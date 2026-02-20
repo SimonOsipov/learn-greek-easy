@@ -156,3 +156,80 @@ export function trackNewsPageSeeAllClicked(): void {
     posthog.capture('news_page_see_all_clicked');
   }
 }
+
+// =============================================================================
+// News Audio Analytics
+// =============================================================================
+
+/**
+ * Properties for tracking news audio play started
+ */
+export interface NewsAudioPlayStartedProperties {
+  news_item_id: string;
+  audio_duration_seconds: number;
+  page: 'dashboard' | 'news';
+}
+
+/**
+ * Track when user starts news audio playback
+ */
+export function trackNewsAudioPlayStarted(properties: NewsAudioPlayStartedProperties): void {
+  if (typeof posthog?.capture === 'function') {
+    posthog.capture('news_audio_play_started', properties);
+  }
+}
+
+/**
+ * Properties for tracking news audio play completed
+ */
+export interface NewsAudioPlayCompletedProperties {
+  news_item_id: string;
+  audio_duration_seconds: number;
+  page: 'dashboard' | 'news';
+}
+
+/**
+ * Track when news audio playback reaches the end
+ */
+export function trackNewsAudioPlayCompleted(properties: NewsAudioPlayCompletedProperties): void {
+  if (typeof posthog?.capture === 'function') {
+    posthog.capture('news_audio_play_completed', properties);
+  }
+}
+
+/**
+ * Properties for tracking news audio play paused
+ */
+export interface NewsAudioPlayPausedProperties {
+  news_item_id: string;
+  paused_at_seconds: number;
+  audio_duration_seconds: number;
+  page: 'dashboard' | 'news';
+}
+
+/**
+ * Track when user pauses news audio playback
+ */
+export function trackNewsAudioPlayPaused(properties: NewsAudioPlayPausedProperties): void {
+  if (typeof posthog?.capture === 'function') {
+    posthog.capture('news_audio_play_paused', properties);
+  }
+}
+
+/**
+ * Properties for tracking news audio errors
+ */
+export interface NewsAudioErrorProperties {
+  news_item_id: string;
+  error_type: 'load_failed' | 'playback_error';
+  page: 'dashboard' | 'news';
+}
+
+/**
+ * Track news audio load or playback failure
+ */
+export function trackNewsAudioError(properties: NewsAudioErrorProperties): void {
+  if (typeof posthog?.capture === 'function') {
+    posthog.capture('news_audio_error', properties);
+  }
+}
