@@ -37,7 +37,7 @@
 
 import log from 'loglevel';
 
-import { queueBreadcrumb, queueLog, queueMessage } from './sentry-queue';
+import { queueBreadcrumb, queueLog } from './sentry-queue';
 
 // Store original factory before modification
 const originalFactory = log.methodFactory;
@@ -64,12 +64,9 @@ log.methodFactory = function (
         .join(' ');
 
       if (methodName === 'error') {
-        // DUAL APPROACH: Send to Sentry Logs AND create Issue
-        // 1. Send to Sentry Logs for searching/correlation
+        // Send to Sentry Logs for searching/correlation
         queueLog('error', message);
-        // 2. Create Sentry Issue for alerting/tracking (existing behavior)
-        queueMessage(message, 'error');
-        // 3. Add as breadcrumb for error context
+        // Add as breadcrumb for error context
         queueBreadcrumb({
           category: 'console',
           message,

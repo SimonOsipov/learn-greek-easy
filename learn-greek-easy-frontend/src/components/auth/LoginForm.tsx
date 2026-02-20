@@ -124,7 +124,7 @@ export const LoginForm: React.FC = () => {
       });
 
       if (error) {
-        log.error('[LoginForm] Supabase auth error:', error);
+        log.warn('[LoginForm] Supabase auth error:', error);
         throw error;
       }
 
@@ -188,17 +188,11 @@ export const LoginForm: React.FC = () => {
       const returnTo = (location.state as { from?: string })?.from || '/dashboard';
       navigate(returnTo, { replace: true });
     } catch (err) {
-      // Enhanced error logging for debugging
-      log.error('[LoginForm] Login error:', err);
-      if (err instanceof Error) {
-        log.error('[LoginForm] Error message:', err.message);
-      }
-
       // Map Supabase error to translated message
       const errorMessage =
         err instanceof Error ? mapSupabaseError(err, t) : t('login.errors.loginFailed');
       setFormError(errorMessage);
-      log.error('[LoginForm] Login failed:', errorMessage);
+      log.warn('[LoginForm] Login failed:', errorMessage);
     } finally {
       setIsSubmitting(false);
     }
