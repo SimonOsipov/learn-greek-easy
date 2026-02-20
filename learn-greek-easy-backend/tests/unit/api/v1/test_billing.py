@@ -391,3 +391,304 @@ class TestCheckoutServiceCustomerLogic:
 
             with pytest.raises(ValueError, match="No price configured for"):
                 await service.create_checkout_session(mock_user, BillingCycle.MONTHLY)
+
+
+# =============================================================================
+# TestVerifyCheckoutEndpoint - Tests for POST /api/v1/billing/checkout/verify
+# =============================================================================
+
+
+class TestVerifyCheckoutEndpoint:
+    """Unit tests for POST /api/v1/billing/checkout/verify endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_returns_200_with_subscription_details_on_valid_paid_session(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+    ):
+        """Test that 200 with subscription details is returned for a valid paid session."""
+        with (
+            patch("src.api.v1.billing.settings") as mock_settings,
+            patch("src.api.v1.billing.get_current_user") as mock_get_user,
+            patch("src.api.v1.billing.CheckoutService") as mock_service_class,
+            patch("src.api.v1.billing.capture_event"),
+        ):
+            mock_settings.stripe_configured = True
+            mock_user = create_mock_user(
+                subscription_tier=SubscriptionTier.PREMIUM,
+                subscription_status=SubscriptionStatus.ACTIVE,
+            )
+            mock_get_user.return_value = mock_user
+
+            mock_service = AsyncMock()
+            mock_service.verify_and_activate.return_value = {
+                "status": "activated",
+                "subscription_tier": "premium",
+                "billing_cycle": "monthly",
+                "subscription_status": "active",
+            }
+            mock_service_class.return_value = mock_service
+
+            response = await client.post(
+                "/api/v1/billing/checkout/verify",
+                json={"session_id": "cs_test_abc123"},
+                headers=auth_headers,
+            )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "activated"
+        assert data["subscription_tier"] == "premium"
+        assert data["billing_cycle"] == "monthly"
+        assert data["subscription_status"] == "active"
+
+    @pytest.mark.asyncio
+    async def test_returns_400_when_payment_not_paid(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+    ):
+        """Test that 400 is returned when payment_status is not paid."""
+        from src.core.exceptions import CheckoutNotPaidException
+
+        with (
+            patch("src.api.v1.billing.settings") as mock_settings,
+            patch("src.api.v1.billing.get_current_user") as mock_get_user,
+            patch("src.api.v1.billing.CheckoutService") as mock_service_class,
+            patch("src.api.v1.billing.capture_event"),
+        ):
+            mock_settings.stripe_configured = True
+            mock_user = create_mock_user()
+            mock_get_user.return_value = mock_user
+
+            mock_service = AsyncMock()
+            mock_service.verify_and_activate.side_effect = CheckoutNotPaidException()
+            mock_service_class.return_value = mock_service
+
+            response = await client.post(
+                "/api/v1/billing/checkout/verify",
+                json={"session_id": "cs_test_unpaid"},
+                headers=auth_headers,
+            )
+
+        assert response.status_code == 400
+        data = response.json()
+        assert data["success"] is False
+        assert data["error"]["code"] == "CHECKOUT_NOT_PAID"
+
+    @pytest.mark.asyncio
+    async def test_returns_400_when_user_mismatch(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+    ):
+        """Test that 400 is returned when session metadata user_id doesn't match."""
+        from src.core.exceptions import CheckoutUserMismatchException
+
+        with (
+            patch("src.api.v1.billing.settings") as mock_settings,
+            patch("src.api.v1.billing.get_current_user") as mock_get_user,
+            patch("src.api.v1.billing.CheckoutService") as mock_service_class,
+            patch("src.api.v1.billing.capture_event"),
+        ):
+            mock_settings.stripe_configured = True
+            mock_user = create_mock_user()
+            mock_get_user.return_value = mock_user
+
+            mock_service = AsyncMock()
+            mock_service.verify_and_activate.side_effect = CheckoutUserMismatchException()
+            mock_service_class.return_value = mock_service
+
+            response = await client.post(
+                "/api/v1/billing/checkout/verify",
+                json={"session_id": "cs_test_mismatch"},
+                headers=auth_headers,
+            )
+
+        assert response.status_code == 400
+        data = response.json()
+        assert data["success"] is False
+        assert data["error"]["code"] == "CHECKOUT_USER_MISMATCH"
+
+    @pytest.mark.asyncio
+    async def test_returns_500_on_stripe_api_error(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+    ):
+        """Test that 500 is returned when Stripe API raises a StripeError."""
+        import stripe as stripe_lib
+
+        with (
+            patch("src.api.v1.billing.settings") as mock_settings,
+            patch("src.api.v1.billing.get_current_user") as mock_get_user,
+            patch("src.api.v1.billing.CheckoutService") as mock_service_class,
+            patch("src.api.v1.billing.capture_event"),
+        ):
+            mock_settings.stripe_configured = True
+            mock_user = create_mock_user()
+            mock_get_user.return_value = mock_user
+
+            mock_service = AsyncMock()
+            mock_service.verify_and_activate.side_effect = stripe_lib.StripeError("API error")
+            mock_service_class.return_value = mock_service
+
+            response = await client.post(
+                "/api/v1/billing/checkout/verify",
+                json={"session_id": "cs_test_error"},
+                headers=auth_headers,
+            )
+
+        assert response.status_code == 500
+        data = response.json()
+        assert data["success"] is False
+        assert "verify checkout session" in data["error"]["message"].lower()
+
+    @pytest.mark.asyncio
+    async def test_returns_already_active_status_for_idempotent_call(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+    ):
+        """Test that already_active status is returned for an idempotent verification."""
+        with (
+            patch("src.api.v1.billing.settings") as mock_settings,
+            patch("src.api.v1.billing.get_current_user") as mock_get_user,
+            patch("src.api.v1.billing.CheckoutService") as mock_service_class,
+            patch("src.api.v1.billing.capture_event"),
+        ):
+            mock_settings.stripe_configured = True
+            mock_user = create_mock_user(
+                subscription_tier=SubscriptionTier.PREMIUM,
+                subscription_status=SubscriptionStatus.ACTIVE,
+            )
+            mock_get_user.return_value = mock_user
+
+            mock_service = AsyncMock()
+            mock_service.verify_and_activate.return_value = {
+                "status": "already_active",
+                "subscription_tier": "premium",
+                "billing_cycle": "monthly",
+                "subscription_status": "active",
+            }
+            mock_service_class.return_value = mock_service
+
+            response = await client.post(
+                "/api/v1/billing/checkout/verify",
+                json={"session_id": "cs_test_already_active"},
+                headers=auth_headers,
+            )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "already_active"
+
+    @pytest.mark.asyncio
+    async def test_posthog_checkout_completed_fired_on_activation(self):
+        """Test that checkout_completed PostHog event is fired on successful activation."""
+        from src.services.checkout_service import CheckoutService
+
+        mock_db = MagicMock()
+        service = CheckoutService(mock_db)
+
+        user_id = uuid4()
+        mock_user = MagicMock(spec=User)
+        mock_user.id = user_id
+        mock_user.email = "test@example.com"
+        mock_user.subscription_tier = SubscriptionTier.PREMIUM
+        mock_user.subscription_status = SubscriptionStatus.ACTIVE
+        mock_user.billing_cycle = BillingCycle.MONTHLY
+
+        mock_session = MagicMock()
+        mock_session.payment_status = "paid"
+        mock_session.metadata = {
+            "user_id": str(user_id),
+            "billing_cycle": "monthly",
+        }
+        mock_session.subscription = "sub_test123"
+        mock_session.customer = "cus_test123"
+
+        with (
+            patch("src.services.checkout_service.get_stripe_client") as mock_get_client,
+            patch("src.services.checkout_service.capture_event") as mock_capture,
+        ):
+            mock_client = MagicMock()
+            mock_client.v1.checkout.sessions.retrieve_async = AsyncMock(return_value=mock_session)
+            mock_get_client.return_value = mock_client
+
+            service.activate_premium_subscription = AsyncMock(return_value="activated")
+
+            await service.verify_and_activate(mock_user, "cs_test_abc123")
+
+        mock_capture.assert_called_once_with(
+            distinct_id=str(user_id),
+            event="checkout_completed",
+            properties={
+                "session_id": "cs_test_abc123",
+                "billing_cycle": "monthly",
+                "subscription_tier": SubscriptionTier.PREMIUM.value,
+            },
+            user_email="test@example.com",
+        )
+
+    @pytest.mark.asyncio
+    async def test_posthog_checkout_verify_failed_fired_on_payment_not_paid(self):
+        """Test that checkout_verify_failed PostHog event is fired when payment is not paid."""
+        from src.core.exceptions import CheckoutNotPaidException
+        from src.services.checkout_service import CheckoutService
+
+        mock_db = MagicMock()
+        service = CheckoutService(mock_db)
+
+        user_id = uuid4()
+        mock_user = MagicMock(spec=User)
+        mock_user.id = user_id
+        mock_user.email = "test@example.com"
+
+        mock_session = MagicMock()
+        mock_session.payment_status = "unpaid"
+        mock_session.metadata = {}
+
+        with (
+            patch("src.services.checkout_service.get_stripe_client") as mock_get_client,
+            patch("src.services.checkout_service.capture_event") as mock_capture,
+        ):
+            mock_client = MagicMock()
+            mock_client.v1.checkout.sessions.retrieve_async = AsyncMock(return_value=mock_session)
+            mock_get_client.return_value = mock_client
+
+            with pytest.raises(CheckoutNotPaidException):
+                await service.verify_and_activate(mock_user, "cs_test_unpaid")
+
+        mock_capture.assert_called_once_with(
+            distinct_id=str(user_id),
+            event="checkout_verify_failed",
+            properties={
+                "error_type": "payment_not_paid",
+                "session_id": "cs_test_unpaid",
+                "payment_status": "unpaid",
+            },
+            user_email="test@example.com",
+        )
+
+    @pytest.mark.asyncio
+    async def test_returns_400_when_stripe_not_configured(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+    ):
+        """Test that 400 is returned when Stripe is not configured."""
+        with patch("src.api.v1.billing.settings") as mock_settings:
+            mock_settings.stripe_configured = False
+
+            response = await client.post(
+                "/api/v1/billing/checkout/verify",
+                json={"session_id": "cs_test_abc123"},
+                headers=auth_headers,
+            )
+
+        assert response.status_code == 400
+        data = response.json()
+        assert data["success"] is False
+        assert data["error"]["code"] == "BILLING_NOT_CONFIGURED"
