@@ -130,8 +130,12 @@ export function CulturePracticePage() {
     const hasRecoverable = checkRecoverableSession();
     if (hasRecoverable) {
       setShowRecoveryDialog(true);
-    } else if (deckId && !session) {
-      // Start new session - fetch questions and initialize
+    } else if (
+      deckId &&
+      !summary &&
+      (!session || session.deckId !== deckId || session.status !== 'active')
+    ) {
+      resetSession();
       initializeSession();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

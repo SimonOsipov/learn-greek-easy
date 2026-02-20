@@ -454,16 +454,16 @@ export const useCultureSessionStore = create<CultureSessionState>()(
        * Abandon session without saving progress
        */
       abandonSession: () => {
-        const { session } = get();
-        if (session) {
-          const abandonedSession: CultureSession = {
-            ...session,
-            status: 'abandoned',
-            endedAt: new Date().toISOString(),
-          };
-          set({ session: abandonedSession });
-        }
-
+        set({
+          session: null,
+          summary: null,
+          isLoading: false,
+          error: null,
+          hasRecoverableSession: false,
+          currentQuestion: null,
+          progress: { current: 0, total: 0 },
+          hasNextQuestion: false,
+        });
         clearSessionStorage();
       },
 
