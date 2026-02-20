@@ -166,3 +166,53 @@ class TestActivatePremiumSubscription:
 
         # Should remain QUARTERLY since billing_cycle param was None
         assert user.billing_cycle == BillingCycle.QUARTERLY
+
+
+@pytest.mark.unit
+@pytest.mark.stripe
+class TestCheckoutRaceConditions:
+    """Verify idempotency when verify and webhook race to activate subscription."""
+
+    @pytest.mark.asyncio
+    async def test_verify_then_webhook_is_idempotent(self) -> None:
+        """First call activates, second call with same sub_id returns already_active."""
+        user = _make_user()
+        db = MagicMock()
+        service = CheckoutService(db)
+
+        result1 = await service.activate_premium_subscription(
+            user=user,
+            stripe_customer_id="cus_123",
+            stripe_subscription_id="sub_456",
+            billing_cycle=BillingCycle.MONTHLY,
+        )
+        assert result1 == "activated"
+
+        # Second call (e.g., webhook fires after verify already activated)
+        result2 = await service.activate_premium_subscription(
+            user=user,
+            stripe_customer_id="cus_123",
+            stripe_subscription_id="sub_456",
+            billing_cycle=BillingCycle.MONTHLY,
+        )
+        assert result2 == "already_active"
+
+    @pytest.mark.asyncio
+    async def test_webhook_then_verify_returns_already_active(self) -> None:
+        """Webhook activates first; subsequent verify call returns already_active."""
+        # Pre-set user as if webhook already activated
+        user = _make_user(
+            stripe_subscription_id="sub_456",
+            subscription_tier=SubscriptionTier.PREMIUM,
+            subscription_status=SubscriptionStatus.ACTIVE,
+        )
+        db = MagicMock()
+        service = CheckoutService(db)
+
+        result = await service.activate_premium_subscription(
+            user=user,
+            stripe_customer_id="cus_123",
+            stripe_subscription_id="sub_456",
+            billing_cycle=BillingCycle.MONTHLY,
+        )
+        assert result == "already_active"
