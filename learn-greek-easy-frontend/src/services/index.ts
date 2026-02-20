@@ -157,3 +157,7 @@ export { mockExamAPI } from './mockExamAPI';
 
 // Changelog API
 export { changelogAPI } from './changelogAPI';
+
+// Billing API
+export { billingAPI } from './billingAPI';
+export type { BillingCycle, CheckoutSessionResponse, CheckoutVerifyResponse } from './billingAPI';

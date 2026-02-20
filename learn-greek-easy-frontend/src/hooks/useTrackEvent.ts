@@ -33,7 +33,9 @@ export type AnalyticsEventName =
   // Future monetization events
   | 'pricing_page_viewed'
   | 'purchase_started'
-  | 'purchase_completed';
+  | 'purchase_completed'
+  // Billing events
+  | 'checkout_abandoned';
 
 // Base properties included with all events
 interface BaseEventProperties {
