@@ -53,6 +53,10 @@ class UserResponse(UserBase):
     is_active: bool
     is_superuser: bool
     avatar_url: Optional[str] = None
+    effective_role: str = Field(
+        "free",
+        description="Computed role: 'admin', 'premium', or 'free'",
+    )
     auth_provider: Optional[str] = Field(
         None,
         description="Authentication provider: 'email' or 'google' (derived from Supabase JWT)",

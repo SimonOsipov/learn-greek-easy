@@ -38,6 +38,7 @@ export interface UserProfileResponse {
   is_active: boolean;
   is_superuser: boolean;
   auth_provider?: string | null; // e.g., 'email', 'google'
+  effective_role?: 'admin' | 'premium' | 'free';
   created_at: string;
   updated_at: string;
   settings?: {
