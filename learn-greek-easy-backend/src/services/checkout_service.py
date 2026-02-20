@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import Literal
+from typing import Any, Literal
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -114,21 +114,20 @@ class CheckoutService:
         success_url = f"{settings.frontend_url}/checkout/success?session_id={{CHECKOUT_SESSION_ID}}"
         cancel_url = f"{settings.frontend_url}/checkout/cancel"
 
-        session = await client.v1.checkout.sessions.create_async(
-            params={
-                "mode": "subscription",
-                "customer": customer_id,
-                "client_reference_id": user.supabase_id,
-                "line_items": [{"price": price_id, "quantity": 1}],
-                "success_url": success_url,
-                "cancel_url": cancel_url,
-                "metadata": {
-                    "user_id": str(user.id),
-                    "billing_cycle": billing_cycle.value,
-                    "price_id": price_id,
-                },
+        checkout_params: Any = {
+            "mode": "subscription",
+            "customer": customer_id,
+            "client_reference_id": user.supabase_id or "",
+            "line_items": [{"price": price_id, "quantity": 1}],
+            "success_url": success_url,
+            "cancel_url": cancel_url,
+            "metadata": {
+                "user_id": str(user.id),
+                "billing_cycle": billing_cycle.value,
+                "price_id": price_id,
             },
-        )
+        }
+        session = await client.v1.checkout.sessions.create_async(params=checkout_params)
 
         logger.info(
             "Checkout session created",
@@ -137,7 +136,8 @@ class CheckoutService:
             session_id=session.id,
         )
 
-        return session.url, session.id
+        url = session.url or ""
+        return url, session.id
 
     async def verify_and_activate(
         self,
@@ -185,9 +185,20 @@ class CheckoutService:
             )
             raise CheckoutUserMismatchException()
 
-        # Extract subscription details
-        stripe_subscription_id = session.subscription
-        stripe_customer_id = session.customer
+        # Extract subscription details (fields may be expanded objects or plain string IDs)
+        import stripe as _stripe
+
+        _sub = session.subscription
+        if isinstance(_sub, _stripe.Subscription):
+            stripe_subscription_id = _sub.id
+        else:
+            stripe_subscription_id = _sub or ""
+
+        _cust = session.customer
+        if isinstance(_cust, _stripe.Customer):
+            stripe_customer_id = _cust.id
+        else:
+            stripe_customer_id = _cust or ""
         billing_cycle_str = metadata.get("billing_cycle")
         billing_cycle = BillingCycle(billing_cycle_str) if billing_cycle_str else None
 
