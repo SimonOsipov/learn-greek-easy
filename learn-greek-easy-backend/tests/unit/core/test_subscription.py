@@ -20,6 +20,7 @@ Acceptance Criteria tested:
 - AC-11: Existing tests still pass
 """
 
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
@@ -43,6 +44,7 @@ def _make_user(
     subscription_status: SubscriptionStatus = SubscriptionStatus.NONE,
     is_superuser: bool = False,
     subscription_tier: SubscriptionTier = SubscriptionTier.FREE,
+    trial_end_date: datetime | None = None,
 ) -> MagicMock:
     """Create a minimal User mock with subscription fields."""
     user = MagicMock()
@@ -51,6 +53,7 @@ def _make_user(
     user.subscription_status = subscription_status
     user.subscription_tier = subscription_tier
     user.is_superuser = is_superuser
+    user.trial_end_date = trial_end_date
     return user
 
 
@@ -97,12 +100,11 @@ class TestModuleStructure:
         """_PREMIUM_STATUSES must be a frozenset."""
         assert isinstance(_PREMIUM_STATUSES, frozenset)
 
-    def test_premium_statuses_contains_exactly_three(self):
-        """_PREMIUM_STATUSES must contain ACTIVE, TRIALING, PAST_DUE only."""
+    def test_premium_statuses_contains_exactly_two(self):
+        """_PREMIUM_STATUSES must contain ACTIVE, PAST_DUE only (TRIALING handled separately)."""
         assert _PREMIUM_STATUSES == frozenset(
             {
                 SubscriptionStatus.ACTIVE,
-                SubscriptionStatus.TRIALING,
                 SubscriptionStatus.PAST_DUE,
             }
         )
@@ -142,8 +144,11 @@ class TestGetEffectiveAccessLevelPremiumStatuses:
         assert get_effective_access_level(user) == SubscriptionTier.PREMIUM
 
     def test_trialing_returns_premium(self):
-        """TRIALING subscription status yields PREMIUM access."""
-        user = _make_user(subscription_status=SubscriptionStatus.TRIALING)
+        """TRIALING subscription status with active trial yields PREMIUM access."""
+        user = _make_user(
+            subscription_status=SubscriptionStatus.TRIALING,
+            trial_end_date=datetime.now(timezone.utc) + timedelta(days=7),
+        )
         assert get_effective_access_level(user) == SubscriptionTier.PREMIUM
 
     def test_past_due_returns_premium(self):
@@ -312,8 +317,11 @@ class TestRequirePremiumAllowsPremiumUsers:
 
     @pytest.mark.asyncio
     async def test_trialing_user_passes_through(self):
-        """TRIALING user is returned from require_premium."""
-        user = _make_user(subscription_status=SubscriptionStatus.TRIALING)
+        """TRIALING user with active trial is returned from require_premium."""
+        user = _make_user(
+            subscription_status=SubscriptionStatus.TRIALING,
+            trial_end_date=datetime.now(timezone.utc) + timedelta(days=7),
+        )
         result = await require_premium(current_user=user)
         assert result is user
 
@@ -544,8 +552,11 @@ class TestCheckPremiumDeckAccessPremiumDeckPremiumUser:
         assert result is None
 
     def test_premium_deck_trialing_user_no_exception(self):
-        """Premium deck with TRIALING user raises no exception."""
-        user = _make_user(subscription_status=SubscriptionStatus.TRIALING)
+        """Premium deck with TRIALING user (active trial) raises no exception."""
+        user = _make_user(
+            subscription_status=SubscriptionStatus.TRIALING,
+            trial_end_date=datetime.now(timezone.utc) + timedelta(days=7),
+        )
         deck = _make_deck(is_premium=True)
         result = check_premium_deck_access(user, deck)
         assert result is None
@@ -771,3 +782,101 @@ class TestRequirePremiumNotAppliedToEndpoints:
             f"require_premium is applied to endpoints in: {found_usages}. "
             "AC-10 requires it NOT be applied yet."
         )
+
+
+# =============================================================================
+# Trial expiration check
+# =============================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.stripe
+class TestTrialExpirationCheck:
+    """Trial expiration logic in get_effective_access_level."""
+
+    def test_expired_trial_returns_free(self):
+        """TRIALING user with trial_end_date in the past gets FREE."""
+        user = _make_user(
+            subscription_status=SubscriptionStatus.TRIALING,
+            trial_end_date=datetime.now(timezone.utc) - timedelta(hours=1),
+        )
+        assert get_effective_access_level(user) == SubscriptionTier.FREE
+
+    def test_active_trial_returns_premium(self):
+        """TRIALING user with trial_end_date in the future gets PREMIUM."""
+        user = _make_user(
+            subscription_status=SubscriptionStatus.TRIALING,
+            trial_end_date=datetime.now(timezone.utc) + timedelta(days=7),
+        )
+        assert get_effective_access_level(user) == SubscriptionTier.PREMIUM
+
+    def test_null_trial_end_date_returns_premium(self):
+        """TRIALING user with NULL trial_end_date gets PREMIUM (defensive)."""
+        user = _make_user(
+            subscription_status=SubscriptionStatus.TRIALING,
+            trial_end_date=None,
+        )
+        assert get_effective_access_level(user) == SubscriptionTier.PREMIUM
+
+    def test_trial_expired_just_now_returns_free(self):
+        """TRIALING user with trial_end_date 1 second in the past gets FREE."""
+        user = _make_user(
+            subscription_status=SubscriptionStatus.TRIALING,
+            trial_end_date=datetime.now(timezone.utc) - timedelta(seconds=1),
+        )
+        assert get_effective_access_level(user) == SubscriptionTier.FREE
+
+    def test_trial_expiring_in_one_second_returns_premium(self):
+        """TRIALING user with trial_end_date 1 second in the future gets PREMIUM."""
+        user = _make_user(
+            subscription_status=SubscriptionStatus.TRIALING,
+            trial_end_date=datetime.now(timezone.utc) + timedelta(seconds=1),
+        )
+        assert get_effective_access_level(user) == SubscriptionTier.PREMIUM
+
+    def test_superuser_with_expired_trial_returns_premium(self):
+        """Superuser bypass takes precedence over expired trial."""
+        user = _make_user(
+            subscription_status=SubscriptionStatus.TRIALING,
+            is_superuser=True,
+            trial_end_date=datetime.now(timezone.utc) - timedelta(hours=1),
+        )
+        assert get_effective_access_level(user) == SubscriptionTier.PREMIUM
+
+    def test_active_status_not_affected_by_trial_end_date(self):
+        """ACTIVE status ignores trial_end_date entirely."""
+        user = _make_user(
+            subscription_status=SubscriptionStatus.ACTIVE,
+            trial_end_date=datetime.now(timezone.utc) - timedelta(days=30),
+        )
+        assert get_effective_access_level(user) == SubscriptionTier.PREMIUM
+
+    def test_past_due_status_not_affected_by_trial_end_date(self):
+        """PAST_DUE status ignores trial_end_date entirely."""
+        user = _make_user(
+            subscription_status=SubscriptionStatus.PAST_DUE,
+            trial_end_date=datetime.now(timezone.utc) - timedelta(days=30),
+        )
+        assert get_effective_access_level(user) == SubscriptionTier.PREMIUM
+
+    @pytest.mark.asyncio
+    async def test_expired_trial_blocked_by_require_premium(self):
+        """TRIALING user with expired trial is blocked by require_premium."""
+        user = _make_user(
+            subscription_status=SubscriptionStatus.TRIALING,
+            trial_end_date=datetime.now(timezone.utc) - timedelta(hours=1),
+        )
+        with patch("src.core.subscription.capture_event"):
+            with pytest.raises(PremiumRequiredException):
+                await require_premium(current_user=user)
+
+    def test_expired_trial_blocked_by_check_premium_deck_access(self):
+        """TRIALING user with expired trial cannot access premium deck."""
+        user = _make_user(
+            subscription_status=SubscriptionStatus.TRIALING,
+            trial_end_date=datetime.now(timezone.utc) - timedelta(hours=1),
+        )
+        deck = _make_deck(is_premium=True)
+        with patch("src.core.subscription.capture_event"):
+            with pytest.raises(PremiumRequiredException):
+                check_premium_deck_access(user, deck)
