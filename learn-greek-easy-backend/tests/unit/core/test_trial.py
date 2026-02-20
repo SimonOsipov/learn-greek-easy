@@ -250,7 +250,7 @@ class TestTrialExpirationTask:
             patch("src.tasks.scheduled.init_posthog"),
             patch("src.tasks.scheduled.is_posthog_enabled", return_value=True),
             patch("src.tasks.scheduled.capture_event") as mock_capture,
-            patch("src.tasks.scheduled.posthog"),
+            patch("src.tasks.scheduled.flush_posthog"),
         ):
             mock_engine = AsyncMock()
             mock_engine_creator.return_value = mock_engine
@@ -275,7 +275,7 @@ class TestTrialExpirationTask:
             patch("src.tasks.scheduled.init_posthog"),
             patch("src.tasks.scheduled.is_posthog_enabled", return_value=True),
             patch("src.tasks.scheduled.capture_event") as mock_capture,
-            patch("src.tasks.scheduled.posthog"),
+            patch("src.tasks.scheduled.flush_posthog"),
         ):
             mock_engine = AsyncMock()
             mock_engine_creator.return_value = mock_engine
@@ -308,7 +308,7 @@ class TestTrialExpirationTask:
             patch("src.tasks.scheduled.init_posthog"),
             patch("src.tasks.scheduled.is_posthog_enabled", return_value=True),
             patch("src.tasks.scheduled.capture_event"),
-            patch("src.tasks.scheduled.posthog") as mock_posthog,
+            patch("src.tasks.scheduled.flush_posthog") as mock_flush,
         ):
             mock_engine = AsyncMock()
             mock_engine_creator.return_value = mock_engine
@@ -316,7 +316,7 @@ class TestTrialExpirationTask:
 
             await trial_expiration_task()
 
-        mock_posthog.flush.assert_called_once()
+        mock_flush.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_posthog_disabled_skips_events(self, caplog_loguru):
@@ -332,7 +332,7 @@ class TestTrialExpirationTask:
             patch("src.tasks.scheduled.init_posthog"),
             patch("src.tasks.scheduled.is_posthog_enabled", return_value=False),
             patch("src.tasks.scheduled.capture_event") as mock_capture,
-            patch("src.tasks.scheduled.posthog") as mock_posthog,
+            patch("src.tasks.scheduled.flush_posthog") as mock_flush,
         ):
             mock_engine = AsyncMock()
             mock_engine_creator.return_value = mock_engine
@@ -341,7 +341,7 @@ class TestTrialExpirationTask:
             await trial_expiration_task()
 
         mock_capture.assert_not_called()
-        mock_posthog.flush.assert_not_called()
+        mock_flush.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_session_closed_on_completion(self, caplog_loguru):
