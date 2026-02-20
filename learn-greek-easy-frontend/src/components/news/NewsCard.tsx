@@ -202,7 +202,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({
 
       {/* Action Buttons - only show if news has associated question */}
       {hasQuestion && (
-        <div className="absolute bottom-0 left-0 right-0 z-20 flex flex-col gap-2 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-3 pt-8 sm:flex-row">
+        <div className="absolute bottom-0 left-0 right-0 z-20 flex flex-col gap-2 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-3 pt-8 sm:flex-row sm:items-stretch">
           <div
             className={cn(
               'relative min-w-0 flex-[1.7] transition-opacity duration-300',
@@ -243,7 +243,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({
             data-testid={`news-questions-button-${article.id}`}
           >
             <HelpCircle className="mr-2 h-4 w-4" />
-            {t('dashboard.news.buttons.questions', 'Questions')}
+            {t('dashboard.news.buttons.questions', 'Practice!')}
           </Button>
         </div>
       )}
