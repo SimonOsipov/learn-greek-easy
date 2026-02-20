@@ -104,7 +104,12 @@ def setup_scheduler() -> None:
 
     # Register scheduled jobs (implemented in 12.07-12.09)
     # Import here to avoid circular imports
-    from src.tasks.scheduled import session_cleanup_task, stats_aggregate_task, streak_reset_task
+    from src.tasks.scheduled import (
+        session_cleanup_task,
+        stats_aggregate_task,
+        streak_reset_task,
+        trial_expiration_task,
+    )
 
     # Daily streak reset at configured hour (default: midnight UTC)
     _scheduler.add_job(
@@ -128,6 +133,13 @@ def setup_scheduler() -> None:
         CronTrigger(hour=0, minute=30),
         id="stats_aggregate",
         name="Daily Stats Aggregation",
+    )
+
+    _scheduler.add_job(
+        trial_expiration_task,
+        CronTrigger(hour=2, minute=0),
+        id="trial_expiration",
+        name="Daily Trial Expiration",
     )
 
     _scheduler.start()

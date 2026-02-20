@@ -4,6 +4,8 @@ Single source of truth for: "Does this user have premium access?"
 Exports: get_effective_access_level, require_premium, check_premium_deck_access
 """
 
+from datetime import datetime, timezone
+
 from fastapi import Depends
 
 from src.core.dependencies import get_current_user
@@ -16,7 +18,6 @@ __all__ = ["check_premium_deck_access", "get_effective_access_level", "require_p
 _PREMIUM_STATUSES = frozenset(
     {
         SubscriptionStatus.ACTIVE,
-        SubscriptionStatus.TRIALING,
         SubscriptionStatus.PAST_DUE,
     }
 )
@@ -30,6 +31,12 @@ def get_effective_access_level(user: User) -> SubscriptionTier:
     """
     if user.is_superuser:
         return SubscriptionTier.PREMIUM
+
+    if user.subscription_status == SubscriptionStatus.TRIALING:
+        if user.trial_end_date is not None and user.trial_end_date < datetime.now(timezone.utc):
+            return SubscriptionTier.FREE
+        return SubscriptionTier.PREMIUM
+
     if user.subscription_status in _PREMIUM_STATUSES:
         return SubscriptionTier.PREMIUM
     return SubscriptionTier.FREE

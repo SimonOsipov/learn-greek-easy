@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from src.config import settings
 from src.core.logging import get_logger
+from src.core.posthog import capture_event, flush_posthog, init_posthog, is_posthog_enabled
 
 if TYPE_CHECKING:
     from redis.asyncio import Redis
@@ -411,5 +412,110 @@ async def stats_aggregate_task() -> None:
 
     finally:
         # Always dispose of the engine to clean up connections
+        if engine is not None:
+            await engine.dispose()
+
+
+async def trial_expiration_task() -> None:
+    """Expire auto-trial users whose trial period has ended.
+
+    Runs daily at 2 AM UTC. Transitions users from TRIALING to NONE when
+    trial_end_date has passed. Only processes app-managed trials
+    (stripe_subscription_id IS NULL). Stripe-managed trials are handled
+    by Stripe webhooks exclusively.
+
+    Does NOT modify subscription_tier, trial_start_date, or trial_end_date.
+    """
+    logger.info("Starting trial expiration task")
+    start_time = datetime.now(timezone.utc)
+    engine = None
+
+    # Initialize PostHog (scheduler_main.py does not init it)
+    init_posthog()
+
+    try:
+        engine = create_async_engine(
+            settings.database_url,
+            pool_pre_ping=True,
+            connect_args={"ssl": "require"} if settings.is_production else {},
+        )
+        async_session_factory = async_sessionmaker(
+            engine, class_=AsyncSession, expire_on_commit=False
+        )
+
+        session = async_session_factory()
+        try:
+            # Phase 1: Find expired auto-trial users
+            select_query = text(
+                """
+                SELECT id, email, trial_start_date, trial_end_date
+                FROM users
+                WHERE subscription_status = 'TRIALING'
+                  AND trial_end_date < NOW()
+                  AND stripe_subscription_id IS NULL
+                """
+            )
+            result = await session.execute(select_query)
+            expired_users = result.fetchall()
+
+            expired_count = len(expired_users)
+
+            if expired_count > 0:
+                # Phase 2: Batch update all expired users
+                update_query = text(
+                    """
+                    UPDATE users
+                    SET subscription_status = 'NONE',
+                        updated_at = NOW()
+                    WHERE subscription_status = 'TRIALING'
+                      AND trial_end_date < NOW()
+                      AND stripe_subscription_id IS NULL
+                    """
+                )
+                await session.execute(update_query)
+
+                # Phase 3: Fire PostHog events per expired user
+                if is_posthog_enabled():
+                    for user_id, email, trial_start, trial_end in expired_users:
+                        trial_duration_days = (
+                            (trial_end - trial_start).days if trial_start and trial_end else None
+                        )
+                        capture_event(
+                            distinct_id=str(user_id),
+                            event="trial_expired",
+                            properties={
+                                "trial_duration_days": trial_duration_days,
+                                "trial_start_date": (
+                                    trial_start.isoformat() if trial_start else None
+                                ),
+                                "trial_end_date": (trial_end.isoformat() if trial_end else None),
+                                "converted": False,
+                            },
+                            user_email=email,
+                        )
+
+                    # Flush PostHog events to ensure delivery
+                    flush_posthog()
+
+            await session.commit()
+
+            duration_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+
+            logger.info(
+                "Trial expiration task complete",
+                extra={
+                    "expired_count": expired_count,
+                    "duration_ms": duration_ms,
+                },
+            )
+
+        finally:
+            await session.close()
+
+    except Exception as e:
+        logger.error(f"Trial expiration task failed: {e}", exc_info=True)
+        raise
+
+    finally:
         if engine is not None:
             await engine.dispose()

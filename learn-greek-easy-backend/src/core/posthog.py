@@ -155,6 +155,20 @@ def shutdown_posthog() -> None:
         _posthog_initialized = False
 
 
+def flush_posthog() -> None:
+    """Flush pending PostHog events without shutting down the client.
+
+    Use this in long-running processes (e.g. scheduled tasks) to ensure
+    events are sent while keeping the PostHog client alive for future calls.
+    """
+    if not _posthog_initialized:
+        return
+    try:
+        posthog.flush()
+    except Exception as e:
+        logger.error(f"Error flushing PostHog events: {e}", exc_info=True)
+
+
 def is_posthog_enabled() -> bool:
     """Check if PostHog analytics is enabled and initialized.
 
