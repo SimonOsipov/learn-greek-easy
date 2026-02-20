@@ -44,7 +44,9 @@ export const DeckTypeFilter: React.FC<DeckTypeFilterProps> = ({ value, onChange 
 
   return (
     <div className="flex items-center gap-2">
-      <span className="text-sm font-medium text-foreground">{t('filters.deckType')}</span>
+      <span className="min-w-[3.5rem] text-sm font-medium text-foreground">
+        {t('filters.deckType')}
+      </span>
       <div className="inline-flex rounded-lg border border-border p-1">
         {TYPE_OPTIONS.map(({ value: optValue, icon: Icon, labelKey }) => (
           <Button

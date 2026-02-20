@@ -128,7 +128,7 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
         {/* Row 1: Level Filters */}
         <div className="flex flex-wrap items-center gap-2">
           <span
-            className={`text-sm font-medium ${isLevelFilterDisabled ? 'text-muted-foreground/50' : 'text-foreground'}`}
+            className={`min-w-[3.5rem] text-sm font-medium ${isLevelFilterDisabled ? 'text-muted-foreground/50' : 'text-foreground'}`}
             title={isLevelFilterDisabled ? t('filters.levelDisabledForCulture') : undefined}
           >
             {t('filters.level')}
@@ -153,7 +153,9 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
 
         {/* Row 2: Status Filters + Premium + Clear */}
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-medium text-foreground">{t('filters.status')}</span>
+          <span className="min-w-[3.5rem] text-sm font-medium text-foreground">
+            {t('filters.status')}
+          </span>
           {STATUS_OPTIONS.map(({ value, labelKey }) => (
             <Button
               key={value}
