@@ -51,9 +51,10 @@
       "readMore": "Read article",
       "buttons": {
         "audio": "Audio",
-        "audioComingSoon": "Audio (coming soon)",
-        "audioTooltip": "Coming soon",
-        "audioDisabled": "Audio - Coming soon",
+        "playAudio": "Play audio",
+        "pauseAudio": "Pause audio",
+        "audioUnavailable": "Audio not available",
+        "audioError": "Audio failed to load",
         "questions": "Questions",
         "questionsLabel": "Practice questions for this article"
       },

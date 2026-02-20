@@ -9,19 +9,23 @@
  * - PostHog analytics tracking
  */
 
-import React from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
-import { Crown, ExternalLink, HelpCircle, Volume2 } from 'lucide-react';
+import { ExternalLink, HelpCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
-import { Badge } from '@/components/ui/badge';
+import { WaveformPlayer } from '@/components/culture/WaveformPlayer';
 import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   trackNewsArticleClicked,
+  trackNewsAudioError,
+  trackNewsAudioPlayCompleted,
+  trackNewsAudioPlayPaused,
+  trackNewsAudioPlayStarted,
   trackNewsQuestionsButtonClicked,
 } from '@/lib/analytics/newsAnalytics';
+import { clearActivePlayer, registerActivePlayer } from '@/lib/newsAudioCoordinator';
 import { cn } from '@/lib/utils';
 import { type NewsItemResponse } from '@/services/adminAPI';
 
@@ -31,6 +35,7 @@ export interface NewsCardProps {
   article: NewsItemResponse;
   newsLang: 'el' | 'en' | 'ru';
   height?: NewsCardHeight;
+  page?: 'dashboard' | 'news';
 }
 
 const heightClasses: Record<NewsCardHeight, string> = {
@@ -38,11 +43,76 @@ const heightClasses: Record<NewsCardHeight, string> = {
   tall: 'h-[300px]',
 };
 
-export const NewsCard: React.FC<NewsCardProps> = ({ article, newsLang, height = 'default' }) => {
+export const NewsCard: React.FC<NewsCardProps> = ({
+  article,
+  newsLang,
+  height = 'default',
+  page,
+}) => {
   const { t } = useTranslation('common');
   const navigate = useNavigate();
 
   const hasQuestion = article.card_id !== null && article.deck_id !== null;
+
+  const [resetKey, setResetKey] = useState(0);
+  const stopFn = useCallback(() => {
+    setResetKey((k) => k + 1);
+  }, []);
+  const stopFnRef = useRef(stopFn);
+  stopFnRef.current = stopFn;
+
+  const pageName = page ?? (window.location.pathname === '/news' ? 'news' : 'dashboard');
+
+  const handlePlay = useCallback(
+    (duration: number) => {
+      registerActivePlayer(stopFnRef.current);
+      trackNewsAudioPlayStarted({
+        news_item_id: article.id,
+        audio_duration_seconds: duration,
+        page: pageName,
+      });
+    },
+    [article.id, pageName]
+  );
+
+  const handlePause = useCallback(
+    (currentTime: number) => {
+      trackNewsAudioPlayPaused({
+        news_item_id: article.id,
+        paused_at_seconds: currentTime,
+        audio_duration_seconds: 0, // Duration not available in onPause callback
+        page: pageName,
+      });
+    },
+    [article.id, pageName]
+  );
+
+  const handleComplete = useCallback(
+    (duration: number) => {
+      clearActivePlayer(stopFnRef.current);
+      trackNewsAudioPlayCompleted({
+        news_item_id: article.id,
+        audio_duration_seconds: duration,
+        page: pageName,
+      });
+    },
+    [article.id, pageName]
+  );
+
+  const handleError = useCallback(() => {
+    clearActivePlayer(stopFnRef.current);
+    trackNewsAudioError({
+      news_item_id: article.id,
+      error_type: 'load_failed',
+      page: pageName,
+    });
+  }, [article.id, pageName]);
+
+  useEffect(() => {
+    return () => {
+      clearActivePlayer(stopFnRef.current);
+    };
+  }, []);
 
   // Now all 3 languages are supported in backend
   const getLocalizedContent = () => {
@@ -122,30 +192,22 @@ export const NewsCard: React.FC<NewsCardProps> = ({ article, newsLang, height = 
 
       {/* Action Buttons - only show if news has associated question */}
       {hasQuestion && (
-        <div className="absolute bottom-0 left-0 right-0 z-20 flex gap-2 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-3 pt-8">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled
-                  className="flex-1 border-white/50 bg-white/10 text-white hover:bg-white/20 disabled:border-white/30 disabled:text-white/50"
-                  aria-label={t('dashboard.news.buttons.audioDisabled', 'Audio - Coming soon')}
-                  data-testid={`news-audio-button-${article.id}`}
-                >
-                  <Volume2 className="mr-2 h-4 w-4" />
-                  {t('dashboard.news.buttons.audioComingSoon', 'Audio (coming soon)')}
-                  <Badge className="ml-2 inline-flex items-center gap-0.5 border-0 bg-gradient-to-r from-amber-400 to-amber-500 px-1.5 py-0 text-[10px] text-black">
-                    <Crown className="h-2.5 w-2.5" />
-                  </Badge>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{t('dashboard.news.buttons.audioTooltip', 'Coming soon')}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+        <div className="absolute bottom-0 left-0 right-0 z-20 flex flex-col gap-2 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-3 pt-8 sm:flex-row">
+          <div className="min-w-0 flex-[1.7]">
+            <WaveformPlayer
+              key={resetKey}
+              variant="news-mini"
+              audioUrl={article.audio_url ?? undefined}
+              barCount={20}
+              showSpeedControl={false}
+              disableScrub
+              disabled={!article.audio_url}
+              onPlay={handlePlay}
+              onPause={handlePause}
+              onComplete={handleComplete}
+              onError={handleError}
+            />
+          </div>
 
           <Button
             variant="default"

@@ -51,9 +51,10 @@
       "readMore": "Читать статью",
       "buttons": {
         "audio": "Аудио",
-        "audioComingSoon": "Аудио (скоро)",
-        "audioTooltip": "Скоро",
-        "audioDisabled": "Аудио - Скоро",
+        "playAudio": "Воспроизвести аудио",
+        "pauseAudio": "Приостановить аудио",
+        "audioUnavailable": "Аудио недоступно",
+        "audioError": "Не удалось загрузить аудио",
         "questions": "Вопросы",
         "questionsLabel": "Практика вопросов по этой статье"
       },

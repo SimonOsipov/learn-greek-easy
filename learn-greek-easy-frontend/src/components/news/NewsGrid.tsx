@@ -73,7 +73,7 @@ export const NewsGrid: React.FC<NewsGridProps> = ({
     >
       {articles.map((article) => (
         <div key={article.id} role="listitem">
-          <NewsCard article={article} newsLang={newsLang} height="tall" />
+          <NewsCard article={article} newsLang={newsLang} height="tall" page="news" />
         </div>
       ))}
     </div>
