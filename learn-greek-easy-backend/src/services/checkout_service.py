@@ -3,7 +3,10 @@ from typing import Literal
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.config import settings
+from src.core.billing_utils import billing_cycle_to_price_id
 from src.core.logging import get_logger
+from src.core.stripe import get_stripe_client
 from src.db.models import BillingCycle, SubscriptionStatus, SubscriptionTier, User
 
 logger = get_logger(__name__)
@@ -78,3 +81,59 @@ class CheckoutService:
         )
 
         return "activated"
+
+    async def create_checkout_session(
+        self,
+        user: User,
+        billing_cycle: BillingCycle,
+    ) -> tuple[str, str]:
+        """Create a Stripe checkout session for premium subscription.
+
+        Returns (checkout_url, session_id).
+        Does NOT commit — caller handles commit.
+        """
+        price_id = billing_cycle_to_price_id(billing_cycle)
+        if not price_id:
+            raise ValueError(f"No price configured for {billing_cycle.value} billing cycle")
+
+        client = get_stripe_client()
+
+        # Get or create Stripe customer
+        customer_id = user.stripe_customer_id
+        if not customer_id:
+            customer = await client.v1.customers.create_async(
+                params={
+                    "email": user.email,
+                    "metadata": {"user_id": str(user.id)},
+                },
+            )
+            customer_id = customer.id
+            user.stripe_customer_id = customer_id
+
+        success_url = f"{settings.frontend_url}/checkout/success?session_id={{CHECKOUT_SESSION_ID}}"
+        cancel_url = f"{settings.frontend_url}/checkout/cancel"
+
+        session = await client.v1.checkout.sessions.create_async(
+            params={
+                "mode": "subscription",
+                "customer": customer_id,
+                "client_reference_id": user.supabase_id,
+                "line_items": [{"price": price_id, "quantity": 1}],
+                "success_url": success_url,
+                "cancel_url": cancel_url,
+                "metadata": {
+                    "user_id": str(user.id),
+                    "billing_cycle": billing_cycle.value,
+                    "price_id": price_id,
+                },
+            },
+        )
+
+        logger.info(
+            "Checkout session created",
+            user_id=str(user.id),
+            billing_cycle=billing_cycle.value,
+            session_id=session.id,
+        )
+
+        return session.url, session.id
