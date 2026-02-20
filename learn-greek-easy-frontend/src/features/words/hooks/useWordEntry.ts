@@ -11,6 +11,12 @@ import { useQuery } from '@tanstack/react-query';
 
 import { wordEntryAPI, type WordEntryResponse } from '@/services/wordEntryAPI';
 
+function hasGeneratingAudio(data: WordEntryResponse | undefined): boolean {
+  if (!data) return false;
+  if (data.audio_status === 'generating') return true;
+  return data.examples?.some((ex) => ex.audio_status === 'generating') ?? false;
+}
+
 // ============================================
 // Types
 // ============================================
@@ -57,6 +63,9 @@ export function useWordEntry({ wordId, enabled = true }: UseWordEntryOptions): U
     enabled: enabled && !!wordId,
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 30 * 60 * 1000, // 30 minutes (formerly cacheTime)
+    refetchInterval: (query) => {
+      return hasGeneratingAudio(query.state.data) ? 3000 : false;
+    },
   });
 
   return {

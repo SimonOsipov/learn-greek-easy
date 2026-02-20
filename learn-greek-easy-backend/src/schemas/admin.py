@@ -9,10 +9,10 @@ This module contains schemas for:
 """
 
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Literal, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from src.db.models import DeckLevel
 
@@ -174,3 +174,63 @@ class AdminCultureQuestionsResponse(BaseModel):
     page: int
     page_size: int
     deck_id: UUID
+
+
+# ============================================================================
+# Word Entry Inline Update Schemas
+# ============================================================================
+
+
+class ExampleSentenceUpdate(BaseModel):
+    """Example sentence for inline word entry update.
+
+    Requires id + greek (minimum). System fields (audio_key, audio_status)
+    are preserved from existing data during merge.
+    """
+
+    id: str = Field(..., min_length=1, max_length=50)
+    greek: str = Field(..., min_length=1, max_length=1000)
+    english: Optional[str] = Field(default=None, max_length=1000)
+    russian: Optional[str] = Field(default=None, max_length=1000)
+    context: Optional[str] = Field(default=None, max_length=200)
+
+
+class WordEntryInlineUpdate(BaseModel):
+    """Schema for admin inline word entry update (PATCH).
+
+    Only exposes fields that are safe to edit inline.
+    Explicitly excludes: lemma, part_of_speech, is_active,
+    audio_key, audio_status, grammar_data (gender is top-level).
+    """
+
+    translation_en: Optional[str] = Field(default=None, min_length=1, max_length=500)
+    translation_en_plural: Optional[str] = Field(default=None, max_length=500)
+    translation_ru: Optional[str] = Field(default=None, max_length=500)
+    translation_ru_plural: Optional[str] = Field(default=None, max_length=500)
+    pronunciation: Optional[str] = Field(default=None, max_length=200)
+    gender: Optional[str] = Field(default=None, pattern="^(masculine|feminine|neuter)$")
+    examples: Optional[list[ExampleSentenceUpdate]] = None
+
+    @model_validator(mode="after")
+    def check_at_least_one_field(self) -> "WordEntryInlineUpdate":
+        if not self.model_dump(exclude_unset=True):
+            raise ValueError("At least one field must be provided")
+        return self
+
+
+class GenerateWordEntryAudioRequest(BaseModel):
+    """Request schema for generating audio for a specific part of a word entry."""
+
+    part: Literal["lemma", "example"] = Field(
+        ..., description="Which part to generate audio for: 'lemma' or 'example'"
+    )
+    example_id: Optional[str] = Field(
+        default=None,
+        description="UUID of the example sentence. Required when part='example'.",
+    )
+
+    @model_validator(mode="after")
+    def validate_example_id(self) -> "GenerateWordEntryAudioRequest":
+        if self.part == "example" and not self.example_id:
+            raise ValueError("example_id is required when part is 'example'")
+        return self

@@ -155,6 +155,51 @@
     "loading": "Загрузка содержимого...",
     "createCard": "Создать карточку"
   },
+  "wordEntryDetail": {
+    "back": "Назад",
+    "tabWordEntry": "Словарная запись",
+    "tabCards": "Карточки",
+    "placeholder": "Подробности появятся здесь",
+    "cardsLoading": "Загрузка карточек…",
+    "cardsEmpty": "Для этой словарной записи не созданы карточки",
+    "cardsError": "Не удалось загрузить карточки",
+    "cardsRetry": "Повторить",
+    "cardsSummary": "{{count}} карточек, {{types}} типов",
+    "cardsSummarySingularType": "{{count}} карточек, 1 тип",
+    "cardFront": "Лицевая сторона",
+    "cardBack": "Оборотная сторона",
+    "cardTier": "Уровень",
+    "cardVariant": "Вариант",
+    "cardType": {
+      "meaning_el_to_en": "Греческий → Английский",
+      "meaning_en_to_el": "Английский → Греческий",
+      "article": "Артикль",
+      "plural_form": "Множественное число",
+      "conjugation": "Спряжение",
+      "declension": "Склонение",
+      "cloze": "Заполнение пропусков",
+      "sentence_translation": "Перевод предложения"
+    }
+  },
+  "wordEntryContent": {
+    "pronunciation": "Произношение",
+    "translationEnPlural": "Перевод (EN множ.)",
+    "translationRu": "Перевод (RU)",
+    "gender": "Род",
+    "genderMasculine": "Мужской",
+    "genderFeminine": "Женский",
+    "genderNeuter": "Средний",
+    "examples": "Примеры",
+    "noExamples": "Нет примеров",
+    "exampleGreek": "Греческий",
+    "exampleEnglish": "Английский",
+    "exampleRussian": "Русский",
+    "exampleContext": "Контекст",
+    "notSet": "—",
+    "loading": "Загрузка словарной записи…",
+    "errorTitle": "Не удалось загрузить словарную запись",
+    "errorRetry": "Повторить"
+  },
   "cardDelete": {
     "title": "Безвозвратно удалить карточку",
     "titleQuestion": "Безвозвратно удалить вопрос",
@@ -680,5 +725,49 @@
       "adjectives": "Прил",
       "adverbs": "Нар"
     }
+  },
+  "audioStatus": {
+    "ready": "Готово",
+    "missing": "Отсутствует",
+    "generating": "Генерация...",
+    "failed": "Ошибка",
+    "lemmaAudio": "Аудио леммы"
+  },
+  "audioGenerate": {
+    "generate": "Сгенерировать",
+    "retry": "Повторить",
+    "success": "Генерация аудио запущена",
+    "error": "Не удалось запустить генерацию аудио"
+  },
+  "wordEntryEdit": {
+    "edit": "Редактировать",
+    "save": "Сохранить",
+    "cancel": "Отменить",
+    "saving": "Сохранение...",
+    "success": "Слово обновлено",
+    "error": "Не удалось обновить слово",
+    "notFound": "Словарная запись не найдена.",
+    "audioRegenWarning": "Сохранено, но генерацию аудио запустить не удалось",
+    "discardTitle": "Несохранённые изменения",
+    "discardMessage": "У вас есть несохранённые изменения. Отменить их?",
+    "discardConfirm": "Отменить",
+    "discardCancel": "Продолжить редактирование",
+    "fieldTranslationEn": "Перевод (EN)",
+    "fieldTranslationEnPlural": "Перевод мн. ч. (EN)",
+    "fieldTranslationRu": "Перевод (RU)",
+    "fieldTranslationRuPlural": "Перевод мн. ч. (RU)",
+    "fieldPronunciation": "Произношение",
+    "fieldGender": "Род",
+    "fieldExampleGreek": "Греческий",
+    "fieldExampleEnglish": "Английский",
+    "fieldExampleRussian": "Русский",
+    "fieldExampleContext": "Контекст",
+    "exampleHeader": "Пример {{index}}",
+    "genderMasculine": "Мужской",
+    "genderFeminine": "Женский",
+    "genderNeuter": "Средний",
+    "requiredField": "Обязательное поле",
+    "lemmaReadOnly": "Лемма",
+    "partOfSpeechReadOnly": "Часть речи"
   }
 }

@@ -145,6 +145,51 @@
     "loading": "Loading contents...",
     "createCard": "Create Card"
   },
+  "wordEntryDetail": {
+    "back": "Back",
+    "tabWordEntry": "Word Entry",
+    "tabCards": "Cards",
+    "placeholder": "Details will appear here",
+    "cardsLoading": "Loading cards…",
+    "cardsEmpty": "No cards have been generated for this word entry",
+    "cardsError": "Failed to load cards",
+    "cardsRetry": "Retry",
+    "cardsSummary": "{{count}} cards across {{types}} types",
+    "cardsSummarySingularType": "{{count}} cards across 1 type",
+    "cardFront": "Front",
+    "cardBack": "Back",
+    "cardTier": "Tier",
+    "cardVariant": "Variant",
+    "cardType": {
+      "meaning_el_to_en": "Greek → English",
+      "meaning_en_to_el": "English → Greek",
+      "article": "Article",
+      "plural_form": "Plural Form",
+      "conjugation": "Conjugation",
+      "declension": "Declension",
+      "cloze": "Cloze",
+      "sentence_translation": "Sentence Translation"
+    }
+  },
+  "wordEntryContent": {
+    "pronunciation": "Pronunciation",
+    "translationEnPlural": "Translation (EN plural)",
+    "translationRu": "Translation (RU)",
+    "gender": "Gender",
+    "genderMasculine": "Masculine",
+    "genderFeminine": "Feminine",
+    "genderNeuter": "Neuter",
+    "examples": "Examples",
+    "noExamples": "No examples",
+    "exampleGreek": "Greek",
+    "exampleEnglish": "English",
+    "exampleRussian": "Russian",
+    "exampleContext": "Context",
+    "notSet": "—",
+    "loading": "Loading word entry…",
+    "errorTitle": "Failed to load word entry",
+    "errorRetry": "Retry"
+  },
   "cardDelete": {
     "title": "Permanently Delete Card",
     "titleQuestion": "Permanently Delete Question",
@@ -668,5 +713,49 @@
       "adjectives": "Adj",
       "adverbs": "Adv"
     }
+  },
+  "audioStatus": {
+    "ready": "Ready",
+    "missing": "Missing",
+    "generating": "Generating...",
+    "failed": "Failed",
+    "lemmaAudio": "Lemma Audio"
+  },
+  "audioGenerate": {
+    "generate": "Generate",
+    "retry": "Retry",
+    "success": "Audio generation started",
+    "error": "Failed to start audio generation"
+  },
+  "wordEntryEdit": {
+    "edit": "Edit",
+    "save": "Save",
+    "cancel": "Cancel",
+    "saving": "Saving...",
+    "success": "Word entry updated",
+    "error": "Failed to update word entry",
+    "notFound": "Word entry no longer exists.",
+    "audioRegenWarning": "Saved, but audio regeneration could not start",
+    "discardTitle": "Unsaved Changes",
+    "discardMessage": "You have unsaved changes. Discard them?",
+    "discardConfirm": "Discard",
+    "discardCancel": "Keep Editing",
+    "fieldTranslationEn": "English Translation",
+    "fieldTranslationEnPlural": "English Translation (Plural)",
+    "fieldTranslationRu": "Russian Translation",
+    "fieldTranslationRuPlural": "Russian Translation (Plural)",
+    "fieldPronunciation": "Pronunciation",
+    "fieldGender": "Gender",
+    "fieldExampleGreek": "Greek",
+    "fieldExampleEnglish": "English",
+    "fieldExampleRussian": "Russian",
+    "fieldExampleContext": "Context",
+    "exampleHeader": "Example {{index}}",
+    "genderMasculine": "Masculine",
+    "genderFeminine": "Feminine",
+    "genderNeuter": "Neuter",
+    "requiredField": "This field is required",
+    "lemmaReadOnly": "Lemma",
+    "partOfSpeechReadOnly": "Part of Speech"
   }
 }

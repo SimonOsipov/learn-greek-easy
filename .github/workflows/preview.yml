@@ -144,7 +144,8 @@ jobs:
         id: check
         run: |
           # Get changed files between PR base and head
-          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+          BASE_REF="${{ github.base_ref || 'main' }}"
+          CHANGED_FILES=$(git diff --name-only origin/${BASE_REF}...HEAD)
           echo "Changed files:"
           echo "$CHANGED_FILES"
 
@@ -238,20 +239,21 @@ jobs:
 
           # Set commit SHA and branch for both services
           # Use PR head SHA (not merge commit) for clearer version tracking
-          PR_HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          PR_HEAD_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
+          HEAD_REF="${{ github.head_ref || github.ref_name }}"
           echo "Setting RAILWAY_GIT_COMMIT_SHA=$PR_HEAD_SHA (PR head commit)"
-          echo "Setting RAILWAY_GIT_BRANCH=${{ github.head_ref }}"
+          echo "Setting RAILWAY_GIT_BRANCH=$HEAD_REF"
 
           railway variables \
             --set "RAILWAY_GIT_COMMIT_SHA=$PR_HEAD_SHA" \
-            --set "RAILWAY_GIT_BRANCH=${{ github.head_ref }}" \
+            --set "RAILWAY_GIT_BRANCH=$HEAD_REF" \
             --set "DEBUG=true" \
             --service Backend \
             --skip-deploys
 
           railway variables \
             --set "RAILWAY_GIT_COMMIT_SHA=$PR_HEAD_SHA" \
-            --set "RAILWAY_GIT_BRANCH=${{ github.head_ref }}" \
+            --set "RAILWAY_GIT_BRANCH=$HEAD_REF" \
             --service Frontend \
             --skip-deploys
 

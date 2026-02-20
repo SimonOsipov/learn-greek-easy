@@ -128,6 +128,10 @@ class ExampleSentenceResponse(BaseModel):
         default=None,
         description="Presigned URL for example sentence audio (populated by WAUD-03)",
     )
+    audio_status: Optional[str] = Field(
+        default=None,
+        description="Audio generation status: ready, missing, generating, failed",
+    )
 
 
 # ============================================================================
@@ -321,6 +325,11 @@ class WordEntryUpdate(BaseModel):
         max_length=500,
         description="Russian translation(s)",
     )
+    translation_ru_plural: Optional[str] = Field(
+        default=None,
+        max_length=500,
+        description="Russian plural translation(s)",
+    )
     pronunciation: Optional[str] = Field(
         default=None,
         max_length=200,
@@ -356,6 +365,17 @@ class WordEntryUpdate(BaseModel):
                 raise ValueError("lemma cannot be empty or whitespace only")
         return v
 
+    @field_validator("translation_ru_plural", mode="before")
+    @classmethod
+    def strip_translation_ru_plural(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        if isinstance(v, str):
+            v = v.strip()
+            if not v:
+                return None
+        return v
+
     @model_validator(mode="after")
     def check_at_least_one_field(self) -> "WordEntryUpdate":
         """Ensure at least one field is provided for update."""
@@ -385,6 +405,7 @@ class WordEntryResponse(BaseModel):
     translation_en: str
     translation_en_plural: Optional[str] = None
     translation_ru: Optional[str] = None
+    translation_ru_plural: Optional[str] = None
     pronunciation: Optional[str] = None
     grammar_data: Optional[dict[str, Any]] = None  # Raw dict for response
     examples: Optional[list[ExampleSentenceResponse]] = None
@@ -392,6 +413,10 @@ class WordEntryResponse(BaseModel):
     audio_url: Optional[str] = Field(
         default=None,
         description="Presigned URL for word entry audio (populated by WAUD-03)",
+    )
+    audio_status: str = Field(
+        default="missing",
+        description="Audio generation status: ready, missing, generating, failed",
     )
     is_active: bool
     created_at: datetime

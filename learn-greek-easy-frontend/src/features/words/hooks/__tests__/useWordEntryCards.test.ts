@@ -33,6 +33,7 @@ const mockCards = [
     deck_id: 'deck-1',
     card_type: 'meaning_el_to_en',
     tier: 1,
+    variant_key: 'meaning_el_to_en_t1',
     front_content: {
       card_type: 'meaning_el_to_en',
       prompt: 'What does this mean?',
@@ -53,6 +54,7 @@ const mockCards = [
     deck_id: 'deck-1',
     card_type: 'meaning_en_to_el',
     tier: 1,
+    variant_key: 'meaning_en_to_el_t1',
     front_content: {
       card_type: 'meaning_en_to_el',
       prompt: 'Translate to Greek',

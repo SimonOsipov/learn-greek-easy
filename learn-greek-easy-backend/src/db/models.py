@@ -223,6 +223,15 @@ class WebhookProcessingStatus(str, enum.Enum):
     FAILED = "failed"
 
 
+class AudioStatus(str, enum.Enum):
+    """Audio generation lifecycle status for word entries and examples."""
+
+    MISSING = "missing"
+    GENERATING = "generating"
+    READY = "ready"
+    FAILED = "failed"
+
+
 # ============================================================================
 # User Models
 # ============================================================================
@@ -795,6 +804,20 @@ class WordEntry(Base, TimestampMixin):
         String(500),
         nullable=True,
         comment="S3 key for audio pronunciation file",
+    )
+
+    # Audio generation status
+    audio_status: Mapped[AudioStatus] = mapped_column(
+        nullable=False,
+        default=AudioStatus.MISSING,
+        server_default=text("'MISSING'"),
+        index=True,
+        comment="Audio generation lifecycle status: missing, generating, ready, failed",
+    )
+    audio_generating_since: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="Timestamp when current audio generation started (for stale detection)",
     )
 
     # Status flag

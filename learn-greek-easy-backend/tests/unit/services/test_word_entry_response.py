@@ -6,6 +6,7 @@ from uuid import uuid4
 
 import pytest
 
+from src.db.models import AudioStatus
 from src.schemas.word_entry import WordEntryResponse
 from src.services.s3_service import S3Service
 from src.services.word_entry_response import word_entry_to_response
@@ -32,10 +33,13 @@ def sample_entry():
     entry.translation_en = "house"
     entry.translation_en_plural = None
     entry.translation_ru = "дом"
+    entry.translation_ru_plural = None
     entry.pronunciation = "spíti"
     entry.grammar_data = None
     entry.audio_key = "word-audio/spiti.mp3"
     entry.audio_url = None  # Pydantic reads this during model_validate; service overwrites it
+    entry.audio_status = AudioStatus.READY
+    entry.audio_generating_since = None
     entry.examples = [
         {
             "id": "ex_1",

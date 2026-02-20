@@ -143,7 +143,7 @@ class TestLemmaAudioGeneration:
         expected_s3_key = f"{WORD_AUDIO_S3_PREFIX}/{word_entry_id}.mp3"
         mock_s3.upload_object.assert_called_once_with(expected_s3_key, b"audio-bytes", "audio/mpeg")
         assert word_entry.audio_key == expected_s3_key
-        mock_session.commit.assert_called_once()
+        assert mock_session.commit.call_count == 2
 
     async def test_task_lemma_tts_failure_continues_to_examples(self):
         """When lemma TTS raises, task logs error and continues to process examples."""
@@ -452,7 +452,7 @@ class TestSkipIfUnchanged:
             )
 
         mock_elevenlabs.generate_speech.assert_not_called()
-        mock_session.commit.assert_not_called()
+        assert mock_session.commit.call_count == 2
 
     async def test_task_generates_lemma_when_text_changed(self):
         """TTS IS called when DB lemma differs from incoming lemma."""
@@ -739,7 +739,7 @@ class TestDbUpdate:
             )
 
         assert word_entry.audio_key == f"{WORD_AUDIO_S3_PREFIX}/{word_entry_id}.mp3"
-        mock_session.commit.assert_called_once()
+        assert mock_session.commit.call_count == 2
 
     async def test_task_updates_example_audio_keys_in_jsonb(self):
         """After successful example audio, JSONB is fully reassigned with new audio_keys."""
@@ -784,10 +784,10 @@ class TestDbUpdate:
         # Full JSONB reassignment should have occurred
         expected_key = f"{WORD_AUDIO_S3_PREFIX}/{word_entry_id}/ex_1.mp3"
         assert word_entry.examples[0]["audio_key"] == expected_key
-        mock_session.commit.assert_called_once()
+        assert mock_session.commit.call_count == 2
 
     async def test_task_all_skipped_no_db_update(self):
-        """When all items are skipped, no DB commit occurs."""
+        """When all items are skipped, task still commits twice (GENERATING status + final cleanup)."""
         word_entry_id = uuid4()
         word_entry = make_word_entry(
             lemma="σπίτι",
@@ -824,7 +824,7 @@ class TestDbUpdate:
                 db_url="postgresql+asyncpg://test",
             )
 
-        mock_session.commit.assert_not_called()
+        assert mock_session.commit.call_count == 2
 
     async def test_task_word_entry_not_found_returns_gracefully(self):
         """If word entry deleted before task runs, task logs error and returns."""
