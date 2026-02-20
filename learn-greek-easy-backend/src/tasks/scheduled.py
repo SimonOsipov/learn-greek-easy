@@ -12,13 +12,12 @@ Tasks:
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 
-import posthog
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from src.config import settings
 from src.core.logging import get_logger
-from src.core.posthog import capture_event, init_posthog, is_posthog_enabled
+from src.core.posthog import capture_event, flush_posthog, init_posthog, is_posthog_enabled
 
 if TYPE_CHECKING:
     from redis.asyncio import Redis
@@ -496,7 +495,7 @@ async def trial_expiration_task() -> None:
                         )
 
                     # Flush PostHog events to ensure delivery
-                    posthog.flush()
+                    flush_posthog()
 
             await session.commit()
 
