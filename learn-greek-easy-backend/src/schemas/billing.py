@@ -1,5 +1,7 @@
 """Billing schemas for checkout and subscription management."""
 
+from datetime import datetime
+
 from pydantic import BaseModel, Field
 
 from src.db.models import BillingCycle
@@ -34,3 +36,25 @@ class VerifyCheckoutResponse(BaseModel):
     subscription_tier: str = Field(..., description="Subscription tier after verification")
     billing_cycle: str = Field(..., description="Billing cycle for the subscription")
     subscription_status: str = Field(..., description="Current subscription status")
+
+
+class PricingPlan(BaseModel):
+    billing_cycle: str = Field(..., description="Billing cycle: monthly, quarterly, semi_annual")
+    price_amount: int = Field(..., description="Price in smallest currency unit (e.g., cents)")
+    price_formatted: str = Field(..., description="Human-readable price string (e.g., '29.00')")
+    currency: str = Field(..., description="Currency code (e.g., 'eur')")
+    interval: str = Field(..., description="Stripe interval (e.g., 'month')")
+    interval_count: int = Field(..., description="Stripe interval count (1, 3, 6)")
+    savings_percent: int | None = Field(
+        None, description="Savings vs monthly, None if monthly or not computable"
+    )
+
+
+class BillingStatusResponse(BaseModel):
+    subscription_status: str
+    subscription_tier: str
+    trial_end_date: datetime | None = None
+    trial_days_remaining: int | None = None
+    billing_cycle: str | None = None
+    is_premium: bool
+    pricing: list[PricingPlan] = Field(default_factory=list)

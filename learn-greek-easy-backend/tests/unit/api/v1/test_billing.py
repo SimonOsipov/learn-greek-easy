@@ -7,8 +7,10 @@ Tests cover:
 - Successful checkout session creation (200)
 - Stripe customer get-or-create logic
 - Trialing users can proceed to checkout
+- GET /api/v1/billing/status endpoint behavior
 """
 
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -27,6 +29,8 @@ def create_mock_user(
     subscription_status: SubscriptionStatus = SubscriptionStatus.NONE,
     stripe_customer_id: str | None = None,
     supabase_id: str | None = None,
+    trial_end_date: datetime | None = None,
+    billing_cycle: BillingCycle | None = None,
 ) -> MagicMock:
     """Create a mock User object for billing tests."""
     mock = MagicMock(spec=User)
@@ -36,6 +40,8 @@ def create_mock_user(
     mock.subscription_status = subscription_status
     mock.stripe_customer_id = stripe_customer_id
     mock.supabase_id = supabase_id or str(uuid4())
+    mock.trial_end_date = trial_end_date
+    mock.billing_cycle = billing_cycle
     return mock
 
 
@@ -510,8 +516,6 @@ class TestCheckoutEndpoint:
         auth_headers: dict,
     ):
         """User with expired trial can checkout with promo_code — returns 200."""
-        from datetime import datetime, timezone
-
         with (
             patch("src.api.v1.billing.settings") as mock_settings,
             patch("src.api.v1.billing.get_current_user") as mock_get_user,
@@ -963,3 +967,320 @@ class TestVerifyCheckoutEndpoint:
         data = response.json()
         assert data["success"] is False
         assert data["error"]["code"] == "BILLING_NOT_CONFIGURED"
+
+
+# =============================================================================
+# TestBillingStatusEndpoint - Tests for GET /api/v1/billing/status
+# =============================================================================
+
+
+def _make_stripe_price(
+    unit_amount: int, currency: str = "eur", interval: str = "month", interval_count: int = 1
+) -> MagicMock:
+    """Build a mock Stripe price object."""
+    price = MagicMock()
+    price.unit_amount = unit_amount
+    price.currency = currency
+    price.recurring = MagicMock()
+    price.recurring.interval = interval
+    price.recurring.interval_count = interval_count
+    return price
+
+
+class TestBillingStatusEndpoint:
+    """Unit tests for GET /api/v1/billing/status endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_returns_200_with_free_user_status(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+    ):
+        """Free user with Stripe not configured returns basic status with empty pricing."""
+        mock_user = create_mock_user(
+            subscription_tier=SubscriptionTier.FREE,
+            subscription_status=SubscriptionStatus.NONE,
+        )
+        with (
+            patch("src.api.v1.billing.get_current_user", return_value=mock_user),
+            patch("src.api.v1.billing.is_stripe_configured", return_value=False),
+            patch(
+                "src.api.v1.billing.get_effective_access_level", return_value=SubscriptionTier.FREE
+            ),
+        ):
+            response = await client.get("/api/v1/billing/status", headers=auth_headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["subscription_status"] == "none"
+        assert data["is_premium"] is False
+        assert data["pricing"] == []
+
+    @pytest.mark.asyncio
+    async def test_returns_200_with_trialing_user_status(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+    ):
+        """Trialing user with future trial_end_date reports positive trial_days_remaining."""
+        future_date = datetime.now(timezone.utc) + timedelta(days=5)
+        mock_user = create_mock_user(
+            subscription_tier=SubscriptionTier.FREE,
+            subscription_status=SubscriptionStatus.TRIALING,
+            trial_end_date=future_date,
+        )
+        with (
+            patch("src.api.v1.billing.get_current_user", return_value=mock_user),
+            patch("src.api.v1.billing.is_stripe_configured", return_value=False),
+            patch(
+                "src.api.v1.billing.get_effective_access_level",
+                return_value=SubscriptionTier.PREMIUM,
+            ),
+        ):
+            response = await client.get("/api/v1/billing/status", headers=auth_headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["trial_days_remaining"] is not None
+        assert data["trial_days_remaining"] > 0
+        assert data["is_premium"] is True
+
+    @pytest.mark.asyncio
+    async def test_returns_200_with_expired_trial_status(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+    ):
+        """User with expired trial_end_date gets trial_days_remaining=0 and is_premium=False."""
+        past_date = datetime.now(timezone.utc) - timedelta(days=3)
+        mock_user = create_mock_user(
+            subscription_tier=SubscriptionTier.FREE,
+            subscription_status=SubscriptionStatus.TRIALING,
+            trial_end_date=past_date,
+        )
+        with (
+            patch("src.api.v1.billing.get_current_user", return_value=mock_user),
+            patch("src.api.v1.billing.is_stripe_configured", return_value=False),
+            patch(
+                "src.api.v1.billing.get_effective_access_level",
+                return_value=SubscriptionTier.FREE,
+            ),
+        ):
+            response = await client.get("/api/v1/billing/status", headers=auth_headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["trial_days_remaining"] == 0
+        assert data["is_premium"] is False
+
+    @pytest.mark.asyncio
+    async def test_returns_200_with_active_premium_status(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+    ):
+        """Active premium user returns is_premium=True."""
+        mock_user = create_mock_user(
+            subscription_tier=SubscriptionTier.PREMIUM,
+            subscription_status=SubscriptionStatus.ACTIVE,
+            billing_cycle=BillingCycle.MONTHLY,
+        )
+        with (
+            patch("src.api.v1.billing.get_current_user", return_value=mock_user),
+            patch("src.api.v1.billing.is_stripe_configured", return_value=False),
+            patch(
+                "src.api.v1.billing.get_effective_access_level",
+                return_value=SubscriptionTier.PREMIUM,
+            ),
+        ):
+            response = await client.get("/api/v1/billing/status", headers=auth_headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["is_premium"] is True
+        assert data["subscription_status"] == "active"
+
+    @pytest.mark.asyncio
+    async def test_returns_200_with_pricing_when_stripe_configured(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+    ):
+        """When Stripe is configured and prices are fetched, pricing list is populated."""
+        mock_user = create_mock_user()
+        mock_client = MagicMock()
+        monthly_price = _make_stripe_price(
+            unit_amount=2900, currency="eur", interval="month", interval_count=1
+        )
+        mock_client.v1.prices.retrieve_async = AsyncMock(return_value=monthly_price)
+
+        with (
+            patch("src.api.v1.billing.get_current_user", return_value=mock_user),
+            patch("src.api.v1.billing.is_stripe_configured", return_value=True),
+            patch("src.api.v1.billing.get_stripe_client", return_value=mock_client),
+            patch(
+                "src.api.v1.billing._build_price_to_cycle_map",
+                return_value={"price_monthly_test": BillingCycle.MONTHLY},
+            ),
+            patch(
+                "src.api.v1.billing.get_effective_access_level",
+                return_value=SubscriptionTier.FREE,
+            ),
+        ):
+            response = await client.get("/api/v1/billing/status", headers=auth_headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["pricing"]) == 1
+        plan = data["pricing"][0]
+        assert plan["billing_cycle"] == "monthly"
+        assert plan["price_amount"] == 2900
+        assert plan["price_formatted"] == "29.00"
+        assert plan["currency"] == "eur"
+
+    @pytest.mark.asyncio
+    async def test_returns_200_with_empty_pricing_when_stripe_not_configured(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+    ):
+        """When Stripe is not configured, pricing is an empty list."""
+        mock_user = create_mock_user()
+        with (
+            patch("src.api.v1.billing.get_current_user", return_value=mock_user),
+            patch("src.api.v1.billing.is_stripe_configured", return_value=False),
+            patch(
+                "src.api.v1.billing.get_effective_access_level",
+                return_value=SubscriptionTier.FREE,
+            ),
+        ):
+            response = await client.get("/api/v1/billing/status", headers=auth_headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["pricing"] == []
+
+    @pytest.mark.asyncio
+    async def test_returns_200_with_empty_pricing_on_stripe_error(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+    ):
+        """When Stripe price retrieval raises an exception, pricing is empty and still 200."""
+        mock_user = create_mock_user()
+        mock_client = MagicMock()
+        mock_client.v1.prices.retrieve_async = AsyncMock(side_effect=Exception("Stripe error"))
+
+        with (
+            patch("src.api.v1.billing.get_current_user", return_value=mock_user),
+            patch("src.api.v1.billing.is_stripe_configured", return_value=True),
+            patch("src.api.v1.billing.get_stripe_client", return_value=mock_client),
+            patch(
+                "src.api.v1.billing._build_price_to_cycle_map",
+                return_value={"price_monthly_test": BillingCycle.MONTHLY},
+            ),
+            patch(
+                "src.api.v1.billing.get_effective_access_level",
+                return_value=SubscriptionTier.FREE,
+            ),
+        ):
+            response = await client.get("/api/v1/billing/status", headers=auth_headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["pricing"] == []
+
+    @pytest.mark.asyncio
+    async def test_savings_percent_computed_correctly(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+    ):
+        """Quarterly plan savings_percent is computed correctly vs monthly price."""
+        mock_user = create_mock_user()
+        mock_client = MagicMock()
+
+        monthly_price = _make_stripe_price(
+            unit_amount=2900, currency="eur", interval="month", interval_count=1
+        )
+        quarterly_price = _make_stripe_price(
+            unit_amount=7500, currency="eur", interval="month", interval_count=3
+        )
+
+        async def retrieve_price(price_id, **kwargs):
+            if price_id == "price_monthly":
+                return monthly_price
+            return quarterly_price
+
+        mock_client.v1.prices.retrieve_async = AsyncMock(side_effect=retrieve_price)
+
+        with (
+            patch("src.api.v1.billing.get_current_user", return_value=mock_user),
+            patch("src.api.v1.billing.is_stripe_configured", return_value=True),
+            patch("src.api.v1.billing.get_stripe_client", return_value=mock_client),
+            patch(
+                "src.api.v1.billing._build_price_to_cycle_map",
+                return_value={
+                    "price_monthly": BillingCycle.MONTHLY,
+                    "price_quarterly": BillingCycle.QUARTERLY,
+                },
+            ),
+            patch(
+                "src.api.v1.billing.get_effective_access_level",
+                return_value=SubscriptionTier.FREE,
+            ),
+        ):
+            response = await client.get("/api/v1/billing/status", headers=auth_headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["pricing"]) == 2
+        quarterly = next(p for p in data["pricing"] if p["billing_cycle"] == "quarterly")
+        # per_month = 7500 / 3 = 2500; savings = round((1 - 2500/2900) * 100) = round(13.79) = 14
+        assert quarterly["savings_percent"] == 14
+
+    @pytest.mark.asyncio
+    async def test_unconfigured_price_ids_omitted(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+    ):
+        """Only configured price IDs appear in pricing; unconfigured ones are omitted."""
+        mock_user = create_mock_user()
+        mock_client = MagicMock()
+        monthly_price = _make_stripe_price(
+            unit_amount=2900, currency="eur", interval="month", interval_count=1
+        )
+        mock_client.v1.prices.retrieve_async = AsyncMock(return_value=monthly_price)
+
+        with (
+            patch("src.api.v1.billing.get_current_user", return_value=mock_user),
+            patch("src.api.v1.billing.is_stripe_configured", return_value=True),
+            patch("src.api.v1.billing.get_stripe_client", return_value=mock_client),
+            patch(
+                "src.api.v1.billing._build_price_to_cycle_map",
+                return_value={"price_monthly_only": BillingCycle.MONTHLY},
+            ),
+            patch(
+                "src.api.v1.billing.get_effective_access_level",
+                return_value=SubscriptionTier.FREE,
+            ),
+        ):
+            response = await client.get("/api/v1/billing/status", headers=auth_headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["pricing"]) == 1
+        assert data["pricing"][0]["billing_cycle"] == "monthly"
+
+    @pytest.mark.asyncio
+    async def test_returns_401_when_unauthenticated(
+        self,
+        client: AsyncClient,
+    ):
+        """Unauthenticated request to /status returns 401."""
+        response = await client.get("/api/v1/billing/status")
+
+        assert response.status_code == 401
+        data = response.json()
+        assert data["success"] is False
