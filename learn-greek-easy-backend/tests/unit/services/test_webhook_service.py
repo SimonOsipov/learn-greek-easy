@@ -285,22 +285,47 @@ class TestCheckoutSessionCompleted:
         subscription: str = "sub_123",
         price_id: str | None = None,
         currency: str = "eur",
+        promo_code: str | None = None,
+        discount_data: dict | None = None,
     ) -> dict:
-        metadata = {}
+        metadata: dict = {}
         if price_id is not None:
             metadata["price_id"] = price_id
+        if promo_code is not None:
+            metadata["promo_code"] = promo_code
+
+        session_obj: dict = {
+            "client_reference_id": supabase_id,
+            "customer": customer,
+            "subscription": subscription,
+            "currency": currency,
+            "metadata": metadata,
+        }
+
+        if discount_data is not None:
+            session_obj["total_details"] = {
+                "breakdown": {
+                    "discounts": [
+                        {
+                            "discount": {
+                                "coupon": {
+                                    "id": discount_data.get("coupon_id", "coupon_123"),
+                                    "name": discount_data.get("coupon_name", "Launch 20%"),
+                                    "percent_off": discount_data.get("percent_off", 20.0),
+                                },
+                                "promotion_code": discount_data.get(
+                                    "promotion_code_id", "promo_abc"
+                                ),
+                            }
+                        }
+                    ]
+                }
+            }
+
         return {
             "id": "evt_checkout",
             "type": "checkout.session.completed",
-            "data": {
-                "object": {
-                    "client_reference_id": supabase_id,
-                    "customer": customer,
-                    "subscription": subscription,
-                    "currency": currency,
-                    "metadata": metadata,
-                }
-            },
+            "data": {"object": session_obj},
         }
 
     @pytest.mark.asyncio
@@ -479,6 +504,181 @@ class TestCheckoutSessionCompleted:
             await svc.process_event(self._make_event())
 
         mock_capture.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_subscription_created_event_includes_promo_fields_when_discount_present(
+        self,
+    ):
+        """subscription_created event includes promo fields when discount is present."""
+        user = _make_user(
+            subscription_status=SubscriptionStatus.NONE,
+            subscription_tier=SubscriptionTier.FREE,
+        )
+        svc = _make_service()
+        svc.user_repo = _make_mock_user_repo(user=user)
+        svc.webhook_repo = _make_mock_webhook_repo()
+
+        event = self._make_event(
+            promo_code="LAUNCH20",
+            discount_data={
+                "coupon_id": "coupon_abc",
+                "coupon_name": "Launch 20%",
+                "percent_off": 20.0,
+                "promotion_code_id": "promo_xyz",
+            },
+        )
+
+        with _patch_settings(), patch("src.services.webhook_service.capture_event") as mock_capture:
+            await svc.process_event(event)
+
+        props = mock_capture.call_args_list[0].kwargs["properties"]
+        assert props["has_promo_code"] is True
+        assert props["promo_code"] == "LAUNCH20"
+        assert props["discount_percent_off"] == 20.0
+        assert props["coupon_name"] == "Launch 20%"
+
+    @pytest.mark.asyncio
+    async def test_subscription_created_event_has_promo_false_when_no_discount(self):
+        """subscription_created event has has_promo_code=False when no discount."""
+        user = _make_user(
+            subscription_status=SubscriptionStatus.NONE,
+            subscription_tier=SubscriptionTier.FREE,
+        )
+        svc = _make_service()
+        svc.user_repo = _make_mock_user_repo(user=user)
+        svc.webhook_repo = _make_mock_webhook_repo()
+
+        event = self._make_event()
+
+        with _patch_settings(), patch("src.services.webhook_service.capture_event") as mock_capture:
+            await svc.process_event(event)
+
+        props = mock_capture.call_args_list[0].kwargs["properties"]
+        assert props["has_promo_code"] is False
+        assert props["promo_code"] is None
+        assert props["discount_percent_off"] is None
+        assert props["coupon_name"] is None
+
+    @pytest.mark.asyncio
+    async def test_promo_code_applied_event_fired_when_discount_present(self):
+        """promo_code_applied event fires when discount data is present."""
+        user = _make_user(
+            subscription_status=SubscriptionStatus.NONE,
+            subscription_tier=SubscriptionTier.FREE,
+        )
+        svc = _make_service()
+        svc.user_repo = _make_mock_user_repo(user=user)
+        svc.webhook_repo = _make_mock_webhook_repo()
+
+        event = self._make_event(
+            promo_code="LAUNCH20",
+            discount_data={
+                "coupon_id": "coupon_abc",
+                "coupon_name": "Launch 20%",
+                "percent_off": 20.0,
+                "promotion_code_id": "promo_xyz",
+            },
+        )
+
+        with _patch_settings(), patch("src.services.webhook_service.capture_event") as mock_capture:
+            await svc.process_event(event)
+
+        assert mock_capture.call_count == 2
+        events_fired = [call.kwargs["event"] for call in mock_capture.call_args_list]
+        assert "subscription_created" in events_fired
+        assert "promo_code_applied" in events_fired
+
+        promo_call = next(
+            c for c in mock_capture.call_args_list if c.kwargs["event"] == "promo_code_applied"
+        )
+        assert promo_call.kwargs["properties"]["promo_code"] == "LAUNCH20"
+        assert promo_call.kwargs["properties"]["coupon_id"] == "coupon_abc"
+        assert promo_call.kwargs["properties"]["percent_off"] == 20.0
+
+    @pytest.mark.asyncio
+    async def test_promo_code_applied_event_not_fired_when_no_discount(self):
+        """promo_code_applied event does NOT fire when no discount data."""
+        user = _make_user(
+            subscription_status=SubscriptionStatus.NONE,
+            subscription_tier=SubscriptionTier.FREE,
+        )
+        svc = _make_service()
+        svc.user_repo = _make_mock_user_repo(user=user)
+        svc.webhook_repo = _make_mock_webhook_repo()
+
+        event = self._make_event(promo_code="LAUNCH20")  # promo attempted but no discount
+
+        with _patch_settings(), patch("src.services.webhook_service.capture_event") as mock_capture:
+            await svc.process_event(event)
+
+        assert mock_capture.call_count == 1
+        assert mock_capture.call_args_list[0].kwargs["event"] == "subscription_created"
+
+    def test_extract_discount_data_returns_none_when_no_discounts(self):
+        """_extract_discount_data returns None for missing or empty discounts."""
+        svc = _make_service()
+
+        assert svc._extract_discount_data({}) is None
+        assert svc._extract_discount_data({"total_details": {}}) is None
+        assert (
+            svc._extract_discount_data({"total_details": {"breakdown": {"discounts": []}}}) is None
+        )
+
+    def test_extract_discount_data_extracts_coupon_fields(self):
+        """_extract_discount_data correctly extracts coupon fields from session payload."""
+        svc = _make_service()
+
+        session = {
+            "total_details": {
+                "breakdown": {
+                    "discounts": [
+                        {
+                            "discount": {
+                                "coupon": {
+                                    "id": "coupon_test",
+                                    "name": "Test 15%",
+                                    "percent_off": 15.0,
+                                },
+                                "promotion_code": "promo_test",
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+
+        result = svc._extract_discount_data(session)
+        assert result is not None
+        assert result["coupon_id"] == "coupon_test"
+        assert result["coupon_name"] == "Test 15%"
+        assert result["percent_off"] == 15.0
+        assert result["promotion_code_id"] == "promo_test"
+
+    @pytest.mark.asyncio
+    async def test_subscription_activation_unchanged_with_discount(self):
+        """Subscription activation logic is unchanged when discount data is present."""
+        user = _make_user(
+            subscription_status=SubscriptionStatus.NONE,
+            subscription_tier=SubscriptionTier.FREE,
+        )
+        svc = _make_service()
+        svc.user_repo = _make_mock_user_repo(user=user)
+        svc.webhook_repo = _make_mock_webhook_repo()
+
+        event = self._make_event(
+            promo_code="LAUNCH20",
+            discount_data={
+                "coupon_id": "coupon_abc",
+                "coupon_name": "Launch 20%",
+                "percent_off": 20.0,
+            },
+        )
+
+        with _patch_settings(), patch("src.services.webhook_service.capture_event"):
+            await svc.process_event(event)
+
+        assert user.subscription_tier == SubscriptionTier.PREMIUM
+        assert user.subscription_status == SubscriptionStatus.ACTIVE
 
 
 # ---------------------------------------------------------------------------
