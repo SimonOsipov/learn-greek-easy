@@ -32,6 +32,12 @@ export interface BillingStatusResponse {
   billing_cycle: string | null;
   is_premium: boolean;
   pricing: PricingPlan[];
+  // Subscription period and price fields (BP-10)
+  current_period_end: string | null;
+  cancel_at_period_end: boolean;
+  current_price_amount: number | null;
+  current_price_formatted: string | null;
+  current_price_currency: string | null;
 }
 
 export const billingAPI = {
