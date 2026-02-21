@@ -61,4 +61,18 @@ export const billingAPI = {
   getBillingStatus: async (): Promise<BillingStatusResponse> => {
     return api.get<BillingStatusResponse>('/api/v1/billing/status');
   },
+
+  changePlan: async (billingCycle: BillingCycle): Promise<BillingStatusResponse> => {
+    return api.post<BillingStatusResponse>('/api/v1/billing/subscription/change-plan', {
+      billing_cycle: billingCycle,
+    });
+  },
+
+  cancelSubscription: async (): Promise<BillingStatusResponse> => {
+    return api.post<BillingStatusResponse>('/api/v1/billing/subscription/cancel');
+  },
+
+  reactivateSubscription: async (): Promise<BillingStatusResponse> => {
+    return api.post<BillingStatusResponse>('/api/v1/billing/subscription/reactivate');
+  },
 };

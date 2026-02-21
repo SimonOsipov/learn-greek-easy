@@ -18,6 +18,7 @@ from src.db.dependencies import get_db
 from src.db.models import BillingCycle, SubscriptionStatus, SubscriptionTier, User
 from src.schemas.billing import (
     BillingStatusResponse,
+    ChangePlanRequest,
     CheckoutRequest,
     CheckoutResponse,
     PricingPlan,
@@ -25,6 +26,7 @@ from src.schemas.billing import (
     VerifyCheckoutResponse,
 )
 from src.services.checkout_service import CheckoutService
+from src.services.subscription_service import SubscriptionService
 
 router = APIRouter(
     tags=["Billing"],
@@ -214,28 +216,88 @@ async def _fetch_subscription_price(
         return None, None, None
 
 
-@router.get("/status", response_model=BillingStatusResponse, status_code=status.HTTP_200_OK)
-async def get_billing_status(
-    current_user: User = Depends(get_current_user),
-) -> BillingStatusResponse:
+async def _build_billing_status_response(user: User) -> BillingStatusResponse:
+    """Build BillingStatusResponse from the given user, fetching pricing and subscription price."""
     trial_days_remaining: int | None = None
-    if current_user.trial_end_date:
-        remaining = (current_user.trial_end_date - datetime.now(timezone.utc)).days
+    if user.trial_end_date:
+        remaining = (user.trial_end_date - datetime.now(timezone.utc)).days
         trial_days_remaining = max(0, remaining)
-    effective_tier = get_effective_access_level(current_user)
+    effective_tier = get_effective_access_level(user)
     pricing = await _fetch_pricing()
-    price_amount, price_formatted, price_currency = await _fetch_subscription_price(current_user)
+    price_amount, price_formatted, price_currency = await _fetch_subscription_price(user)
     return BillingStatusResponse(
-        subscription_status=current_user.subscription_status.value,
-        subscription_tier=current_user.subscription_tier.value,
-        trial_end_date=current_user.trial_end_date,
+        subscription_status=user.subscription_status.value,
+        subscription_tier=user.subscription_tier.value,
+        trial_end_date=user.trial_end_date,
         trial_days_remaining=trial_days_remaining,
-        billing_cycle=current_user.billing_cycle.value if current_user.billing_cycle else None,
+        billing_cycle=user.billing_cycle.value if user.billing_cycle else None,
         is_premium=(effective_tier == SubscriptionTier.PREMIUM),
         pricing=pricing,
-        current_period_end=current_user.subscription_current_period_end,
-        cancel_at_period_end=current_user.subscription_cancel_at_period_end,
+        current_period_end=user.subscription_current_period_end,
+        cancel_at_period_end=user.subscription_cancel_at_period_end,
         current_price_amount=price_amount,
         current_price_formatted=price_formatted,
         current_price_currency=price_currency,
     )
+
+
+@router.get("/status", response_model=BillingStatusResponse, status_code=status.HTTP_200_OK)
+async def get_billing_status(
+    current_user: User = Depends(get_current_user),
+) -> BillingStatusResponse:
+    return await _build_billing_status_response(current_user)
+
+
+@router.post(
+    "/subscription/change-plan",
+    response_model=BillingStatusResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def change_subscription_plan(
+    body: ChangePlanRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> BillingStatusResponse:
+    if not settings.stripe_configured:
+        raise BillingNotConfiguredException()
+
+    service = SubscriptionService(db)
+    await service.change_plan(current_user, BillingCycle(body.billing_cycle))
+
+    return await _build_billing_status_response(current_user)
+
+
+@router.post(
+    "/subscription/cancel",
+    response_model=BillingStatusResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def cancel_subscription(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> BillingStatusResponse:
+    if not settings.stripe_configured:
+        raise BillingNotConfiguredException()
+
+    service = SubscriptionService(db)
+    await service.cancel(current_user)
+
+    return await _build_billing_status_response(current_user)
+
+
+@router.post(
+    "/subscription/reactivate",
+    response_model=BillingStatusResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def reactivate_subscription(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> BillingStatusResponse:
+    if not settings.stripe_configured:
+        raise BillingNotConfiguredException()
+
+    service = SubscriptionService(db)
+    await service.reactivate(current_user)
+
+    return await _build_billing_status_response(current_user)

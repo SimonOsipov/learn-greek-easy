@@ -42,3 +42,4 @@ export { useAudioPlayer } from './useAudioPlayer';
 
 // Checkout hooks
 export { useCheckout } from './useCheckout';
+export { useSubscriptionActions } from './useSubscriptionActions';

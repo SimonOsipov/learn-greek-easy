@@ -1,6 +1,7 @@
 """Billing schemas for checkout and subscription management."""
 
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -64,3 +65,7 @@ class BillingStatusResponse(BaseModel):
     current_price_amount: int | None = None
     current_price_formatted: str | None = None
     current_price_currency: str | None = None
+
+
+class ChangePlanRequest(BaseModel):
+    billing_cycle: Literal["monthly", "quarterly", "semi_annual"]

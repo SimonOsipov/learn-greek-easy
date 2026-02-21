@@ -1568,3 +1568,212 @@ class TestBillingStatusNewFields:
         assert data["current_period_end"] is not None
         # Price fields still null (no stripe_subscription_id)
         assert data["current_price_amount"] is None
+
+
+# =============================================================================
+# TestSubscriptionEndpoints - Tests for new subscription management endpoints
+# =============================================================================
+
+
+def _make_billing_status_response() -> dict:
+    """Build a minimal valid BillingStatusResponse dict for mocking."""
+    return {
+        "subscription_status": "active",
+        "subscription_tier": "premium",
+        "trial_end_date": None,
+        "trial_days_remaining": None,
+        "billing_cycle": "monthly",
+        "is_premium": True,
+        "pricing": [],
+        "current_period_end": None,
+        "cancel_at_period_end": False,
+        "current_price_amount": 999,
+        "current_price_formatted": "9.99",
+        "current_price_currency": "eur",
+    }
+
+
+@pytest.mark.unit
+@pytest.mark.stripe
+class TestSubscriptionEndpoints:
+    """Tests for POST /subscription/change-plan, /cancel, /reactivate endpoints.
+
+    These tests use the auth_headers fixture (which sets up app.dependency_overrides
+    for get_current_user) and modify test_user in place to simulate different states.
+    """
+
+    @pytest.mark.asyncio
+    async def test_change_plan_endpoint_returns_200(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        test_user,
+        db_session,
+    ):
+        """Happy path — plan change returns BillingStatusResponse."""
+        test_user.subscription_tier = SubscriptionTier.PREMIUM
+        test_user.subscription_status = SubscriptionStatus.ACTIVE
+        test_user.stripe_subscription_id = "sub_test123"
+        test_user.billing_cycle = BillingCycle.MONTHLY
+        test_user.subscription_cancel_at_period_end = False
+        await db_session.flush()
+
+        from src.schemas.billing import BillingStatusResponse
+
+        with (
+            patch("src.api.v1.billing.settings") as mock_settings,
+            patch("src.api.v1.billing.SubscriptionService") as mock_service_class,
+            patch("src.api.v1.billing._build_billing_status_response") as mock_build,
+        ):
+            mock_settings.stripe_configured = True
+            mock_service = AsyncMock()
+            mock_service.change_plan = AsyncMock()
+            mock_service_class.return_value = mock_service
+            mock_build.return_value = BillingStatusResponse(**_make_billing_status_response())
+
+            response = await client.post(
+                "/api/v1/billing/subscription/change-plan",
+                json={"billing_cycle": "quarterly"},
+                headers=auth_headers,
+            )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "subscription_status" in data
+
+    @pytest.mark.asyncio
+    async def test_cancel_endpoint_returns_200(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        test_user,
+        db_session,
+    ):
+        """Happy path — cancel returns BillingStatusResponse."""
+        test_user.subscription_tier = SubscriptionTier.PREMIUM
+        test_user.subscription_status = SubscriptionStatus.ACTIVE
+        test_user.stripe_subscription_id = "sub_test123"
+        test_user.subscription_cancel_at_period_end = False
+        await db_session.flush()
+
+        from src.schemas.billing import BillingStatusResponse
+
+        with (
+            patch("src.api.v1.billing.settings") as mock_settings,
+            patch("src.api.v1.billing.SubscriptionService") as mock_service_class,
+            patch("src.api.v1.billing._build_billing_status_response") as mock_build,
+        ):
+            mock_settings.stripe_configured = True
+            mock_service = AsyncMock()
+            mock_service.cancel = AsyncMock()
+            mock_service_class.return_value = mock_service
+            mock_build.return_value = BillingStatusResponse(**_make_billing_status_response())
+
+            response = await client.post(
+                "/api/v1/billing/subscription/cancel",
+                headers=auth_headers,
+            )
+
+        assert response.status_code == 200
+
+    @pytest.mark.asyncio
+    async def test_reactivate_endpoint_returns_200(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        test_user,
+        db_session,
+    ):
+        """Happy path — reactivate returns BillingStatusResponse."""
+        test_user.subscription_tier = SubscriptionTier.PREMIUM
+        test_user.subscription_status = SubscriptionStatus.ACTIVE
+        test_user.stripe_subscription_id = "sub_test123"
+        test_user.subscription_cancel_at_period_end = True
+        await db_session.flush()
+
+        from src.schemas.billing import BillingStatusResponse
+
+        with (
+            patch("src.api.v1.billing.settings") as mock_settings,
+            patch("src.api.v1.billing.SubscriptionService") as mock_service_class,
+            patch("src.api.v1.billing._build_billing_status_response") as mock_build,
+        ):
+            mock_settings.stripe_configured = True
+            mock_service = AsyncMock()
+            mock_service.reactivate = AsyncMock()
+            mock_service_class.return_value = mock_service
+            mock_build.return_value = BillingStatusResponse(**_make_billing_status_response())
+
+            response = await client.post(
+                "/api/v1/billing/subscription/reactivate",
+                headers=auth_headers,
+            )
+
+        assert response.status_code == 200
+
+    @pytest.mark.asyncio
+    async def test_change_plan_endpoint_returns_401_unauthenticated(self, client: AsyncClient):
+        """Unauthenticated request returns 401."""
+        response = await client.post(
+            "/api/v1/billing/subscription/change-plan",
+            json={"billing_cycle": "quarterly"},
+        )
+        assert response.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_cancel_endpoint_returns_401_unauthenticated(self, client: AsyncClient):
+        """Unauthenticated cancel returns 401."""
+        response = await client.post("/api/v1/billing/subscription/cancel")
+        assert response.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_reactivate_endpoint_returns_401_unauthenticated(self, client: AsyncClient):
+        """Unauthenticated reactivate returns 401."""
+        response = await client.post("/api/v1/billing/subscription/reactivate")
+        assert response.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_endpoints_return_400_stripe_not_configured_change_plan(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+    ):
+        """Returns 400 when Stripe is not configured — change-plan."""
+        with patch("src.api.v1.billing.settings") as mock_settings:
+            mock_settings.stripe_configured = False
+            response = await client.post(
+                "/api/v1/billing/subscription/change-plan",
+                json={"billing_cycle": "quarterly"},
+                headers=auth_headers,
+            )
+        assert response.status_code == 400
+
+    @pytest.mark.asyncio
+    async def test_endpoints_return_400_stripe_not_configured_cancel(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+    ):
+        """Returns 400 when Stripe is not configured — cancel."""
+        with patch("src.api.v1.billing.settings") as mock_settings:
+            mock_settings.stripe_configured = False
+            response = await client.post(
+                "/api/v1/billing/subscription/cancel",
+                headers=auth_headers,
+            )
+        assert response.status_code == 400
+
+    @pytest.mark.asyncio
+    async def test_endpoints_return_400_stripe_not_configured_reactivate(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+    ):
+        """Returns 400 when Stripe is not configured — reactivate."""
+        with patch("src.api.v1.billing.settings") as mock_settings:
+            mock_settings.stripe_configured = False
+            response = await client.post(
+                "/api/v1/billing/subscription/reactivate",
+                headers=auth_headers,
+            )
+        assert response.status_code == 400
