@@ -87,6 +87,7 @@ class CheckoutService:
         self,
         user: User,
         billing_cycle: BillingCycle,
+        promo_code: str | None = None,
     ) -> tuple[str, str]:
         """Create a Stripe checkout session for premium subscription.
 
@@ -125,8 +126,29 @@ class CheckoutService:
                 "user_id": str(user.id),
                 "billing_cycle": billing_cycle.value,
                 "price_id": price_id,
+                "promo_code": promo_code or "",
             },
         }
+
+        # Resolve promo code to Stripe Promotion Code ID
+        resolved_promo_id: str | None = None
+        if promo_code:
+            try:
+                promo_result = await client.v1.promotion_codes.list_async(
+                    params={"code": promo_code, "active": True, "limit": 1}
+                )
+                if promo_result.data:
+                    resolved_promo_id = promo_result.data[0].id
+                else:
+                    logger.warning("Promo code not found or inactive", promo_code=promo_code)
+            except Exception as e:
+                logger.warning("Failed to resolve promo code", promo_code=promo_code, error=str(e))
+
+        if resolved_promo_id:
+            checkout_params["discounts"] = [{"promotion_code": resolved_promo_id}]
+        else:
+            checkout_params["allow_promotion_codes"] = True
+
         session = await client.v1.checkout.sessions.create_async(params=checkout_params)
 
         logger.info(

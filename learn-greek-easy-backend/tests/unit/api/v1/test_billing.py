@@ -270,6 +270,94 @@ class TestCheckoutEndpoint:
         call_args = mock_service.create_checkout_session.call_args
         assert call_args.args[1] == BillingCycle.SEMI_ANNUAL
 
+    @pytest.mark.asyncio
+    async def test_checkout_accepts_promo_code(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+    ):
+        """Test that the checkout endpoint accepts an optional promo_code field."""
+        with (
+            patch("src.api.v1.billing.settings") as mock_settings,
+            patch("src.api.v1.billing.get_current_user") as mock_get_user,
+            patch("src.api.v1.billing.CheckoutService") as mock_service_class,
+            patch("src.api.v1.billing.capture_event"),
+        ):
+            mock_settings.stripe_configured = True
+            mock_user = create_mock_user(
+                subscription_tier=SubscriptionTier.FREE,
+                subscription_status=SubscriptionStatus.NONE,
+            )
+            mock_get_user.return_value = mock_user
+
+            mock_service = AsyncMock()
+            mock_service.create_checkout_session.return_value = (
+                "https://checkout.stripe.com/pay/cs_promo",
+                "cs_promo",
+            )
+            mock_service_class.return_value = mock_service
+
+            response = await client.post(
+                "/api/v1/billing/checkout/premium",
+                json={"billing_cycle": "monthly", "promo_code": "SAVE20"},
+                headers=auth_headers,
+            )
+
+        assert response.status_code == 200
+
+    @pytest.mark.asyncio
+    async def test_checkout_backward_compat_no_promo(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+    ):
+        """Test that the checkout endpoint remains compatible when promo_code is omitted."""
+        with (
+            patch("src.api.v1.billing.settings") as mock_settings,
+            patch("src.api.v1.billing.get_current_user") as mock_get_user,
+            patch("src.api.v1.billing.CheckoutService") as mock_service_class,
+            patch("src.api.v1.billing.capture_event"),
+        ):
+            mock_settings.stripe_configured = True
+            mock_user = create_mock_user(
+                subscription_tier=SubscriptionTier.FREE,
+                subscription_status=SubscriptionStatus.NONE,
+            )
+            mock_get_user.return_value = mock_user
+
+            mock_service = AsyncMock()
+            mock_service.create_checkout_session.return_value = (
+                "https://checkout.stripe.com/pay/cs_nopromo",
+                "cs_nopromo",
+            )
+            mock_service_class.return_value = mock_service
+
+            response = await client.post(
+                "/api/v1/billing/checkout/premium",
+                json={"billing_cycle": "monthly"},
+                headers=auth_headers,
+            )
+
+        assert response.status_code == 200
+
+    @pytest.mark.asyncio
+    async def test_checkout_promo_code_max_length(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+    ):
+        """Test that 422 is returned when promo_code exceeds 50 characters."""
+        with patch("src.api.v1.billing.settings") as mock_settings:
+            mock_settings.stripe_configured = True
+
+            response = await client.post(
+                "/api/v1/billing/checkout/premium",
+                json={"billing_cycle": "monthly", "promo_code": "x" * 51},
+                headers=auth_headers,
+            )
+
+        assert response.status_code == 422
+
 
 # =============================================================================
 # TestCheckoutServiceCustomerLogic - Tests for get-or-create customer logic

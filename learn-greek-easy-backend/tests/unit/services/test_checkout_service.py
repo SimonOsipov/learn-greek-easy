@@ -216,3 +216,220 @@ class TestCheckoutRaceConditions:
             billing_cycle=BillingCycle.MONTHLY,
         )
         assert result == "already_active"
+
+
+def _make_checkout_mocks(promo_code=None):
+    """Helper to build standard mocks for create_checkout_session tests."""
+    from unittest.mock import MagicMock
+    from uuid import uuid4
+
+    mock_user = MagicMock()
+    mock_user.id = uuid4()
+    mock_user.email = "test@example.com"
+    mock_user.stripe_customer_id = "cus_existing"
+    mock_user.supabase_id = str(uuid4())
+
+    mock_session = MagicMock()
+    mock_session.id = "cs_test_promo"
+    mock_session.url = "https://checkout.stripe.com/pay/cs_test_promo"
+
+    return mock_user, mock_session
+
+
+@pytest.mark.unit
+@pytest.mark.stripe
+class TestCreateCheckoutSessionPromoCode:
+    """Tests for promo code handling in CheckoutService.create_checkout_session."""
+
+    @pytest.mark.asyncio
+    async def test_no_promo_code_allows_promotion_codes(self):
+        """When no promo_code is passed, checkout_params should have allow_promotion_codes=True."""
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        mock_db = MagicMock()
+        service = CheckoutService(mock_db)
+        mock_user, mock_session = _make_checkout_mocks()
+
+        with (
+            patch("src.services.checkout_service.billing_cycle_to_price_id") as mock_price,
+            patch("src.services.checkout_service.get_stripe_client") as mock_get_client,
+            patch("src.services.checkout_service.settings") as mock_settings,
+        ):
+            mock_price.return_value = "price_monthly_test"
+            mock_settings.frontend_url = "https://app.example.com"
+
+            mock_client = MagicMock()
+            mock_client.v1.checkout.sessions.create_async = AsyncMock(return_value=mock_session)
+            mock_get_client.return_value = mock_client
+
+            await service.create_checkout_session(mock_user, BillingCycle.MONTHLY)
+
+        params = mock_client.v1.checkout.sessions.create_async.call_args.kwargs["params"]
+        assert params["allow_promotion_codes"] is True
+        assert "discounts" not in params
+
+    @pytest.mark.asyncio
+    async def test_resolved_promo_code_sets_discounts(self):
+        """When promo_code resolves successfully, checkout_params should have discounts set."""
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        mock_db = MagicMock()
+        service = CheckoutService(mock_db)
+        mock_user, mock_session = _make_checkout_mocks()
+
+        mock_promo = MagicMock()
+        mock_promo.id = "promo_abc123"
+        mock_promo_result = MagicMock()
+        mock_promo_result.data = [mock_promo]
+
+        with (
+            patch("src.services.checkout_service.billing_cycle_to_price_id") as mock_price,
+            patch("src.services.checkout_service.get_stripe_client") as mock_get_client,
+            patch("src.services.checkout_service.settings") as mock_settings,
+        ):
+            mock_price.return_value = "price_monthly_test"
+            mock_settings.frontend_url = "https://app.example.com"
+
+            mock_client = MagicMock()
+            mock_client.v1.promotion_codes.list_async = AsyncMock(return_value=mock_promo_result)
+            mock_client.v1.checkout.sessions.create_async = AsyncMock(return_value=mock_session)
+            mock_get_client.return_value = mock_client
+
+            await service.create_checkout_session(
+                mock_user, BillingCycle.MONTHLY, promo_code="SAVE20"
+            )
+
+        params = mock_client.v1.checkout.sessions.create_async.call_args.kwargs["params"]
+        assert params["discounts"] == [{"promotion_code": "promo_abc123"}]
+        assert "allow_promotion_codes" not in params
+
+    @pytest.mark.asyncio
+    async def test_promo_code_not_found_falls_back(self):
+        """When promo_code lookup returns empty data, fall back to allow_promotion_codes=True."""
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        mock_db = MagicMock()
+        service = CheckoutService(mock_db)
+        mock_user, mock_session = _make_checkout_mocks()
+
+        mock_promo_result = MagicMock()
+        mock_promo_result.data = []
+
+        with (
+            patch("src.services.checkout_service.billing_cycle_to_price_id") as mock_price,
+            patch("src.services.checkout_service.get_stripe_client") as mock_get_client,
+            patch("src.services.checkout_service.settings") as mock_settings,
+        ):
+            mock_price.return_value = "price_monthly_test"
+            mock_settings.frontend_url = "https://app.example.com"
+
+            mock_client = MagicMock()
+            mock_client.v1.promotion_codes.list_async = AsyncMock(return_value=mock_promo_result)
+            mock_client.v1.checkout.sessions.create_async = AsyncMock(return_value=mock_session)
+            mock_get_client.return_value = mock_client
+
+            await service.create_checkout_session(
+                mock_user, BillingCycle.MONTHLY, promo_code="BADCODE"
+            )
+
+        params = mock_client.v1.checkout.sessions.create_async.call_args.kwargs["params"]
+        assert params["allow_promotion_codes"] is True
+        assert "discounts" not in params
+
+    @pytest.mark.asyncio
+    async def test_stripe_error_falls_back(self):
+        """When promo code lookup raises an exception, fall back to allow_promotion_codes=True and checkout is NOT blocked."""
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        mock_db = MagicMock()
+        service = CheckoutService(mock_db)
+        mock_user, mock_session = _make_checkout_mocks()
+
+        with (
+            patch("src.services.checkout_service.billing_cycle_to_price_id") as mock_price,
+            patch("src.services.checkout_service.get_stripe_client") as mock_get_client,
+            patch("src.services.checkout_service.settings") as mock_settings,
+        ):
+            mock_price.return_value = "price_monthly_test"
+            mock_settings.frontend_url = "https://app.example.com"
+
+            mock_client = MagicMock()
+            mock_client.v1.promotion_codes.list_async = AsyncMock(
+                side_effect=Exception("stripe error")
+            )
+            mock_client.v1.checkout.sessions.create_async = AsyncMock(return_value=mock_session)
+            mock_get_client.return_value = mock_client
+
+            # Should NOT raise — checkout proceeds despite promo lookup failure
+            result = await service.create_checkout_session(
+                mock_user, BillingCycle.MONTHLY, promo_code="ERRCODE"
+            )
+
+        assert result == ("https://checkout.stripe.com/pay/cs_test_promo", "cs_test_promo")
+        params = mock_client.v1.checkout.sessions.create_async.call_args.kwargs["params"]
+        assert params["allow_promotion_codes"] is True
+        assert "discounts" not in params
+
+    @pytest.mark.asyncio
+    async def test_promo_code_stored_in_metadata(self):
+        """When promo_code is provided, it should be stored in checkout session metadata."""
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        mock_db = MagicMock()
+        service = CheckoutService(mock_db)
+        mock_user, mock_session = _make_checkout_mocks()
+
+        mock_promo = MagicMock()
+        mock_promo.id = "promo_xyz"
+        mock_promo_result = MagicMock()
+        mock_promo_result.data = [mock_promo]
+
+        with (
+            patch("src.services.checkout_service.billing_cycle_to_price_id") as mock_price,
+            patch("src.services.checkout_service.get_stripe_client") as mock_get_client,
+            patch("src.services.checkout_service.settings") as mock_settings,
+        ):
+            mock_price.return_value = "price_monthly_test"
+            mock_settings.frontend_url = "https://app.example.com"
+
+            mock_client = MagicMock()
+            mock_client.v1.promotion_codes.list_async = AsyncMock(return_value=mock_promo_result)
+            mock_client.v1.checkout.sessions.create_async = AsyncMock(return_value=mock_session)
+            mock_get_client.return_value = mock_client
+
+            await service.create_checkout_session(
+                mock_user, BillingCycle.MONTHLY, promo_code="SAVE20"
+            )
+
+        params = mock_client.v1.checkout.sessions.create_async.call_args.kwargs["params"]
+        assert params["metadata"]["promo_code"] == "SAVE20"
+
+    @pytest.mark.asyncio
+    async def test_empty_promo_code_treated_as_none(self):
+        """Empty string promo_code should not trigger promo resolution and falls back to allow_promotion_codes=True."""
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        mock_db = MagicMock()
+        service = CheckoutService(mock_db)
+        mock_user, mock_session = _make_checkout_mocks()
+
+        with (
+            patch("src.services.checkout_service.billing_cycle_to_price_id") as mock_price,
+            patch("src.services.checkout_service.get_stripe_client") as mock_get_client,
+            patch("src.services.checkout_service.settings") as mock_settings,
+        ):
+            mock_price.return_value = "price_monthly_test"
+            mock_settings.frontend_url = "https://app.example.com"
+
+            mock_client = MagicMock()
+            mock_client.v1.promotion_codes.list_async = AsyncMock()
+            mock_client.v1.checkout.sessions.create_async = AsyncMock(return_value=mock_session)
+            mock_get_client.return_value = mock_client
+
+            await service.create_checkout_session(mock_user, BillingCycle.MONTHLY, promo_code="")
+
+        # Empty string is falsy — no promo resolution should be attempted
+        mock_client.v1.promotion_codes.list_async.assert_not_awaited()
+        params = mock_client.v1.checkout.sessions.create_async.call_args.kwargs["params"]
+        assert params["allow_promotion_codes"] is True
+        assert params["metadata"]["promo_code"] == ""

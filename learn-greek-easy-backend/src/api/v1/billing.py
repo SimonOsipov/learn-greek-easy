@@ -53,7 +53,7 @@ async def create_checkout_session(
 
     service = CheckoutService(db)
     checkout_url, session_id = await service.create_checkout_session(
-        current_user, body.billing_cycle
+        current_user, body.billing_cycle, promo_code=body.promo_code
     )
 
     capture_event(
