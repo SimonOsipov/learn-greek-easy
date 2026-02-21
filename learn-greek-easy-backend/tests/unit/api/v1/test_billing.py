@@ -988,7 +988,12 @@ def _make_stripe_price(
 
 
 class TestBillingStatusEndpoint:
-    """Unit tests for GET /api/v1/billing/status endpoint."""
+    """Unit tests for GET /api/v1/billing/status endpoint.
+
+    Uses the real test_user from the database (via auth_headers fixture)
+    rather than mocking get_current_user, because the auth_headers fixture
+    sets app.dependency_overrides which takes precedence over module patches.
+    """
 
     @pytest.mark.asyncio
     async def test_returns_200_with_free_user_status(
@@ -997,12 +1002,7 @@ class TestBillingStatusEndpoint:
         auth_headers: dict,
     ):
         """Free user with Stripe not configured returns basic status with empty pricing."""
-        mock_user = create_mock_user(
-            subscription_tier=SubscriptionTier.FREE,
-            subscription_status=SubscriptionStatus.NONE,
-        )
         with (
-            patch("src.api.v1.billing.get_current_user", return_value=mock_user),
             patch("src.api.v1.billing.is_stripe_configured", return_value=False),
             patch(
                 "src.api.v1.billing.get_effective_access_level", return_value=SubscriptionTier.FREE
@@ -1021,16 +1021,15 @@ class TestBillingStatusEndpoint:
         self,
         client: AsyncClient,
         auth_headers: dict,
+        test_user: User,
+        db_session,
     ):
         """Trialing user with future trial_end_date reports positive trial_days_remaining."""
-        future_date = datetime.now(timezone.utc) + timedelta(days=5)
-        mock_user = create_mock_user(
-            subscription_tier=SubscriptionTier.FREE,
-            subscription_status=SubscriptionStatus.TRIALING,
-            trial_end_date=future_date,
-        )
+        test_user.subscription_status = SubscriptionStatus.TRIALING
+        test_user.trial_end_date = datetime.now(timezone.utc) + timedelta(days=5)
+        await db_session.flush()
+
         with (
-            patch("src.api.v1.billing.get_current_user", return_value=mock_user),
             patch("src.api.v1.billing.is_stripe_configured", return_value=False),
             patch(
                 "src.api.v1.billing.get_effective_access_level",
@@ -1050,16 +1049,15 @@ class TestBillingStatusEndpoint:
         self,
         client: AsyncClient,
         auth_headers: dict,
+        test_user: User,
+        db_session,
     ):
         """User with expired trial_end_date gets trial_days_remaining=0 and is_premium=False."""
-        past_date = datetime.now(timezone.utc) - timedelta(days=3)
-        mock_user = create_mock_user(
-            subscription_tier=SubscriptionTier.FREE,
-            subscription_status=SubscriptionStatus.TRIALING,
-            trial_end_date=past_date,
-        )
+        test_user.subscription_status = SubscriptionStatus.TRIALING
+        test_user.trial_end_date = datetime.now(timezone.utc) - timedelta(days=3)
+        await db_session.flush()
+
         with (
-            patch("src.api.v1.billing.get_current_user", return_value=mock_user),
             patch("src.api.v1.billing.is_stripe_configured", return_value=False),
             patch(
                 "src.api.v1.billing.get_effective_access_level",
@@ -1078,15 +1076,16 @@ class TestBillingStatusEndpoint:
         self,
         client: AsyncClient,
         auth_headers: dict,
+        test_user: User,
+        db_session,
     ):
         """Active premium user returns is_premium=True."""
-        mock_user = create_mock_user(
-            subscription_tier=SubscriptionTier.PREMIUM,
-            subscription_status=SubscriptionStatus.ACTIVE,
-            billing_cycle=BillingCycle.MONTHLY,
-        )
+        test_user.subscription_tier = SubscriptionTier.PREMIUM
+        test_user.subscription_status = SubscriptionStatus.ACTIVE
+        test_user.billing_cycle = BillingCycle.MONTHLY
+        await db_session.flush()
+
         with (
-            patch("src.api.v1.billing.get_current_user", return_value=mock_user),
             patch("src.api.v1.billing.is_stripe_configured", return_value=False),
             patch(
                 "src.api.v1.billing.get_effective_access_level",
@@ -1107,7 +1106,6 @@ class TestBillingStatusEndpoint:
         auth_headers: dict,
     ):
         """When Stripe is configured and prices are fetched, pricing list is populated."""
-        mock_user = create_mock_user()
         mock_client = MagicMock()
         monthly_price = _make_stripe_price(
             unit_amount=2900, currency="eur", interval="month", interval_count=1
@@ -1115,7 +1113,6 @@ class TestBillingStatusEndpoint:
         mock_client.v1.prices.retrieve_async = AsyncMock(return_value=monthly_price)
 
         with (
-            patch("src.api.v1.billing.get_current_user", return_value=mock_user),
             patch("src.api.v1.billing.is_stripe_configured", return_value=True),
             patch("src.api.v1.billing.get_stripe_client", return_value=mock_client),
             patch(
@@ -1145,9 +1142,7 @@ class TestBillingStatusEndpoint:
         auth_headers: dict,
     ):
         """When Stripe is not configured, pricing is an empty list."""
-        mock_user = create_mock_user()
         with (
-            patch("src.api.v1.billing.get_current_user", return_value=mock_user),
             patch("src.api.v1.billing.is_stripe_configured", return_value=False),
             patch(
                 "src.api.v1.billing.get_effective_access_level",
@@ -1167,12 +1162,10 @@ class TestBillingStatusEndpoint:
         auth_headers: dict,
     ):
         """When Stripe price retrieval raises an exception, pricing is empty and still 200."""
-        mock_user = create_mock_user()
         mock_client = MagicMock()
         mock_client.v1.prices.retrieve_async = AsyncMock(side_effect=Exception("Stripe error"))
 
         with (
-            patch("src.api.v1.billing.get_current_user", return_value=mock_user),
             patch("src.api.v1.billing.is_stripe_configured", return_value=True),
             patch("src.api.v1.billing.get_stripe_client", return_value=mock_client),
             patch(
@@ -1197,7 +1190,6 @@ class TestBillingStatusEndpoint:
         auth_headers: dict,
     ):
         """Quarterly plan savings_percent is computed correctly vs monthly price."""
-        mock_user = create_mock_user()
         mock_client = MagicMock()
 
         monthly_price = _make_stripe_price(
@@ -1215,7 +1207,6 @@ class TestBillingStatusEndpoint:
         mock_client.v1.prices.retrieve_async = AsyncMock(side_effect=retrieve_price)
 
         with (
-            patch("src.api.v1.billing.get_current_user", return_value=mock_user),
             patch("src.api.v1.billing.is_stripe_configured", return_value=True),
             patch("src.api.v1.billing.get_stripe_client", return_value=mock_client),
             patch(
@@ -1246,7 +1237,6 @@ class TestBillingStatusEndpoint:
         auth_headers: dict,
     ):
         """Only configured price IDs appear in pricing; unconfigured ones are omitted."""
-        mock_user = create_mock_user()
         mock_client = MagicMock()
         monthly_price = _make_stripe_price(
             unit_amount=2900, currency="eur", interval="month", interval_count=1
@@ -1254,7 +1244,6 @@ class TestBillingStatusEndpoint:
         mock_client.v1.prices.retrieve_async = AsyncMock(return_value=monthly_price)
 
         with (
-            patch("src.api.v1.billing.get_current_user", return_value=mock_user),
             patch("src.api.v1.billing.is_stripe_configured", return_value=True),
             patch("src.api.v1.billing.get_stripe_client", return_value=mock_client),
             patch(
