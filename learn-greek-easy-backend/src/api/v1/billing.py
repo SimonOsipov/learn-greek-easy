@@ -63,6 +63,8 @@ async def create_checkout_session(
             "billing_cycle": body.billing_cycle.value,
             "is_trialing": current_user.subscription_status == SubscriptionStatus.TRIALING,
             "user_id": str(current_user.id),
+            "has_promo_code": bool(body.promo_code),
+            "promo_code": body.promo_code or None,
         },
         user_email=current_user.email,
     )
