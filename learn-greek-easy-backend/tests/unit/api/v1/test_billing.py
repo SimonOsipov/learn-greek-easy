@@ -270,6 +270,277 @@ class TestCheckoutEndpoint:
         call_args = mock_service.create_checkout_session.call_args
         assert call_args.args[1] == BillingCycle.SEMI_ANNUAL
 
+    @pytest.mark.asyncio
+    async def test_checkout_accepts_promo_code(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+    ):
+        """Test that the checkout endpoint accepts an optional promo_code field."""
+        with (
+            patch("src.api.v1.billing.settings") as mock_settings,
+            patch("src.api.v1.billing.get_current_user") as mock_get_user,
+            patch("src.api.v1.billing.CheckoutService") as mock_service_class,
+            patch("src.api.v1.billing.capture_event"),
+        ):
+            mock_settings.stripe_configured = True
+            mock_user = create_mock_user(
+                subscription_tier=SubscriptionTier.FREE,
+                subscription_status=SubscriptionStatus.NONE,
+            )
+            mock_get_user.return_value = mock_user
+
+            mock_service = AsyncMock()
+            mock_service.create_checkout_session.return_value = (
+                "https://checkout.stripe.com/pay/cs_promo",
+                "cs_promo",
+            )
+            mock_service_class.return_value = mock_service
+
+            response = await client.post(
+                "/api/v1/billing/checkout/premium",
+                json={"billing_cycle": "monthly", "promo_code": "SAVE20"},
+                headers=auth_headers,
+            )
+
+        assert response.status_code == 200
+
+    @pytest.mark.asyncio
+    async def test_checkout_backward_compat_no_promo(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+    ):
+        """Test that the checkout endpoint remains compatible when promo_code is omitted."""
+        with (
+            patch("src.api.v1.billing.settings") as mock_settings,
+            patch("src.api.v1.billing.get_current_user") as mock_get_user,
+            patch("src.api.v1.billing.CheckoutService") as mock_service_class,
+            patch("src.api.v1.billing.capture_event"),
+        ):
+            mock_settings.stripe_configured = True
+            mock_user = create_mock_user(
+                subscription_tier=SubscriptionTier.FREE,
+                subscription_status=SubscriptionStatus.NONE,
+            )
+            mock_get_user.return_value = mock_user
+
+            mock_service = AsyncMock()
+            mock_service.create_checkout_session.return_value = (
+                "https://checkout.stripe.com/pay/cs_nopromo",
+                "cs_nopromo",
+            )
+            mock_service_class.return_value = mock_service
+
+            response = await client.post(
+                "/api/v1/billing/checkout/premium",
+                json={"billing_cycle": "monthly"},
+                headers=auth_headers,
+            )
+
+        assert response.status_code == 200
+
+    @pytest.mark.asyncio
+    async def test_checkout_promo_code_max_length(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+    ):
+        """Test that 422 is returned when promo_code exceeds 50 characters."""
+        with patch("src.api.v1.billing.settings") as mock_settings:
+            mock_settings.stripe_configured = True
+
+            response = await client.post(
+                "/api/v1/billing/checkout/premium",
+                json={"billing_cycle": "monthly", "promo_code": "x" * 51},
+                headers=auth_headers,
+            )
+
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_create_checkout_passes_promo_code_to_service(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+    ):
+        """Test that promo_code is passed through to the CheckoutService."""
+        with (
+            patch("src.api.v1.billing.settings") as mock_settings,
+            patch("src.api.v1.billing.get_current_user") as mock_get_user,
+            patch("src.api.v1.billing.CheckoutService") as mock_service_class,
+            patch("src.api.v1.billing.capture_event"),
+        ):
+            mock_settings.stripe_configured = True
+            mock_user = create_mock_user(
+                subscription_tier=SubscriptionTier.FREE,
+                subscription_status=SubscriptionStatus.NONE,
+            )
+            mock_get_user.return_value = mock_user
+
+            mock_service = AsyncMock()
+            mock_service.create_checkout_session.return_value = (
+                "https://checkout.stripe.com/pay/cs_promo",
+                "cs_promo",
+            )
+            mock_service_class.return_value = mock_service
+
+            response = await client.post(
+                "/api/v1/billing/checkout/premium",
+                json={"billing_cycle": "monthly", "promo_code": "SAVE20"},
+                headers=auth_headers,
+            )
+
+        assert response.status_code == 200
+        assert mock_service.create_checkout_session.call_args.kwargs["promo_code"] == "SAVE20"
+
+    @pytest.mark.asyncio
+    async def test_create_checkout_posthog_has_promo_code_true(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+    ):
+        """Test that PostHog event has has_promo_code=True and promo_code set when provided."""
+        with (
+            patch("src.api.v1.billing.settings") as mock_settings,
+            patch("src.api.v1.billing.get_current_user") as mock_get_user,
+            patch("src.api.v1.billing.CheckoutService") as mock_service_class,
+            patch("src.api.v1.billing.capture_event") as mock_capture,
+        ):
+            mock_settings.stripe_configured = True
+            mock_user = create_mock_user(
+                subscription_tier=SubscriptionTier.FREE,
+                subscription_status=SubscriptionStatus.NONE,
+            )
+            mock_get_user.return_value = mock_user
+
+            mock_service = AsyncMock()
+            mock_service.create_checkout_session.return_value = (
+                "https://checkout.stripe.com/pay/cs_promo",
+                "cs_promo",
+            )
+            mock_service_class.return_value = mock_service
+
+            response = await client.post(
+                "/api/v1/billing/checkout/premium",
+                json={"billing_cycle": "monthly", "promo_code": "SAVE20"},
+                headers=auth_headers,
+            )
+
+        assert response.status_code == 200
+        assert mock_capture.call_args.kwargs["properties"]["has_promo_code"] is True
+        assert mock_capture.call_args.kwargs["properties"]["promo_code"] == "SAVE20"
+
+    @pytest.mark.asyncio
+    async def test_create_checkout_posthog_has_promo_code_false(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+    ):
+        """Test that PostHog event has has_promo_code=False and promo_code=None when not provided."""
+        with (
+            patch("src.api.v1.billing.settings") as mock_settings,
+            patch("src.api.v1.billing.get_current_user") as mock_get_user,
+            patch("src.api.v1.billing.CheckoutService") as mock_service_class,
+            patch("src.api.v1.billing.capture_event") as mock_capture,
+        ):
+            mock_settings.stripe_configured = True
+            mock_user = create_mock_user(
+                subscription_tier=SubscriptionTier.FREE,
+                subscription_status=SubscriptionStatus.NONE,
+            )
+            mock_get_user.return_value = mock_user
+
+            mock_service = AsyncMock()
+            mock_service.create_checkout_session.return_value = (
+                "https://checkout.stripe.com/pay/cs_nopromo",
+                "cs_nopromo",
+            )
+            mock_service_class.return_value = mock_service
+
+            response = await client.post(
+                "/api/v1/billing/checkout/premium",
+                json={"billing_cycle": "monthly"},
+                headers=auth_headers,
+            )
+
+        assert response.status_code == 200
+        assert mock_capture.call_args.kwargs["properties"]["has_promo_code"] is False
+        assert mock_capture.call_args.kwargs["properties"]["promo_code"] is None
+
+    @pytest.mark.asyncio
+    async def test_trialing_user_checkout_with_promo(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+    ):
+        """Trialing user (FREE tier, TRIALING status) can checkout with promo_code — returns 200."""
+        with (
+            patch("src.api.v1.billing.settings") as mock_settings,
+            patch("src.api.v1.billing.get_current_user") as mock_get_user,
+            patch("src.api.v1.billing.CheckoutService") as mock_service_class,
+            patch("src.api.v1.billing.capture_event"),
+        ):
+            mock_settings.stripe_configured = True
+            mock_user = create_mock_user(
+                subscription_tier=SubscriptionTier.FREE,
+                subscription_status=SubscriptionStatus.TRIALING,
+            )
+            mock_get_user.return_value = mock_user
+
+            mock_service = AsyncMock()
+            mock_service.create_checkout_session.return_value = (
+                "https://checkout.stripe.com/pay/cs_test_abc",
+                "cs_test_abc",
+            )
+            mock_service_class.return_value = mock_service
+
+            response = await client.post(
+                "/api/v1/billing/checkout/premium",
+                json={"billing_cycle": "monthly", "promo_code": "WELCOME20"},
+                headers=auth_headers,
+            )
+
+        assert response.status_code == 200
+
+    @pytest.mark.asyncio
+    async def test_expired_trial_user_checkout_with_promo(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+    ):
+        """User with expired trial can checkout with promo_code — returns 200."""
+        from datetime import datetime, timezone
+
+        with (
+            patch("src.api.v1.billing.settings") as mock_settings,
+            patch("src.api.v1.billing.get_current_user") as mock_get_user,
+            patch("src.api.v1.billing.CheckoutService") as mock_service_class,
+            patch("src.api.v1.billing.capture_event"),
+        ):
+            mock_settings.stripe_configured = True
+            mock_user = create_mock_user(
+                subscription_tier=SubscriptionTier.FREE,
+                subscription_status=SubscriptionStatus.TRIALING,
+            )
+            mock_user.trial_end_date = datetime(2025, 1, 1, tzinfo=timezone.utc)
+            mock_get_user.return_value = mock_user
+
+            mock_service = AsyncMock()
+            mock_service.create_checkout_session.return_value = (
+                "https://checkout.stripe.com/pay/cs_test_def",
+                "cs_test_def",
+            )
+            mock_service_class.return_value = mock_service
+
+            response = await client.post(
+                "/api/v1/billing/checkout/premium",
+                json={"billing_cycle": "monthly", "promo_code": "WELCOME20"},
+                headers=auth_headers,
+            )
+
+        assert response.status_code == 200
+
 
 # =============================================================================
 # TestCheckoutServiceCustomerLogic - Tests for get-or-create customer logic

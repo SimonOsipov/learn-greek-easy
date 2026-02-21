@@ -9,6 +9,7 @@ class CheckoutRequest(BaseModel):
     """Schema for creating a checkout session."""
 
     billing_cycle: BillingCycle = Field(..., description="Billing cycle for the subscription")
+    promo_code: str | None = Field(None, max_length=50, description="Optional promotion code")
 
 
 class CheckoutResponse(BaseModel):

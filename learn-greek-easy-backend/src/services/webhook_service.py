@@ -123,6 +123,12 @@ class WebhookService:
         price_id = metadata.get("price_id")
         billing_cycle = price_id_to_billing_cycle(price_id) if price_id else None
 
+        # Extract promo code from metadata (stored during checkout session creation)
+        promo_code_str = metadata.get("promo_code") or None
+
+        # Extract discount details from Stripe event payload
+        discount_data = self._extract_discount_data(session)
+
         # Delegate activation to CheckoutService
         checkout_service = CheckoutService(self.db)
         result = await checkout_service.activate_premium_subscription(
@@ -133,6 +139,7 @@ class WebhookService:
         )
 
         if result == "activated":
+            has_promo = bool(discount_data or promo_code_str)
             self._track_event(
                 user,
                 "subscription_created",
@@ -143,8 +150,27 @@ class WebhookService:
                     "stripe_customer_id": session.get("customer"),
                     "stripe_subscription_id": session.get("subscription"),
                     "currency": session.get("currency"),
+                    "has_promo_code": has_promo,
+                    "promo_code": promo_code_str,
+                    "discount_percent_off": discount_data["percent_off"] if discount_data else None,
+                    "coupon_name": discount_data["coupon_name"] if discount_data else None,
                 },
             )
+
+            # Fire promo_code_applied only when a discount was actually applied
+            if discount_data:
+                self._track_event(
+                    user,
+                    "promo_code_applied",
+                    {
+                        "promo_code": promo_code_str,
+                        "coupon_id": discount_data["coupon_id"],
+                        "coupon_name": discount_data["coupon_name"],
+                        "percent_off": discount_data["percent_off"],
+                        "billing_cycle": billing_cycle.value if billing_cycle else None,
+                        "subscription_id": session.get("subscription"),
+                    },
+                )
 
     async def _handle_invoice_paid(self, event: dict) -> None:
         """Handle invoice.paid event.
@@ -355,6 +381,30 @@ class WebhookService:
     # =========================================================================
     # Helpers
     # =========================================================================
+
+    def _extract_discount_data(self, session: dict) -> dict | None:
+        """Extract discount/coupon data from checkout session payload.
+
+        Returns dict with coupon_id, coupon_name, percent_off, promotion_code_id
+        or None if no discount was applied.
+        """
+        total_details = session.get("total_details") or {}
+        breakdown = total_details.get("breakdown") or {}
+        discounts = breakdown.get("discounts") or []
+
+        if not discounts:
+            return None
+
+        first_discount = discounts[0]
+        discount_obj = first_discount.get("discount") or {}
+        coupon = discount_obj.get("coupon") or {}
+
+        return {
+            "coupon_id": coupon.get("id"),
+            "coupon_name": coupon.get("name"),
+            "percent_off": coupon.get("percent_off"),
+            "promotion_code_id": discount_obj.get("promotion_code"),
+        }
 
     async def _find_user_by_supabase_id(
         self, supabase_id: str | None, event_type: str

@@ -11,12 +11,12 @@ export function useCheckout() {
   const [isLoading, setIsLoading] = useState(false);
   const { t } = useTranslation('common');
 
-  const startCheckout = async (billingCycle: BillingCycle) => {
+  const startCheckout = async (billingCycle: BillingCycle, promoCode?: string) => {
     if (isLoading) return;
     setIsLoading(true);
 
     try {
-      const { checkout_url } = await billingAPI.createCheckoutSession(billingCycle);
+      const { checkout_url } = await billingAPI.createCheckoutSession(billingCycle, promoCode);
       // Navigate to Stripe — browser leaves page, button stays disabled
       window.location.href = checkout_url;
     } catch (error) {

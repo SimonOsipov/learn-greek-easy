@@ -15,10 +15,15 @@ export interface CheckoutVerifyResponse {
 }
 
 export const billingAPI = {
-  createCheckoutSession: async (billingCycle: BillingCycle): Promise<CheckoutSessionResponse> => {
-    return api.post<CheckoutSessionResponse>('/api/v1/billing/checkout/premium', {
-      billing_cycle: billingCycle,
-    });
+  createCheckoutSession: async (
+    billingCycle: BillingCycle,
+    promoCode?: string
+  ): Promise<CheckoutSessionResponse> => {
+    const body: Record<string, string> = { billing_cycle: billingCycle };
+    if (promoCode) {
+      body.promo_code = promoCode;
+    }
+    return api.post<CheckoutSessionResponse>('/api/v1/billing/checkout/premium', body);
   },
 
   verifyCheckout: async (sessionId: string): Promise<CheckoutVerifyResponse> => {
