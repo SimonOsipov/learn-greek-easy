@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-import { User, Settings, Shield, Menu, X } from 'lucide-react';
+import { CreditCard, Menu, Settings, Shield, User, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 // Import section components
@@ -8,12 +8,13 @@ import { PersonalInfoSection } from '@/components/profile/PersonalInfoSection';
 import { PreferencesSection } from '@/components/profile/PreferencesSection';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { SecuritySection } from '@/components/profile/SecuritySection';
+import { SubscriptionSection } from '@/components/profile/SubscriptionSection';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/authStore';
 
-type ProfileSection = 'personal' | 'preferences' | 'security';
+type ProfileSection = 'personal' | 'preferences' | 'security' | 'subscription';
 
 interface NavigationItem {
   id: ProfileSection;
@@ -36,6 +37,7 @@ export const Profile: React.FC = () => {
     { id: 'personal', labelKey: 'page.tabs.personalInfo', icon: User },
     { id: 'preferences', labelKey: 'page.tabs.preferences', icon: Settings },
     { id: 'security', labelKey: 'page.tabs.security', icon: Shield },
+    { id: 'subscription', labelKey: 'page.tabs.subscription', icon: CreditCard },
   ];
 
   const renderSection = () => {
@@ -46,6 +48,8 @@ export const Profile: React.FC = () => {
         return <PreferencesSection user={user} />;
       case 'security':
         return <SecuritySection />;
+      case 'subscription':
+        return <SubscriptionSection />;
       default:
         return null;
     }
