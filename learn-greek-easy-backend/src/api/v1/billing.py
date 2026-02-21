@@ -183,6 +183,35 @@ async def _fetch_pricing() -> list[PricingPlan]:
     return plans
 
 
+async def _fetch_subscription_price(
+    user: User,
+) -> tuple[int | None, str | None, str | None]:
+    """Fetch current subscription price from Stripe.
+    Returns (unit_amount, formatted_price, currency) or (None, None, None).
+    """
+    if (
+        not user.stripe_subscription_id
+        or user.subscription_status not in (SubscriptionStatus.ACTIVE, SubscriptionStatus.PAST_DUE)
+        or not is_stripe_configured()
+    ):
+        return None, None, None
+    try:
+        client = get_stripe_client()
+        subscription = await client.v1.subscriptions.retrieve_async(user.stripe_subscription_id)
+        price = subscription.items.data[0].price
+        unit_amount = price.unit_amount
+        currency = price.currency
+        formatted = f"{unit_amount / 100:.2f}"
+        return unit_amount, formatted, currency
+    except Exception:
+        logger.warning(
+            "Failed to fetch subscription price from Stripe",
+            stripe_subscription_id=user.stripe_subscription_id,
+            user_id=str(user.id),
+        )
+        return None, None, None
+
+
 @router.get("/status", response_model=BillingStatusResponse, status_code=status.HTTP_200_OK)
 async def get_billing_status(
     current_user: User = Depends(get_current_user),
@@ -193,6 +222,7 @@ async def get_billing_status(
         trial_days_remaining = max(0, remaining)
     effective_tier = get_effective_access_level(current_user)
     pricing = await _fetch_pricing()
+    price_amount, price_formatted, price_currency = await _fetch_subscription_price(current_user)
     return BillingStatusResponse(
         subscription_status=current_user.subscription_status.value,
         subscription_tier=current_user.subscription_tier.value,
@@ -201,4 +231,9 @@ async def get_billing_status(
         billing_cycle=current_user.billing_cycle.value if current_user.billing_cycle else None,
         is_premium=(effective_tier == SubscriptionTier.PREMIUM),
         pricing=pricing,
+        current_period_end=current_user.subscription_current_period_end,
+        cancel_at_period_end=current_user.subscription_cancel_at_period_end,
+        current_price_amount=price_amount,
+        current_price_formatted=price_formatted,
+        current_price_currency=price_currency,
     )
