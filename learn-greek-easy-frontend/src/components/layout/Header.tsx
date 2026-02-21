@@ -216,13 +216,17 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
                     {t('nav.profile')}
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  data-testid="premium-menu-item"
-                  onClick={(e) => e.preventDefault()}
-                  className="flex cursor-pointer items-center gap-2"
-                >
-                  <Crown className="h-4 w-4 text-amber-500" />
-                  {t('nav.premium')}
+                <DropdownMenuItem asChild>
+                  <Link
+                    to="/upgrade"
+                    data-testid="premium-menu-item"
+                    className="flex items-center gap-2"
+                  >
+                    <Crown className="h-4 w-4 text-amber-500" />
+                    {user?.role === 'premium' || user?.role === 'admin'
+                      ? t('nav.mySubscription')
+                      : t('nav.upgradeToPremium')}
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild onSelect={(e) => e.preventDefault()}>

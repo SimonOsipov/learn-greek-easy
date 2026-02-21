@@ -35,7 +35,9 @@ export type AnalyticsEventName =
   | 'purchase_started'
   | 'purchase_completed'
   // Billing events
-  | 'checkout_abandoned';
+  | 'checkout_abandoned'
+  | 'upgrade_page_viewed'
+  | 'billing_cycle_selected';
 
 // Base properties included with all events
 interface BaseEventProperties {

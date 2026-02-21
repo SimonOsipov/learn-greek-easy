@@ -25,7 +25,7 @@ const mockUser = {
   email: 'maria.papadopoulos@example.com',
   name: 'Maria Papadopoulos',
   avatar: 'https://example.com/avatar.jpg',
-  role: 'free' as const,
+  role: 'free' as 'free' | 'premium' | 'admin',
   preferences: {
     language: 'en' as const,
     dailyGoal: 20,
@@ -82,6 +82,8 @@ vi.mock('react-i18next', () => ({
         'nav.feedback': 'Feedback & Support',
         'nav.profile': 'Profile',
         'nav.premium': 'Premium',
+        'nav.upgradeToPremium': 'Upgrade to Premium',
+        'nav.mySubscription': 'My Subscription',
         'nav.logout': 'Logout',
         'nav.toggleMenu': 'Toggle Menu',
         'nav.userMenu': 'User Menu',
@@ -115,6 +117,7 @@ vi.mock('@/components/theme', () => ({
 describe('Header', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUser.role = 'free';
   });
 
   const renderHeader = () => {
@@ -251,7 +254,7 @@ describe('Header', () => {
       });
     });
 
-    it('should display Premium text', async () => {
+    it('should navigate to /upgrade', async () => {
       const user = userEvent.setup();
       renderHeader();
 
@@ -259,7 +262,34 @@ describe('Header', () => {
       await user.click(userMenuButton);
 
       await waitFor(() => {
-        expect(screen.getByText('Premium')).toBeInTheDocument();
+        const premiumItem = screen.getByTestId('premium-menu-item');
+        expect(premiumItem.closest('a')).toHaveAttribute('href', '/upgrade');
+      });
+    });
+
+    it('should display "Upgrade to Premium" text for free user', async () => {
+      const user = userEvent.setup();
+      renderHeader();
+
+      const userMenuButton = screen.getByTestId('user-menu-trigger');
+      await user.click(userMenuButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('Upgrade to Premium')).toBeInTheDocument();
+      });
+    });
+
+    it('should display "My Subscription" text for premium user', async () => {
+      mockUser.role = 'premium';
+
+      const user = userEvent.setup();
+      renderHeader();
+
+      const userMenuButton = screen.getByTestId('user-menu-trigger');
+      await user.click(userMenuButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('My Subscription')).toBeInTheDocument();
       });
     });
 
