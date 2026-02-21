@@ -201,6 +201,8 @@ async def _fetch_subscription_price(
         price = subscription.items.data[0].price
         unit_amount = price.unit_amount
         currency = price.currency
+        if unit_amount is None:
+            return None, None, currency
         formatted = f"{unit_amount / 100:.2f}"
         return unit_amount, formatted, currency
     except Exception:
