@@ -47,8 +47,10 @@ class SubscriptionService:
             raise PlanChangeNotAllowedException("Already on this billing cycle")
 
         # Retrieve current subscription from Stripe to get item ID
+        # stripe_subscription_id is guaranteed non-None by _require_active_subscription
+        subscription_id: str = user.stripe_subscription_id  # type: ignore[assignment]
         client = get_stripe_client()
-        subscription = await client.v1.subscriptions.retrieve_async(user.stripe_subscription_id)
+        subscription = await client.v1.subscriptions.retrieve_async(subscription_id)
         current_item_id = subscription.items.data[0].id
 
         # Get the new price ID
@@ -63,7 +65,7 @@ class SubscriptionService:
 
         # Update subscription on Stripe
         await client.v1.subscriptions.update_async(
-            user.stripe_subscription_id,
+            subscription_id,
             params={
                 "items": [{"id": current_item_id, "price": new_price_id}],
                 "proration_behavior": "create_prorations",
@@ -100,9 +102,11 @@ class SubscriptionService:
             raise SubscriptionAlreadyCancelingException()
 
         # Update Stripe subscription
+        # stripe_subscription_id is guaranteed non-None by _require_active_subscription
+        subscription_id: str = user.stripe_subscription_id  # type: ignore[assignment]
         client = get_stripe_client()
         await client.v1.subscriptions.update_async(
-            user.stripe_subscription_id,
+            subscription_id,
             params={"cancel_at_period_end": True},
         )
 
@@ -135,9 +139,11 @@ class SubscriptionService:
             )
 
         # Update Stripe subscription
+        # stripe_subscription_id is guaranteed non-None by _require_active_subscription
+        subscription_id: str = user.stripe_subscription_id  # type: ignore[assignment]
         client = get_stripe_client()
         await client.v1.subscriptions.update_async(
-            user.stripe_subscription_id,
+            subscription_id,
             params={"cancel_at_period_end": False},
         )
 
