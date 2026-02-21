@@ -680,6 +680,95 @@ class TestCheckoutSessionCompleted:
         assert user.subscription_tier == SubscriptionTier.PREMIUM
         assert user.subscription_status == SubscriptionStatus.ACTIVE
 
+    @pytest.mark.asyncio
+    async def test_full_promo_flow_checkout_to_webhook(self):
+        """Full flow: promo code in metadata + discount in total_details → both events fire."""
+        user = _make_user(
+            subscription_status=SubscriptionStatus.NONE,
+            subscription_tier=SubscriptionTier.FREE,
+        )
+        svc = _make_service()
+        svc.user_repo = _make_mock_user_repo(user=user)
+        svc.webhook_repo = _make_mock_webhook_repo()
+
+        event = self._make_event(
+            price_id=PRICE_MONTHLY,
+            promo_code="WELCOME20",
+            discount_data={
+                "coupon_id": "coupon_welcome",
+                "coupon_name": "WELCOME20 Coupon",
+                "percent_off": 20.0,
+                "promotion_code_id": "promo_welcome",
+            },
+        )
+
+        with _patch_settings(), patch("src.services.webhook_service.capture_event") as mock_capture:
+            await svc.process_event(event)
+
+        assert mock_capture.call_count == 2
+        sub_call = next(
+            c for c in mock_capture.call_args_list if c.kwargs["event"] == "subscription_created"
+        )
+        promo_call = next(
+            c for c in mock_capture.call_args_list if c.kwargs["event"] == "promo_code_applied"
+        )
+
+        assert sub_call.kwargs["properties"]["has_promo_code"] is True
+        assert sub_call.kwargs["properties"]["promo_code"] == "WELCOME20"
+        assert sub_call.kwargs["properties"]["discount_percent_off"] == 20.0
+        assert sub_call.kwargs["properties"]["coupon_name"] == "WELCOME20 Coupon"
+
+        assert promo_call.kwargs["properties"]["promo_code"] == "WELCOME20"
+        assert promo_call.kwargs["properties"]["coupon_id"] == "coupon_welcome"
+        assert promo_call.kwargs["properties"]["percent_off"] == 20.0
+        assert promo_call.kwargs["properties"]["billing_cycle"] == "monthly"
+
+    @pytest.mark.asyncio
+    async def test_promo_code_in_metadata_but_no_discount_in_total_details(self):
+        """Promo code in metadata but no discount applied — has_promo_code=True, promo_code_applied NOT fired."""
+        user = _make_user(
+            subscription_status=SubscriptionStatus.NONE,
+            subscription_tier=SubscriptionTier.FREE,
+        )
+        svc = _make_service()
+        svc.user_repo = _make_mock_user_repo(user=user)
+        svc.webhook_repo = _make_mock_webhook_repo()
+
+        # promo_code in metadata, but no discount_data (no total_details in session)
+        event = self._make_event(promo_code="WELCOME20")
+
+        with _patch_settings(), patch("src.services.webhook_service.capture_event") as mock_capture:
+            await svc.process_event(event)
+
+        assert mock_capture.call_count == 1
+        sub_call = mock_capture.call_args_list[0]
+        assert sub_call.kwargs["event"] == "subscription_created"
+        assert sub_call.kwargs["properties"]["has_promo_code"] is True
+        assert sub_call.kwargs["properties"]["promo_code"] == "WELCOME20"
+        assert sub_call.kwargs["properties"]["discount_percent_off"] is None
+
+    @pytest.mark.asyncio
+    async def test_backward_compat_checkout_without_promo_fields(self):
+        """Old-format webhook events (no promo_code in metadata, no total_details) still work."""
+        user = _make_user(
+            subscription_status=SubscriptionStatus.NONE,
+            subscription_tier=SubscriptionTier.FREE,
+        )
+        svc = _make_service()
+        svc.user_repo = _make_mock_user_repo(user=user)
+        svc.webhook_repo = _make_mock_webhook_repo()
+
+        # No promo_code, no total_details — simulates pre-BP-08 checkout events
+        event = self._make_event(price_id=PRICE_MONTHLY)
+
+        with _patch_settings(), patch("src.services.webhook_service.capture_event") as mock_capture:
+            await svc.process_event(event)
+
+        mock_capture.assert_called_once()
+        assert mock_capture.call_args.kwargs["event"] == "subscription_created"
+        assert mock_capture.call_args.kwargs["properties"]["has_promo_code"] is False
+        assert mock_capture.call_args.kwargs["properties"]["promo_code"] is None
+
 
 # ---------------------------------------------------------------------------
 # Test: invoice.paid
