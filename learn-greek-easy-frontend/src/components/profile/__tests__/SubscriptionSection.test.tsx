@@ -48,15 +48,28 @@ vi.mock('@/lib/errorReporting', () => ({
   reportAPIError: vi.fn(),
 }));
 
-// Tooltip in Radix requires a Provider.  Provide a minimal inline mock so
-// tests do not need a full Radix context provider.
-vi.mock('@/components/ui/tooltip', () => ({
-  Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  TooltipTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) =>
-    asChild ? <>{children}</> : <span>{children}</span>,
-  TooltipContent: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="tooltip-content">{children}</div>
-  ),
+vi.mock('@/hooks/useSubscriptionActions', () => ({
+  useSubscriptionActions: () => ({
+    changePlan: vi.fn(),
+    cancelSubscription: vi.fn(),
+    reactivateSubscription: vi.fn(),
+    isChangingPlan: false,
+    isCanceling: false,
+    isReactivating: false,
+  }),
+}));
+
+vi.mock('@/components/subscription/ChangePlanDialog', () => ({
+  ChangePlanDialog: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="change-plan-dialog">ChangePlanDialog</div> : null,
+}));
+vi.mock('@/components/subscription/CancelDialog', () => ({
+  CancelDialog: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="cancel-dialog">CancelDialog</div> : null,
+}));
+vi.mock('@/components/subscription/ReactivateDialog', () => ({
+  ReactivateDialog: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="reactivate-dialog">ReactivateDialog</div> : null,
 }));
 
 // ---------------------------------------------------------------------------
@@ -254,13 +267,16 @@ describe('SubscriptionSection', () => {
       expect(screen.queryByText('Billing details')).not.toBeInTheDocument();
     });
 
-    it('does not show manage subscription or reactivate buttons', async () => {
+    it('does not show change plan, cancel, or reactivate buttons', async () => {
       renderComponent();
       await waitFor(() => {
         expect(screen.getByText('Free')).toBeInTheDocument();
       });
-      expect(screen.queryByRole('button', { name: 'Manage Subscription' })).not.toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'Reactivate' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Change Plan' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Cancel Subscription' })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: 'Reactivate Subscription' })
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -380,28 +396,21 @@ describe('SubscriptionSection', () => {
       });
     });
 
-    it('renders a disabled Manage Subscription button', async () => {
+    it('renders an enabled Change Plan button', async () => {
       renderComponent();
       await waitFor(() => {
-        const btn = screen.getByRole('button', { name: 'Manage Subscription' });
-        expect(btn).toBeDisabled();
+        const btn = screen.getByRole('button', { name: 'Change Plan' });
+        expect(btn).toBeInTheDocument();
+        expect(btn).not.toBeDisabled();
       });
     });
 
-    it('wraps disabled Manage Subscription button in a span (AC-15)', async () => {
+    it('renders an enabled Cancel Subscription button', async () => {
       renderComponent();
       await waitFor(() => {
-        const btn = screen.getByRole('button', { name: 'Manage Subscription' });
-        // Parent should be a span (for Radix Tooltip compatibility)
-        expect(btn.closest('span')).not.toBeNull();
-      });
-    });
-
-    it('shows coming soon tooltip text', async () => {
-      renderComponent();
-      await waitFor(() => {
-        expect(screen.getByTestId('tooltip-content')).toBeInTheDocument();
-        expect(screen.getByText('Coming soon')).toBeInTheDocument();
+        const btn = screen.getByRole('button', { name: 'Cancel Subscription' });
+        expect(btn).toBeInTheDocument();
+        expect(btn).not.toBeDisabled();
       });
     });
   });
@@ -479,21 +488,22 @@ describe('SubscriptionSection', () => {
       expect(listItems).toHaveLength(PREMIUM_ONLY_FEATURES.length);
     });
 
-    it('renders a disabled Reactivate button wrapped in a span (AC-15)', async () => {
+    it('renders an enabled Reactivate Subscription button', async () => {
       renderComponent();
       await waitFor(() => {
-        const btn = screen.getByRole('button', { name: 'Reactivate' });
-        expect(btn).toBeDisabled();
-        expect(btn.closest('span')).not.toBeNull();
+        const btn = screen.getByRole('button', { name: 'Reactivate Subscription' });
+        expect(btn).toBeInTheDocument();
+        expect(btn).not.toBeDisabled();
       });
     });
 
-    it('does not show manage subscription button in cancelled state', async () => {
+    it('does not show change plan or cancel buttons in cancelled state', async () => {
       renderComponent();
       await waitFor(() => {
         expect(screen.getByText('Premium (Cancelled)')).toBeInTheDocument();
       });
-      expect(screen.queryByRole('button', { name: 'Manage Subscription' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Change Plan' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Cancel Subscription' })).not.toBeInTheDocument();
     });
   });
 
@@ -506,13 +516,13 @@ describe('SubscriptionSection', () => {
       });
     });
 
-    it('shows Reactivate (not Manage Subscription) for cancel_at_period_end', async () => {
+    it('shows Reactivate Subscription (not Change Plan) for cancel_at_period_end', async () => {
       mockGetBillingStatus.mockResolvedValue(CANCELLED_VIA_PERIOD_END);
       renderComponent();
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: 'Reactivate' })).toBeDisabled();
+        expect(screen.getByRole('button', { name: 'Reactivate Subscription' })).not.toBeDisabled();
       });
-      expect(screen.queryByRole('button', { name: 'Manage Subscription' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Change Plan' })).not.toBeInTheDocument();
     });
   });
 
@@ -552,11 +562,12 @@ describe('SubscriptionSection', () => {
       });
     });
 
-    it('renders a disabled Manage Subscription button', async () => {
+    it('renders an enabled Cancel Subscription button', async () => {
       renderComponent();
       await waitFor(() => {
-        const btn = screen.getByRole('button', { name: 'Manage Subscription' });
-        expect(btn).toBeDisabled();
+        const btn = screen.getByRole('button', { name: 'Cancel Subscription' });
+        expect(btn).toBeInTheDocument();
+        expect(btn).not.toBeDisabled();
       });
     });
 
@@ -646,30 +657,32 @@ describe('SubscriptionSection', () => {
   // -------------------------------------------------------------------------
 
   describe('getSubscriptionState priority logic (AC-4, AC-6)', () => {
-    it('treats canceled status as cancelled (reactivate shown, not manage)', async () => {
+    it('treats canceled status as cancelled (reactivate shown, not change plan)', async () => {
       mockGetBillingStatus.mockResolvedValue(CANCELLED_VIA_STATUS);
       renderComponent();
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: 'Reactivate' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Reactivate Subscription' })).toBeInTheDocument();
       });
-      expect(screen.queryByRole('button', { name: 'Manage Subscription' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Change Plan' })).not.toBeInTheDocument();
     });
 
     it('treats cancel_at_period_end=true as cancelled even when status=active', async () => {
       mockGetBillingStatus.mockResolvedValue(CANCELLED_VIA_PERIOD_END);
       renderComponent();
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: 'Reactivate' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Reactivate Subscription' })).toBeInTheDocument();
       });
     });
 
-    it('treats past_due separately from cancelled (manage shown, not reactivate)', async () => {
+    it('treats past_due separately from cancelled (cancel shown, not reactivate)', async () => {
       mockGetBillingStatus.mockResolvedValue(PAST_DUE_STATUS);
       renderComponent();
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: 'Manage Subscription' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Cancel Subscription' })).toBeInTheDocument();
       });
-      expect(screen.queryByRole('button', { name: 'Reactivate' })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: 'Reactivate Subscription' })
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -720,6 +733,43 @@ describe('SubscriptionSection', () => {
         expect(dateEl).toBeInTheDocument();
         expect(dateEl.textContent).toMatch(/\(.+\)/);
       });
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Dialog opening behavior
+  // -------------------------------------------------------------------------
+
+  describe('dialog opening behavior', () => {
+    it('opens ChangePlanDialog when Change Plan is clicked in active state', async () => {
+      mockGetBillingStatus.mockResolvedValue(ACTIVE_STATUS);
+      renderComponent();
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Change Plan' })).toBeInTheDocument();
+      });
+      expect(screen.queryByTestId('change-plan-dialog')).not.toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: 'Change Plan' }));
+      expect(screen.getByTestId('change-plan-dialog')).toBeInTheDocument();
+    });
+
+    it('opens CancelDialog when Cancel Subscription is clicked in active state', async () => {
+      mockGetBillingStatus.mockResolvedValue(ACTIVE_STATUS);
+      renderComponent();
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Cancel Subscription' })).toBeInTheDocument();
+      });
+      await userEvent.click(screen.getByRole('button', { name: 'Cancel Subscription' }));
+      expect(screen.getByTestId('cancel-dialog')).toBeInTheDocument();
+    });
+
+    it('opens ReactivateDialog when Reactivate Subscription is clicked in cancelled state', async () => {
+      mockGetBillingStatus.mockResolvedValue(CANCELLED_VIA_STATUS);
+      renderComponent();
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Reactivate Subscription' })).toBeInTheDocument();
+      });
+      await userEvent.click(screen.getByRole('button', { name: 'Reactivate Subscription' }));
+      expect(screen.getByTestId('reactivate-dialog')).toBeInTheDocument();
     });
   });
 });

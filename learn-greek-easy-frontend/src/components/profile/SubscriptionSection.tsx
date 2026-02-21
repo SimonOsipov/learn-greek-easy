@@ -7,10 +7,12 @@ import { AlertTriangle, Crown, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
+import { CancelDialog } from '@/components/subscription/CancelDialog';
+import { ChangePlanDialog } from '@/components/subscription/ChangePlanDialog';
+import { ReactivateDialog } from '@/components/subscription/ReactivateDialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { PREMIUM_ONLY_FEATURES } from '@/constants/premiumFeatures';
 import { useTrackEvent } from '@/hooks/useTrackEvent';
 import { reportAPIError } from '@/lib/errorReporting';
@@ -35,6 +37,9 @@ export const SubscriptionSection: React.FC = () => {
   const [billingStatus, setBillingStatus] = useState<BillingStatusResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [changePlanOpen, setChangePlanOpen] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [reactivateOpen, setReactivateOpen] = useState(false);
 
   const fetchStatus = useCallback(() => {
     setError(null);
@@ -280,8 +285,9 @@ export const SubscriptionSection: React.FC = () => {
 
       {/* Action Buttons */}
       <div className="mt-4">
-        {state === 'free' && (
+        {(state === 'free' || state === 'trialing') && (
           <Button
+            className="w-full"
             onClick={() => {
               handleActionClick('subscribe_now');
               navigate('/upgrade');
@@ -290,44 +296,78 @@ export const SubscriptionSection: React.FC = () => {
             {t('subscription.subscribeNow')}
           </Button>
         )}
-
-        {state === 'trialing' && (
-          <Button
-            onClick={() => {
-              handleActionClick('subscribe_now');
-              navigate('/upgrade');
-            }}
-          >
-            {t('subscription.subscribeNow')}
-          </Button>
+        {state === 'active' && !billingStatus.cancel_at_period_end && (
+          <div className="flex gap-2">
+            <Button
+              className="flex-1"
+              variant="default"
+              onClick={() => {
+                handleActionClick('change_plan');
+                setChangePlanOpen(true);
+              }}
+            >
+              {t('subscription.changePlan', 'Change Plan')}
+            </Button>
+            <Button
+              variant="ghost"
+              className="flex-1 text-destructive hover:text-destructive"
+              onClick={() => {
+                handleActionClick('cancel_subscription');
+                setCancelOpen(true);
+              }}
+            >
+              {t('subscription.cancelSubscription', 'Cancel Subscription')}
+            </Button>
+          </div>
         )}
-
-        {(state === 'active' || state === 'past_due') && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span tabIndex={0} className="inline-block">
-                <Button disabled>{t('subscription.manageSubscription')}</Button>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{t('subscription.comingSoon')}</p>
-            </TooltipContent>
-          </Tooltip>
-        )}
-
         {state === 'cancelled' && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span tabIndex={0} className="inline-block">
-                <Button disabled>{t('subscription.reactivate')}</Button>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{t('subscription.comingSoon')}</p>
-            </TooltipContent>
-          </Tooltip>
+          <Button
+            className="w-full"
+            variant="default"
+            onClick={() => {
+              handleActionClick('reactivate_subscription');
+              setReactivateOpen(true);
+            }}
+          >
+            {t('subscription.reactivateSubscription', 'Reactivate Subscription')}
+          </Button>
+        )}
+        {state === 'past_due' && (
+          <Button
+            variant="ghost"
+            className="w-full text-destructive hover:text-destructive"
+            onClick={() => {
+              handleActionClick('cancel_subscription');
+              setCancelOpen(true);
+            }}
+          >
+            {t('subscription.cancelSubscription', 'Cancel Subscription')}
+          </Button>
         )}
       </div>
+
+      {billingStatus && (
+        <>
+          <ChangePlanDialog
+            open={changePlanOpen}
+            onOpenChange={setChangePlanOpen}
+            billingStatus={billingStatus}
+            onSuccess={fetchStatus}
+          />
+          <CancelDialog
+            open={cancelOpen}
+            onOpenChange={setCancelOpen}
+            periodEndDate={billingStatus.current_period_end}
+            onSuccess={fetchStatus}
+          />
+          <ReactivateDialog
+            open={reactivateOpen}
+            onOpenChange={setReactivateOpen}
+            billingStatus={billingStatus}
+            onSuccess={fetchStatus}
+          />
+        </>
+      )}
     </div>
   );
 };
