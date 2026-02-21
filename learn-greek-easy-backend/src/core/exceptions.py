@@ -419,6 +419,33 @@ class CheckoutUserMismatchException(BaseAPIException):
         )
 
 
+class SubscriptionNotActiveException(BaseAPIException):
+    def __init__(self, detail: str = "User does not have an active subscription") -> None:
+        super().__init__(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=detail,
+            error_code="SUBSCRIPTION_NOT_ACTIVE",
+        )
+
+
+class PlanChangeNotAllowedException(BaseAPIException):
+    def __init__(self, detail: str = "Plan change is not allowed for this subscription") -> None:
+        super().__init__(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=detail,
+            error_code="PLAN_CHANGE_NOT_ALLOWED",
+        )
+
+
+class SubscriptionAlreadyCancelingException(BaseAPIException):
+    def __init__(self, detail: str = "Subscription is already scheduled for cancellation") -> None:
+        super().__init__(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=detail,
+            error_code="SUBSCRIPTION_ALREADY_CANCELING",
+        )
+
+
 # ============================================================================
 # ElevenLabs Service Exceptions
 # ============================================================================
