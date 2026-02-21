@@ -41,6 +41,7 @@ export const NAMESPACES = [
   'landing', // Landing page
   'achievements', // Achievement cards and categories
   'changelog', // Changelog tag labels
+  'upgrade', // Upgrade/pricing page
 ] as const;
 
 export type Namespace = (typeof NAMESPACES)[number];

@@ -128,6 +128,8 @@
       "newsFeed": "News Feed"
     },
     "premium": "Premium",
+    "upgradeToPremium": "Upgrade to Premium",
+    "mySubscription": "My Subscription",
     "feedbackDropdown": {
       "feedback": "Submit Feedback",
       "changelog": "New Features & Changes"

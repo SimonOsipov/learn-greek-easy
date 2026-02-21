@@ -433,3 +433,35 @@ class TestCreateCheckoutSessionPromoCode:
         params = mock_client.v1.checkout.sessions.create_async.call_args.kwargs["params"]
         assert params["allow_promotion_codes"] is True
         assert params["metadata"]["promo_code"] == ""
+
+
+@pytest.mark.unit
+@pytest.mark.stripe
+class TestCheckoutSessionCancelUrl:
+    """Tests for cancel_url pointing to /upgrade."""
+
+    @pytest.mark.asyncio
+    async def test_checkout_session_cancel_url_points_to_upgrade(self):
+        """Verify cancel_url equals {frontend_url}/upgrade."""
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        mock_db = MagicMock()
+        service = CheckoutService(mock_db)
+        mock_user, mock_session = _make_checkout_mocks()
+
+        with (
+            patch("src.services.checkout_service.billing_cycle_to_price_id") as mock_price,
+            patch("src.services.checkout_service.get_stripe_client") as mock_get_client,
+            patch("src.services.checkout_service.settings") as mock_settings,
+        ):
+            mock_price.return_value = "price_monthly_test"
+            mock_settings.frontend_url = "https://app.example.com"
+
+            mock_client = MagicMock()
+            mock_client.v1.checkout.sessions.create_async = AsyncMock(return_value=mock_session)
+            mock_get_client.return_value = mock_client
+
+            await service.create_checkout_session(mock_user, BillingCycle.MONTHLY)
+
+        params = mock_client.v1.checkout.sessions.create_async.call_args.kwargs["params"]
+        assert params["cancel_url"] == "https://app.example.com/upgrade"

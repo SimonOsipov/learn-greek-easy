@@ -14,6 +14,26 @@ export interface CheckoutVerifyResponse {
   subscription_status: string;
 }
 
+export interface PricingPlan {
+  billing_cycle: string;
+  price_amount: number;
+  price_formatted: string;
+  currency: string;
+  interval: string;
+  interval_count: number;
+  savings_percent: number | null;
+}
+
+export interface BillingStatusResponse {
+  subscription_status: string;
+  subscription_tier: string;
+  trial_end_date: string | null;
+  trial_days_remaining: number | null;
+  billing_cycle: string | null;
+  is_premium: boolean;
+  pricing: PricingPlan[];
+}
+
 export const billingAPI = {
   createCheckoutSession: async (
     billingCycle: BillingCycle,
@@ -30,5 +50,9 @@ export const billingAPI = {
     return api.post<CheckoutVerifyResponse>('/api/v1/billing/checkout/verify', {
       session_id: sessionId,
     });
+  },
+
+  getBillingStatus: async (): Promise<BillingStatusResponse> => {
+    return api.get<BillingStatusResponse>('/api/v1/billing/status');
   },
 };

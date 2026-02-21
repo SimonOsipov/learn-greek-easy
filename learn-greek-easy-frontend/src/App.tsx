@@ -169,6 +169,9 @@ const CheckoutSuccessPage = lazyWithRetry(() =>
 const CheckoutCancelPage = lazyWithRetry(() =>
   import('@/pages/CheckoutCancelPage').then((m) => ({ default: m.CheckoutCancelPage }))
 );
+const UpgradePage = lazyWithRetry(() =>
+  import('@/pages/UpgradePage').then((m) => ({ default: m.UpgradePage }))
+);
 
 function AppContent() {
   const isAppReady = useAppStore(selectIsReady);
@@ -290,6 +293,9 @@ function AppContent() {
                 </Route>
                 <Route path="/checkout/success" element={<CheckoutSuccessPage />} />
                 <Route path="/checkout/cancel" element={<CheckoutCancelPage />} />
+                <Route path="/upgrade" element={<AppLayout />}>
+                  <Route index element={<UpgradePage />} />
+                </Route>
               </Route>
 
               {/* Admin Routes - require admin role */}
