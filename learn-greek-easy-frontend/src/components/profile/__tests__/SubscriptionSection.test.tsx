@@ -17,6 +17,7 @@ import { BrowserRouter } from 'react-router-dom';
 
 import { SubscriptionSection } from '../SubscriptionSection';
 import type { BillingStatusResponse } from '@/services/billingAPI';
+import { PREMIUM_ONLY_FEATURES } from '@/constants/premiumFeatures';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -467,6 +468,15 @@ describe('SubscriptionSection', () => {
       await waitFor(() => {
         expect(screen.getByText("Features you'll lose")).toBeInTheDocument();
       });
+    });
+
+    it('feature loss list length matches PREMIUM_ONLY_FEATURES.length', async () => {
+      renderComponent();
+      await waitFor(() => {
+        expect(screen.getByText("Features you'll lose")).toBeInTheDocument();
+      });
+      const listItems = screen.getAllByRole('listitem');
+      expect(listItems).toHaveLength(PREMIUM_ONLY_FEATURES.length);
     });
 
     it('renders a disabled Reactivate button wrapped in a span (AC-15)', async () => {
