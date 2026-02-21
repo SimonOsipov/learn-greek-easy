@@ -4,7 +4,7 @@ Tests cover:
 - Idempotency: duplicate event returns early without DB mutation
 - Unknown events: recorded as completed, returns True
 - checkout.session.completed: sets PREMIUM, Stripe IDs, billing_cycle,
-  subscription_created_at; preserves trial dates; sets resubscribed_at for
+  subscription_created_at; clears trial dates; sets resubscribed_at for
   previously-canceled users; marks failed on user-not-found; fires PostHog
 - invoice.paid: sets ACTIVE, updates period_end and subscription_created_at;
   fires subscription_renewed for non-first invoices only
@@ -413,8 +413,8 @@ class TestCheckoutSessionCompleted:
         assert user.subscription_resubscribed_at is None
 
     @pytest.mark.asyncio
-    async def test_does_not_touch_trial_dates(self):
-        """trial_start_date and trial_end_date are NOT modified."""
+    async def test_clears_trial_dates(self):
+        """trial_start_date and trial_end_date are cleared to None."""
         from datetime import datetime, timezone
 
         trial_start = datetime(2024, 3, 1, tzinfo=timezone.utc)
@@ -427,8 +427,8 @@ class TestCheckoutSessionCompleted:
         with _patch_settings(), patch("src.services.webhook_service.capture_event"):
             await svc.process_event(self._make_event())
 
-        assert user.trial_start_date == trial_start
-        assert user.trial_end_date == trial_end
+        assert user.trial_start_date is None
+        assert user.trial_end_date is None
 
     @pytest.mark.asyncio
     async def test_user_not_found_marks_event_failed(self):

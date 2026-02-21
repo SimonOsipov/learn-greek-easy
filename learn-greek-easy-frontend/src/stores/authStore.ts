@@ -112,7 +112,8 @@ export const useAuthStore = create<AuthState>()(
             email: profileResponse.email,
             name: profileResponse.full_name || profileResponse.email.split('@')[0],
             avatar: profileResponse.avatar_url || undefined,
-            role: profileResponse.is_superuser ? 'admin' : 'free',
+            role:
+              profileResponse.effective_role ?? (profileResponse.is_superuser ? 'admin' : 'free'),
             preferences: {
               // Preserve current language (backend doesn't store it yet)
               language: updates.preferences?.language ?? user.preferences.language,
@@ -203,7 +204,8 @@ export const useAuthStore = create<AuthState>()(
             email: profileResponse.email,
             name: profileResponse.full_name || profileResponse.email.split('@')[0],
             avatar: profileResponse.avatar_url || undefined,
-            role: profileResponse.is_superuser ? 'admin' : 'free',
+            role:
+              profileResponse.effective_role ?? (profileResponse.is_superuser ? 'admin' : 'free'),
             preferences: {
               language: 'en',
               dailyGoal: profileResponse.settings?.daily_goal || 20,

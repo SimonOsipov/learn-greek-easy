@@ -39,3 +39,6 @@ export type { UseMockExamTimerOptions, UseMockExamTimerResult } from './useMockE
 
 // Audio hooks
 export { useAudioPlayer } from './useAudioPlayer';
+
+// Checkout hooks
+export { useCheckout } from './useCheckout';

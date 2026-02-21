@@ -17,6 +17,7 @@ from sqlalchemy.orm import selectinload
 
 from src.core.dependencies import get_current_user
 from src.core.logging import get_logger
+from src.core.subscription import get_effective_access_level
 from src.db.dependencies import get_db
 from src.db.models import User
 from src.repositories.user import UserSettingsRepository
@@ -76,6 +77,12 @@ def _build_user_profile_response(user: User, auth_provider: str = "email") -> Us
     response.avatar_url = avatar_presigned_url
     # Set auth_provider
     response.auth_provider = auth_provider
+
+    # Compute effective role from subscription status
+    if user.is_superuser:
+        response.effective_role = "admin"
+    else:
+        response.effective_role = get_effective_access_level(user).value
 
     return response
 

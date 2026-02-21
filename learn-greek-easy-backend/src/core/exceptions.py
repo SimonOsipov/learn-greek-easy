@@ -372,6 +372,53 @@ class NewsItemNotFoundException(NotFoundException):
         super().__init__(resource="NewsItem", detail=detail)
 
 
+# ── Billing Exceptions ──────────────────────────────────────────────
+
+
+class BillingNotConfiguredException(BaseAPIException):
+    """Stripe billing is not configured."""
+
+    def __init__(self, detail: str = "Stripe billing is not configured") -> None:
+        super().__init__(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=detail,
+            error_code="BILLING_NOT_CONFIGURED",
+        )
+
+
+class AlreadyPremiumException(BaseAPIException):
+    """User already has an active premium subscription."""
+
+    def __init__(self, detail: str = "You already have an active premium subscription") -> None:
+        super().__init__(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=detail,
+            error_code="ALREADY_PREMIUM",
+        )
+
+
+class CheckoutNotPaidException(BaseAPIException):
+    """Checkout session payment is not complete."""
+
+    def __init__(self, detail: str = "Payment has not been completed") -> None:
+        super().__init__(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=detail,
+            error_code="CHECKOUT_NOT_PAID",
+        )
+
+
+class CheckoutUserMismatchException(BaseAPIException):
+    """Checkout session user does not match authenticated user."""
+
+    def __init__(self, detail: str = "Checkout session does not belong to this user") -> None:
+        super().__init__(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=detail,
+            error_code="CHECKOUT_USER_MISMATCH",
+        )
+
+
 # ============================================================================
 # ElevenLabs Service Exceptions
 # ============================================================================

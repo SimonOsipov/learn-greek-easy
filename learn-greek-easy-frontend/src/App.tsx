@@ -163,6 +163,13 @@ const WordPracticePage = lazyWithRetry(() =>
   }))
 );
 
+const CheckoutSuccessPage = lazyWithRetry(() =>
+  import('@/pages/CheckoutSuccessPage').then((m) => ({ default: m.CheckoutSuccessPage }))
+);
+const CheckoutCancelPage = lazyWithRetry(() =>
+  import('@/pages/CheckoutCancelPage').then((m) => ({ default: m.CheckoutCancelPage }))
+);
+
 function AppContent() {
   const isAppReady = useAppStore(selectIsReady);
   const setReactHydrated = useAppStore((state) => state.setReactHydrated);
@@ -281,6 +288,8 @@ function AppContent() {
                 <Route path="/news" element={<AppLayout />}>
                   <Route index element={<NewsPage />} />
                 </Route>
+                <Route path="/checkout/success" element={<CheckoutSuccessPage />} />
+                <Route path="/checkout/cancel" element={<CheckoutCancelPage />} />
               </Route>
 
               {/* Admin Routes - require admin role */}

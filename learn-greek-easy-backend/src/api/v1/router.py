@@ -24,6 +24,7 @@ from fastapi import APIRouter
 
 from src.api.v1.admin import router as admin_router
 from src.api.v1.auth import router as auth_router
+from src.api.v1.billing import router as billing_router
 from src.api.v1.card_errors import router as card_errors_router
 from src.api.v1.cards import router as card_router
 from src.api.v1.changelog import router as changelog_router
@@ -164,6 +165,15 @@ v1_router.include_router(
     changelog_router,
     prefix="/changelog",
     tags=["Changelog"],
+)
+
+# =============================================================================
+# Billing Routes
+# =============================================================================
+v1_router.include_router(
+    billing_router,
+    prefix="/billing",
+    tags=["Billing"],
 )
 
 # =============================================================================

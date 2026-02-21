@@ -15,6 +15,7 @@ from src.core.posthog import capture_event
 from src.db.models import BillingCycle, SubscriptionStatus, SubscriptionTier, User
 from src.repositories.user import UserRepository
 from src.repositories.webhook_event import WebhookEventRepository
+from src.services.checkout_service import CheckoutService
 
 logger = get_logger(__name__)
 
@@ -37,6 +38,7 @@ class WebhookService:
     }
 
     def __init__(self, db: AsyncSession) -> None:
+        self.db = db
         self.user_repo = UserRepository(db)
         self.webhook_repo = WebhookEventRepository(db)
 
@@ -104,57 +106,45 @@ class WebhookService:
     # =========================================================================
 
     async def _handle_checkout_session_completed(self, event: dict) -> None:
-        """Handle checkout.session.completed event.
-
-        Sets user subscription to PREMIUM/ACTIVE with Stripe IDs.
-        Sets subscription_created_at if first subscription.
-        Sets subscription_resubscribed_at if previously canceled.
-        Does NOT touch trial dates.
-        """
+        """Handle checkout.session.completed — activate premium subscription."""
         session = event.get("data", {}).get("object", {})
         supabase_id = session.get("client_reference_id")
-
-        user = await self._find_user_by_supabase_id(supabase_id, "checkout.session.completed")
-        if user is None:
+        if not supabase_id:
+            logger.warning("checkout.session.completed missing client_reference_id")
             return
 
-        # Capture state BEFORE updating
-        was_previously_canceled = user.subscription_status == SubscriptionStatus.CANCELED
-        now = datetime.now(timezone.utc)
+        user = await self.user_repo.get_by_supabase_id(supabase_id)
+        if not user:
+            logger.warning("checkout.session.completed user not found", supabase_id=supabase_id)
+            return
 
-        # Update Stripe IDs and tier/status
-        user.stripe_customer_id = session.get("customer")
-        user.stripe_subscription_id = session.get("subscription")
-        user.subscription_tier = SubscriptionTier.PREMIUM
-        user.subscription_status = SubscriptionStatus.ACTIVE
-
-        # Billing cycle from metadata price_id
+        # Extract billing cycle from metadata
         metadata = session.get("metadata") or {}
         price_id = metadata.get("price_id")
-        if price_id:
-            cycle = price_id_to_billing_cycle(price_id)
-            if cycle is not None:
-                user.billing_cycle = cycle
+        billing_cycle = price_id_to_billing_cycle(price_id) if price_id else None
 
-        # Set created_at only if not already set
-        if user.subscription_created_at is None:
-            user.subscription_created_at = now
-
-        # Set resubscribed_at if coming back from canceled
-        if was_previously_canceled:
-            user.subscription_resubscribed_at = now
-
-        # Do NOT touch trial_start_date or trial_end_date
-
-        self._track_event(
-            user,
-            "subscription_created",
-            {
-                "tier": user.subscription_tier.value if user.subscription_tier else None,
-                "billing_cycle": user.billing_cycle.value if user.billing_cycle else None,
-                "currency": session.get("currency"),
-            },
+        # Delegate activation to CheckoutService
+        checkout_service = CheckoutService(self.db)
+        result = await checkout_service.activate_premium_subscription(
+            user=user,
+            stripe_customer_id=session.get("customer", ""),
+            stripe_subscription_id=session.get("subscription", ""),
+            billing_cycle=billing_cycle,
         )
+
+        if result == "activated":
+            self._track_event(
+                user,
+                "subscription_created",
+                {
+                    "subscription_tier": SubscriptionTier.PREMIUM.value,
+                    "subscription_status": SubscriptionStatus.ACTIVE.value,
+                    "billing_cycle": billing_cycle.value if billing_cycle else None,
+                    "stripe_customer_id": session.get("customer"),
+                    "stripe_subscription_id": session.get("subscription"),
+                    "currency": session.get("currency"),
+                },
+            )
 
     async def _handle_invoice_paid(self, event: dict) -> None:
         """Handle invoice.paid event.

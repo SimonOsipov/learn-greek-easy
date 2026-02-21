@@ -206,5 +206,16 @@
       "previous": "Previous",
       "next": "Next"
     }
+  },
+  "checkout": {
+    "success": {
+      "title": "Welcome to Premium!",
+      "description": "Your subscription is active. Enjoy unlimited access to all decks and features.",
+      "goToDashboard": "Go to Dashboard"
+    },
+    "error": {
+      "title": "Checkout failed",
+      "description": "Please try again."
+    }
   }
 }

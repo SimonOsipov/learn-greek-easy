@@ -71,6 +71,20 @@ def price_id_to_billing_cycle(price_id: str | None) -> BillingCycle | None:
     return result
 
 
+def billing_cycle_to_price_id(cycle: BillingCycle) -> str | None:
+    """Convert a BillingCycle enum to its configured Stripe Price ID.
+
+    Returns None if the cycle has no configured price (e.g. LIFETIME)
+    or if the corresponding setting is not set.
+    """
+    cycle_to_price: dict[BillingCycle, str | None] = {
+        BillingCycle.MONTHLY: settings.stripe_price_premium_monthly,
+        BillingCycle.QUARTERLY: settings.stripe_price_premium_quarterly,
+        BillingCycle.SEMI_ANNUAL: settings.stripe_price_premium_semi_annual,
+    }
+    return cycle_to_price.get(cycle)
+
+
 def stripe_status_to_subscription_status(
     stripe_status: str | None,
 ) -> SubscriptionStatus | None:
