@@ -23,9 +23,9 @@ test.describe('Subscription Tab E2E Tests', () => {
     await page.getByRole('button', { name: /subscription/i }).click();
     await expect(page.getByText('Current plan').first()).toBeVisible({ timeout: 10000 });
 
-    await expect(page.getByText('Free Trial')).toBeVisible();
+    await expect(page.getByText('Free Trial').first()).toBeVisible();
     await expect(page.getByText('Trial ends')).toBeVisible();
-    await expect(page.getByText('2026')).toBeVisible(); // Date with year
+    await expect(page.getByText('2026').first()).toBeVisible(); // Date with year
     await expect(page.getByRole('button', { name: 'Subscribe Now' })).toBeEnabled();
   });
 
@@ -40,7 +40,7 @@ test.describe('Subscription Tab E2E Tests', () => {
     await page.getByRole('button', { name: /subscription/i }).click();
     await expect(page.getByText('Current plan').first()).toBeVisible({ timeout: 10000 });
 
-    await expect(page.getByText('Free Trial')).toBeVisible();
+    await expect(page.getByText('Free Trial').first()).toBeVisible();
     await expect(page.getByText('Your free trial has expired')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Subscribe Now' })).toBeEnabled();
   });
@@ -56,9 +56,9 @@ test.describe('Subscription Tab E2E Tests', () => {
     await page.getByRole('button', { name: /subscription/i }).click();
     await expect(page.getByText('Current plan').first()).toBeVisible({ timeout: 10000 });
 
-    await expect(page.getByText('Premium')).toBeVisible();
+    await expect(page.getByText('Premium').first()).toBeVisible();
     await expect(page.getByText('Billing cycle')).toBeVisible();
-    await expect(page.getByText('Monthly')).toBeVisible();
+    await expect(page.getByText('Monthly').first()).toBeVisible();
     await expect(page.getByText('Next renewal')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Change Plan' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Cancel Subscription' })).toBeVisible();
@@ -94,7 +94,7 @@ test.describe('Subscription Tab E2E Tests', () => {
     await expect(
       page.getByText('Your payment is overdue. Please update your payment method.')
     ).toBeVisible();
-    await expect(page.getByText('Premium')).toBeVisible();
+    await expect(page.getByText('Premium').first()).toBeVisible();
     await expect(page.getByText('Billing cycle')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Cancel Subscription' })).toBeVisible();
   });
