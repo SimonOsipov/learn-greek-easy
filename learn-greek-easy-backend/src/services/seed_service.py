@@ -21,6 +21,7 @@ from src.core.logging import get_logger
 from src.db.models import (
     Achievement,
     AnnouncementCampaign,
+    BillingCycle,
     Card,
     CardStatistics,
     CardStatus,
@@ -4392,6 +4393,183 @@ class SeedService:
             "cards": created_cards,
         }
 
+    async def seed_subscription_users(self) -> dict[str, Any]:
+        """Create or update subscription test users for E2E testing.
+
+        Creates 5 users with different subscription states:
+        - e2e_trial@test.com: Active trial (FREE tier, TRIALING)
+        - e2e_expired_trial@test.com: Expired trial (FREE tier, NONE)
+        - e2e_premium@test.com: Active premium (PREMIUM tier, ACTIVE, MONTHLY)
+        - e2e_cancelled@test.com: Cancelled premium (PREMIUM tier, ACTIVE, cancel_at_period_end=True)
+        - e2e_past_due@test.com: Past due premium (PREMIUM tier, PAST_DUE, MONTHLY)
+
+        This method is idempotent - existing users have their subscription fields
+        updated, new users get User + UserSettings rows created.
+        """
+        self._check_can_seed()
+
+        now = datetime.now(timezone.utc)
+
+        subscription_users: list[dict[str, Any]] = [
+            {
+                "email": "e2e_trial@test.com",
+                "full_name": "E2E Trial",
+                "subscription_tier": SubscriptionTier.FREE,
+                "subscription_status": SubscriptionStatus.TRIALING,
+                "billing_cycle": None,
+                "subscription_cancel_at_period_end": False,
+                "trial_start_date": now - timedelta(days=7),
+                "trial_end_date": now + timedelta(days=7),
+                "subscription_current_period_end": None,
+                "subscription_created_at": None,
+                "stripe_customer_id": None,
+                "stripe_subscription_id": None,
+            },
+            {
+                "email": "e2e_expired_trial@test.com",
+                "full_name": "E2E Expired Trial",
+                "subscription_tier": SubscriptionTier.FREE,
+                "subscription_status": SubscriptionStatus.NONE,
+                "billing_cycle": None,
+                "subscription_cancel_at_period_end": False,
+                "trial_start_date": now - timedelta(days=21),
+                "trial_end_date": now - timedelta(days=7),
+                "subscription_current_period_end": None,
+                "subscription_created_at": None,
+                "stripe_customer_id": None,
+                "stripe_subscription_id": None,
+            },
+            {
+                "email": "e2e_premium@test.com",
+                "full_name": "E2E Premium",
+                "subscription_tier": SubscriptionTier.PREMIUM,
+                "subscription_status": SubscriptionStatus.ACTIVE,
+                "billing_cycle": BillingCycle.MONTHLY,
+                "subscription_cancel_at_period_end": False,
+                "trial_start_date": None,
+                "trial_end_date": None,
+                "subscription_current_period_end": now + timedelta(days=30),
+                "subscription_created_at": now - timedelta(days=60),
+                "stripe_customer_id": None,
+                "stripe_subscription_id": None,
+            },
+            {
+                "email": "e2e_cancelled@test.com",
+                "full_name": "E2E Cancelled",
+                "subscription_tier": SubscriptionTier.PREMIUM,
+                "subscription_status": SubscriptionStatus.ACTIVE,
+                "billing_cycle": BillingCycle.QUARTERLY,
+                "subscription_cancel_at_period_end": True,
+                "trial_start_date": None,
+                "trial_end_date": None,
+                "subscription_current_period_end": now + timedelta(days=15),
+                "subscription_created_at": now - timedelta(days=75),
+                "stripe_customer_id": None,
+                "stripe_subscription_id": None,
+            },
+            {
+                "email": "e2e_past_due@test.com",
+                "full_name": "E2E Past Due",
+                "subscription_tier": SubscriptionTier.PREMIUM,
+                "subscription_status": SubscriptionStatus.PAST_DUE,
+                "billing_cycle": BillingCycle.MONTHLY,
+                "subscription_cancel_at_period_end": False,
+                "trial_start_date": None,
+                "trial_end_date": None,
+                "subscription_current_period_end": now + timedelta(days=5),
+                "subscription_created_at": now - timedelta(days=30),
+                "stripe_customer_id": None,
+                "stripe_subscription_id": None,
+            },
+        ]
+
+        created_count = 0
+        updated_count = 0
+        results = []
+
+        for user_data in subscription_users:
+            result_row = await self.db.execute(select(User).where(User.email == user_data["email"]))
+            existing_user = result_row.scalar_one_or_none()
+
+            if existing_user is None:
+                user = User(
+                    email=user_data["email"],
+                    full_name=user_data["full_name"],
+                    supabase_id=None,
+                    is_superuser=False,
+                    is_active=True,
+                    subscription_tier=user_data["subscription_tier"],
+                    subscription_status=user_data["subscription_status"],
+                    billing_cycle=user_data["billing_cycle"],
+                    subscription_cancel_at_period_end=user_data[
+                        "subscription_cancel_at_period_end"
+                    ],
+                    trial_start_date=user_data["trial_start_date"],
+                    trial_end_date=user_data["trial_end_date"],
+                    subscription_current_period_end=user_data["subscription_current_period_end"],
+                    subscription_created_at=user_data["subscription_created_at"],
+                    stripe_customer_id=None,
+                    stripe_subscription_id=None,
+                )
+                self.db.add(user)
+                await self.db.flush()
+
+                settings = UserSettings(
+                    user_id=user.id,
+                    daily_goal=20,
+                    email_notifications=True,
+                )
+                self.db.add(settings)
+                await self.db.flush()
+
+                created_count += 1
+                results.append(
+                    {
+                        "email": user.email,
+                        "id": str(user.id),
+                        "tier": user_data["subscription_tier"].value,
+                        "status": user_data["subscription_status"].value,
+                        "action": "created",
+                    }
+                )
+            else:
+                existing_user.subscription_tier = user_data["subscription_tier"]
+                existing_user.subscription_status = user_data["subscription_status"]
+                existing_user.billing_cycle = user_data["billing_cycle"]
+                existing_user.subscription_cancel_at_period_end = user_data[
+                    "subscription_cancel_at_period_end"
+                ]
+                existing_user.trial_start_date = user_data["trial_start_date"]
+                existing_user.trial_end_date = user_data["trial_end_date"]
+                existing_user.subscription_current_period_end = user_data[
+                    "subscription_current_period_end"
+                ]
+                existing_user.subscription_created_at = user_data["subscription_created_at"]
+                existing_user.stripe_customer_id = None
+                existing_user.stripe_subscription_id = None
+                existing_user.subscription_resubscribed_at = None
+                existing_user.grandfathered_price_id = None
+                existing_user.grandfathered_at = None
+                await self.db.flush()
+
+                updated_count += 1
+                results.append(
+                    {
+                        "email": existing_user.email,
+                        "id": str(existing_user.id),
+                        "tier": user_data["subscription_tier"].value,
+                        "status": user_data["subscription_status"].value,
+                        "action": "updated",
+                    }
+                )
+
+        return {
+            "success": True,
+            "users_created": created_count,
+            "users_updated": updated_count,
+            "users": results,
+        }
+
     # =====================
     # Full Seed Orchestration
     # =====================
@@ -4688,6 +4866,9 @@ class SeedService:
         # Step 16: Seed changelog entries
         changelog_result = await self.seed_changelog_entries()
 
+        # Step 17: Create/update subscription-specific test users
+        subscription_users_result = await self.seed_subscription_users()
+
         # Commit all changes
         await self.db.commit()
 
@@ -4716,6 +4897,7 @@ class SeedService:
             "news_questions": news_questions_result,
             "announcements": announcements_result,
             "changelog": changelog_result,
+            "subscription_users": subscription_users_result,
         }
 
     async def _create_word_entries_from_vocab(

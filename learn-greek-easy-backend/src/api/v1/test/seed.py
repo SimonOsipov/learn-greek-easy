@@ -725,3 +725,35 @@ async def seed_admin_cards(
         duration_ms=duration_ms,
         results=result,
     )
+
+
+@router.post(
+    "/subscription-users",
+    response_model=SeedResultResponse,
+    summary="Seed subscription test users",
+    description=(
+        "Create test users with various subscription states for E2E testing. "
+        "Creates 5 users: trial, expired trial, premium, cancelled, past due. "
+        "This endpoint is idempotent - existing users are updated, not duplicated."
+    ),
+    dependencies=[Depends(verify_seed_access)],
+)
+async def seed_subscription_users(
+    db: AsyncSession = Depends(get_db),
+) -> SeedResultResponse:
+    """Seed subscription test users for E2E testing."""
+    start_time = perf_counter()
+
+    service = SeedService(db)
+    result = await service.seed_subscription_users()
+    await db.commit()
+
+    duration_ms = (perf_counter() - start_time) * 1000
+
+    return SeedResultResponse(
+        success=result.get("success", False),
+        operation="subscription-users",
+        timestamp=datetime.now(timezone.utc),
+        duration_ms=duration_ms,
+        results=result,
+    )
