@@ -134,9 +134,9 @@ class TestSeedAllIntegration:
         assert "timestamp" in data
 
         # Verify users created
-        # seed_users creates 4 base users + seed_all adds 3 XP test users = 7 total
+        # seed_users creates 4 base users + seed_all adds 3 XP test users + 5 subscription test users = 12 total
         user_count = await db_session.scalar(select(func.count(User.id)))
-        assert user_count == 7
+        assert user_count == 12
 
         # Verify decks created
         # 6 CEFR decks + 4 user decks (3 for learner + 1 for admin) + 3 V2 decks = 13 total
