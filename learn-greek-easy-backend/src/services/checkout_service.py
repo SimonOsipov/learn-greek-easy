@@ -113,7 +113,7 @@ class CheckoutService:
             user.stripe_customer_id = customer_id
 
         success_url = f"{settings.frontend_url}/checkout/success?session_id={{CHECKOUT_SESSION_ID}}"
-        cancel_url = f"{settings.frontend_url}/checkout/cancel"
+        cancel_url = f"{settings.frontend_url}/upgrade"
 
         checkout_params: Any = {
             "mode": "subscription",

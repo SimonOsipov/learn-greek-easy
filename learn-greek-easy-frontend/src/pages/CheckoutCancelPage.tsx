@@ -14,7 +14,7 @@ export const CheckoutCancelPage: React.FC = () => {
         ...(billingCycle && { billing_cycle: billingCycle }),
       });
     }
-    navigate('/dashboard', { replace: true });
+    navigate('/upgrade', { replace: true });
   }, [navigate, searchParams]);
 
   return null;
