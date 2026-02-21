@@ -39,7 +39,10 @@ export type AnalyticsEventName =
   | 'upgrade_page_viewed'
   | 'billing_cycle_selected'
   | 'subscription_tab_viewed'
-  | 'subscription_action_clicked';
+  | 'subscription_action_clicked'
+  | 'plan_change_confirmed'
+  | 'cancel_confirmed'
+  | 'reactivate_confirmed';
 
 // Base properties included with all events
 interface BaseEventProperties {

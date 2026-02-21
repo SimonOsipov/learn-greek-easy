@@ -37,6 +37,7 @@ import enProfile from './locales/en/profile.json';
 import enReview from './locales/en/review.json';
 import enSettings from './locales/en/settings.json';
 import enStatistics from './locales/en/statistics.json';
+import enSubscription from './locales/en/subscription.json';
 import enUpgrade from './locales/en/upgrade.json';
 
 import type { SupportedLanguage } from './constants';
@@ -52,6 +53,7 @@ const englishResources = {
     changelog: enChangelog,
     common: enCommon,
     upgrade: enUpgrade,
+    subscription: enSubscription,
     culture: enCulture,
     deck: enDeck,
     feedback: enFeedback,
@@ -109,6 +111,7 @@ async function loadRussianBundle(): Promise<Record<string, unknown>> {
     settings,
     statistics,
     upgrade,
+    subscription,
   ] = await Promise.all([
     import('./locales/ru/achievements.json'),
     import('./locales/ru/admin.json'),
@@ -125,6 +128,7 @@ async function loadRussianBundle(): Promise<Record<string, unknown>> {
     import('./locales/ru/settings.json'),
     import('./locales/ru/statistics.json'),
     import('./locales/ru/upgrade.json'),
+    import('./locales/ru/subscription.json'),
   ]);
 
   return {
@@ -143,6 +147,7 @@ async function loadRussianBundle(): Promise<Record<string, unknown>> {
     settings: settings.default,
     statistics: statistics.default,
     upgrade: upgrade.default,
+    subscription: subscription.default,
   };
 }
 

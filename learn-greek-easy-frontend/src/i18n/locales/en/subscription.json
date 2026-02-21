@@ -1,0 +1,68 @@
+{
+  "page": {
+    "title": "Manage Subscription",
+    "subtitle": "View and manage your Premium subscription"
+  },
+  "status": {
+    "active": "Active",
+    "canceled": "Canceled",
+    "pastDue": "Past Due",
+    "trialing": "Trial"
+  },
+  "cycle": {
+    "monthly": "Monthly",
+    "quarterly": "Quarterly",
+    "semi_annual": "Semi-Annual"
+  },
+  "changePlan": {
+    "title": "Change Plan",
+    "description": "Switch to a different billing cycle",
+    "confirm": "Confirm Change",
+    "cancel": "Cancel",
+    "success": "Plan changed successfully",
+    "error": "Failed to change plan. Please try again.",
+    "success.title": "Plan updated",
+    "success.description": "Your billing cycle has been updated.",
+    "error.title": "Plan change failed",
+    "error.description": "Failed to change plan. Please try again."
+  },
+  "cancel": {
+    "title": "Cancel Subscription",
+    "description": "Your subscription will remain active until the end of the current billing period.",
+    "confirm": "Yes, Cancel",
+    "dismiss": "Keep Subscription",
+    "success": "Subscription canceled. You'll have access until {{date}}.",
+    "error": "Failed to cancel subscription. Please try again.",
+    "success.title": "Subscription canceled",
+    "success.description": "You'll retain premium access until your current billing period ends.",
+    "error.title": "Cancellation failed",
+    "error.description": "Failed to cancel your subscription. Please try again."
+  },
+  "reactivate": {
+    "title": "Reactivate Subscription",
+    "description": "Resume your subscription before it expires.",
+    "confirm": "Reactivate",
+    "cancel": "Cancel",
+    "success": "Subscription reactivated successfully",
+    "error": "Failed to reactivate subscription. Please try again.",
+    "success.title": "Subscription reactivated",
+    "success.description": "Your premium subscription has been reactivated.",
+    "error.title": "Reactivation failed",
+    "error.description": "Failed to reactivate your subscription. Please try again."
+  },
+  "buttons": {
+    "changePlan": "Change Plan",
+    "cancel": "Cancel Subscription",
+    "reactivate": "Reactivate"
+  },
+  "labels": {
+    "currentPlan": "Current Plan",
+    "nextBilling": "Next billing date",
+    "canceledAt": "Access until",
+    "price": "Price"
+  },
+  "errors": {
+    "loadFailed": "Failed to load subscription details",
+    "retry": "Try again"
+  }
+}
