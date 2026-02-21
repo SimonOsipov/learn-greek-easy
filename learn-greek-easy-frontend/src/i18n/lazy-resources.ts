@@ -46,6 +46,7 @@ async function loadRussianResources(): Promise<void> {
     review,
     settings,
     statistics,
+    upgrade,
   ] = await Promise.all([
     import('./locales/ru/achievements.json'),
     import('./locales/ru/admin.json'),
@@ -61,6 +62,7 @@ async function loadRussianResources(): Promise<void> {
     import('./locales/ru/review.json'),
     import('./locales/ru/settings.json'),
     import('./locales/ru/statistics.json'),
+    import('./locales/ru/upgrade.json'),
   ]);
 
   i18n.addResourceBundle('ru', 'achievements', achievements.default, true, true);
@@ -77,6 +79,7 @@ async function loadRussianResources(): Promise<void> {
   i18n.addResourceBundle('ru', 'review', review.default, true, true);
   i18n.addResourceBundle('ru', 'settings', settings.default, true, true);
   i18n.addResourceBundle('ru', 'statistics', statistics.default, true, true);
+  i18n.addResourceBundle('ru', 'upgrade', upgrade.default, true, true);
 }
 
 /**

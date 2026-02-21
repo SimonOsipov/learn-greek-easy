@@ -46,7 +46,7 @@ describe('CheckoutCancelPage', () => {
       expect(mockCapture).toHaveBeenCalledWith('checkout_abandoned', {
         billing_cycle: 'monthly',
       });
-      expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true });
+      expect(mockNavigate).toHaveBeenCalledWith('/upgrade', { replace: true });
     });
   });
 
@@ -59,7 +59,7 @@ describe('CheckoutCancelPage', () => {
 
     await waitFor(() => {
       expect(mockCapture).toHaveBeenCalledWith('checkout_abandoned', {});
-      expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true });
+      expect(mockNavigate).toHaveBeenCalledWith('/upgrade', { replace: true });
     });
   });
 });
