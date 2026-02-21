@@ -5,25 +5,12 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
+import { COMPARISON_FEATURES } from '@/constants/premiumFeatures';
 import { useCheckout } from '@/hooks/useCheckout';
 import { useTrackEvent } from '@/hooks/useTrackEvent';
 import { reportAPIError } from '@/lib/errorReporting';
 import { billingAPI } from '@/services/billingAPI';
 import type { BillingCycle, BillingStatusResponse, PricingPlan } from '@/services/billingAPI';
-
-const COMPARISON_FEATURES = [
-  { label: 'Basic vocabulary cards (A1)', free: true, premium: true },
-  { label: 'Limited daily practice', free: true, premium: true },
-  { label: 'Limited personal decks', free: true, premium: true },
-  { label: 'Progress tracking', free: true, premium: true },
-  { label: 'Community access', free: true, premium: true },
-  { label: 'All vocabulary themes (A1-B2)', free: false, premium: true },
-  { label: 'Unlimited practice', free: false, premium: true },
-  { label: 'Verb conjugations & noun cases', free: false, premium: true },
-  { label: 'Real news & audio dialogs', free: false, premium: true },
-  { label: 'History & culture', free: false, premium: true },
-  { label: 'Priority support', free: false, premium: true },
-];
 
 function getPeriodKey(billingCycle: string): string {
   if (billingCycle === 'monthly') return 'pricing.perMonth';
@@ -258,7 +245,7 @@ export function UpgradePage() {
         <thead>
           <tr className="border-b border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50">
             <th className="px-4 py-3 text-left font-medium text-gray-700 dark:text-gray-300">
-              Feature
+              {t('comparison.featureColumn')}
             </th>
             <th className="px-4 py-3 text-center font-medium text-gray-700 dark:text-gray-300">
               {t('comparison.freeColumn')}
@@ -271,12 +258,12 @@ export function UpgradePage() {
         <tbody>
           {COMPARISON_FEATURES.map((feature, index) => (
             <tr
-              key={feature.label}
+              key={feature.labelKey}
               className={`border-b border-gray-100 dark:border-gray-700/50 ${
                 index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50/50 dark:bg-gray-800/50'
               }`}
             >
-              <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{feature.label}</td>
+              <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{t(feature.labelKey)}</td>
               <td className="px-4 py-3 text-center">
                 {feature.free ? (
                   <Check className="mx-auto h-4 w-4 text-green-500" />

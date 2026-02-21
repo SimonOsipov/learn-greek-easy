@@ -6,7 +6,8 @@
     "tabs": {
       "personalInfo": "Личные данные",
       "preferences": "Настройки",
-      "security": "Безопасность"
+      "security": "Безопасность",
+      "subscription": "Подписка"
     }
   },
   "header": {
@@ -148,5 +149,35 @@
       "passwordNumber": "Пароль должен содержать хотя бы одну цифру",
       "passwordsDoNotMatch": "Пароли не совпадают"
     }
+  },
+  "subscription": {
+    "currentPlan": "Текущий план",
+    "billingDetails": "Детали оплаты",
+    "plans": {
+      "free": "Бесплатный",
+      "premium": "Премиум",
+      "trial": "Пробный период",
+      "cancelled": "Премиум (Отменён)"
+    },
+    "billingCycle": "Период оплаты",
+    "cycles": {
+      "monthly": "Ежемесячно",
+      "quarterly": "Ежеквартально",
+      "semi_annual": "Раз в полгода"
+    },
+    "price": "Стоимость",
+    "priceFormat": "{{currency}} {{amount}} / {{period}}",
+    "nextRenewal": "Следующее продление",
+    "accessEnds": "Доступ заканчивается",
+    "trialEnds": "Пробный период заканчивается",
+    "trialExpired": "Ваш пробный период закончился",
+    "subscribeNow": "Подписаться",
+    "manageSubscription": "Управление подпиской",
+    "reactivate": "Возобновить подписку",
+    "comingSoon": "Скоро",
+    "featuresYouLose": "Функции, которые вы потеряете",
+    "pastDueWarning": "Ваш платёж просрочен. Пожалуйста, обновите способ оплаты.",
+    "error": "Не удалось загрузить статус подписки",
+    "retry": "Попробовать снова"
   }
 }

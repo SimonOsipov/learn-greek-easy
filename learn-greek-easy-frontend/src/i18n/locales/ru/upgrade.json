@@ -3,6 +3,19 @@
   "banner": { "trialActive": "У вас осталось {{days}} дней бесплатного пробного периода", "trialExpired": "Ваш бесплатный пробный период закончился", "pastDue": "Ваш платёж просрочен. Пожалуйста, обновите способ оплаты." },
   "alreadyPremium": { "title": "Вы уже на Премиуме!", "description": "У вас полный доступ ко всем функциям.", "manageLink": "Управление подпиской" },
   "pricing": { "mostPopular": "Самый популярный", "save": "Скидка {{percent}}%", "perMonth": "/месяц", "perQuarter": "/квартал", "perSixMonths": "/6 месяцев", "subscribe": "Подписаться", "subscribing": "Перенаправление на оплату...", "unavailable": "Оплата временно недоступна. Пожалуйста, попробуйте позже.", "moneyBack": "Гарантия возврата в течение 14 дней" },
-  "comparison": { "freeColumn": "Бесплатно", "premiumColumn": "Премиум" },
+  "comparison": { "freeColumn": "Бесплатно", "premiumColumn": "Премиум", "featureColumn": "Функция" },
+  "features": {
+    "basicVocabulary": "Базовые карточки слов (A1)",
+    "limitedDailyPractice": "Ограниченная ежедневная практика",
+    "limitedPersonalDecks": "Ограниченные личные колоды",
+    "progressTracking": "Отслеживание прогресса",
+    "communityAccess": "Доступ к сообществу",
+    "allVocabularyThemes": "Все темы лексики (A1-B2)",
+    "unlimitedPractice": "Безлимитная практика",
+    "verbConjugations": "Спряжения глаголов и падежи существительных",
+    "realNewsAudio": "Реальные новости и аудиодиалоги",
+    "historyCulture": "История и культура",
+    "prioritySupport": "Приоритетная поддержка"
+  },
   "error": { "title": "Не удалось загрузить цены", "retry": "Попробовать снова" }
 }

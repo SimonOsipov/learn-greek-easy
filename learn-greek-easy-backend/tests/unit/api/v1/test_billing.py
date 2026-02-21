@@ -31,6 +31,9 @@ def create_mock_user(
     supabase_id: str | None = None,
     trial_end_date: datetime | None = None,
     billing_cycle: BillingCycle | None = None,
+    stripe_subscription_id: str | None = None,
+    subscription_current_period_end: datetime | None = None,
+    subscription_cancel_at_period_end: bool = False,
 ) -> MagicMock:
     """Create a mock User object for billing tests."""
     mock = MagicMock(spec=User)
@@ -42,6 +45,9 @@ def create_mock_user(
     mock.supabase_id = supabase_id or str(uuid4())
     mock.trial_end_date = trial_end_date
     mock.billing_cycle = billing_cycle
+    mock.stripe_subscription_id = stripe_subscription_id
+    mock.subscription_current_period_end = subscription_current_period_end
+    mock.subscription_cancel_at_period_end = subscription_cancel_at_period_end
     return mock
 
 
@@ -987,6 +993,18 @@ def _make_stripe_price(
     return price
 
 
+def _make_stripe_subscription(unit_amount: int = 2900, currency: str = "eur") -> MagicMock:
+    """Build a mock Stripe subscription object with one item."""
+    price = MagicMock()
+    price.unit_amount = unit_amount
+    price.currency = currency
+    item = MagicMock()
+    item.price = price
+    subscription = MagicMock()
+    subscription.items.data = [item]
+    return subscription
+
+
 class TestBillingStatusEndpoint:
     """Unit tests for GET /api/v1/billing/status endpoint.
 
@@ -1273,3 +1291,280 @@ class TestBillingStatusEndpoint:
         assert response.status_code == 401
         data = response.json()
         assert data["success"] is False
+
+
+# =============================================================================
+# TestBillingStatusNewFields - Tests for new subscription price/period fields
+# =============================================================================
+
+
+class TestBillingStatusNewFields:
+    """Unit tests for the 5 new billing status fields (BP-10).
+
+    Tests use the real test_user from the database (via auth_headers fixture)
+    and patch Stripe/config at the module level.
+
+    NOTE: Do NOT patch get_current_user — auth_headers uses app.dependency_overrides
+    which takes precedence. Instead, set fields on test_user + await db_session.flush().
+    """
+
+    @pytest.mark.asyncio
+    async def test_active_user_with_stripe_sub_returns_price_fields(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        test_user: User,
+        db_session,
+    ):
+        """Active user with stripe_subscription_id returns all price fields."""
+        test_user.subscription_tier = SubscriptionTier.PREMIUM
+        test_user.subscription_status = SubscriptionStatus.ACTIVE
+        test_user.stripe_subscription_id = "sub_test_active"
+        test_user.subscription_current_period_end = datetime(2026, 3, 15, tzinfo=timezone.utc)
+        test_user.subscription_cancel_at_period_end = False
+        await db_session.flush()
+
+        mock_sub = _make_stripe_subscription(unit_amount=2900, currency="eur")
+        mock_client = MagicMock()
+        mock_client.v1.subscriptions.retrieve_async = AsyncMock(return_value=mock_sub)
+
+        with (
+            patch("src.api.v1.billing.is_stripe_configured", return_value=True),
+            patch("src.api.v1.billing.get_stripe_client", return_value=mock_client),
+            patch("src.api.v1.billing._build_price_to_cycle_map", return_value={}),
+            patch(
+                "src.api.v1.billing.get_effective_access_level",
+                return_value=SubscriptionTier.PREMIUM,
+            ),
+        ):
+            response = await client.get("/api/v1/billing/status", headers=auth_headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["current_price_amount"] == 2900
+        assert data["current_price_formatted"] == "29.00"
+        assert data["current_price_currency"] == "eur"
+        assert data["current_period_end"] is not None
+        assert data["cancel_at_period_end"] is False
+        mock_client.v1.subscriptions.retrieve_async.assert_awaited_once_with("sub_test_active")
+
+    @pytest.mark.asyncio
+    async def test_past_due_user_with_stripe_sub_returns_price_fields(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        test_user: User,
+        db_session,
+    ):
+        """Past-due user with stripe_subscription_id also gets price fields."""
+        test_user.subscription_tier = SubscriptionTier.PREMIUM
+        test_user.subscription_status = SubscriptionStatus.PAST_DUE
+        test_user.stripe_subscription_id = "sub_test_past_due"
+        test_user.subscription_current_period_end = datetime(2026, 3, 1, tzinfo=timezone.utc)
+        test_user.subscription_cancel_at_period_end = True
+        await db_session.flush()
+
+        mock_sub = _make_stripe_subscription(unit_amount=7500, currency="eur")
+        mock_client = MagicMock()
+        mock_client.v1.subscriptions.retrieve_async = AsyncMock(return_value=mock_sub)
+
+        with (
+            patch("src.api.v1.billing.is_stripe_configured", return_value=True),
+            patch("src.api.v1.billing.get_stripe_client", return_value=mock_client),
+            patch("src.api.v1.billing._build_price_to_cycle_map", return_value={}),
+            patch(
+                "src.api.v1.billing.get_effective_access_level",
+                return_value=SubscriptionTier.PREMIUM,
+            ),
+        ):
+            response = await client.get("/api/v1/billing/status", headers=auth_headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["current_price_amount"] == 7500
+        assert data["current_price_formatted"] == "75.00"
+        assert data["current_price_currency"] == "eur"
+        assert data["cancel_at_period_end"] is True
+
+    @pytest.mark.asyncio
+    async def test_free_user_gets_null_price_fields(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+    ):
+        """Free user (default test_user) has null price fields."""
+        with (
+            patch("src.api.v1.billing.is_stripe_configured", return_value=False),
+            patch(
+                "src.api.v1.billing.get_effective_access_level",
+                return_value=SubscriptionTier.FREE,
+            ),
+        ):
+            response = await client.get("/api/v1/billing/status", headers=auth_headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["current_price_amount"] is None
+        assert data["current_price_formatted"] is None
+        assert data["current_price_currency"] is None
+        assert data["current_period_end"] is None
+        assert data["cancel_at_period_end"] is False
+
+    @pytest.mark.asyncio
+    async def test_trialing_user_gets_null_price_fields(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        test_user: User,
+        db_session,
+    ):
+        """Trialing user has null price fields (not ACTIVE/PAST_DUE)."""
+        test_user.subscription_status = SubscriptionStatus.TRIALING
+        test_user.trial_end_date = datetime.now(timezone.utc) + timedelta(days=5)
+        await db_session.flush()
+
+        with (
+            patch("src.api.v1.billing.is_stripe_configured", return_value=True),
+            patch("src.api.v1.billing.get_stripe_client", return_value=MagicMock()),
+            patch("src.api.v1.billing._build_price_to_cycle_map", return_value={}),
+            patch(
+                "src.api.v1.billing.get_effective_access_level",
+                return_value=SubscriptionTier.PREMIUM,
+            ),
+        ):
+            response = await client.get("/api/v1/billing/status", headers=auth_headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["current_price_amount"] is None
+        assert data["current_price_formatted"] is None
+        assert data["current_price_currency"] is None
+
+    @pytest.mark.asyncio
+    async def test_active_user_without_stripe_sub_id_gets_null_price(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        test_user: User,
+        db_session,
+    ):
+        """Active premium user missing stripe_subscription_id gets null price."""
+        test_user.subscription_tier = SubscriptionTier.PREMIUM
+        test_user.subscription_status = SubscriptionStatus.ACTIVE
+        test_user.stripe_subscription_id = None
+        await db_session.flush()
+
+        with (
+            patch("src.api.v1.billing.is_stripe_configured", return_value=True),
+            patch("src.api.v1.billing.get_stripe_client", return_value=MagicMock()),
+            patch("src.api.v1.billing._build_price_to_cycle_map", return_value={}),
+            patch(
+                "src.api.v1.billing.get_effective_access_level",
+                return_value=SubscriptionTier.PREMIUM,
+            ),
+        ):
+            response = await client.get("/api/v1/billing/status", headers=auth_headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["current_price_amount"] is None
+        assert data["current_price_formatted"] is None
+        assert data["current_price_currency"] is None
+
+    @pytest.mark.asyncio
+    async def test_stripe_api_failure_returns_null_price_fields(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        test_user: User,
+        db_session,
+    ):
+        """Stripe API error returns null price fields, endpoint still 200."""
+        test_user.subscription_tier = SubscriptionTier.PREMIUM
+        test_user.subscription_status = SubscriptionStatus.ACTIVE
+        test_user.stripe_subscription_id = "sub_test_error"
+        await db_session.flush()
+
+        mock_client = MagicMock()
+        mock_client.v1.subscriptions.retrieve_async = AsyncMock(
+            side_effect=Exception("Stripe API error")
+        )
+
+        with (
+            patch("src.api.v1.billing.is_stripe_configured", return_value=True),
+            patch("src.api.v1.billing.get_stripe_client", return_value=mock_client),
+            patch("src.api.v1.billing._build_price_to_cycle_map", return_value={}),
+            patch(
+                "src.api.v1.billing.get_effective_access_level",
+                return_value=SubscriptionTier.PREMIUM,
+            ),
+        ):
+            response = await client.get("/api/v1/billing/status", headers=auth_headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["current_price_amount"] is None
+        assert data["current_price_formatted"] is None
+        assert data["current_price_currency"] is None
+
+    @pytest.mark.asyncio
+    async def test_stripe_not_configured_returns_null_price_fields(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        test_user: User,
+        db_session,
+    ):
+        """Stripe not configured returns null price fields for active user."""
+        test_user.subscription_tier = SubscriptionTier.PREMIUM
+        test_user.subscription_status = SubscriptionStatus.ACTIVE
+        test_user.stripe_subscription_id = "sub_test_noconfig"
+        await db_session.flush()
+
+        with (
+            patch("src.api.v1.billing.is_stripe_configured", return_value=False),
+            patch(
+                "src.api.v1.billing.get_effective_access_level",
+                return_value=SubscriptionTier.PREMIUM,
+            ),
+        ):
+            response = await client.get("/api/v1/billing/status", headers=auth_headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["current_price_amount"] is None
+        assert data["current_price_formatted"] is None
+        assert data["current_price_currency"] is None
+
+    @pytest.mark.asyncio
+    async def test_period_end_and_cancel_at_from_user_model(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        test_user: User,
+        db_session,
+    ):
+        """current_period_end and cancel_at_period_end come from user model."""
+        period_end = datetime(2026, 4, 1, 12, 0, 0, tzinfo=timezone.utc)
+        test_user.subscription_tier = SubscriptionTier.PREMIUM
+        test_user.subscription_status = SubscriptionStatus.ACTIVE
+        test_user.subscription_current_period_end = period_end
+        test_user.subscription_cancel_at_period_end = True
+        test_user.stripe_subscription_id = None
+        await db_session.flush()
+
+        with (
+            patch("src.api.v1.billing.is_stripe_configured", return_value=False),
+            patch(
+                "src.api.v1.billing.get_effective_access_level",
+                return_value=SubscriptionTier.PREMIUM,
+            ),
+        ):
+            response = await client.get("/api/v1/billing/status", headers=auth_headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["cancel_at_period_end"] is True
+        assert data["current_period_end"] is not None
+        # Price fields still null (no stripe_subscription_id)
+        assert data["current_price_amount"] is None

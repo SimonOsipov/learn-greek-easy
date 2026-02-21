@@ -58,3 +58,9 @@ class BillingStatusResponse(BaseModel):
     billing_cycle: str | None = None
     is_premium: bool
     pricing: list[PricingPlan] = Field(default_factory=list)
+    # Subscription period and price fields (BP-10)
+    current_period_end: datetime | None = None
+    cancel_at_period_end: bool = False
+    current_price_amount: int | None = None
+    current_price_formatted: str | None = None
+    current_price_currency: str | None = None

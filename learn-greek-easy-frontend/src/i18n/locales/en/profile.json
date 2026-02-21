@@ -6,7 +6,8 @@
     "tabs": {
       "personalInfo": "Personal Info",
       "preferences": "Preferences",
-      "security": "Security"
+      "security": "Security",
+      "subscription": "Subscription"
     }
   },
   "header": {
@@ -148,5 +149,35 @@
       "passwordNumber": "Password must contain at least one number",
       "passwordsDoNotMatch": "Passwords don't match"
     }
+  },
+  "subscription": {
+    "currentPlan": "Current plan",
+    "billingDetails": "Billing details",
+    "plans": {
+      "free": "Free",
+      "premium": "Premium",
+      "trial": "Free Trial",
+      "cancelled": "Premium (Cancelled)"
+    },
+    "billingCycle": "Billing cycle",
+    "cycles": {
+      "monthly": "Monthly",
+      "quarterly": "Quarterly",
+      "semi_annual": "Every 6 months"
+    },
+    "price": "Price",
+    "priceFormat": "{{currency}} {{amount}} / {{period}}",
+    "nextRenewal": "Next renewal",
+    "accessEnds": "Access ends",
+    "trialEnds": "Trial ends",
+    "trialExpired": "Your free trial has expired",
+    "subscribeNow": "Subscribe Now",
+    "manageSubscription": "Manage Subscription",
+    "reactivate": "Reactivate",
+    "comingSoon": "Coming soon",
+    "featuresYouLose": "Features you'll lose",
+    "pastDueWarning": "Your payment is overdue. Please update your payment method.",
+    "error": "Failed to load subscription status",
+    "retry": "Retry"
   }
 }
