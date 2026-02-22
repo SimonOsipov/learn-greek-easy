@@ -63,7 +63,7 @@ import type {
 import { CardCreateModal } from './CardCreateModal';
 import { CardDeleteDialog } from './CardDeleteDialog';
 import { CardEditModal } from './CardEditModal';
-import { VocabularyCardCreateModal, VocabularyCardEditModal } from './vocabulary';
+import { V1CardEditInDialog, VocabularyCardCreateModal } from './vocabulary';
 import { WordEntryCards } from './WordEntryCards';
 import { WordEntryContent } from './WordEntryContent';
 
@@ -159,14 +159,15 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
 
   // Vocabulary card modal state
   const [vocabularyCreateModalOpen, setVocabularyCreateModalOpen] = useState(false);
-  const [vocabularyEditModalOpen, setVocabularyEditModalOpen] = useState(false);
-  const [selectedVocabularyCardId, setSelectedVocabularyCardId] = useState<string | null>(null);
 
-  // Word entry detail view state
+  // Word entry detail view state (V2)
   const [selectedWordEntry, setSelectedWordEntry] = useState<AdminVocabularyCard | null>(null);
+  // V1 card edit in-dialog state
+  const [selectedV1Card, setSelectedV1Card] = useState<AdminVocabularyCard | null>(null);
   const scrollPositionRef = useRef<number>(0);
   const dialogContentRef = useRef<HTMLDivElement>(null);
   const backButtonRef = useRef<HTMLButtonElement>(null);
+  const v1BackButtonRef = useRef<HTMLButtonElement>(null);
   const clickedRowIdRef = useRef<string | null>(null);
 
   // Search, filter, and sort state (V2 word list)
@@ -232,6 +233,7 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
   useEffect(() => {
     setPage(1);
     setSelectedWordEntry(null);
+    setSelectedV1Card(null);
     setSearchQuery('');
     setDebouncedSearch('');
     setPosFilter('all');
@@ -383,6 +385,35 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
     }
   }, [selectedWordEntry]);
 
+  const handleV1CardClick = (card: AdminVocabularyCard) => {
+    if (dialogContentRef.current) {
+      scrollPositionRef.current = dialogContentRef.current.scrollTop;
+    }
+    clickedRowIdRef.current = card.id;
+    setSelectedV1Card(card);
+  };
+
+  const handleV1Back = useCallback(() => {
+    setSelectedV1Card(null);
+    requestAnimationFrame(() => {
+      if (dialogContentRef.current) {
+        dialogContentRef.current.scrollTop = scrollPositionRef.current;
+      }
+      if (clickedRowIdRef.current) {
+        const row = document.querySelector(`[data-testid="card-item-${clickedRowIdRef.current}"]`);
+        if (row instanceof HTMLElement) row.focus();
+        clickedRowIdRef.current = null;
+      }
+    });
+  }, []);
+
+  // Focus management for V1 card edit view
+  useEffect(() => {
+    if (selectedV1Card && v1BackButtonRef.current) {
+      v1BackButtonRef.current.focus();
+    }
+  }, [selectedV1Card]);
+
   if (!deck) return null;
 
   const deckName = getDeckDisplayName(deck, locale);
@@ -412,6 +443,9 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
             if (selectedWordEntry) {
               e.preventDefault();
               handleBack();
+            } else if (selectedV1Card) {
+              e.preventDefault();
+              handleV1Back();
             }
           }}
         >
@@ -477,6 +511,36 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
                   </TabsContent>
                 </Tabs>
               </div>
+            </>
+          ) : selectedV1Card ? (
+            <>
+              <DialogHeader>
+                <Button
+                  ref={v1BackButtonRef}
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleV1Back}
+                  className="mb-2 w-fit"
+                  data-testid="v1-card-edit-back"
+                >
+                  <ChevronLeft className="mr-1 h-4 w-4" />
+                  {t('v1CardEdit.back')}
+                </Button>
+                <DialogTitle data-testid="deck-detail-title">
+                  {selectedV1Card.front_text}
+                </DialogTitle>
+                <DialogDescription>{selectedV1Card.back_text_en}</DialogDescription>
+              </DialogHeader>
+              <V1CardEditInDialog
+                card={selectedV1Card}
+                deckId={deck.id}
+                deckLevel={deck.level ?? undefined}
+                onBack={handleV1Back}
+                onSaved={() => {
+                  handleV1Back();
+                  fetchItems();
+                }}
+              />
             </>
           ) : (
             <>
@@ -645,26 +709,24 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
                         key={card.id}
                         className={cn(
                           'flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50',
-                          isV2Vocabulary && 'cursor-pointer'
+                          isVocabulary && 'cursor-pointer'
                         )}
                         data-testid={
                           isV2Vocabulary ? `word-entry-row-${card.id}` : `card-item-${card.id}`
                         }
-                        {...(isV2Vocabulary && {
-                          onClick: (e: React.MouseEvent) => {
-                            if ((e.target as HTMLElement).closest('button')) return;
-                            handleWordEntryClick(card);
-                          },
-                          role: 'button' as const,
-                          tabIndex: 0,
-                          onKeyDown: (e: React.KeyboardEvent) => {
-                            if ((e.target as HTMLElement).closest('button')) return;
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault();
-                              handleWordEntryClick(card);
-                            }
-                          },
-                        })}
+                        onClick={(e: React.MouseEvent) => {
+                          if ((e.target as HTMLElement).closest('button')) return;
+                          isV2Vocabulary ? handleWordEntryClick(card) : handleV1CardClick(card);
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e: React.KeyboardEvent) => {
+                          if ((e.target as HTMLElement).closest('button')) return;
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            isV2Vocabulary ? handleWordEntryClick(card) : handleV1CardClick(card);
+                          }
+                        }}
                       >
                         {isV2Vocabulary && (
                           <Checkbox
@@ -786,12 +848,7 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
                             variant="ghost"
                             size="sm"
                             onClick={() => {
-                              if (isV2Vocabulary) {
-                                handleWordEntryClick(card);
-                              } else {
-                                setSelectedVocabularyCardId(card.id);
-                                setVocabularyEditModalOpen(true);
-                              }
+                              isV2Vocabulary ? handleWordEntryClick(card) : handleV1CardClick(card);
                             }}
                             data-testid={`vocabulary-card-edit-${card.id}`}
                           >
@@ -996,23 +1053,6 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
           onSuccess={() => {
             fetchItems();
             onItemDeleted?.(); // Refresh parent deck counts
-          }}
-        />
-      )}
-
-      {/* Vocabulary Card Edit Modal */}
-      {isVocabulary && deck && selectedVocabularyCardId && (
-        <VocabularyCardEditModal
-          open={vocabularyEditModalOpen}
-          onOpenChange={(open) => {
-            setVocabularyEditModalOpen(open);
-            if (!open) setSelectedVocabularyCardId(null);
-          }}
-          cardId={selectedVocabularyCardId}
-          deckId={deck.id}
-          deckLevel={deck.level ?? undefined}
-          onSuccess={() => {
-            fetchItems();
           }}
         />
       )}

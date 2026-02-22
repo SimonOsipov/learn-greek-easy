@@ -59,7 +59,7 @@ vi.mock('../CardEditModal', () => ({ CardEditModal: () => null }));
 vi.mock('../CardCreateModal', () => ({ CardCreateModal: () => null }));
 vi.mock('../vocabulary', () => ({
   VocabularyCardCreateModal: () => null,
-  VocabularyCardEditModal: () => null,
+  V1CardEditInDialog: () => null,
 }));
 vi.mock('../WordEntryContent', () => ({ WordEntryContent: () => null }));
 vi.mock('../WordEntryCards', () => ({ WordEntryCards: () => null }));

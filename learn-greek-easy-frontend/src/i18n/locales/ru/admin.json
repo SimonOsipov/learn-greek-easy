@@ -775,6 +775,9 @@
     "bulkDeleteSuccess": "{{count}} слов удалено",
     "bulkDeleteError": "Не удалось удалить некоторые слова"
   },
+  "v1CardEdit": {
+    "back": "Вернуться к списку"
+  },
   "wordEntryEdit": {
     "edit": "Редактировать",
     "save": "Сохранить",

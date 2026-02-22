@@ -763,6 +763,9 @@
     "bulkDeleteSuccess": "{{count}} words deleted",
     "bulkDeleteError": "Failed to delete some words"
   },
+  "v1CardEdit": {
+    "back": "Back to list"
+  },
   "wordEntryEdit": {
     "edit": "Edit",
     "save": "Save",
