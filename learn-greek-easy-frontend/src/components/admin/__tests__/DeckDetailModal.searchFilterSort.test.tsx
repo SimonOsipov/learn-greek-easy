@@ -131,6 +131,16 @@ const createWordEntry = (
   has_examples: false,
   has_audio: false,
   has_grammar: false,
+  // Granular enrichment fields (V2)
+  translation_en_plural: null,
+  translation_ru_plural: null,
+  audio_status: 'missing',
+  grammar_filled: 0,
+  grammar_total: 9,
+  example_count: 0,
+  examples_with_en: 0,
+  examples_with_ru: 0,
+  examples_with_audio: 0,
   ...overrides,
 });
 
