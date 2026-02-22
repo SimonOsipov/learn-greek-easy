@@ -97,8 +97,8 @@ async function clickEditForCard(page: import('@playwright/test').Page, frontText
   const editBtn = cardItem.locator('[data-testid^="vocabulary-card-edit-"]');
   await editBtn.click();
 
-  // Wait for edit modal to open
-  await expect(page.getByTestId('vocabulary-card-edit-modal')).toBeVisible({ timeout: 5000 });
+  // Wait for inline edit form to appear (V1 card edit in-dialog)
+  await expect(page.getByTestId('v1-card-edit-cancel')).toBeVisible({ timeout: 5000 });
 }
 
 // ============================================================================
@@ -127,9 +127,9 @@ test.describe('Admin Vocabulary Card Edit - Pre-population', () => {
     const posSelect = page.getByTestId('part-of-speech-select');
     await expect(posSelect).toContainText(/noun/i);
 
-    // Close the modal
-    await page.getByTestId('vocabulary-card-edit-cancel').click();
-    await expect(page.getByTestId('vocabulary-card-edit-modal')).not.toBeVisible({ timeout: 5000 });
+    // Close the inline edit form (back to card list)
+    await page.getByTestId('v1-card-edit-cancel').click();
+    await expect(page.getByTestId('v1-card-edit-cancel')).not.toBeVisible({ timeout: 5000 });
   });
 });
 
@@ -155,10 +155,10 @@ test.describe('Admin Vocabulary Card Edit - Basic Fields', () => {
     await page.getByTestId('back-text-en-input').fill(newTranslation);
 
     // Save
-    await page.getByTestId('vocabulary-card-edit-submit').click();
+    await page.getByTestId('v1-card-edit-submit').click();
 
-    // Modal should close
-    await expect(page.getByTestId('vocabulary-card-edit-modal')).not.toBeVisible({ timeout: 10000 });
+    // Edit form should close (back to card list)
+    await expect(page.getByTestId('v1-card-edit-submit')).not.toBeVisible({ timeout: 10000 });
 
     // Verify card is still visible in the list
     await expect(page.getByText('καλημέρα')).toBeVisible({ timeout: 5000 });
@@ -318,10 +318,10 @@ test.describe('Admin Vocabulary Card Edit - Examples', () => {
     }
 
     // Save
-    await page.getByTestId('vocabulary-card-edit-submit').click();
+    await page.getByTestId('v1-card-edit-submit').click();
 
-    // Modal should close
-    await expect(page.getByTestId('vocabulary-card-edit-modal')).not.toBeVisible({ timeout: 10000 });
+    // Edit form should close (back to card list)
+    await expect(page.getByTestId('v1-card-edit-submit')).not.toBeVisible({ timeout: 10000 });
   });
 });
 
@@ -346,7 +346,7 @@ test.describe('Admin Vocabulary Card Edit - Cancel Confirmation', () => {
     await page.getByTestId('back-text-en-input').fill(`${originalValue} MODIFIED`);
 
     // Click cancel
-    await page.getByTestId('vocabulary-card-edit-cancel').click();
+    await page.getByTestId('v1-card-edit-cancel').click();
 
     // Verify confirmation dialog appears
     const keepEditingBtn = page.getByRole('button', { name: /keep editing/i });
@@ -365,7 +365,7 @@ test.describe('Admin Vocabulary Card Edit - Cancel Confirmation', () => {
     await page.getByTestId('back-text-en-input').fill(modifiedValue);
 
     // Click cancel
-    await page.getByTestId('vocabulary-card-edit-cancel').click();
+    await page.getByTestId('v1-card-edit-cancel').click();
 
     // Click Keep Editing
     const keepEditingBtn = page.getByRole('button', { name: /keep editing/i });
@@ -373,7 +373,7 @@ test.describe('Admin Vocabulary Card Edit - Cancel Confirmation', () => {
     await keepEditingBtn.click();
 
     // Verify still in edit mode with content preserved
-    await expect(page.getByTestId('vocabulary-card-edit-modal')).toBeVisible();
+    await expect(page.getByTestId('v1-card-edit-cancel')).toBeVisible();
     await expect(page.getByTestId('back-text-en-input')).toHaveValue(modifiedValue);
   });
 
@@ -388,13 +388,13 @@ test.describe('Admin Vocabulary Card Edit - Cancel Confirmation', () => {
     await page.getByTestId('back-text-en-input').fill(`${originalValue} SHOULD_NOT_SAVE`);
 
     // Click cancel, then Discard
-    await page.getByTestId('vocabulary-card-edit-cancel').click();
+    await page.getByTestId('v1-card-edit-cancel').click();
     const discardBtn = page.getByRole('button', { name: /discard/i });
     await expect(discardBtn).toBeVisible({ timeout: 5000 });
     await discardBtn.click();
 
-    // Verify modal closed
-    await expect(page.getByTestId('vocabulary-card-edit-modal')).not.toBeVisible({ timeout: 5000 });
+    // Verify edit form closed (back to card list)
+    await expect(page.getByTestId('v1-card-edit-cancel')).not.toBeVisible({ timeout: 5000 });
 
     // Verify original data is unchanged by opening edit again
     await clickEditForCard(page, 'καλημέρα');

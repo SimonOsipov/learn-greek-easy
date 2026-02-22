@@ -32,7 +32,12 @@
       },
       "cancel": "Оставить активной",
       "confirm": "Деактивировать"
-    }
+    },
+    "sectionIdentity": "Информация о колоде",
+    "sectionAccess": "Управление доступом",
+    "stats": "Статистика",
+    "wordCount": "Слова",
+    "createdAt": "Создана"
   },
   "deckCreate": {
     "title": "Создать колоду",
@@ -739,6 +744,40 @@
     "success": "Генерация аудио запущена",
     "error": "Не удалось запустить генерацию аудио"
   },
+  "wordList": {
+    "audioReady": "Аудио: готово",
+    "audioMissing": "Аудио: отсутствует",
+    "examplesPresent": "Примеры: есть",
+    "examplesMissing": "Примеры: отсутствуют",
+    "grammarPresent": "Грамматика: есть",
+    "grammarMissing": "Грамматика: отсутствует",
+    "search": "Поиск слов...",
+    "filterByPos": "Часть речи",
+    "allPartsOfSpeech": "Все",
+    "posNoun": "Существительное",
+    "posVerb": "Глагол",
+    "posAdjective": "Прилагательное",
+    "posAdverb": "Наречие",
+    "posPhrase": "Фраза",
+    "sortBy": "Сортировка",
+    "sortAlphaGreek": "По алфавиту (греческий)",
+    "sortDateAdded": "По дате добавления",
+    "filteredCount": "{{filtered}} из {{total}} слов",
+    "noResults": "Нет слов, соответствующих поиску",
+    "selectAll": "Выбрать все",
+    "selectedCount": "Выбрано: {{count}}",
+    "bulkDeleteButton": "Удалить выбранные",
+    "bulkDeleteTitle": "Удалить {{count}} слов?",
+    "bulkDeleteDescription": "Это навсегда удалит {{count}} слов вместе со всеми связанными карточками и прогрессом пользователей. Это действие нельзя отменить.",
+    "bulkDeleteConfirm": "Удалить {{count}} слов",
+    "bulkDeleteCancel": "Отмена",
+    "bulkDeleteDeleting": "Удаление...",
+    "bulkDeleteSuccess": "{{count}} слов удалено",
+    "bulkDeleteError": "Не удалось удалить некоторые слова"
+  },
+  "v1CardEdit": {
+    "back": "Вернуться к списку"
+  },
   "wordEntryEdit": {
     "edit": "Редактировать",
     "save": "Сохранить",
@@ -768,6 +807,9 @@
     "genderNeuter": "Средний",
     "requiredField": "Обязательное поле",
     "lemmaReadOnly": "Лемма",
-    "partOfSpeechReadOnly": "Часть речи"
+    "partOfSpeechReadOnly": "Часть речи",
+    "sectionTranslations": "Переводы",
+    "sectionPronunciationGrammar": "Произношение и грамматика",
+    "sectionExamples": "Примеры"
   }
 }

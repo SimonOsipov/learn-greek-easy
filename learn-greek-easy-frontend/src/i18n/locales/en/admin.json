@@ -32,7 +32,12 @@
       },
       "cancel": "Keep Active",
       "confirm": "Deactivate"
-    }
+    },
+    "sectionIdentity": "Deck Identity",
+    "sectionAccess": "Access Control",
+    "stats": "Statistics",
+    "wordCount": "Words",
+    "createdAt": "Created"
   },
   "deckCreate": {
     "title": "Create Deck",
@@ -727,6 +732,40 @@
     "success": "Audio generation started",
     "error": "Failed to start audio generation"
   },
+  "wordList": {
+    "audioReady": "Audio: ready",
+    "audioMissing": "Audio: missing",
+    "examplesPresent": "Examples: present",
+    "examplesMissing": "Examples: missing",
+    "grammarPresent": "Grammar: present",
+    "grammarMissing": "Grammar: missing",
+    "search": "Search words...",
+    "filterByPos": "Part of speech",
+    "allPartsOfSpeech": "All",
+    "posNoun": "Noun",
+    "posVerb": "Verb",
+    "posAdjective": "Adjective",
+    "posAdverb": "Adverb",
+    "posPhrase": "Phrase",
+    "sortBy": "Sort",
+    "sortAlphaGreek": "Alphabetical (Greek)",
+    "sortDateAdded": "Date added",
+    "filteredCount": "{{filtered}} of {{total}} words",
+    "noResults": "No words match your search",
+    "selectAll": "Select all",
+    "selectedCount": "{{count}} selected",
+    "bulkDeleteButton": "Delete selected",
+    "bulkDeleteTitle": "Delete {{count}} words?",
+    "bulkDeleteDescription": "This will permanently delete {{count}} words and all associated cards and user progress. This action cannot be undone.",
+    "bulkDeleteConfirm": "Delete {{count}} words",
+    "bulkDeleteCancel": "Cancel",
+    "bulkDeleteDeleting": "Deleting...",
+    "bulkDeleteSuccess": "{{count}} words deleted",
+    "bulkDeleteError": "Failed to delete some words"
+  },
+  "v1CardEdit": {
+    "back": "Back to list"
+  },
   "wordEntryEdit": {
     "edit": "Edit",
     "save": "Save",
@@ -756,6 +795,9 @@
     "genderNeuter": "Neuter",
     "requiredField": "This field is required",
     "lemmaReadOnly": "Lemma",
-    "partOfSpeechReadOnly": "Part of Speech"
+    "partOfSpeechReadOnly": "Part of Speech",
+    "sectionTranslations": "Translations",
+    "sectionPronunciationGrammar": "Pronunciation & Grammar",
+    "sectionExamples": "Examples"
   }
 }

@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Form,
   FormControl,
@@ -251,180 +252,203 @@ export function WordEntryEditForm({ wordEntry, onSaveSuccess, onCancel }: WordEn
             </div>
           </div>
 
-          {/* translation_en (required) */}
-          <FormField
-            control={form.control}
-            name="translation_en"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t('wordEntryEdit.fieldTranslationEn')}</FormLabel>
-                <FormControl>
-                  <Input {...field} data-testid="word-entry-field-translation-en" autoFocus />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* translation_en_plural */}
-          <FormField
-            control={form.control}
-            name="translation_en_plural"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t('wordEntryEdit.fieldTranslationEnPlural')}</FormLabel>
-                <FormControl>
-                  <Input {...field} data-testid="word-entry-field-translation-en-plural" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* translation_ru */}
-          <FormField
-            control={form.control}
-            name="translation_ru"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t('wordEntryEdit.fieldTranslationRu')}</FormLabel>
-                <FormControl>
-                  <Input {...field} data-testid="word-entry-field-translation-ru" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* translation_ru_plural */}
-          <FormField
-            control={form.control}
-            name="translation_ru_plural"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t('wordEntryEdit.fieldTranslationRuPlural')}</FormLabel>
-                <FormControl>
-                  <Input {...field} data-testid="word-entry-field-translation-ru-plural" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* pronunciation */}
-          <FormField
-            control={form.control}
-            name="pronunciation"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t('wordEntryEdit.fieldPronunciation')}</FormLabel>
-                <FormControl>
-                  <Input {...field} data-testid="word-entry-field-pronunciation" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* gender (conditional) */}
-          {showGender && (
-            <FormField
-              control={form.control}
-              name="gender"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('wordEntryEdit.fieldGender')}</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value ?? ''}>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">{t('wordEntryEdit.sectionTranslations')}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* translation_en (required) */}
+              <FormField
+                control={form.control}
+                name="translation_en"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('wordEntryEdit.fieldTranslationEn')}</FormLabel>
                     <FormControl>
-                      <SelectTrigger data-testid="word-entry-field-gender">
-                        <SelectValue />
-                      </SelectTrigger>
+                      <Input {...field} data-testid="word-entry-field-translation-en" autoFocus />
                     </FormControl>
-                    <SelectContent>
-                      <SelectItem value="masculine">
-                        {t('wordEntryEdit.genderMasculine')}
-                      </SelectItem>
-                      <SelectItem value="feminine">{t('wordEntryEdit.genderFeminine')}</SelectItem>
-                      <SelectItem value="neuter">{t('wordEntryEdit.genderNeuter')}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* translation_en_plural */}
+              <FormField
+                control={form.control}
+                name="translation_en_plural"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('wordEntryEdit.fieldTranslationEnPlural')}</FormLabel>
+                    <FormControl>
+                      <Input {...field} data-testid="word-entry-field-translation-en-plural" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* translation_ru */}
+              <FormField
+                control={form.control}
+                name="translation_ru"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('wordEntryEdit.fieldTranslationRu')}</FormLabel>
+                    <FormControl>
+                      <Input {...field} data-testid="word-entry-field-translation-ru" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* translation_ru_plural */}
+              <FormField
+                control={form.control}
+                name="translation_ru_plural"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('wordEntryEdit.fieldTranslationRuPlural')}</FormLabel>
+                    <FormControl>
+                      <Input {...field} data-testid="word-entry-field-translation-ru-plural" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">
+                {t('wordEntryEdit.sectionPronunciationGrammar')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* pronunciation */}
+              <FormField
+                control={form.control}
+                name="pronunciation"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('wordEntryEdit.fieldPronunciation')}</FormLabel>
+                    <FormControl>
+                      <Input {...field} data-testid="word-entry-field-pronunciation" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* gender (conditional) */}
+              {showGender && (
+                <FormField
+                  control={form.control}
+                  name="gender"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('wordEntryEdit.fieldGender')}</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value ?? ''}>
+                        <FormControl>
+                          <SelectTrigger data-testid="word-entry-field-gender">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="masculine">
+                            {t('wordEntryEdit.genderMasculine')}
+                          </SelectItem>
+                          <SelectItem value="feminine">
+                            {t('wordEntryEdit.genderFeminine')}
+                          </SelectItem>
+                          <SelectItem value="neuter">{t('wordEntryEdit.genderNeuter')}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               )}
-            />
-          )}
+            </CardContent>
+          </Card>
 
           {/* Examples */}
           {examples.length > 0 && (
-            <div className="space-y-3">
-              {examples.map((_, index) => (
-                <div
-                  key={index}
-                  className="space-y-2 rounded-md border p-3"
-                  data-testid={`word-entry-example-${index}`}
-                >
-                  <p className="text-xs font-medium text-muted-foreground">
-                    {t('wordEntryEdit.exampleHeader', { index: index + 1 })}
-                  </p>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">{t('wordEntryEdit.sectionExamples')}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {examples.map((_, index) => (
+                  <div
+                    key={index}
+                    className="space-y-2 rounded-md border p-3"
+                    data-testid={`word-entry-example-${index}`}
+                  >
+                    <p className="text-xs font-medium text-muted-foreground">
+                      {t('wordEntryEdit.exampleHeader', { index: index + 1 })}
+                    </p>
 
-                  <FormField
-                    control={form.control}
-                    name={`examples.${index}.greek`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t('wordEntryEdit.fieldExampleGreek')}</FormLabel>
-                        <FormControl>
-                          <Input {...field} data-testid={`word-entry-example-${index}-greek`} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                    <FormField
+                      control={form.control}
+                      name={`examples.${index}.greek`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t('wordEntryEdit.fieldExampleGreek')}</FormLabel>
+                          <FormControl>
+                            <Input {...field} data-testid={`word-entry-example-${index}-greek`} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                  <FormField
-                    control={form.control}
-                    name={`examples.${index}.english`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t('wordEntryEdit.fieldExampleEnglish')}</FormLabel>
-                        <FormControl>
-                          <Input {...field} data-testid={`word-entry-example-${index}-english`} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                    <FormField
+                      control={form.control}
+                      name={`examples.${index}.english`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t('wordEntryEdit.fieldExampleEnglish')}</FormLabel>
+                          <FormControl>
+                            <Input {...field} data-testid={`word-entry-example-${index}-english`} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                  <FormField
-                    control={form.control}
-                    name={`examples.${index}.russian`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t('wordEntryEdit.fieldExampleRussian')}</FormLabel>
-                        <FormControl>
-                          <Input {...field} data-testid={`word-entry-example-${index}-russian`} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                    <FormField
+                      control={form.control}
+                      name={`examples.${index}.russian`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t('wordEntryEdit.fieldExampleRussian')}</FormLabel>
+                          <FormControl>
+                            <Input {...field} data-testid={`word-entry-example-${index}-russian`} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                  <FormField
-                    control={form.control}
-                    name={`examples.${index}.context`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t('wordEntryEdit.fieldExampleContext')}</FormLabel>
-                        <FormControl>
-                          <Input {...field} data-testid={`word-entry-example-${index}-context`} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              ))}
-            </div>
+                    <FormField
+                      control={form.control}
+                      name={`examples.${index}.context`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t('wordEntryEdit.fieldExampleContext')}</FormLabel>
+                          <FormControl>
+                            <Input {...field} data-testid={`word-entry-example-${index}-context`} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
           )}
 
           {/* Actions */}

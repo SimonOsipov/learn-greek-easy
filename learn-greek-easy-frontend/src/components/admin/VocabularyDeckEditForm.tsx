@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DialogFooter } from '@/components/ui/dialog';
 import {
   Form,
@@ -89,6 +90,8 @@ interface VocabularyDeckEditFormProps {
   onSave: (data: VocabularyDeckFormData) => void;
   onCancel: () => void;
   isLoading?: boolean;
+  itemCount?: number;
+  createdAt?: string;
 }
 
 /**
@@ -106,6 +109,8 @@ export const VocabularyDeckEditForm: React.FC<VocabularyDeckEditFormProps> = ({
   onSave,
   onCancel,
   isLoading = false,
+  itemCount,
+  createdAt,
 }) => {
   const { t } = useTranslation('admin');
   const [showDeactivationWarning, setShowDeactivationWarning] = useState(false);
@@ -118,8 +123,8 @@ export const VocabularyDeckEditForm: React.FC<VocabularyDeckEditFormProps> = ({
     resolver: zodResolver(vocabularyDeckSchema),
     mode: 'onChange',
     defaultValues: {
-      name_en: deck.name_en || '',
-      name_ru: deck.name_ru || '',
+      name_en: deckName,
+      name_ru: deck.name_ru || (typeof deck.name !== 'string' ? deck.name.ru : '') || '',
       description_en: deck.description_en || '',
       description_ru: deck.description_ru || '',
       level: (deck.level as DeckLevel) || 'A1',
@@ -171,140 +176,178 @@ export const VocabularyDeckEditForm: React.FC<VocabularyDeckEditFormProps> = ({
         className="space-y-4"
         data-testid="vocabulary-deck-edit-form"
       >
-        {/* Language tabs for name/description */}
-        <div className="space-y-4">
-          <div className="flex gap-1 rounded-lg bg-muted p-1">
-            {DECK_LANGUAGES.map((lang) => (
-              <button
-                key={lang}
-                type="button"
-                onClick={() => setActiveTab(lang)}
-                data-testid={`deck-edit-lang-tab-${lang}`}
-                className={cn(
-                  'relative flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors',
-                  activeTab === lang ? 'bg-background shadow' : 'hover:bg-background/50',
-                  hasTabErrors(lang) && 'text-destructive'
-                )}
-              >
-                {LANGUAGE_LABELS[lang]}
-                {hasTabErrors(lang) && (
-                  <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-destructive" />
-                )}
-              </button>
-            ))}
-          </div>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">{t('deckEdit.sectionIdentity')}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Language tabs for name/description */}
+            <div className="space-y-4">
+              <div className="flex gap-1 rounded-lg bg-muted p-1">
+                {DECK_LANGUAGES.map((lang) => (
+                  <button
+                    key={lang}
+                    type="button"
+                    onClick={() => setActiveTab(lang)}
+                    data-testid={`deck-edit-lang-tab-${lang}`}
+                    className={cn(
+                      'relative flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors',
+                      activeTab === lang ? 'bg-background shadow' : 'hover:bg-background/50',
+                      hasTabErrors(lang) && 'text-destructive'
+                    )}
+                  >
+                    {LANGUAGE_LABELS[lang]}
+                    {hasTabErrors(lang) && (
+                      <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-destructive" />
+                    )}
+                  </button>
+                ))}
+              </div>
 
-          {/* Tab content - name and description per language */}
-          {DECK_LANGUAGES.map((lang) => (
-            <div key={lang} className={cn('space-y-4', activeTab !== lang && 'hidden')}>
-              <FormField
-                control={form.control}
-                name={`name_${lang}` as keyof VocabularyDeckFormData}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      {t('deckEdit.name')} ({LANGUAGE_LABELS[lang]})
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder={t('deckEdit.namePlaceholder')}
-                        data-testid={`deck-edit-name-${lang}`}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {/* Tab content - name and description per language */}
+              {DECK_LANGUAGES.map((lang) => (
+                <div key={lang} className={cn('space-y-4', activeTab !== lang && 'hidden')}>
+                  <FormField
+                    control={form.control}
+                    name={`name_${lang}` as keyof VocabularyDeckFormData}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          {t('deckEdit.name')} ({LANGUAGE_LABELS[lang]})
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder={t('deckEdit.namePlaceholder')}
+                            data-testid={`deck-edit-name-${lang}`}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-              <FormField
-                control={form.control}
-                name={`description_${lang}` as keyof VocabularyDeckFormData}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      {t('deckEdit.description')} ({LANGUAGE_LABELS[lang]})
-                    </FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder={t('deckEdit.descriptionPlaceholder')}
-                        className="min-h-[100px]"
-                        data-testid={`deck-edit-description-${lang}`}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                  <FormField
+                    control={form.control}
+                    name={`description_${lang}` as keyof VocabularyDeckFormData}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          {t('deckEdit.description')} ({LANGUAGE_LABELS[lang]})
+                        </FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder={t('deckEdit.descriptionPlaceholder')}
+                            className="min-h-[100px]"
+                            data-testid={`deck-edit-description-${lang}`}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
 
-        <FormField
-          control={form.control}
-          name="level"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t('deckEdit.level')}</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
-                <FormControl>
-                  <SelectTrigger data-testid="deck-edit-level">
-                    <SelectValue placeholder={t('deckEdit.levelPlaceholder')} />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {CEFR_LEVELS.map((level) => (
-                    <SelectItem key={level} value={level}>
-                      {level}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+            <FormField
+              control={form.control}
+              name="level"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('deckEdit.level')}</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger data-testid="deck-edit-level">
+                        <SelectValue placeholder={t('deckEdit.levelPlaceholder')} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {CEFR_LEVELS.map((level) => (
+                        <SelectItem key={level} value={level}>
+                          {level}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </CardContent>
+        </Card>
 
-        <FormField
-          control={form.control}
-          name="is_active"
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-              <div className="space-y-0.5">
-                <FormLabel className="text-base">{t('deckEdit.isActive')}</FormLabel>
-                <FormDescription>{t('deckEdit.isActiveDescription')}</FormDescription>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">{t('deckEdit.sectionAccess')}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <FormField
+              control={form.control}
+              name="is_active"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base">{t('deckEdit.isActive')}</FormLabel>
+                    <FormDescription>{t('deckEdit.isActiveDescription')}</FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={handleActiveChange}
+                      data-testid="deck-edit-is-active"
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="is_premium"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base">{t('deckEdit.isPremium')}</FormLabel>
+                    <FormDescription>{t('deckEdit.isPremiumDescription')}</FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      data-testid="deck-edit-is-premium"
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+          </CardContent>
+        </Card>
+
+        {(itemCount !== undefined || createdAt) && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">{t('deckEdit.stats')}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
+                {itemCount !== undefined && (
+                  <div>
+                    <span className="font-medium">{t('deckEdit.wordCount')}</span>
+                    <p className="mt-1">{itemCount}</p>
+                  </div>
+                )}
+                {createdAt && (
+                  <div>
+                    <span className="font-medium">{t('deckEdit.createdAt')}</span>
+                    <p className="mt-1">{new Date(createdAt).toLocaleDateString()}</p>
+                  </div>
+                )}
               </div>
-              <FormControl>
-                <Switch
-                  checked={field.value}
-                  onCheckedChange={handleActiveChange}
-                  data-testid="deck-edit-is-active"
-                />
-              </FormControl>
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="is_premium"
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-              <div className="space-y-0.5">
-                <FormLabel className="text-base">{t('deckEdit.isPremium')}</FormLabel>
-                <FormDescription>{t('deckEdit.isPremiumDescription')}</FormDescription>
-              </div>
-              <FormControl>
-                <Switch
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                  data-testid="deck-edit-is-premium"
-                />
-              </FormControl>
-            </FormItem>
-          )}
-        />
+            </CardContent>
+          </Card>
+        )}
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={onCancel} data-testid="deck-edit-cancel">
