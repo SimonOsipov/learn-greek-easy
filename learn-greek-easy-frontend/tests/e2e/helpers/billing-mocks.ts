@@ -5,7 +5,7 @@ const BASE_PRICING = [
   {
     billing_cycle: 'monthly',
     price_amount: 999,
-    price_formatted: '€9.99',
+    price_formatted: '9.99',
     currency: 'eur',
     interval: 'month',
     interval_count: 1,
@@ -14,7 +14,7 @@ const BASE_PRICING = [
   {
     billing_cycle: 'quarterly',
     price_amount: 2499,
-    price_formatted: '€24.99',
+    price_formatted: '24.99',
     currency: 'eur',
     interval: 'month',
     interval_count: 3,
@@ -23,7 +23,7 @@ const BASE_PRICING = [
   {
     billing_cycle: 'semi_annual',
     price_amount: 3999,
-    price_formatted: '€39.99',
+    price_formatted: '39.99',
     currency: 'eur',
     interval: 'month',
     interval_count: 6,
@@ -72,7 +72,7 @@ export const BILLING_PREMIUM: BillingStatusResponse = {
   current_period_end: '2026-03-22T00:00:00.000Z',
   cancel_at_period_end: false,
   current_price_amount: 999,
-  current_price_formatted: '€9.99',
+  current_price_formatted: '9.99',
   current_price_currency: 'eur',
 };
 
@@ -87,7 +87,7 @@ export const BILLING_CANCELLED: BillingStatusResponse = {
   current_period_end: '2026-04-15T00:00:00.000Z',
   cancel_at_period_end: true,
   current_price_amount: 2499,
-  current_price_formatted: '€24.99',
+  current_price_formatted: '24.99',
   current_price_currency: 'eur',
 };
 
@@ -102,7 +102,7 @@ export const BILLING_PAST_DUE: BillingStatusResponse = {
   current_period_end: '2026-02-26T00:00:00.000Z',
   cancel_at_period_end: false,
   current_price_amount: 999,
-  current_price_formatted: '€9.99',
+  current_price_formatted: '9.99',
   current_price_currency: 'eur',
 };
 

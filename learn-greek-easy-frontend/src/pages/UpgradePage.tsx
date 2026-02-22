@@ -161,17 +161,22 @@ export function UpgradePage() {
     }
 
     return (
-      <div className="mb-12 grid grid-cols-1 gap-6 md:grid-cols-3">
-        {billingStatus.pricing.map((plan) => (
-          <PricingCard
-            key={plan.billing_cycle}
-            plan={plan}
-            isLoading={isLoading}
-            onSubscribe={handleSubscribe}
-            t={t}
-          />
-        ))}
-      </div>
+      <>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+          {billingStatus.pricing.map((plan) => (
+            <PricingCard
+              key={plan.billing_cycle}
+              plan={plan}
+              isLoading={isLoading}
+              onSubscribe={handleSubscribe}
+              t={t}
+            />
+          ))}
+        </div>
+        <p className="mb-12 mt-4 text-center text-xs text-gray-400 dark:text-gray-500">
+          {t('pricing.moneyBack')}
+        </p>
+      </>
     );
   })();
 
@@ -201,14 +206,22 @@ export function UpgradePage() {
             >
               <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{t(feature.labelKey)}</td>
               <td className="px-4 py-3 text-center">
-                {feature.free ? (
+                {typeof feature.free === 'string' ? (
+                  <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                    {t(feature.free)}
+                  </span>
+                ) : feature.free ? (
                   <Check className="mx-auto h-4 w-4 text-green-500" />
                 ) : (
                   <X className="mx-auto h-4 w-4 text-gray-300 dark:text-gray-600" />
                 )}
               </td>
               <td className="px-4 py-3 text-center">
-                {feature.premium ? (
+                {typeof feature.premium === 'string' ? (
+                  <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                    {t(feature.premium)}
+                  </span>
+                ) : feature.premium ? (
                   <Check className="mx-auto h-4 w-4 text-green-500" />
                 ) : (
                   <X className="mx-auto h-4 w-4 text-gray-300 dark:text-gray-600" />
@@ -231,7 +244,9 @@ export function UpgradePage() {
       {banner}
 
       {pricingSection}
-
+      <h2 className="mb-6 text-center text-2xl font-bold text-gray-900 dark:text-white">
+        {t('comparison.heading')}
+      </h2>
       {comparisonTable}
     </div>
   );
