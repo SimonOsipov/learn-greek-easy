@@ -340,6 +340,11 @@
       "invalidDate": "Неверный формат даты (используйте YYYY-MM-DD)",
       "noFieldsToUpdate": "Нет полей для обновления"
     },
+    "search": {
+      "placeholder": "Поиск новостей...",
+      "filteredCount": "{{filtered}} из {{total}} элементов",
+      "noResults": "Новости не найдены"
+    },
     "audio": {
       "hasAudio": "Аудио",
       "noAudio": "Нет аудио",
@@ -403,6 +408,11 @@
         "message": "Не удалось сохранить ответ. Пожалуйста, попробуйте ещё раз."
       }
     },
+    "search": {
+      "placeholder": "Поиск отзывов...",
+      "filteredCount": "{{filtered}} из {{total}} элементов",
+      "noResults": "Отзывы не найдены"
+    },
     "errors": {
       "loadingTitle": "Ошибка загрузки отзывов"
     },
@@ -435,6 +445,11 @@
       "allStatuses": "Все статусы",
       "allTypes": "Все типы",
       "clear": "Очистить фильтры"
+    },
+    "search": {
+      "placeholder": "Поиск отчётов...",
+      "filteredCount": "{{filtered}} из {{total}} отчётов",
+      "noResults": "Отчёты не найдены"
     },
     "errors": {
       "loadingTitle": "Ошибка загрузки отчётов"
@@ -503,6 +518,18 @@
     "title": "История изменений",
     "addNew": "Добавить",
     "editDescription": "Редактирование записи изменений в формате JSON",
+    "search": {
+      "placeholder": "Поиск изменений...",
+      "filteredCount": "{{filtered}} из {{total}} записей",
+      "noResults": "Записи изменений не найдены"
+    },
+    "filter": {
+      "allTags": "Все теги",
+      "tagPlaceholder": "Фильтр по тегу"
+    },
+    "table": {
+      "empty": "Записи изменений не найдены"
+    },
     "create": {
       "title": "Создать запись изменений",
       "description": "Вставьте JSON для создания новой записи",

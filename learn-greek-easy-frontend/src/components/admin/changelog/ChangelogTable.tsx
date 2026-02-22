@@ -2,11 +2,21 @@
  * Admin table for managing changelog entries.
  */
 
-import { ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+
+import { ChevronLeft, ChevronRight, Pencil, Search, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
@@ -16,8 +26,19 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import type { ChangelogEntryAdmin } from '@/types/changelog';
-import { CHANGELOG_TAG_CONFIG } from '@/types/changelog';
+import type { ChangelogEntryAdmin, ChangelogTag } from '@/types/changelog';
+import { CHANGELOG_TAG_CONFIG, CHANGELOG_TAG_OPTIONS } from '@/types/changelog';
+
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+  return debouncedValue;
+}
 
 interface ChangelogTableProps {
   items: ChangelogEntryAdmin[];
@@ -67,6 +88,18 @@ export function ChangelogTable({
 }: ChangelogTableProps) {
   const { t, i18n } = useTranslation(['admin', 'changelog']);
 
+  const [searchInput, setSearchInput] = useState('');
+  const [tagFilter, setTagFilter] = useState<ChangelogTag | 'all'>('all');
+  const debouncedSearch = useDebounce(searchInput, 300);
+
+  const filteredEntries = items.filter((entry) => {
+    const title = i18n.language === 'ru' ? entry.title_ru || entry.title_en : entry.title_en;
+    const matchesSearch =
+      !debouncedSearch || title.toLowerCase().includes(debouncedSearch.toLowerCase());
+    const matchesTag = tagFilter === 'all' || entry.tag === tagFilter;
+    return matchesSearch && matchesTag;
+  });
+
   const formatDate = (dateString: string): string => {
     return new Date(dateString).toLocaleDateString(i18n.language, {
       year: 'numeric',
@@ -89,6 +122,39 @@ export function ChangelogTable({
 
   return (
     <div className="space-y-4" data-testid="changelog-table">
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder={t('admin:changelog.search.placeholder')}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            className="pl-9"
+            data-testid="changelog-search-input"
+          />
+        </div>
+        <Select value={tagFilter} onValueChange={(v) => setTagFilter(v as ChangelogTag | 'all')}>
+          <SelectTrigger className="w-full sm:w-[180px]" data-testid="changelog-tag-filter">
+            <SelectValue placeholder={t('admin:changelog.filter.tagPlaceholder')} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{t('admin:changelog.filter.allTags')}</SelectItem>
+            {CHANGELOG_TAG_OPTIONS.map((tag) => (
+              <SelectItem key={tag} value={tag}>
+                {t(CHANGELOG_TAG_CONFIG[tag].labelKey)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      {(debouncedSearch || tagFilter !== 'all') && (
+        <p className="text-sm text-muted-foreground">
+          {t('admin:changelog.search.filteredCount', {
+            filtered: filteredEntries.length,
+            total: items.length,
+          })}
+        </p>
+      )}
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -102,14 +168,16 @@ export function ChangelogTable({
           <TableBody>
             {isLoading ? (
               <TableSkeleton />
-            ) : items.length === 0 ? (
+            ) : filteredEntries.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                  No changelog entries found.
+                  {debouncedSearch || tagFilter !== 'all'
+                    ? t('admin:changelog.search.noResults')
+                    : t('admin:changelog.table.empty')}
                 </TableCell>
               </TableRow>
             ) : (
-              items.map((entry) => {
+              filteredEntries.map((entry) => {
                 const tagConfig = CHANGELOG_TAG_CONFIG[entry.tag];
                 return (
                   <TableRow key={entry.id} data-testid={`changelog-row-${entry.id}`}>

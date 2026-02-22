@@ -328,6 +328,11 @@
       "invalidDate": "Invalid publication_date format (use YYYY-MM-DD)",
       "noFieldsToUpdate": "No fields to update"
     },
+    "search": {
+      "placeholder": "Search news...",
+      "filteredCount": "{{filtered}} of {{total}} items",
+      "noResults": "No news items match your search"
+    },
     "audio": {
       "hasAudio": "Audio",
       "noAudio": "No audio",
@@ -394,6 +399,11 @@
     "errors": {
       "loadingTitle": "Error Loading Feedback"
     },
+    "search": {
+      "placeholder": "Search feedback...",
+      "filteredCount": "{{filtered}} of {{total}} items",
+      "noResults": "No feedback matches your search"
+    },
     "states": {
       "noFeedback": "No feedback submitted yet",
       "noFilteredResults": "No feedback matches the selected filters"
@@ -423,6 +433,11 @@
       "allStatuses": "All Statuses",
       "allTypes": "All Types",
       "clear": "Clear Filters"
+    },
+    "search": {
+      "placeholder": "Search reports...",
+      "filteredCount": "{{filtered}} of {{total}} reports",
+      "noResults": "No reports match your search"
     },
     "errors": {
       "loadingTitle": "Error Loading Reports"
@@ -491,6 +506,18 @@
     "title": "Changelog",
     "addNew": "Add New",
     "editDescription": "Edit changelog entry as JSON",
+    "search": {
+      "placeholder": "Search changelog...",
+      "filteredCount": "{{filtered}} of {{total}} entries",
+      "noResults": "No changelog entries match your search"
+    },
+    "filter": {
+      "allTags": "All Tags",
+      "tagPlaceholder": "Filter by tag"
+    },
+    "table": {
+      "empty": "No changelog entries found."
+    },
     "create": {
       "title": "Create Changelog Entry",
       "description": "Paste JSON to create a new changelog entry",
