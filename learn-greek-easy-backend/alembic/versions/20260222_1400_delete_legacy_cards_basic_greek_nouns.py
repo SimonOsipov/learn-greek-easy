@@ -1,13 +1,13 @@
 """Delete legacy cards from Basic Greek Nouns deck
 
-Revision ID: a1b2c3d4e5f6
+Revision ID: 3549b976ac14
 Revises: 4c9f15d252bd
 Create Date: 2026-02-22
 """
 
 from alembic import op
 
-revision = "a1b2c3d4e5f6"
+revision = "3549b976ac14"
 down_revision = "4c9f15d252bd"
 branch_labels = None
 depends_on = None
