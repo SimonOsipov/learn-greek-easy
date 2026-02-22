@@ -15,8 +15,10 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 
+import { BarChart3, Megaphone } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { SummaryCard } from '@/components/admin/SummaryCard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
 import { adminAPI } from '@/services/adminAPI';
@@ -49,6 +51,7 @@ export const AnnouncementsTab: React.FC = () => {
     announcements,
     selectedAnnouncement,
     page,
+    total,
     totalPages,
     isLoading,
     isLoadingDetail,
@@ -159,8 +162,35 @@ export const AnnouncementsTab: React.FC = () => {
     [setPage]
   );
 
+  const avgReadPct =
+    announcements.length > 0
+      ? Math.round(
+          announcements.reduce(
+            (sum, a) =>
+              sum + (a.total_recipients > 0 ? (a.read_count / a.total_recipients) * 100 : 0),
+            0
+          ) / announcements.length
+        )
+      : 0;
+
   return (
     <div className="space-y-6">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <SummaryCard
+          title={t('announcements.stats.total')}
+          value={total}
+          icon={<Megaphone className="h-5 w-5 text-muted-foreground" />}
+          testId="announcements-total-card"
+        />
+        <SummaryCard
+          title={t('announcements.stats.avgRead')}
+          value={`${avgReadPct}%`}
+          icon={<BarChart3 className="h-5 w-5 text-muted-foreground" />}
+          testId="announcements-avg-read-card"
+        />
+      </div>
+
       {/* Create Form */}
       <Card data-testid="announcements-tab">
         <CardHeader>

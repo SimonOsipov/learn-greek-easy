@@ -232,6 +232,7 @@
     "wordEntries": "Word Entries"
   },
   "announcements": {
+    "stats": { "total": "Total Announcements", "avgRead": "Avg. Read Rate" },
     "create": {
       "title": "Create Announcement",
       "description": "Send a notification to all active users",
@@ -277,6 +278,7 @@
     }
   },
   "news": {
+    "stats": { "total": "Total News", "withAudio": "With Audio" },
     "create": {
       "title": "Create News Item",
       "description": "Enter news item data as JSON. The backend will download and store the image from source_image_url.",
@@ -345,6 +347,7 @@
     }
   },
   "feedback": {
+    "stats": { "total": "Total Feedback", "new": "New", "responded": "Responded" },
     "sectionTitle": "User Feedback",
     "sectionDescription": "Review and respond to user feedback and bug reports",
     "anonymousUser": "Anonymous User",
@@ -397,6 +400,7 @@
     }
   },
   "cardErrors": {
+    "stats": { "total": "Total Reports", "pending": "Pending", "fixed": "Fixed" },
     "sectionTitle": "Card Error Reports",
     "sectionDescription": "Review and respond to card error reports from users",
     "anonymousUser": "Anonymous User",
@@ -483,6 +487,7 @@
     "discard": "Discard"
   },
   "changelog": {
+    "stats": { "total": "Total Entries", "mostRecent": "Most Recent" },
     "title": "Changelog",
     "addNew": "Add New",
     "editDescription": "Edit changelog entry as JSON",

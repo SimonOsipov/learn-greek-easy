@@ -2,9 +2,18 @@
 
 import React, { useEffect, useState } from 'react';
 
-import { AlertCircle, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
+import {
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight,
+  Inbox,
+  MessageCircle,
+  MessageSquare,
+  RefreshCw,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { SummaryCard } from '@/components/admin/SummaryCard';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -97,8 +106,31 @@ export const AdminFeedbackSection: React.FC = () => {
 
   const hasActiveFilters = filters.status !== null || filters.category !== null;
 
+  const newCount = feedbackList.filter((f) => f.status === 'new').length;
+  const respondedCount = feedbackList.filter((f) => f.admin_response !== null).length;
+
   return (
-    <>
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <SummaryCard
+          title={t('feedback.stats.total')}
+          value={total}
+          icon={<MessageSquare className="h-5 w-5 text-muted-foreground" />}
+          testId="feedback-total-card"
+        />
+        <SummaryCard
+          title={t('feedback.stats.new')}
+          value={newCount}
+          icon={<Inbox className="h-5 w-5 text-muted-foreground" />}
+          testId="feedback-new-card"
+        />
+        <SummaryCard
+          title={t('feedback.stats.responded')}
+          value={respondedCount}
+          icon={<MessageCircle className="h-5 w-5 text-muted-foreground" />}
+          testId="feedback-responded-card"
+        />
+      </div>
       <Card data-testid="admin-feedback-section">
         <CardHeader>
           <CardTitle data-testid="admin-feedback-title">{t('feedback.sectionTitle')}</CardTitle>
@@ -255,6 +287,6 @@ export const AdminFeedbackSection: React.FC = () => {
         onOpenChange={handleResponseDialogClose}
         feedback={selectedFeedback}
       />
-    </>
+    </div>
   );
 };

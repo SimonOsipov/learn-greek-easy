@@ -2,9 +2,18 @@
 
 import React, { useEffect, useState } from 'react';
 
-import { AlertCircle, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
+import {
+  AlertCircle,
+  AlertTriangle,
+  CheckCircle,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  RefreshCw,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { SummaryCard } from '@/components/admin/SummaryCard';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -110,8 +119,31 @@ export const AdminCardErrorSection: React.FC = () => {
 
   const hasActiveFilters = filters.status !== null || filters.cardType !== null;
 
+  const pendingCount = errorList.filter((e) => e.status === 'PENDING').length;
+  const fixedCount = errorList.filter((e) => e.status === 'FIXED').length;
+
   return (
-    <>
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <SummaryCard
+          title={t('cardErrors.stats.total')}
+          value={total}
+          icon={<AlertTriangle className="h-5 w-5 text-muted-foreground" />}
+          testId="card-errors-total-card"
+        />
+        <SummaryCard
+          title={t('cardErrors.stats.pending')}
+          value={pendingCount}
+          icon={<Clock className="h-5 w-5 text-muted-foreground" />}
+          testId="card-errors-pending-card"
+        />
+        <SummaryCard
+          title={t('cardErrors.stats.fixed')}
+          value={fixedCount}
+          icon={<CheckCircle className="h-5 w-5 text-muted-foreground" />}
+          testId="card-errors-fixed-card"
+        />
+      </div>
       <Card data-testid="admin-card-error-section">
         <CardHeader>
           <CardTitle data-testid="admin-card-error-title">{t('cardErrors.sectionTitle')}</CardTitle>
@@ -273,6 +305,6 @@ export const AdminCardErrorSection: React.FC = () => {
           fetchErrorList();
         }}
       />
-    </>
+    </div>
   );
 };

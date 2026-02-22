@@ -12,9 +12,10 @@
 
 import { useEffect, useState } from 'react';
 
-import { Loader2 } from 'lucide-react';
+import { Calendar, FileText, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { SummaryCard } from '@/components/admin/SummaryCard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -129,9 +130,35 @@ export function ChangelogTab() {
     }
   };
 
+  const mostRecentDate =
+    items.length > 0
+      ? new Date(
+          items.reduce(
+            (latest, item) => (item.created_at > latest ? item.created_at : latest),
+            items[0].created_at
+          )
+        ).toLocaleDateString()
+      : '—';
+
   return (
     <>
       <div className="space-y-6" data-testid="changelog-tab">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <SummaryCard
+            title={t('admin:changelog.stats.total')}
+            value={total}
+            icon={<FileText className="h-5 w-5 text-muted-foreground" />}
+            testId="changelog-total-card"
+          />
+          <SummaryCard
+            title={t('admin:changelog.stats.mostRecent')}
+            value={mostRecentDate}
+            icon={<Calendar className="h-5 w-5 text-muted-foreground" />}
+            testId="changelog-most-recent-card"
+          />
+        </div>
+
         {/* Create Changelog Entry Section */}
         <Card data-testid="changelog-create-card">
           <CardHeader>
