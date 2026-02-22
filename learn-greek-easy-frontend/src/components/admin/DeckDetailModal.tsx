@@ -482,8 +482,12 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
                           variant="ghost"
                           size="sm"
                           onClick={() => {
-                            setSelectedVocabularyCardId(card.id);
-                            setVocabularyEditModalOpen(true);
+                            if (isV2Vocabulary) {
+                              handleWordEntryClick(card);
+                            } else {
+                              setSelectedVocabularyCardId(card.id);
+                              setVocabularyEditModalOpen(true);
+                            }
                           }}
                           data-testid={`vocabulary-card-edit-${card.id}`}
                         >
