@@ -7,6 +7,8 @@ function getPeriodKey(billingCycle: string): string {
   return 'pricing.perSixMonths';
 }
 
+const CURRENCY_SYMBOLS: Record<string, string> = { eur: '€', usd: '$', gbp: '£' };
+
 interface PricingCardProps {
   plan: PricingPlan;
   isLoading: boolean;
@@ -25,10 +27,11 @@ export function PricingCard({
   buttonLabel,
 }: PricingCardProps) {
   const isFeatured = plan.billing_cycle === 'semi_annual';
+  const symbol = CURRENCY_SYMBOLS[plan.currency] ?? plan.currency.toUpperCase();
 
   return (
     <div
-      className={`relative flex flex-col rounded-xl border bg-white p-6 shadow-sm dark:bg-gray-800 ${
+      className={`relative flex flex-col overflow-visible rounded-xl border bg-white p-6 shadow-sm dark:bg-gray-800 ${
         isFeatured
           ? 'border-amber-500 ring-2 ring-amber-500'
           : 'border-gray-200 dark:border-gray-700'
@@ -36,7 +39,7 @@ export function PricingCard({
     >
       {isFeatured && (
         <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-          <span className="rounded-full bg-amber-500 px-3 py-1 text-xs font-semibold text-white">
+          <span className="whitespace-nowrap rounded-full bg-amber-500 px-3 py-1 text-xs font-semibold text-white">
             {t('pricing.mostPopular')}
           </span>
         </div>
@@ -50,13 +53,14 @@ export function PricingCard({
         </div>
       )}
 
-      <div className="mb-4">
-        <div className="text-3xl font-bold text-gray-900 dark:text-white">
+      <div className="mb-4 flex items-baseline gap-1">
+        <span className="text-3xl font-bold text-gray-900 dark:text-white">
+          {symbol}
           {plan.price_formatted}
-        </div>
-        <div className="text-sm text-gray-500 dark:text-gray-400">
+        </span>
+        <span className="text-sm text-gray-500 dark:text-gray-400">
           {t(getPeriodKey(plan.billing_cycle))}
-        </div>
+        </span>
       </div>
 
       {plan.savings_percent !== null && (
@@ -75,10 +79,6 @@ export function PricingCard({
       >
         {isLoading ? t('pricing.subscribing') : (buttonLabel ?? t('pricing.subscribe'))}
       </Button>
-
-      <p className="mt-3 text-center text-xs text-gray-400 dark:text-gray-500">
-        {t('pricing.moneyBack')}
-      </p>
     </div>
   );
 }

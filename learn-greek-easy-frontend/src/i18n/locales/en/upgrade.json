@@ -2,7 +2,7 @@
   "page": { "title": "Upgrade to Premium", "subtitle": "Unlock the full Greekly experience" },
   "banner": { "trialActive": "You have {{days}} days left in your free trial", "trialExpired": "Your free trial has ended", "pastDue": "Your payment is past due. Please update your payment method." },
   "alreadyPremium": { "title": "You're already on Premium!", "description": "You have full access to all features.", "manageLink": "Manage Subscription" },
-  "pricing": { "mostPopular": "Most Popular", "save": "Save {{percent}}%", "perMonth": "/month", "perQuarter": "/quarter", "perSixMonths": "/6 months", "subscribe": "Subscribe", "subscribing": "Redirecting to checkout...", "unavailable": "Billing is not currently available. Please try again later.", "moneyBack": "14-day money-back guarantee" },
+  "pricing": { "mostPopular": "Most Popular", "save": "Save {{percent}}%", "perMonth": "/month", "perQuarter": "/3 months", "perSixMonths": "/6 months", "subscribe": "Subscribe", "subscribing": "Redirecting to checkout...", "unavailable": "Billing is not currently available. Please try again later.", "moneyBack": "14-day money-back guarantee" },
   "comparison": { "freeColumn": "Free", "premiumColumn": "Premium", "featureColumn": "Feature" },
   "features": {
     "basicVocabulary": "Basic vocabulary cards (A1)",

@@ -129,9 +129,9 @@ describe('UpgradePage', () => {
 
   it('renders pricing cards', async () => {
     render(<UpgradePage />);
-    expect(await screen.findByText('29.00')).toBeInTheDocument();
-    expect(screen.getByText('75.00')).toBeInTheDocument();
-    expect(screen.getByText('138.00')).toBeInTheDocument();
+    expect(await screen.findByText('€29.00')).toBeInTheDocument();
+    expect(screen.getByText('€75.00')).toBeInTheDocument();
+    expect(screen.getByText('€138.00')).toBeInTheDocument();
   });
 
   it('semi_annual shows most popular badge', async () => {

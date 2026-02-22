@@ -2,7 +2,7 @@
   "page": { "title": "Перейти на Премиум", "subtitle": "Откройте полный доступ к Greekly" },
   "banner": { "trialActive": "У вас осталось {{days}} дней бесплатного пробного периода", "trialExpired": "Ваш бесплатный пробный период закончился", "pastDue": "Ваш платёж просрочен. Пожалуйста, обновите способ оплаты." },
   "alreadyPremium": { "title": "Вы уже на Премиуме!", "description": "У вас полный доступ ко всем функциям.", "manageLink": "Управление подпиской" },
-  "pricing": { "mostPopular": "Самый популярный", "save": "Скидка {{percent}}%", "perMonth": "/месяц", "perQuarter": "/квартал", "perSixMonths": "/6 месяцев", "subscribe": "Подписаться", "subscribing": "Перенаправление на оплату...", "unavailable": "Оплата временно недоступна. Пожалуйста, попробуйте позже.", "moneyBack": "Гарантия возврата в течение 14 дней" },
+  "pricing": { "mostPopular": "Самый популярный", "save": "Скидка {{percent}}%", "perMonth": "/месяц", "perQuarter": "/3 месяца", "perSixMonths": "/6 месяцев", "subscribe": "Подписаться", "subscribing": "Перенаправление на оплату...", "unavailable": "Оплата временно недоступна. Пожалуйста, попробуйте позже.", "moneyBack": "Гарантия возврата в течение 14 дней" },
   "comparison": { "freeColumn": "Бесплатно", "premiumColumn": "Премиум", "featureColumn": "Функция" },
   "features": {
     "basicVocabulary": "Базовые карточки слов (A1)",

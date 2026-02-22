@@ -161,17 +161,22 @@ export function UpgradePage() {
     }
 
     return (
-      <div className="mb-12 grid grid-cols-1 gap-6 md:grid-cols-3">
-        {billingStatus.pricing.map((plan) => (
-          <PricingCard
-            key={plan.billing_cycle}
-            plan={plan}
-            isLoading={isLoading}
-            onSubscribe={handleSubscribe}
-            t={t}
-          />
-        ))}
-      </div>
+      <>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+          {billingStatus.pricing.map((plan) => (
+            <PricingCard
+              key={plan.billing_cycle}
+              plan={plan}
+              isLoading={isLoading}
+              onSubscribe={handleSubscribe}
+              t={t}
+            />
+          ))}
+        </div>
+        <p className="mb-12 mt-4 text-center text-xs text-gray-400 dark:text-gray-500">
+          {t('pricing.moneyBack')}
+        </p>
+      </>
     );
   })();
 
