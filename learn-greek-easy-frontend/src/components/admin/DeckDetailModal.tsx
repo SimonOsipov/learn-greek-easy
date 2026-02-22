@@ -2,16 +2,27 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
-import { AlertCircle, ChevronLeft, ChevronRight, Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import {
+  AlertCircle,
+  AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -166,6 +177,11 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const totalCountRef = useRef<number | null>(null);
 
+  // Bulk selection state (V2 word list)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+
   const fetchItems = useCallback(async () => {
     if (!deck) return;
 
@@ -184,6 +200,7 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
               })
             : await adminAPI.listVocabularyCards(deck.id, page, pageSize);
         setCards(response.cards);
+        setSelectedIds(new Set());
         setTotal(response.total);
         // Cache unfiltered total on first load
         if (!debouncedSearch && posFilter === 'all' && totalCountRef.current === null) {
@@ -221,6 +238,7 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
     setSortBy('lemma');
     setSortOrder('asc');
     totalCountRef.current = null;
+    setSelectedIds(new Set());
   }, [deck?.id]);
 
   // Debounce search input
@@ -287,6 +305,45 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
       setItemToDelete(null);
     }
     setDeleteDialogOpen(openState);
+  };
+
+  const handleSelectAll = () => {
+    if (selectedIds.size === cards.length && cards.length > 0) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(cards.map((c) => c.id)));
+    }
+  };
+
+  const handleSelectCard = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    if (!deck) return;
+    setIsBulkDeleting(true);
+    const count = selectedIds.size;
+    try {
+      const results = await Promise.allSettled(
+        Array.from(selectedIds).map((id) => adminAPI.deleteVocabularyCard(id))
+      );
+      const failed = results.filter((r) => r.status === 'rejected').length;
+      setBulkDeleteDialogOpen(false);
+      if (failed > 0) {
+        toast({ title: t('wordList.bulkDeleteError'), variant: 'destructive' });
+      } else {
+        toast({ title: t('wordList.bulkDeleteSuccess', { count }) });
+      }
+      await fetchItems();
+      onItemDeleted?.();
+    } finally {
+      setIsBulkDeleting(false);
+    }
   };
 
   const handleWordEntryClick = (card: AdminVocabularyCard) => {
@@ -513,6 +570,37 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
                 </div>
               )}
 
+              {/* Bulk Actions Bar — V2 vocabulary only */}
+              {isV2Vocabulary && !isLoading && !error && cards.length > 0 && (
+                <div className="flex items-center gap-2" data-testid="word-list-bulk-bar">
+                  <Checkbox
+                    id="select-all-words"
+                    checked={selectedIds.size === cards.length && cards.length > 0}
+                    onCheckedChange={handleSelectAll}
+                    data-testid="word-list-select-all"
+                  />
+                  <label
+                    htmlFor="select-all-words"
+                    className="cursor-pointer select-none text-sm text-muted-foreground"
+                  >
+                    {selectedIds.size > 0
+                      ? t('wordList.selectedCount', { count: selectedIds.size })
+                      : t('wordList.selectAll')}
+                  </label>
+                  {selectedIds.size > 0 && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setBulkDeleteDialogOpen(true)}
+                      data-testid="word-list-bulk-delete-btn"
+                    >
+                      <Trash2 className="mr-1 h-4 w-4" />
+                      {t('wordList.bulkDeleteButton')}
+                    </Button>
+                  )}
+                </div>
+              )}
+
               {/* Loading State */}
               {isLoading && (
                 <div className="space-y-3" data-testid="deck-detail-loading">
@@ -578,6 +666,14 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
                           },
                         })}
                       >
+                        {isV2Vocabulary && (
+                          <Checkbox
+                            checked={selectedIds.has(card.id)}
+                            onCheckedChange={() => handleSelectCard(card.id)}
+                            className="mr-2 shrink-0"
+                            data-testid={`word-entry-select-${card.id}`}
+                          />
+                        )}
                         <div className="min-w-0 flex-1 pr-2">
                           <div className="flex items-center gap-2">
                             <p className="truncate font-medium">{card.front_text}</p>
@@ -826,6 +922,43 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
         onConfirm={handleConfirmDelete}
         isDeleting={isDeleting}
       />
+
+      {/* Bulk Delete Confirmation Dialog */}
+      {isV2Vocabulary && (
+        <Dialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
+          <DialogContent data-testid="bulk-delete-dialog">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+                {t('wordList.bulkDeleteTitle', { count: selectedIds.size })}
+              </DialogTitle>
+              <DialogDescription>
+                {t('wordList.bulkDeleteDescription', { count: selectedIds.size })}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setBulkDeleteDialogOpen(false)}
+                disabled={isBulkDeleting}
+                data-testid="bulk-delete-cancel"
+              >
+                {t('wordList.bulkDeleteCancel')}
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleBulkDelete}
+                disabled={isBulkDeleting}
+                data-testid="bulk-delete-confirm"
+              >
+                {isBulkDeleting
+                  ? t('wordList.bulkDeleteDeleting')
+                  : t('wordList.bulkDeleteConfirm', { count: selectedIds.size })}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Culture Question Edit Modal */}
       <CardEditModal

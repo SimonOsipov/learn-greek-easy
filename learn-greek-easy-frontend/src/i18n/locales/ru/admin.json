@@ -763,7 +763,17 @@
     "sortAlphaGreek": "По алфавиту (греческий)",
     "sortDateAdded": "По дате добавления",
     "filteredCount": "{{filtered}} из {{total}} слов",
-    "noResults": "Нет слов, соответствующих поиску"
+    "noResults": "Нет слов, соответствующих поиску",
+    "selectAll": "Выбрать все",
+    "selectedCount": "Выбрано: {{count}}",
+    "bulkDeleteButton": "Удалить выбранные",
+    "bulkDeleteTitle": "Удалить {{count}} слов?",
+    "bulkDeleteDescription": "Это навсегда удалит {{count}} слов вместе со всеми связанными карточками и прогрессом пользователей. Это действие нельзя отменить.",
+    "bulkDeleteConfirm": "Удалить {{count}} слов",
+    "bulkDeleteCancel": "Отмена",
+    "bulkDeleteDeleting": "Удаление...",
+    "bulkDeleteSuccess": "{{count}} слов удалено",
+    "bulkDeleteError": "Не удалось удалить некоторые слова"
   },
   "wordEntryEdit": {
     "edit": "Редактировать",

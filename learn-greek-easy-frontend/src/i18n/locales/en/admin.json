@@ -751,7 +751,17 @@
     "sortAlphaGreek": "Alphabetical (Greek)",
     "sortDateAdded": "Date added",
     "filteredCount": "{{filtered}} of {{total}} words",
-    "noResults": "No words match your search"
+    "noResults": "No words match your search",
+    "selectAll": "Select all",
+    "selectedCount": "{{count}} selected",
+    "bulkDeleteButton": "Delete selected",
+    "bulkDeleteTitle": "Delete {{count}} words?",
+    "bulkDeleteDescription": "This will permanently delete {{count}} words and all associated cards and user progress. This action cannot be undone.",
+    "bulkDeleteConfirm": "Delete {{count}} words",
+    "bulkDeleteCancel": "Cancel",
+    "bulkDeleteDeleting": "Deleting...",
+    "bulkDeleteSuccess": "{{count}} words deleted",
+    "bulkDeleteError": "Failed to delete some words"
   },
   "wordEntryEdit": {
     "edit": "Edit",
