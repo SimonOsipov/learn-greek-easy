@@ -434,6 +434,7 @@
       "anonymousUser": "Anonymous User",
       "userDescription": "User Description",
       "viewCard": "View Card",
+      "copyCardId": "Copy Card ID",
       "cardIdCopied": "Card ID Copied",
       "cardIdCopiedMessage": "Card ID has been copied to clipboard",
       "adminActions": "Admin Actions",
@@ -484,6 +485,7 @@
   "changelog": {
     "title": "Changelog",
     "addNew": "Add New",
+    "editDescription": "Edit changelog entry as JSON",
     "create": {
       "title": "Create Changelog Entry",
       "description": "Paste JSON to create a new changelog entry",

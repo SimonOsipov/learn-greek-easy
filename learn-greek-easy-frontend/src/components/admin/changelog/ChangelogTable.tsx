@@ -157,8 +157,11 @@ export function ChangelogTable({
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            Showing {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, total)} of {total}{' '}
-            entries
+            {t('admin:pagination.showing', {
+              from: (page - 1) * pageSize + 1,
+              to: Math.min(page * pageSize, total),
+              total,
+            })}
           </p>
           <div className="flex items-center gap-2">
             <Button
@@ -169,10 +172,10 @@ export function ChangelogTable({
               data-testid="pagination-previous"
             >
               <ChevronLeft className="h-4 w-4" />
-              Previous
+              {t('admin:pagination.previous')}
             </Button>
             <span className="text-sm text-muted-foreground">
-              Page {page} of {totalPages}
+              {t('admin:pagination.pageOf', { page, totalPages })}
             </span>
             <Button
               variant="outline"
@@ -181,7 +184,7 @@ export function ChangelogTable({
               disabled={page >= totalPages}
               data-testid="pagination-next"
             >
-              Next
+              {t('admin:pagination.next')}
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>

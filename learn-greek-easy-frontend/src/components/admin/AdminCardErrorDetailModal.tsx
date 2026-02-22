@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { BookOpen, ExternalLink, Globe, Loader2, User } from 'lucide-react';
+import { BookOpen, Copy, Globe, Loader2, User } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
@@ -281,8 +281,8 @@ export const AdminCardErrorDetailModal: React.FC<AdminCardErrorDetailModalProps>
               className="w-full"
               data-testid="view-card-button"
             >
-              <ExternalLink className="mr-2 h-4 w-4" />
-              {t('cardErrors.detail.viewCard')}
+              <Copy className="mr-2 h-4 w-4" />
+              {t('cardErrors.detail.copyCardId')}
             </Button>
           </div>
 
