@@ -246,7 +246,20 @@
       "optional": "optional",
       "preview": "Preview",
       "success": "Announcement sent successfully",
-      "error": "Failed to send announcement"
+      "error": "Failed to send announcement",
+      "modeForm": "Form",
+      "modeJson": "JSON",
+      "jsonHint": "Paste a JSON object with title, message, and optional link_url.",
+      "jsonPlaceholder": "{\n  \"title\": \"Your announcement title\",\n  \"message\": \"Your announcement message\",\n  \"link_url\": \"https://example.com (optional)\"\n}",
+      "switchModeConfirmTitle": "Switch mode?",
+      "switchModeConfirm": "Your current input will be cleared. Continue?",
+      "jsonInvalidJson": "Invalid JSON. Please check your syntax.",
+      "jsonTitleRequired": "Title is required.",
+      "jsonTitleTooLong": "Title must be 100 characters or less.",
+      "jsonMessageRequired": "Message is required.",
+      "jsonMessageTooLong": "Message must be 500 characters or less.",
+      "jsonInvalidUrl": "Link URL must be a valid URL.",
+      "jsonUrlTooLong": "Link URL must be 500 characters or less."
     },
     "preview": {
       "title": "Preview Announcement",
