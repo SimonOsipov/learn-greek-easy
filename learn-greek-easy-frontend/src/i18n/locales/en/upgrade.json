@@ -3,19 +3,26 @@
   "banner": { "trialActive": "You have {{days}} days left in your free trial", "trialExpired": "Your free trial has ended", "pastDue": "Your payment is past due. Please update your payment method." },
   "alreadyPremium": { "title": "You're already on Premium!", "description": "You have full access to all features.", "manageLink": "Manage Subscription" },
   "pricing": { "mostPopular": "Most Popular", "save": "Save {{percent}}%", "perMonth": "/month", "perQuarter": "/3 months", "perSixMonths": "/6 months", "subscribe": "Subscribe", "subscribing": "Redirecting to checkout...", "unavailable": "Billing is not currently available. Please try again later.", "moneyBack": "14-day money-back guarantee" },
-  "comparison": { "freeColumn": "Free", "premiumColumn": "Premium", "featureColumn": "Feature" },
+  "comparison": { "freeColumn": "Free", "premiumColumn": "Premium", "featureColumn": "Feature", "heading": "What is Premium?" },
   "features": {
-    "basicVocabulary": "Basic vocabulary cards (A1)",
-    "limitedDailyPractice": "Limited daily practice",
-    "limitedPersonalDecks": "Limited personal decks",
-    "progressTracking": "Progress tracking",
-    "communityAccess": "Community access",
-    "allVocabularyThemes": "All vocabulary themes (A1-B2)",
-    "unlimitedPractice": "Unlimited practice",
-    "verbConjugations": "Verb conjugations & noun cases",
-    "realNewsAudio": "Real news & audio dialogs",
-    "historyCulture": "History & culture",
-    "prioritySupport": "Priority support"
+    "baseDecks": "Base decks for A1 and A2 level",
+    "dailyPractice": {
+      "label": "Daily practice",
+      "free": "Limited",
+      "premium": "Unlimited"
+    },
+    "personalDecks": {
+      "label": "Personal decks",
+      "free": "Up to 100 cards",
+      "premium": "Unlimited"
+    },
+    "historyCulturePractice": "History & culture practice",
+    "themedDecks": "Themed decks (Medicine, Real Estate, etc.)",
+    "verbConjugationPractice": "Verb conjugation practice",
+    "nounCasePractice": "Noun case practice",
+    "articlePractice": "Article practice",
+    "singularPluralPractice": "Singular / plural practice",
+    "currentNews": "Current news for culture practice"
   },
   "error": { "title": "Failed to load pricing", "retry": "Try again" }
 }
