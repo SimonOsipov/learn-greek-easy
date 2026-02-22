@@ -773,6 +773,9 @@
     "genderNeuter": "Средний",
     "requiredField": "Обязательное поле",
     "lemmaReadOnly": "Лемма",
-    "partOfSpeechReadOnly": "Часть речи"
+    "partOfSpeechReadOnly": "Часть речи",
+    "sectionTranslations": "Переводы",
+    "sectionPronunciationGrammar": "Произношение и грамматика",
+    "sectionExamples": "Примеры"
   }
 }

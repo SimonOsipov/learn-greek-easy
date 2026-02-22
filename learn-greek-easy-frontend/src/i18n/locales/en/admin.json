@@ -761,6 +761,9 @@
     "genderNeuter": "Neuter",
     "requiredField": "This field is required",
     "lemmaReadOnly": "Lemma",
-    "partOfSpeechReadOnly": "Part of Speech"
+    "partOfSpeechReadOnly": "Part of Speech",
+    "sectionTranslations": "Translations",
+    "sectionPronunciationGrammar": "Pronunciation & Grammar",
+    "sectionExamples": "Examples"
   }
 }
