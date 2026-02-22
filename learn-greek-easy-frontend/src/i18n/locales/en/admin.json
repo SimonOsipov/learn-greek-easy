@@ -732,6 +732,14 @@
     "success": "Audio generation started",
     "error": "Failed to start audio generation"
   },
+  "wordList": {
+    "audioReady": "Audio: ready",
+    "audioMissing": "Audio: missing",
+    "examplesPresent": "Examples: present",
+    "examplesMissing": "Examples: missing",
+    "grammarPresent": "Grammar: present",
+    "grammarMissing": "Grammar: missing"
+  },
   "wordEntryEdit": {
     "edit": "Edit",
     "save": "Save",

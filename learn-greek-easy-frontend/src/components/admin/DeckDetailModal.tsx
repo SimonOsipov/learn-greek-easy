@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from '@/hooks/use-toast';
 import {
   trackAdminWordEntryDetailOpened,
@@ -424,90 +425,173 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
 
               {/* Vocabulary Cards List */}
               {!isLoading && !error && isVocabulary && cards.length > 0 && (
-                <div className="space-y-2" data-testid="vocabulary-cards-list">
-                  {cards.map((card) => (
-                    <div
-                      key={card.id}
-                      className={cn(
-                        'flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50',
-                        isV2Vocabulary && 'cursor-pointer'
-                      )}
-                      data-testid={
-                        isV2Vocabulary ? `word-entry-row-${card.id}` : `card-item-${card.id}`
-                      }
-                      {...(isV2Vocabulary && {
-                        onClick: (e: React.MouseEvent) => {
-                          if ((e.target as HTMLElement).closest('button')) return;
-                          handleWordEntryClick(card);
-                        },
-                        role: 'button' as const,
-                        tabIndex: 0,
-                        onKeyDown: (e: React.KeyboardEvent) => {
-                          if ((e.target as HTMLElement).closest('button')) return;
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
+                <TooltipProvider delayDuration={200}>
+                  <div className="space-y-2" data-testid="vocabulary-cards-list">
+                    {cards.map((card) => (
+                      <div
+                        key={card.id}
+                        className={cn(
+                          'flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50',
+                          isV2Vocabulary && 'cursor-pointer'
+                        )}
+                        data-testid={
+                          isV2Vocabulary ? `word-entry-row-${card.id}` : `card-item-${card.id}`
+                        }
+                        {...(isV2Vocabulary && {
+                          onClick: (e: React.MouseEvent) => {
+                            if ((e.target as HTMLElement).closest('button')) return;
                             handleWordEntryClick(card);
-                          }
-                        },
-                      })}
-                    >
-                      <div className="min-w-0 flex-1 pr-2">
-                        <div className="flex items-center gap-2">
-                          <p className="truncate font-medium">{card.front_text}</p>
-                          {card.part_of_speech && (
-                            <Badge
-                              variant="secondary"
-                              className="shrink-0"
-                              data-testid={`vocabulary-card-pos-badge-${card.id}`}
-                            >
-                              {card.part_of_speech}
-                            </Badge>
-                          )}
-                          {card.level && card.level !== deck?.level && (
-                            <Badge
-                              variant="outline"
-                              className="shrink-0"
-                              data-testid={`vocabulary-card-level-badge-${card.id}`}
-                            >
-                              {card.level}
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="truncate text-sm text-muted-foreground">
-                          {card.back_text_en}
-                        </p>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            if (isV2Vocabulary) {
+                          },
+                          role: 'button' as const,
+                          tabIndex: 0,
+                          onKeyDown: (e: React.KeyboardEvent) => {
+                            if ((e.target as HTMLElement).closest('button')) return;
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
                               handleWordEntryClick(card);
-                            } else {
-                              setSelectedVocabularyCardId(card.id);
-                              setVocabularyEditModalOpen(true);
                             }
-                          }}
-                          data-testid={`vocabulary-card-edit-${card.id}`}
-                        >
-                          <Pencil className="h-4 w-4" />
-                          <span className="sr-only">{t('actions.edit')}</span>
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteClick(card)}
-                          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                          data-testid={`delete-card-${card.id}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          <span className="sr-only">{t('actions.delete')}</span>
-                        </Button>
+                          },
+                        })}
+                      >
+                        <div className="min-w-0 flex-1 pr-2">
+                          <div className="flex items-center gap-2">
+                            <p className="truncate font-medium">{card.front_text}</p>
+                            {card.part_of_speech && (
+                              <Badge
+                                variant="secondary"
+                                className="shrink-0"
+                                data-testid={`vocabulary-card-pos-badge-${card.id}`}
+                              >
+                                {card.part_of_speech}
+                              </Badge>
+                            )}
+                            {/* Gender badge — nouns only */}
+                            {card.gender && (
+                              <Badge
+                                variant="outline"
+                                className="shrink-0"
+                                data-testid={`vocabulary-card-gender-badge-${card.id}`}
+                              >
+                                {card.gender === 'masculine'
+                                  ? '♂'
+                                  : card.gender === 'feminine'
+                                    ? '♀'
+                                    : '⚬'}
+                              </Badge>
+                            )}
+                            {card.level && card.level !== deck?.level && (
+                              <Badge
+                                variant="outline"
+                                className="shrink-0"
+                                data-testid={`vocabulary-card-level-badge-${card.id}`}
+                              >
+                                {card.level}
+                              </Badge>
+                            )}
+                            {/* Completeness indicators — V2 only */}
+                            {isV2Vocabulary && (
+                              <div className="flex shrink-0 items-center gap-1">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span
+                                      className={cn(
+                                        'inline-block h-2 w-2 rounded-full',
+                                        card.has_audio ? 'bg-green-500' : 'bg-muted-foreground/30'
+                                      )}
+                                      data-testid={`vocabulary-card-audio-dot-${card.id}`}
+                                    />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    {t(
+                                      card.has_audio
+                                        ? 'wordList.audioReady'
+                                        : 'wordList.audioMissing'
+                                    )}
+                                  </TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span
+                                      className={cn(
+                                        'inline-block h-2 w-2 rounded-full',
+                                        card.has_examples
+                                          ? 'bg-green-500'
+                                          : 'bg-muted-foreground/30'
+                                      )}
+                                      data-testid={`vocabulary-card-examples-dot-${card.id}`}
+                                    />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    {t(
+                                      card.has_examples
+                                        ? 'wordList.examplesPresent'
+                                        : 'wordList.examplesMissing'
+                                    )}
+                                  </TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span
+                                      className={cn(
+                                        'inline-block h-2 w-2 rounded-full',
+                                        card.has_grammar ? 'bg-green-500' : 'bg-muted-foreground/30'
+                                      )}
+                                      data-testid={`vocabulary-card-grammar-dot-${card.id}`}
+                                    />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    {t(
+                                      card.has_grammar
+                                        ? 'wordList.grammarPresent'
+                                        : 'wordList.grammarMissing'
+                                    )}
+                                  </TooltipContent>
+                                </Tooltip>
+                              </div>
+                            )}
+                          </div>
+                          {/* Pronunciation — below Greek word */}
+                          {card.pronunciation && (
+                            <p className="truncate text-xs text-muted-foreground">
+                              {card.pronunciation}
+                            </p>
+                          )}
+                          <p className="truncate text-sm text-muted-foreground">
+                            {card.back_text_en}
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              if (isV2Vocabulary) {
+                                handleWordEntryClick(card);
+                              } else {
+                                setSelectedVocabularyCardId(card.id);
+                                setVocabularyEditModalOpen(true);
+                              }
+                            }}
+                            data-testid={`vocabulary-card-edit-${card.id}`}
+                          >
+                            <Pencil className="h-4 w-4" />
+                            <span className="sr-only">{t('actions.edit')}</span>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteClick(card)}
+                            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            data-testid={`delete-card-${card.id}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            <span className="sr-only">{t('actions.delete')}</span>
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                </TooltipProvider>
               )}
 
               {/* Culture Questions List */}

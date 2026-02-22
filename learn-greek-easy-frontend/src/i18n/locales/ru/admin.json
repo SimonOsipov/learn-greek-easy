@@ -744,6 +744,14 @@
     "success": "Генерация аудио запущена",
     "error": "Не удалось запустить генерацию аудио"
   },
+  "wordList": {
+    "audioReady": "Аудио: готово",
+    "audioMissing": "Аудио: отсутствует",
+    "examplesPresent": "Примеры: есть",
+    "examplesMissing": "Примеры: отсутствуют",
+    "grammarPresent": "Грамматика: есть",
+    "grammarMissing": "Грамматика: отсутствует"
+  },
   "wordEntryEdit": {
     "edit": "Редактировать",
     "save": "Сохранить",

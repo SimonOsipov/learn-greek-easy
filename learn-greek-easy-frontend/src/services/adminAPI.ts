@@ -272,6 +272,11 @@ export interface AdminVocabularyCard {
   level: DeckLevel | null;
   created_at: string;
   updated_at: string;
+  // Enrichment fields (V2 only; V1 defaults to null/false)
+  gender: string | null;
+  has_examples: boolean;
+  has_audio: boolean;
+  has_grammar: boolean;
 }
 
 /**
@@ -810,7 +815,17 @@ export const adminAPI = {
       page,
       page_size: pageSize,
     });
-    return api.get<AdminVocabularyCardsResponse>(`/api/v1/cards${queryString}`);
+    const response = await api.get<AdminVocabularyCardsResponse>(`/api/v1/cards${queryString}`);
+    return {
+      ...response,
+      cards: response.cards.map((card) => ({
+        ...card,
+        gender: null,
+        has_examples: false,
+        has_audio: false,
+        has_grammar: false,
+      })),
+    };
   },
 
   /**
@@ -847,6 +862,9 @@ export const adminAPI = {
         level?: string | null;
         created_at: string;
         updated_at: string;
+        grammar_data: Record<string, unknown> | null;
+        examples: Array<unknown> | null;
+        audio_status: string;
       }>;
     }>(`/api/v1/decks/${deckId}/word-entries${queryString}`);
 
@@ -867,6 +885,16 @@ export const adminAPI = {
         level: (entry.level ?? null) as AdminVocabularyCard['level'],
         created_at: entry.created_at,
         updated_at: entry.updated_at,
+        gender:
+          entry.part_of_speech === 'noun' && entry.grammar_data
+            ? ((entry.grammar_data.gender as string | null) ?? null)
+            : null,
+        has_examples: Array.isArray(entry.examples) && entry.examples.length > 0,
+        has_audio: entry.audio_status === 'ready',
+        has_grammar:
+          entry.grammar_data !== null &&
+          entry.grammar_data !== undefined &&
+          Object.keys(entry.grammar_data).length > 0,
       })),
     };
   },
