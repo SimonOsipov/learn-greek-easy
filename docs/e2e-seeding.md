@@ -26,6 +26,7 @@ The seeding infrastructure provides deterministic test data for E2E tests, enabl
 | `/api/v1/test/seed/news-questions` | POST | Seed news items with linked culture questions |
 | `/api/v1/test/seed/danger-zone` | POST | Create danger zone test users |
 | `/api/v1/test/seed/admin-cards` | POST | Create vocabulary cards for admin E2E testing |
+| `/api/v1/test/seed/subscription-users` | POST | Create/update subscription test users |
 
 ## Test Users
 
@@ -62,6 +63,7 @@ Test users are **auto-provisioned on first login**, not created by seeding. User
 - **3 News Sources**: 2 active, 1 inactive (for admin testing)
 - **4 Fetch History Entries**: 3 successful, 1 failed (for first news source)
 - **3 XP Test Users**: Boundary, Mid, Max (for XP system E2E testing)
+- **5 Subscription Test Users**: Trial, Expired Trial, Premium, Cancelled, Past Due
 
 ### Mock Exam History
 
@@ -206,6 +208,22 @@ Creates vocabulary decks and cards for E2E testing of the admin vocabulary card 
 | 10 | βιβλίο | Noun + examples | noun_data + 3 structured examples |
 
 **Note**: This endpoint is standalone and does NOT depend on other seed endpoints. It is idempotent - existing E2E test decks are replaced on each call.
+
+## Subscription Test Users
+
+Seed endpoint: `POST /api/v1/test/seed/subscription-users`
+
+Creates test users with various subscription states for E2E billing/subscription UI testing. Password for all: `TestPassword123!`
+
+| Email | Tier | Status | Billing Cycle | Cancel at Period End | Trial Start | Trial End | Period End | Created At |
+|-------|------|--------|---------------|----------------------|-------------|-----------|------------|------------|
+| `e2e_trial@test.com` | FREE | TRIALING | — | No | NOW-7d | NOW+7d | — | — |
+| `e2e_expired_trial@test.com` | FREE | NONE | — | No | NOW-21d | NOW-7d | — | — |
+| `e2e_premium@test.com` | PREMIUM | ACTIVE | MONTHLY | No | — | — | NOW+30d | NOW-60d |
+| `e2e_cancelled@test.com` | PREMIUM | ACTIVE | QUARTERLY | Yes | — | — | NOW+15d | NOW-75d |
+| `e2e_past_due@test.com` | PREMIUM | PAST_DUE | MONTHLY | No | — | — | NOW+5d | NOW-30d |
+
+This endpoint is idempotent: existing users have their subscription fields updated, new users get `User` + `UserSettings` rows created. Also included in `/seed/all` as Step 17.
 
 ## CLI Usage
 

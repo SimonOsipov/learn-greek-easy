@@ -73,9 +73,9 @@ class TestSeedServiceIntegration:
         assert "v2_decks" in result
 
         # Verify users were created
-        # 4 base users (learner, beginner, advanced, admin) + 3 XP test users = 7 total
+        # 4 base users (learner, beginner, advanced, admin) + 3 XP test users + 5 subscription test users = 12 total
         user_count = await db_session.scalar(select(func.count(User.id)))
-        assert user_count == 7
+        assert user_count == 12
 
         # Verify decks were created
         # 6 CEFR level decks + 4 user-owned decks (3 learner + 1 admin) + 3 V2 decks = 13 total
@@ -91,9 +91,9 @@ class TestSeedServiceIntegration:
         word_entry_count = await db_session.scalar(select(func.count(WordEntry.id)))
         assert word_entry_count == 30
 
-        # Verify user settings were created (7 users = 7 settings)
+        # Verify user settings were created (12 users = 12 settings)
         settings_count = await db_session.scalar(select(func.count(UserSettings.id)))
-        assert settings_count == 7
+        assert settings_count == 12
 
     @pytest.mark.asyncio
     async def test_seed_creates_correct_users(self, db_session: AsyncSession, enable_seeding):
