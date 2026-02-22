@@ -123,8 +123,8 @@ export const VocabularyDeckEditForm: React.FC<VocabularyDeckEditFormProps> = ({
     resolver: zodResolver(vocabularyDeckSchema),
     mode: 'onChange',
     defaultValues: {
-      name_en: deck.name_en || (typeof deck.name === 'string' ? deck.name : '') || '',
-      name_ru: deck.name_ru || '',
+      name_en: deckName,
+      name_ru: deck.name_ru || (typeof deck.name !== 'string' ? deck.name.ru : '') || '',
       description_en: deck.description_en || '',
       description_ru: deck.description_ru || '',
       level: (deck.level as DeckLevel) || 'A1',
