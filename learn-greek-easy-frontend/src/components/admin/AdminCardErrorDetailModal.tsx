@@ -34,6 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -292,7 +293,7 @@ export const AdminCardErrorDetailModal: React.FC<AdminCardErrorDetailModalProps>
               {/* Separator */}
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
+                  <Separator />
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
                   <span className="bg-background px-2 text-muted-foreground">

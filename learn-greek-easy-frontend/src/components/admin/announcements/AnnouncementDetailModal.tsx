@@ -135,25 +135,29 @@ export const AnnouncementDetailModal: React.FC<AnnouncementDetailModalProps> = (
               <div className="space-y-4">
                 {/* Sent/Read counts */}
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="rounded-lg border bg-muted/30 p-3">
-                    <p className="text-sm text-muted-foreground">
-                      {t('announcements.detail.sent')}
-                    </p>
-                    <p className="text-2xl font-semibold" data-testid="detail-sent">
-                      {announcement.total_recipients}
-                    </p>
-                  </div>
-                  <div className="rounded-lg border bg-muted/30 p-3">
-                    <p className="text-sm text-muted-foreground">
-                      {t('announcements.detail.read')}
-                    </p>
-                    <p className="text-2xl font-semibold" data-testid="detail-read">
-                      {announcement.read_count}{' '}
-                      <span className="text-base font-normal text-muted-foreground">
-                        ({announcement.read_percentage.toFixed(1)}%)
-                      </span>
-                    </p>
-                  </div>
+                  <Card className="bg-muted/30">
+                    <CardContent className="p-3">
+                      <p className="text-sm text-muted-foreground">
+                        {t('announcements.detail.sent')}
+                      </p>
+                      <p className="text-2xl font-semibold" data-testid="detail-sent">
+                        {announcement.total_recipients}
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-muted/30">
+                    <CardContent className="p-3">
+                      <p className="text-sm text-muted-foreground">
+                        {t('announcements.detail.read')}
+                      </p>
+                      <p className="text-2xl font-semibold" data-testid="detail-read">
+                        {announcement.read_count}{' '}
+                        <span className="text-base font-normal text-muted-foreground">
+                          ({announcement.read_percentage.toFixed(1)}%)
+                        </span>
+                      </p>
+                    </CardContent>
+                  </Card>
                 </div>
 
                 {/* Progress bar */}

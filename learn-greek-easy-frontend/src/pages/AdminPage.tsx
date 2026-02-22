@@ -55,6 +55,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import {
   trackAdminDeckCreateCancelled,
@@ -1128,8 +1129,12 @@ const AdminPage: React.FC = () => {
       </div>
 
       {/* Top-Level Tab Switcher */}
-      <div className="w-full" data-testid="admin-tab-switcher">
-        <div className="flex gap-2 rounded-lg bg-muted p-1">
+      <Tabs
+        value={activeTab}
+        onValueChange={(val) => setActiveTab(val as AdminTabType)}
+        data-testid="admin-tab-switcher"
+      >
+        <TabsList className="w-full">
           {(
             [
               'decks',
@@ -1141,24 +1146,12 @@ const AdminPage: React.FC = () => {
               'feedback',
             ] as AdminTabType[]
           ).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={cn(
-                'flex-1 rounded-md px-4 py-2 text-sm font-medium transition-all',
-                activeTab === tab
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:bg-background/50 hover:text-foreground'
-              )}
-              aria-pressed={activeTab === tab}
-              type="button"
-              data-testid={`admin-tab-${tab}`}
-            >
+            <TabsTrigger key={tab} value={tab} className="flex-1" data-testid={`admin-tab-${tab}`}>
               {t(`tabs.${tab}`)}
-            </button>
+            </TabsTrigger>
           ))}
-        </div>
-      </div>
+        </TabsList>
+      </Tabs>
 
       {/* Decks Tab Content */}
       {activeTab === 'decks' && (

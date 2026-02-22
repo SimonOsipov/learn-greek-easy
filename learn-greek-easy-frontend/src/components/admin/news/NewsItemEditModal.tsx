@@ -18,6 +18,7 @@ import { useTranslation } from 'react-i18next';
 
 import { WaveformPlayer } from '@/components/culture/WaveformPlayer';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -312,84 +313,87 @@ export const NewsItemEditModal: React.FC<NewsItemEditModalProps> = ({
         </DialogHeader>
 
         {/* Audio Status Section */}
-        <div className="rounded-lg border p-4" data-testid="audio-status-section">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <h4 className="text-sm font-medium">{t('news.audio.statusTitle')}</h4>
-                {item.audio_url ? (
-                  <Circle className="h-2.5 w-2.5 fill-green-500 text-green-500" />
-                ) : (
-                  <Circle className="h-2.5 w-2.5 fill-muted-foreground/40 text-muted-foreground/40" />
-                )}
-              </div>
-              {item.audio_url ? (
-                <div className="space-y-0.5 text-xs text-muted-foreground">
-                  {item.audio_duration_seconds != null && (
-                    <p>
-                      {t('news.audio.duration')}: {formatAudioDuration(item.audio_duration_seconds)}
-                    </p>
-                  )}
-                  {item.audio_file_size_bytes != null && (
-                    <p>
-                      {t('news.audio.fileSize')}: {formatFileSize(item.audio_file_size_bytes)}
-                    </p>
-                  )}
-                  {item.audio_generated_at && (
-                    <p>
-                      {t('news.audio.generated')}:{' '}
-                      {new Date(item.audio_generated_at).toLocaleString()}
-                    </p>
+        <Card data-testid="audio-status-section">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <h4 className="text-sm font-medium">{t('news.audio.statusTitle')}</h4>
+                  {item.audio_url ? (
+                    <Circle className="h-2.5 w-2.5 fill-green-500 text-green-500" />
+                  ) : (
+                    <Circle className="h-2.5 w-2.5 fill-muted-foreground/40 text-muted-foreground/40" />
                   )}
                 </div>
-              ) : (
-                <p className="text-xs text-muted-foreground/60">
-                  {t('news.audio.noAudioGenerated')}
+                {item.audio_url ? (
+                  <div className="space-y-0.5 text-xs text-muted-foreground">
+                    {item.audio_duration_seconds != null && (
+                      <p>
+                        {t('news.audio.duration')}:{' '}
+                        {formatAudioDuration(item.audio_duration_seconds)}
+                      </p>
+                    )}
+                    {item.audio_file_size_bytes != null && (
+                      <p>
+                        {t('news.audio.fileSize')}: {formatFileSize(item.audio_file_size_bytes)}
+                      </p>
+                    )}
+                    {item.audio_generated_at && (
+                      <p>
+                        {t('news.audio.generated')}:{' '}
+                        {new Date(item.audio_generated_at).toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground/60">
+                    {t('news.audio.noAudioGenerated')}
+                  </p>
+                )}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRegenerate}
+                disabled={isRegenerating || cooldownRemaining > 0}
+                data-testid="modal-regenerate-audio"
+              >
+                {isRegenerating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {t('news.audio.regenerating')}
+                  </>
+                ) : cooldownRemaining > 0 ? (
+                  `${cooldownRemaining}s`
+                ) : (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    {t('news.audio.regenerate')}
+                  </>
+                )}
+              </Button>
+            </div>
+            {/* Audio Player */}
+            <div className="mt-3" data-testid="audio-player-container">
+              <WaveformPlayer
+                audioUrl={item.audio_url ?? undefined}
+                variant="admin"
+                showSpeedControl={false}
+                disabled={!item.audio_url}
+                onError={handleAudioError}
+              />
+              {audioError && (
+                <p
+                  className="mt-1.5 text-xs text-destructive"
+                  data-testid="audio-load-error"
+                  role="alert"
+                >
+                  {t('news.audio.loadError')}
                 </p>
               )}
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRegenerate}
-              disabled={isRegenerating || cooldownRemaining > 0}
-              data-testid="modal-regenerate-audio"
-            >
-              {isRegenerating ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {t('news.audio.regenerating')}
-                </>
-              ) : cooldownRemaining > 0 ? (
-                `${cooldownRemaining}s`
-              ) : (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  {t('news.audio.regenerate')}
-                </>
-              )}
-            </Button>
-          </div>
-          {/* Audio Player */}
-          <div className="mt-3" data-testid="audio-player-container">
-            <WaveformPlayer
-              audioUrl={item.audio_url ?? undefined}
-              variant="admin"
-              showSpeedControl={false}
-              disabled={!item.audio_url}
-              onError={handleAudioError}
-            />
-            {audioError && (
-              <p
-                className="mt-1.5 text-xs text-destructive"
-                data-testid="audio-load-error"
-                role="alert"
-              >
-                {t('news.audio.loadError')}
-              </p>
-            )}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
         <div className="space-y-4">
           <Textarea
