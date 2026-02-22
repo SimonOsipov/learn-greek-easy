@@ -277,6 +277,16 @@ export interface AdminVocabularyCard {
   has_examples: boolean;
   has_audio: boolean;
   has_grammar: boolean;
+  // Granular enrichment fields for V2 chips
+  translation_en_plural: string | null;
+  translation_ru_plural: string | null;
+  audio_status: string; // 'ready' | 'missing' | 'generating' | 'failed'
+  grammar_filled: number; // count of non-empty grammar fields
+  grammar_total: number; // total expected grammar fields for POS
+  example_count: number;
+  examples_with_en: number;
+  examples_with_ru: number;
+  examples_with_audio: number;
 }
 
 /**
@@ -565,6 +575,14 @@ export interface ListWordEntriesParams {
 // Admin API Methods
 // ============================================
 
+const GRAMMAR_TOTAL_BY_POS: Record<string, number> = {
+  noun: 9,
+  verb: 33,
+  adjective: 26,
+  adverb: 2,
+  phrase: 0,
+};
+
 export const adminAPI = {
   /**
    * Get content statistics for admin dashboard
@@ -834,6 +852,15 @@ export const adminAPI = {
         has_examples: false,
         has_audio: false,
         has_grammar: false,
+        translation_en_plural: null,
+        translation_ru_plural: null,
+        audio_status: 'missing',
+        grammar_filled: 0,
+        grammar_total: 0,
+        example_count: 0,
+        examples_with_en: 0,
+        examples_with_ru: 0,
+        examples_with_audio: 0,
       })),
     };
   },
@@ -876,12 +903,18 @@ export const adminAPI = {
         part_of_speech: PartOfSpeech | null;
         translation_en: string;
         translation_ru: string | null;
+        translation_en_plural?: string | null;
+        translation_ru_plural?: string | null;
         pronunciation: string | null;
         level?: string | null;
         created_at: string;
         updated_at: string;
         grammar_data: Record<string, unknown> | null;
-        examples: Array<unknown> | null;
+        examples: Array<{
+          english?: string | null;
+          russian?: string | null;
+          audio_status?: string;
+        }> | null;
         audio_status: string;
       }>;
     }>(`/api/v1/decks/${deckId}/word-entries${queryString}`);
@@ -891,29 +924,59 @@ export const adminAPI = {
       page: raw.page,
       page_size: raw.page_size,
       deck_id: raw.deck_id,
-      cards: raw.word_entries.map((entry) => ({
-        id: entry.id,
-        deck_id: entry.deck_id,
-        front_text: entry.lemma,
-        back_text_en: entry.translation_en,
-        back_text_ru: entry.translation_ru ?? null,
-        example_sentence: null,
-        pronunciation: entry.pronunciation ?? null,
-        part_of_speech: entry.part_of_speech,
-        level: (entry.level ?? null) as AdminVocabularyCard['level'],
-        created_at: entry.created_at,
-        updated_at: entry.updated_at,
-        gender:
-          entry.part_of_speech === 'noun' && entry.grammar_data
-            ? ((entry.grammar_data.gender as string | null) ?? null)
-            : null,
-        has_examples: Array.isArray(entry.examples) && entry.examples.length > 0,
-        has_audio: entry.audio_status === 'ready',
-        has_grammar:
-          entry.grammar_data !== null &&
-          entry.grammar_data !== undefined &&
-          Object.keys(entry.grammar_data).length > 0,
-      })),
+      cards: raw.word_entries.map((entry) => {
+        // Grammar enrichment
+        const grammarData = entry.grammar_data ?? {};
+        const grammarFilled = Object.values(grammarData).filter(
+          (v) => v !== null && v !== '' && v !== undefined
+        ).length;
+        const pos = entry.part_of_speech?.toLowerCase() ?? 'phrase';
+        const grammarTotal = GRAMMAR_TOTAL_BY_POS[pos] ?? 0;
+
+        // Example enrichment
+        const examples = entry.examples ?? [];
+        const exampleCount = examples.length;
+        const examplesWithEn = examples.filter(
+          (ex) => ex.english && ex.english.trim() !== ''
+        ).length;
+        const examplesWithRu = examples.filter(
+          (ex) => ex.russian && ex.russian.trim() !== ''
+        ).length;
+        const examplesWithAudio = examples.filter((ex) => ex.audio_status === 'ready').length;
+
+        return {
+          id: entry.id,
+          deck_id: entry.deck_id,
+          front_text: entry.lemma,
+          back_text_en: entry.translation_en,
+          back_text_ru: entry.translation_ru ?? null,
+          example_sentence: null,
+          pronunciation: entry.pronunciation ?? null,
+          part_of_speech: entry.part_of_speech,
+          level: (entry.level ?? null) as AdminVocabularyCard['level'],
+          created_at: entry.created_at,
+          updated_at: entry.updated_at,
+          gender:
+            entry.part_of_speech === 'noun' && entry.grammar_data
+              ? ((entry.grammar_data.gender as string | null) ?? null)
+              : null,
+          has_examples: Array.isArray(entry.examples) && entry.examples.length > 0,
+          has_audio: entry.audio_status === 'ready',
+          has_grammar:
+            entry.grammar_data !== null &&
+            entry.grammar_data !== undefined &&
+            Object.keys(entry.grammar_data).length > 0,
+          translation_en_plural: entry.translation_en_plural ?? null,
+          translation_ru_plural: entry.translation_ru_plural ?? null,
+          audio_status: entry.audio_status ?? 'missing',
+          grammar_filled: grammarFilled,
+          grammar_total: grammarTotal,
+          example_count: exampleCount,
+          examples_with_en: examplesWithEn,
+          examples_with_ru: examplesWithRu,
+          examples_with_audio: examplesWithAudio,
+        };
+      }),
     };
   },
 
