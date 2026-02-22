@@ -738,7 +738,20 @@
     "examplesPresent": "Examples: present",
     "examplesMissing": "Examples: missing",
     "grammarPresent": "Grammar: present",
-    "grammarMissing": "Grammar: missing"
+    "grammarMissing": "Grammar: missing",
+    "search": "Search words...",
+    "filterByPos": "Part of speech",
+    "allPartsOfSpeech": "All",
+    "posNoun": "Noun",
+    "posVerb": "Verb",
+    "posAdjective": "Adjective",
+    "posAdverb": "Adverb",
+    "posPhrase": "Phrase",
+    "sortBy": "Sort",
+    "sortAlphaGreek": "Alphabetical (Greek)",
+    "sortDateAdded": "Date added",
+    "filteredCount": "{{filtered}} of {{total}} words",
+    "noResults": "No words match your search"
   },
   "wordEntryEdit": {
     "edit": "Edit",

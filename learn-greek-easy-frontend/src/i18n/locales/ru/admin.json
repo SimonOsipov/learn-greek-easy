@@ -750,7 +750,20 @@
     "examplesPresent": "Примеры: есть",
     "examplesMissing": "Примеры: отсутствуют",
     "grammarPresent": "Грамматика: есть",
-    "grammarMissing": "Грамматика: отсутствует"
+    "grammarMissing": "Грамматика: отсутствует",
+    "search": "Поиск слов...",
+    "filterByPos": "Часть речи",
+    "allPartsOfSpeech": "Все",
+    "posNoun": "Существительное",
+    "posVerb": "Глагол",
+    "posAdjective": "Прилагательное",
+    "posAdverb": "Наречие",
+    "posPhrase": "Фраза",
+    "sortBy": "Сортировка",
+    "sortAlphaGreek": "По алфавиту (греческий)",
+    "sortDateAdded": "По дате добавления",
+    "filteredCount": "{{filtered}} из {{total}} слов",
+    "noResults": "Нет слов, соответствующих поиску"
   },
   "wordEntryEdit": {
     "edit": "Редактировать",

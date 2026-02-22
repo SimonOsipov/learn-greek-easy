@@ -255,7 +255,7 @@ export interface CultureDeckListItem {
 /**
  * Part of speech type
  */
-export type PartOfSpeech = 'noun' | 'verb' | 'adjective' | 'adverb';
+export type PartOfSpeech = 'noun' | 'verb' | 'adjective' | 'adverb' | 'phrase';
 
 /**
  * Vocabulary card item for admin deck detail view
@@ -551,6 +551,16 @@ export interface NewsItemListResponse {
   items: NewsItemResponse[];
 }
 
+/**
+ * Parameters for listing word entries (V2 vocabulary decks)
+ */
+export interface ListWordEntriesParams {
+  search?: string;
+  partOfSpeech?: PartOfSpeech;
+  sortBy?: 'lemma' | 'created_at';
+  sortOrder?: 'asc' | 'desc';
+}
+
 // ============================================
 // Admin API Methods
 // ============================================
@@ -843,9 +853,17 @@ export const adminAPI = {
   listWordEntries: async (
     deckId: string,
     page = 1,
-    pageSize = 20
+    pageSize = 20,
+    params: ListWordEntriesParams = {}
   ): Promise<AdminVocabularyCardsResponse> => {
-    const queryString = buildQueryString({ page, page_size: pageSize });
+    const queryString = buildQueryString({
+      page,
+      page_size: pageSize,
+      search: params.search,
+      part_of_speech: params.partOfSpeech,
+      sort_by: params.sortBy,
+      sort_order: params.sortOrder,
+    });
     const raw = await api.get<{
       deck_id: string;
       total: number;

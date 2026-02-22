@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
-import { AlertCircle, ChevronLeft, ChevronRight, Pencil, Plus, Trash2 } from 'lucide-react';
+import { AlertCircle, ChevronLeft, ChevronRight, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -15,6 +15,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -30,6 +45,7 @@ import type {
   AdminCultureQuestion,
   AdminVocabularyCard,
   MultilingualName,
+  PartOfSpeech,
   UnifiedDeckItem,
 } from '@/services/adminAPI';
 
@@ -142,6 +158,14 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
   const backButtonRef = useRef<HTMLButtonElement>(null);
   const clickedRowIdRef = useRef<string | null>(null);
 
+  // Search, filter, and sort state (V2 word list)
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [posFilter, setPosFilter] = useState<PartOfSpeech | 'all'>('all');
+  const [sortBy, setSortBy] = useState<'lemma' | 'created_at'>('lemma');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const totalCountRef = useRef<number | null>(null);
+
   const fetchItems = useCallback(async () => {
     if (!deck) return;
 
@@ -152,10 +176,19 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
       if (deck.type === 'vocabulary') {
         const response =
           deck.card_system === 'V2'
-            ? await adminAPI.listWordEntries(deck.id, page, pageSize)
+            ? await adminAPI.listWordEntries(deck.id, page, pageSize, {
+                search: debouncedSearch || undefined,
+                partOfSpeech: posFilter !== 'all' ? (posFilter as PartOfSpeech) : undefined,
+                sortBy,
+                sortOrder,
+              })
             : await adminAPI.listVocabularyCards(deck.id, page, pageSize);
         setCards(response.cards);
         setTotal(response.total);
+        // Cache unfiltered total on first load
+        if (!debouncedSearch && posFilter === 'all' && totalCountRef.current === null) {
+          totalCountRef.current = response.total;
+        }
         setQuestions([]);
       } else {
         const response = await adminAPI.listCultureQuestions(deck.id, page, pageSize);
@@ -169,7 +202,7 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [deck, page, t]);
+  }, [deck, page, t, debouncedSearch, posFilter, sortBy, sortOrder]);
 
   // Fetch items when modal opens or page changes
   useEffect(() => {
@@ -178,11 +211,30 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
     }
   }, [open, deck, fetchItems]);
 
-  // Reset page when deck changes
+  // Reset page and all filter state when deck changes
   useEffect(() => {
     setPage(1);
     setSelectedWordEntry(null);
+    setSearchQuery('');
+    setDebouncedSearch('');
+    setPosFilter('all');
+    setSortBy('lemma');
+    setSortOrder('asc');
+    totalCountRef.current = null;
   }, [deck?.id]);
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, posFilter, sortBy, sortOrder]);
 
   const totalPages = Math.ceil(total / pageSize);
 
@@ -375,7 +427,16 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
                 <div className="flex items-start justify-between">
                   <div>
                     <DialogTitle data-testid="deck-detail-title">{deckName}</DialogTitle>
-                    <DialogDescription>{t(itemCountKey, { count: total })}</DialogDescription>
+                    <DialogDescription>
+                      {isV2Vocabulary &&
+                      (debouncedSearch || posFilter !== 'all') &&
+                      totalCountRef.current !== null
+                        ? t('wordList.filteredCount', {
+                            filtered: total,
+                            total: totalCountRef.current,
+                          })
+                        : t(itemCountKey, { count: total })}
+                    </DialogDescription>
                   </div>
                   <Button
                     size="sm"
@@ -389,6 +450,68 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
                   </Button>
                 </div>
               </DialogHeader>
+
+              {/* Search/Filter/Sort Toolbar — V2 vocabulary only */}
+              {isV2Vocabulary && (
+                <div
+                  className="flex flex-col gap-2 sm:flex-row sm:items-center"
+                  data-testid="word-list-toolbar"
+                >
+                  <div className="relative flex-1">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder={t('wordList.search')}
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-9"
+                      data-testid="word-list-search"
+                    />
+                  </div>
+                  <Select
+                    value={posFilter}
+                    onValueChange={(val) => setPosFilter(val as PartOfSpeech | 'all')}
+                  >
+                    <SelectTrigger
+                      className="w-full sm:w-[180px]"
+                      data-testid="word-list-pos-filter"
+                    >
+                      <SelectValue placeholder={t('wordList.filterByPos')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t('wordList.allPartsOfSpeech')}</SelectItem>
+                      <SelectItem value="noun">{t('wordList.posNoun')}</SelectItem>
+                      <SelectItem value="verb">{t('wordList.posVerb')}</SelectItem>
+                      <SelectItem value="adjective">{t('wordList.posAdjective')}</SelectItem>
+                      <SelectItem value="adverb">{t('wordList.posAdverb')}</SelectItem>
+                      <SelectItem value="phrase">{t('wordList.posPhrase')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" data-testid="word-list-sort-trigger">
+                        {t('wordList.sortBy')}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuRadioGroup
+                        value={`${sortBy}-${sortOrder}`}
+                        onValueChange={(val) => {
+                          const parts = val.split('-');
+                          setSortBy(parts[0] as 'lemma' | 'created_at');
+                          setSortOrder(parts[1] as 'asc' | 'desc');
+                        }}
+                      >
+                        <DropdownMenuRadioItem value="lemma-asc">
+                          {t('wordList.sortAlphaGreek')}
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="created_at-desc">
+                          {t('wordList.sortDateAdded')}
+                        </DropdownMenuRadioItem>
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              )}
 
               {/* Loading State */}
               {isLoading && (
@@ -419,7 +542,9 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
                   className="py-8 text-center text-muted-foreground"
                   data-testid="deck-detail-empty"
                 >
-                  {t(noItemsKey)}
+                  {isV2Vocabulary && (debouncedSearch || posFilter !== 'all')
+                    ? t('wordList.noResults')
+                    : t(noItemsKey)}
                 </p>
               )}
 
