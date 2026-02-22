@@ -32,7 +32,12 @@
       },
       "cancel": "Keep Active",
       "confirm": "Deactivate"
-    }
+    },
+    "sectionIdentity": "Deck Identity",
+    "sectionAccess": "Access Control",
+    "stats": "Statistics",
+    "wordCount": "Words",
+    "createdAt": "Created"
   },
   "deckCreate": {
     "title": "Create Deck",

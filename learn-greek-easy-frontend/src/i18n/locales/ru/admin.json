@@ -32,7 +32,12 @@
       },
       "cancel": "Оставить активной",
       "confirm": "Деактивировать"
-    }
+    },
+    "sectionIdentity": "Информация о колоде",
+    "sectionAccess": "Управление доступом",
+    "stats": "Статистика",
+    "wordCount": "Слова",
+    "createdAt": "Создана"
   },
   "deckCreate": {
     "title": "Создать колоду",

@@ -64,7 +64,7 @@ export const DeckEditModal: React.FC<DeckEditModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]" data-testid="deck-edit-modal">
+      <DialogContent className="sm:max-w-[600px]" data-testid="deck-edit-modal">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {t('deckEdit.title')}
@@ -81,6 +81,8 @@ export const DeckEditModal: React.FC<DeckEditModalProps> = ({
             onSave={handleSave}
             onCancel={handleCancel}
             isLoading={isLoading}
+            itemCount={deck.item_count}
+            createdAt={deck.created_at}
           />
         ) : (
           <CultureDeckEditForm
