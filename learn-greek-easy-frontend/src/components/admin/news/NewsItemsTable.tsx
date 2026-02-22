@@ -13,6 +13,9 @@
 
 import React, { useEffect, useState } from 'react';
 
+import { format } from 'date-fns';
+import { el } from 'date-fns/locale/el';
+import { ru } from 'date-fns/locale/ru';
 import {
   ChevronLeft,
   ChevronRight,
@@ -25,6 +28,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -75,16 +79,22 @@ interface NewsItemsTableProps {
   onRegenerateAudio: (item: NewsItemResponse) => void;
 }
 
+function getDateLocale(lang: string) {
+  switch (lang) {
+    case 'el':
+      return el;
+    case 'ru':
+      return ru;
+    default:
+      return undefined;
+  }
+}
+
 /**
  * Format date string for display
  */
-function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
+function formatDate(dateString: string, lang: string): string {
+  return format(new Date(dateString), 'dd MMM yyyy', { locale: getDateLocale(lang) });
 }
 
 /**
@@ -150,6 +160,9 @@ const NewsItemRow: React.FC<NewsItemRowProps> = ({
 }) => {
   const { title } = getLocalizedContent(item, lang);
   const isRegenerating = regeneratingId === item.id;
+  const isElComplete = !!item.title_el?.trim() && !!item.description_el?.trim();
+  const isEnComplete = !!item.title_en?.trim() && !!item.description_en?.trim();
+  const isRuComplete = !!item.title_ru?.trim() && !!item.description_ru?.trim();
   const isCooldownActive = cooldownEndTime !== null;
   const canRegenerate = !isRegenerating && !isCooldownActive && !!item.description_el;
 
@@ -179,11 +192,45 @@ const NewsItemRow: React.FC<NewsItemRowProps> = ({
           <p className="font-medium">{title}</p>
           <div className="flex gap-3 text-xs text-muted-foreground">
             <span>
-              {t('news.table.published')}: {formatDate(item.publication_date)}
+              {t('news.table.published')}: {formatDate(item.publication_date, lang)}
             </span>
             <span>
-              {t('news.table.created')}: {formatDate(item.created_at)}
+              {t('news.table.created')}: {formatDate(item.created_at, lang)}
             </span>
+          </div>
+          <div className="mt-1 flex gap-1">
+            {item.card_id ? (
+              <Badge
+                variant="outline"
+                className="border-green-500/30 bg-green-500/10 px-1.5 py-0 text-[10px] text-green-700 dark:text-green-400"
+              >
+                Q
+              </Badge>
+            ) : (
+              <Badge variant="secondary" className="px-1.5 py-0 text-[10px] opacity-50">
+                Q
+              </Badge>
+            )}
+            {(['EL', 'EN', 'RU'] as const).map((badgeLang, idx) => {
+              const isComplete = [isElComplete, isEnComplete, isRuComplete][idx];
+              return isComplete ? (
+                <Badge
+                  key={badgeLang}
+                  variant="outline"
+                  className="border-green-500/30 bg-green-500/10 px-1.5 py-0 text-[10px] text-green-700 dark:text-green-400"
+                >
+                  {badgeLang}
+                </Badge>
+              ) : (
+                <Badge
+                  key={badgeLang}
+                  variant="secondary"
+                  className="px-1.5 py-0 text-[10px] opacity-50"
+                >
+                  {badgeLang}
+                </Badge>
+              );
+            })}
           </div>
         </div>
       </div>

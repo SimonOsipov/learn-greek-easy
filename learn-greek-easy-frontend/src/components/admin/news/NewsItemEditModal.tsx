@@ -13,6 +13,9 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
+import { format } from 'date-fns';
+import { el } from 'date-fns/locale/el';
+import { ru } from 'date-fns/locale/ru';
 import { Circle, Loader2, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -32,6 +35,17 @@ import { toast } from '@/hooks/use-toast';
 import { useLanguage } from '@/hooks/useLanguage';
 import type { NewsItemResponse, NewsItemUpdate } from '@/services/adminAPI';
 import { useAdminNewsStore } from '@/stores/adminNewsStore';
+
+function getDateLocale(lang: string) {
+  switch (lang) {
+    case 'el':
+      return el;
+    case 'ru':
+      return ru;
+    default:
+      return undefined;
+  }
+}
 
 /**
  * Get localized title based on current interface language
@@ -341,7 +355,9 @@ export const NewsItemEditModal: React.FC<NewsItemEditModalProps> = ({
                     {item.audio_generated_at && (
                       <p>
                         {t('news.audio.generated')}:{' '}
-                        {new Date(item.audio_generated_at).toLocaleString()}
+                        {format(new Date(item.audio_generated_at), 'dd MMM yyyy, HH:mm', {
+                          locale: getDateLocale(currentLanguage),
+                        })}
                       </p>
                     )}
                   </div>
