@@ -64,7 +64,10 @@ export const DeckEditModal: React.FC<DeckEditModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]" data-testid="deck-edit-modal">
+      <DialogContent
+        className="max-h-[90vh] overflow-y-auto sm:max-w-[600px]"
+        data-testid="deck-edit-modal"
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {t('deckEdit.title')}
