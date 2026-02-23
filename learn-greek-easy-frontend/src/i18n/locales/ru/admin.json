@@ -99,6 +99,9 @@
     "byOwner": "от {{owner}}",
     "deactivated": "Деактивировано"
   },
+  "deckList": {
+    "hideDeactivated": "Скрыть неактивные"
+  },
   "deckTypes": {
     "vocabulary": "Словарь",
     "culture": "Культура"

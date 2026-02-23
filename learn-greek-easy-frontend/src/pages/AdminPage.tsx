@@ -48,6 +48,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -56,6 +57,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import {
@@ -326,10 +328,18 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
     const [error, setError] = useState<string | null>(null);
     const [searchInput, setSearchInput] = useState('');
     const [typeFilter, setTypeFilter] = useState<'all' | 'vocabulary' | 'culture'>('all');
+    const [hideDeactivated, setHideDeactivated] = useState<boolean>(
+      () => localStorage.getItem('admin.deckList.hideDeactivated') === 'true'
+    );
     const [page, setPage] = useState(1);
     const pageSize = 10;
 
     const debouncedSearch = useDebounce(searchInput, 300);
+
+    const handleHideDeactivatedChange = (checked: boolean) => {
+      setHideDeactivated(checked);
+      localStorage.setItem('admin.deckList.hideDeactivated', checked.toString());
+    };
 
     const fetchDecks = useCallback(async () => {
       setIsLoading(true);
@@ -394,6 +404,12 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
       }
     };
 
+    const displayDecks = deckList
+      ? hideDeactivated
+        ? deckList.decks.filter((d) => d.is_active)
+        : deckList.decks
+      : [];
+
     return (
       <Card>
         <CardHeader>
@@ -429,6 +445,20 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
                 <SelectItem value="culture">{t('filter.culture')}</SelectItem>
               </SelectContent>
             </Select>
+            <div className="flex items-center gap-2">
+              <Switch
+                id="hide-deactivated"
+                checked={hideDeactivated}
+                onCheckedChange={handleHideDeactivatedChange}
+                data-testid="hide-deactivated-toggle"
+              />
+              <Label
+                htmlFor="hide-deactivated"
+                className="cursor-pointer whitespace-nowrap text-sm"
+              >
+                {t('deckList.hideDeactivated')}
+              </Label>
+            </div>
           </div>
 
           {/* Loading State */}
@@ -458,11 +488,11 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
           {/* Deck List */}
           {!isLoading && !error && deckList && (
             <>
-              {deckList.decks.length === 0 ? (
+              {displayDecks.length === 0 ? (
                 <p className="py-4 text-center text-muted-foreground">{t('states.noDecksFound')}</p>
               ) : (
                 <div className="space-y-3">
-                  {deckList.decks.map((deck) => (
+                  {displayDecks.map((deck) => (
                     <UnifiedDeckListItem
                       key={deck.id}
                       deck={deck}

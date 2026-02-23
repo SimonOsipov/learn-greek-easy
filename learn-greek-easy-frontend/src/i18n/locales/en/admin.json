@@ -93,6 +93,9 @@
     "byOwner": "by {{owner}}",
     "deactivated": "Deactivated"
   },
+  "deckList": {
+    "hideDeactivated": "Hide deactivated"
+  },
   "deckTypes": {
     "vocabulary": "Vocabulary",
     "culture": "Culture"
