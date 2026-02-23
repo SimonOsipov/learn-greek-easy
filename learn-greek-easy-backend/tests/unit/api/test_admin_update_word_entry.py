@@ -109,6 +109,44 @@ async def entry_with_translation_ru_plural(db_session: AsyncSession, test_deck: 
     return entry
 
 
+@pytest.fixture
+async def noun_with_full_grammar(db_session: AsyncSession, test_deck: Deck) -> WordEntry:
+    """Create a noun word entry with rich grammar_data."""
+    entry = WordEntry(
+        id=uuid4(),
+        deck_id=test_deck.id,
+        lemma="άνδρας",
+        part_of_speech=PartOfSpeech.NOUN,
+        translation_en="man",
+        translation_ru="мужчина",
+        grammar_data={"gender": "masculine", "declension": "first", "plural": "άνδρες"},
+        is_active=True,
+    )
+    db_session.add(entry)
+    await db_session.commit()
+    await db_session.refresh(entry)
+    return entry
+
+
+@pytest.fixture
+async def entry_with_null_grammar(db_session: AsyncSession, test_deck: Deck) -> WordEntry:
+    """Create a word entry with grammar_data=None."""
+    entry = WordEntry(
+        id=uuid4(),
+        deck_id=test_deck.id,
+        lemma="γρήγορα",
+        part_of_speech=PartOfSpeech.ADVERB,
+        translation_en="quickly",
+        translation_ru="быстро",
+        grammar_data=None,
+        is_active=True,
+    )
+    db_session.add(entry)
+    await db_session.commit()
+    await db_session.refresh(entry)
+    return entry
+
+
 # =============================================================================
 # Schema Tests
 # =============================================================================
@@ -191,6 +229,13 @@ class TestWordEntryInlineUpdateSchema:
                     }
                 ]
             )
+
+    def test_standalone_gender_field_rejected(self):
+        """Passing gender= kwarg raises ValidationError (no declared field accepts it)."""
+        import pydantic
+
+        with pytest.raises(pydantic.ValidationError):
+            WordEntryInlineUpdate(gender="neuter")
 
 
 # =============================================================================
@@ -454,6 +499,106 @@ class TestUpdateWordEntryEndpoint:
         )
         assert response.status_code == 200
         assert response.json()["grammar_data"] == {}
+
+
+@pytest.mark.unit
+class TestGrammarDataUpdate:
+    """Tests for grammar_data field behavior on PATCH endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_grammar_data_replaces_existing(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict[str, str],
+        noun_with_full_grammar: WordEntry,
+    ):
+        """200: grammar_data fully replaces existing, old keys are removed."""
+        response = await client.patch(
+            f"/api/v1/admin/word-entries/{noun_with_full_grammar.id}",
+            json={"grammar_data": {"gender": "feminine"}},
+            headers=superuser_auth_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["grammar_data"] == {"gender": "feminine"}
+        assert "declension" not in data["grammar_data"]
+        assert "plural" not in data["grammar_data"]
+
+    @pytest.mark.asyncio
+    async def test_grammar_data_null_fields_preserved(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict[str, str],
+        noun_with_full_grammar: WordEntry,
+    ):
+        """200: null values within grammar_data dict are preserved."""
+        response = await client.patch(
+            f"/api/v1/admin/word-entries/{noun_with_full_grammar.id}",
+            json={"grammar_data": {"gender": "neuter", "notes": None}},
+            headers=superuser_auth_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["grammar_data"]["gender"] == "neuter"
+        assert "notes" in data["grammar_data"]
+        assert data["grammar_data"]["notes"] is None
+
+    @pytest.mark.asyncio
+    async def test_grammar_data_with_null_initial(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict[str, str],
+        entry_with_null_grammar: WordEntry,
+    ):
+        """200: grammar_data can be set when initially None."""
+        response = await client.patch(
+            f"/api/v1/admin/word-entries/{entry_with_null_grammar.id}",
+            json={"grammar_data": {"type": "manner"}},
+            headers=superuser_auth_headers,
+        )
+        assert response.status_code == 200
+        assert response.json()["grammar_data"] == {"type": "manner"}
+
+    @pytest.mark.asyncio
+    async def test_grammar_data_with_other_fields(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict[str, str],
+        noun_with_full_grammar: WordEntry,
+    ):
+        """200: grammar_data alongside other fields updates both."""
+        response = await client.patch(
+            f"/api/v1/admin/word-entries/{noun_with_full_grammar.id}",
+            json={
+                "grammar_data": {"gender": "feminine"},
+                "translation_en": "woman",
+            },
+            headers=superuser_auth_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["grammar_data"] == {"gender": "feminine"}
+        assert data["translation_en"] == "woman"
+
+    @pytest.mark.asyncio
+    async def test_grammar_data_preserves_examples(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict[str, str],
+        test_word_entry: WordEntry,
+    ):
+        """200: updating grammar_data does not affect examples."""
+        response = await client.patch(
+            f"/api/v1/admin/word-entries/{test_word_entry.id}",
+            json={"grammar_data": {"gender": "masculine"}},
+            headers=superuser_auth_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["grammar_data"] == {"gender": "masculine"}
+        assert data["examples"] is not None
+        assert len(data["examples"]) == 1
+        assert data["examples"][0]["greek"] == "Το σπίτι είναι μεγάλο."
 
 
 # =============================================================================
