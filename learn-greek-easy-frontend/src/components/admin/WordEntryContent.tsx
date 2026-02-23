@@ -167,13 +167,35 @@ function ContentFields({
         </Button>
       </div>
       <dl className="space-y-3">
-        {wordEntry.pronunciation ? (
-          <FieldRow
-            label={t('wordEntryContent.pronunciation')}
-            value={wordEntry.pronunciation}
-            testId="word-entry-content-pronunciation"
-            suffix={
-              <div className="flex items-center gap-2">
+        <div id="section-pron">
+          {wordEntry.pronunciation ? (
+            <FieldRow
+              label={t('wordEntryContent.pronunciation')}
+              value={wordEntry.pronunciation}
+              testId="word-entry-content-pronunciation"
+              suffix={
+                <div className="flex items-center gap-2">
+                  <AudioStatusBadge
+                    status={wordEntry.audio_status}
+                    data-testid="audio-status-badge-lemma"
+                  />
+                  <AudioGenerateButton
+                    status={wordEntry.audio_status}
+                    onClick={() => onGenerateClick('lemma')}
+                    isLoading={
+                      isPending &&
+                      pendingVariables?.part === 'lemma' &&
+                      !pendingVariables?.exampleId
+                    }
+                    data-testid="audio-generate-btn-lemma"
+                  />
+                </div>
+              }
+            />
+          ) : (
+            <div data-testid="word-entry-content-pronunciation">
+              <dt className="text-sm text-muted-foreground">{t('audioStatus.lemmaAudio')}</dt>
+              <dd className="mt-0.5 flex items-center gap-2">
                 <AudioStatusBadge
                   status={wordEntry.audio_status}
                   data-testid="audio-status-badge-lemma"
@@ -186,56 +208,46 @@ function ContentFields({
                   }
                   data-testid="audio-generate-btn-lemma"
                 />
-              </div>
-            }
-          />
-        ) : (
-          <div data-testid="word-entry-content-pronunciation">
-            <dt className="text-sm text-muted-foreground">{t('audioStatus.lemmaAudio')}</dt>
-            <dd className="mt-0.5 flex items-center gap-2">
-              <AudioStatusBadge
-                status={wordEntry.audio_status}
-                data-testid="audio-status-badge-lemma"
-              />
-              <AudioGenerateButton
-                status={wordEntry.audio_status}
-                onClick={() => onGenerateClick('lemma')}
-                isLoading={
-                  isPending && pendingVariables?.part === 'lemma' && !pendingVariables?.exampleId
-                }
-                data-testid="audio-generate-btn-lemma"
-              />
-            </dd>
+              </dd>
+            </div>
+          )}
+        </div>
+        <div id="section-en">
+          {wordEntry.translation_en_plural && (
+            <FieldRow
+              label={t('wordEntryContent.translationEnPlural')}
+              value={wordEntry.translation_en_plural}
+              testId="word-entry-content-translation-en-plural"
+            />
+          )}
+        </div>
+        <div id="section-ru">
+          {wordEntry.translation_ru && (
+            <FieldRow
+              label={t('wordEntryContent.translationRu')}
+              value={wordEntry.translation_ru}
+              testId="word-entry-content-translation-ru"
+            />
+          )}
+        </div>
+        {gender && (
+          <div id="section-gram">
+            <FieldRow
+              label={t('wordEntryContent.gender')}
+              value={t(`wordEntryContent.gender${capitalize(gender)}`)}
+              testId="word-entry-content-gender"
+            />
           </div>
         )}
-        {wordEntry.translation_en_plural && (
-          <FieldRow
-            label={t('wordEntryContent.translationEnPlural')}
-            value={wordEntry.translation_en_plural}
-            testId="word-entry-content-translation-en-plural"
-          />
-        )}
-        {wordEntry.translation_ru && (
-          <FieldRow
-            label={t('wordEntryContent.translationRu')}
-            value={wordEntry.translation_ru}
-            testId="word-entry-content-translation-ru"
-          />
-        )}
-        {gender && (
-          <FieldRow
-            label={t('wordEntryContent.gender')}
-            value={t(`wordEntryContent.gender${capitalize(gender)}`)}
-            testId="word-entry-content-gender"
-          />
-        )}
       </dl>
-      <ExamplesSection
-        examples={wordEntry.examples}
-        onGenerateClick={onGenerateClick}
-        isPending={isPending}
-        pendingVariables={pendingVariables}
-      />
+      <div id="section-ex">
+        <ExamplesSection
+          examples={wordEntry.examples}
+          onGenerateClick={onGenerateClick}
+          isPending={isPending}
+          pendingVariables={pendingVariables}
+        />
+      </div>
     </div>
   );
 }

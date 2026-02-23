@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { DetailCompletenessChips } from '@/components/admin/vocabulary/DetailCompletenessChips';
 import { EnrichmentChips } from '@/components/admin/vocabulary/EnrichmentChips';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -50,6 +51,7 @@ import {
   trackAdminWordEntryDetailOpened,
   trackAdminWordEntryDetailTabSwitched,
 } from '@/lib/analytics/adminAnalytics';
+import { computeCompletionPercentage } from '@/lib/completeness';
 import { getLocalizedDeckName } from '@/lib/deckLocale';
 import { cn } from '@/lib/utils';
 import { adminAPI } from '@/services/adminAPI';
@@ -163,6 +165,7 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
 
   // Word entry detail view state (V2)
   const [selectedWordEntry, setSelectedWordEntry] = useState<AdminVocabularyCard | null>(null);
+  const [activeTab, setActiveTab] = useState('entry');
   // V1 card edit in-dialog state
   const [selectedV1Card, setSelectedV1Card] = useState<AdminVocabularyCard | null>(null);
   const scrollPositionRef = useRef<number>(0);
@@ -355,6 +358,7 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
     }
     clickedRowIdRef.current = card.id;
     setSelectedWordEntry(card);
+    setActiveTab('entry');
     trackAdminWordEntryDetailOpened({
       word_entry_id: card.id,
       deck_id: deck!.id,
@@ -472,21 +476,60 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
                     {selectedWordEntry.part_of_speech && (
                       <Badge variant="secondary">{selectedWordEntry.part_of_speech}</Badge>
                     )}
+                    {selectedWordEntry.gender && (
+                      <Badge variant="outline" data-testid="detail-header-gender-badge">
+                        {selectedWordEntry.gender === 'masculine'
+                          ? '♂'
+                          : selectedWordEntry.gender === 'feminine'
+                            ? '♀'
+                            : '⚬'}{' '}
+                        {selectedWordEntry.gender}
+                      </Badge>
+                    )}
+                    {selectedWordEntry.level && (
+                      <Badge variant="outline" data-testid="detail-header-level-badge">
+                        {selectedWordEntry.level}
+                      </Badge>
+                    )}
+                    {(() => {
+                      const completionPct = computeCompletionPercentage(selectedWordEntry);
+                      return (
+                        <Badge
+                          variant="outline"
+                          data-testid="detail-header-completion-badge"
+                          className={
+                            completionPct >= 80
+                              ? 'border-green-500 text-green-700'
+                              : completionPct >= 40
+                                ? 'border-yellow-500 text-yellow-700'
+                                : 'border-gray-400 text-gray-500'
+                          }
+                        >
+                          {completionPct}%
+                        </Badge>
+                      );
+                    })()}
                   </div>
                   <DialogDescription>{selectedWordEntry.back_text_en}</DialogDescription>
+                  <DetailCompletenessChips
+                    card={selectedWordEntry}
+                    activeTab={activeTab}
+                    onEnsureEntryTab={() => setActiveTab('entry')}
+                  />
                 </div>
               </DialogHeader>
               <div data-testid="word-entry-detail-view">
                 <Tabs
                   key={selectedWordEntry.id}
-                  defaultValue="entry"
-                  data-testid="word-entry-detail-tabs"
-                  onValueChange={(value) =>
+                  value={activeTab}
+                  onValueChange={(value) => {
+                    setActiveTab(value);
                     trackAdminWordEntryDetailTabSwitched({
                       word_entry_id: selectedWordEntry.id,
                       tab: value,
-                    })
-                  }
+                    });
+                  }}
+                  data-testid="word-entry-detail-tabs"
                 >
                   <TabsList className="w-full">
                     <TabsTrigger
