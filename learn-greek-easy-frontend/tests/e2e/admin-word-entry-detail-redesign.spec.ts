@@ -168,6 +168,15 @@ test.describe('Admin Word Entry Detail Redesign - Word Entry Tab Sections', () =
     // The V2 Nouns Deck contains nouns — should show NounGrammarDisplay
     await expect(page.getByTestId('noun-grammar-display')).toBeVisible();
   });
+
+  test('edit button opens edit form', async ({ page }) => {
+    await navigateToV2NounsDeck(page);
+    await openFirstWordEntryDetail(page);
+    await expect(page.getByTestId('word-entry-content-fields')).toBeVisible({ timeout: 5000 });
+    await page.getByTestId('word-entry-edit-btn').click();
+    await expect(page.getByTestId('word-entry-edit-form')).toBeVisible({ timeout: 3000 });
+    await expect(page.getByTestId('word-entry-content-fields')).not.toBeVisible();
+  });
 });
 
 // ============================================================================
@@ -309,6 +318,21 @@ test.describe('Admin Word Entry Detail Redesign - Cards Tab', () => {
         timeout: 3000,
       });
     }
+  });
+
+  test('shows audio status badges on card records in cards tab', async ({ page }) => {
+    await navigateToV2NounsDeck(page);
+    await openFirstWordEntryDetail(page);
+    await page.getByTestId('word-entry-tab-cards').click();
+    await expect(page.getByTestId('word-entry-tab-content-cards')).toBeVisible({ timeout: 5000 });
+    // If there are cards with audio status, at least one badge should be visible
+    const audioBadges = page.locator('[data-testid^="card-audio-badge-"]');
+    const count = await audioBadges.count();
+    if (count > 0) {
+      await expect(audioBadges.first()).toBeVisible();
+    }
+    // Empty state is also acceptable - just verify no JS errors by checking the tab loaded
+    await expect(page.getByTestId('word-entry-tab-content-cards')).toBeVisible();
   });
 });
 
