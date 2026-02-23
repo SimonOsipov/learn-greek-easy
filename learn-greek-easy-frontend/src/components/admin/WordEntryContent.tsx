@@ -6,13 +6,20 @@ import { useTranslation } from 'react-i18next';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useGenerateAudio } from '@/features/words/hooks';
 import { useWordEntry } from '@/features/words/hooks/useWordEntry';
+import { chipColorClasses, type ChipColor } from '@/lib/completeness';
 import type { WordEntryExampleSentence, WordEntryResponse } from '@/services/wordEntryAPI';
 
 import { AudioGenerateButton } from './AudioGenerateButton';
 import { AudioStatusBadge } from './AudioStatusBadge';
+import { GrammarDisplaySection } from './vocabulary/grammar-display/GrammarDisplaySection';
+import {
+  normalizeGrammarData,
+  GRAMMAR_FIELD_COUNTS,
+} from './vocabulary/grammar-display/grammarNormalizer';
 import { WordEntryEditForm } from './WordEntryEditForm';
 
 interface WordEntryContentProps {
@@ -114,7 +121,7 @@ function FieldRow({
   suffix,
 }: {
   label: string;
-  value: string;
+  value: React.ReactNode;
   testId: string;
   suffix?: React.ReactNode;
 }) {
@@ -129,17 +136,55 @@ function FieldRow({
   );
 }
 
-function getGenderForNoun(wordEntry: WordEntryResponse): string | null {
-  if (wordEntry.part_of_speech !== 'noun') return null;
-  if (!wordEntry.grammar_data) return null;
-  const gender = (wordEntry.grammar_data as Record<string, unknown>).gender;
-  if (typeof gender !== 'string') return null;
-  return gender;
+function NotSet() {
+  return <span className="italic text-muted-foreground">Not set</span>;
+}
+
+function SectionBadge({ filled, total }: { filled: number; total: number }) {
+  const color: ChipColor = filled === total ? 'green' : filled > 0 ? 'yellow' : 'gray';
+  return (
+    <span className={`ml-2 rounded-sm border px-1.5 py-0.5 text-xs ${chipColorClasses[color]}`}>
+      {filled}/{total}
+    </span>
+  );
 }
 
 function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
+
+// ============================================
+// Section completeness helpers
+// ============================================
+
+function countIdentityFields(wordEntry: WordEntryResponse): { filled: number; total: number } {
+  let filled = 0;
+  if (wordEntry.pronunciation) filled++;
+  if (wordEntry.audio_status === 'ready') filled++;
+  return { filled, total: 2 };
+}
+
+function countTranslationFields(wordEntry: WordEntryResponse): { filled: number; total: number } {
+  let filled = 0;
+  if (wordEntry.translation_en) filled++;
+  if (wordEntry.translation_en_plural) filled++;
+  if (wordEntry.translation_ru) filled++;
+  if (wordEntry.translation_ru_plural) filled++;
+  return { filled, total: 4 };
+}
+
+function countGrammarFields(wordEntry: WordEntryResponse): { filled: number; total: number } {
+  const pos = wordEntry.part_of_speech;
+  const total = GRAMMAR_FIELD_COUNTS[pos] ?? 0;
+  if (total === 0 || !wordEntry.grammar_data) return { filled: 0, total };
+  const normalized = normalizeGrammarData(wordEntry.grammar_data, pos);
+  const filled = Object.values(normalized).filter((v) => v !== null).length;
+  return { filled, total };
+}
+
+// ============================================
+// ContentFields
+// ============================================
 
 function ContentFields({
   wordEntry,
@@ -157,23 +202,44 @@ function ContentFields({
     | undefined;
 }) {
   const { t } = useTranslation('admin');
-  const gender = getGenderForNoun(wordEntry);
+
+  const identityCompl = countIdentityFields(wordEntry);
+  const translationsCompl = countTranslationFields(wordEntry);
+  const grammarCompl = countGrammarFields(wordEntry);
+  const examplesCount = wordEntry.examples?.length ?? 0;
 
   return (
-    <div data-testid="word-entry-content-fields">
-      <div className="mb-3 flex justify-end">
+    <div className="space-y-3" data-testid="word-entry-content-fields">
+      <div className="flex justify-end">
         <Button variant="outline" size="sm" onClick={onEdit} data-testid="word-entry-edit-btn">
           {t('wordEntryEdit.edit')}
         </Button>
       </div>
-      <dl className="space-y-3">
-        <div id="section-pron">
-          {wordEntry.pronunciation ? (
+
+      {/* ── Identity Card ── */}
+      <Card id="section-identity">
+        <CardHeader className="px-4 pb-2 pt-4">
+          <div className="flex items-center text-sm font-semibold">
+            {t('wordEntryContent.sectionIdentity')}
+            <SectionBadge filled={identityCompl.filled} total={identityCompl.total} />
+          </div>
+        </CardHeader>
+        <CardContent className="px-4 pb-4">
+          <dl className="space-y-3">
+            {/* Part of Speech */}
             <FieldRow
-              label={t('wordEntryContent.pronunciation')}
-              value={wordEntry.pronunciation}
-              testId="word-entry-content-pronunciation"
-              suffix={
+              label="Part of Speech"
+              value={wordEntry.part_of_speech ? capitalize(wordEntry.part_of_speech) : <NotSet />}
+              testId="word-entry-content-pos"
+            />
+
+            {/* Pronunciation + Audio */}
+            <div id="section-pron" data-testid="word-entry-content-pronunciation">
+              <dt className="text-sm text-muted-foreground">
+                {t('wordEntryContent.pronunciation')}
+              </dt>
+              <dd className="mt-0.5 flex items-center gap-2 text-sm font-medium">
+                {wordEntry.pronunciation ? wordEntry.pronunciation : <NotSet />}
                 <div className="flex items-center gap-2">
                   <AudioStatusBadge
                     status={wordEntry.audio_status}
@@ -190,67 +256,94 @@ function ContentFields({
                     data-testid="audio-generate-btn-lemma"
                   />
                 </div>
-              }
-            />
-          ) : (
-            <div data-testid="word-entry-content-pronunciation">
-              <dt className="text-sm text-muted-foreground">{t('audioStatus.lemmaAudio')}</dt>
-              <dd className="mt-0.5 flex items-center gap-2">
-                <AudioStatusBadge
-                  status={wordEntry.audio_status}
-                  data-testid="audio-status-badge-lemma"
-                />
-                <AudioGenerateButton
-                  status={wordEntry.audio_status}
-                  onClick={() => onGenerateClick('lemma')}
-                  isLoading={
-                    isPending && pendingVariables?.part === 'lemma' && !pendingVariables?.exampleId
-                  }
-                  data-testid="audio-generate-btn-lemma"
-                />
               </dd>
             </div>
-          )}
-        </div>
-        <div id="section-en">
-          {wordEntry.translation_en_plural && (
+          </dl>
+        </CardContent>
+      </Card>
+
+      {/* ── Translations Card ── */}
+      <Card id="section-translations">
+        <CardHeader className="px-4 pb-2 pt-4">
+          <div className="flex items-center text-sm font-semibold">
+            {t('wordEntryContent.sectionTranslations')}
+            <SectionBadge filled={translationsCompl.filled} total={translationsCompl.total} />
+          </div>
+        </CardHeader>
+        <CardContent className="px-4 pb-4">
+          <dl className="space-y-3" id="section-en">
+            <FieldRow
+              label={t('wordEntryContent.translationEn')}
+              value={wordEntry.translation_en || <NotSet />}
+              testId="word-entry-content-translation-en"
+            />
             <FieldRow
               label={t('wordEntryContent.translationEnPlural')}
-              value={wordEntry.translation_en_plural}
+              value={wordEntry.translation_en_plural || <NotSet />}
               testId="word-entry-content-translation-en-plural"
             />
-          )}
-        </div>
-        <div id="section-ru">
-          {wordEntry.translation_ru && (
+            <div id="section-ru">
+              <FieldRow
+                label={t('wordEntryContent.translationRu')}
+                value={wordEntry.translation_ru || <NotSet />}
+                testId="word-entry-content-translation-ru"
+              />
+            </div>
             <FieldRow
-              label={t('wordEntryContent.translationRu')}
-              value={wordEntry.translation_ru}
-              testId="word-entry-content-translation-ru"
+              label={t('wordEntryContent.translationRuPlural')}
+              value={wordEntry.translation_ru_plural || <NotSet />}
+              testId="word-entry-content-translation-ru-plural"
             />
-          )}
-        </div>
-        {gender && (
-          <div id="section-gram">
-            <FieldRow
-              label={t('wordEntryContent.gender')}
-              value={t(`wordEntryContent.gender${capitalize(gender)}`)}
-              testId="word-entry-content-gender"
+          </dl>
+        </CardContent>
+      </Card>
+
+      {/* ── Grammar Card (not for phrases) ── */}
+      {wordEntry.part_of_speech !== 'phrase' && (
+        <Card id="section-grammar">
+          <CardHeader className="px-4 pb-2 pt-4">
+            <div className="flex items-center text-sm font-semibold">
+              {t('wordEntryContent.sectionGrammar')}
+              {grammarCompl.total > 0 && (
+                <SectionBadge filled={grammarCompl.filled} total={grammarCompl.total} />
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="px-4 pb-4" id="section-gram">
+            <GrammarDisplaySection
+              partOfSpeech={wordEntry.part_of_speech}
+              grammarData={wordEntry.grammar_data}
             />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── Examples Card ── */}
+      <Card id="section-examples">
+        <CardHeader className="px-4 pb-2 pt-4">
+          <div className="flex items-center text-sm font-semibold">
+            {t('wordEntryContent.sectionExamples')}
+            <span className="ml-2 rounded-sm border border-muted-foreground/30 bg-muted/50 px-1.5 py-0.5 text-xs text-muted-foreground">
+              {examplesCount}
+            </span>
           </div>
-        )}
-      </dl>
-      <div id="section-ex">
-        <ExamplesSection
-          examples={wordEntry.examples}
-          onGenerateClick={onGenerateClick}
-          isPending={isPending}
-          pendingVariables={pendingVariables}
-        />
-      </div>
+        </CardHeader>
+        <CardContent className="px-4 pb-4" id="section-ex">
+          <ExamplesSection
+            examples={wordEntry.examples}
+            onGenerateClick={onGenerateClick}
+            isPending={isPending}
+            pendingVariables={pendingVariables}
+          />
+        </CardContent>
+      </Card>
     </div>
   );
 }
+
+// ============================================
+// ExamplesSection
+// ============================================
 
 function ExamplesSection({
   examples,
@@ -269,10 +362,7 @@ function ExamplesSection({
   const hasExamples = examples && examples.length > 0;
 
   return (
-    <div className="mt-4" data-testid="word-entry-content-examples">
-      <h4 className="mb-2 text-sm font-medium text-muted-foreground">
-        {t('wordEntryContent.examples')}
-      </h4>
+    <div data-testid="word-entry-content-examples">
       {!hasExamples && (
         <p className="text-sm text-muted-foreground" data-testid="word-entry-content-no-examples">
           {t('wordEntryContent.noExamples')}
@@ -296,6 +386,18 @@ function ExamplesSection({
   );
 }
 
+// ============================================
+// ExampleCard
+// ============================================
+
+function CompletionDot({ filled }: { filled: boolean }) {
+  return (
+    <span
+      className={`inline-block h-2 w-2 flex-shrink-0 rounded-full ${filled ? 'bg-green-500' : 'bg-muted-foreground/30'}`}
+    />
+  );
+}
+
 function ExampleCard({
   example,
   index,
@@ -313,43 +415,78 @@ function ExampleCard({
 }) {
   const { t } = useTranslation('admin');
 
+  const hasEnglish = Boolean(example.english);
+  const hasRussian = Boolean(example.russian);
+  const hasAudio = example.audio_status === 'ready' || example.audio_status === 'generating';
+
   return (
     <div
       className="space-y-1.5 rounded-md border p-3"
       data-testid={`word-entry-content-example-${index}`}
     >
-      <div className="flex items-center justify-between">
-        <span className="text-xs text-muted-foreground">{t('wordEntryContent.exampleGreek')}</span>
-        {example.audio_status && (
-          <div className="flex items-center gap-2">
-            <AudioStatusBadge
-              status={example.audio_status}
-              data-testid={`audio-status-badge-example-${index}`}
-            />
-            <AudioGenerateButton
-              status={example.audio_status}
-              onClick={() => onGenerateClick('example', example.id)}
-              isLoading={isPending && pendingVariables?.exampleId === example.id}
-              data-testid={`audio-generate-btn-example-${index}`}
-            />
-          </div>
-        )}
+      {/* Example number header */}
+      <div className="mb-1 text-xs font-medium text-muted-foreground">#{index + 1}</div>
+
+      {/* Greek — always green dot */}
+      <div className="flex items-start gap-2">
+        <CompletionDot filled={true} />
+        <div className="min-w-0 flex-1">
+          <span className="text-xs text-muted-foreground">
+            {t('wordEntryContent.exampleGreek')}
+          </span>
+          <p className="text-sm">{example.greek}</p>
+        </div>
       </div>
-      <p className="text-sm">{example.greek}</p>
-      <div>
-        <span className="text-xs text-muted-foreground">
-          {t('wordEntryContent.exampleEnglish')}
-        </span>
-        <p className="text-sm">{example.english || t('wordEntryContent.notSet')}</p>
+
+      {/* English — green if present, gray if absent */}
+      <div className="flex items-start gap-2">
+        <CompletionDot filled={hasEnglish} />
+        <div className="min-w-0 flex-1">
+          <span className="text-xs text-muted-foreground">
+            {t('wordEntryContent.exampleEnglish')}
+          </span>
+          <p className="text-sm">{example.english || t('wordEntryContent.notSet')}</p>
+        </div>
       </div>
-      {example.russian && (
-        <div>
+
+      {/* Russian — always shown, green/gray dot */}
+      <div className="flex items-start gap-2">
+        <CompletionDot filled={hasRussian} />
+        <div className="min-w-0 flex-1">
           <span className="text-xs text-muted-foreground">
             {t('wordEntryContent.exampleRussian')}
           </span>
-          <p className="text-sm">{example.russian}</p>
+          {hasRussian ? (
+            <p className="text-sm">{example.russian}</p>
+          ) : (
+            <p className="text-sm">
+              <span className="italic text-muted-foreground">Not set</span>
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Audio — green/gray dot + badge + button */}
+      {example.audio_status && (
+        <div className="flex items-center gap-2">
+          <CompletionDot filled={hasAudio} />
+          <span className="text-xs text-muted-foreground">
+            {t('wordEntryContent.exampleAudio')}
+          </span>
+          <AudioStatusBadge
+            status={example.audio_status}
+            data-testid={`audio-status-badge-example-${index}`}
+          />
+          <AudioGenerateButton
+            status={example.audio_status}
+            onClick={() => onGenerateClick('example', example.id)}
+            isLoading={isPending && pendingVariables?.exampleId === example.id}
+            data-testid={`audio-generate-btn-example-${index}`}
+          />
         </div>
       )}
+
+      {/* Context — only shown when present */}
       {example.context && (
         <div>
           <span className="text-xs text-muted-foreground">

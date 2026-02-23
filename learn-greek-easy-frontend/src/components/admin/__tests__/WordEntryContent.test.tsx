@@ -147,7 +147,7 @@ describe('WordEntryContent', () => {
       );
     });
 
-    it('omits translation_en_plural when null', () => {
+    it('shows Not set for translation_en_plural when null', () => {
       (useWordEntry as Mock).mockReturnValue({
         wordEntry: createMockWordEntry({ translation_en_plural: null }),
         isLoading: false,
@@ -155,9 +155,10 @@ describe('WordEntryContent', () => {
         refetch: vi.fn(),
       });
       renderComponent();
-      expect(
-        screen.queryByTestId('word-entry-content-translation-en-plural')
-      ).not.toBeInTheDocument();
+      // Field always renders — shows "Not set" when null
+      const field = screen.getByTestId('word-entry-content-translation-en-plural');
+      expect(field).toBeInTheDocument();
+      expect(field).toHaveTextContent('Not set');
     });
   });
 
@@ -172,7 +173,7 @@ describe('WordEntryContent', () => {
       expect(screen.getByTestId('word-entry-content-translation-ru')).toHaveTextContent('дом');
     });
 
-    it('omits translation_ru when null', () => {
+    it('shows Not set for translation_ru when null', () => {
       (useWordEntry as Mock).mockReturnValue({
         wordEntry: createMockWordEntry({ translation_ru: null }),
         isLoading: false,
@@ -180,22 +181,29 @@ describe('WordEntryContent', () => {
         refetch: vi.fn(),
       });
       renderComponent();
-      expect(screen.queryByTestId('word-entry-content-translation-ru')).not.toBeInTheDocument();
+      // Field always renders — shows "Not set" when null
+      const field = screen.getByTestId('word-entry-content-translation-ru');
+      expect(field).toBeInTheDocument();
+      expect(field).toHaveTextContent('Not set');
     });
   });
 
   // ============================================
-  // Group 5: Gender
+  // Group 5: Grammar section / Gender
   // ============================================
 
-  describe('gender field', () => {
-    it('shows gender row for noun with grammar_data.gender', () => {
+  describe('grammar section', () => {
+    it('renders noun grammar display for noun with grammar_data', () => {
       renderComponent();
-      expect(screen.getByTestId('word-entry-content-gender')).toBeInTheDocument();
-      expect(screen.getByTestId('word-entry-content-gender')).toHaveTextContent('Neuter');
+      expect(screen.getByTestId('noun-grammar-display')).toBeInTheDocument();
     });
 
-    it('omits gender when grammar_data is null', () => {
+    it('shows Neuter gender in noun grammar display', () => {
+      renderComponent();
+      expect(screen.getByTestId('noun-grammar-display')).toHaveTextContent('Neuter');
+    });
+
+    it('shows "No grammar data" when grammar_data is null for noun', () => {
       (useWordEntry as Mock).mockReturnValue({
         wordEntry: createMockWordEntry({ grammar_data: null }),
         isLoading: false,
@@ -203,10 +211,10 @@ describe('WordEntryContent', () => {
         refetch: vi.fn(),
       });
       renderComponent();
-      expect(screen.queryByTestId('word-entry-content-gender')).not.toBeInTheDocument();
+      expect(screen.getByTestId('grammar-no-data')).toBeInTheDocument();
     });
 
-    it('omits gender when grammar_data has no gender key', () => {
+    it('shows Not set for gender when grammar_data has no gender key', () => {
       (useWordEntry as Mock).mockReturnValue({
         wordEntry: createMockWordEntry({ grammar_data: { other: 'value' } }),
         isLoading: false,
@@ -214,21 +222,35 @@ describe('WordEntryContent', () => {
         refetch: vi.fn(),
       });
       renderComponent();
-      expect(screen.queryByTestId('word-entry-content-gender')).not.toBeInTheDocument();
+      // Grammar section still renders noun display, gender shows Not set
+      expect(screen.getByTestId('noun-grammar-display')).toBeInTheDocument();
     });
 
-    it('omits gender for non-noun part of speech even with grammar_data.gender', () => {
+    it('shows verb grammar display for verb part of speech', () => {
       (useWordEntry as Mock).mockReturnValue({
         wordEntry: createMockWordEntry({
           part_of_speech: 'verb',
-          grammar_data: { gender: 'masculine' },
+          grammar_data: { voice: 'active' },
         }),
         isLoading: false,
         isError: false,
         refetch: vi.fn(),
       });
       renderComponent();
-      expect(screen.queryByTestId('word-entry-content-gender')).not.toBeInTheDocument();
+      expect(screen.getByTestId('verb-grammar-display')).toBeInTheDocument();
+    });
+
+    it('hides grammar section for phrase part of speech', () => {
+      (useWordEntry as Mock).mockReturnValue({
+        wordEntry: createMockWordEntry({ part_of_speech: 'phrase', grammar_data: null }),
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn(),
+      });
+      renderComponent();
+      expect(screen.queryByTestId('noun-grammar-display')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('verb-grammar-display')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('grammar-no-data')).not.toBeInTheDocument();
     });
   });
 
@@ -285,7 +307,7 @@ describe('WordEntryContent', () => {
       expect(screen.getByTestId('word-entry-content-example-0')).toHaveTextContent('Дом большой.');
     });
 
-    it('omits example Russian when empty string', () => {
+    it('shows Not set for example Russian when empty string', () => {
       (useWordEntry as Mock).mockReturnValue({
         wordEntry: createMockWordEntry({
           examples: [
@@ -305,8 +327,10 @@ describe('WordEntryContent', () => {
         refetch: vi.fn(),
       });
       renderComponent();
-      // Russian label should not appear since russian is empty string (falsy)
-      expect(screen.getByTestId('word-entry-content-example-0')).not.toHaveTextContent('Russian');
+      // Russian row always renders — shows "Not set" when empty/null
+      const exampleCard = screen.getByTestId('word-entry-content-example-0');
+      expect(exampleCard).toHaveTextContent('Russian');
+      expect(exampleCard).toHaveTextContent('Not set');
     });
 
     it('renders example Context when non-null', () => {
