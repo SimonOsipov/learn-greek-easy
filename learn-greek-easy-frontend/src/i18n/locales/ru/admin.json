@@ -187,6 +187,9 @@
       "declension": "Склонение",
       "cloze": "Заполнение пропусков",
       "sentence_translation": "Перевод предложения"
+    },
+    "cards": {
+      "tierTooltip": "Уровень 1: самые частые, изучаются первыми. Уровень 2: менее частые. Уровень 3+: специализированная лексика."
     }
   },
   "wordEntryContent": {
@@ -210,7 +213,14 @@
     "exampleRussian": "Русский",
     "exampleContext": "Контекст",
     "exampleAudio": "Аудио",
-    "notSet": "—",
+    "notSet": "Не задано",
+    "partOfSpeech": "Часть речи",
+    "completion": "Заполненность: {{pct}}%",
+    "grammarSection": {
+      "title": "Грамматика {{filled}}/{{total}}"
+    },
+    "noGrammarData": "Нет данных о грамматике",
+    "unknownPartOfSpeech": "Неизвестная часть речи: {{pos}}",
     "loading": "Загрузка словарной записи…",
     "errorTitle": "Не удалось загрузить словарную запись",
     "errorRetry": "Повторить"

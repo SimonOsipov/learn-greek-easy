@@ -199,8 +199,7 @@ function CardRecord({
               </span>
             </TooltipTrigger>
             <TooltipContent side="top" className="max-w-xs text-xs">
-              Tier 1: most common, introduced first. Tier 2: less common. Tier 3+: specialized
-              vocabulary.
+              {t('wordEntryDetail.cards.tierTooltip')}
             </TooltipContent>
           </Tooltip>
         )}

@@ -279,7 +279,7 @@ describe('WordEntryContent', () => {
       );
     });
 
-    it('renders em-dash fallback when English is empty string', () => {
+    it('renders not-set fallback when English is empty string', () => {
       (useWordEntry as Mock).mockReturnValue({
         wordEntry: createMockWordEntry({
           examples: [
@@ -299,7 +299,7 @@ describe('WordEntryContent', () => {
         refetch: vi.fn(),
       });
       renderComponent();
-      expect(screen.getByTestId('word-entry-content-example-0')).toHaveTextContent('—');
+      expect(screen.getByTestId('word-entry-content-example-0')).toHaveTextContent('Not set');
     });
 
     it('renders example Russian when non-empty', () => {

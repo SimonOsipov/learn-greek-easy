@@ -137,7 +137,8 @@ function FieldRow({
 }
 
 function NotSet() {
-  return <span className="italic text-muted-foreground">Not set</span>;
+  const { t } = useTranslation('admin');
+  return <span className="italic text-muted-foreground">{t('wordEntryContent.notSet')}</span>;
 }
 
 function SectionBadge({ filled, total }: { filled: number; total: number }) {
@@ -228,7 +229,7 @@ function ContentFields({
           <dl className="space-y-3">
             {/* Part of Speech */}
             <FieldRow
-              label="Part of Speech"
+              label={t('wordEntryContent.partOfSpeech')}
               value={wordEntry.part_of_speech ? capitalize(wordEntry.part_of_speech) : <NotSet />}
               testId="word-entry-content-pos"
             />
@@ -460,7 +461,7 @@ function ExampleCard({
             <p className="text-sm">{example.russian}</p>
           ) : (
             <p className="text-sm">
-              <span className="italic text-muted-foreground">Not set</span>
+              <NotSet />
             </p>
           )}
         </div>

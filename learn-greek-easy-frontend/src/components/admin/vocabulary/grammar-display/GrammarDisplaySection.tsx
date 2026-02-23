@@ -8,6 +8,8 @@
  * - Normalizes V1/V2 data and routes to appropriate display component
  */
 
+import { useTranslation } from 'react-i18next';
+
 import { AdjectiveGrammarDisplay } from './AdjectiveGrammarDisplay';
 import { AdverbGrammarDisplay } from './AdverbGrammarDisplay';
 import { normalizeGrammarData } from './grammarNormalizer';
@@ -28,13 +30,15 @@ interface GrammarDisplaySectionProps {
 // ============================================
 
 export function GrammarDisplaySection({ partOfSpeech, grammarData }: GrammarDisplaySectionProps) {
+  const { t } = useTranslation('admin');
+
   // Phrases have no grammar section at all
   if (partOfSpeech === 'phrase') return null;
 
   if (!grammarData) {
     return (
       <p data-testid="grammar-no-data" className="text-sm italic text-muted-foreground">
-        No grammar data
+        {t('wordEntryContent.noGrammarData')}
       </p>
     );
   }
@@ -52,7 +56,9 @@ export function GrammarDisplaySection({ partOfSpeech, grammarData }: GrammarDisp
       return <AdverbGrammarDisplay fields={normalized} />;
     default:
       return (
-        <p className="text-sm text-muted-foreground">Unknown part of speech: {partOfSpeech}</p>
+        <p className="text-sm text-muted-foreground">
+          {t('wordEntryContent.unknownPartOfSpeech', { pos: partOfSpeech })}
+        </p>
       );
   }
 }

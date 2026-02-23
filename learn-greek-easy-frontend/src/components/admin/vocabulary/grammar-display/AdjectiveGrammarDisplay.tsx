@@ -47,7 +47,8 @@ interface AdjectiveGrammarDisplayProps {
 // ============================================
 
 function NotSet() {
-  return <span className="italic text-muted-foreground">Not set</span>;
+  const { t } = useTranslation('admin');
+  return <span className="italic text-muted-foreground">{t('wordEntryContent.notSet')}</span>;
 }
 
 export function AdjectiveGrammarDisplay({ fields }: AdjectiveGrammarDisplayProps) {

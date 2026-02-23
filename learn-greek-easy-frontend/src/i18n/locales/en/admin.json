@@ -177,6 +177,9 @@
       "declension": "Declension",
       "cloze": "Cloze",
       "sentence_translation": "Sentence Translation"
+    },
+    "cards": {
+      "tierTooltip": "Tier 1: most common, introduced first. Tier 2: less common. Tier 3+: specialized vocabulary."
     }
   },
   "wordEntryContent": {
@@ -200,7 +203,14 @@
     "exampleRussian": "Russian",
     "exampleContext": "Context",
     "exampleAudio": "Audio",
-    "notSet": "—",
+    "notSet": "Not set",
+    "partOfSpeech": "Part of Speech",
+    "completion": "Completion: {{pct}}%",
+    "grammarSection": {
+      "title": "Grammar {{filled}}/{{total}}"
+    },
+    "noGrammarData": "No grammar data",
+    "unknownPartOfSpeech": "Unknown part of speech: {{pos}}",
     "loading": "Loading word entry…",
     "errorTitle": "Failed to load word entry",
     "errorRetry": "Retry"
