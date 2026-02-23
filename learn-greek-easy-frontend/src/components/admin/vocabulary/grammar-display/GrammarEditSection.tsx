@@ -167,7 +167,7 @@ export function GrammarEditSection({ wordEntry, onEditingChange }: GrammarEditSe
                   disabled={updateWordEntry.isPending}
                   data-testid="grammar-cancel-btn"
                 >
-                  {t('wordEntryEdit.cancel')}
+                  {t('grammarEdit.cancel')}
                 </Button>
                 <Button
                   type="button"
@@ -176,7 +176,7 @@ export function GrammarEditSection({ wordEntry, onEditingChange }: GrammarEditSe
                   disabled={!isDirty || updateWordEntry.isPending}
                   data-testid="grammar-save-btn"
                 >
-                  {updateWordEntry.isPending ? t('wordEntryEdit.saving') : t('wordEntryEdit.save')}
+                  {updateWordEntry.isPending ? t('grammarEdit.saving') : t('grammarEdit.save')}
                 </Button>
               </div>
             </div>
@@ -193,18 +193,18 @@ export function GrammarEditSection({ wordEntry, onEditingChange }: GrammarEditSe
         <AlertDialog
           open={showDiscard}
           onOpenChange={setShowDiscard}
-          title={t('wordEntryEdit.discardTitle')}
-          description={t('wordEntryEdit.discardMessage')}
+          title={t('grammarEdit.discardTitle')}
+          description={t('grammarEdit.discardMessage')}
           variant="warning"
           dismissible={false}
           actions={[
             {
-              label: t('wordEntryEdit.discardCancel'),
+              label: t('grammarEdit.discardCancel'),
               onClick: () => setShowDiscard(false),
               variant: 'outline',
             },
             {
-              label: t('wordEntryEdit.discardConfirm'),
+              label: t('grammarEdit.discardConfirm'),
               onClick: handleDiscard,
               variant: 'destructive',
             },

@@ -877,21 +877,27 @@
     "fieldTranslationRu": "Перевод (RU)",
     "fieldTranslationRuPlural": "Перевод мн. ч. (RU)",
     "fieldPronunciation": "Произношение",
-    "fieldGender": "Род",
     "fieldExampleGreek": "Греческий",
     "fieldExampleEnglish": "Английский",
     "fieldExampleRussian": "Русский",
     "fieldExampleContext": "Контекст",
     "exampleHeader": "Пример {{index}}",
-    "genderMasculine": "Мужской",
-    "genderFeminine": "Женский",
-    "genderNeuter": "Средний",
     "requiredField": "Обязательное поле",
     "lemmaReadOnly": "Лемма",
     "partOfSpeechReadOnly": "Часть речи",
     "sectionTranslations": "Переводы",
     "sectionPronunciation": "Произношение",
-    "sectionPronunciationGrammar": "Произношение и грамматика",
     "sectionExamples": "Примеры"
+  },
+  "grammarEdit": {
+    "editTooltip": "Редактировать грамматику",
+    "save": "Сохранить",
+    "cancel": "Отменить",
+    "saving": "Сохранение...",
+    "success": "Грамматика обновлена",
+    "discardTitle": "Несохранённые изменения",
+    "discardMessage": "У вас есть несохранённые изменения в грамматике. Отменить?",
+    "discardConfirm": "Отменить",
+    "discardCancel": "Продолжить редактирование"
   }
 }
