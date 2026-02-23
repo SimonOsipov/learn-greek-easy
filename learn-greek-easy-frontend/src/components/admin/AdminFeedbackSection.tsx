@@ -15,6 +15,7 @@ import {
 import { useTranslation } from 'react-i18next';
 
 import { SummaryCard } from '@/components/admin/SummaryCard';
+import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -60,16 +61,19 @@ export const AdminFeedbackSection: React.FC = () => {
     totalPages,
     filters,
     isLoading,
+    isDeleting,
     error,
     fetchFeedbackList,
     setFilters,
     clearFilters,
     setPage,
+    deleteFeedback,
     selectedFeedback,
     setSelectedFeedback,
   } = useAdminFeedbackStore();
 
   const [isResponseDialogOpen, setIsResponseDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<AdminFeedbackItem | null>(null);
   const [searchInput, setSearchInput] = useState('');
   const debouncedSearch = useDebounce(searchInput, 300);
   const pageSize = 10;
@@ -283,6 +287,7 @@ export const AdminFeedbackSection: React.FC = () => {
                         key={feedback.id}
                         feedback={feedback}
                         onRespond={handleRespond}
+                        onDelete={(item) => setDeleteTarget(item)}
                       />
                     ))}
                   </div>
@@ -336,6 +341,24 @@ export const AdminFeedbackSection: React.FC = () => {
         open={isResponseDialogOpen}
         onOpenChange={handleResponseDialogClose}
         feedback={selectedFeedback}
+      />
+
+      {/* Delete Feedback Confirm Dialog */}
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        title={t('feedback.delete.title')}
+        description={t('feedback.delete.warning')}
+        loading={isDeleting}
+        onConfirm={async () => {
+          if (deleteTarget) {
+            await deleteFeedback(deleteTarget.id);
+            setDeleteTarget(null);
+          }
+        }}
+        variant="destructive"
       />
     </div>
   );

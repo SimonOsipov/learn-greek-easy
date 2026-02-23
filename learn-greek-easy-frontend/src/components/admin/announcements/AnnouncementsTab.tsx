@@ -55,6 +55,9 @@ export const AnnouncementsTab: React.FC = () => {
   const jsonDirtyRef = useRef(false);
   const formDirtyRef = useRef(false);
 
+  // Delete state
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+
   // Store state and actions
   const {
     announcements,
@@ -64,8 +67,10 @@ export const AnnouncementsTab: React.FC = () => {
     totalPages,
     isLoading,
     isLoadingDetail,
+    isDeleting,
     fetchAnnouncements,
     fetchAnnouncementDetail,
+    deleteAnnouncement,
     setPage,
     clearSelectedAnnouncement,
     refresh,
@@ -275,6 +280,8 @@ export const AnnouncementsTab: React.FC = () => {
         totalPages={totalPages}
         onPageChange={handlePageChange}
         onViewDetail={handleViewDetail}
+        onDelete={(id) => setDeleteTarget(id)}
+        isDeleting={isDeleting}
       />
 
       {/* Preview Modal */}
@@ -303,6 +310,23 @@ export const AnnouncementsTab: React.FC = () => {
         title={t('announcements.create.switchModeConfirmTitle')}
         description={t('announcements.create.switchModeConfirm')}
         onConfirm={handleConfirmModeSwitch}
+      />
+
+      {/* Delete Announcement Confirm Dialog */}
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        title={t('announcements.delete.title')}
+        description={t('announcements.delete.warning')}
+        onConfirm={async () => {
+          if (deleteTarget) {
+            await deleteAnnouncement(deleteTarget);
+            setDeleteTarget(null);
+          }
+        }}
+        variant="destructive"
       />
     </div>
   );

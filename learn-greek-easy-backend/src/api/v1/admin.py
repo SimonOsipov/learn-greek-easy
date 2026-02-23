@@ -1460,6 +1460,35 @@ async def get_announcement(
     )
 
 
+@router.delete(
+    "/announcements/{announcement_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete announcement campaign",
+    description="Delete an announcement campaign. Already-sent notifications are NOT recalled. Requires superuser privileges.",
+    responses={
+        204: {"description": "Announcement deleted successfully"},
+        404: {"description": "Announcement not found"},
+    },
+)
+async def delete_announcement(
+    announcement_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> None:
+    """Delete an announcement campaign (admin only).
+
+    Args:
+        announcement_id: UUID of the announcement to delete
+        db: Database session (injected)
+        current_user: Authenticated superuser (injected)
+
+    Raises:
+        404: If announcement not found
+    """
+    service = AnnouncementService(db)
+    await service.delete_campaign(announcement_id)
+
+
 # ============================================================================
 # Changelog Admin Endpoints
 # ============================================================================

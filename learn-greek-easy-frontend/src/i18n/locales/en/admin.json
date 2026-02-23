@@ -288,6 +288,13 @@
       "read": "Read by",
       "readProgress": "Read Progress",
       "close": "Close"
+    },
+    "delete": {
+      "button": "Delete",
+      "title": "Delete Announcement",
+      "warning": "This will permanently delete the announcement. Already-sent notifications will NOT be recalled.",
+      "confirm": "Delete",
+      "success": "Announcement deleted"
     }
   },
   "news": {
@@ -420,6 +427,13 @@
     "states": {
       "noFeedback": "No feedback submitted yet",
       "noFilteredResults": "No feedback matches the selected filters"
+    },
+    "delete": {
+      "button": "Delete",
+      "title": "Delete Feedback",
+      "warning": "This will permanently delete this feedback item.",
+      "confirm": "Delete",
+      "success": "Feedback deleted"
     }
   },
   "cardErrors": {

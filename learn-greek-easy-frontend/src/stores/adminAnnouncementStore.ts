@@ -30,6 +30,7 @@ interface AdminAnnouncementState {
   // Loading states
   isLoading: boolean;
   isLoadingDetail: boolean;
+  isDeleting: boolean;
 
   // Error state
   error: string | null;
@@ -37,6 +38,7 @@ interface AdminAnnouncementState {
   // Actions
   fetchAnnouncements: () => Promise<void>;
   fetchAnnouncementDetail: (id: string) => Promise<void>;
+  deleteAnnouncement: (id: string) => Promise<void>;
   setPage: (page: number) => void;
   clearSelectedAnnouncement: () => void;
   clearError: () => void;
@@ -58,6 +60,7 @@ export const useAdminAnnouncementStore = create<AdminAnnouncementState>()(
       totalPages: 0,
       isLoading: false,
       isLoadingDetail: false,
+      isDeleting: false,
       error: null,
 
       /**
@@ -97,6 +100,22 @@ export const useAdminAnnouncementStore = create<AdminAnnouncementState>()(
             error instanceof Error ? error.message : 'Failed to load announcement details';
           set({ isLoadingDetail: false, error: message, selectedAnnouncement: null });
           throw error;
+        }
+      },
+
+      /**
+       * Delete an announcement campaign
+       */
+      deleteAnnouncement: async (id: string) => {
+        set({ isDeleting: true });
+        try {
+          await adminAPI.deleteAnnouncement(id);
+          set((state) => ({
+            announcements: state.announcements.filter((a) => a.id !== id),
+            total: state.total - 1,
+          }));
+        } finally {
+          set({ isDeleting: false });
         }
       },
 

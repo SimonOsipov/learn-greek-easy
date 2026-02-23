@@ -13,7 +13,7 @@
 
 import React from 'react';
 
-import { Eye, Megaphone } from 'lucide-react';
+import { Eye, Megaphone, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
@@ -36,6 +36,8 @@ interface AnnouncementHistoryTableProps {
   totalPages: number;
   onPageChange: (page: number) => void;
   onViewDetail: (id: string) => void;
+  onDelete?: (id: string) => void;
+  isDeleting?: boolean;
 }
 
 /**
@@ -118,6 +120,8 @@ export const AnnouncementHistoryTable: React.FC<AnnouncementHistoryTableProps> =
   totalPages,
   onPageChange,
   onViewDetail,
+  onDelete,
+  isDeleting,
 }) => {
   const { t, i18n } = useTranslation('admin');
 
@@ -157,7 +161,7 @@ export const AnnouncementHistoryTable: React.FC<AnnouncementHistoryTableProps> =
                   <TableHead className="w-[120px] text-right">
                     {t('announcements.detail.read')}
                   </TableHead>
-                  <TableHead className="w-[80px]"></TableHead>
+                  <TableHead className="w-[100px]"></TableHead>
                 </TableRow>
               </TableHeader>
               {isLoading ? (
@@ -189,15 +193,27 @@ export const AnnouncementHistoryTable: React.FC<AnnouncementHistoryTableProps> =
                           </span>
                         </TableCell>
                         <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => onViewDetail(announcement.id)}
-                            title={t('announcements.history.viewDetail')}
-                            data-testid={`view-detail-${announcement.id}`}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => onViewDetail(announcement.id)}
+                              title={t('announcements.history.viewDetail')}
+                              data-testid={`view-detail-${announcement.id}`}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => onDelete?.(announcement.id)}
+                              disabled={isDeleting}
+                              title={t('announcements.delete.button')}
+                              data-testid={`delete-announcement-${announcement.id}`}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     );

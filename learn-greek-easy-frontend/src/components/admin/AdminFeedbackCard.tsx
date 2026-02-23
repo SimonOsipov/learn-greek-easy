@@ -5,7 +5,7 @@ import React from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { el } from 'date-fns/locale/el';
 import { ru } from 'date-fns/locale/ru';
-import { MessageSquare, ThumbsUp, User } from 'lucide-react';
+import { MessageSquare, ThumbsUp, Trash2, User } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { FeedbackCategoryBadge } from '@/components/feedback-voting/FeedbackCategoryBadge';
@@ -17,6 +17,7 @@ import type { AdminFeedbackItem } from '@/types/feedback';
 interface AdminFeedbackCardProps {
   feedback: AdminFeedbackItem;
   onRespond: (feedback: AdminFeedbackItem) => void;
+  onDelete?: (feedback: AdminFeedbackItem) => void;
 }
 
 /**
@@ -30,7 +31,11 @@ interface AdminFeedbackCardProps {
  * - Admin response indicator
  * - Respond button
  */
-export const AdminFeedbackCard: React.FC<AdminFeedbackCardProps> = ({ feedback, onRespond }) => {
+export const AdminFeedbackCard: React.FC<AdminFeedbackCardProps> = ({
+  feedback,
+  onRespond,
+  onDelete,
+}) => {
   const { t, i18n } = useTranslation('admin');
 
   const getDateLocale = () => {
@@ -84,6 +89,14 @@ export const AdminFeedbackCard: React.FC<AdminFeedbackCardProps> = ({ feedback, 
             >
               <MessageSquare className="mr-2 h-4 w-4" />
               {hasResponse ? t('feedback.editResponse') : t('feedback.respond')}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onDelete?.(feedback)}
+              data-testid={`delete-feedback-${feedback.id}`}
+            >
+              <Trash2 className="h-4 w-4 text-destructive" />
             </Button>
           </div>
         </div>

@@ -6,6 +6,7 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.exceptions import NotFoundException
 from src.core.logging import get_logger
 from src.db.models import AnnouncementCampaign, User
 from src.repositories.announcement import AnnouncementCampaignRepository
@@ -96,6 +97,29 @@ class AnnouncementService:
             campaign.read_count = read_count
             await self.db.flush()
         return read_count
+
+    async def delete_campaign(self, campaign_id: UUID) -> None:
+        """Delete an announcement campaign.
+
+        Args:
+            campaign_id: UUID of the campaign to delete
+
+        Raises:
+            NotFoundException: If campaign not found
+        """
+        campaign = await self.repo.get(campaign_id)
+        if campaign is None:
+            raise NotFoundException(
+                resource="AnnouncementCampaign",
+                detail=f"Announcement campaign with ID '{campaign_id}' not found",
+            )
+        await self.repo.delete(campaign)
+        await self.db.commit()
+
+        logger.info(
+            "Announcement campaign deleted",
+            extra={"campaign_id": str(campaign_id)},
+        )
 
     @staticmethod
     def calculate_read_percentage(total_recipients: int, read_count: int) -> float:

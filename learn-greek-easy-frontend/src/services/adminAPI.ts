@@ -1174,6 +1174,20 @@ export const adminAPI = {
     return api.get<AnnouncementDetailResponse>(`/api/v1/admin/announcements/${id}`);
   },
 
+  /**
+   * Delete an announcement campaign (HARD DELETE)
+   *
+   * Permanently removes the announcement campaign. Already-sent notifications
+   * are NOT recalled.
+   * Requires superuser authentication.
+   *
+   * @param id - UUID of the announcement to delete
+   * @throws 404 if announcement not found
+   */
+  deleteAnnouncement: async (id: string): Promise<void> => {
+    return api.delete<void>(`/api/v1/admin/announcements/${id}`);
+  },
+
   // ============================================
   // Card Error Management
   // ============================================
