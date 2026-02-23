@@ -1,8 +1,11 @@
+import React from 'react';
+
 import { AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useWordEntry } from '@/features/words/hooks/useWordEntry';
@@ -16,6 +19,7 @@ import type {
 } from '@/services/wordEntryAPI';
 
 import { AudioStatusBadge } from './AudioStatusBadge';
+import { NotSet } from './NotSet';
 
 interface WordEntryCardsProps {
   entryId: string;
@@ -71,6 +75,34 @@ function getCardAudioStatus(
     const example = wordEntry.examples?.find((ex) => ex.id === exampleId);
     if (!example) return 'missing';
     return example.audio_status ?? 'missing';
+  }
+  return null;
+}
+
+const RU_CARD_TYPES = new Set<CardRecordType>([
+  'meaning_el_to_en',
+  'meaning_en_to_el',
+  'sentence_translation',
+  'plural_form',
+]);
+
+function getCardRuTranslation(
+  card: CardRecordResponse,
+  wordEntry: WordEntryResponse | null
+): string | null {
+  if (!wordEntry) return null;
+  if (card.card_type === 'meaning_el_to_en' || card.card_type === 'meaning_en_to_el') {
+    return wordEntry.translation_ru ?? null;
+  }
+  if (card.card_type === 'sentence_translation') {
+    const back = card.back_content as Record<string, unknown>;
+    const direction = (card.front_content as Record<string, unknown>).direction;
+    if (direction === 'target_to_el') return null;
+    return typeof back.answer_ru === 'string' ? back.answer_ru : null;
+  }
+  if (card.card_type === 'plural_form') {
+    const back = card.back_content as Record<string, unknown>;
+    return typeof back.answer_sub_ru === 'string' ? back.answer_sub_ru : null;
   }
   return null;
 }
@@ -159,7 +191,9 @@ function CardTypeSection({
           const audioStatus = AUDIO_CARD_TYPES.has(card.card_type)
             ? getCardAudioStatus(card, wordEntry)
             : null;
-          return <CardRecord key={card.id} card={card} audioStatus={audioStatus} />;
+          return (
+            <CardRecord key={card.id} card={card} audioStatus={audioStatus} wordEntry={wordEntry} />
+          );
         })}
       </div>
     </div>
@@ -169,9 +203,11 @@ function CardTypeSection({
 function CardRecord({
   card,
   audioStatus,
+  wordEntry,
 }: {
   card: CardRecordResponse;
   audioStatus: AudioStatus | null;
+  wordEntry: WordEntryResponse | null;
 }) {
   const { t } = useTranslation('admin');
   const front = card.front_content as Record<string, unknown>;
@@ -182,35 +218,77 @@ function CardRecord({
   const backAnswer = typeof back.answer === 'string' ? back.answer : undefined;
   const backAnswerSub = typeof back.answer_sub === 'string' ? back.answer_sub : undefined;
 
+  const ruTranslation = getCardRuTranslation(card, wordEntry);
+  const showRuRow =
+    RU_CARD_TYPES.has(card.card_type) &&
+    !(
+      card.card_type === 'sentence_translation' &&
+      (front as Record<string, unknown>).direction === 'target_to_el'
+    );
+
   return (
     <div className="rounded-md border p-3 text-sm" data-testid={`card-record-${card.id}`}>
-      <div className="space-y-1">
-        {frontPrompt && <p className="text-xs text-muted-foreground">{frontPrompt}</p>}
-        {frontMain && <p className="font-medium">{frontMain}</p>}
-        {backAnswer && <p className="text-muted-foreground">{backAnswer}</p>}
-        {backAnswerSub && <p className="text-xs text-muted-foreground">{backAnswerSub}</p>}
+      <div className="space-y-1.5">
+        <div>
+          {frontPrompt && <p className="text-xs text-muted-foreground">{frontPrompt}</p>}
+          {frontMain && <p className="font-medium">{frontMain}</p>}
+        </div>
+        <Separator />
+        <div>
+          {backAnswer && <p className="text-muted-foreground">{backAnswer}</p>}
+          {backAnswerSub && <p className="text-xs text-muted-foreground">{backAnswerSub}</p>}
+          {showRuRow &&
+            (ruTranslation ? (
+              <p className="text-xs text-muted-foreground">{ruTranslation}</p>
+            ) : (
+              <NotSet />
+            ))}
+        </div>
       </div>
-      <div className="mt-1.5 flex gap-3 text-xs text-muted-foreground">
-        {card.tier !== null && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="cursor-default">
-                {t('wordEntryDetail.cardTier')}: {card.tier}
-              </span>
-            </TooltipTrigger>
-            <TooltipContent side="top" className="max-w-xs text-xs">
-              {t('wordEntryDetail.cards.tierTooltip')}
-            </TooltipContent>
-          </Tooltip>
-        )}
-        <span className="flex flex-col leading-tight">
-          <span>{getVariantKeyLabel(card.variant_key)}</span>
-          <span className="font-mono text-[10px] text-muted-foreground/60">{card.variant_key}</span>
-        </span>
-        {audioStatus && (
-          <AudioStatusBadge status={audioStatus} data-testid={`card-audio-badge-${card.id}`} />
-        )}
-      </div>
+      {(() => {
+        const footerItems: React.ReactNode[] = [];
+        if (card.tier !== null) {
+          footerItems.push(
+            <Tooltip key="tier">
+              <TooltipTrigger asChild>
+                <span className="cursor-default">
+                  {t('wordEntryDetail.cardTier')}: {card.tier}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs text-xs">
+                {t('wordEntryDetail.cards.tierTooltip')}
+              </TooltipContent>
+            </Tooltip>
+          );
+        }
+        footerItems.push(
+          <span key="variant" className="flex flex-col leading-tight">
+            <span>{getVariantKeyLabel(card.variant_key)}</span>
+            <span className="font-mono text-[10px] text-muted-foreground/60">
+              {card.variant_key}
+            </span>
+          </span>
+        );
+        if (audioStatus) {
+          footerItems.push(
+            <AudioStatusBadge
+              key="audio"
+              status={audioStatus}
+              data-testid={`card-audio-badge-${card.id}`}
+            />
+          );
+        }
+        return (
+          <div className="mt-1.5 flex items-center gap-3 text-xs text-muted-foreground">
+            {footerItems.map((item, i) => (
+              <React.Fragment key={String(i)}>
+                {i > 0 && <Separator orientation="vertical" className="h-3" />}
+                {item}
+              </React.Fragment>
+            ))}
+          </div>
+        );
+      })()}
     </div>
   );
 }
