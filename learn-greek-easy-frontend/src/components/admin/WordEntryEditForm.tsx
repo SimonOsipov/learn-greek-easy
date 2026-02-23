@@ -142,9 +142,6 @@ export function WordEntryEditForm({ wordEntry, onSaveSuccess, onCancel }: WordEn
       if (dirtyFields.pronunciation !== undefined) {
         payload.pronunciation = data.pronunciation || null;
       }
-      if (dirtyFields.gender !== undefined) {
-        payload.gender = data.gender || null;
-      }
       if (dirtyFields.examples) {
         payload.examples = (data.examples ?? []).map((ex) => ({
           id: ex.id,

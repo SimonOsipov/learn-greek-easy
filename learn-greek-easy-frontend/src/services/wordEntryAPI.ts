@@ -111,7 +111,7 @@ export interface WordEntryInlineUpdatePayload {
   translation_ru?: string | null;
   translation_ru_plural?: string | null;
   pronunciation?: string | null;
-  gender?: string | null;
+  grammar_data?: Record<string, string | null>;
   examples?: ExampleSentenceUpdatePayload[];
 }
 
