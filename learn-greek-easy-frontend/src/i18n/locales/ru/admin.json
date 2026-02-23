@@ -99,6 +99,9 @@
     "byOwner": "от {{owner}}",
     "deactivated": "Деактивировано"
   },
+  "deckList": {
+    "hideDeactivated": "Скрыть неактивные"
+  },
   "deckTypes": {
     "vocabulary": "Словарь",
     "culture": "Культура"
@@ -244,6 +247,7 @@
     "newsComingSoonDescription": "Вкладка Новости обновляется. Скоро появятся новые функции."
   },
   "announcements": {
+    "stats": { "total": "Всего объявлений", "avgRead": "Ср. % прочитавших" },
     "create": {
       "title": "Создать объявление",
       "description": "Отправить уведомление всем активным пользователям",
@@ -257,7 +261,20 @@
       "optional": "необязательно",
       "preview": "Предпросмотр",
       "success": "Объявление успешно отправлено",
-      "error": "Не удалось отправить объявление"
+      "error": "Не удалось отправить объявление",
+      "modeForm": "Форма",
+      "modeJson": "JSON",
+      "jsonHint": "Вставьте объект JSON с заголовком, сообщением и необязательной ссылкой.",
+      "jsonPlaceholder": "{\n  \"title\": \"Заголовок объявления\",\n  \"message\": \"Текст объявления\",\n  \"link_url\": \"https://example.com (необязательно)\"\n}",
+      "switchModeConfirmTitle": "Переключить режим?",
+      "switchModeConfirm": "Текущий ввод будет очищен. Продолжить?",
+      "jsonInvalidJson": "Неверный JSON. Проверьте синтаксис.",
+      "jsonTitleRequired": "Заголовок обязателен.",
+      "jsonTitleTooLong": "Заголовок не должен превышать 100 символов.",
+      "jsonMessageRequired": "Сообщение обязательно.",
+      "jsonMessageTooLong": "Сообщение не должно превышать 500 символов.",
+      "jsonInvalidUrl": "URL ссылки должен быть валидным.",
+      "jsonUrlTooLong": "URL ссылки не должен превышать 500 символов."
     },
     "preview": {
       "title": "Предпросмотр объявления",
@@ -286,9 +303,17 @@
       "read": "Прочитано",
       "readProgress": "Прогресс прочтения",
       "close": "Закрыть"
+    },
+    "delete": {
+      "button": "Удалить",
+      "title": "Удалить объявление",
+      "warning": "Это навсегда удалит объявление. Уже отправленные уведомления НЕ будут отозваны.",
+      "confirm": "Удалить",
+      "success": "Объявление удалено"
     }
   },
   "news": {
+    "stats": { "total": "Всего новостей", "withAudio": "С аудио" },
     "create": {
       "title": "Создать новость",
       "description": "Введите данные новости в формате JSON. Сервер загрузит и сохранит изображение из source_image_url.",
@@ -338,6 +363,11 @@
       "invalidDate": "Неверный формат даты (используйте YYYY-MM-DD)",
       "noFieldsToUpdate": "Нет полей для обновления"
     },
+    "search": {
+      "placeholder": "Поиск новостей...",
+      "filteredCount": "{{filtered}} из {{total}} элементов",
+      "noResults": "Новости не найдены"
+    },
     "audio": {
       "hasAudio": "Аудио",
       "noAudio": "Нет аудио",
@@ -357,6 +387,7 @@
     }
   },
   "feedback": {
+    "stats": { "total": "Всего отзывов", "new": "Новые", "responded": "С ответом" },
     "sectionTitle": "Отзывы пользователей",
     "sectionDescription": "Просматривайте и отвечайте на отзывы и сообщения об ошибках от пользователей",
     "anonymousUser": "Анонимный пользователь",
@@ -400,15 +431,28 @@
         "message": "Не удалось сохранить ответ. Пожалуйста, попробуйте ещё раз."
       }
     },
+    "search": {
+      "placeholder": "Поиск отзывов...",
+      "filteredCount": "{{filtered}} из {{total}} элементов",
+      "noResults": "Отзывы не найдены"
+    },
     "errors": {
       "loadingTitle": "Ошибка загрузки отзывов"
     },
     "states": {
       "noFeedback": "Отзывы ещё не отправлены",
       "noFilteredResults": "Нет отзывов, соответствующих выбранным фильтрам"
+    },
+    "delete": {
+      "button": "Удалить",
+      "title": "Удалить отзыв",
+      "warning": "Это навсегда удалит этот отзыв.",
+      "confirm": "Удалить",
+      "success": "Отзыв удалён"
     }
   },
   "cardErrors": {
+    "stats": { "total": "Всего отчётов", "pending": "На рассмотрении", "fixed": "Исправлено" },
     "sectionTitle": "Отчёты об ошибках в карточках",
     "sectionDescription": "Просмотр и ответы на отчёты пользователей об ошибках в карточках",
     "anonymousUser": "Анонимный пользователь",
@@ -432,6 +476,11 @@
       "allTypes": "Все типы",
       "clear": "Очистить фильтры"
     },
+    "search": {
+      "placeholder": "Поиск отчётов...",
+      "filteredCount": "{{filtered}} из {{total}} отчётов",
+      "noResults": "Отчёты не найдены"
+    },
     "errors": {
       "loadingTitle": "Ошибка загрузки отчётов"
     },
@@ -446,6 +495,7 @@
       "anonymousUser": "Анонимный пользователь",
       "userDescription": "Описание пользователя",
       "viewCard": "Просмотреть карточку",
+      "copyCardId": "Скопировать ID карточки",
       "cardIdCopied": "ID карточки скопирован",
       "cardIdCopiedMessage": "ID карточки скопирован в буфер обмена",
       "adminActions": "Действия администратора",
@@ -494,8 +544,22 @@
     "discard": "Отменить"
   },
   "changelog": {
+    "stats": { "total": "Всего записей", "mostRecent": "Последняя запись" },
     "title": "История изменений",
     "addNew": "Добавить",
+    "editDescription": "Редактирование записи изменений в формате JSON",
+    "search": {
+      "placeholder": "Поиск изменений...",
+      "filteredCount": "{{filtered}} из {{total}} записей",
+      "noResults": "Записи изменений не найдены"
+    },
+    "filter": {
+      "allTags": "Все теги",
+      "tagPlaceholder": "Фильтр по тегу"
+    },
+    "table": {
+      "empty": "Записи изменений не найдены"
+    },
     "create": {
       "title": "Создать запись изменений",
       "description": "Вставьте JSON для создания новой записи",

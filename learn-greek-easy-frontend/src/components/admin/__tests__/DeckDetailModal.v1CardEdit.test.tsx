@@ -117,6 +117,20 @@ const createCard = (id: string, overrides?: Partial<AdminVocabularyCard>): Admin
   level: 'A1',
   created_at: '2024-01-01',
   updated_at: '2024-01-01',
+  gender: null,
+  has_examples: false,
+  has_audio: false,
+  has_grammar: false,
+  // Enrichment fields default to V1 no-op values
+  translation_en_plural: null,
+  translation_ru_plural: null,
+  audio_status: 'missing',
+  grammar_filled: 0,
+  grammar_total: 0,
+  example_count: 0,
+  examples_with_en: 0,
+  examples_with_ru: 0,
+  examples_with_audio: 0,
   ...overrides,
 });
 

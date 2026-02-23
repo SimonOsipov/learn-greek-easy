@@ -13,9 +13,10 @@
 
 import React, { useEffect, useState } from 'react';
 
-import { Loader2 } from 'lucide-react';
+import { Loader2, Newspaper, Volume2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { SummaryCard } from '@/components/admin/SummaryCard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -184,6 +185,8 @@ export const NewsTab: React.FC = () => {
     regenerateAudio,
   } = useAdminNewsStore();
 
+  const newsWithAudio = newsItems.filter((item) => !!item.audio_url).length;
+
   // Fetch news items on mount
   useEffect(() => {
     fetchNewsItems();
@@ -338,6 +341,22 @@ export const NewsTab: React.FC = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <SummaryCard
+            title={t('news.stats.total')}
+            value={total}
+            icon={<Newspaper className="h-5 w-5 text-muted-foreground" />}
+            testId="news-total-card"
+          />
+          <SummaryCard
+            title={t('news.stats.withAudio')}
+            value={newsWithAudio}
+            icon={<Volume2 className="h-5 w-5 text-muted-foreground" />}
+            testId="news-with-audio-card"
+          />
+        </div>
 
         {/* News Items Table Section */}
         <NewsItemsTable

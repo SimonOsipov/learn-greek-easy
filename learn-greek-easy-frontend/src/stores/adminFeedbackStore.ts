@@ -11,6 +11,7 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
 import { adminAPI } from '@/services/adminAPI';
+import { feedbackAPI } from '@/services/feedbackAPI';
 import type {
   AdminFeedbackItem,
   FeedbackCategory,
@@ -54,6 +55,7 @@ interface AdminFeedbackState {
   // Loading states
   isLoading: boolean;
   isUpdating: boolean;
+  isDeleting: boolean;
 
   // Error state
   error: string | null;
@@ -64,6 +66,7 @@ interface AdminFeedbackState {
     feedbackId: string,
     data: AdminFeedbackUpdateRequest
   ) => Promise<AdminFeedbackItem>;
+  deleteFeedback: (id: string) => Promise<void>;
   setFilters: (filters: Partial<AdminFeedbackFilters>) => void;
   clearFilters: () => void;
   setPage: (page: number) => void;
@@ -87,6 +90,7 @@ export const useAdminFeedbackStore = create<AdminFeedbackState>()(
       filters: DEFAULT_FILTERS,
       isLoading: false,
       isUpdating: false,
+      isDeleting: false,
       error: null,
 
       /**
@@ -141,6 +145,22 @@ export const useAdminFeedbackStore = create<AdminFeedbackState>()(
           const message = error instanceof Error ? error.message : 'Failed to update feedback';
           set({ isUpdating: false, error: message });
           throw error;
+        }
+      },
+
+      /**
+       * Delete a feedback item
+       */
+      deleteFeedback: async (id: string) => {
+        set({ isDeleting: true });
+        try {
+          await feedbackAPI.delete(id);
+          set((state) => ({
+            feedbackList: state.feedbackList.filter((f) => f.id !== id),
+            total: state.total - 1,
+          }));
+        } finally {
+          set({ isDeleting: false });
         }
       },
 

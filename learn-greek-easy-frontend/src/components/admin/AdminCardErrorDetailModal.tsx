@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { BookOpen, ExternalLink, Globe, Loader2, User } from 'lucide-react';
+import { BookOpen, Copy, Globe, Loader2, User } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
@@ -34,6 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -281,8 +282,8 @@ export const AdminCardErrorDetailModal: React.FC<AdminCardErrorDetailModalProps>
               className="w-full"
               data-testid="view-card-button"
             >
-              <ExternalLink className="mr-2 h-4 w-4" />
-              {t('cardErrors.detail.viewCard')}
+              <Copy className="mr-2 h-4 w-4" />
+              {t('cardErrors.detail.copyCardId')}
             </Button>
           </div>
 
@@ -292,7 +293,7 @@ export const AdminCardErrorDetailModal: React.FC<AdminCardErrorDetailModalProps>
               {/* Separator */}
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
+                  <Separator />
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
                   <span className="bg-background px-2 text-muted-foreground">

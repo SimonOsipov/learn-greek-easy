@@ -27,6 +27,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import type { UnifiedDeckItem } from '@/services/adminAPI';
@@ -177,26 +178,23 @@ export const CultureDeckEditForm: React.FC<CultureDeckEditFormProps> = ({
       >
         {/* Language Tabs */}
         <div className="space-y-4">
-          <div className="flex gap-1 rounded-lg bg-muted p-1">
-            {DECK_LANGUAGES.map((lang) => (
-              <button
-                key={lang}
-                type="button"
-                onClick={() => setActiveTab(lang)}
-                data-testid={`culture-deck-edit-lang-tab-${lang}`}
-                className={cn(
-                  'relative flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors',
-                  activeTab === lang ? 'bg-background shadow' : 'hover:bg-background/50',
-                  hasTabErrors(lang) && 'text-destructive'
-                )}
-              >
-                {LANGUAGE_LABELS[lang]}
-                {hasTabErrors(lang) && (
-                  <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-destructive" />
-                )}
-              </button>
-            ))}
-          </div>
+          <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as DeckLanguage)}>
+            <TabsList className="w-full">
+              {DECK_LANGUAGES.map((lang) => (
+                <TabsTrigger
+                  key={lang}
+                  value={lang}
+                  className={cn('relative flex-1', hasTabErrors(lang) && 'text-destructive')}
+                  data-testid={`culture-deck-edit-lang-tab-${lang}`}
+                >
+                  {LANGUAGE_LABELS[lang]}
+                  {hasTabErrors(lang) && (
+                    <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-destructive" />
+                  )}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
 
           {/* Tab Content - name and description per language */}
           {DECK_LANGUAGES.map((lang) => (

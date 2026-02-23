@@ -93,6 +93,9 @@
     "byOwner": "by {{owner}}",
     "deactivated": "Deactivated"
   },
+  "deckList": {
+    "hideDeactivated": "Hide deactivated"
+  },
   "deckTypes": {
     "vocabulary": "Vocabulary",
     "culture": "Culture"
@@ -232,6 +235,7 @@
     "wordEntries": "Word Entries"
   },
   "announcements": {
+    "stats": { "total": "Total Announcements", "avgRead": "Avg. Read Rate" },
     "create": {
       "title": "Create Announcement",
       "description": "Send a notification to all active users",
@@ -245,7 +249,20 @@
       "optional": "optional",
       "preview": "Preview",
       "success": "Announcement sent successfully",
-      "error": "Failed to send announcement"
+      "error": "Failed to send announcement",
+      "modeForm": "Form",
+      "modeJson": "JSON",
+      "jsonHint": "Paste a JSON object with title, message, and optional link_url.",
+      "jsonPlaceholder": "{\n  \"title\": \"Your announcement title\",\n  \"message\": \"Your announcement message\",\n  \"link_url\": \"https://example.com (optional)\"\n}",
+      "switchModeConfirmTitle": "Switch mode?",
+      "switchModeConfirm": "Your current input will be cleared. Continue?",
+      "jsonInvalidJson": "Invalid JSON. Please check your syntax.",
+      "jsonTitleRequired": "Title is required.",
+      "jsonTitleTooLong": "Title must be 100 characters or less.",
+      "jsonMessageRequired": "Message is required.",
+      "jsonMessageTooLong": "Message must be 500 characters or less.",
+      "jsonInvalidUrl": "Link URL must be a valid URL.",
+      "jsonUrlTooLong": "Link URL must be 500 characters or less."
     },
     "preview": {
       "title": "Preview Announcement",
@@ -274,9 +291,17 @@
       "read": "Read by",
       "readProgress": "Read Progress",
       "close": "Close"
+    },
+    "delete": {
+      "button": "Delete",
+      "title": "Delete Announcement",
+      "warning": "This will permanently delete the announcement. Already-sent notifications will NOT be recalled.",
+      "confirm": "Delete",
+      "success": "Announcement deleted"
     }
   },
   "news": {
+    "stats": { "total": "Total News", "withAudio": "With Audio" },
     "create": {
       "title": "Create News Item",
       "description": "Enter news item data as JSON. The backend will download and store the image from source_image_url.",
@@ -326,6 +351,11 @@
       "invalidDate": "Invalid publication_date format (use YYYY-MM-DD)",
       "noFieldsToUpdate": "No fields to update"
     },
+    "search": {
+      "placeholder": "Search news...",
+      "filteredCount": "{{filtered}} of {{total}} items",
+      "noResults": "No news items match your search"
+    },
     "audio": {
       "hasAudio": "Audio",
       "noAudio": "No audio",
@@ -345,6 +375,7 @@
     }
   },
   "feedback": {
+    "stats": { "total": "Total Feedback", "new": "New", "responded": "Responded" },
     "sectionTitle": "User Feedback",
     "sectionDescription": "Review and respond to user feedback and bug reports",
     "anonymousUser": "Anonymous User",
@@ -391,12 +422,25 @@
     "errors": {
       "loadingTitle": "Error Loading Feedback"
     },
+    "search": {
+      "placeholder": "Search feedback...",
+      "filteredCount": "{{filtered}} of {{total}} items",
+      "noResults": "No feedback matches your search"
+    },
     "states": {
       "noFeedback": "No feedback submitted yet",
       "noFilteredResults": "No feedback matches the selected filters"
+    },
+    "delete": {
+      "button": "Delete",
+      "title": "Delete Feedback",
+      "warning": "This will permanently delete this feedback item.",
+      "confirm": "Delete",
+      "success": "Feedback deleted"
     }
   },
   "cardErrors": {
+    "stats": { "total": "Total Reports", "pending": "Pending", "fixed": "Fixed" },
     "sectionTitle": "Card Error Reports",
     "sectionDescription": "Review and respond to card error reports from users",
     "anonymousUser": "Anonymous User",
@@ -420,6 +464,11 @@
       "allTypes": "All Types",
       "clear": "Clear Filters"
     },
+    "search": {
+      "placeholder": "Search reports...",
+      "filteredCount": "{{filtered}} of {{total}} reports",
+      "noResults": "No reports match your search"
+    },
     "errors": {
       "loadingTitle": "Error Loading Reports"
     },
@@ -434,6 +483,7 @@
       "anonymousUser": "Anonymous User",
       "userDescription": "User Description",
       "viewCard": "View Card",
+      "copyCardId": "Copy Card ID",
       "cardIdCopied": "Card ID Copied",
       "cardIdCopiedMessage": "Card ID has been copied to clipboard",
       "adminActions": "Admin Actions",
@@ -482,8 +532,22 @@
     "discard": "Discard"
   },
   "changelog": {
+    "stats": { "total": "Total Entries", "mostRecent": "Most Recent" },
     "title": "Changelog",
     "addNew": "Add New",
+    "editDescription": "Edit changelog entry as JSON",
+    "search": {
+      "placeholder": "Search changelog...",
+      "filteredCount": "{{filtered}} of {{total}} entries",
+      "noResults": "No changelog entries match your search"
+    },
+    "filter": {
+      "allTags": "All Tags",
+      "tagPlaceholder": "Filter by tag"
+    },
+    "table": {
+      "empty": "No changelog entries found."
+    },
     "create": {
       "title": "Create Changelog Entry",
       "description": "Paste JSON to create a new changelog entry",

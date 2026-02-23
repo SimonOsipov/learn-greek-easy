@@ -2,12 +2,23 @@
 
 import React, { useEffect, useState } from 'react';
 
-import { AlertCircle, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
+import {
+  AlertCircle,
+  AlertTriangle,
+  CheckCircle,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  RefreshCw,
+  Search,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { SummaryCard } from '@/components/admin/SummaryCard';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -33,6 +44,17 @@ const CARD_TYPES: { value: CardType; label: string }[] = [
   { value: 'WORD', label: 'word' },
   { value: 'CULTURE', label: 'culture' },
 ];
+
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+  return debouncedValue;
+}
 
 /**
  * Admin Card Error Section Component
@@ -60,6 +82,8 @@ export const AdminCardErrorSection: React.FC = () => {
 
   // Dialog state
   const [isResponseDialogOpen, setIsResponseDialogOpen] = useState(false);
+  const [searchInput, setSearchInput] = useState('');
+  const debouncedSearch = useDebounce(searchInput, 300);
   const pageSize = 10;
 
   // Fetch on mount
@@ -108,10 +132,45 @@ export const AdminCardErrorSection: React.FC = () => {
     }
   };
 
-  const hasActiveFilters = filters.status !== null || filters.cardType !== null;
+  const hasActiveFilters =
+    filters.status !== null || filters.cardType !== null || debouncedSearch !== '';
+
+  const filteredErrors = debouncedSearch
+    ? errorList.filter((item) => {
+        const desc = item.description?.toLowerCase() ?? '';
+        const name = item.reporter?.full_name?.toLowerCase() ?? '';
+        return (
+          desc.includes(debouncedSearch.toLowerCase()) ||
+          name.includes(debouncedSearch.toLowerCase())
+        );
+      })
+    : errorList;
+
+  const pendingCount = errorList.filter((e) => e.status === 'PENDING').length;
+  const fixedCount = errorList.filter((e) => e.status === 'FIXED').length;
 
   return (
-    <>
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <SummaryCard
+          title={t('cardErrors.stats.total')}
+          value={total}
+          icon={<AlertTriangle className="h-5 w-5 text-muted-foreground" />}
+          testId="card-errors-total-card"
+        />
+        <SummaryCard
+          title={t('cardErrors.stats.pending')}
+          value={pendingCount}
+          icon={<Clock className="h-5 w-5 text-muted-foreground" />}
+          testId="card-errors-pending-card"
+        />
+        <SummaryCard
+          title={t('cardErrors.stats.fixed')}
+          value={fixedCount}
+          icon={<CheckCircle className="h-5 w-5 text-muted-foreground" />}
+          testId="card-errors-fixed-card"
+        />
+      </div>
       <Card data-testid="admin-card-error-section">
         <CardHeader>
           <CardTitle data-testid="admin-card-error-title">{t('cardErrors.sectionTitle')}</CardTitle>
@@ -122,6 +181,17 @@ export const AdminCardErrorSection: React.FC = () => {
         <CardContent>
           {/* Filters */}
           <div className="mb-4 flex flex-col gap-4 sm:flex-row">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder={t('cardErrors.search.placeholder')}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="pl-9"
+                data-testid="card-error-search-input"
+              />
+            </div>
             <Select value={filters.status || 'all'} onValueChange={handleStatusFilterChange}>
               <SelectTrigger className="w-full sm:w-[180px]" data-testid="card-error-status-filter">
                 <SelectValue placeholder={t('cardErrors.filters.statusPlaceholder')} />
@@ -202,22 +272,34 @@ export const AdminCardErrorSection: React.FC = () => {
           {/* Error List */}
           {!isLoading && !error && (
             <>
-              {errorList.length === 0 ? (
+              {filteredErrors.length === 0 ? (
                 <p className="py-8 text-center text-muted-foreground">
-                  {hasActiveFilters
-                    ? t('cardErrors.states.noFilteredResults')
-                    : t('cardErrors.states.noErrors')}
+                  {debouncedSearch
+                    ? t('cardErrors.search.noResults')
+                    : hasActiveFilters
+                      ? t('cardErrors.states.noFilteredResults')
+                      : t('cardErrors.states.noErrors')}
                 </p>
               ) : (
-                <div className="space-y-4">
-                  {errorList.map((errorReport) => (
-                    <AdminCardErrorCard
-                      key={errorReport.id}
-                      errorReport={errorReport}
-                      onRespond={handleRespond}
-                    />
-                  ))}
-                </div>
+                <>
+                  {debouncedSearch && (
+                    <p className="mb-3 text-sm text-muted-foreground">
+                      {t('cardErrors.search.filteredCount', {
+                        filtered: filteredErrors.length,
+                        total: errorList.length,
+                      })}
+                    </p>
+                  )}
+                  <div className="space-y-4">
+                    {filteredErrors.map((errorReport) => (
+                      <AdminCardErrorCard
+                        key={errorReport.id}
+                        errorReport={errorReport}
+                        onRespond={handleRespond}
+                      />
+                    ))}
+                  </div>
+                </>
               )}
 
               {/* Pagination */}
@@ -273,6 +355,6 @@ export const AdminCardErrorSection: React.FC = () => {
           fetchErrorList();
         }}
       />
-    </>
+    </div>
   );
 };

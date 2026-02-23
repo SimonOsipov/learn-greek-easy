@@ -17,6 +17,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -67,31 +68,33 @@ export const AnnouncementPreviewModal: React.FC<AnnouncementPreviewModalProps> =
         {/* Preview Content */}
         <div className="space-y-4 py-4">
           {/* Announcement Preview Card */}
-          <div className="rounded-lg border bg-muted/50 p-4">
-            <h3 className="mb-2 font-semibold" data-testid="preview-title">
-              {data.title}
-            </h3>
-            <p
-              className="whitespace-pre-wrap text-sm text-muted-foreground"
-              data-testid="preview-message"
-            >
-              {data.message}
-            </p>
-            {data.linkUrl && (
-              <div className="mt-3">
-                <a
-                  href={data.linkUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
-                  data-testid="preview-link"
-                >
-                  {data.linkUrl}
-                  <ExternalLink className="h-3 w-3" />
-                </a>
-              </div>
-            )}
-          </div>
+          <Card className="bg-muted/50">
+            <CardContent className="p-4">
+              <h3 className="mb-2 font-semibold" data-testid="preview-title">
+                {data.title}
+              </h3>
+              <p
+                className="whitespace-pre-wrap text-sm text-muted-foreground"
+                data-testid="preview-message"
+              >
+                {data.message}
+              </p>
+              {data.linkUrl && (
+                <div className="mt-3">
+                  <a
+                    href={data.linkUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                    data-testid="preview-link"
+                  >
+                    {data.linkUrl}
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Warning Alert */}
           <Alert

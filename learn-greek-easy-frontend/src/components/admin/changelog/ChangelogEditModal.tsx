@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -152,6 +153,7 @@ export function ChangelogEditModal({ open, onOpenChange, entry }: ChangelogEditM
       <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{t('admin:changelog.edit.title')}</DialogTitle>
+          <DialogDescription>{t('admin:changelog.editDescription')}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">

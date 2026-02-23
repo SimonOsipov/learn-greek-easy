@@ -38,6 +38,7 @@ import {
   type DeckEditFormData,
   type DeckType,
   NewsTab,
+  SummaryCard,
   WordEntriesTab,
 } from '@/components/admin';
 import { CultureBadge, type CultureCategory } from '@/components/culture';
@@ -47,6 +48,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -55,6 +57,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import {
   trackAdminDeckCreateCancelled,
@@ -161,28 +165,6 @@ const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry, isRetrying, t
       </Button>
     </AlertDescription>
   </Alert>
-);
-
-/**
- * Summary card component for displaying a single stat
- */
-interface SummaryCardProps {
-  title: string;
-  value: number;
-  icon: React.ReactNode;
-  testId?: string;
-}
-
-const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, icon, testId }) => (
-  <Card data-testid={testId}>
-    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-      <CardTitle className="text-sm font-medium">{title}</CardTitle>
-      {icon}
-    </CardHeader>
-    <CardContent>
-      <div className="text-2xl font-bold">{value.toLocaleString()}</div>
-    </CardContent>
-  </Card>
 );
 
 /**
@@ -346,10 +328,18 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
     const [error, setError] = useState<string | null>(null);
     const [searchInput, setSearchInput] = useState('');
     const [typeFilter, setTypeFilter] = useState<'all' | 'vocabulary' | 'culture'>('all');
+    const [hideDeactivated, setHideDeactivated] = useState<boolean>(
+      () => localStorage.getItem('admin.deckList.hideDeactivated') === 'true'
+    );
     const [page, setPage] = useState(1);
     const pageSize = 10;
 
     const debouncedSearch = useDebounce(searchInput, 300);
+
+    const handleHideDeactivatedChange = (checked: boolean) => {
+      setHideDeactivated(checked);
+      localStorage.setItem('admin.deckList.hideDeactivated', checked.toString());
+    };
 
     const fetchDecks = useCallback(async () => {
       setIsLoading(true);
@@ -414,6 +404,12 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
       }
     };
 
+    const displayDecks = deckList
+      ? hideDeactivated
+        ? deckList.decks.filter((d) => d.is_active)
+        : deckList.decks
+      : [];
+
     return (
       <Card>
         <CardHeader>
@@ -449,6 +445,20 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
                 <SelectItem value="culture">{t('filter.culture')}</SelectItem>
               </SelectContent>
             </Select>
+            <div className="flex items-center gap-2">
+              <Switch
+                id="hide-deactivated"
+                checked={hideDeactivated}
+                onCheckedChange={handleHideDeactivatedChange}
+                data-testid="hide-deactivated-toggle"
+              />
+              <Label
+                htmlFor="hide-deactivated"
+                className="cursor-pointer whitespace-nowrap text-sm"
+              >
+                {t('deckList.hideDeactivated')}
+              </Label>
+            </div>
           </div>
 
           {/* Loading State */}
@@ -478,11 +488,11 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
           {/* Deck List */}
           {!isLoading && !error && deckList && (
             <>
-              {deckList.decks.length === 0 ? (
+              {displayDecks.length === 0 ? (
                 <p className="py-4 text-center text-muted-foreground">{t('states.noDecksFound')}</p>
               ) : (
                 <div className="space-y-3">
-                  {deckList.decks.map((deck) => (
+                  {displayDecks.map((deck) => (
                     <UnifiedDeckListItem
                       key={deck.id}
                       deck={deck}
@@ -1128,8 +1138,12 @@ const AdminPage: React.FC = () => {
       </div>
 
       {/* Top-Level Tab Switcher */}
-      <div className="w-full" data-testid="admin-tab-switcher">
-        <div className="flex gap-2 rounded-lg bg-muted p-1">
+      <Tabs
+        value={activeTab}
+        onValueChange={(val) => setActiveTab(val as AdminTabType)}
+        data-testid="admin-tab-switcher"
+      >
+        <TabsList className="w-full">
           {(
             [
               'decks',
@@ -1141,24 +1155,12 @@ const AdminPage: React.FC = () => {
               'feedback',
             ] as AdminTabType[]
           ).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={cn(
-                'flex-1 rounded-md px-4 py-2 text-sm font-medium transition-all',
-                activeTab === tab
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:bg-background/50 hover:text-foreground'
-              )}
-              aria-pressed={activeTab === tab}
-              type="button"
-              data-testid={`admin-tab-${tab}`}
-            >
+            <TabsTrigger key={tab} value={tab} className="flex-1" data-testid={`admin-tab-${tab}`}>
               {t(`tabs.${tab}`)}
-            </button>
+            </TabsTrigger>
           ))}
-        </div>
-      </div>
+        </TabsList>
+      </Tabs>
 
       {/* Decks Tab Content */}
       {activeTab === 'decks' && (

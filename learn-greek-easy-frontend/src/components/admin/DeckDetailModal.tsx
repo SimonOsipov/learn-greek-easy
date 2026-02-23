@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { EnrichmentChips } from '@/components/admin/vocabulary/EnrichmentChips';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -43,7 +44,7 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { toast } from '@/hooks/use-toast';
 import {
   trackAdminWordEntryDetailOpened,
@@ -771,67 +772,6 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
                                 {card.level}
                               </Badge>
                             )}
-                            {/* Completeness indicators — V2 only */}
-                            {isV2Vocabulary && (
-                              <div className="flex shrink-0 items-center gap-1">
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <span
-                                      className={cn(
-                                        'inline-block h-2 w-2 rounded-full',
-                                        card.has_audio ? 'bg-green-500' : 'bg-muted-foreground/30'
-                                      )}
-                                      data-testid={`vocabulary-card-audio-dot-${card.id}`}
-                                    />
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    {t(
-                                      card.has_audio
-                                        ? 'wordList.audioReady'
-                                        : 'wordList.audioMissing'
-                                    )}
-                                  </TooltipContent>
-                                </Tooltip>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <span
-                                      className={cn(
-                                        'inline-block h-2 w-2 rounded-full',
-                                        card.has_examples
-                                          ? 'bg-green-500'
-                                          : 'bg-muted-foreground/30'
-                                      )}
-                                      data-testid={`vocabulary-card-examples-dot-${card.id}`}
-                                    />
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    {t(
-                                      card.has_examples
-                                        ? 'wordList.examplesPresent'
-                                        : 'wordList.examplesMissing'
-                                    )}
-                                  </TooltipContent>
-                                </Tooltip>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <span
-                                      className={cn(
-                                        'inline-block h-2 w-2 rounded-full',
-                                        card.has_grammar ? 'bg-green-500' : 'bg-muted-foreground/30'
-                                      )}
-                                      data-testid={`vocabulary-card-grammar-dot-${card.id}`}
-                                    />
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    {t(
-                                      card.has_grammar
-                                        ? 'wordList.grammarPresent'
-                                        : 'wordList.grammarMissing'
-                                    )}
-                                  </TooltipContent>
-                                </Tooltip>
-                              </div>
-                            )}
                           </div>
                           {/* Pronunciation — below Greek word */}
                           {card.pronunciation && (
@@ -842,6 +782,8 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
                           <p className="truncate text-sm text-muted-foreground">
                             {card.back_text_en}
                           </p>
+                          {/* Per-field enrichment chips — V2 only */}
+                          {isV2Vocabulary && <EnrichmentChips card={card} />}
                         </div>
                         <div className="flex shrink-0 items-center gap-1">
                           <Button

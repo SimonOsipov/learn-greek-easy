@@ -2,12 +2,24 @@
 
 import React, { useEffect, useState } from 'react';
 
-import { AlertCircle, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
+import {
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight,
+  Inbox,
+  MessageCircle,
+  MessageSquare,
+  RefreshCw,
+  Search,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { SummaryCard } from '@/components/admin/SummaryCard';
+import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -22,6 +34,17 @@ import { FEEDBACK_CATEGORIES, FEEDBACK_STATUSES } from '@/types/feedback';
 
 import { AdminFeedbackCard } from './AdminFeedbackCard';
 import { AdminFeedbackResponseDialog } from './AdminFeedbackResponseDialog';
+
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+  return debouncedValue;
+}
 
 /**
  * Admin Feedback Section Component
@@ -38,16 +61,21 @@ export const AdminFeedbackSection: React.FC = () => {
     totalPages,
     filters,
     isLoading,
+    isDeleting,
     error,
     fetchFeedbackList,
     setFilters,
     clearFilters,
     setPage,
+    deleteFeedback,
     selectedFeedback,
     setSelectedFeedback,
   } = useAdminFeedbackStore();
 
   const [isResponseDialogOpen, setIsResponseDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<AdminFeedbackItem | null>(null);
+  const [searchInput, setSearchInput] = useState('');
+  const debouncedSearch = useDebounce(searchInput, 300);
   const pageSize = 10;
 
   // Fetch feedback on mount
@@ -95,10 +123,45 @@ export const AdminFeedbackSection: React.FC = () => {
     }
   };
 
-  const hasActiveFilters = filters.status !== null || filters.category !== null;
+  const hasActiveFilters =
+    filters.status !== null || filters.category !== null || debouncedSearch !== '';
+
+  const filteredFeedback = debouncedSearch
+    ? feedbackList.filter((item) => {
+        const title = item.title?.toLowerCase() ?? '';
+        const desc = item.description?.toLowerCase() ?? '';
+        return (
+          title.includes(debouncedSearch.toLowerCase()) ||
+          desc.includes(debouncedSearch.toLowerCase())
+        );
+      })
+    : feedbackList;
+
+  const newCount = feedbackList.filter((f) => f.status === 'new').length;
+  const respondedCount = feedbackList.filter((f) => f.admin_response !== null).length;
 
   return (
-    <>
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <SummaryCard
+          title={t('feedback.stats.total')}
+          value={total}
+          icon={<MessageSquare className="h-5 w-5 text-muted-foreground" />}
+          testId="feedback-total-card"
+        />
+        <SummaryCard
+          title={t('feedback.stats.new')}
+          value={newCount}
+          icon={<Inbox className="h-5 w-5 text-muted-foreground" />}
+          testId="feedback-new-card"
+        />
+        <SummaryCard
+          title={t('feedback.stats.responded')}
+          value={respondedCount}
+          icon={<MessageCircle className="h-5 w-5 text-muted-foreground" />}
+          testId="feedback-responded-card"
+        />
+      </div>
       <Card data-testid="admin-feedback-section">
         <CardHeader>
           <CardTitle data-testid="admin-feedback-title">{t('feedback.sectionTitle')}</CardTitle>
@@ -109,6 +172,17 @@ export const AdminFeedbackSection: React.FC = () => {
         <CardContent>
           {/* Filters */}
           <div className="mb-4 flex flex-col gap-4 sm:flex-row">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder={t('feedback.search.placeholder')}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="pl-9"
+                data-testid="feedback-search-input"
+              />
+            </div>
             <Select value={filters.status || 'all'} onValueChange={handleStatusFilterChange}>
               <SelectTrigger className="w-full sm:w-[180px]" data-testid="feedback-status-filter">
                 <SelectValue placeholder={t('feedback.filters.statusPlaceholder')} />
@@ -189,22 +263,35 @@ export const AdminFeedbackSection: React.FC = () => {
           {/* Feedback List */}
           {!isLoading && !error && (
             <>
-              {feedbackList.length === 0 ? (
+              {filteredFeedback.length === 0 ? (
                 <p className="py-8 text-center text-muted-foreground">
-                  {hasActiveFilters
-                    ? t('feedback.states.noFilteredResults')
-                    : t('feedback.states.noFeedback')}
+                  {debouncedSearch
+                    ? t('feedback.search.noResults')
+                    : hasActiveFilters
+                      ? t('feedback.states.noFilteredResults')
+                      : t('feedback.states.noFeedback')}
                 </p>
               ) : (
-                <div className="space-y-4">
-                  {feedbackList.map((feedback) => (
-                    <AdminFeedbackCard
-                      key={feedback.id}
-                      feedback={feedback}
-                      onRespond={handleRespond}
-                    />
-                  ))}
-                </div>
+                <>
+                  {debouncedSearch && (
+                    <p className="mb-3 text-sm text-muted-foreground">
+                      {t('feedback.search.filteredCount', {
+                        filtered: filteredFeedback.length,
+                        total: feedbackList.length,
+                      })}
+                    </p>
+                  )}
+                  <div className="space-y-4">
+                    {filteredFeedback.map((feedback) => (
+                      <AdminFeedbackCard
+                        key={feedback.id}
+                        feedback={feedback}
+                        onRespond={handleRespond}
+                        onDelete={(item) => setDeleteTarget(item)}
+                      />
+                    ))}
+                  </div>
+                </>
               )}
 
               {/* Pagination */}
@@ -255,6 +342,24 @@ export const AdminFeedbackSection: React.FC = () => {
         onOpenChange={handleResponseDialogClose}
         feedback={selectedFeedback}
       />
-    </>
+
+      {/* Delete Feedback Confirm Dialog */}
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        title={t('feedback.delete.title')}
+        description={t('feedback.delete.warning')}
+        loading={isDeleting}
+        onConfirm={async () => {
+          if (deleteTarget) {
+            await deleteFeedback(deleteTarget.id);
+            setDeleteTarget(null);
+          }
+        }}
+        variant="destructive"
+      />
+    </div>
   );
 };

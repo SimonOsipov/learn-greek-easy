@@ -51,9 +51,8 @@ async function navigateToAdminNewsTab(page: Page): Promise<void> {
   // Wait for admin page to load
   await expect(page.getByTestId('admin-page')).toBeVisible({ timeout: 15000 });
 
-  // Click on News tab
-  const newsTab = page.getByRole('button', { name: /news/i });
-  await newsTab.click();
+  // Click on News tab (shadcn TabsTrigger uses data-testid, not role=button)
+  await page.getByTestId('admin-tab-news').click();
 
   // Wait for news tab content to load
   await expect(page.getByTestId('news-create-card')).toBeVisible({ timeout: 10000 });
