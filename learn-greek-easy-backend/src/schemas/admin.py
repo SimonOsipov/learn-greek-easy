@@ -9,7 +9,7 @@ This module contains schemas for:
 """
 
 from datetime import datetime
-from typing import List, Literal, Optional
+from typing import Any, List, Literal, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -200,7 +200,7 @@ class WordEntryInlineUpdate(BaseModel):
 
     Only exposes fields that are safe to edit inline.
     Explicitly excludes: lemma, part_of_speech, is_active,
-    audio_key, audio_status, grammar_data (gender is top-level).
+    audio_key, audio_status.
     """
 
     translation_en: Optional[str] = Field(default=None, min_length=1, max_length=500)
@@ -208,7 +208,7 @@ class WordEntryInlineUpdate(BaseModel):
     translation_ru: Optional[str] = Field(default=None, max_length=500)
     translation_ru_plural: Optional[str] = Field(default=None, max_length=500)
     pronunciation: Optional[str] = Field(default=None, max_length=200)
-    gender: Optional[str] = Field(default=None, pattern="^(masculine|feminine|neuter)$")
+    grammar_data: Optional[dict[str, Any]] = Field(default=None)
     examples: Optional[list[ExampleSentenceUpdate]] = None
 
     @model_validator(mode="after")

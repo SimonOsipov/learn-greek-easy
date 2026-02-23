@@ -131,10 +131,10 @@ class TestWordEntryInlineUpdateSchema:
             translation_ru="дом",
             translation_ru_plural="дома",
             pronunciation="/spí·ti/",
-            gender="neuter",
+            grammar_data={"gender": "neuter"},
         )
         assert schema.translation_en == "house"
-        assert schema.gender == "neuter"
+        assert schema.grammar_data == {"gender": "neuter"}
 
     def test_empty_payload_rejected(self):
         """Schema rejects empty payload (no fields provided)."""
@@ -149,18 +149,17 @@ class TestWordEntryInlineUpdateSchema:
         schema = WordEntryInlineUpdate(translation_en="  house  ")
         assert schema.translation_en == "  house  "
 
-    def test_invalid_gender_rejected(self):
-        """Schema rejects invalid gender values."""
-        import pydantic
-
-        with pytest.raises(pydantic.ValidationError):
-            WordEntryInlineUpdate(gender="unknown")
-
-    def test_valid_gender_values(self):
-        """Schema accepts all valid gender values."""
-        for gender in ["masculine", "feminine", "neuter"]:
-            schema = WordEntryInlineUpdate(gender=gender)
-            assert schema.gender == gender
+    def test_valid_grammar_data_values(self):
+        """Schema accepts various grammar_data dict shapes."""
+        # Single field
+        schema = WordEntryInlineUpdate(grammar_data={"gender": "masculine"})
+        assert schema.grammar_data == {"gender": "masculine"}
+        # Multiple fields
+        schema = WordEntryInlineUpdate(grammar_data={"gender": "feminine", "case": "nominative"})
+        assert schema.grammar_data == {"gender": "feminine", "case": "nominative"}
+        # Empty dict
+        schema = WordEntryInlineUpdate(grammar_data={})
+        assert schema.grammar_data == {}
 
     def test_examples_with_valid_data(self):
         """Schema accepts valid examples list."""
@@ -314,21 +313,21 @@ class TestUpdateWordEntryEndpoint:
         assert response.status_code == 403
 
     @pytest.mark.asyncio
-    async def test_gender_merge_into_existing_grammar_data(
+    async def test_grammar_data_full_replacement(
         self,
         client: AsyncClient,
         superuser_auth_headers: dict[str, str],
         noun_word_entry: WordEntry,
     ):
-        """200: gender update merges into existing grammar_data."""
+        """200: grammar_data is fully replaced, not merged."""
         response = await client.patch(
             f"/api/v1/admin/word-entries/{noun_word_entry.id}",
-            json={"gender": "masculine"},
+            json={"grammar_data": {"gender": "masculine", "declension": "second"}},
             headers=superuser_auth_headers,
         )
         assert response.status_code == 200
         data = response.json()
-        assert data["grammar_data"]["gender"] == "masculine"
+        assert data["grammar_data"] == {"gender": "masculine", "declension": "second"}
 
     @pytest.mark.asyncio
     async def test_examples_preserved_on_unrelated_update(
@@ -425,19 +424,36 @@ class TestUpdateWordEntryEndpoint:
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_invalid_gender_returns_422(
+    async def test_grammar_data_only_payload_accepted(
         self,
         client: AsyncClient,
         superuser_auth_headers: dict[str, str],
-        test_word_entry: WordEntry,
+        noun_word_entry: WordEntry,
     ):
-        """422: invalid gender value is rejected."""
+        """200: grammar_data-only payload is accepted."""
         response = await client.patch(
-            f"/api/v1/admin/word-entries/{test_word_entry.id}",
-            json={"gender": "unknown_gender"},
+            f"/api/v1/admin/word-entries/{noun_word_entry.id}",
+            json={"grammar_data": {"gender": "neuter"}},
             headers=superuser_auth_headers,
         )
-        assert response.status_code == 422
+        assert response.status_code == 200
+        assert response.json()["grammar_data"] == {"gender": "neuter"}
+
+    @pytest.mark.asyncio
+    async def test_grammar_data_empty_dict_clears_grammar(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict[str, str],
+        noun_word_entry: WordEntry,
+    ):
+        """200: empty grammar_data dict clears all grammar fields."""
+        response = await client.patch(
+            f"/api/v1/admin/word-entries/{noun_word_entry.id}",
+            json={"grammar_data": {}},
+            headers=superuser_auth_headers,
+        )
+        assert response.status_code == 200
+        assert response.json()["grammar_data"] == {}
 
 
 # =============================================================================
