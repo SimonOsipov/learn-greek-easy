@@ -2,7 +2,8 @@
  * Tests for WordEntryContent component (WDET02)
  */
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { I18nextProvider } from 'react-i18next';
 
 import { WordEntryContent } from '../WordEntryContent';
@@ -16,6 +17,10 @@ import i18n from '@/i18n';
 
 vi.mock('@/features/words/hooks/useWordEntry', () => ({
   useWordEntry: vi.fn(),
+}));
+
+vi.mock('../WordEntryEditForm', () => ({
+  WordEntryEditForm: () => <div data-testid="word-entry-edit-form" />,
 }));
 
 vi.mock('@/features/words/hooks', async (importOriginal) => {
@@ -566,6 +571,37 @@ describe('WordEntryContent', () => {
         part: 'lemma',
         exampleId: undefined,
       });
+    });
+  });
+
+  // ============================================
+  // Group 10: Edit mode
+  // ============================================
+
+  describe('Edit mode', () => {
+    it('clicking edit button switches to edit form', async () => {
+      renderComponent();
+      await waitFor(() => {
+        expect(screen.getByTestId('word-entry-content-fields')).toBeInTheDocument();
+      });
+      await userEvent.click(screen.getByTestId('word-entry-edit-btn'));
+      expect(screen.getByTestId('word-entry-edit-form')).toBeInTheDocument();
+      expect(screen.queryByTestId('word-entry-content-fields')).not.toBeInTheDocument();
+    });
+  });
+
+  // ============================================
+  // Group 11: Section completeness badges
+  // ============================================
+
+  describe('Section completeness badges', () => {
+    it('identity section shows correct completeness badge', () => {
+      renderComponent();
+      const identitySection = document.getElementById('section-identity');
+      expect(identitySection).not.toBeNull();
+      // With pronunciation present and audio_status ready, identity should show 2/2
+      const badgeText = identitySection!.textContent;
+      expect(badgeText).toContain('2/2');
     });
   });
 });

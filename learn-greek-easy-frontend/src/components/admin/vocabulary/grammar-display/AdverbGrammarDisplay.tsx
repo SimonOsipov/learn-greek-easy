@@ -9,6 +9,7 @@
 
 import { useTranslation } from 'react-i18next';
 
+import { NotSet } from '@/components/admin/NotSet';
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
 
 // ============================================
@@ -22,11 +23,6 @@ interface AdverbGrammarDisplayProps {
 // ============================================
 // Component
 // ============================================
-
-function NotSet() {
-  const { t } = useTranslation('admin');
-  return <span className="italic text-muted-foreground">{t('wordEntryContent.notSet')}</span>;
-}
 
 export function AdverbGrammarDisplay({ fields }: AdverbGrammarDisplayProps) {
   const { t } = useTranslation('admin');

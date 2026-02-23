@@ -479,6 +479,40 @@ describe('WordEntryCards', () => {
       const record = screen.getByTestId('card-record-card-1');
       expect(record.querySelectorAll('button')).toHaveLength(0);
     });
+
+    it('renders RU translation for meaning card when wordEntry has translation_ru', () => {
+      const card = createMockCard({ card_type: 'meaning_el_to_en' });
+      (useWordEntryCards as Mock).mockReturnValue({
+        cards: [card],
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn(),
+      });
+      (useWordEntry as Mock).mockReturnValue({
+        wordEntry: { ...createMockWordEntry(), translation_ru: 'дом' },
+        isLoading: false,
+        isError: false,
+      });
+      renderComponent();
+      expect(screen.getByText('дом')).toBeInTheDocument();
+    });
+
+    it('renders NotSet for meaning card when translation_ru is null', () => {
+      const card = createMockCard({ card_type: 'meaning_el_to_en' });
+      (useWordEntryCards as Mock).mockReturnValue({
+        cards: [card],
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn(),
+      });
+      (useWordEntry as Mock).mockReturnValue({
+        wordEntry: { ...createMockWordEntry(), translation_ru: null },
+        isLoading: false,
+        isError: false,
+      });
+      renderComponent();
+      expect(screen.getByText('Not set')).toBeInTheDocument();
+    });
   });
 
   // ============================================

@@ -15,6 +15,7 @@ import type { WordEntryExampleSentence, WordEntryResponse } from '@/services/wor
 
 import { AudioGenerateButton } from './AudioGenerateButton';
 import { AudioStatusBadge } from './AudioStatusBadge';
+import { NotSet } from './NotSet';
 import { GrammarDisplaySection } from './vocabulary/grammar-display/GrammarDisplaySection';
 import {
   normalizeGrammarData,
@@ -134,11 +135,6 @@ function FieldRow({
       </dd>
     </div>
   );
-}
-
-function NotSet() {
-  const { t } = useTranslation('admin');
-  return <span className="italic text-muted-foreground">{t('wordEntryContent.notSet')}</span>;
 }
 
 function SectionBadge({ filled, total }: { filled: number; total: number }) {
@@ -446,7 +442,7 @@ function ExampleCard({
           <span className="text-xs text-muted-foreground">
             {t('wordEntryContent.exampleEnglish')}
           </span>
-          <p className="text-sm">{example.english || t('wordEntryContent.notSet')}</p>
+          <p className="text-sm">{example.english || <NotSet />}</p>
         </div>
       </div>
 
