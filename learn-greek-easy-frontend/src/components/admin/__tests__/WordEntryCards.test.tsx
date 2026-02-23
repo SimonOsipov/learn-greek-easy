@@ -454,7 +454,7 @@ describe('WordEntryCards', () => {
       expect(record.textContent).not.toContain('Tier');
     });
 
-    it('renders variant_key', () => {
+    it('renders human-readable label for variant_key', () => {
       (useWordEntryCards as Mock).mockReturnValue({
         cards: [createMockCard({ variant_key: 'meaning_el_to_en_t1' })],
         isLoading: false,
@@ -462,6 +462,9 @@ describe('WordEntryCards', () => {
         refetch: vi.fn(),
       });
       renderComponent();
+      // Human-readable fallback label (title-cased)
+      expect(screen.getByText('Meaning El To En T1')).toBeInTheDocument();
+      // Raw key shown as secondary text
       expect(screen.getByText('meaning_el_to_en_t1')).toBeInTheDocument();
     });
 
