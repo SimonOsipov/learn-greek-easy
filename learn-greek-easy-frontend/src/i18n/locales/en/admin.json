@@ -177,23 +177,40 @@
       "declension": "Declension",
       "cloze": "Cloze",
       "sentence_translation": "Sentence Translation"
+    },
+    "cards": {
+      "tierTooltip": "Tier 1: most common, introduced first. Tier 2: less common. Tier 3+: specialized vocabulary."
     }
   },
   "wordEntryContent": {
     "pronunciation": "Pronunciation",
+    "audio": "Audio",
+    "translationEn": "Translation (EN)",
     "translationEnPlural": "Translation (EN plural)",
     "translationRu": "Translation (RU)",
+    "translationRuPlural": "Translation (RU plural)",
     "gender": "Gender",
     "genderMasculine": "Masculine",
     "genderFeminine": "Feminine",
     "genderNeuter": "Neuter",
-    "examples": "Examples",
+    "sectionIdentity": "Identity",
+    "sectionTranslations": "Translations",
+    "sectionGrammar": "Grammar",
+    "sectionExamples": "Examples",
     "noExamples": "No examples",
     "exampleGreek": "Greek",
     "exampleEnglish": "English",
     "exampleRussian": "Russian",
     "exampleContext": "Context",
-    "notSet": "—",
+    "exampleAudio": "Audio",
+    "notSet": "Not set",
+    "partOfSpeech": "Part of Speech",
+    "completion": "Completion: {{pct}}%",
+    "grammarSection": {
+      "title": "Grammar {{filled}}/{{total}}"
+    },
+    "noGrammarData": "No grammar data",
+    "unknownPartOfSpeech": "Unknown part of speech: {{pos}}",
     "loading": "Loading word entry…",
     "errorTitle": "Failed to load word entry",
     "errorRetry": "Retry"

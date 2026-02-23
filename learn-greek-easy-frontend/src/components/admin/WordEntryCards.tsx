@@ -4,8 +4,10 @@ import { useTranslation } from 'react-i18next';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useWordEntry } from '@/features/words/hooks/useWordEntry';
 import { useWordEntryCards } from '@/features/words/hooks/useWordEntryCards';
+import { getVariantKeyLabel } from '@/lib/variantKeyLabels';
 import type {
   AudioStatus,
   CardRecordResponse,
@@ -118,16 +120,18 @@ export function WordEntryCards({ entryId }: WordEntryCardsProps) {
   const typeCount = groups.length;
 
   return (
-    <div className="space-y-4">
-      <p className="text-sm text-muted-foreground" data-testid="cards-tab-summary">
-        {typeCount === 1
-          ? t('wordEntryDetail.cardsSummarySingularType', { count: totalCards })
-          : t('wordEntryDetail.cardsSummary', { count: totalCards, types: typeCount })}
-      </p>
-      {groups.map((group) => (
-        <CardTypeSection key={group.type} group={group} wordEntry={wordEntry ?? null} />
-      ))}
-    </div>
+    <TooltipProvider>
+      <div className="space-y-4">
+        <p className="text-sm text-muted-foreground" data-testid="cards-tab-summary">
+          {typeCount === 1
+            ? t('wordEntryDetail.cardsSummarySingularType', { count: totalCards })
+            : t('wordEntryDetail.cardsSummary', { count: totalCards, types: typeCount })}
+        </p>
+        {groups.map((group) => (
+          <CardTypeSection key={group.type} group={group} wordEntry={wordEntry ?? null} />
+        ))}
+      </div>
+    </TooltipProvider>
   );
 }
 
@@ -188,11 +192,21 @@ function CardRecord({
       </div>
       <div className="mt-1.5 flex gap-3 text-xs text-muted-foreground">
         {card.tier !== null && (
-          <span>
-            {t('wordEntryDetail.cardTier')}: {card.tier}
-          </span>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="cursor-default">
+                {t('wordEntryDetail.cardTier')}: {card.tier}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-xs text-xs">
+              {t('wordEntryDetail.cards.tierTooltip')}
+            </TooltipContent>
+          </Tooltip>
         )}
-        <span>{card.variant_key}</span>
+        <span className="flex flex-col leading-tight">
+          <span>{getVariantKeyLabel(card.variant_key)}</span>
+          <span className="font-mono text-[10px] text-muted-foreground/60">{card.variant_key}</span>
+        </span>
         {audioStatus && (
           <AudioStatusBadge status={audioStatus} data-testid={`card-audio-badge-${card.id}`} />
         )}

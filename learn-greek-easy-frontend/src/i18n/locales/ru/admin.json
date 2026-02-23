@@ -187,23 +187,40 @@
       "declension": "Склонение",
       "cloze": "Заполнение пропусков",
       "sentence_translation": "Перевод предложения"
+    },
+    "cards": {
+      "tierTooltip": "Уровень 1: самые частые, изучаются первыми. Уровень 2: менее частые. Уровень 3+: специализированная лексика."
     }
   },
   "wordEntryContent": {
     "pronunciation": "Произношение",
+    "audio": "Аудио",
+    "translationEn": "Перевод (EN)",
     "translationEnPlural": "Перевод (EN множ.)",
     "translationRu": "Перевод (RU)",
+    "translationRuPlural": "Перевод (RU множ.)",
     "gender": "Род",
     "genderMasculine": "Мужской",
     "genderFeminine": "Женский",
     "genderNeuter": "Средний",
-    "examples": "Примеры",
+    "sectionIdentity": "Идентичность",
+    "sectionTranslations": "Переводы",
+    "sectionGrammar": "Грамматика",
+    "sectionExamples": "Примеры",
     "noExamples": "Нет примеров",
     "exampleGreek": "Греческий",
     "exampleEnglish": "Английский",
     "exampleRussian": "Русский",
     "exampleContext": "Контекст",
-    "notSet": "—",
+    "exampleAudio": "Аудио",
+    "notSet": "Не задано",
+    "partOfSpeech": "Часть речи",
+    "completion": "Заполненность: {{pct}}%",
+    "grammarSection": {
+      "title": "Грамматика {{filled}}/{{total}}"
+    },
+    "noGrammarData": "Нет данных о грамматике",
+    "unknownPartOfSpeech": "Неизвестная часть речи: {{pos}}",
     "loading": "Загрузка словарной записи…",
     "errorTitle": "Не удалось загрузить словарную запись",
     "errorRetry": "Повторить"
