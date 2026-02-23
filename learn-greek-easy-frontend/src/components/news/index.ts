@@ -9,3 +9,5 @@ export type { NewsGridProps } from './NewsGrid';
 
 export { NewsPagination } from './NewsPagination';
 export type { NewsPaginationProps } from './NewsPagination';
+
+export { ScrollToTopButton } from './ScrollToTopButton';

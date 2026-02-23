@@ -15,7 +15,7 @@ import { AlertCircle, Newspaper } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '@/components/feedback/EmptyState';
-import { NewsGrid, NewsPagination } from '@/components/news';
+import { NewsGrid, NewsPagination, ScrollToTopButton } from '@/components/news';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { trackNewsPagePaginated, trackNewsPageViewed } from '@/lib/analytics/newsAnalytics';
@@ -107,7 +107,7 @@ export const NewsPage: React.FC = () => {
   }, [fetchNews]);
 
   return (
-    <div className="space-y-6 pb-8" data-testid="news-page">
+    <div className="space-y-6 pb-20 lg:pb-8" data-testid="news-page">
       {/* Page Header */}
       <div>
         <h1
@@ -177,6 +177,8 @@ export const NewsPage: React.FC = () => {
           description={t('news.empty.description')}
         />
       )}
+
+      <ScrollToTopButton />
     </div>
   );
 };
