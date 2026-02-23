@@ -865,20 +865,27 @@
     "fieldTranslationRu": "Russian Translation",
     "fieldTranslationRuPlural": "Russian Translation (Plural)",
     "fieldPronunciation": "Pronunciation",
-    "fieldGender": "Gender",
     "fieldExampleGreek": "Greek",
     "fieldExampleEnglish": "English",
     "fieldExampleRussian": "Russian",
     "fieldExampleContext": "Context",
     "exampleHeader": "Example {{index}}",
-    "genderMasculine": "Masculine",
-    "genderFeminine": "Feminine",
-    "genderNeuter": "Neuter",
     "requiredField": "This field is required",
     "lemmaReadOnly": "Lemma",
     "partOfSpeechReadOnly": "Part of Speech",
     "sectionTranslations": "Translations",
-    "sectionPronunciationGrammar": "Pronunciation & Grammar",
+    "sectionPronunciation": "Pronunciation",
     "sectionExamples": "Examples"
+  },
+  "grammarEdit": {
+    "editTooltip": "Edit grammar data",
+    "save": "Save",
+    "cancel": "Cancel",
+    "saving": "Saving...",
+    "success": "Grammar data updated",
+    "discardTitle": "Unsaved Changes",
+    "discardMessage": "You have unsaved grammar changes. Discard them?",
+    "discardConfirm": "Discard",
+    "discardCancel": "Keep Editing"
   }
 }

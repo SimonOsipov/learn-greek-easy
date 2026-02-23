@@ -35,6 +35,15 @@ vi.mock('@/features/words/hooks', async (importOriginal) => {
   };
 });
 
+vi.mock('@/features/words/hooks/useUpdateWordEntry', () => ({
+  useUpdateWordEntry: vi.fn(() => ({
+    mutate: vi.fn(),
+    mutateAsync: vi.fn(),
+    isPending: false,
+    variables: undefined,
+  })),
+}));
+
 // ============================================
 // Factory Functions
 // ============================================

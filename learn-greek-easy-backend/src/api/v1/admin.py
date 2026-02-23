@@ -1898,16 +1898,14 @@ async def update_word_entry_inline(
         raise NotFoundException(detail=f"Word entry {word_entry_id} not found")
 
     provided = update_data.model_dump(exclude_unset=True)
-    gender = provided.pop("gender", None)
+    grammar_data = provided.pop("grammar_data", None)
     examples = provided.pop("examples", None)
 
     for field, value in provided.items():
         setattr(word_entry, field, value)
 
-    if gender is not None:
-        existing_gd = dict(word_entry.grammar_data or {})
-        existing_gd["gender"] = gender
-        word_entry.grammar_data = existing_gd
+    if grammar_data is not None:
+        word_entry.grammar_data = grammar_data
 
     if examples is not None:
         existing_by_id = {ex["id"]: ex for ex in (word_entry.examples or []) if "id" in ex}

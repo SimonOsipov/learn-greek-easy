@@ -157,26 +157,6 @@ describe('WordEntryEditForm', () => {
       expect(input.value).toBe('/spí·ti/');
     });
 
-    it('shows gender field for noun', () => {
-      renderForm();
-      expect(screen.getByTestId('word-entry-field-gender')).toBeInTheDocument();
-    });
-
-    it('shows gender field for adjective', () => {
-      renderForm({ part_of_speech: 'adjective', grammar_data: { gender: 'masculine' } });
-      expect(screen.getByTestId('word-entry-field-gender')).toBeInTheDocument();
-    });
-
-    it('does not show gender field for verb', () => {
-      renderForm({ part_of_speech: 'verb', grammar_data: {} });
-      expect(screen.queryByTestId('word-entry-field-gender')).not.toBeInTheDocument();
-    });
-
-    it('does not show gender field for adverb', () => {
-      renderForm({ part_of_speech: 'adverb', grammar_data: {} });
-      expect(screen.queryByTestId('word-entry-field-gender')).not.toBeInTheDocument();
-    });
-
     it('renders example fields when examples exist', () => {
       renderForm();
       expect(screen.getByTestId('word-entry-example-0')).toBeInTheDocument();
