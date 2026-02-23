@@ -9,6 +9,7 @@
 
 import { useTranslation } from 'react-i18next';
 
+import { NotSet } from '@/components/admin/NotSet';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Table,
@@ -46,11 +47,6 @@ interface VerbGrammarDisplayProps {
 // ============================================
 // Component
 // ============================================
-
-function NotSet() {
-  const { t } = useTranslation('admin');
-  return <span className="italic text-muted-foreground">{t('wordEntryContent.notSet')}</span>;
-}
 
 function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);

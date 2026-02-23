@@ -13,8 +13,8 @@ const statusConfig: Record<
     className: 'border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-400',
   },
   missing: {
-    variant: 'secondary',
-    className: '',
+    variant: 'outline',
+    className: 'border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400',
   },
   generating: {
     variant: 'outline',
