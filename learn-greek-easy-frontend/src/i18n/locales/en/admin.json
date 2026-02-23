@@ -878,6 +878,7 @@
     "lemmaReadOnly": "Lemma",
     "partOfSpeechReadOnly": "Part of Speech",
     "sectionTranslations": "Translations",
+    "sectionPronunciation": "Pronunciation",
     "sectionPronunciationGrammar": "Pronunciation & Grammar",
     "sectionExamples": "Examples"
   }

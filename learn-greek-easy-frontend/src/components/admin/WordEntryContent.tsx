@@ -16,11 +16,7 @@ import type { WordEntryExampleSentence, WordEntryResponse } from '@/services/wor
 import { AudioGenerateButton } from './AudioGenerateButton';
 import { AudioStatusBadge } from './AudioStatusBadge';
 import { NotSet } from './NotSet';
-import { GrammarDisplaySection } from './vocabulary/grammar-display/GrammarDisplaySection';
-import {
-  normalizeGrammarData,
-  GRAMMAR_FIELD_COUNTS,
-} from './vocabulary/grammar-display/grammarNormalizer';
+import { GrammarEditSection } from './vocabulary/grammar-display/GrammarEditSection';
 import { WordEntryEditForm } from './WordEntryEditForm';
 
 interface WordEntryContentProps {
@@ -32,6 +28,7 @@ export function WordEntryContent({ wordEntryId }: WordEntryContentProps) {
     wordId: wordEntryId,
   });
   const [isEditing, setIsEditing] = useState(false);
+  const [isGrammarEditing, setIsGrammarEditing] = useState(false);
 
   const generateAudioMutation = useGenerateAudio();
   const { isPending, variables: pendingVariables } = generateAudioMutation;
@@ -77,6 +74,8 @@ export function WordEntryContent({ wordEntryId }: WordEntryContentProps) {
       onGenerateClick={handleGenerateClick}
       isPending={isPending}
       pendingVariables={pendingVariables}
+      isGrammarEditing={isGrammarEditing}
+      onGrammarEditingChange={setIsGrammarEditing}
     />
   );
 }
@@ -170,15 +169,6 @@ function countTranslationFields(wordEntry: WordEntryResponse): { filled: number;
   return { filled, total: 4 };
 }
 
-function countGrammarFields(wordEntry: WordEntryResponse): { filled: number; total: number } {
-  const pos = wordEntry.part_of_speech;
-  const total = GRAMMAR_FIELD_COUNTS[pos] ?? 0;
-  if (total === 0 || !wordEntry.grammar_data) return { filled: 0, total };
-  const normalized = normalizeGrammarData(wordEntry.grammar_data, pos);
-  const filled = Object.values(normalized).filter((v) => v !== null).length;
-  return { filled, total };
-}
-
 // ============================================
 // ContentFields
 // ============================================
@@ -189,6 +179,8 @@ function ContentFields({
   onGenerateClick,
   isPending,
   pendingVariables,
+  isGrammarEditing,
+  onGrammarEditingChange,
 }: {
   wordEntry: WordEntryResponse;
   onEdit: () => void;
@@ -197,18 +189,25 @@ function ContentFields({
   pendingVariables:
     | { wordEntryId: string; part: 'lemma' | 'example'; exampleId?: string }
     | undefined;
+  isGrammarEditing: boolean;
+  onGrammarEditingChange: (isEditing: boolean) => void;
 }) {
   const { t } = useTranslation('admin');
 
   const identityCompl = countIdentityFields(wordEntry);
   const translationsCompl = countTranslationFields(wordEntry);
-  const grammarCompl = countGrammarFields(wordEntry);
   const examplesCount = wordEntry.examples?.length ?? 0;
 
   return (
     <div className="space-y-3" data-testid="word-entry-content-fields">
       <div className="flex justify-end">
-        <Button variant="outline" size="sm" onClick={onEdit} data-testid="word-entry-edit-btn">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onEdit}
+          disabled={isGrammarEditing}
+          data-testid="word-entry-edit-btn"
+        >
           {t('wordEntryEdit.edit')}
         </Button>
       </div>
@@ -295,25 +294,7 @@ function ContentFields({
         </CardContent>
       </Card>
 
-      {/* ── Grammar Card (not for phrases) ── */}
-      {wordEntry.part_of_speech !== 'phrase' && (
-        <Card id="section-grammar">
-          <CardHeader className="px-4 pb-2 pt-4">
-            <div className="flex items-center text-sm font-semibold">
-              {t('wordEntryContent.sectionGrammar')}
-              {grammarCompl.total > 0 && (
-                <SectionBadge filled={grammarCompl.filled} total={grammarCompl.total} />
-              )}
-            </div>
-          </CardHeader>
-          <CardContent className="px-4 pb-4" id="section-gram">
-            <GrammarDisplaySection
-              partOfSpeech={wordEntry.part_of_speech}
-              grammarData={wordEntry.grammar_data}
-            />
-          </CardContent>
-        </Card>
-      )}
+      <GrammarEditSection wordEntry={wordEntry} onEditingChange={onGrammarEditingChange} />
 
       {/* ── Examples Card ── */}
       <Card id="section-examples">

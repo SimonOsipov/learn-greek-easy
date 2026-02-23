@@ -18,13 +18,6 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { useUpdateWordEntry } from '@/features/words/hooks/useUpdateWordEntry';
 import {
   trackAdminWordEntryAutoAudioRegen,
@@ -53,7 +46,6 @@ const wordEntryEditSchema = z.object({
   translation_ru: z.string().optional().or(z.literal('')),
   translation_ru_plural: z.string().optional().or(z.literal('')),
   pronunciation: z.string().optional().or(z.literal('')),
-  gender: z.string().optional().nullable(),
   examples: z.array(exampleSchema).optional(),
 });
 
@@ -70,20 +62,6 @@ interface WordEntryEditFormProps {
 }
 
 // ============================================
-// Helper
-// ============================================
-
-function getGenderFromEntry(wordEntry: WordEntryResponse): string | null {
-  if (!wordEntry.grammar_data) return null;
-  const g = (wordEntry.grammar_data as Record<string, unknown>).gender;
-  return typeof g === 'string' ? g : null;
-}
-
-function showGenderField(wordEntry: WordEntryResponse): boolean {
-  return wordEntry.part_of_speech === 'noun' || wordEntry.part_of_speech === 'adjective';
-}
-
-// ============================================
 // Component
 // ============================================
 
@@ -97,7 +75,6 @@ export function WordEntryEditForm({ wordEntry, onSaveSuccess, onCancel }: WordEn
     translation_ru: wordEntry.translation_ru ?? '',
     translation_ru_plural: wordEntry.translation_ru_plural ?? '',
     pronunciation: wordEntry.pronunciation ?? '',
-    gender: getGenderFromEntry(wordEntry),
     examples: (wordEntry.examples ?? []).map((ex) => ({
       id: ex.id ?? '',
       greek: ex.greek,
@@ -225,7 +202,6 @@ export function WordEntryEditForm({ wordEntry, onSaveSuccess, onCancel }: WordEn
   }, [wordEntry, onCancel]);
 
   const examples = getValues('examples') ?? [];
-  const showGender = showGenderField(wordEntry);
 
   return (
     <>
@@ -318,9 +294,7 @@ export function WordEntryEditForm({ wordEntry, onSaveSuccess, onCancel }: WordEn
 
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">
-                {t('wordEntryEdit.sectionPronunciationGrammar')}
-              </CardTitle>
+              <CardTitle className="text-base">{t('wordEntryEdit.sectionPronunciation')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* pronunciation */}
@@ -337,36 +311,6 @@ export function WordEntryEditForm({ wordEntry, onSaveSuccess, onCancel }: WordEn
                   </FormItem>
                 )}
               />
-
-              {/* gender (conditional) */}
-              {showGender && (
-                <FormField
-                  control={form.control}
-                  name="gender"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('wordEntryEdit.fieldGender')}</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value ?? ''}>
-                        <FormControl>
-                          <SelectTrigger data-testid="word-entry-field-gender">
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="masculine">
-                            {t('wordEntryEdit.genderMasculine')}
-                          </SelectItem>
-                          <SelectItem value="feminine">
-                            {t('wordEntryEdit.genderFeminine')}
-                          </SelectItem>
-                          <SelectItem value="neuter">{t('wordEntryEdit.genderNeuter')}</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
             </CardContent>
           </Card>
 

@@ -890,6 +890,7 @@
     "lemmaReadOnly": "Лемма",
     "partOfSpeechReadOnly": "Часть речи",
     "sectionTranslations": "Переводы",
+    "sectionPronunciation": "Произношение",
     "sectionPronunciationGrammar": "Произношение и грамматика",
     "sectionExamples": "Примеры"
   }
