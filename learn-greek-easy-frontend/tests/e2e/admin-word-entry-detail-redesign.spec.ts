@@ -17,6 +17,8 @@
  * - V2 deck name: "E2E V2 Nouns Deck (A1)"
  * - Section IDs are HTML id attrs, not data-testid: use page.locator('#section-identity')
  * - Auth storage state: playwright/.auth/admin.json
+ * - Deck list is paginated — use search input to find deck reliably
+ * - Grammar chip tooltip is lowercase: "X/Y grammar fields"
  *
  * Test User: e2e_admin@test.com (Admin with superuser access)
  */
@@ -26,7 +28,7 @@ import { test, expect, type Page } from '@playwright/test';
 // Storage state path
 const ADMIN_AUTH = 'playwright/.auth/admin.json';
 
-// V2 deck name as created by /api/v1/test/seed/all
+// V2 deck name as created by /api/v1/test/seed/all (full name for search)
 const V2_NOUNS_DECK_NAME = 'E2E V2 Nouns Deck';
 
 /**
@@ -43,19 +45,26 @@ async function seedAllData(page: Page): Promise<void> {
 
 /**
  * Navigate to /admin and open the V2 Nouns deck in the deck detail modal.
- * The admin page defaults to the Decks tab, so no tab click needed.
+ * Uses the search input to handle pagination — the V2 deck may not be on page 1.
  */
 async function navigateToV2NounsDeck(page: Page): Promise<void> {
   await page.goto('/admin');
   await expect(page.getByTestId('admin-page')).toBeVisible({ timeout: 15000 });
 
-  // The Decks tab is the default; ensure it's active
+  // Ensure Decks tab is active (it is the default, but click to be safe)
   await page.getByTestId('admin-tab-decks').click();
 
   // Wait for deck list to load
   await expect(page.getByTestId('all-decks-title')).toBeVisible({ timeout: 10000 });
 
-  // Find and click the V2 Nouns deck row (contains the deck name text)
+  // Use search to find the V2 deck regardless of pagination position
+  const searchInput = page.getByTestId('deck-search-input');
+  await searchInput.fill(V2_NOUNS_DECK_NAME);
+
+  // Wait for debounced search (300ms debounce + render)
+  await page.waitForTimeout(600);
+
+  // Find and click the V2 Nouns deck row (hasText does substring match)
   const deckRow = page.locator('[data-testid^="deck-row-"]').filter({
     hasText: V2_NOUNS_DECK_NAME,
   });
@@ -142,11 +151,11 @@ test.describe('Admin Word Entry Detail Redesign - Word Entry Tab Sections', () =
     // Wait for content fields to render
     await expect(page.getByTestId('word-entry-content-fields')).toBeVisible({ timeout: 10000 });
 
-    // V2 seed data has vocative cases missing — expect "Not set" in the grammar section
-    // Also translations may be partially missing.
+    // V2 seed data has vocative cases missing — NounGrammarDisplay shows "Not set" for vocative sg/pl.
+    // Also translation_en_plural and translation_ru_plural may be null for some entries.
     // At minimum, the grammar table for nouns shows vocative with "Not set".
     const notSetElements = page.getByText('Not set');
-    await expect(notSetElements.first()).toBeVisible();
+    await expect(notSetElements.first()).toBeVisible({ timeout: 5000 });
   });
 
   test('grammar section shows NounGrammarDisplay for a noun', async ({ page }) => {
@@ -181,12 +190,9 @@ test.describe('Admin Word Entry Detail Redesign - Completeness Chips', () => {
     // The detail-header-completion-badge shows overall completion percentage
     await expect(page.getByTestId('detail-header-completion-badge')).toBeVisible();
 
-    // DetailCompletenessChips renders chip buttons with title attributes containing
-    // field info (e.g. "Grammar: X of Y fields filled", "English: singular ...")
-    // Verify at least one chip button is visible in the header area
-    const chipButtons = page
-      .getByTestId('word-entry-detail-header')
-      .locator('button[title]');
+    // DetailCompletenessChips renders chip buttons inside word-entry-detail-header
+    // Chip buttons have title attributes with field info (e.g. "2/2 EN translations")
+    const chipButtons = page.getByTestId('word-entry-detail-header').locator('button[title]');
     await expect(chipButtons.first()).toBeVisible({ timeout: 5000 });
   });
 
@@ -197,28 +203,19 @@ test.describe('Admin Word Entry Detail Redesign - Completeness Chips', () => {
     // Wait for content to load
     await expect(page.getByTestId('word-entry-content-fields')).toBeVisible({ timeout: 10000 });
 
-    // Find the grammar chip — its title contains "Grammar:"
-    // DetailCompletenessChips renders: tooltip = `Grammar: X of Y fields filled`
+    // Grammar chip tooltip format is lowercase: "X/Y grammar fields"
     const gramChip = page
       .getByTestId('word-entry-detail-header')
-      .locator('button[title*="Grammar"]');
+      .locator('button[title*="grammar"]');
 
     const gramChipVisible = await gramChip.isVisible().catch(() => false);
     if (gramChipVisible) {
       await gramChip.click();
-      // After clicking, grammar section should be visible (scroll target)
+      // After clicking, grammar section should remain visible (scroll target)
       await expect(page.locator('#section-grammar')).toBeVisible({ timeout: 3000 });
     } else {
-      // Chip may use lowercase "grammar" in tooltip
-      const gramChipLower = page
-        .getByTestId('word-entry-detail-header')
-        .locator('button[title*="grammar"]');
-      const gramChipLowerVisible = await gramChipLower.isVisible().catch(() => false);
-      if (gramChipLowerVisible) {
-        await gramChipLower.click();
-        await expect(page.locator('#section-grammar')).toBeVisible({ timeout: 3000 });
-      }
-      // If no chip found, the section should still be visible from initial render
+      // Grammar chip may not be visible if grammar_total=0 (non-noun entries)
+      // Just verify the grammar section is rendered
       await expect(page.locator('#section-grammar')).toBeVisible();
     }
   });
@@ -252,31 +249,23 @@ test.describe('Admin Word Entry Detail Redesign - Cards Tab', () => {
       .catch(() => false);
 
     if (!isEmpty) {
-      // Cards tab shows card type group headers with i18n labels (via t('wordEntryDetail.cardType.X'))
-      // and individual card footers with human-readable variant labels (via getVariantKeyLabel).
-      // Verify at least one card type group header is visible.
+      // Cards tab shows card type group headers with i18n labels
       await expect(
         page.locator('[data-testid^="card-type-group-header-"]').first()
       ).toBeVisible({ timeout: 5000 });
 
-      // Verify that variant key labels are human-readable:
-      // The CardRecord renders getVariantKeyLabel(card.variant_key) — e.g. "Default",
-      // "Greek → Translation", "Singular → Plural", etc.
-      // Also verify raw machine keys like "meaning_el_to_en_t1" are NOT the sole visible text
-      // (they appear as a small subtitle in font-mono, not as primary text).
+      // Individual card footers show human-readable variant labels via getVariantKeyLabel.
+      // Known labels: "Default", "Greek → Translation", "Translation → Greek",
+      //               "Singular → Plural", "Plural → Singular"
       const tabContent = page.getByTestId('word-entry-tab-content-cards');
-
-      // Check that at least one human-readable variant label is present
       const humanReadablePattern =
         /^(Default|Greek → Translation|Translation → Greek|Singular → Plural|Plural → Singular|Conjugation|Declension|Grammar Form)/;
-      const humanReadableLabel = tabContent
-        .getByText(humanReadablePattern)
-        .first();
+      const humanReadableLabel = tabContent.getByText(humanReadablePattern).first();
 
       const hasHumanLabel = await humanReadableLabel.isVisible().catch(() => false);
       if (!hasHumanLabel) {
-        // Cards may not have variant keys covered by the pattern above — just check
-        // that at least one card-record is visible (not empty state)
+        // Cards exist but their variant keys fall through to fallback formatter —
+        // just verify at least one card record is visible
         await expect(
           page.locator('[data-testid^="card-record-"]').first()
         ).toBeVisible({ timeout: 5000 });
@@ -307,14 +296,14 @@ test.describe('Admin Word Entry Detail Redesign - Cards Tab', () => {
     const chipVisible = await anyChip.isVisible().catch(() => false);
     if (chipVisible) {
       await anyChip.click();
-      // Wait for tab switch animation
+      // Wait for tab switch (includes 100ms setTimeout in DetailCompletenessChips)
       await page.waitForTimeout(300);
       // Verify Word Entry tab content is now active
       await expect(page.getByTestId('word-entry-tab-content-entry')).toBeVisible({
         timeout: 3000,
       });
     } else {
-      // If no chips visible, verify Word Entry tab content is accessible by clicking tab directly
+      // If no chips visible, verify Word Entry tab is accessible directly
       await page.getByTestId('word-entry-tab-entry').click();
       await expect(page.getByTestId('word-entry-tab-content-entry')).toBeVisible({
         timeout: 3000,
