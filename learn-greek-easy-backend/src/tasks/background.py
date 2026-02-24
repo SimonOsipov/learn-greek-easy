@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 if TYPE_CHECKING:
-    from src.db.models import WordEntry
+    from src.db.models import WordEntry  # noqa: F401
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
@@ -1258,7 +1258,7 @@ async def generate_word_entry_audio_task(  # noqa: C901
         try:
             from sqlalchemy import select
 
-            from src.db.models import AudioStatus, WordEntry
+            from src.db.models import AudioStatus, WordEntry  # noqa: F811
             from src.services.elevenlabs_service import get_elevenlabs_service
             from src.services.s3_service import get_s3_service
 
@@ -1394,6 +1394,11 @@ async def generate_word_entry_audio_task(  # noqa: C901
                     failed_count += 1
 
             # --- DB update: audio keys + per-example status + clear generating_since ---
+            # Note: this bulk task uses a read-modify-write on examples, which has a
+            # theoretical race condition if concurrent generate_word_entry_part_audio_task
+            # calls run at the same time. The part task uses atomic SQL to avoid this;
+            # the bulk task is not expected to run concurrently with part tasks for the
+            # same word entry.
             if new_lemma_audio_key:
                 word_entry.audio_key = new_lemma_audio_key
 
@@ -1444,28 +1449,6 @@ async def generate_word_entry_audio_task(  # noqa: C901
             await engine.dispose()
 
 
-def _should_clear_generating_since(
-    word_entry: "WordEntry",
-    completed_part: str,
-    completed_example_id: str | None,
-) -> bool:
-    """Check if all parts are done generating so audio_generating_since can be cleared."""
-    from src.db.models import AudioStatus
-
-    if completed_part != "lemma":
-        if word_entry.audio_status == AudioStatus.GENERATING:
-            return False
-
-    if word_entry.examples:
-        for ex in word_entry.examples:
-            ex_id = ex.get("id")
-            if completed_part == "example" and ex_id == completed_example_id:
-                continue
-            if ex.get("audio_status") == "generating":
-                return False
-    return True
-
-
 async def generate_word_entry_part_audio_task(  # noqa: C901
     word_entry_id: UUID,
     part: str,
@@ -1482,9 +1465,11 @@ async def generate_word_entry_part_audio_task(  # noqa: C901
         example_id: UUID string of the example (None for lemma)
         db_url: Database URL for creating dedicated connection
     """
-    from src.db.models import AudioStatus, WordEntry
-    from src.services.elevenlabs_service import get_elevenlabs_service
-    from src.services.s3_service import get_s3_service
+    import json as json_mod
+
+    from sqlalchemy import text as sa_text
+
+    from src.db.models import WordEntry  # noqa: F811
 
     if not is_background_tasks_enabled():
         return
@@ -1518,6 +1503,9 @@ async def generate_word_entry_part_audio_task(  # noqa: C901
 
                 success = False
                 try:
+                    from src.services.elevenlabs_service import get_elevenlabs_service
+                    from src.services.s3_service import get_s3_service
+
                     elevenlabs = get_elevenlabs_service()
                     audio_bytes = await elevenlabs.generate_speech(
                         text, voice_id=WORD_AUDIO_VOICE_ID
@@ -1529,28 +1517,79 @@ async def generate_word_entry_part_audio_task(  # noqa: C901
                     success = False
 
                 if part == "lemma":
-                    if success:
-                        word_entry.audio_key = s3_key
-                        word_entry.audio_status = AudioStatus.READY
-                    else:
-                        word_entry.audio_status = AudioStatus.FAILED
+                    await session.execute(
+                        sa_text(
+                            """
+                            UPDATE word_entries
+                            SET
+                                audio_key = CASE WHEN :success THEN :s3_key ELSE audio_key END,
+                                audio_status = CASE WHEN :success THEN 'READY' ELSE 'FAILED' END,
+                                audio_generating_since = CASE
+                                    WHEN NOT EXISTS (
+                                        SELECT 1
+                                        FROM jsonb_array_elements(
+                                            COALESCE(examples::jsonb, '[]'::jsonb)
+                                        ) AS e
+                                        WHERE e->>'audio_status' = 'generating'
+                                    )
+                                    THEN NULL
+                                    ELSE audio_generating_since
+                                END,
+                                updated_at = NOW()
+                            WHERE id = :word_entry_id
+                        """
+                        ),
+                        {
+                            "success": success,
+                            "s3_key": s3_key,
+                            "word_entry_id": str(word_entry_id),
+                        },
+                    )
                 else:
-                    if word_entry.examples:
-                        updated = []
-                        for ex in word_entry.examples:
-                            ex_copy = dict(ex)
-                            if ex_copy.get("id") == example_id:
-                                if success:
-                                    ex_copy["audio_key"] = s3_key
-                                    ex_copy["audio_status"] = "ready"
-                                else:
-                                    ex_copy["audio_status"] = "failed"
-                            updated.append(ex_copy)
-                        word_entry.examples = updated
-
-                # Clear audio_generating_since if no parts are still generating
-                if _should_clear_generating_since(word_entry, part, example_id):
-                    word_entry.audio_generating_since = None
+                    patch = (
+                        json_mod.dumps({"audio_key": s3_key, "audio_status": "ready"})
+                        if success
+                        else json_mod.dumps({"audio_status": "failed"})
+                    )
+                    await session.execute(
+                        sa_text(
+                            """
+                            UPDATE word_entries
+                            SET
+                                examples = (
+                                    SELECT coalesce(json_agg(
+                                        CASE
+                                            WHEN elem->>'id' = :example_id
+                                            THEN elem || :patch::jsonb
+                                            ELSE elem
+                                        END
+                                        ORDER BY ordinality
+                                    ), '[]'::json)
+                                    FROM jsonb_array_elements(examples::jsonb)
+                                        WITH ORDINALITY AS arr(elem, ordinality)
+                                ),
+                                audio_generating_since = CASE
+                                    WHEN audio_status != 'GENERATING'
+                                         AND NOT EXISTS (
+                                             SELECT 1
+                                             FROM jsonb_array_elements(examples::jsonb) AS e
+                                             WHERE e->>'id' != :example_id
+                                               AND e->>'audio_status' = 'generating'
+                                         )
+                                    THEN NULL
+                                    ELSE audio_generating_since
+                                END,
+                                updated_at = NOW()
+                            WHERE id = :word_entry_id
+                              AND examples IS NOT NULL
+                        """
+                        ),
+                        {
+                            "example_id": example_id,
+                            "patch": patch,
+                            "word_entry_id": str(word_entry_id),
+                        },
+                    )
 
                 await session.commit()
             except Exception:
