@@ -6,6 +6,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { I18nextProvider } from 'react-i18next';
 
 import { WordEntryCards } from '../WordEntryCards';
+import { useGenerateCards } from '@/features/words/hooks/useGenerateCards';
 import { useWordEntryCards } from '@/features/words/hooks/useWordEntryCards';
 import { useWordEntry } from '@/features/words/hooks/useWordEntry';
 import type { WordEntryResponse } from '@/services/wordEntryAPI';
@@ -21,6 +22,10 @@ vi.mock('@/features/words/hooks/useWordEntryCards', () => ({
 
 vi.mock('@/features/words/hooks/useWordEntry', () => ({
   useWordEntry: vi.fn(),
+}));
+
+vi.mock('@/features/words/hooks/useGenerateCards', () => ({
+  useGenerateCards: vi.fn(),
 }));
 
 // ============================================
@@ -69,6 +74,11 @@ beforeEach(() => {
     isError: false,
     error: null,
     refetch: vi.fn(),
+  });
+  (useGenerateCards as Mock).mockReturnValue({
+    mutate: vi.fn(),
+    isPending: false,
+    variables: undefined,
   });
 });
 
