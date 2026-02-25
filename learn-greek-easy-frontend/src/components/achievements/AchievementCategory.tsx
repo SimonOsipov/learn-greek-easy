@@ -22,6 +22,30 @@ const categoryIcons: Record<string, React.ComponentType<{ className?: string }>>
   default: Award,
 };
 
+interface CategoryColorConfig {
+  icon: string;
+  iconDark: string;
+  border: string;
+  borderDark: string;
+}
+
+const CATEGORY_COLORS: Record<string, CategoryColorConfig> = {
+  streak: { icon: 'text-orange-600', iconDark: 'dark:text-orange-400', border: 'border-l-orange-500', borderDark: 'dark:border-l-orange-400' },
+  learning: { icon: 'text-blue-600', iconDark: 'dark:text-blue-400', border: 'border-l-blue-500', borderDark: 'dark:border-l-blue-400' },
+  session: { icon: 'text-green-600', iconDark: 'dark:text-green-400', border: 'border-l-green-500', borderDark: 'dark:border-l-green-400' },
+  accuracy: { icon: 'text-teal-600', iconDark: 'dark:text-teal-400', border: 'border-l-teal-500', borderDark: 'dark:border-l-teal-400' },
+  cefr: { icon: 'text-indigo-600', iconDark: 'dark:text-indigo-400', border: 'border-l-indigo-500', borderDark: 'dark:border-l-indigo-400' },
+  special: { icon: 'text-purple-600', iconDark: 'dark:text-purple-400', border: 'border-l-purple-500', borderDark: 'dark:border-l-purple-400' },
+  culture: { icon: 'text-rose-600', iconDark: 'dark:text-rose-400', border: 'border-l-rose-500', borderDark: 'dark:border-l-rose-400' },
+};
+
+const DEFAULT_COLORS: CategoryColorConfig = {
+  icon: 'text-gray-600',
+  iconDark: 'dark:text-gray-400',
+  border: 'border-l-gray-500',
+  borderDark: 'dark:border-l-gray-400',
+};
+
 /**
  * Props for AchievementCategory component
  */
@@ -51,6 +75,7 @@ export const AchievementCategory: React.FC<AchievementCategoryProps> = ({
   // Get icon for category
   const categoryKey = category.toLowerCase();
   const IconComponent = categoryIcons[categoryKey] || categoryIcons.default;
+  const colors = CATEGORY_COLORS[categoryKey] || DEFAULT_COLORS;
 
   // Format category name for fallback (capitalize, replace underscores)
   const formattedCategory = category.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
@@ -61,11 +86,14 @@ export const AchievementCategory: React.FC<AchievementCategoryProps> = ({
   const headingId = `category-${categoryKey.replace(/\s+/g, '-')}`;
 
   return (
-    <section className={cn('space-y-4', className)} aria-labelledby={headingId}>
+    <section
+      className={cn('space-y-4 border-l-4 pl-4', colors.border, colors.borderDark, className)}
+      aria-labelledby={headingId}
+    >
       {/* Category Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <IconComponent className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+          <IconComponent className={cn('h-5 w-5', colors.icon, colors.iconDark)} />
           <h2 id={headingId} className="text-lg font-semibold text-foreground">
             {translatedCategory}
           </h2>
@@ -75,7 +103,7 @@ export const AchievementCategory: React.FC<AchievementCategoryProps> = ({
         <div className="flex items-center gap-4 text-sm text-muted-foreground">
           <span>{t('category.unlocked', { count: unlockedCount, total: totalCount })}</span>
           {totalXP > 0 && (
-            <span className="text-purple-600 dark:text-purple-400">
+            <span className={cn(colors.icon, colors.iconDark)}>
               {t('category.xpEarned', { xp: totalXP })}
             </span>
           )}

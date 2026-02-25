@@ -44,8 +44,8 @@ export const FeedbackPage: React.FC = () => {
   }, [highlightId, feedbackList]);
 
   return (
-    <div className="space-y-6" data-testid="feedback-page">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 pb-20 lg:pb-8" data-testid="feedback-page">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground" data-testid="feedback-page-title">
             {t('page.title')}
