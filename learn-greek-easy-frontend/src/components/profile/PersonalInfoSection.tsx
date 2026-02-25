@@ -33,6 +33,7 @@ export const createProfileSchema = (t: TFunction) =>
   z.object({
     name: z
       .string()
+      .trim()
       .min(2, t('personalInfo.validation.nameMin'))
       .max(50, t('personalInfo.validation.nameMax'))
       .regex(/^[\p{L}\p{M}\s'-]+$/u, t('personalInfo.validation.nameFormat')),

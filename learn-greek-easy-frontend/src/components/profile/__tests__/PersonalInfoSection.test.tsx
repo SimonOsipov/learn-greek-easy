@@ -48,5 +48,9 @@ describe('PersonalInfoSection - name validation', () => {
     it('rejects empty string', () => {
       expect(schema.safeParse({ name: '' }).success).toBe(false);
     });
+
+    it('rejects whitespace-only string', () => {
+      expect(schema.safeParse({ name: '   ' }).success).toBe(false);
+    });
   });
 });
