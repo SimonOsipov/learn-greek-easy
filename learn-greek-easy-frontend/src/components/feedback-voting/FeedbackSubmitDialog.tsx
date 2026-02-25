@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -89,6 +90,7 @@ export const FeedbackSubmitDialog: React.FC<FeedbackSubmitDialogProps> = ({
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>{t('submit.title')}</DialogTitle>
+          <DialogDescription className="sr-only">{t('submit.dialogDescription')}</DialogDescription>
         </DialogHeader>
 
         <Form {...form}>

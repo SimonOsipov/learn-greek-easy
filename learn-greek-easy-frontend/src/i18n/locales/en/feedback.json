@@ -18,6 +18,7 @@
   },
   "submit": {
     "title": "Submit Feedback",
+    "dialogDescription": "Fill out the form below to share your feedback or report an issue.",
     "category": "Category",
     "categoryPlaceholder": "Select category",
     "titleField": "Title",
@@ -39,6 +40,7 @@
   "edit": {
     "button": "Edit",
     "title": "Edit Feedback",
+    "dialogDescription": "Update the title or description of your feedback.",
     "save": "Save Changes",
     "saving": "Saving...",
     "success": {
