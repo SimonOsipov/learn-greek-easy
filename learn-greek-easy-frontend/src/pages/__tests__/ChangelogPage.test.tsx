@@ -560,4 +560,89 @@ describe('ChangelogPage', () => {
       expect(heading).toBeInTheDocument();
     });
   });
+
+  describe('Tag Filter', () => {
+    it('should render TagFilter component', () => {
+      const mockItems = [
+        {
+          id: '1',
+          title: 'Entry 1',
+          content: 'Content 1',
+          tag: 'new_feature' as const,
+          created_at: '2026-01-15T10:30:00Z',
+          updated_at: '2026-01-15T10:30:00Z',
+        },
+      ];
+      setupMockStore(createMockStoreState({ items: mockItems, total: 5, totalPages: 1 }));
+      render(<ChangelogPage />);
+      expect(screen.getByTestId('tag-filter')).toBeInTheDocument();
+    });
+
+    it('should call setTag when tag filter button is clicked', async () => {
+      const user = userEvent.setup();
+      const mockItems = [
+        {
+          id: '1',
+          title: 'Entry 1',
+          content: 'Content 1',
+          tag: 'new_feature' as const,
+          created_at: '2026-01-15T10:30:00Z',
+          updated_at: '2026-01-15T10:30:00Z',
+        },
+      ];
+      const mockStore = createMockStoreState({ items: mockItems, total: 5, totalPages: 1 });
+      setupMockStore(mockStore);
+      render(<ChangelogPage />);
+      await user.click(screen.getByTestId('tag-filter-new_feature'));
+      expect(mockStore.setTag).toHaveBeenCalledWith('new_feature');
+    });
+  });
+
+  describe('End Message', () => {
+    it('should show end message when on the last page', () => {
+      const mockItems = [
+        {
+          id: '1',
+          title: 'Entry 1',
+          content: 'Content 1',
+          tag: 'new_feature' as const,
+          created_at: '2026-01-15T10:30:00Z',
+          updated_at: '2026-01-15T10:30:00Z',
+        },
+      ];
+      setupMockStore(
+        createMockStoreState({
+          items: mockItems,
+          page: 2,
+          totalPages: 2,
+          total: 10,
+        })
+      );
+      render(<ChangelogPage />);
+      expect(screen.getByText(/reached the beginning/i)).toBeInTheDocument();
+    });
+
+    it('should NOT show end message when not on the last page', () => {
+      const mockItems = [
+        {
+          id: '1',
+          title: 'Entry 1',
+          content: 'Content 1',
+          tag: 'new_feature' as const,
+          created_at: '2026-01-15T10:30:00Z',
+          updated_at: '2026-01-15T10:30:00Z',
+        },
+      ];
+      setupMockStore(
+        createMockStoreState({
+          items: mockItems,
+          page: 1,
+          totalPages: 3,
+          total: 15,
+        })
+      );
+      render(<ChangelogPage />);
+      expect(screen.queryByText(/reached the beginning/i)).not.toBeInTheDocument();
+    });
+  });
 });

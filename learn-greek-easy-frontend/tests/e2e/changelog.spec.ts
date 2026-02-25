@@ -209,6 +209,61 @@ test.describe('Changelog - User Flow', () => {
     await page.waitForURL('/changelog', { timeout: 10000 });
     await expect(page.getByTestId('changelog-page')).toBeVisible({ timeout: 10000 });
   });
+
+  test('CHANGELOG-E2E-16: Tag filter shows only matching entries', async ({ page }) => {
+    await page.goto('/changelog');
+    await waitForChangelogLoaded(page);
+
+    // Click "New Feature" filter — seed has 4 new_feature entries
+    await page.getByTestId('tag-filter-new_feature').click();
+    await page.waitForTimeout(200); // client-side filter, no network wait needed
+
+    const cards = page.getByTestId('changelog-card');
+    const count = await cards.count();
+    // 4 new_feature entries fit on 1 page with pageSize=5
+    expect(count).toBe(4);
+
+    // Click "All" to reset
+    await page.getByTestId('tag-filter-all').click();
+    await page.waitForTimeout(200);
+    expect(await page.getByTestId('changelog-card').count()).toBe(5); // back to 5 on page 1
+  });
+
+  test('CHANGELOG-E2E-17: Deep linking scrolls to specific entry', async ({ page }) => {
+    await page.goto('/changelog');
+    await waitForChangelogLoaded(page);
+
+    // Get the id attribute of the first card
+    const firstCard = page.getByTestId('changelog-card').first();
+    const entryId = await firstCard.getAttribute('id'); // e.g. "entry-abc-123"
+    expect(entryId).toBeTruthy();
+    const hashId = entryId!.replace('entry-', ''); // extract just the UUID
+
+    // Navigate to the deep-link URL
+    await page.goto(`/changelog#entry-${hashId}`);
+    await waitForChangelogLoaded(page);
+
+    // Wait for the element to be in DOM and visible
+    const target = page.locator(`#entry-${hashId}`);
+    await expect(target).toBeVisible({ timeout: 3000 });
+  });
+
+  test('CHANGELOG-E2E-18: Last page shows end message', async ({ page }) => {
+    await page.goto('/changelog');
+    await waitForChangelogLoaded(page);
+
+    // Navigate to last page (page 3 with 12 entries, pageSize=5)
+    await page.getByTestId('changelog-pagination-page-3').click();
+    await page.waitForTimeout(200);
+
+    // End message should be visible
+    await expect(page.getByText(/reached the beginning/i)).toBeVisible();
+
+    // Navigate back to page 1 — end message should disappear
+    await page.getByTestId('changelog-pagination-page-1').click();
+    await page.waitForTimeout(200);
+    await expect(page.getByText(/reached the beginning/i)).not.toBeVisible();
+  });
 });
 
 // =====================
@@ -512,5 +567,15 @@ test.describe('Changelog - Mobile Tests', () => {
 
     // Verify Previous mobile is now enabled
     await expect(prevMobile).toBeEnabled();
+  });
+
+  test('CHANGELOG-E2E-19: Mobile bottom padding prevents nav overlap', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto('/changelog');
+    await waitForChangelogLoaded(page);
+
+    const pageContainer = page.getByTestId('changelog-page');
+    const classList = await pageContainer.evaluate((el) => el.className);
+    expect(classList).toContain('pb-20');
   });
 });
