@@ -3,11 +3,17 @@
 import React, { useMemo } from 'react';
 
 import { useTranslation } from 'react-i18next';
-import { PieChart, Pie, Cell, Legend, Tooltip, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, Legend } from 'recharts';
 
-import { ChartContainer, ChartTooltip } from '@/components/charts';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from '@/components/ui/chart';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useAnalytics } from '@/hooks/useAnalytics';
-import { colorSchemes } from '@/lib/chartConfig';
 
 interface StageDistributionChartProps {
   height?: number;
@@ -21,27 +27,19 @@ interface PieDataItem {
   original: string;
 }
 
-interface CustomTooltipProps {
-  active?: boolean;
-  payload?: Array<{ payload: PieDataItem }>;
-}
-
 interface LabelProps {
   percent: number;
 }
 
-interface LegendEntry {
-  payload: PieDataItem;
+interface LegendPayloadItem {
+  value: string;
+  color?: string;
+  payload?: PieDataItem;
 }
 
 /**
  * PieChart showing distribution of words across learning stages
  * Displays: New, Learning, Review, Mastered, Relearning
- *
- * @example
- * ```tsx
- * <StageDistributionChart height={350} />
- * ```
  */
 export const StageDistributionChart = React.forwardRef<HTMLDivElement, StageDistributionChartProps>(
   ({ height, className }, ref) => {
@@ -50,10 +48,31 @@ export const StageDistributionChart = React.forwardRef<HTMLDivElement, StageDist
 
     const chartHeight = height || 350;
 
-    // Transform WordStatusBreakdown to Pie chart format
+    const chartConfig = {
+      new: {
+        label: t('charts.stageDistribution.stages.new'),
+        color: 'hsl(var(--chart-6))',
+      },
+      learning: {
+        label: t('charts.stageDistribution.stages.learning'),
+        color: 'hsl(var(--chart-1))',
+      },
+      review: {
+        label: t('charts.stageDistribution.stages.review'),
+        color: 'hsl(var(--chart-4))',
+      },
+      mastered: {
+        label: t('charts.stageDistribution.stages.mastered'),
+        color: 'hsl(var(--chart-2))',
+      },
+      relearning: {
+        label: t('charts.stageDistribution.stages.relearning'),
+        color: 'hsl(var(--chart-5))',
+      },
+    } satisfies ChartConfig;
+
     const pieData = useMemo(() => {
       if (!data?.wordStatus) return [];
-
       const wordStatus = data.wordStatus;
       return [
         {
@@ -89,122 +108,122 @@ export const StageDistributionChart = React.forwardRef<HTMLDivElement, StageDist
       ].filter((item) => item.value > 0);
     }, [data?.wordStatus, t]);
 
-    // Stage-specific colors
-    const stageColors: Record<string, string> = {
-      new: colorSchemes.spectrum[5], // cyan (chart6)
-      learning: colorSchemes.spectrum[0], // blue (chart1)
-      review: colorSchemes.spectrum[4], // violet (chart5)
-      mastered: colorSchemes.spectrum[1], // green (chart2)
-      relearning: colorSchemes.spectrum[3], // red (chart4)
+    const stageColorVar: Record<string, string> = {
+      new: 'var(--color-new)',
+      learning: 'var(--color-learning)',
+      review: 'var(--color-review)',
+      mastered: 'var(--color-mastered)',
+      relearning: 'var(--color-relearning)',
     };
 
-    // Custom tooltip
-    const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
-      if (!active || !payload || payload.length === 0) return null;
+    const renderLabel = ({ percent }: LabelProps): string => `${Math.round(percent)}%`;
 
-      const data = payload[0].payload as PieDataItem;
-
+    const renderLegend = ({ payload }: { payload?: LegendPayloadItem[] }) => {
+      if (!payload || payload.length === 0) return null;
       return (
-        <ChartTooltip
-          active={active}
-          payload={[
-            {
-              name: data.name,
-              value: `${data.value} cards (${Math.round(data.percent)}%)`,
-              color: stageColors[data.original],
-              dataKey: data.original,
-            },
-          ]}
-        />
+        <div className="flex flex-wrap items-center justify-center gap-4 pt-3 text-xs">
+          {payload.map((entry, index) => (
+            <div key={`legend-${index}`} className="flex items-center gap-1.5">
+              <div
+                className="h-2 w-2 shrink-0 rounded-[2px]"
+                style={{ backgroundColor: entry.color }}
+              />
+              <span className="text-muted-foreground">
+                {entry.value}
+                {entry.payload ? ` (${Math.round(entry.payload.percent)}%)` : ''}
+              </span>
+            </div>
+          ))}
+        </div>
       );
     };
 
-    // Custom label renderer for pie slices
-    const renderLabel = ({ percent }: LabelProps): string => {
-      return `${Math.round(percent)}%`;
-    };
-
-    // Handle error
     if (error) {
       return (
-        <ChartContainer
-          ref={ref}
-          className={className}
-          title={t('charts.stageDistribution.title')}
-          description={t('charts.stageDistribution.description')}
-          noData
-        >
-          <div className="text-red-600">{t('error.loadingData', { error })}</div>
-        </ChartContainer>
+        <Card ref={ref} className={className}>
+          <CardHeader>
+            <CardTitle>{t('charts.stageDistribution.title')}</CardTitle>
+            <CardDescription>{t('charts.stageDistribution.description')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex h-[200px] items-center justify-center text-red-600">
+              {t('error.loadingData', { error })}
+            </div>
+          </CardContent>
+        </Card>
       );
     }
 
-    // Handle loading
     if (loading) {
       return (
-        <ChartContainer
-          ref={ref}
-          className={className}
-          title={t('charts.stageDistribution.title')}
-          description={t('charts.stageDistribution.description')}
-          loading
-          height={chartHeight}
-        >
-          <div />
-        </ChartContainer>
+        <Card ref={ref} className={className}>
+          <CardHeader>
+            <CardTitle>{t('charts.stageDistribution.title')}</CardTitle>
+            <CardDescription>{t('charts.stageDistribution.description')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="w-full" style={{ height: chartHeight }} />
+          </CardContent>
+        </Card>
       );
     }
 
-    // Handle empty
     if (!data?.wordStatus || data.wordStatus.total === 0 || pieData.length === 0) {
       return (
-        <ChartContainer
-          ref={ref}
-          className={className}
-          title={t('charts.stageDistribution.title')}
-          description={t('charts.stageDistribution.description')}
-          noData
-          height={chartHeight}
-        >
-          <div />
-        </ChartContainer>
+        <Card ref={ref} className={className}>
+          <CardHeader>
+            <CardTitle>{t('charts.stageDistribution.title')}</CardTitle>
+            <CardDescription>{t('charts.stageDistribution.description')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div
+              className="flex items-center justify-center text-muted-foreground"
+              style={{ height: chartHeight }}
+            >
+              <p>No data available</p>
+            </div>
+          </CardContent>
+        </Card>
       );
     }
 
     return (
-      <ChartContainer
-        ref={ref}
-        className={className}
-        title={t('charts.stageDistribution.title')}
-        description={t('charts.stageDistribution.description')}
-        height={chartHeight}
-      >
-        <ResponsiveContainer width="100%" height={chartHeight}>
-          <PieChart margin={{ top: 20, right: 20, left: 20, bottom: 20 }}>
-            <Pie
-              data={pieData}
-              cx="50%"
-              cy="45%"
-              outerRadius={100}
-              label={renderLabel}
-              dataKey="value"
-              isAnimationActive={false}
-            >
-              {pieData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={stageColors[entry.original]} />
-              ))}
-            </Pie>
-            <Tooltip content={<CustomTooltip />} />
-            <Legend
-              verticalAlign="bottom"
-              height={36}
-              formatter={(_value, entry: LegendEntry) =>
-                `${entry.payload.name} (${Math.round(entry.payload.percent)}%)`
-              }
-            />
-          </PieChart>
-        </ResponsiveContainer>
-      </ChartContainer>
+      <Card ref={ref} className={className}>
+        <CardHeader>
+          <CardTitle>{t('charts.stageDistribution.title')}</CardTitle>
+          <CardDescription>{t('charts.stageDistribution.description')}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ChartContainer config={chartConfig} className={`h-[${chartHeight}px] w-full`}>
+            <PieChart margin={{ top: 20, right: 20, left: 20, bottom: 20 }}>
+              <Pie
+                data={pieData}
+                cx="50%"
+                cy="45%"
+                outerRadius={100}
+                label={renderLabel}
+                dataKey="value"
+                isAnimationActive={false}
+              >
+                {pieData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={stageColorVar[entry.original]} />
+                ))}
+              </Pie>
+              <ChartTooltip
+                content={
+                  <ChartTooltipContent
+                    formatter={(value, name, item) => {
+                      const pieItem = item.payload as PieDataItem;
+                      return [`${pieItem.value} cards (${Math.round(pieItem.percent)}%)`, name];
+                    }}
+                  />
+                }
+              />
+              <Legend content={renderLegend} />
+            </PieChart>
+          </ChartContainer>
+        </CardContent>
+      </Card>
     );
   }
 );

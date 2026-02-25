@@ -4,47 +4,28 @@ import React from 'react';
 
 import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
 
-import { ChartContainer, ChartTooltip } from '@/components/charts';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+  type ChartConfig,
+} from '@/components/ui/chart';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useProgressData } from '@/hooks/useProgressData';
-import { chartColors, colorSchemes } from '@/lib/chartConfig';
 
 interface ProgressLineChartProps {
   height?: number;
   className?: string;
 }
 
-interface TooltipPayloadItem {
-  name: string;
-  value: number;
-  color: string;
-  dataKey: string;
-}
-
-interface CustomTooltipProps {
-  active?: boolean;
-  payload?: TooltipPayloadItem[];
-  label?: string;
-}
-
 /**
  * LineChart visualization of word status progression over time
- * Shows three trends: New Cards, Learning Cards, Mastered Cards
- *
- * @example
- * ```tsx
- * <ProgressLineChart height={300} />
- * ```
+ * Shows trends: Learning Cards, Mastered Cards
  */
 export const ProgressLineChart = React.forwardRef<HTMLDivElement, ProgressLineChartProps>(
   ({ height, className }, ref) => {
@@ -53,7 +34,17 @@ export const ProgressLineChart = React.forwardRef<HTMLDivElement, ProgressLineCh
 
     const chartHeight = height || 300;
 
-    // Format X-axis dates
+    const chartConfig = {
+      cardsLearning: {
+        label: t('charts.progressOverTime.learningCards'),
+        color: 'hsl(var(--chart-1))',
+      },
+      cardsMastered: {
+        label: t('charts.progressOverTime.masteredCards'),
+        color: 'hsl(var(--chart-2))',
+      },
+    } satisfies ChartConfig;
+
     const formatXAxis = (dateString: string): string => {
       try {
         const date = new Date(dateString);
@@ -63,113 +54,96 @@ export const ProgressLineChart = React.forwardRef<HTMLDivElement, ProgressLineCh
       }
     };
 
-    // Custom tooltip for line chart
-    const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
-      if (!active || !payload || payload.length === 0) return null;
-
-      return (
-        <ChartTooltip
-          active={active}
-          payload={payload}
-          label={label}
-          labelFormatter={formatXAxis}
-          formatter={(value) => `${Number(value).toLocaleString()}`}
-        />
-      );
-    };
-
-    // Handle error state
     if (error) {
       return (
-        <ChartContainer
-          ref={ref}
-          className={className}
-          title={t('charts.progressOverTime.title')}
-          description={t('charts.progressOverTime.description')}
-          noData
-        >
-          <div className="text-red-600">{t('error.loadingData', { error })}</div>
-        </ChartContainer>
+        <Card ref={ref} className={className}>
+          <CardHeader>
+            <CardTitle>{t('charts.progressOverTime.title')}</CardTitle>
+            <CardDescription>{t('charts.progressOverTime.description')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex h-[200px] items-center justify-center text-red-600">
+              {t('error.loadingData', { error })}
+            </div>
+          </CardContent>
+        </Card>
       );
     }
 
-    // Handle loading state
     if (loading) {
       return (
-        <ChartContainer
-          ref={ref}
-          className={className}
-          title={t('charts.progressOverTime.title')}
-          description={t('charts.progressOverTime.description')}
-          loading
-          height={chartHeight}
-        >
-          <div />
-        </ChartContainer>
+        <Card ref={ref} className={className}>
+          <CardHeader>
+            <CardTitle>{t('charts.progressOverTime.title')}</CardTitle>
+            <CardDescription>{t('charts.progressOverTime.description')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="w-full" style={{ height: chartHeight }} />
+          </CardContent>
+        </Card>
       );
     }
 
-    // Handle empty state
     if (!progressData || progressData.length === 0) {
       return (
-        <ChartContainer
-          ref={ref}
-          className={className}
-          title={t('charts.progressOverTime.title')}
-          description={t('charts.progressOverTime.description')}
-          noData
-          height={chartHeight}
-        >
-          <div />
-        </ChartContainer>
+        <Card ref={ref} className={className}>
+          <CardHeader>
+            <CardTitle>{t('charts.progressOverTime.title')}</CardTitle>
+            <CardDescription>{t('charts.progressOverTime.description')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div
+              className="flex items-center justify-center text-muted-foreground"
+              style={{ height: chartHeight }}
+            >
+              <p>No data available</p>
+            </div>
+          </CardContent>
+        </Card>
       );
     }
 
     return (
-      <ChartContainer
-        ref={ref}
-        className={className}
-        title={t('charts.progressOverTime.title')}
-        description={t('charts.progressOverTime.description')}
-        height={chartHeight}
-      >
-        <ResponsiveContainer width="100%" height={chartHeight}>
-          <LineChart data={progressData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke={chartColors.gray200} />
-            <XAxis
-              dataKey="dateString"
-              tick={{ fontSize: 12, fill: chartColors.gray600 }}
-              tickFormatter={formatXAxis}
-              stroke={chartColors.gray300}
-            />
-            <YAxis
-              tick={{ fontSize: 12, fill: chartColors.gray600 }}
-              stroke={chartColors.gray300}
-              tickFormatter={(value) => `${value}`}
-            />
-            <Tooltip content={<CustomTooltip />} />
-            <Legend wrapperStyle={{ paddingTop: '20px' }} iconType="circle" />
-            <Line
-              type="monotone"
-              dataKey="cardsLearning"
-              stroke={colorSchemes.progression[1]} // blue
-              name={t('charts.progressOverTime.learningCards')}
-              strokeWidth={2}
-              dot={false}
-              isAnimationActive={false}
-            />
-            <Line
-              type="monotone"
-              dataKey="cardsMastered"
-              stroke={colorSchemes.progression[2]} // green
-              name={t('charts.progressOverTime.masteredCards')}
-              strokeWidth={2}
-              dot={false}
-              isAnimationActive={false}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </ChartContainer>
+      <Card ref={ref} className={className}>
+        <CardHeader>
+          <CardTitle>{t('charts.progressOverTime.title')}</CardTitle>
+          <CardDescription>{t('charts.progressOverTime.description')}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ChartContainer config={chartConfig} className={`h-[${chartHeight}px] w-full`}>
+            <LineChart data={progressData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="dateString" tick={{ fontSize: 12 }} tickFormatter={formatXAxis} />
+              <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => `${value}`} />
+              <ChartTooltip
+                content={
+                  <ChartTooltipContent
+                    labelFormatter={(value) => formatXAxis(value as string)}
+                    formatter={(value) => [`${Number(value).toLocaleString()}`, '']}
+                  />
+                }
+              />
+              <ChartLegend content={<ChartLegendContent />} />
+              <Line
+                type="monotone"
+                dataKey="cardsLearning"
+                stroke="var(--color-cardsLearning)"
+                strokeWidth={2}
+                dot={false}
+                isAnimationActive={false}
+              />
+              <Line
+                type="monotone"
+                dataKey="cardsMastered"
+                stroke="var(--color-cardsMastered)"
+                strokeWidth={2}
+                dot={false}
+                isAnimationActive={false}
+              />
+            </LineChart>
+          </ChartContainer>
+        </CardContent>
+      </Card>
     );
   }
 );
