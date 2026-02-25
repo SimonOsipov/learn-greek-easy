@@ -148,6 +148,14 @@ export interface CardRecordResponse {
   updated_at: string;
 }
 
+export type GenerateCardType = 'meaning' | 'plural_form' | 'article' | 'sentence_translation';
+
+export interface GenerateCardsResponse {
+  card_type: string;
+  created: number;
+  updated: number;
+}
+
 // ============================================
 // Word Entry API Methods
 // ============================================
@@ -251,6 +259,16 @@ export const wordEntryAPI = {
         part,
         example_id: exampleId ?? null,
       }
+    );
+  },
+
+  generateCards: async (
+    wordEntryId: string,
+    cardType: GenerateCardType
+  ): Promise<GenerateCardsResponse> => {
+    return api.post<GenerateCardsResponse>(
+      `/api/v1/admin/word-entries/${wordEntryId}/generate-cards`,
+      { card_type: cardType }
     );
   },
 };

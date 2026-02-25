@@ -813,6 +813,10 @@
     "success": "Audio generation started",
     "error": "Failed to start audio generation"
   },
+  "cardGenerate": {
+    "success": "Cards generated: {{created}} created, {{updated}} updated",
+    "error": "Failed to generate cards"
+  },
   "wordList": {
     "audioReady": "Audio: ready",
     "audioMissing": "Audio: missing",
