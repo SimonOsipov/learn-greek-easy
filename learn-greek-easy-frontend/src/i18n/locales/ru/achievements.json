@@ -26,6 +26,38 @@
     "unlocked": "Достижение Разблокировано!",
     "xpEarned": "+{{xp}} XP"
   },
+  "empty": {
+    "title": "Нет доступных достижений",
+    "description": "Начните учиться, чтобы открывать достижения!"
+  },
+  "error": {
+    "loadFailed": "Не удалось загрузить достижения",
+    "retry": "Попробовать снова"
+  },
+  "stats": {
+    "heading": "Статистика достижений",
+    "unlocked": "Разблокировано",
+    "progress": "Прогресс",
+    "xpEarned": "XP заработано"
+  },
+  "filter": {
+    "all": "Все",
+    "unlocked": "Разблокированные",
+    "inProgress": "В процессе",
+    "locked": "Заблокированные"
+  },
+  "section": {
+    "almostThereTitle": "Почти готово",
+    "almostThereSubtitle": "Вы так близки к разблокировке!"
+  },
+  "status": {
+    "completed": "Завершено",
+    "notStarted": "Не начато"
+  },
+  "toggle": {
+    "showAll": "Показать все",
+    "hide": "Скрыть"
+  },
   "items": {
     "streak_first_flame": {
       "name": "Первое Пламя",

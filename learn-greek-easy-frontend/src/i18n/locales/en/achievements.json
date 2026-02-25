@@ -26,6 +26,38 @@
     "unlocked": "Achievement Unlocked!",
     "xpEarned": "+{{xp}} XP"
   },
+  "empty": {
+    "title": "No achievements available",
+    "description": "Start learning to unlock achievements!"
+  },
+  "error": {
+    "loadFailed": "Failed to load achievements",
+    "retry": "Try Again"
+  },
+  "stats": {
+    "heading": "Achievement Statistics",
+    "unlocked": "Unlocked",
+    "progress": "Progress",
+    "xpEarned": "XP Earned"
+  },
+  "filter": {
+    "all": "All",
+    "unlocked": "Unlocked",
+    "inProgress": "In Progress",
+    "locked": "Locked"
+  },
+  "section": {
+    "almostThereTitle": "Almost There",
+    "almostThereSubtitle": "You're so close to unlocking these!"
+  },
+  "status": {
+    "completed": "Completed",
+    "notStarted": "Not started"
+  },
+  "toggle": {
+    "showAll": "Show all",
+    "hide": "Hide"
+  },
   "items": {
     "streak_first_flame": {
       "name": "First Flame",
