@@ -137,6 +137,7 @@ export const StatsGrid: React.FC<StatsGridProps> = ({
         </CardHeader>
         <CardContent>
           <div className="text-3xl font-bold text-foreground">{totalXP.toLocaleString()}</div>
+          <p className="mt-2 text-xs text-muted-foreground">{t('stats.totalXPSubtitle')}</p>
         </CardContent>
       </Card>
     </div>

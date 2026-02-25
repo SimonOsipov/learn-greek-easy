@@ -22,7 +22,8 @@
       "start": "Начните серию обучения сегодня!"
     },
     "cultureQuestionsMastered": "Освоенные вопросы о культуре",
-    "cultureProgress": "Знание греческой культуры"
+    "cultureProgress": "Знание греческой культуры",
+    "totalXPSubtitle": "Ваши очки опыта"
   },
   "level": {
     "title": "Уровень {{level}}",
@@ -84,7 +85,8 @@
         "relearning": "Переучивание"
       },
       "cards": "{{count}} карточек ({{percent}}%)"
-    }
+    },
+    "noData": "Нет данных"
   },
   "error": {
     "loadingData": "Ошибка загрузки данных: {{error}}"

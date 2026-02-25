@@ -22,7 +22,8 @@
       "start": "Start your learning streak today!"
     },
     "cultureQuestionsMastered": "Culture Questions Mastered",
-    "cultureProgress": "Greek culture knowledge"
+    "cultureProgress": "Greek culture knowledge",
+    "totalXPSubtitle": "Your experience points"
   },
   "level": {
     "title": "Level {{level}}",
@@ -84,7 +85,8 @@
         "relearning": "Relearning"
       },
       "cards": "{{count}} cards ({{percent}}%)"
-    }
+    },
+    "noData": "No data available"
   },
   "error": {
     "loadingData": "Error loading data: {{error}}"
