@@ -96,6 +96,7 @@
     "clear": "Clear"
   },
   "developerResponse": {
-    "title": "Developer Response"
+    "title": "Developer Response",
+    "ariaLabel": "Developer response"
   }
 }

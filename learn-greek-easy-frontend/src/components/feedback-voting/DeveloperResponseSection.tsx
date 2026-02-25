@@ -36,9 +36,10 @@ export const DeveloperResponseSection: React.FC<DeveloperResponseSectionProps> =
   });
 
   return (
-    <div
+    <section
       className="mx-6 mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950/30"
       data-testid="developer-response-section"
+      aria-label={t('developerResponse.ariaLabel')}
     >
       <div className="mb-2 flex items-center gap-2">
         <MessageSquareText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
@@ -53,6 +54,6 @@ export const DeveloperResponseSection: React.FC<DeveloperResponseSectionProps> =
       >
         {response}
       </p>
-    </div>
+    </section>
   );
 };

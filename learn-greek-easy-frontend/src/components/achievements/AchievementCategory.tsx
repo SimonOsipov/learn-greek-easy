@@ -30,13 +30,48 @@ interface CategoryColorConfig {
 }
 
 const CATEGORY_COLORS: Record<string, CategoryColorConfig> = {
-  streak: { icon: 'text-orange-600', iconDark: 'dark:text-orange-400', border: 'border-l-orange-500', borderDark: 'dark:border-l-orange-400' },
-  learning: { icon: 'text-blue-600', iconDark: 'dark:text-blue-400', border: 'border-l-blue-500', borderDark: 'dark:border-l-blue-400' },
-  session: { icon: 'text-green-600', iconDark: 'dark:text-green-400', border: 'border-l-green-500', borderDark: 'dark:border-l-green-400' },
-  accuracy: { icon: 'text-teal-600', iconDark: 'dark:text-teal-400', border: 'border-l-teal-500', borderDark: 'dark:border-l-teal-400' },
-  cefr: { icon: 'text-indigo-600', iconDark: 'dark:text-indigo-400', border: 'border-l-indigo-500', borderDark: 'dark:border-l-indigo-400' },
-  special: { icon: 'text-purple-600', iconDark: 'dark:text-purple-400', border: 'border-l-purple-500', borderDark: 'dark:border-l-purple-400' },
-  culture: { icon: 'text-rose-600', iconDark: 'dark:text-rose-400', border: 'border-l-rose-500', borderDark: 'dark:border-l-rose-400' },
+  streak: {
+    icon: 'text-orange-600',
+    iconDark: 'dark:text-orange-400',
+    border: 'border-l-orange-500',
+    borderDark: 'dark:border-l-orange-400',
+  },
+  learning: {
+    icon: 'text-blue-600',
+    iconDark: 'dark:text-blue-400',
+    border: 'border-l-blue-500',
+    borderDark: 'dark:border-l-blue-400',
+  },
+  session: {
+    icon: 'text-green-600',
+    iconDark: 'dark:text-green-400',
+    border: 'border-l-green-500',
+    borderDark: 'dark:border-l-green-400',
+  },
+  accuracy: {
+    icon: 'text-teal-600',
+    iconDark: 'dark:text-teal-400',
+    border: 'border-l-teal-500',
+    borderDark: 'dark:border-l-teal-400',
+  },
+  cefr: {
+    icon: 'text-indigo-600',
+    iconDark: 'dark:text-indigo-400',
+    border: 'border-l-indigo-500',
+    borderDark: 'dark:border-l-indigo-400',
+  },
+  special: {
+    icon: 'text-purple-600',
+    iconDark: 'dark:text-purple-400',
+    border: 'border-l-purple-500',
+    borderDark: 'dark:border-l-purple-400',
+  },
+  culture: {
+    icon: 'text-rose-600',
+    iconDark: 'dark:text-rose-400',
+    border: 'border-l-rose-500',
+    borderDark: 'dark:border-l-rose-400',
+  },
 };
 
 const DEFAULT_COLORS: CategoryColorConfig = {

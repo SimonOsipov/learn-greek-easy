@@ -54,7 +54,12 @@ export const FeedbackList: React.FC = () => {
             <ChevronLeft className="mr-1 h-4 w-4" />
             {t('pagination.previous')}
           </Button>
-          <span className="text-sm text-muted-foreground" data-testid="pagination-info">
+          <span
+            className="text-sm text-muted-foreground"
+            data-testid="pagination-info"
+            aria-live="polite"
+            role="status"
+          >
             {t('pagination.pageInfo', { page, totalPages })}
           </span>
           <Button
