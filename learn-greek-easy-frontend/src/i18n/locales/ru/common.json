@@ -206,7 +206,8 @@
     "pagination": {
       "showing": "Показаны {{from}}-{{to}} из {{total}} записей",
       "previous": "Назад",
-      "next": "Далее"
+      "next": "Далее",
+      "pageLabel": "Страница {{page}}"
     }
   },
   "checkout": {

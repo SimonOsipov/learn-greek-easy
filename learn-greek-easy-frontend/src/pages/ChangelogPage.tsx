@@ -4,10 +4,15 @@
 
 import React, { useCallback, useEffect, useRef } from 'react';
 
-import { History, RefreshCw } from 'lucide-react';
+import { Flag, History, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { ChangelogCard, ChangelogCardSkeleton, ChangelogPagination } from '@/components/changelog';
+import {
+  ChangelogCard,
+  ChangelogCardSkeleton,
+  ChangelogPagination,
+  TagFilter,
+} from '@/components/changelog';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -16,6 +21,8 @@ import {
   trackChangelogPageViewed,
 } from '@/lib/analytics/changelogAnalytics';
 import {
+  selectActiveTag,
+  selectAllItems,
   selectChangelogError,
   selectChangelogItems,
   selectChangelogLoading,
@@ -40,20 +47,27 @@ export function ChangelogPage() {
   const fetchChangelog = useChangelogStore((state) => state.fetchChangelog);
   const setPage = useChangelogStore((state) => state.setPage);
   const reset = useChangelogStore((state) => state.reset);
+  const activeTag = useChangelogStore(selectActiveTag);
+  const setTag = useChangelogStore((state) => state.setTag);
+  const allItems = useChangelogStore(selectAllItems);
 
   // Track page view once
   const hasTrackedPageView = useRef(false);
+  const hasHighlightedRef = useRef(false);
 
-  // Fetch on mount and when language changes
+  // Effect 1: fetch on mount and re-fetch on language change (no reset on language change)
   useEffect(() => {
     fetchChangelog(i18n.language).catch(() => {
       // Error handled by store
     });
+  }, [i18n.language, fetchChangelog]);
 
+  // Effect 2: reset store on unmount only
+  useEffect(() => {
     return () => {
       reset();
     };
-  }, [i18n.language, fetchChangelog, reset]);
+  }, [reset]);
 
   // Track page view on first successful load
   useEffect(() => {
@@ -68,6 +82,40 @@ export function ChangelogPage() {
     }
   }, [isLoading, items.length, total, page, i18n.language]);
 
+  // Deep linking: scroll to entry from URL hash
+  useEffect(() => {
+    if (hasHighlightedRef.current || isLoading || allItems.length === 0) return;
+
+    const hash = window.location.hash;
+    if (!hash || !hash.startsWith('#entry-')) return;
+
+    const entryId = hash.slice(7); // Remove "#entry-" prefix
+
+    // Search allItems (full unfiltered dataset) to support cross-page navigation
+    const idx = allItems.findIndex((item) => item.id === entryId);
+    if (idx === -1) return;
+
+    // Clear any active tag filter so the entry is visible
+    setTag(null);
+
+    // Calculate target page (pageSize is items per display page)
+    const targetPage = Math.floor(idx / pageSize) + 1;
+    if (targetPage !== page) {
+      setPage(targetPage);
+    }
+
+    hasHighlightedRef.current = true;
+
+    setTimeout(() => {
+      const element = document.getElementById(`entry-${entryId}`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        element.classList.add('highlight-animation');
+        setTimeout(() => element.classList.remove('highlight-animation'), 2000);
+      }
+    }, 150);
+  }, [isLoading, allItems, page, pageSize, setPage, setTag]);
+
   const handlePageChange = useCallback(
     (newPage: number) => {
       if (newPage !== page) {
@@ -76,11 +124,11 @@ export function ChangelogPage() {
           to_page: newPage,
           total_pages: totalPages,
         });
-        setPage(newPage, i18n.language);
+        setPage(newPage);
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     },
-    [page, totalPages, setPage, i18n.language]
+    [page, totalPages, setPage]
   );
 
   const handleRetry = useCallback(() => {
@@ -90,7 +138,7 @@ export function ChangelogPage() {
   }, [fetchChangelog, i18n.language]);
 
   return (
-    <div className="space-y-6 pb-8" data-testid="changelog-page">
+    <div className="space-y-6 pb-20 lg:pb-8" data-testid="changelog-page">
       {/* Page Header */}
       <div>
         <h1 className="text-2xl font-semibold text-foreground md:text-3xl">
@@ -100,6 +148,8 @@ export function ChangelogPage() {
           {t('changelog.page.subtitle')}
         </p>
       </div>
+
+      <TagFilter activeTag={activeTag} onTagChange={setTag} />
 
       {/* Error State */}
       {error && !isLoading && (
@@ -142,6 +192,17 @@ export function ChangelogPage() {
               onPageChange={handlePageChange}
               isLoading={isLoading}
             />
+          )}
+
+          {/* End-of-list message on last page */}
+          {page === totalPages && totalPages > 0 && (
+            <div
+              className="flex flex-col items-center gap-2 py-6 text-center text-muted-foreground"
+              data-testid="changelog-end-message"
+            >
+              <Flag className="h-5 w-5" />
+              <p className="text-sm">{t('endMessage', { ns: 'changelog' })}</p>
+            </div>
           )}
         </>
       )}

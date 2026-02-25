@@ -18,6 +18,8 @@ import { ChangelogPage } from '@/pages/ChangelogPage';
 import { render, screen, waitFor, act } from '@/lib/test-utils';
 import {
   useChangelogStore,
+  selectActiveTag,
+  selectAllItems,
   selectChangelogItems,
   selectChangelogLoading,
   selectChangelogError,
@@ -31,6 +33,8 @@ import * as changelogAnalytics from '@/lib/analytics/changelogAnalytics';
 // Mock the changelog store
 vi.mock('@/stores/changelogStore', () => ({
   useChangelogStore: vi.fn(),
+  selectActiveTag: vi.fn((state) => state.activeTag),
+  selectAllItems: vi.fn((state) => state.allItems),
   selectChangelogItems: vi.fn((state) => state.items),
   selectChangelogLoading: vi.fn((state) => state.isLoading),
   selectChangelogError: vi.fn((state) => state.error),
@@ -59,6 +63,15 @@ interface MockStoreState {
     created_at: string;
     updated_at: string;
   }>;
+  allItems: Array<{
+    id: string;
+    title: string;
+    content: string;
+    tag: 'new_feature' | 'bug_fix' | 'announcement';
+    created_at: string;
+    updated_at: string;
+  }>;
+  activeTag: 'new_feature' | 'bug_fix' | 'announcement' | null;
   isLoading: boolean;
   error: string | null;
   page: number;
@@ -67,11 +80,14 @@ interface MockStoreState {
   totalPages: number;
   fetchChangelog: Mock;
   setPage: Mock;
+  setTag: Mock;
   reset: Mock;
 }
 
 const createMockStoreState = (overrides: Partial<MockStoreState> = {}): MockStoreState => ({
   items: [],
+  allItems: [],
+  activeTag: null,
   isLoading: false,
   error: null,
   page: 1,
@@ -80,6 +96,7 @@ const createMockStoreState = (overrides: Partial<MockStoreState> = {}): MockStor
   totalPages: 0,
   fetchChangelog: vi.fn().mockResolvedValue(undefined),
   setPage: vi.fn(),
+  setTag: vi.fn(),
   reset: vi.fn(),
   ...overrides,
 });
@@ -172,7 +189,7 @@ describe('ChangelogPage', () => {
 
       render(<ChangelogPage />);
 
-      const retryButton = screen.getByRole('button');
+      const retryButton = screen.getByRole('button', { name: /retry/i });
       expect(retryButton).toBeInTheDocument();
     });
 
@@ -189,7 +206,7 @@ describe('ChangelogPage', () => {
 
       render(<ChangelogPage />);
 
-      const retryButton = screen.getByRole('button');
+      const retryButton = screen.getByRole('button', { name: /retry/i });
       await user.click(retryButton);
 
       // fetchChangelog is called on mount and on retry
@@ -373,7 +390,7 @@ describe('ChangelogPage', () => {
       const page2Button = screen.getByTestId('changelog-pagination-page-2');
       await user.click(page2Button);
 
-      expect(mockSetPage).toHaveBeenCalledWith(2, 'en');
+      expect(mockSetPage).toHaveBeenCalledWith(2);
     });
 
     it('should scroll to top when page changes', async () => {
@@ -541,6 +558,91 @@ describe('ChangelogPage', () => {
 
       const heading = screen.getByRole('heading', { level: 1 });
       expect(heading).toBeInTheDocument();
+    });
+  });
+
+  describe('Tag Filter', () => {
+    it('should render TagFilter component', () => {
+      const mockItems = [
+        {
+          id: '1',
+          title: 'Entry 1',
+          content: 'Content 1',
+          tag: 'new_feature' as const,
+          created_at: '2026-01-15T10:30:00Z',
+          updated_at: '2026-01-15T10:30:00Z',
+        },
+      ];
+      setupMockStore(createMockStoreState({ items: mockItems, total: 5, totalPages: 1 }));
+      render(<ChangelogPage />);
+      expect(screen.getByTestId('tag-filter')).toBeInTheDocument();
+    });
+
+    it('should call setTag when tag filter button is clicked', async () => {
+      const user = userEvent.setup();
+      const mockItems = [
+        {
+          id: '1',
+          title: 'Entry 1',
+          content: 'Content 1',
+          tag: 'new_feature' as const,
+          created_at: '2026-01-15T10:30:00Z',
+          updated_at: '2026-01-15T10:30:00Z',
+        },
+      ];
+      const mockStore = createMockStoreState({ items: mockItems, total: 5, totalPages: 1 });
+      setupMockStore(mockStore);
+      render(<ChangelogPage />);
+      await user.click(screen.getByTestId('tag-filter-new_feature'));
+      expect(mockStore.setTag).toHaveBeenCalledWith('new_feature');
+    });
+  });
+
+  describe('End Message', () => {
+    it('should show end message when on the last page', () => {
+      const mockItems = [
+        {
+          id: '1',
+          title: 'Entry 1',
+          content: 'Content 1',
+          tag: 'new_feature' as const,
+          created_at: '2026-01-15T10:30:00Z',
+          updated_at: '2026-01-15T10:30:00Z',
+        },
+      ];
+      setupMockStore(
+        createMockStoreState({
+          items: mockItems,
+          page: 2,
+          totalPages: 2,
+          total: 10,
+        })
+      );
+      render(<ChangelogPage />);
+      expect(screen.getByText(/reached the beginning/i)).toBeInTheDocument();
+    });
+
+    it('should NOT show end message when not on the last page', () => {
+      const mockItems = [
+        {
+          id: '1',
+          title: 'Entry 1',
+          content: 'Content 1',
+          tag: 'new_feature' as const,
+          created_at: '2026-01-15T10:30:00Z',
+          updated_at: '2026-01-15T10:30:00Z',
+        },
+      ];
+      setupMockStore(
+        createMockStoreState({
+          items: mockItems,
+          page: 1,
+          totalPages: 3,
+          total: 15,
+        })
+      );
+      render(<ChangelogPage />);
+      expect(screen.queryByText(/reached the beginning/i)).not.toBeInTheDocument();
     });
   });
 });
