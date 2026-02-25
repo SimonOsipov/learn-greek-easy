@@ -73,43 +73,64 @@ const STATUS_FILTERS: Record<StatusFilter, (a: AchievementResponse) => boolean> 
  */
 const AchievementsLoadingSkeleton: React.FC = () => (
   <div className="space-y-6">
-    {/* Mobile stats skeleton */}
+    {/* Mobile compact stats */}
     <Card className="sm:hidden">
       <CardContent className="grid grid-cols-3 gap-2 px-2 py-3">
         {[1, 2, 3].map((i) => (
           <div key={i} className="flex flex-col items-center gap-1">
-            <Skeleton className="h-7 w-7 rounded-full" />
-            <Skeleton className="h-3 w-12" />
-            <Skeleton className="h-5 w-10" />
+            <Skeleton className="h-4 w-12" />
+            <Skeleton className="h-6 w-10" />
           </div>
         ))}
       </CardContent>
     </Card>
 
-    {/* Desktop stats skeleton */}
-    <div className="hidden sm:grid sm:grid-cols-3 sm:gap-4">
+    {/* Desktop stat cards */}
+    <div className="hidden gap-4 sm:grid sm:grid-cols-3">
       {[1, 2, 3].map((i) => (
         <Card key={i}>
           <CardHeader className="flex flex-row items-center gap-3 pb-2">
             <Skeleton className="h-11 w-11 rounded-full" />
-            <div>
+            <div className="space-y-1">
               <Skeleton className="h-4 w-16" />
-              <Skeleton className="mt-1 h-7 w-12" />
+              <Skeleton className="h-7 w-12" />
             </div>
           </CardHeader>
         </Card>
       ))}
     </div>
 
-    {/* Category skeletons */}
+    {/* Filter tabs skeleton */}
+    <div className="flex items-center gap-2">
+      {[1, 2, 3, 4].map((i) => (
+        <Skeleton key={i} className="h-8 w-20 rounded-full" />
+      ))}
+    </div>
+
+    {/* Collapsed category skeletons */}
     {[1, 2].map((i) => (
-      <div key={i} className="space-y-4">
-        <Skeleton className="h-6 w-32" />
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3].map((j) => (
+      <div key={i} className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-5 w-5 rounded" />
+            <Skeleton className="h-5 w-28" />
+          </div>
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-4 w-16" />
+            <Skeleton className="h-4 w-4" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {[1, 2].map((j) => (
             <Card key={j}>
-              <CardContent className="p-4">
-                <Skeleton className="h-24 w-full" />
+              <CardContent className="p-3">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-10 w-10 rounded-lg" />
+                  <div className="flex-1 space-y-1">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-3 w-32" />
+                  </div>
+                </div>
               </CardContent>
             </Card>
           ))}
