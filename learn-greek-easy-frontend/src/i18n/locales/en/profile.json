@@ -14,6 +14,7 @@
     "change": "Change",
     "memberSince": "Member Since",
     "lastActive": "Last Active",
+    "activeNow": "Active now",
     "roles": {
       "admin": "Admin",
       "premium": "Premium",
