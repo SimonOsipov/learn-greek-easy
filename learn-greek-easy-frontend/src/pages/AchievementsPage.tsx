@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Trophy, AlertCircle, Star } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { AchievementCategory } from '@/components/achievements';
+import { AchievementCard, AchievementCategory } from '@/components/achievements';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -199,6 +199,20 @@ const AchievementsPage: React.FC = () => {
 
   const filteredCategories = Object.keys(filteredGroupedAchievements);
 
+  // "Almost There" — top 3 in-progress achievements by progress descending
+  const almostThereAchievements = useMemo(() => {
+    if (!achievements?.achievements) return [];
+    return achievements.achievements
+      .map(normaliseAchievement)
+      .filter((a) => !a.unlocked && a.progress > 0)
+      .sort((a, b) => b.progress - a.progress)
+      .slice(0, 3);
+  }, [achievements]);
+
+  const showAlmostThere =
+    almostThereAchievements.length > 0 &&
+    (statusFilter === 'all' || statusFilter === 'in_progress');
+
   // Stats from API response
   const totalCount = achievements?.total_count ?? 0;
   const unlockedCount = achievements?.unlocked_count ?? 0;
@@ -342,6 +356,36 @@ const AchievementsPage: React.FC = () => {
               ))}
             </TabsList>
           </Tabs>
+
+          {/* Almost There Section */}
+          {showAlmostThere && (
+            <section
+              className="rounded-lg border-l-4 border-amber-400 bg-amber-50/50 p-4 dark:border-amber-500 dark:bg-amber-950/20"
+              aria-labelledby="almost-there-heading"
+              data-testid="almost-there-section"
+            >
+              <div className="mb-3">
+                <h2
+                  id="almost-there-heading"
+                  className="text-base font-semibold text-amber-900 dark:text-amber-200"
+                >
+                  {t('section.almostThereTitle', 'Almost There!')}
+                </h2>
+                <p className="text-sm text-amber-700 dark:text-amber-400">
+                  {t('section.almostThereSubtitle', "You're so close to unlocking these!")}
+                </p>
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {almostThereAchievements.map((achievement) => (
+                  <AchievementCard
+                    key={achievement.id}
+                    achievement={achievement}
+                    className="border-amber-200 opacity-100 dark:border-amber-800"
+                  />
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* Achievement Categories */}
           {filteredCategories.length > 0 ? (
