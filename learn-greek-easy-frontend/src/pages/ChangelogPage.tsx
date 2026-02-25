@@ -7,7 +7,12 @@ import React, { useCallback, useEffect, useRef } from 'react';
 import { History, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { ChangelogCard, ChangelogCardSkeleton, ChangelogPagination } from '@/components/changelog';
+import {
+  ChangelogCard,
+  ChangelogCardSkeleton,
+  ChangelogPagination,
+  TagFilter,
+} from '@/components/changelog';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -16,6 +21,7 @@ import {
   trackChangelogPageViewed,
 } from '@/lib/analytics/changelogAnalytics';
 import {
+  selectActiveTag,
   selectChangelogError,
   selectChangelogItems,
   selectChangelogLoading,
@@ -40,6 +46,8 @@ export function ChangelogPage() {
   const fetchChangelog = useChangelogStore((state) => state.fetchChangelog);
   const setPage = useChangelogStore((state) => state.setPage);
   const reset = useChangelogStore((state) => state.reset);
+  const activeTag = useChangelogStore(selectActiveTag);
+  const setTag = useChangelogStore((state) => state.setTag);
 
   // Track page view once
   const hasTrackedPageView = useRef(false);
@@ -76,11 +84,11 @@ export function ChangelogPage() {
           to_page: newPage,
           total_pages: totalPages,
         });
-        setPage(newPage, i18n.language);
+        setPage(newPage);
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     },
-    [page, totalPages, setPage, i18n.language]
+    [page, totalPages, setPage]
   );
 
   const handleRetry = useCallback(() => {
@@ -100,6 +108,8 @@ export function ChangelogPage() {
           {t('changelog.page.subtitle')}
         </p>
       </div>
+
+      <TagFilter activeTag={activeTag} onTagChange={setTag} />
 
       {/* Error State */}
       {error && !isLoading && (

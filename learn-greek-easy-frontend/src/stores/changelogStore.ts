@@ -9,7 +9,7 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
 import { changelogAPI } from '@/services/changelogAPI';
-import type { ChangelogItem } from '@/types/changelog';
+import type { ChangelogItem, ChangelogTag } from '@/types/changelog';
 
 /**
  * Changelog Store State Interface
@@ -17,6 +17,10 @@ import type { ChangelogItem } from '@/types/changelog';
 interface ChangelogState {
   // Data
   items: ChangelogItem[];
+  allItems: ChangelogItem[];
+
+  // Filter
+  activeTag: ChangelogTag | null;
 
   // Pagination
   page: number;
@@ -32,7 +36,8 @@ interface ChangelogState {
 
   // Actions
   fetchChangelog: (language?: string) => Promise<void>;
-  setPage: (page: number, language?: string) => void;
+  setPage: (page: number) => void;
+  setTag: (tag: ChangelogTag | null) => void;
   reset: () => void;
 }
 
@@ -41,6 +46,8 @@ interface ChangelogState {
  */
 const INITIAL_STATE = {
   items: [] as ChangelogItem[],
+  allItems: [] as ChangelogItem[],
+  activeTag: null as ChangelogTag | null,
   page: 1,
   pageSize: 5,
   total: 0,
@@ -48,6 +55,27 @@ const INITIAL_STATE = {
   isLoading: false,
   error: null,
 };
+
+/** Derive paginated items from allItems + activeTag + page.
+ * NOTE: Backend enforces page_size <= 50. If >50 entries exist, only newest 50 are fetched. */
+function derivePagedState(
+  allItems: ChangelogItem[],
+  activeTag: ChangelogTag | null,
+  page: number,
+  pageSize: number
+) {
+  const filtered = activeTag ? allItems.filter((item) => item.tag === activeTag) : allItems;
+  const filteredTotal = filtered.length;
+  const filteredTotalPages = Math.ceil(filteredTotal / pageSize);
+  const safePage = Math.min(page, Math.max(filteredTotalPages, 1));
+  const start = (safePage - 1) * pageSize;
+  return {
+    items: filtered.slice(start, start + pageSize),
+    total: filteredTotal,
+    totalPages: filteredTotalPages,
+    page: safePage,
+  };
+}
 
 /**
  * Changelog store hook for components
@@ -58,34 +86,43 @@ export const useChangelogStore = create<ChangelogState>()(
       ...INITIAL_STATE,
 
       /**
-       * Fetch paginated changelog entries from public API
+       * Fetch all changelog entries from public API, then derive paginated view
        */
       fetchChangelog: async (language?: string) => {
-        const { page, pageSize } = get();
         set({ isLoading: true, error: null });
-
         try {
-          const response = await changelogAPI.getList(page, pageSize, language);
-
+          // Fetch ALL entries (backend hard max = 50)
+          const response = await changelogAPI.getList(1, 50, language);
+          const { activeTag, page, pageSize } = get();
+          const derived = derivePagedState(response.items, activeTag, page, pageSize);
           set({
-            items: response.items,
-            total: response.total,
-            totalPages: Math.ceil(response.total / response.page_size),
+            allItems: response.items,
+            ...derived,
             isLoading: false,
           });
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Failed to load changelog';
-          set({ isLoading: false, error: message, items: [] });
+          set({ isLoading: false, error: message, items: [], allItems: [] });
           throw error;
         }
       },
 
       /**
-       * Set current page and re-fetch
+       * Set current page (client-side only, no API call)
        */
-      setPage: (page: number, language?: string) => {
-        set({ page });
-        get().fetchChangelog(language);
+      setPage: (page: number) => {
+        const { allItems, activeTag, pageSize } = get();
+        const derived = derivePagedState(allItems, activeTag, page, pageSize);
+        set(derived);
+      },
+
+      /**
+       * Set active tag filter and reset to page 1
+       */
+      setTag: (tag: ChangelogTag | null) => {
+        const { allItems, pageSize } = get();
+        const derived = derivePagedState(allItems, tag, 1, pageSize); // always page 1
+        set({ activeTag: tag, ...derived });
       },
 
       /**
@@ -108,3 +145,5 @@ export const selectChangelogPage = (state: ChangelogState) => state.page;
 export const selectChangelogPageSize = (state: ChangelogState) => state.pageSize;
 export const selectChangelogTotal = (state: ChangelogState) => state.total;
 export const selectChangelogTotalPages = (state: ChangelogState) => state.totalPages;
+export const selectActiveTag = (state: ChangelogState) => state.activeTag;
+export const selectAllItems = (state: ChangelogState) => state.allItems;

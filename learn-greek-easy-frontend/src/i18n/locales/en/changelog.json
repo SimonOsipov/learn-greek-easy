@@ -3,5 +3,9 @@
     "newFeature": "New Feature",
     "bugFix": "Bug Fix",
     "announcement": "Announcement"
+  },
+  "filter": {
+    "all": "All",
+    "label": "Filter by type"
   }
 }
