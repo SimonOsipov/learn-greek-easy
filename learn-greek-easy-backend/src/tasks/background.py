@@ -1410,9 +1410,11 @@ async def generate_word_entry_audio_task(  # noqa: C901
                     if ex_id and ex_id in new_example_audio_keys:
                         ex_copy["audio_key"] = new_example_audio_keys[ex_id]
                         ex_copy["audio_status"] = "ready"
+                        ex_copy.pop("audio_generating_since", None)
                     elif ex_copy.get("audio_status") == "generating":
                         # Generation was attempted but failed
                         ex_copy["audio_status"] = "failed"
+                        ex_copy.pop("audio_generating_since", None)
                     updated_examples.append(ex_copy)
                 word_entry.examples = updated_examples
 
@@ -1524,17 +1526,7 @@ async def generate_word_entry_part_audio_task(  # noqa: C901
                             SET
                                 audio_key = CASE WHEN :success THEN :s3_key ELSE audio_key END,
                                 audio_status = CASE WHEN :success THEN 'READY'::audiostatus ELSE 'FAILED'::audiostatus END,
-                                audio_generating_since = CASE
-                                    WHEN NOT EXISTS (
-                                        SELECT 1
-                                        FROM jsonb_array_elements(
-                                            COALESCE(examples::jsonb, '[]'::jsonb)
-                                        ) AS e
-                                        WHERE e->>'audio_status' = 'generating'
-                                    )
-                                    THEN NULL
-                                    ELSE audio_generating_since
-                                END,
+                                audio_generating_since = NULL,
                                 updated_at = NOW()
                             WHERE id = :word_entry_id
                         """
@@ -1560,7 +1552,7 @@ async def generate_word_entry_part_audio_task(  # noqa: C901
                                     SELECT coalesce(json_agg(
                                         CASE
                                             WHEN elem->>'id' = :example_id
-                                            THEN elem || :patch::jsonb
+                                            THEN (elem - 'audio_generating_since') || CAST(:patch AS jsonb)
                                             ELSE elem
                                         END
                                         ORDER BY ordinality
@@ -1568,17 +1560,6 @@ async def generate_word_entry_part_audio_task(  # noqa: C901
                                     FROM jsonb_array_elements(examples::jsonb)
                                         WITH ORDINALITY AS arr(elem, ordinality)
                                 ),
-                                audio_generating_since = CASE
-                                    WHEN audio_status != 'GENERATING'::audiostatus
-                                         AND NOT EXISTS (
-                                             SELECT 1
-                                             FROM jsonb_array_elements(examples::jsonb) AS e
-                                             WHERE e->>'id' != :example_id
-                                               AND e->>'audio_status' = 'generating'
-                                         )
-                                    THEN NULL
-                                    ELSE audio_generating_since
-                                END,
                                 updated_at = NOW()
                             WHERE id = :word_entry_id
                               AND examples IS NOT NULL

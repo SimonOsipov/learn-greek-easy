@@ -147,8 +147,8 @@ class TestResolveExampleAudioStatus:
         assert result == "missing"
 
     def test_generating_fresh_returns_generating(self):
-        """Explicit 'generating' with recent timestamp returns 'generating'."""
-        generating_since = datetime.now(timezone.utc) - timedelta(minutes=2)
+        """Explicit 'generating' with recent ISO timestamp returns 'generating'."""
+        generating_since = (datetime.now(timezone.utc) - timedelta(minutes=2)).isoformat()
         result = _resolve_example_audio_status(
             example_audio_status="generating",
             example_audio_key=None,
@@ -157,16 +157,25 @@ class TestResolveExampleAudioStatus:
         assert result == "generating"
 
     def test_generating_stale_returns_failed(self):
-        """Explicit 'generating' with stale timestamp returns 'failed'."""
+        """Explicit 'generating' with stale ISO timestamp returns 'failed'."""
         generating_since = (
             datetime.now(timezone.utc) - STALE_GENERATING_THRESHOLD - timedelta(seconds=1)
-        )
+        ).isoformat()
         result = _resolve_example_audio_status(
             example_audio_status="generating",
             example_audio_key=None,
             generating_since=generating_since,
         )
         assert result == "failed"
+
+    def test_generating_malformed_timestamp_returns_generating(self):
+        """Explicit 'generating' with malformed timestamp returns 'generating' (no stale check)."""
+        result = _resolve_example_audio_status(
+            example_audio_status="generating",
+            example_audio_key=None,
+            generating_since="not-a-timestamp",
+        )
+        assert result == "generating"
 
 
 # ============================================================================
@@ -205,3 +214,25 @@ class TestWordEntryToResponseAudioStatus:
         result = word_entry_to_response(sample_entry, s3_service=mock_s3_service)
         assert len(result.examples) == 1
         assert result.examples[0].audio_status == "ready"
+
+    def test_example_generating_since_read_from_jsonb(self, sample_entry, mock_s3_service):
+        """word_entry_to_response reads audio_generating_since from per-example JSONB field."""
+        stale_ts = (
+            datetime.now(timezone.utc) - STALE_GENERATING_THRESHOLD - timedelta(seconds=1)
+        ).isoformat()
+        sample_entry.examples = [
+            {
+                "id": "ex_1",
+                "greek": "Το σπίτι μου",
+                "english": "My house",
+                "russian": "",
+                "context": None,
+                "audio_key": None,
+                "audio_status": "generating",
+                "audio_generating_since": stale_ts,
+            }
+        ]
+        result = word_entry_to_response(sample_entry, s3_service=mock_s3_service)
+        assert len(result.examples) == 1
+        # Stale generating_since in JSONB → resolved to failed
+        assert result.examples[0].audio_status == "failed"

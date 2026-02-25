@@ -1964,6 +1964,7 @@ async def generate_word_entry_audio(
     if request.part == "lemma":
         text = word_entry.lemma
         word_entry.audio_status = AudioStatus.GENERATING
+        word_entry.audio_generating_since = datetime.now(timezone.utc)
     else:
         examples = word_entry.examples or []
         example_dict = None
@@ -1980,10 +1981,13 @@ async def generate_word_entry_audio(
             )
         text = example_dict.get("greek", "")
         updated_examples = list(examples)
-        updated_examples[example_index] = {**example_dict, "audio_status": "generating"}
+        updated_examples[example_index] = {
+            **example_dict,
+            "audio_status": "generating",
+            "audio_generating_since": datetime.now(timezone.utc).isoformat(),
+        }
         word_entry.examples = updated_examples
 
-    word_entry.audio_generating_since = datetime.now(timezone.utc)
     await db.commit()
 
     background_tasks.add_task(

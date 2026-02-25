@@ -30,14 +30,18 @@ def _resolve_audio_status(
 def _resolve_example_audio_status(
     example_audio_status: str | None,
     example_audio_key: str | None,
-    generating_since: datetime | None,
+    generating_since: str | None,
 ) -> str:
     if example_audio_status is not None:
         if example_audio_status.lower() == "generating":
             if generating_since is not None:
-                elapsed = datetime.now(timezone.utc) - generating_since
-                if elapsed > STALE_GENERATING_THRESHOLD:
-                    return "failed"
+                try:
+                    ts = datetime.fromisoformat(generating_since)
+                    elapsed = datetime.now(timezone.utc) - ts
+                    if elapsed > STALE_GENERATING_THRESHOLD:
+                        return "failed"
+                except (ValueError, TypeError):
+                    pass
             return "generating"
         return example_audio_status.lower()
     return "ready" if example_audio_key else "missing"
@@ -77,7 +81,7 @@ def word_entry_to_response(
             example.audio_status = _resolve_example_audio_status(
                 raw_ex.get("audio_status"),
                 raw_ex.get("audio_key"),
-                entry.audio_generating_since,
+                raw_ex.get("audio_generating_since"),
             )
 
     return response
