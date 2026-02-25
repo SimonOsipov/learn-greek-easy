@@ -216,17 +216,13 @@ test.describe('Changelog - User Flow', () => {
 
     // Click "New Feature" filter — seed has 4 new_feature entries
     await page.getByTestId('tag-filter-new_feature').click();
-    await page.waitForTimeout(200); // client-side filter, no network wait needed
-
-    const cards = page.getByTestId('changelog-card');
-    const count = await cards.count();
-    // 4 new_feature entries fit on 1 page with pageSize=5
-    expect(count).toBe(4);
+    // Use toHaveCount instead of fixed timeout — retries until count matches
+    await expect(page.getByTestId('changelog-card')).toHaveCount(4);
 
     // Click "All" to reset
     await page.getByTestId('tag-filter-all').click();
-    await page.waitForTimeout(200);
-    expect(await page.getByTestId('changelog-card').count()).toBe(5); // back to 5 on page 1
+    // All 12 entries → 5 on page 1 with pageSize=5
+    await expect(page.getByTestId('changelog-card')).toHaveCount(5);
   });
 
   test('CHANGELOG-E2E-17: Deep linking scrolls to specific entry', async ({ page }) => {
@@ -254,14 +250,22 @@ test.describe('Changelog - User Flow', () => {
 
     // Navigate to last page (page 3 with 12 entries, pageSize=5)
     await page.getByTestId('changelog-pagination-page-3').click();
-    await page.waitForTimeout(200);
+    // Wait for page 3 to be the active page before asserting end message
+    await expect(page.getByTestId('changelog-pagination-page-3')).toHaveAttribute(
+      'aria-current',
+      'page'
+    );
 
-    // End message should be visible
+    // End message should be visible on last page
     await expect(page.getByText(/reached the beginning/i)).toBeVisible();
 
     // Navigate back to page 1 — end message should disappear
     await page.getByTestId('changelog-pagination-page-1').click();
-    await page.waitForTimeout(200);
+    // Wait for page 1 to be active
+    await expect(page.getByTestId('changelog-pagination-page-1')).toHaveAttribute(
+      'aria-current',
+      'page'
+    );
     await expect(page.getByText(/reached the beginning/i)).not.toBeVisible();
   });
 });
