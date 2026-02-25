@@ -29,13 +29,14 @@ interface PersonalInfoSectionProps {
 }
 
 // Factory function to create schema with translations
-const createProfileSchema = (t: TFunction) =>
+export const createProfileSchema = (t: TFunction) =>
   z.object({
     name: z
       .string()
+      .trim()
       .min(2, t('personalInfo.validation.nameMin'))
       .max(50, t('personalInfo.validation.nameMax'))
-      .regex(/^[a-zA-Z\s'-]+$/, t('personalInfo.validation.nameFormat')),
+      .regex(/^[\p{L}\p{M}\s'-]+$/u, t('personalInfo.validation.nameFormat')),
   });
 
 type ProfileFormData = z.infer<ReturnType<typeof createProfileSchema>>;
@@ -283,8 +284,7 @@ export const PersonalInfoSection: React.FC<PersonalInfoSectionProps> = ({ user }
               type="email"
               value={user.email}
               readOnly
-              disabled
-              className="pr-10 text-muted-foreground"
+              className="cursor-default pr-10 text-muted-foreground"
             />
             <Lock className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           </div>

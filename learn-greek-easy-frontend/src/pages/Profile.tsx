@@ -60,23 +60,40 @@ export const Profile: React.FC = () => {
       <div className="container mx-auto max-w-7xl px-4 py-6">
         {/* Page Header - Always visible */}
         <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-foreground md:text-3xl">{t('page.title')}</h1>
+          <h1 className="text-2xl font-bold text-foreground lg:text-3xl">{t('page.title')}</h1>
           {/* Mobile menu toggle */}
           <Button
             variant="outline"
             size="icon"
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="md:hidden"
+            className="lg:hidden"
             aria-label={isSidebarOpen ? t('page.closeMenu') : t('page.openMenu')}
           >
             {isSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
         </div>
 
+        {/* Mobile section indicator — hidden on lg+ where sidebar is visible */}
+        <div className="mb-4 lg:hidden">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
+            {(() => {
+              const active = navigationItems.find((item) => item.id === activeSection);
+              if (!active) return null;
+              const Icon = active.icon;
+              return (
+                <>
+                  <Icon className="h-3.5 w-3.5" />
+                  {t(active.labelKey)}
+                </>
+              );
+            })()}
+          </span>
+        </div>
+
         {/* Main Layout */}
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* Sidebar */}
-          <aside className={cn('md:col-span-1', isSidebarOpen ? 'block' : 'hidden md:block')}>
+          <aside className={cn('lg:col-span-1', isSidebarOpen ? 'block' : 'hidden lg:block')}>
             <Card className="overflow-hidden">
               {/* Profile Header */}
               <ProfileHeader user={user} />
@@ -112,7 +129,7 @@ export const Profile: React.FC = () => {
           </aside>
 
           {/* Main Content */}
-          <main className="md:col-span-2">
+          <main className="lg:col-span-2">
             <Card className="overflow-hidden">{renderSection()}</Card>
           </main>
         </div>

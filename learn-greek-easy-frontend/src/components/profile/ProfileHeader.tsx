@@ -56,23 +56,32 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user, onAvatarClic
     <div className="p-6">
       <div className="flex flex-col items-center text-center">
         {/* Avatar */}
-        <button
-          onClick={onAvatarClick}
-          className="group relative mb-4 transition-transform hover:scale-105"
-          type="button"
-        >
-          <Avatar className="h-24 w-24 border-4 border-background shadow-lg">
-            <AvatarImage src={user.avatar} alt={user.name} />
-            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-blue-600 text-2xl font-bold text-white">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
-          {onAvatarClick && (
+        {onAvatarClick ? (
+          <button
+            onClick={onAvatarClick}
+            className="group relative mb-4 transition-transform hover:scale-105"
+            type="button"
+          >
+            <Avatar className="h-24 w-24 border-4 border-background shadow-lg">
+              <AvatarImage src={user.avatar} alt={user.name} />
+              <AvatarFallback className="bg-gradient-to-br from-blue-500 to-blue-600 text-2xl font-bold text-white">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
             <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
               <span className="text-xs font-medium text-white">{t('header.change')}</span>
             </div>
-          )}
-        </button>
+          </button>
+        ) : (
+          <div className="relative mb-4">
+            <Avatar className="h-24 w-24 border-4 border-background shadow-lg">
+              <AvatarImage src={user.avatar} alt={user.name} />
+              <AvatarFallback className="bg-gradient-to-br from-blue-500 to-blue-600 text-2xl font-bold text-white">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+          </div>
+        )}
 
         {/* User Info */}
         <div className="mb-3">
@@ -90,17 +99,17 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user, onAvatarClic
               <span className="text-xs text-muted-foreground">{t('header.memberSince')}</span>
               <span className="font-medium text-foreground">{memberSince}</span>
             </div>
-            {user.stats.lastActivity && (
-              <div className="flex flex-col border-l border-border pl-4">
-                <span className="text-xs text-muted-foreground">{t('header.lastActive')}</span>
-                <span className="font-medium text-foreground">
-                  {new Date(user.stats.lastActivity).toLocaleDateString(i18n.language, {
-                    month: 'short',
-                    day: 'numeric',
-                  })}
-                </span>
-              </div>
-            )}
+            <div className="flex flex-col border-l border-border pl-4">
+              <span className="text-xs text-muted-foreground">{t('header.lastActive')}</span>
+              <span className="font-medium text-foreground">
+                {user.stats.lastActivity
+                  ? new Date(user.stats.lastActivity).toLocaleDateString(i18n.language, {
+                      month: 'short',
+                      day: 'numeric',
+                    })
+                  : t('header.activeNow')}
+              </span>
+            </div>
           </div>
         </div>
       </div>

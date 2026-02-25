@@ -14,6 +14,7 @@
     "change": "Изменить",
     "memberSince": "Участник с",
     "lastActive": "Последняя активность",
+    "activeNow": "Сейчас активен",
     "roles": {
       "admin": "Администратор",
       "premium": "Премиум",
@@ -151,6 +152,10 @@
     }
   },
   "subscription": {
+    "sectionTitle": "Подписка",
+    "subtitle": "Управление тарифным планом и оплатой",
+    "trialDaysLeft": "{{count}} дн. осталось в пробном периоде",
+    "whatYouGet": "Что вы получите с Премиум",
     "currentPlan": "Текущий план",
     "billingDetails": "Детали оплаты",
     "plans": {
