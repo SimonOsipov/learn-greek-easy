@@ -90,7 +90,7 @@ export function ChangelogPage() {
   }, [fetchChangelog, i18n.language]);
 
   return (
-    <div className="space-y-6 pb-8" data-testid="changelog-page">
+    <div className="space-y-6 pb-20 lg:pb-8" data-testid="changelog-page">
       {/* Page Header */}
       <div>
         <h1 className="text-2xl font-semibold text-foreground md:text-3xl">

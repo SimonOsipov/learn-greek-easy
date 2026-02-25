@@ -3,6 +3,7 @@
  */
 
 import { useTranslation } from 'react-i18next';
+import ReactMarkdown from 'react-markdown';
 
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,28 +12,6 @@ import { CHANGELOG_TAG_CONFIG } from '@/types/changelog';
 
 interface ChangelogCardProps {
   entry: ChangelogItem;
-}
-
-/**
- * Render content with basic markdown (bold and italic).
- * Converts **text** to <strong> and *text* to <em>.
- */
-function renderMarkdown(content: string): React.ReactNode {
-  // Split by markdown patterns while preserving delimiters
-  const parts = content.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g);
-
-  return parts.map((part, index) => {
-    // Bold: **text**
-    if (part.startsWith('**') && part.endsWith('**')) {
-      return <strong key={index}>{part.slice(2, -2)}</strong>;
-    }
-    // Italic: *text*
-    if (part.startsWith('*') && part.endsWith('*')) {
-      return <em key={index}>{part.slice(1, -1)}</em>;
-    }
-    // Plain text
-    return part;
-  });
 }
 
 /**
@@ -73,12 +52,31 @@ export function ChangelogCard({ entry }: ChangelogCardProps) {
         </div>
       </CardHeader>
       <CardContent>
-        <p
-          className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground"
+        <div
+          className="text-sm leading-relaxed text-muted-foreground"
           data-testid="changelog-content"
         >
-          {renderMarkdown(entry.content)}
-        </p>
+          <ReactMarkdown
+            components={{
+              p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+              ul: ({ children }) => <ul className="ml-4 list-disc space-y-1">{children}</ul>,
+              ol: ({ children }) => <ol className="ml-4 list-decimal space-y-1">{children}</ol>,
+              li: ({ children }) => <li>{children}</li>,
+              strong: ({ children }) => (
+                <strong className="font-semibold text-foreground">{children}</strong>
+              ),
+              em: ({ children }) => <em>{children}</em>,
+              h2: ({ children }) => (
+                <h2 className="mb-1 mt-3 text-base font-semibold text-foreground">{children}</h2>
+              ),
+              h3: ({ children }) => (
+                <h3 className="mb-1 mt-2 text-sm font-semibold text-foreground">{children}</h3>
+              ),
+            }}
+          >
+            {entry.content}
+          </ReactMarkdown>
+        </div>
       </CardContent>
     </Card>
   );

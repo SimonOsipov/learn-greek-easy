@@ -206,7 +206,8 @@
     "pagination": {
       "showing": "Showing {{from}}-{{to}} of {{total}} entries",
       "previous": "Previous",
-      "next": "Next"
+      "next": "Next",
+      "pageLabel": "Page {{page}}"
     }
   },
   "checkout": {

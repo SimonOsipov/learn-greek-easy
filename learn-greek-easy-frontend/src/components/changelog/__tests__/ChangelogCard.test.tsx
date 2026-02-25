@@ -196,12 +196,13 @@ describe('ChangelogCard', () => {
   });
 
   describe('Whitespace Handling', () => {
-    it('should have whitespace-pre-wrap class applied to content', () => {
+    it('should not have whitespace-pre-wrap class and content wrapper should be a div', () => {
       const entry = createMockEntry({ content: 'Test content' });
       render(<ChangelogCard entry={entry} />);
 
       const contentElement = screen.getByTestId('changelog-content');
-      expect(contentElement).toHaveClass('whitespace-pre-wrap');
+      expect(contentElement).not.toHaveClass('whitespace-pre-wrap');
+      expect(contentElement.tagName).toBe('DIV');
     });
 
     it('should preserve line breaks in multiline content', () => {
@@ -209,8 +210,7 @@ describe('ChangelogCard', () => {
       render(<ChangelogCard entry={entry} />);
 
       const contentElement = screen.getByTestId('changelog-content');
-      // The whitespace-pre-wrap class ensures newlines are preserved
-      expect(contentElement).toHaveClass('whitespace-pre-wrap');
+      // The text content should still be present (react-markdown renders it, single \n becomes space)
       expect(contentElement).toHaveTextContent('Line one');
       expect(contentElement).toHaveTextContent('Line two');
       expect(contentElement).toHaveTextContent('Line three');
@@ -223,7 +223,6 @@ describe('ChangelogCard', () => {
       render(<ChangelogCard entry={entry} />);
 
       const contentElement = screen.getByTestId('changelog-content');
-      expect(contentElement).toHaveClass('whitespace-pre-wrap');
       expect(screen.getByText('Bold line').tagName).toBe('STRONG');
       expect(screen.getByText('Italic line').tagName).toBe('EM');
       expect(contentElement).toHaveTextContent('Plain line');

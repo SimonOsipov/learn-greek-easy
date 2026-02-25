@@ -159,7 +159,7 @@ export const ChangelogPagination: React.FC<ChangelogPaginationProps> = ({
                 onClick={() => handlePageClick(page)}
                 disabled={isLoading}
                 data-testid={`changelog-pagination-page-${page}`}
-                aria-label={`Page ${page}`}
+                aria-label={t('changelog.pagination.pageLabel', { page })}
                 aria-current={page === currentPage ? 'page' : undefined}
                 className={cn('min-w-[36px]', page === currentPage && 'pointer-events-none')}
               >
