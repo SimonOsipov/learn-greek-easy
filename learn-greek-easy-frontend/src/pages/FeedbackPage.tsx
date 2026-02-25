@@ -2,18 +2,20 @@
 
 import React, { useEffect, useRef } from 'react';
 
-import { Plus } from 'lucide-react';
+import { AlertCircle, Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 
 import { FeedbackList, FeedbackFilters, FeedbackSubmitDialog } from '@/components/feedback-voting';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useFeedbackStore } from '@/stores/feedbackStore';
 
 export const FeedbackPage: React.FC = () => {
   const { t } = useTranslation('feedback');
   const location = useLocation();
-  const { fetchFeedbackList, feedbackList, error } = useFeedbackStore();
+  const { fetchFeedbackList, feedbackList, error, total } = useFeedbackStore();
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = React.useState(false);
 
   // Track which feedback ID has been highlighted to prevent re-triggering
@@ -47,9 +49,16 @@ export const FeedbackPage: React.FC = () => {
     <div className="space-y-6 pb-20 lg:pb-8" data-testid="feedback-page">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground" data-testid="feedback-page-title">
-            {t('page.title')}
-          </h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold text-foreground" data-testid="feedback-page-title">
+              {t('page.title')}
+            </h1>
+            {total > 0 && (
+              <Badge variant="secondary" data-testid="feedback-count-badge">
+                {t('page.count', { count: total })}
+              </Badge>
+            )}
+          </div>
           <p className="mt-2 text-muted-foreground">{t('page.subtitle')}</p>
         </div>
         <Button
@@ -65,12 +74,10 @@ export const FeedbackPage: React.FC = () => {
       <FeedbackFilters />
 
       {error && (
-        <div
-          className="rounded-md bg-destructive/10 p-4 text-destructive"
-          data-testid="feedback-error"
-        >
-          {error}
-        </div>
+        <Alert variant="destructive" data-testid="feedback-error">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
 
       <FeedbackList onOpenSubmitDialog={() => setIsSubmitDialogOpen(true)} />

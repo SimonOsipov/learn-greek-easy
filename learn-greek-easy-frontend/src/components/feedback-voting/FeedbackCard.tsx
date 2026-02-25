@@ -48,7 +48,11 @@ export const FeedbackCard: React.FC<FeedbackCardProps> = ({ feedback }) => {
 
   return (
     <>
-      <Card id={`feedback-${feedback.id}`} data-testid="feedback-card">
+      <Card
+        id={`feedback-${feedback.id}`}
+        data-testid="feedback-card"
+        className="transition-shadow hover:shadow-md"
+      >
         <CardHeader className="flex flex-row items-start gap-4 space-y-0">
           <FeedbackVoteButton
             feedbackId={feedback.id}
@@ -65,10 +69,12 @@ export const FeedbackCard: React.FC<FeedbackCardProps> = ({ feedback }) => {
             </div>
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground" data-testid="feedback-meta">
-                {formatDistanceToNow(new Date(feedback.created_at), {
-                  addSuffix: true,
-                  locale: getDateLocale(),
-                })}
+                <span title={new Date(feedback.created_at).toLocaleString(i18n.language)}>
+                  {formatDistanceToNow(new Date(feedback.created_at), {
+                    addSuffix: true,
+                    locale: getDateLocale(),
+                  })}
+                </span>
                 {feedback.author.full_name && ` ${t('list.by')} ${feedback.author.full_name}`}
               </p>
               {isOwner && (

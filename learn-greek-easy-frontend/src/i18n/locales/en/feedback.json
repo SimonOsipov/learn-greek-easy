@@ -2,7 +2,8 @@
   "page": {
     "title": "Feedback & Ideas",
     "subtitle": "Share your ideas, report bugs, and vote on suggestions",
-    "submitButton": "Submit Feedback"
+    "submitButton": "Submit Feedback",
+    "count": "{{count}}"
   },
   "categories": {
     "feature_request": "Feature Request",
