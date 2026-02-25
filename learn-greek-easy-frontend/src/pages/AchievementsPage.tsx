@@ -36,6 +36,28 @@ const groupByCategory = (
 };
 
 /**
+ * Normalise achievement data to fix backend inconsistencies.
+ * When unlocked === true, progress is forced to 100 regardless of API value.
+ */
+const normaliseAchievement = (a: AchievementResponse): AchievementResponse => ({
+  ...a,
+  progress: a.unlocked ? 100 : a.progress,
+});
+
+/**
+ * Sort achievements within a category:
+ * 1. Unlocked first
+ * 2. In-progress (progress > 0) sorted by progress descending
+ * 3. Locked (progress === 0)
+ */
+const sortAchievements = (achievements: AchievementResponse[]): AchievementResponse[] => {
+  return [...achievements].sort((a, b) => {
+    if (a.unlocked !== b.unlocked) return a.unlocked ? -1 : 1;
+    return b.progress - a.progress;
+  });
+};
+
+/**
  * Loading skeleton for achievements page
  */
 const AchievementsLoadingSkeleton: React.FC = () => (
@@ -114,7 +136,11 @@ const AchievementsPage: React.FC = () => {
   // Group achievements by category
   const groupedAchievements = useMemo(() => {
     if (!achievements?.achievements) return {};
-    return groupByCategory(achievements.achievements);
+    const normalised = achievements.achievements.map(normaliseAchievement);
+    const grouped = groupByCategory(normalised);
+    return Object.fromEntries(
+      Object.entries(grouped).map(([cat, items]) => [cat, sortAchievements(items)])
+    );
   }, [achievements]);
 
   const categories = Object.keys(groupedAchievements);
