@@ -33,6 +33,7 @@ from src.db.models import (
     FeedbackCategory,
     FeedbackStatus,
     NewsItem,
+    PartOfSpeech,
     User,
     WordEntry,
 )
@@ -43,6 +44,8 @@ from src.schemas.admin import (
     AdminDeckListResponse,
     AdminStatsResponse,
     ArticleCheckResponse,
+    GenerateCardsRequest,
+    GenerateCardsResponse,
     GenerateWordEntryAudioRequest,
     PendingQuestionItem,
     PendingQuestionsResponse,
@@ -86,6 +89,7 @@ from src.schemas.news_item import (
 from src.schemas.word_entry import WordEntryResponse
 from src.services.announcement_service import AnnouncementService
 from src.services.card_error_admin_service import CardErrorAdminService
+from src.services.card_generator_service import CardGeneratorService
 from src.services.changelog_service import ChangelogService
 from src.services.feedback_admin_service import FeedbackAdminService
 from src.services.news_item_service import NewsItemService
@@ -2001,3 +2005,146 @@ async def generate_word_entry_audio(
         },
     )
     return {"message": "Audio generation started"}
+
+
+def _validate_meaning_eligibility(word_entry: "WordEntry") -> None:
+    if not word_entry.translation_en or not word_entry.translation_ru:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Meaning cards require both translation_en and translation_ru",
+        )
+
+
+def _validate_plural_form_noun(gd: dict) -> None:
+    sg = (gd.get("cases") or {}).get("singular", {}).get("nominative")
+    pl = (gd.get("cases") or {}).get("plural", {}).get("nominative")
+    if not sg or not pl:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Plural form cards for nouns require singular and plural nominative in grammar_data.cases",
+        )
+
+
+def _validate_plural_form_adjective(gd: dict) -> None:
+    forms = gd.get("forms") or {}
+    has_any = any(
+        (forms.get(g) or {}).get("singular", {}).get("nominative")
+        and (forms.get(g) or {}).get("plural", {}).get("nominative")
+        for g in ("masculine", "feminine", "neuter")
+    )
+    if not has_any:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Plural form cards for adjectives require at least one gender with singular and plural nominative in grammar_data.forms",
+        )
+
+
+def _validate_plural_form_eligibility(word_entry: "WordEntry") -> None:
+    gd = word_entry.grammar_data or {}
+    if word_entry.part_of_speech == PartOfSpeech.NOUN:
+        _validate_plural_form_noun(gd)
+    elif word_entry.part_of_speech == PartOfSpeech.ADJECTIVE:
+        _validate_plural_form_adjective(gd)
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Plural form cards are not supported for part of speech '{word_entry.part_of_speech.value}'",
+        )
+
+
+def _validate_article_eligibility(word_entry: "WordEntry") -> None:
+    if word_entry.part_of_speech != PartOfSpeech.NOUN:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Article cards are only supported for nouns",
+        )
+    gd = word_entry.grammar_data or {}
+    gender = gd.get("gender")
+    nom_sg = (gd.get("cases") or {}).get("singular", {}).get("nominative")
+    if not gender or not nom_sg:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Article cards require gender and singular nominative in grammar_data",
+        )
+
+
+def _validate_sentence_translation_eligibility(word_entry: "WordEntry") -> None:
+    examples = word_entry.examples or []
+    has_valid = any(ex.get("id") and ex.get("greek") and ex.get("english") for ex in examples)
+    if not has_valid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Sentence translation cards require at least one example with id, greek, and english",
+        )
+
+
+def _validate_card_type_eligibility(word_entry: "WordEntry", card_type: str) -> None:
+    """Validate that a word entry has the required data for a given card type.
+
+    Raises HTTPException(400) with a descriptive message if the word entry
+    is missing required fields for the requested card type.
+    """
+    validators = {
+        "meaning": _validate_meaning_eligibility,
+        "plural_form": _validate_plural_form_eligibility,
+        "article": _validate_article_eligibility,
+        "sentence_translation": _validate_sentence_translation_eligibility,
+    }
+    validators[card_type](word_entry)
+
+
+@router.post(
+    "/word-entries/{word_entry_id}/generate-cards",
+    response_model=GenerateCardsResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Generate flashcards for a word entry",
+)
+async def generate_word_entry_cards(
+    word_entry_id: UUID,
+    request: GenerateCardsRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> GenerateCardsResponse:
+    """Generate or regenerate flashcard records for a specific word entry.
+
+    Validates that the word entry has the required data for the requested
+    card type, then delegates to CardGeneratorService for card creation/update.
+    """
+    repo = WordEntryRepository(db)
+    word_entry = await repo.get(word_entry_id)
+    if word_entry is None:
+        raise NotFoundException(
+            resource="Word entry",
+            detail=f"Word entry with ID '{word_entry_id}' not found",
+        )
+
+    _validate_card_type_eligibility(word_entry, request.card_type)
+
+    service = CardGeneratorService(db)
+    method_map = {
+        "meaning": service.generate_meaning_cards,
+        "plural_form": service.generate_plural_form_cards,
+        "article": service.generate_article_cards,
+        "sentence_translation": service.generate_sentence_translation_cards,
+    }
+    generate_fn = method_map[request.card_type]
+    created, updated = await generate_fn([word_entry], word_entry.deck_id)
+
+    await db.commit()
+
+    logger.info(
+        "Cards generated for word entry",
+        extra={
+            "word_entry_id": str(word_entry_id),
+            "card_type": request.card_type,
+            "created": created,
+            "updated": updated,
+            "triggered_by": str(current_user.id),
+        },
+    )
+
+    return GenerateCardsResponse(
+        card_type=request.card_type,
+        created=created,
+        updated=updated,
+    )

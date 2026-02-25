@@ -234,3 +234,19 @@ class GenerateWordEntryAudioRequest(BaseModel):
         if self.part == "example" and not self.example_id:
             raise ValueError("example_id is required when part is 'example'")
         return self
+
+
+class GenerateCardsRequest(BaseModel):
+    """Request schema for generating flashcards from a word entry."""
+
+    card_type: Literal["meaning", "plural_form", "article", "sentence_translation"] = Field(
+        ..., description="Type of flashcard to generate"
+    )
+
+
+class GenerateCardsResponse(BaseModel):
+    """Response schema for card generation results."""
+
+    card_type: str = Field(..., description="Type of card that was generated")
+    created: int = Field(..., ge=0, description="Number of new cards created")
+    updated: int = Field(..., ge=0, description="Number of existing cards updated")
