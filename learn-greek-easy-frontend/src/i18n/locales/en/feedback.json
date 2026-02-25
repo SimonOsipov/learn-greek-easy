@@ -70,6 +70,14 @@
   },
   "list": {
     "empty": "No feedback found. Be the first to share your ideas!",
+    "emptyState": {
+      "message": "No feedback yet. Be the first to share your ideas!",
+      "cta": "Submit Feedback"
+    },
+    "noResults": {
+      "message": "No feedback matches your current filters.",
+      "clearFilters": "Clear Filters"
+    },
     "by": "by"
   },
   "pagination": {

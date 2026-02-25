@@ -73,7 +73,7 @@ export const FeedbackPage: React.FC = () => {
         </div>
       )}
 
-      <FeedbackList />
+      <FeedbackList onOpenSubmitDialog={() => setIsSubmitDialogOpen(true)} />
 
       <FeedbackSubmitDialog open={isSubmitDialogOpen} onOpenChange={setIsSubmitDialogOpen} />
     </div>
