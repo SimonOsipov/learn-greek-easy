@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import { AchievementCategory } from '@/components/achievements';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { AchievementResponse } from '@/services/xpAPI';
@@ -62,14 +62,30 @@ const sortAchievements = (achievements: AchievementResponse[]): AchievementRespo
  */
 const AchievementsLoadingSkeleton: React.FC = () => (
   <div className="space-y-6">
-    {/* Stats skeleton */}
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+    {/* Mobile stats skeleton */}
+    <Card className="sm:hidden">
+      <CardContent className="grid grid-cols-3 gap-2 px-2 py-3">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="flex flex-col items-center gap-1">
+            <Skeleton className="h-7 w-7 rounded-full" />
+            <Skeleton className="h-3 w-12" />
+            <Skeleton className="h-5 w-10" />
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+
+    {/* Desktop stats skeleton */}
+    <div className="hidden sm:grid sm:grid-cols-3 sm:gap-4">
       {[1, 2, 3].map((i) => (
         <Card key={i}>
-          <CardContent className="pt-6">
-            <Skeleton className="h-6 w-20" />
-            <Skeleton className="mt-2 h-8 w-16" />
-          </CardContent>
+          <CardHeader className="flex flex-row items-center gap-3 pb-2">
+            <Skeleton className="h-11 w-11 rounded-full" />
+            <div>
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="mt-1 h-7 w-12" />
+            </div>
+          </CardHeader>
         </Card>
       ))}
     </div>
@@ -152,7 +168,7 @@ const AchievementsPage: React.FC = () => {
   const progressPercent = totalCount > 0 ? Math.round((unlockedCount / totalCount) * 100) : 0;
 
   return (
-    <div className="space-y-6 pb-8" data-testid="achievements-page">
+    <div className="space-y-6 pb-24 lg:pb-8" data-testid="achievements-page">
       {/* Page Header */}
       <div>
         <h1 className="text-2xl font-semibold text-foreground md:text-3xl">
@@ -195,59 +211,80 @@ const AchievementsPage: React.FC = () => {
           {/* Stats Header */}
           <section aria-labelledby="achievements-stats-heading">
             <h2 id="achievements-stats-heading" className="sr-only">
-              {t('stats.heading', 'Achievement Statistics')}
+              {t('stats.heading')}
             </h2>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              {/* Unlocked Count */}
+
+            {/* Mobile: compact single card */}
+            <Card className="sm:hidden">
+              <CardContent className="grid grid-cols-3 gap-2 px-2 py-3">
+                <div className="flex flex-col items-center text-center">
+                  <div className="rounded-full bg-purple-100 p-1.5 dark:bg-purple-900/50">
+                    <Trophy className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">{t('stats.unlocked')}</p>
+                  <p className="text-lg font-bold text-foreground">
+                    {unlockedCount}
+                    <span className="text-xs font-normal text-muted-foreground">/{totalCount}</span>
+                  </p>
+                </div>
+                <div className="flex flex-col items-center text-center">
+                  <div className="rounded-full bg-green-100 p-1.5 dark:bg-green-900/50">
+                    <Trophy className="h-4 w-4 text-green-600 dark:text-green-400" />
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">{t('stats.progress')}</p>
+                  <p className="text-lg font-bold text-foreground">{progressPercent}%</p>
+                </div>
+                <div className="flex flex-col items-center text-center">
+                  <div className="rounded-full bg-amber-100 p-1.5 dark:bg-amber-900/50">
+                    <Star className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">{t('stats.xpEarned')}</p>
+                  <p className="text-lg font-bold text-foreground">
+                    {totalXPEarned.toLocaleString()}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Desktop: three separate cards */}
+            <div className="hidden sm:grid sm:grid-cols-3 sm:gap-4">
               <Card>
-                <CardContent className="flex items-center gap-3 pt-6">
+                <CardHeader className="flex flex-row items-center gap-3 pb-2">
                   <div className="rounded-full bg-purple-100 p-3 dark:bg-purple-900/50">
                     <Trophy className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">
-                      {t('stats.unlocked', 'Unlocked')}
-                    </p>
-                    <p className="text-2xl font-bold text-foreground">
+                    <CardDescription>{t('stats.unlocked')}</CardDescription>
+                    <CardTitle>
                       {unlockedCount}
                       <span className="text-base font-normal text-muted-foreground">
                         /{totalCount}
                       </span>
-                    </p>
+                    </CardTitle>
                   </div>
-                </CardContent>
+                </CardHeader>
               </Card>
-
-              {/* Progress Percentage */}
               <Card>
-                <CardContent className="flex items-center gap-3 pt-6">
+                <CardHeader className="flex flex-row items-center gap-3 pb-2">
                   <div className="rounded-full bg-green-100 p-3 dark:bg-green-900/50">
                     <Trophy className="h-5 w-5 text-green-600 dark:text-green-400" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">
-                      {t('stats.progress', 'Progress')}
-                    </p>
-                    <p className="text-2xl font-bold text-foreground">{progressPercent}%</p>
+                    <CardDescription>{t('stats.progress')}</CardDescription>
+                    <CardTitle>{progressPercent}%</CardTitle>
                   </div>
-                </CardContent>
+                </CardHeader>
               </Card>
-
-              {/* Total XP Earned */}
               <Card>
-                <CardContent className="flex items-center gap-3 pt-6">
+                <CardHeader className="flex flex-row items-center gap-3 pb-2">
                   <div className="rounded-full bg-amber-100 p-3 dark:bg-amber-900/50">
                     <Star className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">
-                      {t('stats.xpEarned', 'XP Earned')}
-                    </p>
-                    <p className="text-2xl font-bold text-foreground">
-                      {totalXPEarned.toLocaleString()}
-                    </p>
+                    <CardDescription>{t('stats.xpEarned')}</CardDescription>
+                    <CardTitle>{totalXPEarned.toLocaleString()}</CardTitle>
                   </div>
-                </CardContent>
+                </CardHeader>
               </Card>
             </div>
           </section>

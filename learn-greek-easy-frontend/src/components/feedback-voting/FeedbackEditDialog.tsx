@@ -25,10 +25,22 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useFeedbackStore } from '@/stores/feedbackStore';
+import { FEEDBACK_CATEGORIES } from '@/types/feedback';
 import type { FeedbackItem } from '@/types/feedback';
+
+const TITLE_MAX = 200;
+const DESCRIPTION_MAX = 2000;
+const WARN_THRESHOLD = 0.9;
 
 const feedbackEditSchema = z.object({
   title: z.string().min(5, 'Title must be at least 5 characters').max(200),
@@ -59,6 +71,9 @@ export const FeedbackEditDialog: React.FC<FeedbackEditDialogProps> = ({
       description: feedback.description,
     },
   });
+
+  const titleValue = form.watch('title');
+  const descriptionValue = form.watch('description');
 
   // Reset form when feedback changes or dialog opens
   useEffect(() => {
@@ -101,6 +116,23 @@ export const FeedbackEditDialog: React.FC<FeedbackEditDialogProps> = ({
             className="space-y-4"
             data-testid="feedback-edit-form"
           >
+            {/* Read-only category display */}
+            <div className="space-y-2">
+              <FormLabel>{t('submit.category')}</FormLabel>
+              <Select value={feedback.category} disabled>
+                <SelectTrigger data-testid="feedback-edit-category-select" disabled>
+                  <SelectValue>{t(`categories.${feedback.category}`)}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {FEEDBACK_CATEGORIES.map((cat) => (
+                    <SelectItem key={cat.value} value={cat.value}>
+                      {t(`categories.${cat.value}`)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <FormField
               control={form.control}
               name="title"
@@ -114,7 +146,18 @@ export const FeedbackEditDialog: React.FC<FeedbackEditDialogProps> = ({
                       {...field}
                     />
                   </FormControl>
-                  <FormMessage />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <FormMessage />
+                    <span
+                      className={
+                        titleValue.length >= TITLE_MAX * WARN_THRESHOLD
+                          ? 'text-destructive'
+                          : undefined
+                      }
+                    >
+                      {titleValue.length} / {TITLE_MAX}
+                    </span>
+                  </div>
                 </FormItem>
               )}
             />
@@ -133,7 +176,18 @@ export const FeedbackEditDialog: React.FC<FeedbackEditDialogProps> = ({
                       {...field}
                     />
                   </FormControl>
-                  <FormMessage />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <FormMessage />
+                    <span
+                      className={
+                        descriptionValue.length >= DESCRIPTION_MAX * WARN_THRESHOLD
+                          ? 'text-destructive'
+                          : undefined
+                      }
+                    >
+                      {descriptionValue.length} / {DESCRIPTION_MAX}
+                    </span>
+                  </div>
                 </FormItem>
               )}
             />
