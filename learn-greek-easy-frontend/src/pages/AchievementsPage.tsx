@@ -1,13 +1,15 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import { Trophy, AlertCircle, Star } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { AchievementCategory } from '@/components/achievements';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { AchievementResponse } from '@/services/xpAPI';
 import {
   useXPStore,
@@ -55,6 +57,15 @@ const sortAchievements = (achievements: AchievementResponse[]): AchievementRespo
     if (a.unlocked !== b.unlocked) return a.unlocked ? -1 : 1;
     return b.progress - a.progress;
   });
+};
+
+type StatusFilter = 'all' | 'unlocked' | 'in_progress' | 'locked';
+
+const STATUS_FILTERS: Record<StatusFilter, (a: AchievementResponse) => boolean> = {
+  all: () => true,
+  unlocked: (a) => a.unlocked === true,
+  in_progress: (a) => !a.unlocked && a.progress > 0,
+  locked: (a) => !a.unlocked && a.progress === 0,
 };
 
 /**
@@ -159,7 +170,34 @@ const AchievementsPage: React.FC = () => {
     );
   }, [achievements]);
 
-  const categories = Object.keys(groupedAchievements);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+
+  // Compute counts for each filter tab
+  const filterCounts = useMemo(() => {
+    const all = achievements?.achievements ?? [];
+    const normalised = all.map(normaliseAchievement);
+    return {
+      all: normalised.length,
+      unlocked: normalised.filter(STATUS_FILTERS.unlocked).length,
+      in_progress: normalised.filter(STATUS_FILTERS.in_progress).length,
+      locked: normalised.filter(STATUS_FILTERS.locked).length,
+    } satisfies Record<StatusFilter, number>;
+  }, [achievements]);
+
+  // Apply active filter to grouped achievements, hiding empty categories
+  const filteredGroupedAchievements = useMemo(() => {
+    const predicate = STATUS_FILTERS[statusFilter];
+    const result: Record<string, AchievementResponse[]> = {};
+    for (const [category, items] of Object.entries(groupedAchievements)) {
+      const filtered = items.filter(predicate);
+      if (filtered.length > 0) {
+        result[category] = filtered;
+      }
+    }
+    return result;
+  }, [groupedAchievements, statusFilter]);
+
+  const filteredCategories = Object.keys(filteredGroupedAchievements);
 
   // Stats from API response
   const totalCount = achievements?.total_count ?? 0;
@@ -291,14 +329,28 @@ const AchievementsPage: React.FC = () => {
 
           <Separator />
 
+          {/* Status Filter Tabs */}
+          <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
+            <TabsList className="w-full justify-start">
+              {(Object.keys(STATUS_FILTERS) as StatusFilter[]).map((key) => (
+                <TabsTrigger key={key} value={key} className="gap-2">
+                  {t(`filter.${key === 'in_progress' ? 'inProgress' : key}`)}
+                  <Badge variant="secondary" className="ml-1 min-w-[1.25rem] px-1.5">
+                    {filterCounts[key]}
+                  </Badge>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+
           {/* Achievement Categories */}
-          {categories.length > 0 ? (
+          {filteredCategories.length > 0 ? (
             <div className="space-y-8">
-              {categories.map((category) => (
+              {filteredCategories.map((category) => (
                 <AchievementCategory
                   key={category}
                   category={category}
-                  achievements={groupedAchievements[category]}
+                  achievements={filteredGroupedAchievements[category]}
                 />
               ))}
             </div>
