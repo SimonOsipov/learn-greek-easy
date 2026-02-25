@@ -7,5 +7,9 @@
   "filter": {
     "all": "All",
     "label": "Filter by type"
-  }
+  },
+  "endMessage": "You've reached the beginning. That's where it all started!",
+  "copyLink": "Copy link",
+  "linkCopied": "Link copied",
+  "linkCopiedMessage": "Changelog entry link copied to clipboard"
 }

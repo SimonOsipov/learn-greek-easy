@@ -2,17 +2,26 @@
  * Card component for displaying a single changelog entry.
  */
 
+import { Link2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
 
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useToast } from '@/hooks/use-toast';
 import type { ChangelogItem, ChangelogTag } from '@/types/changelog';
 import { CHANGELOG_TAG_CONFIG } from '@/types/changelog';
 
 interface ChangelogCardProps {
   entry: ChangelogItem;
 }
+
+const TAG_BORDER_COLORS: Record<ChangelogTag, string> = {
+  new_feature: 'border-l-green-500',
+  bug_fix: 'border-l-amber-500',
+  announcement: 'border-l-blue-500',
+};
 
 /**
  * Tag badge with appropriate color styling.
@@ -29,7 +38,7 @@ function TagBadge({ tag }: { tag: ChangelogTag }) {
 }
 
 export function ChangelogCard({ entry }: ChangelogCardProps) {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation('changelog');
 
   // Format date using user's locale (follows AchievementCard pattern)
   const formattedDate = new Date(entry.created_at).toLocaleDateString(i18n.language, {
@@ -38,15 +47,45 @@ export function ChangelogCard({ entry }: ChangelogCardProps) {
     day: 'numeric',
   });
 
+  const { toast } = useToast();
+
+  const handleCopyLink = async () => {
+    const url = `${window.location.origin}${window.location.pathname}#entry-${entry.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast({
+        title: t('linkCopied'),
+        description: t('linkCopiedMessage'),
+      });
+    } catch {
+      // Clipboard API unavailable (insecure context) — silent fail
+    }
+  };
+
   return (
-    <Card className="w-full" data-testid="changelog-card">
+    <Card
+      id={`entry-${entry.id}`}
+      className={`group w-full border-l-4 ${TAG_BORDER_COLORS[entry.tag]}`}
+      data-testid="changelog-card"
+    >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 space-y-1">
             <CardTitle className="text-lg font-semibold leading-tight">{entry.title}</CardTitle>
-            <time dateTime={entry.created_at} className="text-sm text-muted-foreground">
-              {formattedDate}
-            </time>
+            <div className="flex items-center gap-1">
+              <time dateTime={entry.created_at} className="text-sm text-muted-foreground">
+                {formattedDate}
+              </time>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100"
+                onClick={handleCopyLink}
+                aria-label={t('copyLink')}
+              >
+                <Link2 className="h-3.5 w-3.5" />
+              </Button>
+            </div>
           </div>
           <TagBadge tag={entry.tag} />
         </div>

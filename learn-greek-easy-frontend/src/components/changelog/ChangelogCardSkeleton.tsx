@@ -7,7 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export function ChangelogCardSkeleton() {
   return (
-    <Card className="w-full">
+    <Card className="w-full border-l-4 border-l-muted">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 space-y-2">

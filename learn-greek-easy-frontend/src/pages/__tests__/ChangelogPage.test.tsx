@@ -19,6 +19,7 @@ import { render, screen, waitFor, act } from '@/lib/test-utils';
 import {
   useChangelogStore,
   selectActiveTag,
+  selectAllItems,
   selectChangelogItems,
   selectChangelogLoading,
   selectChangelogError,
@@ -33,6 +34,7 @@ import * as changelogAnalytics from '@/lib/analytics/changelogAnalytics';
 vi.mock('@/stores/changelogStore', () => ({
   useChangelogStore: vi.fn(),
   selectActiveTag: vi.fn((state) => state.activeTag),
+  selectAllItems: vi.fn((state) => state.allItems),
   selectChangelogItems: vi.fn((state) => state.items),
   selectChangelogLoading: vi.fn((state) => state.isLoading),
   selectChangelogError: vi.fn((state) => state.error),

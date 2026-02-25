@@ -4,7 +4,7 @@
 
 import React, { useCallback, useEffect, useRef } from 'react';
 
-import { History, RefreshCw } from 'lucide-react';
+import { Flag, History, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -22,6 +22,7 @@ import {
 } from '@/lib/analytics/changelogAnalytics';
 import {
   selectActiveTag,
+  selectAllItems,
   selectChangelogError,
   selectChangelogItems,
   selectChangelogLoading,
@@ -48,20 +49,25 @@ export function ChangelogPage() {
   const reset = useChangelogStore((state) => state.reset);
   const activeTag = useChangelogStore(selectActiveTag);
   const setTag = useChangelogStore((state) => state.setTag);
+  const allItems = useChangelogStore(selectAllItems);
 
   // Track page view once
   const hasTrackedPageView = useRef(false);
+  const hasHighlightedRef = useRef(false);
 
-  // Fetch on mount and when language changes
+  // Effect 1: fetch on mount and re-fetch on language change (no reset on language change)
   useEffect(() => {
     fetchChangelog(i18n.language).catch(() => {
       // Error handled by store
     });
+  }, [i18n.language, fetchChangelog]);
 
+  // Effect 2: reset store on unmount only
+  useEffect(() => {
     return () => {
       reset();
     };
-  }, [i18n.language, fetchChangelog, reset]);
+  }, [reset]);
 
   // Track page view on first successful load
   useEffect(() => {
@@ -75,6 +81,40 @@ export function ChangelogPage() {
       hasTrackedPageView.current = true;
     }
   }, [isLoading, items.length, total, page, i18n.language]);
+
+  // Deep linking: scroll to entry from URL hash
+  useEffect(() => {
+    if (hasHighlightedRef.current || isLoading || allItems.length === 0) return;
+
+    const hash = window.location.hash;
+    if (!hash || !hash.startsWith('#entry-')) return;
+
+    const entryId = hash.slice(7); // Remove "#entry-" prefix
+
+    // Search allItems (full unfiltered dataset) to support cross-page navigation
+    const idx = allItems.findIndex((item) => item.id === entryId);
+    if (idx === -1) return;
+
+    // Clear any active tag filter so the entry is visible
+    setTag(null);
+
+    // Calculate target page (pageSize is items per display page)
+    const targetPage = Math.floor(idx / pageSize) + 1;
+    if (targetPage !== page) {
+      setPage(targetPage);
+    }
+
+    hasHighlightedRef.current = true;
+
+    setTimeout(() => {
+      const element = document.getElementById(`entry-${entryId}`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        element.classList.add('highlight-animation');
+        setTimeout(() => element.classList.remove('highlight-animation'), 2000);
+      }
+    }, 150);
+  }, [isLoading, allItems, page, pageSize, setPage, setTag]);
 
   const handlePageChange = useCallback(
     (newPage: number) => {
@@ -152,6 +192,14 @@ export function ChangelogPage() {
               onPageChange={handlePageChange}
               isLoading={isLoading}
             />
+          )}
+
+          {/* End-of-list message on last page */}
+          {page === totalPages && totalPages > 0 && (
+            <div className="flex flex-col items-center gap-2 py-6 text-center text-muted-foreground">
+              <Flag className="h-5 w-5" />
+              <p className="text-sm">{t('endMessage', { ns: 'changelog' })}</p>
+            </div>
           )}
         </>
       )}
