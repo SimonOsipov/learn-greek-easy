@@ -29,7 +29,7 @@ interface PersonalInfoSectionProps {
 }
 
 // Factory function to create schema with translations
-const createProfileSchema = (t: TFunction) =>
+export const createProfileSchema = (t: TFunction) =>
   z.object({
     name: z
       .string()

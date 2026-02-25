@@ -772,4 +772,50 @@ describe('SubscriptionSection', () => {
       expect(screen.getByTestId('reactivate-dialog')).toBeInTheDocument();
     });
   });
+
+  describe('section heading and subtitle (PROFUX-01-02)', () => {
+    beforeEach(() => {
+      mockGetBillingStatus.mockResolvedValue(FREE_STATUS);
+    });
+
+    it('displays "Subscription" as the section heading', async () => {
+      renderComponent();
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'Subscription', level: 2 })).toBeInTheDocument();
+      });
+    });
+
+    it('renders a subtitle paragraph', async () => {
+      renderComponent();
+      await waitFor(() => {
+        expect(screen.getByText('Manage your subscription plan and billing')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('free state feature list (PROFUX-01-02)', () => {
+    beforeEach(() => {
+      mockGetBillingStatus.mockResolvedValue(FREE_STATUS);
+    });
+
+    it('shows "What you get with Premium" feature list', async () => {
+      renderComponent();
+      await waitFor(() => {
+        expect(screen.getByText('What you get with Premium')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('trialing state trial days banner (PROFUX-01-02)', () => {
+    beforeEach(() => {
+      mockGetBillingStatus.mockResolvedValue(TRIALING_STATUS);
+    });
+
+    it('shows remaining trial days when trial_days_remaining is 22', async () => {
+      renderComponent();
+      await waitFor(() => {
+        expect(screen.getByText('22 days left in your trial')).toBeInTheDocument();
+      });
+    });
+  });
 });
