@@ -1523,7 +1523,7 @@ async def generate_word_entry_part_audio_task(  # noqa: C901
                             UPDATE word_entries
                             SET
                                 audio_key = CASE WHEN :success THEN :s3_key ELSE audio_key END,
-                                audio_status = CASE WHEN :success THEN 'READY' ELSE 'FAILED' END,
+                                audio_status = CASE WHEN :success THEN 'READY'::audiostatus ELSE 'FAILED'::audiostatus END,
                                 audio_generating_since = CASE
                                     WHEN NOT EXISTS (
                                         SELECT 1
@@ -1569,7 +1569,7 @@ async def generate_word_entry_part_audio_task(  # noqa: C901
                                         WITH ORDINALITY AS arr(elem, ordinality)
                                 ),
                                 audio_generating_since = CASE
-                                    WHEN audio_status != 'GENERATING'
+                                    WHEN audio_status != 'GENERATING'::audiostatus
                                          AND NOT EXISTS (
                                              SELECT 1
                                              FROM jsonb_array_elements(examples::jsonb) AS e
