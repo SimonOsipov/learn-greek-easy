@@ -33,18 +33,6 @@ export const getStreakMessageKey = (streak: number): string => {
 };
 
 /**
- * Get motivational message based on streak length (deprecated, use getStreakMessageKey with translation)
- * @deprecated Use getStreakMessageKey with t() function instead
- */
-export const getStreakMessage = (streak: number): string => {
-  if (streak >= 30) return "Incredible! You're on fire!";
-  if (streak >= 14) return 'Amazing streak! Keep it up!';
-  if (streak >= 7) return 'Great job! One week strong!';
-  if (streak >= 3) return 'Nice start! Keep going!';
-  return 'Start your learning streak today!';
-};
-
-/**
  * StatsGrid displays key learning statistics in a responsive grid layout.
  * Shows streak, words learned, and total XP in individual cards.
  */

@@ -8,7 +8,13 @@ import {
   DeckPerformanceChart,
   StageDistributionChart,
 } from '@/components/charts';
-import { StatsGrid, LevelProgressCard } from '@/components/statistics';
+import {
+  StatsGrid,
+  LevelProgressCard,
+  AchievementsGrid,
+  achievementConfigs,
+} from '@/components/statistics';
+import type { Achievement } from '@/components/statistics';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -130,6 +136,15 @@ const Statistics: React.FC = () => {
   // Get streak from analytics data (fetched from backend API)
   const currentStreak = analyticsData?.streak?.currentStreak ?? 0;
 
+  const wordsLearned = analyticsData?.summary?.totalCardsReviewed ?? 0;
+  const achievements: Achievement[] = achievementConfigs.map((config) => ({
+    id: config.id,
+    name: t(config.nameKey),
+    icon: config.icon,
+    unlocked: config.checkUnlocked(wordsLearned, currentStreak),
+    description: t(config.descriptionKey),
+  }));
+
   return (
     <div className="space-y-6 pb-8" data-testid="statistics-page">
       {/* Page Header */}
@@ -156,6 +171,9 @@ const Statistics: React.FC = () => {
       <LevelProgressCard />
 
       <Separator />
+
+      {/* Achievements */}
+      <AchievementsGrid achievements={achievements} />
 
       {/* Analytics Charts Section */}
       <section aria-labelledby="analytics-heading">

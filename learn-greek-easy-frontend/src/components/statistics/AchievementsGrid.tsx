@@ -75,42 +75,6 @@ export const achievementConfigs: AchievementConfig[] = [
 ];
 
 /**
- * Default achievements that can be used when no custom achievements are provided.
- * These are based on streak and words learned milestones.
- * @deprecated Use achievementConfigs with translations instead
- */
-export const getDefaultAchievements = (wordsLearned: number, streak: number): Achievement[] => [
-  {
-    id: 'first-steps',
-    name: 'First Steps',
-    icon: '\uD83D\uDC63',
-    unlocked: wordsLearned >= 10,
-    description: 'Learn 10 words',
-  },
-  {
-    id: 'week-warrior',
-    name: 'Week Warrior',
-    icon: '\u2694\uFE0F',
-    unlocked: streak >= 7,
-    description: 'Maintain a 7-day streak',
-  },
-  {
-    id: 'century-club',
-    name: 'Century Club',
-    icon: '\uD83D\uDCAF',
-    unlocked: wordsLearned >= 100,
-    description: 'Learn 100 words',
-  },
-  {
-    id: 'fire-keeper',
-    name: 'Fire Keeper',
-    icon: '\uD83D\uDD25',
-    unlocked: streak >= 30,
-    description: 'Maintain a 30-day streak',
-  },
-];
-
-/**
  * AchievementsGrid displays a grid of achievement badges.
  * Shows locked/unlocked states with visual differentiation.
  */
