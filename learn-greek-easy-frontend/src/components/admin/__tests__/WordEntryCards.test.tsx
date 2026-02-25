@@ -6,6 +6,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { I18nextProvider } from 'react-i18next';
 
 import { WordEntryCards } from '../WordEntryCards';
+import { useGenerateCards } from '@/features/words/hooks/useGenerateCards';
 import { useWordEntryCards } from '@/features/words/hooks/useWordEntryCards';
 import { useWordEntry } from '@/features/words/hooks/useWordEntry';
 import type { WordEntryResponse } from '@/services/wordEntryAPI';
@@ -21,6 +22,10 @@ vi.mock('@/features/words/hooks/useWordEntryCards', () => ({
 
 vi.mock('@/features/words/hooks/useWordEntry', () => ({
   useWordEntry: vi.fn(),
+}));
+
+vi.mock('@/features/words/hooks/useGenerateCards', () => ({
+  useGenerateCards: vi.fn(),
 }));
 
 // ============================================
@@ -69,6 +74,11 @@ beforeEach(() => {
     isError: false,
     error: null,
     refetch: vi.fn(),
+  });
+  (useGenerateCards as Mock).mockReturnValue({
+    mutate: vi.fn(),
+    isPending: false,
+    variables: undefined,
   });
 });
 
@@ -523,6 +533,295 @@ describe('WordEntryCards', () => {
     it('passes entryId to useWordEntryCards hook', () => {
       renderComponent('my-entry-id');
       expect(useWordEntryCards).toHaveBeenCalledWith({ wordEntryId: 'my-entry-id' });
+    });
+  });
+
+  // ============================================
+  // Regenerate buttons
+  // ============================================
+
+  describe('Regenerate buttons', () => {
+    it('renders regenerate button for meaning_el_to_en group', () => {
+      (useWordEntryCards as Mock).mockReturnValue({
+        cards: [createMockCard({ id: 'c1', card_type: 'meaning_el_to_en' })],
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn(),
+      });
+      renderComponent();
+      expect(screen.getByTestId('regenerate-btn-meaning_el_to_en')).toBeInTheDocument();
+    });
+
+    it('renders regenerate button for plural_form group', () => {
+      (useWordEntryCards as Mock).mockReturnValue({
+        cards: [
+          createMockCard({ id: 'c1', card_type: 'plural_form', variant_key: 'plural_form_t1' }),
+        ],
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn(),
+      });
+      renderComponent();
+      expect(screen.getByTestId('regenerate-btn-plural_form')).toBeInTheDocument();
+    });
+
+    it('renders regenerate button for article group', () => {
+      (useWordEntryCards as Mock).mockReturnValue({
+        cards: [createMockCard({ id: 'c1', card_type: 'article', variant_key: 'article_t1' })],
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn(),
+      });
+      renderComponent();
+      expect(screen.getByTestId('regenerate-btn-article')).toBeInTheDocument();
+    });
+
+    it('renders regenerate button for sentence_translation group', () => {
+      (useWordEntryCards as Mock).mockReturnValue({
+        cards: [
+          createMockCard({
+            id: 'c1',
+            card_type: 'sentence_translation',
+            variant_key: 'sentence_translation_t1',
+          }),
+        ],
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn(),
+      });
+      renderComponent();
+      expect(screen.getByTestId('regenerate-btn-sentence_translation')).toBeInTheDocument();
+    });
+
+    it('does NOT render regenerate button for conjugation group', () => {
+      (useWordEntryCards as Mock).mockReturnValue({
+        cards: [
+          createMockCard({ id: 'c1', card_type: 'conjugation', variant_key: 'conjugation_t1' }),
+        ],
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn(),
+      });
+      renderComponent();
+      expect(screen.queryByTestId('regenerate-btn-conjugation')).not.toBeInTheDocument();
+    });
+
+    it('does NOT render regenerate button for declension group', () => {
+      (useWordEntryCards as Mock).mockReturnValue({
+        cards: [
+          createMockCard({ id: 'c1', card_type: 'declension', variant_key: 'declension_t1' }),
+        ],
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn(),
+      });
+      renderComponent();
+      expect(screen.queryByTestId('regenerate-btn-declension')).not.toBeInTheDocument();
+    });
+
+    it('does NOT render regenerate button for cloze group', () => {
+      (useWordEntryCards as Mock).mockReturnValue({
+        cards: [createMockCard({ id: 'c1', card_type: 'cloze', variant_key: 'cloze_t1' })],
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn(),
+      });
+      renderComponent();
+      expect(screen.queryByTestId('regenerate-btn-cloze')).not.toBeInTheDocument();
+    });
+
+    it('clicking regenerate button calls mutate with correct params for meaning', () => {
+      const mutate = vi.fn();
+      (useGenerateCards as Mock).mockReturnValue({
+        mutate,
+        isPending: false,
+        variables: undefined,
+      });
+      (useWordEntryCards as Mock).mockReturnValue({
+        cards: [createMockCard({ id: 'c1', card_type: 'meaning_el_to_en' })],
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn(),
+      });
+      renderComponent('entry-1');
+      fireEvent.click(screen.getByTestId('regenerate-btn-meaning_el_to_en'));
+      expect(mutate).toHaveBeenCalledWith({ wordEntryId: 'entry-1', cardType: 'meaning' });
+    });
+
+    it('clicking regenerate button calls mutate with correct params for article', () => {
+      const mutate = vi.fn();
+      (useGenerateCards as Mock).mockReturnValue({
+        mutate,
+        isPending: false,
+        variables: undefined,
+      });
+      (useWordEntryCards as Mock).mockReturnValue({
+        cards: [createMockCard({ id: 'c1', card_type: 'article', variant_key: 'article_t1' })],
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn(),
+      });
+      renderComponent('entry-1');
+      fireEvent.click(screen.getByTestId('regenerate-btn-article'));
+      expect(mutate).toHaveBeenCalledWith({ wordEntryId: 'entry-1', cardType: 'article' });
+    });
+
+    it('shows loading state on regenerate button when isPending and cardType matches', () => {
+      (useGenerateCards as Mock).mockReturnValue({
+        mutate: vi.fn(),
+        isPending: true,
+        variables: { wordEntryId: 'entry-1', cardType: 'meaning' },
+      });
+      (useWordEntryCards as Mock).mockReturnValue({
+        cards: [createMockCard({ id: 'c1', card_type: 'meaning_el_to_en' })],
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn(),
+      });
+      renderComponent();
+      const btn = screen.getByTestId('regenerate-btn-meaning_el_to_en');
+      expect(btn).toBeDisabled();
+    });
+  });
+
+  // ============================================
+  // Available Card Types section
+  // ============================================
+
+  describe('Available Card Types section', () => {
+    function setupWithWordEntry(wordEntry: ReturnType<typeof createMockWordEntry>) {
+      (useWordEntry as Mock).mockReturnValue({
+        wordEntry,
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+    }
+
+    it('shows the available-card-types section when wordEntry exists and types are missing', () => {
+      setupWithWordEntry(createMockWordEntry());
+      renderComponent();
+      expect(screen.getByTestId('available-card-types')).toBeInTheDocument();
+    });
+
+    it('shows all four generator types when no cards exist', () => {
+      setupWithWordEntry(createMockWordEntry());
+      renderComponent();
+      expect(screen.getByTestId('available-type-meaning')).toBeInTheDocument();
+      expect(screen.getByTestId('available-type-article')).toBeInTheDocument();
+      expect(screen.getByTestId('available-type-plural_form')).toBeInTheDocument();
+      expect(screen.getByTestId('available-type-sentence_translation')).toBeInTheDocument();
+    });
+
+    it('eligible types show generate button with correct testid', () => {
+      setupWithWordEntry(
+        createMockWordEntry({
+          translation_en: 'house',
+          translation_ru: 'dom',
+          grammar_data: {
+            gender: 'neuter',
+            cases: {
+              singular: { nominative: 'spiti' },
+              plural: { nominative: 'spitia' },
+            },
+          },
+          examples: [{ id: 'ex1', greek: 'Sentence.', english: 'Translation.' }],
+        })
+      );
+      renderComponent();
+      expect(screen.getByTestId('generate-btn-meaning')).toBeInTheDocument();
+      expect(screen.getByTestId('generate-btn-article')).toBeInTheDocument();
+      expect(screen.getByTestId('generate-btn-plural_form')).toBeInTheDocument();
+      expect(screen.getByTestId('generate-btn-sentence_translation')).toBeInTheDocument();
+    });
+
+    it('ineligible types show ineligible-reason span instead of generate button', () => {
+      setupWithWordEntry(
+        createMockWordEntry({
+          translation_en: 'house',
+          translation_ru: null,
+          grammar_data: null,
+          examples: null,
+        })
+      );
+      renderComponent();
+      // meaning: missing translation_ru → ineligible
+      expect(screen.getByTestId('ineligible-reason-meaning')).toBeInTheDocument();
+      expect(screen.queryByTestId('generate-btn-meaning')).not.toBeInTheDocument();
+    });
+
+    it('clicking generate button calls mutate with correct params', () => {
+      const mutate = vi.fn();
+      (useGenerateCards as Mock).mockReturnValue({
+        mutate,
+        isPending: false,
+        variables: undefined,
+      });
+      setupWithWordEntry(
+        createMockWordEntry({
+          translation_en: 'house',
+          translation_ru: 'dom',
+          grammar_data: null,
+          examples: null,
+        })
+      );
+      renderComponent('entry-1');
+      fireEvent.click(screen.getByTestId('generate-btn-meaning'));
+      expect(mutate).toHaveBeenCalledWith({ wordEntryId: 'entry-1', cardType: 'meaning' });
+    });
+
+    it('does not show available-card-types when wordEntry is null', () => {
+      // default beforeEach sets wordEntry to null
+      renderComponent();
+      expect(screen.queryByTestId('available-card-types')).not.toBeInTheDocument();
+    });
+
+    it('does not show available-card-types when all generator types already have cards', () => {
+      setupWithWordEntry(createMockWordEntry());
+      (useWordEntryCards as Mock).mockReturnValue({
+        cards: [
+          createMockCard({ id: 'c1', card_type: 'meaning_el_to_en' }),
+          createMockCard({ id: 'c2', card_type: 'article', variant_key: 'article_t1' }),
+          createMockCard({ id: 'c3', card_type: 'plural_form', variant_key: 'plural_form_t1' }),
+          createMockCard({
+            id: 'c4',
+            card_type: 'sentence_translation',
+            variant_key: 'sentence_translation_t1',
+          }),
+        ],
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn(),
+      });
+      renderComponent();
+      expect(screen.queryByTestId('available-card-types')).not.toBeInTheDocument();
+    });
+  });
+
+  // ============================================
+  // Empty state with Available section
+  // ============================================
+
+  describe('Empty state with Available section', () => {
+    it('renders both cards-tab-empty and available-card-types when no cards but wordEntry exists', () => {
+      (useWordEntry as Mock).mockReturnValue({
+        wordEntry: createMockWordEntry(),
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+      renderComponent();
+      expect(screen.getByTestId('cards-tab-empty')).toBeInTheDocument();
+      expect(screen.getByTestId('available-card-types')).toBeInTheDocument();
+    });
+
+    it('renders cards-tab-empty but NOT available-card-types when wordEntry is null', () => {
+      // default beforeEach: wordEntry = null, cards = []
+      renderComponent();
+      expect(screen.getByTestId('cards-tab-empty')).toBeInTheDocument();
+      expect(screen.queryByTestId('available-card-types')).not.toBeInTheDocument();
     });
   });
 });

@@ -180,6 +180,23 @@
     },
     "cards": {
       "tierTooltip": "Tier 1: most common, introduced first. Tier 2: less common. Tier 3+: specialized vocabulary."
+    },
+    "regenerateCards": "Regenerate",
+    "generateCards": "Generate",
+    "availableCardTypes": "Available Card Types",
+    "cardTypeGenerator": {
+      "meaning": "Meaning (Greek/English)",
+      "plural_form": "Plural Form",
+      "article": "Article",
+      "sentence_translation": "Sentence Translation"
+    },
+    "eligibility": {
+      "meaningMissing": "Requires English and Russian translations",
+      "pluralFormWrongPos": "Only available for nouns and adjectives",
+      "pluralFormMissing": "Requires grammar data with singular and plural nominative forms",
+      "articleNotNoun": "Only available for nouns",
+      "articleMissing": "Requires grammar data with gender and nominative singular form",
+      "sentenceMissing": "Requires at least one example with Greek and English text"
     }
   },
   "wordEntryContent": {
@@ -812,6 +829,10 @@
     "retry": "Retry",
     "success": "Audio generation started",
     "error": "Failed to start audio generation"
+  },
+  "cardGenerate": {
+    "success": "Cards generated: {{created}} created, {{updated}} updated",
+    "error": "Failed to generate cards"
   },
   "wordList": {
     "audioReady": "Audio: ready",

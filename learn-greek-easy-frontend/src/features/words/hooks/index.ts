@@ -8,3 +8,5 @@ export { useUpdateWordEntry } from './useUpdateWordEntry';
 export type { UseUpdateWordEntryOptions } from './useUpdateWordEntry';
 export { useGenerateAudio } from './useGenerateAudio';
 export type { GenerateAudioParams } from './useGenerateAudio';
+export { useGenerateCards } from './useGenerateCards';
+export type { GenerateCardsParams } from './useGenerateCards';
