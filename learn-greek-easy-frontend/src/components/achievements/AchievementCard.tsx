@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { Lock, Star } from 'lucide-react';
+import { Star } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { AchievementIcon } from '@/components/achievements/AchievementIcon';
@@ -53,7 +53,7 @@ export const AchievementCard: React.FC<AchievementCardProps> = ({ achievement, c
   return (
     <Card
       className={cn(
-        'relative overflow-hidden transition-all',
+        'relative overflow-hidden transition-all hover:scale-[1.02] hover:shadow-md active:scale-[0.98]',
         unlocked
           ? 'border-purple-300 bg-purple-50 dark:border-purple-700 dark:bg-purple-900/30'
           : 'border-border bg-muted/30 opacity-75',
@@ -64,7 +64,7 @@ export const AchievementCard: React.FC<AchievementCardProps> = ({ achievement, c
     >
       <CardContent className="p-4">
         {/* Icon and Status */}
-        <div className="flex items-start justify-between">
+        <div className="flex items-start">
           <div className="flex items-center gap-3">
             {/* Achievement Icon */}
             <div
@@ -87,40 +87,39 @@ export const AchievementCard: React.FC<AchievementCardProps> = ({ achievement, c
               </p>
             </div>
           </div>
-
-          {/* Lock indicator for locked achievements */}
-          {!unlocked && (
-            <Lock className="h-4 w-4 text-muted-foreground" aria-label={t('card.locked')} />
-          )}
         </div>
 
-        {/* Progress Section */}
-        <div className="mt-4">
-          {/* Progress bar */}
-          <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
-            <span>
-              {current_value} / {threshold}
-            </span>
-            <span>{Math.round(progress)}%</span>
+        {/* Progress Section -- conditional display */}
+        {unlocked ? (
+          <div className="mt-4">
+            <Badge variant="secondary" className="text-xs">
+              {t('status.completed')}
+            </Badge>
           </div>
-          <Progress
-            value={progress}
-            className={cn(
-              'h-2',
-              unlocked ? '[&>div]:bg-purple-500' : '[&>div]:bg-muted-foreground'
-            )}
-            aria-label={`Progress: ${Math.round(progress)}%`}
-          />
-        </div>
+        ) : progress > 0 ? (
+          <div className="mt-4">
+            <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
+              <span>
+                {current_value} / {threshold}
+              </span>
+              <span>{Math.round(progress)}%</span>
+            </div>
+            <Progress
+              value={progress}
+              className="h-2 [&>div]:bg-muted-foreground"
+              aria-label={`Progress: ${Math.round(progress)}%`}
+            />
+          </div>
+        ) : null}
 
         {/* XP Reward Badge */}
         <div className="mt-3 flex items-center justify-between">
           <Badge
-            variant={unlocked ? 'default' : 'outline'}
+            variant="secondary"
             className={cn(
               unlocked
                 ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300'
-                : 'text-muted-foreground'
+                : ''
             )}
           >
             <Star className="mr-1 h-3 w-3" aria-hidden="true" />
