@@ -214,15 +214,27 @@ test.describe('Changelog - User Flow', () => {
     await page.goto('/changelog');
     await waitForChangelogLoaded(page);
 
+    // Verify filter buttons exist before clicking
+    await expect(page.getByTestId('tag-filter')).toBeVisible();
+
     // Click "New Feature" filter — seed has 4 new_feature entries
     await page.getByTestId('tag-filter-new_feature').click();
-    // Use toHaveCount instead of fixed timeout — retries until count matches
-    await expect(page.getByTestId('changelog-card')).toHaveCount(4);
+
+    // Use waitForFunction to poll until card count changes to 4
+    // (more reliable than toHaveCount in CI where React updates may be delayed)
+    await page.waitForFunction(
+      () => document.querySelectorAll('[data-testid="changelog-card"]').length === 4,
+      { timeout: 10000 }
+    );
+    expect(await page.getByTestId('changelog-card').count()).toBe(4);
 
     // Click "All" to reset
     await page.getByTestId('tag-filter-all').click();
-    // All 12 entries → 5 on page 1 with pageSize=5
-    await expect(page.getByTestId('changelog-card')).toHaveCount(5);
+    await page.waitForFunction(
+      () => document.querySelectorAll('[data-testid="changelog-card"]').length === 5,
+      { timeout: 10000 }
+    );
+    expect(await page.getByTestId('changelog-card').count()).toBe(5);
   });
 
   test('CHANGELOG-E2E-17: Deep linking scrolls to specific entry', async ({ page }) => {
@@ -250,14 +262,14 @@ test.describe('Changelog - User Flow', () => {
 
     // Navigate to last page (page 3 with 12 entries, pageSize=5)
     await page.getByTestId('changelog-pagination-page-3').click();
-    // Wait for page 3 to be the active page before asserting end message
+    // Wait for page 3 to be the active page
     await expect(page.getByTestId('changelog-pagination-page-3')).toHaveAttribute(
       'aria-current',
       'page'
     );
 
-    // End message should be visible on last page
-    await expect(page.getByText(/reached the beginning/i)).toBeVisible();
+    // End message should be visible on last page (use data-testid for reliability)
+    await expect(page.getByTestId('changelog-end-message')).toBeVisible();
 
     // Navigate back to page 1 — end message should disappear
     await page.getByTestId('changelog-pagination-page-1').click();
@@ -266,7 +278,7 @@ test.describe('Changelog - User Flow', () => {
       'aria-current',
       'page'
     );
-    await expect(page.getByText(/reached the beginning/i)).not.toBeVisible();
+    await expect(page.getByTestId('changelog-end-message')).not.toBeVisible();
   });
 });
 

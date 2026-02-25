@@ -196,7 +196,10 @@ export function ChangelogPage() {
 
           {/* End-of-list message on last page */}
           {page === totalPages && totalPages > 0 && (
-            <div className="flex flex-col items-center gap-2 py-6 text-center text-muted-foreground">
+            <div
+              className="flex flex-col items-center gap-2 py-6 text-center text-muted-foreground"
+              data-testid="changelog-end-message"
+            >
               <Flag className="h-5 w-5" />
               <p className="text-sm">{t('endMessage', { ns: 'changelog' })}</p>
             </div>
