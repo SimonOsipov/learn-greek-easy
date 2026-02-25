@@ -41,7 +41,7 @@ const groupByCategory = (
  * Normalise achievement data to fix backend inconsistencies.
  * When unlocked === true, progress is forced to 100 regardless of API value.
  */
-const normaliseAchievement = (a: AchievementResponse): AchievementResponse => ({
+export const normaliseAchievement = (a: AchievementResponse): AchievementResponse => ({
   ...a,
   progress: a.unlocked ? 100 : a.progress,
 });
@@ -52,16 +52,16 @@ const normaliseAchievement = (a: AchievementResponse): AchievementResponse => ({
  * 2. In-progress (progress > 0) sorted by progress descending
  * 3. Locked (progress === 0)
  */
-const sortAchievements = (achievements: AchievementResponse[]): AchievementResponse[] => {
+export const sortAchievements = (achievements: AchievementResponse[]): AchievementResponse[] => {
   return [...achievements].sort((a, b) => {
     if (a.unlocked !== b.unlocked) return a.unlocked ? -1 : 1;
     return b.progress - a.progress;
   });
 };
 
-type StatusFilter = 'all' | 'unlocked' | 'in_progress' | 'locked';
+export type StatusFilter = 'all' | 'unlocked' | 'in_progress' | 'locked';
 
-const STATUS_FILTERS: Record<StatusFilter, (a: AchievementResponse) => boolean> = {
+export const STATUS_FILTERS: Record<StatusFilter, (a: AchievementResponse) => boolean> = {
   all: () => true,
   unlocked: (a) => a.unlocked === true,
   in_progress: (a) => !a.unlocked && a.progress > 0,

@@ -16,6 +16,7 @@ import { initReactI18next } from 'react-i18next';
 import { afterEach, beforeAll, vi } from 'vitest';
 
 // Import all translation resources for test i18n setup
+import enAchievements from '@/i18n/locales/en/achievements.json';
 import enAdmin from '@/i18n/locales/en/admin.json';
 import enAuth from '@/i18n/locales/en/auth.json';
 import enChangelog from '@/i18n/locales/en/changelog.json';
@@ -34,6 +35,7 @@ i18n.use(initReactI18next).init({
   resources: {
     en: {
       common: enCommon,
+      achievements: enAchievements,
       auth: enAuth,
       changelog: enChangelog,
       deck: enDeck,
@@ -51,6 +53,7 @@ i18n.use(initReactI18next).init({
   defaultNS: 'common',
   ns: [
     'common',
+    'achievements',
     'auth',
     'changelog',
     'deck',
