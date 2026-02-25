@@ -62,14 +62,14 @@ export const AchievementCard: React.FC<AchievementCardProps> = ({ achievement, c
       role="article"
       aria-label={`Achievement: ${translatedName}`}
     >
-      <CardContent className="p-4">
+      <CardContent className="p-3 sm:p-4">
         {/* Icon and Status */}
         <div className="flex items-start">
           <div className="flex items-center gap-3">
             {/* Achievement Icon */}
             <div
               className={cn(
-                'flex h-12 w-12 items-center justify-center rounded-lg',
+                'flex h-10 w-10 items-center justify-center rounded-lg sm:h-12 sm:w-12',
                 unlocked
                   ? 'bg-purple-100 text-purple-600 dark:bg-purple-800/50 dark:text-purple-300'
                   : 'bg-muted text-muted-foreground grayscale'
@@ -82,7 +82,7 @@ export const AchievementCard: React.FC<AchievementCardProps> = ({ achievement, c
             {/* Name and Description */}
             <div className="flex-1">
               <h3 className="font-semibold text-foreground">{translatedName}</h3>
-              <p className="text-sm text-muted-foreground">
+              <p className={cn('text-sm text-muted-foreground', !unlocked && 'hidden sm:block')}>
                 {unlocked ? translatedDescription : translatedHint}
               </p>
             </div>
@@ -91,13 +91,13 @@ export const AchievementCard: React.FC<AchievementCardProps> = ({ achievement, c
 
         {/* Progress Section -- conditional display */}
         {unlocked ? (
-          <div className="mt-4">
+          <div className="mt-3 sm:mt-4">
             <Badge variant="secondary" className="text-xs">
               {t('status.completed')}
             </Badge>
           </div>
         ) : progress > 0 ? (
-          <div className="mt-4">
+          <div className="mt-3 sm:mt-4">
             <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
               <span>
                 {current_value} / {threshold}
