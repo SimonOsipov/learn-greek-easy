@@ -152,6 +152,10 @@
     }
   },
   "subscription": {
+    "sectionTitle": "Subscription",
+    "subtitle": "Manage your subscription plan and billing",
+    "trialDaysLeft": "{{count}} days left in your trial",
+    "whatYouGet": "What you get with Premium",
     "currentPlan": "Current plan",
     "billingDetails": "Billing details",
     "plans": {

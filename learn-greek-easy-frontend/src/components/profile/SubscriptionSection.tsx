@@ -168,8 +168,21 @@ export const SubscriptionSection: React.FC = () => {
 
   return (
     <div className="p-6">
-      <h2 className="text-xl font-bold text-foreground">{t('subscription.currentPlan')}</h2>
-      <Separator className="my-4" />
+      <div className="mb-6">
+        <h2 className="text-xl font-bold text-foreground">{t('subscription.sectionTitle')}</h2>
+        <p className="text-sm text-muted-foreground">{t('subscription.subtitle')}</p>
+      </div>
+      <Separator className="mb-6" />
+
+      {/* Trial Days Remaining Banner */}
+      {state === 'trialing' &&
+        billingStatus.trial_days_remaining !== null &&
+        billingStatus.trial_days_remaining > 0 && (
+          <div className="mb-4 flex items-center gap-2 rounded-lg border border-blue-300 bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+            <Crown className="h-4 w-4 shrink-0" />
+            <p>{t('subscription.trialDaysLeft', { count: billingStatus.trial_days_remaining })}</p>
+          </div>
+        )}
 
       {/* Past Due Warning Banner */}
       {state === 'past_due' && (
@@ -279,6 +292,28 @@ export const SubscriptionSection: React.FC = () => {
                 </ul>
               </div>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Premium features upsell — free and trialing users */}
+      {(state === 'free' || state === 'trialing') && (
+        <Card className="mb-4">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">{t('subscription.whatYouGet')}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-1">
+              {PREMIUM_ONLY_FEATURES.map((feature) => (
+                <li
+                  key={feature.labelKey}
+                  className="flex items-center gap-2 text-sm text-muted-foreground"
+                >
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground" />
+                  {t(feature.labelKey, { ns: 'upgrade' })}
+                </li>
+              ))}
+            </ul>
           </CardContent>
         </Card>
       )}
