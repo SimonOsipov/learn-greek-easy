@@ -31,14 +31,21 @@ from datetime import date
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from src.constants import ReadinessConstants
 from src.core.exceptions import CultureDeckNotFoundException, CultureQuestionNotFoundException
 from src.core.logging import get_logger
 from src.core.sm2 import DEFAULT_EASINESS_FACTOR, calculate_next_review_date, calculate_sm2
-from src.db.models import CardStatus, CultureDeck, CultureQuestion, CultureQuestionStats
+from src.db.models import (
+    CardStatus,
+    CultureAnswerHistory,
+    CultureDeck,
+    CultureQuestion,
+    CultureQuestionStats,
+)
 from src.repositories import CultureQuestionRepository
 from src.repositories.culture_question_stats import CultureQuestionStatsRepository
 from src.schemas.culture import (
@@ -54,6 +61,7 @@ from src.schemas.culture import (
     CultureQuestionQueue,
     CultureQuestionQueueItem,
     CultureQuestionUpdate,
+    CultureReadinessResponse,
     SM2QuestionResult,
 )
 from src.services.s3_service import S3Service, get_s3_service
@@ -588,6 +596,129 @@ class CultureQuestionService:
             overall=overall,
             by_category=by_category,
             recent_sessions=[],  # Session tracking in future subtask
+        )
+
+    async def get_culture_readiness(self, user_id: UUID) -> CultureReadinessResponse:
+        """Get culture exam readiness assessment.
+
+        Computes a weighted readiness score across exam-relevant categories
+        (history, geography, politics, culture, practical) based on SRS card stages.
+
+        Args:
+            user_id: User to assess readiness for
+
+        Returns:
+            CultureReadinessResponse with readiness percentage, verdict, and stats
+        """
+        logger.debug(
+            "Getting culture readiness",
+            extra={"user_id": str(user_id)},
+        )
+
+        # Single query: total questions + status counts via conditional aggregates
+        stats_query = (
+            select(
+                func.count(CultureQuestion.id).label("questions_total"),
+                func.count(
+                    case(
+                        (
+                            CultureQuestionStats.status == CardStatus.LEARNING,
+                            CultureQuestionStats.id,
+                        )
+                    )
+                ).label("count_learning"),
+                func.count(
+                    case(
+                        (CultureQuestionStats.status == CardStatus.REVIEW, CultureQuestionStats.id)
+                    )
+                ).label("count_review"),
+                func.count(
+                    case(
+                        (
+                            CultureQuestionStats.status == CardStatus.MASTERED,
+                            CultureQuestionStats.id,
+                        )
+                    )
+                ).label("count_mastered"),
+            )
+            .select_from(CultureQuestion)
+            .join(CultureDeck, CultureQuestion.deck_id == CultureDeck.id)
+            .outerjoin(
+                CultureQuestionStats,
+                (CultureQuestionStats.question_id == CultureQuestion.id)
+                & (CultureQuestionStats.user_id == user_id),
+            )
+            .where(
+                CultureDeck.category.in_(ReadinessConstants.INCLUDED_CATEGORIES),
+                CultureDeck.is_active == True,  # noqa: E712
+            )
+        )
+        stats_result = await self.db.execute(stats_query)
+        stats_row = stats_result.one()
+        questions_total = stats_row.questions_total
+        count_learning = stats_row.count_learning
+        count_review = stats_row.count_review
+        count_mastered = stats_row.count_mastered
+
+        # Accuracy query: from culture_answer_history filtered by included categories
+        accuracy_query = select(
+            func.count().label("total_answers"),
+            func.sum(
+                case((CultureAnswerHistory.is_correct == True, 1), else_=0)  # noqa: E712
+            ).label("correct_answers"),
+        ).where(
+            CultureAnswerHistory.user_id == user_id,
+            CultureAnswerHistory.deck_category.in_(ReadinessConstants.INCLUDED_CATEGORIES),
+        )
+        accuracy_result = await self.db.execute(accuracy_query)
+        accuracy_row = accuracy_result.one()
+        total_answers = accuracy_row.total_answers or 0
+        correct_answers = accuracy_row.correct_answers or 0
+
+        accuracy_percentage: Optional[float] = None
+        if total_answers > 0:
+            accuracy_percentage = (correct_answers / total_answers) * 100
+
+        # Compute readiness percentage
+        if questions_total == 0:
+            readiness_percentage = 0.0
+        else:
+            weighted_sum = (
+                count_learning * ReadinessConstants.WEIGHT_LEARNING
+                + count_review * ReadinessConstants.WEIGHT_REVIEW
+                + count_mastered * ReadinessConstants.WEIGHT_MASTERED
+            )
+            readiness_percentage = (weighted_sum / questions_total) * 100
+
+        # Determine verdict from thresholds
+        verdict = ReadinessConstants.VERDICT_THRESHOLDS[-1][1]  # default lowest
+        for threshold, label in sorted(
+            ReadinessConstants.VERDICT_THRESHOLDS, key=lambda t: t[0], reverse=True
+        ):
+            if readiness_percentage >= threshold:
+                verdict = label
+                break
+
+        logger.info(
+            "Culture readiness retrieved",
+            extra={
+                "user_id": str(user_id),
+                "readiness_percentage": readiness_percentage,
+                "verdict": verdict,
+                "questions_total": questions_total,
+                "count_mastered": count_mastered,
+            },
+        )
+
+        return CultureReadinessResponse(
+            readiness_percentage=round(readiness_percentage, 1),
+            verdict=verdict,
+            questions_total=questions_total,
+            questions_learned=count_mastered,
+            accuracy_percentage=(
+                round(accuracy_percentage, 1) if accuracy_percentage is not None else None
+            ),
+            total_answers=total_answers,
         )
 
     # =========================================================================
