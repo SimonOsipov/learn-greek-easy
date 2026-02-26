@@ -130,6 +130,69 @@ CATEGORY_DB_TO_LOGICAL: dict[str, str] = {
 LOGICAL_CATEGORIES = ("history", "geography", "politics", "culture")
 
 
+# Motivation Message Constants
+MOTIVATION_DELTA_IMPROVING_THRESHOLD = 3.0
+MOTIVATION_DELTA_DECLINING_THRESHOLD = -3.0
+MOTIVATION_DELTA_DAYS = 7
+
+MOTIVATION_TEMPLATES: dict[tuple[str, str], list[str]] = {
+    ("improving", "not_ready"): [
+        "cultureMotivation.improving.notReady.1",
+        "cultureMotivation.improving.notReady.2",
+    ],
+    ("improving", "getting_there"): [
+        "cultureMotivation.improving.gettingThere.1",
+        "cultureMotivation.improving.gettingThere.2",
+    ],
+    ("improving", "ready"): [
+        "cultureMotivation.improving.ready.1",
+        "cultureMotivation.improving.ready.2",
+    ],
+    ("improving", "thoroughly_prepared"): [
+        "cultureMotivation.improving.thoroughlyPrepared.1",
+        "cultureMotivation.improving.thoroughlyPrepared.2",
+    ],
+    ("stagnant", "not_ready"): [
+        "cultureMotivation.stagnant.notReady.1",
+        "cultureMotivation.stagnant.notReady.2",
+    ],
+    ("stagnant", "getting_there"): [
+        "cultureMotivation.stagnant.gettingThere.1",
+        "cultureMotivation.stagnant.gettingThere.2",
+    ],
+    ("stagnant", "ready"): [
+        "cultureMotivation.stagnant.ready.1",
+        "cultureMotivation.stagnant.ready.2",
+    ],
+    ("stagnant", "thoroughly_prepared"): [
+        "cultureMotivation.stagnant.thoroughlyPrepared.1",
+        "cultureMotivation.stagnant.thoroughlyPrepared.2",
+    ],
+    ("declining", "not_ready"): [
+        "cultureMotivation.declining.notReady.1",
+        "cultureMotivation.declining.notReady.2",
+    ],
+    ("declining", "getting_there"): [
+        "cultureMotivation.declining.gettingThere.1",
+        "cultureMotivation.declining.gettingThere.2",
+    ],
+    ("declining", "ready"): [
+        "cultureMotivation.declining.ready.1",
+        "cultureMotivation.declining.ready.2",
+    ],
+    ("declining", "thoroughly_prepared"): [
+        "cultureMotivation.declining.thoroughlyPrepared.1",
+        "cultureMotivation.declining.thoroughlyPrepared.2",
+    ],
+}
+
+MOTIVATION_NEW_USER_TEMPLATES: list[str] = [
+    "cultureMotivation.newUser.1",
+    "cultureMotivation.newUser.2",
+    "cultureMotivation.newUser.3",
+]
+
+
 # Pagination
 DEFAULT_PAGE = 1
 DEFAULT_PAGE_SIZE = 20

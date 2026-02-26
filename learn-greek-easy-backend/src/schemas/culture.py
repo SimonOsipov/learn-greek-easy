@@ -267,6 +267,22 @@ class CultureProgressResponse(BaseModel):
 
 
 # ============================================================================
+# Motivation Message Schema
+# ============================================================================
+
+
+class MotivationMessage(BaseModel):
+    """Motivational message based on user's progress delta and readiness level."""
+
+    message_key: str = Field(..., description="i18n translation key")
+    params: dict[str, Any] = Field(..., description="Interpolation parameters")
+    delta_direction: Literal["improving", "stagnant", "declining", "new_user"] = Field(
+        ..., description="Direction of progress change"
+    )
+    delta_percentage: float = Field(..., description="Signed delta from last week")
+
+
+# ============================================================================
 # Culture Exam Readiness Schema
 # ============================================================================
 
@@ -311,6 +327,9 @@ class CultureReadinessResponse(BaseModel):
     categories: list[CategoryReadiness] = Field(
         default_factory=list,
         description="Per-category readiness breakdown, sorted ascending by readiness_percentage",
+    )
+    motivation: Optional[MotivationMessage] = Field(
+        None, description="Motivational message (null when no content exists)"
     )
 
 

@@ -90,6 +90,7 @@ from src.schemas.culture import (
     CultureQuestionStatsResponse,
     CultureReadinessResponse,
     CultureSessionSummary,
+    MotivationMessage,
     MultilingualText,
 )
 
@@ -345,6 +346,7 @@ __all__ = [
     "ClearResponse",
     # Culture
     "CategoryReadiness",
+    "MotivationMessage",
     "MultilingualText",
     "CultureDeckProgress",
     "CultureDeckResponse",
