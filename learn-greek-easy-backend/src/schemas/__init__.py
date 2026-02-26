@@ -87,6 +87,7 @@ from src.schemas.culture import (
     CultureQuestionListResponse,
     CultureQuestionResponse,
     CultureQuestionStatsResponse,
+    CultureReadinessResponse,
     CultureSessionSummary,
     MultilingualText,
 )
@@ -355,6 +356,7 @@ __all__ = [
     "CultureOverallProgress",
     "CultureProgressResponse",
     "CultureSessionSummary",
+    "CultureReadinessResponse",
     # Mock Exam
     "MockExamQuestionResponse",
     "MockExamSessionResponse",
