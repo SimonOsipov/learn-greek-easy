@@ -22,6 +22,7 @@ import { z } from 'zod';
 
 import { AuthLayout } from '@/components/auth/AuthLayout';
 import { SubmitButton } from '@/components/forms';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -189,13 +190,9 @@ export const ForgotPassword: React.FC = () => {
           <CardContent className="space-y-4">
             {/* Form-level error display */}
             {formError && (
-              <div
-                className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-600"
-                role="alert"
-                data-testid="form-error"
-              >
-                {formError}
-              </div>
+              <Alert variant="destructive" data-testid="form-error">
+                <AlertDescription>{formError}</AlertDescription>
+              </Alert>
             )}
 
             {/* Email field */}
@@ -213,7 +210,7 @@ export const ForgotPassword: React.FC = () => {
                 {...register('email')}
               />
               {errors.email && (
-                <p id="email-error" className="mt-1 text-sm text-red-600" role="alert">
+                <p id="email-error" className="mt-1 text-sm text-destructive" role="alert">
                   {getErrorMessage(errors.email.message)}
                 </p>
               )}

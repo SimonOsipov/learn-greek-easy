@@ -32,6 +32,7 @@ import { z } from 'zod';
 import { AuthLayout } from '@/components/auth/AuthLayout';
 import { PasswordStrengthIndicator } from '@/components/auth/PasswordStrengthIndicator';
 import { SubmitButton } from '@/components/forms';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -320,7 +321,7 @@ export const RegisterForm: React.FC = () => {
 
             {resendSuccess && (
               <div
-                className="rounded-md border border-green-200 bg-green-50 p-3 text-center text-sm text-green-600"
+                className="rounded-md border border-green-200 bg-green-50 p-3 text-center text-sm text-green-600 dark:border-green-800 dark:bg-green-950 dark:text-green-400"
                 role="status"
                 data-testid="resend-success"
               >
@@ -392,13 +393,9 @@ export const RegisterForm: React.FC = () => {
           <CardContent className="space-y-4">
             {/* Form-level error display */}
             {formError && (
-              <div
-                className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-600"
-                role="alert"
-                data-testid="form-error"
-              >
-                {formError}
-              </div>
+              <Alert variant="destructive" data-testid="form-error">
+                <AlertDescription>{formError}</AlertDescription>
+              </Alert>
             )}
 
             {/* Name field */}
@@ -416,7 +413,7 @@ export const RegisterForm: React.FC = () => {
                 {...register('name')}
               />
               {errors.name && (
-                <p id="name-error" className="mt-1 text-sm text-red-600" role="alert">
+                <p id="name-error" className="mt-1 text-sm text-destructive" role="alert">
                   {getErrorMessage(errors.name.message)}
                 </p>
               )}
@@ -437,7 +434,7 @@ export const RegisterForm: React.FC = () => {
                 {...register('email')}
               />
               {errors.email && (
-                <p id="email-error" className="mt-1 text-sm text-red-600" role="alert">
+                <p id="email-error" className="mt-1 text-sm text-destructive" role="alert">
                   {getErrorMessage(errors.email.message)}
                 </p>
               )}
@@ -473,7 +470,7 @@ export const RegisterForm: React.FC = () => {
                 </Button>
               </div>
               {errors.password && (
-                <p id="password-error" className="mt-1 text-sm text-red-600" role="alert">
+                <p id="password-error" className="mt-1 text-sm text-destructive" role="alert">
                   {getErrorMessage(errors.password.message)}
                 </p>
               )}
@@ -512,7 +509,11 @@ export const RegisterForm: React.FC = () => {
                 </Button>
               </div>
               {errors.confirmPassword && (
-                <p id="confirmPassword-error" className="mt-1 text-sm text-red-600" role="alert">
+                <p
+                  id="confirmPassword-error"
+                  className="mt-1 text-sm text-destructive"
+                  role="alert"
+                >
                   {getErrorMessage(errors.confirmPassword.message)}
                 </p>
               )}
@@ -539,7 +540,7 @@ export const RegisterForm: React.FC = () => {
                 </Label>
               </div>
               {errors.acceptedTerms && (
-                <p id="terms-error" className="text-sm text-red-600" role="alert">
+                <p id="terms-error" className="text-sm text-destructive" role="alert">
                   {getErrorMessage(errors.acceptedTerms.message)}
                 </p>
               )}
