@@ -100,6 +100,7 @@ from src.tasks import (
     generate_word_entry_part_audio_task,
     is_background_tasks_enabled,
 )
+from src.utils.greek_text import resolve_tts_text
 
 logger = get_logger(__name__)
 
@@ -1962,7 +1963,9 @@ async def generate_word_entry_audio(
         )
 
     if request.part == "lemma":
-        text = word_entry.lemma
+        text = resolve_tts_text(
+            word_entry.lemma, word_entry.part_of_speech.value, word_entry.grammar_data
+        )
         word_entry.audio_status = AudioStatus.GENERATING
         word_entry.audio_generating_since = datetime.now(timezone.utc)
     else:

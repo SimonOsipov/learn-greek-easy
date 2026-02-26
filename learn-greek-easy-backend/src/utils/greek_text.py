@@ -396,17 +396,18 @@ def resolve_tts_text(lemma: str, part_of_speech: str, grammar_data: dict | None)
         return lemma
 
     if part_of_speech == "noun":
-        nominative = grammar_data.get("cases", {}).get("singular", {}).get("nominative")
+        nominative: str = grammar_data.get("cases", {}).get("singular", {}).get("nominative") or ""
         if nominative:
             return nominative
-        gender = grammar_data.get("gender")
+        gender: str = grammar_data.get("gender") or ""
         if gender in GENDER_TO_ARTICLE:
             return GENDER_TO_ARTICLE[gender] + lemma
         return lemma
 
     if part_of_speech == "adjective":
-        masc_nominative = (
+        masc_nominative: str = (
             grammar_data.get("forms", {}).get("masculine", {}).get("singular", {}).get("nominative")
+            or ""
         )
         if masc_nominative:
             return "ο " + masc_nominative
