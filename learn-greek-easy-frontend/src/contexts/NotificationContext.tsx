@@ -9,6 +9,7 @@ import React, {
 } from 'react';
 
 import { reportAPIError } from '@/lib/errorReporting';
+import { APIRequestError } from '@/services/api';
 import * as notificationAPI from '@/services/notificationAPI';
 import { useAppStore } from '@/stores/appStore';
 import { useAuthStore, useHasHydrated } from '@/stores/authStore';
@@ -135,10 +136,14 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         setUnreadCount(count);
       }
     } catch (err) {
-      reportAPIError(err, {
-        operation: 'refreshUnreadCount',
-        endpoint: '/notifications/unread-count',
-      });
+      const isExpectedPollingError =
+        err instanceof APIRequestError && (err.status === 401 || err.status === 408);
+      if (!isExpectedPollingError) {
+        reportAPIError(err, {
+          operation: 'refreshUnreadCount',
+          endpoint: '/notifications/unread-count',
+        });
+      }
     }
   }, [
     hasHydrated,
@@ -227,11 +232,38 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   useEffect(() => {
     if (!hasHydrated || !isAuthenticated || !authInitialized) return;
 
-    const interval = setInterval(() => {
-      refreshUnreadCountRef.current();
-    }, POLLING_INTERVAL);
+    let intervalId: ReturnType<typeof setInterval> | null = null;
 
-    return () => clearInterval(interval);
+    const startPolling = () => {
+      if (intervalId !== null) clearInterval(intervalId);
+      intervalId = setInterval(() => {
+        refreshUnreadCountRef.current();
+      }, POLLING_INTERVAL);
+    };
+
+    const stopPolling = () => {
+      if (intervalId !== null) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        stopPolling();
+      } else {
+        refreshUnreadCountRef.current();
+        startPolling();
+      }
+    };
+
+    startPolling();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      stopPolling();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [hasHydrated, isAuthenticated, authInitialized]); // Depend on hydration, auth, and auth validation for stable interval
 
   const value = useMemo<NotificationContextValue>(
