@@ -13,6 +13,12 @@ export interface SpeakerButtonProps {
   onPlay?: () => void;
   onError?: (error: string) => void;
   className?: string;
+  controlledState?: {
+    isPlaying: boolean;
+    isLoading: boolean;
+    error: string | null;
+    toggle: () => void;
+  };
 }
 
 export function SpeakerButton({
@@ -21,9 +27,13 @@ export function SpeakerButton({
   onPlay,
   onError,
   className,
+  controlledState,
 }: SpeakerButtonProps) {
   const { t } = useTranslation('common');
-  const { isPlaying, isLoading, error, toggle } = useAudioPlayer(audioUrl);
+  // Always call the hook (React rules) but pass null URL when controlled
+  const internal = useAudioPlayer(controlledState ? null : audioUrl);
+  // Use controlled values if provided, otherwise use internal hook values
+  const { isPlaying, isLoading, error, toggle } = controlledState ?? internal;
 
   // Callback refs pattern to avoid stale closures
   const onPlayRef = useRef(onPlay);

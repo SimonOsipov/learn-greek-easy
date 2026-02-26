@@ -17,6 +17,7 @@ import { Link, useParams } from 'react-router-dom';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAudioPlayer } from '@/hooks/useAudioPlayer';
 import type { CardRecordResponse, WordEntryResponse } from '@/services/wordEntryAPI';
 
 import { PracticeCard } from '../components';
@@ -82,6 +83,17 @@ export function WordPracticePage() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
 
+  // Lift audio state to page level so the "A" shortcut can control it
+  const _hookCurrentCard =
+    cards && cards.length > 0 ? cards[Math.min(currentIndex, cards.length - 1)] : null;
+  const hookAudioUrl = _hookCurrentCard ? resolveCardAudioUrl(_hookCurrentCard, wordEntry) : null;
+  const {
+    isPlaying: audioIsPlaying,
+    isLoading: audioIsLoading,
+    error: audioError,
+    toggle: audioToggle,
+  } = useAudioPlayer(hookAudioUrl);
+
   const backUrl = `/decks/${deckId}/words/${wordId}`;
 
   const handleFlip = useCallback(() => {
@@ -130,6 +142,14 @@ export function WordPracticePage() {
         return;
       }
 
+      if (e.key === 'a' || e.key === 'A') {
+        e.preventDefault();
+        if (hookAudioUrl) {
+          audioToggle();
+        }
+        return;
+      }
+
       // 1-4 keys for SRS ratings (only when card is flipped/revealed)
       if (isFlipped && ['1', '2', '3', '4'].includes(e.key)) {
         e.preventDefault();
@@ -139,7 +159,7 @@ export function WordPracticePage() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isFlipped, handleFlip, handleNextCard, handleRate]);
+  }, [isFlipped, handleFlip, handleNextCard, handleRate, audioToggle, hookAudioUrl]);
 
   // Loading state
   if (isLoading) {
@@ -204,7 +224,13 @@ export function WordPracticePage() {
   // Ready state — guard currentIndex against stale data
   const safeIndex = Math.min(currentIndex, cards.length - 1);
   const currentCard = cards[safeIndex];
-  const audioUrl = resolveCardAudioUrl(currentCard, wordEntry);
+  const audioState = {
+    audioUrl: resolveCardAudioUrl(currentCard, wordEntry),
+    isPlaying: audioIsPlaying,
+    isLoading: audioIsLoading,
+    error: audioError,
+    onToggle: audioToggle,
+  };
 
   return (
     <div
@@ -235,7 +261,7 @@ export function WordPracticePage() {
           translationRu={wordEntry?.translation_ru ?? null}
           translationRuPlural={wordEntry?.translation_ru_plural ?? null}
           onRate={handleRate}
-          audioUrl={audioUrl}
+          audioState={audioState}
           wordEntryId={wordId}
           deckId={deckId}
         />

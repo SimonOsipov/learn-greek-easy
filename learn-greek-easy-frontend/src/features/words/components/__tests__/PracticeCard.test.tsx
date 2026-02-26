@@ -34,6 +34,7 @@ vi.mock('@/components/ui/SpeakerButton', () => ({
     audioUrl: string | null | undefined;
     onPlay?: () => void;
     onError?: (error: string) => void;
+    controlledState?: unknown;
   }) => {
     if (!audioUrl) return null;
     return (
@@ -870,73 +871,93 @@ describe('PracticeCard', () => {
 
   describe('Speaker Button', () => {
     const audioUrl = 'https://example.com/audio.mp3';
+    const makeAudioState = (url: string | null) => ({
+      audioUrl: url,
+      isPlaying: false,
+      isLoading: false,
+      error: null,
+      onToggle: vi.fn(),
+    });
 
     it('shows speaker button on front for meaning_el_to_en when audioUrl provided', () => {
-      renderCard({ card: mockCard, audioUrl });
+      renderCard({ card: mockCard, audioState: makeAudioState(audioUrl) });
       expect(screen.getByTestId('speaker-button')).toBeInTheDocument();
     });
 
     it('does NOT show speaker button on back for meaning_el_to_en', () => {
-      renderCard({ card: mockCard, isFlipped: true, audioUrl });
+      renderCard({ card: mockCard, isFlipped: true, audioState: makeAudioState(audioUrl) });
       expect(screen.queryByTestId('speaker-button')).not.toBeInTheDocument();
     });
 
     it('does NOT show speaker button on front for meaning_en_to_el', () => {
-      renderCard({ card: mockEnToElCard, audioUrl });
+      renderCard({ card: mockEnToElCard, audioState: makeAudioState(audioUrl) });
       expect(screen.queryByTestId('speaker-button')).not.toBeInTheDocument();
     });
 
     it('shows speaker button on back for meaning_en_to_el when flipped', () => {
-      renderCard({ card: mockEnToElCard, isFlipped: true, audioUrl });
+      renderCard({ card: mockEnToElCard, isFlipped: true, audioState: makeAudioState(audioUrl) });
       expect(screen.getByTestId('speaker-button')).toBeInTheDocument();
     });
 
     it('shows speaker button on front for sentence_translation (el_to_target)', () => {
-      renderCard({ card: mockSentenceCard, audioUrl });
+      renderCard({ card: mockSentenceCard, audioState: makeAudioState(audioUrl) });
       expect(screen.getByTestId('speaker-button')).toBeInTheDocument();
     });
 
     it('does NOT show speaker button on back for sentence_translation (el_to_target)', () => {
-      renderCard({ card: mockSentenceCard, isFlipped: true, audioUrl });
+      renderCard({ card: mockSentenceCard, isFlipped: true, audioState: makeAudioState(audioUrl) });
       expect(screen.queryByTestId('speaker-button')).not.toBeInTheDocument();
     });
 
     it('does NOT show speaker button on front for sentence_translation (target_to_el)', () => {
-      renderCard({ card: mockTargetToElSentenceCard, audioUrl });
+      renderCard({ card: mockTargetToElSentenceCard, audioState: makeAudioState(audioUrl) });
       expect(screen.queryByTestId('speaker-button')).not.toBeInTheDocument();
     });
 
     it('shows speaker button on back for sentence_translation (target_to_el) when flipped', () => {
-      renderCard({ card: mockTargetToElSentenceCard, isFlipped: true, audioUrl });
+      renderCard({
+        card: mockTargetToElSentenceCard,
+        isFlipped: true,
+        audioState: makeAudioState(audioUrl),
+      });
       expect(screen.getByTestId('speaker-button')).toBeInTheDocument();
     });
 
     it('does NOT show speaker button for plural_form card', () => {
-      renderCard({ card: mockPluralSgToPlCard, audioUrl });
+      renderCard({ card: mockPluralSgToPlCard, audioState: makeAudioState(audioUrl) });
       expect(screen.queryByTestId('speaker-button')).not.toBeInTheDocument();
-      renderCard({ card: mockPluralSgToPlCard, isFlipped: true, audioUrl });
+      renderCard({
+        card: mockPluralSgToPlCard,
+        isFlipped: true,
+        audioState: makeAudioState(audioUrl),
+      });
       expect(screen.queryByTestId('speaker-button')).not.toBeInTheDocument();
     });
 
     it('does NOT show speaker button for article card', () => {
-      renderCard({ card: mockArticleCard, audioUrl });
+      renderCard({ card: mockArticleCard, audioState: makeAudioState(audioUrl) });
       expect(screen.queryByTestId('speaker-button')).not.toBeInTheDocument();
     });
 
     it('does NOT show speaker button when audioUrl is null', () => {
-      renderCard({ card: mockCard, audioUrl: null });
+      renderCard({ card: mockCard, audioState: makeAudioState(null) });
       expect(screen.queryByTestId('speaker-button')).not.toBeInTheDocument();
     });
 
     it('does NOT trigger card flip when speaker button clicked', () => {
       const onFlip = vi.fn();
-      renderCard({ card: mockCard, audioUrl, onFlip });
+      renderCard({ card: mockCard, audioState: makeAudioState(audioUrl), onFlip });
       fireEvent.click(screen.getByTestId('speaker-button'));
       expect(onFlip).not.toHaveBeenCalled();
     });
 
     it('fires word_audio_played analytics for meaning_el_to_en on play', () => {
-      renderCard({ card: mockCard, audioUrl, wordEntryId: 'word-001', deckId: 'deck-001' });
+      renderCard({
+        card: mockCard,
+        audioState: makeAudioState(audioUrl),
+        wordEntryId: 'word-001',
+        deckId: 'deck-001',
+      });
       fireEvent.click(screen.getByTestId('speaker-button'));
       expect(trackWordAudioPlayed).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -948,7 +969,12 @@ describe('PracticeCard', () => {
     });
 
     it('fires example_audio_played analytics for sentence_translation on play', () => {
-      renderCard({ card: mockSentenceCard, audioUrl, wordEntryId: 'word-001', deckId: 'deck-001' });
+      renderCard({
+        card: mockSentenceCard,
+        audioState: makeAudioState(audioUrl),
+        wordEntryId: 'word-001',
+        deckId: 'deck-001',
+      });
       fireEvent.click(screen.getByTestId('speaker-button'));
       expect(trackExampleAudioPlayed).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -961,7 +987,12 @@ describe('PracticeCard', () => {
     });
 
     it('fires word_audio_failed analytics on error', () => {
-      renderCard({ card: mockCard, audioUrl, wordEntryId: 'word-001', deckId: 'deck-001' });
+      renderCard({
+        card: mockCard,
+        audioState: makeAudioState(audioUrl),
+        wordEntryId: 'word-001',
+        deckId: 'deck-001',
+      });
       fireEvent.click(screen.getByTestId('speaker-error-trigger'));
       expect(trackWordAudioFailed).toHaveBeenCalledWith(
         expect.objectContaining({

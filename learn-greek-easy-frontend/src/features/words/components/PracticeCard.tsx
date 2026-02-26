@@ -45,14 +45,18 @@ export interface PracticeCardProps {
   translationRuPlural?: string | null;
   /** Callback when user rates the card (1=again, 2=hard, 3=good, 4=easy) */
   onRate?: (rating: number) => void;
-  /** Presigned audio URL for this card, null if no audio available */
-  audioUrl?: string | null;
+  /** Lifted audio state from the page, includes URL + playback state + toggle */
+  audioState?: {
+    audioUrl: string | null;
+    isPlaying: boolean;
+    isLoading: boolean;
+    error: string | null;
+    onToggle: () => void;
+  } | null;
   /** Word entry ID for analytics tracking */
   wordEntryId?: string;
   /** Deck ID for analytics tracking */
   deckId?: string;
-  /** Callback to play audio (wired up in later subtask) */
-  onPlayAudio?: () => void;
 }
 
 interface MeaningFrontContent {
@@ -163,6 +167,7 @@ function CardFront({
   onAudioPlay,
   onAudioError,
   showAudio,
+  controlledState,
 }: {
   front: MeaningFrontContent;
   typeBadgeLabel: string;
@@ -173,6 +178,12 @@ function CardFront({
   onAudioPlay?: () => void;
   onAudioError?: (error: string) => void;
   showAudio?: boolean;
+  controlledState?: {
+    isPlaying: boolean;
+    isLoading: boolean;
+    error: string | null;
+    toggle: () => void;
+  };
 }) {
   const mainFontSize = cardType === 'sentence_translation' ? 'text-xl' : 'text-3xl';
 
@@ -198,6 +209,7 @@ function CardFront({
             size="sm"
             onPlay={onAudioPlay}
             onError={onAudioError}
+            controlledState={controlledState}
           />
         </div>
       ) : (
@@ -230,6 +242,7 @@ function CardBack({
   onAudioPlay,
   onAudioError,
   showAudio,
+  controlledState,
 }: {
   back: MeaningBackContent;
   typeBadgeLabel: string;
@@ -244,6 +257,12 @@ function CardBack({
   onAudioPlay?: () => void;
   onAudioError?: (error: string) => void;
   showAudio?: boolean;
+  controlledState?: {
+    isPlaying: boolean;
+    isLoading: boolean;
+    error: string | null;
+    toggle: () => void;
+  };
 }) {
   const answerFontSize = cardType === 'sentence_translation' ? 'text-xl' : 'text-3xl';
 
@@ -274,6 +293,7 @@ function CardBack({
               size="sm"
               onPlay={onAudioPlay}
               onError={onAudioError}
+              controlledState={controlledState}
             />
           </div>
         ) : (
@@ -374,11 +394,21 @@ export function PracticeCard({
   translationRu,
   translationRuPlural,
   onRate,
-  audioUrl,
+  audioState,
   wordEntryId,
   deckId,
 }: PracticeCardProps) {
   const { t, i18n } = useTranslation('deck');
+
+  const audioUrl = audioState?.audioUrl ?? null;
+  const audioControlledState = audioState
+    ? {
+        isPlaying: audioState.isPlaying,
+        isLoading: audioState.isLoading,
+        error: audioState.error,
+        toggle: audioState.onToggle,
+      }
+    : undefined;
 
   const front = card.front_content as unknown as MeaningFrontContent;
   const back = card.back_content as unknown as MeaningBackContent;
@@ -602,6 +632,7 @@ export function PracticeCard({
             onAudioPlay={showAudioOnFront ? handleAudioPlay : undefined}
             onAudioError={showAudioOnFront ? handleAudioError : undefined}
             showAudio={showAudioOnFront}
+            controlledState={showAudioOnFront ? audioControlledState : undefined}
           />
         ) : (
           <CardBack
@@ -618,6 +649,7 @@ export function PracticeCard({
             onAudioPlay={showAudioOnBack ? handleAudioPlay : undefined}
             onAudioError={showAudioOnBack ? handleAudioError : undefined}
             showAudio={showAudioOnBack}
+            controlledState={showAudioOnBack ? audioControlledState : undefined}
           />
         )}
       </CardContent>
