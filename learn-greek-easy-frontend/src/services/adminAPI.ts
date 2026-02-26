@@ -451,6 +451,11 @@ export interface AnnouncementDetailResponse extends AnnouncementItem {
 // ============================================
 
 /**
+ * Country classification for news items
+ */
+export type NewsCountry = 'cyprus' | 'greece' | 'world';
+
+/**
  * Payload for creating a news item
  */
 export interface NewsItemCreate {
@@ -463,6 +468,7 @@ export interface NewsItemCreate {
   publication_date: string;
   original_article_url: string;
   source_image_url: string;
+  country: NewsCountry;
 }
 
 /**
@@ -524,6 +530,7 @@ export interface NewsItemUpdate {
   publication_date?: string;
   original_article_url?: string;
   source_image_url?: string;
+  country?: NewsCountry;
 }
 
 /**
@@ -546,6 +553,7 @@ export interface NewsItemResponse {
   audio_file_size_bytes: number | null;
   created_at: string;
   updated_at: string;
+  country: NewsCountry;
   // New fields for card association
   card_id: string | null;
   deck_id: string | null;
@@ -559,6 +567,7 @@ export interface NewsItemListResponse {
   page: number;
   page_size: number;
   items: NewsItemResponse[];
+  country_counts: { cyprus: number; greece: number; world: number };
 }
 
 /**
@@ -1060,8 +1069,12 @@ export const adminAPI = {
    * @param pageSize - Items per page (1-50, default: 10)
    * @returns Paginated list of news items
    */
-  getNewsItems: async (page = 1, pageSize = 10): Promise<NewsItemListResponse> => {
-    const queryString = buildQueryString({ page, page_size: pageSize });
+  getNewsItems: async (
+    page = 1,
+    pageSize = 10,
+    country?: NewsCountry
+  ): Promise<NewsItemListResponse> => {
+    const queryString = buildQueryString({ page, page_size: pageSize, country });
     return api.get<NewsItemListResponse>(`/api/v1/news${queryString}`);
   },
 

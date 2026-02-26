@@ -12,6 +12,7 @@ import { devtools } from 'zustand/middleware';
 
 import { adminAPI } from '@/services/adminAPI';
 import type {
+  NewsCountry,
   NewsItemResponse,
   NewsItemUpdate,
   NewsItemWithCardResponse,
@@ -41,6 +42,9 @@ interface AdminNewsState {
   // Error state
   error: string | null;
 
+  // Filter
+  countryFilter: NewsCountry | 'all';
+
   // Regeneration state
   regeneratingId: string | null;
   cooldownEndTime: number | null;
@@ -53,6 +57,7 @@ interface AdminNewsState {
   regenerateAudio: (id: string) => Promise<void>;
   setPage: (page: number) => void;
   setSelectedItem: (item: NewsItemResponse | null) => void;
+  setCountryFilter: (filter: NewsCountry | 'all') => void;
   clearError: () => void;
 }
 
@@ -74,6 +79,7 @@ export const useAdminNewsStore = create<AdminNewsState>()(
       isUpdating: false,
       isDeleting: false,
       error: null,
+      countryFilter: 'all' as NewsCountry | 'all',
       regeneratingId: null,
       cooldownEndTime: null,
 
@@ -81,11 +87,15 @@ export const useAdminNewsStore = create<AdminNewsState>()(
        * Fetch paginated news items list from admin API
        */
       fetchNewsItems: async () => {
-        const { page, pageSize } = get();
+        const { page, pageSize, countryFilter } = get();
         set({ isLoading: true, error: null });
 
         try {
-          const response = await adminAPI.getNewsItems(page, pageSize);
+          const response = await adminAPI.getNewsItems(
+            page,
+            pageSize,
+            countryFilter === 'all' ? undefined : countryFilter
+          );
 
           set((state) => ({
             newsItems: response.items,
@@ -208,6 +218,14 @@ export const useAdminNewsStore = create<AdminNewsState>()(
       },
 
       /**
+       * Set country filter, reset to page 1, and re-fetch
+       */
+      setCountryFilter: (filter: NewsCountry | 'all') => {
+        set({ countryFilter: filter, page: 1 });
+        get().fetchNewsItems();
+      },
+
+      /**
        * Set the selected news item for edit/delete dialogs
        */
       setSelectedItem: (item: NewsItemResponse | null) => set({ selectedItem: item }),
@@ -240,3 +258,4 @@ export const selectPagination = (state: AdminNewsState) => ({
 });
 export const selectRegeneratingId = (state: AdminNewsState) => state.regeneratingId;
 export const selectCooldownEndTime = (state: AdminNewsState) => state.cooldownEndTime;
+export const selectCountryFilter = (state: AdminNewsState) => state.countryFilter;
