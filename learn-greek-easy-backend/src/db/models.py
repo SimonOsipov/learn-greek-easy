@@ -2288,6 +2288,12 @@ class NewsItem(Base, TimestampMixin):
 
     # Country classification
     country: Mapped[NewsCountry] = mapped_column(
+        SAEnum(
+            NewsCountry,
+            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+            name="newscountry",
+            create_type=False,
+        ),
         nullable=False,
         index=True,
         comment="Country/region this news item belongs to",
