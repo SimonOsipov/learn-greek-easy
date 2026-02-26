@@ -344,3 +344,72 @@ def generate_normalized_forms(forms: list[str]) -> list[str]:
         if norm:
             normalized.add(norm)
     return sorted(normalized)
+
+
+# ============================================================================
+# TTS Text Resolution
+# ============================================================================
+
+# Gender-to-article mapping for TTS text resolution
+GENDER_TO_ARTICLE: dict[str, str] = {
+    "masculine": "ο ",
+    "feminine": "η ",
+    "neuter": "το ",
+}
+
+
+def resolve_tts_text(lemma: str, part_of_speech: str, grammar_data: dict | None) -> str:
+    """Resolve the text to send to ElevenLabs TTS for a word entry.
+
+    Returns the article-prepended form for nouns and adjectives, or the bare
+    lemma for verbs, adverbs, phrases, and any unrecognised part of speech.
+
+    Resolution logic:
+    - Nouns: Use grammar_data.cases.singular.nominative if present (already
+      includes the article, e.g. "το νερό"), else fall back to the gender-inferred
+      article from GENDER_TO_ARTICLE prepended to the lemma, else bare lemma.
+    - Adjectives: Use "ο " + grammar_data.forms.masculine.singular.nominative
+      if present, else bare lemma.
+    - Verbs, adverbs, phrases (and unrecognised parts): bare lemma.
+
+    Args:
+        lemma: The base word form (e.g. "νερό", "καλός", "τρέχω").
+        part_of_speech: String value of the part of speech -- "noun", "verb",
+            "adjective", "adverb", or "phrase". Use the string value, not the
+            enum, to keep this function decoupled from SQLAlchemy models.
+        grammar_data: The JSON grammar_data blob from the word entry, or None.
+
+    Returns:
+        Text string to send to the TTS service.
+
+    Examples:
+        >>> resolve_tts_text("νερό", "noun", {"cases": {"singular": {"nominative": "το νερό"}}})
+        'το νερό'
+
+        >>> resolve_tts_text("τράπεζα", "noun", {"gender": "feminine"})
+        'η τράπεζα'
+
+        >>> resolve_tts_text("τρέχω", "verb", None)
+        'τρέχω'
+    """
+    if not isinstance(grammar_data, dict):
+        return lemma
+
+    if part_of_speech == "noun":
+        nominative = grammar_data.get("cases", {}).get("singular", {}).get("nominative")
+        if nominative:
+            return nominative
+        gender = grammar_data.get("gender")
+        if gender in GENDER_TO_ARTICLE:
+            return GENDER_TO_ARTICLE[gender] + lemma
+        return lemma
+
+    if part_of_speech == "adjective":
+        masc_nominative = (
+            grammar_data.get("forms", {}).get("masculine", {}).get("singular", {}).get("nominative")
+        )
+        if masc_nominative:
+            return "ο " + masc_nominative
+        return lemma
+
+    return lemma

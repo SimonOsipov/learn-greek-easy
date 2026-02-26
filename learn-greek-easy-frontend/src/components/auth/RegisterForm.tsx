@@ -44,6 +44,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 import log from '@/lib/logger';
 import { supabase } from '@/lib/supabaseClient';
 import { authAPI } from '@/services/authAPI';
@@ -557,12 +558,10 @@ export const RegisterForm: React.FC = () => {
             </SubmitButton>
 
             {/* OAuth Divider */}
-            <div className="relative my-6 flex items-center">
-              <div className="flex-grow border-t border-border"></div>
-              <span className="px-4 text-sm text-muted-foreground">
-                {t('register.orContinueWith')}
-              </span>
-              <div className="flex-grow border-t border-border"></div>
+            <div className="relative my-6 flex items-center gap-4">
+              <Separator className="flex-1" />
+              <span className="text-sm text-muted-foreground">{t('register.orContinueWith')}</span>
+              <Separator className="flex-1" />
             </div>
 
             {/* Google Sign Up Button */}
