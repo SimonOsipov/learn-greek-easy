@@ -22,7 +22,7 @@ from sqlalchemy.orm import aliased
 
 from src.core.exceptions import NewsItemNotFoundException, NotFoundException
 from src.core.logging import get_logger
-from src.db.models import CultureDeck, CultureQuestion, NewsItem
+from src.db.models import CultureDeck, CultureQuestion, NewsCountry, NewsItem
 from src.repositories.news_item import NewsItemRepository
 from src.schemas.news_item import (
     CardBrief,
@@ -212,6 +212,16 @@ class NewsItemService:
         news_item = await self.repo.create(news_item_dict)
 
         # Handle question creation if provided
+        # Silent skip: questions only supported for Cyprus news
+        if data.country != NewsCountry.CYPRUS and data.question is not None:
+            logger.info(
+                "Skipping question creation for non-Cyprus news",
+                extra={"country": data.country.value},
+            )
+            data = data.model_copy(update={"question": None})
+            message = (
+                "News item created successfully. Question skipped (only supported for Cyprus news)."
+            )
         if data.question:
             deck_result = await self.db.execute(
                 select(CultureDeck).where(
@@ -309,25 +319,30 @@ class NewsItemService:
 
         return self._to_response(news_item)
 
-    async def get_list(self, *, page: int = 1, page_size: int = 20) -> NewsItemListResponse:
+    async def get_list(
+        self, *, page: int = 1, page_size: int = 20, country: NewsCountry | None = None
+    ) -> NewsItemListResponse:
         """Get paginated list of news items.
 
         Args:
             page: Page number (1-indexed)
             page_size: Number of items per page
+            country: Optional country filter
 
         Returns:
-            NewsItemListResponse with paginated news items
+            NewsItemListResponse with paginated news items and country counts
         """
         skip = (page - 1) * page_size
-        news_items = await self.repo.get_list(skip=skip, limit=page_size)
-        total = await self.repo.count_all()
+        news_items = await self.repo.get_list(skip=skip, limit=page_size, country=country)
+        total = await self.repo.count_all(country=country)
+        country_counts = await self.repo.count_by_country()
 
         return NewsItemListResponse(
             total=total,
             page=page,
             page_size=page_size,
             items=[self._to_response(item) for item in news_items],
+            country_counts=country_counts,
         )
 
     async def get_recent(self, limit: int = 3) -> list[NewsItemResponse]:
@@ -459,7 +474,7 @@ class NewsItemService:
         return NewsCardInfo(card_id=card_info[0], deck_id=card_info[1])
 
     async def get_list_with_cards(
-        self, *, page: int = 1, page_size: int = 20
+        self, *, page: int = 1, page_size: int = 20, country: NewsCountry | None = None
     ) -> NewsItemListWithCardsResponse:
         """Get paginated list of news items with card associations.
 
@@ -469,6 +484,7 @@ class NewsItemService:
         Args:
             page: Page number (1-indexed)
             page_size: Number of items per page
+            country: Optional country filter
 
         Returns:
             NewsItemListWithCardsResponse with paginated news items and card info
@@ -507,7 +523,11 @@ class NewsItemService:
                 QuestionAlias,
                 QuestionAlias.id.cast(String) == first_question_subq.c.first_question_id,
             )
-            .order_by(
+        )
+        if country is not None:
+            query = query.where(NewsItem.country == country)
+        query = (
+            query.order_by(
                 NewsItem.publication_date.desc(),
                 NewsItem.created_at.desc(),
                 NewsItem.id.desc(),
@@ -519,8 +539,9 @@ class NewsItemService:
         result = await self.db.execute(query)
         rows = result.all()
 
-        # Total count - counts unique NewsItems (unchanged)
-        total = await self.repo.count_all()
+        # Total count - counts unique NewsItems (filtered by country if provided)
+        total = await self.repo.count_all(country=country)
+        country_counts = await self.repo.count_by_country()
 
         items = []
         for row in rows:
@@ -542,6 +563,7 @@ class NewsItemService:
             page=page,
             page_size=page_size,
             items=items,
+            country_counts=country_counts,
         )
 
     # =========================================================================
