@@ -2,7 +2,8 @@
   "page": {
     "title": "Feedback & Ideas",
     "subtitle": "Share your ideas, report bugs, and vote on suggestions",
-    "submitButton": "Submit Feedback"
+    "submitButton": "Submit Feedback",
+    "count": "{{count}}"
   },
   "categories": {
     "feature_request": "Feature Request",
@@ -18,6 +19,7 @@
   },
   "submit": {
     "title": "Submit Feedback",
+    "dialogDescription": "Fill out the form below to share your feedback or report an issue.",
     "category": "Category",
     "categoryPlaceholder": "Select category",
     "titleField": "Title",
@@ -39,6 +41,7 @@
   "edit": {
     "button": "Edit",
     "title": "Edit Feedback",
+    "dialogDescription": "Update the title or description of your feedback.",
     "save": "Save Changes",
     "saving": "Saving...",
     "success": {
@@ -68,6 +71,14 @@
   },
   "list": {
     "empty": "No feedback found. Be the first to share your ideas!",
+    "emptyState": {
+      "message": "No feedback yet. Be the first to share your ideas!",
+      "cta": "Submit Feedback"
+    },
+    "noResults": {
+      "message": "No feedback matches your current filters.",
+      "clearFilters": "Clear Filters"
+    },
     "by": "by"
   },
   "pagination": {
@@ -94,6 +105,7 @@
     "clear": "Clear"
   },
   "developerResponse": {
-    "title": "Developer Response"
+    "title": "Developer Response",
+    "ariaLabel": "Developer response"
   }
 }

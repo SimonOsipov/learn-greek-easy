@@ -60,6 +60,8 @@ export const FeedbackVoteButton: React.FC<FeedbackVoteButtonProps> = ({
           voteCount < 0 && 'text-destructive'
         )}
         data-testid="vote-count"
+        aria-live="polite"
+        aria-atomic="true"
       >
         {voteCount}
       </span>

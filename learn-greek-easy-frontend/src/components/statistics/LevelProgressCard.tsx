@@ -82,7 +82,7 @@ export const LevelProgressCard: React.FC<LevelProgressCardProps> = ({ className 
   return (
     <Card className={cn(className)}>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle className="flex items-center gap-2">
               {isMaxLevel ? (
@@ -109,7 +109,7 @@ export const LevelProgressCard: React.FC<LevelProgressCardProps> = ({ className 
                   })}
             </CardDescription>
           </div>
-          <Badge variant="secondary" className="text-lg">
+          <Badge variant="secondary" className="text-sm sm:text-lg">
             {isMaxLevel
               ? t('level.maxLevel', 'Max Level!')
               : t('level.xpToNext', { xp: xpToNextLevel.toLocaleString(), level: level + 1 })}

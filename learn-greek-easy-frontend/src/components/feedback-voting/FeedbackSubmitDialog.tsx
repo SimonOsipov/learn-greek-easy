@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -35,6 +36,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useFeedbackStore } from '@/stores/feedbackStore';
 import { FEEDBACK_CATEGORIES } from '@/types/feedback';
+
+const TITLE_MAX = 200;
+const DESCRIPTION_MAX = 2000;
+const WARN_THRESHOLD = 0.9;
 
 const feedbackSchema = z.object({
   title: z.string().min(5, 'Title must be at least 5 characters').max(200),
@@ -66,6 +71,9 @@ export const FeedbackSubmitDialog: React.FC<FeedbackSubmitDialogProps> = ({
     },
   });
 
+  const titleValue = form.watch('title');
+  const descriptionValue = form.watch('description');
+
   const onSubmit = async (data: FeedbackFormData) => {
     try {
       await createFeedback(data);
@@ -89,6 +97,7 @@ export const FeedbackSubmitDialog: React.FC<FeedbackSubmitDialogProps> = ({
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>{t('submit.title')}</DialogTitle>
+          <DialogDescription className="sr-only">{t('submit.dialogDescription')}</DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
@@ -135,7 +144,18 @@ export const FeedbackSubmitDialog: React.FC<FeedbackSubmitDialogProps> = ({
                       {...field}
                     />
                   </FormControl>
-                  <FormMessage />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <FormMessage />
+                    <span
+                      className={
+                        titleValue.length >= TITLE_MAX * WARN_THRESHOLD
+                          ? 'text-destructive'
+                          : undefined
+                      }
+                    >
+                      {titleValue.length} / {TITLE_MAX}
+                    </span>
+                  </div>
                 </FormItem>
               )}
             />
@@ -154,7 +174,18 @@ export const FeedbackSubmitDialog: React.FC<FeedbackSubmitDialogProps> = ({
                       {...field}
                     />
                   </FormControl>
-                  <FormMessage />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <FormMessage />
+                    <span
+                      className={
+                        descriptionValue.length >= DESCRIPTION_MAX * WARN_THRESHOLD
+                          ? 'text-destructive'
+                          : undefined
+                      }
+                    >
+                      {descriptionValue.length} / {DESCRIPTION_MAX}
+                    </span>
+                  </div>
                 </FormItem>
               )}
             />

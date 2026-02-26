@@ -3,20 +3,12 @@
 import React, { useMemo } from 'react';
 
 import { useTranslation } from 'react-i18next';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Cell,
-  ResponsiveContainer,
-} from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Cell } from 'recharts';
 
-import { ChartContainer, ChartTooltip } from '@/components/charts';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ChartContainer, ChartTooltip, type ChartConfig } from '@/components/ui/chart';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useDeckPerformance } from '@/hooks/useDeckPerformance';
-import { chartColors, colorSchemes } from '@/lib/chartConfig';
 import type { DeckPerformanceStats } from '@/types/analytics';
 
 interface DeckPerformanceChartProps {
@@ -33,11 +25,6 @@ interface CustomTooltipProps {
 /**
  * Horizontal BarChart showing deck completion/mastery percentages
  * Allows comparing performance across all decks
- *
- * @example
- * ```tsx
- * <DeckPerformanceChart height={400} />
- * ```
  */
 export const DeckPerformanceChart = React.forwardRef<HTMLDivElement, DeckPerformanceChartProps>(
   ({ height, maxDecks = 8, className }, ref) => {
@@ -46,127 +33,134 @@ export const DeckPerformanceChart = React.forwardRef<HTMLDivElement, DeckPerform
 
     const chartHeight = height || 400;
 
-    // Sort and limit decks
+    const chartConfig = {
+      mastery: {
+        label: t('charts.deckPerformance.title'),
+        color: 'hsl(var(--chart-1))',
+      },
+    } satisfies ChartConfig;
+
     const sortedDecks = useMemo(() => {
       if (!deckStats) return [];
-      return deckStats.sort((a, b) => b.mastery - a.mastery).slice(0, maxDecks);
+      return [...deckStats].sort((a, b) => b.mastery - a.mastery).slice(0, maxDecks);
     }, [deckStats, maxDecks]);
 
-    // Format X-axis as percentage
     const formatXAxis = (value: number): string => `${Math.round(value)}%`;
 
-    // Custom tooltip with detailed info
     const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
       if (!active || !payload || payload.length === 0) return null;
-
       const data = payload[0].payload as DeckPerformanceStats;
       const deckIndex = sortedDecks.findIndex((d) => d.deckId === data.deckId);
-
+      const color = `hsl(var(--chart-${(deckIndex % 8) + 1}))`;
       return (
-        <ChartTooltip
-          active={active}
-          payload={[
-            {
-              name: data.deckName,
-              value: `${Math.round(data.mastery)}% (${data.cardsMastered}/${data.cardsInDeck} cards, ${Math.round(data.accuracy)}% accuracy)`,
-              color: colorSchemes.spectrum[deckIndex % 8],
-              dataKey: 'mastery',
-            },
-          ]}
-        />
+        <div className="grid min-w-[8rem] items-start gap-1.5 rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-xl">
+          <div className="flex items-center gap-2">
+            <div
+              className="h-2.5 w-2.5 shrink-0 rounded-[2px]"
+              style={{ backgroundColor: color }}
+            />
+            <span className="font-medium">{data.deckName}</span>
+          </div>
+          <div className="text-muted-foreground">
+            {Math.round(data.mastery)}% ({data.cardsMastered}/{data.cardsInDeck} cards,{' '}
+            {Math.round(data.accuracy)}% accuracy)
+          </div>
+        </div>
       );
     };
 
-    // Handle error
     if (error) {
       return (
-        <ChartContainer
-          ref={ref}
-          className={className}
-          title={t('charts.deckPerformance.title')}
-          description={t('charts.deckPerformance.description')}
-          noData
-        >
-          <div className="text-red-600">{t('error.loadingData', { error })}</div>
-        </ChartContainer>
+        <Card ref={ref} className={className}>
+          <CardHeader>
+            <CardTitle>{t('charts.deckPerformance.title')}</CardTitle>
+            <CardDescription>{t('charts.deckPerformance.description')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex h-[200px] items-center justify-center text-red-600">
+              {t('error.loadingData', { error })}
+            </div>
+          </CardContent>
+        </Card>
       );
     }
 
-    // Handle loading
     if (loading) {
       return (
-        <ChartContainer
-          ref={ref}
-          className={className}
-          title={t('charts.deckPerformance.title')}
-          description={t('charts.deckPerformance.description')}
-          loading
-          height={chartHeight}
-        >
-          <div />
-        </ChartContainer>
+        <Card ref={ref} className={className}>
+          <CardHeader>
+            <CardTitle>{t('charts.deckPerformance.title')}</CardTitle>
+            <CardDescription>{t('charts.deckPerformance.description')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="w-full" style={{ height: chartHeight }} />
+          </CardContent>
+        </Card>
       );
     }
 
-    // Handle empty
     if (!sortedDecks || sortedDecks.length === 0) {
       return (
-        <ChartContainer
-          ref={ref}
-          className={className}
-          title={t('charts.deckPerformance.title')}
-          description={t('charts.deckPerformance.description')}
-          noData
-          height={chartHeight}
-        >
-          <div />
-        </ChartContainer>
+        <Card ref={ref} className={className}>
+          <CardHeader>
+            <CardTitle>{t('charts.deckPerformance.title')}</CardTitle>
+            <CardDescription>{t('charts.deckPerformance.description')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div
+              className="flex items-center justify-center text-muted-foreground"
+              style={{ height: chartHeight }}
+            >
+              <p>{t('charts.noData')}</p>
+            </div>
+          </CardContent>
+        </Card>
       );
     }
 
     return (
-      <ChartContainer
-        ref={ref}
-        className={className}
-        title={t('charts.deckPerformance.title')}
-        description={t('charts.deckPerformance.description')}
-        height={chartHeight}
-      >
-        <ResponsiveContainer width="100%" height={chartHeight}>
-          <BarChart
-            data={sortedDecks}
-            layout="vertical"
-            margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
+      <Card ref={ref} className={className}>
+        <CardHeader>
+          <CardTitle>{t('charts.deckPerformance.title')}</CardTitle>
+          <CardDescription>{t('charts.deckPerformance.description')}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ChartContainer
+            config={chartConfig}
+            className="w-full"
+            style={{ height: `${chartHeight}px` }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke={chartColors.gray200} />
-            <XAxis
-              type="number"
-              domain={[0, 100]}
-              tick={{ fontSize: 12, fill: chartColors.gray600 }}
-              stroke={chartColors.gray300}
-              tickFormatter={formatXAxis}
-            />
-            <YAxis
-              type="category"
-              dataKey="deckName"
-              width={120}
-              tick={{ fontSize: 12, fill: chartColors.gray600 }}
-              stroke={chartColors.gray300}
-            />
-            <Tooltip content={<CustomTooltip />} />
-            <Bar
-              dataKey="mastery"
-              fill={chartColors.chart1}
-              isAnimationActive={false}
-              radius={[0, 8, 8, 0]}
+            <BarChart
+              data={sortedDecks}
+              layout="vertical"
+              margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
             >
-              {sortedDecks.map((_entry, index) => (
-                <Cell key={`cell-${index}`} fill={colorSchemes.spectrum[index % 8]} />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </ChartContainer>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis
+                type="number"
+                domain={[0, 100]}
+                tick={{ fontSize: 12 }}
+                tickFormatter={formatXAxis}
+              />
+              <YAxis
+                type="category"
+                dataKey="deckName"
+                width={120}
+                tick={{ fontSize: 12 }}
+                tickFormatter={(name: string) =>
+                  name.length > 12 ? name.slice(0, 12) + '…' : name
+                }
+              />
+              <ChartTooltip content={<CustomTooltip />} />
+              <Bar dataKey="mastery" isAnimationActive={false} radius={[0, 8, 8, 0]}>
+                {sortedDecks.map((_entry, index) => (
+                  <Cell key={`cell-${index}`} fill={`hsl(var(--chart-${(index % 8) + 1}))`} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ChartContainer>
+        </CardContent>
+      </Card>
     );
   }
 );
