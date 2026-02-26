@@ -89,6 +89,18 @@
     },
     "noData": "No data available"
   },
+  "cultureReadiness": {
+    "title": "Culture Exam Readiness",
+    "questionsLearned": "Questions Learned",
+    "overallAccuracy": "Overall Accuracy",
+    "noAccuracyData": "N/A",
+    "verdicts": {
+      "not_ready": "Not Ready",
+      "getting_there": "Getting There",
+      "ready": "Ready",
+      "thoroughly_prepared": "Thoroughly Prepared"
+    }
+  },
   "error": {
     "loadingData": "Error loading data: {{error}}"
   }

@@ -89,6 +89,18 @@
     },
     "noData": "Нет данных"
   },
+  "cultureReadiness": {
+    "title": "Готовность к экзамену по культуре",
+    "questionsLearned": "Вопросы изучены",
+    "overallAccuracy": "Общая точность",
+    "noAccuracyData": "Н/Д",
+    "verdicts": {
+      "not_ready": "Не готов",
+      "getting_there": "В процессе",
+      "ready": "Готов",
+      "thoroughly_prepared": "Отлично подготовлен"
+    }
+  },
   "error": {
     "loadingData": "Ошибка загрузки данных: {{error}}"
   }
