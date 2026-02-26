@@ -280,4 +280,53 @@ describe('Change B — visibility-aware polling', () => {
 
     removeEventListenerSpy.mockRestore();
   });
+
+  it('should not start polling when tab is hidden at mount time', async () => {
+    // Set hidden BEFORE mounting
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => 'hidden',
+    });
+
+    const { unmount } = renderHook(() => useNotifications(), { wrapper });
+
+    // Let initial effects settle
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    // Isolate from the initial fetch by clearing the mock now
+    vi.mocked(notificationAPI.fetchUnreadCount).mockClear();
+
+    // Advance 3 full polling intervals — polling should NOT have fired
+    await act(async () => {
+      vi.advanceTimersByTime(180000);
+      await Promise.resolve();
+    });
+
+    expect(vi.mocked(notificationAPI.fetchUnreadCount)).not.toHaveBeenCalled();
+
+    // Now make the tab visible — should trigger an immediate refresh
+    await act(async () => {
+      Object.defineProperty(document, 'visibilityState', {
+        configurable: true,
+        get: () => 'visible',
+      });
+      document.dispatchEvent(new Event('visibilitychange'));
+      await Promise.resolve();
+    });
+
+    // Immediate refresh on visibility restore
+    expect(vi.mocked(notificationAPI.fetchUnreadCount).mock.calls.length).toBe(1);
+
+    // Advance another interval — polling should now be running
+    await act(async () => {
+      vi.advanceTimersByTime(60000);
+      await Promise.resolve();
+    });
+
+    expect(vi.mocked(notificationAPI.fetchUnreadCount).mock.calls.length).toBe(2);
+
+    unmount();
+  });
 });

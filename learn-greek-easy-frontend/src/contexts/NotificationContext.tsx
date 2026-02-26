@@ -257,7 +257,9 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       }
     };
 
-    startPolling();
+    if (document.visibilityState === 'visible') {
+      startPolling();
+    }
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
