@@ -22,6 +22,7 @@ import { z } from 'zod';
 
 import { AuthLayout } from '@/components/auth/AuthLayout';
 import { SubmitButton } from '@/components/forms';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -173,7 +174,7 @@ export const ForgotPassword: React.FC = () => {
       <Card className="shadow-xl" data-testid="forgot-password-card">
         <CardHeader className="space-y-1 text-center">
           <div className="mx-auto mb-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-purple-100">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-blue-200">
               <Lock className="h-8 w-8 text-primary" />
             </div>
           </div>
@@ -189,13 +190,9 @@ export const ForgotPassword: React.FC = () => {
           <CardContent className="space-y-4">
             {/* Form-level error display */}
             {formError && (
-              <div
-                className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-600"
-                role="alert"
-                data-testid="form-error"
-              >
-                {formError}
-              </div>
+              <Alert variant="destructive" data-testid="form-error">
+                <AlertDescription>{formError}</AlertDescription>
+              </Alert>
             )}
 
             {/* Email field */}
@@ -213,7 +210,7 @@ export const ForgotPassword: React.FC = () => {
                 {...register('email')}
               />
               {errors.email && (
-                <p id="email-error" className="mt-1 text-sm text-red-600" role="alert">
+                <p id="email-error" className="mt-1 text-sm text-destructive" role="alert">
                   {getErrorMessage(errors.email.message)}
                 </p>
               )}
@@ -223,7 +220,7 @@ export const ForgotPassword: React.FC = () => {
               data-testid="forgot-password-submit"
               loading={isSubmitting}
               loadingText={t('forgotPassword.submitting')}
-              className="w-full bg-gradient-to-br from-gradient-from to-gradient-to text-white hover:opacity-90"
+              className="w-full"
               size="lg"
             >
               {t('forgotPassword.submit')}

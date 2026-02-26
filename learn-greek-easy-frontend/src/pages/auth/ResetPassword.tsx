@@ -28,6 +28,7 @@ import { z } from 'zod';
 
 import { AuthLayout } from '@/components/auth/AuthLayout';
 import { SubmitButton } from '@/components/forms';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -157,7 +158,7 @@ export const ResetPassword: React.FC = () => {
       <Card className="shadow-xl" data-testid="reset-password-card">
         <CardHeader className="space-y-1 text-center">
           <div className="mx-auto mb-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-purple-100">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-blue-200">
               <Lock className="h-8 w-8 text-primary" />
             </div>
           </div>
@@ -173,13 +174,9 @@ export const ResetPassword: React.FC = () => {
           <CardContent className="space-y-4">
             {/* Form-level error display */}
             {formError && (
-              <div
-                className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-600"
-                role="alert"
-                data-testid="form-error"
-              >
-                {formError}
-              </div>
+              <Alert variant="destructive" data-testid="form-error">
+                <AlertDescription>{formError}</AlertDescription>
+              </Alert>
             )}
 
             {/* New Password field */}
@@ -212,7 +209,7 @@ export const ResetPassword: React.FC = () => {
                 </Button>
               </div>
               {errors.password && (
-                <p id="password-error" className="mt-1 text-sm text-red-600" role="alert">
+                <p id="password-error" className="mt-1 text-sm text-destructive" role="alert">
                   {getErrorMessage(errors.password.message)}
                 </p>
               )}
@@ -250,7 +247,11 @@ export const ResetPassword: React.FC = () => {
                 </Button>
               </div>
               {errors.confirmPassword && (
-                <p id="confirmPassword-error" className="mt-1 text-sm text-red-600" role="alert">
+                <p
+                  id="confirmPassword-error"
+                  className="mt-1 text-sm text-destructive"
+                  role="alert"
+                >
                   {getErrorMessage(errors.confirmPassword.message)}
                 </p>
               )}
@@ -260,7 +261,7 @@ export const ResetPassword: React.FC = () => {
               data-testid="reset-password-submit"
               loading={isSubmitting}
               loadingText={t('resetPassword.submitting')}
-              className="w-full bg-gradient-to-br from-gradient-from to-gradient-to text-white hover:opacity-90"
+              className="w-full"
               size="lg"
             >
               {t('resetPassword.submit')}

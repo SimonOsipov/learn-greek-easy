@@ -26,6 +26,7 @@ import { z } from 'zod';
 
 import { AuthLayout } from '@/components/auth/AuthLayout';
 import { SubmitButton } from '@/components/forms';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -38,6 +39,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 import log from '@/lib/logger';
 import { supabase } from '@/lib/supabaseClient';
 import { authAPI } from '@/services/authAPI';
@@ -245,13 +247,9 @@ export const LoginForm: React.FC = () => {
           <CardContent className="space-y-4">
             {/* Form-level error display */}
             {formError && (
-              <div
-                className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-600"
-                role="alert"
-                data-testid="form-error"
-              >
-                {formError}
-              </div>
+              <Alert variant="destructive" data-testid="form-error">
+                <AlertDescription>{formError}</AlertDescription>
+              </Alert>
             )}
 
             {/* Email field */}
@@ -269,7 +267,7 @@ export const LoginForm: React.FC = () => {
                 {...register('email')}
               />
               {errors.email && (
-                <p id="email-error" className="mt-1 text-sm text-red-600" role="alert">
+                <p id="email-error" className="mt-1 text-sm text-destructive" role="alert">
                   {getErrorMessage(errors.email.message)}
                 </p>
               )}
@@ -305,7 +303,7 @@ export const LoginForm: React.FC = () => {
                 </Button>
               </div>
               {errors.password && (
-                <p id="password-error" className="mt-1 text-sm text-red-600" role="alert">
+                <p id="password-error" className="mt-1 text-sm text-destructive" role="alert">
                   {getErrorMessage(errors.password.message)}
                 </p>
               )}
@@ -337,19 +335,17 @@ export const LoginForm: React.FC = () => {
               data-testid="login-submit"
               loading={isSubmitting}
               loadingText={t('login.submitting')}
-              className="w-full bg-gradient-to-br from-gradient-from to-gradient-to text-white hover:opacity-90"
+              className="w-full"
               size="lg"
             >
               {t('login.submit')}
             </SubmitButton>
 
             {/* OAuth Divider */}
-            <div className="relative my-6 flex items-center">
-              <div className="flex-grow border-t border-border"></div>
-              <span className="px-4 text-sm text-muted-foreground">
-                {t('login.orContinueWith')}
-              </span>
-              <div className="flex-grow border-t border-border"></div>
+            <div className="relative my-6 flex items-center gap-4">
+              <Separator className="flex-1" />
+              <span className="text-sm text-muted-foreground">{t('login.orContinueWith')}</span>
+              <Separator className="flex-1" />
             </div>
 
             {/* Google Sign In Button */}

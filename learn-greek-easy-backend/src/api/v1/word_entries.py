@@ -23,6 +23,7 @@ from src.schemas.word_entry import WordEntryBulkRequest, WordEntryBulkResponse, 
 from src.services.card_generator_service import CardGeneratorService
 from src.services.word_entry_response import word_entry_to_response
 from src.tasks import generate_word_entry_audio_task, is_background_tasks_enabled
+from src.utils.greek_text import resolve_tts_text
 
 router = APIRouter(
     # Note: prefix is set by parent router in v1/router.py
@@ -364,7 +365,7 @@ async def bulk_upload_word_entries(
             background_tasks.add_task(
                 generate_word_entry_audio_task,
                 word_entry_id=entry.id,
-                lemma=entry.lemma,
+                lemma=resolve_tts_text(entry.lemma, entry.part_of_speech.value, entry.grammar_data),
                 examples=[
                     {"id": ex.get("id"), "greek": ex.get("greek")} for ex in (entry.examples or [])
                 ],

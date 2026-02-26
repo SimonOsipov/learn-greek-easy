@@ -9,9 +9,11 @@ Target coverage: 95%+
 """
 
 from src.utils.greek_text import (
+    GENDER_TO_ARTICLE,
     extract_searchable_forms,
     generate_normalized_forms,
     normalize_greek_accents,
+    resolve_tts_text,
 )
 
 
@@ -415,3 +417,78 @@ class TestIntegration:
         assert "θελω" in normalized
         assert "θελησω" in normalized
         assert "θελησει" in normalized
+
+
+class TestResolveTtsText:
+    """Tests for TTS text resolution."""
+
+    def test_noun_with_nominative_case_form(self) -> None:
+        """Noun with grammar_data.cases.singular.nominative returns that form directly."""
+        grammar_data = {"gender": "neuter", "cases": {"singular": {"nominative": "το νερό"}}}
+        assert resolve_tts_text("νερό", "noun", grammar_data) == "το νερό"
+
+    def test_noun_with_gender_no_nominative(self) -> None:
+        """Noun with gender but no nominative falls back to gender-inferred article."""
+        grammar_data = {"gender": "feminine"}
+        assert resolve_tts_text("τράπεζα", "noun", grammar_data) == "η τράπεζα"
+
+    def test_noun_masculine_gender_fallback(self) -> None:
+        """Masculine gender maps to ο  article prefix."""
+        grammar_data = {"gender": "masculine"}
+        assert resolve_tts_text("φίλος", "noun", grammar_data) == "ο φίλος"
+
+    def test_noun_neuter_gender_fallback(self) -> None:
+        """Neuter gender maps to το  article prefix."""
+        grammar_data = {"gender": "neuter"}
+        assert resolve_tts_text("βιβλίο", "noun", grammar_data) == "το βιβλίο"
+
+    def test_noun_no_grammar_data(self) -> None:
+        """Noun with None grammar_data returns bare lemma."""
+        assert resolve_tts_text("τράπεζα", "noun", None) == "τράπεζα"
+
+    def test_noun_empty_grammar_data(self) -> None:
+        """Noun with empty dict returns bare lemma."""
+        assert resolve_tts_text("τράπεζα", "noun", {}) == "τράπεζα"
+
+    def test_noun_no_gender_key(self) -> None:
+        """Noun with grammar_data but no gender key returns bare lemma."""
+        grammar_data = {"declension_group": "feminine_a"}
+        assert resolve_tts_text("τράπεζα", "noun", grammar_data) == "τράπεζα"
+
+    def test_adjective_with_masculine_nominative(self) -> None:
+        """Adjective with masculine singular nominative returns ο  + that form."""
+        grammar_data = {"forms": {"masculine": {"singular": {"nominative": "καλός"}}}}
+        assert resolve_tts_text("καλός", "adjective", grammar_data) == "ο καλός"
+
+    def test_adjective_no_grammar_data(self) -> None:
+        """Adjective with None grammar_data returns bare lemma."""
+        assert resolve_tts_text("καλός", "adjective", None) == "καλός"
+
+    def test_adjective_no_masculine_form(self) -> None:
+        """Adjective with partial grammar_data no masculine key returns bare lemma."""
+        grammar_data = {"forms": {}}
+        assert resolve_tts_text("καλός", "adjective", grammar_data) == "καλός"
+
+    def test_verb_returns_bare_lemma(self) -> None:
+        """Verb always returns bare lemma regardless of grammar_data."""
+        assert resolve_tts_text("τρέχω", "verb", {"some": "data"}) == "τρέχω"
+
+    def test_adverb_returns_bare_lemma(self) -> None:
+        """Adverb returns bare lemma."""
+        assert resolve_tts_text("γρήγορα", "adverb", None) == "γρήγορα"
+
+    def test_phrase_returns_bare_lemma(self) -> None:
+        """Phrase returns bare lemma."""
+        assert resolve_tts_text("καλημέρα σας", "phrase", None) == "καλημέρα σας"
+
+    def test_noun_nominative_takes_priority_over_gender(self) -> None:
+        """When both nominative and gender exist, nominative wins."""
+        grammar_data = {"gender": "neuter", "cases": {"singular": {"nominative": "το νερό"}}}
+        assert resolve_tts_text("νερό", "noun", grammar_data) == "το νερό"
+
+    def test_gender_to_article_constant(self) -> None:
+        """GENDER_TO_ARTICLE has exactly 3 entries with correct values."""
+        assert set(GENDER_TO_ARTICLE.keys()) == {"masculine", "feminine", "neuter"}
+        assert GENDER_TO_ARTICLE["masculine"] == "ο "
+        assert GENDER_TO_ARTICLE["feminine"] == "η "
+        assert GENDER_TO_ARTICLE["neuter"] == "το "

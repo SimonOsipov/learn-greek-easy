@@ -59,6 +59,7 @@ class NewsItemFactory(BaseFactory):
     )
     image_s3_key = factory.Sequence(lambda n: f"news-images/test-{n}.jpg")
     audio_s3_key = None
+    country = "cyprus"
 
     class Params:
         old = factory.Trait(
@@ -67,6 +68,8 @@ class NewsItemFactory(BaseFactory):
         with_audio = factory.Trait(
             audio_s3_key=factory.Sequence(lambda n: f"news-audio/test-{n}.mp3")
         )
+        greece = factory.Trait(country="greece")
+        world = factory.Trait(country="world")
 
 
 # ============================================================================

@@ -15,18 +15,22 @@ import { AlertCircle, Newspaper } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '@/components/feedback/EmptyState';
-import { NewsGrid, NewsPagination, ScrollToTopButton } from '@/components/news';
+import { COUNTRY_CONFIG, NewsGrid, NewsPagination, ScrollToTopButton } from '@/components/news';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { trackNewsPagePaginated, trackNewsPageViewed } from '@/lib/analytics/newsAnalytics';
 import { reportAPIError } from '@/lib/errorReporting';
-import { adminAPI, type NewsItemResponse } from '@/services/adminAPI';
+import { adminAPI, type NewsCountry, type NewsItemResponse } from '@/services/adminAPI';
 
 /** Items displayed per page */
 const ITEMS_PER_PAGE = 12;
 
 /** News language - Greek for learning material */
 const NEWS_LANG = 'el';
+
+type CountryFilter = 'all' | NewsCountry;
 
 export const NewsPage: React.FC = () => {
   const { t } = useTranslation('common');
@@ -37,6 +41,12 @@ export const NewsPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [countryFilter, setCountryFilter] = useState<CountryFilter>('all');
+  const [countryCounts, setCountryCounts] = useState<{
+    cyprus: number;
+    greece: number;
+    world: number;
+  }>({ cyprus: 0, greece: 0, world: 0 });
 
   // Track if we've already tracked the page view (only track on first successful load)
   const hasTrackedPageView = useRef(false);
@@ -48,15 +58,18 @@ export const NewsPage: React.FC = () => {
    * Fetch news articles for a specific page
    */
   const fetchNews = useCallback(
-    async (page: number) => {
+    async (page: number, country?: NewsCountry) => {
       setIsLoading(true);
       setError(null);
 
       try {
-        const response = await adminAPI.getNewsItems(page, ITEMS_PER_PAGE);
+        const response = await adminAPI.getNewsItems(page, ITEMS_PER_PAGE, country);
         setArticles(response.items);
         setTotalItems(response.total);
         setCurrentPage(page);
+        if (response.country_counts) {
+          setCountryCounts(response.country_counts);
+        }
 
         // Track page view only on first successful load
         if (!hasTrackedPageView.current) {
@@ -88,18 +101,30 @@ export const NewsPage: React.FC = () => {
         to_page: newPage,
         total_pages: totalPages,
       });
-      fetchNews(newPage);
+      fetchNews(newPage, countryFilter === 'all' ? undefined : countryFilter);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     },
-    [currentPage, totalPages, fetchNews]
+    [currentPage, totalPages, fetchNews, countryFilter]
+  );
+
+  /**
+   * Handle country filter tab change
+   */
+  const handleCountryChange = useCallback(
+    (value: string) => {
+      const newFilter = value as CountryFilter;
+      setCountryFilter(newFilter);
+      fetchNews(1, newFilter === 'all' ? undefined : (newFilter as NewsCountry));
+    },
+    [fetchNews]
   );
 
   /**
    * Handle retry after error
    */
   const handleRetry = useCallback(() => {
-    fetchNews(currentPage);
-  }, [fetchNews, currentPage]);
+    fetchNews(currentPage, countryFilter === 'all' ? undefined : countryFilter);
+  }, [fetchNews, currentPage, countryFilter]);
 
   // Initial load
   useEffect(() => {
@@ -118,6 +143,26 @@ export const NewsPage: React.FC = () => {
         </h1>
         <p className="mt-2 text-sm text-muted-foreground md:text-base">{t('news.page.subtitle')}</p>
       </div>
+
+      {/* Country Filter Tabs */}
+      <Tabs value={countryFilter} onValueChange={handleCountryChange}>
+        <TabsList className="w-full justify-start overflow-x-auto">
+          <TabsTrigger value="all" className="gap-2">
+            {t('news.country.all')}
+            <Badge variant="secondary" className="ml-1 min-w-[1.25rem] px-1.5">
+              {countryCounts.cyprus + countryCounts.greece + countryCounts.world}
+            </Badge>
+          </TabsTrigger>
+          {(['cyprus', 'greece', 'world'] as const).map((country) => (
+            <TabsTrigger key={country} value={country} className="gap-2">
+              {COUNTRY_CONFIG[country].flag} {t(COUNTRY_CONFIG[country].labelKey)}
+              <Badge variant="secondary" className="ml-1 min-w-[1.25rem] px-1.5">
+                {countryCounts[country]}
+              </Badge>
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
 
       {/* Error State */}
       {error && (

@@ -36,6 +36,7 @@ import { NewsItemsTable } from './NewsItemsTable';
  * Example JSON for the placeholder
  */
 const JSON_PLACEHOLDER = `{
+  "country": "cyprus",
   "title_el": "Τίτλος ειδήσεων",
   "title_en": "News title",
   "title_ru": "Заголовок новости",
@@ -64,6 +65,7 @@ const JSON_PLACEHOLDER = `{
  * Required fields for news item creation
  */
 const REQUIRED_FIELDS = [
+  'country',
   'title_el',
   'title_en',
   'title_ru',
@@ -83,7 +85,8 @@ type ValidationErrorType =
   | 'missingFields'
   | 'invalidArticleUrl'
   | 'invalidImageUrl'
-  | 'invalidDate';
+  | 'invalidDate'
+  | 'invalidCountry';
 
 /**
  * Validates JSON input for news item creation
@@ -134,8 +137,15 @@ function validateNewsItemJson(json: string): {
     return { valid: false, errorType: 'invalidDate' };
   }
 
+  // Validate country
+  const VALID_COUNTRIES = ['cyprus', 'greece', 'world'];
+  if (!VALID_COUNTRIES.includes(parsed.country as string)) {
+    return { valid: false, errorType: 'invalidCountry' };
+  }
+
   // Build the data object
   const data: NewsItemWithQuestionCreate = {
+    country: parsed.country as string,
     title_el: parsed.title_el as string,
     title_en: parsed.title_en as string,
     title_ru: parsed.title_ru as string,
@@ -180,6 +190,8 @@ export const NewsTab: React.FC = () => {
     createNewsItem,
     setPage,
     setSelectedItem,
+    setCountryFilter,
+    countryFilter,
     regeneratingId,
     cooldownEndTime,
     regenerateAudio,
@@ -372,6 +384,10 @@ export const NewsTab: React.FC = () => {
           regeneratingId={regeneratingId}
           cooldownEndTime={cooldownEndTime}
           onRegenerateAudio={handleRegenerateAudio}
+          countryFilter={countryFilter}
+          onCountryFilterChange={(v) =>
+            setCountryFilter(v === null ? 'all' : (v as 'cyprus' | 'greece' | 'world'))
+          }
         />
       </div>
 

@@ -232,6 +232,14 @@ class AudioStatus(str, enum.Enum):
     FAILED = "failed"
 
 
+class NewsCountry(str, enum.Enum):
+    """Country/region classification for news items."""
+
+    CYPRUS = "cyprus"
+    GREECE = "greece"
+    WORLD = "world"
+
+
 # ============================================================================
 # User Models
 # ============================================================================
@@ -2276,6 +2284,19 @@ class NewsItem(Base, TimestampMixin):
         Float,
         nullable=True,
         comment="Duration of audio in seconds",
+    )
+
+    # Country classification
+    country: Mapped[NewsCountry] = mapped_column(
+        SAEnum(
+            NewsCountry,
+            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+            name="newscountry",
+            create_type=False,
+        ),
+        nullable=False,
+        index=True,
+        comment="Country/region this news item belongs to",
     )
 
     def __repr__(self) -> str:

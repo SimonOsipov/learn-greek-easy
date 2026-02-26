@@ -69,6 +69,7 @@ async def sample_news_item(db_session: AsyncSession) -> NewsItem:
         publication_date=date.today(),
         original_article_url="https://example.com/test-article",
         image_s3_key="news-images/test-uuid.jpg",
+        country="cyprus",
     )
     db_session.add(item)
     await db_session.commit()
@@ -93,6 +94,7 @@ async def multiple_news_items(db_session: AsyncSession) -> list[NewsItem]:
             publication_date=base_date - timedelta(days=i),
             original_article_url=f"https://example.com/article-{i}",
             image_s3_key=f"news-images/test-{i}.jpg",
+            country="cyprus",
         )
         db_session.add(item)
         items.append(item)
@@ -137,6 +139,7 @@ class TestCreate:
                 publication_date=date.today(),
                 original_article_url="https://example.com/new-article",
                 source_image_url="https://example.com/image.jpg",
+                country="cyprus",
             )
 
             result = await service.create(create_data)
@@ -175,6 +178,7 @@ class TestCreate:
             publication_date=date.today(),
             original_article_url=sample_news_item.original_article_url,
             source_image_url="https://example.com/image.jpg",
+            country="cyprus",
         )
 
         with pytest.raises(ValueError, match="already exists"):
@@ -209,6 +213,7 @@ class TestCreate:
                 publication_date=date.today(),
                 original_article_url="https://example.com/new-article",
                 source_image_url="https://example.com/fake-image.html",
+                country="cyprus",
             )
 
             with pytest.raises(ValueError, match="Invalid image content-type"):
@@ -244,6 +249,7 @@ class TestCreate:
                 publication_date=date.today(),
                 original_article_url="https://example.com/new-article",
                 source_image_url="https://example.com/huge-image.jpg",
+                country="cyprus",
             )
 
             with pytest.raises(ValueError, match="exceeds maximum"):
@@ -332,6 +338,7 @@ class TestAudioUrl:
             publication_date=date.today(),
             original_article_url="https://example.com/article-with-audio",
             image_s3_key="news-images/test.jpg",
+            country="cyprus",
             audio_s3_key="news-audio/test.mp3",
         )
         db_session.add(item)
@@ -627,6 +634,7 @@ class TestCreateWithQuestion:
                 publication_date=date.today(),
                 original_article_url="https://example.com/news-with-question",
                 source_image_url="https://example.com/image.jpg",
+                country="cyprus",
                 question=make_question_create(active_culture_deck.id),
             )
 
@@ -680,6 +688,7 @@ class TestCreateWithQuestion:
                 publication_date=date.today(),
                 original_article_url="https://example.com/news-nonexistent-deck",
                 source_image_url="https://example.com/image.jpg",
+                country="cyprus",
                 question=make_question_create(nonexistent_deck_id),
             )
 
@@ -712,6 +721,7 @@ class TestCreateWithQuestion:
                 publication_date=date.today(),
                 original_article_url="https://example.com/news-inactive-deck",
                 source_image_url="https://example.com/image.jpg",
+                country="cyprus",
                 question=make_question_create(inactive_culture_deck.id),
             )
 
@@ -743,6 +753,7 @@ class TestCreateWithQuestion:
                 publication_date=date.today(),
                 original_article_url="https://example.com/news-no-question",
                 source_image_url="https://example.com/image.jpg",
+                country="cyprus",
                 question=None,  # No question
             )
 
@@ -787,6 +798,7 @@ class TestGetListWithCards:
             publication_date=date.today(),
             original_article_url="https://example.com/article-with-many-questions",
             image_s3_key="news-images/test.jpg",
+            country="cyprus",
         )
         db_session.add(news_item)
         await db_session.flush()
@@ -837,6 +849,7 @@ class TestGetListWithCards:
             publication_date=date.today(),
             original_article_url="https://example.com/article-with-card",
             image_s3_key="news-images/test.jpg",
+            country="cyprus",
         )
         db_session.add(news_item)
         await db_session.flush()
@@ -882,6 +895,7 @@ class TestGetListWithCards:
             publication_date=date.today(),
             original_article_url="https://example.com/article-no-questions",
             image_s3_key="news-images/test.jpg",
+            country="cyprus",
         )
         db_session.add(news_item)
         await db_session.commit()
@@ -916,6 +930,7 @@ class TestGetListWithCards:
                 publication_date=date.today(),
                 original_article_url=f"https://example.com/article-{i}",
                 image_s3_key=f"news-images/test-{i}.jpg",
+                country="cyprus",
             )
             db_session.add(news_item)
 

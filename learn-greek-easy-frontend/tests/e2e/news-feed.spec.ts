@@ -174,15 +174,15 @@ test.describe('News Feed - Admin Tests', () => {
     await navigateToAdminNewsTab(page);
 
     // Wait for table to load
-    const newsRows = page.locator('[data-testid^="news-item-row-"]');
-    await expect(newsRows.first()).toBeVisible({ timeout: 10000 });
+    const firstDeleteButton = page.locator('[data-testid^="delete-news-"]').first();
+    await expect(firstDeleteButton).toBeVisible({ timeout: 10000 });
 
-    // Get initial count
-    const initialCount = await newsRows.count();
+    // Get the specific item ID being deleted
+    const deleteTestId = await firstDeleteButton.getAttribute('data-testid');
+    const itemId = deleteTestId?.replace('delete-news-', '');
 
     // Click delete on first item
-    const deleteButton = page.locator('[data-testid^="delete-news-"]').first();
-    await deleteButton.click();
+    await firstDeleteButton.click();
 
     // Dialog should open
     const dialog = page.getByTestId('news-delete-dialog');
@@ -194,15 +194,9 @@ test.describe('News Feed - Admin Tests', () => {
     // Dialog should close
     await expect(dialog).toBeHidden({ timeout: 5000 });
 
-    // Wait for table to update (either fewer rows or empty state)
-    await page.waitForTimeout(1000); // Allow time for refresh
-
-    // Either we have fewer rows or the empty state appears
-    const newCount = await newsRows.count();
-    const emptyState = page.getByTestId('news-table-empty');
-    const hasEmpty = await emptyState.isVisible().catch(() => false);
-
-    expect(newCount < initialCount || hasEmpty).toBe(true);
+    // Verify the specific item row was removed from the table
+    // This is more robust than checking total count (which may not change if table is full-page)
+    await expect(page.getByTestId(`news-item-row-${itemId}`)).not.toBeVisible({ timeout: 5000 });
   });
 });
 

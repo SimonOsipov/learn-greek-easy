@@ -53,6 +53,7 @@ const createMockNewsItem = (overrides: Partial<NewsItemResponse> = {}): NewsItem
   image_url: 'https://example.com/image.jpg',
   created_at: '2026-01-27T00:00:00Z',
   updated_at: '2026-01-27T00:00:00Z',
+  country: 'cyprus',
   card_id: null,
   deck_id: null,
   ...overrides,
@@ -63,13 +64,16 @@ const createPaginatedResponse = (
   items: NewsItemResponse[],
   total: number,
   page: number = 1,
-  limit: number = 12
+  limit: number = 12,
+  country_counts = { cyprus: 0, greece: 0, world: 0 }
 ) => ({
   items,
   total,
   page,
+  page_size: limit,
   limit,
   pages: Math.ceil(total / limit),
+  country_counts,
 });
 
 describe('NewsPage Component', () => {
@@ -134,7 +138,7 @@ describe('NewsPage Component', () => {
       render(<NewsPage />);
 
       await waitFor(() => {
-        expect(adminAPI.getNewsItems).toHaveBeenCalledWith(1, 12);
+        expect(adminAPI.getNewsItems).toHaveBeenCalledWith(1, 12, undefined);
       });
     });
 
@@ -328,7 +332,7 @@ describe('NewsPage Component', () => {
       await user.click(screen.getByTestId('news-pagination-next'));
 
       await waitFor(() => {
-        expect(adminAPI.getNewsItems).toHaveBeenCalledWith(2, 12);
+        expect(adminAPI.getNewsItems).toHaveBeenCalledWith(2, 12, undefined);
       });
     });
 
@@ -392,7 +396,7 @@ describe('NewsPage Component', () => {
       await user.click(screen.getByTestId('news-pagination-next'));
 
       await waitFor(() => {
-        expect(adminAPI.getNewsItems).toHaveBeenCalledWith(2, 12);
+        expect(adminAPI.getNewsItems).toHaveBeenCalledWith(2, 12, undefined);
       });
 
       // Should still only be called once
@@ -520,6 +524,131 @@ describe('NewsPage Component', () => {
           'Showing 13-24 of 36 articles'
         );
       });
+    });
+  });
+});
+
+describe('Country Filter Tabs', () => {
+  it('renders All/Cyprus/Greece/World tabs', async () => {
+    const articles = [createMockNewsItem({ id: 'article-1' })];
+    (adminAPI.getNewsItems as Mock).mockResolvedValue(
+      createPaginatedResponse(articles, 1, 1, 12, { cyprus: 3, greece: 2, world: 1 })
+    );
+
+    render(<NewsPage />);
+
+    await waitFor(() => {
+      // All 4 tabs should be present - use getAllByText to handle multiple matches
+      const allElements = screen.getAllByText('All');
+      expect(allElements.length).toBeGreaterThan(0);
+      const cyprusElements = screen.getAllByText(/Cyprus/);
+      expect(cyprusElements.length).toBeGreaterThan(0);
+      const greeceElements = screen.getAllByText(/Greece/);
+      expect(greeceElements.length).toBeGreaterThan(0);
+      const worldElements = screen.getAllByText(/World/);
+      expect(worldElements.length).toBeGreaterThan(0);
+    });
+  });
+
+  it('clicking Cyprus tab calls API with country=cyprus', async () => {
+    const user = userEvent.setup();
+    const articles = [createMockNewsItem({ id: 'article-1' })];
+
+    (adminAPI.getNewsItems as Mock).mockResolvedValue(
+      createPaginatedResponse(articles, 1, 1, 12, { cyprus: 3, greece: 2, world: 1 })
+    );
+
+    render(<NewsPage />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText('All').length).toBeGreaterThan(0);
+    });
+
+    // Find the Cyprus tab trigger (role="tab")
+    const tabs = screen.getAllByRole('tab');
+    const cyprusTab = tabs.find((tab) => tab.textContent?.includes('Cyprus'));
+    expect(cyprusTab).toBeDefined();
+    await user.click(cyprusTab!);
+
+    await waitFor(() => {
+      expect(adminAPI.getNewsItems).toHaveBeenCalledWith(1, 12, 'cyprus');
+    });
+  });
+
+  it('clicking All tab calls API without country', async () => {
+    const user = userEvent.setup();
+    const articles = [createMockNewsItem({ id: 'article-1' })];
+
+    (adminAPI.getNewsItems as Mock).mockResolvedValue(
+      createPaginatedResponse(articles, 1, 1, 12, { cyprus: 3, greece: 2, world: 1 })
+    );
+
+    render(<NewsPage />);
+
+    await waitFor(() => {
+      expect(screen.getAllByRole('tab').length).toBeGreaterThan(0);
+    });
+
+    const tabs = screen.getAllByRole('tab');
+    // Click Cyprus first
+    const cyprusTab = tabs.find((tab) => tab.textContent?.includes('Cyprus'));
+    expect(cyprusTab).toBeDefined();
+    await user.click(cyprusTab!);
+    await waitFor(() => {
+      expect(adminAPI.getNewsItems).toHaveBeenCalledWith(1, 12, 'cyprus');
+    });
+
+    // Then click All
+    const allTab = tabs.find(
+      (tab) =>
+        tab.getAttribute('data-value') === 'all' ||
+        (tab.getAttribute('data-state') !== undefined && tab.textContent?.startsWith('All'))
+    );
+    if (allTab) {
+      await user.click(allTab);
+    } else {
+      // Fallback: click the first tab which should be "All"
+      await user.click(tabs[0]);
+    }
+    await waitFor(() => {
+      expect(adminAPI.getNewsItems).toHaveBeenCalledWith(1, 12, undefined);
+    });
+  });
+
+  it('tab change resets to page 1', async () => {
+    const user = userEvent.setup();
+
+    // Start with 36 articles on page 1
+    const articles = Array.from({ length: 12 }, (_, i) =>
+      createMockNewsItem({ id: `article-${i}` })
+    );
+    (adminAPI.getNewsItems as Mock).mockResolvedValue(
+      createPaginatedResponse(articles, 36, 1, 12, { cyprus: 12, greece: 12, world: 12 })
+    );
+
+    render(<NewsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('news-grid')).toBeInTheDocument();
+    });
+
+    // Navigate to page 2
+    (adminAPI.getNewsItems as Mock).mockResolvedValue(
+      createPaginatedResponse(articles, 36, 2, 12, { cyprus: 12, greece: 12, world: 12 })
+    );
+    await user.click(screen.getByTestId('news-pagination-next'));
+
+    // Click Greece filter - should reset to page 1
+    (adminAPI.getNewsItems as Mock).mockResolvedValue(
+      createPaginatedResponse(articles, 12, 1, 12, { cyprus: 12, greece: 12, world: 12 })
+    );
+    const tabs2 = screen.getAllByRole('tab');
+    const greeceTab = tabs2.find((tab) => tab.textContent?.includes('Greece'));
+    expect(greeceTab).toBeDefined();
+    await user.click(greeceTab!);
+
+    await waitFor(() => {
+      expect(adminAPI.getNewsItems).toHaveBeenCalledWith(1, 12, 'greece');
     });
   });
 });

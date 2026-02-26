@@ -12,6 +12,16 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
 
+from src.db.models import NewsCountry
+
+
+class CountryCounts(BaseModel):
+    """Count of news items per country."""
+
+    cyprus: int = 0
+    greece: int = 0
+    world: int = 0
+
 
 class NewsItemCreate(BaseModel):
     """Schema for creating a news item.
@@ -28,6 +38,7 @@ class NewsItemCreate(BaseModel):
     publication_date: date
     original_article_url: HttpUrl = Field(..., max_length=500)
     source_image_url: HttpUrl = Field(..., description="URL to download the image from")
+    country: NewsCountry = Field(..., description="Country/region: cyprus, greece, or world")
 
 
 class NewsItemUpdate(BaseModel):
@@ -48,6 +59,9 @@ class NewsItemUpdate(BaseModel):
     source_image_url: Optional[HttpUrl] = Field(
         None, description="New image URL to download (replaces existing)"
     )
+    country: Optional[NewsCountry] = Field(
+        None, description="Country/region: cyprus, greece, or world"
+    )
 
 
 class NewsItemResponse(BaseModel):
@@ -67,6 +81,7 @@ class NewsItemResponse(BaseModel):
     description_ru: str
     publication_date: date
     original_article_url: str
+    country: str = Field(..., description="Country/region this news item belongs to")
     image_url: Optional[str] = Field(None, description="Presigned S3 URL for the image")
     audio_url: Optional[str] = Field(None, description="Presigned S3 URL for the audio narration")
     audio_generated_at: Optional[datetime] = Field(
@@ -87,6 +102,9 @@ class NewsItemListResponse(BaseModel):
     page: int = Field(..., ge=1)
     page_size: int = Field(..., ge=1, le=50)
     items: list[NewsItemResponse]
+    country_counts: CountryCounts = Field(
+        default_factory=CountryCounts, description="Count of news items per country"
+    )
 
 
 # ============================================================================
@@ -176,6 +194,9 @@ class NewsItemListWithCardsResponse(BaseModel):
     page: int = Field(..., ge=1)
     page_size: int = Field(..., ge=1, le=50)
     items: list[NewsItemWithCardInfo]
+    country_counts: CountryCounts = Field(
+        default_factory=CountryCounts, description="Count of news items per country"
+    )
 
 
 # ============================================================================
@@ -183,6 +204,7 @@ class NewsItemListWithCardsResponse(BaseModel):
 # ============================================================================
 
 __all__ = [
+    "CountryCounts",
     "NewsItemCreate",
     "NewsItemUpdate",
     "NewsItemResponse",

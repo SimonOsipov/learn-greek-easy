@@ -269,7 +269,10 @@
     "wordEntries": "Word Entries"
   },
   "announcements": {
-    "stats": { "total": "Total Announcements", "avgRead": "Avg. Read Rate" },
+    "stats": {
+      "total": "Total Announcements",
+      "avgRead": "Avg. Read Rate"
+    },
     "create": {
       "title": "Create Announcement",
       "description": "Send a notification to all active users",
@@ -335,7 +338,10 @@
     }
   },
   "news": {
-    "stats": { "total": "Total News", "withAudio": "With Audio" },
+    "stats": {
+      "total": "Total News",
+      "withAudio": "With Audio"
+    },
     "create": {
       "title": "Create News Item",
       "description": "Enter news item data as JSON. The backend will download and store the image from source_image_url.",
@@ -346,7 +352,8 @@
       "error": "Failed to create news item",
       "validationError": "Invalid JSON",
       "duplicateUrl": "This article URL has already been used",
-      "imageDownloadFailed": "Failed to download image from the provided URL"
+      "imageDownloadFailed": "Failed to download image from the provided URL",
+      "questionSkipped": "Question skipped"
     },
     "table": {
       "title": "News Items",
@@ -383,7 +390,8 @@
       "invalidArticleUrl": "Invalid original_article_url format",
       "invalidImageUrl": "Invalid source_image_url format",
       "invalidDate": "Invalid publication_date format (use YYYY-MM-DD)",
-      "noFieldsToUpdate": "No fields to update"
+      "noFieldsToUpdate": "No fields to update",
+      "invalidCountry": "Invalid country. Must be: cyprus, greece, or world"
     },
     "search": {
       "placeholder": "Search news...",
@@ -406,10 +414,18 @@
       "pause": "Pause audio",
       "playerDisabled": "No audio available for preview",
       "loadError": "Failed to load audio"
+    },
+    "country": {
+      "label": "Country",
+      "filterAll": "All Countries"
     }
   },
   "feedback": {
-    "stats": { "total": "Total Feedback", "new": "New", "responded": "Responded" },
+    "stats": {
+      "total": "Total Feedback",
+      "new": "New",
+      "responded": "Responded"
+    },
     "sectionTitle": "User Feedback",
     "sectionDescription": "Review and respond to user feedback and bug reports",
     "anonymousUser": "Anonymous User",
@@ -474,7 +490,11 @@
     }
   },
   "cardErrors": {
-    "stats": { "total": "Total Reports", "pending": "Pending", "fixed": "Fixed" },
+    "stats": {
+      "total": "Total Reports",
+      "pending": "Pending",
+      "fixed": "Fixed"
+    },
     "sectionTitle": "Card Error Reports",
     "sectionDescription": "Review and respond to card error reports from users",
     "anonymousUser": "Anonymous User",
@@ -566,7 +586,10 @@
     "discard": "Discard"
   },
   "changelog": {
-    "stats": { "total": "Total Entries", "mostRecent": "Most Recent" },
+    "stats": {
+      "total": "Total Entries",
+      "mostRecent": "Most Recent"
+    },
     "title": "Changelog",
     "addNew": "Add New",
     "editDescription": "Edit changelog entry as JSON",
