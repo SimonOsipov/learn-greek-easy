@@ -132,6 +132,7 @@ class NewsItemService:
             "publication_date": data.publication_date,
             "original_article_url": str(data.original_article_url),
             "image_s3_key": s3_key,
+            "country": data.country.value,
         }
 
         news_item = await self.repo.create(news_item_dict)
@@ -205,6 +206,7 @@ class NewsItemService:
             "publication_date": data.publication_date,
             "original_article_url": str(data.original_article_url),
             "image_s3_key": s3_key,
+            "country": data.country.value,
         }
 
         news_item = await self.repo.create(news_item_dict)
@@ -572,6 +574,8 @@ class NewsItemService:
             update_dict["publication_date"] = data.publication_date
         if data.original_article_url is not None:
             update_dict["original_article_url"] = str(data.original_article_url)
+        if data.country is not None:
+            update_dict["country"] = data.country.value
         return update_dict
 
     async def _handle_image_update(
@@ -688,6 +692,11 @@ class NewsItemService:
             description_ru=news_item.description_ru,
             publication_date=news_item.publication_date,
             original_article_url=news_item.original_article_url,
+            country=(
+                news_item.country.value
+                if hasattr(news_item.country, "value")
+                else (str(news_item.country) if news_item.country else "cyprus")
+            ),
             image_url=image_url,
             audio_url=audio_url,
             audio_generated_at=news_item.audio_generated_at,

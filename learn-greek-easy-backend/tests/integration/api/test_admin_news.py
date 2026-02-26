@@ -64,6 +64,7 @@ def valid_news_create_data():
         "publication_date": str(date.today()),
         "original_article_url": f"https://example.com/article-{uuid4().hex[:8]}",
         "source_image_url": "https://example.com/image.jpg",
+        "country": "cyprus",
     }
 
 
@@ -170,6 +171,7 @@ class TestCreateNewsItemEndpoint:
             "publication_date": str(date.today()),
             "original_article_url": existing.original_article_url,
             "source_image_url": "https://example.com/new-image.jpg",
+            "country": "cyprus",
         }
 
         response = await client.post(

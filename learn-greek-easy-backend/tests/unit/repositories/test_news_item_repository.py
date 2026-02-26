@@ -40,6 +40,7 @@ async def news_items(db_session: AsyncSession) -> list[NewsItem]:
             publication_date=base_date - timedelta(days=i),  # Newest first
             original_article_url=f"https://example.com/article-{i + 1}",
             image_s3_key=f"news-images/{uuid4()}.jpg",
+            country="cyprus",
         )
         db_session.add(item)
         items.append(item)
@@ -64,6 +65,7 @@ async def single_news_item(db_session: AsyncSession) -> NewsItem:
         publication_date=date.today(),
         original_article_url="https://example.com/test-article",
         image_s3_key=f"news-images/{uuid4()}.jpg",
+        country="cyprus",
     )
     db_session.add(item)
     await db_session.flush()
@@ -270,6 +272,7 @@ class TestCreate:
             "publication_date": date.today(),
             "original_article_url": "https://example.com/new-article",
             "image_s3_key": f"news-images/{uuid4()}.jpg",
+            "country": "cyprus",
         }
 
         result = await repo.create(news_item_data)

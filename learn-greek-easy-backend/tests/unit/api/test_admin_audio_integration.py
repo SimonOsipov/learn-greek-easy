@@ -57,6 +57,7 @@ class TestAdminNewsAudioIntegration:
                 description_ru="Русское описание",
                 publication_date=date(2024, 1, 15),
                 original_article_url="https://example.com/article",
+                country="cyprus",
                 image_url="https://s3.amazonaws.com/test.jpg",
                 audio_url=None,
                 created_at="2024-01-15T10:30:00Z",
@@ -85,6 +86,7 @@ class TestAdminNewsAudioIntegration:
                 "publication_date": "2024-01-15",
                 "original_article_url": "https://example.com/article",
                 "source_image_url": "https://example.com/image.jpg",
+                "country": "cyprus",
             }
 
             response = await client.post(
