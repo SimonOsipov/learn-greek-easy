@@ -98,7 +98,7 @@ export const AccuracyAreaChart = React.forwardRef<HTMLDivElement, AccuracyAreaCh
               className="flex items-center justify-center text-muted-foreground"
               style={{ height: chartHeight }}
             >
-              <p>No data available</p>
+              <p>{t('charts.noData')}</p>
             </div>
           </CardContent>
         </Card>
