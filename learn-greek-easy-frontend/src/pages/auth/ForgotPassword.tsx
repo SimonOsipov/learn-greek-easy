@@ -173,7 +173,7 @@ export const ForgotPassword: React.FC = () => {
       <Card className="shadow-xl" data-testid="forgot-password-card">
         <CardHeader className="space-y-1 text-center">
           <div className="mx-auto mb-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-purple-100">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-blue-200">
               <Lock className="h-8 w-8 text-primary" />
             </div>
           </div>
