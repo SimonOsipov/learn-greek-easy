@@ -129,6 +129,11 @@ CATEGORY_DB_TO_LOGICAL: dict[str, str] = {
 }
 LOGICAL_CATEGORIES = ("history", "geography", "politics", "culture")
 
+# Accuracy & Reinforcement Thresholds
+ACCURACY_WINDOW_DAYS = 30
+REINFORCEMENT_ACCURACY_THRESHOLD = 70.0
+REINFORCEMENT_MASTERY_THRESHOLD = 80.0
+
 
 # Motivation Message Constants
 MOTIVATION_DELTA_IMPROVING_THRESHOLD = 3.0

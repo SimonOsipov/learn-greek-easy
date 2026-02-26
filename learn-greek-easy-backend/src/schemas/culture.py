@@ -301,6 +301,16 @@ class CategoryReadiness(BaseModel):
     deck_ids: list[str] = Field(
         default_factory=list, description="UUIDs of decks in this logical category"
     )
+    accuracy_percentage: Optional[float] = Field(
+        None,
+        ge=0,
+        le=100,
+        description="Per-category accuracy from last 30 days. Null if no answers in window.",
+    )
+    needs_reinforcement: bool = Field(
+        default=False,
+        description="True when accuracy < 70% and readiness >= 80%",
+    )
 
 
 class CultureReadinessResponse(BaseModel):
