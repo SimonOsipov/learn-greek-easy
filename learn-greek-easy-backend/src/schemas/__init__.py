@@ -76,6 +76,7 @@ from src.schemas.changelog import (
 
 # Culture schemas
 from src.schemas.culture import (
+    CategoryReadiness,
     CultureAnswerRequest,
     CultureAnswerResponse,
     CultureDeckDetailResponse,
@@ -87,6 +88,7 @@ from src.schemas.culture import (
     CultureQuestionListResponse,
     CultureQuestionResponse,
     CultureQuestionStatsResponse,
+    CultureReadinessResponse,
     CultureSessionSummary,
     MultilingualText,
 )
@@ -342,6 +344,7 @@ __all__ = [
     "MarkReadResponse",
     "ClearResponse",
     # Culture
+    "CategoryReadiness",
     "MultilingualText",
     "CultureDeckProgress",
     "CultureDeckResponse",
@@ -355,6 +358,7 @@ __all__ = [
     "CultureOverallProgress",
     "CultureProgressResponse",
     "CultureSessionSummary",
+    "CultureReadinessResponse",
     # Mock Exam
     "MockExamQuestionResponse",
     "MockExamSessionResponse",

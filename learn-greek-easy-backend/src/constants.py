@@ -96,6 +96,38 @@ class SRSConstants:
     MASTERED_THRESHOLD = 21
 
 
+# Culture Exam Readiness Constants
+class ReadinessConstants:
+    """Constants for culture exam readiness calculation."""
+
+    # Weighted contribution of each SRS stage to readiness score
+    WEIGHT_LEARNING = 0.25
+    WEIGHT_REVIEW = 0.5
+    WEIGHT_MASTERED = 1.0
+
+    # Verdict thresholds: (min_percent, verdict_key)
+    # Ordered descending for first-match lookup
+    VERDICT_THRESHOLDS: list[tuple[int, str]] = [
+        (85, "thoroughly_prepared"),
+        (60, "ready"),
+        (40, "getting_there"),
+        (0, "not_ready"),
+    ]
+
+    # Categories included in readiness calculation
+    # Excludes "traditions" which is not part of the official exam
+    INCLUDED_CATEGORIES = ("history", "geography", "politics", "culture", "practical")
+
+
+# Category mapping: DB categories → logical UI categories
+CATEGORY_DB_TO_LOGICAL: dict[str, str] = {
+    "history": "history",
+    "geography": "geography",
+    "politics": "politics",
+    "culture": "culture",
+    "practical": "culture",
+}
+LOGICAL_CATEGORIES = ("history", "geography", "politics", "culture")
 # Pagination
 DEFAULT_PAGE = 1
 DEFAULT_PAGE_SIZE = 20
