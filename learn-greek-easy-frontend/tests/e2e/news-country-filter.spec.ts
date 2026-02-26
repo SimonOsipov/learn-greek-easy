@@ -30,12 +30,14 @@ function getApiBaseUrl(): string {
  * Seed news items with varied countries for country filter testing.
  * Uses news-feed-page seeder (25 items) with MCNEWS-03 country rotation.
  */
-async function seedNewsCountryData(request: APIRequestContext): Promise<void> {
+async function seedNewsCountryData(request: APIRequestContext): Promise<string> {
   const apiBaseUrl = getApiBaseUrl();
   const response = await request.post(`${apiBaseUrl}/api/v1/test/seed/news-feed-page`);
   if (!response.ok()) {
     throw new Error(`Failed to seed news feed page: ${response.status()}`);
   }
+  const data = await response.json();
+  return data.results.deck_id as string;
 }
 
 /**
@@ -114,32 +116,24 @@ test.describe('MCNEWS - Country Pills Display', () => {
 
     await waitForNewsGridLoaded(page);
 
-    // Navigate to page 2 if pagination exists
+    // Page 2 always exists (25 seeded items, 12 per page)
     const nextButton = page.getByTestId('news-pagination-next');
-    const nextVisible = await nextButton.isVisible();
+    await expect(nextButton).toBeVisible({ timeout: 10000 });
+    await expect(nextButton).not.toBeDisabled();
+    await nextButton.click();
+    await waitForNewsGridLoaded(page);
 
-    if (nextVisible) {
-      const nextDisabled = await nextButton.isDisabled();
-      if (!nextDisabled) {
-        await nextButton.click();
-        await waitForNewsGridLoaded(page);
+    // Click a country tab - should reset to page 1
+    const greeceTab = page.getByRole('tab').filter({ hasText: /Greece/i }).first();
+    await expect(greeceTab).toBeVisible({ timeout: 5000 });
+    await greeceTab.click();
+    await waitForNewsGridLoaded(page);
 
-        // Now click a country tab - should reset to page 1
-        const greeceTab = page.getByRole('tab').filter({ hasText: /Greece/i }).first();
-        if (await greeceTab.isVisible()) {
-          await greeceTab.click();
-          await waitForNewsGridLoaded(page);
+    // Previous button should be disabled (now on page 1)
+    const prevButton = page.getByTestId('news-pagination-prev');
+    await expect(prevButton).toBeVisible({ timeout: 5000 });
+    await expect(prevButton).toBeDisabled();
 
-          // Previous button should be disabled (on page 1)
-          const prevButton = page.getByTestId('news-pagination-prev');
-          if (await prevButton.isVisible()) {
-            await expect(prevButton).toBeDisabled();
-          }
-        }
-      }
-    }
-
-    // Just verify the page is still functional
     await expect(page.getByTestId('news-page')).toBeVisible();
   });
 });
@@ -192,8 +186,10 @@ test.describe('MCNEWS - Dashboard Shows Pills Without Filter', () => {
 test.describe('MCNEWS - Admin Country Management', () => {
   test.use({ storageState: 'playwright/.auth/admin.json' });
 
+  let e2eDeckId: string;
+
   test.beforeEach(async ({ request }) => {
-    await seedNewsCountryData(request);
+    e2eDeckId = await seedNewsCountryData(request);
   });
 
   test('MCNEWS-E2E-06: Admin create Greece news shows GR badge in table', async ({ page }) => {
@@ -264,8 +260,6 @@ test.describe('MCNEWS - Admin Country Management', () => {
 
     const testUrl = `https://example-cyprus-q-test-${Date.now()}.com/article`;
 
-    // Use the news items seed for the deck ID - get from current items if possible
-    // For now, just use a simple creation without question to test country
     const newsJson = JSON.stringify({
       country: 'cyprus',
       title_el: 'Κυπριακά νέα E2E',
@@ -277,6 +271,19 @@ test.describe('MCNEWS - Admin Country Management', () => {
       publication_date: '2026-01-15',
       original_article_url: testUrl,
       source_image_url: 'https://picsum.photos/400/300',
+      question: {
+        deck_id: e2eDeckId,
+        question_el: 'Ερώτηση δοκιμής;',
+        question_en: 'Test question?',
+        question_ru: 'Тестовый вопрос?',
+        options: [
+          { text_el: 'Α', text_en: 'A', text_ru: 'А' },
+          { text_el: 'Β', text_en: 'B', text_ru: 'Б' },
+          { text_el: 'Γ', text_en: 'C', text_ru: 'В' },
+          { text_el: 'Δ', text_en: 'D', text_ru: 'Г' },
+        ],
+        correct_answer_index: 0,
+      },
     });
 
     await jsonInput.fill(newsJson);
@@ -288,12 +295,14 @@ test.describe('MCNEWS - Admin Country Management', () => {
     const toast = page.locator('[data-state="open"]').first();
     await expect(toast).toBeVisible({ timeout: 15000 });
 
-    // Verify CY badge appears
+    // Verify Q badge is visible for the Cyprus news row (question was created)
     const newsTable = page.getByTestId('news-items-table');
-    if (await newsTable.isVisible()) {
-      const cyBadges = newsTable.getByText(/CY/);
-      await expect(cyBadges.first()).toBeVisible({ timeout: 10000 });
-    }
+    await expect(newsTable).toBeVisible({ timeout: 10000 });
+    const greenQBadge = newsTable.locator('[data-testid^="news-item-row-"]')
+      .filter({ hasText: 'Cyprus News E2E' })
+      .locator('text=Q')
+      .first();
+    await expect(greenQBadge).toBeVisible({ timeout: 10000 });
   });
 
   test('MCNEWS-E2E-08: Admin create Greece news with question skips question', async ({
@@ -326,6 +335,19 @@ test.describe('MCNEWS - Admin Country Management', () => {
       publication_date: '2026-01-15',
       original_article_url: testUrl,
       source_image_url: 'https://picsum.photos/400/300',
+      question: {
+        deck_id: e2eDeckId,
+        question_el: 'Ερώτηση δοκιμής;',
+        question_en: 'Test question?',
+        question_ru: 'Тестовый вопрос?',
+        options: [
+          { text_el: 'Α', text_en: 'A', text_ru: 'А' },
+          { text_el: 'Β', text_en: 'B', text_ru: 'Б' },
+          { text_el: 'Γ', text_en: 'C', text_ru: 'В' },
+          { text_el: 'Δ', text_en: 'D', text_ru: 'Г' },
+        ],
+        correct_answer_index: 0,
+      },
     });
 
     await jsonInput.fill(newsJson);
@@ -336,6 +358,18 @@ test.describe('MCNEWS - Admin Country Management', () => {
     // Wait for success (not error) response
     const toast = page.locator('[data-state="open"]').first();
     await expect(toast).toBeVisible({ timeout: 15000 });
+
+    // The green Q badge should NOT appear for Greece news (question was skipped)
+    const newsTable = page.getByTestId('news-items-table');
+    await expect(newsTable).toBeVisible({ timeout: 10000 });
+    const greeceRow = newsTable.locator('[data-testid^="news-item-row-"]')
+      .filter({ hasText: 'Greece News Skip E2E' })
+      .first();
+    if (await greeceRow.isVisible({ timeout: 5000 })) {
+      // The green Q badge should NOT be in this row (question was skipped)
+      const greenQInRow = greeceRow.locator('.bg-green-500\\/10').filter({ hasText: 'Q' });
+      await expect(greenQInRow).toHaveCount(0);
+    }
   });
 
   test('MCNEWS-E2E-09: Admin country filter shows correct items', async ({ page }) => {

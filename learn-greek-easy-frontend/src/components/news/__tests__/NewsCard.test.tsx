@@ -244,23 +244,19 @@ describe('NewsCard Country Pill', () => {
   it('renders country pill for cyprus', () => {
     const article = createMockArticle({ country: 'cyprus', id: 'test-cy' });
     render(<NewsCard article={article} newsLang="el" />);
-    // Pill should be visible (contains the country label)
-    const pill = document.querySelector('.rounded-full.bg-black\\/60');
-    expect(pill).toBeInTheDocument();
+    expect(screen.getByText(/news\.country\.cyprus/)).toBeInTheDocument();
   });
 
   it('renders country pill for greece', () => {
     const article = createMockArticle({ country: 'greece', id: 'test-gr' });
     render(<NewsCard article={article} newsLang="el" />);
-    const pill = document.querySelector('.rounded-full.bg-black\\/60');
-    expect(pill).toBeInTheDocument();
+    expect(screen.getByText(/news\.country\.greece/)).toBeInTheDocument();
   });
 
   it('renders country pill for world', () => {
     const article = createMockArticle({ country: 'world', id: 'test-wo' });
     render(<NewsCard article={article} newsLang="el" />);
-    const pill = document.querySelector('.rounded-full.bg-black\\/60');
-    expect(pill).toBeInTheDocument();
+    expect(screen.getByText(/news\.country\.world/)).toBeInTheDocument();
   });
 
   it('pill has correct position classes', () => {

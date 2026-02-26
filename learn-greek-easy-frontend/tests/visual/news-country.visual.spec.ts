@@ -291,11 +291,11 @@ test.describe('Admin News Table - Country Badges', () => {
     // Login as admin
     await loginForVisualTest(page);
     await page.evaluate(() => {
-      const userData = localStorage.getItem('greekly-user');
-      if (userData) {
-        const user = JSON.parse(userData);
-        user.role = 'admin';
-        localStorage.setItem('greekly-user', JSON.stringify(user));
+      const authStorage = localStorage.getItem('auth-storage');
+      if (authStorage) {
+        const authState = JSON.parse(authStorage);
+        authState.state.user.role = 'admin';
+        localStorage.setItem('auth-storage', JSON.stringify(authState));
       }
     });
 
@@ -331,11 +331,11 @@ test.describe('Admin News Table - Country Badges', () => {
   test('Visual-MCNEWS-09: Admin news table with country filter', async ({ page }, testInfo) => {
     await loginForVisualTest(page);
     await page.evaluate(() => {
-      const userData = localStorage.getItem('greekly-user');
-      if (userData) {
-        const user = JSON.parse(userData);
-        user.role = 'admin';
-        localStorage.setItem('greekly-user', JSON.stringify(user));
+      const authStorage = localStorage.getItem('auth-storage');
+      if (authStorage) {
+        const authState = JSON.parse(authStorage);
+        authState.state.user.role = 'admin';
+        localStorage.setItem('auth-storage', JSON.stringify(authState));
       }
     });
 
