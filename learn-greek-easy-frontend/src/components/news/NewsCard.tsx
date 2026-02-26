@@ -27,7 +27,7 @@ import {
 } from '@/lib/analytics/newsAnalytics';
 import { clearActivePlayer, registerActivePlayer } from '@/lib/newsAudioCoordinator';
 import { cn } from '@/lib/utils';
-import type { NewsCountry, type NewsItemResponse } from '@/services/adminAPI';
+import type { NewsCountry, NewsItemResponse } from '@/services/adminAPI';
 
 import { COUNTRY_CONFIG } from './countryConfig';
 
