@@ -175,6 +175,12 @@
       "previous": "Назад",
       "next": "Далее",
       "page": "Страница {{current}} из {{total}}"
+    },
+    "country": {
+      "all": "Все",
+      "cyprus": "Кипр",
+      "greece": "Греция",
+      "world": "Мир"
     }
   },
   "notifications": {

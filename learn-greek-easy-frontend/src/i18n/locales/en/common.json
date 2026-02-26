@@ -175,6 +175,12 @@
       "previous": "Previous",
       "next": "Next",
       "page": "Page {{current}} of {{total}}"
+    },
+    "country": {
+      "all": "All",
+      "cyprus": "Cyprus",
+      "greece": "Greece",
+      "world": "World"
     }
   },
   "notifications": {

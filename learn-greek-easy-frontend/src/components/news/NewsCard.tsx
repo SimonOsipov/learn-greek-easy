@@ -27,7 +27,9 @@ import {
 } from '@/lib/analytics/newsAnalytics';
 import { clearActivePlayer, registerActivePlayer } from '@/lib/newsAudioCoordinator';
 import { cn } from '@/lib/utils';
-import { type NewsItemResponse } from '@/services/adminAPI';
+import type { NewsCountry, type NewsItemResponse } from '@/services/adminAPI';
+
+import { COUNTRY_CONFIG } from './countryConfig';
 
 export type NewsCardHeight = 'default' | 'tall';
 
@@ -186,6 +188,14 @@ export const NewsCard: React.FC<NewsCardProps> = ({
 
         {/* Semi-transparent Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-black/30" />
+
+        {/* Country Flag Pill */}
+        {article.country && COUNTRY_CONFIG[article.country as NewsCountry] && (
+          <span className="absolute left-2 top-2 z-10 rounded-full bg-black/60 px-2 py-0.5 text-xs text-white">
+            {COUNTRY_CONFIG[article.country as NewsCountry].flag}{' '}
+            {t(COUNTRY_CONFIG[article.country as NewsCountry].labelKey)}
+          </span>
+        )}
 
         {/* Content */}
         <div

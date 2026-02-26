@@ -53,6 +53,7 @@ const createMockNewsItem = (overrides: Partial<NewsItemResponse> = {}): NewsItem
   image_url: 'https://example.com/image.jpg',
   created_at: '2026-01-27T00:00:00Z',
   updated_at: '2026-01-27T00:00:00Z',
+  country: 'cyprus',
   card_id: null,
   deck_id: null,
   ...overrides,
@@ -68,8 +69,10 @@ const createPaginatedResponse = (
   items,
   total,
   page,
+  page_size: limit,
   limit,
   pages: Math.ceil(total / limit),
+  country_counts: { cyprus: total, greece: 0, world: 0 },
 });
 
 describe('NewsPage Component', () => {
@@ -134,7 +137,7 @@ describe('NewsPage Component', () => {
       render(<NewsPage />);
 
       await waitFor(() => {
-        expect(adminAPI.getNewsItems).toHaveBeenCalledWith(1, 12);
+        expect(adminAPI.getNewsItems).toHaveBeenCalledWith(1, 12, undefined);
       });
     });
 
@@ -328,7 +331,7 @@ describe('NewsPage Component', () => {
       await user.click(screen.getByTestId('news-pagination-next'));
 
       await waitFor(() => {
-        expect(adminAPI.getNewsItems).toHaveBeenCalledWith(2, 12);
+        expect(adminAPI.getNewsItems).toHaveBeenCalledWith(2, 12, undefined);
       });
     });
 
@@ -392,7 +395,7 @@ describe('NewsPage Component', () => {
       await user.click(screen.getByTestId('news-pagination-next'));
 
       await waitFor(() => {
-        expect(adminAPI.getNewsItems).toHaveBeenCalledWith(2, 12);
+        expect(adminAPI.getNewsItems).toHaveBeenCalledWith(2, 12, undefined);
       });
 
       // Should still only be called once
