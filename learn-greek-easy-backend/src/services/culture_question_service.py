@@ -27,7 +27,8 @@ Example Usage:
         response = await service.bulk_create_questions(deck_id, questions)
 """
 
-from datetime import date
+import hashlib
+from datetime import date, datetime, timedelta
 from typing import Optional
 from uuid import UUID
 
@@ -35,7 +36,14 @@ from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.constants import ReadinessConstants
+from src.constants import (
+    MOTIVATION_DELTA_DAYS,
+    MOTIVATION_DELTA_DECLINING_THRESHOLD,
+    MOTIVATION_DELTA_IMPROVING_THRESHOLD,
+    MOTIVATION_NEW_USER_TEMPLATES,
+    MOTIVATION_TEMPLATES,
+    ReadinessConstants,
+)
 from src.core.exceptions import CultureDeckNotFoundException, CultureQuestionNotFoundException
 from src.core.logging import get_logger
 from src.core.sm2 import DEFAULT_EASINESS_FACTOR, calculate_next_review_date, calculate_sm2
@@ -62,6 +70,7 @@ from src.schemas.culture import (
     CultureQuestionQueueItem,
     CultureQuestionUpdate,
     CultureReadinessResponse,
+    MotivationMessage,
     SM2QuestionResult,
 )
 from src.services.s3_service import S3Service, get_s3_service
@@ -710,6 +719,19 @@ class CultureQuestionService:
             },
         )
 
+        # Determine has_stats: user has at least some SRS stats
+        has_stats = (count_mastered + count_review + count_learning) > 0
+
+        # Compute motivational message
+        motivation = await self._compute_motivation(
+            user_id=user_id,
+            current_readiness=readiness_percentage,
+            current_verdict=verdict,
+            questions_total=questions_total,
+            questions_learned=count_mastered,
+            has_stats=has_stats,
+        )
+
         return CultureReadinessResponse(
             readiness_percentage=round(readiness_percentage, 1),
             verdict=verdict,
@@ -719,11 +741,121 @@ class CultureQuestionService:
                 round(accuracy_percentage, 1) if accuracy_percentage is not None else None
             ),
             total_answers=total_answers,
+            motivation=motivation,
         )
 
     # =========================================================================
     # Private Helper Methods
     # =========================================================================
+
+    async def _compute_motivation(
+        self,
+        user_id: UUID,
+        current_readiness: float,
+        current_verdict: str,
+        questions_total: int,
+        questions_learned: int,
+        has_stats: bool,
+    ) -> Optional[MotivationMessage]:
+        """Compute weekly motivational message based on readiness trend."""
+        # Guard: no questions means no message
+        if questions_total == 0:
+            return None
+
+        # New user: no historical stats
+        if not has_stats:
+            iso_week = date.today().isocalendar()[1]
+            seed = f"{user_id}{iso_week}"
+            variant_index = int(hashlib.sha256(seed.encode()).hexdigest(), 16) % len(
+                MOTIVATION_NEW_USER_TEMPLATES
+            )
+            return MotivationMessage(
+                message_key=MOTIVATION_NEW_USER_TEMPLATES[variant_index],
+                params={"questionsTotal": questions_total},
+                delta_direction="new_user",
+                delta_percentage=0.0,
+            )
+
+        # Past readiness: stats with status counts from > MOTIVATION_DELTA_DAYS ago
+        cutoff = datetime.utcnow() - timedelta(days=MOTIVATION_DELTA_DAYS)
+        past_stats_query = (
+            select(
+                func.count(
+                    case(
+                        (
+                            CultureQuestionStats.status == CardStatus.LEARNING,
+                            CultureQuestionStats.id,
+                        )
+                    )
+                ).label("count_learning"),
+                func.count(
+                    case(
+                        (CultureQuestionStats.status == CardStatus.REVIEW, CultureQuestionStats.id)
+                    )
+                ).label("count_review"),
+                func.count(
+                    case(
+                        (
+                            CultureQuestionStats.status == CardStatus.MASTERED,
+                            CultureQuestionStats.id,
+                        )
+                    )
+                ).label("count_mastered"),
+            )
+            .select_from(CultureQuestion)
+            .join(CultureDeck, CultureQuestion.deck_id == CultureDeck.id)
+            .outerjoin(
+                CultureQuestionStats,
+                (CultureQuestionStats.question_id == CultureQuestion.id)
+                & (CultureQuestionStats.user_id == user_id)
+                & (CultureQuestionStats.created_at <= cutoff),
+            )
+            .where(
+                CultureDeck.category.in_(ReadinessConstants.INCLUDED_CATEGORIES),
+                CultureDeck.is_active == True,  # noqa: E712
+            )
+        )
+        past_result = await self.db.execute(past_stats_query)
+        past_row = past_result.one()
+
+        if questions_total == 0:
+            past_readiness = 0.0
+        else:
+            past_weighted = (
+                past_row.count_learning * ReadinessConstants.WEIGHT_LEARNING
+                + past_row.count_review * ReadinessConstants.WEIGHT_REVIEW
+                + past_row.count_mastered * ReadinessConstants.WEIGHT_MASTERED
+            )
+            past_readiness = (past_weighted / questions_total) * 100
+
+        delta = current_readiness - past_readiness
+        if delta > MOTIVATION_DELTA_IMPROVING_THRESHOLD:
+            direction = "improving"
+        elif delta < MOTIVATION_DELTA_DECLINING_THRESHOLD:
+            direction = "declining"
+        else:
+            direction = "stagnant"
+
+        templates = MOTIVATION_TEMPLATES.get((direction, current_verdict), [])
+        if not templates:
+            return None
+
+        iso_week = date.today().isocalendar()[1]
+        seed = f"{user_id}{iso_week}"
+        variant_index = int(hashlib.sha256(seed.encode()).hexdigest(), 16) % len(templates)
+
+        return MotivationMessage(
+            message_key=templates[variant_index],
+            params={
+                "currentPercent": round(current_readiness, 1),
+                "previousPercent": round(past_readiness, 1),
+                "delta": round(abs(delta), 1),
+                "questionsTotal": questions_total,
+                "questionsLearned": questions_learned,
+            },
+            delta_direction=direction,
+            delta_percentage=round(delta, 1),
+        )
 
     async def _get_active_deck(self, deck_id: UUID) -> CultureDeck:
         """Get deck or raise 404.
