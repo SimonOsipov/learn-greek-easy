@@ -17,7 +17,13 @@ import { PartOfSpeechBadge } from '@/components/review/grammar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { SpeakerButton } from '@/components/ui/SpeakerButton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  trackWordAudioPlayed,
+  trackExampleAudioPlayed,
+  trackWordAudioFailed,
+} from '@/lib/analytics';
 import { cn } from '@/lib/utils';
 import type { CardRecordResponse } from '@/services/wordEntryAPI';
 import type { PartOfSpeech } from '@/types/grammar';
@@ -39,6 +45,18 @@ export interface PracticeCardProps {
   translationRuPlural?: string | null;
   /** Callback when user rates the card (1=again, 2=hard, 3=good, 4=easy) */
   onRate?: (rating: number) => void;
+  /** Lifted audio state from the page, includes URL + playback state + toggle */
+  audioState?: {
+    audioUrl: string | null;
+    isPlaying: boolean;
+    isLoading: boolean;
+    error: string | null;
+    onToggle: () => void;
+  } | null;
+  /** Word entry ID for analytics tracking */
+  wordEntryId?: string;
+  /** Deck ID for analytics tracking */
+  deckId?: string;
 }
 
 interface MeaningFrontContent {
@@ -145,12 +163,27 @@ function CardFront({
   tapToRevealLabel,
   partOfSpeech,
   cardType,
+  audioUrl,
+  onAudioPlay,
+  onAudioError,
+  showAudio,
+  controlledState,
 }: {
   front: MeaningFrontContent;
   typeBadgeLabel: string;
   tapToRevealLabel: string;
   partOfSpeech: PartOfSpeech | null;
   cardType: string;
+  audioUrl?: string | null;
+  onAudioPlay?: () => void;
+  onAudioError?: (error: string) => void;
+  showAudio?: boolean;
+  controlledState?: {
+    isPlaying: boolean;
+    isLoading: boolean;
+    error: string | null;
+    toggle: () => void;
+  };
 }) {
   const mainFontSize = cardType === 'sentence_translation' ? 'text-xl' : 'text-3xl';
 
@@ -168,7 +201,20 @@ function CardFront({
       <p className="text-center text-sm text-muted-foreground">{front.prompt}</p>
 
       {/* Main text */}
-      <p className={cn('break-words text-center font-bold', mainFontSize)}>{front.main}</p>
+      {showAudio ? (
+        <div className="flex items-center justify-center gap-2">
+          <p className={cn('break-words text-center font-bold', mainFontSize)}>{front.main}</p>
+          <SpeakerButton
+            audioUrl={audioUrl}
+            size="sm"
+            onPlay={onAudioPlay}
+            onError={onAudioError}
+            controlledState={controlledState}
+          />
+        </div>
+      ) : (
+        <p className={cn('break-words text-center font-bold', mainFontSize)}>{front.main}</p>
+      )}
 
       {/* Sub text (pronunciation) */}
       {front.sub && <p className="text-center text-sm italic text-muted-foreground">{front.sub}</p>}
@@ -192,6 +238,11 @@ function CardBack({
   displayAnswer,
   onRate,
   cardType,
+  audioUrl,
+  onAudioPlay,
+  onAudioError,
+  showAudio,
+  controlledState,
 }: {
   back: MeaningBackContent;
   typeBadgeLabel: string;
@@ -202,6 +253,16 @@ function CardBack({
   displayAnswer: string;
   onRate?: (rating: number) => void;
   cardType: string;
+  audioUrl?: string | null;
+  onAudioPlay?: () => void;
+  onAudioError?: (error: string) => void;
+  showAudio?: boolean;
+  controlledState?: {
+    isPlaying: boolean;
+    isLoading: boolean;
+    error: string | null;
+    toggle: () => void;
+  };
 }) {
   const answerFontSize = cardType === 'sentence_translation' ? 'text-xl' : 'text-3xl';
 
@@ -222,7 +283,22 @@ function CardBack({
           <span className="text-sm font-medium text-emerald-600">{answerLabel}</span>
         </div>
 
-        <p className={cn('break-words text-center font-bold', answerFontSize)}>{displayAnswer}</p>
+        {showAudio ? (
+          <div className="flex items-center justify-center gap-2">
+            <p className={cn('break-words text-center font-bold', answerFontSize)}>
+              {displayAnswer}
+            </p>
+            <SpeakerButton
+              audioUrl={audioUrl}
+              size="sm"
+              onPlay={onAudioPlay}
+              onError={onAudioError}
+              controlledState={controlledState}
+            />
+          </div>
+        ) : (
+          <p className={cn('break-words text-center font-bold', answerFontSize)}>{displayAnswer}</p>
+        )}
 
         {back.answer_sub && (
           <p className="break-words text-center text-lg text-muted-foreground">{back.answer_sub}</p>
@@ -318,8 +394,21 @@ export function PracticeCard({
   translationRu,
   translationRuPlural,
   onRate,
+  audioState,
+  wordEntryId,
+  deckId,
 }: PracticeCardProps) {
   const { t, i18n } = useTranslation('deck');
+
+  const audioUrl = audioState?.audioUrl ?? null;
+  const audioControlledState = audioState
+    ? {
+        isPlaying: audioState.isPlaying,
+        isLoading: audioState.isLoading,
+        error: audioState.error,
+        toggle: audioState.onToggle,
+      }
+    : undefined;
 
   const front = card.front_content as unknown as MeaningFrontContent;
   const back = card.back_content as unknown as MeaningBackContent;
@@ -333,6 +422,41 @@ export function PracticeCard({
   const isSentenceCard = card.card_type === 'sentence_translation';
   const isSentenceElToTarget = isSentenceCard && front.prompt === 'Translate this sentence';
   const isSentenceTargetToEl = isSentenceCard && front.prompt === 'Translate to Greek';
+
+  const showAudioOnFront = card.card_type === 'meaning_el_to_en' || isSentenceElToTarget;
+  const showAudioOnBack = card.card_type === 'meaning_en_to_el' || isSentenceTargetToEl;
+
+  const handleAudioPlay = () => {
+    if (isSentenceCard) {
+      const exampleId =
+        typeof (card.front_content as Record<string, unknown>).example_id === 'string'
+          ? ((card.front_content as Record<string, unknown>).example_id as string)
+          : '';
+      trackExampleAudioPlayed({
+        word_entry_id: wordEntryId ?? '',
+        example_id: exampleId,
+        context: 'review',
+        deck_id: deckId ?? '',
+      });
+    } else {
+      trackWordAudioPlayed({
+        word_entry_id: wordEntryId ?? '',
+        lemma: card.card_type === 'meaning_en_to_el' ? back.answer : front.main,
+        part_of_speech: front.badge?.toLowerCase() ?? null,
+        context: 'review',
+        deck_id: deckId ?? '',
+      });
+    }
+  };
+
+  const handleAudioError = (error: string) => {
+    trackWordAudioFailed({
+      word_entry_id: wordEntryId ?? '',
+      error,
+      audio_type: isSentenceCard ? 'example' : 'word',
+      context: 'review',
+    });
+  };
 
   // Detect article cards
   const isArticleCard = card.card_type === 'article';
@@ -504,6 +628,11 @@ export function PracticeCard({
             tapToRevealLabel={tapToRevealLabel}
             partOfSpeech={partOfSpeech}
             cardType={card.card_type}
+            audioUrl={showAudioOnFront ? audioUrl : null}
+            onAudioPlay={showAudioOnFront ? handleAudioPlay : undefined}
+            onAudioError={showAudioOnFront ? handleAudioError : undefined}
+            showAudio={showAudioOnFront}
+            controlledState={showAudioOnFront ? audioControlledState : undefined}
           />
         ) : (
           <CardBack
@@ -516,6 +645,11 @@ export function PracticeCard({
             displayAnswer={displayAnswer}
             onRate={onRate}
             cardType={card.card_type}
+            audioUrl={showAudioOnBack ? audioUrl : null}
+            onAudioPlay={showAudioOnBack ? handleAudioPlay : undefined}
+            onAudioError={showAudioOnBack ? handleAudioError : undefined}
+            showAudio={showAudioOnBack}
+            controlledState={showAudioOnBack ? audioControlledState : undefined}
           />
         )}
       </CardContent>

@@ -17,9 +17,34 @@ import { Link, useParams } from 'react-router-dom';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAudioPlayer } from '@/hooks/useAudioPlayer';
+import type { CardRecordResponse, WordEntryResponse } from '@/services/wordEntryAPI';
 
 import { PracticeCard } from '../components';
 import { useWordEntry, useWordEntryCards } from '../hooks';
+
+// ============================================
+// Helpers
+// ============================================
+
+function resolveCardAudioUrl(
+  card: CardRecordResponse,
+  wordEntry: WordEntryResponse | null | undefined
+): string | null {
+  if (!wordEntry) return null;
+  if (card.card_type === 'meaning_el_to_en' || card.card_type === 'meaning_en_to_el') {
+    const url = wordEntry.audio_url;
+    return url || null; // treat empty string as null
+  }
+  if (card.card_type === 'sentence_translation') {
+    const front = card.front_content as Record<string, unknown>;
+    const exampleId = typeof front.example_id === 'string' ? front.example_id : undefined;
+    if (!exampleId || !wordEntry.examples) return null;
+    const example = wordEntry.examples.find((ex) => ex.id === exampleId);
+    return example?.audio_url || null; // treat empty string as null
+  }
+  return null; // plural_form, article, conjugation, declension, cloze
+}
 
 // ============================================
 // Loading Skeleton
@@ -57,6 +82,17 @@ export function WordPracticePage() {
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
+
+  // Lift audio state to page level so the "A" shortcut can control it
+  const _hookCurrentCard =
+    cards && cards.length > 0 ? cards[Math.min(currentIndex, cards.length - 1)] : null;
+  const hookAudioUrl = _hookCurrentCard ? resolveCardAudioUrl(_hookCurrentCard, wordEntry) : null;
+  const {
+    isPlaying: audioIsPlaying,
+    isLoading: audioIsLoading,
+    error: audioError,
+    toggle: audioToggle,
+  } = useAudioPlayer(hookAudioUrl);
 
   const backUrl = `/decks/${deckId}/words/${wordId}`;
 
@@ -106,6 +142,28 @@ export function WordPracticePage() {
         return;
       }
 
+      if (e.key === 'a' || e.key === 'A') {
+        e.preventDefault();
+        if (hookAudioUrl && _hookCurrentCard) {
+          const prompt =
+            typeof (_hookCurrentCard.front_content as Record<string, unknown>)?.prompt === 'string'
+              ? ((_hookCurrentCard.front_content as Record<string, unknown>).prompt as string)
+              : '';
+          const showAudioOnFront =
+            _hookCurrentCard.card_type === 'meaning_el_to_en' ||
+            (_hookCurrentCard.card_type === 'sentence_translation' &&
+              prompt === 'Translate this sentence');
+          const showAudioOnBack =
+            _hookCurrentCard.card_type === 'meaning_en_to_el' ||
+            (_hookCurrentCard.card_type === 'sentence_translation' &&
+              prompt === 'Translate to Greek');
+          if (isFlipped ? showAudioOnBack : showAudioOnFront) {
+            audioToggle();
+          }
+        }
+        return;
+      }
+
       // 1-4 keys for SRS ratings (only when card is flipped/revealed)
       if (isFlipped && ['1', '2', '3', '4'].includes(e.key)) {
         e.preventDefault();
@@ -115,7 +173,15 @@ export function WordPracticePage() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isFlipped, handleFlip, handleNextCard, handleRate]);
+  }, [
+    isFlipped,
+    handleFlip,
+    handleNextCard,
+    handleRate,
+    audioToggle,
+    hookAudioUrl,
+    _hookCurrentCard,
+  ]);
 
   // Loading state
   if (isLoading) {
@@ -180,6 +246,13 @@ export function WordPracticePage() {
   // Ready state — guard currentIndex against stale data
   const safeIndex = Math.min(currentIndex, cards.length - 1);
   const currentCard = cards[safeIndex];
+  const audioState = {
+    audioUrl: resolveCardAudioUrl(currentCard, wordEntry),
+    isPlaying: audioIsPlaying,
+    isLoading: audioIsLoading,
+    error: audioError,
+    onToggle: audioToggle,
+  };
 
   return (
     <div
@@ -210,6 +283,9 @@ export function WordPracticePage() {
           translationRu={wordEntry?.translation_ru ?? null}
           translationRuPlural={wordEntry?.translation_ru_plural ?? null}
           onRate={handleRate}
+          audioState={audioState}
+          wordEntryId={wordId}
+          deckId={deckId}
         />
 
         {/* Next card button — only show if more than 1 card */}
