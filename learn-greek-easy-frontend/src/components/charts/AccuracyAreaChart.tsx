@@ -112,7 +112,11 @@ export const AccuracyAreaChart = React.forwardRef<HTMLDivElement, AccuracyAreaCh
           <CardDescription>{t('charts.accuracyTrend.description')}</CardDescription>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={chartConfig} className={`h-[${chartHeight}px] w-full`}>
+          <ChartContainer
+            config={chartConfig}
+            className="w-full"
+            style={{ height: `${chartHeight}px` }}
+          >
             <AreaChart data={progressData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
               <defs>
                 <linearGradient id="vocabAccuracyGradient" x1="0" y1="0" x2="0" y2="1">
