@@ -111,7 +111,7 @@ export const DeckPerformanceChart = React.forwardRef<HTMLDivElement, DeckPerform
               className="flex items-center justify-center text-muted-foreground"
               style={{ height: chartHeight }}
             >
-              <p>No data available</p>
+              <p>{t('charts.noData')}</p>
             </div>
           </CardContent>
         </Card>
@@ -125,7 +125,11 @@ export const DeckPerformanceChart = React.forwardRef<HTMLDivElement, DeckPerform
           <CardDescription>{t('charts.deckPerformance.description')}</CardDescription>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={chartConfig} className={`h-[${chartHeight}px] w-full`}>
+          <ChartContainer
+            config={chartConfig}
+            className="w-full"
+            style={{ height: `${chartHeight}px` }}
+          >
             <BarChart
               data={sortedDecks}
               layout="vertical"

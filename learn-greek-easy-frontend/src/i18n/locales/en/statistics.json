@@ -84,7 +84,8 @@
         "mastered": "Mastered",
         "relearning": "Relearning"
       },
-      "cards": "{{count}} cards ({{percent}}%)"
+      "cards": "{{count}} cards ({{percent}}%)",
+      "cardsUnit": "cards"
     },
     "noData": "No data available"
   },

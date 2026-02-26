@@ -96,7 +96,7 @@ export const ProgressLineChart = React.forwardRef<HTMLDivElement, ProgressLineCh
               className="flex items-center justify-center text-muted-foreground"
               style={{ height: chartHeight }}
             >
-              <p>No data available</p>
+              <p>{t('charts.noData')}</p>
             </div>
           </CardContent>
         </Card>
@@ -110,7 +110,11 @@ export const ProgressLineChart = React.forwardRef<HTMLDivElement, ProgressLineCh
           <CardDescription>{t('charts.progressOverTime.description')}</CardDescription>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={chartConfig} className={`h-[${chartHeight}px] w-full`}>
+          <ChartContainer
+            config={chartConfig}
+            className="w-full"
+            style={{ height: `${chartHeight}px` }}
+          >
             <LineChart data={progressData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="dateString" tick={{ fontSize: 12 }} tickFormatter={formatXAxis} />

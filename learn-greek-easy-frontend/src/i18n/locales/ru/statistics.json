@@ -84,7 +84,8 @@
         "mastered": "Освоенные",
         "relearning": "Переучивание"
       },
-      "cards": "{{count}} карточек ({{percent}}%)"
+      "cards": "{{count}} карточек ({{percent}}%)",
+      "cardsUnit": "карточки"
     },
     "noData": "Нет данных"
   },

@@ -116,7 +116,7 @@ export const StageDistributionChart = React.forwardRef<HTMLDivElement, StageDist
       relearning: 'var(--color-relearning)',
     };
 
-    const renderLabel = ({ percent }: LabelProps): string => `${Math.round(percent)}%`;
+    const renderLabel = ({ percent }: LabelProps): string => `${Math.round((percent ?? 0) * 100)}%`;
 
     const renderLegend = ({ payload }: { payload?: LegendPayloadItem[] }) => {
       if (!payload || payload.length === 0) return null;
@@ -130,7 +130,7 @@ export const StageDistributionChart = React.forwardRef<HTMLDivElement, StageDist
               />
               <span className="text-muted-foreground">
                 {entry.value}
-                {entry.payload ? ` (${Math.round(entry.payload.percent)}%)` : ''}
+                {entry.payload ? ` (${Math.round(entry.payload.percent * 100)}%)` : ''}
               </span>
             </div>
           ))}
@@ -180,7 +180,7 @@ export const StageDistributionChart = React.forwardRef<HTMLDivElement, StageDist
               className="flex items-center justify-center text-muted-foreground"
               style={{ height: chartHeight }}
             >
-              <p>No data available</p>
+              <p>{t('charts.noData')}</p>
             </div>
           </CardContent>
         </Card>
@@ -194,7 +194,11 @@ export const StageDistributionChart = React.forwardRef<HTMLDivElement, StageDist
           <CardDescription>{t('charts.stageDistribution.description')}</CardDescription>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={chartConfig} className={`h-[${chartHeight}px] w-full`}>
+          <ChartContainer
+            config={chartConfig}
+            className="w-full"
+            style={{ height: `${chartHeight}px` }}
+          >
             <PieChart margin={{ top: 20, right: 20, left: 20, bottom: 20 }}>
               <Pie
                 data={pieData}
@@ -214,7 +218,10 @@ export const StageDistributionChart = React.forwardRef<HTMLDivElement, StageDist
                   <ChartTooltipContent
                     formatter={(value, name, item) => {
                       const pieItem = item.payload as PieDataItem;
-                      return [`${pieItem.value} cards (${Math.round(pieItem.percent)}%)`, name];
+                      return [
+                        `${pieItem.value} ${t('charts.stageDistribution.cardsUnit')} (${Math.round(pieItem.percent * 100)}%)`,
+                        name,
+                      ];
                     }}
                   />
                 }
