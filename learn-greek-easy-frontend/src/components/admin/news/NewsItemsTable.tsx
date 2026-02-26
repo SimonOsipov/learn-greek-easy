@@ -32,9 +32,28 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useLanguage } from '@/hooks/useLanguage';
 import type { NewsItemResponse } from '@/services/adminAPI';
+
+const COUNTRY_FLAG_EMOJI: Record<string, string> = {
+  cyprus: '🇨🇾',
+  greece: '🇬🇷',
+  world: '🌍',
+};
+
+const COUNTRY_SHORT_LABELS: Record<string, string> = {
+  cyprus: 'CY',
+  greece: 'GR',
+  world: 'World',
+};
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -77,6 +96,8 @@ interface NewsItemsTableProps {
   regeneratingId: string | null;
   cooldownEndTime: number | null;
   onRegenerateAudio: (item: NewsItemResponse) => void;
+  countryFilter?: string | null;
+  onCountryFilterChange?: (country: string | null) => void;
 }
 
 function getDateLocale(lang: string) {
@@ -199,6 +220,15 @@ const NewsItemRow: React.FC<NewsItemRowProps> = ({
             </span>
           </div>
           <div className="mt-1 flex gap-1">
+            {item.country && COUNTRY_FLAG_EMOJI[item.country] && (
+              <Badge
+                variant="outline"
+                className="border-blue-500/30 bg-blue-500/10 px-1.5 py-0 text-[10px] text-blue-700 dark:text-blue-400"
+              >
+                {COUNTRY_FLAG_EMOJI[item.country]}{' '}
+                {COUNTRY_SHORT_LABELS[item.country] ?? item.country}
+              </Badge>
+            )}
             {item.card_id ? (
               <Badge
                 variant="outline"
@@ -315,6 +345,8 @@ export const NewsItemsTable: React.FC<NewsItemsTableProps> = ({
   regeneratingId,
   cooldownEndTime,
   onRegenerateAudio,
+  countryFilter,
+  onCountryFilterChange,
 }) => {
   const { t } = useTranslation('admin');
   const { currentLanguage } = useLanguage();
@@ -346,16 +378,34 @@ export const NewsItemsTable: React.FC<NewsItemsTableProps> = ({
       <CardHeader>
         <CardTitle>{t('news.table.title')}</CardTitle>
         <CardDescription>{t('news.table.description')}</CardDescription>
-        <div className="relative flex-1 pt-2">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder={t('news.search.placeholder')}
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            className="pl-9"
-            data-testid="news-search-input"
-          />
+        <div className="flex gap-2 pt-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder={t('news.search.placeholder')}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="pl-9"
+              data-testid="news-search-input"
+            />
+          </div>
+          {onCountryFilterChange && (
+            <Select
+              value={countryFilter ?? 'all'}
+              onValueChange={(v) => onCountryFilterChange(v === 'all' ? null : v)}
+            >
+              <SelectTrigger className="w-40" data-testid="news-country-filter">
+                <SelectValue placeholder={t('news.country.filterAll')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('news.country.filterAll')}</SelectItem>
+                <SelectItem value="cyprus">🇨🇾 Cyprus</SelectItem>
+                <SelectItem value="greece">🇬🇷 Greece</SelectItem>
+                <SelectItem value="world">🌍 World</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
         </div>
       </CardHeader>
       <CardContent>

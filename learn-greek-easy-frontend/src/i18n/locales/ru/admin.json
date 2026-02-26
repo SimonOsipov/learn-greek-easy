@@ -281,7 +281,10 @@
     "newsComingSoonDescription": "Вкладка Новости обновляется. Скоро появятся новые функции."
   },
   "announcements": {
-    "stats": { "total": "Всего объявлений", "avgRead": "Ср. % прочитавших" },
+    "stats": {
+      "total": "Всего объявлений",
+      "avgRead": "Ср. % прочитавших"
+    },
     "create": {
       "title": "Создать объявление",
       "description": "Отправить уведомление всем активным пользователям",
@@ -347,7 +350,10 @@
     }
   },
   "news": {
-    "stats": { "total": "Всего новостей", "withAudio": "С аудио" },
+    "stats": {
+      "total": "Всего новостей",
+      "withAudio": "С аудио"
+    },
     "create": {
       "title": "Создать новость",
       "description": "Введите данные новости в формате JSON. Сервер загрузит и сохранит изображение из source_image_url.",
@@ -358,7 +364,8 @@
       "error": "Не удалось создать новость",
       "validationError": "Неверный JSON",
       "duplicateUrl": "Этот URL статьи уже использовался",
-      "imageDownloadFailed": "Не удалось загрузить изображение по URL"
+      "imageDownloadFailed": "Не удалось загрузить изображение по URL",
+      "questionSkipped": "Вопрос пропущен"
     },
     "table": {
       "title": "Новости",
@@ -395,7 +402,8 @@
       "invalidArticleUrl": "Неверный формат original_article_url",
       "invalidImageUrl": "Неверный формат source_image_url",
       "invalidDate": "Неверный формат даты (используйте YYYY-MM-DD)",
-      "noFieldsToUpdate": "Нет полей для обновления"
+      "noFieldsToUpdate": "Нет полей для обновления",
+      "invalidCountry": "Недопустимая страна. Допустимые значения: cyprus, greece, world"
     },
     "search": {
       "placeholder": "Поиск новостей...",
@@ -418,10 +426,18 @@
       "pause": "Пауза аудио",
       "playerDisabled": "Аудио для предпрослушивания недоступно",
       "loadError": "Не удалось загрузить аудио"
+    },
+    "country": {
+      "label": "Страна",
+      "filterAll": "Все страны"
     }
   },
   "feedback": {
-    "stats": { "total": "Всего отзывов", "new": "Новые", "responded": "С ответом" },
+    "stats": {
+      "total": "Всего отзывов",
+      "new": "Новые",
+      "responded": "С ответом"
+    },
     "sectionTitle": "Отзывы пользователей",
     "sectionDescription": "Просматривайте и отвечайте на отзывы и сообщения об ошибках от пользователей",
     "anonymousUser": "Анонимный пользователь",
@@ -486,7 +502,11 @@
     }
   },
   "cardErrors": {
-    "stats": { "total": "Всего отчётов", "pending": "На рассмотрении", "fixed": "Исправлено" },
+    "stats": {
+      "total": "Всего отчётов",
+      "pending": "На рассмотрении",
+      "fixed": "Исправлено"
+    },
     "sectionTitle": "Отчёты об ошибках в карточках",
     "sectionDescription": "Просмотр и ответы на отчёты пользователей об ошибках в карточках",
     "anonymousUser": "Анонимный пользователь",
@@ -578,7 +598,10 @@
     "discard": "Отменить"
   },
   "changelog": {
-    "stats": { "total": "Всего записей", "mostRecent": "Последняя запись" },
+    "stats": {
+      "total": "Всего записей",
+      "mostRecent": "Последняя запись"
+    },
     "title": "История изменений",
     "addNew": "Добавить",
     "editDescription": "Редактирование записи изменений в формате JSON",

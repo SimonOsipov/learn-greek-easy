@@ -89,6 +89,7 @@ interface NewsItemEditModalProps {
  */
 function itemToEditableJson(item: NewsItemResponse, imageUrlPlaceholder: string): string {
   const editable = {
+    country: item.country,
     title_el: item.title_el,
     title_en: item.title_en,
     title_ru: item.title_ru,
@@ -112,7 +113,8 @@ type ValidationErrorType =
   | 'invalidArticleUrl'
   | 'invalidImageUrl'
   | 'invalidDate'
-  | 'noFieldsToUpdate';
+  | 'noFieldsToUpdate'
+  | 'invalidCountry';
 
 /**
  * Validate and parse the edited JSON
@@ -148,6 +150,16 @@ function parseEditJson(json: string): {
     if (typeof value === 'string' && value.trim()) {
       (update as Record<string, string>)[field] = value.trim();
     }
+  }
+
+  // Handle country field if present
+  const countryValue = parsed.country;
+  if (typeof countryValue === 'string' && countryValue.trim()) {
+    const VALID_COUNTRIES = ['cyprus', 'greece', 'world'];
+    if (!VALID_COUNTRIES.includes(countryValue.trim())) {
+      return { valid: false, errorType: 'invalidCountry' };
+    }
+    (update as Record<string, string>)['country'] = countryValue.trim();
   }
 
   // Handle source_image_url specially - only include if it's a valid URL
