@@ -15,10 +15,57 @@ import i18n from 'i18next';
 import { afterEach, describe, it, expect, vi } from 'vitest';
 
 import { TooltipProvider } from '@/components/ui/tooltip';
+import {
+  trackWordAudioPlayed,
+  trackExampleAudioPlayed,
+  trackWordAudioFailed,
+} from '@/lib/analytics';
 import type { CardRecordResponse } from '@/services/wordEntryAPI';
 
 import { PracticeCard } from '../PracticeCard';
 import type { PracticeCardProps } from '../PracticeCard';
+
+vi.mock('@/components/ui/SpeakerButton', () => ({
+  SpeakerButton: ({
+    audioUrl,
+    onPlay,
+    onError,
+  }: {
+    audioUrl: string | null | undefined;
+    onPlay?: () => void;
+    onError?: (error: string) => void;
+  }) => {
+    if (!audioUrl) return null;
+    return (
+      <>
+        <button
+          data-testid="speaker-button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onPlay?.();
+          }}
+        >
+          Play
+        </button>
+        <button
+          data-testid="speaker-error-trigger"
+          onClick={(e) => {
+            e.stopPropagation();
+            onError?.('play error');
+          }}
+        >
+          Error
+        </button>
+      </>
+    );
+  },
+}));
+
+vi.mock('@/lib/analytics', () => ({
+  trackWordAudioPlayed: vi.fn(),
+  trackExampleAudioPlayed: vi.fn(),
+  trackWordAudioFailed: vi.fn(),
+}));
 
 // ============================================
 // Mock Data
@@ -69,6 +116,7 @@ const mockSentenceCard: CardRecordResponse = {
     badge: 'Sentence',
     hint: null,
     example_index: 0,
+    example_id: 'example-001',
   },
   back_content: {
     card_type: 'sentence_translation',
@@ -153,6 +201,60 @@ const mockArticleCard: CardRecordResponse = {
     answer_sub: 'neuter',
     gender: 'neuter',
     gender_ru: '\u0441\u0440\u0435\u0434\u043D\u0438\u0439',
+  },
+  is_active: true,
+  created_at: '2024-01-01T00:00:00Z',
+  updated_at: '2024-01-01T00:00:00Z',
+};
+
+const mockEnToElCard: CardRecordResponse = {
+  id: 'card-en-to-el-001',
+  word_entry_id: 'word-001',
+  deck_id: 'deck-001',
+  card_type: 'meaning_en_to_el',
+  tier: 1,
+  variant_key: 'default',
+  front_content: {
+    card_type: 'meaning_en_to_el',
+    prompt: 'What is the Greek for',
+    main: 'hello',
+    sub: null,
+    badge: 'Noun',
+    hint: null,
+  },
+  back_content: {
+    card_type: 'meaning_en_to_el',
+    answer: 'γεια σας',
+    answer_sub: '/ja sas/',
+    context: null,
+  },
+  is_active: true,
+  created_at: '2024-01-01T00:00:00Z',
+  updated_at: '2024-01-01T00:00:00Z',
+};
+
+const mockTargetToElSentenceCard: CardRecordResponse = {
+  id: 'card-target-to-el-001',
+  word_entry_id: 'word-001',
+  deck_id: 'deck-001',
+  card_type: 'sentence_translation',
+  tier: 1,
+  variant_key: 'default',
+  front_content: {
+    card_type: 'sentence_translation',
+    prompt: 'Translate to Greek',
+    main: 'Good morning!',
+    sub: null,
+    badge: 'Sentence',
+    hint: null,
+    example_id: 'example-001',
+  },
+  back_content: {
+    card_type: 'sentence_translation',
+    answer: 'Καλημέρα σας!',
+    answer_sub: null,
+    answer_ru: 'Доброе утро!',
+    context: null,
   },
   is_active: true,
   created_at: '2024-01-01T00:00:00Z',
@@ -763,6 +865,111 @@ describe('PracticeCard', () => {
         // answer_sub should fall back to English since Russian is not available
         expect(screen.getByText('houses, homes')).toBeInTheDocument();
       });
+    });
+  });
+
+  describe('Speaker Button', () => {
+    const audioUrl = 'https://example.com/audio.mp3';
+
+    it('shows speaker button on front for meaning_el_to_en when audioUrl provided', () => {
+      renderCard({ card: mockCard, audioUrl });
+      expect(screen.getByTestId('speaker-button')).toBeInTheDocument();
+    });
+
+    it('does NOT show speaker button on back for meaning_el_to_en', () => {
+      renderCard({ card: mockCard, isFlipped: true, audioUrl });
+      expect(screen.queryByTestId('speaker-button')).not.toBeInTheDocument();
+    });
+
+    it('does NOT show speaker button on front for meaning_en_to_el', () => {
+      renderCard({ card: mockEnToElCard, audioUrl });
+      expect(screen.queryByTestId('speaker-button')).not.toBeInTheDocument();
+    });
+
+    it('shows speaker button on back for meaning_en_to_el when flipped', () => {
+      renderCard({ card: mockEnToElCard, isFlipped: true, audioUrl });
+      expect(screen.getByTestId('speaker-button')).toBeInTheDocument();
+    });
+
+    it('shows speaker button on front for sentence_translation (el_to_target)', () => {
+      renderCard({ card: mockSentenceCard, audioUrl });
+      expect(screen.getByTestId('speaker-button')).toBeInTheDocument();
+    });
+
+    it('does NOT show speaker button on back for sentence_translation (el_to_target)', () => {
+      renderCard({ card: mockSentenceCard, isFlipped: true, audioUrl });
+      expect(screen.queryByTestId('speaker-button')).not.toBeInTheDocument();
+    });
+
+    it('does NOT show speaker button on front for sentence_translation (target_to_el)', () => {
+      renderCard({ card: mockTargetToElSentenceCard, audioUrl });
+      expect(screen.queryByTestId('speaker-button')).not.toBeInTheDocument();
+    });
+
+    it('shows speaker button on back for sentence_translation (target_to_el) when flipped', () => {
+      renderCard({ card: mockTargetToElSentenceCard, isFlipped: true, audioUrl });
+      expect(screen.getByTestId('speaker-button')).toBeInTheDocument();
+    });
+
+    it('does NOT show speaker button for plural_form card', () => {
+      renderCard({ card: mockPluralSgToPlCard, audioUrl });
+      expect(screen.queryByTestId('speaker-button')).not.toBeInTheDocument();
+      renderCard({ card: mockPluralSgToPlCard, isFlipped: true, audioUrl });
+      expect(screen.queryByTestId('speaker-button')).not.toBeInTheDocument();
+    });
+
+    it('does NOT show speaker button for article card', () => {
+      renderCard({ card: mockArticleCard, audioUrl });
+      expect(screen.queryByTestId('speaker-button')).not.toBeInTheDocument();
+    });
+
+    it('does NOT show speaker button when audioUrl is null', () => {
+      renderCard({ card: mockCard, audioUrl: null });
+      expect(screen.queryByTestId('speaker-button')).not.toBeInTheDocument();
+    });
+
+    it('does NOT trigger card flip when speaker button clicked', () => {
+      const onFlip = vi.fn();
+      renderCard({ card: mockCard, audioUrl, onFlip });
+      fireEvent.click(screen.getByTestId('speaker-button'));
+      expect(onFlip).not.toHaveBeenCalled();
+    });
+
+    it('fires word_audio_played analytics for meaning_el_to_en on play', () => {
+      renderCard({ card: mockCard, audioUrl, wordEntryId: 'word-001', deckId: 'deck-001' });
+      fireEvent.click(screen.getByTestId('speaker-button'));
+      expect(trackWordAudioPlayed).toHaveBeenCalledWith(
+        expect.objectContaining({
+          word_entry_id: 'word-001',
+          context: 'review',
+          deck_id: 'deck-001',
+        })
+      );
+    });
+
+    it('fires example_audio_played analytics for sentence_translation on play', () => {
+      renderCard({ card: mockSentenceCard, audioUrl, wordEntryId: 'word-001', deckId: 'deck-001' });
+      fireEvent.click(screen.getByTestId('speaker-button'));
+      expect(trackExampleAudioPlayed).toHaveBeenCalledWith(
+        expect.objectContaining({
+          word_entry_id: 'word-001',
+          example_id: 'example-001',
+          context: 'review',
+          deck_id: 'deck-001',
+        })
+      );
+    });
+
+    it('fires word_audio_failed analytics on error', () => {
+      renderCard({ card: mockCard, audioUrl, wordEntryId: 'word-001', deckId: 'deck-001' });
+      fireEvent.click(screen.getByTestId('speaker-error-trigger'));
+      expect(trackWordAudioFailed).toHaveBeenCalledWith(
+        expect.objectContaining({
+          word_entry_id: 'word-001',
+          audio_type: 'word',
+          context: 'review',
+        })
+      );
     });
   });
 });

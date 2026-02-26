@@ -17,7 +17,13 @@ import { PartOfSpeechBadge } from '@/components/review/grammar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { SpeakerButton } from '@/components/ui/SpeakerButton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  trackWordAudioPlayed,
+  trackExampleAudioPlayed,
+  trackWordAudioFailed,
+} from '@/lib/analytics';
 import { cn } from '@/lib/utils';
 import type { CardRecordResponse } from '@/services/wordEntryAPI';
 import type { PartOfSpeech } from '@/types/grammar';
@@ -153,12 +159,20 @@ function CardFront({
   tapToRevealLabel,
   partOfSpeech,
   cardType,
+  audioUrl,
+  onAudioPlay,
+  onAudioError,
+  showAudio,
 }: {
   front: MeaningFrontContent;
   typeBadgeLabel: string;
   tapToRevealLabel: string;
   partOfSpeech: PartOfSpeech | null;
   cardType: string;
+  audioUrl?: string | null;
+  onAudioPlay?: () => void;
+  onAudioError?: (error: string) => void;
+  showAudio?: boolean;
 }) {
   const mainFontSize = cardType === 'sentence_translation' ? 'text-xl' : 'text-3xl';
 
@@ -176,7 +190,19 @@ function CardFront({
       <p className="text-center text-sm text-muted-foreground">{front.prompt}</p>
 
       {/* Main text */}
-      <p className={cn('break-words text-center font-bold', mainFontSize)}>{front.main}</p>
+      {showAudio ? (
+        <div className="flex items-center justify-center gap-2">
+          <p className={cn('break-words text-center font-bold', mainFontSize)}>{front.main}</p>
+          <SpeakerButton
+            audioUrl={audioUrl}
+            size="sm"
+            onPlay={onAudioPlay}
+            onError={onAudioError}
+          />
+        </div>
+      ) : (
+        <p className={cn('break-words text-center font-bold', mainFontSize)}>{front.main}</p>
+      )}
 
       {/* Sub text (pronunciation) */}
       {front.sub && <p className="text-center text-sm italic text-muted-foreground">{front.sub}</p>}
@@ -200,6 +226,10 @@ function CardBack({
   displayAnswer,
   onRate,
   cardType,
+  audioUrl,
+  onAudioPlay,
+  onAudioError,
+  showAudio,
 }: {
   back: MeaningBackContent;
   typeBadgeLabel: string;
@@ -210,6 +240,10 @@ function CardBack({
   displayAnswer: string;
   onRate?: (rating: number) => void;
   cardType: string;
+  audioUrl?: string | null;
+  onAudioPlay?: () => void;
+  onAudioError?: (error: string) => void;
+  showAudio?: boolean;
 }) {
   const answerFontSize = cardType === 'sentence_translation' ? 'text-xl' : 'text-3xl';
 
@@ -230,7 +264,21 @@ function CardBack({
           <span className="text-sm font-medium text-emerald-600">{answerLabel}</span>
         </div>
 
-        <p className={cn('break-words text-center font-bold', answerFontSize)}>{displayAnswer}</p>
+        {showAudio ? (
+          <div className="flex items-center justify-center gap-2">
+            <p className={cn('break-words text-center font-bold', answerFontSize)}>
+              {displayAnswer}
+            </p>
+            <SpeakerButton
+              audioUrl={audioUrl}
+              size="sm"
+              onPlay={onAudioPlay}
+              onError={onAudioError}
+            />
+          </div>
+        ) : (
+          <p className={cn('break-words text-center font-bold', answerFontSize)}>{displayAnswer}</p>
+        )}
 
         {back.answer_sub && (
           <p className="break-words text-center text-lg text-muted-foreground">{back.answer_sub}</p>
@@ -329,14 +377,7 @@ export function PracticeCard({
   audioUrl,
   wordEntryId,
   deckId,
-  onPlayAudio,
 }: PracticeCardProps) {
-  // These props are reserved for audio playback (wired up in a later subtask)
-  void audioUrl;
-  void wordEntryId;
-  void deckId;
-  void onPlayAudio;
-
   const { t, i18n } = useTranslation('deck');
 
   const front = card.front_content as unknown as MeaningFrontContent;
@@ -351,6 +392,41 @@ export function PracticeCard({
   const isSentenceCard = card.card_type === 'sentence_translation';
   const isSentenceElToTarget = isSentenceCard && front.prompt === 'Translate this sentence';
   const isSentenceTargetToEl = isSentenceCard && front.prompt === 'Translate to Greek';
+
+  const showAudioOnFront = card.card_type === 'meaning_el_to_en' || isSentenceElToTarget;
+  const showAudioOnBack = card.card_type === 'meaning_en_to_el' || isSentenceTargetToEl;
+
+  const handleAudioPlay = () => {
+    if (isSentenceCard) {
+      const exampleId =
+        typeof (card.front_content as Record<string, unknown>).example_id === 'string'
+          ? ((card.front_content as Record<string, unknown>).example_id as string)
+          : '';
+      trackExampleAudioPlayed({
+        word_entry_id: wordEntryId ?? '',
+        example_id: exampleId,
+        context: 'review',
+        deck_id: deckId ?? '',
+      });
+    } else {
+      trackWordAudioPlayed({
+        word_entry_id: wordEntryId ?? '',
+        lemma: front.main,
+        part_of_speech: front.badge?.toLowerCase() ?? null,
+        context: 'review',
+        deck_id: deckId ?? '',
+      });
+    }
+  };
+
+  const handleAudioError = (error: string) => {
+    trackWordAudioFailed({
+      word_entry_id: wordEntryId ?? '',
+      error,
+      audio_type: isSentenceCard ? 'example' : 'word',
+      context: 'review',
+    });
+  };
 
   // Detect article cards
   const isArticleCard = card.card_type === 'article';
@@ -522,6 +598,10 @@ export function PracticeCard({
             tapToRevealLabel={tapToRevealLabel}
             partOfSpeech={partOfSpeech}
             cardType={card.card_type}
+            audioUrl={showAudioOnFront ? audioUrl : null}
+            onAudioPlay={showAudioOnFront ? handleAudioPlay : undefined}
+            onAudioError={showAudioOnFront ? handleAudioError : undefined}
+            showAudio={showAudioOnFront}
           />
         ) : (
           <CardBack
@@ -534,6 +614,10 @@ export function PracticeCard({
             displayAnswer={displayAnswer}
             onRate={onRate}
             cardType={card.card_type}
+            audioUrl={showAudioOnBack ? audioUrl : null}
+            onAudioPlay={showAudioOnBack ? handleAudioPlay : undefined}
+            onAudioError={showAudioOnBack ? handleAudioError : undefined}
+            showAudio={showAudioOnBack}
           />
         )}
       </CardContent>
