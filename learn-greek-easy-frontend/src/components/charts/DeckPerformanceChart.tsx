@@ -42,7 +42,7 @@ export const DeckPerformanceChart = React.forwardRef<HTMLDivElement, DeckPerform
 
     const sortedDecks = useMemo(() => {
       if (!deckStats) return [];
-      return deckStats.sort((a, b) => b.mastery - a.mastery).slice(0, maxDecks);
+      return [...deckStats].sort((a, b) => b.mastery - a.mastery).slice(0, maxDecks);
     }, [deckStats, maxDecks]);
 
     const formatXAxis = (value: number): string => `${Math.round(value)}%`;
