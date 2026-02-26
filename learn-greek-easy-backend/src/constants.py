@@ -119,6 +119,17 @@ class ReadinessConstants:
     INCLUDED_CATEGORIES = ("history", "geography", "politics", "culture", "practical")
 
 
+# Category mapping: DB categories → logical UI categories
+CATEGORY_DB_TO_LOGICAL: dict[str, str] = {
+    "history": "history",
+    "geography": "geography",
+    "politics": "politics",
+    "culture": "culture",
+    "practical": "culture",
+}
+LOGICAL_CATEGORIES = ("history", "geography", "politics", "culture")
+
+
 # Pagination
 DEFAULT_PAGE = 1
 DEFAULT_PAGE_SIZE = 20

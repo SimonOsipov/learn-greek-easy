@@ -273,6 +273,20 @@ class CultureProgressResponse(BaseModel):
 ReadinessVerdict = Literal["not_ready", "getting_there", "ready", "thoroughly_prepared"]
 
 
+class CategoryReadiness(BaseModel):
+    """Readiness data for a single logical culture category."""
+
+    category: str = Field(
+        ..., description="Logical category key: history, geography, politics, culture"
+    )
+    readiness_percentage: float = Field(..., ge=0, le=100, description="Weighted readiness 0-100")
+    questions_mastered: int = Field(..., ge=0, description="Questions with MASTERED status")
+    questions_total: int = Field(..., ge=0, description="Total questions in this category")
+    deck_ids: list[str] = Field(
+        default_factory=list, description="UUIDs of decks in this logical category"
+    )
+
+
 class CultureReadinessResponse(BaseModel):
     """Response schema for culture exam readiness assessment.
 
@@ -293,6 +307,10 @@ class CultureReadinessResponse(BaseModel):
     )
     total_answers: int = Field(
         ..., ge=0, description="Total answers submitted across included categories"
+    )
+    categories: list[CategoryReadiness] = Field(
+        default_factory=list,
+        description="Per-category readiness breakdown, sorted ascending by readiness_percentage",
     )
 
 
