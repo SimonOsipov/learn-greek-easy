@@ -37,6 +37,10 @@ vi.mock('react-i18next', () => ({
         'news.audio.noAudio': 'No audio',
         'news.audio.regenerate': 'Regenerate',
         'news.audio.regenerating': 'Regenerating...',
+        'news.country.filterAll': 'All Countries',
+        'news.country.cyprus': 'Cyprus',
+        'news.country.greece': 'Greece',
+        'news.country.world': 'World',
         'actions.edit': 'Edit',
         'actions.delete': 'Delete',
         'pagination.previous': 'Previous',
@@ -83,6 +87,7 @@ function makeNewsItem(overrides: Partial<NewsItemResponse> = {}): NewsItemRespon
     updated_at: '2025-01-10T00:00:00Z',
     card_id: null,
     deck_id: null,
+    country: 'cyprus',
     ...overrides,
   };
 }
@@ -514,5 +519,35 @@ describe('NewsItemsTable — Core table functionality (AC-10, no regressions)', 
     render(<NewsItemsTable {...defaultTableProps} newsItems={[item]} regeneratingId="item-1" />);
 
     expect(screen.getByTestId('regenerate-audio-item-1')).toBeDisabled();
+  });
+});
+
+describe('NewsItemsTable — Country badge', () => {
+  it('shows country badge for cyprus items', () => {
+    const item = makeNewsItem({ country: 'cyprus' });
+    render(<NewsItemsTable {...defaultTableProps} newsItems={[item]} />);
+    // Badge contains CY short label (may be preceded by flag emoji)
+    expect(screen.getByText((content) => content.includes('CY'))).toBeInTheDocument();
+  });
+
+  it('shows country badge for greece items', () => {
+    const item = makeNewsItem({ country: 'greece' });
+    render(<NewsItemsTable {...defaultTableProps} newsItems={[item]} />);
+    expect(screen.getByText((content) => content.includes('GR'))).toBeInTheDocument();
+  });
+
+  it('shows country badge for world items', () => {
+    const item = makeNewsItem({ country: 'world' });
+    render(<NewsItemsTable {...defaultTableProps} newsItems={[item]} />);
+    expect(screen.getByText((content) => content.includes('World'))).toBeInTheDocument();
+  });
+
+  it('country badge has blue color classes', () => {
+    const item = makeNewsItem({ country: 'cyprus' });
+    render(<NewsItemsTable {...defaultTableProps} newsItems={[item]} />);
+    const badge = screen
+      .getByText((content) => content.includes('CY'))
+      .closest('[class*="bg-blue"]');
+    expect(badge).not.toBeNull();
   });
 });

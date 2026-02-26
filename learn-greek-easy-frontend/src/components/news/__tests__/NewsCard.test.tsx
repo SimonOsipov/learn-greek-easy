@@ -54,6 +54,7 @@ const createMockArticle = (overrides: Partial<NewsItemResponse> = {}): NewsItemR
   updated_at: '2026-01-27T00:00:00Z',
   card_id: null,
   deck_id: null,
+  country: 'cyprus',
   ...overrides,
 });
 
@@ -236,5 +237,36 @@ describe('NewsCard', () => {
 
       expect(true).toBe(true); // No crash means cleanup worked
     });
+  });
+});
+
+describe('NewsCard Country Pill', () => {
+  it('renders country pill for cyprus', () => {
+    const article = createMockArticle({ country: 'cyprus', id: 'test-cy' });
+    render(<NewsCard article={article} newsLang="el" />);
+    // Pill should be visible (contains the country label)
+    const pill = document.querySelector('.rounded-full.bg-black\\/60');
+    expect(pill).toBeInTheDocument();
+  });
+
+  it('renders country pill for greece', () => {
+    const article = createMockArticle({ country: 'greece', id: 'test-gr' });
+    render(<NewsCard article={article} newsLang="el" />);
+    const pill = document.querySelector('.rounded-full.bg-black\\/60');
+    expect(pill).toBeInTheDocument();
+  });
+
+  it('renders country pill for world', () => {
+    const article = createMockArticle({ country: 'world', id: 'test-wo' });
+    render(<NewsCard article={article} newsLang="el" />);
+    const pill = document.querySelector('.rounded-full.bg-black\\/60');
+    expect(pill).toBeInTheDocument();
+  });
+
+  it('pill has correct position classes', () => {
+    const article = createMockArticle({ country: 'cyprus', id: 'test-pos' });
+    render(<NewsCard article={article} newsLang="el" />);
+    const pill = document.querySelector('.absolute.left-2.top-2.z-10');
+    expect(pill).toBeInTheDocument();
   });
 });

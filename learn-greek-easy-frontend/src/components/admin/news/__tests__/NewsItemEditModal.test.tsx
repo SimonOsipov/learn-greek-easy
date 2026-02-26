@@ -102,6 +102,7 @@ function makeNewsItem(overrides: Partial<NewsItemResponse> = {}): NewsItemRespon
     updated_at: '2025-01-10T00:00:00Z',
     card_id: null,
     deck_id: null,
+    country: 'cyprus',
     ...overrides,
   };
 }
@@ -268,5 +269,23 @@ describe('NewsItemEditModal — Audio status section (no regression)', () => {
     render(<NewsItemEditModal open={true} onOpenChange={vi.fn()} item={item} />);
 
     expect(screen.getByText('Русский заголовок')).toBeInTheDocument();
+  });
+});
+
+describe('NewsItemEditModal — Country field in JSON', () => {
+  it('JSON textarea includes country field pre-filled', async () => {
+    const item = makeNewsItem({ country: 'greece' });
+    render(<NewsItemEditModal open={true} onOpenChange={vi.fn()} item={item} />);
+    const textarea = screen.getByTestId('news-edit-json-input') as HTMLTextAreaElement;
+    expect(textarea.value).toContain('"country": "greece"');
+  });
+
+  it('JSON textarea includes country as first field', async () => {
+    const item = makeNewsItem({ country: 'world' });
+    render(<NewsItemEditModal open={true} onOpenChange={vi.fn()} item={item} />);
+    const textarea = screen.getByTestId('news-edit-json-input') as HTMLTextAreaElement;
+    const parsed = JSON.parse(textarea.value);
+    const keys = Object.keys(parsed);
+    expect(keys[0]).toBe('country');
   });
 });
