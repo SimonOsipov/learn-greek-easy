@@ -260,7 +260,7 @@ export const ResetPassword: React.FC = () => {
               data-testid="reset-password-submit"
               loading={isSubmitting}
               loadingText={t('resetPassword.submitting')}
-              className="w-full bg-gradient-to-br from-gradient-from to-gradient-to text-white hover:opacity-90"
+              className="w-full"
               size="lg"
             >
               {t('resetPassword.submit')}

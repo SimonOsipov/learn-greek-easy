@@ -223,7 +223,7 @@ export const ForgotPassword: React.FC = () => {
               data-testid="forgot-password-submit"
               loading={isSubmitting}
               loadingText={t('forgotPassword.submitting')}
-              className="w-full bg-gradient-to-br from-gradient-from to-gradient-to text-white hover:opacity-90"
+              className="w-full"
               size="lg"
             >
               {t('forgotPassword.submit')}

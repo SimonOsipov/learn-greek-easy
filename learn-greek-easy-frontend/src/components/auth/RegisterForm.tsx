@@ -550,7 +550,7 @@ export const RegisterForm: React.FC = () => {
               data-testid="register-submit"
               loading={isSubmitting}
               loadingText={t('register.submitting')}
-              className="w-full bg-gradient-to-br from-gradient-from to-gradient-to text-white hover:opacity-90"
+              className="w-full"
               size="lg"
             >
               {t('register.submit')}

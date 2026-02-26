@@ -19,7 +19,7 @@ interface SubmitButtonProps extends Omit<ButtonProps, 'type'> {
  * - Automatic loading state with spinner
  * - Disabled state during submission
  * - Customizable loading text
- * - Full width on mobile, auto on desktop
+ * - Full width on all viewports
  * - Inherits all Button props except 'type' (always 'submit')
  *
  * @example
@@ -49,7 +49,7 @@ export function SubmitButton({
     <Button
       type="submit"
       disabled={loading || disabled}
-      className={cn('w-full md:w-auto', className)}
+      className={cn('w-full', className)}
       {...props}
     >
       {loading ? (
