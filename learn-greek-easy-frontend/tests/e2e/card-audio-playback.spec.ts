@@ -236,58 +236,65 @@ test.describe('Card Audio Playback', () => {
       });
     });
 
-    // Mock word entry API to inject audio_url
-    await page.route(`**/api/v1/word-entries/${testWordEntryId}`, (route) => {
-      if (route.request().method() !== 'GET') {
-        void route.continue();
-        return;
+    // Mock word entry API to inject audio_url.
+    // Use a function matcher so query params don't prevent matching, and /cards subpath is excluded.
+    await page.route(
+      (url) => url.pathname === `/api/v1/word-entries/${testWordEntryId}`,
+      (route) => {
+        if (route.request().method() !== 'GET') {
+          void route.continue();
+          return;
+        }
+        void route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            id: testWordEntryId,
+            deck_id: v2DeckId,
+            lemma: testWordEntryLemma,
+            part_of_speech: 'noun',
+            translation_en: 'hello',
+            translation_en_plural: null,
+            translation_ru: null,
+            translation_ru_plural: null,
+            pronunciation: null,
+            grammar_data: null,
+            examples: [
+              {
+                id: 'example-001',
+                greek: 'Γεια σας!',
+                english: 'Hello!',
+                audio_url: audioUrl,
+                audio_status: 'ready',
+              },
+            ],
+            audio_key: 'test/audio.wav',
+            audio_url: audioUrl,
+            audio_status: 'ready',
+            is_active: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }),
+        });
       }
-      void route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          id: testWordEntryId,
-          deck_id: v2DeckId,
-          lemma: testWordEntryLemma,
-          part_of_speech: 'noun',
-          translation_en: 'hello',
-          translation_en_plural: null,
-          translation_ru: null,
-          translation_ru_plural: null,
-          pronunciation: null,
-          grammar_data: null,
-          examples: [
-            {
-              id: 'example-001',
-              greek: 'Γεια σας!',
-              english: 'Hello!',
-              audio_url: audioUrl,
-              audio_status: 'ready',
-            },
-          ],
-          audio_key: 'test/audio.wav',
-          audio_url: audioUrl,
-          audio_status: 'ready',
-          is_active: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        }),
-      });
-    });
+    );
 
-    // Mock cards API to return specific card type
-    await page.route(`**/api/v1/word-entries/${testWordEntryId}/cards`, (route) => {
-      if (route.request().method() !== 'GET') {
-        void route.continue();
-        return;
+    // Mock cards API to return specific card type.
+    await page.route(
+      (url) => url.pathname === `/api/v1/word-entries/${testWordEntryId}/cards`,
+      (route) => {
+        if (route.request().method() !== 'GET') {
+          void route.continue();
+          return;
+        }
+        const mockCard = buildMockCard(cardType, 'test-card-001', testWordEntryId, v2DeckId, audioUrl);
+        void route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ cards: [mockCard] }),
+        });
       }
-      const mockCard = buildMockCard(cardType, 'test-card-001', testWordEntryId, v2DeckId, audioUrl);
-      void route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ cards: [mockCard] }),
-      });
-    });
+    );
   }
 
   const practiceUrl = () => `/decks/${v2DeckId}/words/${testWordEntryId}/practice`;
@@ -336,35 +343,38 @@ test.describe('Card Audio Playback', () => {
     await setupAudioMocks(page, { cardType: 'meaning_el_to_en', audioUrl: 'https://test.local/audio.wav' });
 
     // Override the word entry mock to have null audio_url
-    await page.route(`**/api/v1/word-entries/${testWordEntryId}`, (route) => {
-      if (route.request().method() !== 'GET') {
-        void route.continue();
-        return;
+    await page.route(
+      (url) => url.pathname === `/api/v1/word-entries/${testWordEntryId}`,
+      (route) => {
+        if (route.request().method() !== 'GET') {
+          void route.continue();
+          return;
+        }
+        void route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            id: testWordEntryId,
+            deck_id: v2DeckId,
+            lemma: testWordEntryLemma,
+            part_of_speech: 'noun',
+            translation_en: 'hello',
+            translation_en_plural: null,
+            translation_ru: null,
+            translation_ru_plural: null,
+            pronunciation: null,
+            grammar_data: null,
+            examples: null,
+            audio_key: null,
+            audio_url: null,
+            audio_status: 'missing',
+            is_active: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }),
+        });
       }
-      void route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          id: testWordEntryId,
-          deck_id: v2DeckId,
-          lemma: testWordEntryLemma,
-          part_of_speech: 'noun',
-          translation_en: 'hello',
-          translation_en_plural: null,
-          translation_ru: null,
-          translation_ru_plural: null,
-          pronunciation: null,
-          grammar_data: null,
-          examples: null,
-          audio_key: null,
-          audio_url: null,
-          audio_status: 'missing',
-          is_active: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        }),
-      });
-    });
+    );
 
     await page.goto(practiceUrl());
     await page.waitForSelector('[data-testid="practice-card-front"]', { timeout: 10000 });
