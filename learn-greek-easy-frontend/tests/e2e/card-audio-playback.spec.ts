@@ -291,7 +291,8 @@ test.describe('Card Audio Playback', () => {
         void route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify({ cards: [mockCard] }),
+          // API returns array directly, NOT { cards: [...] } wrapper
+          body: JSON.stringify([mockCard]),
         });
       }
     );
