@@ -17,9 +17,33 @@ import { Link, useParams } from 'react-router-dom';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import type { CardRecordResponse, WordEntryResponse } from '@/services/wordEntryAPI';
 
 import { PracticeCard } from '../components';
 import { useWordEntry, useWordEntryCards } from '../hooks';
+
+// ============================================
+// Helpers
+// ============================================
+
+function resolveCardAudioUrl(
+  card: CardRecordResponse,
+  wordEntry: WordEntryResponse | null | undefined
+): string | null {
+  if (!wordEntry) return null;
+  if (card.card_type === 'meaning_el_to_en' || card.card_type === 'meaning_en_to_el') {
+    const url = wordEntry.audio_url;
+    return url || null; // treat empty string as null
+  }
+  if (card.card_type === 'sentence_translation') {
+    const front = card.front_content as Record<string, unknown>;
+    const exampleId = typeof front.example_id === 'string' ? front.example_id : undefined;
+    if (!exampleId || !wordEntry.examples) return null;
+    const example = wordEntry.examples.find((ex) => ex.id === exampleId);
+    return example?.audio_url || null; // treat empty string as null
+  }
+  return null; // plural_form, article, conjugation, declension, cloze
+}
 
 // ============================================
 // Loading Skeleton
@@ -180,6 +204,7 @@ export function WordPracticePage() {
   // Ready state — guard currentIndex against stale data
   const safeIndex = Math.min(currentIndex, cards.length - 1);
   const currentCard = cards[safeIndex];
+  const audioUrl = resolveCardAudioUrl(currentCard, wordEntry);
 
   return (
     <div
@@ -210,6 +235,9 @@ export function WordPracticePage() {
           translationRu={wordEntry?.translation_ru ?? null}
           translationRuPlural={wordEntry?.translation_ru_plural ?? null}
           onRate={handleRate}
+          audioUrl={audioUrl}
+          wordEntryId={wordId}
+          deckId={deckId}
         />
 
         {/* Next card button — only show if more than 1 card */}

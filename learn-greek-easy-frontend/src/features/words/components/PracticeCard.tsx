@@ -39,6 +39,14 @@ export interface PracticeCardProps {
   translationRuPlural?: string | null;
   /** Callback when user rates the card (1=again, 2=hard, 3=good, 4=easy) */
   onRate?: (rating: number) => void;
+  /** Presigned audio URL for this card, null if no audio available */
+  audioUrl?: string | null;
+  /** Word entry ID for analytics tracking */
+  wordEntryId?: string;
+  /** Deck ID for analytics tracking */
+  deckId?: string;
+  /** Callback to play audio (wired up in later subtask) */
+  onPlayAudio?: () => void;
 }
 
 interface MeaningFrontContent {
@@ -318,7 +326,17 @@ export function PracticeCard({
   translationRu,
   translationRuPlural,
   onRate,
+  audioUrl,
+  wordEntryId,
+  deckId,
+  onPlayAudio,
 }: PracticeCardProps) {
+  // These props are reserved for audio playback (wired up in a later subtask)
+  void audioUrl;
+  void wordEntryId;
+  void deckId;
+  void onPlayAudio;
+
   const { t, i18n } = useTranslation('deck');
 
   const front = card.front_content as unknown as MeaningFrontContent;
