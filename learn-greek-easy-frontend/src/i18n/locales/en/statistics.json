@@ -103,12 +103,20 @@
     "categoryBreakdown": {
       "title": "Progress by Category",
       "mastered": "{{mastered}} / {{total}} mastered",
+      "accuracy": "Accuracy: {{value}}%",
+      "accuracyNA": "Accuracy: N/A",
+      "needsReinforcement": "Needs Review",
+      "needsReinforcementTooltip": "High mastery but low recent accuracy — consider reviewing this category",
       "categories": {
         "history": "History",
         "geography": "Geography",
         "politics": "Politics",
         "culture": "Culture"
       }
+    },
+    "studyWeakest": {
+      "button": "Practice {{category}} — {{percentage}}%",
+      "ariaLabel": "Practice {{category}}, currently at {{percentage}}% readiness"
     }
   },
   "cultureMotivation": {

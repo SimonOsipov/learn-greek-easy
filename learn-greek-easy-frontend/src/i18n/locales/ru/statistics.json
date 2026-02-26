@@ -103,12 +103,20 @@
     "categoryBreakdown": {
       "title": "Прогресс по категориям",
       "mastered": "{{mastered}} / {{total}} освоено",
+      "accuracy": "Точность: {{value}}%",
+      "accuracyNA": "Точность: Н/Д",
+      "needsReinforcement": "Требует повторения",
+      "needsReinforcementTooltip": "Высокий уровень освоения, но низкая точность за последнее время — рекомендуется повторить эту категорию",
       "categories": {
         "history": "История",
         "geography": "География",
         "politics": "Политика",
         "culture": "Культура"
       }
+    },
+    "studyWeakest": {
+      "button": "Практика: {{category}} — {{percentage}}%",
+      "ariaLabel": "Практика: {{category}}, текущая готовность {{percentage}}%"
     }
   },
   "cultureMotivation": {
