@@ -38,12 +38,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from src.constants import (
+    ACCURACY_WINDOW_DAYS,
     LOGICAL_CATEGORIES,
     MOTIVATION_DELTA_DAYS,
     MOTIVATION_DELTA_DECLINING_THRESHOLD,
     MOTIVATION_DELTA_IMPROVING_THRESHOLD,
     MOTIVATION_NEW_USER_TEMPLATES,
     MOTIVATION_TEMPLATES,
+    REINFORCEMENT_ACCURACY_THRESHOLD,
+    REINFORCEMENT_MASTERY_THRESHOLD,
     ReadinessConstants,
 )
 from src.core.exceptions import CultureDeckNotFoundException, CultureQuestionNotFoundException
@@ -610,7 +613,7 @@ class CultureQuestionService:
             recent_sessions=[],  # Session tracking in future subtask
         )
 
-    async def get_culture_readiness(self, user_id: UUID) -> CultureReadinessResponse:
+    async def get_culture_readiness(self, user_id: UUID) -> CultureReadinessResponse:  # noqa: C901
         """Get culture exam readiness assessment.
 
         Computes a weighted readiness score across exam-relevant categories
@@ -721,6 +724,67 @@ class CultureQuestionService:
 
         # Sort ascending: weakest categories first, alphabetical tie-break
         categories_list.sort(key=lambda c: (c.readiness_percentage, c.category))
+
+        # Per-category accuracy from last 30 days
+        accuracy_cutoff = datetime.utcnow() - timedelta(days=ACCURACY_WINDOW_DAYS)
+
+        logical_cat_acc = case(
+            (CultureAnswerHistory.deck_category == "practical", literal("culture")),
+            else_=CultureAnswerHistory.deck_category,
+        )
+
+        cat_accuracy_query = (
+            select(
+                logical_cat_acc.label("logical_category"),
+                func.count().label("total_answers"),
+                func.sum(
+                    case(
+                        (CultureAnswerHistory.is_correct == True, literal(1)),  # noqa: E712
+                        else_=literal(0),
+                    )
+                ).label("correct_answers"),
+            )
+            .where(
+                CultureAnswerHistory.user_id == user_id,
+                CultureAnswerHistory.created_at >= accuracy_cutoff,
+                CultureAnswerHistory.deck_category.in_(ReadinessConstants.INCLUDED_CATEGORIES),
+            )
+            .group_by(logical_cat_acc)
+        )
+        cat_accuracy_result = await self.db.execute(cat_accuracy_query)
+        cat_accuracy_rows = cat_accuracy_result.all()
+
+        # Build accuracy lookup
+        cat_accuracy_map: dict[str, dict] = {}
+        for acc_row in cat_accuracy_rows:
+            total = acc_row.total_answers
+            correct = acc_row.correct_answers or 0
+            cat_accuracy_map[acc_row.logical_category] = {
+                "accuracy_percentage": round(correct / total * 100, 1) if total > 0 else None,
+                "total_answers": total,
+            }
+
+        # Merge accuracy into categories list
+        categories_list = [
+            cat.model_copy(
+                update={
+                    "accuracy_percentage": cat_accuracy_map.get(cat.category, {}).get(
+                        "accuracy_percentage"
+                    ),
+                    "needs_reinforcement": (
+                        (
+                            acc_pct := cat_accuracy_map.get(cat.category, {}).get(
+                                "accuracy_percentage"
+                            )
+                        )
+                        is not None
+                        and acc_pct < REINFORCEMENT_ACCURACY_THRESHOLD
+                        and cat.readiness_percentage >= REINFORCEMENT_MASTERY_THRESHOLD
+                    ),
+                }
+            )
+            for cat in categories_list
+        ]
 
         # Overall totals from per-category aggregates
         questions_total = sum(c.questions_total for c in categories_list)
