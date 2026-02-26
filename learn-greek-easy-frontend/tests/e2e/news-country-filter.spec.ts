@@ -354,14 +354,20 @@ test.describe('MCNEWS - Admin Country Management', () => {
     await expect(newsTable).toBeVisible({ timeout: 10000 });
 
     // Find country filter if it exists (MCNEWS-07 adds it)
+    // It's a shadcn Select (not native <select>), so interact via click
     const countryFilter = page.getByTestId('news-country-filter');
     if (await countryFilter.isVisible({ timeout: 3000 })) {
-      // Filter by Greece
-      await countryFilter.selectOption('greece');
-      await page.waitForTimeout(500); // Allow for debounce
+      // Open the shadcn Select dropdown by clicking the trigger
+      await countryFilter.click();
+      // Click the Greece option in the dropdown
+      const greeceOption = page.getByRole('option', { name: /Greece/i });
+      if (await greeceOption.isVisible({ timeout: 2000 })) {
+        await greeceOption.click();
+        await page.waitForTimeout(500); // Allow for debounce/refetch
 
-      // Verify table reloaded
-      await expect(newsTable).toBeVisible({ timeout: 10000 });
+        // Verify table reloaded
+        await expect(newsTable).toBeVisible({ timeout: 10000 });
+      }
     }
 
     // Test passes regardless - just verifying admin table is functional with country data

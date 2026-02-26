@@ -195,14 +195,13 @@ test.describe('News Feed - Admin Tests', () => {
     await expect(dialog).toBeHidden({ timeout: 5000 });
 
     // Wait for table to update (either fewer rows or empty state)
-    await page.waitForTimeout(1000); // Allow time for refresh
-
-    // Either we have fewer rows or the empty state appears
-    const newCount = await newsRows.count();
+    // Use polling instead of a fixed timeout to avoid flakiness
     const emptyState = page.getByTestId('news-table-empty');
-    const hasEmpty = await emptyState.isVisible().catch(() => false);
-
-    expect(newCount < initialCount || hasEmpty).toBe(true);
+    await expect(async () => {
+      const newCount = await newsRows.count();
+      const hasEmpty = await emptyState.isVisible().catch(() => false);
+      expect(newCount < initialCount || hasEmpty).toBe(true);
+    }).toPass({ timeout: 5000 });
   });
 });
 
