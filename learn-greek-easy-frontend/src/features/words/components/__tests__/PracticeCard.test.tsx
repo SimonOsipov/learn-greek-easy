@@ -986,6 +986,22 @@ describe('PracticeCard', () => {
       );
     });
 
+    it('word_audio_played analytics uses Greek answer as lemma for meaning_en_to_el', () => {
+      renderCard({
+        card: mockEnToElCard,
+        isFlipped: true,
+        audioState: makeAudioState('https://example.com/audio.mp3'),
+        wordEntryId: 'word-001',
+        deckId: 'deck-001',
+      });
+      fireEvent.click(screen.getByTestId('speaker-button'));
+      expect(trackWordAudioPlayed).toHaveBeenCalledWith(
+        expect.objectContaining({
+          lemma: 'γεια σας', // back.answer, NOT 'hello' (front.main)
+        })
+      );
+    });
+
     it('fires word_audio_failed analytics on error', () => {
       renderCard({
         card: mockCard,

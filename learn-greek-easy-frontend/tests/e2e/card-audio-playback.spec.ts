@@ -36,9 +36,11 @@ function getLearnerAccessToken(): string | null {
   try {
     const storageKey = getSupabaseStorageKey();
     const authState = JSON.parse(fs.readFileSync(LEARNER_AUTH, 'utf-8'));
-    const sessionEntry = authState.origins?.[0]?.localStorage?.find(
-      (item: { name: string; value: string }) => item.name === storageKey
-    );
+    const sessionEntry = (authState.origins ?? [])
+      .flatMap((origin: { localStorage?: Array<{ name: string; value: string }> }) =>
+        origin.localStorage ?? []
+      )
+      .find((item: { name: string; value: string }) => item.name === storageKey);
     if (sessionEntry) {
       const session = JSON.parse(sessionEntry.value);
       return session?.access_token || null;
@@ -403,13 +405,13 @@ test.describe('Card Audio Playback', () => {
     const speakerButton = page.getByRole('button', { name: /play audio/i });
     await expect(speakerButton).toBeVisible({ timeout: 5000 });
 
-    // Press "A" to start audio
+    // Set up request interceptor BEFORE triggering (to avoid race condition)
+    const audioRequest = page.waitForRequest(
+      (req) => req.method() === 'GET' && req.url() === 'https://test.local/audio.wav'
+    );
     await page.keyboard.press('a');
-
-    // Button aria-label should change to "Pause audio" or "Loading audio"
-    await expect(
-      page.getByRole('button', { name: /pause audio|loading audio/i })
-    ).toBeVisible({ timeout: 5000 });
+    // Verify audio playback was triggered by confirming the audio request was made
+    await audioRequest;
   });
 
   test('"A" key is no-op when no speaker is visible (meaning_en_to_el front)', async ({

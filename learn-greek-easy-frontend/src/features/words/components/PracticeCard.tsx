@@ -441,7 +441,7 @@ export function PracticeCard({
     } else {
       trackWordAudioPlayed({
         word_entry_id: wordEntryId ?? '',
-        lemma: front.main,
+        lemma: card.card_type === 'meaning_en_to_el' ? back.answer : front.main,
         part_of_speech: front.badge?.toLowerCase() ?? null,
         context: 'review',
         deck_id: deckId ?? '',

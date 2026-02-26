@@ -144,8 +144,22 @@ export function WordPracticePage() {
 
       if (e.key === 'a' || e.key === 'A') {
         e.preventDefault();
-        if (hookAudioUrl) {
-          audioToggle();
+        if (hookAudioUrl && _hookCurrentCard) {
+          const prompt =
+            typeof (_hookCurrentCard.front_content as Record<string, unknown>)?.prompt === 'string'
+              ? ((_hookCurrentCard.front_content as Record<string, unknown>).prompt as string)
+              : '';
+          const showAudioOnFront =
+            _hookCurrentCard.card_type === 'meaning_el_to_en' ||
+            (_hookCurrentCard.card_type === 'sentence_translation' &&
+              prompt === 'Translate this sentence');
+          const showAudioOnBack =
+            _hookCurrentCard.card_type === 'meaning_en_to_el' ||
+            (_hookCurrentCard.card_type === 'sentence_translation' &&
+              prompt === 'Translate to Greek');
+          if (isFlipped ? showAudioOnBack : showAudioOnFront) {
+            audioToggle();
+          }
         }
         return;
       }
@@ -159,7 +173,15 @@ export function WordPracticePage() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isFlipped, handleFlip, handleNextCard, handleRate, audioToggle, hookAudioUrl]);
+  }, [
+    isFlipped,
+    handleFlip,
+    handleNextCard,
+    handleRate,
+    audioToggle,
+    hookAudioUrl,
+    _hookCurrentCard,
+  ]);
 
   // Loading state
   if (isLoading) {
