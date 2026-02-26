@@ -8,6 +8,7 @@ This module provides public endpoints for news items:
 All endpoints are public (no authentication required).
 """
 
+from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
@@ -15,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.logging import get_logger
 from src.db.dependencies import get_db
+from src.db.models import NewsCountry
 from src.schemas.news_item import NewsCardInfo, NewsItemListWithCardsResponse, NewsItemResponse
 from src.services.news_item_service import NewsItemService
 
@@ -80,6 +82,9 @@ router = APIRouter()
 async def list_news_items(
     page: int = Query(default=1, ge=1, description="Page number"),
     page_size: int = Query(default=10, ge=1, le=50, description="Items per page"),
+    country: Optional[NewsCountry] = Query(
+        None, description="Filter by country: cyprus, greece, or world"
+    ),
     db: AsyncSession = Depends(get_db),
 ) -> NewsItemListWithCardsResponse:
     """Get paginated list of news items with card associations (public, no auth required).
@@ -90,13 +95,14 @@ async def list_news_items(
     Args:
         page: Page number (1-indexed)
         page_size: Number of items per page (max 50)
+        country: Optional country filter (cyprus, greece, or world)
         db: Database session (injected)
 
     Returns:
         NewsItemListWithCardsResponse with paginated news items and card info
     """
     service = NewsItemService(db)
-    return await service.get_list_with_cards(page=page, page_size=page_size)
+    return await service.get_list_with_cards(page=page, page_size=page_size, country=country)
 
 
 @router.get(

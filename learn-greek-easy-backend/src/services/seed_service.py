@@ -412,7 +412,7 @@ class SeedService:
             "description_en": "New economic data shows significant growth.",
             "description_ru": "Новые экономические данные показывают значительный рост.",
             "days_ago": 2,
-            "country": "cyprus",
+            "country": "greece",
         },
         {
             "title_el": "Τουριστική Σεζόν 2026",
@@ -422,7 +422,7 @@ class SeedService:
             "description_en": "Predictions for the tourism season are optimistic.",
             "description_ru": "Прогнозы на туристический сезон оптимистичны.",
             "days_ago": 7,
-            "country": "cyprus",
+            "country": "greece",
         },
         {
             "title_el": "Πολιτιστικά Γεγονότα Ιανουαρίου",
@@ -432,7 +432,7 @@ class SeedService:
             "description_en": "The most important cultural events of the month.",
             "description_ru": "Самые важные культурные события месяца.",
             "days_ago": 30,
-            "country": "cyprus",
+            "country": "world",
         },
     ]
 
@@ -3049,7 +3049,7 @@ class SeedService:
             description_en="Latest news from Cyprus.",
             description_ru="Последние новости с Кипра.",
             image_s3_key="news-images/e2e-placeholder.jpg",
-            country="cyprus",
+            country="world",
             publication_date=date.today() - timedelta(days=2),
             original_article_url="https://example.com/e2e-news-question-3-no-question",
         )
@@ -3453,7 +3453,7 @@ class SeedService:
                 description_en=summary_en,
                 description_ru=summary_ru,
                 image_s3_key=f"news-images/e2e-news-feed-page-{i + 1}.jpg",
-                country="cyprus",
+                country=["cyprus", "greece", "world"][i % 3],
                 publication_date=publication_date,
                 original_article_url=article_url,
             )
