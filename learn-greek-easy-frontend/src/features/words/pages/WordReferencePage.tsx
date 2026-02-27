@@ -20,6 +20,7 @@ import { Link, useParams } from 'react-router-dom';
 import { ReportErrorButton, ReportErrorModal } from '@/components/card-errors';
 import { GenderBadge, PartOfSpeechBadge } from '@/components/review/grammar';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AudioSpeedToggle } from '@/components/ui/AudioSpeedToggle';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -256,7 +257,7 @@ export function WordReferencePage() {
   return (
     <div className="space-y-6" data-testid="word-reference-page">
       {/* Gradient Header */}
-      <div className="rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 p-6">
+      <div className="relative rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 p-6 pb-12">
         {/* Back navigation */}
         <Button
           asChild
@@ -323,6 +324,12 @@ export function WordReferencePage() {
 
         {/* Translation - single locale-appropriate value */}
         <p className="mt-4 text-[1.15em] font-bold text-foreground">{displayTranslation}</p>
+
+        {wordEntry.audio_url && (
+          <div className="absolute bottom-3 left-3">
+            <AudioSpeedToggle />
+          </div>
+        )}
       </div>
 
       {/* Grammar Section */}
