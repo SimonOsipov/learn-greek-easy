@@ -7,7 +7,7 @@
  * 1. Level filter buttons are disabled when Culture deck type is selected
  * 2. Level filters are automatically cleared when switching to Culture
  * 3. Level filters work normally for All and Vocabulary deck types
- * 4. Visual feedback (dimmed label) appears when level filter is disabled
+ * 4. Visual feedback (disabled buttons) appears when level filter is disabled
  */
 
 import { test, expect } from '@playwright/test';
@@ -160,20 +160,16 @@ test.describe('Deck Filter - Culture/Level Interaction', () => {
   });
 
   test.describe('Visual Feedback', () => {
-    test('should dim level label when Culture is selected', async ({ page }) => {
-      // Find the level label
-      const levelLabel = page.getByText(/level:/i);
+    test('should disable level buttons when Culture is selected', async ({ page }) => {
+      // Before culture selection — level buttons are enabled
+      const a1Button = page.getByRole('button', { name: /^A1$/i });
+      await expect(a1Button).not.toBeDisabled();
 
-      // Initially should have normal color (text-foreground semantic class)
-      await expect(levelLabel).toBeVisible();
-      await expect(levelLabel).toHaveClass(/text-foreground/);
+      // Click Culture type
+      await page.getByRole('button', { name: 'Culture', exact: true }).click();
 
-      // Switch to Culture
-      const cultureButton = page.getByRole('button', { name: 'Culture', exact: true });
-      await cultureButton.click();
-
-      // Label should now be dimmed (text-muted-foreground/50 semantic class) - assertions auto-wait
-      await expect(levelLabel).toHaveClass(/text-muted-foreground/);
+      // Level buttons should now be disabled (assertions auto-wait)
+      await expect(a1Button).toBeDisabled();
     });
 
     test('should show tooltip on disabled level buttons', async ({ page }) => {
