@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 
 import { useTranslation } from 'react-i18next';
 
+import { AudioSpeedToggle } from '@/components/ui/AudioSpeedToggle';
 import { Card, CardContent } from '@/components/ui/card';
 import { SpeakerButton } from '@/components/ui/SpeakerButton';
 import { trackExampleAudioPlayed, trackWordAudioFailed } from '@/lib/analytics';
@@ -52,6 +53,8 @@ export function ExampleSentences({
     if (!examples || examples.length === 0) return [];
     return [...examples].sort((a, b) => getTenseSortIndex(a.tense) - getTenseSortIndex(b.tense));
   }, [examples]);
+
+  const hasAnyAudio = useMemo(() => sortedExamples.some((ex) => !!ex.audio_url), [sortedExamples]);
 
   if (!examples || examples.length === 0) {
     return (
@@ -115,6 +118,7 @@ export function ExampleSentences({
           </Card>
         );
       })}
+      {isFlipped && hasAnyAudio && <AudioSpeedToggle />}
     </div>
   );
 }

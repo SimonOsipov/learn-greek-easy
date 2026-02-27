@@ -62,6 +62,12 @@ vi.mock('@/components/ui/SpeakerButton', () => ({
   },
 }));
 
+vi.mock('@/components/ui/AudioSpeedToggle', () => ({
+  AudioSpeedToggle: ({ speed }: { speed?: number }) => (
+    <div data-testid="audio-speed-toggle" data-speed={speed} />
+  ),
+}));
+
 vi.mock('@/lib/analytics', () => ({
   trackWordAudioPlayed: vi.fn(),
   trackExampleAudioPlayed: vi.fn(),
@@ -877,6 +883,8 @@ describe('PracticeCard', () => {
       isLoading: false,
       error: null,
       onToggle: vi.fn(),
+      speed: 1 as const,
+      setSpeed: vi.fn(),
     });
 
     it('shows speaker button on front for meaning_el_to_en when audioUrl provided', () => {
@@ -1017,6 +1025,75 @@ describe('PracticeCard', () => {
           context: 'review',
         })
       );
+    });
+  });
+
+  describe('Audio Cluster', () => {
+    const audioUrl = 'https://example.com/audio.mp3';
+    const baseAudioState = {
+      audioUrl,
+      isPlaying: false,
+      isLoading: false,
+      error: null,
+      onToggle: vi.fn(),
+      speed: 1 as const,
+      setSpeed: vi.fn(),
+    };
+
+    it('1. renders for meaning_el_to_en on front (not flipped)', () => {
+      renderCard({ card: mockCard, isFlipped: false, audioState: baseAudioState });
+      expect(screen.getByTestId('audio-cluster')).toBeInTheDocument();
+    });
+
+    it('2. renders for meaning_en_to_el on back (flipped)', () => {
+      renderCard({ card: mockEnToElCard, isFlipped: true, audioState: baseAudioState });
+      expect(screen.getByTestId('audio-cluster')).toBeInTheDocument();
+    });
+
+    it('3. renders for sentence el_to_target on front', () => {
+      renderCard({ card: mockSentenceCard, isFlipped: false, audioState: baseAudioState });
+      expect(screen.getByTestId('audio-cluster')).toBeInTheDocument();
+    });
+
+    it('4. renders for sentence target_to_el on back (flipped)', () => {
+      renderCard({ card: mockTargetToElSentenceCard, isFlipped: true, audioState: baseAudioState });
+      expect(screen.getByTestId('audio-cluster')).toBeInTheDocument();
+    });
+
+    it('5. does NOT render for plural_form on front', () => {
+      renderCard({ card: mockPluralSgToPlCard, isFlipped: false, audioState: baseAudioState });
+      expect(screen.queryByTestId('audio-cluster')).not.toBeInTheDocument();
+    });
+
+    it('6. does NOT render for plural_form on back', () => {
+      renderCard({ card: mockPluralSgToPlCard, isFlipped: true, audioState: baseAudioState });
+      expect(screen.queryByTestId('audio-cluster')).not.toBeInTheDocument();
+    });
+
+    it('7. does NOT render for article on front', () => {
+      renderCard({ card: mockArticleCard, isFlipped: false, audioState: baseAudioState });
+      expect(screen.queryByTestId('audio-cluster')).not.toBeInTheDocument();
+    });
+
+    it('8. does NOT render when audioUrl is null', () => {
+      const nullAudioState = { ...baseAudioState, audioUrl: null };
+      renderCard({ card: mockCard, isFlipped: false, audioState: nullAudioState });
+      expect(screen.queryByTestId('audio-cluster')).not.toBeInTheDocument();
+    });
+
+    it('9. click on cluster does NOT trigger card flip', () => {
+      const onFlip = vi.fn();
+      renderCard({ card: mockCard, isFlipped: false, onFlip, audioState: baseAudioState });
+      const cluster = screen.getByTestId('audio-cluster');
+      fireEvent.click(cluster);
+      expect(onFlip).not.toHaveBeenCalled();
+    });
+
+    it('10. AudioSpeedToggle receives speed from audioState', () => {
+      const audioStateWith075 = { ...baseAudioState, speed: 0.75 as const };
+      renderCard({ card: mockCard, isFlipped: false, audioState: audioStateWith075 });
+      const toggle = screen.getByTestId('audio-speed-toggle');
+      expect(toggle).toHaveAttribute('data-speed', '0.75');
     });
   });
 });
