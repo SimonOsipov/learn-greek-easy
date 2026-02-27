@@ -197,6 +197,7 @@ class NewsItemListWithCardsResponse(BaseModel):
     country_counts: CountryCounts = Field(
         default_factory=CountryCounts, description="Count of news items per country"
     )
+    audio_count: int = Field(0, ge=0, description="Total number of news items with audio")
 
 
 # ============================================================================

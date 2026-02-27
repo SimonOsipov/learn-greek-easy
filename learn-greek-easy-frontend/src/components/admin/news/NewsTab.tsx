@@ -195,9 +195,8 @@ export const NewsTab: React.FC = () => {
     regeneratingId,
     cooldownEndTime,
     regenerateAudio,
+    audioCount,
   } = useAdminNewsStore();
-
-  const newsWithAudio = newsItems.filter((item) => !!item.audio_url).length;
 
   // Fetch news items on mount
   useEffect(() => {
@@ -364,7 +363,7 @@ export const NewsTab: React.FC = () => {
           />
           <SummaryCard
             title={t('news.stats.withAudio')}
-            value={newsWithAudio}
+            value={audioCount}
             icon={<Volume2 className="h-5 w-5 text-muted-foreground" />}
             testId="news-with-audio-card"
           />

@@ -102,6 +102,21 @@ class NewsItemRepository(BaseRepository[NewsItem]):
         result = await self.db.execute(query)
         return result.scalar_one()
 
+    async def count_with_audio(self, country: NewsCountry | None = None) -> int:
+        """Count news items that have audio generated.
+
+        Args:
+            country: Optional country filter
+
+        Returns:
+            Number of news items with a non-null audio_s3_key
+        """
+        query = select(func.count()).select_from(NewsItem).where(NewsItem.audio_s3_key.isnot(None))
+        if country is not None:
+            query = query.where(NewsItem.country == country)
+        result = await self.db.execute(query)
+        return result.scalar_one()
+
     async def count_by_country(self) -> dict[str, int]:
         """Count news items grouped by country.
 

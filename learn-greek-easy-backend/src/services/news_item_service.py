@@ -541,6 +541,7 @@ class NewsItemService:
 
         # Total count - counts unique NewsItems (filtered by country if provided)
         total = await self.repo.count_all(country=country)
+        audio_count = await self.repo.count_with_audio(country=country)
         country_counts = await self.repo.count_by_country()
 
         items = []
@@ -564,6 +565,7 @@ class NewsItemService:
             page_size=page_size,
             items=items,
             country_counts=country_counts,
+            audio_count=audio_count,
         )
 
     # =========================================================================
