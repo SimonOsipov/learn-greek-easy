@@ -45,9 +45,21 @@ describe('AudioGenerateButton', () => {
     expect(screen.getByTestId('btn')).toHaveTextContent('Retry');
   });
 
-  it('renders nothing (returns null) when status is ready', () => {
-    const { container } = renderButton({ status: 'ready', testId: 'btn' });
-    expect(container).toBeEmptyDOMElement();
+  it('renders "Regenerate" when status is ready', () => {
+    renderButton({ status: 'ready', testId: 'btn' });
+    expect(screen.getByTestId('btn')).toHaveTextContent('Regenerate');
+  });
+
+  it('clicking calls onClick for ready status', () => {
+    const onClick = vi.fn();
+    renderButton({ status: 'ready', onClick, testId: 'btn' });
+    fireEvent.click(screen.getByTestId('btn'));
+    expect(onClick).toHaveBeenCalledOnce();
+  });
+
+  it('button is not disabled when status is ready', () => {
+    renderButton({ status: 'ready', testId: 'btn' });
+    expect(screen.getByTestId('btn')).not.toBeDisabled();
   });
 
   it('renders disabled with spinner when status is generating', () => {

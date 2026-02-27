@@ -522,10 +522,10 @@ describe('WordEntryContent', () => {
       expect(screen.getByTestId('audio-generate-btn-lemma')).toHaveTextContent('Retry');
     });
 
-    it('does not show generate button for lemma with ready audio status', () => {
+    it('shows Regenerate button for lemma with ready audio status', () => {
       // Default mock has audio_status: 'ready'
       renderComponent();
-      expect(screen.queryByTestId('audio-generate-btn-lemma')).not.toBeInTheDocument();
+      expect(screen.getByTestId('audio-generate-btn-lemma')).toHaveTextContent('Regenerate');
     });
 
     it('shows Generate button for example with missing audio status', () => {
@@ -553,10 +553,10 @@ describe('WordEntryContent', () => {
       expect(screen.getByTestId('audio-generate-btn-example-0')).toHaveTextContent('Generate');
     });
 
-    it('does not show generate button for example with ready audio status', () => {
+    it('shows Regenerate button for example with ready audio status', () => {
       // Default mock has example audio_status: 'ready'
       renderComponent();
-      expect(screen.queryByTestId('audio-generate-btn-example-0')).not.toBeInTheDocument();
+      expect(screen.getByTestId('audio-generate-btn-example-0')).toHaveTextContent('Regenerate');
     });
 
     it('clicking lemma generate button triggers mutation with correct params', () => {
