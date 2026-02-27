@@ -16,6 +16,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { trackExampleAudioPlayed, trackWordAudioFailed } from '@/lib/analytics';
 import type { Example } from '@/types/grammar';
 
+// Mock AudioSpeedToggle
+vi.mock('@/components/ui/AudioSpeedToggle', () => ({
+  AudioSpeedToggle: () => <div data-testid="audio-speed-toggle">Speed Toggle</div>,
+}));
+
 // Mock SpeakerButton for audio tests
 vi.mock('@/components/ui/SpeakerButton', () => ({
   SpeakerButton: ({
@@ -531,5 +536,36 @@ describe('ExampleSentences — Audio SpeakerButton integration', () => {
       audio_type: 'example',
       context: 'review',
     });
+  });
+});
+
+describe('ExampleSentences — AudioSpeedToggle', () => {
+  it('renders AudioSpeedToggle when isFlipped and at least one example has audio', () => {
+    render(
+      <ExampleSentences
+        examples={mockExampleWithAudio}
+        isFlipped={true}
+        wordEntryId="we-123"
+        deckId="deck-456"
+      />
+    );
+    expect(screen.getByTestId('audio-speed-toggle')).toBeInTheDocument();
+  });
+
+  it('does NOT render AudioSpeedToggle when isFlipped is false', () => {
+    render(
+      <ExampleSentences
+        examples={mockExampleWithAudio}
+        isFlipped={false}
+        wordEntryId="we-123"
+        deckId="deck-456"
+      />
+    );
+    expect(screen.queryByTestId('audio-speed-toggle')).not.toBeInTheDocument();
+  });
+
+  it('does NOT render AudioSpeedToggle when no examples have audio_url', () => {
+    render(<ExampleSentences examples={mockSingleExample} isFlipped={true} />);
+    expect(screen.queryByTestId('audio-speed-toggle')).not.toBeInTheDocument();
   });
 });
