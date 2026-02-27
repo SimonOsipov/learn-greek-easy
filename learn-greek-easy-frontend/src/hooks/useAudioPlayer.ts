@@ -19,7 +19,10 @@ export interface UseAudioPlayerReturn {
   setSpeed: (s: AudioSpeed) => void;
 }
 
-export function useAudioPlayer(audioUrl: string | null | undefined): UseAudioPlayerReturn {
+export function useAudioPlayer(
+  audioUrl: string | null | undefined,
+  externalSpeed?: AudioSpeed
+): UseAudioPlayerReturn {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -120,6 +123,13 @@ export function useAudioPlayer(audioUrl: string | null | undefined): UseAudioPla
       audioRef.current.playbackRate = s;
     }
   }, []);
+
+  // Sync with external speed when provided
+  useEffect(() => {
+    if (externalSpeed !== undefined && externalSpeed !== speedRef.current) {
+      setSpeed(externalSpeed);
+    }
+  }, [externalSpeed, setSpeed]);
 
   // Reset when audioUrl changes
   useEffect(() => {

@@ -13,6 +13,7 @@ import { SpeakerButton } from '@/components/ui/SpeakerButton';
 import { trackExampleAudioPlayed, trackWordAudioFailed } from '@/lib/analytics';
 import { getLocalizedTranslation } from '@/lib/localeUtils';
 import type { WordEntryExampleSentence } from '@/services/wordEntryAPI';
+import type { AudioSpeed } from '@/utils/audioSpeed';
 
 // ============================================
 // Types
@@ -23,13 +24,14 @@ export interface ExamplesSectionProps {
   examples: WordEntryExampleSentence[] | null;
   wordEntryId?: string;
   deckId?: string;
+  speed?: AudioSpeed;
 }
 
 // ============================================
 // Component
 // ============================================
 
-export function ExamplesSection({ examples, wordEntryId, deckId }: ExamplesSectionProps) {
+export function ExamplesSection({ examples, wordEntryId, deckId, speed }: ExamplesSectionProps) {
   const { t, i18n } = useTranslation('review');
 
   // Handle empty/null examples
@@ -74,6 +76,7 @@ export function ExamplesSection({ examples, wordEntryId, deckId }: ExamplesSecti
                   <SpeakerButton
                     audioUrl={example.audio_url}
                     size="sm"
+                    speed={speed}
                     onPlay={() =>
                       trackExampleAudioPlayed({
                         word_entry_id: wordEntryId ?? '',

@@ -14,6 +14,7 @@ export interface SpeakerButtonProps {
   onPlay?: () => void;
   onError?: (error: string) => void;
   className?: string;
+  speed?: AudioSpeed;
   controlledState?: {
     isPlaying: boolean;
     isLoading: boolean;
@@ -34,11 +35,12 @@ export function SpeakerButton({
   onPlay,
   onError,
   className,
+  speed,
   controlledState,
 }: SpeakerButtonProps) {
   const { t } = useTranslation('common');
   // Always call the hook (React rules) but pass null URL when controlled
-  const internal = useAudioPlayer(controlledState ? null : audioUrl);
+  const internal = useAudioPlayer(controlledState ? null : audioUrl, speed);
   // Use controlled values if provided, otherwise use internal hook values
   const { isPlaying, isLoading, error, toggle } = controlledState ?? internal;
 

@@ -30,6 +30,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { trackWordAudioFailed, trackWordAudioPlayed } from '@/lib/analytics';
 import { getLocalizedTranslation } from '@/lib/localeUtils';
 import type { AdjectiveData, AdverbData, NounDataAny, NounGender, VerbData } from '@/types/grammar';
+import { getPersistedAudioSpeed, setPersistedAudioSpeed } from '@/utils/audioSpeed';
+import type { AudioSpeed } from '@/utils/audioSpeed';
 
 import {
   AdjectiveDeclensionTable,
@@ -186,6 +188,11 @@ export function WordReferencePage() {
   });
 
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [audioSpeed, setAudioSpeed] = useState<AudioSpeed>(getPersistedAudioSpeed);
+  const handleSpeedChange = (newSpeed: AudioSpeed) => {
+    setAudioSpeed(newSpeed);
+    setPersistedAudioSpeed(newSpeed);
+  };
 
   const { cards, isLoading: isCardsLoading } = useWordEntryCards({
     wordEntryId: wordId || '',
@@ -294,6 +301,7 @@ export function WordReferencePage() {
           {wordEntry.audio_url && (
             <SpeakerButton
               audioUrl={wordEntry.audio_url}
+              speed={audioSpeed}
               className="hover:bg-transparent [&_svg]:size-6"
               onPlay={() =>
                 trackWordAudioPlayed({
@@ -325,13 +333,9 @@ export function WordReferencePage() {
         {/* Translation - single locale-appropriate value */}
         <p className="mt-4 text-[1.15em] font-bold text-foreground">{displayTranslation}</p>
 
-        {/* TODO: Wire AudioSpeedToggle to SpeakerButton speed state so runtime
-            speed changes propagate within the same session. Currently the toggle
-            persists to localStorage; SpeakerButton picks up the new speed on
-            next mount. See ASPEED-FIX follow-up. */}
         {wordEntry.audio_url && (
           <div className="absolute bottom-3 left-3">
-            <AudioSpeedToggle />
+            <AudioSpeedToggle speed={audioSpeed} onSpeedChange={handleSpeedChange} />
           </div>
         )}
       </div>
@@ -340,7 +344,12 @@ export function WordReferencePage() {
       {renderGrammarSection()}
 
       {/* Examples Section */}
-      <ExamplesSection examples={wordEntry.examples} wordEntryId={wordEntry.id} deckId={deckId} />
+      <ExamplesSection
+        examples={wordEntry.examples}
+        wordEntryId={wordEntry.id}
+        deckId={deckId}
+        speed={audioSpeed}
+      />
 
       {/* Notes Section (if available) */}
       {notes && (
