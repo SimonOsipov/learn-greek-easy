@@ -22,6 +22,7 @@ from src.services.progress_service import ProgressService
 from src.services.s3_service import S3Service, get_s3_service
 from src.services.seed_service import SeedService
 from src.services.sm2_service import SM2Service
+from src.services.spellcheck_service import SpellcheckService, get_spellcheck_service
 from src.services.user_deletion_service import DeletionResult, UserDeletionService
 from src.services.user_progress_reset_service import UserProgressResetService
 from src.services.webhook_service import WebhookService
@@ -45,10 +46,12 @@ __all__ = [
     "ProgressService",
     "S3Service",
     "SeedService",
+    "SpellcheckService",
     "SM2Service",
     "UserDeletionService",
     "UserProgressResetService",
     "WebhookService",
     "XPService",
     "get_s3_service",
+    "get_spellcheck_service",
 ]
