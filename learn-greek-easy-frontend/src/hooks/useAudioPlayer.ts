@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { AudioSpeed, getPersistedAudioSpeed, setPersistedAudioSpeed } from '@/utils/audioSpeed';
+import {
+  type AudioSpeed,
+  getPersistedAudioSpeed,
+  setPersistedAudioSpeed,
+} from '@/utils/audioSpeed';
 
 export type { AudioSpeed } from '@/utils/audioSpeed';
 
