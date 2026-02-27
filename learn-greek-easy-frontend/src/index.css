@@ -239,6 +239,10 @@
     height: 100%;
   }
 
+  body {
+    @apply bg-background text-foreground;
+  }
+
   /* Better focus styles for accessibility */
   *:focus-visible {
     outline: 2px solid #2563eb;
