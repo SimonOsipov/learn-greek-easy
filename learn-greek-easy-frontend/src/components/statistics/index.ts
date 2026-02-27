@@ -11,3 +11,6 @@ export { AchievementsGrid, achievementConfigs } from './AchievementsGrid';
 export type { AchievementsGridProps, Achievement, AchievementConfig } from './AchievementsGrid';
 
 export { CultureReadinessCard } from './CultureReadinessCard';
+
+export { CategoryBreakdown } from './CategoryBreakdown';
+export type { CategoryBreakdownProps } from './CategoryBreakdown';
