@@ -37,3 +37,14 @@ class MorphologyResult(BaseModel):
         ...,
         description="Whether the analysis completed. False if input was empty, not Greek script, or processing failed.",
     )
+
+
+class NormalizedLemma(BaseModel):
+    """Result of the full lemma normalization pipeline."""
+
+    input_word: str = Field(..., description="Original word submitted for normalization")
+    lemma: str = Field(..., description="Normalized lemma (dictionary form)")
+    gender: str | None = Field(None, description='Gender: "masculine"/"feminine"/"neuter"/None')
+    article: str | None = Field(None, description='Article: "ο"/"η"/"το"/None')
+    pos: str = Field(..., description="Universal POS tag (NOUN, VERB, ADJ, etc.)")
+    confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence score 0.0-1.0")

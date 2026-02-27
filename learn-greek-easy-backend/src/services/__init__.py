@@ -15,6 +15,10 @@ from src.services.checkout_service import CheckoutService
 from src.services.culture_deck_service import CultureDeckService
 from src.services.culture_question_service import CultureQuestionService
 from src.services.feedback_admin_service import FeedbackAdminService
+from src.services.lemma_normalization_service import (
+    LemmaNormalizationService,
+    get_lemma_normalization_service,
+)
 from src.services.mock_exam_service import MockExamService
 from src.services.morphology_service import MorphologyService, get_morphology_service
 from src.services.news_item_service import NewsItemService
@@ -41,6 +45,7 @@ __all__ = [
     "CultureQuestionService",
     "DeletionResult",
     "FeedbackAdminService",
+    "LemmaNormalizationService",
     "MockExamService",
     "MorphologyService",
     "NewsItemService",
@@ -54,6 +59,7 @@ __all__ = [
     "UserProgressResetService",
     "WebhookService",
     "XPService",
+    "get_lemma_normalization_service",
     "get_morphology_service",
     "get_s3_service",
     "get_spellcheck_service",
