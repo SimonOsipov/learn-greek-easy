@@ -25,7 +25,7 @@ def spellcheck_service():
 
 
 @pytest.fixture
-def reset_spellcheck_singleton():
+def _reset_spellcheck_singleton():
     """Reset the singleton SpellcheckService instance before and after each test."""
     import src.services.spellcheck_service as spellcheck_module
 

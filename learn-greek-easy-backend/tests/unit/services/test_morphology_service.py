@@ -30,7 +30,7 @@ def morphology_service():
 
 
 @pytest.fixture
-def reset_morphology_singleton():
+def _reset_morphology_singleton():
     """Reset the singleton MorphologyService instance before and after each test."""
     import src.services.morphology_service as morphology_module
 
