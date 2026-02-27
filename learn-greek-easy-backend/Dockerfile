@@ -44,7 +44,7 @@ COPY pyproject.toml poetry.lock ./
 
 # Install production dependencies only (no dev dependencies)
 RUN poetry install --only=main --no-root --no-directory
-RUN python -m spacy download el_core_news_sm
+RUN pip install https://github.com/explosion/spacy-models/releases/download/el_core_news_sm-3.8.0/el_core_news_sm-3.8.0-py3-none-any.whl
 
 # Copy application source code
 COPY src/ ./src/
