@@ -25,11 +25,19 @@ describe('mapSupabaseResetError', () => {
     );
   });
 
+  it('returns samePassword for "different from the old password" errors', () => {
+    expect(mapSupabaseResetError('Must be different from the old password')).toBe('samePassword');
+  });
+
   it('returns weakPassword for "weak password" errors', () => {
     expect(mapSupabaseResetError('Password is too weak')).toBe('weakPassword');
   });
 
   it('returns updateFailed for unknown errors', () => {
     expect(mapSupabaseResetError('Something unexpected happened')).toBe('updateFailed');
+  });
+
+  it('returns updateFailed for network errors', () => {
+    expect(mapSupabaseResetError('Network error occurred')).toBe('updateFailed');
   });
 });

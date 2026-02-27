@@ -52,6 +52,8 @@ test.describe('Reset Password', () => {
       });
 
       await expect(page.getByTestId('back-to-login-button')).toBeVisible();
+      await page.getByTestId('back-to-login-button').click();
+      await page.waitForURL('/login', { timeout: 10000 });
     });
 
     test('should show password strength indicator when typing', async ({ page }) => {
