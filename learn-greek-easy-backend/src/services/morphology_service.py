@@ -92,9 +92,8 @@ class MorphologyService:
             logger.warning(
                 "MorphologyService received multi-token input, using first token",
                 extra={
-                    "input_word": stripped,
                     "token_count": len(doc),
-                    "used_token": doc[0].text,
+                    "input_length": len(stripped),
                 },
             )
 

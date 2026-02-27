@@ -53,7 +53,7 @@ class SpellcheckService:
         if len(tokens) > 1:
             logger.warning(
                 "SpellcheckService received multi-token input, using first token",
-                extra={"input": stripped, "token_used": tokens[0]},
+                extra={"token_count": len(tokens), "input_length": len(stripped)},
             )
             stripped = tokens[0]
 

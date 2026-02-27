@@ -216,14 +216,14 @@ class TestMorphologyResultContract:
 class TestGetMorphologyService:
     """Tests for the get_morphology_service() singleton factory."""
 
-    def test_returns_same_instance(self, reset_morphology_singleton):
+    def test_returns_same_instance(self, _reset_morphology_singleton):
         from src.services.morphology_service import get_morphology_service
 
         s1 = get_morphology_service()
         s2 = get_morphology_service()
         assert s1 is s2
 
-    def test_returns_morphology_service_instance(self, reset_morphology_singleton):
+    def test_returns_morphology_service_instance(self, _reset_morphology_singleton):
         from src.services.morphology_service import MorphologyService, get_morphology_service
 
         service = get_morphology_service()

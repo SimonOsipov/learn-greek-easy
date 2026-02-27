@@ -171,14 +171,14 @@ class TestSpellcheckResultContract:
 class TestGetSpellcheckService:
     """Tests for the get_spellcheck_service() singleton factory."""
 
-    def test_returns_same_instance(self, reset_spellcheck_singleton):
+    def test_returns_same_instance(self, _reset_spellcheck_singleton):
         from src.services.spellcheck_service import get_spellcheck_service
 
         s1 = get_spellcheck_service()
         s2 = get_spellcheck_service()
         assert s1 is s2
 
-    def test_returns_spellcheck_service_instance(self, reset_spellcheck_singleton):
+    def test_returns_spellcheck_service_instance(self, _reset_spellcheck_singleton):
         from src.services.spellcheck_service import SpellcheckService, get_spellcheck_service
 
         service = get_spellcheck_service()
