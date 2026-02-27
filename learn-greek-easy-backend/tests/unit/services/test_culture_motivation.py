@@ -142,11 +142,11 @@ async def create_stats_with_date(
         await db_session.refresh(s)
         stat_ids.append(s.id)
 
-    # Override created_at via raw SQL (server_default cannot be overridden via ORM)
+    # Override created_at and updated_at via raw SQL (server_default cannot be overridden via ORM)
     await db_session.execute(
         sa.update(CultureQuestionStats)
         .where(CultureQuestionStats.id.in_(stat_ids))
-        .values(created_at=created_at)
+        .values(created_at=created_at, updated_at=created_at)
     )
     await db_session.flush()
 
