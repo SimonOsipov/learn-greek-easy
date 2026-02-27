@@ -85,10 +85,10 @@ class TestLemmaNormalizationPipeline:
     def test_cross_service_consistency_valid_word(self):
         """Normalized lemma of valid word should pass spellcheck."""
         from src.services.lemma_normalization_service import get_lemma_normalization_service
-        from src.services.spellcheck_service import SpellcheckService
+        from src.services.spellcheck_service import get_spellcheck_service
 
         norm_service = get_lemma_normalization_service()
-        spell_service = SpellcheckService()
+        spell_service = get_spellcheck_service()
 
         norm_result = norm_service.normalize("σπίτια")
         spell_result = spell_service.check(norm_result.lemma)
@@ -98,10 +98,10 @@ class TestLemmaNormalizationPipeline:
     def test_cross_service_consistency_hallucinated(self):
         """Normalized lemma of hallucinated word should fail spellcheck."""
         from src.services.lemma_normalization_service import get_lemma_normalization_service
-        from src.services.spellcheck_service import SpellcheckService
+        from src.services.spellcheck_service import get_spellcheck_service
 
         norm_service = get_lemma_normalization_service()
-        spell_service = SpellcheckService()
+        spell_service = get_spellcheck_service()
 
         norm_result = norm_service.normalize("σπλίτρο")
         spell_result = spell_service.check(norm_result.lemma)
