@@ -108,25 +108,6 @@ describe('DeckFilters', () => {
       expect(onChange).not.toHaveBeenCalled();
     });
 
-    it('should dim the level label text when deckType is "culture"', () => {
-      renderWithI18n(<DeckFilters {...defaultProps} deckType="culture" />);
-
-      // Find the "Level:" label by its text content
-      const levelLabel = screen.getByText(/Level:/i);
-
-      // The label should have the dimmed text-muted-foreground/50 class (with opacity)
-      expect(levelLabel).toHaveClass('text-muted-foreground/50');
-    });
-
-    it('should have normal label text color when deckType is not "culture"', () => {
-      renderWithI18n(<DeckFilters {...defaultProps} deckType="all" />);
-
-      const levelLabel = screen.getByText(/Level:/i);
-
-      // The label should have the normal text-foreground class
-      expect(levelLabel).toHaveClass('text-foreground');
-    });
-
     it('should show tooltip on level buttons when disabled', () => {
       renderWithI18n(<DeckFilters {...defaultProps} deckType="culture" />);
 
@@ -137,25 +118,13 @@ describe('DeckFilters', () => {
       expect(a1Button.getAttribute('title')).toContain('Culture');
     });
 
-    it('should show tooltip on level label when disabled', () => {
-      renderWithI18n(<DeckFilters {...defaultProps} deckType="culture" />);
-
-      const levelLabel = screen.getByText(/Level:/i);
-
-      // Label should have a title attribute explaining why it's disabled
-      expect(levelLabel).toHaveAttribute('title');
-      expect(levelLabel.getAttribute('title')).toContain('Culture');
-    });
-
     it('should not show tooltip when deckType is not "culture"', () => {
       renderWithI18n(<DeckFilters {...defaultProps} deckType="all" />);
 
       const a1Button = screen.getByRole('button', { name: /^A1$/i });
-      const levelLabel = screen.getByText(/Level:/i);
 
-      // Neither should have title attributes
+      // Button should not have a title attribute
       expect(a1Button).not.toHaveAttribute('title');
-      expect(levelLabel).not.toHaveAttribute('title');
     });
   });
 

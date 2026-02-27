@@ -43,25 +43,20 @@ export const DeckTypeFilter: React.FC<DeckTypeFilterProps> = ({ value, onChange 
   );
 
   return (
-    <div className="flex items-center gap-2">
-      <span className="min-w-[3.5rem] text-sm font-medium text-foreground">
-        {t('filters.deckType')}
-      </span>
-      <div className="inline-flex rounded-lg border border-border p-1">
-        {TYPE_OPTIONS.map(({ value: optValue, icon: Icon, labelKey }) => (
-          <Button
-            key={optValue}
-            variant={value === optValue ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => handleTypeChange(optValue)}
-            className={`gap-1.5 ${value === optValue ? '' : 'text-muted-foreground'}`}
-            aria-pressed={value === optValue}
-          >
-            <Icon className="h-4 w-4" />
-            {t(labelKey)}
-          </Button>
-        ))}
-      </div>
+    <div className="inline-flex rounded-lg border border-border p-1">
+      {TYPE_OPTIONS.map(({ value: optValue, icon: Icon, labelKey }) => (
+        <Button
+          key={optValue}
+          variant={value === optValue ? 'default' : 'ghost'}
+          size="sm"
+          onClick={() => handleTypeChange(optValue)}
+          className={`gap-1.5 ${value === optValue ? '' : 'text-muted-foreground'}`}
+          aria-pressed={value === optValue}
+        >
+          <Icon className="h-4 w-4" />
+          {t(labelKey)}
+        </Button>
+      ))}
     </div>
   );
 };
