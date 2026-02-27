@@ -325,6 +325,10 @@ export function WordReferencePage() {
         {/* Translation - single locale-appropriate value */}
         <p className="mt-4 text-[1.15em] font-bold text-foreground">{displayTranslation}</p>
 
+        {/* TODO: Wire AudioSpeedToggle to SpeakerButton speed state so runtime
+            speed changes propagate within the same session. Currently the toggle
+            persists to localStorage; SpeakerButton picks up the new speed on
+            next mount. See ASPEED-FIX follow-up. */}
         {wordEntry.audio_url && (
           <div className="absolute bottom-3 left-3">
             <AudioSpeedToggle />
