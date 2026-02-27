@@ -2,7 +2,8 @@
  * Password Strength Indicator Component
  *
  * Visual indicator for password strength that matches Auth0's password policy requirements.
- * Shows a progress bar with color-coded strength levels and descriptive text.
+ * Shows a checklist of requirements always, and a progress bar with color-coded strength
+ * levels and descriptive text when a password has been entered.
  *
  * Auth0 Default Password Policy (Good strength):
  * - Minimum 8 characters
@@ -14,6 +15,7 @@
 
 import React, { useMemo } from 'react';
 
+import { Check, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Progress } from '@/components/ui/progress';
@@ -42,6 +44,25 @@ interface StrengthResult {
     hasSpecial: boolean;
   };
 }
+
+const EMPTY_REQUIREMENTS = {
+  minLength: false,
+  hasLowercase: false,
+  hasUppercase: false,
+  hasNumber: false,
+  hasSpecial: false,
+};
+
+const REQUIREMENT_KEYS: Array<{
+  key: keyof typeof EMPTY_REQUIREMENTS;
+  i18nKey: string;
+}> = [
+  { key: 'minLength', i18nKey: 'register.passwordRequirements.minLength' },
+  { key: 'hasLowercase', i18nKey: 'register.passwordRequirements.hasLowercase' },
+  { key: 'hasUppercase', i18nKey: 'register.passwordRequirements.hasUppercase' },
+  { key: 'hasNumber', i18nKey: 'register.passwordRequirements.hasNumber' },
+  { key: 'hasSpecial', i18nKey: 'register.passwordRequirements.hasSpecial' },
+];
 
 /**
  * Calculate password strength based on Auth0 password policy
@@ -109,6 +130,22 @@ function getProgressColorClass(level: 'weak' | 'fair' | 'strong'): string {
   }
 }
 
+interface RequirementItemProps {
+  met: boolean;
+  label: string;
+}
+
+const RequirementItem: React.FC<RequirementItemProps> = ({ met, label }) => (
+  <li className="flex items-center gap-1.5 text-xs">
+    {met ? (
+      <Check className="h-3 w-3 shrink-0 text-green-500" />
+    ) : (
+      <X className="h-3 w-3 shrink-0 text-muted-foreground" />
+    )}
+    <span className={met ? 'text-green-500' : 'text-muted-foreground'}>{label}</span>
+  </li>
+);
+
 export const PasswordStrengthIndicator: React.FC<PasswordStrengthIndicatorProps> = ({
   password,
   className,
@@ -117,24 +154,30 @@ export const PasswordStrengthIndicator: React.FC<PasswordStrengthIndicatorProps>
 
   const strength = useMemo(() => calculateStrength(password), [password]);
 
-  // Don't render if password is empty
-  if (!password) {
-    return null;
-  }
+  const requirements = password ? strength.requirements : EMPTY_REQUIREMENTS;
 
   return (
-    <div className={cn('space-y-1', className)} data-testid="password-strength-indicator">
-      <Progress
-        value={strength.score}
-        className={cn('h-1.5', getProgressColorClass(strength.level))}
-        aria-label={t('register.passwordStrength.label')}
-      />
-      <p className="text-xs text-muted-foreground">
-        {t('register.passwordStrength.label')}{' '}
-        <span className={cn('font-medium', strength.colorClass)}>
-          {t(`register.passwordStrength.${strength.level}`)}
-        </span>
-      </p>
+    <div className={cn('space-y-2', className)} data-testid="password-strength-indicator">
+      <ul className="space-y-1" data-testid="password-requirements-list">
+        {REQUIREMENT_KEYS.map(({ key, i18nKey }) => (
+          <RequirementItem key={key} met={requirements[key]} label={t(i18nKey)} />
+        ))}
+      </ul>
+      {password && (
+        <div className="space-y-1" data-testid="password-strength-bar">
+          <Progress
+            value={strength.score}
+            className={cn('h-2', getProgressColorClass(strength.level))}
+            aria-label={t('register.passwordStrength.label')}
+          />
+          <p className="text-xs text-muted-foreground">
+            {t('register.passwordStrength.label')}{' '}
+            <span className={cn('font-medium', strength.colorClass)}>
+              {t(`register.passwordStrength.${strength.level}`)}
+            </span>
+          </p>
+        </div>
+      )}
     </div>
   );
 };

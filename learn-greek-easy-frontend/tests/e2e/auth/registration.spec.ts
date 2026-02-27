@@ -37,7 +37,7 @@ test.describe('Registration', () => {
       await expect(page.getByTestId('password-input')).toBeVisible();
       await expect(page.getByTestId('confirm-password-input')).toBeVisible();
 
-      await expect(page.locator('#terms')).toBeVisible();
+      await expect(page.locator('#acceptedTerms')).toBeVisible();
       await expect(page.getByTestId('register-submit')).toBeVisible();
       await expect(page.getByTestId('google-signup-button')).toBeVisible();
       await expect(page.getByTestId('login-link')).toBeVisible();
@@ -77,7 +77,7 @@ test.describe('Registration', () => {
       await page.getByTestId('email-input').fill('test@example.com');
       await page.getByTestId('password-input').fill('TestPassword123!');
       await page.getByTestId('confirm-password-input').fill('TestPassword123!');
-      await page.locator('#terms').check();
+      await page.locator('#acceptedTerms').check();
 
       await page.getByTestId('register-submit').click();
 
@@ -95,7 +95,7 @@ test.describe('Registration', () => {
       await page.getByTestId('email-input').fill('test@example.com');
       await page.getByTestId('password-input').fill('TestPassword123!');
       await page.getByTestId('confirm-password-input').fill('TestPassword123!');
-      await page.locator('#terms').check();
+      await page.locator('#acceptedTerms').check();
 
       await page.getByTestId('register-submit').click();
 
@@ -114,7 +114,7 @@ test.describe('Registration', () => {
       await page.getByTestId('name-input').fill('Test User');
       await page.getByTestId('password-input').fill('TestPassword123!');
       await page.getByTestId('confirm-password-input').fill('TestPassword123!');
-      await page.locator('#terms').check();
+      await page.locator('#acceptedTerms').check();
 
       await page.getByTestId('register-submit').click();
 
@@ -133,7 +133,7 @@ test.describe('Registration', () => {
       await page.getByTestId('email-input').fill('notanemail');
       await page.getByTestId('password-input').fill('TestPassword123!');
       await page.getByTestId('confirm-password-input').fill('TestPassword123!');
-      await page.locator('#terms').check();
+      await page.locator('#acceptedTerms').check();
 
       await page.getByTestId('register-submit').click();
 
@@ -151,7 +151,7 @@ test.describe('Registration', () => {
 
       await page.getByTestId('name-input').fill('Test User');
       await page.getByTestId('email-input').fill('test@example.com');
-      await page.locator('#terms').check();
+      await page.locator('#acceptedTerms').check();
 
       await page.getByTestId('register-submit').click();
 
@@ -169,7 +169,7 @@ test.describe('Registration', () => {
       await page.getByTestId('email-input').fill('test@example.com');
       await page.getByTestId('password-input').fill('short');
       await page.getByTestId('confirm-password-input').fill('short');
-      await page.locator('#terms').check();
+      await page.locator('#acceptedTerms').check();
 
       await page.getByTestId('register-submit').click();
 
@@ -187,7 +187,7 @@ test.describe('Registration', () => {
       await page.getByTestId('email-input').fill('test@example.com');
       await page.getByTestId('password-input').fill('TestPassword123!');
       await page.getByTestId('confirm-password-input').fill('DifferentPassword123!');
-      await page.locator('#terms').check();
+      await page.locator('#acceptedTerms').check();
 
       await page.getByTestId('register-submit').click();
 
@@ -196,7 +196,7 @@ test.describe('Registration', () => {
   });
 
   test.describe('Password Strength Indicator', () => {
-    test('should not show strength indicator when password is empty', async ({ page }) => {
+    test('should show checklist but not progress bar when password is empty', async ({ page }) => {
       await page.goto('/register');
       await page.waitForSelector('[data-testid="register-form"]', {
         state: 'visible',
@@ -204,7 +204,13 @@ test.describe('Registration', () => {
       });
 
       const strengthIndicator = page.getByTestId('password-strength-indicator');
-      await expect(strengthIndicator).not.toBeVisible();
+      await expect(strengthIndicator).toBeVisible();
+
+      const requirementsList = page.getByTestId('password-requirements-list');
+      await expect(requirementsList).toBeVisible();
+
+      const strengthBar = page.getByTestId('password-strength-bar');
+      await expect(strengthBar).not.toBeVisible();
     });
 
     test('should show strength indicator when password is entered', async ({ page }) => {
@@ -306,7 +312,7 @@ test.describe('Registration', () => {
 
       await page.getByTestId('register-submit').click();
 
-      await expect(page.locator('#terms-error')).toBeVisible();
+      await expect(page.locator('#acceptedTerms-error')).toBeVisible();
     });
   });
 
