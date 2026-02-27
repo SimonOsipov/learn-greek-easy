@@ -212,4 +212,47 @@ test.describe('Forgot Password', () => {
       await expect(page.getByTestId('login-card')).toBeVisible();
     });
   });
+
+  test.describe('Rate Limiting', () => {
+    test('should disable submit button with countdown after successful submission and retry', async ({
+      page,
+    }) => {
+      await page.goto('/forgot-password');
+      await page.waitForSelector('[data-testid="forgot-password-form"]', {
+        state: 'visible',
+        timeout: 10000,
+      });
+
+      // Mock successful Supabase password reset endpoint
+      await page.route('**/auth/v1/recover', (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: '{}',
+        })
+      );
+
+      // Fill email and submit
+      await page.getByTestId('email-input').fill('test@example.com');
+      await page.getByTestId('forgot-password-submit').click();
+
+      // Wait for success state
+      await expect(page.getByTestId('forgot-password-success-card')).toBeVisible({
+        timeout: 10000,
+      });
+
+      // Click "Try a different email" to return to form
+      await page.getByTestId('try-different-email-button').click();
+
+      await expect(page.getByTestId('forgot-password-form')).toBeVisible({ timeout: 5000 });
+
+      // Submit button should be disabled with countdown text
+      const submitButton = page.getByTestId('forgot-password-submit');
+      await expect(submitButton).toBeDisabled({ timeout: 3000 });
+
+      // Verify countdown text is present (e.g., contains seconds like "57s")
+      const buttonText = await submitButton.textContent();
+      expect(buttonText).toMatch(/\d+s/);
+    });
+  });
 });
