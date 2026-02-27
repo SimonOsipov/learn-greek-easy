@@ -52,6 +52,8 @@ import { authAPI } from '@/services/authAPI';
 import { useAuthStore } from '@/stores/authStore';
 import type { User } from '@/types/auth';
 
+import type { FieldErrors } from 'react-hook-form';
+
 /** Form state machine states */
 type FormState = 'form' | 'verification' | 'error';
 
@@ -228,6 +230,14 @@ export const RegisterForm: React.FC = () => {
     }
   };
 
+  const onInvalid = (fieldErrors: FieldErrors<RegisterFormData>) => {
+    const firstErrorKey = Object.keys(fieldErrors)[0];
+    if (firstErrorKey) {
+      const element = document.getElementById(firstErrorKey);
+      element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
+
   /**
    * Handle resend verification email
    */
@@ -389,7 +399,7 @@ export const RegisterForm: React.FC = () => {
           </CardDescription>
         </CardHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} data-testid="register-form">
+        <form onSubmit={handleSubmit(onSubmit, onInvalid)} data-testid="register-form">
           <CardContent className="space-y-4">
             {/* Form-level error display */}
             {formError && (
@@ -523,16 +533,16 @@ export const RegisterForm: React.FC = () => {
             <div className="space-y-2">
               <div className="flex items-center space-x-2">
                 <Checkbox
-                  id="terms"
+                  id="acceptedTerms"
                   checked={acceptedTermsValue}
                   onCheckedChange={(checked) => {
                     setValue('acceptedTerms', checked === true, { shouldValidate: true });
                   }}
                   disabled={isFormDisabled}
                   aria-invalid={errors.acceptedTerms ? 'true' : 'false'}
-                  aria-describedby={errors.acceptedTerms ? 'terms-error' : undefined}
+                  aria-describedby={errors.acceptedTerms ? 'acceptedTerms-error' : undefined}
                 />
-                <Label htmlFor="terms" className="cursor-pointer text-sm font-normal">
+                <Label htmlFor="acceptedTerms" className="cursor-pointer text-sm font-normal">
                   {t('register.acceptTerms')}{' '}
                   <Link to="/terms" className="text-primary hover:underline">
                     {t('register.termsLink')}
@@ -540,7 +550,7 @@ export const RegisterForm: React.FC = () => {
                 </Label>
               </div>
               {errors.acceptedTerms && (
-                <p id="terms-error" className="text-sm text-destructive" role="alert">
+                <p id="acceptedTerms-error" className="text-sm text-destructive" role="alert">
                   {getErrorMessage(errors.acceptedTerms.message)}
                 </p>
               )}
