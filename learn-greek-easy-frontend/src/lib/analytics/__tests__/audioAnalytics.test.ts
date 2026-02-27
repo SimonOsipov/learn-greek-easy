@@ -39,6 +39,7 @@ describe('audioAnalytics', () => {
         part_of_speech: 'verb',
         context: 'review',
         deck_id: 'deck-456',
+        playback_speed: 1,
       });
 
       expect(posthog.capture).toHaveBeenCalledWith('word_audio_played', {
@@ -47,6 +48,7 @@ describe('audioAnalytics', () => {
         part_of_speech: 'verb',
         context: 'review',
         deck_id: 'deck-456',
+        playback_speed: 1,
       });
     });
 
@@ -57,6 +59,7 @@ describe('audioAnalytics', () => {
         part_of_speech: null,
         context: 'reference',
         deck_id: 'deck-def',
+        playback_speed: 1,
       });
 
       expect(posthog.capture).toHaveBeenCalledWith('word_audio_played', {
@@ -65,6 +68,27 @@ describe('audioAnalytics', () => {
         part_of_speech: null,
         context: 'reference',
         deck_id: 'deck-def',
+        playback_speed: 1,
+      });
+    });
+
+    it('should track with playback_speed: 0.75', () => {
+      trackWordAudioPlayed({
+        word_entry_id: 'we-xyz',
+        lemma: 'τρέχω',
+        part_of_speech: 'verb',
+        context: 'review',
+        deck_id: 'deck-xyz',
+        playback_speed: 0.75,
+      });
+
+      expect(posthog.capture).toHaveBeenCalledWith('word_audio_played', {
+        word_entry_id: 'we-xyz',
+        lemma: 'τρέχω',
+        part_of_speech: 'verb',
+        context: 'review',
+        deck_id: 'deck-xyz',
+        playback_speed: 0.75,
       });
     });
 
@@ -79,6 +103,7 @@ describe('audioAnalytics', () => {
           part_of_speech: 'noun',
           context: 'review',
           deck_id: 'deck-test',
+          playback_speed: 1,
         });
       }).not.toThrow();
 
@@ -96,6 +121,7 @@ describe('audioAnalytics', () => {
           part_of_speech: 'verb',
           context: 'reference',
           deck_id: 'deck-test',
+          playback_speed: 1,
         });
       }).not.toThrow();
 
@@ -114,6 +140,7 @@ describe('audioAnalytics', () => {
         example_id: 'ex-456',
         context: 'review',
         deck_id: 'deck-789',
+        playback_speed: 1,
       });
 
       expect(posthog.capture).toHaveBeenCalledWith('example_audio_played', {
@@ -121,6 +148,7 @@ describe('audioAnalytics', () => {
         example_id: 'ex-456',
         context: 'review',
         deck_id: 'deck-789',
+        playback_speed: 1,
       });
     });
 
@@ -130,6 +158,7 @@ describe('audioAnalytics', () => {
         example_id: 'ex-def',
         context: 'reference',
         deck_id: 'deck-ghi',
+        playback_speed: 1,
       });
 
       expect(posthog.capture).toHaveBeenCalledWith('example_audio_played', {
@@ -137,6 +166,25 @@ describe('audioAnalytics', () => {
         example_id: 'ex-def',
         context: 'reference',
         deck_id: 'deck-ghi',
+        playback_speed: 1,
+      });
+    });
+
+    it('should track with playback_speed: 0.75', () => {
+      trackExampleAudioPlayed({
+        word_entry_id: 'we-xyz',
+        example_id: 'ex-xyz',
+        context: 'review',
+        deck_id: 'deck-xyz',
+        playback_speed: 0.75,
+      });
+
+      expect(posthog.capture).toHaveBeenCalledWith('example_audio_played', {
+        word_entry_id: 'we-xyz',
+        example_id: 'ex-xyz',
+        context: 'review',
+        deck_id: 'deck-xyz',
+        playback_speed: 0.75,
       });
     });
 
@@ -150,6 +198,7 @@ describe('audioAnalytics', () => {
           example_id: 'ex-test',
           context: 'review',
           deck_id: 'deck-test',
+          playback_speed: 1,
         });
       }).not.toThrow();
 
@@ -166,6 +215,7 @@ describe('audioAnalytics', () => {
           example_id: 'ex-test',
           context: 'reference',
           deck_id: 'deck-test',
+          playback_speed: 1,
         });
       }).not.toThrow();
 
@@ -259,6 +309,7 @@ describe('audioAnalytics', () => {
           part_of_speech: 'noun',
           context: 'review',
           deck_id: 'deck-1',
+          playback_speed: 1,
         });
       }).not.toThrow();
 
@@ -268,6 +319,7 @@ describe('audioAnalytics', () => {
           example_id: 'ex-2',
           context: 'review',
           deck_id: 'deck-2',
+          playback_speed: 1,
         });
       }).not.toThrow();
 
@@ -294,12 +346,14 @@ describe('audioAnalytics', () => {
           part_of_speech: null,
           context: 'reference',
           deck_id: 'deck-1',
+          playback_speed: 1,
         });
         trackExampleAudioPlayed({
           word_entry_id: 'we-2',
           example_id: 'ex-2',
           context: 'reference',
           deck_id: 'deck-2',
+          playback_speed: 1,
         });
         trackWordAudioFailed({
           word_entry_id: 'we-3',

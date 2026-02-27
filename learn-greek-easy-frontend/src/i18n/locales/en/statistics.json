@@ -90,7 +90,7 @@
     "noData": "No data available"
   },
   "cultureReadiness": {
-    "title": "Culture Exam Readiness",
+    "title": "Cyprus Culture Exam Readiness",
     "questionsLearned": "Questions Learned",
     "overallAccuracy": "Overall Accuracy",
     "noAccuracyData": "N/A",
@@ -104,7 +104,7 @@
       "title": "Progress by Category",
       "mastered": "{{mastered}} / {{total}} mastered",
       "accuracy": "Accuracy: {{value}}%",
-      "accuracyNA": "Accuracy: N/A",
+      "accuracyNA": "Accuracy: No attempts yet",
       "needsReinforcement": "Needs Review",
       "needsReinforcementTooltip": "High mastery but low recent accuracy — consider reviewing this category",
       "categories": {

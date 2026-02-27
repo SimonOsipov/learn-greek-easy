@@ -90,7 +90,7 @@
     "noData": "Нет данных"
   },
   "cultureReadiness": {
-    "title": "Готовность к экзамену по культуре",
+    "title": "Готовность к экзамену по культуре Кипра",
     "questionsLearned": "Вопросы изучены",
     "overallAccuracy": "Общая точность",
     "noAccuracyData": "Н/Д",
@@ -104,7 +104,7 @@
       "title": "Прогресс по категориям",
       "mastered": "{{mastered}} / {{total}} освоено",
       "accuracy": "Точность: {{value}}%",
-      "accuracyNA": "Точность: Н/Д",
+      "accuracyNA": "Точность: Нет попыток",
       "needsReinforcement": "Требует повторения",
       "needsReinforcementTooltip": "Высокий уровень освоения, но низкая точность за последнее время — рекомендуется повторить эту категорию",
       "categories": {

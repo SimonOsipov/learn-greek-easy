@@ -4,11 +4,12 @@ import { Pause, Play } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { generateBars } from '@/lib/waveform';
+import { getPersistedAudioSpeed, setPersistedAudioSpeed } from '@/utils/audioSpeed';
 
 const BAR_COUNT = 48;
 const DEFAULT_DURATION = 90;
 const TICK_INTERVAL_MS = 100;
-const SPEED_OPTIONS = [0.75, 1, 1.25] as const;
+const SPEED_OPTIONS = [0.75, 1] as const;
 type Speed = (typeof SPEED_OPTIONS)[number];
 
 function formatTime(seconds: number): string {
@@ -82,7 +83,7 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [speed, setSpeed] = useState<Speed>(1);
+  const [speed, setSpeed] = useState<Speed>(getPersistedAudioSpeed);
   const [audioDuration, setAudioDuration] = useState<number>(0);
   const [audioError, setAudioError] = useState<boolean>(false);
 
@@ -178,6 +179,7 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
           onPause(audioRef.current.currentTime);
         }
       } else {
+        audioRef.current.playbackRate = speedRef.current;
         audioRef.current.play().catch(() => {
           setAudioError(true);
         });
@@ -260,6 +262,7 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
       }
 
       setSpeed(newSpeed);
+      setPersistedAudioSpeed(newSpeed);
       if (audioRef.current) {
         audioRef.current.playbackRate = newSpeed;
       }

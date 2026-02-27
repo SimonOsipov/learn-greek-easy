@@ -296,6 +296,7 @@ describe('ExamplesSection — Audio SpeakerButton integration (reference)', () =
       example_id: 'ex-1',
       context: 'reference',
       deck_id: 'deck-xyz',
+      playback_speed: 1,
     });
   });
 

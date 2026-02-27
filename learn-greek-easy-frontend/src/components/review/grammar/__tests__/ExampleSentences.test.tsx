@@ -496,6 +496,7 @@ describe('ExampleSentences — Audio SpeakerButton integration', () => {
       example_id: 'ex-001',
       context: 'review',
       deck_id: 'deck-456',
+      playback_speed: 1,
     });
   });
 

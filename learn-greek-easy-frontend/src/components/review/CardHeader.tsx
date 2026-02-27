@@ -86,6 +86,7 @@ export function CardHeader({ card, onFlip, isCardFlipped }: CardHeaderProps) {
                 part_of_speech: card.part_of_speech ?? null,
                 context: 'review',
                 deck_id: card.srData.deckId,
+                playback_speed: 1,
               })
             }
             onError={(error) =>

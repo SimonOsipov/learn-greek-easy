@@ -105,7 +105,7 @@ export function CategoryBreakdown({ categories, isLoading }: CategoryBreakdownPr
           >
             <div
               className={cn('h-full rounded-full', getReadinessColor(cat.readiness_percentage))}
-              style={{ width: `${cat.readiness_percentage}%` }}
+              style={{ width: `${Math.max(cat.readiness_percentage, 2)}%` }}
             />
           </div>
           <div className="flex w-16 shrink-0 flex-col items-end">

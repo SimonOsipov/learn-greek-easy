@@ -2,11 +2,18 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { getPersistedAudioSpeed, setPersistedAudioSpeed } from '@/utils/audioSpeed';
+
 import { WaveformPlayer } from '../WaveformPlayer';
 
 // Mock generateBars for deterministic output
 vi.mock('@/lib/waveform', () => ({
   generateBars: (count: number) => Array.from({ length: count }, (_, i) => (i + 1) / count),
+}));
+
+vi.mock('@/utils/audioSpeed', () => ({
+  getPersistedAudioSpeed: vi.fn(() => 1),
+  setPersistedAudioSpeed: vi.fn(),
 }));
 
 // Helper to mock getBoundingClientRect on an element
@@ -25,6 +32,11 @@ function mockBarsRect(element: HTMLElement, width = 480) {
 }
 
 describe('WaveformPlayer', () => {
+  beforeEach(() => {
+    vi.mocked(getPersistedAudioSpeed).mockReturnValue(1);
+    vi.mocked(setPersistedAudioSpeed).mockClear();
+  });
+
   describe('Rendering', () => {
     it('renders outer container with data-testid', () => {
       render(<WaveformPlayer />);
@@ -64,11 +76,11 @@ describe('WaveformPlayer', () => {
       expect(totalTime).toHaveTextContent('1:30');
     });
 
-    it('renders 3 speed pills with 1x selected by default', () => {
+    it('renders 2 speed pills with 1x selected by default', () => {
       render(<WaveformPlayer />);
 
       const pills = screen.getAllByRole('radio');
-      expect(pills).toHaveLength(3);
+      expect(pills).toHaveLength(2);
 
       const pill1x = screen.getByRole('radio', { name: '1x speed' });
       expect(pill1x).toHaveAttribute('aria-checked', 'true');
@@ -150,10 +162,10 @@ describe('WaveformPlayer', () => {
 
       const playButton = screen.getByTestId('waveform-play-button');
       const slider = screen.getByRole('slider');
-      const pill125x = screen.getByRole('radio', { name: '1.25x speed' });
+      const pill075x = screen.getByRole('radio', { name: '0.75x speed' });
 
-      // Select 1.25x speed using fireEvent since we're in fake timers mode
-      fireEvent.click(pill125x);
+      // Select 0.75x speed using fireEvent since we're in fake timers mode
+      fireEvent.click(pill075x);
 
       fireEvent.click(playButton);
 
@@ -161,7 +173,7 @@ describe('WaveformPlayer', () => {
         vi.advanceTimersByTime(1000);
       });
 
-      // At 1.25x speed, 1 second should advance by 1.25 seconds
+      // At 0.75x speed, 1 second should advance by 0.75 seconds
       expect(slider).toHaveAttribute('aria-valuenow', '1');
     });
 
@@ -223,20 +235,20 @@ describe('WaveformPlayer', () => {
   });
 
   describe('Speed Pills', () => {
-    it('clicking 1.25x sets aria-checked="true", 1x becomes "false"', async () => {
+    it('clicking 0.75x sets aria-checked=true, 1x becomes false', async () => {
       const user = userEvent.setup();
       render(<WaveformPlayer />);
 
       const pill1x = screen.getByRole('radio', { name: '1x speed' });
-      const pill125x = screen.getByRole('radio', { name: '1.25x speed' });
+      const pill075x = screen.getByRole('radio', { name: '0.75x speed' });
 
       expect(pill1x).toHaveAttribute('aria-checked', 'true');
-      expect(pill125x).toHaveAttribute('aria-checked', 'false');
+      expect(pill075x).toHaveAttribute('aria-checked', 'false');
 
-      await user.click(pill125x);
+      await user.click(pill075x);
 
       expect(pill1x).toHaveAttribute('aria-checked', 'false');
-      expect(pill125x).toHaveAttribute('aria-checked', 'true');
+      expect(pill075x).toHaveAttribute('aria-checked', 'true');
     });
 
     it('speed container has role="radiogroup" with label "Playback speed"', () => {
@@ -246,12 +258,27 @@ describe('WaveformPlayer', () => {
       expect(speedGroup).toBeInTheDocument();
     });
 
-    it('all 3 pills have correct aria-labels', () => {
+    it('all 2 pills have correct aria-labels', () => {
       render(<WaveformPlayer />);
 
       expect(screen.getByRole('radio', { name: '0.75x speed' })).toBeInTheDocument();
       expect(screen.getByRole('radio', { name: '1x speed' })).toBeInTheDocument();
-      expect(screen.getByRole('radio', { name: '1.25x speed' })).toBeInTheDocument();
+    });
+
+    it('initializes speed from getPersistedAudioSpeed()', () => {
+      vi.mocked(getPersistedAudioSpeed).mockReturnValue(0.75);
+      render(<WaveformPlayer audioUrl="test.mp3" />);
+      const pill075 = screen.getByRole('radio', { name: '0.75x speed' });
+      const pill1 = screen.getByRole('radio', { name: '1x speed' });
+      expect(pill075).toHaveAttribute('aria-checked', 'true');
+      expect(pill1).toHaveAttribute('aria-checked', 'false');
+    });
+
+    it('persists speed to localStorage when changed', async () => {
+      render(<WaveformPlayer audioUrl="test.mp3" />);
+      const pill075 = screen.getByRole('radio', { name: '0.75x speed' });
+      await userEvent.click(pill075);
+      expect(setPersistedAudioSpeed).toHaveBeenCalledWith(0.75);
     });
   });
 
@@ -535,7 +562,7 @@ describe('WaveformPlayer', () => {
       expect(speedPills).toBeInTheDocument();
 
       const pills = screen.getAllByRole('radio');
-      expect(pills).toHaveLength(3);
+      expect(pills).toHaveLength(2);
     });
 
     it('shows speed pills when showSpeedControl={true}', () => {
@@ -545,7 +572,7 @@ describe('WaveformPlayer', () => {
       expect(speedPills).toBeInTheDocument();
 
       const pills = screen.getAllByRole('radio');
-      expect(pills).toHaveLength(3);
+      expect(pills).toHaveLength(2);
     });
   });
 
@@ -927,13 +954,13 @@ describe('WaveformPlayer', () => {
         });
         fireEvent(audio, new Event('loadedmetadata'));
 
-        // Change speed to 1.25x
-        const pill125x = screen.getByRole('radio', { name: '1.25x speed' });
-        fireEvent.click(pill125x);
+        // Change speed to 0.75x
+        const pill075x = screen.getByRole('radio', { name: '0.75x speed' });
+        fireEvent.click(pill075x);
 
         // Update audio playbackRate to simulate real audio behavior
         Object.defineProperty(audio, 'playbackRate', {
-          value: 1.25,
+          value: 0.75,
           writable: true,
           configurable: true,
         });
@@ -941,7 +968,7 @@ describe('WaveformPlayer', () => {
         // Dispatch ended event
         fireEvent(audio, new Event('ended'));
 
-        expect(onComplete).toHaveBeenCalledWith(120, 1.25);
+        expect(onComplete).toHaveBeenCalledWith(120, 0.75);
       });
 
       it('does NOT call onComplete in timer mode (no audioUrl)', () => {
@@ -1024,11 +1051,11 @@ describe('WaveformPlayer', () => {
         });
         fireEvent(audio, new Event('loadedmetadata'));
 
-        // Change speed from 1x to 1.25x
-        const pill125x = screen.getByRole('radio', { name: '1.25x speed' });
-        fireEvent.click(pill125x);
+        // Change speed from 1x to 0.75x
+        const pill075x = screen.getByRole('radio', { name: '0.75x speed' });
+        fireEvent.click(pill075x);
 
-        expect(onSpeedChange).toHaveBeenCalledWith(1, 1.25);
+        expect(onSpeedChange).toHaveBeenCalledWith(1, 0.75);
         expect(onSpeedChange).toHaveBeenCalledTimes(1);
       });
 
@@ -1048,15 +1075,15 @@ describe('WaveformPlayer', () => {
         });
         fireEvent(audio, new Event('loadedmetadata'));
 
-        // Change speed 1x -> 1.25x
-        const pill125x = screen.getByRole('radio', { name: '1.25x speed' });
-        fireEvent.click(pill125x);
-        expect(onSpeedChange).toHaveBeenCalledWith(1, 1.25);
-
-        // Change speed 1.25x -> 0.75x
+        // Change speed 1x -> 0.75x
         const pill075x = screen.getByRole('radio', { name: '0.75x speed' });
         fireEvent.click(pill075x);
-        expect(onSpeedChange).toHaveBeenCalledWith(1.25, 0.75);
+        expect(onSpeedChange).toHaveBeenCalledWith(1, 0.75);
+
+        // Change speed 0.75x -> 1x
+        const pill1x = screen.getByRole('radio', { name: '1x speed' });
+        fireEvent.click(pill1x);
+        expect(onSpeedChange).toHaveBeenCalledWith(0.75, 1);
 
         expect(onSpeedChange).toHaveBeenCalledTimes(2);
       });
@@ -1066,8 +1093,8 @@ describe('WaveformPlayer', () => {
         render(<WaveformPlayer duration={90} onSpeedChange={onSpeedChange} />);
 
         // Change speed
-        const pill125x = screen.getByRole('radio', { name: '1.25x speed' });
-        fireEvent.click(pill125x);
+        const pill075x = screen.getByRole('radio', { name: '0.75x speed' });
+        fireEvent.click(pill075x);
 
         expect(onSpeedChange).not.toHaveBeenCalled();
       });
@@ -1093,8 +1120,8 @@ describe('WaveformPlayer', () => {
         fireEvent(audio, new Event('loadedmetadata'));
 
         // Change speed
-        const pill125x = screen.getByRole('radio', { name: '1.25x speed' });
-        fireEvent.click(pill125x);
+        const pill075x = screen.getByRole('radio', { name: '0.75x speed' });
+        fireEvent.click(pill075x);
 
         expect(onSpeedChange).not.toHaveBeenCalled();
       });
@@ -1111,8 +1138,8 @@ describe('WaveformPlayer', () => {
         fireEvent(audio, new Event('error'));
 
         // Try to change speed
-        const pill125x = screen.getByRole('radio', { name: '1.25x speed' });
-        fireEvent.click(pill125x);
+        const pill075x = screen.getByRole('radio', { name: '0.75x speed' });
+        fireEvent.click(pill075x);
 
         expect(onSpeedChange).not.toHaveBeenCalled();
       });
@@ -1277,20 +1304,20 @@ describe('WaveformPlayer', () => {
         expect(onPlay).toHaveBeenCalledWith(120);
 
         // Change speed - should trigger onSpeedChange
-        const pill125x = screen.getByRole('radio', { name: '1.25x speed' });
-        fireEvent.click(pill125x);
-        expect(onSpeedChange).toHaveBeenCalledWith(1, 1.25);
+        const pill075x = screen.getByRole('radio', { name: '0.75x speed' });
+        fireEvent.click(pill075x);
+        expect(onSpeedChange).toHaveBeenCalledWith(1, 0.75);
 
         // Update audio playbackRate to simulate real audio behavior
         Object.defineProperty(audio, 'playbackRate', {
-          value: 1.25,
+          value: 0.75,
           writable: true,
           configurable: true,
         });
 
         // End - should trigger onComplete
         fireEvent(audio, new Event('ended'));
-        expect(onComplete).toHaveBeenCalledWith(120, 1.25);
+        expect(onComplete).toHaveBeenCalledWith(120, 0.75);
 
         expect(onPlay).toHaveBeenCalledTimes(1);
         expect(onSpeedChange).toHaveBeenCalledTimes(1);
