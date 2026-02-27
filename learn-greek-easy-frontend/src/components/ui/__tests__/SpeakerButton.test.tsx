@@ -71,7 +71,9 @@ describe('SpeakerButton', () => {
     const { container } = render(<SpeakerButton audioUrl="https://example.com/audio.mp3" />);
 
     expect(container.querySelector('.animate-spin')).toBeInTheDocument();
-    expect(container.querySelector('.text-muted-foreground')).not.toBeInTheDocument();
+    // Volume2 icon should not be rendered inside the play button during loading
+    const playButton = screen.getByRole('button', { name: 'Loading audio' });
+    expect(playButton.querySelector('.text-muted-foreground')).not.toBeInTheDocument();
   });
 
   it('8. aria-label is "Loading audio" during loading', () => {
@@ -139,5 +141,50 @@ describe('SpeakerButton', () => {
     render(<SpeakerButton audioUrl="https://example.com/audio.mp3" size="sm" />);
     const button = screen.getByRole('button');
     expect(button.className).toContain('h-9');
+  });
+});
+
+describe('SpeedPills', () => {
+  it('renders speed pills when audioUrl is provided', () => {
+    render(<SpeakerButton audioUrl="https://example.com/audio.mp3" />);
+    expect(screen.getByTestId('speed-pill-1')).toBeInTheDocument();
+    expect(screen.getByTestId('speed-pill-0.75')).toBeInTheDocument();
+  });
+
+  it('does not render speed pills when audioUrl is null', () => {
+    render(<SpeakerButton audioUrl={null} />);
+    expect(screen.queryByTestId('speed-pill-1')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('speed-pill-0.75')).not.toBeInTheDocument();
+  });
+
+  it('clicking x0.75 pill calls setSpeed(0.75)', async () => {
+    const mockSetSpeed = vi.fn();
+    vi.mocked(useAudioPlayer).mockReturnValue({ ...mockDefaultReturn, setSpeed: mockSetSpeed });
+    const user = userEvent.setup();
+
+    render(<SpeakerButton audioUrl="https://example.com/audio.mp3" />);
+    await user.click(screen.getByTestId('speed-pill-0.75'));
+
+    expect(mockSetSpeed).toHaveBeenCalledWith(0.75);
+  });
+
+  it('x1 pill has aria-checked=true by default', () => {
+    render(<SpeakerButton audioUrl="https://example.com/audio.mp3" />);
+    expect(screen.getByTestId('speed-pill-1')).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByTestId('speed-pill-0.75')).toHaveAttribute('aria-checked', 'false');
+  });
+
+  it('pill click does not propagate to parent', async () => {
+    const parentClick = vi.fn();
+    const user = userEvent.setup();
+
+    render(
+      <div role="presentation" onClick={parentClick}>
+        <SpeakerButton audioUrl="https://example.com/audio.mp3" />
+      </div>
+    );
+    await user.click(screen.getByTestId('speed-pill-1'));
+
+    expect(parentClick).not.toHaveBeenCalled();
   });
 });

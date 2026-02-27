@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { SpeakerButton } from '@/components/ui/SpeakerButton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import type { AudioSpeed } from '@/hooks';
 import {
   trackWordAudioPlayed,
   trackExampleAudioPlayed,
@@ -52,6 +53,8 @@ export interface PracticeCardProps {
     isLoading: boolean;
     error: string | null;
     onToggle: () => void;
+    speed?: AudioSpeed;
+    setSpeed?: (s: AudioSpeed) => void;
   } | null;
   /** Word entry ID for analytics tracking */
   wordEntryId?: string;
@@ -183,6 +186,8 @@ function CardFront({
     isLoading: boolean;
     error: string | null;
     toggle: () => void;
+    speed?: AudioSpeed;
+    setSpeed?: (s: AudioSpeed) => void;
   };
 }) {
   const mainFontSize = cardType === 'sentence_translation' ? 'text-xl' : 'text-3xl';
@@ -262,6 +267,8 @@ function CardBack({
     isLoading: boolean;
     error: string | null;
     toggle: () => void;
+    speed?: AudioSpeed;
+    setSpeed?: (s: AudioSpeed) => void;
   };
 }) {
   const answerFontSize = cardType === 'sentence_translation' ? 'text-xl' : 'text-3xl';
@@ -407,6 +414,8 @@ export function PracticeCard({
         isLoading: audioState.isLoading,
         error: audioState.error,
         toggle: audioState.onToggle,
+        speed: audioState.speed,
+        setSpeed: audioState.setSpeed,
       }
     : undefined;
 

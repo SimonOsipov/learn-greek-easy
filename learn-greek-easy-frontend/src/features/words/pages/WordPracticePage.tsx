@@ -92,6 +92,8 @@ export function WordPracticePage() {
     isLoading: audioIsLoading,
     error: audioError,
     toggle: audioToggle,
+    speed: audioSpeed,
+    setSpeed: audioSetSpeed,
   } = useAudioPlayer(hookAudioUrl);
 
   const backUrl = `/decks/${deckId}/words/${wordId}`;
@@ -252,6 +254,8 @@ export function WordPracticePage() {
     isLoading: audioIsLoading,
     error: audioError,
     onToggle: audioToggle,
+    speed: audioSpeed,
+    setSpeed: audioSetSpeed,
   };
 
   return (
