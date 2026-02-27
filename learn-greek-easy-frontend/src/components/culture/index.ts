@@ -1,7 +1,7 @@
 export { AnswerOption } from './AnswerOption';
 export type { AnswerOptionProps, AnswerOptionState, OptionLetter } from './AnswerOption';
 
-export { CultureBadge } from './CultureBadge';
+export { CultureBadge, getCategoryColor } from './CultureBadge';
 export type { CultureBadgeProps, CultureCategory } from './CultureBadge';
 
 export { ExplanationCard } from './ExplanationCard';

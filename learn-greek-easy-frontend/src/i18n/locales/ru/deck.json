@@ -24,7 +24,8 @@
     "premiumOnly": "Только премиум",
     "clearAll": "Сбросить всё",
     "showing": "Показано {{count}} из {{total}} колод",
-    "levelDisabledForCulture": "Фильтр по уровню недоступен для колод Культуры"
+    "levelDisabledForCulture": "Фильтр по уровню недоступен для колод Культуры",
+    "clearSearch": "Очистить поиск"
   },
   "culture": {
     "badge": "Культура",
@@ -131,6 +132,14 @@
       "vocabulary": "Словарь",
       "grammar": "Грамматика",
       "phrases": "Фразы"
+    },
+    "metadata": {
+      "notStarted": "Не начато",
+      "dueToday": "На сегодня: {{count}}",
+      "upToDate": "Всё повторено",
+      "last": "Посл.: {{time}}",
+      "completed": "Завершено",
+      "mastered": "{{count}} освоено"
     }
   },
   "myDecks": {
@@ -287,5 +296,8 @@
     "easy": "Легко",
     "langEn": "EN",
     "langRu": "RU"
+  },
+  "skeleton": {
+    "loadingCard": "Загрузка карточки"
   }
 }

@@ -125,9 +125,9 @@ describe('CultureBadge', () => {
       },
       {
         category: 'practical',
-        expectedDotColor: 'bg-purple-500',
-        expectedBgColor: 'bg-purple-500/10',
-        expectedBorderColor: 'border-purple-500/20',
+        expectedDotColor: 'bg-rose-500',
+        expectedBgColor: 'bg-rose-500/10',
+        expectedBorderColor: 'border-rose-500/20',
         expectedText: 'Practical',
       },
       {
@@ -139,9 +139,9 @@ describe('CultureBadge', () => {
       },
       {
         category: 'geography',
-        expectedDotColor: 'bg-emerald-500',
-        expectedBgColor: 'bg-emerald-500/10',
-        expectedBorderColor: 'border-emerald-500/20',
+        expectedDotColor: 'bg-teal-500',
+        expectedBgColor: 'bg-teal-500/10',
+        expectedBorderColor: 'border-teal-500/20',
         expectedText: 'Geography',
       },
     ];
@@ -202,10 +202,10 @@ describe('CultureBadge', () => {
     it('should return correct color for practical', () => {
       const colors = getCategoryColor('practical');
 
-      expect(colors.dot).toBe('bg-purple-500');
-      expect(colors.text).toContain('text-purple-700');
-      expect(colors.bg).toBe('bg-purple-500/10');
-      expect(colors.border).toBe('border-purple-500/20');
+      expect(colors.dot).toBe('bg-rose-500');
+      expect(colors.text).toContain('text-rose-700');
+      expect(colors.bg).toBe('bg-rose-500/10');
+      expect(colors.border).toBe('border-rose-500/20');
     });
 
     it('should return correct color for culture', () => {
@@ -220,10 +220,10 @@ describe('CultureBadge', () => {
     it('should return correct color for geography', () => {
       const colors = getCategoryColor('geography');
 
-      expect(colors.dot).toBe('bg-emerald-500');
-      expect(colors.text).toContain('text-emerald-700');
-      expect(colors.bg).toBe('bg-emerald-500/10');
-      expect(colors.border).toBe('border-emerald-500/20');
+      expect(colors.dot).toBe('bg-teal-500');
+      expect(colors.text).toContain('text-teal-700');
+      expect(colors.bg).toBe('bg-teal-500/10');
+      expect(colors.border).toBe('border-teal-500/20');
     });
   });
 });

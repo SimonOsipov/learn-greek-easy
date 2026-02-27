@@ -75,7 +75,9 @@ export const DecksGrid: React.FC<DecksGridProps> = ({
         // Culture decks might have tags like "history", "geography" etc.
         const cultureCategory = isCultureDeck
           ? (deck.tags?.find((tag) =>
-              ['history', 'geography', 'politics', 'culture', 'traditions'].includes(tag)
+              ['history', 'geography', 'politics', 'culture', 'traditions', 'practical'].includes(
+                tag
+              )
             ) as CultureCategory | undefined)
           : undefined;
 
@@ -85,7 +87,6 @@ export const DecksGrid: React.FC<DecksGridProps> = ({
               deck={deck}
               onClick={() => handleDeckClick(deck.id)}
               showProgress={true}
-              showStats={true}
               variant="grid"
               isCultureDeck={isCultureDeck}
               cultureCategory={cultureCategory}
