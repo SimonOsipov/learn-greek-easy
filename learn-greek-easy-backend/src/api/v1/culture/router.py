@@ -10,6 +10,7 @@ Endpoints:
 - GET /culture/decks/{deck_id}/questions - Get question queue for practice
 - POST /culture/questions/{question_id}/answer - Submit answer with SM-2
 - GET /culture/progress - Get overall culture learning progress
+- GET /culture/readiness - Get culture exam readiness assessment
 - GET /culture/categories - Get available categories
 
 Admin Endpoints (superuser only):
@@ -49,6 +50,7 @@ from src.schemas.culture import (
     CultureQuestionCreate,
     CultureQuestionQueue,
     CultureQuestionUpdate,
+    CultureReadinessResponse,
 )
 from src.services import CultureDeckService, CultureQuestionService
 from src.tasks import is_background_tasks_enabled, process_culture_answer_full_async
@@ -617,6 +619,25 @@ async def get_culture_progress(
     service = CultureQuestionService(db)
 
     return await service.get_culture_progress(user_id=current_user.id)
+
+
+@router.get(
+    "/readiness",
+    response_model=CultureReadinessResponse,
+    summary="Get culture exam readiness",
+    description="Returns a weighted readiness score and verdict based on the user's SRS stage distribution across culture exam categories.",
+    responses={
+        401: {"description": "Unauthorized"},
+        200: {"description": "Readiness assessment returned successfully"},
+    },
+)
+async def get_culture_readiness(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> CultureReadinessResponse:
+    """Get the user's culture exam readiness assessment."""
+    service = CultureQuestionService(db)
+    return await service.get_culture_readiness(user_id=current_user.id)
 
 
 # ============================================================================

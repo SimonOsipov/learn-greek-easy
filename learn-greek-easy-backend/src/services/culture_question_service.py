@@ -27,21 +27,42 @@ Example Usage:
         response = await service.bulk_create_questions(deck_id, questions)
 """
 
-from datetime import date
+import hashlib
+from datetime import date, datetime, timedelta
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import func, select
+import sqlalchemy as sa
+from sqlalchemy import case, func, literal, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from src.constants import (
+    ACCURACY_WINDOW_DAYS,
+    LOGICAL_CATEGORIES,
+    MOTIVATION_DELTA_DAYS,
+    MOTIVATION_DELTA_DECLINING_THRESHOLD,
+    MOTIVATION_DELTA_IMPROVING_THRESHOLD,
+    MOTIVATION_NEW_USER_TEMPLATES,
+    MOTIVATION_TEMPLATES,
+    REINFORCEMENT_ACCURACY_THRESHOLD,
+    REINFORCEMENT_MASTERY_THRESHOLD,
+    ReadinessConstants,
+)
 from src.core.exceptions import CultureDeckNotFoundException, CultureQuestionNotFoundException
 from src.core.logging import get_logger
 from src.core.sm2 import DEFAULT_EASINESS_FACTOR, calculate_next_review_date, calculate_sm2
-from src.db.models import CardStatus, CultureDeck, CultureQuestion, CultureQuestionStats
+from src.db.models import (
+    CardStatus,
+    CultureAnswerHistory,
+    CultureDeck,
+    CultureQuestion,
+    CultureQuestionStats,
+)
 from src.repositories import CultureQuestionRepository
 from src.repositories.culture_question_stats import CultureQuestionStatsRepository
 from src.schemas.culture import (
+    CategoryReadiness,
     CultureAnswerResponseFast,
     CultureAnswerResponseWithSM2,
     CultureDeckProgress,
@@ -54,6 +75,8 @@ from src.schemas.culture import (
     CultureQuestionQueue,
     CultureQuestionQueueItem,
     CultureQuestionUpdate,
+    CultureReadinessResponse,
+    MotivationMessage,
     SM2QuestionResult,
 )
 from src.services.s3_service import S3Service, get_s3_service
@@ -590,9 +613,372 @@ class CultureQuestionService:
             recent_sessions=[],  # Session tracking in future subtask
         )
 
+    async def get_culture_readiness(self, user_id: UUID) -> CultureReadinessResponse:  # noqa: C901
+        """Get culture exam readiness assessment.
+
+        Computes a weighted readiness score across exam-relevant categories
+        (history, geography, politics, culture, practical) based on SRS card stages.
+
+        Args:
+            user_id: User to assess readiness for
+
+        Returns:
+            CultureReadinessResponse with readiness percentage, verdict, and stats
+        """
+        logger.debug("Getting culture readiness")
+
+        # Map DB categories to logical categories at SQL level
+        logical_category = case(
+            (CultureDeck.category == "practical", literal("culture")),
+            else_=CultureDeck.category,
+        )
+
+        category_query = (
+            select(
+                logical_category.label("logical_category"),
+                func.count(CultureQuestion.id).label("questions_total"),
+                func.count(
+                    case(
+                        (
+                            CultureQuestionStats.status == CardStatus.LEARNING,
+                            CultureQuestionStats.id,
+                        )
+                    )
+                ).label("count_learning"),
+                func.count(
+                    case(
+                        (CultureQuestionStats.status == CardStatus.REVIEW, CultureQuestionStats.id)
+                    )
+                ).label("count_review"),
+                func.count(
+                    case(
+                        (
+                            CultureQuestionStats.status == CardStatus.MASTERED,
+                            CultureQuestionStats.id,
+                        )
+                    )
+                ).label("count_mastered"),
+                func.array_agg(func.distinct(CultureDeck.id.cast(sa.String))).label("deck_ids"),
+            )
+            .select_from(CultureQuestion)
+            .join(CultureDeck, CultureQuestion.deck_id == CultureDeck.id)
+            .outerjoin(
+                CultureQuestionStats,
+                (CultureQuestionStats.question_id == CultureQuestion.id)
+                & (CultureQuestionStats.user_id == user_id),
+            )
+            .where(
+                CultureDeck.is_active == True,  # noqa: E712
+                CultureDeck.category.in_(ReadinessConstants.INCLUDED_CATEGORIES),
+                CultureQuestion.deck_id.isnot(None),
+            )
+            .group_by(logical_category)
+        )
+        result = await self.db.execute(category_query)
+        rows = result.all()
+
+        # Build lookup from query results
+        category_data: dict[str, dict] = {}
+        for row in rows:
+            cat = row.logical_category
+            qt = row.questions_total
+            cm = row.count_mastered
+
+            if qt == 0:
+                readiness_pct = 0.0
+            else:
+                weighted_sum = (
+                    row.count_learning * ReadinessConstants.WEIGHT_LEARNING
+                    + row.count_review * ReadinessConstants.WEIGHT_REVIEW
+                    + cm * ReadinessConstants.WEIGHT_MASTERED
+                )
+                readiness_pct = (weighted_sum / qt) * 100
+
+            deck_ids = [d for d in (row.deck_ids or []) if d is not None]
+            category_data[cat] = {
+                "category": cat,
+                "readiness_percentage": round(readiness_pct, 1),
+                "questions_mastered": cm,
+                "questions_total": qt,
+                "deck_ids": deck_ids,
+            }
+
+        # Zero-fill all 4 logical categories
+        categories_list: list[CategoryReadiness] = []
+        for cat in LOGICAL_CATEGORIES:
+            if cat in category_data:
+                categories_list.append(CategoryReadiness(**category_data[cat]))
+            else:
+                categories_list.append(
+                    CategoryReadiness(
+                        category=cat,
+                        readiness_percentage=0.0,
+                        questions_mastered=0,
+                        questions_total=0,
+                        deck_ids=[],
+                    )
+                )
+
+        # Sort ascending: weakest categories first, alphabetical tie-break
+        categories_list.sort(key=lambda c: (c.readiness_percentage, c.category))
+
+        # Per-category accuracy from last 30 days
+        accuracy_cutoff = datetime.utcnow() - timedelta(days=ACCURACY_WINDOW_DAYS)
+
+        logical_cat_acc = case(
+            (CultureAnswerHistory.deck_category == "practical", literal("culture")),
+            else_=CultureAnswerHistory.deck_category,
+        )
+
+        cat_accuracy_query = (
+            select(
+                logical_cat_acc.label("logical_category"),
+                func.count().label("total_answers"),
+                func.sum(
+                    case(
+                        (CultureAnswerHistory.is_correct == True, literal(1)),  # noqa: E712
+                        else_=literal(0),
+                    )
+                ).label("correct_answers"),
+            )
+            .where(
+                CultureAnswerHistory.user_id == user_id,
+                CultureAnswerHistory.created_at >= accuracy_cutoff,
+                CultureAnswerHistory.deck_category.in_(ReadinessConstants.INCLUDED_CATEGORIES),
+            )
+            .group_by(logical_cat_acc)
+        )
+        cat_accuracy_result = await self.db.execute(cat_accuracy_query)
+        cat_accuracy_rows = cat_accuracy_result.all()
+
+        # Build accuracy lookup
+        cat_accuracy_map: dict[str, dict] = {}
+        for acc_row in cat_accuracy_rows:
+            total = acc_row.total_answers
+            correct = acc_row.correct_answers or 0
+            cat_accuracy_map[acc_row.logical_category] = {
+                "accuracy_percentage": round(correct / total * 100, 1) if total > 0 else None,
+                "total_answers": total,
+            }
+
+        # Merge accuracy into categories list
+        categories_list = [
+            cat.model_copy(
+                update={
+                    "accuracy_percentage": cat_accuracy_map.get(cat.category, {}).get(
+                        "accuracy_percentage"
+                    ),
+                    "needs_reinforcement": (
+                        (
+                            acc_pct := cat_accuracy_map.get(cat.category, {}).get(
+                                "accuracy_percentage"
+                            )
+                        )
+                        is not None
+                        and acc_pct < REINFORCEMENT_ACCURACY_THRESHOLD
+                        and cat.readiness_percentage >= REINFORCEMENT_MASTERY_THRESHOLD
+                    ),
+                }
+            )
+            for cat in categories_list
+        ]
+
+        # Overall totals from per-category aggregates
+        questions_total = sum(c.questions_total for c in categories_list)
+        count_mastered = sum(c.questions_mastered for c in categories_list)
+
+        # Overall weighted readiness (weighted average, not simple average)
+        overall_weighted_sum = 0.0
+        for row in rows:
+            overall_weighted_sum += (
+                row.count_learning * ReadinessConstants.WEIGHT_LEARNING
+                + row.count_review * ReadinessConstants.WEIGHT_REVIEW
+                + row.count_mastered * ReadinessConstants.WEIGHT_MASTERED
+            )
+
+        if questions_total == 0:
+            readiness_percentage = 0.0
+        else:
+            readiness_percentage = (overall_weighted_sum / questions_total) * 100
+
+        # Accuracy query: from culture_answer_history filtered by included categories
+        accuracy_query = select(
+            func.count().label("total_answers"),
+            func.sum(
+                case((CultureAnswerHistory.is_correct == True, 1), else_=0)  # noqa: E712
+            ).label("correct_answers"),
+        ).where(
+            CultureAnswerHistory.user_id == user_id,
+            CultureAnswerHistory.deck_category.in_(ReadinessConstants.INCLUDED_CATEGORIES),
+        )
+        accuracy_result = await self.db.execute(accuracy_query)
+        accuracy_row = accuracy_result.one()
+        total_answers = accuracy_row.total_answers or 0
+        correct_answers = accuracy_row.correct_answers or 0
+
+        accuracy_percentage: Optional[float] = None
+        if total_answers > 0:
+            accuracy_percentage = (correct_answers / total_answers) * 100
+
+        # Determine verdict from thresholds
+        verdict = ReadinessConstants.VERDICT_THRESHOLDS[-1][1]  # default lowest
+        for threshold, label in sorted(
+            ReadinessConstants.VERDICT_THRESHOLDS, key=lambda t: t[0], reverse=True
+        ):
+            if readiness_percentage >= threshold:
+                verdict = label
+                break
+
+        # For has_stats: check if user has any stats at all
+        total_count_learning = sum(row.count_learning for row in rows)
+        total_count_review = sum(row.count_review for row in rows)
+        has_stats = (count_mastered + total_count_review + total_count_learning) > 0
+
+        logger.info(
+            "Culture readiness retrieved",
+            extra={
+                "readiness_percentage": readiness_percentage,
+                "verdict": verdict,
+                "questions_total": questions_total,
+                "count_mastered": count_mastered,
+            },
+        )
+
+        # Compute motivational message
+        motivation = await self._compute_motivation(
+            user_id=user_id,
+            current_readiness=readiness_percentage,
+            current_verdict=verdict,
+            questions_total=questions_total,
+            questions_learned=count_mastered,
+            has_stats=has_stats,
+        )
+
+        return CultureReadinessResponse(
+            readiness_percentage=round(readiness_percentage, 1),
+            verdict=verdict,
+            questions_total=questions_total,
+            questions_learned=count_mastered,
+            accuracy_percentage=(
+                round(accuracy_percentage, 1) if accuracy_percentage is not None else None
+            ),
+            total_answers=total_answers,
+            categories=categories_list,
+            motivation=motivation,
+        )
+
     # =========================================================================
     # Private Helper Methods
     # =========================================================================
+
+    async def _compute_motivation(
+        self,
+        user_id: UUID,
+        current_readiness: float,
+        current_verdict: str,
+        questions_total: int,
+        questions_learned: int,
+        has_stats: bool,
+    ) -> Optional[MotivationMessage]:
+        """Compute weekly motivational message based on readiness trend."""
+        # Guard: no questions means no message
+        if questions_total == 0:
+            return None
+
+        # New user: no historical stats
+        if not has_stats:
+            iso_week = date.today().isocalendar()[1]
+            seed = f"{user_id}{iso_week}"
+            variant_index = int(hashlib.sha256(seed.encode()).hexdigest(), 16) % len(
+                MOTIVATION_NEW_USER_TEMPLATES
+            )
+            return MotivationMessage(
+                message_key=MOTIVATION_NEW_USER_TEMPLATES[variant_index],
+                params={"questionsTotal": questions_total},
+                delta_direction="new_user",
+                delta_percentage=0.0,
+            )
+
+        # Past readiness: stats with status counts from > MOTIVATION_DELTA_DAYS ago
+        cutoff = datetime.utcnow() - timedelta(days=MOTIVATION_DELTA_DAYS)
+        past_stats_query = (
+            select(
+                func.count(
+                    case(
+                        (
+                            CultureQuestionStats.status == CardStatus.LEARNING,
+                            CultureQuestionStats.id,
+                        )
+                    )
+                ).label("count_learning"),
+                func.count(
+                    case(
+                        (CultureQuestionStats.status == CardStatus.REVIEW, CultureQuestionStats.id)
+                    )
+                ).label("count_review"),
+                func.count(
+                    case(
+                        (
+                            CultureQuestionStats.status == CardStatus.MASTERED,
+                            CultureQuestionStats.id,
+                        )
+                    )
+                ).label("count_mastered"),
+            )
+            .select_from(CultureQuestion)
+            .join(CultureDeck, CultureQuestion.deck_id == CultureDeck.id)
+            .outerjoin(
+                CultureQuestionStats,
+                (CultureQuestionStats.question_id == CultureQuestion.id)
+                & (CultureQuestionStats.user_id == user_id)
+                & (CultureQuestionStats.updated_at <= cutoff),
+            )
+            .where(
+                CultureDeck.category.in_(ReadinessConstants.INCLUDED_CATEGORIES),
+                CultureDeck.is_active == True,  # noqa: E712
+            )
+        )
+        past_result = await self.db.execute(past_stats_query)
+        past_row = past_result.one()
+
+        if questions_total == 0:
+            past_readiness = 0.0
+        else:
+            past_weighted = (
+                past_row.count_learning * ReadinessConstants.WEIGHT_LEARNING
+                + past_row.count_review * ReadinessConstants.WEIGHT_REVIEW
+                + past_row.count_mastered * ReadinessConstants.WEIGHT_MASTERED
+            )
+            past_readiness = (past_weighted / questions_total) * 100
+
+        delta = current_readiness - past_readiness
+        if delta > MOTIVATION_DELTA_IMPROVING_THRESHOLD:
+            direction = "improving"
+        elif delta < MOTIVATION_DELTA_DECLINING_THRESHOLD:
+            direction = "declining"
+        else:
+            direction = "stagnant"
+
+        templates = MOTIVATION_TEMPLATES.get((direction, current_verdict), [])
+        if not templates:
+            return None
+
+        iso_week = date.today().isocalendar()[1]
+        seed = f"{user_id}{iso_week}"
+        variant_index = int(hashlib.sha256(seed.encode()).hexdigest(), 16) % len(templates)
+
+        return MotivationMessage(
+            message_key=templates[variant_index],
+            params={
+                "currentPercent": round(current_readiness, 1),
+                "previousPercent": round(past_readiness, 1),
+                "delta": round(abs(delta), 1),
+                "questionsTotal": questions_total,
+                "questionsLearned": questions_learned,
+            },
+            delta_direction=direction,
+            delta_percentage=round(delta, 1),
+        )
 
     async def _get_active_deck(self, deck_id: UUID) -> CultureDeck:
         """Get deck or raise 404.

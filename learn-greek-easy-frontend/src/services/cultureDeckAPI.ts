@@ -129,6 +129,43 @@ export interface CultureAnswerResponse {
   deck_category: string;
 }
 
+/**
+ * Per-category readiness breakdown
+ */
+export interface CategoryReadiness {
+  category: 'history' | 'geography' | 'politics' | 'culture';
+  readiness_percentage: number;
+  questions_mastered: number;
+  questions_total: number;
+  deck_ids: string[];
+  accuracy_percentage: number | null;
+  needs_reinforcement: boolean;
+}
+
+/**
+ * Motivation message with delta tracking
+ */
+export interface MotivationMessage {
+  message_key: string;
+  params: Record<string, string | number>;
+  delta_direction: 'improving' | 'stagnant' | 'declining' | 'new_user';
+  delta_percentage: number;
+}
+
+/**
+ * Response from the culture exam readiness endpoint
+ */
+export interface CultureReadinessResponse {
+  readiness_percentage: number;
+  verdict: 'not_ready' | 'getting_there' | 'ready' | 'thoroughly_prepared';
+  questions_learned: number;
+  questions_total: number;
+  accuracy_percentage: number | null;
+  total_answers: number;
+  categories: CategoryReadiness[];
+  motivation: MotivationMessage | null;
+}
+
 // ============================================
 // Culture Deck API Methods
 // ============================================
@@ -185,5 +222,12 @@ export const cultureDeckAPI = {
       `/api/v1/culture/questions/${questionId}/answer`,
       request
     );
+  },
+
+  /**
+   * Get culture exam readiness assessment
+   */
+  getReadiness: async (): Promise<CultureReadinessResponse> => {
+    return api.get<CultureReadinessResponse>('/api/v1/culture/readiness');
   },
 };

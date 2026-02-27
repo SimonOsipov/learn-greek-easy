@@ -13,6 +13,8 @@ import {
   LevelProgressCard,
   AchievementsGrid,
   achievementConfigs,
+  CultureReadinessCard,
+  MotivationalMessageCard,
 } from '@/components/statistics';
 import type { Achievement } from '@/components/statistics';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -27,6 +29,29 @@ import { useXPStore, selectXPStats } from '@/stores/xpStore';
  */
 const StatisticsLoadingSkeleton: React.FC = () => (
   <div className="space-y-6">
+    {/* Culture Readiness Skeleton */}
+    <Card>
+      <CardContent className="flex items-center gap-6 p-6">
+        <Skeleton className="h-[120px] w-[120px] shrink-0 rounded-full" />
+        <div className="flex-1 space-y-3">
+          <Skeleton className="h-5 w-48" />
+          <Skeleton className="h-4 w-64" />
+        </div>
+      </CardContent>
+      <CardContent>
+        {/* Category row skeletons */}
+        <div className="mt-4 space-y-3">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="flex items-center gap-3">
+              <Skeleton className="h-4 w-20 shrink-0" />
+              <Skeleton className="h-3 w-full" />
+              <Skeleton className="h-3 w-16 shrink-0" />
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+
     {/* Stats Grid Skeleton */}
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {[1, 2, 3, 4].map((i) => (
@@ -152,6 +177,17 @@ const Statistics: React.FC = () => {
         <h1 className="text-2xl font-semibold text-foreground md:text-3xl">{t('page.title')}</h1>
         <p className="mt-2 text-muted-foreground">{t('page.subtitle')}</p>
       </div>
+
+      {/* Culture Exam Readiness */}
+      <section aria-labelledby="culture-readiness-heading" className="mb-6">
+        <h2 id="culture-readiness-heading" className="sr-only">
+          {t('cultureReadiness.title')}
+        </h2>
+        <CultureReadinessCard />
+        <div className="mt-3">
+          <MotivationalMessageCard />
+        </div>
+      </section>
 
       {/* User Stats Section */}
       <section aria-labelledby="stats-heading">

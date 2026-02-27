@@ -89,6 +89,97 @@
     },
     "noData": "No data available"
   },
+  "cultureReadiness": {
+    "title": "Culture Exam Readiness",
+    "questionsLearned": "Questions Learned",
+    "overallAccuracy": "Overall Accuracy",
+    "noAccuracyData": "N/A",
+    "verdicts": {
+      "not_ready": "Not Ready",
+      "getting_there": "Getting There",
+      "ready": "Ready",
+      "thoroughly_prepared": "Thoroughly Prepared"
+    },
+    "categoryBreakdown": {
+      "title": "Progress by Category",
+      "mastered": "{{mastered}} / {{total}} mastered",
+      "accuracy": "Accuracy: {{value}}%",
+      "accuracyNA": "Accuracy: N/A",
+      "needsReinforcement": "Needs Review",
+      "needsReinforcementTooltip": "High mastery but low recent accuracy — consider reviewing this category",
+      "categories": {
+        "history": "History",
+        "geography": "Geography",
+        "politics": "Politics",
+        "culture": "Culture"
+      }
+    },
+    "studyWeakest": {
+      "button": "Practice {{category}} — {{percentage}}%",
+      "ariaLabel": "Practice {{category}}, currently at {{percentage}}% readiness"
+    }
+  },
+  "cultureMotivation": {
+    "improving": {
+      "notReady": {
+        "1": "Nice progress! You climbed from {{previousPercent}}% to {{currentPercent}}% this week.",
+        "2": "You're moving in the right direction — up {{delta}}% from last week. Keep it up!"
+      },
+      "gettingThere": {
+        "1": "You're getting closer! Up {{delta}}% since last week — keep the momentum.",
+        "2": "Great improvement! You went from {{previousPercent}}% to {{currentPercent}}%. The finish line is in sight."
+      },
+      "ready": {
+        "1": "Impressive growth — {{currentPercent}}% and climbing! You've mastered {{questionsLearned}} of {{questionsTotal}} questions.",
+        "2": "Up {{delta}}% this week! At {{currentPercent}}%, you're well prepared for the culture section."
+      },
+      "thoroughlyPrepared": {
+        "1": "Outstanding! You jumped to {{currentPercent}}% — you're thoroughly prepared with {{questionsLearned}} of {{questionsTotal}} questions mastered.",
+        "2": "From {{previousPercent}}% to {{currentPercent}}% — incredible dedication! The culture exam holds no surprises for you."
+      }
+    },
+    "stagnant": {
+      "notReady": {
+        "1": "You've been holding steady. Even small steps forward this week will add up.",
+        "2": "Still at {{currentPercent}}%. Try reviewing a few culture cards today to get the ball rolling."
+      },
+      "gettingThere": {
+        "1": "Holding at {{currentPercent}}% — you're on the right track. A focused session could push you higher.",
+        "2": "Steady at {{currentPercent}}%. You've learned {{questionsLearned}} of {{questionsTotal}} questions — keep going to close the gap."
+      },
+      "ready": {
+        "1": "Still at {{currentPercent}}% — a solid position. A little extra effort could make you exam-ready.",
+        "2": "You're holding strong at {{currentPercent}}% with {{questionsLearned}} questions mastered. Push for the next milestone!"
+      },
+      "thoroughlyPrepared": {
+        "1": "Rock solid at {{currentPercent}}%! You've mastered {{questionsLearned}} of {{questionsTotal}} culture questions.",
+        "2": "Consistently at {{currentPercent}}% — you clearly know your stuff. Keep reviewing to stay sharp."
+      }
+    },
+    "declining": {
+      "notReady": {
+        "1": "Your score slipped from {{previousPercent}}% to {{currentPercent}}%. A quick review can turn things around.",
+        "2": "Down {{delta}}% this week. Don't worry — revisiting a few culture cards will help you bounce back."
+      },
+      "gettingThere": {
+        "1": "You dipped from {{previousPercent}}% to {{currentPercent}}%. A short review session should get you back on track.",
+        "2": "Down {{delta}}% but still at {{currentPercent}}%. A bit of practice will reverse the slide."
+      },
+      "ready": {
+        "1": "Your readiness dipped slightly this week. A quick review session should bring it back up.",
+        "2": "Slipped to {{currentPercent}}% from {{previousPercent}}%. You still know {{questionsLearned}} questions — a refresher will help."
+      },
+      "thoroughlyPrepared": {
+        "1": "A small dip to {{currentPercent}}%, but you're still in great shape with {{questionsLearned}} of {{questionsTotal}} mastered.",
+        "2": "Down slightly from {{previousPercent}}% to {{currentPercent}}%. A brief review will have you back at peak readiness."
+      }
+    },
+    "newUser": {
+      "1": "Start your culture exam journey! Begin with any deck to see your progress here.",
+      "2": "Ready to explore Greek culture? Complete some culture questions to track your readiness.",
+      "3": "Welcome! Your culture exam readiness will appear here once you start answering culture questions."
+    }
+  },
   "error": {
     "loadingData": "Error loading data: {{error}}"
   }

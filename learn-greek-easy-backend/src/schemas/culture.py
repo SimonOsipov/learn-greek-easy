@@ -267,6 +267,83 @@ class CultureProgressResponse(BaseModel):
 
 
 # ============================================================================
+# Motivation Message Schema
+# ============================================================================
+
+
+class MotivationMessage(BaseModel):
+    """Motivational message based on user's progress delta and readiness level."""
+
+    message_key: str = Field(..., description="i18n translation key")
+    params: dict[str, Any] = Field(..., description="Interpolation parameters")
+    delta_direction: Literal["improving", "stagnant", "declining", "new_user"] = Field(
+        ..., description="Direction of progress change"
+    )
+    delta_percentage: float = Field(..., description="Signed delta from last week")
+
+
+# ============================================================================
+# Culture Exam Readiness Schema
+# ============================================================================
+
+ReadinessVerdict = Literal["not_ready", "getting_there", "ready", "thoroughly_prepared"]
+
+
+class CategoryReadiness(BaseModel):
+    """Readiness data for a single logical culture category."""
+
+    category: str = Field(
+        ..., description="Logical category key: history, geography, politics, culture"
+    )
+    readiness_percentage: float = Field(..., ge=0, le=100, description="Weighted readiness 0-100")
+    questions_mastered: int = Field(..., ge=0, description="Questions with MASTERED status")
+    questions_total: int = Field(..., ge=0, description="Total questions in this category")
+    deck_ids: list[str] = Field(
+        default_factory=list, description="UUIDs of decks in this logical category"
+    )
+    accuracy_percentage: Optional[float] = Field(
+        None,
+        ge=0,
+        le=100,
+        description="Per-category accuracy from last 30 days. Null if no answers in window.",
+    )
+    needs_reinforcement: bool = Field(
+        default=False,
+        description="True when accuracy < 70% and readiness >= 80%",
+    )
+
+
+class CultureReadinessResponse(BaseModel):
+    """Response schema for culture exam readiness assessment.
+
+    Calculates a weighted readiness score based on SRS card stages
+    across exam-relevant categories and maps it to a verdict.
+    """
+
+    readiness_percentage: float = Field(
+        ..., ge=0, le=100, description="Weighted readiness score (0-100)"
+    )
+    verdict: ReadinessVerdict = Field(..., description="Human-readable readiness verdict")
+    questions_learned: int = Field(..., ge=0, description="Questions with MASTERED status")
+    questions_total: int = Field(
+        ..., ge=0, description="Total questions across included categories"
+    )
+    accuracy_percentage: Optional[float] = Field(
+        None, ge=0, le=100, description="Overall answer accuracy (null if no answers)"
+    )
+    total_answers: int = Field(
+        ..., ge=0, description="Total answers submitted across included categories"
+    )
+    categories: list[CategoryReadiness] = Field(
+        default_factory=list,
+        description="Per-category readiness breakdown, sorted ascending by readiness_percentage",
+    )
+    motivation: Optional[MotivationMessage] = Field(
+        None, description="Motivational message (null when no content exists)"
+    )
+
+
+# ============================================================================
 # Session Summary Schema (Reuse pattern from existing)
 # ============================================================================
 

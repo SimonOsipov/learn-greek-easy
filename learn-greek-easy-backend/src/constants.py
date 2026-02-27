@@ -96,6 +96,108 @@ class SRSConstants:
     MASTERED_THRESHOLD = 21
 
 
+# Culture Exam Readiness Constants
+class ReadinessConstants:
+    """Constants for culture exam readiness calculation."""
+
+    # Weighted contribution of each SRS stage to readiness score
+    WEIGHT_LEARNING = 0.25
+    WEIGHT_REVIEW = 0.5
+    WEIGHT_MASTERED = 1.0
+
+    # Verdict thresholds: (min_percent, verdict_key)
+    # Ordered descending for first-match lookup
+    VERDICT_THRESHOLDS: tuple[tuple[int, str], ...] = (
+        (85, "thoroughly_prepared"),
+        (60, "ready"),
+        (40, "getting_there"),
+        (0, "not_ready"),
+    )
+
+    # Categories included in readiness calculation
+    # Excludes "traditions" which is not part of the official exam
+    INCLUDED_CATEGORIES = ("history", "geography", "politics", "culture", "practical")
+
+
+# Category mapping: DB categories → logical UI categories
+CATEGORY_DB_TO_LOGICAL: dict[str, str] = {
+    "history": "history",
+    "geography": "geography",
+    "politics": "politics",
+    "culture": "culture",
+    "practical": "culture",
+}
+LOGICAL_CATEGORIES = ("history", "geography", "politics", "culture")
+
+# Accuracy & Reinforcement Thresholds
+ACCURACY_WINDOW_DAYS = 30
+REINFORCEMENT_ACCURACY_THRESHOLD = 70.0
+REINFORCEMENT_MASTERY_THRESHOLD = 80.0
+
+
+# Motivation Message Constants
+MOTIVATION_DELTA_IMPROVING_THRESHOLD = 3.0
+MOTIVATION_DELTA_DECLINING_THRESHOLD = -3.0
+MOTIVATION_DELTA_DAYS = 7
+
+MOTIVATION_TEMPLATES: dict[tuple[str, str], list[str]] = {
+    ("improving", "not_ready"): [
+        "cultureMotivation.improving.notReady.1",
+        "cultureMotivation.improving.notReady.2",
+    ],
+    ("improving", "getting_there"): [
+        "cultureMotivation.improving.gettingThere.1",
+        "cultureMotivation.improving.gettingThere.2",
+    ],
+    ("improving", "ready"): [
+        "cultureMotivation.improving.ready.1",
+        "cultureMotivation.improving.ready.2",
+    ],
+    ("improving", "thoroughly_prepared"): [
+        "cultureMotivation.improving.thoroughlyPrepared.1",
+        "cultureMotivation.improving.thoroughlyPrepared.2",
+    ],
+    ("stagnant", "not_ready"): [
+        "cultureMotivation.stagnant.notReady.1",
+        "cultureMotivation.stagnant.notReady.2",
+    ],
+    ("stagnant", "getting_there"): [
+        "cultureMotivation.stagnant.gettingThere.1",
+        "cultureMotivation.stagnant.gettingThere.2",
+    ],
+    ("stagnant", "ready"): [
+        "cultureMotivation.stagnant.ready.1",
+        "cultureMotivation.stagnant.ready.2",
+    ],
+    ("stagnant", "thoroughly_prepared"): [
+        "cultureMotivation.stagnant.thoroughlyPrepared.1",
+        "cultureMotivation.stagnant.thoroughlyPrepared.2",
+    ],
+    ("declining", "not_ready"): [
+        "cultureMotivation.declining.notReady.1",
+        "cultureMotivation.declining.notReady.2",
+    ],
+    ("declining", "getting_there"): [
+        "cultureMotivation.declining.gettingThere.1",
+        "cultureMotivation.declining.gettingThere.2",
+    ],
+    ("declining", "ready"): [
+        "cultureMotivation.declining.ready.1",
+        "cultureMotivation.declining.ready.2",
+    ],
+    ("declining", "thoroughly_prepared"): [
+        "cultureMotivation.declining.thoroughlyPrepared.1",
+        "cultureMotivation.declining.thoroughlyPrepared.2",
+    ],
+}
+
+MOTIVATION_NEW_USER_TEMPLATES: list[str] = [
+    "cultureMotivation.newUser.1",
+    "cultureMotivation.newUser.2",
+    "cultureMotivation.newUser.3",
+]
+
+
 # Pagination
 DEFAULT_PAGE = 1
 DEFAULT_PAGE_SIZE = 20
