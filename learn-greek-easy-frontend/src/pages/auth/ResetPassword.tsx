@@ -17,16 +17,17 @@
  * the user would be redirected to dashboard before setting their password.
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { CheckCircle, Eye, EyeOff, Lock } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Eye, EyeOff, Lock } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { z } from 'zod';
 
 import { AuthLayout } from '@/components/auth/AuthLayout';
+import { PasswordStrengthIndicator } from '@/components/auth/PasswordStrengthIndicator';
 import { SubmitButton } from '@/components/forms';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -42,6 +43,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import log from '@/lib/logger';
 import { supabase } from '@/lib/supabaseClient';
+import { mapSupabaseResetError } from '@/utils/auth-errors';
 
 /** Form state machine states */
 type FormState = 'form' | 'success';
@@ -75,6 +77,7 @@ export const ResetPassword: React.FC = () => {
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<ResetPasswordFormData>({
     resolver: zodResolver(resetPasswordSchema),
@@ -85,6 +88,18 @@ export const ResetPassword: React.FC = () => {
     mode: 'onSubmit',
     reValidateMode: 'onChange',
   });
+
+  const passwordValue = watch('password');
+
+  const [userEmail, setUserEmail] = useState<string>('');
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user?.email) {
+        setUserEmail(data.user.email);
+      }
+    });
+  }, []);
 
   /**
    * Handle form submission
@@ -106,9 +121,8 @@ export const ResetPassword: React.FC = () => {
       log.info('[ResetPassword] Password updated successfully');
       setFormState('success');
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : t('resetPassword.errors.updateFailed');
-      setFormError(errorMessage);
+      const error = err instanceof Error ? err : { message: String(err) };
+      setFormError(t(`resetPassword.errors.${mapSupabaseResetError(error.message)}`));
       log.error('[ResetPassword] Password reset failed:', err);
     } finally {
       setIsSubmitting(false);
@@ -129,8 +143,8 @@ export const ResetPassword: React.FC = () => {
       <AuthLayout>
         <Card className="shadow-xl" data-testid="reset-password-success-card">
           <CardHeader className="space-y-1 text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-              <CheckCircle className="h-8 w-8 text-green-600" />
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+              <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
             </div>
             <CardTitle className="text-2xl font-bold" data-testid="success-title">
               {t('resetPassword.successTitle')}
@@ -179,6 +193,18 @@ export const ResetPassword: React.FC = () => {
               </Alert>
             )}
 
+            {/* Hidden username field for password managers */}
+            <input
+              type="email"
+              value={userEmail}
+              autoComplete="username"
+              aria-hidden="true"
+              tabIndex={-1}
+              className="sr-only"
+              readOnly
+              data-testid="hidden-email-input"
+            />
+
             {/* New Password field */}
             <div className="space-y-2">
               <Label htmlFor="password">{t('resetPassword.newPassword')}</Label>
@@ -213,6 +239,7 @@ export const ResetPassword: React.FC = () => {
                   {getErrorMessage(errors.password.message)}
                 </p>
               )}
+              <PasswordStrengthIndicator password={passwordValue} className="mt-1" />
             </div>
 
             {/* Confirm Password field */}
@@ -266,6 +293,15 @@ export const ResetPassword: React.FC = () => {
             >
               {t('resetPassword.submit')}
             </SubmitButton>
+
+            <div className="pt-2">
+              <Button asChild variant="outline" className="w-full">
+                <Link to="/login" data-testid="back-to-login-button">
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  {t('resetPassword.backToLogin')}
+                </Link>
+              </Button>
+            </div>
           </CardContent>
         </form>
       </Card>
