@@ -21,6 +21,8 @@ function createMockAudio() {
       listeners[event].push(handler);
     }),
     removeEventListener: vi.fn(),
+    currentTime: 0,
+    playbackRate: 1,
     __listeners: listeners,
     __emit: (event: string) => {
       listeners[event]?.forEach((h) => h());
@@ -37,6 +39,7 @@ beforeEach(() => {
     vi.fn(() => mockAudioInstance)
   );
   vi.clearAllMocks();
+  localStorage.clear();
 });
 
 // --- Tests ---
@@ -248,6 +251,124 @@ describe('useAudioPlayer Hook', () => {
       expect(result.current.play).toBe(firstRender.play);
       expect(result.current.pause).toBe(firstRender.pause);
       expect(result.current.toggle).toBe(firstRender.toggle);
+    });
+  });
+
+  describe('speed / setSpeed', () => {
+    it('1. default speed is 1 when localStorage is empty', () => {
+      const { result } = renderHook(() => useAudioPlayer('https://example.com/audio.mp3'));
+      expect(result.current.speed).toBe(1);
+    });
+
+    it('2. reads persisted 0.75 from localStorage', () => {
+      localStorage.setItem('greekly_audio_speed', '0.75');
+      const { result } = renderHook(() => useAudioPlayer('https://example.com/audio.mp3'));
+      expect(result.current.speed).toBe(0.75);
+    });
+
+    it('3. treats "1.25" in localStorage as 1', () => {
+      localStorage.setItem('greekly_audio_speed', '1.25');
+      const { result } = renderHook(() => useAudioPlayer('https://example.com/audio.mp3'));
+      expect(result.current.speed).toBe(1);
+    });
+
+    it('4. treats "abc" in localStorage as 1', () => {
+      localStorage.setItem('greekly_audio_speed', 'abc');
+      const { result } = renderHook(() => useAudioPlayer('https://example.com/audio.mp3'));
+      expect(result.current.speed).toBe(1);
+    });
+
+    it('5. persists speed to localStorage on setSpeed', () => {
+      const { result } = renderHook(() => useAudioPlayer('https://example.com/audio.mp3'));
+
+      act(() => {
+        result.current.setSpeed(0.75);
+      });
+
+      expect(localStorage.getItem('greekly_audio_speed')).toBe('0.75');
+      expect(result.current.speed).toBe(0.75);
+    });
+
+    it('6. applies playbackRate on play()', async () => {
+      localStorage.setItem('greekly_audio_speed', '0.75');
+      const { result } = renderHook(() => useAudioPlayer('https://example.com/audio.mp3'));
+
+      await act(async () => {
+        result.current.play();
+      });
+
+      expect(mockAudioInstance.playbackRate).toBe(0.75);
+    });
+
+    it('7. applies playbackRate on toggle() play branch', async () => {
+      localStorage.setItem('greekly_audio_speed', '0.75');
+      const { result } = renderHook(() => useAudioPlayer('https://example.com/audio.mp3'));
+
+      await act(async () => {
+        result.current.toggle();
+      });
+
+      expect(mockAudioInstance.playbackRate).toBe(0.75);
+    });
+
+    it('8. stop-and-replay when setSpeed called during playback', async () => {
+      const { result } = renderHook(() => useAudioPlayer('https://example.com/audio.mp3'));
+
+      await act(async () => {
+        result.current.play();
+      });
+
+      expect(result.current.isPlaying).toBe(true);
+
+      await act(async () => {
+        result.current.setSpeed(0.75);
+      });
+
+      expect(mockAudioInstance.pause).toHaveBeenCalled();
+      expect(mockAudioInstance.currentTime).toBe(0);
+      expect(mockAudioInstance.playbackRate).toBe(0.75);
+      expect(mockAudioInstance.play).toHaveBeenCalledTimes(2);
+    });
+
+    it('9. no playback when setSpeed called while NOT playing', async () => {
+      const { result } = renderHook(() => useAudioPlayer('https://example.com/audio.mp3'));
+
+      expect(result.current.isPlaying).toBe(false);
+
+      act(() => {
+        result.current.setSpeed(0.75);
+      });
+
+      expect(mockAudioInstance.play).not.toHaveBeenCalled();
+      expect(result.current.speed).toBe(0.75);
+    });
+
+    it('10. speed is maintained after URL change re-creates Audio element', async () => {
+      const { result, rerender } = renderHook(({ url }) => useAudioPlayer(url), {
+        initialProps: { url: 'https://example.com/audio1.mp3' as string | null },
+      });
+
+      act(() => {
+        result.current.setSpeed(0.75);
+      });
+
+      rerender({ url: 'https://example.com/audio2.mp3' });
+
+      // speed state is maintained
+      expect(result.current.speed).toBe(0.75);
+
+      // new audio element gets the correct playbackRate on next play
+      mockAudioInstance = createMockAudio();
+      vi.stubGlobal(
+        'Audio',
+        vi.fn(() => mockAudioInstance)
+      );
+
+      await act(async () => {
+        result.current.play();
+      });
+
+      expect(mockAudioInstance.playbackRate).toBe(0.75);
     });
   });
 });

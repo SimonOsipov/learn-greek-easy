@@ -18,6 +18,8 @@ const mockDefaultReturn = {
   play: vi.fn(),
   pause: vi.fn(),
   toggle: vi.fn(),
+  speed: 1 as const,
+  setSpeed: vi.fn(),
 };
 
 beforeEach(() => {
