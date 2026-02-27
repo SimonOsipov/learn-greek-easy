@@ -45,7 +45,9 @@ export type AnalyticsEventName =
   | 'reactivate_confirmed'
   // Statistics events
   | 'culture_readiness_viewed'
-  | 'culture_category_clicked';
+  | 'culture_category_clicked'
+  | 'culture_weak_area_cta_clicked'
+  | 'culture_motivation_viewed';
 
 // Base properties included with all events
 interface BaseEventProperties {
