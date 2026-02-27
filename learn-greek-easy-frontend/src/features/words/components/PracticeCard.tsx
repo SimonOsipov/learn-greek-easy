@@ -14,6 +14,7 @@ import { Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { PartOfSpeechBadge } from '@/components/review/grammar';
+import { AudioSpeedToggle } from '@/components/ui/AudioSpeedToggle';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -166,36 +167,19 @@ function CardFront({
   tapToRevealLabel,
   partOfSpeech,
   cardType,
-  audioUrl,
-  onAudioPlay,
-  onAudioError,
-  showAudio,
-  controlledState,
 }: {
   front: MeaningFrontContent;
   typeBadgeLabel: string;
   tapToRevealLabel: string;
   partOfSpeech: PartOfSpeech | null;
   cardType: string;
-  audioUrl?: string | null;
-  onAudioPlay?: () => void;
-  onAudioError?: (error: string) => void;
-  showAudio?: boolean;
-  controlledState?: {
-    isPlaying: boolean;
-    isLoading: boolean;
-    error: string | null;
-    toggle: () => void;
-    speed?: AudioSpeed;
-    setSpeed?: (s: AudioSpeed) => void;
-  };
 }) {
   const mainFontSize = cardType === 'sentence_translation' ? 'text-xl' : 'text-3xl';
 
   return (
     <div data-testid="practice-card-front" className="flex flex-col items-center gap-6 py-6">
       {/* Badges row */}
-      <div className="flex w-full items-center gap-2">
+      <div className="flex w-full items-start justify-start gap-2">
         <Badge className="bg-[#6366f1]/10 text-[#6366f1] hover:bg-[#6366f1]/10">
           {typeBadgeLabel}
         </Badge>
@@ -206,20 +190,7 @@ function CardFront({
       <p className="text-center text-sm text-muted-foreground">{front.prompt}</p>
 
       {/* Main text */}
-      {showAudio ? (
-        <div className="flex items-center justify-center gap-2">
-          <p className={cn('break-words text-center font-bold', mainFontSize)}>{front.main}</p>
-          <SpeakerButton
-            audioUrl={audioUrl}
-            size="sm"
-            onPlay={onAudioPlay}
-            onError={onAudioError}
-            controlledState={controlledState}
-          />
-        </div>
-      ) : (
-        <p className={cn('break-words text-center font-bold', mainFontSize)}>{front.main}</p>
-      )}
+      <p className={cn('break-words text-center font-bold', mainFontSize)}>{front.main}</p>
 
       {/* Sub text (pronunciation) */}
       {front.sub && <p className="text-center text-sm italic text-muted-foreground">{front.sub}</p>}
@@ -243,11 +214,6 @@ function CardBack({
   displayAnswer,
   onRate,
   cardType,
-  audioUrl,
-  onAudioPlay,
-  onAudioError,
-  showAudio,
-  controlledState,
 }: {
   back: MeaningBackContent;
   typeBadgeLabel: string;
@@ -258,25 +224,13 @@ function CardBack({
   displayAnswer: string;
   onRate?: (rating: number) => void;
   cardType: string;
-  audioUrl?: string | null;
-  onAudioPlay?: () => void;
-  onAudioError?: (error: string) => void;
-  showAudio?: boolean;
-  controlledState?: {
-    isPlaying: boolean;
-    isLoading: boolean;
-    error: string | null;
-    toggle: () => void;
-    speed?: AudioSpeed;
-    setSpeed?: (s: AudioSpeed) => void;
-  };
 }) {
   const answerFontSize = cardType === 'sentence_translation' ? 'text-xl' : 'text-3xl';
 
   return (
     <div data-testid="practice-card-back" className="flex animate-fade-in flex-col gap-6 py-6">
       {/* Badges row */}
-      <div className="flex w-full items-center gap-2">
+      <div className="flex w-full items-start justify-start gap-2">
         <Badge className="bg-[#6366f1]/10 text-[#6366f1] hover:bg-[#6366f1]/10">
           {typeBadgeLabel}
         </Badge>
@@ -290,22 +244,7 @@ function CardBack({
           <span className="text-sm font-medium text-emerald-600">{answerLabel}</span>
         </div>
 
-        {showAudio ? (
-          <div className="flex items-center justify-center gap-2">
-            <p className={cn('break-words text-center font-bold', answerFontSize)}>
-              {displayAnswer}
-            </p>
-            <SpeakerButton
-              audioUrl={audioUrl}
-              size="sm"
-              onPlay={onAudioPlay}
-              onError={onAudioError}
-              controlledState={controlledState}
-            />
-          </div>
-        ) : (
-          <p className={cn('break-words text-center font-bold', answerFontSize)}>{displayAnswer}</p>
-        )}
+        <p className={cn('break-words text-center font-bold', answerFontSize)}>{displayAnswer}</p>
 
         {back.answer_sub && (
           <p className="break-words text-center text-lg text-muted-foreground">{back.answer_sub}</p>
@@ -434,6 +373,7 @@ export function PracticeCard({
 
   const showAudioOnFront = card.card_type === 'meaning_el_to_en' || isSentenceElToTarget;
   const showAudioOnBack = card.card_type === 'meaning_en_to_el' || isSentenceTargetToEl;
+  const showAudioCluster = isFlipped ? showAudioOnBack : showAudioOnFront;
 
   const handleAudioPlay = () => {
     if (isSentenceCard) {
@@ -639,11 +579,6 @@ export function PracticeCard({
             tapToRevealLabel={tapToRevealLabel}
             partOfSpeech={partOfSpeech}
             cardType={card.card_type}
-            audioUrl={showAudioOnFront ? audioUrl : null}
-            onAudioPlay={showAudioOnFront ? handleAudioPlay : undefined}
-            onAudioError={showAudioOnFront ? handleAudioError : undefined}
-            showAudio={showAudioOnFront}
-            controlledState={showAudioOnFront ? audioControlledState : undefined}
           />
         ) : (
           <CardBack
@@ -656,14 +591,29 @@ export function PracticeCard({
             displayAnswer={displayAnswer}
             onRate={onRate}
             cardType={card.card_type}
-            audioUrl={showAudioOnBack ? audioUrl : null}
-            onAudioPlay={showAudioOnBack ? handleAudioPlay : undefined}
-            onAudioError={showAudioOnBack ? handleAudioError : undefined}
-            showAudio={showAudioOnBack}
-            controlledState={showAudioOnBack ? audioControlledState : undefined}
           />
         )}
       </CardContent>
+      {showAudioCluster && audioUrl && (
+        <div
+          className="absolute bottom-3 right-3 z-10 flex items-center gap-2"
+          data-testid="audio-cluster"
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
+        >
+          <AudioSpeedToggle
+            speed={audioState?.speed ?? 1}
+            onSpeedChange={audioState?.setSpeed ?? (() => {})}
+          />
+          <SpeakerButton
+            audioUrl={audioUrl}
+            size="sm"
+            onPlay={handleAudioPlay}
+            onError={handleAudioError}
+            controlledState={audioControlledState}
+          />
+        </div>
+      )}
     </Card>
   );
 }
