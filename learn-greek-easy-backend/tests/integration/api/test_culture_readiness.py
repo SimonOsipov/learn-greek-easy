@@ -81,13 +81,12 @@ class TestGetReadinessEndpoint:
 
         assert response.status_code == 401
 
+    @pytest.mark.usefixtures("culture_deck", "culture_questions")
     @pytest.mark.asyncio
     async def test_readiness_returns_correct_schema(
         self,
         client: AsyncClient,
         auth_headers: dict,
-        culture_deck: CultureDeck,
-        culture_questions: list[CultureQuestion],
     ):
         """Authenticated request returns 200 with correct response schema."""
         response = await client.get("/api/v1/culture/readiness", headers=auth_headers)

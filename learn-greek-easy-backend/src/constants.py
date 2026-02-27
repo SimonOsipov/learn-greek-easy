@@ -107,12 +107,12 @@ class ReadinessConstants:
 
     # Verdict thresholds: (min_percent, verdict_key)
     # Ordered descending for first-match lookup
-    VERDICT_THRESHOLDS: list[tuple[int, str]] = [
+    VERDICT_THRESHOLDS: tuple[tuple[int, str], ...] = (
         (85, "thoroughly_prepared"),
         (60, "ready"),
         (40, "getting_there"),
         (0, "not_ready"),
-    ]
+    )
 
     # Categories included in readiness calculation
     # Excludes "traditions" which is not part of the official exam

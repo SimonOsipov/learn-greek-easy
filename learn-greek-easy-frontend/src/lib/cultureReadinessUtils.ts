@@ -8,7 +8,7 @@ export interface WeakestCategoryResult {
 export function getWeakestCategory(categories: CategoryReadiness[]): WeakestCategoryResult | null {
   if (categories.length === 0) return null;
 
-  const lowestPct = categories[0].readiness_percentage;
+  const lowestPct = Math.min(...categories.map((c) => c.readiness_percentage));
   const tied = categories.filter((c) => c.readiness_percentage === lowestPct);
 
   if (tied.length === 1) {

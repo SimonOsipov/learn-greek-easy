@@ -20,10 +20,11 @@ export function WeakAreaCTA({ categories, isLoading }: WeakAreaCTAProps) {
   const navigate = useNavigate();
   const { track } = useTrackEvent();
 
+  if (isLoading) return <Skeleton className="h-11 w-full" />;
+
   const result = getWeakestCategory(categories);
 
   if (result === null) return null;
-  if (isLoading) return <Skeleton className="h-11 w-full" />;
 
   const target = result.category;
   const translatedName = t(`cultureReadiness.categoryBreakdown.categories.${target.category}`);

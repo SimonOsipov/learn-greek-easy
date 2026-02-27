@@ -41,6 +41,17 @@ describe('getWeakestCategory', () => {
     expect(result?.wasTieBroken).toBe(false);
   });
 
+  it('finds weakest when not first in array', () => {
+    const cats = [
+      makeCategory('history', 60, 12, 20),
+      makeCategory('geography', 30, 6, 20),
+      makeCategory('politics', 80, 16, 20),
+    ];
+    const result = getWeakestCategory(cats);
+    expect(result?.category.category).toBe('geography');
+    expect(result?.wasTieBroken).toBe(false);
+  });
+
   it('tie-breaks by NEW count descending', () => {
     const cats = [
       makeCategory('geography', 30, 12, 40), // NEW = 28

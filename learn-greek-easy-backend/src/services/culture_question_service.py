@@ -625,10 +625,7 @@ class CultureQuestionService:
         Returns:
             CultureReadinessResponse with readiness percentage, verdict, and stats
         """
-        logger.debug(
-            "Getting culture readiness",
-            extra={"user_id": str(user_id)},
-        )
+        logger.debug("Getting culture readiness")
 
         # Map DB categories to logical categories at SQL level
         logical_category = case(
@@ -840,7 +837,6 @@ class CultureQuestionService:
         logger.info(
             "Culture readiness retrieved",
             extra={
-                "user_id": str(user_id),
                 "readiness_percentage": readiness_percentage,
                 "verdict": verdict,
                 "questions_total": questions_total,
@@ -935,7 +931,7 @@ class CultureQuestionService:
                 CultureQuestionStats,
                 (CultureQuestionStats.question_id == CultureQuestion.id)
                 & (CultureQuestionStats.user_id == user_id)
-                & (CultureQuestionStats.created_at <= cutoff),
+                & (CultureQuestionStats.updated_at <= cutoff),
             )
             .where(
                 CultureDeck.category.in_(ReadinessConstants.INCLUDED_CATEGORIES),

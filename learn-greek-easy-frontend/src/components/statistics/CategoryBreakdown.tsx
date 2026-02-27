@@ -34,6 +34,7 @@ export function CategoryBreakdown({ categories, isLoading }: CategoryBreakdownPr
   const navigate = useNavigate();
   const { track } = useTrackEvent();
   const hasFiredAccuracy = useRef(false);
+  const seenReinforcement = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (!hasFiredAccuracy.current && categories.some((c) => c.accuracy_percentage !== null)) {
@@ -45,7 +46,10 @@ export function CategoryBreakdown({ categories, isLoading }: CategoryBreakdownPr
     categories
       .filter((c) => c.needs_reinforcement)
       .forEach((c) => {
-        track('culture_reinforcement_badge_seen', { category: c.category });
+        if (!seenReinforcement.current.has(c.category)) {
+          seenReinforcement.current.add(c.category);
+          track('culture_reinforcement_badge_seen', { category: c.category });
+        }
       });
   }, [categories, track]);
 
