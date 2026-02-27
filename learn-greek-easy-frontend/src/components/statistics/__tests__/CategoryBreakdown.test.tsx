@@ -147,10 +147,10 @@ describe('CategoryBreakdown', () => {
       expect(screen.getByText('Accuracy: 65%')).toBeInTheDocument();
     });
 
-    it('renders "Accuracy: N/A" when accuracy_percentage is null', () => {
+    it('renders "Accuracy: No attempts yet" when accuracy_percentage is null', () => {
       const categories = [makeCategory('history', 60, 10, 20, ['deck-1'], null)];
       renderComponent({ categories });
-      expect(screen.getByText('Accuracy: N/A')).toBeInTheDocument();
+      expect(screen.getByText('Accuracy: No attempts yet')).toBeInTheDocument();
     });
 
     it('shows "Needs Review" badge when needs_reinforcement is true', () => {
@@ -211,7 +211,7 @@ describe('CategoryBreakdown', () => {
       renderComponent({ categories });
       expect(screen.getByText('Accuracy: 75%')).toBeInTheDocument();
       expect(screen.getByText('Accuracy: 45%')).toBeInTheDocument();
-      expect(screen.getByText('Accuracy: N/A')).toBeInTheDocument();
+      expect(screen.getByText('Accuracy: No attempts yet')).toBeInTheDocument();
       expect(screen.getByText('Needs Review')).toBeInTheDocument();
     });
   });
