@@ -650,6 +650,10 @@ jobs:
         working-directory: learn-greek-easy-backend
         run: poetry install --no-interaction
 
+      - name: Download spaCy Greek model
+        working-directory: learn-greek-easy-backend
+        run: poetry run python -m spacy download el_core_news_sm
+
       - name: Create test database extensions
         run: |
           PGPASSWORD=postgres psql -h localhost -p 5433 -U postgres -d test_learn_greek -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
