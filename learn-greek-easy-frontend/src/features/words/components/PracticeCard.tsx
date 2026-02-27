@@ -177,7 +177,7 @@ function CardFront({
   const mainFontSize = cardType === 'sentence_translation' ? 'text-xl' : 'text-3xl';
 
   return (
-    <div data-testid="practice-card-front" className="flex flex-col items-center gap-6 py-6">
+    <div data-testid="practice-card-front" className="flex flex-col items-center gap-6 pb-6 pt-3">
       {/* Badges row */}
       <div className="flex w-full items-start justify-start gap-2">
         <Badge className="bg-[#6366f1]/10 text-[#6366f1] hover:bg-[#6366f1]/10">
@@ -228,7 +228,7 @@ function CardBack({
   const answerFontSize = cardType === 'sentence_translation' ? 'text-xl' : 'text-3xl';
 
   return (
-    <div data-testid="practice-card-back" className="flex animate-fade-in flex-col gap-6 py-6">
+    <div data-testid="practice-card-back" className="flex animate-fade-in flex-col gap-6 pb-6 pt-3">
       {/* Badges row */}
       <div className="flex w-full items-start justify-start gap-2">
         <Badge className="bg-[#6366f1]/10 text-[#6366f1] hover:bg-[#6366f1]/10">
@@ -566,7 +566,7 @@ export function PracticeCard({
         </Button>
       </div>
 
-      <CardContent className="min-h-[280px] p-6">
+      <CardContent className="min-h-[280px] px-6 pb-6">
         {/* Screen reader announcement */}
         <div aria-live="polite" aria-atomic="true" className="sr-only">
           {isFlipped ? `${answerLabel}: ${displayAnswer}` : ''}
