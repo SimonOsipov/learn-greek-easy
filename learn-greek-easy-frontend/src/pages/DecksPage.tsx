@@ -9,9 +9,10 @@ import { useLocation } from 'react-router-dom';
 import { DeckFilters } from '@/components/decks/DeckFilters';
 import { DecksGrid } from '@/components/decks/DecksGrid';
 import type { DeckType } from '@/components/decks/DeckTypeFilter';
-import { CardSkeleton, EmptyState } from '@/components/feedback';
+import { EmptyState } from '@/components/feedback';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { reportAPIError } from '@/lib/errorReporting';
 import { useDeckStore } from '@/stores/deckStore';
 
@@ -38,7 +39,7 @@ export const DecksPage: React.FC = () => {
   }, [fetchDecks, location.key]); // location.key changes on navigation
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-6 pb-20 lg:pb-8">
       {/* Page Header */}
       <div>
         <h1
@@ -108,11 +109,30 @@ export const DecksPage: React.FC = () => {
   );
 };
 
-// Loading skeleton component
+// Loading skeleton components
+const DeckCardSkeleton: React.FC = () => (
+  <div
+    className="overflow-hidden rounded-lg border bg-card shadow-sm"
+    role="status"
+    aria-label="Loading deck card"
+  >
+    <Skeleton className="h-1 w-full rounded-none" />
+    <div className="space-y-3 p-4">
+      <Skeleton className="h-5 w-2/3" />
+      <div className="flex gap-2">
+        <Skeleton className="h-5 w-16 rounded-full" />
+        <Skeleton className="h-5 w-12 rounded-full" />
+      </div>
+      <Skeleton className="h-3 w-full rounded-full" />
+      <Skeleton className="h-3 w-1/2" />
+    </div>
+  </div>
+);
+
 const DeckGridSkeleton: React.FC = () => (
   <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
     {[1, 2, 3, 4, 5, 6].map((i) => (
-      <CardSkeleton key={i} />
+      <DeckCardSkeleton key={i} />
     ))}
   </div>
 );
