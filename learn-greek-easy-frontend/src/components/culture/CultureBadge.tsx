@@ -48,10 +48,10 @@ const CATEGORY_COLORS: Record<CultureCategory, CategoryColorConfig> = {
     border: 'border-purple-500/20',
   },
   practical: {
-    dot: 'bg-purple-500',
-    text: 'text-purple-700 dark:text-purple-300',
-    bg: 'bg-purple-500/10',
-    border: 'border-purple-500/20',
+    dot: 'bg-rose-500',
+    text: 'text-rose-700 dark:text-rose-300',
+    bg: 'bg-rose-500/10',
+    border: 'border-rose-500/20',
   },
   culture: {
     dot: 'bg-emerald-500',
@@ -60,10 +60,10 @@ const CATEGORY_COLORS: Record<CultureCategory, CategoryColorConfig> = {
     border: 'border-emerald-500/20',
   },
   geography: {
-    dot: 'bg-emerald-500',
-    text: 'text-emerald-700 dark:text-emerald-300',
-    bg: 'bg-emerald-500/10',
-    border: 'border-emerald-500/20',
+    dot: 'bg-teal-500',
+    text: 'text-teal-700 dark:text-teal-300',
+    bg: 'bg-teal-500/10',
+    border: 'border-teal-500/20',
   },
 };
 
