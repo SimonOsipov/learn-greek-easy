@@ -2,10 +2,12 @@
 
 Tests cover:
 - Happy path: full pipeline producing correct lemma, gender, article, POS, confidence
-- Article stripping: "το σπίτι" -> "σπίτι"
+- Plural-to-singular and genitive-to-nominative lemmatization
+- Masculine, feminine, and neuter full-flow tests
+- Article stripping: "το σπίτι" -> "σπίτι", including accusative "τον άντρα"
 - Gender extraction: masculine, feminine, neuter mappings
 - Confidence scoring: all 7 tiers (0.0, 0.2, 0.5, 0.6, 0.8, 0.95, 1.0)
-- Edge cases: empty, whitespace, non-Greek
+- Edge cases: empty, whitespace, non-Greek, hallucinated words
 - Singleton pattern for get_lemma_normalization_service()
 """
 
@@ -191,6 +193,87 @@ class TestNormalizePipeline:
 
         assert isinstance(result, NormalizedLemma)
 
+    def test_plural_to_singular_lemma(
+        self, normalization_service, mock_morphology_service, mock_spellcheck_service
+    ):
+        """σπίτια (plural) → lemma σπίτι, gender neuter, article το, confidence >= 0.95."""
+        mock_morphology_service.analyze.return_value = _make_morphology_result(
+            input_word="σπίτια",
+            lemma="σπίτι",
+            pos="NOUN",
+            morph_features={"Gender": "Neut", "Number": "Plur"},
+        )
+        mock_spellcheck_service.check.side_effect = lambda w: _make_spellcheck_result(
+            input_word=w, is_valid=True
+        )
+
+        result = normalization_service.normalize("σπίτια")
+
+        assert result.lemma == "σπίτι"
+        assert result.gender == "neuter"
+        assert result.article == "το"
+        assert result.confidence >= 0.95
+
+    def test_genitive_to_nominative_lemma(
+        self, normalization_service, mock_morphology_service, mock_spellcheck_service
+    ):
+        """σπιτιού (genitive) → lemma σπίτι, confidence >= 0.5."""
+        mock_morphology_service.analyze.return_value = _make_morphology_result(
+            input_word="σπιτιού",
+            lemma="σπίτι",
+            pos="NOUN",
+            morph_features={"Gender": "Neut", "Case": "Gen"},
+        )
+        # Input may fail spellcheck; lemma passes
+        mock_spellcheck_service.check.side_effect = lambda w: _make_spellcheck_result(
+            input_word=w, is_valid=(w == "σπίτι")
+        )
+
+        result = normalization_service.normalize("σπιτιού")
+
+        assert result.lemma == "σπίτι"
+        assert result.confidence >= 0.5
+
+    def test_masculine_noun_full_flow(
+        self, normalization_service, mock_morphology_service, mock_spellcheck_service
+    ):
+        """άντρας → lemma άντρας, gender masculine, article ο, NOUN, confidence 1.0."""
+        mock_morphology_service.analyze.return_value = _make_morphology_result(
+            input_word="άντρας",
+            lemma="άντρας",
+            pos="NOUN",
+            morph_features={"Gender": "Masc"},
+        )
+        mock_spellcheck_service.check.return_value = _make_spellcheck_result(is_valid=True)
+
+        result = normalization_service.normalize("άντρας")
+
+        assert result.lemma == "άντρας"
+        assert result.gender == "masculine"
+        assert result.article == "ο"
+        assert result.pos == "NOUN"
+        assert result.confidence == 1.0
+
+    def test_feminine_noun_full_flow(
+        self, normalization_service, mock_morphology_service, mock_spellcheck_service
+    ):
+        """γυναίκα → lemma γυναίκα, gender feminine, article η, NOUN, confidence 1.0."""
+        mock_morphology_service.analyze.return_value = _make_morphology_result(
+            input_word="γυναίκα",
+            lemma="γυναίκα",
+            pos="NOUN",
+            morph_features={"Gender": "Fem"},
+        )
+        mock_spellcheck_service.check.return_value = _make_spellcheck_result(is_valid=True)
+
+        result = normalization_service.normalize("γυναίκα")
+
+        assert result.lemma == "γυναίκα"
+        assert result.gender == "feminine"
+        assert result.article == "η"
+        assert result.pos == "NOUN"
+        assert result.confidence == 1.0
+
 
 # ============================================================================
 # TestNormalizeArticleStripping
@@ -251,6 +334,19 @@ class TestNormalizeArticleStripping:
         result = normalization_service.normalize("το σπίτι")
 
         assert result.input_word == "το σπίτι"
+
+    def test_strip_accusative_article_ton(
+        self, normalization_service, mock_morphology_service, mock_spellcheck_service
+    ):
+        """'τον άντρα' → article stripped, morph.analyze called with 'άντρα'."""
+        mock_morphology_service.analyze.return_value = _make_morphology_result(
+            input_word="άντρα", lemma="άντρας", pos="NOUN", morph_features={"Gender": "Masc"}
+        )
+        mock_spellcheck_service.check.return_value = _make_spellcheck_result(is_valid=True)
+
+        normalization_service.normalize("τον άντρα")
+
+        mock_morphology_service.analyze.assert_called_once_with("άντρα")
 
 
 # ============================================================================
@@ -430,7 +526,7 @@ class TestNormalizeConfidenceScoring:
 
 
 class TestNormalizeEdgeCases:
-    """Edge case inputs: empty, whitespace, non-Greek."""
+    """Edge case inputs: empty, whitespace, non-Greek, hallucinated words."""
 
     def test_empty_string(
         self, normalization_service, mock_morphology_service, mock_spellcheck_service
@@ -497,6 +593,37 @@ class TestNormalizeEdgeCases:
         normalization_service.normalize("σπίτι")
 
         assert mock_spellcheck_service.check.call_count == 1
+
+    def test_whitespace_trimmed_calls_morph_with_stripped_word(
+        self, normalization_service, mock_morphology_service, mock_spellcheck_service
+    ):
+        """'  σπίτι  ' (leading/trailing whitespace) → morph.analyze called with 'σπίτι'."""
+        mock_morphology_service.analyze.return_value = _make_morphology_result(
+            input_word="σπίτι", lemma="σπίτι", pos="NOUN", morph_features={"Gender": "Neut"}
+        )
+        mock_spellcheck_service.check.return_value = _make_spellcheck_result(is_valid=True)
+
+        result = normalization_service.normalize("  σπίτι  ")
+
+        mock_morphology_service.analyze.assert_called_once_with("σπίτι")
+        assert result.lemma == "σπίτι"
+
+    def test_hallucinated_word_low_confidence(
+        self, normalization_service, mock_morphology_service, mock_spellcheck_service
+    ):
+        """'σπλίτρο' (non-word): input spellcheck fails, lemma spellcheck fails → confidence 0.2."""
+        mock_morphology_service.analyze.return_value = _make_morphology_result(
+            input_word="σπλίτρο",
+            lemma="σπλίτρο",
+            pos="NOUN",
+            morph_features={"Gender": "Neut"},
+            analysis_successful=True,
+        )
+        mock_spellcheck_service.check.return_value = _make_spellcheck_result(is_valid=False)
+
+        result = normalization_service.normalize("σπλίτρο")
+
+        assert result.confidence == 0.2
 
 
 # ============================================================================
