@@ -16,6 +16,7 @@ from src.services.culture_deck_service import CultureDeckService
 from src.services.culture_question_service import CultureQuestionService
 from src.services.feedback_admin_service import FeedbackAdminService
 from src.services.mock_exam_service import MockExamService
+from src.services.morphology_service import MorphologyService, get_morphology_service
 from src.services.news_item_service import NewsItemService
 from src.services.notification_service import NotificationService
 from src.services.progress_service import ProgressService
@@ -41,6 +42,7 @@ __all__ = [
     "DeletionResult",
     "FeedbackAdminService",
     "MockExamService",
+    "MorphologyService",
     "NewsItemService",
     "NotificationService",
     "ProgressService",
@@ -52,6 +54,7 @@ __all__ = [
     "UserProgressResetService",
     "WebhookService",
     "XPService",
+    "get_morphology_service",
     "get_s3_service",
     "get_spellcheck_service",
 ]
