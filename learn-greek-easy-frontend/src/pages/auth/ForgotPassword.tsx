@@ -11,7 +11,7 @@
  * 5. User clicks link in email → redirected to /reset-password to set new password
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowLeft, Lock, Mail } from 'lucide-react';
@@ -60,6 +60,8 @@ export const ForgotPassword: React.FC = () => {
   const [submittedEmail, setSubmittedEmail] = useState<string>('');
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [lastSentAt, setLastSentAt] = useState<number | null>(null);
+  const [cooldownRemaining, setCooldownRemaining] = useState(0);
 
   // React Hook Form
   const {
@@ -75,6 +77,20 @@ export const ForgotPassword: React.FC = () => {
     mode: 'onSubmit',
     reValidateMode: 'onChange',
   });
+
+  // Cooldown timer
+  useEffect(() => {
+    if (!lastSentAt) return;
+    const tick = () => {
+      const elapsed = Math.floor((Date.now() - lastSentAt) / 1000);
+      const remaining = Math.max(60 - elapsed, 0);
+      setCooldownRemaining(remaining);
+      if (remaining === 0) clearInterval(id);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [lastSentAt]);
 
   /**
    * Handle form submission
@@ -95,6 +111,7 @@ export const ForgotPassword: React.FC = () => {
 
       setSubmittedEmail(data.email);
       setFormState('success');
+      setLastSentAt(Date.now());
     } catch (err) {
       const translatedError = t('forgotPassword.errors.sendFailed');
       setFormError(translatedError);
@@ -106,6 +123,7 @@ export const ForgotPassword: React.FC = () => {
 
   /**
    * Handle "Try different email" action
+   * Note: lastSentAt is intentionally NOT cleared to preserve cooldown
    */
   const handleTryDifferentEmail = () => {
     setFormState('form');
@@ -128,8 +146,8 @@ export const ForgotPassword: React.FC = () => {
       <AuthLayout>
         <Card className="shadow-xl" data-testid="forgot-password-success-card">
           <CardHeader className="space-y-1 text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
-              <Mail className="h-8 w-8 text-blue-600" />
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
+              <Mail className="h-8 w-8 text-blue-600 dark:text-blue-400" />
             </div>
             <CardTitle className="text-2xl font-bold" data-testid="success-title">
               {t('forgotPassword.checkEmailTitle')}
@@ -157,7 +175,7 @@ export const ForgotPassword: React.FC = () => {
               {t('forgotPassword.tryDifferentEmail')}
             </Button>
 
-            <Button asChild variant="ghost" className="w-full">
+            <Button asChild variant="outline" className="w-full">
               <Link to="/login" data-testid="back-to-login-link">
                 {t('forgotPassword.backToLogin')}
               </Link>
@@ -220,10 +238,13 @@ export const ForgotPassword: React.FC = () => {
               data-testid="forgot-password-submit"
               loading={isSubmitting}
               loadingText={t('forgotPassword.submitting')}
+              disabled={cooldownRemaining > 0}
               className="w-full"
               size="lg"
             >
-              {t('forgotPassword.submit')}
+              {cooldownRemaining > 0
+                ? t('forgotPassword.cooldown', { seconds: cooldownRemaining })
+                : t('forgotPassword.submit')}
             </SubmitButton>
 
             <div className="pt-2">
