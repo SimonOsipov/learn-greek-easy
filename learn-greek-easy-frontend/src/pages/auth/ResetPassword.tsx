@@ -43,6 +43,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import log from '@/lib/logger';
 import { supabase } from '@/lib/supabaseClient';
+import { mapSupabaseResetError } from '@/utils/auth-errors';
 
 /** Form state machine states */
 type FormState = 'form' | 'success';
@@ -61,24 +62,6 @@ const resetPasswordSchema = z
   });
 
 type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
-
-const mapSupabaseResetError = (error: { message: string }, t: (key: string) => string): string => {
-  const msg = error.message.toLowerCase();
-  if (
-    msg.includes('session expired') ||
-    msg.includes('refresh_token') ||
-    msg.includes('not authenticated')
-  ) {
-    return t('resetPassword.errors.sessionExpired');
-  }
-  if (msg.includes('same password') || msg.includes('different from the old password')) {
-    return t('resetPassword.errors.samePassword');
-  }
-  if (msg.includes('weak password') || msg.includes('password is too weak')) {
-    return t('resetPassword.errors.weakPassword');
-  }
-  return t('resetPassword.errors.updateFailed');
-};
 
 export const ResetPassword: React.FC = () => {
   const { t } = useTranslation('auth');
@@ -139,7 +122,7 @@ export const ResetPassword: React.FC = () => {
       setFormState('success');
     } catch (err) {
       const error = err instanceof Error ? err : { message: String(err) };
-      setFormError(mapSupabaseResetError(error, t));
+      setFormError(t(`resetPassword.errors.${mapSupabaseResetError(error.message)}`));
       log.error('[ResetPassword] Password reset failed:', err);
     } finally {
       setIsSubmitting(false);
