@@ -1,17 +1,18 @@
 // /src/components/decks/DeckFilters.tsx
 
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 
-import { Search, X } from 'lucide-react';
+import { BookOpen, GraduationCap, Layers, Search, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { trackDeckFilterChanged } from '@/lib/analytics';
 import { CEFR_LEVEL_OPTIONS } from '@/lib/cefrColors';
 import { debounce } from '@/lib/utils';
 import type { DeckFilters as DeckFiltersType, DeckLevel, DeckStatus } from '@/types/deck';
 
-import { DeckTypeFilter, type DeckType } from './DeckTypeFilter';
+export type DeckType = 'all' | 'vocabulary' | 'culture';
 
 export interface DeckFiltersProps {
   filters: DeckFiltersType;
@@ -22,6 +23,16 @@ export interface DeckFiltersProps {
   deckType: DeckType;
   onDeckTypeChange: (type: DeckType) => void;
 }
+
+const TYPE_OPTIONS: {
+  value: DeckType;
+  icon: React.ComponentType<{ className?: string }>;
+  labelKey: string;
+}[] = [
+  { value: 'all', icon: Layers, labelKey: 'filters.typeAll' },
+  { value: 'vocabulary', icon: GraduationCap, labelKey: 'filters.typeVocabulary' },
+  { value: 'culture', icon: BookOpen, labelKey: 'filters.typeCulture' },
+];
 
 const STATUS_OPTIONS: { value: DeckStatus; labelKey: string }[] = [
   { value: 'not-started', labelKey: 'filters.notStarted' },
@@ -39,6 +50,15 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
   onDeckTypeChange,
 }) => {
   const { t } = useTranslation('deck');
+  const handleTypeChange = useCallback(
+    (newType: DeckType) => {
+      if (newType === deckType) return;
+      trackDeckFilterChanged({ filter_type: newType });
+      onDeckTypeChange(newType);
+    },
+    [deckType, onDeckTypeChange]
+  );
+
   // Local state for search input (debounced before updating store)
   const [searchInput, setSearchInput] = useState(filters.search);
 
@@ -126,7 +146,19 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
 
       {/* Row 2: All filters */}
       <div className="flex flex-wrap items-center gap-2">
-        <DeckTypeFilter value={deckType} onChange={onDeckTypeChange} />
+        {TYPE_OPTIONS.map(({ value: optValue, icon: Icon, labelKey }) => (
+          <Button
+            key={optValue}
+            variant={deckType === optValue ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => handleTypeChange(optValue)}
+            className="gap-1.5"
+            aria-pressed={deckType === optValue}
+          >
+            <Icon className="h-4 w-4" />
+            {t(labelKey)}
+          </Button>
+        ))}
         <div className="h-6 w-px bg-border" aria-hidden="true" />
         {CEFR_LEVEL_OPTIONS.map(({ value, color }) => (
           <Button

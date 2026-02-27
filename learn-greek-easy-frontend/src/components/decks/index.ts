@@ -14,9 +14,8 @@ export type { DecksGridProps } from './DecksGrid';
 export { DeckFilters } from './DeckFilters';
 export type { DeckFiltersProps } from './DeckFilters';
 
-// New exports for culture deck support (CULTURE-07)
-export { DeckTypeFilter } from './DeckTypeFilter';
-export type { DeckType, DeckTypeFilterProps } from './DeckTypeFilter';
+// Re-export DeckType from DeckFilters (originally from CULTURE-07)
+export type { DeckType } from './DeckFilters';
 
 // User deck form component (DECKCREAT-05)
 export { UserDeckForm } from './UserDeckForm';

@@ -7,8 +7,8 @@ import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 
 import { DeckFilters } from '@/components/decks/DeckFilters';
+import type { DeckType } from '@/components/decks/DeckFilters';
 import { DecksGrid } from '@/components/decks/DecksGrid';
-import type { DeckType } from '@/components/decks/DeckTypeFilter';
 import { EmptyState } from '@/components/feedback';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';

@@ -10,7 +10,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
-import type { DeckType } from '@/components/decks/DeckTypeFilter';
+import type { DeckType } from '@/components/decks/DeckFilters';
 import { reportAPIError } from '@/lib/errorReporting';
 import { cultureDeckAPI } from '@/services/cultureDeckAPI';
 import type { CultureDeckResponse } from '@/services/cultureDeckAPI';
