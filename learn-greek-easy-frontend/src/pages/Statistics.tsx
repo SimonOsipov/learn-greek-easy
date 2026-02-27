@@ -14,6 +14,7 @@ import {
   AchievementsGrid,
   achievementConfigs,
   CultureReadinessCard,
+  MotivationalMessageCard,
 } from '@/components/statistics';
 import type { Achievement } from '@/components/statistics';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -35,6 +36,18 @@ const StatisticsLoadingSkeleton: React.FC = () => (
         <div className="flex-1 space-y-3">
           <Skeleton className="h-5 w-48" />
           <Skeleton className="h-4 w-64" />
+        </div>
+      </CardContent>
+      <CardContent>
+        {/* Category row skeletons */}
+        <div className="mt-4 space-y-3">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="flex items-center gap-3">
+              <Skeleton className="h-4 w-20 shrink-0" />
+              <Skeleton className="h-3 w-full" />
+              <Skeleton className="h-3 w-16 shrink-0" />
+            </div>
+          ))}
         </div>
       </CardContent>
     </Card>
@@ -171,6 +184,9 @@ const Statistics: React.FC = () => {
           {t('cultureReadiness.title')}
         </h2>
         <CultureReadinessCard />
+        <div className="mt-3">
+          <MotivationalMessageCard />
+        </div>
       </section>
 
       {/* User Stats Section */}

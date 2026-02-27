@@ -2,7 +2,10 @@ import React, { useEffect, useRef } from 'react';
 
 import { useTranslation } from 'react-i18next';
 
+import { CategoryBreakdown } from '@/components/statistics/CategoryBreakdown';
+import { WeakAreaCTA } from '@/components/statistics/WeakAreaCTA';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCultureReadiness } from '@/hooks/useCultureReadiness';
 import { useTrackEvent } from '@/hooks/useTrackEvent';
@@ -152,6 +155,11 @@ export function CultureReadinessCard({ className }: CultureReadinessCardProps) {
               </span>
             </div>
           </div>
+        </div>
+        <Separator className="my-4" />
+        <CategoryBreakdown categories={data.categories} isLoading={false} />
+        <div className="mt-4">
+          <WeakAreaCTA categories={data.categories} isLoading={false} />
         </div>
       </CardContent>
     </Card>

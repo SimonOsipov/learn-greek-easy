@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 
+import { AlertTriangle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useTrackEvent } from '@/hooks/useTrackEvent';
 import { cn } from '@/lib/utils';
 import type { CategoryReadiness } from '@/services/cultureDeckAPI';
@@ -15,6 +17,13 @@ function getReadinessColor(percentage: number): string {
   return 'bg-red-500 dark:bg-red-400';
 }
 
+function getAccuracyColor(accuracy: number | null): string {
+  if (accuracy === null) return 'text-muted-foreground';
+  if (accuracy >= 70) return 'text-green-600 dark:text-green-400';
+  if (accuracy >= 50) return 'text-orange-500 dark:text-orange-400';
+  return 'text-red-500 dark:text-red-400';
+}
+
 export interface CategoryBreakdownProps {
   categories: CategoryReadiness[];
   isLoading: boolean;
@@ -24,6 +33,21 @@ export function CategoryBreakdown({ categories, isLoading }: CategoryBreakdownPr
   const { t } = useTranslation('statistics');
   const navigate = useNavigate();
   const { track } = useTrackEvent();
+  const hasFiredAccuracy = useRef(false);
+
+  useEffect(() => {
+    if (!hasFiredAccuracy.current && categories.some((c) => c.accuracy_percentage !== null)) {
+      hasFiredAccuracy.current = true;
+      track('culture_accuracy_viewed', {
+        categories_with_accuracy: categories.filter((c) => c.accuracy_percentage !== null).length,
+      });
+    }
+    categories
+      .filter((c) => c.needs_reinforcement)
+      .forEach((c) => {
+        track('culture_reinforcement_badge_seen', { category: c.category });
+      });
+  }, [categories, track]);
 
   if (isLoading) {
     return (
@@ -80,9 +104,38 @@ export function CategoryBreakdown({ categories, isLoading }: CategoryBreakdownPr
               style={{ width: `${cat.readiness_percentage}%` }}
             />
           </div>
-          <span className="w-16 shrink-0 text-right text-sm text-muted-foreground">
-            {Math.round(cat.readiness_percentage)}%
-          </span>
+          <div className="flex w-16 shrink-0 flex-col items-end">
+            <span className="text-right text-sm text-muted-foreground">
+              {Math.round(cat.readiness_percentage)}%
+            </span>
+            {/* Accuracy label */}
+            <p className={cn('text-xs', getAccuracyColor(cat.accuracy_percentage))}>
+              {cat.accuracy_percentage !== null
+                ? t('cultureReadiness.categoryBreakdown.accuracy', {
+                    value: cat.accuracy_percentage,
+                  })
+                : t('cultureReadiness.categoryBreakdown.accuracyNA')}
+            </p>
+            {/* Needs reinforcement badge */}
+            {cat.needs_reinforcement && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span
+                      className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-600 dark:bg-amber-950/30 dark:text-amber-400"
+                      aria-label={t('cultureReadiness.categoryBreakdown.needsReinforcementTooltip')}
+                    >
+                      <AlertTriangle size={10} />
+                      {t('cultureReadiness.categoryBreakdown.needsReinforcement')}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{t('cultureReadiness.categoryBreakdown.needsReinforcementTooltip')}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </div>
         </button>
       ))}
     </div>
