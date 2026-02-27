@@ -44,6 +44,7 @@ COPY pyproject.toml poetry.lock ./
 
 # Install production dependencies only (no dev dependencies)
 RUN poetry install --only=main --no-root --no-directory
+RUN python -m spacy download el_core_news_sm
 
 # Copy application source code
 COPY src/ ./src/
