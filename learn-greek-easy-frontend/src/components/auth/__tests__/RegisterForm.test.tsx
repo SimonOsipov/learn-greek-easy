@@ -5,7 +5,7 @@
  * when the form is submitted with validation errors.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import userEvent from '@testing-library/user-event';
 
@@ -21,8 +21,14 @@ vi.mock('@/services/authAPI', () => ({
 }));
 
 describe('RegisterForm auto-scroll behavior', () => {
+  let scrollSpy: ReturnType<typeof vi.spyOn>;
+
   beforeEach(() => {
-    Element.prototype.scrollIntoView = vi.fn();
+    scrollSpy = vi.spyOn(Element.prototype, 'scrollIntoView').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    scrollSpy.mockRestore();
   });
 
   it('should scroll to the first error field when submitting an empty form', async () => {
@@ -35,10 +41,9 @@ describe('RegisterForm auto-scroll behavior', () => {
     await waitFor(() => {
       const nameElement = document.getElementById('name');
       expect(nameElement).not.toBeNull();
-      expect(nameElement!.scrollIntoView).toHaveBeenCalledWith({
-        behavior: 'smooth',
-        block: 'center',
-      });
+      expect(scrollSpy).toHaveBeenCalled();
+      expect(scrollSpy.mock.instances.at(-1)).toBe(nameElement);
+      expect(scrollSpy).toHaveBeenLastCalledWith({ behavior: 'smooth', block: 'center' });
     });
   });
 
@@ -51,9 +56,8 @@ describe('RegisterForm auto-scroll behavior', () => {
 
     // Check the acceptedTerms checkbox
     const checkbox = document.getElementById('acceptedTerms');
-    if (checkbox) {
-      await user.click(checkbox);
-    }
+    expect(checkbox).not.toBeNull();
+    await user.click(checkbox!);
 
     const submitButton = screen.getByTestId('register-submit');
     await user.click(submitButton);
@@ -61,10 +65,9 @@ describe('RegisterForm auto-scroll behavior', () => {
     await waitFor(() => {
       const passwordElement = document.getElementById('password');
       expect(passwordElement).not.toBeNull();
-      expect(passwordElement!.scrollIntoView).toHaveBeenCalledWith({
-        behavior: 'smooth',
-        block: 'center',
-      });
+      expect(scrollSpy).toHaveBeenCalled();
+      expect(scrollSpy.mock.instances.at(-1)).toBe(passwordElement);
+      expect(scrollSpy).toHaveBeenLastCalledWith({ behavior: 'smooth', block: 'center' });
     });
   });
 });

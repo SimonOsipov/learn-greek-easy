@@ -87,8 +87,8 @@ export const ForgotPassword: React.FC = () => {
       setCooldownRemaining(remaining);
       if (remaining === 0) clearInterval(id);
     };
-    tick();
     const id = setInterval(tick, 1000);
+    tick();
     return () => clearInterval(id);
   }, [lastSentAt]);
 

@@ -64,8 +64,12 @@ test.describe('Reset Password', () => {
         timeout: 10000,
       });
 
+      // Before typing: bar should not be visible
+      await expect(page.getByTestId('password-strength-bar')).not.toBeVisible();
+
+      // After typing: bar should appear
       await page.getByTestId('password-input').fill('test');
-      await expect(page.getByTestId('password-strength-indicator')).toBeVisible();
+      await expect(page.getByTestId('password-strength-bar')).toBeVisible();
     });
   });
 });
