@@ -204,13 +204,25 @@ gh pr edit --remove-label "skip-visual" && gh pr ready
 gh pr checks  # Required: deploy + smoke-tests pass
 ```
 
-4. **Move all tasks to "Done"** — after deploy + smoke tests pass:
+4. **Review CodeRabbit comments** — after all CI checks pass, read every CodeRabbit review comment on the PR:
+```bash
+gh pr view [PR_NUMBER] --comments
+# or via API:
+gh api repos/{owner}/{repo}/pulls/{PR_NUMBER}/reviews
+gh api repos/{owner}/{repo}/pulls/{PR_NUMBER}/comments
+```
+- Read each comment carefully
+- For each comment you **agree with**: fix the issue in code, then commit and push
+- For each comment you **disagree with** or that is not applicable: skip it
+- After all agreed-upon fixes are committed and pushed, wait for CI to go green again
+
+5. **Move all tasks to "Done"** — after deploy + smoke tests pass AND CodeRabbit fixes are in:
 ```
 For each task ID:
   mcp__backlog__task_edit(id=task_id, status="Done")
 ```
 
-5. Cleanup and complete:
+6. Cleanup and complete:
 ```bash
 rm -f .claude/handoff.yaml
 ```
@@ -384,15 +396,27 @@ gh pr edit --remove-label "skip-visual" && gh pr ready
 gh pr checks  # Required: deploy + smoke-tests pass
 ```
 
-5. **Move all tasks to "Done"** — after deploy + smoke tests pass:
+5. **Review CodeRabbit comments** — after all CI checks pass, read every CodeRabbit review comment on the PR:
+```bash
+gh pr view [PR_NUMBER] --comments
+# or via API:
+gh api repos/{owner}/{repo}/pulls/{PR_NUMBER}/reviews
+gh api repos/{owner}/{repo}/pulls/{PR_NUMBER}/comments
+```
+- Read each comment carefully
+- For each comment you **agree with**: fix the issue in code, then commit and push
+- For each comment you **disagree with** or that is not applicable: skip it
+- After all agreed-upon fixes are committed and pushed, wait for CI to go green again
+
+6. **Move all tasks to "Done"** — after deploy + smoke tests pass AND CodeRabbit fixes are in:
 ```
 For each task ID:
   mcp__backlog__task_edit(id=task_id, status="Done")
 ```
 
-6. **Shutdown teammates** via `SendMessage` with `type: "shutdown_request"`
+7. **Shutdown teammates** via `SendMessage` with `type: "shutdown_request"`
 
-7. **Cleanup:**
+8. **Cleanup:**
 ```bash
 rm -f .claude/handoff.yaml
 ```
