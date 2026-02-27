@@ -179,14 +179,11 @@ const Statistics: React.FC = () => {
       </div>
 
       {/* Culture Exam Readiness */}
-      <section aria-labelledby="culture-readiness-heading" className="mb-6">
-        <h2 id="culture-readiness-heading" className="sr-only">
-          {t('cultureReadiness.title')}
-        </h2>
-        <CultureReadinessCard />
-        <div className="mt-3">
+      <section className="mb-6">
+        <div className="mb-3">
           <MotivationalMessageCard />
         </div>
+        <CultureReadinessCard />
       </section>
 
       {/* User Stats Section */}
@@ -212,10 +209,7 @@ const Statistics: React.FC = () => {
       <AchievementsGrid achievements={achievements} />
 
       {/* Analytics Charts Section */}
-      <section aria-labelledby="analytics-heading">
-        <h2 id="analytics-heading" className="mb-4 text-lg font-semibold text-foreground">
-          {t('page.learningAnalytics')}
-        </h2>
+      <section>
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {/* Progress Over Time */}
           <ProgressLineChart height={280} />
