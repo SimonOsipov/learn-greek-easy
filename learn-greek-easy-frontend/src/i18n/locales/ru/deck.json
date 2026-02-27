@@ -24,7 +24,8 @@
     "premiumOnly": "Только премиум",
     "clearAll": "Сбросить всё",
     "showing": "Показано {{count}} из {{total}} колод",
-    "levelDisabledForCulture": "Фильтр по уровню недоступен для колод Культуры"
+    "levelDisabledForCulture": "Фильтр по уровню недоступен для колод Культуры",
+    "clearSearch": "Очистить поиск"
   },
   "culture": {
     "badge": "Культура",
@@ -295,5 +296,8 @@
     "easy": "Легко",
     "langEn": "EN",
     "langRu": "RU"
+  },
+  "skeleton": {
+    "loadingCard": "Загрузка карточки"
   }
 }

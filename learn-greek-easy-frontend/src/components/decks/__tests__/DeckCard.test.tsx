@@ -453,6 +453,14 @@ describe('DeckCard', () => {
       renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
       expect(screen.getByTestId('deck-card-metadata')).toHaveTextContent(/completed/i);
     });
+
+    it('should show "Not started" when status is not-started with progress object', () => {
+      const deck = createMockDeck({
+        progress: { ...createMockDeck().progress!, status: 'not-started', dueToday: 0 },
+      });
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
+      expect(screen.getByTestId('deck-card-metadata')).toHaveTextContent(/not started/i);
+    });
   });
 
   describe('Action Buttons (Edit/Delete)', () => {

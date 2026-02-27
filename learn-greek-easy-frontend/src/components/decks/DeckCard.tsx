@@ -86,7 +86,7 @@ export const DeckCard: React.FC<DeckCardProps> = ({
   };
 
   const getMetadataText = (): string => {
-    if (!progress) {
+    if (!progress || progress.status === 'not-started') {
       return t('card.metadata.notStarted');
     }
     const { status, dueToday, cardsMastered, lastStudied } = progress;

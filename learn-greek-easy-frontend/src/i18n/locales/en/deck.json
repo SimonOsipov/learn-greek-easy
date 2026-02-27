@@ -24,7 +24,8 @@
     "premiumOnly": "Premium Only",
     "clearAll": "Clear All",
     "showing": "Showing {{count}} of {{total}} decks",
-    "levelDisabledForCulture": "Level filter is not available for Culture decks"
+    "levelDisabledForCulture": "Level filter is not available for Culture decks",
+    "clearSearch": "Clear search"
   },
   "culture": {
     "badge": "Culture",
@@ -295,5 +296,8 @@
     "easy": "Easy",
     "langEn": "EN",
     "langRu": "RU"
+  },
+  "skeleton": {
+    "loadingCard": "Loading deck card"
   }
 }
