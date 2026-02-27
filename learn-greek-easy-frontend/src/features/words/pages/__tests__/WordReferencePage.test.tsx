@@ -715,6 +715,7 @@ describe('WordReferencePage — Audio SpeakerButton integration', () => {
       part_of_speech: 'verb',
       context: 'reference',
       deck_id: 'test-deck-id',
+      playback_speed: 1,
     });
   });
 

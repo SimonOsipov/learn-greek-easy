@@ -19,6 +19,7 @@ export interface WordAudioPlayedProperties {
   part_of_speech: string | null;
   context: 'review' | 'reference';
   deck_id: string;
+  playback_speed: number;
 }
 
 export interface ExampleAudioPlayedProperties {
@@ -26,6 +27,7 @@ export interface ExampleAudioPlayedProperties {
   example_id: string;
   context: 'review' | 'reference';
   deck_id: string;
+  playback_speed: number;
 }
 
 export interface WordAudioFailedProperties {

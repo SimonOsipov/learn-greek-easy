@@ -168,6 +168,7 @@ export interface NewsAudioPlayStartedProperties {
   news_item_id: string;
   audio_duration_seconds: number;
   page: 'dashboard' | 'news';
+  playback_speed: number;
 }
 
 /**

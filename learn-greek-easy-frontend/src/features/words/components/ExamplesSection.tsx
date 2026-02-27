@@ -80,6 +80,7 @@ export function ExamplesSection({ examples, wordEntryId, deckId }: ExamplesSecti
                         example_id: example.id ?? '',
                         context: 'reference',
                         deck_id: deckId ?? '',
+                        playback_speed: 1,
                       })
                     }
                     onError={(error) =>

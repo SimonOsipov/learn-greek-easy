@@ -11,6 +11,7 @@ import posthog from 'posthog-js';
 
 import {
   trackNewsArticleClicked,
+  trackNewsAudioPlayStarted,
   trackNewsQuestionsButtonClicked,
   trackNewsSourceLinkClicked,
   trackNewsPageViewed,
@@ -585,6 +586,44 @@ describe('newsAnalytics', () => {
       }).not.toThrow();
 
       (posthog as Record<string, unknown>).capture = originalCapture;
+    });
+  });
+
+  // ==========================================================================
+  // trackNewsAudioPlayStarted
+  // ==========================================================================
+
+  describe('trackNewsAudioPlayStarted', () => {
+    it('should call posthog.capture with correct event name and properties', () => {
+      trackNewsAudioPlayStarted({
+        news_item_id: 'news-123',
+        audio_duration_seconds: 120,
+        page: 'news',
+        playback_speed: 1,
+      });
+
+      expect(posthog.capture).toHaveBeenCalledWith('news_audio_play_started', {
+        news_item_id: 'news-123',
+        audio_duration_seconds: 120,
+        page: 'news',
+        playback_speed: 1,
+      });
+    });
+
+    it('should track with dashboard page and playback_speed: 1', () => {
+      trackNewsAudioPlayStarted({
+        news_item_id: 'news-456',
+        audio_duration_seconds: 60,
+        page: 'dashboard',
+        playback_speed: 1,
+      });
+
+      expect(posthog.capture).toHaveBeenCalledWith('news_audio_play_started', {
+        news_item_id: 'news-456',
+        audio_duration_seconds: 60,
+        page: 'dashboard',
+        playback_speed: 1,
+      });
     });
   });
 });

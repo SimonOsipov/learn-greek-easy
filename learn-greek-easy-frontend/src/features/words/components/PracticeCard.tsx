@@ -446,6 +446,7 @@ export function PracticeCard({
         example_id: exampleId,
         context: 'review',
         deck_id: deckId ?? '',
+        playback_speed: audioState?.speed ?? 1,
       });
     } else {
       trackWordAudioPlayed({
@@ -454,6 +455,7 @@ export function PracticeCard({
         part_of_speech: front.badge?.toLowerCase() ?? null,
         context: 'review',
         deck_id: deckId ?? '',
+        playback_speed: audioState?.speed ?? 1,
       });
     }
   };

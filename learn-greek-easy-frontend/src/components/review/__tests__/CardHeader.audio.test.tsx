@@ -129,6 +129,7 @@ describe('CardHeader — SpeakerButton audio integration', () => {
       part_of_speech: 'verb',
       context: 'review',
       deck_id: 'deck-456',
+      playback_speed: 1,
     });
   });
 

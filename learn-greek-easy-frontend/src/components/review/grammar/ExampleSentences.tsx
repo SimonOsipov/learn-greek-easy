@@ -85,6 +85,7 @@ export function ExampleSentences({
                         example_id: example.id ?? '',
                         context: 'review',
                         deck_id: deckId ?? '',
+                        playback_speed: 1,
                       })
                     }
                     onError={(error) =>

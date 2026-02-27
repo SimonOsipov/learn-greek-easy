@@ -74,6 +74,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({
         news_item_id: article.id,
         audio_duration_seconds: duration,
         page: pageName,
+        playback_speed: 1,
       });
     },
     [article.id, pageName]
