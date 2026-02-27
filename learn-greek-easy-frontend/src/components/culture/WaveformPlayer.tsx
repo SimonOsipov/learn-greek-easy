@@ -179,6 +179,7 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
           onPause(audioRef.current.currentTime);
         }
       } else {
+        audioRef.current.playbackRate = speedRef.current;
         audioRef.current.play().catch(() => {
           setAudioError(true);
         });

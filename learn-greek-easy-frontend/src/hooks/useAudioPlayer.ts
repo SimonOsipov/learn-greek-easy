@@ -112,8 +112,9 @@ export function useAudioPlayer(audioUrl: string | null | undefined): UseAudioPla
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
       audioRef.current.playbackRate = s;
-      audioRef.current.play().catch(() => {
-        // ignore replay errors
+      audioRef.current.play().catch((err: Error) => {
+        setIsPlaying(false);
+        setError(err.message || 'Failed to play audio');
       });
     } else if (audioRef.current) {
       audioRef.current.playbackRate = s;
