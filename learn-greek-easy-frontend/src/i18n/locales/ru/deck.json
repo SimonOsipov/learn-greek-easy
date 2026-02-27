@@ -131,6 +131,14 @@
       "vocabulary": "Словарь",
       "grammar": "Грамматика",
       "phrases": "Фразы"
+    },
+    "metadata": {
+      "notStarted": "Не начато",
+      "dueToday": "На сегодня: {{count}}",
+      "upToDate": "Всё повторено",
+      "last": "Посл.: {{time}}",
+      "completed": "Завершено",
+      "mastered": "{{count}} освоено"
     }
   },
   "myDecks": {

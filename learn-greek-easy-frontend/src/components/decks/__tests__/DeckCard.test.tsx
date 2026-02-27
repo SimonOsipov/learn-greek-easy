@@ -48,6 +48,7 @@ const createMockDeck = (overrides: Partial<Deck> = {}): Deck => ({
     cardsMastered: 5,
     dueToday: 10,
     streak: 3,
+    lastStudied: new Date('2026-01-15'),
     totalTimeSpent: 120,
     accuracy: 75,
   },
@@ -391,6 +392,66 @@ describe('DeckCard', () => {
       // Premium (and locked) cards have grayscale but when unlocked would have amber border
       // For now, just verify the card renders correctly
       expect(card).toBeInTheDocument();
+    });
+  });
+
+  describe('Accent Stripe', () => {
+    it('should render accent stripe with CEFR color for vocab deck', () => {
+      const deck = createMockDeck({ level: 'A1' });
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
+      const stripe = screen.getByTestId('deck-card-accent-stripe');
+      expect(stripe).toBeInTheDocument();
+      expect(stripe.className).toContain('bg-green-500');
+    });
+
+    it('should render accent stripe with culture category color', () => {
+      const deck = createMockDeck();
+      renderWithI18n(
+        <DeckCard
+          deck={deck}
+          onClick={mockOnClick}
+          isCultureDeck={true}
+          cultureCategory="history"
+        />
+      );
+      const stripe = screen.getByTestId('deck-card-accent-stripe');
+      expect(stripe.className).toContain('bg-amber-500');
+    });
+
+    it('should have aria-hidden on accent stripe', () => {
+      const deck = createMockDeck();
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
+      const stripe = screen.getByTestId('deck-card-accent-stripe');
+      expect(stripe).toHaveAttribute('aria-hidden', 'true');
+    });
+  });
+
+  describe('Temporal Metadata', () => {
+    it('should show "Not started" when no progress', () => {
+      const deck = createMockDeck({ progress: undefined });
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
+      expect(screen.getByTestId('deck-card-metadata')).toHaveTextContent(/not started/i);
+    });
+
+    it('should show "Due today" when dueToday > 0', () => {
+      renderWithI18n(<DeckCard deck={createMockDeck()} onClick={mockOnClick} />);
+      expect(screen.getByTestId('deck-card-metadata')).toHaveTextContent(/due today/i);
+    });
+
+    it('should show "Up to date" when dueToday === 0', () => {
+      const deck = createMockDeck({
+        progress: { ...createMockDeck().progress!, dueToday: 0 },
+      });
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
+      expect(screen.getByTestId('deck-card-metadata')).toHaveTextContent(/up to date/i);
+    });
+
+    it('should show "Completed" for completed decks', () => {
+      const deck = createMockDeck({
+        progress: { ...createMockDeck().progress!, status: 'completed' },
+      });
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
+      expect(screen.getByTestId('deck-card-metadata')).toHaveTextContent(/completed/i);
     });
   });
 

@@ -3,10 +3,12 @@ import React from 'react';
 import { Crown, Pencil, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { CultureBadge, type CultureCategory } from '@/components/culture';
+import { CultureBadge, getCategoryColor, type CultureCategory } from '@/components/culture';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { CEFR_COLORS } from '@/lib/cefrColors';
 import { getLocalizedDeckName } from '@/lib/deckLocale';
+import { formatRelativeDate } from '@/lib/helpers';
 import { calculateCompletionPercentage } from '@/lib/progressUtils';
 import type { Deck } from '@/types/deck';
 
@@ -18,7 +20,6 @@ export interface DeckCardProps {
   onClick?: () => void;
   showProgress?: boolean;
   variant?: 'grid' | 'list';
-  showStats?: boolean;
   isCultureDeck?: boolean;
   cultureCategory?: CultureCategory;
   /** Show edit/delete action buttons (for user-owned decks) */
@@ -34,7 +35,6 @@ export const DeckCard: React.FC<DeckCardProps> = ({
   onClick,
   showProgress = true,
   variant = 'grid',
-  showStats = true,
   isCultureDeck = false,
   cultureCategory,
   showActions = false,
@@ -72,11 +72,41 @@ export const DeckCard: React.FC<DeckCardProps> = ({
   // Locked state is indicated by Lock icon and non-clickable behavior
   const cardClassName = `
     relative overflow-hidden group
-    min-h-[300px] flex flex-col
+    flex flex-col
     ${isClickable ? 'cursor-pointer transition-all duration-200 hover:shadow-lg' : ''}
     ${isPremium && !isLocked ? 'border-amber-400 hover:border-amber-500' : ''}
     ${variant === 'list' ? 'flex flex-row items-center' : ''}
   `.trim();
+
+  const getAccentStripeColor = (): string => {
+    if (isCultureDeck && cultureCategory) {
+      return getCategoryColor(cultureCategory).dot;
+    }
+    return CEFR_COLORS[level].bgColorLight;
+  };
+
+  const getMetadataText = (): string => {
+    if (!progress) {
+      return t('card.metadata.notStarted');
+    }
+    const { status, dueToday, cardsMastered, lastStudied } = progress;
+    if (status === 'completed') {
+      if (cardsMastered > 0) {
+        return `${t('card.metadata.completed')} · ${t('card.metadata.mastered', { count: cardsMastered })}`;
+      }
+      return t('card.metadata.completed');
+    }
+    const parts: string[] = [];
+    if (dueToday > 0) {
+      parts.push(t('card.metadata.dueToday', { count: dueToday }));
+    } else {
+      parts.push(t('card.metadata.upToDate'));
+    }
+    if (lastStudied) {
+      parts.push(t('card.metadata.last', { time: formatRelativeDate(lastStudied) }));
+    }
+    return parts.join(' · ');
+  };
 
   return (
     <Card
@@ -97,6 +127,13 @@ export const DeckCard: React.FC<DeckCardProps> = ({
       }
       aria-label={`${localizedName} deck, ${level} level, ${completionPercent}% completed${isLocked ? ', locked' : ''}`}
     >
+      {/* Accent stripe */}
+      <div
+        className={`h-1 w-full ${getAccentStripeColor()}`}
+        aria-hidden="true"
+        data-testid="deck-card-accent-stripe"
+      />
+
       {/* Action buttons (edit/delete) - visible on hover */}
       {showActions && (
         <div
@@ -188,39 +225,15 @@ export const DeckCard: React.FC<DeckCardProps> = ({
                   }
                 }
                 showLegend={false}
+                size="large"
               />
-              <p className="mt-1 text-xs text-muted-foreground">
-                {completionPercent}% {t('detail.complete')}
+              {/* Temporal metadata */}
+              <p className="mt-1 text-xs text-muted-foreground" data-testid="deck-card-metadata">
+                {getMetadataText()}
               </p>
             </div>
           )}
         </div>
-
-        {/* Stats Row */}
-        {showStats && (
-          <div
-            data-testid="deck-card-stats"
-            className="grid grid-cols-2 gap-2 border-t border-border pt-3 text-center"
-          >
-            {/* Card Count */}
-            <div>
-              <p className="text-xs text-muted-foreground">
-                {isCultureDeck
-                  ? t('detail.questions')
-                  : deck.cardSystem === 'V2'
-                    ? t('detail.words')
-                    : t('detail.cards')}
-              </p>
-              <p className="text-sm font-semibold text-foreground">{cardCount}</p>
-            </div>
-
-            {/* Completion or Progress */}
-            <div>
-              <p className="text-xs text-muted-foreground">{t('detail.progress')}</p>
-              <p className="text-sm font-semibold text-foreground">{completionPercent}%</p>
-            </div>
-          </div>
-        )}
       </CardContent>
 
       {/* Locked state overlay - indicates premium content */}
