@@ -850,6 +850,7 @@
   "audioGenerate": {
     "generate": "Generate",
     "retry": "Retry",
+    "regenerate": "Regenerate",
     "success": "Audio generation started",
     "error": "Failed to start audio generation"
   },

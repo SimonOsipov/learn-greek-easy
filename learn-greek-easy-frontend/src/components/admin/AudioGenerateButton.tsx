@@ -19,9 +19,12 @@ export function AudioGenerateButton({
 }: AudioGenerateButtonProps) {
   const { t } = useTranslation('admin');
 
-  if (status === 'ready') return null;
-
-  const label = status === 'failed' ? t('audioGenerate.retry') : t('audioGenerate.generate');
+  const label =
+    status === 'failed'
+      ? t('audioGenerate.retry')
+      : status === 'ready'
+        ? t('audioGenerate.regenerate')
+        : t('audioGenerate.generate');
   const disabled = status === 'generating' || isLoading;
 
   return (

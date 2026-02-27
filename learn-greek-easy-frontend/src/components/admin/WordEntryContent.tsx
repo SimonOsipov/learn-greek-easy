@@ -46,6 +46,14 @@ export function WordEntryContent({ wordEntryId }: WordEntryContentProps) {
     );
   }
 
+  const resolveAction = (
+    audioStatus: string | undefined | null
+  ): 'generate' | 'retry' | 'regenerate' => {
+    if (audioStatus === 'failed') return 'retry';
+    if (audioStatus === 'ready') return 'regenerate';
+    return 'generate';
+  };
+
   const handleGenerateClick = (part: 'lemma' | 'example', exampleId?: string) => {
     if (typeof posthog?.capture === 'function') {
       posthog.capture('admin_audio_generation_triggered', {
@@ -55,12 +63,8 @@ export function WordEntryContent({ wordEntryId }: WordEntryContentProps) {
         example_id: exampleId ?? null,
         action:
           part === 'lemma'
-            ? wordEntry.audio_status === 'failed'
-              ? 'retry'
-              : 'generate'
-            : wordEntry.examples?.find((e) => e.id === exampleId)?.audio_status === 'failed'
-              ? 'retry'
-              : 'generate',
+            ? resolveAction(wordEntry.audio_status)
+            : resolveAction(wordEntry.examples?.find((e) => e.id === exampleId)?.audio_status),
         lemma: wordEntry.lemma,
       });
     }
