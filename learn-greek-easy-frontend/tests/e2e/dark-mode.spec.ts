@@ -368,8 +368,11 @@ test.describe('Dark Mode - Theme Persists on Logout', () => {
     // Should be on landing page
     await expect(page.getByTestId('landing-page')).toBeVisible({ timeout: 10000 });
 
+    // Wait for any theme transition to complete before asserting
+    await expect(page.locator('html')).not.toHaveClass(/theme-transition/, { timeout: 5000 });
+
     // Theme should still be light after logout
-    await expect(page.locator('html')).not.toHaveClass(/dark/);
+    await expect(page.locator('html')).not.toHaveClass(/dark/, { timeout: 3000 });
 
     // Verify localStorage has light theme
     const theme = await page.evaluate(() => localStorage.getItem('theme'));
