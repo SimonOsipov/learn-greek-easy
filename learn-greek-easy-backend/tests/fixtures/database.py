@@ -172,7 +172,7 @@ def create_test_session_factory(
 # =============================================================================
 
 
-async def ensure_database_ready(engine: AsyncEngine) -> None:
+async def ensure_database_ready(engine: AsyncEngine) -> None:  # noqa: C901
     """Ensure database is ready for testing.
 
     Checks:
@@ -213,8 +213,10 @@ async def ensure_database_ready(engine: AsyncEngine) -> None:
             except IntegrityError:
                 # Another parallel worker created the extension - this is fine
                 await conn.rollback()
-            except Exception as e:
-                raise RuntimeError(f"uuid-ossp extension not installed and cannot create: {e}")
+            except Exception as err:
+                raise RuntimeError(
+                    f"uuid-ossp extension not installed and cannot create: {err}"
+                ) from err
 
         # Check vector extension (required for pgvector embeddings)
         result = await conn.execute(
@@ -236,8 +238,47 @@ async def ensure_database_ready(engine: AsyncEngine) -> None:
             except IntegrityError:
                 # Another parallel worker created the extension - this is fine
                 await conn.rollback()
-            except Exception as e:
-                raise RuntimeError(f"vector extension not installed and cannot create: {e}")
+            except Exception as err:
+                raise RuntimeError(
+                    f"vector extension not installed and cannot create: {err}"
+                ) from err
+
+        # Check unaccent extension (required for accent-insensitive Greek matching)
+        result = await conn.execute(
+            text(
+                """
+                SELECT EXISTS (
+                    SELECT 1 FROM pg_extension WHERE extname = 'unaccent'
+                )
+                """
+            )
+        )
+        has_unaccent_extension = result.scalar()
+
+        if not has_unaccent_extension:
+            # Try to create it
+            try:
+                await conn.execute(text('CREATE EXTENSION IF NOT EXISTS "unaccent"'))
+                await conn.commit()
+            except IntegrityError:
+                # Another parallel worker created the extension - this is fine
+                await conn.rollback()
+            except Exception as err:
+                raise RuntimeError(
+                    f"unaccent extension not installed and cannot create: {err}"
+                ) from err
+
+        # Create immutable_unaccent wrapper (required for expression index on word_entries)
+        await conn.execute(
+            text(
+                """
+                CREATE OR REPLACE FUNCTION immutable_unaccent(text)
+                RETURNS text LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE AS
+                $$ SELECT public.unaccent('public.unaccent', $1) $$
+                """
+            )
+        )
+        await conn.commit()
 
 
 # =============================================================================

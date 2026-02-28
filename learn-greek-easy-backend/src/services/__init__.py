@@ -14,6 +14,7 @@ from src.services.changelog_service import ChangelogService
 from src.services.checkout_service import CheckoutService
 from src.services.culture_deck_service import CultureDeckService
 from src.services.culture_question_service import CultureQuestionService
+from src.services.duplicate_detection_service import DuplicateDetectionService
 from src.services.feedback_admin_service import FeedbackAdminService
 from src.services.lemma_normalization_service import (
     LemmaNormalizationService,
@@ -44,6 +45,7 @@ __all__ = [
     "CultureDeckService",
     "CultureQuestionService",
     "DeletionResult",
+    "DuplicateDetectionService",
     "FeedbackAdminService",
     "LemmaNormalizationService",
     "MockExamService",
