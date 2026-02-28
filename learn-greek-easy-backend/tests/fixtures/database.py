@@ -213,8 +213,10 @@ async def ensure_database_ready(engine: AsyncEngine) -> None:  # noqa: C901
             except IntegrityError:
                 # Another parallel worker created the extension - this is fine
                 await conn.rollback()
-            except Exception as e:
-                raise RuntimeError(f"uuid-ossp extension not installed and cannot create: {e}")
+            except Exception as err:
+                raise RuntimeError(
+                    f"uuid-ossp extension not installed and cannot create: {err}"
+                ) from err
 
         # Check vector extension (required for pgvector embeddings)
         result = await conn.execute(
@@ -236,8 +238,10 @@ async def ensure_database_ready(engine: AsyncEngine) -> None:  # noqa: C901
             except IntegrityError:
                 # Another parallel worker created the extension - this is fine
                 await conn.rollback()
-            except Exception as e:
-                raise RuntimeError(f"vector extension not installed and cannot create: {e}")
+            except Exception as err:
+                raise RuntimeError(
+                    f"vector extension not installed and cannot create: {err}"
+                ) from err
 
         # Check unaccent extension (required for accent-insensitive Greek matching)
         result = await conn.execute(
@@ -259,8 +263,10 @@ async def ensure_database_ready(engine: AsyncEngine) -> None:  # noqa: C901
             except IntegrityError:
                 # Another parallel worker created the extension - this is fine
                 await conn.rollback()
-            except Exception as e:
-                raise RuntimeError(f"unaccent extension not installed and cannot create: {e}")
+            except Exception as err:
+                raise RuntimeError(
+                    f"unaccent extension not installed and cannot create: {err}"
+                ) from err
 
 
 # =============================================================================

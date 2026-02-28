@@ -41,7 +41,7 @@ async def _create_word_entry(
         is_active=is_active,
     )
     db_session.add(entry)
-    await db_session.commit()
+    await db_session.flush()
     await db_session.refresh(entry)
     return entry
 
