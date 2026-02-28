@@ -1,4 +1,4 @@
-"""add unaccent functional index on word_entries
+"""add immutable_unaccent function for accent-insensitive queries
 
 Revision ID: 6011531b4324
 Revises: 28ddf97adf4d
@@ -18,9 +18,12 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    """Add immutable unaccent wrapper and functional index for accent-insensitive lemma lookup."""
-    # unaccent() is STABLE, not IMMUTABLE, so it cannot be used directly in an
-    # expression index. Create an IMMUTABLE wrapper that pins the unaccent dictionary.
+    """Create IMMUTABLE wrapper around unaccent() for use in queries and future indexes.
+
+    unaccent() is STABLE (not IMMUTABLE), which prevents its use in expression
+    indexes. This wrapper pins the unaccent dictionary explicitly, making it
+    IMMUTABLE and safe for use in both queries and expression indexes.
+    """
     op.execute(
         """
         CREATE OR REPLACE FUNCTION immutable_unaccent(text)
@@ -28,15 +31,8 @@ def upgrade() -> None:
         $$ SELECT public.unaccent('public.unaccent', $1) $$
         """
     )
-    op.execute(
-        """
-        CREATE INDEX IF NOT EXISTS ix_word_entries_unaccent_lemma_pos_active
-        ON word_entries (immutable_unaccent(lemma), part_of_speech, is_active)
-        """
-    )
 
 
 def downgrade() -> None:
-    """Remove functional index and immutable unaccent wrapper."""
-    op.execute("DROP INDEX IF EXISTS ix_word_entries_unaccent_lemma_pos_active")
+    """Remove the immutable_unaccent wrapper function."""
     op.execute("DROP FUNCTION IF EXISTS immutable_unaccent(text)")
