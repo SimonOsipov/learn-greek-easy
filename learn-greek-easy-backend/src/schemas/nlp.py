@@ -1,5 +1,7 @@
 """NLP verification Pydantic schemas for spellcheck and morphology results."""
 
+from uuid import UUID
+
 from pydantic import BaseModel, Field
 
 
@@ -48,3 +50,25 @@ class NormalizedLemma(BaseModel):
     article: str | None = Field(None, description='Article: "ο"/"η"/"το"/None')
     pos: str = Field(..., description="Universal POS tag (NOUN, VERB, ADJ, etc.)")
     confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence score 0.0-1.0")
+
+
+class WordEntrySnapshot(BaseModel):
+    """Lightweight snapshot of a WordEntry for duplicate detection results."""
+
+    id: UUID
+    lemma: str
+    part_of_speech: str
+    translation_en: str
+    translation_ru: str | None = None
+    pronunciation: str | None = None
+    grammar_data: dict | None = None
+    examples: list[dict] | None = None
+
+
+class DuplicateCheckResult(BaseModel):
+    """Result of checking whether a word entry is a duplicate."""
+
+    is_duplicate: bool
+    existing_entry: WordEntrySnapshot | None = None
+    matched_deck_id: UUID | None = None
+    matched_deck_name: str | None = None
