@@ -72,3 +72,15 @@ class DuplicateCheckResult(BaseModel):
     existing_entry: WordEntrySnapshot | None = None
     matched_deck_id: UUID | None = None
     matched_deck_name: str | None = None
+
+
+class OpenRouterResponse(BaseModel):
+    """Response from an OpenRouter API call."""
+
+    content: str = Field(..., description="Text content returned by the model")
+    model: str = Field(..., description="Model ID that generated the response")
+    usage: dict | None = Field(
+        default=None,
+        description="Token usage statistics (prompt_tokens, completion_tokens, total_tokens)",
+    )
+    latency_ms: float = Field(..., description="Request latency in milliseconds")

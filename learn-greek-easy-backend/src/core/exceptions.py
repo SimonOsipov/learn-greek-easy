@@ -505,3 +505,55 @@ class ElevenLabsAPIError(ElevenLabsError):
         self.status_code = status_code
         self.detail = detail
         super().__init__(f"ElevenLabs API error {status_code}: {detail}")
+
+
+# ============================================================================
+# OpenRouter Service Exceptions
+# ============================================================================
+
+
+class OpenRouterError(Exception):
+    """Base exception for all OpenRouter-related errors."""
+
+    pass
+
+
+class OpenRouterNotConfiguredError(OpenRouterError):
+    """OpenRouter API key is not configured."""
+
+    def __init__(self, detail: str = "OpenRouter API key is not configured") -> None:
+        self.detail = detail
+        super().__init__(detail)
+
+
+class OpenRouterAuthenticationError(OpenRouterError):
+    """OpenRouter authentication failed (401 - invalid API key)."""
+
+    def __init__(self, detail: str = "OpenRouter authentication failed") -> None:
+        self.detail = detail
+        super().__init__(detail)
+
+
+class OpenRouterRateLimitError(OpenRouterError):
+    """OpenRouter rate limit exceeded (429)."""
+
+    def __init__(self, detail: str = "OpenRouter rate limit exceeded") -> None:
+        self.detail = detail
+        super().__init__(detail)
+
+
+class OpenRouterAPIError(OpenRouterError):
+    """Generic OpenRouter API error with status code and detail."""
+
+    def __init__(self, status_code: int, detail: str) -> None:
+        self.status_code = status_code
+        self.detail = detail
+        super().__init__(f"OpenRouter API error {status_code}: {detail}")
+
+
+class OpenRouterTimeoutError(OpenRouterError):
+    """OpenRouter request timed out."""
+
+    def __init__(self, detail: str = "OpenRouter request timed out") -> None:
+        self.detail = detail
+        super().__init__(detail)
