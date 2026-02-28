@@ -172,7 +172,7 @@ def create_test_session_factory(
 # =============================================================================
 
 
-async def ensure_database_ready(engine: AsyncEngine) -> None:
+async def ensure_database_ready(engine: AsyncEngine) -> None:  # noqa: C901
     """Ensure database is ready for testing.
 
     Checks:
@@ -238,6 +238,29 @@ async def ensure_database_ready(engine: AsyncEngine) -> None:
                 await conn.rollback()
             except Exception as e:
                 raise RuntimeError(f"vector extension not installed and cannot create: {e}")
+
+        # Check unaccent extension (required for accent-insensitive Greek matching)
+        result = await conn.execute(
+            text(
+                """
+                SELECT EXISTS (
+                    SELECT 1 FROM pg_extension WHERE extname = 'unaccent'
+                )
+                """
+            )
+        )
+        has_unaccent_extension = result.scalar()
+
+        if not has_unaccent_extension:
+            # Try to create it
+            try:
+                await conn.execute(text('CREATE EXTENSION IF NOT EXISTS "unaccent"'))
+                await conn.commit()
+            except IntegrityError:
+                # Another parallel worker created the extension - this is fine
+                await conn.rollback()
+            except Exception as e:
+                raise RuntimeError(f"unaccent extension not installed and cannot create: {e}")
 
 
 # =============================================================================
