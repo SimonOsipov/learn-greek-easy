@@ -15,8 +15,9 @@ logger = get_logger(__name__)
 class DuplicateDetectionService:
     """Detects duplicate word entries across all decks.
 
-    Uses accent-insensitive lemma + part_of_speech matching via
-    PostgreSQL ``unaccent()`` extension. Instantiated per-request
+    Uses accent-insensitive lemma + part_of_speech matching via the
+    ``immutable_unaccent()`` function (an IMMUTABLE wrapper around the
+    PostgreSQL ``unaccent()`` extension). Instantiated per-request
     with an AsyncSession (same pattern as repositories).
     """
 
@@ -45,7 +46,7 @@ class DuplicateDetectionService:
             select(WordEntry, Deck.name_en)
             .join(Deck, WordEntry.deck_id == Deck.id)
             .where(
-                func.unaccent(WordEntry.lemma) == func.unaccent(lemma),
+                func.immutable_unaccent(WordEntry.lemma) == func.immutable_unaccent(lemma),
                 WordEntry.part_of_speech == part_of_speech,
                 WordEntry.is_active.is_(True),
             )

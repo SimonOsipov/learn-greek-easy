@@ -268,6 +268,18 @@ async def ensure_database_ready(engine: AsyncEngine) -> None:  # noqa: C901
                     f"unaccent extension not installed and cannot create: {err}"
                 ) from err
 
+        # Create immutable_unaccent wrapper (required for expression index on word_entries)
+        await conn.execute(
+            text(
+                """
+                CREATE OR REPLACE FUNCTION immutable_unaccent(text)
+                RETURNS text LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE AS
+                $$ SELECT public.unaccent('public.unaccent', $1) $$
+                """
+            )
+        )
+        await conn.commit()
+
 
 # =============================================================================
 # Core Database Fixtures
