@@ -53,3 +53,69 @@ class TestNLPServicesIntegration:
         # MorphologyService still processes it (spaCy attempts analysis)
         assert morph_result.analysis_successful is True
         assert morph_result.is_known is False
+
+
+@pytest.mark.integration
+class TestLemmaNormalizationPipeline:
+    """Integration tests for LemmaNormalizationService full pipeline."""
+
+    def test_valid_noun_full_pipeline(self):
+        """σπίτια (houses) -> lemma σπίτι, neuter, article το, high confidence."""
+        from src.services.lemma_normalization_service import get_lemma_normalization_service
+
+        service = get_lemma_normalization_service()
+        result = service.normalize("σπίτια")
+
+        assert result.lemma == "σπίτι"
+        assert result.gender == "neuter"
+        assert result.article == "το"
+        assert result.confidence >= 0.95
+
+    def test_hallucinated_word_low_confidence(self):
+        """σπλίτρο (nonsense) -> low confidence, no gender/article."""
+        from src.services.lemma_normalization_service import get_lemma_normalization_service
+
+        service = get_lemma_normalization_service()
+        result = service.normalize("σπλίτρο")
+
+        assert result.confidence < 0.5
+        assert result.gender is None
+        assert result.article is None
+
+    def test_cross_service_consistency_valid_word(self):
+        """Normalized lemma of valid word should pass spellcheck."""
+        from src.services.lemma_normalization_service import get_lemma_normalization_service
+        from src.services.spellcheck_service import get_spellcheck_service
+
+        norm_service = get_lemma_normalization_service()
+        spell_service = get_spellcheck_service()
+
+        norm_result = norm_service.normalize("σπίτια")
+        spell_result = spell_service.check(norm_result.lemma)
+
+        assert spell_result.is_valid is True
+
+    def test_cross_service_consistency_hallucinated(self):
+        """Normalized lemma of hallucinated word should fail spellcheck."""
+        from src.services.lemma_normalization_service import get_lemma_normalization_service
+        from src.services.spellcheck_service import get_spellcheck_service
+
+        norm_service = get_lemma_normalization_service()
+        spell_service = get_spellcheck_service()
+
+        norm_result = norm_service.normalize("σπλίτρο")
+        spell_result = spell_service.check(norm_result.lemma)
+
+        assert spell_result.is_valid is False
+
+    def test_feminine_noun_pipeline(self):
+        """μητέρες (mothers) -> lemma μητέρα, feminine, article η, high confidence."""
+        from src.services.lemma_normalization_service import get_lemma_normalization_service
+
+        service = get_lemma_normalization_service()
+        result = service.normalize("μητέρες")
+
+        assert result.lemma == "μητέρα"
+        assert result.gender == "feminine"
+        assert result.article == "η"
+        assert result.confidence >= 0.95
