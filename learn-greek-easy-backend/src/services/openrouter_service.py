@@ -159,7 +159,13 @@ class OpenRouterService:
                         detail=response.text[:200],
                     )
 
-                data = response.json()
+                try:
+                    data = response.json()
+                except ValueError as err:
+                    raise OpenRouterAPIError(
+                        status_code=response.status_code,
+                        detail="Invalid JSON response from OpenRouter",
+                    ) from err
                 usage = data.get("usage") or {}
                 choices = data.get("choices", [])
                 content = choices[0].get("message", {}).get("content", "") if choices else ""
@@ -181,8 +187,8 @@ class OpenRouterService:
                     },
                 )
                 logger.debug(
-                    "OpenRouter response content",
-                    extra={"content_preview": content[:200] if content else ""},
+                    "OpenRouter response metadata",
+                    extra={"content_length": len(content) if content else 0},
                 )
 
                 return OpenRouterResponse(
@@ -192,7 +198,7 @@ class OpenRouterService:
                     latency_ms=latency_ms,
                 )
 
-            except httpx.TimeoutException:
+            except httpx.TimeoutException as err:
                 latency_ms = round((time.monotonic() - start_time) * 1000)
                 logger.warning(
                     "OpenRouter request timed out",
@@ -204,6 +210,7 @@ class OpenRouterService:
                     },
                 )
                 last_exception = OpenRouterTimeoutError()
+                last_exception.__cause__ = err
                 if attempt < MAX_ATTEMPTS:
                     await asyncio.sleep(BACKOFF_SECONDS[attempt - 1])
                     continue

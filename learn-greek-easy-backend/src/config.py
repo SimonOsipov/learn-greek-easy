@@ -679,7 +679,7 @@ class Settings(BaseSettings):
     @property
     def openrouter_configured(self) -> bool:
         """Check if OpenRouter is properly configured."""
-        return bool(self.openrouter_api_key)
+        return bool(self.openrouter_api_key and self.openrouter_api_key.strip())
 
     @property
     def stripe_configured(self) -> bool:
