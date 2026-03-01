@@ -399,7 +399,10 @@ export const NewsItemEditModal: React.FC<NewsItemEditModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]" data-testid="news-edit-modal">
+      <DialogContent
+        className="max-h-[90vh] overflow-y-auto sm:max-w-[600px]"
+        data-testid="news-edit-modal"
+      >
         <DialogHeader>
           <DialogTitle>{t('news.edit.title')}</DialogTitle>
           <DialogDescription>{getLocalizedTitle(item, currentLanguage)}</DialogDescription>
