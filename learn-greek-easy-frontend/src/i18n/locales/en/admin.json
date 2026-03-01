@@ -391,7 +391,8 @@
       "invalidImageUrl": "Invalid source_image_url format",
       "invalidDate": "Invalid publication_date format (use YYYY-MM-DD)",
       "noFieldsToUpdate": "No fields to update",
-      "invalidCountry": "Invalid country. Must be: cyprus, greece, or world"
+      "invalidCountry": "Invalid country. Must be: cyprus, greece, or world",
+      "a2FieldsPaired": "title_el_a2 and description_el_a2 must both be provided or both omitted"
     },
     "search": {
       "placeholder": "Search news...",

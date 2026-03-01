@@ -40,6 +40,8 @@ const JSON_PLACEHOLDER = `{
   "title_el": "Τίτλος ειδήσεων",
   "title_en": "News title",
   "title_ru": "Заголовок новости",
+  "title_el_a2": "(optional) Simplified A2 title",
+  "description_el_a2": "(optional) Simplified A2 description",
   "description_el": "Περιγραφή στα ελληνικά",
   "description_en": "Description in English",
   "description_ru": "Описание на русском",
@@ -86,7 +88,8 @@ type ValidationErrorType =
   | 'invalidArticleUrl'
   | 'invalidImageUrl'
   | 'invalidDate'
-  | 'invalidCountry';
+  | 'invalidCountry'
+  | 'a2FieldsPaired';
 
 /**
  * Validates JSON input for news item creation
@@ -143,6 +146,20 @@ function validateNewsItemJson(json: string): {
     return { valid: false, errorType: 'invalidCountry' };
   }
 
+  // Validate A2 fields pairing
+  const titleA2 =
+    typeof parsed.title_el_a2 === 'string' && parsed.title_el_a2.trim() !== ''
+      ? (parsed.title_el_a2 as string)
+      : null;
+  const descA2 =
+    typeof parsed.description_el_a2 === 'string' && parsed.description_el_a2.trim() !== ''
+      ? (parsed.description_el_a2 as string)
+      : null;
+
+  if ((titleA2 !== null) !== (descA2 !== null)) {
+    return { valid: false, errorType: 'a2FieldsPaired' };
+  }
+
   // Build the data object
   const data: NewsItemWithQuestionCreate = {
     country: parsed.country as string,
@@ -156,6 +173,12 @@ function validateNewsItemJson(json: string): {
     original_article_url: parsed.original_article_url as string,
     source_image_url: parsed.source_image_url as string,
   };
+
+  // Include A2 fields when both present
+  if (titleA2 !== null && descA2 !== null) {
+    data.title_el_a2 = titleA2;
+    data.description_el_a2 = descA2;
+  }
 
   // Include question if present (optional field - backend will validate structure)
   if (parsed.question !== undefined && parsed.question !== null) {

@@ -92,6 +92,8 @@ function makeNewsItem(overrides: Partial<NewsItemResponse> = {}): NewsItemRespon
     description_el_a2: null,
     audio_a2_url: null,
     audio_a2_duration_seconds: null,
+    audio_a2_generated_at: null,
+    audio_a2_file_size_bytes: null,
     has_a2_content: false,
     ...overrides,
   };
@@ -554,5 +556,42 @@ describe('NewsItemsTable — Country badge', () => {
       .getByText((content) => content.includes('CY'))
       .closest('[class*="bg-blue"]');
     expect(badge).not.toBeNull();
+  });
+});
+
+describe('NewsItemsTable — A2 badge', () => {
+  beforeEach(() => {
+    mockCurrentLanguage.value = 'en';
+    vi.clearAllMocks();
+  });
+
+  it('shows purple A2 badge when has_a2_content is true', () => {
+    const item = makeNewsItem({ id: 'item-a2', has_a2_content: true });
+    render(<NewsItemsTable {...defaultTableProps} newsItems={[item]} />);
+
+    const badge = screen.getByTestId('a2-badge-item-a2');
+    expect(badge).toBeInTheDocument();
+    expect(badge.className).toContain('bg-purple-500');
+  });
+
+  it('shows muted A2 badge when has_a2_content is false', () => {
+    const item = makeNewsItem({ id: 'item-no-a2', has_a2_content: false });
+    render(<NewsItemsTable {...defaultTableProps} newsItems={[item]} />);
+
+    const badge = screen.getByTestId('a2-badge-item-no-a2');
+    expect(badge).toBeInTheDocument();
+    expect(badge.className).toContain('opacity-50');
+    expect(badge.className).not.toContain('bg-purple-500');
+  });
+
+  it('A2 badge is present for every row', () => {
+    const items = [
+      makeNewsItem({ id: 'item-1', has_a2_content: true }),
+      makeNewsItem({ id: 'item-2', has_a2_content: false }),
+    ];
+    render(<NewsItemsTable {...defaultTableProps} newsItems={items} total={2} />);
+
+    expect(screen.getByTestId('a2-badge-item-1')).toBeInTheDocument();
+    expect(screen.getByTestId('a2-badge-item-2')).toBeInTheDocument();
   });
 });

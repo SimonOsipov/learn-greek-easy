@@ -49,6 +49,8 @@ interface AdminNewsState {
   // Regeneration state
   regeneratingId: string | null;
   cooldownEndTime: number | null;
+  regeneratingA2Id: string | null;
+  cooldownA2EndTime: number | null;
 
   // Actions
   fetchNewsItems: () => Promise<void>;
@@ -56,6 +58,7 @@ interface AdminNewsState {
   updateNewsItem: (id: string, data: NewsItemUpdate) => Promise<NewsItemResponse>;
   deleteNewsItem: (id: string) => Promise<void>;
   regenerateAudio: (id: string) => Promise<void>;
+  regenerateA2Audio: (id: string) => Promise<void>;
   setPage: (page: number) => void;
   setSelectedItem: (item: NewsItemResponse | null) => void;
   setCountryFilter: (filter: NewsCountry | 'all') => void;
@@ -84,6 +87,8 @@ export const useAdminNewsStore = create<AdminNewsState>()(
       countryFilter: 'all' as NewsCountry | 'all',
       regeneratingId: null,
       cooldownEndTime: null,
+      regeneratingA2Id: null,
+      cooldownA2EndTime: null,
 
       /**
        * Fetch paginated news items list from admin API
@@ -213,6 +218,33 @@ export const useAdminNewsStore = create<AdminNewsState>()(
       },
 
       /**
+       * Regenerate A2 audio for a news item
+       */
+      regenerateA2Audio: async (id: string) => {
+        if (get().regeneratingA2Id !== null) return;
+
+        set({ regeneratingA2Id: id, error: null });
+
+        try {
+          await adminAPI.regenerateA2Audio(id);
+
+          set({
+            regeneratingA2Id: null,
+            cooldownA2EndTime: Date.now() + 15_000,
+          });
+
+          setTimeout(() => {
+            set({ cooldownA2EndTime: null });
+            get().fetchNewsItems();
+          }, 15_000);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Failed to regenerate A2 audio';
+          set({ regeneratingA2Id: null, cooldownA2EndTime: null, error: message });
+          throw error;
+        }
+      },
+
+      /**
        * Set current page and re-fetch
        */
       setPage: (page: number) => {
@@ -261,4 +293,6 @@ export const selectPagination = (state: AdminNewsState) => ({
 });
 export const selectRegeneratingId = (state: AdminNewsState) => state.regeneratingId;
 export const selectCooldownEndTime = (state: AdminNewsState) => state.cooldownEndTime;
+export const selectRegeneratingA2Id = (state: AdminNewsState) => state.regeneratingA2Id;
+export const selectCooldownA2EndTime = (state: AdminNewsState) => state.cooldownA2EndTime;
 export const selectCountryFilter = (state: AdminNewsState) => state.countryFilter;
