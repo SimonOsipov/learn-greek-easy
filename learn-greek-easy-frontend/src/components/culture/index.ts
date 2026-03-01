@@ -24,3 +24,9 @@ export type { SourceImageProps } from './SourceImage';
 
 export { WaveformPlayer } from './WaveformPlayer';
 export type { WaveformPlayerProps } from './WaveformPlayer';
+
+export { QuestionCard, QuestionCardSkeleton } from './QuestionCard';
+export type { QuestionCardProps } from './QuestionCard';
+
+export { QuestionBrowser } from './QuestionBrowser';
+export type { QuestionBrowserProps } from './QuestionBrowser';
