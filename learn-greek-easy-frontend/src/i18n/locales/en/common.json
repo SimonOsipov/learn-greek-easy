@@ -185,7 +185,8 @@
     "level": {
       "a2": "A2",
       "b2": "B2",
-      "label": "Content level"
+      "label": "Content level",
+      "difficulty": "Difficulty:"
     }
   },
   "notifications": {
