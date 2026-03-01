@@ -292,7 +292,7 @@ class TestGenerate:
         await service.generate(_make_lemma())
 
         user_content = mock_openrouter.complete.call_args.kwargs["messages"][1]["content"]
-        schema_key = list(GeneratedNounData.model_json_schema().keys())[0]
+        schema_key = next(iter(GeneratedNounData.model_json_schema().keys()))
         assert schema_key in user_content  # e.g. "$defs" or "properties" present
 
     @pytest.mark.asyncio

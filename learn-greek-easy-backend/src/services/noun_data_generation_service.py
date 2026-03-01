@@ -88,7 +88,7 @@ Example 2 (neuter, neuter_o):
   },
   "examples": [
     {"id": 1, "greek": "Αυτό το βιβλίο είναι ενδιαφέρον.", "english": "This book is interesting.", "russian": "Эта книга интересная."},
-    {"id": 2, "greek": "Διαβάζω πολλά βιβλία.", "english": "I read many books.", "russian": "Я читαω πολλά βιβλία."}
+    {"id": 2, "greek": "Διαβάζω πολλά βιβλία.", "english": "I read many books.", "russian": "Я читаю много книг."}
   ]
 }
 """
