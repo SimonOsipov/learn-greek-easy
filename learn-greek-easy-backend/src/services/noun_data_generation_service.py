@@ -8,7 +8,10 @@ from src.core.exceptions import NounGenerationError
 from src.core.logging import get_logger
 from src.schemas.nlp import GeneratedNounData, NormalizedLemma
 from src.services.openrouter_service import OpenRouterService, get_openrouter_service
-from src.utils.greek_text import _strip_article  # noqa: WPS450 (private import by design)
+from src.utils.greek_text import (  # noqa: WPS450 (private import by design)
+    _strip_article,
+    normalize_greek_accents,
+)
 
 logger = get_logger(__name__)
 
@@ -125,11 +128,13 @@ _DECLENSION_RULES: dict[str, list[tuple[str, str]]] = {
 def _derive_declension_group(gender: str, nominative_singular: str) -> str | None:
     """Derive declension group from gender and nominative singular form."""
     bare = _strip_article(nominative_singular)
+    bare_normalized = normalize_greek_accents(bare)
     rules = _DECLENSION_RULES.get(gender)
     if rules is None:
         return None
     for suffix, group in rules:
-        if bare.endswith(suffix.lstrip("-")):
+        suffix_normalized = normalize_greek_accents(suffix.lstrip("-"))
+        if bare_normalized.endswith(suffix_normalized):
             return group
     return None
 
