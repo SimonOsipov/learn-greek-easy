@@ -178,10 +178,10 @@ describe('WordGrid Component', () => {
     it('should render mastery dots for each card', () => {
       renderWithRouter([mockWordEntries[0]]);
 
-      const dots = screen.getByTestId('word-card-mastery-dots');
+      const dots = screen.getByTestId('mastery-dots');
       expect(dots).toBeInTheDocument();
-      // Should have 5 dots
-      expect(dots.children).toHaveLength(5);
+      // Should have 4 dots
+      expect(dots.children).toHaveLength(4);
     });
   });
 

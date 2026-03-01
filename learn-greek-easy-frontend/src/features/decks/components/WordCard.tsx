@@ -17,6 +17,7 @@ import React from 'react';
 
 import { useTranslation } from 'react-i18next';
 
+import { MasteryDots } from '@/components/shared/MasteryDots';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getLocalizedTranslation } from '@/lib/localeUtils';
@@ -41,13 +42,6 @@ interface MasteryIndicatorProps {
   level: number;
 }
 
-interface MasteryDotsProps {
-  /** Total number of dots */
-  count: number;
-  /** Number of filled dots */
-  filled: number;
-}
-
 // ============================================
 // Sub-Components
 // ============================================
@@ -64,33 +58,6 @@ const MasteryIndicator: React.FC<MasteryIndicatorProps> = ({ level }) => {
       className="h-2.5 w-2.5 rounded-full bg-muted-foreground/30"
       aria-label={`Mastery level: ${level} of 5`}
     />
-  );
-};
-
-/**
- * Mastery dots row (bottom of card).
- * Shows progress with filled/empty dots.
- * V2 placeholder: all dots gray for now.
- */
-const MasteryDots: React.FC<MasteryDotsProps> = ({ count, filled }) => {
-  return (
-    <div
-      data-testid="word-card-mastery-dots"
-      className="flex gap-1"
-      aria-label={`Progress: ${filled} of ${count}`}
-    >
-      {Array.from({ length: count }).map((_, i) => (
-        <div
-          key={i}
-          className={cn(
-            'h-2 w-2 rounded-full',
-            i < filled
-              ? 'bg-primary' // Filled dot
-              : 'bg-muted-foreground/30' // Empty dot
-          )}
-        />
-      ))}
-    </div>
   );
 };
 
@@ -114,7 +81,7 @@ export const WordCardSkeleton: React.FC = () => {
           <Skeleton className="h-4 w-16" />
           <Skeleton className="h-4 w-24" />
           <div className="flex gap-1 pt-2">
-            {Array.from({ length: 5 }).map((_, i) => (
+            {Array.from({ length: 4 }).map((_, i) => (
               <Skeleton key={i} className="h-2 w-2 rounded-full" />
             ))}
           </div>
@@ -201,9 +168,9 @@ export const WordCard: React.FC<WordCardProps> = ({ wordEntry, onClick, loading 
             {displayTranslation}
           </p>
 
-          {/* Bottom mastery dots (5 dots, all gray for V2) */}
+          {/* Bottom mastery dots (4 dots, all gray for V2) */}
           <div className="pt-2">
-            <MasteryDots count={5} filled={0} />
+            <MasteryDots filled={0} />
           </div>
         </div>
       </CardContent>
