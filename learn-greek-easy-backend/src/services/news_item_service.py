@@ -390,6 +390,11 @@ class NewsItemService:
         # Handle image replacement if source_image_url provided
         old_s3_key = await self._handle_image_update(data, news_item, update_dict)
 
+        # Capture old A2 audio key if this update clears A2 content
+        old_audio_a2_s3_key: str | None = None
+        if data.description_el_a2 is not None and not data.description_el_a2.strip():
+            old_audio_a2_s3_key = news_item.audio_a2_s3_key
+
         # Update database record
         updated_news_item = await self.repo.update(news_item, update_dict)
         await self.db.commit()
@@ -401,6 +406,13 @@ class NewsItemService:
             logger.info(
                 "Deleted old news item image from S3",
                 extra={"old_s3_key": old_s3_key},
+            )
+
+        if old_audio_a2_s3_key:
+            self.s3_service.delete_object(old_audio_a2_s3_key)
+            logger.info(
+                "Deleted old A2 audio from S3",
+                extra={"old_audio_a2_s3_key": old_audio_a2_s3_key},
             )
 
         logger.info(

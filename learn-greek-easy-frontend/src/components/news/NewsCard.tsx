@@ -141,8 +141,10 @@ export const NewsCard: React.FC<NewsCardProps> = ({
   const getLocalizedContent = () => {
     if (newsLang === 'el') {
       return {
-        title: useA2 ? article.title_el_a2! : article.title_el,
-        description: useA2 ? article.description_el_a2! : article.description_el,
+        title: useA2 ? (article.title_el_a2 ?? article.title_el) : article.title_el,
+        description: useA2
+          ? (article.description_el_a2 ?? article.description_el)
+          : article.description_el,
       };
     }
     switch (newsLang) {

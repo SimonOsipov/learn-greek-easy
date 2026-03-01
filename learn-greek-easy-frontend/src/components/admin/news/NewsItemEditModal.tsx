@@ -166,20 +166,24 @@ function parseEditJson(json: string): {
     (update as Record<string, string>)['country'] = countryValue.trim();
   }
 
-  // A2 pair validation: both present or both absent
-  const a2Title = typeof parsed.title_el_a2 === 'string' ? parsed.title_el_a2.trim() : null;
-  const a2Desc =
-    typeof parsed.description_el_a2 === 'string' ? parsed.description_el_a2.trim() : null;
-  const hasA2Title = a2Title !== null && a2Title !== '';
-  const hasA2Desc = a2Desc !== null && a2Desc !== '';
-  if (hasA2Title !== hasA2Desc) {
+  // A2 pair validation: both keys must be present together or absent together
+  const hasA2TitleKey = Object.prototype.hasOwnProperty.call(parsed, 'title_el_a2');
+  const hasA2DescKey = Object.prototype.hasOwnProperty.call(parsed, 'description_el_a2');
+  if (hasA2TitleKey !== hasA2DescKey) {
     return { valid: false, errorType: 'a2FieldsPaired' };
   }
-  // Include A2 fields in update (empty string = clear content)
-  if (a2Title !== null) {
+  if (hasA2TitleKey && hasA2DescKey) {
+    if (typeof parsed.title_el_a2 !== 'string' || typeof parsed.description_el_a2 !== 'string') {
+      return { valid: false, errorType: 'a2FieldsPaired' };
+    }
+    const a2Title = parsed.title_el_a2.trim();
+    const a2Desc = parsed.description_el_a2.trim();
+    const hasA2Title = a2Title !== '';
+    const hasA2Desc = a2Desc !== '';
+    if (hasA2Title !== hasA2Desc) {
+      return { valid: false, errorType: 'a2FieldsPaired' };
+    }
     (update as Record<string, unknown>)['title_el_a2'] = a2Title;
-  }
-  if (a2Desc !== null) {
     (update as Record<string, unknown>)['description_el_a2'] = a2Desc;
   }
 

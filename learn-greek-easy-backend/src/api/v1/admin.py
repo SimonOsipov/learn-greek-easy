@@ -1038,11 +1038,12 @@ async def create_news_item(
         db_url=settings.database_url,
     )
 
-    if data.description_el_a2:
+    description_el_a2 = (data.description_el_a2 or "").strip()
+    if description_el_a2:
         background_tasks.add_task(
             generate_a2_audio_for_news_item_task,
             news_item_id=result.news_item.id,
-            description_el_a2=data.description_el_a2,
+            description_el_a2=description_el_a2,
             db_url=settings.database_url,
         )
 
@@ -1101,11 +1102,12 @@ async def update_news_item(
             db_url=settings.database_url,
         )
 
-    if data.description_el_a2 is not None:
+    _description_el_a2 = (data.description_el_a2 or "").strip()
+    if _description_el_a2:
         background_tasks.add_task(
             generate_a2_audio_for_news_item_task,
             news_item_id=news_item_id,
-            description_el_a2=data.description_el_a2,
+            description_el_a2=_description_el_a2,
             db_url=settings.database_url,
         )
 
