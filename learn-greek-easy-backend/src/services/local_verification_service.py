@@ -150,8 +150,15 @@ class LocalVerificationService:
                     message = f"'{bare}' not in dictionary"
             except Exception as exc:  # noqa: BLE001
                 logger.warning("Spellcheck failed for %s: %s", path, exc)
+                # Use warn (not skipped with empty checks) so morphology cannot
+                # silently promote this field to 'pass' via _recompute_field_status.
+                exc_check = CheckResult(
+                    check_name="spellcheck",
+                    status="warn",
+                    message=f"Spellcheck raised an exception: {exc}",
+                )
                 fields_by_path[path] = FieldVerificationResult(
-                    field_path=path, status="skipped", checks=[]
+                    field_path=path, status="warn", checks=[exc_check]
                 )
                 continue
 
@@ -173,8 +180,13 @@ class LocalVerificationService:
                 message = f"'{bare_lemma}' not in dictionary"
         except Exception as exc:  # noqa: BLE001
             logger.warning("Spellcheck failed for lemma: %s", exc)
+            exc_check = CheckResult(
+                check_name="spellcheck",
+                status="warn",
+                message=f"Spellcheck raised an exception: {exc}",
+            )
             fields_by_path["lemma"] = FieldVerificationResult(
-                field_path="lemma", status="skipped", checks=[]
+                field_path="lemma", status="warn", checks=[exc_check]
             )
             return
 
