@@ -367,7 +367,52 @@ describe('NewsItemEditModal -- A2 Audio Section', () => {
     });
     render(<NewsItemEditModal open={true} onOpenChange={vi.fn()} item={item} />);
 
-    expect(screen.getByText('45s')).toBeInTheDocument();
+    expect(screen.getByText(/Duration:/).textContent).toMatch(/0:45/);
+  });
+});
+
+describe('NewsItemEditModal — A2 audio metadata formatting', () => {
+  beforeEach(() => {
+    mockCurrentLanguage.value = 'en';
+    vi.clearAllMocks();
+  });
+
+  it('shows formatted A2 duration with label when audio_a2_url exists', () => {
+    const item = makeNewsItem({
+      audio_a2_url: 'https://example.com/audio_a2.mp3',
+      audio_a2_duration_seconds: 45,
+    });
+    render(<NewsItemEditModal open={true} onOpenChange={vi.fn()} item={item} />);
+    expect(screen.getByText(/Duration:/).textContent).toMatch(/0:45/);
+  });
+
+  it('shows formatted A2 file size with label when audio_a2_url exists', () => {
+    const item = makeNewsItem({
+      audio_a2_url: 'https://example.com/audio_a2.mp3',
+      audio_a2_file_size_bytes: 268288,
+    });
+    render(<NewsItemEditModal open={true} onOpenChange={vi.fn()} item={item} />);
+    expect(screen.getByText(/File size:/).textContent).toMatch(/262\.0 KB/);
+  });
+
+  it('shows A2 metadata when audio_a2_url is set (regardless of has_a2_content)', () => {
+    const item = makeNewsItem({
+      has_a2_content: false,
+      audio_a2_url: 'https://example.com/audio_a2.mp3',
+      audio_a2_duration_seconds: 17,
+    });
+    render(<NewsItemEditModal open={true} onOpenChange={vi.fn()} item={item} />);
+    expect(screen.getByText(/Duration:/).textContent).toMatch(/0:17/);
+  });
+
+  it('does not show A2 metadata when audio_a2_url is null', () => {
+    const item = makeNewsItem({
+      has_a2_content: true,
+      audio_a2_url: null,
+    });
+    render(<NewsItemEditModal open={true} onOpenChange={vi.fn()} item={item} />);
+    // Metadata block is not rendered — no Duration label appears for A2
+    expect(screen.queryByText('No A2 content')).toBeInTheDocument();
   });
 });
 

@@ -508,16 +508,27 @@ export const NewsItemEditModal: React.FC<NewsItemEditModalProps> = ({
                       className={`h-2 w-2 rounded-full ${item.audio_a2_url ? 'bg-green-500' : 'bg-gray-300'}`}
                     />
                   </div>
-                  {item.has_a2_content ? (
-                    <div className="space-y-1 text-xs text-muted-foreground">
-                      {item.audio_a2_duration_seconds && (
-                        <p>{Math.round(item.audio_a2_duration_seconds)}s</p>
+                  {item.audio_a2_url ? (
+                    <div className="space-y-0.5 text-xs text-muted-foreground">
+                      {item.audio_a2_duration_seconds != null && (
+                        <p>
+                          {t('news.audio.duration')}:{' '}
+                          {formatAudioDuration(item.audio_a2_duration_seconds)}
+                        </p>
                       )}
-                      {item.audio_a2_file_size_bytes && (
-                        <p>{Math.round(item.audio_a2_file_size_bytes / 1024)}KB</p>
+                      {item.audio_a2_file_size_bytes != null && (
+                        <p>
+                          {t('news.audio.fileSize')}:{' '}
+                          {formatFileSize(item.audio_a2_file_size_bytes)}
+                        </p>
                       )}
                       {item.audio_a2_generated_at && (
-                        <p>{new Date(item.audio_a2_generated_at).toLocaleDateString()}</p>
+                        <p>
+                          {t('news.audio.generated')}:{' '}
+                          {format(new Date(item.audio_a2_generated_at), 'dd MMM yyyy, HH:mm', {
+                            locale: getDateLocale(currentLanguage),
+                          })}
+                        </p>
                       )}
                     </div>
                   ) : (
