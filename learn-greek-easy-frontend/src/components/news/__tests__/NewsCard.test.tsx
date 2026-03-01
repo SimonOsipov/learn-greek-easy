@@ -87,15 +87,54 @@ describe('NewsCard', () => {
     expect(player).toHaveAttribute('aria-disabled', 'true');
   });
 
-  it('does not render WaveformPlayer when no question', () => {
+  it('does not render WaveformPlayer when no audio and no question', () => {
     const article = createMockArticle({
       card_id: null,
       deck_id: null,
+      audio_url: null,
     });
 
     render(<NewsCard article={article} newsLang="el" />);
 
     expect(screen.queryByTestId('waveform-player')).not.toBeInTheDocument();
+  });
+
+  it('renders WaveformPlayer when audio exists but no question', () => {
+    const article = createMockArticle({
+      card_id: null,
+      deck_id: null,
+      audio_url: 'https://example.com/audio.mp3',
+    });
+
+    render(<NewsCard article={article} newsLang="el" />);
+
+    expect(screen.getByTestId('waveform-player')).toBeInTheDocument();
+  });
+
+  it('audio-only article renders player but not Practice button', () => {
+    const article = createMockArticle({
+      card_id: null,
+      deck_id: null,
+      audio_url: 'https://example.com/audio.mp3',
+    });
+
+    render(<NewsCard article={article} newsLang="el" />);
+
+    expect(screen.getByTestId('waveform-player')).toBeInTheDocument();
+    expect(screen.queryByTestId(`news-questions-button-${article.id}`)).not.toBeInTheDocument();
+  });
+
+  it('article with neither audio nor question renders no action bar', () => {
+    const article = createMockArticle({
+      card_id: null,
+      deck_id: null,
+      audio_url: null,
+    });
+
+    render(<NewsCard article={article} newsLang="el" />);
+
+    expect(screen.queryByTestId('waveform-player')).not.toBeInTheDocument();
+    expect(screen.queryByTestId(`news-questions-button-${article.id}`)).not.toBeInTheDocument();
   });
 
   it('does not render old placeholder button text', () => {

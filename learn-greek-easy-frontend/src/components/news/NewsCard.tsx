@@ -55,6 +55,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({
   const navigate = useNavigate();
 
   const hasQuestion = article.card_id !== null && article.deck_id !== null;
+  const hasAudio = !!article.audio_url;
 
   const [resetKey, setResetKey] = useState(0);
   const [showError, setShowError] = useState(false);
@@ -202,7 +203,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({
         <div
           className={cn(
             'relative z-10 flex h-full flex-col justify-end p-4',
-            hasQuestion && 'pb-16'
+            (hasAudio || hasQuestion) && 'pb-16'
           )}
         >
           <h3 className="mb-1 line-clamp-2 text-lg font-semibold text-white">{title}</h3>
@@ -211,12 +212,13 @@ export const NewsCard: React.FC<NewsCardProps> = ({
         </div>
       </a>
 
-      {/* Action Buttons - only show if news has associated question */}
-      {hasQuestion && (
+      {/* Action Buttons - show if article has audio or an associated question */}
+      {(hasAudio || hasQuestion) && (
         <div className="absolute bottom-0 left-0 right-0 z-20 flex flex-col gap-2 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-3 pt-8 sm:flex-row sm:items-stretch">
           <div
             className={cn(
-              'relative min-w-0 flex-[1.7] transition-opacity duration-300',
+              'relative min-w-0 transition-opacity duration-300',
+              hasQuestion ? 'flex-[1.7]' : 'flex-1',
               showError && 'opacity-60'
             )}
           >
@@ -242,20 +244,22 @@ export const NewsCard: React.FC<NewsCardProps> = ({
             />
           </div>
 
-          <Button
-            variant="default"
-            size="sm"
-            className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 sm:h-auto"
-            onClick={handleQuestionsClick}
-            aria-label={t(
-              'dashboard.news.buttons.questionsLabel',
-              'Practice questions for this article'
-            )}
-            data-testid={`news-questions-button-${article.id}`}
-          >
-            <HelpCircle className="mr-2 h-4 w-4" />
-            {t('dashboard.news.buttons.questions', 'Practice!')}
-          </Button>
+          {hasQuestion && (
+            <Button
+              variant="default"
+              size="sm"
+              className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 sm:h-auto"
+              onClick={handleQuestionsClick}
+              aria-label={t(
+                'dashboard.news.buttons.questionsLabel',
+                'Practice questions for this article'
+              )}
+              data-testid={`news-questions-button-${article.id}`}
+            >
+              <HelpCircle className="mr-2 h-4 w-4" />
+              {t('dashboard.news.buttons.questions', 'Practice!')}
+            </Button>
+          )}
         </div>
       )}
     </div>
