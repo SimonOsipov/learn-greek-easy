@@ -19,7 +19,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
 import { NewsCard, NewsCardSkeleton, NewsLevelToggle } from '@/components/news';
-import { trackNewsPageSeeAllClicked } from '@/lib/analytics';
+import { trackNewsLevelToggled, trackNewsPageSeeAllClicked } from '@/lib/analytics';
 import { reportAPIError } from '@/lib/errorReporting';
 import { adminAPI, type NewsItemResponse } from '@/services/adminAPI';
 import { getPersistedNewsLevel, setPersistedNewsLevel, type NewsLevel } from '@/utils/newsLevel';
@@ -41,6 +41,7 @@ export const NewsSection: React.FC = () => {
   const handleLevelChange = useCallback((level: NewsLevel) => {
     setPersistedNewsLevel(level);
     setNewsLevel(level);
+    trackNewsLevelToggled({ level, page: 'dashboard' });
   }, []);
 
   useEffect(() => {

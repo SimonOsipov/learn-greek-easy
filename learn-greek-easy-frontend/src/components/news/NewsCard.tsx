@@ -81,9 +81,10 @@ export const NewsCard: React.FC<NewsCardProps> = ({
         audio_duration_seconds: duration,
         page: pageName,
         playback_speed: 1,
+        level: level ?? 'b2',
       });
     },
-    [article.id, pageName]
+    [article.id, pageName, level]
   );
 
   const handlePause = useCallback(
@@ -93,9 +94,10 @@ export const NewsCard: React.FC<NewsCardProps> = ({
         paused_at_seconds: currentTime,
         audio_duration_seconds: 0, // Duration not available in onPause callback
         page: pageName,
+        level: level ?? 'b2',
       });
     },
-    [article.id, pageName]
+    [article.id, pageName, level]
   );
 
   const handleComplete = useCallback(
@@ -105,9 +107,10 @@ export const NewsCard: React.FC<NewsCardProps> = ({
         news_item_id: article.id,
         audio_duration_seconds: duration,
         page: pageName,
+        level: level ?? 'b2',
       });
     },
-    [article.id, pageName]
+    [article.id, pageName, level]
   );
 
   const handleError = useCallback(() => {
@@ -116,6 +119,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({
       news_item_id: article.id,
       error_type: 'load_failed',
       page: pageName,
+      level: level ?? 'b2',
     });
 
     setShowError(true);
@@ -124,7 +128,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({
       setShowError(false);
       setResetKey((k) => k + 1);
     }, 1500);
-  }, [article.id, pageName]);
+  }, [article.id, pageName, level]);
 
   useEffect(() => {
     return () => {
@@ -157,12 +161,14 @@ export const NewsCard: React.FC<NewsCardProps> = ({
       trackNewsArticleClicked({
         item_id: article.id,
         article_domain: domain,
+        level: level ?? 'b2',
       });
     } catch {
       // If URL parsing fails, still track but without domain
       trackNewsArticleClicked({
         item_id: article.id,
         article_domain: 'unknown',
+        level: level ?? 'b2',
       });
     }
   };

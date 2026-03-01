@@ -26,7 +26,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { trackNewsPagePaginated, trackNewsPageViewed } from '@/lib/analytics/newsAnalytics';
+import {
+  trackNewsLevelToggled,
+  trackNewsPagePaginated,
+  trackNewsPageViewed,
+} from '@/lib/analytics/newsAnalytics';
 import { reportAPIError } from '@/lib/errorReporting';
 import { adminAPI, type NewsCountry, type NewsItemResponse } from '@/services/adminAPI';
 import { getPersistedNewsLevel, setPersistedNewsLevel, type NewsLevel } from '@/utils/newsLevel';
@@ -137,6 +141,7 @@ export const NewsPage: React.FC = () => {
   const handleLevelChange = useCallback((level: NewsLevel) => {
     setPersistedNewsLevel(level);
     setNewsLevel(level);
+    trackNewsLevelToggled({ level, page: 'news' });
   }, []);
 
   // Initial load
