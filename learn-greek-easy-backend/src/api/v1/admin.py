@@ -1268,6 +1268,34 @@ async def regenerate_a2_news_audio(
     return {"message": "A2 audio regeneration started"}
 
 
+@router.get(
+    "/news/questions/{question_id}",
+    response_model=PendingQuestionItem,
+    summary="Get culture question for news item",
+)
+async def get_news_question(
+    question_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> PendingQuestionItem:
+    """Fetch any culture question by ID regardless of pending status."""
+    result = await db.execute(select(CultureQuestion).where(CultureQuestion.id == question_id))
+    question = result.scalar_one_or_none()
+    if not question:
+        raise NotFoundException(resource="Question", detail=f"Question '{question_id}' not found")
+    return PendingQuestionItem(
+        id=question.id,
+        question_text=question.question_text,
+        option_a=question.option_a,
+        option_b=question.option_b,
+        option_c=question.option_c,
+        option_d=question.option_d,
+        correct_option=question.correct_option,
+        source_article_url=question.source_article_url,
+        created_at=question.created_at,
+    )
+
+
 # ============================================================================
 # Announcement Admin Endpoints
 # ============================================================================

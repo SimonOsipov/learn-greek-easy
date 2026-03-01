@@ -16,7 +16,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { format } from 'date-fns';
 import { el } from 'date-fns/locale/el';
 import { ru } from 'date-fns/locale/ru';
-import { Circle, Loader2, RefreshCw } from 'lucide-react';
+import { Check, Circle, Loader2, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { WaveformPlayer } from '@/components/culture/WaveformPlayer';
@@ -34,7 +34,8 @@ import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
 import { useLanguage } from '@/hooks/useLanguage';
-import type { NewsItemResponse, NewsItemUpdate } from '@/services/adminAPI';
+import { adminAPI } from '@/services/adminAPI';
+import type { NewsItemResponse, NewsItemUpdate, PendingQuestion } from '@/services/adminAPI';
 import { useAdminNewsStore } from '@/stores/adminNewsStore';
 
 function getDateLocale(lang: string) {
@@ -250,6 +251,27 @@ export const NewsItemEditModal: React.FC<NewsItemEditModalProps> = ({
   const cooldownA2TimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [audioA2Error, setAudioA2Error] = useState<string | null>(null);
+  const [questionData, setQuestionData] = useState<PendingQuestion | null>(null);
+
+  // Fetch question preview when card_id changes
+  useEffect(() => {
+    if (!item?.card_id) {
+      setQuestionData(null);
+      return;
+    }
+    let cancelled = false;
+    adminAPI
+      .getNewsQuestion(item.card_id)
+      .then((data) => {
+        if (!cancelled) setQuestionData(data);
+      })
+      .catch(() => {
+        if (!cancelled) setQuestionData(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [item?.card_id]);
 
   // Initialize JSON input when item changes
   useEffect(() => {
@@ -562,6 +584,47 @@ export const NewsItemEditModal: React.FC<NewsItemEditModalProps> = ({
             </div>
           </CardContent>
         </Card>
+
+        {item.card_id && questionData && (
+          <Card data-testid="question-preview-card">
+            <CardContent className="space-y-3 p-4">
+              <h4 className="text-sm font-medium">{t('news.question.previewTitle')}</h4>
+              <p className="text-sm">
+                {(questionData.question_text as Record<string, string>)[currentLanguage] ||
+                  (questionData.question_text as Record<string, string>).el}
+              </p>
+              <div className="space-y-1.5">
+                {(['A', 'B', 'C', 'D'] as const).map((letter, idx) => {
+                  const optionKey = `option_${letter.toLowerCase()}` as
+                    | 'option_a'
+                    | 'option_b'
+                    | 'option_c'
+                    | 'option_d';
+                  const option = questionData[optionKey] as Record<string, string> | null;
+                  if (!option) return null;
+                  const isCorrect = questionData.correct_option === idx + 1;
+                  return (
+                    <div
+                      key={letter}
+                      className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-sm ${
+                        isCorrect
+                          ? 'bg-green-500/10 text-green-700 dark:text-green-400'
+                          : 'bg-muted'
+                      }`}
+                    >
+                      <span className="font-medium">{letter}.</span>
+                      <span>
+                        {(option as Record<string, string>)[currentLanguage] ||
+                          (option as Record<string, string>).el}
+                      </span>
+                      {isCorrect && <Check className="ml-auto h-4 w-4" />}
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="space-y-4">
           <Textarea

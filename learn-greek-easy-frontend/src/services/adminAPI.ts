@@ -1168,6 +1168,20 @@ export const adminAPI = {
     return api.post<void>(`/api/v1/admin/news/${newsItemId}/regenerate-a2-audio`);
   },
 
+  /**
+   * Get a culture question by ID (regardless of pending status)
+   *
+   * Used to fetch the question associated with a news item for preview.
+   * Requires superuser authentication.
+   *
+   * @param questionId - UUID of the question
+   * @returns Full question details
+   * @throws 404 if question not found
+   */
+  getNewsQuestion: async (questionId: string): Promise<PendingQuestion> => {
+    return api.get<PendingQuestion>(`/api/v1/admin/news/questions/${questionId}`);
+  },
+
   // ============================================
   // Announcement Management
   // ============================================
