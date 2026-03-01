@@ -557,3 +557,17 @@ class OpenRouterTimeoutError(OpenRouterError):
     def __init__(self, detail: str = "OpenRouter request timed out") -> None:
         self.detail = detail
         super().__init__(detail)
+
+
+# ============================================================================
+# Noun Generation Exceptions
+# ============================================================================
+
+
+class NounGenerationError(Exception):
+    """Error during AI-powered noun generation (parsing, validation, or API failure)."""
+
+    def __init__(self, detail: str, raw_content: str | None = None) -> None:
+        self.detail = detail
+        self.raw_content = raw_content
+        super().__init__(detail)
