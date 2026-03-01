@@ -241,9 +241,9 @@ test.describe('News Feed - Learner Dashboard Tests', () => {
     const newsCards = page.locator('[data-testid^="news-card-"]');
     const cardCount = await newsCards.count();
 
-    // Should have 1-3 cards (max 3 displayed on dashboard)
+    // Should have 1-6 cards (max 6 displayed on dashboard)
     expect(cardCount).toBeGreaterThanOrEqual(1);
-    expect(cardCount).toBeLessThanOrEqual(3);
+    expect(cardCount).toBeLessThanOrEqual(6);
   });
 
   test('NEWSFEED-12: News card link has correct attributes', async ({ page }) => {

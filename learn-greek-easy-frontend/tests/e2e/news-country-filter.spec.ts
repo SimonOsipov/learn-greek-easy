@@ -83,8 +83,8 @@ test.describe('MCNEWS - Country Pills Display', () => {
     await waitForNewsGridLoaded(page);
 
     // Country filter tabs should be present (MCNEWS-06 adds Tabs component)
-    // Scope to the second tablist (index 1) to exclude the NewsLevelToggle tablist (index 0)
-    const countryTablist = page.getByRole('tablist').nth(1);
+    // After reposition fix: country filter is tablist index 0 (inside flex row, before level toggle)
+    const countryTablist = page.getByRole('tablist').nth(0);
     const tabs = countryTablist.getByRole('tab');
     await expect(tabs).toHaveCount(4, { timeout: 10000 }); // All, Cyprus, Greece, World
 
@@ -157,7 +157,7 @@ test.describe('MCNEWS - Dashboard Shows Pills Without Filter', () => {
     await seedNewsCountryData(request);
   });
 
-  test('MCNEWS-E2E-05: Dashboard shows news with country pills, no filter tabs', async ({
+  test('MCNEWS-E2E-05: Dashboard shows news with country pills and filter tabs', async ({
     page,
   }) => {
     await page.goto('/dashboard');
@@ -178,13 +178,13 @@ test.describe('MCNEWS - Dashboard Shows Pills Without Filter', () => {
     const cardCount = await newsCards.count();
     expect(cardCount).toBeGreaterThanOrEqual(0); // May be empty if no data
 
-    // NewsLevelToggle is present in the news section (1 tablist expected)
+    // Both country filter tablist AND NewsLevelToggle tablist are present (2 tablists)
     const newsTablist = newsSection.getByRole('tablist');
-    await expect(newsTablist).toHaveCount(1);
-    // Verify it is the level toggle (A2/B2), not a country filter
+    await expect(newsTablist).toHaveCount(2);
+    // Verify the level toggle (A2/B2) is present
     await expect(newsSection.getByTestId('news-level-toggle')).toBeVisible();
-    // Country filter tabs (All/Cyprus/Greece/World) should NOT be present
-    await expect(newsSection.getByRole('tab', { name: /Cyprus/i })).not.toBeVisible();
+    // Country filter tabs (All/Cyprus/Greece/World) ARE present on dashboard
+    await expect(newsSection.getByRole('tab', { name: /Cyprus/i })).toBeVisible();
   });
 });
 
