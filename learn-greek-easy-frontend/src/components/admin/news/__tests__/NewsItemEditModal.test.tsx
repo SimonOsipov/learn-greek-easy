@@ -41,12 +41,22 @@ vi.mock('react-i18next', () => ({
         'news.audio.fileSize': 'File size',
         'news.audio.generated': 'Generated',
         'news.audio.loadError': 'Failed to load audio',
+        'news.audio.b2StatusTitle': 'B2 Audio',
+        'news.audio.a2StatusTitle': 'A2 Audio',
+        'news.audio.regenerateB2': 'Regenerate B2 Audio',
+        'news.audio.regenerateA2': 'Regenerate A2 Audio',
+        'news.audio.regeneratingB2': 'Regenerating B2...',
+        'news.audio.regeneratingA2': 'Regenerating A2...',
+        'news.audio.regenerateA2Success': 'A2 audio regeneration started',
+        'news.audio.regenerateA2Error': 'Failed to regenerate A2 audio',
+        'news.audio.noA2Content': 'No A2 content',
         'news.create.imageDownloadFailed': 'Failed to download image',
         'news.validation.invalidJson': 'Invalid JSON',
         'news.validation.invalidArticleUrl': 'Invalid article URL',
         'news.validation.invalidImageUrl': 'Invalid image URL',
         'news.validation.invalidDate': 'Invalid date format',
         'news.validation.noFieldsToUpdate': 'No fields to update',
+        'news.validation.a2FieldsPaired': 'Both A2 fields required',
       };
       return translations[key] || key;
     },
@@ -68,11 +78,13 @@ vi.mock('@/hooks/use-toast', () => ({
 // Mock adminNewsStore
 const mockUpdateNewsItem = vi.fn();
 const mockRegenerateAudio = vi.fn();
+const mockRegenerateA2Audio = vi.fn();
 vi.mock('@/stores/adminNewsStore', () => ({
   useAdminNewsStore: () => ({
     updateNewsItem: mockUpdateNewsItem,
     isUpdating: false,
     regenerateAudio: mockRegenerateAudio,
+    regenerateA2Audio: mockRegenerateA2Audio,
   }),
 }));
 
@@ -107,6 +119,8 @@ function makeNewsItem(overrides: Partial<NewsItemResponse> = {}): NewsItemRespon
     description_el_a2: null,
     audio_a2_url: null,
     audio_a2_duration_seconds: null,
+    audio_a2_generated_at: null,
+    audio_a2_file_size_bytes: null,
     has_a2_content: false,
     ...overrides,
   };
@@ -237,11 +251,13 @@ describe('NewsItemEditModal — Audio status section (no regression)', () => {
     expect(screen.getByTestId('news-edit-cancel')).toBeInTheDocument();
   });
 
-  it('renders waveform player', () => {
+  it('renders waveform players (B2 and A2)', () => {
     const item = makeNewsItem();
     render(<NewsItemEditModal open={true} onOpenChange={vi.fn()} item={item} />);
 
-    expect(screen.getByTestId('waveform-player')).toBeInTheDocument();
+    // Two WaveformPlayer instances: one for B2 and one for A2
+    const players = screen.getAllByTestId('waveform-player');
+    expect(players).toHaveLength(2);
   });
 
   it('returns null when item is null', () => {
@@ -292,5 +308,93 @@ describe('NewsItemEditModal — Country field in JSON', () => {
     const parsed = JSON.parse(textarea.value);
     const keys = Object.keys(parsed);
     expect(keys[0]).toBe('country');
+  });
+});
+
+describe('NewsItemEditModal -- A2 Audio Section', () => {
+  beforeEach(() => {
+    mockCurrentLanguage.value = 'en';
+    vi.clearAllMocks();
+  });
+
+  it('A2 section renders with modal-regenerate-a2-audio button', () => {
+    const item = makeNewsItem();
+    render(<NewsItemEditModal open={true} onOpenChange={vi.fn()} item={item} />);
+
+    expect(screen.getByTestId('modal-regenerate-a2-audio')).toBeInTheDocument();
+  });
+
+  it('A2 regen button is disabled when has_a2_content is false', () => {
+    const item = makeNewsItem({ has_a2_content: false });
+    render(<NewsItemEditModal open={true} onOpenChange={vi.fn()} item={item} />);
+
+    const button = screen.getByTestId('modal-regenerate-a2-audio');
+    expect(button).toBeDisabled();
+  });
+
+  it('A2 regen button is enabled when has_a2_content is true', () => {
+    const item = makeNewsItem({
+      has_a2_content: true,
+      title_el_a2: 'Α2 τίτλος',
+      description_el_a2: 'Α2 περιγραφή',
+    });
+    render(<NewsItemEditModal open={true} onOpenChange={vi.fn()} item={item} />);
+
+    const button = screen.getByTestId('modal-regenerate-a2-audio');
+    expect(button).not.toBeDisabled();
+  });
+
+  it('B2 and A2 buttons render independently (both testids present)', () => {
+    const item = makeNewsItem();
+    render(<NewsItemEditModal open={true} onOpenChange={vi.fn()} item={item} />);
+
+    expect(screen.getByTestId('modal-regenerate-b2-audio')).toBeInTheDocument();
+    expect(screen.getByTestId('modal-regenerate-a2-audio')).toBeInTheDocument();
+  });
+
+  it('shows no A2 content message when has_a2_content is false', () => {
+    const item = makeNewsItem({ has_a2_content: false });
+    render(<NewsItemEditModal open={true} onOpenChange={vi.fn()} item={item} />);
+
+    expect(screen.getByText('No A2 content')).toBeInTheDocument();
+  });
+
+  it('shows A2 metadata when A2 audio exists', () => {
+    const item = makeNewsItem({
+      has_a2_content: true,
+      audio_a2_url: 'https://example.com/audio_a2.mp3',
+      audio_a2_duration_seconds: 45,
+    });
+    render(<NewsItemEditModal open={true} onOpenChange={vi.fn()} item={item} />);
+
+    expect(screen.getByText('45s')).toBeInTheDocument();
+  });
+});
+
+describe('NewsItemEditModal -- A2 JSON fields', () => {
+  beforeEach(() => {
+    mockCurrentLanguage.value = 'en';
+    vi.clearAllMocks();
+  });
+
+  it('JSON textarea includes A2 fields pre-filled from item data', () => {
+    const item = makeNewsItem({
+      title_el_a2: 'Α2 τίτλος',
+      description_el_a2: 'Α2 περιγραφή',
+    });
+    render(<NewsItemEditModal open={true} onOpenChange={vi.fn()} item={item} />);
+
+    const textarea = screen.getByTestId('news-edit-json-input') as HTMLTextAreaElement;
+    expect(textarea.value).toContain('"title_el_a2": "Α2 τίτλος"');
+    expect(textarea.value).toContain('"description_el_a2": "Α2 περιγραφή"');
+  });
+
+  it('JSON shows empty strings for null A2 fields', () => {
+    const item = makeNewsItem({ title_el_a2: null, description_el_a2: null });
+    render(<NewsItemEditModal open={true} onOpenChange={vi.fn()} item={item} />);
+
+    const textarea = screen.getByTestId('news-edit-json-input') as HTMLTextAreaElement;
+    expect(textarea.value).toContain('"title_el_a2": ""');
+    expect(textarea.value).toContain('"description_el_a2": ""');
   });
 });
