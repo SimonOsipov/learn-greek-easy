@@ -608,6 +608,11 @@ class NewsItemService:
             update_dict["title_el_a2"] = data.title_el_a2
         if data.description_el_a2 is not None:
             update_dict["description_el_a2"] = data.description_el_a2
+            if not data.description_el_a2.strip():
+                update_dict["audio_a2_s3_key"] = None
+                update_dict["audio_a2_generated_at"] = None
+                update_dict["audio_a2_duration_seconds"] = None
+                update_dict["audio_a2_file_size_bytes"] = None
         return update_dict
 
     async def _handle_image_update(

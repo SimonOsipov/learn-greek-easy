@@ -96,6 +96,7 @@ from src.services.news_item_service import NewsItemService
 from src.services.word_entry_response import word_entry_to_response
 from src.tasks import (
     create_announcement_notifications_task,
+    generate_a2_audio_for_news_item_task,
     generate_audio_for_news_item_task,
     generate_word_entry_part_audio_task,
     is_background_tasks_enabled,
@@ -1037,6 +1038,14 @@ async def create_news_item(
         db_url=settings.database_url,
     )
 
+    if data.description_el_a2:
+        background_tasks.add_task(
+            generate_a2_audio_for_news_item_task,
+            news_item_id=result.news_item.id,
+            description_el_a2=data.description_el_a2,
+            db_url=settings.database_url,
+        )
+
     return result
 
 
@@ -1089,6 +1098,14 @@ async def update_news_item(
             generate_audio_for_news_item_task,
             news_item_id=news_item_id,
             description_el=data.description_el,
+            db_url=settings.database_url,
+        )
+
+    if data.description_el_a2 is not None:
+        background_tasks.add_task(
+            generate_a2_audio_for_news_item_task,
+            news_item_id=news_item_id,
+            description_el_a2=data.description_el_a2,
             db_url=settings.database_url,
         )
 
@@ -1186,6 +1203,67 @@ async def regenerate_news_audio(
     )
 
     return {"message": "Audio regeneration started"}
+
+
+@router.post(
+    "/news/{news_item_id}/regenerate-a2-audio",
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Regenerate A2 audio for news item",
+    description="Trigger A2-level audio regeneration for a news item's simplified Greek description. Requires superuser privileges.",
+    responses={
+        202: {
+            "description": "A2 audio regeneration started",
+            "content": {
+                "application/json": {"example": {"message": "A2 audio regeneration started"}}
+            },
+        },
+        404: {"description": "News item not found or no A2 Greek description"},
+        503: {"description": "Audio service unavailable"},
+    },
+)
+async def regenerate_a2_news_audio(
+    news_item_id: UUID,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> dict:
+    if not is_background_tasks_enabled() or not settings.elevenlabs_configured:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Audio generation is not available",
+        )
+
+    result = await db.execute(select(NewsItem).where(NewsItem.id == news_item_id))
+    news_item = result.scalar_one_or_none()
+    if news_item is None:
+        raise NotFoundException(
+            resource="News item",
+            detail=f"News item with ID '{news_item_id}' not found",
+        )
+
+    if not news_item.description_el_a2 or not news_item.description_el_a2.strip():
+        raise NotFoundException(
+            resource="A2 description",
+            detail=f"News item with ID '{news_item_id}' has no A2 Greek description",
+        )
+
+    background_tasks.add_task(
+        generate_a2_audio_for_news_item_task,
+        news_item_id=news_item_id,
+        description_el_a2=news_item.description_el_a2,
+        db_url=settings.database_url,
+    )
+
+    logger.info(
+        "A2 audio regeneration scheduled for news item",
+        extra={
+            "news_item_id": str(news_item_id),
+            "triggered_by": str(current_user.id),
+            "text_length": len(news_item.description_el_a2),
+        },
+    )
+
+    return {"message": "A2 audio regeneration started"}
 
 
 # ============================================================================
