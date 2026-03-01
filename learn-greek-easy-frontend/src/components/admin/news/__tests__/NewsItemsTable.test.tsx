@@ -88,6 +88,11 @@ function makeNewsItem(overrides: Partial<NewsItemResponse> = {}): NewsItemRespon
     card_id: null,
     deck_id: null,
     country: 'cyprus',
+    title_el_a2: null,
+    description_el_a2: null,
+    audio_a2_url: null,
+    audio_a2_duration_seconds: null,
+    has_a2_content: false,
     ...overrides,
   };
 }

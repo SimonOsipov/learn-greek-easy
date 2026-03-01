@@ -555,6 +555,12 @@ export interface NewsItemResponse {
   created_at: string;
   updated_at: string;
   country: NewsCountry;
+  // A2 content fields (from NLVL-01)
+  title_el_a2: string | null;
+  description_el_a2: string | null;
+  audio_a2_url: string | null;
+  audio_a2_duration_seconds: number | null;
+  has_a2_content: boolean;
   // New fields for card association
   card_id: string | null;
   deck_id: string | null;

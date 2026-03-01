@@ -7,6 +7,8 @@ export type { NewsCardSkeletonProps } from './NewsCardSkeleton';
 export { NewsGrid } from './NewsGrid';
 export type { NewsGridProps } from './NewsGrid';
 
+export { NewsLevelToggle } from './NewsLevelToggle';
+
 export { NewsPagination } from './NewsPagination';
 export type { NewsPaginationProps } from './NewsPagination';
 

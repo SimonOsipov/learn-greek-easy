@@ -31,6 +31,11 @@ const createMockNewsItem = (overrides: Partial<NewsItemResponse> = {}): NewsItem
   updated_at: '2026-01-27T00:00:00Z',
   card_id: null,
   deck_id: null,
+  title_el_a2: null,
+  description_el_a2: null,
+  audio_a2_url: null,
+  audio_a2_duration_seconds: null,
+  has_a2_content: false,
   ...overrides,
 });
 

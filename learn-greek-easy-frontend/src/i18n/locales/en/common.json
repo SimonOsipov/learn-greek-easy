@@ -181,6 +181,11 @@
       "cyprus": "Cyprus",
       "greece": "Greece",
       "world": "World"
+    },
+    "level": {
+      "a2": "A2",
+      "b2": "B2",
+      "label": "Content level"
     }
   },
   "notifications": {
