@@ -133,6 +133,8 @@ class NewsItemService:
             "original_article_url": str(data.original_article_url),
             "image_s3_key": s3_key,
             "country": data.country.value,
+            "title_el_a2": data.title_el_a2,
+            "description_el_a2": data.description_el_a2,
         }
 
         news_item = await self.repo.create(news_item_dict)
@@ -207,6 +209,8 @@ class NewsItemService:
             "original_article_url": str(data.original_article_url),
             "image_s3_key": s3_key,
             "country": data.country.value,
+            "title_el_a2": data.title_el_a2,
+            "description_el_a2": data.description_el_a2,
         }
 
         news_item = await self.repo.create(news_item_dict)
@@ -572,7 +576,7 @@ class NewsItemService:
     # Helper Methods
     # =========================================================================
 
-    def _build_update_dict(self, data: NewsItemUpdate) -> dict[str, Any]:
+    def _build_update_dict(self, data: NewsItemUpdate) -> dict[str, Any]:  # noqa: C901
         """Build update dictionary from NewsItemUpdate data.
 
         Args:
@@ -600,6 +604,10 @@ class NewsItemService:
             update_dict["original_article_url"] = str(data.original_article_url)
         if data.country is not None:
             update_dict["country"] = data.country.value
+        if data.title_el_a2 is not None:
+            update_dict["title_el_a2"] = data.title_el_a2
+        if data.description_el_a2 is not None:
+            update_dict["description_el_a2"] = data.description_el_a2
         return update_dict
 
     async def _handle_image_update(
@@ -706,6 +714,9 @@ class NewsItemService:
         # Generate presigned URL for the audio
         audio_url = self.s3_service.generate_presigned_url(news_item.audio_s3_key)
 
+        # Generate presigned URL for the A2 audio
+        audio_a2_url = self.s3_service.generate_presigned_url(news_item.audio_a2_s3_key)
+
         return NewsItemResponse(
             id=news_item.id,
             title_el=news_item.title_el,
@@ -726,6 +737,12 @@ class NewsItemService:
             audio_generated_at=news_item.audio_generated_at,
             audio_duration_seconds=news_item.audio_duration_seconds,
             audio_file_size_bytes=news_item.audio_file_size_bytes,
+            title_el_a2=news_item.title_el_a2,
+            description_el_a2=news_item.description_el_a2,
+            audio_a2_url=audio_a2_url,
+            audio_a2_generated_at=news_item.audio_a2_generated_at,
+            audio_a2_duration_seconds=news_item.audio_a2_duration_seconds,
+            audio_a2_file_size_bytes=news_item.audio_a2_file_size_bytes,
             created_at=news_item.created_at,
             updated_at=news_item.updated_at,
         )

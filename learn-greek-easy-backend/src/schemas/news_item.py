@@ -7,10 +7,18 @@ This module contains schemas for:
 """
 
 from datetime import date, datetime
-from typing import Optional
+from typing import Optional, Self
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    HttpUrl,
+    computed_field,
+    field_validator,
+    model_validator,
+)
 
 from src.db.models import NewsCountry
 
@@ -39,6 +47,19 @@ class NewsItemCreate(BaseModel):
     original_article_url: HttpUrl = Field(..., max_length=500)
     source_image_url: HttpUrl = Field(..., description="URL to download the image from")
     country: NewsCountry = Field(..., description="Country/region: cyprus, greece, or world")
+    title_el_a2: Optional[str] = Field(None, max_length=500)
+    description_el_a2: Optional[str] = Field(None, max_length=1000)
+
+    @model_validator(mode="after")
+    def validate_a2_pair(self) -> Self:
+        """If one A2 field is set, the other must also be set."""
+        has_title = self.title_el_a2 is not None
+        has_desc = self.description_el_a2 is not None
+        if has_title != has_desc:
+            raise ValueError(
+                "title_el_a2 and description_el_a2 must both be provided or both omitted"
+            )
+        return self
 
 
 class NewsItemUpdate(BaseModel):
@@ -62,6 +83,19 @@ class NewsItemUpdate(BaseModel):
     country: Optional[NewsCountry] = Field(
         None, description="Country/region: cyprus, greece, or world"
     )
+    title_el_a2: Optional[str] = Field(None, max_length=500)
+    description_el_a2: Optional[str] = Field(None, max_length=1000)
+
+    @model_validator(mode="after")
+    def validate_a2_pair(self) -> Self:
+        """If one A2 field is set, the other must also be set."""
+        has_title = self.title_el_a2 is not None
+        has_desc = self.description_el_a2 is not None
+        if has_title != has_desc:
+            raise ValueError(
+                "title_el_a2 and description_el_a2 must both be provided or both omitted"
+            )
+        return self
 
 
 class NewsItemResponse(BaseModel):
@@ -91,6 +125,29 @@ class NewsItemResponse(BaseModel):
         None, description="Duration of audio narration in seconds"
     )
     audio_file_size_bytes: Optional[int] = Field(None, description="Size of audio file in bytes")
+
+    # A2 text content
+    title_el_a2: Optional[str] = None
+    description_el_a2: Optional[str] = None
+
+    # A2 audio metadata (read-only, populated by NLVL-02)
+    audio_a2_url: Optional[str] = Field(None, description="Presigned S3 URL for A2 audio narration")
+    audio_a2_generated_at: Optional[datetime] = Field(
+        None, description="Timestamp when A2 audio was generated via TTS"
+    )
+    audio_a2_duration_seconds: Optional[float] = Field(
+        None, description="Duration of A2 audio narration in seconds"
+    )
+    audio_a2_file_size_bytes: Optional[int] = Field(
+        None, description="Size of A2 audio file in bytes"
+    )
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def has_a2_content(self) -> bool:
+        """Whether this news item has A2-level content."""
+        return bool(self.title_el_a2 and self.description_el_a2)
+
     created_at: datetime
     updated_at: datetime
 
