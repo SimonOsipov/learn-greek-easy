@@ -1,5 +1,6 @@
 """NLP verification Pydantic schemas for spellcheck and morphology results."""
 
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -84,3 +85,52 @@ class OpenRouterResponse(BaseModel):
         description="Token usage statistics (prompt_tokens, completion_tokens, total_tokens)",
     )
     latency_ms: float = Field(..., description="Request latency in milliseconds")
+
+
+# ── Noun Generation Schemas ───────────────────────────────────────────
+
+
+class GeneratedNounCaseSet(BaseModel):
+    """Declension case forms for a single number (singular or plural)."""
+
+    nominative: str = Field(..., min_length=1)
+    genitive: str = Field(..., min_length=1)
+    accusative: str = Field(..., min_length=1)
+    vocative: str = Field(..., min_length=1)
+
+
+class GeneratedNounCases(BaseModel):
+    """Singular and plural declension cases for a noun."""
+
+    singular: GeneratedNounCaseSet
+    plural: GeneratedNounCaseSet
+
+
+class GeneratedNounGrammar(BaseModel):
+    """Grammar metadata for a generated noun: gender, declension group, and case forms."""
+
+    gender: Literal["masculine", "feminine", "neuter"]
+    declension_group: str = Field(..., min_length=1)
+    cases: GeneratedNounCases
+
+
+class GeneratedExample(BaseModel):
+    """A trilingual example sentence for a generated noun."""
+
+    id: int = Field(..., ge=1, le=2)
+    greek: str = Field(..., min_length=1)
+    english: str = Field(..., min_length=1)
+    russian: str = Field(..., min_length=1)
+
+
+class GeneratedNounData(BaseModel):
+    """Complete generated noun entry from OpenRouter, ready for validation and DB insertion."""
+
+    lemma: str = Field(..., min_length=1)
+    part_of_speech: Literal["noun"]
+    translation_en: str = Field(..., min_length=1)
+    translation_en_plural: str | None = None
+    translation_ru: str = Field(..., min_length=1)
+    pronunciation: str = Field(..., min_length=1)
+    grammar_data: GeneratedNounGrammar
+    examples: list[GeneratedExample] = Field(..., min_length=2, max_length=2)
