@@ -521,8 +521,10 @@ describe('NewsItemEditModal — Question preview card', () => {
     const item = makeNewsItem({ card_id: 'nonexistent-question' });
     render(<NewsItemEditModal open={true} onOpenChange={vi.fn()} item={item} />);
 
-    // Card should not appear
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    // Card should not appear after fetch fails
+    await waitFor(() => {
+      expect(adminAPI.getNewsQuestion).toHaveBeenCalled();
+    });
     expect(screen.queryByTestId('question-preview-card')).not.toBeInTheDocument();
   });
 
