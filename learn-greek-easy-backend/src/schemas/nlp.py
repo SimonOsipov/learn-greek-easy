@@ -134,3 +134,43 @@ class GeneratedNounData(BaseModel):
     pronunciation: str = Field(..., min_length=1)
     grammar_data: GeneratedNounGrammar
     examples: list[GeneratedExample] = Field(..., min_length=2, max_length=2)
+
+
+# ── Local Verification Schemas ─────────────────────────────────────────────
+
+
+class CheckResult(BaseModel):
+    """Result of a single verification check on a generated field."""
+
+    check_name: str = Field(
+        ..., description="Name of the check (e.g., 'spellcheck', 'morphology_pos')"
+    )
+    status: Literal["pass", "fail", "warn"] = Field(..., description="Check outcome")
+    message: str | None = Field(None, description="Human-readable detail for non-pass results")
+
+
+class FieldVerificationResult(BaseModel):
+    """Aggregated verification result for a single field in the generated data."""
+
+    field_path: str = Field(..., description="Dot-notation path (e.g., 'cases.singular.genitive')")
+    status: Literal["pass", "fail", "warn", "skipped"] = Field(
+        ..., description="Aggregate status derived from checks"
+    )
+    checks: list[CheckResult] = Field(
+        default_factory=list, description="Individual check results for this field"
+    )
+
+
+class LocalVerificationResult(BaseModel):
+    """Complete result of local verification pipeline run on generated noun data."""
+
+    fields: list[FieldVerificationResult] = Field(..., description="Per-field verification results")
+    tier: Literal["auto_approve", "quick_review", "manual_review"] = Field(
+        ..., description="Aggregate confidence tier"
+    )
+    stages_skipped: list[str] = Field(
+        default_factory=list, description="Stages that could not run (e.g., ['spellcheck'])"
+    )
+    summary: str = Field(
+        ..., description="Human-readable summary (e.g., '9 pass, 2 warn, 0 fail -> auto_approve')"
+    )
