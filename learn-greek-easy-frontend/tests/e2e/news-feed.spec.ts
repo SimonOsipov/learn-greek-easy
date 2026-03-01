@@ -145,8 +145,8 @@ test.describe('News Feed - Admin Tests', () => {
     // JSON input should be visible
     await expect(page.getByTestId('news-edit-json-input')).toBeVisible();
 
-    // Cancel should close modal
-    await page.getByTestId('news-edit-cancel').click();
+    // Cancel should close modal (use Escape since modal may overflow viewport with A2 section)
+    await page.keyboard.press('Escape');
     await expect(modal).toBeHidden();
   });
 
