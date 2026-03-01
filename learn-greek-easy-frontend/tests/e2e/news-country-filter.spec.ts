@@ -83,7 +83,9 @@ test.describe('MCNEWS - Country Pills Display', () => {
     await waitForNewsGridLoaded(page);
 
     // Country filter tabs should be present (MCNEWS-06 adds Tabs component)
-    const tabs = page.getByRole('tab');
+    // Scope to the second tablist (index 1) to exclude the NewsLevelToggle tablist (index 0)
+    const countryTablist = page.getByRole('tablist').nth(1);
+    const tabs = countryTablist.getByRole('tab');
     await expect(tabs).toHaveCount(4, { timeout: 10000 }); // All, Cyprus, Greece, World
 
     // "All" tab should be active by default
@@ -176,12 +178,13 @@ test.describe('MCNEWS - Dashboard Shows Pills Without Filter', () => {
     const cardCount = await newsCards.count();
     expect(cardCount).toBeGreaterThanOrEqual(0); // May be empty if no data
 
-    // Country filter tabs should NOT be present on dashboard
-    const countryTabs = page.getByRole('tablist');
-    // The tabs component is not on dashboard - verify news page doesn't have it embedded
-    // (This is a soft check - the test verifies no country filter tabs in news-section)
+    // NewsLevelToggle is present in the news section (1 tablist expected)
     const newsTablist = newsSection.getByRole('tablist');
-    await expect(newsTablist).toHaveCount(0);
+    await expect(newsTablist).toHaveCount(1);
+    // Verify it is the level toggle (A2/B2), not a country filter
+    await expect(newsSection.getByTestId('news-level-toggle')).toBeVisible();
+    // Country filter tabs (All/Cyprus/Greece/World) should NOT be present
+    await expect(newsSection.getByRole('tab', { name: /Cyprus/i })).not.toBeVisible();
   });
 });
 
