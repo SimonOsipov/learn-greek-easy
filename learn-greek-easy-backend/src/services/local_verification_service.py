@@ -249,10 +249,10 @@ class LocalVerificationService:
                 self._merge_morphology_checks(path, new_checks, fields_by_path)
                 continue
 
-            # POS check
+            # POS check (mismatch → warn, not fail — spaCy small model is unreliable)
             if analysis.pos == "NOUN":
                 new_checks.append(
-                    CheckResult(check_name="morphology_pos", status="warn", message=None)
+                    CheckResult(check_name="morphology_pos", status="pass", message=None)
                 )
             else:
                 new_checks.append(
@@ -268,7 +268,7 @@ class LocalVerificationService:
             actual_gender = _GENDER_MAP.get(analysis.morph_features.get("Gender", ""), "")
             if actual_gender == expected_gender:
                 new_checks.append(
-                    CheckResult(check_name="morphology_gender", status="warn", message=None)
+                    CheckResult(check_name="morphology_gender", status="pass", message=None)
                 )
             else:
                 new_checks.append(
@@ -284,7 +284,7 @@ class LocalVerificationService:
             actual_lemma = _strip_article(analysis.lemma)
             if actual_lemma == expected_lemma:
                 new_checks.append(
-                    CheckResult(check_name="morphology_lemma", status="warn", message=None)
+                    CheckResult(check_name="morphology_lemma", status="pass", message=None)
                 )
             else:
                 new_checks.append(
@@ -302,7 +302,7 @@ class LocalVerificationService:
             actual_number = analysis.morph_features.get("Number", "")
             if actual_case == expected_case and actual_number == expected_number:
                 new_checks.append(
-                    CheckResult(check_name="morphology_case_number", status="warn", message=None)
+                    CheckResult(check_name="morphology_case_number", status="pass", message=None)
                 )
             else:
                 new_checks.append(
