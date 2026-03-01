@@ -13,6 +13,7 @@ import posthog from 'posthog-js';
 export interface NewsArticleClickedProperties {
   item_id: string;
   article_domain: string;
+  level: 'a2' | 'b2';
 }
 
 /**
@@ -169,6 +170,7 @@ export interface NewsAudioPlayStartedProperties {
   audio_duration_seconds: number;
   page: 'dashboard' | 'news';
   playback_speed: number;
+  level: 'a2' | 'b2';
 }
 
 /**
@@ -187,6 +189,7 @@ export interface NewsAudioPlayCompletedProperties {
   news_item_id: string;
   audio_duration_seconds: number;
   page: 'dashboard' | 'news';
+  level: 'a2' | 'b2';
 }
 
 /**
@@ -206,6 +209,7 @@ export interface NewsAudioPlayPausedProperties {
   paused_at_seconds: number;
   audio_duration_seconds: number;
   page: 'dashboard' | 'news';
+  level: 'a2' | 'b2';
 }
 
 /**
@@ -224,6 +228,7 @@ export interface NewsAudioErrorProperties {
   news_item_id: string;
   error_type: 'load_failed' | 'playback_error';
   page: 'dashboard' | 'news';
+  level: 'a2' | 'b2';
 }
 
 /**
@@ -232,5 +237,18 @@ export interface NewsAudioErrorProperties {
 export function trackNewsAudioError(properties: NewsAudioErrorProperties): void {
   if (typeof posthog?.capture === 'function') {
     posthog.capture('news_audio_error', properties);
+  }
+}
+
+// News Level Toggle Analytics
+
+export interface NewsLevelToggledProperties {
+  level: 'a2' | 'b2';
+  page: 'dashboard' | 'news';
+}
+
+export function trackNewsLevelToggled(properties: NewsLevelToggledProperties): void {
+  if (typeof posthog?.capture === 'function') {
+    posthog.capture('news_level_toggled', properties);
   }
 }

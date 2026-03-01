@@ -12,6 +12,7 @@ import posthog from 'posthog-js';
 import {
   trackNewsArticleClicked,
   trackNewsAudioPlayStarted,
+  trackNewsLevelToggled,
   trackNewsQuestionsButtonClicked,
   trackNewsSourceLinkClicked,
   trackNewsPageViewed,
@@ -42,11 +43,13 @@ describe('newsAnalytics', () => {
       trackNewsArticleClicked({
         item_id: 'news-item-123',
         article_domain: 'ekathimerini.com',
+        level: 'b2',
       });
 
       expect(posthog.capture).toHaveBeenCalledWith('news_article_clicked', {
         item_id: 'news-item-123',
         article_domain: 'ekathimerini.com',
+        level: 'b2',
       });
     });
 
@@ -54,11 +57,13 @@ describe('newsAnalytics', () => {
       trackNewsArticleClicked({
         item_id: 'news-item-456',
         article_domain: 'in.gr',
+        level: 'b2',
       });
 
       expect(posthog.capture).toHaveBeenCalledWith('news_article_clicked', {
         item_id: 'news-item-456',
         article_domain: 'in.gr',
+        level: 'b2',
       });
     });
 
@@ -70,6 +75,7 @@ describe('newsAnalytics', () => {
         trackNewsArticleClicked({
           item_id: 'news-item-789',
           article_domain: 'example.com',
+          level: 'b2',
         });
       }).not.toThrow();
 
@@ -84,6 +90,7 @@ describe('newsAnalytics', () => {
         trackNewsArticleClicked({
           item_id: 'news-item-abc',
           article_domain: 'test.com',
+          level: 'b2',
         });
       }).not.toThrow();
 
@@ -512,6 +519,7 @@ describe('newsAnalytics', () => {
         trackNewsArticleClicked({
           item_id: 'news-item-test',
           article_domain: 'example.com',
+          level: 'b2',
         });
       }).not.toThrow();
 
@@ -553,6 +561,10 @@ describe('newsAnalytics', () => {
         trackNewsPageSeeAllClicked();
       }).not.toThrow();
 
+      expect(() => {
+        trackNewsLevelToggled({ level: 'b2', page: 'dashboard' });
+      }).not.toThrow();
+
       (posthog as Record<string, unknown>).capture = originalCapture;
     });
 
@@ -565,6 +577,7 @@ describe('newsAnalytics', () => {
         trackNewsArticleClicked({
           item_id: 'news-1',
           article_domain: 'test.com',
+          level: 'b2',
         });
         trackNewsQuestionsButtonClicked({
           news_item_id: 'news-2',
@@ -583,6 +596,7 @@ describe('newsAnalytics', () => {
         });
         trackNewsPageQuestionsClicked({ article_id: 'id', has_questions: true });
         trackNewsPageSeeAllClicked();
+        trackNewsLevelToggled({ level: 'a2', page: 'news' });
       }).not.toThrow();
 
       (posthog as Record<string, unknown>).capture = originalCapture;
@@ -600,6 +614,7 @@ describe('newsAnalytics', () => {
         audio_duration_seconds: 120,
         page: 'news',
         playback_speed: 1,
+        level: 'b2',
       });
 
       expect(posthog.capture).toHaveBeenCalledWith('news_audio_play_started', {
@@ -607,6 +622,7 @@ describe('newsAnalytics', () => {
         audio_duration_seconds: 120,
         page: 'news',
         playback_speed: 1,
+        level: 'b2',
       });
     });
 
@@ -616,6 +632,7 @@ describe('newsAnalytics', () => {
         audio_duration_seconds: 60,
         page: 'dashboard',
         playback_speed: 1,
+        level: 'b2',
       });
 
       expect(posthog.capture).toHaveBeenCalledWith('news_audio_play_started', {
@@ -623,7 +640,54 @@ describe('newsAnalytics', () => {
         audio_duration_seconds: 60,
         page: 'dashboard',
         playback_speed: 1,
+        level: 'b2',
       });
+    });
+  });
+
+  // ==========================================================================
+  // trackNewsLevelToggled
+  // ==========================================================================
+
+  describe('trackNewsLevelToggled', () => {
+    it('should fire news_level_toggled with correct properties', () => {
+      trackNewsLevelToggled({ level: 'a2', page: 'news' });
+
+      expect(posthog.capture).toHaveBeenCalledWith('news_level_toggled', {
+        level: 'a2',
+        page: 'news',
+      });
+    });
+
+    it('should pass page: dashboard correctly', () => {
+      trackNewsLevelToggled({ level: 'b2', page: 'dashboard' });
+
+      expect(posthog.capture).toHaveBeenCalledWith('news_level_toggled', {
+        level: 'b2',
+        page: 'dashboard',
+      });
+    });
+
+    it('should not throw if posthog.capture is undefined', () => {
+      const originalCapture = posthog.capture;
+      (posthog as Record<string, unknown>).capture = undefined;
+
+      expect(() => {
+        trackNewsLevelToggled({ level: 'a2', page: 'news' });
+      }).not.toThrow();
+
+      (posthog as Record<string, unknown>).capture = originalCapture;
+    });
+
+    it('should not throw if posthog.capture is null', () => {
+      const originalCapture = posthog.capture;
+      (posthog as Record<string, unknown>).capture = null;
+
+      expect(() => {
+        trackNewsLevelToggled({ level: 'b2', page: 'dashboard' });
+      }).not.toThrow();
+
+      (posthog as Record<string, unknown>).capture = originalCapture;
     });
   });
 });

@@ -403,7 +403,8 @@
       "invalidImageUrl": "Неверный формат source_image_url",
       "invalidDate": "Неверный формат даты (используйте YYYY-MM-DD)",
       "noFieldsToUpdate": "Нет полей для обновления",
-      "invalidCountry": "Недопустимая страна. Допустимые значения: cyprus, greece, world"
+      "invalidCountry": "Недопустимая страна. Допустимые значения: cyprus, greece, world",
+      "a2FieldsPaired": "title_el_a2 и description_el_a2 должны быть указаны оба или оба пропущены"
     },
     "search": {
       "placeholder": "Поиск новостей...",
@@ -425,7 +426,16 @@
       "play": "Воспроизвести аудио",
       "pause": "Пауза аудио",
       "playerDisabled": "Аудио для предпрослушивания недоступно",
-      "loadError": "Не удалось загрузить аудио"
+      "loadError": "Не удалось загрузить аудио",
+      "b2StatusTitle": "Аудио B2",
+      "a2StatusTitle": "Аудио A2",
+      "regenerateB2": "Перегенерировать аудио B2",
+      "regenerateA2": "Перегенерировать аудио A2",
+      "regeneratingB2": "Перегенерация B2...",
+      "regeneratingA2": "Перегенерация A2...",
+      "regenerateA2Success": "Перегенерация аудио A2 запущена",
+      "regenerateA2Error": "Не удалось перегенерировать аудио A2",
+      "noA2Content": "Нет контента A2 — добавьте текст A2 для активации аудио"
     },
     "country": {
       "label": "Страна",

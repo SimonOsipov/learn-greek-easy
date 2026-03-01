@@ -16,6 +16,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { type NewsItemResponse } from '@/services/adminAPI';
+import type { NewsLevel } from '@/utils/newsLevel';
 
 import { NewsCard } from './NewsCard';
 import { NewsCardSkeleton } from './NewsCardSkeleton';
@@ -29,6 +30,7 @@ export interface NewsGridProps {
   isLoading?: boolean;
   /** Number of skeleton cards to show during loading */
   skeletonCount?: number;
+  level?: NewsLevel;
 }
 
 export const NewsGrid: React.FC<NewsGridProps> = ({
@@ -36,6 +38,7 @@ export const NewsGrid: React.FC<NewsGridProps> = ({
   newsLang = 'el',
   isLoading = false,
   skeletonCount = 8,
+  level,
 }) => {
   const { t } = useTranslation('common');
 
@@ -73,7 +76,7 @@ export const NewsGrid: React.FC<NewsGridProps> = ({
     >
       {articles.map((article) => (
         <div key={article.id} role="listitem">
-          <NewsCard article={article} newsLang={newsLang} height="tall" page="news" />
+          <NewsCard article={article} newsLang={newsLang} height="tall" page="news" level={level} />
         </div>
       ))}
     </div>

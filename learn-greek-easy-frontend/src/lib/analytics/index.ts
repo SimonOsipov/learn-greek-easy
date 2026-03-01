@@ -89,6 +89,7 @@ export {
   type NewsAudioPlayCompletedProperties,
   type NewsAudioPlayPausedProperties,
   type NewsAudioErrorProperties,
+  type NewsLevelToggledProperties,
   // Tracking functions
   trackNewsArticleClicked,
   trackNewsQuestionsButtonClicked,
@@ -102,6 +103,7 @@ export {
   trackNewsAudioPlayCompleted,
   trackNewsAudioPlayPaused,
   trackNewsAudioError,
+  trackNewsLevelToggled,
 } from './newsAnalytics';
 export {
   // Type interfaces

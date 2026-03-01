@@ -261,6 +261,23 @@ const NewsItemRow: React.FC<NewsItemRowProps> = ({
                 </Badge>
               );
             })}
+            {item.has_a2_content ? (
+              <Badge
+                variant="outline"
+                className="border-purple-500/30 bg-purple-500/10 px-1.5 py-0 text-[10px] text-purple-700 dark:text-purple-400"
+                data-testid={`a2-badge-${item.id}`}
+              >
+                A2
+              </Badge>
+            ) : (
+              <Badge
+                variant="secondary"
+                className="px-1.5 py-0 text-[10px] opacity-50"
+                data-testid={`a2-badge-${item.id}`}
+              >
+                A2
+              </Badge>
+            )}
           </div>
         </div>
       </div>

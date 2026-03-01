@@ -960,3 +960,208 @@ class TestGetListWithCards:
         assert len(result.items) == 3
         # Total should match the number of unique news items
         assert result.total == 3
+
+
+# =============================================================================
+# Test A2 Content
+# =============================================================================
+
+
+class TestA2Content:
+    """Tests for A2-level content fields in schemas and service."""
+
+    @pytest.mark.asyncio
+    async def test_create_with_a2_fields(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+        mock_httpx_response: MagicMock,
+    ):
+        """Should create news item with A2 fields and has_a2_content=True."""
+        from pydantic import ValidationError  # noqa: F401
+
+        with patch("src.services.news_item_service.httpx.AsyncClient") as mock_client:
+            mock_client_instance = AsyncMock()
+            mock_client_instance.get = AsyncMock(return_value=mock_httpx_response)
+            mock_client.return_value.__aenter__.return_value = mock_client_instance
+
+            service = NewsItemService(db_session, s3_service=mock_s3_service)
+
+            create_data = NewsItemCreate(
+                title_el="Ελληνικός τίτλος",
+                title_en="English Title",
+                title_ru="Russian Title",
+                description_el="Ελληνική περιγραφή",
+                description_en="English description",
+                description_ru="Russian description",
+                publication_date=date.today(),
+                original_article_url="https://example.com/a2-article",
+                source_image_url="https://example.com/image.jpg",
+                country="cyprus",
+                title_el_a2="Απλός τίτλος",
+                description_el_a2="Απλή περιγραφή",
+            )
+
+            result = await service.create(create_data)
+
+            assert result.title_el_a2 == "Απλός τίτλος"
+            assert result.description_el_a2 == "Απλή περιγραφή"
+            assert result.has_a2_content is True
+
+    @pytest.mark.asyncio
+    async def test_create_without_a2_fields(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+        mock_httpx_response: MagicMock,
+    ):
+        """Should create news item without A2 fields; has_a2_content=False, fields are None."""
+        with patch("src.services.news_item_service.httpx.AsyncClient") as mock_client:
+            mock_client_instance = AsyncMock()
+            mock_client_instance.get = AsyncMock(return_value=mock_httpx_response)
+            mock_client.return_value.__aenter__.return_value = mock_client_instance
+
+            service = NewsItemService(db_session, s3_service=mock_s3_service)
+
+            create_data = NewsItemCreate(
+                title_el="Ελληνικός τίτλος",
+                title_en="English Title",
+                title_ru="Russian Title",
+                description_el="Ελληνική περιγραφή",
+                description_en="English description",
+                description_ru="Russian description",
+                publication_date=date.today(),
+                original_article_url="https://example.com/no-a2-article",
+                source_image_url="https://example.com/image.jpg",
+                country="cyprus",
+            )
+
+            result = await service.create(create_data)
+
+            assert result.title_el_a2 is None
+            assert result.description_el_a2 is None
+            assert result.has_a2_content is False
+
+    @pytest.mark.asyncio
+    async def test_update_with_a2_fields(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+        sample_news_item: NewsItem,
+    ):
+        """Should update A2 fields and reflect values in response."""
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+
+        update_data = NewsItemUpdate(
+            title_el_a2="Ενημερωμένος απλός τίτλος",
+            description_el_a2="Ενημερωμένη απλή περιγραφή",
+        )
+
+        result = await service.update(sample_news_item.id, update_data)
+
+        assert result.title_el_a2 == "Ενημερωμένος απλός τίτλος"
+        assert result.description_el_a2 == "Ενημερωμένη απλή περιγραφή"
+        assert result.has_a2_content is True
+
+    def test_paired_validation_title_without_description(self):
+        """Should raise ValidationError when title_el_a2 set but description_el_a2 omitted."""
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError, match="must both be provided or both omitted"):
+            NewsItemCreate(
+                title_el="Τίτλος",
+                title_en="Title",
+                title_ru="Title",
+                description_el="Περιγραφή",
+                description_en="Description",
+                description_ru="Description",
+                publication_date=date.today(),
+                original_article_url="https://example.com/article",
+                source_image_url="https://example.com/image.jpg",
+                country="cyprus",
+                title_el_a2="Απλός τίτλος",
+                # description_el_a2 omitted
+            )
+
+    def test_paired_validation_description_without_title(self):
+        """Should raise ValidationError when description_el_a2 set but title_el_a2 omitted."""
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError, match="must both be provided or both omitted"):
+            NewsItemCreate(
+                title_el="Τίτλος",
+                title_en="Title",
+                title_ru="Title",
+                description_el="Περιγραφή",
+                description_en="Description",
+                description_ru="Description",
+                publication_date=date.today(),
+                original_article_url="https://example.com/article",
+                source_image_url="https://example.com/image.jpg",
+                country="cyprus",
+                # title_el_a2 omitted
+                description_el_a2="Απλή περιγραφή",
+            )
+
+    def test_paired_validation_on_update_schema(self):
+        """Should raise ValidationError on NewsItemUpdate when A2 pair is incomplete."""
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError, match="must both be provided or both omitted"):
+            NewsItemUpdate(
+                title_el_a2="Απλός τίτλος",
+                # description_el_a2 omitted
+            )
+
+    @pytest.mark.asyncio
+    async def test_to_response_maps_audio_a2_s3_key_to_presigned_url(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+    ):
+        """Should generate presigned audio_a2_url when audio_a2_s3_key is set."""
+        item = NewsItem(
+            title_el="Τίτλος",
+            title_en="Title",
+            title_ru="Title",
+            description_el="Περιγραφή",
+            description_en="Description",
+            description_ru="Description",
+            publication_date=date.today(),
+            original_article_url="https://example.com/article-with-a2-audio",
+            image_s3_key="news-images/test.jpg",
+            country="cyprus",
+            title_el_a2="Απλός τίτλος",
+            description_el_a2="Απλή περιγραφή",
+            audio_a2_s3_key="news-audio-a2/test-a2.mp3",
+        )
+        db_session.add(item)
+        await db_session.commit()
+        await db_session.refresh(item)
+
+        mock_s3_service.generate_presigned_url.side_effect = lambda key: (
+            f"https://s3.example.com/{key}" if key else None
+        )
+
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+        result = await service.get_by_id(item.id)
+
+        assert result.audio_a2_url == "https://s3.example.com/news-audio-a2/test-a2.mp3"
+        mock_s3_service.generate_presigned_url.assert_any_call("news-audio-a2/test-a2.mp3")
+
+    @pytest.mark.asyncio
+    async def test_to_response_returns_none_for_audio_a2_when_no_key(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+        sample_news_item: NewsItem,
+    ):
+        """Should return audio_a2_url=None when audio_a2_s3_key is not set."""
+        mock_s3_service.generate_presigned_url.side_effect = lambda key: (
+            f"https://s3.example.com/{key}" if key else None
+        )
+
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+        result = await service.get_by_id(sample_news_item.id)
+
+        assert result.audio_a2_url is None

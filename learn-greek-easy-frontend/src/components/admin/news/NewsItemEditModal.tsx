@@ -30,6 +30,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
 import { useLanguage } from '@/hooks/useLanguage';
@@ -96,6 +97,8 @@ function itemToEditableJson(item: NewsItemResponse, imageUrlPlaceholder: string)
     description_el: item.description_el,
     description_en: item.description_en,
     description_ru: item.description_ru,
+    title_el_a2: item.title_el_a2 ?? '',
+    description_el_a2: item.description_el_a2 ?? '',
     publication_date: item.publication_date,
     original_article_url: item.original_article_url,
     // Include source_image_url as empty to show it's optional
@@ -114,7 +117,8 @@ type ValidationErrorType =
   | 'invalidImageUrl'
   | 'invalidDate'
   | 'noFieldsToUpdate'
-  | 'invalidCountry';
+  | 'invalidCountry'
+  | 'a2FieldsPaired';
 
 /**
  * Validate and parse the edited JSON
@@ -160,6 +164,27 @@ function parseEditJson(json: string): {
       return { valid: false, errorType: 'invalidCountry' };
     }
     (update as Record<string, string>)['country'] = countryValue.trim();
+  }
+
+  // A2 pair validation: both keys must be present together or absent together
+  const hasA2TitleKey = Object.prototype.hasOwnProperty.call(parsed, 'title_el_a2');
+  const hasA2DescKey = Object.prototype.hasOwnProperty.call(parsed, 'description_el_a2');
+  if (hasA2TitleKey !== hasA2DescKey) {
+    return { valid: false, errorType: 'a2FieldsPaired' };
+  }
+  if (hasA2TitleKey && hasA2DescKey) {
+    if (typeof parsed.title_el_a2 !== 'string' || typeof parsed.description_el_a2 !== 'string') {
+      return { valid: false, errorType: 'a2FieldsPaired' };
+    }
+    const a2Title = parsed.title_el_a2.trim();
+    const a2Desc = parsed.description_el_a2.trim();
+    const hasA2Title = a2Title !== '';
+    const hasA2Desc = a2Desc !== '';
+    if (hasA2Title !== hasA2Desc) {
+      return { valid: false, errorType: 'a2FieldsPaired' };
+    }
+    (update as Record<string, unknown>)['title_el_a2'] = a2Title;
+    (update as Record<string, unknown>)['description_el_a2'] = a2Desc;
   }
 
   // Handle source_image_url specially - only include if it's a valid URL
@@ -213,12 +238,18 @@ export const NewsItemEditModal: React.FC<NewsItemEditModalProps> = ({
   const { t } = useTranslation('admin');
   const { currentLanguage } = useLanguage();
   const [jsonInput, setJsonInput] = useState('');
-  const { updateNewsItem, isUpdating, regenerateAudio } = useAdminNewsStore();
+  const { updateNewsItem, isUpdating, regenerateAudio, regenerateA2Audio } = useAdminNewsStore();
   const [audioError, setAudioError] = useState(false);
 
-  const [cooldownRemaining, setCooldownRemaining] = useState(0);
-  const [isRegenerating, setIsRegenerating] = useState(false);
-  const cooldownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [cooldownB2Remaining, setCooldownB2Remaining] = useState(0);
+  const [isRegeneratingB2, setIsRegeneratingB2] = useState(false);
+  const cooldownB2TimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const [cooldownA2Remaining, setCooldownA2Remaining] = useState(0);
+  const [isRegeneratingA2, setIsRegeneratingA2] = useState(false);
+  const cooldownA2TimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const [audioA2Error, setAudioA2Error] = useState<string | null>(null);
 
   // Initialize JSON input when item changes
   useEffect(() => {
@@ -231,39 +262,49 @@ export const NewsItemEditModal: React.FC<NewsItemEditModalProps> = ({
   // Clear cooldown when modal closes
   useEffect(() => {
     if (!open) {
-      setCooldownRemaining(0);
-      setIsRegenerating(false);
-      if (cooldownTimerRef.current) {
-        clearInterval(cooldownTimerRef.current);
-        cooldownTimerRef.current = null;
+      setCooldownB2Remaining(0);
+      setIsRegeneratingB2(false);
+      if (cooldownB2TimerRef.current) {
+        clearInterval(cooldownB2TimerRef.current);
+        cooldownB2TimerRef.current = null;
       }
+      setCooldownA2Remaining(0);
+      setIsRegeneratingA2(false);
+      if (cooldownA2TimerRef.current) {
+        clearInterval(cooldownA2TimerRef.current);
+        cooldownA2TimerRef.current = null;
+      }
+      setAudioA2Error(null);
     }
   }, [open]);
 
-  // Cleanup interval on unmount
+  // Cleanup intervals on unmount
   useEffect(() => {
     return () => {
-      if (cooldownTimerRef.current) {
-        clearInterval(cooldownTimerRef.current);
+      if (cooldownB2TimerRef.current) {
+        clearInterval(cooldownB2TimerRef.current);
+      }
+      if (cooldownA2TimerRef.current) {
+        clearInterval(cooldownA2TimerRef.current);
       }
     };
   }, []);
 
-  const handleRegenerate = useCallback(async () => {
-    if (!item || isRegenerating || cooldownRemaining > 0) return;
+  const handleRegenerateB2 = useCallback(async () => {
+    if (!item || isRegeneratingB2 || cooldownB2Remaining > 0) return;
 
-    setIsRegenerating(true);
+    setIsRegeneratingB2(true);
     try {
       await regenerateAudio(item.id);
       toast({ title: t('news.audio.regenerateSuccess') });
 
-      setCooldownRemaining(15);
-      cooldownTimerRef.current = setInterval(() => {
-        setCooldownRemaining((prev) => {
+      setCooldownB2Remaining(15);
+      cooldownB2TimerRef.current = setInterval(() => {
+        setCooldownB2Remaining((prev) => {
           if (prev <= 1) {
-            if (cooldownTimerRef.current) {
-              clearInterval(cooldownTimerRef.current);
-              cooldownTimerRef.current = null;
+            if (cooldownB2TimerRef.current) {
+              clearInterval(cooldownB2TimerRef.current);
+              cooldownB2TimerRef.current = null;
             }
             return 0;
           }
@@ -278,13 +319,43 @@ export const NewsItemEditModal: React.FC<NewsItemEditModalProps> = ({
         variant: 'destructive',
       });
     } finally {
-      setIsRegenerating(false);
+      setIsRegeneratingB2(false);
     }
-  }, [item, isRegenerating, cooldownRemaining, regenerateAudio, t]);
+  }, [item, isRegeneratingB2, cooldownB2Remaining, regenerateAudio, t]);
+
+  const handleRegenerateA2 = useCallback(async () => {
+    if (!item || !item.has_a2_content || isRegeneratingA2 || cooldownA2Remaining > 0) return;
+
+    setIsRegeneratingA2(true);
+    try {
+      await regenerateA2Audio(item.id);
+      toast({ title: t('news.audio.regenerateA2Success') });
+      // Start A2 cooldown timer (same pattern as B2)
+      setCooldownA2Remaining(30);
+      cooldownA2TimerRef.current = setInterval(() => {
+        setCooldownA2Remaining((prev) => {
+          if (prev <= 1) {
+            if (cooldownA2TimerRef.current) {
+              clearInterval(cooldownA2TimerRef.current);
+              cooldownA2TimerRef.current = null;
+            }
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } catch {
+      toast({ title: t('news.audio.regenerateA2Error'), variant: 'destructive' });
+    } finally {
+      setIsRegeneratingA2(false);
+    }
+  }, [item, isRegeneratingA2, cooldownA2Remaining, regenerateA2Audio, t]);
 
   const handleAudioError = useCallback(() => {
     setAudioError(true);
   }, []);
+
+  const handleA2AudioError = () => setAudioA2Error(t('news.audio.loadError'));
 
   const handleSave = async () => {
     if (!item) return;
@@ -332,7 +403,10 @@ export const NewsItemEditModal: React.FC<NewsItemEditModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]" data-testid="news-edit-modal">
+      <DialogContent
+        className="max-h-[90vh] overflow-y-auto sm:max-w-[600px]"
+        data-testid="news-edit-modal"
+      >
         <DialogHeader>
           <DialogTitle>{t('news.edit.title')}</DialogTitle>
           <DialogDescription>{getLocalizedTitle(item, currentLanguage)}</DialogDescription>
@@ -341,10 +415,11 @@ export const NewsItemEditModal: React.FC<NewsItemEditModalProps> = ({
         {/* Audio Status Section */}
         <Card data-testid="audio-status-section">
           <CardContent className="p-4">
+            {/* B2 Audio Section */}
             <div className="flex items-center justify-between">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <h4 className="text-sm font-medium">{t('news.audio.statusTitle')}</h4>
+                  <h4 className="text-sm font-medium">{t('news.audio.b2StatusTitle')}</h4>
                   {item.audio_url ? (
                     <Circle className="h-2.5 w-2.5 fill-green-500 text-green-500" />
                   ) : (
@@ -382,26 +457,26 @@ export const NewsItemEditModal: React.FC<NewsItemEditModalProps> = ({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleRegenerate}
-                disabled={isRegenerating || cooldownRemaining > 0}
-                data-testid="modal-regenerate-audio"
+                onClick={handleRegenerateB2}
+                disabled={isRegeneratingB2 || cooldownB2Remaining > 0}
+                data-testid="modal-regenerate-b2-audio"
               >
-                {isRegenerating ? (
+                {isRegeneratingB2 ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {t('news.audio.regenerating')}
+                    {t('news.audio.regeneratingB2')}
                   </>
-                ) : cooldownRemaining > 0 ? (
-                  `${cooldownRemaining}s`
+                ) : cooldownB2Remaining > 0 ? (
+                  `${cooldownB2Remaining}s`
                 ) : (
                   <>
                     <RefreshCw className="mr-2 h-4 w-4" />
-                    {t('news.audio.regenerate')}
+                    {t('news.audio.regenerateB2')}
                   </>
                 )}
               </Button>
             </div>
-            {/* Audio Player */}
+            {/* B2 Audio Player */}
             <div className="mt-3" data-testid="audio-player-container">
               <WaveformPlayer
                 audioUrl={item.audio_url ?? undefined}
@@ -419,6 +494,60 @@ export const NewsItemEditModal: React.FC<NewsItemEditModalProps> = ({
                   {t('news.audio.loadError')}
                 </p>
               )}
+            </div>
+
+            <Separator className="my-4" />
+
+            {/* A2 Audio Section */}
+            <div>
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-sm font-medium">{t('news.audio.a2StatusTitle')}</h4>
+                    <div
+                      className={`h-2 w-2 rounded-full ${item.audio_a2_url ? 'bg-green-500' : 'bg-gray-300'}`}
+                    />
+                  </div>
+                  {item.has_a2_content ? (
+                    <div className="space-y-1 text-xs text-muted-foreground">
+                      {item.audio_a2_duration_seconds && (
+                        <p>{Math.round(item.audio_a2_duration_seconds)}s</p>
+                      )}
+                      {item.audio_a2_file_size_bytes && (
+                        <p>{Math.round(item.audio_a2_file_size_bytes / 1024)}KB</p>
+                      )}
+                      {item.audio_a2_generated_at && (
+                        <p>{new Date(item.audio_a2_generated_at).toLocaleDateString()}</p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">{t('news.audio.noA2Content')}</p>
+                  )}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isRegeneratingA2 || cooldownA2Remaining > 0 || !item.has_a2_content}
+                  onClick={handleRegenerateA2}
+                  data-testid="modal-regenerate-a2-audio"
+                >
+                  {isRegeneratingA2
+                    ? t('news.audio.regeneratingA2')
+                    : cooldownA2Remaining > 0
+                      ? `${cooldownA2Remaining}s`
+                      : t('news.audio.regenerateA2')}
+                </Button>
+              </div>
+              {audioA2Error && <p className="mt-1 text-xs text-destructive">{audioA2Error}</p>}
+              <div className="mt-3" data-testid="audio-a2-player-container">
+                <WaveformPlayer
+                  audioUrl={item.audio_a2_url ?? undefined}
+                  variant="admin"
+                  showSpeedControl={false}
+                  disabled={!item.audio_a2_url}
+                  onError={handleA2AudioError}
+                />
+              </div>
             </div>
           </CardContent>
         </Card>

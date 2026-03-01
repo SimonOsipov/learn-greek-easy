@@ -469,6 +469,8 @@ export interface NewsItemCreate {
   original_article_url: string;
   source_image_url: string;
   country: NewsCountry;
+  title_el_a2?: string;
+  description_el_a2?: string;
 }
 
 /**
@@ -532,6 +534,8 @@ export interface NewsItemUpdate {
   original_article_url?: string;
   source_image_url?: string;
   country?: NewsCountry;
+  title_el_a2?: string;
+  description_el_a2?: string;
 }
 
 /**
@@ -555,6 +559,14 @@ export interface NewsItemResponse {
   created_at: string;
   updated_at: string;
   country: NewsCountry;
+  // A2 content fields (from NLVL-01)
+  title_el_a2: string | null;
+  description_el_a2: string | null;
+  audio_a2_url: string | null;
+  audio_a2_duration_seconds: number | null;
+  audio_a2_generated_at: string | null;
+  audio_a2_file_size_bytes: number | null;
+  has_a2_content: boolean;
   // New fields for card association
   card_id: string | null;
   deck_id: string | null;
@@ -1140,6 +1152,20 @@ export const adminAPI = {
    */
   regenerateAudio: async (newsItemId: string): Promise<void> => {
     return api.post<void>(`/api/v1/admin/news/${newsItemId}/regenerate-audio`);
+  },
+
+  /**
+   * Regenerate A2 audio narration for a news item
+   *
+   * Triggers background TTS generation for the news item's A2 Greek description.
+   * Requires superuser authentication.
+   *
+   * @param newsItemId - UUID of the news item
+   * @throws 404 if news item not found
+   * @throws 503 if ElevenLabs service is unavailable or not configured
+   */
+  regenerateA2Audio: async (newsItemId: string): Promise<void> => {
+    return api.post<void>(`/api/v1/admin/news/${newsItemId}/regenerate-a2-audio`);
   },
 
   // ============================================

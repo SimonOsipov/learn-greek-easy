@@ -181,6 +181,11 @@
       "cyprus": "Кипр",
       "greece": "Греция",
       "world": "Мир"
+    },
+    "level": {
+      "a2": "A2",
+      "b2": "B2",
+      "label": "Уровень контента"
     }
   },
   "notifications": {

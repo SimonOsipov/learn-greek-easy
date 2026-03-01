@@ -2286,6 +2286,40 @@ class NewsItem(Base, TimestampMixin):
         comment="Duration of audio in seconds",
     )
 
+    # A2-level simplified content
+    title_el_a2: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+        comment="Simplified A2-level article title in Greek",
+    )
+    description_el_a2: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Simplified A2-level article description in Greek",
+    )
+
+    # A2 audio metadata
+    audio_a2_s3_key: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+        comment="S3 key for A2-level TTS audio file",
+    )
+    audio_a2_generated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="Timestamp when A2 audio was generated via TTS",
+    )
+    audio_a2_duration_seconds: Mapped[float | None] = mapped_column(
+        Float,
+        nullable=True,
+        comment="Duration of A2 audio file in seconds",
+    )
+    audio_a2_file_size_bytes: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+        comment="Size of A2 audio file in bytes",
+    )
+
     # Country classification
     country: Mapped[NewsCountry] = mapped_column(
         SAEnum(

@@ -391,7 +391,8 @@
       "invalidImageUrl": "Invalid source_image_url format",
       "invalidDate": "Invalid publication_date format (use YYYY-MM-DD)",
       "noFieldsToUpdate": "No fields to update",
-      "invalidCountry": "Invalid country. Must be: cyprus, greece, or world"
+      "invalidCountry": "Invalid country. Must be: cyprus, greece, or world",
+      "a2FieldsPaired": "title_el_a2 and description_el_a2 must both be provided or both omitted"
     },
     "search": {
       "placeholder": "Search news...",
@@ -413,7 +414,16 @@
       "play": "Play audio",
       "pause": "Pause audio",
       "playerDisabled": "No audio available for preview",
-      "loadError": "Failed to load audio"
+      "loadError": "Failed to load audio",
+      "b2StatusTitle": "B2 Audio",
+      "a2StatusTitle": "A2 Audio",
+      "regenerateB2": "Regenerate B2 Audio",
+      "regenerateA2": "Regenerate A2 Audio",
+      "regeneratingB2": "Regenerating B2...",
+      "regeneratingA2": "Regenerating A2...",
+      "regenerateA2Success": "A2 audio regeneration started",
+      "regenerateA2Error": "Failed to regenerate A2 audio",
+      "noA2Content": "No A2 content — add A2 text to enable audio"
     },
     "country": {
       "label": "Country",

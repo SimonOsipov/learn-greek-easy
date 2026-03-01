@@ -70,6 +70,7 @@ class TestModuleImports:
             "check_achievements_task",
             "check_culture_achievements_task",
             "create_announcement_notifications_task",
+            "generate_a2_audio_for_news_item_task",
             "generate_audio_for_news_item_task",
             "generate_word_entry_audio_task",
             "generate_word_entry_part_audio_task",
