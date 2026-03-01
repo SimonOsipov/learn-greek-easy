@@ -20,6 +20,10 @@ from src.services.lemma_normalization_service import (
     LemmaNormalizationService,
     get_lemma_normalization_service,
 )
+from src.services.local_verification_service import (
+    LocalVerificationService,
+    get_local_verification_service,
+)
 from src.services.mock_exam_service import MockExamService
 from src.services.morphology_service import MorphologyService, get_morphology_service
 from src.services.news_item_service import NewsItemService
@@ -53,6 +57,7 @@ __all__ = [
     "DuplicateDetectionService",
     "FeedbackAdminService",
     "LemmaNormalizationService",
+    "LocalVerificationService",
     "MockExamService",
     "MorphologyService",
     "NewsItemService",
@@ -69,6 +74,7 @@ __all__ = [
     "WebhookService",
     "XPService",
     "get_lemma_normalization_service",
+    "get_local_verification_service",
     "get_morphology_service",
     "get_noun_data_generation_service",
     "get_openrouter_service",
