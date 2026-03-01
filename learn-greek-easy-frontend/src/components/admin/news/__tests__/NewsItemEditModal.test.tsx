@@ -8,12 +8,25 @@
  * - AC-5: Greek locale shows Greek month names
  */
 
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
-import type { NewsItemResponse } from '@/services/adminAPI';
+import { adminAPI } from '@/services/adminAPI';
+import type { NewsItemResponse, PendingQuestion } from '@/services/adminAPI';
 
 import { NewsItemEditModal } from '../NewsItemEditModal';
+
+// Mock adminAPI
+vi.mock('@/services/adminAPI', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/services/adminAPI')>();
+  return {
+    ...actual,
+    adminAPI: {
+      ...actual.adminAPI,
+      getNewsQuestion: vi.fn(),
+    },
+  };
+});
 
 // Mock i18n
 vi.mock('react-i18next', () => ({
@@ -57,6 +70,7 @@ vi.mock('react-i18next', () => ({
         'news.validation.invalidDate': 'Invalid date format',
         'news.validation.noFieldsToUpdate': 'No fields to update',
         'news.validation.a2FieldsPaired': 'Both A2 fields required',
+        'news.question.previewTitle': 'Question Preview',
       };
       return translations[key] || key;
     },
@@ -367,7 +381,52 @@ describe('NewsItemEditModal -- A2 Audio Section', () => {
     });
     render(<NewsItemEditModal open={true} onOpenChange={vi.fn()} item={item} />);
 
-    expect(screen.getByText('45s')).toBeInTheDocument();
+    expect(screen.getByText(/Duration:/).textContent).toMatch(/0:45/);
+  });
+});
+
+describe('NewsItemEditModal — A2 audio metadata formatting', () => {
+  beforeEach(() => {
+    mockCurrentLanguage.value = 'en';
+    vi.clearAllMocks();
+  });
+
+  it('shows formatted A2 duration with label when audio_a2_url exists', () => {
+    const item = makeNewsItem({
+      audio_a2_url: 'https://example.com/audio_a2.mp3',
+      audio_a2_duration_seconds: 45,
+    });
+    render(<NewsItemEditModal open={true} onOpenChange={vi.fn()} item={item} />);
+    expect(screen.getByText(/Duration:/).textContent).toMatch(/0:45/);
+  });
+
+  it('shows formatted A2 file size with label when audio_a2_url exists', () => {
+    const item = makeNewsItem({
+      audio_a2_url: 'https://example.com/audio_a2.mp3',
+      audio_a2_file_size_bytes: 268288,
+    });
+    render(<NewsItemEditModal open={true} onOpenChange={vi.fn()} item={item} />);
+    expect(screen.getByText(/File size:/).textContent).toMatch(/262\.0 KB/);
+  });
+
+  it('shows A2 metadata when audio_a2_url is set (regardless of has_a2_content)', () => {
+    const item = makeNewsItem({
+      has_a2_content: false,
+      audio_a2_url: 'https://example.com/audio_a2.mp3',
+      audio_a2_duration_seconds: 17,
+    });
+    render(<NewsItemEditModal open={true} onOpenChange={vi.fn()} item={item} />);
+    expect(screen.getByText(/Duration:/).textContent).toMatch(/0:17/);
+  });
+
+  it('does not show A2 metadata when audio_a2_url is null', () => {
+    const item = makeNewsItem({
+      has_a2_content: true,
+      audio_a2_url: null,
+    });
+    render(<NewsItemEditModal open={true} onOpenChange={vi.fn()} item={item} />);
+    // Metadata block is not rendered — no Duration label appears for A2
+    expect(screen.queryByText('No A2 content')).toBeInTheDocument();
   });
 });
 
@@ -396,5 +455,96 @@ describe('NewsItemEditModal -- A2 JSON fields', () => {
     const textarea = screen.getByTestId('news-edit-json-input') as HTMLTextAreaElement;
     expect(textarea.value).toContain('"title_el_a2": ""');
     expect(textarea.value).toContain('"description_el_a2": ""');
+  });
+});
+
+function makePendingQuestion(overrides: Partial<PendingQuestion> = {}): PendingQuestion {
+  return {
+    id: 'question-1',
+    question_text: {
+      el: 'Ποια είναι η πρωτεύουσα της Ελλάδας;',
+      en: 'What is the capital of Greece?',
+      ru: 'Какова столица Греции?',
+    },
+    option_a: { el: 'Αθήνα', en: 'Athens', ru: 'Афины' },
+    option_b: { el: 'Θεσσαλονίκη', en: 'Thessaloniki', ru: 'Салоники' },
+    option_c: null,
+    option_d: null,
+    correct_option: 1,
+    source_article_url: 'https://example.com/article',
+    created_at: '2026-03-01T00:00:00Z',
+    ...overrides,
+  };
+}
+
+describe('NewsItemEditModal — Question preview card', () => {
+  beforeEach(() => {
+    vi.mocked(adminAPI.getNewsQuestion).mockResolvedValue(makePendingQuestion());
+    vi.clearAllMocks();
+  });
+
+  it('renders question preview card when card_id is set and fetch succeeds', async () => {
+    vi.mocked(adminAPI.getNewsQuestion).mockResolvedValue(makePendingQuestion());
+    const item = makeNewsItem({ card_id: 'question-1' });
+    render(<NewsItemEditModal open={true} onOpenChange={vi.fn()} item={item} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('question-preview-card')).toBeInTheDocument();
+    });
+    expect(screen.getByText('What is the capital of Greece?')).toBeInTheDocument();
+  });
+
+  it('does not render question preview card when card_id is null', () => {
+    const item = makeNewsItem({ card_id: null });
+    render(<NewsItemEditModal open={true} onOpenChange={vi.fn()} item={item} />);
+
+    expect(screen.queryByTestId('question-preview-card')).not.toBeInTheDocument();
+  });
+
+  it('correct answer has green styling', async () => {
+    vi.mocked(adminAPI.getNewsQuestion).mockResolvedValue(
+      makePendingQuestion({ correct_option: 1 })
+    );
+    const item = makeNewsItem({ card_id: 'question-1' });
+    render(<NewsItemEditModal open={true} onOpenChange={vi.fn()} item={item} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('question-preview-card')).toBeInTheDocument();
+    });
+    // Correct option (A - Athens) should have green styling
+    const correctOption = screen.getByText('Athens').closest('div');
+    expect(correctOption).toHaveClass('bg-green-500/10');
+  });
+
+  it('gracefully hides preview on fetch failure', async () => {
+    vi.mocked(adminAPI.getNewsQuestion).mockRejectedValue(new Error('Not found'));
+    const item = makeNewsItem({ card_id: 'nonexistent-question' });
+    render(<NewsItemEditModal open={true} onOpenChange={vi.fn()} item={item} />);
+
+    // Card should not appear after fetch fails
+    await waitFor(() => {
+      expect(adminAPI.getNewsQuestion).toHaveBeenCalled();
+    });
+    expect(screen.queryByTestId('question-preview-card')).not.toBeInTheDocument();
+  });
+
+  it('null options (C/D) are not rendered', async () => {
+    vi.mocked(adminAPI.getNewsQuestion).mockResolvedValue(
+      makePendingQuestion({
+        option_c: null,
+        option_d: null,
+      })
+    );
+    const item = makeNewsItem({ card_id: 'question-1' });
+    render(<NewsItemEditModal open={true} onOpenChange={vi.fn()} item={item} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('question-preview-card')).toBeInTheDocument();
+    });
+    // Only A and B options should be rendered
+    expect(screen.getByText('A.')).toBeInTheDocument();
+    expect(screen.getByText('B.')).toBeInTheDocument();
+    expect(screen.queryByText('C.')).not.toBeInTheDocument();
+    expect(screen.queryByText('D.')).not.toBeInTheDocument();
   });
 });

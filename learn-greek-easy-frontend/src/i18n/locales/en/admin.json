@@ -428,6 +428,9 @@
     "country": {
       "label": "Country",
       "filterAll": "All Countries"
+    },
+    "question": {
+      "previewTitle": "Question Preview"
     }
   },
   "feedback": {

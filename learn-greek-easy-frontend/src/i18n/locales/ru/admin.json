@@ -440,6 +440,9 @@
     "country": {
       "label": "Страна",
       "filterAll": "Все страны"
+    },
+    "question": {
+      "previewTitle": "Предпросмотр вопроса"
     }
   },
   "feedback": {

@@ -16,16 +16,7 @@ import React, { useEffect, useState } from 'react';
 import { format } from 'date-fns';
 import { el } from 'date-fns/locale/el';
 import { ru } from 'date-fns/locale/ru';
-import {
-  ChevronLeft,
-  ChevronRight,
-  Circle,
-  Loader2,
-  Pencil,
-  RefreshCw,
-  Search,
-  Trash2,
-} from 'lucide-react';
+import { ChevronLeft, ChevronRight, Pencil, Search, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
@@ -93,9 +84,6 @@ interface NewsItemsTableProps {
   onPageChange: (page: number) => void;
   onEdit: (item: NewsItemResponse) => void;
   onDelete: (item: NewsItemResponse) => void;
-  regeneratingId: string | null;
-  cooldownEndTime: number | null;
-  onRegenerateAudio: (item: NewsItemResponse) => void;
   countryFilter?: string | null;
   onCountryFilterChange?: (country: string | null) => void;
 }
@@ -164,28 +152,13 @@ interface NewsItemRowProps {
   onDelete: (item: NewsItemResponse) => void;
   t: (key: string) => string;
   lang: string;
-  regeneratingId: string | null;
-  cooldownEndTime: number | null;
-  onRegenerateAudio: (item: NewsItemResponse) => void;
 }
 
-const NewsItemRow: React.FC<NewsItemRowProps> = ({
-  item,
-  onEdit,
-  onDelete,
-  t,
-  lang,
-  regeneratingId,
-  cooldownEndTime,
-  onRegenerateAudio,
-}) => {
+const NewsItemRow: React.FC<NewsItemRowProps> = ({ item, onEdit, onDelete, t, lang }) => {
   const { title } = getLocalizedContent(item, lang);
-  const isRegenerating = regeneratingId === item.id;
   const isElComplete = !!item.title_el?.trim() && !!item.description_el?.trim();
   const isEnComplete = !!item.title_en?.trim() && !!item.description_en?.trim();
   const isRuComplete = !!item.title_ru?.trim() && !!item.description_ru?.trim();
-  const isCooldownActive = cooldownEndTime !== null;
-  const canRegenerate = !isRegenerating && !isCooldownActive && !!item.description_el;
 
   return (
     <div
@@ -286,13 +259,30 @@ const NewsItemRow: React.FC<NewsItemRowProps> = ({
       <div className="flex items-center gap-4">
         {/* Audio Status Indicator */}
         <div className="flex items-center gap-1.5 text-sm" data-testid={`audio-status-${item.id}`}>
-          {item.audio_url ? (
+          {item.audio_url || item.audio_a2_url ? (
             <>
-              <Circle className="h-2.5 w-2.5 fill-green-500 text-green-500" />
+              {item.audio_url && (
+                <Badge
+                  variant="outline"
+                  className="border-green-500/30 bg-green-500/10 px-1.5 py-0 text-[10px] text-green-700 dark:text-green-400"
+                >
+                  B2
+                </Badge>
+              )}
+              {item.audio_a2_url && (
+                <Badge
+                  variant="outline"
+                  className="border-purple-500/30 bg-purple-500/10 px-1.5 py-0 text-[10px] text-purple-700 dark:text-purple-400"
+                >
+                  A2
+                </Badge>
+              )}
               <span className="text-muted-foreground">
-                {item.audio_duration_seconds != null
+                {item.audio_url && item.audio_duration_seconds != null
                   ? formatAudioDuration(item.audio_duration_seconds)
-                  : t('news.audio.hasAudio')}
+                  : item.audio_a2_url && item.audio_a2_duration_seconds != null
+                    ? formatAudioDuration(item.audio_a2_duration_seconds)
+                    : t('news.audio.hasAudio')}
               </span>
             </>
           ) : (
@@ -302,22 +292,6 @@ const NewsItemRow: React.FC<NewsItemRowProps> = ({
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2">
-          {/* Regenerate Audio Button */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onRegenerateAudio(item)}
-            disabled={!canRegenerate}
-            data-testid={`regenerate-audio-${item.id}`}
-          >
-            {isRegenerating ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="h-4 w-4" />
-            )}
-            <span className="sr-only">{t('news.audio.regenerate')}</span>
-          </Button>
-
           {/* Edit Button */}
           <Button
             variant="ghost"
@@ -359,9 +333,6 @@ export const NewsItemsTable: React.FC<NewsItemsTableProps> = ({
   onPageChange,
   onEdit,
   onDelete,
-  regeneratingId,
-  cooldownEndTime,
-  onRegenerateAudio,
   countryFilter,
   onCountryFilterChange,
 }) => {
@@ -463,9 +434,6 @@ export const NewsItemsTable: React.FC<NewsItemsTableProps> = ({
                   onDelete={onDelete}
                   t={t}
                   lang={currentLanguage}
-                  regeneratingId={regeneratingId}
-                  cooldownEndTime={cooldownEndTime}
-                  onRegenerateAudio={onRegenerateAudio}
                 />
               ))}
             </div>

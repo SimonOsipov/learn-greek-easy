@@ -21,11 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
-import type {
-  NewsItemResponse,
-  NewsItemWithQuestionCreate,
-  QuestionCreate,
-} from '@/services/adminAPI';
+import type { NewsItemWithQuestionCreate, QuestionCreate } from '@/services/adminAPI';
 import { useAdminNewsStore } from '@/stores/adminNewsStore';
 
 import { NewsItemDeleteDialog } from './NewsItemDeleteDialog';
@@ -215,9 +211,6 @@ export const NewsTab: React.FC = () => {
     setSelectedItem,
     setCountryFilter,
     countryFilter,
-    regeneratingId,
-    cooldownEndTime,
-    regenerateAudio,
     audioCount,
   } = useAdminNewsStore();
 
@@ -295,25 +288,6 @@ export const NewsTab: React.FC = () => {
     if (item) {
       setSelectedItem(item);
       setIsDeleteDialogOpen(true);
-    }
-  };
-
-  /**
-   * Handle regenerate audio button click
-   */
-  const handleRegenerateAudio = async (item: NewsItemResponse) => {
-    try {
-      await regenerateAudio(item.id);
-      toast({
-        title: t('news.audio.regenerateSuccess'),
-      });
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      toast({
-        title: t('news.audio.regenerateError'),
-        description: errorMessage,
-        variant: 'destructive',
-      });
     }
   };
 
@@ -403,9 +377,6 @@ export const NewsTab: React.FC = () => {
           onPageChange={setPage}
           onEdit={handleEdit}
           onDelete={handleDelete}
-          regeneratingId={regeneratingId}
-          cooldownEndTime={cooldownEndTime}
-          onRegenerateAudio={handleRegenerateAudio}
           countryFilter={countryFilter}
           onCountryFilterChange={(v) =>
             setCountryFilter(v === null ? 'all' : (v as 'cyprus' | 'greece' | 'world'))

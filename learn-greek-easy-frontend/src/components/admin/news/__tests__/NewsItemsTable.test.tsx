@@ -108,9 +108,6 @@ const defaultTableProps = {
   onPageChange: vi.fn(),
   onEdit: vi.fn(),
   onDelete: vi.fn(),
-  regeneratingId: null,
-  cooldownEndTime: null,
-  onRegenerateAudio: vi.fn(),
 };
 
 describe('NewsItemsTable — Date formatting', () => {
@@ -343,6 +340,67 @@ describe('NewsItemsTable — Audio status (AC-8)', () => {
   });
 });
 
+describe('NewsItemsTable — Audio level pills', () => {
+  beforeEach(() => {
+    mockCurrentLanguage.value = 'en';
+    vi.clearAllMocks();
+  });
+
+  it('shows B2 pill when audio_url exists', () => {
+    const item = makeNewsItem({ audio_url: 'https://example.com/audio.mp3', audio_a2_url: null });
+    render(<NewsItemsTable {...defaultTableProps} newsItems={[item]} />);
+    const audioStatus = screen.getByTestId('audio-status-item-1');
+    expect(audioStatus.textContent).toContain('B2');
+  });
+
+  it('shows A2 pill when audio_a2_url exists', () => {
+    const item = makeNewsItem({
+      audio_url: null,
+      audio_a2_url: 'https://example.com/audio-a2.mp3',
+    });
+    render(<NewsItemsTable {...defaultTableProps} newsItems={[item]} />);
+    const audioStatus = screen.getByTestId('audio-status-item-1');
+    expect(audioStatus.textContent).toContain('A2');
+  });
+
+  it('shows both B2 and A2 pills when both audio URLs exist', () => {
+    const item = makeNewsItem({
+      audio_url: 'https://example.com/audio.mp3',
+      audio_a2_url: 'https://example.com/audio-a2.mp3',
+    });
+    render(<NewsItemsTable {...defaultTableProps} newsItems={[item]} />);
+    const audioStatus = screen.getByTestId('audio-status-item-1');
+    expect(audioStatus.textContent).toContain('B2');
+    expect(audioStatus.textContent).toContain('A2');
+  });
+
+  it('shows no pills when neither audio URL exists', () => {
+    const item = makeNewsItem({ audio_url: null, audio_a2_url: null });
+    render(<NewsItemsTable {...defaultTableProps} newsItems={[item]} />);
+    expect(screen.getByText('No audio')).toBeInTheDocument();
+  });
+
+  it('shows B2 duration when B2 audio exists', () => {
+    const item = makeNewsItem({
+      audio_url: 'https://example.com/audio.mp3',
+      audio_duration_seconds: 125,
+      audio_a2_url: null,
+    });
+    render(<NewsItemsTable {...defaultTableProps} newsItems={[item]} />);
+    expect(screen.getByText('2:05')).toBeInTheDocument();
+  });
+
+  it('shows A2 duration when only A2 audio exists', () => {
+    const item = makeNewsItem({
+      audio_url: null,
+      audio_a2_url: 'https://example.com/audio-a2.mp3',
+      audio_a2_duration_seconds: 90,
+    });
+    render(<NewsItemsTable {...defaultTableProps} newsItems={[item]} />);
+    expect(screen.getByText('1:30')).toBeInTheDocument();
+  });
+});
+
 describe('NewsItemsTable — Core table functionality (AC-10, no regressions)', () => {
   beforeEach(() => {
     mockCurrentLanguage.value = 'en';
@@ -512,20 +570,6 @@ describe('NewsItemsTable — Core table functionality (AC-10, no regressions)', 
     await new Promise((resolve) => setTimeout(resolve, 350));
 
     expect(screen.getByTestId('news-search-empty')).toBeInTheDocument();
-  });
-
-  it('regenerate button is disabled when canRegenerate is false (no description_el)', () => {
-    const item = makeNewsItem({ description_el: '', id: 'item-1' });
-    render(<NewsItemsTable {...defaultTableProps} newsItems={[item]} />);
-
-    expect(screen.getByTestId('regenerate-audio-item-1')).toBeDisabled();
-  });
-
-  it('regenerate button is disabled when item is currently regenerating', () => {
-    const item = makeNewsItem({ id: 'item-1' });
-    render(<NewsItemsTable {...defaultTableProps} newsItems={[item]} regeneratingId="item-1" />);
-
-    expect(screen.getByTestId('regenerate-audio-item-1')).toBeDisabled();
   });
 });
 
