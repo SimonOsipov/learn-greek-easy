@@ -1202,6 +1202,150 @@ async def generate_audio_for_news_item_task(
             await engine.dispose()
 
 
+async def generate_a2_audio_for_news_item_task(
+    news_item_id: UUID,
+    description_el_a2: str,
+    db_url: str,
+) -> None:
+    """Generate A2-level audio for a news item using ElevenLabs TTS.
+
+    This task runs asynchronously after the news item creation/update response
+    is sent. It generates speech audio from the A2-level Greek description,
+    uploads it to S3, and updates the news item record with the A2 audio metadata.
+
+    The task creates its own database connection to avoid issues with
+    connection sharing across async contexts.
+
+    Args:
+        news_item_id: UUID of the news item to generate A2 audio for
+        description_el_a2: A2-level Greek text to convert to speech
+        db_url: Database connection URL
+    """
+    if not description_el_a2:
+        logger.debug(
+            "No A2 description provided, skipping A2 audio generation",
+            extra={"news_item_id": str(news_item_id)},
+        )
+        return
+
+    if not is_background_tasks_enabled():
+        logger.debug("Background tasks disabled, skipping generate_a2_audio_for_news_item_task")
+        return
+
+    if not settings.elevenlabs_configured:
+        logger.warning(
+            "ElevenLabs not configured, skipping A2 audio generation",
+            extra={"news_item_id": str(news_item_id)},
+        )
+        return
+
+    logger.info(
+        "Starting A2 audio generation for news item",
+        extra={
+            "news_item_id": str(news_item_id),
+            "text_length": len(description_el_a2),
+            "task": "generate_a2_audio_for_news_item",
+        },
+    )
+
+    engine = None
+    try:
+        engine = create_async_engine(
+            db_url,
+            pool_pre_ping=True,
+            connect_args={"ssl": "require"} if settings.is_production else {},
+        )
+        async_session_factory = async_sessionmaker(
+            engine, class_=AsyncSession, expire_on_commit=False
+        )
+
+        start_time = datetime.now(timezone.utc)
+        session = async_session_factory()
+        try:
+            # Step 1: Generate TTS audio
+            from src.services.elevenlabs_service import get_elevenlabs_service
+
+            audio_bytes = await get_elevenlabs_service().generate_speech(
+                description_el_a2, news_item_id=news_item_id
+            )
+
+            # Step 2: Build deterministic S3 key
+            s3_key = f"{settings.audio_a2_s3_prefix}/{news_item_id}.mp3"
+
+            # Step 3: Upload to S3
+            from src.services.s3_service import get_s3_service
+
+            upload_success = get_s3_service().upload_object(s3_key, audio_bytes, "audio/mpeg")
+            if not upload_success:
+                logger.error(
+                    "Failed to upload A2 audio to S3",
+                    extra={
+                        "news_item_id": str(news_item_id),
+                        "s3_key": s3_key,
+                        "task": "generate_a2_audio_for_news_item",
+                    },
+                )
+                return
+
+            # Step 4: Calculate duration from file size (128kbps bitrate)
+            audio_duration_seconds = (len(audio_bytes) * 8) / (128 * 1000)
+
+            # Step 5: Update NewsItem with A2 audio metadata
+            from sqlalchemy import select
+
+            from src.db.models import NewsItem
+
+            result = await session.execute(select(NewsItem).where(NewsItem.id == news_item_id))
+            news_item = result.scalar_one_or_none()
+
+            if news_item is None:
+                logger.error(
+                    "NewsItem not found for A2 audio update",
+                    extra={
+                        "news_item_id": str(news_item_id),
+                        "task": "generate_a2_audio_for_news_item",
+                    },
+                )
+                return
+
+            news_item.audio_a2_s3_key = s3_key
+            news_item.audio_a2_generated_at = datetime.now(timezone.utc)
+            news_item.audio_a2_file_size_bytes = len(audio_bytes)
+            news_item.audio_a2_duration_seconds = audio_duration_seconds
+
+            await session.commit()
+        finally:
+            await session.close()
+
+        # Step 6: Success log
+        duration_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+        logger.info(
+            "A2 audio generation complete",
+            extra={
+                "news_item_id": str(news_item_id),
+                "s3_key": s3_key,
+                "file_size_bytes": len(audio_bytes),
+                "duration_seconds": audio_duration_seconds,
+                "duration_ms": duration_ms,
+                "task": "generate_a2_audio_for_news_item",
+            },
+        )
+
+    except Exception as e:
+        logger.error(
+            "A2 audio generation failed for news item",
+            extra={
+                "news_item_id": str(news_item_id),
+                "error": str(e),
+                "task": "generate_a2_audio_for_news_item",
+            },
+            exc_info=True,
+        )
+    finally:
+        if engine is not None:
+            await engine.dispose()
+
+
 async def generate_word_entry_audio_task(  # noqa: C901
     word_entry_id: UUID,
     lemma: str,

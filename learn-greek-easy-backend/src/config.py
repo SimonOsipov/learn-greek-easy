@@ -516,6 +516,10 @@ class Settings(BaseSettings):
         default="news-audio",
         description="S3 bucket prefix for storing generated audio files",
     )
+    audio_a2_s3_prefix: str = Field(
+        default="news-audio/a2",
+        description="S3 bucket prefix for storing A2-level generated audio files",
+    )
 
     # =========================================================================
     # OpenRouter API (LLM Gateway)
