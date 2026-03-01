@@ -133,6 +133,15 @@ describe('NewsPage Component', () => {
       expect(screen.getByText('Cyprus News')).toBeInTheDocument();
       expect(screen.getByText('Practice reading with real news articles')).toBeInTheDocument();
     });
+
+    it('should render difficulty label alongside the level toggle', async () => {
+      (adminAPI.getNewsItems as Mock).mockResolvedValue(createPaginatedResponse([], 0));
+
+      render(<NewsPage />);
+
+      expect(screen.getByText('Difficulty:')).toBeInTheDocument();
+      expect(screen.getByTestId('news-level-toggle')).toBeInTheDocument();
+    });
   });
 
   describe('Data Fetching', () => {
