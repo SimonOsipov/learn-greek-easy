@@ -45,6 +45,7 @@ from src.schemas.culture import (
     CultureDeckUpdate,
     CultureProgressResponse,
     CultureQuestionAdminResponse,
+    CultureQuestionBrowseResponse,
     CultureQuestionBulkCreateRequest,
     CultureQuestionBulkCreateResponse,
     CultureQuestionCreate,
@@ -413,6 +414,21 @@ async def get_question_queue(
         include_new=include_new,
         new_questions_limit=new_questions_limit,
         force_practice=force_practice,
+    )
+
+
+@router.get("/decks/{deck_id}/questions/browse", response_model=CultureQuestionBrowseResponse)
+async def browse_deck_questions(
+    deck_id: UUID,
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=200),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> CultureQuestionBrowseResponse:
+    """Browse all questions in a deck with per-user learning status."""
+    service = CultureQuestionService(db)
+    return await service.browse_questions(
+        user_id=current_user.id, deck_id=deck_id, offset=offset, limit=limit
     )
 
 
