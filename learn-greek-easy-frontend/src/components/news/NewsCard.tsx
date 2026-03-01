@@ -28,6 +28,7 @@ import {
 import { clearActivePlayer, registerActivePlayer } from '@/lib/newsAudioCoordinator';
 import { cn } from '@/lib/utils';
 import type { NewsCountry, NewsItemResponse } from '@/services/adminAPI';
+import type { NewsLevel } from '@/utils/newsLevel';
 
 import { COUNTRY_CONFIG } from './countryConfig';
 
@@ -38,6 +39,7 @@ export interface NewsCardProps {
   newsLang: 'el' | 'en' | 'ru';
   height?: NewsCardHeight;
   page?: 'dashboard' | 'news';
+  level?: NewsLevel;
 }
 
 const heightClasses: Record<NewsCardHeight, string> = {
@@ -50,12 +52,15 @@ export const NewsCard: React.FC<NewsCardProps> = ({
   newsLang,
   height = 'default',
   page,
+  level = 'b2',
 }) => {
   const { t } = useTranslation('common');
   const navigate = useNavigate();
 
   const hasQuestion = article.card_id !== null && article.deck_id !== null;
-  const hasAudio = !!article.audio_url;
+  const useA2 = level === 'a2' && article.has_a2_content;
+  const audioUrl = useA2 ? article.audio_a2_url : article.audio_url;
+  const hasAudio = !!audioUrl;
 
   const [resetKey, setResetKey] = useState(0);
   const [showError, setShowError] = useState(false);
@@ -130,12 +135,16 @@ export const NewsCard: React.FC<NewsCardProps> = ({
 
   // Now all 3 languages are supported in backend
   const getLocalizedContent = () => {
+    if (newsLang === 'el') {
+      return {
+        title: useA2 ? article.title_el_a2! : article.title_el,
+        description: useA2 ? article.description_el_a2! : article.description_el,
+      };
+    }
     switch (newsLang) {
-      case 'el':
-        return { title: article.title_el, description: article.description_el };
       case 'ru':
         return { title: article.title_ru, description: article.description_ru };
-      default: // 'en'
+      default:
         return { title: article.title_en, description: article.description_en };
     }
   };
@@ -230,13 +239,13 @@ export const NewsCard: React.FC<NewsCardProps> = ({
               </div>
             )}
             <WaveformPlayer
-              key={resetKey}
+              key={`${resetKey}-${level}`}
               variant="news-mini"
-              audioUrl={article.audio_url ?? undefined}
+              audioUrl={audioUrl ?? undefined}
               barCount={20}
               showSpeedControl={false}
               disableScrub
-              disabled={!article.audio_url}
+              disabled={!audioUrl}
               onPlay={handlePlay}
               onPause={handlePause}
               onComplete={handleComplete}

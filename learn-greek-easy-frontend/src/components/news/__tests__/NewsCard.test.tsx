@@ -284,6 +284,43 @@ describe('NewsCard', () => {
   });
 });
 
+describe('NewsCard Level Switching', () => {
+  const a2Article = createMockArticle({
+    has_a2_content: true,
+    title_el: 'B2 Τίτλος',
+    title_el_a2: 'A2 Τίτλος',
+    description_el: 'B2 Περιγραφή',
+    description_el_a2: 'A2 Περιγραφή',
+    audio_url: 'https://example.com/audio-b2.mp3',
+    audio_a2_url: 'https://example.com/audio-a2.mp3',
+    card_id: 'card-1',
+    deck_id: 'deck-1',
+  });
+
+  it('shows A2 title and description when level is a2 and has_a2_content is true', () => {
+    render(<NewsCard article={a2Article} newsLang="el" level="a2" />);
+    expect(screen.getByText('A2 Τίτλος')).toBeInTheDocument();
+    expect(screen.getByText('A2 Περιγραφή')).toBeInTheDocument();
+  });
+
+  it('falls back to B2 when level is a2 but has_a2_content is false', () => {
+    const noA2 = createMockArticle({
+      has_a2_content: false,
+      title_el: 'B2 Τίτλος',
+      description_el: 'B2 Περιγραφή',
+    });
+    render(<NewsCard article={noA2} newsLang="el" level="a2" />);
+    expect(screen.getByText('B2 Τίτλος')).toBeInTheDocument();
+    expect(screen.getByText('B2 Περιγραφή')).toBeInTheDocument();
+  });
+
+  it('shows B2 content when level is b2 regardless of has_a2_content', () => {
+    render(<NewsCard article={a2Article} newsLang="el" level="b2" />);
+    expect(screen.getByText('B2 Τίτλος')).toBeInTheDocument();
+    expect(screen.getByText('B2 Περιγραφή')).toBeInTheDocument();
+  });
+});
+
 describe('NewsCard Country Pill', () => {
   it('renders country pill for cyprus', () => {
     const article = createMockArticle({ country: 'cyprus', id: 'test-cy' });

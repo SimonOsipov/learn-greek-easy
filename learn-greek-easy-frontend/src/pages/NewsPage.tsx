@@ -15,7 +15,13 @@ import { AlertCircle, Newspaper } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '@/components/feedback/EmptyState';
-import { COUNTRY_CONFIG, NewsGrid, NewsPagination, ScrollToTopButton } from '@/components/news';
+import {
+  COUNTRY_CONFIG,
+  NewsGrid,
+  NewsLevelToggle,
+  NewsPagination,
+  ScrollToTopButton,
+} from '@/components/news';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -23,6 +29,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { trackNewsPagePaginated, trackNewsPageViewed } from '@/lib/analytics/newsAnalytics';
 import { reportAPIError } from '@/lib/errorReporting';
 import { adminAPI, type NewsCountry, type NewsItemResponse } from '@/services/adminAPI';
+import { getPersistedNewsLevel, setPersistedNewsLevel, type NewsLevel } from '@/utils/newsLevel';
 
 /** Items displayed per page */
 const ITEMS_PER_PAGE = 12;
@@ -42,6 +49,7 @@ export const NewsPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [countryFilter, setCountryFilter] = useState<CountryFilter>('all');
+  const [newsLevel, setNewsLevel] = useState<NewsLevel>(getPersistedNewsLevel);
   const [countryCounts, setCountryCounts] = useState<{
     cyprus: number;
     greece: number;
@@ -126,6 +134,11 @@ export const NewsPage: React.FC = () => {
     fetchNews(currentPage, countryFilter === 'all' ? undefined : countryFilter);
   }, [fetchNews, currentPage, countryFilter]);
 
+  const handleLevelChange = useCallback((level: NewsLevel) => {
+    setPersistedNewsLevel(level);
+    setNewsLevel(level);
+  }, []);
+
   // Initial load
   useEffect(() => {
     fetchNews(1);
@@ -143,6 +156,8 @@ export const NewsPage: React.FC = () => {
         </h1>
         <p className="mt-2 text-sm text-muted-foreground md:text-base">{t('news.page.subtitle')}</p>
       </div>
+
+      <NewsLevelToggle level={newsLevel} onChange={handleLevelChange} />
 
       {/* Country Filter Tabs */}
       <Tabs value={countryFilter} onValueChange={handleCountryChange}>
@@ -193,13 +208,14 @@ export const NewsPage: React.FC = () => {
           newsLang={NEWS_LANG}
           isLoading={true}
           skeletonCount={ITEMS_PER_PAGE}
+          level={newsLevel}
         />
       )}
 
       {/* Content: Grid + Pagination */}
       {!isLoading && !error && articles.length > 0 && (
         <>
-          <NewsGrid articles={articles} newsLang={NEWS_LANG} />
+          <NewsGrid articles={articles} newsLang={NEWS_LANG} level={newsLevel} />
 
           {totalPages > 1 && (
             <NewsPagination

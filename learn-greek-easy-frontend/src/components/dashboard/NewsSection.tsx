@@ -13,15 +13,16 @@
  * - PostHog analytics tracking on click
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
-import { NewsCard, NewsCardSkeleton } from '@/components/news';
+import { NewsCard, NewsCardSkeleton, NewsLevelToggle } from '@/components/news';
 import { trackNewsPageSeeAllClicked } from '@/lib/analytics';
 import { reportAPIError } from '@/lib/errorReporting';
 import { adminAPI, type NewsItemResponse } from '@/services/adminAPI';
+import { getPersistedNewsLevel, setPersistedNewsLevel, type NewsLevel } from '@/utils/newsLevel';
 
 /**
  * Main NewsSection component
@@ -32,9 +33,15 @@ export const NewsSection: React.FC = () => {
   const [items, setItems] = useState<NewsItemResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [newsLevel, setNewsLevel] = useState<NewsLevel>(getPersistedNewsLevel);
 
   // News content always displays in Greek - this is learning material
   const newsLang: 'el' | 'en' | 'ru' = 'el';
+
+  const handleLevelChange = useCallback((level: NewsLevel) => {
+    setPersistedNewsLevel(level);
+    setNewsLevel(level);
+  }, []);
 
   useEffect(() => {
     const fetchNews = async () => {
@@ -67,15 +74,20 @@ export const NewsSection: React.FC = () => {
   return (
     <section data-testid="news-section">
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-foreground">{t('dashboard.news.title')}</h2>
-        <Link
-          to="/news"
-          onClick={() => trackNewsPageSeeAllClicked()}
-          className="text-sm text-primary hover:underline"
-          data-testid="news-section-see-all"
-        >
-          {t('dashboard.news.seeAll')} &rarr;
-        </Link>
+        <div>
+          <h2 className="text-lg font-semibold text-foreground">{t('dashboard.news.title')}</h2>
+        </div>
+        <NewsLevelToggle level={newsLevel} onChange={handleLevelChange} />
+        <div>
+          <Link
+            to="/news"
+            onClick={() => trackNewsPageSeeAllClicked()}
+            className="text-sm text-primary hover:underline"
+            data-testid="news-section-see-all"
+          >
+            {t('dashboard.news.seeAll')} &rarr;
+          </Link>
+        </div>
       </div>
       {loading ? (
         <div
@@ -89,7 +101,13 @@ export const NewsSection: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {items.map((item) => (
-            <NewsCard key={item.id} article={item} newsLang={newsLang} page="dashboard" />
+            <NewsCard
+              key={item.id}
+              article={item}
+              newsLang={newsLang}
+              page="dashboard"
+              level={newsLevel}
+            />
           ))}
         </div>
       )}
