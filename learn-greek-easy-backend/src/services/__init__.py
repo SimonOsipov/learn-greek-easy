@@ -24,6 +24,7 @@ from src.services.mock_exam_service import MockExamService
 from src.services.morphology_service import MorphologyService, get_morphology_service
 from src.services.news_item_service import NewsItemService
 from src.services.notification_service import NotificationService
+from src.services.openrouter_service import OpenRouterService, get_openrouter_service
 from src.services.progress_service import ProgressService
 from src.services.s3_service import S3Service, get_s3_service
 from src.services.seed_service import SeedService
@@ -52,6 +53,7 @@ __all__ = [
     "MorphologyService",
     "NewsItemService",
     "NotificationService",
+    "OpenRouterService",
     "ProgressService",
     "S3Service",
     "SeedService",
@@ -63,6 +65,7 @@ __all__ = [
     "XPService",
     "get_lemma_normalization_service",
     "get_morphology_service",
+    "get_openrouter_service",
     "get_s3_service",
     "get_spellcheck_service",
 ]

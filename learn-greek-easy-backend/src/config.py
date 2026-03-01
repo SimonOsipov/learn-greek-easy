@@ -518,6 +518,26 @@ class Settings(BaseSettings):
     )
 
     # =========================================================================
+    # OpenRouter API (LLM Gateway)
+    # =========================================================================
+    openrouter_api_key: str = Field(
+        default="",
+        description="OpenRouter API key for LLM-powered text generation",
+    )
+    openrouter_default_model: str = Field(
+        default="google/gemini-2.5-flash-lite",
+        description="Default OpenRouter model for text generation",
+    )
+    openrouter_timeout: int = Field(
+        default=60,
+        description="Timeout in seconds for OpenRouter API calls",
+    )
+    openrouter_base_url: str = Field(
+        default="https://openrouter.ai/api/v1",
+        description="OpenRouter API base URL",
+    )
+
+    # =========================================================================
     # Stripe Billing
     # =========================================================================
     stripe_secret_key: Optional[str] = Field(
@@ -655,6 +675,11 @@ class Settings(BaseSettings):
     def elevenlabs_configured(self) -> bool:
         """Check if ElevenLabs is properly configured."""
         return bool(self.elevenlabs_api_key)
+
+    @property
+    def openrouter_configured(self) -> bool:
+        """Check if OpenRouter is properly configured."""
+        return bool(self.openrouter_api_key and self.openrouter_api_key.strip())
 
     @property
     def stripe_configured(self) -> bool:
