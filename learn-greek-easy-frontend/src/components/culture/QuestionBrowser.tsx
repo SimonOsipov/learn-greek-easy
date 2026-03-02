@@ -149,6 +149,12 @@ export const QuestionBrowser: React.FC<QuestionBrowserProps> = ({
     setSearchQuery('');
   };
 
+  const handleClearAll = () => {
+    setSearchInput('');
+    setSearchQuery('');
+    setActiveFilter('all');
+  };
+
   // Filter and search
   const filteredQuestions = useMemo(() => {
     let result = questions;
@@ -288,7 +294,7 @@ export const QuestionBrowser: React.FC<QuestionBrowserProps> = ({
           title={t('deck.noQuestionsSearch')}
           action={
             hasSearchOrFilter
-              ? { label: t('deck.clearSearch'), onClick: handleClearSearch }
+              ? { label: t('deck.clearSearch'), onClick: handleClearAll }
               : undefined
           }
         />
