@@ -380,6 +380,7 @@ async def get_question_queue(
     ),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    locale: str = Depends(get_locale_from_header),
 ) -> CultureQuestionQueue:
     """Get questions due for review plus new questions for a practice session.
 
@@ -395,6 +396,7 @@ async def get_question_queue(
         new_questions_limit: Maximum new questions (0-20)
         db: Database session (injected)
         current_user: Authenticated user (injected)
+        locale: Locale from Accept-Language header (injected)
 
     Returns:
         CultureQuestionQueue with questions for practice
@@ -414,6 +416,7 @@ async def get_question_queue(
         include_new=include_new,
         new_questions_limit=new_questions_limit,
         force_practice=force_practice,
+        locale=locale,
     )
 
 

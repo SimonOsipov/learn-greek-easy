@@ -35,7 +35,7 @@ from uuid import UUID
 import sqlalchemy as sa
 from sqlalchemy import case, func, literal, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import aliased, selectinload
 
 from src.constants import (
     ACCURACY_WINDOW_DAYS,
@@ -136,6 +136,7 @@ class CultureQuestionService:
         include_new: bool = True,
         new_questions_limit: int = 5,
         force_practice: bool = False,
+        locale: str = "en",
     ) -> CultureQuestionQueue:
         """Get questions due for review plus new questions.
 
@@ -231,6 +232,14 @@ class CultureQuestionService:
             question = stats.question  # Eager loaded
             queue_items.append(self._build_queue_item(question, stats))
 
+        # Step 5: Enrich queue items with cross-deck info
+        if queue_items:
+            question_ids = [item.id for item in queue_items]
+            cross_deck_map = await self._get_cross_deck_map(question_ids, deck_id, locale)
+            for item in queue_items:
+                if item.id in cross_deck_map:
+                    item.also_in_decks = cross_deck_map[item.id]
+
         logger.info(
             "Question queue built successfully",
             extra={
@@ -254,6 +263,60 @@ class CultureQuestionService:
             has_studied_questions=has_studied,
             questions=queue_items,
         )
+
+    async def _get_cross_deck_map(
+        self,
+        question_ids: list[UUID],
+        current_deck_id: UUID,
+        locale: str = "en",
+    ) -> dict[UUID, list[str]]:
+        """Return {question_id: [localized_deck_name, ...]} for questions in other active decks.
+
+        Uses a self-join on culture_questions matching question_text::text.
+        Excludes: current deck, inactive decks, orphan questions (deck_id IS NULL).
+        """
+        if not question_ids:
+            return {}
+
+        q1 = aliased(CultureQuestion, name="q1")
+        q2 = aliased(CultureQuestion, name="q2")
+
+        stmt = (
+            select(
+                q1.id.label("question_id"),
+                CultureDeck.name_en,
+                CultureDeck.name_el,
+                CultureDeck.name_ru,
+            )
+            .select_from(q1)
+            .join(
+                q2,
+                func.cast(q1.question_text, sa.Text) == func.cast(q2.question_text, sa.Text),
+            )
+            .join(CultureDeck, q2.deck_id == CultureDeck.id)
+            .where(
+                q1.id.in_(question_ids),
+                q2.deck_id != current_deck_id,
+                q2.deck_id.isnot(None),
+                CultureDeck.is_active == True,  # noqa: E712
+            )
+        )
+
+        result = await self.db.execute(stmt)
+        rows = result.all()
+
+        cross_deck_map: dict[UUID, list[str]] = {}
+        for row in rows:
+            qid = row.question_id
+            if locale == "el":
+                name = row.name_el or row.name_en
+            elif locale == "ru":
+                name = row.name_ru or row.name_en
+            else:
+                name = row.name_en
+            cross_deck_map.setdefault(qid, []).append(name)
+
+        return cross_deck_map
 
     async def browse_questions(
         self, user_id: UUID, deck_id: UUID, offset: int = 0, limit: int = 100
