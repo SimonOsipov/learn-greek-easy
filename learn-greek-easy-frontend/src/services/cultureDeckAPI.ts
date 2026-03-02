@@ -8,6 +8,8 @@
  * - Getting culture deck details
  */
 
+import type { CultureQuestionBrowseResponse } from '@/types/culture';
+
 import { api } from './api';
 
 // ============================================
@@ -229,5 +231,21 @@ export const cultureDeckAPI = {
    */
   getReadiness: async (): Promise<CultureReadinessResponse> => {
     return api.get<CultureReadinessResponse>('/api/v1/culture/readiness');
+  },
+
+  /**
+   * Browse all questions in a deck (for question browser view)
+   */
+  browseQuestions: async (
+    deckId: string,
+    options?: { offset?: number; limit?: number }
+  ): Promise<CultureQuestionBrowseResponse> => {
+    const params = new URLSearchParams();
+    if (options?.offset !== undefined) params.set('offset', String(options.offset));
+    if (options?.limit !== undefined) params.set('limit', String(options.limit));
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return api.get<CultureQuestionBrowseResponse>(
+      `/api/v1/culture/decks/${deckId}/questions/browse${query}`
+    );
   },
 };

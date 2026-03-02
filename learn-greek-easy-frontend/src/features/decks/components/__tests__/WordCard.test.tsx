@@ -82,11 +82,11 @@ describe('WordCard', () => {
     it('renders mastery dots (bottom row)', () => {
       render(<WordCard wordEntry={mockWordEntry} />);
 
-      const dots = screen.getByTestId('word-card-mastery-dots');
+      const dots = screen.getByTestId('mastery-dots');
       expect(dots).toBeInTheDocument();
-      expect(dots).toHaveAttribute('aria-label', 'Progress: 0 of 5');
-      // Should have 5 dots
-      expect(dots.children).toHaveLength(5);
+      expect(dots).toHaveAttribute('aria-label', 'Progress: 0 of 4');
+      // Should have 4 dots
+      expect(dots.children).toHaveLength(4);
     });
   });
 
@@ -257,13 +257,13 @@ describe('WordCardSkeleton', () => {
     expect(skeletonElements.length).toBeGreaterThan(0);
   });
 
-  it('renders 5 mastery dot skeletons', () => {
+  it('renders 4 mastery dot skeletons', () => {
     render(<WordCardSkeleton />);
 
     const skeleton = screen.getByTestId('word-card-skeleton');
     // Find the container with the dot skeletons (the one with gap-1)
     const dotsContainer = skeleton.querySelector('.flex.gap-1.pt-2');
     expect(dotsContainer).toBeInTheDocument();
-    expect(dotsContainer?.children).toHaveLength(5);
+    expect(dotsContainer?.children).toHaveLength(4);
   });
 });

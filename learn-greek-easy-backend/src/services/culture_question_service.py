@@ -69,6 +69,8 @@ from src.schemas.culture import (
     CultureOverallProgress,
     CultureProgressResponse,
     CultureQuestionAdminResponse,
+    CultureQuestionBrowseItem,
+    CultureQuestionBrowseResponse,
     CultureQuestionBulkCreateRequest,
     CultureQuestionBulkCreateResponse,
     CultureQuestionCreate,
@@ -251,6 +253,60 @@ class CultureQuestionService:
             total_in_queue=len(queue_items),
             has_studied_questions=has_studied,
             questions=queue_items,
+        )
+
+    async def browse_questions(
+        self, user_id: UUID, deck_id: UUID, offset: int = 0, limit: int = 100
+    ) -> CultureQuestionBrowseResponse:
+        """Browse all questions in a deck with per-user status."""
+        deck = await self._get_active_deck(deck_id)
+
+        count_query = select(func.count(CultureQuestion.id)).where(
+            CultureQuestion.deck_id == deck_id,
+            CultureQuestion.is_pending_review == False,  # noqa: E712
+        )
+        count_result = await self.db.execute(count_query)
+        total = count_result.scalar_one()
+
+        query = (
+            select(CultureQuestion, CultureQuestionStats.status)
+            .outerjoin(
+                CultureQuestionStats,
+                sa.and_(
+                    CultureQuestionStats.question_id == CultureQuestion.id,
+                    CultureQuestionStats.user_id == user_id,
+                ),
+            )
+            .where(
+                CultureQuestion.deck_id == deck_id,
+                CultureQuestion.is_pending_review == False,  # noqa: E712
+            )
+            .order_by(CultureQuestion.order_index)
+            .offset(offset)
+            .limit(limit)
+        )
+        result = await self.db.execute(query)
+        rows = result.all()
+
+        items = []
+        for question, status in rows:
+            items.append(
+                CultureQuestionBrowseItem(
+                    id=question.id,
+                    question_text=question.question_text,
+                    option_count=question.option_count,
+                    order_index=question.order_index,
+                    status=status.value if status else CardStatus.NEW.value,
+                )
+            )
+
+        return CultureQuestionBrowseResponse(
+            deck_id=deck_id,
+            deck_name=deck.name_en,
+            total=total,
+            offset=offset,
+            limit=limit,
+            questions=items,
         )
 
     # =========================================================================

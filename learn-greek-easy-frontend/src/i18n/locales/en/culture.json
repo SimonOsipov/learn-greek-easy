@@ -3,7 +3,20 @@
     "culture": "Culture",
     "questions": "Questions",
     "multipleChoice": "Multiple Choice",
-    "practiceDescription": "Test your knowledge with {{count}} multiple-choice questions about Greek culture and history."
+    "practiceDescription": "Test your knowledge with {{count}} multiple-choice questions about Greek culture and history.",
+    "searchQuestions": "Search questions...",
+    "showingQuestions": "Showing {{shown}} of {{total}} questions",
+    "filterAll": "All",
+    "filterMastered": "Mastered",
+    "filterLearning": "In review",
+    "filterNew": "New",
+    "options": "{{count}} options",
+    "noQuestions": "No questions in this deck yet",
+    "noQuestionsSearch": "No questions match your search",
+    "clearSearch": "Clear search",
+    "filterGroup": "Filter by status",
+    "loadError": "Failed to load questions",
+    "retry": "Retry"
   },
   "mcq": {
     "submitAnswer": "Submit Answer",

@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 
 import { CultureBadge, type CultureCategory } from '@/components/culture';
+import { QuestionBrowser } from '@/components/culture/QuestionBrowser';
 import { DeckProgressBar } from '@/components/decks/DeckProgressBar';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -216,6 +217,9 @@ export function CultureDeckDetailPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Question Browser */}
+        <QuestionBrowser deckId={deckId} totalQuestions={deck.question_count} />
       </div>
     </div>
   );
@@ -246,17 +250,25 @@ const LoadingSkeleton: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Action Skeleton */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="py-8 text-center">
-            <Skeleton className="mx-auto mb-4 h-12 w-12 rounded-full" />
-            <Skeleton className="mx-auto mb-2 h-6 w-48" />
-            <Skeleton className="mx-auto mb-6 h-4 w-64" />
-            <Skeleton className="mx-auto h-12 w-48 rounded-lg" />
-          </div>
-        </CardContent>
-      </Card>
+      {/* Question Grid Skeleton */}
+      <div className="space-y-4">
+        {/* Search + Filter bar skeleton */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <Skeleton className="h-10 w-full sm:w-64" />
+          <Skeleton className="h-8 w-48" />
+        </div>
+        {/* Count skeleton */}
+        <Skeleton className="h-4 w-40" />
+        {/* Grid skeleton: 6 question cards */}
+        <div
+          style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}
+          className="grid gap-3"
+        >
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-28 w-full rounded-lg" />
+          ))}
+        </div>
+      </div>
     </div>
   );
 };

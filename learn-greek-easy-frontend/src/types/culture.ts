@@ -80,3 +80,22 @@ export interface CultureAnswerResponse {
   message?: string;
   deck_category: string;
 }
+
+export type CultureQuestionStatus = 'new' | 'learning' | 'review' | 'mastered';
+
+export interface CultureQuestionBrowseItem {
+  id: string;
+  question_text: MultilingualText;
+  option_count: number;
+  order_index: number;
+  status: CultureQuestionStatus;
+}
+
+export interface CultureQuestionBrowseResponse {
+  deck_id: string;
+  deck_name: string;
+  total: number;
+  offset: number;
+  limit: number;
+  questions: CultureQuestionBrowseItem[];
+}

@@ -3,7 +3,20 @@
     "culture": "Культура",
     "questions": "Вопросы",
     "multipleChoice": "Множественный выбор",
-    "practiceDescription": "Проверьте свои знания с помощью {{count}} вопросов с множественным выбором о греческой культуре и истории."
+    "practiceDescription": "Проверьте свои знания с помощью {{count}} вопросов с множественным выбором о греческой культуре и истории.",
+    "searchQuestions": "Поиск вопросов...",
+    "showingQuestions": "Показано {{shown}} из {{total}} вопросов",
+    "filterAll": "Все",
+    "filterMastered": "Выученные",
+    "filterLearning": "На повторении",
+    "filterNew": "Новые",
+    "options": "{{count}} вариантов",
+    "noQuestions": "В этой колоде пока нет вопросов",
+    "noQuestionsSearch": "Не найдено вопросов по запросу",
+    "clearSearch": "Очистить поиск",
+    "filterGroup": "Фильтр по статусу",
+    "loadError": "Не удалось загрузить вопросы",
+    "retry": "Повторить"
   },
   "mcq": {
     "submitAnswer": "Отправить Ответ",

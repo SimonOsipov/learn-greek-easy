@@ -172,6 +172,28 @@ class CultureQuestionListResponse(BaseModel):
     questions: list[CultureQuestionResponse] = Field(..., description="Questions for session")
 
 
+class CultureQuestionBrowseItem(BaseModel):
+    """A single question in a deck browse response (no answer data)."""
+
+    model_config = ConfigDict(from_attributes=True)
+    id: UUID
+    question_text: dict[str, str]
+    option_count: int = Field(..., ge=2, le=4)
+    order_index: int = Field(..., ge=0)
+    status: str
+
+
+class CultureQuestionBrowseResponse(BaseModel):
+    """Response for deck question browse endpoint (all questions, paginated)."""
+
+    deck_id: UUID
+    deck_name: str
+    total: int = Field(..., ge=0)
+    offset: int = Field(..., ge=0)
+    limit: int = Field(..., ge=1)
+    questions: list[CultureQuestionBrowseItem]
+
+
 # ============================================================================
 # Culture Question Stats Schemas
 # ============================================================================
