@@ -152,37 +152,24 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
       <div
         role="group"
         aria-label={t('language.selectLanguage', 'Question Language')}
-        className={cn(
-          'inline-flex rounded-lg border border-slate-200 p-0.5 dark:border-slate-700',
-          className
-        )}
+        className={cn('inline-flex items-center gap-2', className)}
       >
         {languages.map((lang) => {
           const display = getLanguageDisplay(lang);
           const isSelected = lang === value;
 
           return (
-            <button
+            <Button
               key={lang}
-              type="button"
+              variant={isSelected ? 'default' : 'outline'}
+              size="sm"
               onClick={() => handleSelect(lang)}
-              className={cn(
-                'rounded-md font-cult-mono transition-colors duration-200',
-                'px-2.5 py-1',
-                'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 dark:focus:ring-offset-background',
-                size === 'sm' ? 'text-xs' : 'text-sm',
-                isSelected
-                  ? 'bg-indigo-500 text-white'
-                  : 'bg-transparent text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
-              )}
               aria-pressed={isSelected}
               aria-label={t(`language.${lang}`, display.name)}
             >
-              <span className="flex items-center gap-1">
-                {showFlags && display.flag && <span aria-hidden="true">{display.flag}</span>}
-                <span>{display.code}</span>
-              </span>
-            </button>
+              {showFlags && display.flag && <span aria-hidden="true">{display.flag}</span>}
+              {display.code}
+            </Button>
           );
         })}
       </div>

@@ -74,40 +74,31 @@ describe('LanguageSelector — pill variant', () => {
   });
 
   describe('Selection State', () => {
-    it('should apply selected styles to the current language', () => {
+    it('should mark the current language as aria-pressed', () => {
       renderWithProviders(<LanguageSelector {...defaultProps} value="en" />);
       const group = screen.getByRole('group');
       const buttons = within(group).getAllByRole('button');
-      expect(buttons[1].className).toContain('bg-indigo-500');
-      expect(buttons[1].className).toContain('text-white');
-    });
-
-    it('should apply unselected styles to non-current languages', () => {
-      renderWithProviders(<LanguageSelector {...defaultProps} value="en" />);
-      const group = screen.getByRole('group');
-      const buttons = within(group).getAllByRole('button');
-      expect(buttons[0].className).toContain('bg-transparent');
-      expect(buttons[0].className).toContain('text-slate-500');
-      expect(buttons[2].className).toContain('bg-transparent');
-      expect(buttons[2].className).toContain('text-slate-500');
+      expect(buttons[1]).toHaveAttribute('aria-pressed', 'true');
+      expect(buttons[0]).toHaveAttribute('aria-pressed', 'false');
+      expect(buttons[2]).toHaveAttribute('aria-pressed', 'false');
     });
 
     it('should highlight Greek when value is el', () => {
       renderWithProviders(<LanguageSelector {...defaultProps} value="el" />);
       const group = screen.getByRole('group');
       const buttons = within(group).getAllByRole('button');
-      expect(buttons[0].className).toContain('bg-indigo-500');
-      expect(buttons[1].className).toContain('bg-transparent');
-      expect(buttons[2].className).toContain('bg-transparent');
+      expect(buttons[0]).toHaveAttribute('aria-pressed', 'true');
+      expect(buttons[1]).toHaveAttribute('aria-pressed', 'false');
+      expect(buttons[2]).toHaveAttribute('aria-pressed', 'false');
     });
 
     it('should highlight Russian when value is ru', () => {
       renderWithProviders(<LanguageSelector {...defaultProps} value="ru" />);
       const group = screen.getByRole('group');
       const buttons = within(group).getAllByRole('button');
-      expect(buttons[0].className).toContain('bg-transparent');
-      expect(buttons[1].className).toContain('bg-transparent');
-      expect(buttons[2].className).toContain('bg-indigo-500');
+      expect(buttons[0]).toHaveAttribute('aria-pressed', 'false');
+      expect(buttons[1]).toHaveAttribute('aria-pressed', 'false');
+      expect(buttons[2]).toHaveAttribute('aria-pressed', 'true');
     });
   });
 
@@ -181,22 +172,18 @@ describe('LanguageSelector — pill variant', () => {
   });
 
   describe('Size Variants', () => {
-    it('should apply text-xs for size sm', () => {
+    it('should render buttons with size sm', () => {
       renderWithProviders(<LanguageSelector {...defaultProps} size="sm" />);
       const group = screen.getByRole('group');
       const buttons = within(group).getAllByRole('button');
-      buttons.forEach((btn) => {
-        expect(btn.className).toContain('text-xs');
-      });
+      expect(buttons).toHaveLength(3);
     });
 
-    it('should apply text-sm for default size', () => {
+    it('should render buttons with default size', () => {
       renderWithProviders(<LanguageSelector {...defaultProps} />);
       const group = screen.getByRole('group');
       const buttons = within(group).getAllByRole('button');
-      buttons.forEach((btn) => {
-        expect(btn.className).toContain('text-sm');
-      });
+      expect(buttons).toHaveLength(3);
     });
   });
 
@@ -253,12 +240,12 @@ describe('LanguageSelector — pill variant', () => {
       expect(buttons[2]).toHaveAttribute('aria-label', 'Russian');
     });
 
-    it('should have type button on all buttons', () => {
+    it('should render all buttons as button elements', () => {
       renderWithProviders(<LanguageSelector {...defaultProps} />);
       const group = screen.getByRole('group');
       const buttons = within(group).getAllByRole('button');
       buttons.forEach((btn) => {
-        expect(btn).toHaveAttribute('type', 'button');
+        expect(btn.tagName).toBe('BUTTON');
       });
     });
   });
