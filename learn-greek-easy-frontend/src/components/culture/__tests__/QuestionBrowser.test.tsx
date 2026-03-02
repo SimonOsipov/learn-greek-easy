@@ -15,7 +15,7 @@
 import React from 'react';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { I18nextProvider } from 'react-i18next';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -35,6 +35,19 @@ vi.mock('@/services/cultureDeckAPI', () => ({
   cultureDeckAPI: {
     browseQuestions: vi.fn(),
   },
+}));
+
+const { mockSetQuestionLanguage, questionLanguageRef } = vi.hoisted(() => ({
+  mockSetQuestionLanguage: vi.fn(),
+  questionLanguageRef: { current: 'en' as 'el' | 'en' | 'ru' },
+}));
+
+vi.mock('@/hooks/useQuestionLanguage', () => ({
+  useQuestionLanguage: () => ({
+    questionLanguage: questionLanguageRef.current,
+    setQuestionLanguage: mockSetQuestionLanguage,
+    resetToDefault: vi.fn(),
+  }),
 }));
 
 // ============================================
@@ -133,6 +146,7 @@ function renderBrowser(props: { deckId: string; totalQuestions: number }) {
 describe('QuestionBrowser', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    questionLanguageRef.current = 'en';
     vi.useFakeTimers({ shouldAdvanceTime: true });
   });
 
@@ -393,6 +407,77 @@ describe('QuestionBrowser', () => {
       await waitFor(() => {
         expect(screen.getByTestId('question-browser')).toBeInTheDocument();
       });
+    });
+  });
+
+  describe('Language Selector', () => {
+    it('renders LanguageSelector pill in the filter row', async () => {
+      vi.mocked(cultureDeckAPI.browseQuestions).mockResolvedValue(
+        makeBrowseResponse(mockQuestions)
+      );
+
+      renderBrowser({ deckId: 'deck-1', totalQuestions: 4 });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('question-grid')).toBeInTheDocument();
+      });
+
+      // LanguageSelector renders a role="group" with aria-label "Question Language"
+      const langGroup = screen.getByRole('group', { name: /Question Language/i });
+      expect(langGroup).toBeInTheDocument();
+
+      // Should have 3 language buttons (EL, EN, RU)
+      const langButtons = within(langGroup).getAllByRole('button');
+      expect(langButtons).toHaveLength(3);
+
+      // EN should be pressed (default from mock)
+      const enButton = within(langGroup).getByRole('button', { name: /EN/i });
+      expect(enButton).toHaveAttribute('aria-pressed', 'true');
+    });
+
+    it('filters search results using the selected question language', async () => {
+      // Override hook to return Greek
+      questionLanguageRef.current = 'el';
+
+      vi.mocked(cultureDeckAPI.browseQuestions).mockResolvedValue(
+        makeBrowseResponse(mockQuestions)
+      );
+
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      renderBrowser({ deckId: 'deck-1', totalQuestions: 4 });
+
+      await waitFor(() => {
+        expect(screen.getByText(/Showing 4 of 4 questions/i)).toBeInTheDocument();
+      });
+
+      // Search for Greek text that matches only q-1 ("Ελλάδα ερώτηση")
+      const searchInput = screen.getByTestId('question-browser-search');
+      await user.type(searchInput, 'Ελλάδα');
+
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText(/Showing 1 of 4 questions/i)).toBeInTheDocument();
+      });
+    });
+
+    it('passes questionLanguage to QuestionCard components', async () => {
+      vi.mocked(cultureDeckAPI.browseQuestions).mockResolvedValue(
+        makeBrowseResponse(mockQuestions)
+      );
+
+      renderBrowser({ deckId: 'deck-1', totalQuestions: 4 });
+
+      await waitFor(() => {
+        const cards = screen.getAllByTestId('question-card');
+        expect(cards).toHaveLength(4);
+      });
+
+      // Verify cards show English text (default mock language is 'en')
+      expect(screen.getByText('Greece question one')).toBeInTheDocument();
+      expect(screen.getByText('Cyprus question two')).toBeInTheDocument();
     });
   });
 });

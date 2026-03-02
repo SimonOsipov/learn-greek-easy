@@ -263,6 +263,7 @@ export function CulturePracticePage() {
         order_index: q.order_index,
         correct_option: q.correct_option,
         original_article_url: q.original_article_url,
+        also_in_decks: q.also_in_decks,
       }));
 
       const config: CultureSessionConfig = {
@@ -446,6 +447,7 @@ export function CulturePracticePage() {
         order_index: q.order_index,
         correct_option: q.correct_option,
         original_article_url: q.original_article_url,
+        also_in_decks: q.also_in_decks,
       }));
 
       const config: CultureSessionConfig = {

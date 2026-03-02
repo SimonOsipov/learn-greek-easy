@@ -93,6 +93,7 @@ export interface CultureQuestionQueueItem {
   due_date: string | null;
   status: 'new' | 'learning' | 'review' | 'mastered';
   original_article_url: string | null; // Source news article URL
+  also_in_decks: string[]; // Localized names of other active decks with this question
 }
 
 /**

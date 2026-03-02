@@ -2079,3 +2079,379 @@ class TestProcessAnswerFast:
             )
 
             assert context["language"] == lang
+
+
+# =============================================================================
+# Cross-Deck Map Fixtures
+# =============================================================================
+
+
+@pytest.fixture
+async def second_deck(db_session: AsyncSession) -> CultureDeck:
+    """Create a second active culture deck with distinct multilingual names."""
+    deck = CultureDeck(
+        name_en="Geography",
+        name_el="Γεωγραφία",
+        name_ru="География",
+        description_en="Learn about geography",
+        description_el="Learn about geography",
+        description_ru="Learn about geography",
+        category="geography",
+        is_active=True,
+    )
+    db_session.add(deck)
+    await db_session.flush()
+    await db_session.refresh(deck)
+    return deck
+
+
+@pytest.fixture
+async def third_deck(db_session: AsyncSession) -> CultureDeck:
+    """Create a third active culture deck."""
+    deck = CultureDeck(
+        name_en="Politics",
+        name_el="Πολιτική",
+        name_ru="Политика",
+        description_en="Learn about politics",
+        description_el="Learn about politics",
+        description_ru="Learn about politics",
+        category="politics",
+        is_active=True,
+    )
+    db_session.add(deck)
+    await db_session.flush()
+    await db_session.refresh(deck)
+    return deck
+
+
+# =============================================================================
+# Test Cross-Deck Map
+# =============================================================================
+
+
+class TestGetCrossDeckMap:
+    """Tests for _get_cross_deck_map private method."""
+
+    @pytest.mark.asyncio
+    async def test_question_in_two_decks(
+        self, db_session, culture_deck, second_deck, mock_s3_service
+    ):
+        """Returns other deck name when question exists in 2 decks."""
+        q_text = {"en": "Shared Q?", "el": "Κοινή Ε;", "ru": "Общий В?"}
+        q1 = CultureQuestion(
+            deck_id=culture_deck.id,
+            question_text=q_text,
+            option_a={"en": "A", "el": "Α", "ru": "А"},
+            option_b={"en": "B", "el": "Β", "ru": "Б"},
+            correct_option=1,
+            order_index=0,
+        )
+        q2 = CultureQuestion(
+            deck_id=second_deck.id,
+            question_text=q_text,
+            option_a={"en": "A", "el": "Α", "ru": "А"},
+            option_b={"en": "B", "el": "Β", "ru": "Б"},
+            correct_option=1,
+            order_index=0,
+        )
+        db_session.add_all([q1, q2])
+        await db_session.flush()
+
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+        result = await service._get_cross_deck_map([q1.id], culture_deck.id, locale="en")
+
+        assert q1.id in result
+        assert result[q1.id] == ["Geography"]
+
+    @pytest.mark.asyncio
+    async def test_question_in_three_decks(
+        self, db_session, culture_deck, second_deck, third_deck, mock_s3_service
+    ):
+        """Returns 2 deck names when question exists in 3 decks."""
+        q_text = {"en": "Shared Q?", "el": "Κοινή Ε;", "ru": "Общий В?"}
+        q1 = CultureQuestion(
+            deck_id=culture_deck.id,
+            question_text=q_text,
+            option_a={"en": "A", "el": "Α", "ru": "А"},
+            option_b={"en": "B", "el": "Β", "ru": "Б"},
+            correct_option=1,
+            order_index=0,
+        )
+        q2 = CultureQuestion(
+            deck_id=second_deck.id,
+            question_text=q_text,
+            option_a={"en": "A", "el": "Α", "ru": "А"},
+            option_b={"en": "B", "el": "Β", "ru": "Б"},
+            correct_option=1,
+            order_index=0,
+        )
+        q3 = CultureQuestion(
+            deck_id=third_deck.id,
+            question_text=q_text,
+            option_a={"en": "A", "el": "Α", "ru": "А"},
+            option_b={"en": "B", "el": "Β", "ru": "Б"},
+            correct_option=1,
+            order_index=0,
+        )
+        db_session.add_all([q1, q2, q3])
+        await db_session.flush()
+
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+        result = await service._get_cross_deck_map([q1.id], culture_deck.id, locale="en")
+
+        assert q1.id in result
+        assert sorted(result[q1.id]) == ["Geography", "Politics"]
+
+    @pytest.mark.asyncio
+    async def test_unique_question_not_in_result(self, db_session, culture_deck, mock_s3_service):
+        """Unique question (only in one deck) is absent from result dict."""
+        q = CultureQuestion(
+            deck_id=culture_deck.id,
+            question_text={"en": "Unique Q?", "el": "Μοναδική;", "ru": "Уникальный?"},
+            option_a={"en": "A", "el": "Α", "ru": "А"},
+            option_b={"en": "B", "el": "Β", "ru": "Б"},
+            correct_option=1,
+            order_index=0,
+        )
+        db_session.add(q)
+        await db_session.flush()
+
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+        result = await service._get_cross_deck_map([q.id], culture_deck.id, locale="en")
+
+        assert q.id not in result
+
+    @pytest.mark.asyncio
+    async def test_inactive_deck_excluded(
+        self, db_session, culture_deck, inactive_deck, mock_s3_service
+    ):
+        """Duplicate in inactive deck is excluded."""
+        q_text = {"en": "Shared Q?", "el": "Κοινή;", "ru": "Общий?"}
+        q1 = CultureQuestion(
+            deck_id=culture_deck.id,
+            question_text=q_text,
+            option_a={"en": "A", "el": "Α", "ru": "А"},
+            option_b={"en": "B", "el": "Β", "ru": "Б"},
+            correct_option=1,
+            order_index=0,
+        )
+        q2 = CultureQuestion(
+            deck_id=inactive_deck.id,
+            question_text=q_text,
+            option_a={"en": "A", "el": "Α", "ru": "А"},
+            option_b={"en": "B", "el": "Β", "ru": "Б"},
+            correct_option=1,
+            order_index=0,
+        )
+        db_session.add_all([q1, q2])
+        await db_session.flush()
+
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+        result = await service._get_cross_deck_map([q1.id], culture_deck.id, locale="en")
+
+        assert q1.id not in result
+
+    @pytest.mark.asyncio
+    async def test_orphan_question_excluded(self, db_session, culture_deck, mock_s3_service):
+        """Duplicate with deck_id=None is excluded."""
+        q_text = {"en": "Shared Q?", "el": "Κοινή;", "ru": "Общий?"}
+        q1 = CultureQuestion(
+            deck_id=culture_deck.id,
+            question_text=q_text,
+            option_a={"en": "A", "el": "Α", "ru": "А"},
+            option_b={"en": "B", "el": "Β", "ru": "Б"},
+            correct_option=1,
+            order_index=0,
+        )
+        q2 = CultureQuestion(
+            deck_id=None,
+            question_text=q_text,
+            option_a={"en": "A", "el": "Α", "ru": "А"},
+            option_b={"en": "B", "el": "Β", "ru": "Б"},
+            correct_option=1,
+            order_index=0,
+        )
+        db_session.add_all([q1, q2])
+        await db_session.flush()
+
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+        result = await service._get_cross_deck_map([q1.id], culture_deck.id, locale="en")
+
+        assert q1.id not in result
+
+    @pytest.mark.asyncio
+    async def test_locale_el(self, db_session, culture_deck, second_deck, mock_s3_service):
+        """Returns Greek deck name when locale is el."""
+        q_text = {"en": "Q?", "el": "Ε;", "ru": "В?"}
+        q1 = CultureQuestion(
+            deck_id=culture_deck.id,
+            question_text=q_text,
+            option_a={"en": "A", "el": "Α", "ru": "А"},
+            option_b={"en": "B", "el": "Β", "ru": "Б"},
+            correct_option=1,
+            order_index=0,
+        )
+        q2 = CultureQuestion(
+            deck_id=second_deck.id,
+            question_text=q_text,
+            option_a={"en": "A", "el": "Α", "ru": "А"},
+            option_b={"en": "B", "el": "Β", "ru": "Б"},
+            correct_option=1,
+            order_index=0,
+        )
+        db_session.add_all([q1, q2])
+        await db_session.flush()
+
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+        result = await service._get_cross_deck_map([q1.id], culture_deck.id, locale="el")
+
+        assert result[q1.id] == ["Γεωγραφία"]
+
+    @pytest.mark.asyncio
+    async def test_locale_ru(self, db_session, culture_deck, second_deck, mock_s3_service):
+        """Returns Russian deck name when locale is ru."""
+        q_text = {"en": "Q?", "el": "Ε;", "ru": "В?"}
+        q1 = CultureQuestion(
+            deck_id=culture_deck.id,
+            question_text=q_text,
+            option_a={"en": "A", "el": "Α", "ru": "А"},
+            option_b={"en": "B", "el": "Β", "ru": "Б"},
+            correct_option=1,
+            order_index=0,
+        )
+        q2 = CultureQuestion(
+            deck_id=second_deck.id,
+            question_text=q_text,
+            option_a={"en": "A", "el": "Α", "ru": "А"},
+            option_b={"en": "B", "el": "Β", "ru": "Б"},
+            correct_option=1,
+            order_index=0,
+        )
+        db_session.add_all([q1, q2])
+        await db_session.flush()
+
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+        result = await service._get_cross_deck_map([q1.id], culture_deck.id, locale="ru")
+
+        assert result[q1.id] == ["География"]
+
+    @pytest.mark.asyncio
+    async def test_locale_en_default(self, db_session, culture_deck, second_deck, mock_s3_service):
+        """Returns English deck name when locale is en (default)."""
+        q_text = {"en": "Q?", "el": "Ε;", "ru": "В?"}
+        q1 = CultureQuestion(
+            deck_id=culture_deck.id,
+            question_text=q_text,
+            option_a={"en": "A", "el": "Α", "ru": "А"},
+            option_b={"en": "B", "el": "Β", "ru": "Б"},
+            correct_option=1,
+            order_index=0,
+        )
+        q2 = CultureQuestion(
+            deck_id=second_deck.id,
+            question_text=q_text,
+            option_a={"en": "A", "el": "Α", "ru": "А"},
+            option_b={"en": "B", "el": "Β", "ru": "Б"},
+            correct_option=1,
+            order_index=0,
+        )
+        db_session.add_all([q1, q2])
+        await db_session.flush()
+
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+        result = await service._get_cross_deck_map([q1.id], culture_deck.id)
+
+        assert result[q1.id] == ["Geography"]
+
+    @pytest.mark.asyncio
+    async def test_empty_question_ids(self, db_session, mock_s3_service):
+        """Returns empty dict for empty question_ids list."""
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+        result = await service._get_cross_deck_map([], uuid4(), locale="en")
+
+        assert result == {}
+
+    @pytest.mark.asyncio
+    async def test_mixed_queue_only_duplicates_appear(
+        self, db_session, culture_deck, second_deck, mock_s3_service
+    ):
+        """Mixed queue: only duplicated questions appear in dict, unique ones absent."""
+        shared_text = {"en": "Shared?", "el": "Κοινή;", "ru": "Общий?"}
+        unique_text = {"en": "Unique?", "el": "Μοναδική;", "ru": "Уникальный?"}
+        q_shared = CultureQuestion(
+            deck_id=culture_deck.id,
+            question_text=shared_text,
+            option_a={"en": "A", "el": "Α", "ru": "А"},
+            option_b={"en": "B", "el": "Β", "ru": "Б"},
+            correct_option=1,
+            order_index=0,
+        )
+        q_shared_dup = CultureQuestion(
+            deck_id=second_deck.id,
+            question_text=shared_text,
+            option_a={"en": "A", "el": "Α", "ru": "А"},
+            option_b={"en": "B", "el": "Β", "ru": "Б"},
+            correct_option=1,
+            order_index=0,
+        )
+        q_unique = CultureQuestion(
+            deck_id=culture_deck.id,
+            question_text=unique_text,
+            option_a={"en": "A", "el": "Α", "ru": "А"},
+            option_b={"en": "B", "el": "Β", "ru": "Б"},
+            correct_option=1,
+            order_index=1,
+        )
+        db_session.add_all([q_shared, q_shared_dup, q_unique])
+        await db_session.flush()
+
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+        result = await service._get_cross_deck_map(
+            [q_shared.id, q_unique.id], culture_deck.id, locale="en"
+        )
+
+        assert q_shared.id in result
+        assert q_unique.id not in result
+
+    @pytest.mark.asyncio
+    async def test_locale_fallback_when_translation_missing(
+        self, db_session, culture_deck, mock_s3_service
+    ):
+        """Falls back to English when locale-specific name is None."""
+        deck_no_ru = CultureDeck(
+            name_en="No Russian",
+            name_el="Χωρίς Ρωσικά",
+            name_ru="",
+            description_en="No Russian name",
+            description_el="",
+            description_ru="",
+            category="culture",
+            is_active=True,
+        )
+        db_session.add(deck_no_ru)
+        await db_session.flush()
+
+        q_text = {"en": "Q?", "el": "Ε;", "ru": "В?"}
+        q1 = CultureQuestion(
+            deck_id=culture_deck.id,
+            question_text=q_text,
+            option_a={"en": "A", "el": "Α", "ru": "А"},
+            option_b={"en": "B", "el": "Β", "ru": "Б"},
+            correct_option=1,
+            order_index=0,
+        )
+        q2 = CultureQuestion(
+            deck_id=deck_no_ru.id,
+            question_text=q_text,
+            option_a={"en": "A", "el": "Α", "ru": "А"},
+            option_b={"en": "B", "el": "Β", "ru": "Б"},
+            correct_option=1,
+            order_index=0,
+        )
+        db_session.add_all([q1, q2])
+        await db_session.flush()
+
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+        result = await service._get_cross_deck_map([q1.id], culture_deck.id, locale="ru")
+
+        assert result[q1.id] == ["No Russian"]

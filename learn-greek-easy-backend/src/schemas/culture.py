@@ -413,6 +413,10 @@ class CultureQuestionQueueItem(BaseModel):
     due_date: Optional[date] = Field(None, description="Next review date (null for new questions)")
     status: str = Field(..., description="Card status: new, learning, review, mastered")
     original_article_url: Optional[str] = Field(None, description="Source news article URL")
+    also_in_decks: list[str] = Field(
+        default_factory=list,
+        description="Localized names of other active decks containing the same question",
+    )
 
 
 class CultureQuestionQueue(BaseModel):

@@ -142,6 +142,32 @@ describe('QuestionCard', () => {
       expect(buttons).toHaveLength(0);
     });
   });
+
+  describe('Language Prop Override', () => {
+    it('renders Greek text when language="el" is provided', () => {
+      renderWithProviders(<QuestionCard question={makeQuestion()} language="el" />);
+      expect(screen.getByTestId('question-card-text')).toHaveTextContent('Ελληνικό κείμενο;');
+    });
+
+    it('renders Russian text when language="ru" is provided', () => {
+      renderWithProviders(<QuestionCard question={makeQuestion()} language="ru" />);
+      expect(screen.getByTestId('question-card-text')).toHaveTextContent('Какова столица Греции?');
+    });
+
+    it('falls back to i18n.language when language prop is omitted', () => {
+      renderWithProviders(<QuestionCard question={makeQuestion()} />);
+      expect(screen.getByTestId('question-card-text')).toHaveTextContent(
+        'What is the capital of Greece?'
+      );
+    });
+
+    it('falls back to English text when language="" (empty string)', () => {
+      renderWithProviders(<QuestionCard question={makeQuestion()} language="" />);
+      expect(screen.getByTestId('question-card-text')).toHaveTextContent(
+        'What is the capital of Greece?'
+      );
+    });
+  });
 });
 
 // ============================================

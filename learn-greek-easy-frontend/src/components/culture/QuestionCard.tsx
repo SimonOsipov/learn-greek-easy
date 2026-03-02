@@ -16,6 +16,8 @@ import type { CultureQuestionBrowseItem, CultureQuestionStatus } from '@/types/c
 
 export interface QuestionCardProps {
   question: CultureQuestionBrowseItem;
+  /** Override language for question text display. Falls back to i18n.language when omitted. */
+  language?: string;
 }
 
 // ============================================
@@ -86,9 +88,9 @@ QuestionCardSkeleton.displayName = 'QuestionCardSkeleton';
 // QuestionCard Component
 // ============================================
 
-export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
+export const QuestionCard: React.FC<QuestionCardProps> = ({ question, language }) => {
   const { t, i18n } = useTranslation('culture');
-  const lang = i18n.language;
+  const lang = language ?? i18n.language;
 
   const questionText = getLocalizedText(question.question_text, lang);
   const questionNumber = question.order_index + 1;
