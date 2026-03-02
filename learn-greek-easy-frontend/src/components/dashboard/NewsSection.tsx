@@ -114,7 +114,10 @@ export const NewsSection: React.FC = () => {
       {/* Filter row: country tabs (left) + difficulty label + toggle (right) */}
       <div className="mb-4 flex items-center gap-4">
         <Tabs value={countryFilter} onValueChange={handleCountryChange} className="min-w-0 flex-1">
-          <TabsList className="w-full justify-start overflow-x-auto">
+          <TabsList
+            className="w-full justify-start overflow-x-auto"
+            data-testid="news-country-filter"
+          >
             <TabsTrigger value="all" className="gap-2">
               {t('news.country.all')}
               <Badge variant="secondary" className="ml-1 min-w-[1.25rem] px-1.5">
