@@ -174,3 +174,36 @@ class LocalVerificationResult(BaseModel):
     summary: str = Field(
         ..., description="Human-readable summary (e.g., '9 pass, 2 warn, 0 fail -> auto_approve')"
     )
+
+
+# ── Cross-AI Verification Schemas ─────────────────────────────────────────────
+
+
+class FieldComparisonResult(BaseModel):
+    """Result of comparing a single field between primary and secondary LLM generations."""
+
+    field_path: str = Field(..., description="Dot-notation path (e.g., 'cases.singular.genitive')")
+    primary_value: str = Field(..., description="Value from primary generation (Gemini)")
+    secondary_value: str = Field(..., description="Value from secondary generation (GPT)")
+    agrees: bool = Field(..., description="Whether primary and secondary values match")
+    weight: float = Field(
+        ..., description="Importance weight for this field (higher = more critical)"
+    )
+
+
+class CrossAIVerificationResult(BaseModel):
+    """Result of cross-AI verification comparing two LLM generations of the same noun."""
+
+    comparisons: list[FieldComparisonResult] = Field(
+        default_factory=list, description="Per-field comparison results"
+    )
+    overall_agreement: float | None = Field(
+        None, description="Weighted fraction of fields that agree (0.0-1.0), None if failed"
+    )
+    secondary_model: str = Field(
+        default="openai/gpt-4.1-mini", description="Model used for secondary generation"
+    )
+    secondary_generation: GeneratedNounData | None = Field(
+        None, description="Full secondary generation output for admin reference"
+    )
+    error: str | None = Field(None, description="Error message if cross-AI verification failed")
