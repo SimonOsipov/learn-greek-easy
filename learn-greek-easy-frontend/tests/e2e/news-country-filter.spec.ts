@@ -82,16 +82,18 @@ test.describe('MCNEWS - Country Pills Display', () => {
 
     await waitForNewsGridLoaded(page);
 
-    // Country filter tabs should be present (MCNEWS-06 adds Tabs component)
-    // After reposition fix: country filter is tablist index 0 (inside flex row, before level toggle)
-    const countryTablist = page.getByRole('tablist').nth(0);
-    const tabs = countryTablist.getByRole('tab');
-    await expect(tabs).toHaveCount(4, { timeout: 10000 }); // All, Cyprus, Greece, World
+    // Country filter buttons should be present (NewsFilters component)
+    const filters = page.getByTestId('news-filters');
+    await expect(filters).toBeVisible({ timeout: 10000 });
+    // 4 country buttons: All, Cyprus, Greece, World
+    await expect(filters.getByRole('button', { name: /All/i })).toBeVisible();
+    await expect(filters.getByRole('button', { name: /Cyprus/i })).toBeVisible();
+    await expect(filters.getByRole('button', { name: /Greece/i })).toBeVisible();
+    await expect(filters.getByRole('button', { name: /World/i })).toBeVisible();
 
-    // "All" tab should be active by default
-    const allTab = page.getByRole('tab', { name: /All/i }).first();
-    await expect(allTab).toBeVisible();
-    await expect(allTab).toHaveAttribute('data-state', 'active');
+    // "All" button should be pressed by default
+    const allButton = filters.getByRole('button', { name: /All/i });
+    await expect(allButton).toHaveAttribute('aria-pressed', 'true');
   });
 
   test('MCNEWS-E2E-03: Clicking Cyprus tab filters to Cyprus-only items', async ({ page }) => {
@@ -100,16 +102,17 @@ test.describe('MCNEWS - Country Pills Display', () => {
 
     await waitForNewsGridLoaded(page);
 
-    // Click the Cyprus tab
-    const cyprusTab = page.getByRole('tab').filter({ hasText: /Cyprus/i }).first();
-    await expect(cyprusTab).toBeVisible({ timeout: 10000 });
-    await cyprusTab.click();
+    // Click the Cyprus button (scoped to filters)
+    const filters = page.getByTestId('news-filters');
+    const cyprusButton = filters.getByRole('button', { name: /Cyprus/i });
+    await expect(cyprusButton).toBeVisible({ timeout: 10000 });
+    await cyprusButton.click();
 
     // Wait for grid to reload
     await expect(page.getByTestId('news-grid')).toBeVisible({ timeout: 15000 });
 
-    // Cyprus tab should now be active
-    await expect(cyprusTab).toHaveAttribute('data-state', 'active');
+    // Cyprus button should now be pressed
+    await expect(cyprusButton).toHaveAttribute('aria-pressed', 'true');
   });
 
   test('MCNEWS-E2E-04: Tab change resets pagination to page 1', async ({ page }) => {
@@ -125,10 +128,11 @@ test.describe('MCNEWS - Country Pills Display', () => {
     await nextButton.click();
     await waitForNewsGridLoaded(page);
 
-    // Click a country tab - should reset to page 1
-    const greeceTab = page.getByRole('tab').filter({ hasText: /Greece/i }).first();
-    await expect(greeceTab).toBeVisible({ timeout: 5000 });
-    await greeceTab.click();
+    // Click a country button - should reset to page 1
+    const filters = page.getByTestId('news-filters');
+    const greeceButton = filters.getByRole('button', { name: /Greece/i });
+    await expect(greeceButton).toBeVisible({ timeout: 5000 });
+    await greeceButton.click();
     await waitForNewsGridLoaded(page);
 
     // After tab change: pagination resets to page 1.
@@ -178,13 +182,15 @@ test.describe('MCNEWS - Dashboard Shows Pills Without Filter', () => {
     const cardCount = await newsCards.count();
     expect(cardCount).toBeGreaterThanOrEqual(0); // May be empty if no data
 
-    // Both country filter tablist AND NewsLevelToggle tablist are present (2 tablists)
-    const newsTablist = newsSection.getByRole('tablist');
-    await expect(newsTablist).toHaveCount(2);
-    // Verify the level toggle (A2/B2) is present
-    await expect(newsSection.getByTestId('news-level-toggle')).toBeVisible();
-    // Country filter tabs (All/Cyprus/Greece/World) ARE present on dashboard
-    await expect(newsSection.getByRole('tab', { name: /Cyprus/i })).toBeVisible();
+    // Country filter buttons (All/Cyprus/Greece/World) ARE present on dashboard
+    const filters = newsSection.getByTestId('news-filters');
+    await expect(filters).toBeVisible({ timeout: 10000 });
+    await expect(filters.getByRole('button', { name: /Cyprus/i })).toBeVisible();
+    await expect(filters.getByRole('button', { name: /Greece/i })).toBeVisible();
+    await expect(filters.getByRole('button', { name: /World/i })).toBeVisible();
+    // Verify the difficulty level buttons (A2/B2) are present
+    await expect(filters.getByRole('button', { name: /A2/i })).toBeVisible();
+    await expect(filters.getByRole('button', { name: /B2/i })).toBeVisible();
   });
 });
 

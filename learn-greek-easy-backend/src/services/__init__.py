@@ -12,6 +12,10 @@ from src.services.card_error_service import CardErrorService
 from src.services.card_generator_service import CardGeneratorService
 from src.services.changelog_service import ChangelogService
 from src.services.checkout_service import CheckoutService
+from src.services.cross_ai_verification_service import (
+    CrossAIVerificationService,
+    get_cross_ai_verification_service,
+)
 from src.services.culture_deck_service import CultureDeckService
 from src.services.culture_question_service import CultureQuestionService
 from src.services.duplicate_detection_service import DuplicateDetectionService
@@ -51,6 +55,7 @@ __all__ = [
     "CardGeneratorService",
     "ChangelogService",
     "CheckoutService",
+    "CrossAIVerificationService",
     "CultureDeckService",
     "CultureQuestionService",
     "DeletionResult",
@@ -73,6 +78,7 @@ __all__ = [
     "UserProgressResetService",
     "WebhookService",
     "XPService",
+    "get_cross_ai_verification_service",
     "get_lemma_normalization_service",
     "get_local_verification_service",
     "get_morphology_service",
