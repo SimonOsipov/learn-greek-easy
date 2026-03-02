@@ -15,17 +15,9 @@ import { AlertCircle, Newspaper } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '@/components/feedback/EmptyState';
-import {
-  COUNTRY_CONFIG,
-  NewsGrid,
-  NewsLevelToggle,
-  NewsPagination,
-  ScrollToTopButton,
-} from '@/components/news';
-import { Badge } from '@/components/ui/badge';
+import { NewsFilters, NewsGrid, NewsPagination, ScrollToTopButton } from '@/components/news';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   trackNewsLevelToggled,
   trackNewsPagePaginated,
@@ -162,33 +154,14 @@ export const NewsPage: React.FC = () => {
         <p className="mt-2 text-sm text-muted-foreground md:text-base">{t('news.page.subtitle')}</p>
       </div>
 
-      {/* Country Filter Tabs + Difficulty Toggle */}
-      <div className="flex items-center gap-4">
-        <Tabs value={countryFilter} onValueChange={handleCountryChange} className="min-w-0 flex-1">
-          <TabsList className="w-full justify-start overflow-x-auto">
-            <TabsTrigger value="all" className="gap-2">
-              {t('news.country.all')}
-              <Badge variant="secondary" className="ml-1 min-w-[1.25rem] px-1.5">
-                {countryCounts.cyprus + countryCounts.greece + countryCounts.world}
-              </Badge>
-            </TabsTrigger>
-            {(['cyprus', 'greece', 'world'] as const).map((country) => (
-              <TabsTrigger key={country} value={country} className="gap-2">
-                {COUNTRY_CONFIG[country].flag} {t(COUNTRY_CONFIG[country].labelKey)}
-                <Badge variant="secondary" className="ml-1 min-w-[1.25rem] px-1.5">
-                  {countryCounts[country]}
-                </Badge>
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
-        <div className="flex flex-shrink-0 items-center gap-2">
-          <span className="whitespace-nowrap text-sm text-muted-foreground">
-            {t('news.level.difficulty')}
-          </span>
-          <NewsLevelToggle level={newsLevel} onChange={handleLevelChange} />
-        </div>
-      </div>
+      {/* Country Filters + Difficulty Toggle */}
+      <NewsFilters
+        countryFilter={countryFilter}
+        onCountryChange={handleCountryChange}
+        newsLevel={newsLevel}
+        onLevelChange={handleLevelChange}
+        countryCounts={countryCounts}
+      />
 
       {/* Error State */}
       {error && (

@@ -20,9 +20,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
-import { COUNTRY_CONFIG, NewsCard, NewsCardSkeleton, NewsLevelToggle } from '@/components/news';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { NewsCard, NewsCardSkeleton, NewsFilters } from '@/components/news';
 import { trackNewsLevelToggled, trackNewsPageSeeAllClicked } from '@/lib/analytics';
 import { reportAPIError } from '@/lib/errorReporting';
 import { adminAPI, type NewsCountry, type NewsItemResponse } from '@/services/adminAPI';
@@ -111,33 +109,15 @@ export const NewsSection: React.FC = () => {
         </Link>
       </div>
 
-      {/* Filter row: country tabs (left) + difficulty label + toggle (right) */}
-      <div className="mb-4 flex items-center gap-4">
-        <Tabs value={countryFilter} onValueChange={handleCountryChange} className="min-w-0 flex-1">
-          <TabsList className="w-full justify-start overflow-x-auto">
-            <TabsTrigger value="all" className="gap-2">
-              {t('news.country.all')}
-              <Badge variant="secondary" className="ml-1 min-w-[1.25rem] px-1.5">
-                {countryCounts.cyprus + countryCounts.greece + countryCounts.world}
-              </Badge>
-            </TabsTrigger>
-            {(['cyprus', 'greece', 'world'] as const).map((country) => (
-              <TabsTrigger key={country} value={country} className="gap-2">
-                {COUNTRY_CONFIG[country].flag} {t(COUNTRY_CONFIG[country].labelKey)}
-                <Badge variant="secondary" className="ml-1 min-w-[1.25rem] px-1.5">
-                  {countryCounts[country]}
-                </Badge>
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
-        <div className="flex flex-shrink-0 items-center gap-2">
-          <span className="whitespace-nowrap text-sm text-muted-foreground">
-            {t('news.level.difficulty')}
-          </span>
-          <NewsLevelToggle level={newsLevel} onChange={handleLevelChange} />
-        </div>
-      </div>
+      {/* Filter row: country buttons + difficulty toggle */}
+      <NewsFilters
+        countryFilter={countryFilter}
+        onCountryChange={handleCountryChange}
+        newsLevel={newsLevel}
+        onLevelChange={handleLevelChange}
+        countryCounts={countryCounts}
+        className="mb-4"
+      />
 
       {loading ? (
         <div
