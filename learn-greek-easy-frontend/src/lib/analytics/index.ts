@@ -12,6 +12,9 @@ export {
   type CultureSessionAbandonedProperties,
   type CultureLanguageChangedProperties,
   type DeckFilterChangedProperties,
+  type CultureQuestionGridViewedProperties,
+  type CultureQuestionGridSearchedProperties,
+  type CultureQuestionGridFilteredProperties,
   // Tracking functions
   trackCultureDeckViewed,
   trackCultureSessionStarted,
@@ -21,6 +24,9 @@ export {
   trackCultureLanguageChanged,
   trackDeckFilterChanged,
   generateCultureSessionId,
+  trackCultureQuestionGridViewed,
+  trackCultureQuestionGridSearched,
+  trackCultureQuestionGridFiltered,
 } from './cultureAnalytics';
 export {
   // Type interfaces

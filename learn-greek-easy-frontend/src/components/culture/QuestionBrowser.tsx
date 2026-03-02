@@ -1,6 +1,6 @@
 // src/components/culture/QuestionBrowser.tsx
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import { useQuery } from '@tanstack/react-query';
 import { Search, X } from 'lucide-react';
@@ -9,6 +9,11 @@ import { useTranslation } from 'react-i18next';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  trackCultureQuestionGridViewed,
+  trackCultureQuestionGridSearched,
+  trackCultureQuestionGridFiltered,
+} from '@/lib/analytics';
 import { debounce } from '@/lib/utils';
 import { cultureDeckAPI } from '@/services/cultureDeckAPI';
 import type { CultureQuestionBrowseItem, CultureQuestionStatus } from '@/types/culture';
@@ -167,6 +172,41 @@ export const QuestionBrowser: React.FC<QuestionBrowserProps> = ({
 
   // Calculate counts from full list (not filtered)
   const filterCounts = useMemo(() => calculateFilterCounts(questions), [questions]);
+
+  // Analytics: track grid viewed (fire once when data first loads)
+  useEffect(() => {
+    if (data) {
+      trackCultureQuestionGridViewed({
+        deck_id: deckId,
+        question_count: data.questions.length,
+      });
+    }
+  }, [data != null]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Analytics: track search (fire when debounced search query changes, skip empty)
+  useEffect(() => {
+    if (searchQuery) {
+      trackCultureQuestionGridSearched({
+        deck_id: deckId,
+        query_length: searchQuery.length,
+        result_count: filteredQuestions.length,
+      });
+    }
+  }, [searchQuery]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Analytics: track filter change (skip initial 'all' state)
+  const isInitialFilter = useRef(true);
+  useEffect(() => {
+    if (isInitialFilter.current) {
+      isInitialFilter.current = false;
+      return;
+    }
+    trackCultureQuestionGridFiltered({
+      deck_id: deckId,
+      filter_type: activeFilter,
+      result_count: filteredQuestions.length,
+    });
+  }, [activeFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Error state
   if (error) {
