@@ -112,6 +112,7 @@ const mockQuestion: CultureQuestionResponse = {
   order_index: 1,
   correct_option: 1,
   original_article_url: null,
+  also_in_decks: [],
 };
 
 const mockQuestionWithImage: CultureQuestionResponse = {
@@ -140,6 +141,7 @@ const mockQuestionWithMissingTranslation: CultureQuestionResponse = {
   order_index: 1,
   correct_option: 1,
   original_article_url: null,
+  also_in_decks: [],
 };
 
 // Mock question data for variable option count tests
@@ -159,6 +161,7 @@ const mockQuestion2Options: CultureQuestionResponse = {
   order_index: 1,
   correct_option: 1,
   original_article_url: null,
+  also_in_decks: [],
 };
 
 const mockQuestion3Options: CultureQuestionResponse = {
@@ -178,6 +181,7 @@ const mockQuestion3Options: CultureQuestionResponse = {
   order_index: 1,
   correct_option: 2,
   original_article_url: null,
+  also_in_decks: [],
 };
 
 const mockQuestionWithSourceUrl: CultureQuestionResponse = {
@@ -225,6 +229,7 @@ const mockQuestion2: CultureQuestionResponse = {
   option_count: 4,
   image_url: null,
   original_article_url: null,
+  also_in_decks: [],
   difficulty: 'medium',
 };
 
@@ -1729,6 +1734,49 @@ describe('MCQComponent - Redesign Features', () => {
 
       // Test passing = no crash
       expect(nextButton).toBeInTheDocument();
+    });
+  });
+
+  describe('cross-deck label', () => {
+    const mockQuestionWithDecks: CultureQuestionResponse = {
+      ...mockQuestion,
+      also_in_decks: ['History of Cyprus', 'Geography'],
+    };
+
+    it('renders cross-deck label when also_in_decks has items', () => {
+      renderWithProviders(
+        <MCQComponent question={mockQuestionWithDecks} language="en" onAnswer={vi.fn()} />
+      );
+      const label = screen.getByTestId('cross-deck-label');
+      expect(label).toBeInTheDocument();
+      expect(label).toHaveTextContent('History of Cyprus');
+      expect(label).toHaveTextContent('Geography');
+    });
+
+    it('does not render cross-deck label when also_in_decks is empty', () => {
+      renderWithProviders(
+        <MCQComponent question={mockQuestion} language="en" onAnswer={vi.fn()} />
+      );
+      expect(screen.queryByTestId('cross-deck-label')).not.toBeInTheDocument();
+    });
+
+    it('comma-separates multiple deck names', () => {
+      renderWithProviders(
+        <MCQComponent question={mockQuestionWithDecks} language="en" onAnswer={vi.fn()} />
+      );
+      const label = screen.getByTestId('cross-deck-label');
+      expect(label.textContent).toContain('History of Cyprus, Geography');
+    });
+
+    it('label is non-interactive (rendered as p element)', () => {
+      renderWithProviders(
+        <MCQComponent question={mockQuestionWithDecks} language="en" onAnswer={vi.fn()} />
+      );
+      const label = screen.getByTestId('cross-deck-label');
+      expect(label.tagName).toBe('P');
+      expect(label).not.toHaveAttribute('role');
+      expect(label.closest('a')).toBeNull();
+      expect(label.closest('button')).toBeNull();
     });
   });
 });

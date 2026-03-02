@@ -18,6 +18,9 @@
     "loadError": "Не удалось загрузить вопросы",
     "retry": "Повторить"
   },
+  "crossDeck": {
+    "alsoIn": "Также в: {{deckNames}}"
+  },
   "mcq": {
     "submitAnswer": "Отправить Ответ",
     "keyboardHint": "Нажмите 1-4 для выбора · Enter для отправки",

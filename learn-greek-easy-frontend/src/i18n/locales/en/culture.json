@@ -18,6 +18,9 @@
     "loadError": "Failed to load questions",
     "retry": "Retry"
   },
+  "crossDeck": {
+    "alsoIn": "Also in: {{deckNames}}"
+  },
   "mcq": {
     "submitAnswer": "Submit Answer",
     "keyboardHint": "Press 1-4 to select · Enter to submit",

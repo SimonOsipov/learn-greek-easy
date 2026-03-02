@@ -256,6 +256,15 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
             {questionText}
           </h2>
 
+          {/* Cross-deck awareness label */}
+          {question.also_in_decks.length > 0 && (
+            <p className="text-xs text-muted-foreground" data-testid="cross-deck-label">
+              {t('crossDeck.alsoIn', {
+                deckNames: question.also_in_decks.join(', '),
+              })}
+            </p>
+          )}
+
           {/* Audio waveform player placeholder */}
           {question.audio_url && (
             <WaveformPlayer

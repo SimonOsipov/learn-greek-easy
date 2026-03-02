@@ -29,6 +29,7 @@ export interface CultureQuestionResponse {
   order_index: number;
   correct_option: number;
   original_article_url: string | null; // Source news article URL
+  also_in_decks: string[]; // Localized names of other active decks with this question
 }
 
 export interface CultureDeckResponse {
