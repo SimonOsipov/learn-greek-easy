@@ -183,7 +183,7 @@ export function trackNewsAudioError(properties: NewsAudioErrorProperties): void 
 
 export interface NewsLevelToggledProperties {
   level: 'a2' | 'b2';
-  page: 'dashboard' | 'news';
+  page: 'dashboard' | 'news' | 'culture_practice';
 }
 
 export function trackNewsLevelToggled(properties: NewsLevelToggledProperties): void {

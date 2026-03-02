@@ -601,7 +601,8 @@ describe('MCQComponent', () => {
 
       const hint = screen.getByTestId('mcq-keyboard-hint');
       expect(hint).toBeInTheDocument();
-      expect(hint).toHaveClass('font-mono', 'text-xs', 'text-slate-400', 'text-center');
+      expect(hint).toHaveClass('font-mono', 'text-xs', 'text-center');
+      expect(hint.className).toContain('text-[var(--cult-text-dim)]');
     });
 
     it('should hide keyboard hint when answer is submitted', async () => {
@@ -1211,9 +1212,9 @@ describe('MCQComponent - Redesign Features', () => {
       const cardShell = mcqComponent.firstElementChild as HTMLElement;
 
       expect(cardShell.className).toContain('rounded-[20px]');
-      expect(cardShell.className).toContain('bg-white');
+      expect(cardShell.className).toContain('bg-[var(--cult-card)]');
       expect(cardShell.className).toContain('border-[1.5px]');
-      expect(cardShell.className).toContain('border-slate-200');
+      expect(cardShell.className).toContain('border-[var(--cult-border)]');
     });
 
     it('should render card shell with correct shadow', () => {
@@ -1262,7 +1263,7 @@ describe('MCQComponent - Redesign Features', () => {
 
       expect(questionText.className).toContain('tracking-[-0.01em]');
       expect(questionText.className).toContain('leading-[1.5]');
-      expect(questionText.className).toContain('text-slate-900');
+      expect(questionText.className).toContain('text-[var(--cult-text)]');
       expect(questionText.className).toContain('font-semibold');
     });
   });
@@ -1304,8 +1305,8 @@ describe('MCQComponent - Redesign Features', () => {
 
       const submitButton = screen.getByTestId('mcq-submit-button');
 
-      expect(submitButton.className).toContain('bg-indigo-500');
-      expect(submitButton.className).toContain('shadow-[0_0_0_3px_rgba(99,102,241,0.15)]');
+      expect(submitButton.className).toContain('bg-[var(--cult-accent)]');
+      expect(submitButton.className).toContain('shadow-[0_0_0_3px_var(--cult-accent-glow)]');
     });
 
     it('should have slate disabled styling when no option selected', () => {
@@ -1315,8 +1316,8 @@ describe('MCQComponent - Redesign Features', () => {
 
       const submitButton = screen.getByTestId('mcq-submit-button');
 
-      expect(submitButton.className).toContain('bg-slate-100');
-      expect(submitButton.className).toContain('text-slate-400');
+      expect(submitButton.className).toContain('bg-[var(--cult-border)]');
+      expect(submitButton.className).toContain('text-[var(--cult-text-dim)]');
     });
   });
 

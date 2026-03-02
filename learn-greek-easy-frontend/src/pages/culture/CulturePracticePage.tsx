@@ -37,6 +37,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTrackEvent } from '@/hooks/useTrackEvent';
 import i18n from '@/i18n';
+import { trackNewsLevelToggled } from '@/lib/analytics';
 import { reportAPIError } from '@/lib/errorReporting';
 import log from '@/lib/logger';
 import { MAX_ANSWER_TIME_SECONDS } from '@/lib/timeFormatUtils';
@@ -50,13 +51,14 @@ import type {
 } from '@/types/culture';
 import type { CultureSessionConfig } from '@/types/cultureSession';
 import { DEFAULT_SESSION_CONFIG } from '@/types/cultureSession';
+import { getPersistedNewsLevel, setPersistedNewsLevel, type NewsLevel } from '@/utils/newsLevel';
 
 /**
  * Loading skeleton for practice page
  */
 function PracticePageSkeleton() {
   return (
-    <div className="min-h-screen bg-slate-100 px-4 py-6 dark:bg-background md:px-6 md:py-8">
+    <div className="min-h-screen bg-[var(--cult-bg)] px-4 py-6 md:px-6 md:py-8">
       <div className="mx-auto max-w-[520px]">
         {/* Header skeleton: exit button left, language pill right */}
         <div className="mb-4 flex items-center justify-between">
@@ -117,6 +119,7 @@ export function CulturePracticePage() {
   const [hasNoQuestionsDue, setHasNoQuestionsDue] = useState(false);
   const [hasStudiedQuestions, setHasStudiedQuestions] = useState(false);
   const [isPracticeAnywayLoading, setIsPracticeAnywayLoading] = useState(false);
+  const [newsLevel, setNewsLevel] = useState<NewsLevel>(getPersistedNewsLevel);
 
   // Refs for tracking
   const hasTrackedStart = useRef(false);
@@ -405,6 +408,15 @@ export function CulturePracticePage() {
   );
 
   /**
+   * Handle A2/B2 level toggle
+   */
+  const handleNewsLevelChange = useCallback((level: NewsLevel) => {
+    setPersistedNewsLevel(level);
+    setNewsLevel(level);
+    trackNewsLevelToggled({ level, page: 'culture_practice' });
+  }, []);
+
+  /**
    * Handle Try Again button on ScoreCard
    */
   const handleTryAgain = useCallback(() => {
@@ -473,7 +485,7 @@ export function CulturePracticePage() {
   // Recovery dialog
   if (showRecoveryDialog) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-100 p-4 dark:bg-background">
+      <div className="flex min-h-screen items-center justify-center bg-[var(--cult-bg)] p-4">
         <Dialog open={showRecoveryDialog} onOpenChange={setShowRecoveryDialog}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
@@ -502,7 +514,7 @@ export function CulturePracticePage() {
   // Session complete - show inline ScoreCard
   if (summary) {
     return (
-      <div className="min-h-screen bg-slate-100 px-4 py-6 dark:bg-background md:px-6 md:py-8">
+      <div className="min-h-screen bg-[var(--cult-bg)] px-4 py-6 md:px-6 md:py-8">
         <div className="mx-auto max-w-[520px]">
           <ScoreCard
             correct={summary.stats.correctCount}
@@ -518,7 +530,7 @@ export function CulturePracticePage() {
   // No questions due for review state
   if (hasNoQuestionsDue) {
     return (
-      <div className="min-h-screen bg-slate-100 px-4 py-6 dark:bg-background md:px-6 md:py-8">
+      <div className="min-h-screen bg-[var(--cult-bg)] px-4 py-6 md:px-6 md:py-8">
         <div className="mx-auto max-w-[520px]">
           <Button
             variant="ghost"
@@ -589,7 +601,7 @@ export function CulturePracticePage() {
   // Error state
   if (error) {
     return (
-      <div className="min-h-screen bg-slate-100 px-4 py-6 dark:bg-background md:px-6 md:py-8">
+      <div className="min-h-screen bg-[var(--cult-bg)] px-4 py-6 md:px-6 md:py-8">
         <div className="mx-auto max-w-[520px]">
           <Button variant="ghost" onClick={() => navigate('/decks')} className="mb-4">
             <ChevronLeft className="mr-2 h-4 w-4" />
@@ -616,7 +628,7 @@ export function CulturePracticePage() {
   // No current question
   if (!currentQuestion) {
     return (
-      <div className="min-h-screen bg-slate-100 px-4 py-6 dark:bg-background md:px-6 md:py-8">
+      <div className="min-h-screen bg-[var(--cult-bg)] px-4 py-6 md:px-6 md:py-8">
         <div className="mx-auto max-w-[520px]">
           <Button variant="ghost" onClick={() => navigate('/decks')} className="mb-4">
             <ChevronLeft className="mr-2 h-4 w-4" />
@@ -637,25 +649,44 @@ export function CulturePracticePage() {
   const currentLanguage = session.config.language;
 
   return (
-    <div className="min-h-screen bg-slate-100 px-4 py-6 dark:bg-background md:px-6 md:py-8">
+    <div className="min-h-screen bg-[var(--cult-bg)] px-4 py-6 md:px-6 md:py-8">
       <div className="mx-auto max-w-[520px]">
         {/* Header */}
         <div className="mb-4 flex items-center justify-between">
-          <button
-            type="button"
-            onClick={handleExitClick}
-            data-testid="exit-button"
-            className="inline-flex items-center gap-1 text-sm font-medium text-slate-500 transition-colors hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-          >
+          <Button variant="outline" size="sm" onClick={handleExitClick} data-testid="exit-button">
             <ChevronLeft className="h-4 w-4" />
             {t('practice.exit', 'Exit')}
-          </button>
-          <LanguageSelector
-            value={currentLanguage}
-            onChange={handleLanguageChange}
-            variant="pill"
-            size="sm"
-          />
+          </Button>
+          <div className="flex items-center gap-2">
+            {/* A2/B2 level toggle */}
+            <div
+              className="flex items-center gap-1"
+              aria-label={t('common:news.level.label', 'Content level')}
+            >
+              <Button
+                variant={newsLevel === 'a2' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => handleNewsLevelChange('a2')}
+                data-testid="level-toggle-a2"
+              >
+                {t('common:news.level.a2', 'A2')}
+              </Button>
+              <Button
+                variant={newsLevel === 'b2' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => handleNewsLevelChange('b2')}
+                data-testid="level-toggle-b2"
+              >
+                {t('common:news.level.b2', 'B2')}
+              </Button>
+            </div>
+            <LanguageSelector
+              value={currentLanguage}
+              onChange={handleLanguageChange}
+              variant="pill"
+              size="sm"
+            />
+          </div>
         </div>
 
         {/* Question with inline feedback */}

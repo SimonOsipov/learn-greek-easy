@@ -230,7 +230,7 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
       data-testid="mcq-component"
     >
       {/* Card shell - visual container */}
-      <div className="rounded-[20px] border-[1.5px] border-slate-200 bg-white px-[22px] pb-6 pt-6 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)]">
+      <div className="rounded-[20px] border-[1.5px] border-[var(--cult-border)] bg-[var(--cult-card)] px-[22px] pb-6 pt-6 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)]">
         {/* Inner content area with vertical spacing */}
         <div className="flex flex-col space-y-4">
           {/* Badge row - category */}
@@ -250,7 +250,7 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
           {/* Question text - KEEP EXACTLY AS-IS */}
           <h2
             id={questionId}
-            className="mb-1 font-cult-serif text-[19px] font-semibold leading-[1.5] tracking-[-0.01em] text-slate-900"
+            className="mb-1 font-cult-serif text-[19px] font-semibold leading-[1.5] tracking-[-0.01em] text-[var(--cult-text)]"
             data-testid="mcq-question-text"
           >
             {questionText}
@@ -341,7 +341,6 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
                 aria-describedby={keyboardHintId}
                 submitted={isSubmitted}
                 keyboardHintNumber={optionNumber}
-                showKeyboardHint={!isSubmitted}
                 {...resultProps}
               />
             );
@@ -364,7 +363,7 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
         {!isSubmitted && (
           <p
             id={keyboardHintId}
-            className="text-center font-mono text-xs text-slate-400"
+            className="text-center font-mono text-xs text-[var(--cult-text-dim)]"
             data-testid="mcq-keyboard-hint"
           >
             {t('mcq.keyboardHintDynamic', { max: question.option_count })}
@@ -377,7 +376,7 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
             <button
               type="button"
               onClick={handleNext}
-              className="w-full max-w-[280px] rounded-xl bg-indigo-500 px-6 py-2.5 font-medium text-white shadow-[0_0_0_3px_rgba(99,102,241,0.15)] transition-colors hover:bg-indigo-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="w-full max-w-[280px] rounded-xl bg-[var(--cult-accent)] px-6 py-2.5 font-medium text-white shadow-[0_0_0_3px_var(--cult-accent-glow)] transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               data-testid="mcq-next-button"
             >
               {isLastQuestion ? t('mcq.seeResults') : t('mcq.nextQuestion')}
@@ -392,8 +391,8 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
                 'w-full max-w-[280px] rounded-xl px-6 py-2.5 font-medium transition-colors',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                 selectedOption !== null && !disabled
-                  ? 'cursor-pointer bg-indigo-500 text-white shadow-[0_0_0_3px_rgba(99,102,241,0.15)] hover:bg-indigo-600'
-                  : 'cursor-not-allowed bg-slate-100 text-slate-400'
+                  ? 'cursor-pointer bg-[var(--cult-accent)] text-white shadow-[0_0_0_3px_var(--cult-accent-glow)] hover:opacity-90'
+                  : 'cursor-not-allowed bg-[var(--cult-border)] text-[var(--cult-text-dim)]'
               )}
               data-testid="mcq-submit-button"
             >

@@ -102,47 +102,28 @@ describe('AnswerOption', () => {
       expect(button.className).toContain('hover:bg-slate-50/60');
     });
 
-    it('should show keyboard hint when showKeyboardHint=true and keyboardHintNumber provided', () => {
-      render(<AnswerOption {...defaultProps} showKeyboardHint={true} keyboardHintNumber={1} />);
+    it('should show number in left badge when keyboardHintNumber provided', () => {
+      render(<AnswerOption {...defaultProps} keyboardHintNumber={1} />);
 
-      const hint = screen.getByTestId('keyboard-hint-a');
-      expect(hint).toBeInTheDocument();
-      expect(hint).toHaveTextContent('1');
+      const button = screen.getByTestId('answer-option-a');
+      const badge = button.querySelector('span');
+      expect(badge).toHaveTextContent('1');
     });
 
-    it('should hide keyboard hint when showKeyboardHint=false', () => {
-      render(<AnswerOption {...defaultProps} showKeyboardHint={false} keyboardHintNumber={1} />);
+    it('should fall back to letter in badge when keyboardHintNumber is undefined', () => {
+      render(<AnswerOption {...defaultProps} />);
 
-      const hint = screen.queryByTestId('keyboard-hint-a');
-      expect(hint).not.toBeInTheDocument();
+      const button = screen.getByTestId('answer-option-a');
+      const badge = button.querySelector('span');
+      expect(badge).toHaveTextContent('A');
     });
 
-    it('should hide keyboard hint when keyboardHintNumber is undefined', () => {
-      render(<AnswerOption {...defaultProps} showKeyboardHint={true} />);
-
-      const hint = screen.queryByTestId('keyboard-hint-a');
-      expect(hint).not.toBeInTheDocument();
-    });
-
-    it('should display correct keyboard hint number', () => {
+    it('should show correct number in left badge', () => {
       render(<AnswerOption {...defaultProps} keyboardHintNumber={3} />);
 
-      const hint = screen.getByTestId('keyboard-hint-a');
-      expect(hint).toHaveTextContent('3');
-    });
-
-    it('should have keyboard hint with aria-hidden="true"', () => {
-      render(<AnswerOption {...defaultProps} keyboardHintNumber={1} />);
-
-      const hint = screen.getByTestId('keyboard-hint-a');
-      expect(hint).toHaveAttribute('aria-hidden', 'true');
-    });
-
-    it('should have keyboard hint with font-mono class', () => {
-      render(<AnswerOption {...defaultProps} keyboardHintNumber={1} />);
-
-      const hint = screen.getByTestId('keyboard-hint-a');
-      expect(hint).toHaveClass('font-mono');
+      const button = screen.getByTestId('answer-option-a');
+      const badge = button.querySelector('span');
+      expect(badge).toHaveTextContent('3');
     });
   });
 

@@ -39,13 +39,8 @@ export interface AnswerOptionProps {
    */
   isSelectedIncorrect?: boolean;
   /**
-   * Whether to show the keyboard shortcut number badge on this option.
-   * Defaults to true. Set to false to hide the badge.
-   */
-  showKeyboardHint?: boolean;
-  /**
-   * The keyboard shortcut number to display in the badge (1-4).
-   * Only rendered when `showKeyboardHint` is true.
+   * The keyboard shortcut number to display in the left badge (1-4).
+   * When provided, replaces the letter in the badge.
    */
   keyboardHintNumber?: number;
   /**
@@ -75,7 +70,6 @@ export const AnswerOption: React.FC<AnswerOptionProps> = ({
   submitted,
   isCorrect,
   isSelectedIncorrect,
-  showKeyboardHint = true,
   keyboardHintNumber,
   state,
 }) => {
@@ -120,7 +114,7 @@ export const AnswerOption: React.FC<AnswerOptionProps> = ({
         // Default state
         resolvedState === 'default' && [
           'border-[var(--cult-border)] bg-[var(--cult-card)]',
-          'hover:border-slate-300 hover:bg-slate-50/60',
+          'hover:border-slate-300 hover:bg-slate-50/60 dark:hover:border-slate-600 dark:hover:bg-slate-700/60',
         ],
 
         // Selected state (before submit)
@@ -149,7 +143,7 @@ export const AnswerOption: React.FC<AnswerOptionProps> = ({
         disabled && 'pointer-events-none'
       )}
     >
-      {/* Letter badge */}
+      {/* Letter/number badge */}
       <span
         className={cn(
           'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-sm font-bold transition-colors duration-200',
@@ -160,22 +154,11 @@ export const AnswerOption: React.FC<AnswerOptionProps> = ({
           resolvedState === 'incorrect' && 'bg-red-500 text-white'
         )}
       >
-        {letter}
+        {keyboardHintNumber != null ? keyboardHintNumber : letter}
       </span>
 
       {/* Option text */}
       <span className="flex-1 font-cult-serif text-base text-foreground">{text}</span>
-
-      {/* Keyboard hint badge (visible only in default state) */}
-      {resolvedState === 'default' && showKeyboardHint && keyboardHintNumber != null && (
-        <span
-          className="flex h-6 w-5 flex-shrink-0 items-center justify-center rounded-md bg-slate-100 font-mono text-xs text-slate-400 dark:bg-slate-800 dark:text-slate-500"
-          aria-hidden="true"
-          data-testid={`keyboard-hint-${letter.toLowerCase()}`}
-        >
-          {keyboardHintNumber}
-        </span>
-      )}
 
       {/* Result icons (post-submit) */}
       {resolvedState === 'correct' && (
