@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useQuestionLanguage } from '@/hooks/useQuestionLanguage';
 import {
   trackCultureQuestionGridViewed,
   trackCultureQuestionGridSearched,
@@ -18,6 +19,7 @@ import { debounce } from '@/lib/utils';
 import { cultureDeckAPI } from '@/services/cultureDeckAPI';
 import type { CultureQuestionBrowseItem, CultureQuestionStatus } from '@/types/culture';
 
+import { LanguageSelector } from './LanguageSelector';
 import { QuestionCard, QuestionCardSkeleton } from './QuestionCard';
 
 // ============================================
@@ -114,8 +116,8 @@ export const QuestionBrowser: React.FC<QuestionBrowserProps> = ({
   totalQuestions,
   className,
 }) => {
-  const { t, i18n } = useTranslation('culture');
-  const lang = i18n.language;
+  const { t } = useTranslation('culture');
+  const { questionLanguage, setQuestionLanguage } = useQuestionLanguage();
 
   // Data fetching
   const { data, isLoading, error, refetch } = useQuery({
@@ -168,13 +170,14 @@ export const QuestionBrowser: React.FC<QuestionBrowserProps> = ({
     if (searchQuery.trim()) {
       const lowerQuery = searchQuery.toLowerCase().trim();
       result = result.filter((q) => {
-        const text = (q.question_text as Record<string, string>)[lang] || q.question_text.en || '';
+        const text =
+          (q.question_text as Record<string, string>)[questionLanguage] || q.question_text.en || '';
         return text.toLowerCase().includes(lowerQuery);
       });
     }
 
     return result;
-  }, [questions, searchQuery, activeFilter, lang]);
+  }, [questions, searchQuery, activeFilter, questionLanguage]);
 
   // Calculate counts from full list (not filtered)
   const filterCounts = useMemo(() => calculateFilterCounts(questions), [questions]);
@@ -258,12 +261,20 @@ export const QuestionBrowser: React.FC<QuestionBrowserProps> = ({
           )}
         </div>
 
-        {/* Filter Pills */}
-        <FilterPills
-          activeFilter={activeFilter}
-          counts={filterCounts}
-          onFilterChange={setActiveFilter}
-        />
+        {/* Filter Pills + Language Selector */}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <FilterPills
+            activeFilter={activeFilter}
+            counts={filterCounts}
+            onFilterChange={setActiveFilter}
+          />
+          <LanguageSelector
+            value={questionLanguage}
+            onChange={setQuestionLanguage}
+            variant="pill"
+            size="sm"
+          />
+        </div>
 
         {/* Results Counter */}
         {!isLoading && (
@@ -305,7 +316,7 @@ export const QuestionBrowser: React.FC<QuestionBrowserProps> = ({
           className="grid gap-4"
         >
           {filteredQuestions.map((question) => (
-            <QuestionCard key={question.id} question={question} />
+            <QuestionCard key={question.id} question={question} language={questionLanguage} />
           ))}
         </div>
       )}
