@@ -37,8 +37,10 @@ vi.mock('@/services/cultureDeckAPI', () => ({
   },
 }));
 
-const mockSetQuestionLanguage = vi.fn();
-const questionLanguageRef = vi.hoisted(() => ({ current: 'en' as 'el' | 'en' | 'ru' }));
+const { mockSetQuestionLanguage, questionLanguageRef } = vi.hoisted(() => ({
+  mockSetQuestionLanguage: vi.fn(),
+  questionLanguageRef: { current: 'en' as 'el' | 'en' | 'ru' },
+}));
 
 vi.mock('@/hooks/useQuestionLanguage', () => ({
   useQuestionLanguage: () => ({
