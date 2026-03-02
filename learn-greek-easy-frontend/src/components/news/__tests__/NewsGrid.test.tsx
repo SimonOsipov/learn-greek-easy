@@ -251,36 +251,6 @@ describe('NewsGrid Component', () => {
       const card = screen.getByTestId('news-card-article-1');
       expect(card).toHaveClass('h-[300px]');
     });
-
-    it('should render articles with questions button when card_id and deck_id are present', () => {
-      const articles = [
-        createMockNewsItem({
-          id: 'article-with-questions',
-          card_id: 'card-123',
-          deck_id: 'deck-456',
-        }),
-      ];
-      render(<NewsGrid {...createProps({ articles })} />);
-
-      expect(
-        screen.getByTestId('news-questions-button-article-with-questions')
-      ).toBeInTheDocument();
-    });
-
-    it('should not render questions button when card_id is null', () => {
-      const articles = [
-        createMockNewsItem({
-          id: 'article-no-questions',
-          card_id: null,
-          deck_id: null,
-        }),
-      ];
-      render(<NewsGrid {...createProps({ articles })} />);
-
-      expect(
-        screen.queryByTestId('news-questions-button-article-no-questions')
-      ).not.toBeInTheDocument();
-    });
   });
 
   describe('Edge Cases', () => {

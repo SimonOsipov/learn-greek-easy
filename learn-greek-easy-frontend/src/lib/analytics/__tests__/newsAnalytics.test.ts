@@ -13,12 +13,9 @@ import {
   trackNewsArticleClicked,
   trackNewsAudioPlayStarted,
   trackNewsLevelToggled,
-  trackNewsQuestionsButtonClicked,
   trackNewsSourceLinkClicked,
   trackNewsPageViewed,
   trackNewsPagePaginated,
-  trackNewsPageArticleClicked,
-  trackNewsPageQuestionsClicked,
   trackNewsPageSeeAllClicked,
 } from '../newsAnalytics';
 
@@ -91,64 +88,6 @@ describe('newsAnalytics', () => {
           item_id: 'news-item-abc',
           article_domain: 'test.com',
           level: 'b2',
-        });
-      }).not.toThrow();
-
-      (posthog as Record<string, unknown>).capture = originalCapture;
-    });
-  });
-
-  // ==========================================================================
-  // trackNewsQuestionsButtonClicked
-  // ==========================================================================
-
-  describe('trackNewsQuestionsButtonClicked', () => {
-    it('should call posthog.capture with correct event name and properties', () => {
-      trackNewsQuestionsButtonClicked({
-        news_item_id: 'news-123',
-        deck_id: 'deck-456',
-      });
-
-      expect(posthog.capture).toHaveBeenCalledWith('news_questions_button_clicked', {
-        news_item_id: 'news-123',
-        deck_id: 'deck-456',
-      });
-    });
-
-    it('should track with UUID-formatted IDs', () => {
-      trackNewsQuestionsButtonClicked({
-        news_item_id: '550e8400-e29b-41d4-a716-446655440000',
-        deck_id: '6ba7b810-9dad-11d1-80b4-00c04fd430c8',
-      });
-
-      expect(posthog.capture).toHaveBeenCalledWith('news_questions_button_clicked', {
-        news_item_id: '550e8400-e29b-41d4-a716-446655440000',
-        deck_id: '6ba7b810-9dad-11d1-80b4-00c04fd430c8',
-      });
-    });
-
-    it('should not throw if posthog.capture is undefined', () => {
-      const originalCapture = posthog.capture;
-      (posthog as Record<string, unknown>).capture = undefined;
-
-      expect(() => {
-        trackNewsQuestionsButtonClicked({
-          news_item_id: 'news-789',
-          deck_id: 'deck-012',
-        });
-      }).not.toThrow();
-
-      (posthog as Record<string, unknown>).capture = originalCapture;
-    });
-
-    it('should not throw if posthog.capture is null', () => {
-      const originalCapture = posthog.capture;
-      (posthog as Record<string, unknown>).capture = null;
-
-      expect(() => {
-        trackNewsQuestionsButtonClicked({
-          news_item_id: 'news-xyz',
-          deck_id: 'deck-xyz',
         });
       }).not.toThrow();
 
@@ -343,128 +282,6 @@ describe('newsAnalytics', () => {
   });
 
   // ==========================================================================
-  // trackNewsPageArticleClicked
-  // ==========================================================================
-
-  describe('trackNewsPageArticleClicked', () => {
-    it('should call posthog.capture with correct event name and properties', () => {
-      trackNewsPageArticleClicked({
-        article_id: '550e8400-e29b-41d4-a716-446655440000',
-        article_title: 'Greek Economy Update',
-        position: 0,
-      });
-
-      expect(posthog.capture).toHaveBeenCalledWith('news_page_article_clicked', {
-        article_id: '550e8400-e29b-41d4-a716-446655440000',
-        article_title: 'Greek Economy Update',
-        position: 0,
-      });
-    });
-
-    it('should track articles at different positions', () => {
-      trackNewsPageArticleClicked({
-        article_id: '6ba7b810-9dad-11d1-80b4-00c04fd430c8',
-        article_title: 'Athens Festival News',
-        position: 5,
-      });
-
-      expect(posthog.capture).toHaveBeenCalledWith('news_page_article_clicked', {
-        article_id: '6ba7b810-9dad-11d1-80b4-00c04fd430c8',
-        article_title: 'Athens Festival News',
-        position: 5,
-      });
-    });
-
-    it('should not throw if posthog.capture is undefined', () => {
-      const originalCapture = posthog.capture;
-      (posthog as Record<string, unknown>).capture = undefined;
-
-      expect(() => {
-        trackNewsPageArticleClicked({
-          article_id: 'test-id',
-          article_title: 'Test Article',
-          position: 0,
-        });
-      }).not.toThrow();
-
-      (posthog as Record<string, unknown>).capture = originalCapture;
-    });
-
-    it('should not throw if posthog.capture is null', () => {
-      const originalCapture = posthog.capture;
-      (posthog as Record<string, unknown>).capture = null;
-
-      expect(() => {
-        trackNewsPageArticleClicked({
-          article_id: 'test-id-2',
-          article_title: 'Test Article 2',
-          position: 3,
-        });
-      }).not.toThrow();
-
-      (posthog as Record<string, unknown>).capture = originalCapture;
-    });
-  });
-
-  // ==========================================================================
-  // trackNewsPageQuestionsClicked
-  // ==========================================================================
-
-  describe('trackNewsPageQuestionsClicked', () => {
-    it('should call posthog.capture with correct event name and properties', () => {
-      trackNewsPageQuestionsClicked({
-        article_id: '550e8400-e29b-41d4-a716-446655440000',
-        has_questions: true,
-      });
-
-      expect(posthog.capture).toHaveBeenCalledWith('news_page_questions_clicked', {
-        article_id: '550e8400-e29b-41d4-a716-446655440000',
-        has_questions: true,
-      });
-    });
-
-    it('should track when article has no questions', () => {
-      trackNewsPageQuestionsClicked({
-        article_id: '6ba7b810-9dad-11d1-80b4-00c04fd430c8',
-        has_questions: false,
-      });
-
-      expect(posthog.capture).toHaveBeenCalledWith('news_page_questions_clicked', {
-        article_id: '6ba7b810-9dad-11d1-80b4-00c04fd430c8',
-        has_questions: false,
-      });
-    });
-
-    it('should not throw if posthog.capture is undefined', () => {
-      const originalCapture = posthog.capture;
-      (posthog as Record<string, unknown>).capture = undefined;
-
-      expect(() => {
-        trackNewsPageQuestionsClicked({
-          article_id: 'test-id',
-          has_questions: true,
-        });
-      }).not.toThrow();
-
-      (posthog as Record<string, unknown>).capture = originalCapture;
-    });
-
-    it('should not throw if posthog.capture is null', () => {
-      const originalCapture = posthog.capture;
-      (posthog as Record<string, unknown>).capture = null;
-
-      expect(() => {
-        trackNewsPageQuestionsClicked({
-          article_id: 'test-id-2',
-          has_questions: false,
-        });
-      }).not.toThrow();
-
-      (posthog as Record<string, unknown>).capture = originalCapture;
-    });
-  });
-
-  // ==========================================================================
   // trackNewsPageSeeAllClicked
   // ==========================================================================
 
@@ -524,13 +341,6 @@ describe('newsAnalytics', () => {
       }).not.toThrow();
 
       expect(() => {
-        trackNewsQuestionsButtonClicked({
-          news_item_id: 'news-test',
-          deck_id: 'deck-test',
-        });
-      }).not.toThrow();
-
-      expect(() => {
         trackNewsSourceLinkClicked({
           card_id: 'card-test',
           article_domain: 'example.com',
@@ -543,18 +353,6 @@ describe('newsAnalytics', () => {
 
       expect(() => {
         trackNewsPagePaginated({ from_page: 1, to_page: 2, total_pages: 5 });
-      }).not.toThrow();
-
-      expect(() => {
-        trackNewsPageArticleClicked({
-          article_id: 'id',
-          article_title: 'Title',
-          position: 0,
-        });
-      }).not.toThrow();
-
-      expect(() => {
-        trackNewsPageQuestionsClicked({ article_id: 'id', has_questions: true });
       }).not.toThrow();
 
       expect(() => {
@@ -579,22 +377,12 @@ describe('newsAnalytics', () => {
           article_domain: 'test.com',
           level: 'b2',
         });
-        trackNewsQuestionsButtonClicked({
-          news_item_id: 'news-2',
-          deck_id: 'deck-2',
-        });
         trackNewsSourceLinkClicked({
           card_id: 'card-1',
           article_domain: 'test.com',
         });
         trackNewsPageViewed({ total_articles: 10 });
         trackNewsPagePaginated({ from_page: 1, to_page: 2, total_pages: 5 });
-        trackNewsPageArticleClicked({
-          article_id: 'id',
-          article_title: 'Title',
-          position: 0,
-        });
-        trackNewsPageQuestionsClicked({ article_id: 'id', has_questions: true });
         trackNewsPageSeeAllClicked();
         trackNewsLevelToggled({ level: 'a2', page: 'news' });
       }).not.toThrow();

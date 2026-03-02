@@ -10,18 +10,12 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
-const mockNavigate = vi.fn();
-vi.mock('react-router-dom', () => ({
-  useNavigate: () => mockNavigate,
-}));
-
 vi.mock('@/lib/waveform', () => ({
   generateBars: (count: number) => Array.from({ length: count }, (_, i) => (i + 1) / count),
 }));
 
 vi.mock('@/lib/analytics/newsAnalytics', () => ({
   trackNewsArticleClicked: vi.fn(),
-  trackNewsQuestionsButtonClicked: vi.fn(),
   trackNewsAudioPlayStarted: vi.fn(),
   trackNewsAudioPlayPaused: vi.fn(),
   trackNewsAudioPlayCompleted: vi.fn(),
@@ -64,10 +58,8 @@ const createMockArticle = (overrides: Partial<NewsItemResponse> = {}): NewsItemR
 });
 
 describe('NewsCard', () => {
-  it('renders WaveformPlayer when hasQuestion and audio_url is present', () => {
+  it('renders WaveformPlayer when audio_url is present', () => {
     const article = createMockArticle({
-      card_id: 'card-123',
-      deck_id: 'deck-456',
       audio_url: 'https://example.com/audio.mp3',
     });
 
@@ -78,24 +70,8 @@ describe('NewsCard', () => {
     expect(player).not.toHaveAttribute('aria-disabled');
   });
 
-  it('renders disabled WaveformPlayer when hasQuestion and no audio_url', () => {
+  it('does not render WaveformPlayer when no audio', () => {
     const article = createMockArticle({
-      card_id: 'card-123',
-      deck_id: 'deck-456',
-      audio_url: null,
-    });
-
-    render(<NewsCard article={article} newsLang="el" />);
-
-    const player = screen.getByTestId('waveform-player');
-    expect(player).toBeInTheDocument();
-    expect(player).toHaveAttribute('aria-disabled', 'true');
-  });
-
-  it('does not render WaveformPlayer when no audio and no question', () => {
-    const article = createMockArticle({
-      card_id: null,
-      deck_id: null,
       audio_url: null,
     });
 
@@ -104,73 +80,20 @@ describe('NewsCard', () => {
     expect(screen.queryByTestId('waveform-player')).not.toBeInTheDocument();
   });
 
-  it('renders WaveformPlayer when audio exists but no question', () => {
+  it('does not render questions button', () => {
     const article = createMockArticle({
-      card_id: null,
-      deck_id: null,
+      card_id: 'card-123',
+      deck_id: 'deck-456',
       audio_url: 'https://example.com/audio.mp3',
     });
 
     render(<NewsCard article={article} newsLang="el" />);
 
-    expect(screen.getByTestId('waveform-player')).toBeInTheDocument();
-  });
-
-  it('audio-only article renders player but not Practice button', () => {
-    const article = createMockArticle({
-      card_id: null,
-      deck_id: null,
-      audio_url: 'https://example.com/audio.mp3',
-    });
-
-    render(<NewsCard article={article} newsLang="el" />);
-
-    expect(screen.getByTestId('waveform-player')).toBeInTheDocument();
     expect(screen.queryByTestId(`news-questions-button-${article.id}`)).not.toBeInTheDocument();
-  });
-
-  it('article with neither audio nor question renders no action bar', () => {
-    const article = createMockArticle({
-      card_id: null,
-      deck_id: null,
-      audio_url: null,
-    });
-
-    render(<NewsCard article={article} newsLang="el" />);
-
-    expect(screen.queryByTestId('waveform-player')).not.toBeInTheDocument();
-    expect(screen.queryByTestId(`news-questions-button-${article.id}`)).not.toBeInTheDocument();
-  });
-
-  it('does not render old placeholder button text', () => {
-    const article = createMockArticle({
-      card_id: 'card-123',
-      deck_id: 'deck-456',
-    });
-
-    render(<NewsCard article={article} newsLang="el" />);
-
-    expect(screen.queryByText('Audio (coming soon)')).not.toBeInTheDocument();
-  });
-
-  it('questions button navigates to the correct path', () => {
-    const article = createMockArticle({
-      card_id: 'card-123',
-      deck_id: 'deck-456',
-    });
-
-    render(<NewsCard article={article} newsLang="el" />);
-
-    const questionsButton = screen.getByTestId(`news-questions-button-${article.id}`);
-    fireEvent.click(questionsButton);
-
-    expect(mockNavigate).toHaveBeenCalledWith('/culture/deck-456/practice');
   });
 
   it('renders without errors with page="dashboard" prop', () => {
     const article = createMockArticle({
-      card_id: 'card-123',
-      deck_id: 'deck-456',
       audio_url: 'https://example.com/audio.mp3',
     });
 
@@ -182,8 +105,6 @@ describe('NewsCard', () => {
 
   it('renders without errors with page="news" prop', () => {
     const article = createMockArticle({
-      card_id: 'card-123',
-      deck_id: 'deck-456',
       audio_url: 'https://example.com/audio.mp3',
     });
 
@@ -202,8 +123,6 @@ describe('NewsCard', () => {
 
     it('shows error flash when onError fires from WaveformPlayer', () => {
       const article = createMockArticle({
-        card_id: 'card-123',
-        deck_id: 'deck-456',
         audio_url: 'https://example.com/audio.mp3',
       });
 
@@ -219,8 +138,6 @@ describe('NewsCard', () => {
 
     it('error flash disappears after 1.5s timeout', () => {
       const article = createMockArticle({
-        card_id: 'card-123',
-        deck_id: 'deck-456',
         audio_url: 'https://example.com/audio.mp3',
       });
 
@@ -241,8 +158,6 @@ describe('NewsCard', () => {
 
     it('player resets after error flash timeout', () => {
       const article = createMockArticle({
-        card_id: 'card-123',
-        deck_id: 'deck-456',
         audio_url: 'https://example.com/audio.mp3',
       });
 
@@ -262,8 +177,6 @@ describe('NewsCard', () => {
 
     it('timeout is cleared on unmount', () => {
       const article = createMockArticle({
-        card_id: 'card-123',
-        deck_id: 'deck-456',
         audio_url: 'https://example.com/audio.mp3',
       });
 
@@ -293,8 +206,6 @@ describe('NewsCard Level Switching', () => {
     description_el_a2: 'A2 Περιγραφή',
     audio_url: 'https://example.com/audio-b2.mp3',
     audio_a2_url: 'https://example.com/audio-a2.mp3',
-    card_id: 'card-1',
-    deck_id: 'deck-1',
   });
 
   it('shows A2 title and description when level is a2 and has_a2_content is true', () => {

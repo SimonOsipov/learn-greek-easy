@@ -85,12 +85,9 @@ export {
 export {
   // Type interfaces
   type NewsArticleClickedProperties,
-  type NewsQuestionsButtonClickedProperties,
   type NewsSourceLinkClickedProperties,
   type NewsPageViewedProperties,
   type NewsPagePaginatedProperties,
-  type NewsPageArticleClickedProperties,
-  type NewsPageQuestionsClickedProperties,
   type NewsAudioPlayStartedProperties,
   type NewsAudioPlayCompletedProperties,
   type NewsAudioPlayPausedProperties,
@@ -98,12 +95,9 @@ export {
   type NewsLevelToggledProperties,
   // Tracking functions
   trackNewsArticleClicked,
-  trackNewsQuestionsButtonClicked,
   trackNewsSourceLinkClicked,
   trackNewsPageViewed,
   trackNewsPagePaginated,
-  trackNewsPageArticleClicked,
-  trackNewsPageQuestionsClicked,
   trackNewsPageSeeAllClicked,
   trackNewsAudioPlayStarted,
   trackNewsAudioPlayCompleted,

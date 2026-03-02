@@ -54,9 +54,7 @@
         "playAudio": "Play audio",
         "pauseAudio": "Pause audio",
         "audioUnavailable": "Audio not available",
-        "audioError": "Audio failed to load",
-        "questions": "Practice!",
-        "questionsLabel": "Practice questions for this article"
+        "audioError": "Audio failed to load"
       },
       "seeAll": "See All News"
     }
