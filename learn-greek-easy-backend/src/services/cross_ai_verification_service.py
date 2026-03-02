@@ -2,8 +2,7 @@
 
 import json
 from collections.abc import Callable
-
-from pydantic import ValidationError  # noqa: F401 (propagated naturally, imported for clarity)
+from typing import ClassVar
 
 from src.core.logging import get_logger
 from src.schemas.nlp import (
@@ -26,7 +25,7 @@ class CrossAIVerificationService:
     """Verifies LLM-generated noun data by comparing with a secondary model generation."""
 
     _SECONDARY_MODEL = "openai/gpt-4.1-mini"
-    _FIELD_WEIGHTS: dict[str, float] = {
+    _FIELD_WEIGHTS: ClassVar[dict[str, float]] = {
         "lemma": 3.0,
         "grammar_data.gender": 3.0,
         "grammar_data.declension_group": 2.0,
