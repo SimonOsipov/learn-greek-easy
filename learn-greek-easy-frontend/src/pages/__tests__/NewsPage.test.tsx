@@ -140,7 +140,7 @@ describe('NewsPage Component', () => {
       render(<NewsPage />);
 
       expect(screen.getByText('Difficulty:')).toBeInTheDocument();
-      expect(screen.getByTestId('news-level-toggle')).toBeInTheDocument();
+      expect(screen.getByTestId('news-filters')).toBeInTheDocument();
     });
   });
 
@@ -542,8 +542,8 @@ describe('NewsPage Component', () => {
   });
 });
 
-describe('Country Filter Tabs', () => {
-  it('renders All/Cyprus/Greece/World tabs', async () => {
+describe('Country Filter Buttons', () => {
+  it('renders All/Cyprus/Greece/World filter buttons', async () => {
     const articles = [createMockNewsItem({ id: 'article-1' })];
     (adminAPI.getNewsItems as Mock).mockResolvedValue(
       createPaginatedResponse(articles, 1, 1, 12, { cyprus: 3, greece: 2, world: 1 })
@@ -552,19 +552,15 @@ describe('Country Filter Tabs', () => {
     render(<NewsPage />);
 
     await waitFor(() => {
-      // All 4 tabs should be present - use getAllByText to handle multiple matches
-      const allElements = screen.getAllByText('All');
-      expect(allElements.length).toBeGreaterThan(0);
-      const cyprusElements = screen.getAllByText(/Cyprus/);
-      expect(cyprusElements.length).toBeGreaterThan(0);
-      const greeceElements = screen.getAllByText(/Greece/);
-      expect(greeceElements.length).toBeGreaterThan(0);
-      const worldElements = screen.getAllByText(/World/);
-      expect(worldElements.length).toBeGreaterThan(0);
+      const filters = screen.getByTestId('news-filters');
+      expect(within(filters).getByRole('button', { name: /All/ })).toBeInTheDocument();
+      expect(within(filters).getByRole('button', { name: /Cyprus/ })).toBeInTheDocument();
+      expect(within(filters).getByRole('button', { name: /Greece/ })).toBeInTheDocument();
+      expect(within(filters).getByRole('button', { name: /World/ })).toBeInTheDocument();
     });
   });
 
-  it('clicking Cyprus tab calls API with country=cyprus', async () => {
+  it('clicking Cyprus button calls API with country=cyprus', async () => {
     const user = userEvent.setup();
     const articles = [createMockNewsItem({ id: 'article-1' })];
 
@@ -575,21 +571,18 @@ describe('Country Filter Tabs', () => {
     render(<NewsPage />);
 
     await waitFor(() => {
-      expect(screen.getAllByText('All').length).toBeGreaterThan(0);
+      expect(screen.getByTestId('news-filters')).toBeInTheDocument();
     });
 
-    // Find the Cyprus tab trigger (role="tab")
-    const tabs = screen.getAllByRole('tab');
-    const cyprusTab = tabs.find((tab) => tab.textContent?.includes('Cyprus'));
-    expect(cyprusTab).toBeDefined();
-    await user.click(cyprusTab!);
+    const filters = screen.getByTestId('news-filters');
+    await user.click(within(filters).getByRole('button', { name: /Cyprus/ }));
 
     await waitFor(() => {
       expect(adminAPI.getNewsItems).toHaveBeenCalledWith(1, 12, 'cyprus');
     });
   });
 
-  it('clicking All tab calls API without country', async () => {
+  it('clicking All button calls API without country', async () => {
     const user = userEvent.setup();
     const articles = [createMockNewsItem({ id: 'article-1' })];
 
@@ -600,36 +593,25 @@ describe('Country Filter Tabs', () => {
     render(<NewsPage />);
 
     await waitFor(() => {
-      expect(screen.getAllByRole('tab').length).toBeGreaterThan(0);
+      expect(screen.getByTestId('news-filters')).toBeInTheDocument();
     });
 
-    const tabs = screen.getAllByRole('tab');
+    const filters = screen.getByTestId('news-filters');
+
     // Click Cyprus first
-    const cyprusTab = tabs.find((tab) => tab.textContent?.includes('Cyprus'));
-    expect(cyprusTab).toBeDefined();
-    await user.click(cyprusTab!);
+    await user.click(within(filters).getByRole('button', { name: /Cyprus/ }));
     await waitFor(() => {
       expect(adminAPI.getNewsItems).toHaveBeenCalledWith(1, 12, 'cyprus');
     });
 
     // Then click All
-    const allTab = tabs.find(
-      (tab) =>
-        tab.getAttribute('data-value') === 'all' ||
-        (tab.getAttribute('data-state') !== undefined && tab.textContent?.startsWith('All'))
-    );
-    if (allTab) {
-      await user.click(allTab);
-    } else {
-      // Fallback: click the first tab which should be "All"
-      await user.click(tabs[0]);
-    }
+    await user.click(within(filters).getByRole('button', { name: /All/ }));
     await waitFor(() => {
       expect(adminAPI.getNewsItems).toHaveBeenCalledWith(1, 12, undefined);
     });
   });
 
-  it('tab change resets to page 1', async () => {
+  it('filter change resets to page 1', async () => {
     const user = userEvent.setup();
 
     // Start with 36 articles on page 1
@@ -656,10 +638,8 @@ describe('Country Filter Tabs', () => {
     (adminAPI.getNewsItems as Mock).mockResolvedValue(
       createPaginatedResponse(articles, 12, 1, 12, { cyprus: 12, greece: 12, world: 12 })
     );
-    const tabs2 = screen.getAllByRole('tab');
-    const greeceTab = tabs2.find((tab) => tab.textContent?.includes('Greece'));
-    expect(greeceTab).toBeDefined();
-    await user.click(greeceTab!);
+    const filters = screen.getByTestId('news-filters');
+    await user.click(within(filters).getByRole('button', { name: /Greece/ }));
 
     await waitFor(() => {
       expect(adminAPI.getNewsItems).toHaveBeenCalledWith(1, 12, 'greece');

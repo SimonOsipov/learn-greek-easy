@@ -13,7 +13,7 @@ import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vite
 import userEvent from '@testing-library/user-event';
 
 import { NewsSection } from '@/components/dashboard/NewsSection';
-import { render, screen, waitFor } from '@/lib/test-utils';
+import { render, screen, waitFor, within } from '@/lib/test-utils';
 import { adminAPI, type NewsItemResponse } from '@/services/adminAPI';
 
 // Mock adminAPI
@@ -104,7 +104,7 @@ describe('NewsSection Component', () => {
       expect(screen.getByTestId('news-section-see-all')).toHaveAttribute('href', '/news');
     });
 
-    it('renders country filter tabs', async () => {
+    it('renders country filter buttons', async () => {
       const items = [createMockNewsItem({ id: 'item-1' })];
       (adminAPI.getNewsItems as Mock).mockResolvedValue(
         createPaginatedResponse(items, 1, { cyprus: 3, greece: 2, world: 1 })
@@ -116,12 +116,11 @@ describe('NewsSection Component', () => {
         expect(screen.getByTestId('news-section')).toBeInTheDocument();
       });
 
-      const tabs = screen.getAllByRole('tab');
-      const tabTexts = tabs.map((t) => t.textContent);
-      expect(tabTexts.some((text) => text?.includes('All'))).toBe(true);
-      expect(tabTexts.some((text) => text?.includes('Cyprus'))).toBe(true);
-      expect(tabTexts.some((text) => text?.includes('Greece'))).toBe(true);
-      expect(tabTexts.some((text) => text?.includes('World'))).toBe(true);
+      const filters = screen.getByTestId('news-filters');
+      expect(within(filters).getByRole('button', { name: /All/ })).toBeInTheDocument();
+      expect(within(filters).getByRole('button', { name: /Cyprus/ })).toBeInTheDocument();
+      expect(within(filters).getByRole('button', { name: /Greece/ })).toBeInTheDocument();
+      expect(within(filters).getByRole('button', { name: /World/ })).toBeInTheDocument();
     });
 
     it('renders difficulty label', async () => {
@@ -135,14 +134,16 @@ describe('NewsSection Component', () => {
       });
     });
 
-    it('renders level toggle', async () => {
+    it('renders level toggle buttons', async () => {
       const items = [createMockNewsItem({ id: 'item-1' })];
       (adminAPI.getNewsItems as Mock).mockResolvedValue(createPaginatedResponse(items, 1));
 
       render(<NewsSection />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('news-level-toggle')).toBeInTheDocument();
+        const filters = screen.getByTestId('news-filters');
+        expect(within(filters).getByRole('button', { name: /A2/ })).toBeInTheDocument();
+        expect(within(filters).getByRole('button', { name: /B2/ })).toBeInTheDocument();
       });
     });
   });
@@ -197,7 +198,7 @@ describe('NewsSection Component', () => {
   });
 
   describe('Country Filtering', () => {
-    it('refetches with country param when clicking a country tab', async () => {
+    it('refetches with country param when clicking a country button', async () => {
       const user = userEvent.setup();
       const items = [createMockNewsItem({ id: 'item-1' })];
       (adminAPI.getNewsItems as Mock).mockResolvedValue(
@@ -207,20 +208,18 @@ describe('NewsSection Component', () => {
       render(<NewsSection />);
 
       await waitFor(() => {
-        expect(screen.getAllByRole('tab').length).toBeGreaterThan(0);
+        expect(screen.getByTestId('news-filters')).toBeInTheDocument();
       });
 
-      const tabs = screen.getAllByRole('tab');
-      const cyprusTab = tabs.find((tab) => tab.textContent?.includes('Cyprus'));
-      expect(cyprusTab).toBeDefined();
-      await user.click(cyprusTab!);
+      const filters = screen.getByTestId('news-filters');
+      await user.click(within(filters).getByRole('button', { name: /Cyprus/ }));
 
       await waitFor(() => {
         expect(adminAPI.getNewsItems).toHaveBeenCalledWith(1, 6, 'cyprus');
       });
     });
 
-    it('refetches without country param when clicking All tab', async () => {
+    it('refetches without country param when clicking All button', async () => {
       const user = userEvent.setup();
       const items = [createMockNewsItem({ id: 'item-1' })];
       (adminAPI.getNewsItems as Mock).mockResolvedValue(
@@ -230,24 +229,20 @@ describe('NewsSection Component', () => {
       render(<NewsSection />);
 
       await waitFor(() => {
-        expect(screen.getAllByRole('tab').length).toBeGreaterThan(0);
+        expect(screen.getByTestId('news-filters')).toBeInTheDocument();
       });
 
-      const tabs = screen.getAllByRole('tab');
+      const filters = screen.getByTestId('news-filters');
 
       // Click Cyprus first
-      const cyprusTab = tabs.find((tab) => tab.textContent?.includes('Cyprus'));
-      expect(cyprusTab).toBeDefined();
-      await user.click(cyprusTab!);
+      await user.click(within(filters).getByRole('button', { name: /Cyprus/ }));
 
       await waitFor(() => {
         expect(adminAPI.getNewsItems).toHaveBeenCalledWith(1, 6, 'cyprus');
       });
 
       // Click All to reset
-      const allTab = tabs.find((tab) => tab.textContent?.startsWith('All'));
-      expect(allTab).toBeDefined();
-      await user.click(allTab!);
+      await user.click(within(filters).getByRole('button', { name: /All/ }));
 
       await waitFor(() => {
         expect(adminAPI.getNewsItems).toHaveBeenCalledWith(1, 6, undefined);
