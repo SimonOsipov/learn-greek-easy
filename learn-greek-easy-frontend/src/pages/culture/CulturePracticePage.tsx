@@ -21,7 +21,7 @@ import posthog from 'posthog-js';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
 
-import { MCQComponent, LanguageSelector, ProgressBar, ScoreCard } from '@/components/culture';
+import { MCQComponent, LanguageSelector, ScoreCard } from '@/components/culture';
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -63,8 +63,6 @@ function PracticePageSkeleton() {
           <Skeleton className="h-5 w-16 bg-secondary" />
           <Skeleton className="h-8 w-28 rounded-lg bg-secondary" />
         </div>
-        {/* Progress bar skeleton */}
-        <Skeleton className="mb-6 h-1 w-full rounded-full bg-secondary" />
         {/* Question card skeleton */}
         <Card className="bg-card/95">
           <CardContent className="space-y-6 p-6">
@@ -659,9 +657,6 @@ export function CulturePracticePage() {
             size="sm"
           />
         </div>
-
-        {/* Progress bar */}
-        <ProgressBar current={progress.current} total={progress.total} className="mb-6" />
 
         {/* Question with inline feedback */}
         <div key={session.currentIndex} className="flex justify-center">

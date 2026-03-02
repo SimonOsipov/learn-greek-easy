@@ -13,9 +13,6 @@ export type { LanguageSelectorProps } from './LanguageSelector';
 export { MCQComponent } from './MCQComponent';
 export type { MCQComponentProps } from './MCQComponent';
 
-export { ProgressBar } from './ProgressBar';
-export type { ProgressBarProps } from './ProgressBar';
-
 export { ScoreCard } from './ScoreCard';
 export type { ScoreCardProps } from './ScoreCard';
 

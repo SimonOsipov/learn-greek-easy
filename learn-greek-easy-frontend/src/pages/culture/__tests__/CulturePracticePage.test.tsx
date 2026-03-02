@@ -364,28 +364,12 @@ describe('CulturePracticePage', () => {
     });
   });
 
-  describe('ProgressBar', () => {
-    it('renders ProgressBar during active session', () => {
-      useCultureSessionStore.setState(createActiveSessionState(5));
-      render(<CulturePracticePage />);
-
-      expect(screen.getByTestId('progress-bar')).toBeInTheDocument();
-    });
-
-    it('shows correct progress count', () => {
-      useCultureSessionStore.setState(createActiveSessionState(10, 2));
-      render(<CulturePracticePage />);
-
-      expect(screen.getByTestId('progress-bar-counter')).toHaveTextContent('3 / 10');
-    });
-  });
-
   describe('Single question session', () => {
     it('renders with correct progress for single question', () => {
       useCultureSessionStore.setState(createActiveSessionState(1));
       render(<CulturePracticePage />);
 
-      expect(screen.getByTestId('progress-bar-counter')).toHaveTextContent('1 / 1');
+      expect(screen.getByTestId('mcq-component')).toBeInTheDocument();
     });
   });
 
@@ -513,7 +497,7 @@ describe('CulturePracticePage', () => {
       render(<CulturePracticePage />);
 
       // Should render question 3 (index 2)
-      expect(screen.getByTestId('progress-bar-counter')).toHaveTextContent('3 / 5');
+      expect(screen.getByTestId('mcq-component')).toBeInTheDocument();
     });
   });
 });
