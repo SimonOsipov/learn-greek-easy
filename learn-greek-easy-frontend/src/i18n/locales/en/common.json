@@ -230,5 +230,36 @@
       "title": "Checkout failed",
       "description": "Please try again."
     }
+  },
+  "tour": {
+    "button": "Take a Tour",
+    "next": "Next",
+    "previous": "Back",
+    "done": "Done",
+    "progress": "{{current}} of {{total}}",
+    "decks": {
+      "title": "Vocabulary Decks",
+      "description": "This is your Essential Greek Nouns deck. Practice flashcards to build your vocabulary — each card tests you on a Greek word with translations and grammar. This feature is included in your 14-day premium trial!"
+    },
+    "culture": {
+      "title": "Culture Exam Practice",
+      "description": "Prepare for the Greek citizenship culture exam with real practice questions. Test your knowledge of Greek history, geography, and traditions. This feature is included in your 14-day premium trial!"
+    },
+    "news": {
+      "title": "Greek News Feed",
+      "description": "Read real Greek news articles with audio narration. Switch between A2 (beginner) and B2 (intermediate) difficulty levels to match your skill. This feature is included in your 14-day premium trial!"
+    },
+    "dismiss": {
+      "title": "Skip the tour?",
+      "description": "You can always restart it from the navigation bar.",
+      "skip": "Skip tour",
+      "continue": "Continue tour"
+    },
+    "complete": {
+      "title": "You're all set!",
+      "description": "You've seen what Greekly has to offer. Start building your Greek vocabulary, practice for the culture exam, or read the latest news — all included in your 14-day trial.",
+      "startLearning": "Start Learning",
+      "maybeLater": "Maybe later"
+    }
   }
 }

@@ -1,11 +1,14 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 
 import { Home, Layers, BarChart3, User, GraduationCap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Outlet, useLocation, Link } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate, Link } from 'react-router-dom';
 
+import { TourCompletionDialog } from '@/components/tour/TourCompletionDialog';
+import { TourDismissDialog } from '@/components/tour/TourDismissDialog';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { useLayoutContext } from '@/contexts/LayoutContext';
+import { registerDismissHandler, registerCompletionHandler } from '@/lib/tour';
 import { cn } from '@/lib/utils';
 
 import { Header } from './Header';
@@ -15,7 +18,25 @@ import { PageContainer } from './PageContainer';
 export const AppLayout: React.FC = () => {
   const { t } = useTranslation('common');
   const location = useLocation();
+  const navigate = useNavigate();
   const { isMobile, isDesktop, isSidebarOpen, closeSidebar } = useLayoutContext();
+
+  const [dismissState, setDismissState] = useState<{
+    onSkip: () => void;
+    onContinue: () => void;
+  } | null>(null);
+
+  const [showCompletion, setShowCompletion] = useState(false);
+
+  useEffect(() => {
+    registerDismissHandler((handlers) => setDismissState(handlers));
+    return () => registerDismissHandler(null);
+  }, []);
+
+  useEffect(() => {
+    registerCompletionHandler(() => setShowCompletion(true));
+    return () => registerCompletionHandler(null);
+  }, []);
 
   // Close sidebar on route change
   useEffect(() => {
@@ -98,6 +119,26 @@ export const AppLayout: React.FC = () => {
 
       {/* Mobile Bottom Navigation */}
       {!isDesktop && <MobileNav />}
+
+      <TourDismissDialog
+        open={dismissState !== null}
+        onSkip={() => {
+          dismissState?.onSkip();
+          setDismissState(null);
+        }}
+        onContinue={() => {
+          dismissState?.onContinue();
+          setDismissState(null);
+        }}
+      />
+      <TourCompletionDialog
+        open={showCompletion}
+        onStartLearning={() => {
+          setShowCompletion(false);
+          navigate('/decks');
+        }}
+        onDismiss={() => setShowCompletion(false)}
+      />
     </div>
   );
 };

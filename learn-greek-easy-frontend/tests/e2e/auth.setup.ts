@@ -190,6 +190,7 @@ async function authenticateAndSave(
       };
 
       localStorage.setItem('auth-storage', JSON.stringify(authState));
+      localStorage.setItem('greekly_tour_completed', 'true');
     },
     { prof: profile, email: user.email }
   );
