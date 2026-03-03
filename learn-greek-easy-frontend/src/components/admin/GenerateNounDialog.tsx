@@ -1,10 +1,13 @@
 // src/components/admin/GenerateNounDialog.tsx
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 
-import { CheckCircle, Loader2 } from 'lucide-react';
+import { useMutation } from '@tanstack/react-query';
+import { AlertCircle, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -15,81 +18,154 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { adminAPI, type ConfidenceTier } from '@/services/adminAPI';
+import { type APIRequestError } from '@/services/api';
 import { isValidGreekInput } from '@/utils/greekValidation';
 
 export interface GenerateNounDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Accepted but unused until NGEN-08-02 wires the API call. */
   deckId: string;
   deckName: string;
 }
+
+const CONFIDENCE_BADGE_CLASSES: Record<ConfidenceTier, string> = {
+  high: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+  medium: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
+  low: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+};
 
 export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
   open,
   onOpenChange,
   deckName,
-  deckId: _deckId,
+  deckId,
 }) => {
   const { t } = useTranslation('admin');
 
   const [greekWord, setGreekWord] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
-  const submitTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [apiError, setApiError] = useState<string | null>(null);
+
+  const mutation = useMutation({
+    mutationFn: (word: string) => adminAPI.generateWordEntry(word, deckId),
+    onError: (error: Error) => {
+      const apiErr = error as APIRequestError;
+      if (apiErr.detail && typeof apiErr.detail === 'string') {
+        setApiError(apiErr.detail);
+      } else {
+        setApiError(error.message || t('generateNoun.errorGeneric'));
+      }
+    },
+  });
+
+  const isSubmitting = mutation.isPending;
+  const normalizationResult = mutation.data?.normalization ?? null;
+  const hasResult = normalizationResult !== null;
 
   const trimmedWord = greekWord.trim();
   const validation = trimmedWord ? isValidGreekInput(trimmedWord) : { valid: false };
   const showWarning = trimmedWord.length > 0 && !validation.valid && !!validation.reason;
-  const canSubmit = validation.valid && !isSubmitting && !isSuccess;
+  const canSubmit = validation.valid && !isSubmitting && !hasResult;
 
   const warningKey =
     validation.reason === 'tooLong' ? 'generateNoun.tooLong' : 'generateNoun.invalidGreek';
 
   const handleSubmit = () => {
-    if (!canSubmit) return;
-    setIsSubmitting(true);
-    if (submitTimeoutRef.current) clearTimeout(submitTimeoutRef.current);
-    submitTimeoutRef.current = setTimeout(() => {
-      setIsSubmitting(false);
-      setIsSuccess(true);
-      submitTimeoutRef.current = null;
-    }, 2000);
+    const trimmed = greekWord.trim();
+    if (!trimmed) return;
+    setApiError(null);
+    mutation.mutate(trimmed);
   };
 
-  // State reset on close — 200ms delay matches VocabularyCardCreateModal pattern
-  useEffect(() => {
-    if (!open) {
-      if (submitTimeoutRef.current) {
-        clearTimeout(submitTimeoutRef.current);
-        submitTimeoutRef.current = null;
-      }
-      const timeout = setTimeout(() => {
+  const handleOpenChange = (openState: boolean) => {
+    if (!openState) {
+      setTimeout(() => {
         setGreekWord('');
-        setIsSubmitting(false);
-        setIsSuccess(false);
+        setApiError(null);
+        mutation.reset();
       }, 200);
-      return () => clearTimeout(timeout);
     }
-  }, [open]);
-
-  // Unmount cleanup
-  useEffect(() => {
-    return () => {
-      if (submitTimeoutRef.current) clearTimeout(submitTimeoutRef.current);
-    };
-  }, []);
+    onOpenChange(openState);
+  };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[650px]" data-testid="generate-noun-dialog">
         <DialogHeader>
           <DialogTitle>{t('generateNoun.title')}</DialogTitle>
         </DialogHeader>
 
-        {!isSuccess ? (
+        {hasResult && normalizationResult ? (
+          <>
+            <div data-testid="generate-noun-result" className="space-y-4">
+              <h3 className="font-medium">{t('generateNoun.normalizationResult')}</h3>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <span className="text-muted-foreground">{t('generateNoun.lemmaLabel')}</span>
+                  <p data-testid="result-lemma" className="font-medium">
+                    {normalizationResult.lemma}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">{t('generateNoun.genderLabel')}</span>
+                  <p data-testid="result-gender" className="font-medium">
+                    {normalizationResult.gender
+                      ? `${normalizationResult.gender}${normalizationResult.article ? ` (${normalizationResult.article})` : ''}`
+                      : t('generateNoun.genderUnknown')}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">{t('generateNoun.posLabel')}</span>
+                  <p data-testid="result-pos" className="font-medium">
+                    {normalizationResult.pos}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">{t('generateNoun.confidenceLabel')}</span>
+                  <Badge
+                    data-testid="result-confidence-badge"
+                    className={CONFIDENCE_BADGE_CLASSES[normalizationResult.confidence_tier]}
+                  >
+                    {normalizationResult.confidence.toFixed(2)} —{' '}
+                    {t(`generateNoun.confidence.${normalizationResult.confidence_tier}`)}
+                  </Badge>
+                </div>
+              </div>
+              {normalizationResult.confidence_tier === 'low' && (
+                <Alert data-testid="result-low-confidence-warning">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{t('generateNoun.lowConfidenceWarning')}</AlertDescription>
+                </Alert>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setGreekWord('');
+                  setApiError(null);
+                  mutation.reset();
+                }}
+                data-testid="generate-noun-start-over"
+              >
+                {t('generateNoun.startOverButton')}
+              </Button>
+              <Button disabled data-testid="generate-noun-continue">
+                {t('generateNoun.continueButton')}
+              </Button>
+            </DialogFooter>
+          </>
+        ) : (
           <>
             <div className="space-y-4">
+              {apiError && (
+                <Alert variant="destructive" data-testid="generate-noun-error">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{apiError}</AlertDescription>
+                </Alert>
+              )}
+
               <div className="space-y-1">
                 <Label>{t('generateNoun.deckLabel')}</Label>
                 <p>
@@ -101,7 +177,12 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                 <Input
                   data-testid="generate-noun-input"
                   value={greekWord}
-                  onChange={(e) => setGreekWord(e.target.value)}
+                  disabled={isSubmitting}
+                  onChange={(e) => {
+                    setGreekWord(e.target.value);
+                    setApiError(null);
+                    mutation.reset();
+                  }}
                   placeholder={t('generateNoun.inputPlaceholder')}
                 />
                 {showWarning && (
@@ -133,19 +214,6 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                 ) : (
                   t('generateNoun.createButton')
                 )}
-              </Button>
-            </DialogFooter>
-          </>
-        ) : (
-          <>
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-              <p data-testid="generate-noun-success">{t('generateNoun.successMocked')}</p>
-            </div>
-
-            <DialogFooter>
-              <Button onClick={() => onOpenChange(false)} data-testid="generate-noun-close">
-                {t('generateNoun.close')}
               </Button>
             </DialogFooter>
           </>
