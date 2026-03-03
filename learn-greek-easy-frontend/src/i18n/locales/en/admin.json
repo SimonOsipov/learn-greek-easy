@@ -956,6 +956,21 @@
     "creatingButton": "Creating...",
     "cancel": "Cancel",
     "close": "Close",
-    "successMocked": "Noun generation queued (mock). Full pipeline coming in NGEN-08-02."
+    "successMocked": "Noun generation queued (mock). Full pipeline coming in NGEN-08-02.",
+    "normalizationResult": "Normalization Result",
+    "lemmaLabel": "Lemma",
+    "genderLabel": "Gender",
+    "genderUnknown": "Unknown",
+    "posLabel": "Part of Speech",
+    "confidenceLabel": "Confidence",
+    "confidence": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "lowConfidenceWarning": "Low confidence — result may be unreliable. You can still proceed.",
+    "continueButton": "Continue",
+    "startOverButton": "Start Over",
+    "errorGeneric": "Something went wrong. Please try again."
   }
 }
