@@ -413,4 +413,39 @@ describe('GenerateNounDialog', () => {
     expect(screen.getByTestId('generate-noun-input')).toBeInTheDocument();
     expect(screen.getByTestId('generate-noun-input')).toHaveValue('');
   });
+
+  // 23. Create button enabled after error (retry)
+  it('Create button remains enabled after error for retry', async () => {
+    const user = userEvent.setup();
+    vi.mocked(adminAPI.generateWordEntry).mockRejectedValue(
+      new APIRequestError({
+        status: 404,
+        statusText: 'Not Found',
+        message: 'Active deck not found',
+        detail: 'Active deck not found',
+      })
+    );
+    renderDialog();
+    const input = screen.getByTestId('generate-noun-input');
+    await user.type(input, 'γάτα');
+    await user.click(screen.getByTestId('generate-noun-submit'));
+    await waitFor(() => {
+      expect(screen.getByTestId('generate-noun-error')).toBeInTheDocument();
+    });
+    expect(screen.getByTestId('generate-noun-submit')).not.toBeDisabled();
+  });
+
+  // 24. Continue button is disabled
+  it('Continue button is disabled after result', async () => {
+    const user = userEvent.setup();
+    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(mockNormalizationResponse());
+    renderDialog();
+    const input = screen.getByTestId('generate-noun-input');
+    await user.type(input, 'γάτα');
+    await user.click(screen.getByTestId('generate-noun-submit'));
+    await waitFor(() => {
+      expect(screen.getByTestId('generate-noun-result')).toBeInTheDocument();
+    });
+    expect(screen.getByTestId('generate-noun-continue')).toBeDisabled();
+  });
 });
