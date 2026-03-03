@@ -20,6 +20,7 @@ export function registerCompletionHandler(handler: (() => void) | null): void {
 }
 
 let activeDriver: Driver | null = null;
+let isStartingTour = false;
 
 export interface TourOptions {
   trigger?: 'auto' | 'manual';
@@ -28,66 +29,81 @@ export interface TourOptions {
 }
 
 export async function startTour(steps: DriveStep[], options: TourOptions): Promise<void> {
-  if (activeDriver) return;
+  if (activeDriver || isStartingTour) return;
   if (steps.length === 0) return;
+  isStartingTour = true;
 
-  const { driver } = await import('driver.js');
-  await import('driver.js/dist/driver.css');
+  try {
+    const { driver } = await import('driver.js');
+    await import('driver.js/dist/driver.css');
 
-  const { t, trigger = 'manual', onAnalyticsEvent } = options;
+    const { t, trigger = 'manual', onAnalyticsEvent } = options;
 
-  const driverObj = driver({
-    animate: true,
-    smoothScroll: true,
-    allowKeyboardControl: true,
-    showProgress: true,
-    overlayOpacity: 0.5,
-    stagePadding: 10,
-    stageRadius: 8,
-    popoverClass: 'greekly-tour-popover',
-    progressText: t('tour.progress'),
-    nextBtnText: t('tour.next'),
-    prevBtnText: t('tour.previous'),
-    doneBtnText: t('tour.done'),
-    showButtons: ['next', 'previous', 'close'],
-    steps,
-    onDestroyStarted: () => {
-      if (!driverObj.hasNextStep()) {
-        driverObj.destroy();
-        return;
-      }
-      if (dismissCallback) {
-        dismissCallback({
-          onSkip: () => driverObj.destroy(),
-          onContinue: () => {
-            // no-op: dialog closes, tour stays on current step
-          },
-        });
-      } else {
-        driverObj.destroy();
-      }
-    },
-    onDestroyed: () => {
-      const stepsViewed = driverObj.getActiveIndex() ?? 0;
-      const isCompleted = !driverObj.hasNextStep();
-      setTourCompleted();
-      activeDriver = null;
-      if (isCompleted) {
-        onAnalyticsEvent?.('tour_completed', { steps_viewed: stepsViewed + 1, trigger });
-        completionCallback?.();
-      } else {
-        onAnalyticsEvent?.('tour_dismissed', {
-          step_index: stepsViewed,
-          steps_total: steps.length,
-          trigger,
-        });
-      }
-    },
-  });
+    let destroySnapshot = { stepIndex: 0, isCompleted: false };
 
-  activeDriver = driverObj;
-  onAnalyticsEvent?.('tour_started', { trigger });
-  driverObj.drive();
+    const driverObj = driver({
+      animate: true,
+      smoothScroll: true,
+      allowKeyboardControl: true,
+      showProgress: true,
+      overlayOpacity: 0.5,
+      stagePadding: 10,
+      stageRadius: 8,
+      popoverClass: 'greekly-tour-popover',
+      progressText: t('tour.progress'),
+      nextBtnText: t('tour.next'),
+      prevBtnText: t('tour.previous'),
+      doneBtnText: t('tour.done'),
+      showButtons: ['next', 'previous', 'close'],
+      steps,
+      onDestroyStarted: () => {
+        destroySnapshot = {
+          stepIndex: driverObj.getActiveIndex() ?? 0,
+          isCompleted: !driverObj.hasNextStep(),
+        };
+        if (!driverObj.hasNextStep()) {
+          driverObj.destroy();
+          return;
+        }
+        if (dismissCallback) {
+          dismissCallback({
+            onSkip: () => {
+              destroySnapshot.isCompleted = false;
+              driverObj.destroy();
+            },
+            onContinue: () => {
+              // no-op: dialog closes, tour stays on current step
+            },
+          });
+        } else {
+          driverObj.destroy();
+        }
+      },
+      onDestroyed: () => {
+        const { stepIndex: stepsViewed, isCompleted } = destroySnapshot;
+        setTourCompleted();
+        activeDriver = null;
+        if (isCompleted) {
+          onAnalyticsEvent?.('tour_completed', { steps_viewed: stepsViewed + 1, trigger });
+          completionCallback?.();
+        } else {
+          onAnalyticsEvent?.('tour_dismissed', {
+            step_index: stepsViewed,
+            steps_total: steps.length,
+            trigger,
+          });
+        }
+      },
+    });
+
+    activeDriver = driverObj;
+    onAnalyticsEvent?.('tour_started', { trigger });
+    driverObj.drive();
+  } catch {
+    activeDriver = null;
+  } finally {
+    isStartingTour = false;
+  }
 }
 
 export function getTourDriver(): Driver | null {

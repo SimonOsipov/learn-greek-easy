@@ -42,11 +42,23 @@ function getOnDestroyed(): () => void {
   return lastDriverConfig.onDestroyed as () => void;
 }
 
+function getOnDestroyStarted(): () => void {
+  return lastDriverConfig.onDestroyStarted as () => void;
+}
+
+/** Reset module-level activeDriver by simulating a full destroy cycle */
+async function resetTourState() {
+  if (isTourActive()) {
+    mockHasNextStep.mockReturnValue(false);
+    getOnDestroyStarted()();
+    getOnDestroyed()();
+  }
+}
+
 describe('tourManager', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
-    // Reset module state by calling destroy if active
-    // We need a fresh module for each test ideally, but we can work around it
+    await resetTourState();
   });
 
   it('startTour with empty steps is a no-op', async () => {
@@ -61,41 +73,47 @@ describe('tourManager', () => {
   });
 
   it('startTour prevents double-start when already active', async () => {
-    // First call already happened in previous test (module state persists)
-    // Just verify a second call doesn't create a new driver
+    await startTour([{ element: '#test1', popover: { title: 'Test1' } }], { t: mockT });
     const callsBefore = mockDriverFn.mock.calls.length;
     await startTour([{ element: '#test2', popover: { title: 'Test2' } }], { t: mockT });
     expect(mockDriverFn.mock.calls.length).toBe(callsBefore);
   });
 
-  it('getTourDriver returns instance during active tour', () => {
+  it('getTourDriver returns instance during active tour', async () => {
+    await startTour([{ element: '#active', popover: { title: 'Active' } }], { t: mockT });
     expect(getTourDriver()).toBe(mockDriverInstance);
   });
 
-  it('isTourActive returns true during active tour', () => {
+  it('isTourActive returns true during active tour', async () => {
+    await startTour([{ element: '#active2', popover: { title: 'Active2' } }], { t: mockT });
     expect(isTourActive()).toBe(true);
   });
 
-  it('onDestroyed calls setTourCompleted', () => {
-    const onDestroyed = getOnDestroyed();
-    onDestroyed();
+  it('onDestroyed calls setTourCompleted', async () => {
+    await startTour([{ element: '#test', popover: { title: 'Test' } }], { t: mockT });
+    mockHasNextStep.mockReturnValue(false);
+    getOnDestroyStarted()();
+    getOnDestroyed()();
     expect(setTourCompleted).toHaveBeenCalled();
   });
 
-  it('getTourDriver returns null after destroy', () => {
+  it('getTourDriver returns null after destroy', async () => {
+    await startTour([{ element: '#test', popover: { title: 'Test' } }], { t: mockT });
+    mockHasNextStep.mockReturnValue(false);
+    getOnDestroyStarted()();
+    getOnDestroyed()();
     expect(getTourDriver()).toBeNull();
   });
 
   it('onDestroyed fires tour_completed when all steps viewed', async () => {
     const onAnalyticsEvent = vi.fn();
     mockHasNextStep.mockReturnValue(false);
-    // Start a new tour (previous was destroyed)
     await startTour([{ element: '#test3', popover: { title: 'T3' } }], {
       t: mockT,
       onAnalyticsEvent,
     });
-    const onDestroyed = getOnDestroyed();
-    onDestroyed();
+    getOnDestroyStarted()();
+    getOnDestroyed()();
     expect(onAnalyticsEvent).toHaveBeenCalledWith(
       'tour_completed',
       expect.objectContaining({ trigger: 'manual' })
@@ -109,8 +127,8 @@ describe('tourManager', () => {
       t: mockT,
       onAnalyticsEvent,
     });
-    const onDestroyed = getOnDestroyed();
-    onDestroyed();
+    getOnDestroyStarted()();
+    getOnDestroyed()();
     expect(onAnalyticsEvent).toHaveBeenCalledWith(
       'tour_dismissed',
       expect.objectContaining({ trigger: 'manual' })

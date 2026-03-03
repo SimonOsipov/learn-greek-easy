@@ -14,11 +14,13 @@ describe('TourDismissDialog', () => {
     expect(screen.getByText('tour.dismiss.description')).toBeInTheDocument();
   });
 
-  it('"Skip tour" button triggers onSkip', () => {
+  it('"Skip tour" button triggers onSkip without firing onContinue', () => {
     const onSkip = vi.fn();
-    render(<TourDismissDialog open={true} onSkip={onSkip} onContinue={vi.fn()} />);
+    const onContinue = vi.fn();
+    render(<TourDismissDialog open={true} onSkip={onSkip} onContinue={onContinue} />);
     fireEvent.click(screen.getByText('tour.dismiss.skip'));
     expect(onSkip).toHaveBeenCalled();
+    expect(onContinue).not.toHaveBeenCalled();
   });
 
   it('"Continue tour" button triggers onContinue', () => {

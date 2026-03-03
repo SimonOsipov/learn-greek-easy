@@ -1,3 +1,5 @@
+import { useRef } from 'react';
+
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -19,18 +21,28 @@ interface TourDismissDialogProps {
 
 export function TourDismissDialog({ open, onSkip, onContinue }: TourDismissDialogProps) {
   const { t } = useTranslation('common');
+  const skipRequestedRef = useRef(false);
   return (
-    <AlertDialog open={open} onOpenChange={(isOpen) => !isOpen && onContinue()}>
+    <AlertDialog
+      open={open}
+      onOpenChange={(isOpen) => {
+        if (!isOpen && !skipRequestedRef.current) onContinue();
+        skipRequestedRef.current = false;
+      }}
+    >
       <AlertDialogContent className="z-[10001]">
         <AlertDialogHeader>
           <AlertDialogTitle>{t('tour.dismiss.title')}</AlertDialogTitle>
           <AlertDialogDescription>{t('tour.dismiss.description')}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={onContinue}>{t('tour.dismiss.continue')}</AlertDialogCancel>
+          <AlertDialogCancel>{t('tour.dismiss.continue')}</AlertDialogCancel>
           <AlertDialogAction
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            onClick={onSkip}
+            onClick={() => {
+              skipRequestedRef.current = true;
+              onSkip();
+            }}
           >
             {t('tour.dismiss.skip')}
           </AlertDialogAction>
