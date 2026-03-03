@@ -5,13 +5,16 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 const mockStartTour = vi.fn();
 let mockTourSteps: unknown[] = [{ element: '#test', popover: { title: 'Test' } }];
 
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', () => ({
+  useNavigate: () => mockNavigate,
+}));
+
 vi.mock('@/lib/tour', () => ({
   get startTour() {
     return mockStartTour;
   },
-  get tourSteps() {
-    return mockTourSteps;
-  },
+  buildTourSteps: (_navigate: unknown, _t: unknown) => mockTourSteps,
 }));
 
 const mockIsTourCompleted = vi.fn(() => false);

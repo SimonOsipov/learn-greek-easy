@@ -1,3 +1,4 @@
 export { startTour, getTourDriver, isTourActive } from './tourManager';
 export type { TourOptions } from './tourManager';
-export { tourSteps } from './tourSteps';
+export { buildTourSteps } from './tourSteps';
+export { waitForElement, findDeckCardByTitle } from './tourUtils';

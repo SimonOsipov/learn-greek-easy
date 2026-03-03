@@ -3,7 +3,7 @@ import React, { useCallback, useState } from 'react';
 import { Menu, ChevronDown, Crown, User, CircleHelp } from 'lucide-react';
 import posthog from 'posthog-js';
 import { useTranslation } from 'react-i18next';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { LogoutDialog } from '@/components/auth/LogoutDialog';
 import { LanguageSwitcher } from '@/components/i18n';
@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useLayoutContext } from '@/contexts/LayoutContext';
 import { useAuth } from '@/hooks/useAuth';
-import { startTour, tourSteps } from '@/lib/tour';
+import { startTour, buildTourSteps } from '@/lib/tour';
 import { cn } from '@/lib/utils';
 
 import { PageContainer } from './PageContainer';
@@ -44,6 +44,7 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ className }) => {
   const { t } = useTranslation('common');
   const location = useLocation();
+  const navigate = useNavigate();
   const { toggleSidebar, isDesktop } = useLayoutContext();
   const { user } = useAuth();
 
@@ -53,7 +54,7 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
     if (tourRunning) return;
     setTourRunning(true);
     try {
-      await startTour(tourSteps, {
+      await startTour(buildTourSteps(navigate, t), {
         trigger: 'manual',
         t,
         onAnalyticsEvent: (event, props) => {
@@ -65,7 +66,7 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
     } finally {
       setTourRunning(false);
     }
-  }, [tourRunning, t]);
+  }, [tourRunning, navigate, t]);
 
   // Generate initials from user name (e.g., "John Doe" -> "JD")
   const initials =

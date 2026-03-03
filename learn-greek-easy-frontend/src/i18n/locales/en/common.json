@@ -236,6 +236,10 @@
     "next": "Next",
     "previous": "Back",
     "done": "Done",
-    "progress": "{{current}} of {{total}}"
+    "progress": "{{current}} of {{total}}",
+    "decks": {
+      "title": "Vocabulary Decks",
+      "description": "This is your Essential Greek Nouns deck. Practice flashcards to build your vocabulary — each card tests you on a Greek word with translations and grammar. This feature is included in your 14-day premium trial!"
+    }
   }
 }

@@ -2,8 +2,9 @@ import { useEffect, useRef } from 'react';
 
 import posthog from 'posthog-js';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 
-import { startTour, tourSteps } from '@/lib/tour';
+import { startTour, buildTourSteps } from '@/lib/tour';
 import { useAppStore, selectIsReady } from '@/stores/appStore';
 import { useAuthStore } from '@/stores/authStore';
 import { isTourCompleted } from '@/utils/tourStatus';
@@ -14,18 +15,20 @@ export function useTourAutoTrigger(): void {
   const isAppReady = useAppStore(selectIsReady);
   const isAuthenticated = useAuthStore((state) => !!state.user);
   const { t } = useTranslation('common');
+  const navigate = useNavigate();
   const triggeredRef = useRef(false);
 
   useEffect(() => {
     if (!isAppReady || !isAuthenticated) return;
     if (triggeredRef.current) return;
     if (isTourCompleted()) return;
-    if (tourSteps.length === 0) return;
+    const steps = buildTourSteps(navigate, t);
+    if (steps.length === 0) return;
 
     triggeredRef.current = true;
 
     const timer = setTimeout(() => {
-      startTour(tourSteps, {
+      startTour(steps, {
         trigger: 'auto',
         t,
         onAnalyticsEvent: (event, props) => {
@@ -37,5 +40,5 @@ export function useTourAutoTrigger(): void {
     }, AUTO_TRIGGER_DELAY_MS);
 
     return () => clearTimeout(timer);
-  }, [isAppReady, isAuthenticated, t]);
+  }, [isAppReady, isAuthenticated, t, navigate]);
 }
