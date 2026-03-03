@@ -42,7 +42,7 @@ describe('tourUtils', () => {
       const mockNavigate = vi.fn();
       const mockT = vi.fn((key: string) => key);
       const steps = buildTourSteps(mockNavigate, mockT as any);
-      expect(steps).toHaveLength(2);
+      expect(steps).toHaveLength(3);
       expect(steps[0].popover).toBeDefined();
       expect(mockT).toHaveBeenCalledWith('tour.decks.title');
       expect(mockT).toHaveBeenCalledWith('tour.decks.description');
@@ -63,7 +63,7 @@ describe('tourUtils', () => {
       const mockNavigate = vi.fn();
       const mockT = vi.fn((key: string) => key);
       const steps = buildTourSteps(mockNavigate, mockT as any);
-      expect(steps.length).toBeGreaterThanOrEqual(2);
+      expect(steps.length).toBeGreaterThanOrEqual(3);
       expect(mockT).toHaveBeenCalledWith('tour.culture.title');
       expect(mockT).toHaveBeenCalledWith('tour.culture.description');
     });
@@ -89,6 +89,41 @@ describe('tourUtils', () => {
       const mockT = vi.fn((key: string) => key);
       const steps = buildTourSteps(mockNavigate, mockT as any);
       const elementFn = steps[1].element as () => Element | null;
+      expect(elementFn()).toBe(page);
+    });
+  });
+
+  describe('buildTourSteps - news step', () => {
+    it('returns news step at final index (index 2)', () => {
+      const mockNavigate = vi.fn();
+      const mockT = vi.fn((key: string) => key);
+      const steps = buildTourSteps(mockNavigate, mockT as any);
+      expect(steps).toHaveLength(3);
+      expect(mockT).toHaveBeenCalledWith('tour.news.title');
+      expect(mockT).toHaveBeenCalledWith('tour.news.description');
+    });
+
+    it('news step element function returns news-filters when present', () => {
+      const filters = document.createElement('div');
+      filters.setAttribute('data-testid', 'news-filters');
+      document.body.appendChild(filters);
+
+      const mockNavigate = vi.fn();
+      const mockT = vi.fn((key: string) => key);
+      const steps = buildTourSteps(mockNavigate, mockT as any);
+      const elementFn = steps[2].element as () => Element | null;
+      expect(elementFn()).toBe(filters);
+    });
+
+    it('news step element function falls back to news-page', () => {
+      const page = document.createElement('div');
+      page.setAttribute('data-testid', 'news-page');
+      document.body.appendChild(page);
+
+      const mockNavigate = vi.fn();
+      const mockT = vi.fn((key: string) => key);
+      const steps = buildTourSteps(mockNavigate, mockT as any);
+      const elementFn = steps[2].element as () => Element | null;
       expect(elementFn()).toBe(page);
     });
   });

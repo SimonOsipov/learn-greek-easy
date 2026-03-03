@@ -43,5 +43,26 @@ export function buildTourSteps(navigate: NavigateFunction, t: TFunction): DriveS
         }
       },
     },
+    // TOUR-04: News Feed (FINAL content step)
+    {
+      element: () => {
+        return (
+          document.querySelector('[data-testid="news-filters"]') ??
+          document.querySelector('[data-testid="news-page"]')
+        );
+      },
+      popover: {
+        title: t('tour.news.title'),
+        description: t('tour.news.description'),
+        side: 'bottom' as const,
+        align: 'start' as const,
+      },
+      onHighlightStarted: async () => {
+        if (window.location.pathname !== '/news') {
+          navigate('/news');
+          await waitForElement('[data-testid="news-filters"]', 3000);
+        }
+      },
+    },
   ];
 }

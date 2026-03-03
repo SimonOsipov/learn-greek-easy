@@ -244,6 +244,10 @@
     "culture": {
       "title": "Culture Exam Practice",
       "description": "Prepare for the Greek citizenship culture exam with real practice questions. Test your knowledge of Greek history, geography, and traditions. This feature is included in your 14-day premium trial!"
+    },
+    "news": {
+      "title": "Greek News Feed",
+      "description": "Read real Greek news articles with audio narration. Switch between A2 (beginner) and B2 (intermediate) difficulty levels to match your skill. This feature is included in your 14-day premium trial!"
     }
   }
 }
