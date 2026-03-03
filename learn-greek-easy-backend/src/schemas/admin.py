@@ -276,6 +276,24 @@ class NormalizationStageResult(BaseModel):
     confidence_tier: Literal["high", "medium", "low"] = Field(
         ..., description="Display tier derived from confidence score"
     )
+    strategy: str | None = Field(
+        None, description='Normalization strategy used: "direct", "spellcheck", or "article_prefix"'
+    )
+    corrected_from: str | None = Field(
+        None, description="Original misspelled form if spellcheck corrected the input"
+    )
+
+
+class SuggestionItem(BaseModel):
+    """Alternative normalization suggestion for the frontend to display."""
+
+    lemma: str = Field(..., description="Suggested lemma (dictionary form)")
+    pos: str = Field(..., description="Universal POS tag")
+    gender: str | None = Field(None, description="Gender if detected")
+    article: str | None = Field(None, description="Article if detected")
+    confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence score")
+    confidence_tier: Literal["high", "medium", "low"] = Field(..., description="Display tier")
+    strategy: str = Field(..., description='Strategy: "direct", "spellcheck", or "article_prefix"')
 
 
 class GenerateWordEntryResponse(BaseModel):
@@ -283,6 +301,10 @@ class GenerateWordEntryResponse(BaseModel):
 
     stage: str = Field(..., description="Last completed pipeline stage")
     normalization: NormalizationStageResult | None = None
+    suggestions: list[SuggestionItem] = Field(
+        default_factory=list,
+        description="Alternative normalization suggestions (max 3, confidence >= 0.40)",
+    )
     duplicate_check: None = None  # NGEN-08-03
     generation: None = None  # NGEN-08-04
     local_verification: None = None  # NGEN-08-05

@@ -8,6 +8,7 @@ a rule-based confidence score (0.0-1.0).
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass, field
 from typing import Optional
 
 from src.schemas.nlp import MorphologyResult, NormalizedLemma, SpellcheckResult
@@ -29,6 +30,38 @@ _GREEK_SCRIPT_RE = re.compile(r"^[\u0370-\u03FF\u1F00-\u1FFF]+$")
 
 _lemma_normalization_service: Optional["LemmaNormalizationService"] = None
 
+NOMINATIVE_ARTICLES = frozenset({"ο", "η", "το", "οι", "τα"})
+
+
+def detect_article(input_text: str) -> tuple[str | None, str]:
+    """Detect and extract a Greek nominative article prefix from input text."""
+    parts = input_text.strip().split(None, 1)
+    if len(parts) == 2 and parts[0].lower() in NOMINATIVE_ARTICLES:
+        return parts[0].lower(), parts[1].strip()
+    if len(parts) == 1 and parts[0].lower() in NOMINATIVE_ARTICLES:
+        return parts[0].lower(), ""
+    return None, input_text.strip()
+
+
+@dataclass
+class NormalizationCandidate:
+    """Single normalization candidate with its source strategy."""
+
+    input_form: str
+    strategy: str  # "direct" | "spellcheck" | "article_prefix"
+    morphology: MorphologyResult
+    confidence: float
+    corrected_from: str | None
+
+
+@dataclass
+class SmartNormalizationResult:
+    """Result of the smart normalization pipeline."""
+
+    primary: NormalizationCandidate
+    suggestions: list[NormalizationCandidate] = field(default_factory=list)
+    detected_article: str | None = None
+
 
 class LemmaNormalizationService:
     """Normalizes Greek word input into canonical dictionary form.
@@ -37,6 +70,12 @@ class LemmaNormalizationService:
     pipeline. Returns a NormalizedLemma containing the lemma, gender, article,
     POS tag, and a confidence score (0.0-1.0).
     """
+
+    _STRATEGY_PRIORITY: dict[str, int] = {
+        "article_prefix": 0,
+        "spellcheck": 1,
+        "direct": 2,
+    }
 
     def __init__(
         self,
@@ -110,6 +149,95 @@ class LemmaNormalizationService:
             pos=morph.pos,
             confidence=confidence,
         )
+
+    def normalize_smart(self, word: str) -> SmartNormalizationResult:
+        """Smart normalization with article detection, spellcheck correction, and multi-candidate ranking."""
+        # Step 1-2: Article detection and validation
+        detected_article, bare_word = detect_article(word)
+        if not bare_word:
+            raise ValueError(f"No word provided after article detection (input: {word!r})")
+
+        # Step 3: Spellcheck correction
+        corrected = self._spellcheck.correct(bare_word)
+
+        # Step 4: Build candidate inputs (input_form, strategy, corrected_from)
+        candidates_inputs: list[tuple[str, str, str | None]] = []
+        candidates_inputs.append((bare_word, "direct", None))
+        if corrected != bare_word:
+            candidates_inputs.append((corrected, "spellcheck", bare_word))
+        # Article-prefix retries: ONLY if user did NOT specify an article
+        if detected_article is None:
+            for art in ("ο", "η", "το"):
+                art_form = f"{art} {corrected}"
+                candidates_inputs.append(
+                    (art_form, "article_prefix", None if corrected == bare_word else bare_word)
+                )
+
+        # Step 5: Deduplicate by input string
+        seen: set[str] = set()
+        unique_inputs: list[tuple[str, str, str | None]] = []
+        for input_form, strategy, corr_from in candidates_inputs:
+            if input_form not in seen:
+                seen.add(input_form)
+                unique_inputs.append((input_form, strategy, corr_from))
+
+        # Step 6: Run morphology + confidence for each candidate
+        candidates: list[NormalizationCandidate] = []
+        for input_form, strategy, corr_from in unique_inputs:
+            morph = self._morphology.analyze_in_context(input_form)
+            input_sc = self._spellcheck.check(
+                morph.lemma if morph.lemma != input_form else input_form
+            )
+            lemma_sc = (
+                input_sc if morph.lemma == input_form else self._spellcheck.check(morph.lemma)
+            )
+            gender_raw = morph.morph_features.get("Gender")
+            gender = _SPACY_GENDER_MAP.get(gender_raw) if gender_raw else None
+            confidence = self._compute_confidence(morph, input_sc, lemma_sc, gender)
+            candidates.append(
+                NormalizationCandidate(
+                    input_form=input_form,
+                    strategy=strategy,
+                    morphology=morph,
+                    confidence=confidence,
+                    corrected_from=corr_from,
+                )
+            )
+
+        # Step 7: Rank and select
+        primary, suggestions = self._deduplicate_and_rank(candidates)
+        return SmartNormalizationResult(
+            primary=primary,
+            suggestions=suggestions,
+            detected_article=detected_article,
+        )
+
+    def _deduplicate_and_rank(
+        self,
+        candidates: list[NormalizationCandidate],
+    ) -> tuple[NormalizationCandidate, list[NormalizationCandidate]]:
+        """Group candidates by (lemma, pos), pick best per group, rank for primary + suggestions."""
+        groups: dict[tuple[str, str], list[NormalizationCandidate]] = {}
+        for c in candidates:
+            key = (c.morphology.lemma.lower(), c.morphology.pos)
+            groups.setdefault(key, []).append(c)
+
+        best_per_group: list[NormalizationCandidate] = []
+        for group in groups.values():
+            best = max(
+                group,
+                key=lambda c: (c.confidence, -self._STRATEGY_PRIORITY.get(c.strategy, 99)),
+            )
+            best_per_group.append(best)
+
+        best_per_group.sort(
+            key=lambda c: (-c.confidence, self._STRATEGY_PRIORITY.get(c.strategy, 99)),
+        )
+
+        primary = best_per_group[0]
+        suggestions = [c for c in best_per_group[1:] if c.confidence >= 0.40][:3]
+
+        return primary, suggestions
 
     def _compute_confidence(
         self,
