@@ -72,6 +72,8 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
           });
         },
       });
+    } catch {
+      // keep UI stable if tour bootstrap fails
     } finally {
       setTourRunning(false);
     }
