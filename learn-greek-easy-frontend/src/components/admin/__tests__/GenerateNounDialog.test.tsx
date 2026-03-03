@@ -526,7 +526,7 @@ describe('GenerateNounDialog', () => {
             article: 'ο',
             confidence: 0.8,
             confidence_tier: 'medium',
-            strategy: 'spacy',
+            strategy: 'article_prefix',
           },
           {
             lemma: 'γατάκι',
@@ -535,7 +535,7 @@ describe('GenerateNounDialog', () => {
             article: 'το',
             confidence: 0.6,
             confidence_tier: 'medium',
-            strategy: 'spacy',
+            strategy: 'article_prefix',
           },
         ],
       })
@@ -568,7 +568,7 @@ describe('GenerateNounDialog', () => {
             article: 'ο',
             confidence: 0.8,
             confidence_tier: 'medium',
-            strategy: 'spacy',
+            strategy: 'article_prefix',
           },
         ],
       })
@@ -606,7 +606,7 @@ describe('GenerateNounDialog', () => {
             article: 'ο',
             confidence: 0.8,
             confidence_tier: 'medium',
-            strategy: 'spacy',
+            strategy: 'article_prefix',
           },
         ],
       })
@@ -643,7 +643,7 @@ describe('GenerateNounDialog', () => {
             article: 'ο',
             confidence: 0.8,
             confidence_tier: 'medium',
-            strategy: 'spacy',
+            strategy: 'article_prefix',
           },
         ],
       })

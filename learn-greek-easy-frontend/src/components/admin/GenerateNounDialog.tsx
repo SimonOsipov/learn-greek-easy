@@ -159,7 +159,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                   <span>
                     {t('generateNoun.accentCorrected', {
                       from: normalizationResult.corrected_from,
-                      to: displayPrimary?.lemma ?? normalizationResult.lemma,
+                      to: normalizationResult.lemma,
                     })}
                   </span>
                 </div>

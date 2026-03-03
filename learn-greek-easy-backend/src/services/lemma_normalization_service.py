@@ -185,9 +185,7 @@ class LemmaNormalizationService:
         candidates: list[NormalizationCandidate] = []
         for input_form, strategy, corr_from in unique_inputs:
             morph = self._morphology.analyze_in_context(input_form)
-            input_sc = self._spellcheck.check(
-                morph.lemma if morph.lemma != input_form else input_form
-            )
+            input_sc = self._spellcheck.check(input_form)
             lemma_sc = (
                 input_sc if morph.lemma == input_form else self._spellcheck.check(morph.lemma)
             )

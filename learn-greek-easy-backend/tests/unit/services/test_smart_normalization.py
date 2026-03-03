@@ -319,6 +319,11 @@ class TestNormalizeSmartSpellcheck:
         assert result.primary is not None
         # At least one call was made to analyze_in_context
         assert call_count[0] >= 1
+        # Verify corrected_from is set on a spellcheck candidate
+        all_candidates = [result.primary] + result.suggestions
+        spellcheck_candidates = [c for c in all_candidates if c.strategy == "spellcheck"]
+        if spellcheck_candidates:
+            assert spellcheck_candidates[0].corrected_from == "σπιτι"
 
     def test_correct_word_no_spellcheck_candidate(
         self, normalization_service, mock_morphology_service, mock_spellcheck_service
