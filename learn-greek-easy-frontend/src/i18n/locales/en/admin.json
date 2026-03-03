@@ -971,6 +971,9 @@
     "lowConfidenceWarning": "Low confidence — result may be unreliable. You can still proceed.",
     "continueButton": "Continue",
     "startOverButton": "Start Over",
-    "errorGeneric": "Something went wrong. Please try again."
+    "errorGeneric": "Something went wrong. Please try again.",
+    "accentCorrected": "Accent corrected: {{from}} → {{to}}",
+    "suggestionsTitle": "You may also mean",
+    "useSuggestion": "Use"
   }
 }

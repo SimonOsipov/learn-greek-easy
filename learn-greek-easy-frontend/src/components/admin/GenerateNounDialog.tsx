@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 
 import { useMutation } from '@tanstack/react-query';
-import { AlertCircle, Loader2 } from 'lucide-react';
+import { AlertCircle, Info, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -18,7 +18,12 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { adminAPI, type ConfidenceTier } from '@/services/adminAPI';
+import {
+  adminAPI,
+  type ConfidenceTier,
+  type NormalizationStageResult,
+  type SuggestionItem,
+} from '@/services/adminAPI';
 import { type APIRequestError } from '@/services/api';
 import { isValidGreekInput } from '@/utils/greekValidation';
 
@@ -45,6 +50,8 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
 
   const [greekWord, setGreekWord] = useState('');
   const [apiError, setApiError] = useState<string | null>(null);
+  const [displayPrimary, setDisplayPrimary] = useState<NormalizationStageResult | null>(null);
+  const [displaySuggestions, setDisplaySuggestions] = useState<SuggestionItem[]>([]);
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -69,6 +76,13 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
   const normalizationResult = mutation.data?.normalization ?? null;
   const hasResult = normalizationResult !== null;
 
+  useEffect(() => {
+    if (normalizationResult) {
+      setDisplayPrimary(normalizationResult);
+      setDisplaySuggestions(mutation.data?.suggestions ?? []);
+    }
+  }, [normalizationResult, mutation.data?.suggestions]);
+
   const trimmedWord = greekWord.trim();
   const validation = trimmedWord ? isValidGreekInput(trimmedWord) : { valid: false };
   const showWarning = trimmedWord.length > 0 && !validation.valid && !!validation.reason;
@@ -76,6 +90,32 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
 
   const warningKey =
     validation.reason === 'tooLong' ? 'generateNoun.tooLong' : 'generateNoun.invalidGreek';
+
+  const handleSwap = (suggestionIndex: number) => {
+    if (!displayPrimary) return;
+    const chosen = displaySuggestions[suggestionIndex];
+    const newSuggestions = [...displaySuggestions];
+    newSuggestions[suggestionIndex] = {
+      lemma: displayPrimary.lemma,
+      pos: displayPrimary.pos,
+      gender: displayPrimary.gender,
+      article: displayPrimary.article,
+      confidence: displayPrimary.confidence,
+      confidence_tier: displayPrimary.confidence_tier,
+      strategy: displayPrimary.strategy ?? 'direct',
+    };
+    setDisplayPrimary({
+      ...displayPrimary,
+      lemma: chosen.lemma,
+      pos: chosen.pos,
+      gender: chosen.gender,
+      article: chosen.article,
+      confidence: chosen.confidence,
+      confidence_tier: chosen.confidence_tier,
+      strategy: chosen.strategy,
+    });
+    setDisplaySuggestions(newSuggestions);
+  };
 
   const handleSubmit = () => {
     const trimmed = greekWord.trim();
@@ -90,6 +130,8 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
       resetTimerRef.current = setTimeout(() => {
         setGreekWord('');
         setApiError(null);
+        setDisplayPrimary(null);
+        setDisplaySuggestions([]);
         mutation.reset();
         resetTimerRef.current = null;
       }, 200);
@@ -108,43 +150,94 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
           <>
             <div data-testid="generate-noun-result" className="space-y-4">
               <h3 className="font-medium">{t('generateNoun.normalizationResult')}</h3>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <span className="text-muted-foreground">{t('generateNoun.lemmaLabel')}</span>
-                  <p data-testid="result-lemma" className="font-medium">
-                    {normalizationResult.lemma}
-                  </p>
+              {normalizationResult.corrected_from && (
+                <div
+                  data-testid="correction-note"
+                  className="flex items-start gap-2 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm dark:border-blue-800 dark:bg-blue-950"
+                >
+                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
+                  <span>
+                    {t('generateNoun.accentCorrected', {
+                      from: normalizationResult.corrected_from,
+                      to: displayPrimary?.lemma ?? normalizationResult.lemma,
+                    })}
+                  </span>
                 </div>
-                <div>
-                  <span className="text-muted-foreground">{t('generateNoun.genderLabel')}</span>
-                  <p data-testid="result-gender" className="font-medium">
-                    {normalizationResult.gender
-                      ? `${normalizationResult.gender}${normalizationResult.article ? ` (${normalizationResult.article})` : ''}`
-                      : t('generateNoun.genderUnknown')}
-                  </p>
+              )}
+              {displayPrimary && (
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">{t('generateNoun.lemmaLabel')}</span>
+                    <p data-testid="result-lemma" className="font-medium">
+                      {displayPrimary.lemma}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">{t('generateNoun.genderLabel')}</span>
+                    <p data-testid="result-gender" className="font-medium">
+                      {displayPrimary.gender
+                        ? `${displayPrimary.gender}${displayPrimary.article ? ` (${displayPrimary.article})` : ''}`
+                        : t('generateNoun.genderUnknown')}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">{t('generateNoun.posLabel')}</span>
+                    <p data-testid="result-pos" className="font-medium">
+                      {displayPrimary.pos}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">
+                      {t('generateNoun.confidenceLabel')}
+                    </span>
+                    <Badge
+                      data-testid="result-confidence-badge"
+                      className={CONFIDENCE_BADGE_CLASSES[displayPrimary.confidence_tier]}
+                    >
+                      {displayPrimary.confidence.toFixed(2)} —{' '}
+                      {t(`generateNoun.confidence.${displayPrimary.confidence_tier}`)}
+                    </Badge>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-muted-foreground">{t('generateNoun.posLabel')}</span>
-                  <p data-testid="result-pos" className="font-medium">
-                    {normalizationResult.pos}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">{t('generateNoun.confidenceLabel')}</span>
-                  <Badge
-                    data-testid="result-confidence-badge"
-                    className={CONFIDENCE_BADGE_CLASSES[normalizationResult.confidence_tier]}
-                  >
-                    {normalizationResult.confidence.toFixed(2)} —{' '}
-                    {t(`generateNoun.confidence.${normalizationResult.confidence_tier}`)}
-                  </Badge>
-                </div>
-              </div>
-              {normalizationResult.confidence_tier === 'low' && (
+              )}
+              {displayPrimary?.confidence_tier === 'low' && (
                 <Alert data-testid="result-low-confidence-warning">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>{t('generateNoun.lowConfidenceWarning')}</AlertDescription>
                 </Alert>
+              )}
+              {displaySuggestions.length > 0 && (
+                <div data-testid="suggestions-section" className="space-y-2">
+                  <h4 className="text-sm font-medium text-muted-foreground">
+                    {t('generateNoun.suggestionsTitle')}
+                  </h4>
+                  <div className="space-y-1">
+                    {displaySuggestions.map((suggestion, index) => (
+                      <div
+                        key={`${suggestion.lemma}-${suggestion.pos}-${index}`}
+                        data-testid={`suggestion-row-${index}`}
+                        className="flex items-center justify-between rounded-md border p-2 text-sm"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="font-bold">{suggestion.lemma}</span>
+                          <span className="text-muted-foreground">{suggestion.pos}</span>
+                          <Badge className={CONFIDENCE_BADGE_CLASSES[suggestion.confidence_tier]}>
+                            {suggestion.confidence.toFixed(2)}{' '}
+                            {t(`generateNoun.confidence.${suggestion.confidence_tier}`)}
+                          </Badge>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          data-testid={`suggestion-use-${index}`}
+                          onClick={() => handleSwap(index)}
+                        >
+                          {t('generateNoun.useSuggestion')}
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
             </div>
 
@@ -154,6 +247,8 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                 onClick={() => {
                   setGreekWord('');
                   setApiError(null);
+                  setDisplayPrimary(null);
+                  setDisplaySuggestions([]);
                   mutation.reset();
                 }}
                 data-testid="generate-noun-start-over"
