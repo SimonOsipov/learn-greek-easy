@@ -9,7 +9,7 @@ All endpoints require superuser authentication.
 """
 
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Literal, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
@@ -47,6 +47,9 @@ from src.schemas.admin import (
     GenerateCardsRequest,
     GenerateCardsResponse,
     GenerateWordEntryAudioRequest,
+    GenerateWordEntryRequest,
+    GenerateWordEntryResponse,
+    NormalizationStageResult,
     PendingQuestionItem,
     PendingQuestionsResponse,
     QuestionApproveRequest,
@@ -92,6 +95,7 @@ from src.services.card_error_admin_service import CardErrorAdminService
 from src.services.card_generator_service import CardGeneratorService
 from src.services.changelog_service import ChangelogService
 from src.services.feedback_admin_service import FeedbackAdminService
+from src.services.lemma_normalization_service import get_lemma_normalization_service
 from src.services.news_item_service import NewsItemService
 from src.services.word_entry_response import word_entry_to_response
 from src.tasks import (
@@ -2262,4 +2266,64 @@ async def generate_word_entry_cards(
         card_type=request.card_type,
         created=created,
         updated=updated,
+    )
+
+
+def _confidence_tier(confidence: float) -> Literal["high", "medium", "low"]:
+    """Map raw confidence score to a display tier."""
+    if confidence >= 0.8:
+        return "high"
+    if confidence >= 0.5:
+        return "medium"
+    return "low"
+
+
+@router.post(
+    "/word-entries/generate",
+    response_model=GenerateWordEntryResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Run noun generation pipeline (progressive stages)",
+)
+async def generate_word_entry(
+    request: GenerateWordEntryRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> GenerateWordEntryResponse:
+    """Run the noun generation pipeline for a Greek word.
+
+    Currently executes only the normalization stage.
+    Future subtasks will add duplicate check, generation,
+    verification, and persistence stages.
+    """
+    # Validate deck exists and is active
+    result = await db.execute(select(Deck).where(Deck.id == request.deck_id))
+    deck = result.scalar_one_or_none()
+    if deck is None or not deck.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Active deck with ID '{request.deck_id}' not found",
+        )
+
+    # Validate deck is V2
+    if deck.card_system != CardSystemVersion.V2:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Word generation is only supported for V2 vocabulary decks",
+        )
+
+    # Stage 1: Normalization (synchronous -- CPU-bound NLP)
+    svc = get_lemma_normalization_service()
+    normalized = svc.normalize(request.word)
+
+    return GenerateWordEntryResponse(
+        stage="normalization",
+        normalization=NormalizationStageResult(
+            input_word=normalized.input_word,
+            lemma=normalized.lemma,
+            gender=normalized.gender,
+            article=normalized.article,
+            pos=normalized.pos,
+            confidence=normalized.confidence,
+            confidence_tier=_confidence_tier(normalized.confidence),
+        ),
     )

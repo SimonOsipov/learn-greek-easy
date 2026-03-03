@@ -595,6 +595,32 @@ export interface ListWordEntriesParams {
 }
 
 // ============================================
+// Word Entry Generation Pipeline Types
+// ============================================
+
+export type ConfidenceTier = 'high' | 'medium' | 'low';
+
+export interface NormalizationStageResult {
+  input_word: string;
+  lemma: string;
+  gender: string | null;
+  article: string | null;
+  pos: string;
+  confidence: number;
+  confidence_tier: ConfidenceTier;
+}
+
+export interface GenerateWordEntryResponse {
+  stage: string;
+  normalization: NormalizationStageResult | null;
+  duplicate_check: null;
+  generation: null;
+  local_verification: null;
+  cross_verification: null;
+  persist: null;
+}
+
+// ============================================
 // Admin API Methods
 // ============================================
 
@@ -1333,4 +1359,10 @@ export const adminAPI = {
   ): Promise<AdminCardErrorResponse> => {
     return api.patch<AdminCardErrorResponse>(`/api/v1/admin/card-errors/${id}`, data);
   },
+
+  generateWordEntry: async (word: string, deckId: string): Promise<GenerateWordEntryResponse> =>
+    api.post<GenerateWordEntryResponse>('/api/v1/admin/word-entries/generate', {
+      word,
+      deck_id: deckId,
+    }),
 };

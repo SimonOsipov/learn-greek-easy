@@ -250,3 +250,41 @@ class GenerateCardsResponse(BaseModel):
     card_type: str = Field(..., description="Type of card that was generated")
     created: int = Field(..., ge=0, description="Number of new cards created")
     updated: int = Field(..., ge=0, description="Number of existing cards updated")
+
+
+# ============================================================================
+# Word Entry Generation Pipeline Schemas
+# ============================================================================
+
+
+class GenerateWordEntryRequest(BaseModel):
+    """Request to run the noun generation pipeline (progressive stages)."""
+
+    word: str = Field(..., min_length=1, max_length=50, description="Greek word (any form)")
+    deck_id: UUID = Field(..., description="Target V2 vocabulary deck UUID")
+
+
+class NormalizationStageResult(BaseModel):
+    """Normalization result with confidence tier for frontend display."""
+
+    input_word: str = Field(..., description="Original word submitted")
+    lemma: str = Field(..., description="Normalized lemma (dictionary form)")
+    gender: str | None = Field(None, description='Gender: "masculine"/"feminine"/"neuter"/None')
+    article: str | None = Field(None, description='Article: "ο"/"η"/"το"/None')
+    pos: str = Field(..., description="Universal POS tag (NOUN, VERB, ADJ, etc.)")
+    confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence score 0.0-1.0")
+    confidence_tier: Literal["high", "medium", "low"] = Field(
+        ..., description="Display tier derived from confidence score"
+    )
+
+
+class GenerateWordEntryResponse(BaseModel):
+    """Progressive response envelope for the noun generation pipeline."""
+
+    stage: str = Field(..., description="Last completed pipeline stage")
+    normalization: NormalizationStageResult | None = None
+    duplicate_check: None = None  # NGEN-08-03
+    generation: None = None  # NGEN-08-04
+    local_verification: None = None  # NGEN-08-05
+    cross_verification: None = None  # NGEN-08-05
+    persist: None = None  # NGEN-08-06

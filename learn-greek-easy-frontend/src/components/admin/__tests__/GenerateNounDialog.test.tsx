@@ -4,33 +4,88 @@
  * Tests for the GenerateNounDialog component covering:
  * - Modal open/close states
  * - Greek input validation (valid, Latin, mixed, empty)
- * - Submit loading and success states
- * - State reset on close/reopen
+ * - Real useMutation API integration (loading, success, error states)
+ * - Normalization result display (lemma, gender, POS, confidence badge)
+ * - Start Over / Continue footer actions
  *
  * Related feature: [NGEN-08] Generate Noun Dialog
  */
 
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, act } from '@testing-library/react';
+import React from 'react';
+
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { GenerateNounDialog } from '../GenerateNounDialog';
+import { adminAPI } from '@/services/adminAPI';
+import { APIRequestError } from '@/services/api';
+
+import { GenerateNounDialog, type GenerateNounDialogProps } from '../GenerateNounDialog';
+
+// ============================================
+// Mocks
+// ============================================
+
+vi.mock('@/services/adminAPI', () => ({
+  adminAPI: {
+    generateWordEntry: vi.fn(),
+  },
+}));
 
 // ============================================
 // Test Utilities
 // ============================================
 
-const defaultProps = {
+const defaultProps: GenerateNounDialogProps = {
   open: true,
   onOpenChange: vi.fn(),
   deckId: 'deck-1',
   deckName: 'Animals & Nature',
 };
 
-const renderDialog = (overrides: Partial<typeof defaultProps> = {}) => {
+const renderDialog = (overrides?: Partial<GenerateNounDialogProps>) => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  });
   const props = { ...defaultProps, onOpenChange: vi.fn(), ...overrides };
-  return { ...render(<GenerateNounDialog {...props} />), props };
+  return {
+    ...render(
+      <QueryClientProvider client={queryClient}>
+        <GenerateNounDialog {...props} />
+      </QueryClientProvider>
+    ),
+    props,
+  };
 };
+
+const mockNormalizationResponse = (
+  overrides?: Partial<{
+    confidence: number;
+    confidence_tier: string;
+    gender: string | null;
+    article: string | null;
+  }>
+) => ({
+  stage: 'normalization',
+  normalization: {
+    input_word: 'γάτα',
+    lemma: 'γάτα',
+    gender: overrides?.gender !== undefined ? overrides.gender : 'feminine',
+    article: overrides?.article !== undefined ? overrides.article : 'η',
+    pos: 'NOUN',
+    confidence: overrides?.confidence ?? 1.0,
+    confidence_tier: overrides?.confidence_tier ?? 'high',
+  },
+  duplicate_check: null,
+  generation: null,
+  local_verification: null,
+  cross_verification: null,
+  persist: null,
+});
 
 // ============================================
 // Tests
@@ -38,11 +93,7 @@ const renderDialog = (overrides: Partial<typeof defaultProps> = {}) => {
 
 describe('GenerateNounDialog', () => {
   beforeEach(() => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
+    vi.clearAllMocks();
   });
 
   // 1. Renders modal when open
@@ -71,7 +122,7 @@ describe('GenerateNounDialog', () => {
 
   // 4. Greek input enables Create
   it('enables Create button when valid Greek is typed', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const user = userEvent.setup();
     renderDialog();
 
     await user.type(screen.getByTestId('generate-noun-input'), 'σπίτι');
@@ -82,7 +133,7 @@ describe('GenerateNounDialog', () => {
 
   // 5. Latin input shows warning
   it('shows warning and disables Create for Latin input', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const user = userEvent.setup();
     renderDialog();
 
     await user.type(screen.getByTestId('generate-noun-input'), 'spiti');
@@ -93,7 +144,7 @@ describe('GenerateNounDialog', () => {
 
   // 6. Mixed input shows warning
   it('shows warning and disables Create for mixed Greek/Latin input', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const user = userEvent.setup();
     renderDialog();
 
     await user.type(screen.getByTestId('generate-noun-input'), 'σπίτιtest');
@@ -112,118 +163,289 @@ describe('GenerateNounDialog', () => {
 
   // 8. Submit shows loading spinner
   it('shows loading spinner after clicking Create', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const user = userEvent.setup();
+    vi.mocked(adminAPI.generateWordEntry).mockReturnValue(new Promise(() => {}));
     renderDialog();
 
     await user.type(screen.getByTestId('generate-noun-input'), 'σπίτι');
     await user.click(screen.getByTestId('generate-noun-submit'));
 
-    expect(screen.getByText('Creating...')).toBeInTheDocument();
     expect(screen.getByTestId('generate-noun-submit')).toBeDisabled();
+    // The Loader2 spinner is present (Creating... text from i18n key fallback)
+    const submitBtn = screen.getByTestId('generate-noun-submit');
+    expect(submitBtn.querySelector('svg')).toBeTruthy();
   });
 
-  // 9. Success state appears after 2s delay
-  it('shows success state after 2 second delay', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  // 9. Input disabled during loading
+  it('disables input during loading', async () => {
+    const user = userEvent.setup();
+    vi.mocked(adminAPI.generateWordEntry).mockReturnValue(new Promise(() => {}));
     renderDialog();
 
     await user.type(screen.getByTestId('generate-noun-input'), 'σπίτι');
     await user.click(screen.getByTestId('generate-noun-submit'));
 
-    act(() => {
-      vi.advanceTimersByTime(2000);
-    });
-
-    expect(screen.getByTestId('generate-noun-success')).toBeInTheDocument();
+    expect(screen.getByTestId('generate-noun-input')).toBeDisabled();
   });
 
-  // 10. Success hides form
-  it('hides form elements and shows Close button in success state', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  // 10. Result card displayed on success
+  it('displays normalization result card on success', async () => {
+    const user = userEvent.setup();
+    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(mockNormalizationResponse());
     renderDialog();
 
-    await user.type(screen.getByTestId('generate-noun-input'), 'σπίτι');
+    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
     await user.click(screen.getByTestId('generate-noun-submit'));
 
-    act(() => {
-      vi.advanceTimersByTime(2000);
+    await waitFor(() => {
+      expect(screen.getByTestId('generate-noun-result')).toBeInTheDocument();
     });
-
-    expect(screen.queryByTestId('generate-noun-input')).not.toBeInTheDocument();
-    expect(screen.getByTestId('generate-noun-close')).toBeInTheDocument();
   });
 
-  // 11. Close button works in success state
-  it('calls onOpenChange(false) when Close is clicked in success state', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    const onOpenChange = vi.fn();
-    renderDialog({ onOpenChange });
+  // 11. Lemma displayed correctly
+  it('shows lemma in result', async () => {
+    const user = userEvent.setup();
+    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(mockNormalizationResponse());
+    renderDialog();
 
-    await user.type(screen.getByTestId('generate-noun-input'), 'σπίτι');
+    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
     await user.click(screen.getByTestId('generate-noun-submit'));
 
-    act(() => {
-      vi.advanceTimersByTime(2000);
+    await waitFor(() => {
+      expect(screen.getByTestId('result-lemma')).toHaveTextContent('γάτα');
     });
-
-    await user.click(screen.getByTestId('generate-noun-close'));
-
-    expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
-  // 12. Cancel closes modal
-  it('calls onOpenChange(false) when Cancel is clicked', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    const onOpenChange = vi.fn();
-    renderDialog({ onOpenChange });
+  // 12. Gender + article displayed
+  it('shows gender with article in result', async () => {
+    const user = userEvent.setup();
+    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(mockNormalizationResponse());
+    renderDialog();
 
-    await user.click(screen.getByTestId('generate-noun-cancel'));
-
-    expect(onOpenChange).toHaveBeenCalledWith(false);
-  });
-
-  // 13. State resets on close and reopen
-  it('resets state when modal is closed and reopened', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    const onOpenChange = vi.fn();
-    const { rerender } = renderDialog({ onOpenChange });
-
-    // Type something and submit to reach success state
-    await user.type(screen.getByTestId('generate-noun-input'), 'σπίτι');
+    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
     await user.click(screen.getByTestId('generate-noun-submit'));
 
-    act(() => {
-      vi.advanceTimersByTime(2000);
+    await waitFor(() => {
+      expect(screen.getByTestId('result-gender')).toHaveTextContent('feminine (η)');
     });
+  });
 
-    expect(screen.getByTestId('generate-noun-success')).toBeInTheDocument();
+  // 13. POS displayed
+  it('shows POS in result', async () => {
+    const user = userEvent.setup();
+    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(mockNormalizationResponse());
+    renderDialog();
 
-    // Close the dialog
-    rerender(
-      <GenerateNounDialog
-        open={false}
-        onOpenChange={onOpenChange}
-        deckId="deck-1"
-        deckName="Animals & Nature"
-      />
+    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
+    await user.click(screen.getByTestId('generate-noun-submit'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('result-pos')).toHaveTextContent('NOUN');
+    });
+  });
+
+  // 14. High confidence badge has green class
+  it('shows high confidence badge with green class', async () => {
+    const user = userEvent.setup();
+    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(
+      mockNormalizationResponse({ confidence: 0.9, confidence_tier: 'high' })
     );
+    renderDialog();
 
-    act(() => {
-      vi.advanceTimersByTime(200);
+    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
+    await user.click(screen.getByTestId('generate-noun-submit'));
+
+    await waitFor(() => {
+      const badge = screen.getByTestId('result-confidence-badge');
+      expect(badge.className).toContain('bg-green-100');
+    });
+  });
+
+  // 15. Medium confidence badge has amber class
+  it('shows medium confidence badge with amber class', async () => {
+    const user = userEvent.setup();
+    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(
+      mockNormalizationResponse({ confidence: 0.6, confidence_tier: 'medium' })
+    );
+    renderDialog();
+
+    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
+    await user.click(screen.getByTestId('generate-noun-submit'));
+
+    await waitFor(() => {
+      const badge = screen.getByTestId('result-confidence-badge');
+      expect(badge.className).toContain('bg-amber-100');
+    });
+  });
+
+  // 16. Low confidence badge has red class
+  it('shows low confidence badge with red class', async () => {
+    const user = userEvent.setup();
+    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(
+      mockNormalizationResponse({ confidence: 0.2, confidence_tier: 'low' })
+    );
+    renderDialog();
+
+    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
+    await user.click(screen.getByTestId('generate-noun-submit'));
+
+    await waitFor(() => {
+      const badge = screen.getByTestId('result-confidence-badge');
+      expect(badge.className).toContain('bg-red-100');
+    });
+  });
+
+  // 17. Badge shows numeric score and tier label
+  it('shows confidence score and tier label in badge', async () => {
+    const user = userEvent.setup();
+    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(
+      mockNormalizationResponse({ confidence: 1.0, confidence_tier: 'high' })
+    );
+    renderDialog();
+
+    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
+    await user.click(screen.getByTestId('generate-noun-submit'));
+
+    await waitFor(() => {
+      const badge = screen.getByTestId('result-confidence-badge');
+      expect(badge.textContent).toContain('1.00');
+    });
+  });
+
+  // 18. Low confidence warning shown when tier is low
+  it('shows low confidence warning when tier is low', async () => {
+    const user = userEvent.setup();
+    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(
+      mockNormalizationResponse({ confidence: 0.2, confidence_tier: 'low' })
+    );
+    renderDialog();
+
+    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
+    await user.click(screen.getByTestId('generate-noun-submit'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('result-low-confidence-warning')).toBeInTheDocument();
+    });
+  });
+
+  // 19. Low confidence warning hidden when tier is high
+  it('hides low confidence warning when tier is high', async () => {
+    const user = userEvent.setup();
+    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(
+      mockNormalizationResponse({ confidence: 1.0, confidence_tier: 'high' })
+    );
+    renderDialog();
+
+    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
+    await user.click(screen.getByTestId('generate-noun-submit'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('generate-noun-result')).toBeInTheDocument();
     });
 
-    // Reopen the dialog
-    rerender(
-      <GenerateNounDialog
-        open={true}
-        onOpenChange={onOpenChange}
-        deckId="deck-1"
-        deckName="Animals & Nature"
-      />
-    );
+    expect(screen.queryByTestId('result-low-confidence-warning')).not.toBeInTheDocument();
+  });
 
-    // Should show form state with empty input, no success
+  // 20. Error alert on API error
+  it('shows error alert on API error', async () => {
+    const user = userEvent.setup();
+    vi.mocked(adminAPI.generateWordEntry).mockRejectedValue(
+      new APIRequestError({
+        status: 404,
+        statusText: 'Not Found',
+        message: 'Active deck not found',
+        detail: 'Active deck not found',
+      })
+    );
+    renderDialog();
+
+    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
+    await user.click(screen.getByTestId('generate-noun-submit'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('generate-noun-error')).toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId('generate-noun-error')).toHaveTextContent('Active deck not found');
+  });
+
+  // 21. Error clears when input changes
+  it('clears error when input changes', async () => {
+    const user = userEvent.setup();
+    vi.mocked(adminAPI.generateWordEntry).mockRejectedValue(
+      new APIRequestError({
+        status: 404,
+        statusText: 'Not Found',
+        message: 'Active deck not found',
+        detail: 'Active deck not found',
+      })
+    );
+    renderDialog();
+
+    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
+    await user.click(screen.getByTestId('generate-noun-submit'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('generate-noun-error')).toBeInTheDocument();
+    });
+
+    await user.type(screen.getByTestId('generate-noun-input'), 'α');
+
+    expect(screen.queryByTestId('generate-noun-error')).not.toBeInTheDocument();
+  });
+
+  // 22. Start Over resets to input state
+  it('Start Over resets to input state after result', async () => {
+    const user = userEvent.setup();
+    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(mockNormalizationResponse());
+    renderDialog();
+
+    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
+    await user.click(screen.getByTestId('generate-noun-submit'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('generate-noun-result')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByTestId('generate-noun-start-over'));
+
+    expect(screen.queryByTestId('generate-noun-result')).not.toBeInTheDocument();
+    expect(screen.getByTestId('generate-noun-input')).toBeInTheDocument();
     expect(screen.getByTestId('generate-noun-input')).toHaveValue('');
-    expect(screen.queryByTestId('generate-noun-success')).not.toBeInTheDocument();
+  });
+
+  // 23. Create button enabled after error (retry)
+  it('Create button remains enabled after error for retry', async () => {
+    const user = userEvent.setup();
+    vi.mocked(adminAPI.generateWordEntry).mockRejectedValue(
+      new APIRequestError({
+        status: 404,
+        statusText: 'Not Found',
+        message: 'Active deck not found',
+        detail: 'Active deck not found',
+      })
+    );
+    renderDialog();
+    const input = screen.getByTestId('generate-noun-input');
+    await user.type(input, 'γάτα');
+    await user.click(screen.getByTestId('generate-noun-submit'));
+    await waitFor(() => {
+      expect(screen.getByTestId('generate-noun-error')).toBeInTheDocument();
+    });
+    expect(screen.getByTestId('generate-noun-submit')).not.toBeDisabled();
+  });
+
+  // 24. Continue button is disabled
+  it('Continue button is disabled after result', async () => {
+    const user = userEvent.setup();
+    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(mockNormalizationResponse());
+    renderDialog();
+    const input = screen.getByTestId('generate-noun-input');
+    await user.type(input, 'γάτα');
+    await user.click(screen.getByTestId('generate-noun-submit'));
+    await waitFor(() => {
+      expect(screen.getByTestId('generate-noun-result')).toBeInTheDocument();
+    });
+    expect(screen.getByTestId('generate-noun-continue')).toBeDisabled();
   });
 });

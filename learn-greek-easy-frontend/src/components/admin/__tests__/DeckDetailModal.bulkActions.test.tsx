@@ -21,10 +21,12 @@
  * NOTE on Radix UI Checkbox: Radix Checkbox renders as a button element.
  * Use fireEvent.click on the element located by data-testid.
  */
+import type { ReactNode } from 'react';
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { I18nextProvider } from 'react-i18next';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { DeckDetailModal } from '../DeckDetailModal';
 import { adminAPI } from '@/services/adminAPI';
@@ -142,11 +144,21 @@ const renderModal = (props?: Partial<Parameters<typeof DeckDetailModal>[0]>) => 
     deck: createV2Deck(),
     onItemDeleted: vi.fn(),
   };
-  return render(
-    <I18nextProvider i18n={i18n}>
-      <DeckDetailModal {...defaultProps} {...props} />
-    </I18nextProvider>
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  });
+
+  const Wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={queryClient}>
+      <I18nextProvider i18n={i18n}>{children}</I18nextProvider>
+    </QueryClientProvider>
   );
+
+  const mergedProps = { ...defaultProps, ...props };
+  return render(<DeckDetailModal {...mergedProps} />, { wrapper: Wrapper });
 };
 
 // ============================================
