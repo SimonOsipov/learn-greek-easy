@@ -93,6 +93,7 @@ export async function loginForVisualTest(page: Page): Promise<void> {
     localStorage.clear();
     sessionStorage.clear();
     window.playwright = true;
+    localStorage.setItem('greekly_tour_completed', 'true');
     localStorage.setItem('auth-storage', JSON.stringify(data));
     sessionStorage.setItem('auth-token', data.state.token);
   }, authData);
