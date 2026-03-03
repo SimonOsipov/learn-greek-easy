@@ -47,6 +47,7 @@ export interface UserProfileResponse {
     daily_goal: number;
     email_notifications: boolean;
     theme?: 'light' | 'dark';
+    tour_completed_at?: string | null;
     created_at: string;
     updated_at: string;
   };
@@ -87,6 +88,7 @@ export interface ProfileUpdateRequest {
   email_notifications?: boolean;
   preferred_language?: string;
   theme?: 'light' | 'dark';
+  tour_completed_at?: string;
 }
 
 /**

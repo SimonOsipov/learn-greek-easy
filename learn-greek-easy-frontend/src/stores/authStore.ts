@@ -102,6 +102,9 @@ export const useAuthStore = create<AuthState>()(
               apiUpdates.theme = updates.preferences.theme;
             }
           }
+          if (updates.tourCompletedAt !== undefined) {
+            apiUpdates.tour_completed_at = updates.tourCompletedAt;
+          }
 
           // Call backend API
           const profileResponse = await authAPI.updateProfile(apiUpdates);
@@ -125,6 +128,7 @@ export const useAuthStore = create<AuthState>()(
             createdAt: new Date(profileResponse.created_at),
             updatedAt: new Date(profileResponse.updated_at),
             authProvider: profileResponse.auth_provider ?? undefined,
+            tourCompletedAt: profileResponse.settings?.tour_completed_at ?? undefined,
           };
 
           set({
@@ -221,6 +225,7 @@ export const useAuthStore = create<AuthState>()(
             createdAt: new Date(profileResponse.created_at),
             updatedAt: new Date(profileResponse.updated_at),
             authProvider: profileResponse.auth_provider ?? undefined,
+            tourCompletedAt: profileResponse.settings?.tour_completed_at ?? undefined,
           };
 
           // Re-identify user to ensure PostHog session continuity

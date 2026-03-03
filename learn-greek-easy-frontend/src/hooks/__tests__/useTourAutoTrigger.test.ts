@@ -31,10 +31,15 @@ vi.mock('@/stores/appStore', () => ({
   selectIsReady: (state: { isReady: boolean }) => state.isReady,
 }));
 
-let mockUser: object | null = { id: '1' };
+const mockUpdateProfile = vi.fn();
+let mockUser: { id: string; tourCompletedAt?: string } | null = { id: '1' };
 vi.mock('@/stores/authStore', () => ({
-  useAuthStore: (selector: (state: { user: object | null }) => boolean) =>
-    selector({ user: mockUser }),
+  useAuthStore: (
+    selector: (state: {
+      user: { id: string; tourCompletedAt?: string } | null;
+      updateProfile: typeof mockUpdateProfile;
+    }) => unknown
+  ) => selector({ user: mockUser, updateProfile: mockUpdateProfile }),
 }));
 
 vi.mock('react-i18next', () => ({
@@ -55,6 +60,7 @@ describe('useTourAutoTrigger', () => {
     mockUser = { id: '1' };
     mockTourSteps = [{ element: '#test', popover: { title: 'Test' } }];
     mockIsTourCompleted.mockReturnValue(false);
+    mockUpdateProfile.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -109,6 +115,14 @@ describe('useTourAutoTrigger', () => {
   it('cancels timer on unmount', () => {
     const { unmount } = renderHook(() => useTourAutoTrigger());
     unmount();
+    vi.advanceTimersByTime(1000);
+    expect(mockStartTour).not.toHaveBeenCalled();
+  });
+
+  it('does not trigger when user has tourCompletedAt set on server', () => {
+    mockUser = { id: '1', tourCompletedAt: '2026-01-01T00:00:00Z' };
+    mockIsTourCompleted.mockReturnValue(true);
+    renderHook(() => useTourAutoTrigger());
     vi.advanceTimersByTime(1000);
     expect(mockStartTour).not.toHaveBeenCalled();
   });

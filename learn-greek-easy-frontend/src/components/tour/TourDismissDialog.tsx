@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 
 import { useTranslation } from 'react-i18next';
 
@@ -22,6 +22,19 @@ interface TourDismissDialogProps {
 export function TourDismissDialog({ open, onSkip, onContinue }: TourDismissDialogProps) {
   const { t } = useTranslation('common');
   const skipRequestedRef = useRef(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const overlay = document.querySelector('.driver-overlay') as HTMLElement | null;
+    const popover = document.querySelector('.driver-popover') as HTMLElement | null;
+    if (overlay) overlay.style.pointerEvents = 'none';
+    if (popover) popover.style.pointerEvents = 'none';
+    return () => {
+      if (overlay) overlay.style.pointerEvents = '';
+      if (popover) popover.style.pointerEvents = '';
+    };
+  }, [open]);
+
   return (
     <AlertDialog
       open={open}
@@ -30,7 +43,7 @@ export function TourDismissDialog({ open, onSkip, onContinue }: TourDismissDialo
         skipRequestedRef.current = false;
       }}
     >
-      <AlertDialogContent className="z-[10001]">
+      <AlertDialogContent className="z-[1000000001]">
         <AlertDialogHeader>
           <AlertDialogTitle>{t('tour.dismiss.title')}</AlertDialogTitle>
           <AlertDialogDescription>{t('tour.dismiss.description')}</AlertDialogDescription>

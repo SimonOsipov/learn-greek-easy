@@ -28,6 +28,28 @@ describe('tourStatus', () => {
       expect(isTourCompleted()).toBe(false);
       spy.mockRestore();
     });
+
+    it('returns true when serverTourCompletedAt is provided', () => {
+      expect(isTourCompleted('2026-01-01T00:00:00Z')).toBe(true);
+    });
+
+    it('returns false when serverTourCompletedAt is null and localStorage absent', () => {
+      expect(isTourCompleted(null)).toBe(false);
+    });
+
+    it('returns true when serverTourCompletedAt is null but localStorage set', () => {
+      localStorage.setItem(TOUR_COMPLETED_KEY, 'true');
+      expect(isTourCompleted(null)).toBe(true);
+    });
+
+    it('returns true when both server and localStorage indicate completed', () => {
+      localStorage.setItem(TOUR_COMPLETED_KEY, 'true');
+      expect(isTourCompleted('2026-01-01T00:00:00Z')).toBe(true);
+    });
+
+    it('returns false when serverTourCompletedAt is undefined and localStorage absent', () => {
+      expect(isTourCompleted(undefined)).toBe(false);
+    });
   });
 
   describe('setTourCompleted', () => {

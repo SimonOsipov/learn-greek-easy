@@ -14,6 +14,8 @@ const AUTO_TRIGGER_DELAY_MS = 1000;
 export function useTourAutoTrigger(): void {
   const isAppReady = useAppStore(selectIsReady);
   const isAuthenticated = useAuthStore((state) => !!state.user);
+  const tourCompletedAt = useAuthStore((state) => state.user?.tourCompletedAt);
+  const updateProfile = useAuthStore((state) => state.updateProfile);
   const { t } = useTranslation('common');
   const navigate = useNavigate();
   const triggeredRef = useRef(false);
@@ -21,7 +23,7 @@ export function useTourAutoTrigger(): void {
   useEffect(() => {
     if (!isAppReady || !isAuthenticated) return;
     if (triggeredRef.current) return;
-    if (isTourCompleted()) return;
+    if (isTourCompleted(tourCompletedAt)) return;
     const steps = buildTourSteps(navigate, t);
     if (steps.length === 0) return;
 
@@ -36,9 +38,14 @@ export function useTourAutoTrigger(): void {
             posthog.capture(event, props);
           }
         },
+        onPersistCompletion: () => {
+          updateProfile({ tourCompletedAt: new Date().toISOString() }).catch(() => {
+            // best-effort server persistence; localStorage already set
+          });
+        },
       });
     }, AUTO_TRIGGER_DELAY_MS);
 
     return () => clearTimeout(timer);
-  }, [isAppReady, isAuthenticated, t, navigate]);
+  }, [isAppReady, isAuthenticated, tourCompletedAt, updateProfile, t, navigate]);
 }

@@ -46,7 +46,7 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { toggleSidebar, isDesktop } = useLayoutContext();
-  const { user } = useAuth();
+  const { user, updateProfile } = useAuth();
 
   const [tourRunning, setTourRunning] = useState(false);
 
@@ -62,11 +62,16 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
             posthog.capture(event, props);
           }
         },
+        onPersistCompletion: () => {
+          updateProfile({ tourCompletedAt: new Date().toISOString() }).catch(() => {
+            // best-effort server persistence; localStorage already set
+          });
+        },
       });
     } finally {
       setTourRunning(false);
     }
-  }, [tourRunning, navigate, t]);
+  }, [tourRunning, navigate, t, updateProfile]);
 
   // Generate initials from user name (e.g., "John Doe" -> "JD")
   const initials =
