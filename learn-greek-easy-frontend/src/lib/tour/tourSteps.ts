@@ -1,68 +1,104 @@
-import { waitForElement, findDeckCardByTitle } from './tourUtils';
+import { findDeckCardByTitle, getNavElement, waitForElement } from './tourUtils';
 
 import type { DriveStep } from 'driver.js';
 import type { TFunction } from 'i18next';
 import type { NavigateFunction } from 'react-router-dom';
 
-export function buildTourSteps(navigate: NavigateFunction, t: TFunction): DriveStep[] {
-  return [
-    // TOUR-02: Essential Greek Nouns Deck
-    {
-      element: () => findDeckCardByTitle('Essential Greek Nouns'),
+interface DeckInfo {
+  id: string;
+  title: string;
+}
+
+export function buildTourSteps(
+  navigate: NavigateFunction,
+  t: TFunction,
+  essentialDeck?: DeckInfo | null
+): DriveStep[] {
+  const steps: DriveStep[] = [];
+
+  // Step 1: Navigation Bar (dashboard page)
+  steps.push({
+    element: getNavElement() ?? undefined,
+    popover: {
+      title: t('tour.steps.navigation.title'),
+      description: t('tour.steps.navigation.description'),
+      side: 'bottom',
+      align: 'center',
+    },
+  });
+
+  // Step 2: Progress Metrics (dashboard page)
+  steps.push({
+    element: '[data-testid="metrics-section"]',
+    popover: {
+      title: t('tour.steps.progress.title'),
+      description: t('tour.steps.progress.description'),
+      side: 'bottom',
+      align: 'start',
+    },
+  });
+
+  // Step 3: Vocabulary Decks (navigates to /decks)
+  steps.push({
+    element: findDeckCardByTitle('Essential Greek Nouns') ?? '[data-testid="deck-list"]',
+    popover: {
+      title: t('tour.steps.decks.title'),
+      description: t('tour.steps.decks.description'),
+      side: 'right',
+      align: 'start',
+    },
+    onHighlightStarted: async () => {
+      navigate('/decks');
+      await waitForElement('[data-testid="deck-card"]', 3000);
+    },
+  });
+
+  // Step 4: Inside a Deck (conditional — only if Essential Greek Nouns found)
+  if (essentialDeck) {
+    steps.push({
+      element: '[data-testid="word-card"]',
       popover: {
-        title: t('tour.decks.title'),
-        description: t('tour.decks.description'),
-        side: 'right' as const,
-        align: 'start' as const,
+        title: t('tour.steps.card.title'),
+        description: t('tour.steps.card.description'),
+        side: 'top',
+        align: 'start',
       },
       onHighlightStarted: async () => {
-        if (window.location.pathname !== '/decks') {
-          navigate('/decks');
-          await waitForElement('[data-testid="deck-card"]', 3000);
-        }
+        navigate(`/decks/${essentialDeck.id}`);
+        await waitForElement('[data-testid="word-card"]', 5000);
       },
+    });
+  }
+
+  // Step 5: Culture Exam (navigates to /practice/culture-exam)
+  steps.push({
+    element: '[data-testid="start-exam-button"]',
+    popover: {
+      title: t('tour.steps.culture.title'),
+      description: t('tour.steps.culture.description'),
+      side: 'top',
+      align: 'start',
     },
-    // TOUR-03: Culture Exam Practice
-    {
-      element: () => {
-        return (
-          document.querySelector('[data-testid="start-exam-button"]') ??
-          document.querySelector('[data-testid="mock-exam-page"]')
-        );
-      },
-      popover: {
-        title: t('tour.culture.title'),
-        description: t('tour.culture.description'),
-        side: 'top' as const,
-        align: 'start' as const,
-      },
-      onHighlightStarted: async () => {
-        if (window.location.pathname !== '/practice/culture-exam') {
-          navigate('/practice/culture-exam');
-          await waitForElement('[data-testid="start-exam-button"]', 3000);
-        }
-      },
+    onHighlightStarted: async () => {
+      navigate('/practice/culture-exam');
+      await waitForElement('[data-testid="start-exam-button"]', 3000);
     },
-    // TOUR-04: News Feed (FINAL content step)
-    {
-      element: () => {
-        return (
-          document.querySelector('[data-testid="news-filters"]') ??
-          document.querySelector('[data-testid="news-page"]')
-        );
-      },
-      popover: {
-        title: t('tour.news.title'),
-        description: t('tour.news.description'),
-        side: 'bottom' as const,
-        align: 'start' as const,
-      },
-      onHighlightStarted: async () => {
-        if (window.location.pathname !== '/news') {
-          navigate('/news');
-          await waitForElement('[data-testid="news-filters"]', 3000);
-        }
-      },
+  });
+
+  // Step 6: News Feed (navigates to /news)
+  steps.push({
+    element: '[data-testid="news-filters"]',
+    popover: {
+      title: t('tour.steps.news.title'),
+      description: t('tour.steps.news.description'),
+      side: 'bottom',
+      align: 'start',
     },
-  ];
+    onHighlightStarted: async () => {
+      navigate('/news');
+      await waitForElement('[data-testid="news-filters"]', 3000);
+    },
+  });
+
+  return steps;
 }

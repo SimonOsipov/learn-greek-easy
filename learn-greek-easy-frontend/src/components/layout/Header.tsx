@@ -23,6 +23,7 @@ import { useLayoutContext } from '@/contexts/LayoutContext';
 import { useAuth } from '@/hooks/useAuth';
 import { startTour, buildTourSteps } from '@/lib/tour';
 import { cn } from '@/lib/utils';
+import { useDeckStore } from '@/stores/deckStore';
 
 import { PageContainer } from './PageContainer';
 
@@ -46,7 +47,7 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { toggleSidebar, isDesktop } = useLayoutContext();
-  const { user } = useAuth();
+  const { user, updateProfile } = useAuth();
 
   const [tourRunning, setTourRunning] = useState(false);
 
@@ -54,7 +55,10 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
     if (tourRunning) return;
     setTourRunning(true);
     try {
-      await startTour(buildTourSteps(navigate, t), {
+      const decks = useDeckStore.getState().decks;
+      const essentialDeck = decks.find((d) => d.title.includes('Essential Greek Nouns'));
+      const deckInfo = essentialDeck ? { id: essentialDeck.id, title: essentialDeck.title } : null;
+      await startTour(buildTourSteps(navigate, t, deckInfo), {
         trigger: 'manual',
         t,
         onAnalyticsEvent: (event, props) => {
@@ -62,11 +66,18 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
             posthog.capture(event, props);
           }
         },
+        onPersistCompletion: () => {
+          updateProfile({ tourCompletedAt: new Date().toISOString() }).catch(() => {
+            // best-effort server persistence; localStorage already set
+          });
+        },
       });
+    } catch {
+      // keep UI stable if tour bootstrap fails
     } finally {
       setTourRunning(false);
     }
-  }, [tourRunning, navigate, t]);
+  }, [tourRunning, navigate, t, updateProfile]);
 
   // Generate initials from user name (e.g., "John Doe" -> "JD")
   const initials =
@@ -149,7 +160,7 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
 
           {/* Desktop Navigation */}
           {isDesktop && (
-            <nav className="hidden items-center space-x-6 lg:flex">
+            <nav className="hidden items-center space-x-6 lg:flex" data-testid="main-nav">
               {navItems.map((item) =>
                 item.children ? (
                   <DropdownMenu key={item.path}>

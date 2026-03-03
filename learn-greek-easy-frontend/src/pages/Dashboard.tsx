@@ -226,7 +226,7 @@ export const Dashboard: React.FC = () => {
       />
 
       {/* Metrics Grid */}
-      <section>
+      <section data-testid="metrics-section">
         <h2 className="mb-4 text-lg font-semibold text-foreground">
           {t('dashboard.progress.title')}
         </h2>

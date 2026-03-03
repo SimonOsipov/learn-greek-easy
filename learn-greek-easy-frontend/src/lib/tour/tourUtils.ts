@@ -19,3 +19,17 @@ export function findDeckCardByTitle(titleSubstring: string): Element | null {
   }
   return null;
 }
+
+export function getNavElement(): Element | null {
+  const desktopNav = document.querySelector('[data-testid="main-nav"]');
+  if (desktopNav && desktopNav.getBoundingClientRect().width > 0) {
+    return desktopNav;
+  }
+  const mobileNavs = document.querySelectorAll('nav');
+  for (const nav of mobileNavs) {
+    if (nav.classList.contains('fixed') && nav.classList.contains('bottom-0')) {
+      return nav;
+    }
+  }
+  return null;
+}

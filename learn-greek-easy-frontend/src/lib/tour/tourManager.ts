@@ -26,6 +26,7 @@ export interface TourOptions {
   trigger?: 'auto' | 'manual';
   t: TFunction;
   onAnalyticsEvent?: (event: string, properties?: Record<string, unknown>) => void;
+  onPersistCompletion?: () => void;
 }
 
 export async function startTour(steps: DriveStep[], options: TourOptions): Promise<void> {
@@ -37,7 +38,7 @@ export async function startTour(steps: DriveStep[], options: TourOptions): Promi
     const { driver } = await import('driver.js');
     await import('driver.js/dist/driver.css');
 
-    const { t, trigger = 'manual', onAnalyticsEvent } = options;
+    const { t, trigger = 'manual', onAnalyticsEvent, onPersistCompletion } = options;
 
     let destroySnapshot = { stepIndex: 0, isCompleted: false };
 
@@ -82,6 +83,7 @@ export async function startTour(steps: DriveStep[], options: TourOptions): Promi
       onDestroyed: () => {
         const { stepIndex: stepsViewed, isCompleted } = destroySnapshot;
         setTourCompleted();
+        onPersistCompletion?.();
         activeDriver = null;
         if (isCompleted) {
           onAnalyticsEvent?.('tour_completed', { steps_viewed: stepsViewed + 1, trigger });

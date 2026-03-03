@@ -7,4 +7,4 @@ export {
 } from './tourManager';
 export type { TourOptions } from './tourManager';
 export { buildTourSteps } from './tourSteps';
-export { waitForElement, findDeckCardByTitle } from './tourUtils';
+export { waitForElement, findDeckCardByTitle, getNavElement } from './tourUtils';

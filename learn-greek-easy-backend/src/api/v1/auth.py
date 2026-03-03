@@ -400,6 +400,7 @@ async def update_me(
         "email_notifications": update_data.email_notifications,
         "preferred_language": update_data.preferred_language,
         "theme": update_data.theme,
+        "tour_completed_at": update_data.tour_completed_at,
     }
 
     # Filter out None values (only update provided fields)

@@ -1,6 +1,10 @@
 export const TOUR_COMPLETED_KEY = 'greekly_tour_completed';
 
-export function isTourCompleted(): boolean {
+export function isTourCompleted(serverTourCompletedAt?: string | null): boolean {
+  // Server-side check first (authoritative)
+  if (serverTourCompletedAt) return true;
+
+  // Fall back to localStorage (fast cache)
   try {
     if (typeof window === 'undefined') return false;
     return window.localStorage.getItem(TOUR_COMPLETED_KEY) === 'true';

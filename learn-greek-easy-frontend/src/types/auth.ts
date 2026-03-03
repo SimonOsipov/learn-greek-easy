@@ -30,6 +30,7 @@ export interface User {
   createdAt: Date;
   updatedAt: Date;
   authProvider?: string; // e.g., 'email', 'google'
+  tourCompletedAt?: string;
 }
 
 // Registration data

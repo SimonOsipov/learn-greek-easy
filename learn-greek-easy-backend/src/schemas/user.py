@@ -90,6 +90,7 @@ class UserSettingsUpdate(BaseModel):
         pattern="^(light|dark)$",
         description="User's preferred theme: 'light' or 'dark'",
     )
+    tour_completed_at: Optional[datetime] = None
 
     @field_validator("preferred_language", mode="before")
     @classmethod
@@ -111,6 +112,7 @@ class UserSettingsResponse(BaseModel):
     email_notifications: bool
     preferred_language: Optional[str] = None
     theme: Optional[str] = None
+    tour_completed_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
 
@@ -138,6 +140,7 @@ class UserWithSettingsUpdate(BaseModel):
         pattern="^(light|dark)$",
         description="User's preferred theme: 'light' or 'dark'",
     )
+    tour_completed_at: Optional[datetime] = None
 
 
 # ============================================================================
