@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { findDeckCardByTitle } from '../tourUtils';
+import { findDeckCardByTitle, getNavElement } from '../tourUtils';
 import { buildTourSteps } from '../tourSteps';
 
 describe('tourUtils', () => {
@@ -37,94 +37,121 @@ describe('tourUtils', () => {
     });
   });
 
+  describe('getNavElement', () => {
+    it('returns desktop nav when visible (width > 0)', () => {
+      const nav = document.createElement('nav');
+      nav.setAttribute('data-testid', 'main-nav');
+      document.body.appendChild(nav);
+
+      // Mock getBoundingClientRect to return non-zero width
+      vi.spyOn(nav, 'getBoundingClientRect').mockReturnValue({
+        width: 500,
+        height: 50,
+        top: 0,
+        left: 0,
+        right: 500,
+        bottom: 50,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      });
+
+      expect(getNavElement()).toBe(nav);
+    });
+
+    it('returns mobile nav when desktop has zero width', () => {
+      const desktopNav = document.createElement('nav');
+      desktopNav.setAttribute('data-testid', 'main-nav');
+      document.body.appendChild(desktopNav);
+
+      vi.spyOn(desktopNav, 'getBoundingClientRect').mockReturnValue({
+        width: 0,
+        height: 0,
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      });
+
+      const mobileNav = document.createElement('nav');
+      mobileNav.classList.add('fixed', 'bottom-0');
+      document.body.appendChild(mobileNav);
+
+      expect(getNavElement()).toBe(mobileNav);
+    });
+
+    it('returns null when no nav elements exist', () => {
+      expect(getNavElement()).toBeNull();
+    });
+  });
+
   describe('buildTourSteps', () => {
-    it('returns array with decks step', () => {
+    it('returns 6 steps when essentialDeck is provided', () => {
       const mockNavigate = vi.fn();
       const mockT = vi.fn((key: string) => key);
-      const steps = buildTourSteps(mockNavigate, mockT as any);
-      expect(steps).toHaveLength(3);
-      expect(steps[0].popover).toBeDefined();
-      expect(mockT).toHaveBeenCalledWith('tour.decks.title');
-      expect(mockT).toHaveBeenCalledWith('tour.decks.description');
+      const steps = buildTourSteps(mockNavigate, mockT as any, {
+        id: 'deck-1',
+        title: 'Essential Greek Nouns',
+      });
+      expect(steps).toHaveLength(6);
     });
 
-    it('step has correct popover position', () => {
+    it('returns 5 steps when essentialDeck is null', () => {
       const mockNavigate = vi.fn();
       const mockT = vi.fn((key: string) => key);
-      const steps = buildTourSteps(mockNavigate, mockT as any);
-      const popover = steps[0].popover;
-      expect(popover?.side).toBe('right');
-      expect(popover?.align).toBe('start');
-    });
-  });
-
-  describe('buildTourSteps - culture step', () => {
-    it('returns culture step at index 1', () => {
-      const mockNavigate = vi.fn();
-      const mockT = vi.fn((key: string) => key);
-      const steps = buildTourSteps(mockNavigate, mockT as any);
-      expect(steps.length).toBeGreaterThanOrEqual(3);
-      expect(mockT).toHaveBeenCalledWith('tour.culture.title');
-      expect(mockT).toHaveBeenCalledWith('tour.culture.description');
+      const steps = buildTourSteps(mockNavigate, mockT as any, null);
+      expect(steps).toHaveLength(5);
     });
 
-    it('culture step element function returns start-exam-button when present', () => {
-      const el = document.createElement('button');
-      el.setAttribute('data-testid', 'start-exam-button');
-      document.body.appendChild(el);
-
+    it('returns 5 steps when essentialDeck is omitted', () => {
       const mockNavigate = vi.fn();
       const mockT = vi.fn((key: string) => key);
       const steps = buildTourSteps(mockNavigate, mockT as any);
-      const elementFn = steps[1].element as () => Element | null;
-      expect(elementFn()).toBe(el);
+      expect(steps).toHaveLength(5);
     });
 
-    it('culture step element function falls back to mock-exam-page', () => {
-      const page = document.createElement('div');
-      page.setAttribute('data-testid', 'mock-exam-page');
-      document.body.appendChild(page);
-
+    it('step 1 uses tour.steps.navigation keys', () => {
       const mockNavigate = vi.fn();
       const mockT = vi.fn((key: string) => key);
       const steps = buildTourSteps(mockNavigate, mockT as any);
-      const elementFn = steps[1].element as () => Element | null;
-      expect(elementFn()).toBe(page);
-    });
-  });
-
-  describe('buildTourSteps - news step', () => {
-    it('returns news step at final index (index 2)', () => {
-      const mockNavigate = vi.fn();
-      const mockT = vi.fn((key: string) => key);
-      const steps = buildTourSteps(mockNavigate, mockT as any);
-      expect(steps).toHaveLength(3);
-      expect(mockT).toHaveBeenCalledWith('tour.news.title');
-      expect(mockT).toHaveBeenCalledWith('tour.news.description');
+      expect(mockT).toHaveBeenCalledWith('tour.steps.navigation.title');
+      expect(mockT).toHaveBeenCalledWith('tour.steps.navigation.description');
+      expect(steps[0].popover?.side).toBe('bottom');
+      expect(steps[0].popover?.align).toBe('center');
     });
 
-    it('news step element function returns news-filters when present', () => {
-      const filters = document.createElement('div');
-      filters.setAttribute('data-testid', 'news-filters');
-      document.body.appendChild(filters);
-
+    it('step 2 targets metrics-section with tour.steps.progress keys', () => {
       const mockNavigate = vi.fn();
       const mockT = vi.fn((key: string) => key);
       const steps = buildTourSteps(mockNavigate, mockT as any);
-      const elementFn = steps[2].element as () => Element | null;
-      expect(elementFn()).toBe(filters);
+      expect(mockT).toHaveBeenCalledWith('tour.steps.progress.title');
+      expect(mockT).toHaveBeenCalledWith('tour.steps.progress.description');
+      expect(steps[1].element).toBe('[data-testid="metrics-section"]');
     });
 
-    it('news step element function falls back to news-page', () => {
-      const page = document.createElement('div');
-      page.setAttribute('data-testid', 'news-page');
-      document.body.appendChild(page);
-
+    it('step 3 uses tour.steps.decks keys', () => {
       const mockNavigate = vi.fn();
       const mockT = vi.fn((key: string) => key);
       const steps = buildTourSteps(mockNavigate, mockT as any);
-      const elementFn = steps[2].element as () => Element | null;
-      expect(elementFn()).toBe(page);
+      expect(mockT).toHaveBeenCalledWith('tour.steps.decks.title');
+      expect(mockT).toHaveBeenCalledWith('tour.steps.decks.description');
+    });
+
+    it('all steps have title and description in popover', () => {
+      const mockNavigate = vi.fn();
+      const mockT = vi.fn((key: string) => key);
+      const steps = buildTourSteps(mockNavigate, mockT as any, {
+        id: 'deck-1',
+        title: 'Essential Greek Nouns',
+      });
+      for (const step of steps) {
+        expect(step.popover).toBeDefined();
+        expect(step.popover?.title).toBeDefined();
+        expect(step.popover?.description).toBeDefined();
+      }
     });
   });
 });

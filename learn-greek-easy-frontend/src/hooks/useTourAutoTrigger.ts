@@ -5,47 +5,69 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
 import { startTour, buildTourSteps } from '@/lib/tour';
+import { useAnalyticsStore } from '@/stores/analyticsStore';
 import { useAppStore, selectIsReady } from '@/stores/appStore';
 import { useAuthStore } from '@/stores/authStore';
+import { useDeckStore } from '@/stores/deckStore';
 import { isTourCompleted } from '@/utils/tourStatus';
 
-const AUTO_TRIGGER_DELAY_MS = 1000;
+const POST_READY_DELAY_MS = 250;
+const FAIL_SAFE_TIMEOUT_MS = 10_000;
 
 export function useTourAutoTrigger(): void {
   const isAppReady = useAppStore(selectIsReady);
   const isAuthenticated = useAuthStore((state) => !!state.user);
   const tourCompletedAt = useAuthStore((state) => state.user?.tourCompletedAt);
   const updateProfile = useAuthStore((state) => state.updateProfile);
+  const analyticsLoading = useAnalyticsStore((state) => state.loading);
+  const dashboardData = useAnalyticsStore((state) => state.dashboardData);
   const { t } = useTranslation('common');
   const navigate = useNavigate();
   const triggeredRef = useRef(false);
+
+  const isDashboardReady = !analyticsLoading && dashboardData !== null;
 
   useEffect(() => {
     if (!isAppReady || !isAuthenticated) return;
     if (triggeredRef.current) return;
     if (isTourCompleted(tourCompletedAt)) return;
-    const steps = buildTourSteps(navigate, t);
-    if (steps.length === 0) return;
 
-    triggeredRef.current = true;
+    // If dashboard data is ready, trigger tour after small paint delay
+    if (isDashboardReady) {
+      triggeredRef.current = true;
+      const timer = setTimeout(() => {
+        const decks = useDeckStore.getState().decks;
+        const essentialDeck = decks.find((d) => d.title.includes('Essential Greek Nouns'));
+        const deckInfo = essentialDeck
+          ? { id: essentialDeck.id, title: essentialDeck.title }
+          : null;
+        const steps = buildTourSteps(navigate, t, deckInfo);
+        if (steps.length === 0) return;
 
-    const timer = setTimeout(() => {
-      startTour(steps, {
-        trigger: 'auto',
-        t,
-        onAnalyticsEvent: (event, props) => {
-          if (typeof posthog?.capture === 'function') {
-            posthog.capture(event, props);
-          }
-        },
-        onPersistCompletion: () => {
-          updateProfile({ tourCompletedAt: new Date().toISOString() }).catch(() => {
-            // best-effort server persistence; localStorage already set
-          });
-        },
-      });
-    }, AUTO_TRIGGER_DELAY_MS);
+        startTour(steps, {
+          trigger: 'auto',
+          t,
+          onAnalyticsEvent: (event, props) => {
+            if (typeof posthog?.capture === 'function') {
+              posthog.capture(event, props);
+            }
+          },
+          onPersistCompletion: () => {
+            updateProfile({ tourCompletedAt: new Date().toISOString() }).catch(() => {
+              // best-effort server persistence
+            });
+          },
+        });
+      }, POST_READY_DELAY_MS);
 
-    return () => clearTimeout(timer);
-  }, [isAppReady, isAuthenticated, tourCompletedAt, updateProfile, t, navigate]);
+      return () => clearTimeout(timer);
+    }
+
+    // Fail-safe: if dashboard data never loads, cancel after 10s
+    const failSafe = setTimeout(() => {
+      triggeredRef.current = true;
+    }, FAIL_SAFE_TIMEOUT_MS);
+
+    return () => clearTimeout(failSafe);
+  }, [isAppReady, isAuthenticated, tourCompletedAt, isDashboardReady, t, navigate, updateProfile]);
 }

@@ -23,6 +23,7 @@ import { useLayoutContext } from '@/contexts/LayoutContext';
 import { useAuth } from '@/hooks/useAuth';
 import { startTour, buildTourSteps } from '@/lib/tour';
 import { cn } from '@/lib/utils';
+import { useDeckStore } from '@/stores/deckStore';
 
 import { PageContainer } from './PageContainer';
 
@@ -54,7 +55,10 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
     if (tourRunning) return;
     setTourRunning(true);
     try {
-      await startTour(buildTourSteps(navigate, t), {
+      const decks = useDeckStore.getState().decks;
+      const essentialDeck = decks.find((d) => d.title.includes('Essential Greek Nouns'));
+      const deckInfo = essentialDeck ? { id: essentialDeck.id, title: essentialDeck.title } : null;
+      await startTour(buildTourSteps(navigate, t, deckInfo), {
         trigger: 'manual',
         t,
         onAnalyticsEvent: (event, props) => {
@@ -154,7 +158,7 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
 
           {/* Desktop Navigation */}
           {isDesktop && (
-            <nav className="hidden items-center space-x-6 lg:flex">
+            <nav className="hidden items-center space-x-6 lg:flex" data-testid="main-nav">
               {navItems.map((item) =>
                 item.children ? (
                   <DropdownMenu key={item.path}>

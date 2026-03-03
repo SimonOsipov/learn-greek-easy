@@ -237,17 +237,31 @@
     "previous": "Back",
     "done": "Done",
     "progress": "{{current}} of {{total}}",
-    "decks": {
-      "title": "Vocabulary Decks",
-      "description": "This is your Essential Greek Nouns deck. Practice flashcards to build your vocabulary — each card tests you on a Greek word with translations and grammar. This feature is included in your 14-day premium trial!"
-    },
-    "culture": {
-      "title": "Culture Exam Practice",
-      "description": "Prepare for the Greek citizenship culture exam with real practice questions. Test your knowledge of Greek history, geography, and traditions. This feature is included in your 14-day premium trial!"
-    },
-    "news": {
-      "title": "Greek News Feed",
-      "description": "Read real Greek news articles with audio narration. Switch between A2 (beginner) and B2 (intermediate) difficulty levels to match your skill. This feature is included in your 14-day premium trial!"
+    "steps": {
+      "navigation": {
+        "title": "Navigate Your Learning",
+        "description": "Use this menu to access vocabulary decks, practice exercises, your progress, and more. Everything you need is here."
+      },
+      "progress": {
+        "title": "Track Your Progress",
+        "description": "These metrics show your learning at a glance — cards due today, your current streak, mastered words, and total study time."
+      },
+      "decks": {
+        "title": "Vocabulary Decks",
+        "description": "Browse vocabulary decks organized by topic and level. This one covers essential Greek nouns — a great place to start!"
+      },
+      "card": {
+        "title": "Learn with Cards",
+        "description": "Each card tests you on a Greek word with its translation, grammar details, and audio pronunciation."
+      },
+      "culture": {
+        "title": "Culture Exam Practice",
+        "description": "Practice real questions from the Cypriot citizenship exam — history, geography, and traditions."
+      },
+      "news": {
+        "title": "Greek News Feed",
+        "description": "Read real Greek news with audio. Choose your difficulty — A2 for beginners or B2 for intermediate."
+      }
     },
     "dismiss": {
       "title": "Skip the tour?",
