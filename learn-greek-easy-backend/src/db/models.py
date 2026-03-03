@@ -475,6 +475,14 @@ class UserSettings(Base, TimestampMixin):
         comment="User's preferred theme: 'light' or 'dark'",
     )
 
+    # Tour completion
+    tour_completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        default=None,
+        comment="When the user completed the onboarding tour",
+    )
+
     # Relationship
     user: Mapped["User"] = relationship(
         back_populates="settings",
