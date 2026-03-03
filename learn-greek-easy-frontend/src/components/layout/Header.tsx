@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 
-import { Menu, ChevronDown, Crown, User } from 'lucide-react';
+import { Menu, ChevronDown, Crown, User, CircleHelp } from 'lucide-react';
+import posthog from 'posthog-js';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
 
@@ -20,6 +21,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useLayoutContext } from '@/contexts/LayoutContext';
 import { useAuth } from '@/hooks/useAuth';
+import { startTour, tourSteps } from '@/lib/tour';
 import { cn } from '@/lib/utils';
 
 import { PageContainer } from './PageContainer';
@@ -44,6 +46,26 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
   const location = useLocation();
   const { toggleSidebar, isDesktop } = useLayoutContext();
   const { user } = useAuth();
+
+  const [tourRunning, setTourRunning] = useState(false);
+
+  const handleStartTour = useCallback(async () => {
+    if (tourRunning) return;
+    setTourRunning(true);
+    try {
+      await startTour(tourSteps, {
+        trigger: 'manual',
+        t,
+        onAnalyticsEvent: (event, props) => {
+          if (typeof posthog?.capture === 'function') {
+            posthog.capture(event, props);
+          }
+        },
+      });
+    } finally {
+      setTourRunning(false);
+    }
+  }, [tourRunning, t]);
 
   // Generate initials from user name (e.g., "John Doe" -> "JD")
   const initials =
@@ -174,6 +196,20 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
 
           {/* Right side: Theme, Language, Notifications and User Menu */}
           <div className="flex items-center space-x-3">
+            {/* Tour Button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleStartTour}
+              disabled={tourRunning}
+              aria-label={t('tour.button')}
+              data-testid="tour-button"
+              className="lg:w-auto lg:gap-2 lg:px-3"
+            >
+              <CircleHelp className="h-5 w-5" />
+              <span className="hidden text-sm lg:inline">{t('tour.button')}</span>
+            </Button>
+
             {/* Theme Switcher */}
             <ThemeSwitcher />
 

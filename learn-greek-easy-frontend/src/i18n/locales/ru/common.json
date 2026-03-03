@@ -230,5 +230,12 @@
       "title": "Ошибка оплаты",
       "description": "Пожалуйста, попробуйте снова."
     }
+  },
+  "tour": {
+    "button": "Обзор",
+    "next": "Далее",
+    "previous": "Назад",
+    "done": "Готово",
+    "progress": "{{current}} из {{total}}"
   }
 }

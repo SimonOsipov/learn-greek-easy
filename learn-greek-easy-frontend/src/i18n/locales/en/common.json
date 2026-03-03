@@ -230,5 +230,12 @@
       "title": "Checkout failed",
       "description": "Please try again."
     }
+  },
+  "tour": {
+    "button": "Take a Tour",
+    "next": "Next",
+    "previous": "Back",
+    "done": "Done",
+    "progress": "{{current}} of {{total}}"
   }
 }
