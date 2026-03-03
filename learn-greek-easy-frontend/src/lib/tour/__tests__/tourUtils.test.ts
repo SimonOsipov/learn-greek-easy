@@ -42,7 +42,7 @@ describe('tourUtils', () => {
       const mockNavigate = vi.fn();
       const mockT = vi.fn((key: string) => key);
       const steps = buildTourSteps(mockNavigate, mockT as any);
-      expect(steps).toHaveLength(1);
+      expect(steps).toHaveLength(2);
       expect(steps[0].popover).toBeDefined();
       expect(mockT).toHaveBeenCalledWith('tour.decks.title');
       expect(mockT).toHaveBeenCalledWith('tour.decks.description');
@@ -55,6 +55,41 @@ describe('tourUtils', () => {
       const popover = steps[0].popover;
       expect(popover?.side).toBe('right');
       expect(popover?.align).toBe('start');
+    });
+  });
+
+  describe('buildTourSteps - culture step', () => {
+    it('returns culture step at index 1', () => {
+      const mockNavigate = vi.fn();
+      const mockT = vi.fn((key: string) => key);
+      const steps = buildTourSteps(mockNavigate, mockT as any);
+      expect(steps.length).toBeGreaterThanOrEqual(2);
+      expect(mockT).toHaveBeenCalledWith('tour.culture.title');
+      expect(mockT).toHaveBeenCalledWith('tour.culture.description');
+    });
+
+    it('culture step element function returns start-exam-button when present', () => {
+      const el = document.createElement('button');
+      el.setAttribute('data-testid', 'start-exam-button');
+      document.body.appendChild(el);
+
+      const mockNavigate = vi.fn();
+      const mockT = vi.fn((key: string) => key);
+      const steps = buildTourSteps(mockNavigate, mockT as any);
+      const elementFn = steps[1].element as () => Element | null;
+      expect(elementFn()).toBe(el);
+    });
+
+    it('culture step element function falls back to mock-exam-page', () => {
+      const page = document.createElement('div');
+      page.setAttribute('data-testid', 'mock-exam-page');
+      document.body.appendChild(page);
+
+      const mockNavigate = vi.fn();
+      const mockT = vi.fn((key: string) => key);
+      const steps = buildTourSteps(mockNavigate, mockT as any);
+      const elementFn = steps[1].element as () => Element | null;
+      expect(elementFn()).toBe(page);
     });
   });
 });

@@ -22,5 +22,26 @@ export function buildTourSteps(navigate: NavigateFunction, t: TFunction): DriveS
         }
       },
     },
+    // TOUR-03: Culture Exam Practice
+    {
+      element: () => {
+        return (
+          document.querySelector('[data-testid="start-exam-button"]') ??
+          document.querySelector('[data-testid="mock-exam-page"]')
+        );
+      },
+      popover: {
+        title: t('tour.culture.title'),
+        description: t('tour.culture.description'),
+        side: 'top' as const,
+        align: 'start' as const,
+      },
+      onHighlightStarted: async () => {
+        if (window.location.pathname !== '/practice/culture-exam') {
+          navigate('/practice/culture-exam');
+          await waitForElement('[data-testid="start-exam-button"]', 3000);
+        }
+      },
+    },
   ];
 }
