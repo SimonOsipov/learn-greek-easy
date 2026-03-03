@@ -306,9 +306,14 @@ class TestNormalizeSmartSpellcheck:
                 return _make_morphology_result(
                     input_word="σπιτι", lemma="σπιτι", pos="NOUN", morph_features={}
                 )
-            # spellcheck or article_prefix forms
+            if form == "σπίτι":
+                # spellcheck form → good result
+                return _make_morphology_result(
+                    input_word=form, lemma="σπίτι", pos="NOUN", morph_features={"Gender": "Neut"}
+                )
+            # article_prefix forms → low-quality result (different lemma group)
             return _make_morphology_result(
-                input_word=form, lemma="σπίτι", pos="NOUN", morph_features={"Gender": "Neut"}
+                input_word=form, lemma=form, pos="NOUN", morph_features={}
             )
 
         mock_morphology_service.analyze_in_context.side_effect = analyze_side_effect
@@ -322,8 +327,8 @@ class TestNormalizeSmartSpellcheck:
         # Verify corrected_from is set on a spellcheck candidate
         all_candidates = [result.primary] + result.suggestions
         spellcheck_candidates = [c for c in all_candidates if c.strategy == "spellcheck"]
-        if spellcheck_candidates:
-            assert spellcheck_candidates[0].corrected_from == "σπιτι"
+        assert spellcheck_candidates, "Expected at least one spellcheck candidate"
+        assert spellcheck_candidates[0].corrected_from == "σπιτι"
 
     def test_correct_word_no_spellcheck_candidate(
         self, normalization_service, mock_morphology_service, mock_spellcheck_service
