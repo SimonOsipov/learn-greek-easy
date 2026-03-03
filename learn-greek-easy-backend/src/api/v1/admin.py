@@ -54,6 +54,7 @@ from src.schemas.admin import (
     PendingQuestionsResponse,
     QuestionApproveRequest,
     QuestionApproveResponse,
+    SuggestionItem,
     UnifiedDeckItem,
     WordEntryInlineUpdate,
 )
@@ -2278,6 +2279,20 @@ def _confidence_tier(confidence: float) -> Literal["high", "medium", "low"]:
     return "low"
 
 
+_SPACY_GENDER_MAP = {"Masc": "masculine", "Fem": "feminine", "Neut": "neuter"}
+_GENDER_TO_ARTICLE = {"masculine": "ο", "feminine": "η", "neuter": "το"}
+
+
+def _extract_gender_article(
+    morph_features: dict[str, str],
+) -> tuple[str | None, str | None]:
+    """Extract gender and article from spaCy morphology features."""
+    gender_raw = morph_features.get("Gender")
+    gender = _SPACY_GENDER_MAP.get(gender_raw) if gender_raw else None
+    article = _GENDER_TO_ARTICLE.get(gender) if gender else None
+    return gender, article
+
+
 @router.post(
     "/word-entries/generate",
     response_model=GenerateWordEntryResponse,
@@ -2313,17 +2328,42 @@ async def generate_word_entry(
 
     # Stage 1: Normalization (synchronous -- CPU-bound NLP)
     svc = get_lemma_normalization_service()
-    normalized = svc.normalize(request.word)
+    try:
+        smart_result = svc.normalize_smart(request.word)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+
+    primary = smart_result.primary
+    primary_gender, primary_article = _extract_gender_article(primary.morphology.morph_features)
+
+    suggestions = [
+        SuggestionItem(
+            lemma=s.morphology.lemma,
+            pos=s.morphology.pos,
+            gender=_extract_gender_article(s.morphology.morph_features)[0],
+            article=_extract_gender_article(s.morphology.morph_features)[1],
+            confidence=s.confidence,
+            confidence_tier=_confidence_tier(s.confidence),
+            strategy=s.strategy,
+        )
+        for s in smart_result.suggestions
+    ]
 
     return GenerateWordEntryResponse(
         stage="normalization",
         normalization=NormalizationStageResult(
-            input_word=normalized.input_word,
-            lemma=normalized.lemma,
-            gender=normalized.gender,
-            article=normalized.article,
-            pos=normalized.pos,
-            confidence=normalized.confidence,
-            confidence_tier=_confidence_tier(normalized.confidence),
+            input_word=primary.input_form,
+            lemma=primary.morphology.lemma,
+            gender=primary_gender,
+            article=primary_article,
+            pos=primary.morphology.pos,
+            confidence=primary.confidence,
+            confidence_tier=_confidence_tier(primary.confidence),
+            strategy=primary.strategy,
+            corrected_from=primary.corrected_from,
         ),
+        suggestions=suggestions,
     )
