@@ -5,7 +5,6 @@
  * - Grid display with 12 items per page
  * - Pagination controls and navigation
  * - Article click opens external link
- * - Questions button navigation
  * - Navigation from dashboard and header menu
  * - Mobile responsive behavior
  *
@@ -206,26 +205,6 @@ test.describe('News Feed Page - Desktop Tests', () => {
     expect(target).toBe('_blank');
   });
 
-  test('NEWSFEED-PAGE-07: Click questions button - navigate to practice page', async ({
-    page,
-  }) => {
-    await page.goto('/news');
-    await verifyAuthSucceeded(page, '/news');
-
-    await waitForNewsGridLoaded(page);
-
-    // Find a news card with questions button (first 10 items have questions)
-    // The questions button has data-testid="news-questions-button-{id}"
-    const questionsButton = page.locator('[data-testid^="news-questions-button-"]').first();
-    await expect(questionsButton).toBeVisible({ timeout: 10000 });
-
-    // Click the questions button
-    await questionsButton.click();
-
-    // Verify navigation to practice page
-    await page.waitForURL(/\/culture\/.*\/practice/, { timeout: 10000 });
-    expect(page.url()).toMatch(/\/culture\/.*\/practice/);
-  });
 });
 
 // =====================

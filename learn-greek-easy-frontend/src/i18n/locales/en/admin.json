@@ -945,5 +945,17 @@
     "discardMessage": "You have unsaved grammar changes. Discard them?",
     "discardConfirm": "Discard",
     "discardCancel": "Keep Editing"
+  },
+  "generateNoun": {
+    "title": "Generate Noun",
+    "deckLabel": "Deck",
+    "inputPlaceholder": "Enter Greek noun (e.g. σπίτι)",
+    "invalidGreek": "Please enter a valid Greek word",
+    "tooLong": "Word is too long (max 50 characters)",
+    "createButton": "Create",
+    "creatingButton": "Creating...",
+    "cancel": "Cancel",
+    "close": "Close",
+    "successMocked": "Noun generation queued (mock). Full pipeline coming in NGEN-08-02."
   }
 }

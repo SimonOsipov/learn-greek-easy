@@ -66,6 +66,7 @@ import type {
 import { CardCreateModal } from './CardCreateModal';
 import { CardDeleteDialog } from './CardDeleteDialog';
 import { CardEditModal } from './CardEditModal';
+import { GenerateNounDialog } from './GenerateNounDialog';
 import { V1CardEditInDialog, VocabularyCardCreateModal } from './vocabulary';
 import { WordEntryCards } from './WordEntryCards';
 import { WordEntryContent } from './WordEntryContent';
@@ -162,6 +163,7 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
 
   // Vocabulary card modal state
   const [vocabularyCreateModalOpen, setVocabularyCreateModalOpen] = useState(false);
+  const [generateNounDialogOpen, setGenerateNounDialogOpen] = useState(false);
 
   // Word entry detail view state (V2)
   const [selectedWordEntry, setSelectedWordEntry] = useState<AdminVocabularyCard | null>(null);
@@ -605,9 +607,15 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
                   </div>
                   <Button
                     size="sm"
-                    onClick={() =>
-                      isVocabulary ? setVocabularyCreateModalOpen(true) : setCreateModalOpen(true)
-                    }
+                    onClick={() => {
+                      if (isV2Vocabulary) {
+                        setGenerateNounDialogOpen(true);
+                      } else if (isVocabulary) {
+                        setVocabularyCreateModalOpen(true);
+                      } else {
+                        setCreateModalOpen(true);
+                      }
+                    }}
                     data-testid="create-card-btn"
                   >
                     <Plus className="mr-1 h-4 w-4" />
@@ -1039,6 +1047,15 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
             fetchItems();
             onItemDeleted?.(); // Refresh parent deck counts
           }}
+        />
+      )}
+
+      {isV2Vocabulary && deck && (
+        <GenerateNounDialog
+          open={generateNounDialogOpen}
+          onOpenChange={setGenerateNounDialogOpen}
+          deckId={deck.id}
+          deckName={deckName}
         />
       )}
     </>
