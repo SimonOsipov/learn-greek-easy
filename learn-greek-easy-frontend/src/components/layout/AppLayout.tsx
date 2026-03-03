@@ -1,11 +1,13 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 
 import { Home, Layers, BarChart3, User, GraduationCap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Outlet, useLocation, Link } from 'react-router-dom';
 
+import { TourDismissDialog } from '@/components/tour/TourDismissDialog';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { useLayoutContext } from '@/contexts/LayoutContext';
+import { registerDismissHandler } from '@/lib/tour';
 import { cn } from '@/lib/utils';
 
 import { Header } from './Header';
@@ -16,6 +18,16 @@ export const AppLayout: React.FC = () => {
   const { t } = useTranslation('common');
   const location = useLocation();
   const { isMobile, isDesktop, isSidebarOpen, closeSidebar } = useLayoutContext();
+
+  const [dismissState, setDismissState] = useState<{
+    onSkip: () => void;
+    onContinue: () => void;
+  } | null>(null);
+
+  useEffect(() => {
+    registerDismissHandler((handlers) => setDismissState(handlers));
+    return () => registerDismissHandler(null);
+  }, []);
 
   // Close sidebar on route change
   useEffect(() => {
@@ -98,6 +110,18 @@ export const AppLayout: React.FC = () => {
 
       {/* Mobile Bottom Navigation */}
       {!isDesktop && <MobileNav />}
+
+      <TourDismissDialog
+        open={dismissState !== null}
+        onSkip={() => {
+          dismissState?.onSkip();
+          setDismissState(null);
+        }}
+        onContinue={() => {
+          dismissState?.onContinue();
+          setDismissState(null);
+        }}
+      />
     </div>
   );
 };

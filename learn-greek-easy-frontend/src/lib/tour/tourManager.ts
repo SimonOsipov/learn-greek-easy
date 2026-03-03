@@ -4,6 +4,15 @@ import type { DriveStep, Driver } from 'driver.js';
 import type { TFunction } from 'i18next';
 import './tour.css';
 
+let dismissCallback: ((handlers: { onSkip: () => void; onContinue: () => void }) => void) | null =
+  null;
+
+export function registerDismissHandler(
+  handler: ((handlers: { onSkip: () => void; onContinue: () => void }) => void) | null
+): void {
+  dismissCallback = handler;
+}
+
 let activeDriver: Driver | null = null;
 
 export interface TourOptions {
@@ -37,7 +46,20 @@ export async function startTour(steps: DriveStep[], options: TourOptions): Promi
     showButtons: ['next', 'previous', 'close'],
     steps,
     onDestroyStarted: () => {
-      driverObj.destroy();
+      if (!driverObj.hasNextStep()) {
+        driverObj.destroy();
+        return;
+      }
+      if (dismissCallback) {
+        dismissCallback({
+          onSkip: () => driverObj.destroy(),
+          onContinue: () => {
+            // no-op: dialog closes, tour stays on current step
+          },
+        });
+      } else {
+        driverObj.destroy();
+      }
     },
     onDestroyed: () => {
       const stepsViewed = driverObj.getActiveIndex() ?? 0;

@@ -248,6 +248,12 @@
     "news": {
       "title": "Greek News Feed",
       "description": "Read real Greek news articles with audio narration. Switch between A2 (beginner) and B2 (intermediate) difficulty levels to match your skill. This feature is included in your 14-day premium trial!"
+    },
+    "dismiss": {
+      "title": "Skip the tour?",
+      "description": "You can always restart it from the navigation bar.",
+      "skip": "Skip tour",
+      "continue": "Continue tour"
     }
   }
 }
