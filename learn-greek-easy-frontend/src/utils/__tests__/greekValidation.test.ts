@@ -68,6 +68,18 @@ describe('greekValidation', () => {
     it('rejects mixed Greek and numbers (fallback to latin reason)', () => {
       expect(isValidGreekInput('σπίτι123')).toEqual({ valid: false, reason: 'latin' });
     });
+
+    it('rejects a hyphen-only string (no Greek letters)', () => {
+      expect(isValidGreekInput('-')).toEqual({ valid: false, reason: 'latin' });
+    });
+
+    it('rejects a semicolon-only string (no Greek letters)', () => {
+      expect(isValidGreekInput(';')).toEqual({ valid: false, reason: 'latin' });
+    });
+
+    it('rejects middle-dots-only string (no Greek letters)', () => {
+      expect(isValidGreekInput('\u00B7\u00B7\u00B7')).toEqual({ valid: false, reason: 'latin' });
+    });
   });
 
   describe('containsLatinCharacters', () => {

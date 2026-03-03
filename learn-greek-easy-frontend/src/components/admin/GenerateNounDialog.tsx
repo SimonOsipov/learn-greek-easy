@@ -1,6 +1,6 @@
 // src/components/admin/GenerateNounDialog.tsx
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import { CheckCircle, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -36,6 +36,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
   const [greekWord, setGreekWord] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const submitTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const trimmedWord = greekWord.trim();
   const validation = trimmedWord ? isValidGreekInput(trimmedWord) : { valid: false };
@@ -48,15 +49,21 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
   const handleSubmit = () => {
     if (!canSubmit) return;
     setIsSubmitting(true);
-    setTimeout(() => {
+    if (submitTimeoutRef.current) clearTimeout(submitTimeoutRef.current);
+    submitTimeoutRef.current = setTimeout(() => {
       setIsSubmitting(false);
       setIsSuccess(true);
+      submitTimeoutRef.current = null;
     }, 2000);
   };
 
   // State reset on close — 200ms delay matches VocabularyCardCreateModal pattern
   useEffect(() => {
     if (!open) {
+      if (submitTimeoutRef.current) {
+        clearTimeout(submitTimeoutRef.current);
+        submitTimeoutRef.current = null;
+      }
       const timeout = setTimeout(() => {
         setGreekWord('');
         setIsSubmitting(false);
@@ -65,6 +72,13 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
       return () => clearTimeout(timeout);
     }
   }, [open]);
+
+  // Unmount cleanup
+  useEffect(() => {
+    return () => {
+      if (submitTimeoutRef.current) clearTimeout(submitTimeoutRef.current);
+    };
+  }, []);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

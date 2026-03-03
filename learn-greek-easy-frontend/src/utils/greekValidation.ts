@@ -4,7 +4,8 @@ export const MAX_GREEK_INPUT_LENGTH = 50;
 // \u0370-\u03FF — Greek and Coptic (modern Greek, accented vowels)
 // \u1F00-\u1FFF — Greek Extended (polytonic accents)
 // Also allow: spaces, hyphens, ano teleia (·), erotimatiko (;)
-const GREEK_ONLY_REGEX = /^[\u0370-\u03FF\u1F00-\u1FFF\s\-\u00B7;]+$/u;
+const GREEK_ONLY_REGEX =
+  /^(?=.*[\u0370-\u03FF\u1F00-\u1FFF])[\u0370-\u03FF\u1F00-\u1FFF\s\-\u00B7;]+$/u;
 const LATIN_REGEX = /[a-zA-Z]/;
 const NUMBERS_ONLY_REGEX = /^\d+$/;
 
