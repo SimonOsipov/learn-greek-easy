@@ -13,6 +13,12 @@ export function registerDismissHandler(
   dismissCallback = handler;
 }
 
+let completionCallback: (() => void) | null = null;
+
+export function registerCompletionHandler(handler: (() => void) | null): void {
+  completionCallback = handler;
+}
+
 let activeDriver: Driver | null = null;
 
 export interface TourOptions {
@@ -68,6 +74,7 @@ export async function startTour(steps: DriveStep[], options: TourOptions): Promi
       activeDriver = null;
       if (isCompleted) {
         onAnalyticsEvent?.('tour_completed', { steps_viewed: stepsViewed + 1, trigger });
+        completionCallback?.();
       } else {
         onAnalyticsEvent?.('tour_dismissed', {
           step_index: stepsViewed,
