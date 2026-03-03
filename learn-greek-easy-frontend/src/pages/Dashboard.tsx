@@ -10,6 +10,7 @@ import { WelcomeSection } from '@/components/display/WelcomeSection';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAnalytics } from '@/hooks/useAnalytics';
+import { useTourAutoTrigger } from '@/hooks/useTourAutoTrigger';
 import { reportAPIError } from '@/lib/errorReporting';
 import { formatStudyTime } from '@/lib/timeFormatUtils';
 import { useAuthStore } from '@/stores/authStore';
@@ -52,6 +53,8 @@ export const Dashboard: React.FC = () => {
       reportAPIError(error, { operation: 'fetchDecks', endpoint: '/decks' });
     });
   }, [fetchDecks]);
+
+  useTourAutoTrigger();
 
   // Memoized navigation handler for decks page
   const handleNavigateToDecks = useCallback(() => {
