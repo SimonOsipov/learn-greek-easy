@@ -209,6 +209,72 @@ class TestMorphologyResultContract:
 
 
 # ============================================================================
+# MorphologyService Tests - analyze_in_context
+# ============================================================================
+
+
+class TestMorphologyAnalyzeInContext:
+    """Tests for analyze_in_context() — phrase-level morphological analysis."""
+
+    def test_single_word_same_as_analyze(self, morphology_service):
+        """Single word phrase should yield the same pos/lemma as analyze()."""
+        result_ctx = morphology_service.analyze_in_context("σπίτι")
+        result_std = morphology_service.analyze("σπίτι")
+        assert result_ctx.pos == result_std.pos
+        assert result_ctx.lemma == result_std.lemma
+
+    def test_article_noun_neuter(self, morphology_service):
+        """'το σπίτι' — last token (noun) should be NOUN, Neut, lemma σπίτι."""
+        result = morphology_service.analyze_in_context("το σπίτι")
+        assert result.analysis_successful is True
+        assert result.pos == "NOUN"
+        assert result.morph_features.get("Gender") == "Neut"
+        assert result.lemma == "σπίτι"
+
+    def test_article_noun_masculine(self, morphology_service):
+        """'ο άντρας' — last token should be NOUN, Masc."""
+        result = morphology_service.analyze_in_context("ο άντρας")
+        assert result.analysis_successful is True
+        assert result.pos == "NOUN"
+        assert result.morph_features.get("Gender") == "Masc"
+
+    def test_article_noun_feminine(self, morphology_service):
+        """'η γάτα' — last token should be NOUN, Fem."""
+        result = morphology_service.analyze_in_context("η γάτα")
+        assert result.analysis_successful is True
+        assert result.pos == "NOUN"
+        assert result.morph_features.get("Gender") == "Fem"
+
+    def test_empty_string(self, morphology_service):
+        result = morphology_service.analyze_in_context("")
+        assert result.analysis_successful is False
+
+    def test_whitespace_only(self, morphology_service):
+        result = morphology_service.analyze_in_context("   ")
+        assert result.analysis_successful is False
+
+    def test_latin_input(self, morphology_service):
+        result = morphology_service.analyze_in_context("hello")
+        assert result.analysis_successful is False
+
+    def test_mixed_script(self, morphology_service):
+        """Latin + Greek mixed phrase should return analysis_successful=False."""
+        result = morphology_service.analyze_in_context("the σπίτι")
+        assert result.analysis_successful is False
+
+    def test_input_word_preserves_stripped_phrase(self, morphology_service):
+        """input_word should be the stripped phrase, not the original with extra spaces."""
+        result = morphology_service.analyze_in_context("  το σπίτι  ")
+        assert result.input_word == "το σπίτι"
+
+    def test_returns_morphology_result(self, morphology_service):
+        from src.schemas.nlp import MorphologyResult
+
+        result = morphology_service.analyze_in_context("το σπίτι")
+        assert isinstance(result, MorphologyResult)
+
+
+# ============================================================================
 # get_morphology_service() Singleton Tests
 # ============================================================================
 

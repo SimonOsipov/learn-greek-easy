@@ -164,6 +164,42 @@ class TestSpellcheckResultContract:
 
 
 # ============================================================================
+# SpellcheckService Tests - correct()
+# ============================================================================
+
+
+class TestSpellcheckCorrect:
+    """Tests for the correct() convenience method."""
+
+    def test_valid_word_returns_unchanged(self, spellcheck_service):
+        """A valid Greek word should be returned as-is (stripped)."""
+        assert spellcheck_service.correct("σπίτι") == "σπίτι"
+
+    def test_invalid_word_returns_first_suggestion(self, spellcheck_service):
+        """An invalid word with suggestions should return the first suggestion."""
+        result = spellcheck_service.correct("σπιτι")
+        assert result != "σπιτι"
+        assert isinstance(result, str)
+
+    def test_no_suggestions_returns_original(self, spellcheck_service):
+        """An invalid word with no suggestions should return the stripped input."""
+        result = spellcheck_service.correct("ξξξξξξ")
+        assert result == "ξξξξξξ"
+
+    def test_strips_whitespace(self, spellcheck_service):
+        """Whitespace should be stripped before returning the word."""
+        assert spellcheck_service.correct("  σπίτι  ") == "σπίτι"
+
+    def test_empty_string(self, spellcheck_service):
+        assert spellcheck_service.correct("") == ""
+
+    def test_latin_returns_unchanged(self, spellcheck_service):
+        """Latin input is non-Greek — check returns is_valid=False with no
+        suggestions, so correct() returns the stripped input unchanged."""
+        assert spellcheck_service.correct("hello") == "hello"
+
+
+# ============================================================================
 # get_spellcheck_service() Singleton Tests
 # ============================================================================
 

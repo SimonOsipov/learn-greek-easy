@@ -74,6 +74,27 @@ class SpellcheckService:
             suggestions=suggestions,
         )
 
+    def correct(self, word: str) -> str:
+        """Return the best correction for a word, or the word itself if valid.
+
+        Args:
+            word: A Greek word to correct. Whitespace is stripped before
+                  checking. If the word is already valid, it is returned
+                  unchanged. If invalid with suggestions, the first suggestion
+                  is returned. If no suggestions exist, the stripped word
+                  is returned.
+
+        Returns:
+            The corrected word string.
+        """
+        stripped = word.strip()
+        result = self.check(stripped)
+        if result.is_valid:
+            return stripped
+        if result.suggestions:
+            return result.suggestions[0]
+        return stripped
+
 
 _spellcheck_service: Optional[SpellcheckService] = None
 
