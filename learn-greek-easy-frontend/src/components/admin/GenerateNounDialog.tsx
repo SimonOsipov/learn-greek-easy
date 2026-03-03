@@ -1,6 +1,6 @@
 // src/components/admin/GenerateNounDialog.tsx
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import { useMutation } from '@tanstack/react-query';
 import { AlertCircle, Loader2 } from 'lucide-react';
@@ -45,6 +45,13 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
 
   const [greekWord, setGreekWord] = useState('');
   const [apiError, setApiError] = useState<string | null>(null);
+  const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+    };
+  }, []);
 
   const mutation = useMutation({
     mutationFn: (word: string) => adminAPI.generateWordEntry(word, deckId),
@@ -77,15 +84,17 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
     mutation.mutate(trimmed);
   };
 
-  const handleOpenChange = (openState: boolean) => {
-    if (!openState) {
-      setTimeout(() => {
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+      resetTimerRef.current = setTimeout(() => {
         setGreekWord('');
         setApiError(null);
         mutation.reset();
+        resetTimerRef.current = null;
       }, 200);
     }
-    onOpenChange(openState);
+    onOpenChange(open);
   };
 
   return (
