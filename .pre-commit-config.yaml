@@ -24,6 +24,7 @@ repos:
         exclude: ^(learn-greek-easy-frontend/node_modules/|.*tsconfig.*\.json$)
       - id: check-added-large-files
         args: ['--maxkb=1000']
+        exclude: ^data/greek_lexicon\.csv\.gz$
       - id: check-merge-conflict
       - id: detect-private-key
 
