@@ -6,5 +6,3 @@ export { default as FAQ } from './FAQ';
 export { default as SocialProof } from './SocialProof';
 export { default as FinalCTA } from './FinalCTA';
 export { default as Footer } from './Footer';
-export { default as FeatureCard } from './FeatureCard';
-export { default as GreekPattern } from './GreekPattern';
