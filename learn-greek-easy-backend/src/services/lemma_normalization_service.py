@@ -258,6 +258,9 @@ class LemmaNormalizationService:
         if lexicon_candidate is not None:
             candidates.insert(0, lexicon_candidate)
 
+        if not candidates:
+            raise ValueError(f"No candidates could be analyzed for word: {word!r}")
+
         # Step 7: Rank and select
         primary, suggestions = self._deduplicate_and_rank(candidates, expected_pos=expected_pos)
 

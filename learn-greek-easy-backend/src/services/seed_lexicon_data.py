@@ -1,6 +1,6 @@
 """Seed data for Greek lexicon (reference.greek_lexicon).
 
-Provides ~25 representative entries for E2E/CI testing:
+Provides 20 representative entries for E2E/CI testing:
 - 3 noun paradigms (masculine, feminine, neuter) with full case/number forms
 - 1 verb and 1 adjective for POS diversity
 """

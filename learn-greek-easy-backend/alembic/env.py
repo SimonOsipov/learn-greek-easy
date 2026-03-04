@@ -101,7 +101,7 @@ def run_migrations_offline() -> None:
 
 
 def include_object(
-    object: object, name: str | None, type_: str, reflected: bool, compare_to: object
+    object: object, _name: str | None, type_: str, _reflected: bool, _compare_to: object
 ) -> bool:
     """Filter metadata-side objects from the reference schema.
 

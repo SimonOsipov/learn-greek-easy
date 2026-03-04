@@ -4593,17 +4593,17 @@ class SeedService:
 
         await self.db.execute(text("TRUNCATE reference.greek_lexicon"))
 
-        count = 0
         for entry in LEXICON_SEED_DATA:
             await self.db.execute(
                 text(
                     "INSERT INTO reference.greek_lexicon (form, lemma, pos, gender, ptosi, number) "
-                    "VALUES (:form, :lemma, :pos, :gender, :ptosi, :number) "
-                    "ON CONFLICT DO NOTHING"
+                    "VALUES (:form, :lemma, :pos, :gender, :ptosi, :number)"
                 ),
                 entry,
             )
-            count += 1
+
+        result = await self.db.execute(text("SELECT COUNT(*) FROM reference.greek_lexicon"))
+        count = result.scalar_one()
 
         return {"success": True, "lexicon_entries_created": count}
 

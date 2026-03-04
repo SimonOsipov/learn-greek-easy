@@ -70,12 +70,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Warm up NLP services (spaCy + Hunspell) to eliminate cold-start penalty
     morphology_ms = 0.0
     spellcheck_ms = 0.0
+    morphology_ok = False
+    spellcheck_ok = False
     try:
         from src.services.morphology_service import get_morphology_service
 
         t0 = time.perf_counter()
         get_morphology_service()
         morphology_ms = (time.perf_counter() - t0) * 1000
+        morphology_ok = True
     except Exception as exc:
         logger.warning("Morphology service warmup failed: {error}", error=str(exc))
 
@@ -85,13 +88,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         t0 = time.perf_counter()
         get_spellcheck_service()
         spellcheck_ms = (time.perf_counter() - t0) * 1000
+        spellcheck_ok = True
     except Exception as exc:
         logger.warning("Spellcheck service warmup failed: {error}", error=str(exc))
 
+    all_ok = morphology_ok and spellcheck_ok
     logger.info(
-        "NLP services warmed up",
+        "NLP services warmed up" if all_ok else "NLP services partially warmed up (some failures)",
         morphology_ms=round(morphology_ms, 1),
         spellcheck_ms=round(spellcheck_ms, 1),
+        morphology_ok=morphology_ok,
+        spellcheck_ok=spellcheck_ok,
     )
 
     # Auto-seed on deploy (local dev only)
