@@ -1,5 +1,6 @@
 import { ArrowRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 
 import ctaImage from '@/assets/landing/limassol-cta.webp';
 import { Button } from '@/components/ui/button';
@@ -23,19 +24,19 @@ const FinalCTA = () => {
       />
 
       {/* Dark Overlay */}
-      <div className="absolute inset-0 bg-foreground/70" />
+      <div className="absolute inset-0 bg-black/70" />
 
       <div className="container relative z-10 mx-auto px-6">
         <div className="mx-auto max-w-2xl text-center">
           <h2
-            className="mb-6 text-3xl font-bold text-background motion-safe:animate-fade-up md:text-4xl lg:text-5xl"
+            className="mb-6 text-3xl font-bold text-white motion-safe:animate-fade-up md:text-4xl lg:text-5xl"
             style={{ animationDelay: '0.1s' }}
           >
             {t('finalCta.title')}
           </h2>
 
           <p
-            className="mb-10 text-lg text-background/80 motion-safe:animate-fade-up"
+            className="mb-10 text-lg text-white/80 motion-safe:animate-fade-up"
             style={{ animationDelay: '0.2s' }}
           >
             {t('finalCta.subtitle')}
@@ -43,11 +44,14 @@ const FinalCTA = () => {
 
           <div className="motion-safe:animate-fade-up" style={{ animationDelay: '0.3s' }}>
             <Button
+              asChild
               size="xl"
-              className="group bg-background text-foreground shadow-lg hover:bg-background/90"
+              className="group bg-white text-gray-900 shadow-lg hover:bg-white/90"
             >
-              {t('finalCta.primaryCta')}
-              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              <Link to="/register">
+                {t('finalCta.primaryCta')}
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </Link>
             </Button>
           </div>
         </div>
