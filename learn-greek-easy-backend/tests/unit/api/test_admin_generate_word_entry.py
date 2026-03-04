@@ -13,7 +13,7 @@ Tests cover:
 - 422 for invalid / missing request fields
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import ANY, MagicMock, patch
 from uuid import uuid4
 
 import pytest
@@ -350,7 +350,9 @@ class TestGenerateWordEntry:
                 headers=superuser_auth_headers,
             )
 
-        mock_svc.normalize_smart.assert_called_once_with("γάτα", expected_pos="NOUN")
+        mock_svc.normalize_smart.assert_called_once_with(
+            "γάτα", expected_pos="NOUN", lexicon_entry=ANY
+        )
 
     # -------------------------------------------------------------------------
     # 404 / 400 — deck validation errors

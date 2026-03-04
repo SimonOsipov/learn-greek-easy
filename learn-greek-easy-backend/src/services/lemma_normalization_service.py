@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import re
 import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -227,28 +228,30 @@ class LemmaNormalizationService:
                 seen.add(input_form)
                 unique_inputs.append((input_form, strategy, corr_from, corr_to))
 
-        # Step 6: Run morphology + confidence for each candidate
+        # Step 6: Run morphology + confidence for each candidate (parallel)
         t_candidates = time.perf_counter()
         candidates: list[NormalizationCandidate] = []
-        for input_form, strategy, corr_from, corr_to in unique_inputs:
-            morph = self._morphology.analyze_in_context(input_form)
-            input_sc = self._spellcheck.check(input_form)
-            lemma_sc = (
-                input_sc if morph.lemma == input_form else self._spellcheck.check(morph.lemma)
-            )
-            gender_raw = morph.morph_features.get("Gender")
-            gender = _SPACY_GENDER_MAP.get(gender_raw) if gender_raw else None
-            confidence = self._compute_confidence(morph, input_sc, lemma_sc, gender)
-            candidates.append(
-                NormalizationCandidate(
-                    input_form=input_form,
-                    strategy=strategy,
-                    morphology=morph,
-                    confidence=confidence,
-                    corrected_from=corr_from,
-                    corrected_to=corr_to,
-                )
-            )
+        with ThreadPoolExecutor(max_workers=len(unique_inputs)) as executor:
+            futures = {
+                executor.submit(
+                    self._analyze_candidate,
+                    input_form,
+                    strategy,
+                    corr_from,
+                    corr_to,
+                ): input_form
+                for input_form, strategy, corr_from, corr_to in unique_inputs
+            }
+            for future in futures:
+                try:
+                    candidate = future.result()
+                    candidates.append(candidate)
+                except Exception:
+                    input_form = futures[future]
+                    logger.warning(
+                        "Candidate analysis failed, skipping",
+                        input_form=input_form,
+                    )
         candidates_ms = (time.perf_counter() - t_candidates) * 1000
 
         # Prepend lexicon candidate so it participates in ranking
@@ -276,6 +279,29 @@ class LemmaNormalizationService:
             primary=primary,
             suggestions=suggestions,
             detected_article=detected_article,
+        )
+
+    def _analyze_candidate(
+        self,
+        input_form: str,
+        strategy: str,
+        corr_from: str | None,
+        corr_to: str | None,
+    ) -> NormalizationCandidate:
+        """Analyze a single candidate: morphology, spellcheck, confidence."""
+        morph = self._morphology.analyze_in_context(input_form)
+        input_sc = self._spellcheck.check(input_form)
+        lemma_sc = input_sc if morph.lemma == input_form else self._spellcheck.check(morph.lemma)
+        gender_raw = morph.morph_features.get("Gender")
+        gender = _SPACY_GENDER_MAP.get(gender_raw) if gender_raw else None
+        confidence = self._compute_confidence(morph, input_sc, lemma_sc, gender)
+        return NormalizationCandidate(
+            input_form=input_form,
+            strategy=strategy,
+            morphology=morph,
+            confidence=confidence,
+            corrected_from=corr_from,
+            corrected_to=corr_to,
         )
 
     def _deduplicate_and_rank(
