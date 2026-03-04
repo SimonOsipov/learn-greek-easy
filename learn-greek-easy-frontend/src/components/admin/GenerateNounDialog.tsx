@@ -150,7 +150,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
           <>
             <div data-testid="generate-noun-result" className="space-y-4">
               <h3 className="font-medium">{t('generateNoun.normalizationResult')}</h3>
-              {normalizationResult.corrected_from && (
+              {normalizationResult.corrected_from && normalizationResult.corrected_to && (
                 <div
                   data-testid="correction-note"
                   className="flex items-start gap-2 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm dark:border-blue-800 dark:bg-blue-950"
@@ -159,7 +159,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                   <span>
                     {t('generateNoun.accentCorrected', {
                       from: normalizationResult.corrected_from,
-                      to: normalizationResult.lemma,
+                      to: normalizationResult.corrected_to,
                     })}
                   </span>
                 </div>

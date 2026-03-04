@@ -610,6 +610,7 @@ export interface NormalizationStageResult {
   confidence_tier: ConfidenceTier;
   strategy: string | null;
   corrected_from: string | null;
+  corrected_to: string | null;
 }
 
 export interface SuggestionItem {

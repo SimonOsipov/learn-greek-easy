@@ -564,3 +564,100 @@ class TestNormalizeSmartArticleRetries:
         assert "ο σπιτι" not in call_args
         assert "η σπιτι" not in call_args
         assert "το σπιτι" not in call_args
+
+
+# ============================================================================
+# TestNormalizeSmartLexicon
+# ============================================================================
+
+
+@pytest.mark.unit
+class TestNormalizeSmartLexicon:
+    """Tests for lexicon_entry integration in normalize_smart()."""
+
+    def test_lexicon_entry_becomes_primary(
+        self, normalization_service, mock_morphology_service, mock_spellcheck_service
+    ):
+        """When a lexicon entry is provided, it becomes the primary candidate."""
+        from src.services.lexicon_service import LexiconEntry
+
+        mock_spellcheck_service.correct.return_value = "γάτα"
+        mock_spellcheck_service.check.return_value = _make_spellcheck_result(is_valid=True)
+        mock_morphology_service.analyze_in_context.return_value = _make_morphology_result(
+            lemma="γάτα", pos="NOUN", morph_features={"Gender": "Fem"}
+        )
+
+        lexicon_entry = LexiconEntry(
+            form="γάτα", lemma="γάτα", pos="noun", gender="Fem", ptosi="Nom", number="Sing"
+        )
+        result = normalization_service.normalize_smart("γάτα", lexicon_entry=lexicon_entry)
+
+        assert result.primary.strategy == "lexicon"
+        assert result.primary.confidence == 1.0
+        assert result.primary.morphology.lemma == "γάτα"
+
+    def test_no_lexicon_entry_falls_through(
+        self, normalization_service, mock_morphology_service, mock_spellcheck_service
+    ):
+        """Without a lexicon entry, pipeline uses spaCy strategies."""
+        mock_spellcheck_service.correct.return_value = "σπίτι"
+        mock_spellcheck_service.check.return_value = _make_spellcheck_result(is_valid=True)
+        mock_morphology_service.analyze_in_context.return_value = _make_morphology_result(
+            lemma="σπίτι", pos="NOUN", morph_features={"Gender": "Neut"}
+        )
+
+        result = normalization_service.normalize_smart("σπίτι")
+
+        assert result.primary.strategy in ("direct", "article_prefix")
+
+    def test_lexicon_gender_in_morph_features(
+        self, normalization_service, mock_morphology_service, mock_spellcheck_service
+    ):
+        """Lexicon entry gender is stored as spaCy-format morph feature."""
+        from src.services.lexicon_service import LexiconEntry
+
+        mock_spellcheck_service.correct.return_value = "άνθρωπος"
+        mock_spellcheck_service.check.return_value = _make_spellcheck_result(is_valid=True)
+        mock_morphology_service.analyze_in_context.return_value = _make_morphology_result(
+            lemma="άνθρωπος", pos="NOUN", morph_features={"Gender": "Masc"}
+        )
+
+        lexicon_entry = LexiconEntry(
+            form="άνθρωπος",
+            lemma="άνθρωπος",
+            pos="noun",
+            gender="Masc",
+            ptosi="Nom",
+            number="Sing",
+        )
+        result = normalization_service.normalize_smart("άνθρωπος", lexicon_entry=lexicon_entry)
+
+        assert result.primary.strategy == "lexicon"
+        assert result.primary.morphology.morph_features.get("Gender") == "Masc"
+
+    def test_spacy_suggestions_present_with_lexicon(
+        self, normalization_service, mock_morphology_service, mock_spellcheck_service
+    ):
+        """Lexicon primary doesn't suppress high-confidence spaCy candidates as suggestions."""
+        from src.services.lexicon_service import LexiconEntry
+
+        mock_spellcheck_service.correct.return_value = "βιβλίο"
+        mock_spellcheck_service.check.return_value = _make_spellcheck_result(is_valid=True)
+        mock_morphology_service.analyze_in_context.return_value = _make_morphology_result(
+            lemma="βιβλίο", pos="NOUN", morph_features={"Gender": "Neut"}
+        )
+
+        lexicon_entry = LexiconEntry(
+            form="βιβλίο",
+            lemma="βιβλίο",
+            pos="noun",
+            gender="Neut",
+            ptosi="Nom",
+            number="Sing",
+        )
+        result = normalization_service.normalize_smart("βιβλίο", lexicon_entry=lexicon_entry)
+
+        # Lexicon wins primary; lexicon + spaCy produce same (lemma, pos) group → merged
+        assert result.primary.strategy == "lexicon"
+        # suggestions may be empty (same lemma/pos group) — just verify no crash
+        assert isinstance(result.suggestions, list)

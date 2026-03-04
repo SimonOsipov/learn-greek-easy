@@ -24,6 +24,7 @@ from src.services.lemma_normalization_service import (
     LemmaNormalizationService,
     get_lemma_normalization_service,
 )
+from src.services.lexicon_service import LexiconEntry, LexiconService
 from src.services.local_verification_service import (
     LocalVerificationService,
     get_local_verification_service,
@@ -62,6 +63,8 @@ __all__ = [
     "DuplicateDetectionService",
     "FeedbackAdminService",
     "LemmaNormalizationService",
+    "LexiconEntry",
+    "LexiconService",
     "LocalVerificationService",
     "MockExamService",
     "MorphologyService",

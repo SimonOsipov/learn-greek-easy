@@ -652,7 +652,7 @@ jobs:
 
       - name: Download spaCy Greek model
         working-directory: learn-greek-easy-backend
-        run: poetry run python -m spacy download el_core_news_sm
+        run: poetry run python -m spacy download el_core_news_md
 
       - name: Create test database extensions
         run: |

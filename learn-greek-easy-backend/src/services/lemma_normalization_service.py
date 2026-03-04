@@ -8,10 +8,14 @@ a rule-based confidence score (0.0-1.0).
 from __future__ import annotations
 
 import re
+import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Optional
 
+from src.core.logging import get_logger
 from src.schemas.nlp import MorphologyResult, NormalizedLemma, SpellcheckResult
+from src.services.lexicon_service import LexiconEntry
 from src.services.morphology_service import MorphologyService, get_morphology_service
 from src.services.spellcheck_service import SpellcheckService, get_spellcheck_service
 from src.utils.greek_text import _strip_article  # noqa: WPS450 (private import by design)
@@ -27,6 +31,8 @@ _GENDER_TO_ARTICLE: dict[str, str] = {
     "neuter": "το",
 }
 _GREEK_SCRIPT_RE = re.compile(r"^[\u0370-\u03FF\u1F00-\u1FFF]+$")
+
+logger = get_logger(__name__)
 
 _lemma_normalization_service: Optional["LemmaNormalizationService"] = None
 
@@ -48,10 +54,11 @@ class NormalizationCandidate:
     """Single normalization candidate with its source strategy."""
 
     input_form: str
-    strategy: str  # "direct" | "spellcheck" | "article_prefix"
+    strategy: str  # "lexicon" | "direct" | "spellcheck" | "article_prefix"
     morphology: MorphologyResult
     confidence: float
     corrected_from: str | None
+    corrected_to: str | None = None
 
 
 @dataclass
@@ -72,6 +79,7 @@ class LemmaNormalizationService:
     """
 
     _STRATEGY_PRIORITY: dict[str, int] = {
+        "lexicon": -1,
         "article_prefix": 0,
         "spellcheck": 1,
         "direct": 2,
@@ -150,69 +158,159 @@ class LemmaNormalizationService:
             confidence=confidence,
         )
 
-    def normalize_smart(self, word: str) -> SmartNormalizationResult:
+    def normalize_smart(  # noqa: C901
+        self,
+        word: str,
+        expected_pos: str | None = None,
+        *,
+        lexicon_entry: LexiconEntry | None = None,
+    ) -> SmartNormalizationResult:
         """Smart normalization with article detection, spellcheck correction, and multi-candidate ranking."""
+        t_start = time.perf_counter()
+
         # Step 1-2: Article detection and validation
         detected_article, bare_word = detect_article(word)
         if not bare_word:
             raise ValueError(f"No word provided after article detection (input: {word!r})")
 
         # Step 3: Spellcheck correction
+        t_spell = time.perf_counter()
         corrected = self._spellcheck.correct(bare_word)
+        spellcheck_ms = (time.perf_counter() - t_spell) * 1000
 
-        # Step 4: Build candidate inputs (input_form, strategy, corrected_from)
-        candidates_inputs: list[tuple[str, str, str | None]] = []
-        candidates_inputs.append((bare_word, "direct", None))
-        if corrected != bare_word:
-            candidates_inputs.append((corrected, "spellcheck", bare_word))
+        # Step 3.5: Lexicon candidate (if available)
+        lexicon_candidate: NormalizationCandidate | None = None
+        if lexicon_entry is not None:
+            morph_features: dict[str, str] = {}
+            if lexicon_entry.gender:
+                morph_features["Gender"] = lexicon_entry.gender
+                morph_features["Number"] = "Sing"
+                morph_features["Case"] = "Nom"
+            lexicon_candidate = NormalizationCandidate(
+                input_form=lexicon_entry.lemma,
+                strategy="lexicon",
+                morphology=MorphologyResult(
+                    input_word=lexicon_entry.lemma,
+                    lemma=lexicon_entry.lemma,
+                    pos=lexicon_entry.pos.upper(),
+                    morph_features=morph_features,
+                    is_known=True,
+                    analysis_successful=True,
+                ),
+                confidence=1.0,
+                corrected_from=None,
+            )
+
+        # Step 4: Build candidate inputs (input_form, strategy, corrected_from, corrected_to)
+        spellcheck_changed = corrected != bare_word
+        candidates_inputs: list[tuple[str, str, str | None, str | None]] = []
+        candidates_inputs.append((bare_word, "direct", None, None))
+        if spellcheck_changed:
+            candidates_inputs.append((corrected, "spellcheck", bare_word, corrected))
         # Article-prefix retries: ONLY if user did NOT specify an article
         if detected_article is None:
             for art in ("ο", "η", "το"):
                 art_form = f"{art} {corrected}"
                 candidates_inputs.append(
-                    (art_form, "article_prefix", None if corrected == bare_word else bare_word)
+                    (
+                        art_form,
+                        "article_prefix",
+                        bare_word if spellcheck_changed else None,
+                        corrected if spellcheck_changed else None,
+                    )
                 )
 
         # Step 5: Deduplicate by input string
         seen: set[str] = set()
-        unique_inputs: list[tuple[str, str, str | None]] = []
-        for input_form, strategy, corr_from in candidates_inputs:
+        unique_inputs: list[tuple[str, str, str | None, str | None]] = []
+        for input_form, strategy, corr_from, corr_to in candidates_inputs:
             if input_form not in seen:
                 seen.add(input_form)
-                unique_inputs.append((input_form, strategy, corr_from))
+                unique_inputs.append((input_form, strategy, corr_from, corr_to))
 
-        # Step 6: Run morphology + confidence for each candidate
+        # Step 6: Run morphology + confidence for each candidate (parallel)
+        t_candidates = time.perf_counter()
         candidates: list[NormalizationCandidate] = []
-        for input_form, strategy, corr_from in unique_inputs:
-            morph = self._morphology.analyze_in_context(input_form)
-            input_sc = self._spellcheck.check(input_form)
-            lemma_sc = (
-                input_sc if morph.lemma == input_form else self._spellcheck.check(morph.lemma)
-            )
-            gender_raw = morph.morph_features.get("Gender")
-            gender = _SPACY_GENDER_MAP.get(gender_raw) if gender_raw else None
-            confidence = self._compute_confidence(morph, input_sc, lemma_sc, gender)
-            candidates.append(
-                NormalizationCandidate(
-                    input_form=input_form,
-                    strategy=strategy,
-                    morphology=morph,
-                    confidence=confidence,
-                    corrected_from=corr_from,
-                )
-            )
+        with ThreadPoolExecutor(max_workers=len(unique_inputs)) as executor:
+            futures = {
+                executor.submit(
+                    self._analyze_candidate,
+                    input_form,
+                    strategy,
+                    corr_from,
+                    corr_to,
+                ): input_form
+                for input_form, strategy, corr_from, corr_to in unique_inputs
+            }
+            for future in futures:
+                try:
+                    candidate = future.result()
+                    candidates.append(candidate)
+                except Exception:
+                    input_form = futures[future]
+                    logger.warning(
+                        "Candidate analysis failed, skipping",
+                        input_form=input_form,
+                    )
+        candidates_ms = (time.perf_counter() - t_candidates) * 1000
+
+        # Prepend lexicon candidate so it participates in ranking
+        if lexicon_candidate is not None:
+            candidates.insert(0, lexicon_candidate)
+
+        if not candidates:
+            raise ValueError(f"No candidates could be analyzed for word: {word!r}")
 
         # Step 7: Rank and select
-        primary, suggestions = self._deduplicate_and_rank(candidates)
+        primary, suggestions = self._deduplicate_and_rank(candidates, expected_pos=expected_pos)
+
+        total_ms = (time.perf_counter() - t_start) * 1000
+        logger.info(
+            "normalize_smart completed",
+            word=word,
+            primary_lemma=primary.morphology.lemma,
+            primary_strategy=primary.strategy,
+            primary_confidence=primary.confidence,
+            num_candidates=len(candidates),
+            num_suggestions=len(suggestions),
+            spellcheck_ms=round(spellcheck_ms, 1),
+            candidates_ms=round(candidates_ms, 1),
+            total_ms=round(total_ms, 1),
+        )
+
         return SmartNormalizationResult(
             primary=primary,
             suggestions=suggestions,
             detected_article=detected_article,
         )
 
+    def _analyze_candidate(
+        self,
+        input_form: str,
+        strategy: str,
+        corr_from: str | None,
+        corr_to: str | None,
+    ) -> NormalizationCandidate:
+        """Analyze a single candidate: morphology, spellcheck, confidence."""
+        morph = self._morphology.analyze_in_context(input_form)
+        input_sc = self._spellcheck.check(input_form)
+        lemma_sc = input_sc if morph.lemma == input_form else self._spellcheck.check(morph.lemma)
+        gender_raw = morph.morph_features.get("Gender")
+        gender = _SPACY_GENDER_MAP.get(gender_raw) if gender_raw else None
+        confidence = self._compute_confidence(morph, input_sc, lemma_sc, gender)
+        return NormalizationCandidate(
+            input_form=input_form,
+            strategy=strategy,
+            morphology=morph,
+            confidence=confidence,
+            corrected_from=corr_from,
+            corrected_to=corr_to,
+        )
+
     def _deduplicate_and_rank(
         self,
         candidates: list[NormalizationCandidate],
+        expected_pos: str | None = None,
     ) -> tuple[NormalizationCandidate, list[NormalizationCandidate]]:
         """Group candidates by (lemma, pos), pick best per group, rank for primary + suggestions."""
         groups: dict[tuple[str, str], list[NormalizationCandidate]] = {}
@@ -233,7 +331,10 @@ class LemmaNormalizationService:
         )
 
         primary = best_per_group[0]
-        suggestions = [c for c in best_per_group[1:] if c.confidence >= 0.40][:3]
+        suggestions_raw = [c for c in best_per_group[1:] if c.confidence >= 0.40]
+        if expected_pos:
+            suggestions_raw = [s for s in suggestions_raw if s.morphology.pos == expected_pos]
+        suggestions = suggestions_raw[:3]
 
         return primary, suggestions
 

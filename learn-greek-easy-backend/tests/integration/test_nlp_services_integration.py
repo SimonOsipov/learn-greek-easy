@@ -119,3 +119,60 @@ class TestLemmaNormalizationPipeline:
         assert result.gender == "feminine"
         assert result.article == "η"
         assert result.confidence >= 0.95
+
+
+@pytest.mark.integration
+class TestLexiconNormalizationIntegration:
+    """Integration tests for normalize_smart() with lexicon entry."""
+
+    def test_normalize_smart_with_lexicon_entry(self):
+        """When a LexiconEntry is passed, strategy='lexicon' and confidence=1.0."""
+        from src.services.lemma_normalization_service import get_lemma_normalization_service
+        from src.services.lexicon_service import LexiconEntry
+
+        service = get_lemma_normalization_service()
+        entry = LexiconEntry(
+            form="σπίτι",
+            lemma="σπίτι",
+            pos="NOUN",
+            gender="Neut",
+            ptosi="Nom",
+            number="Sing",
+        )
+
+        result = service.normalize_smart("σπίτι", expected_pos="NOUN", lexicon_entry=entry)
+
+        assert result.primary.strategy == "lexicon"
+        assert result.primary.confidence == 1.0
+        assert result.primary.morphology.lemma == "σπίτι"
+
+    def test_normalize_smart_without_lexicon_fallback(self):
+        """Without lexicon entry, falls back to spaCy pipeline."""
+        from src.services.lemma_normalization_service import get_lemma_normalization_service
+
+        service = get_lemma_normalization_service()
+
+        result = service.normalize_smart("σπίτι", expected_pos="NOUN", lexicon_entry=None)
+
+        assert result.primary.strategy != "lexicon"
+        assert result.primary.morphology.lemma == "σπίτι"
+
+    def test_lexicon_entry_wins_over_spacy(self):
+        """Lexicon entry with confidence 1.0 always ranks above spaCy candidates."""
+        from src.services.lemma_normalization_service import get_lemma_normalization_service
+        from src.services.lexicon_service import LexiconEntry
+
+        service = get_lemma_normalization_service()
+        entry = LexiconEntry(
+            form="μπαμπάς",
+            lemma="μπαμπάς",
+            pos="NOUN",
+            gender="Masc",
+            ptosi="Nom",
+            number="Sing",
+        )
+
+        result = service.normalize_smart("μπαμπάς", expected_pos="NOUN", lexicon_entry=entry)
+
+        assert result.primary.strategy == "lexicon"
+        assert result.primary.confidence == 1.0
