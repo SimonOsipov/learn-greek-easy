@@ -92,11 +92,27 @@ def run_migrations_offline() -> None:
         dialect_opts={"paramstyle": "named"},
         compare_type=True,  # Enable type comparison (for enums)
         compare_server_default=True,  # Compare server defaults
-        include_name=include_name,  # Filter out pgvector indexes
+        include_name=include_name,  # Filter out pgvector indexes and reference schema
+        include_object=include_object,  # Filter reference schema from metadata side
     )
 
     with context.begin_transaction():
         context.run_migrations()
+
+
+def include_object(
+    object: object, name: str | None, type_: str, reflected: bool, compare_to: object
+) -> bool:
+    """Filter metadata-side objects from the reference schema.
+
+    include_name filters DB-reflected objects; include_object filters
+    metadata-registered objects (e.g. GreekLexicon in Base.metadata).
+    Without this, Alembic detects reference.greek_lexicon as a new
+    table and reports it as an unmigrated upgrade operation.
+    """
+    if type_ == "table" and getattr(object, "schema", None) == "reference":
+        return False
+    return True
 
 
 def include_name(name: str | None, type_: str, parent_names: dict) -> bool:
@@ -135,7 +151,8 @@ def do_run_migrations(connection: Connection) -> None:
         target_metadata=target_metadata,
         compare_type=True,  # Enable type comparison (critical for enums)
         compare_server_default=True,
-        include_name=include_name,  # Filter out pgvector indexes
+        include_name=include_name,  # Filter out pgvector indexes and reference schema
+        include_object=include_object,  # Filter reference schema from metadata side
     )
 
     with context.begin_transaction():
