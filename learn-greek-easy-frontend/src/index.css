@@ -115,6 +115,17 @@
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
 
+    /* Landing page custom tokens (dark) */
+    --landing-navy: 240 27% 85%;
+    --landing-greek-blue: 212 85% 60%;
+    --landing-greek-blue-light: 212 50% 20%;
+    --landing-gold: 45 93% 68%;
+
+    /* Landing page shadows (dark) */
+    --landing-shadow-card: 0 0 0 1px hsl(var(--border)), 0 4px 12px hsl(0 0% 0% / 0.3);
+    --landing-shadow-card-hover:
+      0 0 0 1px hsl(var(--landing-greek-blue) / 0.3), 0 8px 24px hsl(0 0% 0% / 0.4);
+
     /* Culture card design tokens (dark) */
     --cult-accent: #818cf8; /* indigo-400 */
     --cult-accent-glow: rgba(129, 140, 248, 0.15); /* indigo-400 @ 15% */
