@@ -1,0 +1,173 @@
+"""Seed data for Greek lexicon (reference.greek_lexicon).
+
+Provides ~25 representative entries for E2E/CI testing:
+- 3 noun paradigms (masculine, feminine, neuter) with full case/number forms
+- 1 verb and 1 adjective for POS diversity
+"""
+
+LEXICON_SEED_DATA: list[dict] = [
+    # ─── σπίτι (neuter) ───
+    {
+        "form": "σπίτι",
+        "lemma": "σπίτι",
+        "pos": "NOUN",
+        "gender": "Neut",
+        "ptosi": "Nom",
+        "number": "Sing",
+    },
+    {
+        "form": "σπιτιού",
+        "lemma": "σπίτι",
+        "pos": "NOUN",
+        "gender": "Neut",
+        "ptosi": "Gen",
+        "number": "Sing",
+    },
+    {
+        "form": "σπίτι",
+        "lemma": "σπίτι",
+        "pos": "NOUN",
+        "gender": "Neut",
+        "ptosi": "Acc",
+        "number": "Sing",
+    },
+    {
+        "form": "σπίτια",
+        "lemma": "σπίτι",
+        "pos": "NOUN",
+        "gender": "Neut",
+        "ptosi": "Nom",
+        "number": "Plur",
+    },
+    {
+        "form": "σπιτιών",
+        "lemma": "σπίτι",
+        "pos": "NOUN",
+        "gender": "Neut",
+        "ptosi": "Gen",
+        "number": "Plur",
+    },
+    {
+        "form": "σπίτια",
+        "lemma": "σπίτι",
+        "pos": "NOUN",
+        "gender": "Neut",
+        "ptosi": "Acc",
+        "number": "Plur",
+    },
+    # ─── μπαμπάς (masculine) ───
+    {
+        "form": "μπαμπάς",
+        "lemma": "μπαμπάς",
+        "pos": "NOUN",
+        "gender": "Masc",
+        "ptosi": "Nom",
+        "number": "Sing",
+    },
+    {
+        "form": "μπαμπά",
+        "lemma": "μπαμπάς",
+        "pos": "NOUN",
+        "gender": "Masc",
+        "ptosi": "Gen",
+        "number": "Sing",
+    },
+    {
+        "form": "μπαμπά",
+        "lemma": "μπαμπάς",
+        "pos": "NOUN",
+        "gender": "Masc",
+        "ptosi": "Acc",
+        "number": "Sing",
+    },
+    {
+        "form": "μπαμπάδες",
+        "lemma": "μπαμπάς",
+        "pos": "NOUN",
+        "gender": "Masc",
+        "ptosi": "Nom",
+        "number": "Plur",
+    },
+    {
+        "form": "μπαμπάδων",
+        "lemma": "μπαμπάς",
+        "pos": "NOUN",
+        "gender": "Masc",
+        "ptosi": "Gen",
+        "number": "Plur",
+    },
+    {
+        "form": "μπαμπάδες",
+        "lemma": "μπαμπάς",
+        "pos": "NOUN",
+        "gender": "Masc",
+        "ptosi": "Acc",
+        "number": "Plur",
+    },
+    # ─── γάτα (feminine) ───
+    {
+        "form": "γάτα",
+        "lemma": "γάτα",
+        "pos": "NOUN",
+        "gender": "Fem",
+        "ptosi": "Nom",
+        "number": "Sing",
+    },
+    {
+        "form": "γάτας",
+        "lemma": "γάτα",
+        "pos": "NOUN",
+        "gender": "Fem",
+        "ptosi": "Gen",
+        "number": "Sing",
+    },
+    {
+        "form": "γάτα",
+        "lemma": "γάτα",
+        "pos": "NOUN",
+        "gender": "Fem",
+        "ptosi": "Acc",
+        "number": "Sing",
+    },
+    {
+        "form": "γάτες",
+        "lemma": "γάτα",
+        "pos": "NOUN",
+        "gender": "Fem",
+        "ptosi": "Nom",
+        "number": "Plur",
+    },
+    {
+        "form": "γάτων",
+        "lemma": "γάτα",
+        "pos": "NOUN",
+        "gender": "Fem",
+        "ptosi": "Gen",
+        "number": "Plur",
+    },
+    {
+        "form": "γάτες",
+        "lemma": "γάτα",
+        "pos": "NOUN",
+        "gender": "Fem",
+        "ptosi": "Acc",
+        "number": "Plur",
+    },
+    # ─── Non-noun POS ───
+    {
+        "form": "τρέχω",
+        "lemma": "τρέχω",
+        "pos": "VERB",
+        "gender": None,
+        "ptosi": None,
+        "number": None,
+    },
+    {
+        "form": "μεγάλος",
+        "lemma": "μεγάλος",
+        "pos": "ADJ",
+        "gender": "Masc",
+        "ptosi": None,
+        "number": None,
+    },
+]

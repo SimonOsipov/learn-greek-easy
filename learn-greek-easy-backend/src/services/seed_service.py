@@ -4581,6 +4581,32 @@ class SeedService:
             "users": results,
         }
 
+    async def seed_lexicon(self) -> dict[str, Any]:
+        """Seed representative Greek lexicon entries for E2E testing.
+
+        Truncates reference.greek_lexicon first, then inserts ~20 rows
+        covering 3 noun paradigms + verb + adjective.
+        """
+        self._check_can_seed()
+
+        from src.services.seed_lexicon_data import LEXICON_SEED_DATA
+
+        await self.db.execute(text("TRUNCATE reference.greek_lexicon"))
+
+        count = 0
+        for entry in LEXICON_SEED_DATA:
+            await self.db.execute(
+                text(
+                    "INSERT INTO reference.greek_lexicon (form, lemma, pos, gender, ptosi, number) "
+                    "VALUES (:form, :lemma, :pos, :gender, :ptosi, :number) "
+                    "ON CONFLICT DO NOTHING"
+                ),
+                entry,
+            )
+            count += 1
+
+        return {"success": True, "lexicon_entries_created": count}
+
     # =====================
     # Full Seed Orchestration
     # =====================
@@ -4880,6 +4906,9 @@ class SeedService:
         # Step 17: Create/update subscription-specific test users
         subscription_users_result = await self.seed_subscription_users()
 
+        # Step 18: Seed reference lexicon data
+        lexicon_result = await self.seed_lexicon()
+
         # Commit all changes
         await self.db.commit()
 
@@ -4909,6 +4938,7 @@ class SeedService:
             "announcements": announcements_result,
             "changelog": changelog_result,
             "subscription_users": subscription_users_result,
+            "lexicon": lexicon_result,
         }
 
     async def _create_word_entries_from_vocab(

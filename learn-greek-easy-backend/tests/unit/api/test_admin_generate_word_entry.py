@@ -638,3 +638,98 @@ class TestGenerateWordEntry:
             )
         assert resp.status_code == 400
         assert "No word provided" in resp.json()["error"]["message"]
+
+    # -------------------------------------------------------------------------
+    # Lexicon strategy tests (NGEN-09)
+    # -------------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_200_strategy_lexicon(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        v2_deck: Deck,
+    ):
+        """strategy='lexicon' appears in response for known lexicon words."""
+        with patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory:
+            mock_svc = MagicMock()
+            mock_svc.normalize_smart.return_value = _mock_smart_result(
+                strategy="lexicon", confidence=1.0
+            )
+            mock_factory.return_value = mock_svc
+            resp = await client.post(
+                ENDPOINT,
+                json={"word": "σπίτι", "deck_id": str(v2_deck.id)},
+                headers=superuser_auth_headers,
+            )
+        assert resp.status_code == 200
+        norm = resp.json()["normalization"]
+        assert norm["strategy"] == "lexicon"
+        assert norm["confidence"] == 1.0
+        assert norm["confidence_tier"] == "high"
+
+    @pytest.mark.asyncio
+    async def test_200_fallback_when_not_in_lexicon(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        v2_deck: Deck,
+    ):
+        """When word is not in lexicon, falls back to direct strategy."""
+        with patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory:
+            mock_svc = MagicMock()
+            mock_svc.normalize_smart.return_value = _mock_smart_result(
+                strategy="direct", confidence=0.8
+            )
+            mock_factory.return_value = mock_svc
+            resp = await client.post(
+                ENDPOINT,
+                json={"word": "γάτα", "deck_id": str(v2_deck.id)},
+                headers=superuser_auth_headers,
+            )
+        assert resp.status_code == 200
+        assert resp.json()["normalization"]["strategy"] == "direct"
+
+    @pytest.mark.asyncio
+    async def test_lexicon_entry_passed_to_normalize_smart(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        v2_deck: Deck,
+        db_session: AsyncSession,
+    ):
+        """Endpoint passes lexicon_entry to normalize_smart when found in DB."""
+        from sqlalchemy import text as sa_text
+
+        await db_session.execute(
+            sa_text(
+                "INSERT INTO reference.greek_lexicon (form, lemma, pos, gender, ptosi, number) "
+                "VALUES (:form, :lemma, :pos, :gender, :ptosi, :number)"
+            ),
+            {
+                "form": "σπίτι",
+                "lemma": "σπίτι",
+                "pos": "NOUN",
+                "gender": "Neut",
+                "ptosi": "Nom",
+                "number": "Sing",
+            },
+        )
+        await db_session.flush()
+
+        with patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory:
+            mock_svc = MagicMock()
+            mock_svc.normalize_smart.return_value = _mock_smart_result(strategy="lexicon")
+            mock_factory.return_value = mock_svc
+            resp = await client.post(
+                ENDPOINT,
+                json={"word": "σπίτι", "deck_id": str(v2_deck.id)},
+                headers=superuser_auth_headers,
+            )
+
+        assert resp.status_code == 200
+        call_kwargs = mock_svc.normalize_smart.call_args
+        lexicon_arg = call_kwargs.kwargs.get("lexicon_entry") or call_kwargs[1].get("lexicon_entry")
+        assert lexicon_arg is not None
+        assert lexicon_arg.lemma == "σπίτι"
+        assert lexicon_arg.gender == "Neut"
