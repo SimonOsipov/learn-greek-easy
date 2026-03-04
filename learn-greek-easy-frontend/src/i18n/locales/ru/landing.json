@@ -4,12 +4,15 @@
     "nav": {
       "features": "Возможности",
       "pricing": "Цены",
-      "faq": "Вопросы"
+      "faq": "Вопросы",
+      "ariaLabel": "Основная навигация",
+      "menuLabel": "Открыть меню"
     },
     "cta": {
       "login": "Войти",
       "getStarted": "Начать"
-    }
+    },
+    "logoAriaLabel": "Greekly - наверх"
   },
   "hero": {
     "badge": "Сейчас в бета-версии",

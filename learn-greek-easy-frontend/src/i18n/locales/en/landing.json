@@ -4,12 +4,15 @@
     "nav": {
       "features": "Features",
       "pricing": "Pricing",
-      "faq": "FAQ"
+      "faq": "FAQ",
+      "ariaLabel": "Main navigation",
+      "menuLabel": "Open menu"
     },
     "cta": {
       "login": "Log In",
       "getStarted": "Get Started"
-    }
+    },
+    "logoAriaLabel": "Greekly - back to top"
   },
   "hero": {
     "badge": "Now in Beta",

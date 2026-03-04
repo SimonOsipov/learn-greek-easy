@@ -8,4 +8,3 @@ export { default as FinalCTA } from './FinalCTA';
 export { default as Footer } from './Footer';
 export { default as FeatureCard } from './FeatureCard';
 export { default as GreekPattern } from './GreekPattern';
-export { NavLink } from './NavLink';
