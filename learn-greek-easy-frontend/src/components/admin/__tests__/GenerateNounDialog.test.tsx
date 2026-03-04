@@ -80,9 +80,22 @@ const mockNormalizationResponse = (
       confidence_tier: string;
       strategy: string;
     }>;
+    duplicate_check: {
+      is_duplicate: boolean;
+      existing_entry: {
+        id: string;
+        lemma: string;
+        part_of_speech: string;
+        translation_en: string;
+        translation_ru: string | null;
+        pronunciation: string | null;
+      } | null;
+      matched_deck_id: string | null;
+      matched_deck_name: string | null;
+    } | null;
   }>
 ) => ({
-  stage: 'normalization',
+  stage: 'duplicate_check',
   normalization: {
     input_word: 'γάτα',
     lemma: 'γάτα',
@@ -96,7 +109,15 @@ const mockNormalizationResponse = (
     corrected_to: overrides?.corrected_to !== undefined ? overrides.corrected_to : null,
   },
   suggestions: overrides?.suggestions ?? [],
-  duplicate_check: null,
+  duplicate_check:
+    overrides?.duplicate_check !== undefined
+      ? overrides.duplicate_check
+      : {
+          is_duplicate: false,
+          existing_entry: null,
+          matched_deck_id: null,
+          matched_deck_name: null,
+        },
   generation: null,
   local_verification: null,
   cross_verification: null,
@@ -451,8 +472,8 @@ describe('GenerateNounDialog', () => {
     expect(screen.getByTestId('generate-noun-submit')).not.toBeDisabled();
   });
 
-  // 24. Continue button is disabled
-  it('Continue button is disabled after result', async () => {
+  // 24. Continue button is enabled after duplicate check
+  it('Continue button is enabled after duplicate check completes', async () => {
     const user = userEvent.setup();
     vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(mockNormalizationResponse());
     renderDialog();
@@ -462,7 +483,7 @@ describe('GenerateNounDialog', () => {
     await waitFor(() => {
       expect(screen.getByTestId('generate-noun-result')).toBeInTheDocument();
     });
-    expect(screen.getByTestId('generate-noun-continue')).toBeDisabled();
+    expect(screen.getByTestId('generate-noun-continue')).not.toBeDisabled();
   });
 
   // 25. No correction note when corrected_from is null
@@ -632,7 +653,84 @@ describe('GenerateNounDialog', () => {
     expect(screen.getByTestId('suggestion-row-0')).toHaveTextContent('γάτος');
   });
 
-  // 31. Start Over clears swap state
+  // 31. No-duplicate banner shown
+  it('shows no-duplicate banner when is_duplicate is false', async () => {
+    const user = userEvent.setup();
+    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(mockNormalizationResponse());
+    renderDialog();
+
+    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
+    await user.click(screen.getByTestId('generate-noun-submit'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('no-duplicate-banner')).toBeInTheDocument();
+    });
+  });
+
+  // 32. Duplicate found warning shown
+  it('shows duplicate warning when is_duplicate is true', async () => {
+    const user = userEvent.setup();
+    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(
+      mockNormalizationResponse({
+        duplicate_check: {
+          is_duplicate: true,
+          existing_entry: {
+            id: 'entry-1',
+            lemma: 'γάτα',
+            part_of_speech: 'NOUN',
+            translation_en: 'cat',
+            translation_ru: null,
+            pronunciation: null,
+          },
+          matched_deck_id: 'deck-2',
+          matched_deck_name: 'Animals',
+        },
+      })
+    );
+    renderDialog();
+
+    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
+    await user.click(screen.getByTestId('generate-noun-submit'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('duplicate-found-warning')).toBeInTheDocument();
+    });
+    expect(screen.getByTestId('duplicate-found-warning')).toHaveTextContent('Animals');
+    expect(screen.getByTestId('duplicate-found-warning')).toHaveTextContent('cat');
+  });
+
+  // 33. Continue button enabled even when duplicate found
+  it('Continue button is enabled even when duplicate found', async () => {
+    const user = userEvent.setup();
+    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(
+      mockNormalizationResponse({
+        duplicate_check: {
+          is_duplicate: true,
+          existing_entry: {
+            id: 'entry-1',
+            lemma: 'γάτα',
+            part_of_speech: 'NOUN',
+            translation_en: 'cat',
+            translation_ru: null,
+            pronunciation: null,
+          },
+          matched_deck_id: 'deck-2',
+          matched_deck_name: 'Animals',
+        },
+      })
+    );
+    renderDialog();
+
+    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
+    await user.click(screen.getByTestId('generate-noun-submit'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('duplicate-found-warning')).toBeInTheDocument();
+    });
+    expect(screen.getByTestId('generate-noun-continue')).not.toBeDisabled();
+  });
+
+  // 34. Start Over clears swap state
   it('Start Over clears swap state and returns to input form', async () => {
     const user = userEvent.setup();
     vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(

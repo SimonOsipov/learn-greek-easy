@@ -986,6 +986,10 @@
     "errorGeneric": "Что-то пошло не так. Попробуйте ещё раз.",
     "accentCorrected": "Ударение исправлено: {{from}} → {{to}}",
     "suggestionsTitle": "Возможно, вы имели в виду",
-    "useSuggestion": "Выбрать"
+    "useSuggestion": "Выбрать",
+    "noDuplicates": "Дубликатов не найдено",
+    "duplicateFound": "Уже существует в колоде \"{{deckName}}\"",
+    "duplicateTranslation": "Перевод: {{translation}}",
+    "duplicateWarning": "Вы можете продолжить — слово будет добавлено в текущую колоду"
   }
 }
