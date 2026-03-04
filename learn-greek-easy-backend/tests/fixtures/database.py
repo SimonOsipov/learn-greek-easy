@@ -280,6 +280,10 @@ async def ensure_database_ready(engine: AsyncEngine) -> None:  # noqa: C901
         )
         await conn.commit()
 
+        # Create reference schema (required for GreekLexicon model)
+        await conn.execute(text("CREATE SCHEMA IF NOT EXISTS reference"))
+        await conn.commit()
+
 
 # =============================================================================
 # Core Database Fixtures
