@@ -277,7 +277,8 @@ class NormalizationStageResult(BaseModel):
         ..., description="Display tier derived from confidence score"
     )
     strategy: str | None = Field(
-        None, description='Normalization strategy used: "direct", "spellcheck", or "article_prefix"'
+        None,
+        description='Normalization strategy used: "lexicon", "direct", "spellcheck", or "article_prefix"',
     )
     corrected_from: str | None = Field(
         None, description="Original misspelled form if spellcheck corrected the input"
@@ -296,7 +297,9 @@ class SuggestionItem(BaseModel):
     article: str | None = Field(None, description="Article if detected")
     confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence score")
     confidence_tier: Literal["high", "medium", "low"] = Field(..., description="Display tier")
-    strategy: str = Field(..., description='Strategy: "direct", "spellcheck", or "article_prefix"')
+    strategy: str = Field(
+        ..., description='Strategy: "lexicon", "direct", "spellcheck", or "article_prefix"'
+    )
 
 
 class GenerateWordEntryResponse(BaseModel):
