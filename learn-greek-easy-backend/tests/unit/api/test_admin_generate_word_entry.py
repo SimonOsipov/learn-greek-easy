@@ -350,7 +350,7 @@ class TestGenerateWordEntry:
                 headers=superuser_auth_headers,
             )
 
-        mock_svc.normalize_smart.assert_called_once_with("γάτα")
+        mock_svc.normalize_smart.assert_called_once_with("γάτα", expected_pos="NOUN")
 
     # -------------------------------------------------------------------------
     # 404 / 400 — deck validation errors

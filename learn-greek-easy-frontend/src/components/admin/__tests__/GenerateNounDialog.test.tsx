@@ -69,6 +69,7 @@ const mockNormalizationResponse = (
     gender: string | null;
     article: string | null;
     corrected_from: string | null;
+    corrected_to: string | null;
     strategy: string | null;
     suggestions: Array<{
       lemma: string;
@@ -92,6 +93,7 @@ const mockNormalizationResponse = (
     confidence_tier: overrides?.confidence_tier ?? 'high',
     strategy: overrides?.strategy !== undefined ? overrides.strategy : null,
     corrected_from: overrides?.corrected_from !== undefined ? overrides.corrected_from : null,
+    corrected_to: overrides?.corrected_to !== undefined ? overrides.corrected_to : null,
   },
   suggestions: overrides?.suggestions ?? [],
   duplicate_check: null,
@@ -479,11 +481,11 @@ describe('GenerateNounDialog', () => {
     expect(screen.queryByTestId('correction-note')).not.toBeInTheDocument();
   });
 
-  // 26. Shows correction note when corrected_from is set
-  it('shows correction note when corrected_from is set', async () => {
+  // 26. Shows correction note when corrected_from and corrected_to are set
+  it('shows correction note when corrected_from and corrected_to are set', async () => {
     const user = userEvent.setup();
     vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(
-      mockNormalizationResponse({ corrected_from: 'σπιτι' })
+      mockNormalizationResponse({ corrected_from: 'σπιτι', corrected_to: 'σπίτι' })
     );
     renderDialog();
 

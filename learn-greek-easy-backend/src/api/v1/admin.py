@@ -2329,7 +2329,7 @@ async def generate_word_entry(
     # Stage 1: Normalization (synchronous -- CPU-bound NLP)
     svc = get_lemma_normalization_service()
     try:
-        smart_result = svc.normalize_smart(request.word)
+        smart_result = svc.normalize_smart(request.word, expected_pos="NOUN")
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -2338,6 +2338,14 @@ async def generate_word_entry(
 
     primary = smart_result.primary
     primary_gender, primary_article = _extract_gender_article(primary.morphology.morph_features)
+
+    # Article-based gender override: when user provided a nominative singular article,
+    # use it as ground-truth gender (overrides spaCy's morphological analysis)
+    _ARTICLE_GENDER_OVERRIDE = {"ο": "masculine", "η": "feminine", "το": "neuter"}
+    detected_art = smart_result.detected_article
+    if detected_art in _ARTICLE_GENDER_OVERRIDE:
+        primary_gender = _ARTICLE_GENDER_OVERRIDE[detected_art]
+        primary_article = detected_art
 
     suggestions = [
         SuggestionItem(
@@ -2364,6 +2372,7 @@ async def generate_word_entry(
             confidence_tier=_confidence_tier(primary.confidence),
             strategy=primary.strategy,
             corrected_from=primary.corrected_from,
+            corrected_to=primary.corrected_to,
         ),
         suggestions=suggestions,
     )

@@ -19,7 +19,7 @@ _GREEK_WITH_SPACES_RE = re.compile(r"^[\u0370-\u03FF\u1F00-\u1FFF][\u0370-\u03FF
 
 
 class MorphologyService:
-    """Service for Greek word morphological analysis using spaCy el_core_news_sm.
+    """Service for Greek word morphological analysis using spaCy el_core_news_md.
 
     The spaCy model is loaded once at service initialization (~200-500ms)
     and reused across all calls (singleton pattern).
@@ -29,19 +29,19 @@ class MorphologyService:
         """Load spaCy Greek model eagerly.
 
         Raises:
-            OSError: If el_core_news_sm model is not installed.
+            OSError: If el_core_news_md model is not installed.
         """
         self._nlp: Optional[Language] = None
         try:
-            self._nlp = spacy.load("el_core_news_sm")
+            self._nlp = spacy.load("el_core_news_md")
             logger.info(
-                "MorphologyService initialized with spaCy el_core_news_sm",
-                extra={"model": "el_core_news_sm"},
+                "MorphologyService initialized with spaCy el_core_news_md",
+                extra={"model": "el_core_news_md"},
             )
         except OSError:
             logger.error(
-                "Failed to load spaCy model — run: python -m spacy download el_core_news_sm",
-                extra={"model": "el_core_news_sm"},
+                "Failed to load spaCy model — run: python -m spacy download el_core_news_md",
+                extra={"model": "el_core_news_md"},
             )
             raise
 

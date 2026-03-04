@@ -282,6 +282,9 @@ class NormalizationStageResult(BaseModel):
     corrected_from: str | None = Field(
         None, description="Original misspelled form if spellcheck corrected the input"
     )
+    corrected_to: str | None = Field(
+        None, description="Spellcheck-corrected form (before lemmatization), null if no correction"
+    )
 
 
 class SuggestionItem(BaseModel):
