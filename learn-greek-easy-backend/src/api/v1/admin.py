@@ -96,7 +96,8 @@ from src.services.card_error_admin_service import CardErrorAdminService
 from src.services.card_generator_service import CardGeneratorService
 from src.services.changelog_service import ChangelogService
 from src.services.feedback_admin_service import FeedbackAdminService
-from src.services.lemma_normalization_service import get_lemma_normalization_service
+from src.services.lemma_normalization_service import detect_article, get_lemma_normalization_service
+from src.services.lexicon_service import LexiconService
 from src.services.news_item_service import NewsItemService
 from src.services.word_entry_response import word_entry_to_response
 from src.tasks import (
@@ -2326,10 +2327,17 @@ async def generate_word_entry(
             detail="Word generation is only supported for V2 vocabulary decks",
         )
 
+    # Stage 0.5: Lexicon lookup (async DB query)
+    _, bare_word = detect_article(request.word)
+    lexicon_svc = LexiconService(db)
+    lexicon_entry = await lexicon_svc.lookup(bare_word, pos="NOUN")
+
     # Stage 1: Normalization (synchronous -- CPU-bound NLP)
     svc = get_lemma_normalization_service()
     try:
-        smart_result = svc.normalize_smart(request.word, expected_pos="NOUN")
+        smart_result = svc.normalize_smart(
+            request.word, expected_pos="NOUN", lexicon_entry=lexicon_entry
+        )
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
