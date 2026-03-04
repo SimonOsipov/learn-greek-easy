@@ -21,6 +21,7 @@ import { Label } from '@/components/ui/label';
 import {
   adminAPI,
   type ConfidenceTier,
+  type DuplicateCheckResult,
   type NormalizationStageResult,
   type SuggestionItem,
 } from '@/services/adminAPI';
@@ -52,6 +53,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
   const [apiError, setApiError] = useState<string | null>(null);
   const [displayPrimary, setDisplayPrimary] = useState<NormalizationStageResult | null>(null);
   const [displaySuggestions, setDisplaySuggestions] = useState<SuggestionItem[]>([]);
+  const [displayDuplicate, setDisplayDuplicate] = useState<DuplicateCheckResult | null>(null);
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -80,8 +82,9 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
     if (normalizationResult) {
       setDisplayPrimary(normalizationResult);
       setDisplaySuggestions(mutation.data?.suggestions ?? []);
+      setDisplayDuplicate(mutation.data?.duplicate_check ?? null);
     }
-  }, [normalizationResult, mutation.data?.suggestions]);
+  }, [normalizationResult, mutation.data?.suggestions, mutation.data?.duplicate_check]);
 
   const trimmedWord = greekWord.trim();
   const validation = trimmedWord ? isValidGreekInput(trimmedWord) : { valid: false };
@@ -132,6 +135,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
         setApiError(null);
         setDisplayPrimary(null);
         setDisplaySuggestions([]);
+        setDisplayDuplicate(null);
         mutation.reset();
         resetTimerRef.current = null;
       }, 200);
@@ -241,6 +245,46 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
               )}
             </div>
 
+            {displayDuplicate && (
+              <div data-testid="duplicate-check-section">
+                {displayDuplicate.is_duplicate ? (
+                  <div className="space-y-2">
+                    <div
+                      data-testid="duplicate-found-warning"
+                      className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm dark:border-amber-800 dark:bg-amber-950"
+                    >
+                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                      <div>
+                        <p className="font-medium">
+                          {t('generateNoun.duplicateFound', {
+                            deckName: displayDuplicate.matched_deck_name,
+                          })}
+                        </p>
+                        {displayDuplicate.existing_entry && (
+                          <p className="mt-1 text-muted-foreground">
+                            {t('generateNoun.duplicateTranslation', {
+                              translation: displayDuplicate.existing_entry.translation_en,
+                            })}
+                          </p>
+                        )}
+                        <p className="mt-1 text-muted-foreground">
+                          {t('generateNoun.duplicateWarning')}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    data-testid="no-duplicate-banner"
+                    className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 p-3 text-sm dark:border-green-800 dark:bg-green-950"
+                  >
+                    <Info className="h-4 w-4 shrink-0 text-green-600 dark:text-green-400" />
+                    <span>{t('generateNoun.noDuplicates')}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
             <DialogFooter>
               <Button
                 variant="outline"
@@ -249,13 +293,14 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                   setApiError(null);
                   setDisplayPrimary(null);
                   setDisplaySuggestions([]);
+                  setDisplayDuplicate(null);
                   mutation.reset();
                 }}
                 data-testid="generate-noun-start-over"
               >
                 {t('generateNoun.startOverButton')}
               </Button>
-              <Button disabled data-testid="generate-noun-continue">
+              <Button disabled={!displayDuplicate} data-testid="generate-noun-continue">
                 {t('generateNoun.continueButton')}
               </Button>
             </DialogFooter>
