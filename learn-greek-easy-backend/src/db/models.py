@@ -27,7 +27,18 @@ from uuid import UUID
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import JSON, Boolean, Date, DateTime
 from sqlalchemy import Enum as SAEnum
-from sqlalchemy import Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint, func, text
+from sqlalchemy import (
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    SmallInteger,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+    text,
+)
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -2545,4 +2556,101 @@ class WebhookEvent(Base, TimestampMixin):
         return (
             f"<WebhookEvent(id={self.id}, event_id={self.event_id}, "
             f"type={self.event_type}, status={self.processing_status})>"
+        )
+
+
+# ============================================================================
+# Reference Data (separate PostgreSQL schema)
+# ============================================================================
+
+
+class GreekLexicon(Base):
+    """Greek morphological dictionary entry from eellak/gsoc2019-greek-morpho.
+
+    Stored in the 'reference' PostgreSQL schema, separate from application tables.
+    Contains 902K morphological entries covering 518K distinct surface forms.
+    Used for local morphological verification of generated noun data.
+    """
+
+    __tablename__ = "greek_lexicon"
+    __table_args__ = {"schema": "reference"}
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+        comment="Auto-incrementing primary key",
+    )
+    form: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        index=True,
+        comment="Surface form (inflected word as it appears in text)",
+    )
+    lemma: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        index=True,
+        comment="Dictionary form (lemma/base form)",
+    )
+    pos: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        comment="Part of speech tag (e.g., NOUN, VERB, ADJ)",
+    )
+    gender: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Grammatical gender (Masc, Fem, Neut)",
+    )
+    ptosi: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Grammatical case (Nom, Gen, Acc, Voc)",
+    )
+    number: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Grammatical number (Sing, Plur)",
+    )
+    person: Mapped[int | None] = mapped_column(
+        SmallInteger,
+        nullable=True,
+        comment="Grammatical person (1, 2, 3) for verb forms",
+    )
+    tense: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Verb tense (Past, Pres, Fut)",
+    )
+    aspect: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Verb aspect (Imp, Perf)",
+    )
+    mood: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Verb mood (Ind, Sub, Imp)",
+    )
+    verbform: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Verb form type (Fin, Inf, Part, Conv, Ger)",
+    )
+    voice: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Verb voice (Act, Pass)",
+    )
+    degree: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Adjective degree (Pos, Comp, Sup)",
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<GreekLexicon(id={self.id}, form={self.form!r}, "
+            f"lemma={self.lemma!r}, pos={self.pos!r})>"
         )
