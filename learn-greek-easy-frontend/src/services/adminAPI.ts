@@ -608,11 +608,24 @@ export interface NormalizationStageResult {
   pos: string;
   confidence: number;
   confidence_tier: ConfidenceTier;
+  strategy: string | null;
+  corrected_from: string | null;
+}
+
+export interface SuggestionItem {
+  lemma: string;
+  pos: string;
+  gender: string | null;
+  article: string | null;
+  confidence: number;
+  confidence_tier: ConfidenceTier;
+  strategy: string;
 }
 
 export interface GenerateWordEntryResponse {
   stage: string;
   normalization: NormalizationStageResult | null;
+  suggestions: SuggestionItem[];
   duplicate_check: null;
   generation: null;
   local_verification: null;

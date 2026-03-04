@@ -68,6 +68,17 @@ const mockNormalizationResponse = (
     confidence_tier: string;
     gender: string | null;
     article: string | null;
+    corrected_from: string | null;
+    strategy: string | null;
+    suggestions: Array<{
+      lemma: string;
+      pos: string;
+      gender: string | null;
+      article: string | null;
+      confidence: number;
+      confidence_tier: string;
+      strategy: string;
+    }>;
   }>
 ) => ({
   stage: 'normalization',
@@ -79,7 +90,10 @@ const mockNormalizationResponse = (
     pos: 'NOUN',
     confidence: overrides?.confidence ?? 1.0,
     confidence_tier: overrides?.confidence_tier ?? 'high',
+    strategy: overrides?.strategy !== undefined ? overrides.strategy : null,
+    corrected_from: overrides?.corrected_from !== undefined ? overrides.corrected_from : null,
   },
+  suggestions: overrides?.suggestions ?? [],
   duplicate_check: null,
   generation: null,
   local_verification: null,
@@ -447,5 +461,212 @@ describe('GenerateNounDialog', () => {
       expect(screen.getByTestId('generate-noun-result')).toBeInTheDocument();
     });
     expect(screen.getByTestId('generate-noun-continue')).toBeDisabled();
+  });
+
+  // 25. No correction note when corrected_from is null
+  it('does not show correction note when corrected_from is null', async () => {
+    const user = userEvent.setup();
+    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(mockNormalizationResponse());
+    renderDialog();
+
+    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
+    await user.click(screen.getByTestId('generate-noun-submit'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('generate-noun-result')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByTestId('correction-note')).not.toBeInTheDocument();
+  });
+
+  // 26. Shows correction note when corrected_from is set
+  it('shows correction note when corrected_from is set', async () => {
+    const user = userEvent.setup();
+    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(
+      mockNormalizationResponse({ corrected_from: 'σπιτι' })
+    );
+    renderDialog();
+
+    await user.type(screen.getByTestId('generate-noun-input'), 'σπιτι');
+    await user.click(screen.getByTestId('generate-noun-submit'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('correction-note')).toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId('correction-note')).toHaveTextContent('σπιτι');
+  });
+
+  // 27. No suggestions section when suggestions is empty
+  it('does not show suggestions section when suggestions is empty', async () => {
+    const user = userEvent.setup();
+    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(mockNormalizationResponse());
+    renderDialog();
+
+    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
+    await user.click(screen.getByTestId('generate-noun-submit'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('generate-noun-result')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByTestId('suggestions-section')).not.toBeInTheDocument();
+  });
+
+  // 28. Renders suggestion rows
+  it('renders suggestion rows when suggestions are provided', async () => {
+    const user = userEvent.setup();
+    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(
+      mockNormalizationResponse({
+        suggestions: [
+          {
+            lemma: 'γάτος',
+            pos: 'NOUN',
+            gender: 'masculine',
+            article: 'ο',
+            confidence: 0.8,
+            confidence_tier: 'medium',
+            strategy: 'article_prefix',
+          },
+          {
+            lemma: 'γατάκι',
+            pos: 'NOUN',
+            gender: 'neuter',
+            article: 'το',
+            confidence: 0.6,
+            confidence_tier: 'medium',
+            strategy: 'article_prefix',
+          },
+        ],
+      })
+    );
+    renderDialog();
+
+    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
+    await user.click(screen.getByTestId('generate-noun-submit'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('suggestions-section')).toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId('suggestion-row-0')).toBeInTheDocument();
+    expect(screen.getByTestId('suggestion-row-1')).toBeInTheDocument();
+    expect(screen.getByTestId('suggestion-row-0')).toHaveTextContent('γάτος');
+    expect(screen.getByTestId('suggestion-row-1')).toHaveTextContent('γατάκι');
+  });
+
+  // 29. Click Use swaps suggestion into primary display
+  it('swaps suggestion into primary display when Use is clicked', async () => {
+    const user = userEvent.setup();
+    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(
+      mockNormalizationResponse({
+        suggestions: [
+          {
+            lemma: 'γάτος',
+            pos: 'NOUN',
+            gender: 'masculine',
+            article: 'ο',
+            confidence: 0.8,
+            confidence_tier: 'medium',
+            strategy: 'article_prefix',
+          },
+        ],
+      })
+    );
+    renderDialog();
+
+    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
+    await user.click(screen.getByTestId('generate-noun-submit'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('suggestion-row-0')).toBeInTheDocument();
+    });
+
+    // Before swap: primary is γάτα, suggestion is γάτος
+    expect(screen.getByTestId('result-lemma')).toHaveTextContent('γάτα');
+
+    await user.click(screen.getByTestId('suggestion-use-0'));
+
+    // After swap: primary should be γάτος
+    expect(screen.getByTestId('result-lemma')).toHaveTextContent('γάτος');
+    // Old primary (γάτα) should now be in suggestion row
+    expect(screen.getByTestId('suggestion-row-0')).toHaveTextContent('γάτα');
+  });
+
+  // 30. Round-trip swap — swap A→B→A returns to original
+  it('round-trip swap returns to original values', async () => {
+    const user = userEvent.setup();
+    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(
+      mockNormalizationResponse({
+        suggestions: [
+          {
+            lemma: 'γάτος',
+            pos: 'NOUN',
+            gender: 'masculine',
+            article: 'ο',
+            confidence: 0.8,
+            confidence_tier: 'medium',
+            strategy: 'article_prefix',
+          },
+        ],
+      })
+    );
+    renderDialog();
+
+    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
+    await user.click(screen.getByTestId('generate-noun-submit'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('suggestion-row-0')).toBeInTheDocument();
+    });
+
+    // Swap A→B
+    await user.click(screen.getByTestId('suggestion-use-0'));
+    expect(screen.getByTestId('result-lemma')).toHaveTextContent('γάτος');
+
+    // Swap B→A
+    await user.click(screen.getByTestId('suggestion-use-0'));
+    expect(screen.getByTestId('result-lemma')).toHaveTextContent('γάτα');
+    expect(screen.getByTestId('suggestion-row-0')).toHaveTextContent('γάτος');
+  });
+
+  // 31. Start Over clears swap state
+  it('Start Over clears swap state and returns to input form', async () => {
+    const user = userEvent.setup();
+    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(
+      mockNormalizationResponse({
+        suggestions: [
+          {
+            lemma: 'γάτος',
+            pos: 'NOUN',
+            gender: 'masculine',
+            article: 'ο',
+            confidence: 0.8,
+            confidence_tier: 'medium',
+            strategy: 'article_prefix',
+          },
+        ],
+      })
+    );
+    renderDialog();
+
+    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
+    await user.click(screen.getByTestId('generate-noun-submit'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('suggestion-row-0')).toBeInTheDocument();
+    });
+
+    // Swap
+    await user.click(screen.getByTestId('suggestion-use-0'));
+    expect(screen.getByTestId('result-lemma')).toHaveTextContent('γάτος');
+
+    // Start Over
+    await user.click(screen.getByTestId('generate-noun-start-over'));
+
+    // Should be back at input form, not result
+    expect(screen.queryByTestId('generate-noun-result')).not.toBeInTheDocument();
+    expect(screen.getByTestId('generate-noun-input')).toBeInTheDocument();
+    expect(screen.queryByTestId('suggestions-section')).not.toBeInTheDocument();
   });
 });

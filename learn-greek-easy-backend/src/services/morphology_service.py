@@ -14,6 +14,9 @@ logger = get_logger(__name__)
 # Greek script regex: Basic Greek (U+0370-U+03FF) + Extended Greek (U+1F00-U+1FFF)
 _GREEK_SCRIPT_RE = re.compile(r"^[\u0370-\u03FF\u1F00-\u1FFF]+$")
 
+# Greek script with spaces: allows article+noun phrases like "το σπίτι"
+_GREEK_WITH_SPACES_RE = re.compile(r"^[\u0370-\u03FF\u1F00-\u1FFF][\u0370-\u03FF\u1F00-\u1FFF\s]*$")
+
 
 class MorphologyService:
     """Service for Greek word morphological analysis using spaCy el_core_news_sm.
@@ -101,6 +104,47 @@ class MorphologyService:
 
         # is_known heuristic: spaCy returns word itself as lemma for unknown words.
         # Note: nominative singular nouns also have lemma==text (known limitation).
+        is_known = token.lemma_ != token.text
+
+        return MorphologyResult(
+            input_word=stripped,
+            lemma=token.lemma_,
+            pos=token.pos_,
+            morph_features=token.morph.to_dict(),
+            is_known=is_known,
+            analysis_successful=True,
+        )
+
+    def analyze_in_context(self, phrase: str) -> MorphologyResult:
+        """Analyze morphology of the last token in a Greek phrase.
+
+        Designed for article+noun patterns like "το σπίτι" where the last
+        token is the noun of interest. Allows spaces unlike analyze().
+
+        Args:
+            phrase: A Greek phrase (may contain spaces) to analyze.
+                    The last token is used for morphological analysis.
+
+        Returns:
+            MorphologyResult. analysis_successful=False for empty,
+            non-Greek, or processing errors.
+        """
+        stripped = phrase.strip() if phrase else ""
+        if not stripped:
+            return self._empty_result(phrase or "")
+
+        if not _GREEK_WITH_SPACES_RE.match(stripped):
+            return self._empty_result(stripped)
+
+        if self._nlp is None:
+            return self._empty_result(stripped)
+
+        doc = self._nlp(stripped)
+
+        if len(doc) == 0:
+            return self._empty_result(stripped)
+
+        token = doc[-1]
         is_known = token.lemma_ != token.text
 
         return MorphologyResult(
