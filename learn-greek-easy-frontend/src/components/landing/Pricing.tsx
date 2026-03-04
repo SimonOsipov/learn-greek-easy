@@ -18,6 +18,14 @@ interface Plan {
   highlight?: boolean;
 }
 
+const FOUNDERS_COLORS = {
+  card: 'border-amber-400 bg-amber-50/50 dark:bg-amber-950/20',
+  badge: 'bg-amber-700',
+  iconBg: 'bg-amber-100 text-amber-700',
+  check: 'text-amber-500',
+  button: 'bg-amber-700 text-white hover:bg-amber-800',
+} as const;
+
 const Pricing = () => {
   const { t } = useTranslation('landing');
 
@@ -101,9 +109,10 @@ const Pricing = () => {
                 data-testid="pricing-card"
                 className={`relative flex flex-col rounded-2xl border p-6 transition-all duration-300 motion-safe:animate-fade-up ${
                   plan.popular
-                    ? 'scale-[1.02] border-primary bg-primary/5 shadow-lg'
+                    ? // scale-[1.02]: arbitrary Tailwind value — subtle scale lift on the most-popular card
+                      'scale-[1.02] border-primary bg-primary/5 shadow-lg'
                     : plan.highlight
-                      ? 'border-amber-400 bg-amber-50/50 dark:bg-amber-950/20'
+                      ? FOUNDERS_COLORS.card
                       : 'border-border bg-card hover:border-primary/50'
                 }`}
                 style={{ animationDelay: `${0.1 * (index + 1)}s` }}
@@ -120,7 +129,9 @@ const Pricing = () => {
                 {/* Founders badge */}
                 {plan.highlight && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <span className="flex items-center gap-1 rounded-full bg-amber-700 px-3 py-1 text-xs font-semibold text-white">
+                    <span
+                      className={`flex items-center gap-1 rounded-full ${FOUNDERS_COLORS.badge} px-3 py-1 text-xs font-semibold text-white`}
+                    >
                       <Crown className="h-3 w-3" />
                       {t('pricing.badges.limited')}
                     </span>
@@ -131,7 +142,7 @@ const Pricing = () => {
                 <div className="mb-6">
                   <div
                     className={`mb-4 flex h-12 w-12 items-center justify-center rounded-xl ${
-                      plan.highlight ? 'bg-amber-100 text-amber-700' : 'bg-primary/10 text-primary'
+                      plan.highlight ? FOUNDERS_COLORS.iconBg : 'bg-primary/10 text-primary'
                     }`}
                   >
                     {plan.icon}
@@ -155,7 +166,7 @@ const Pricing = () => {
                     >
                       <Check
                         className={`mt-0.5 h-4 w-4 flex-shrink-0 ${
-                          plan.highlight ? 'text-amber-500' : 'text-primary'
+                          plan.highlight ? FOUNDERS_COLORS.check : 'text-primary'
                         }`}
                       />
                       {feature}
@@ -167,7 +178,7 @@ const Pricing = () => {
                 <Button
                   variant={plan.buttonVariant}
                   className={`h-11 w-full font-semibold ${
-                    plan.highlight ? 'border-0 bg-amber-700 text-white hover:bg-amber-800' : ''
+                    plan.highlight ? `border-0 ${FOUNDERS_COLORS.button}` : ''
                   }`}
                   data-testid="pricing-cta"
                 >
