@@ -235,9 +235,12 @@
   "socialProof": {
     "goToQuote": "Go to quote {{number}}",
     "stats": {
-      "activeLearners": "Active Learners",
-      "flashcards": "Flashcards",
-      "levelCoverage": "Level Coverage"
+      "activeLearnersValue": "500+",
+      "activeLearnersLabel": "Active Learners",
+      "flashcardsValue": "2,000+",
+      "flashcardsLabel": "Flashcards",
+      "levelCoverageValue": "A1-B2",
+      "levelCoverageLabel": "Level Coverage"
     },
     "quotes": {
       "founder": {

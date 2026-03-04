@@ -241,9 +241,12 @@
   "socialProof": {
     "goToQuote": "Перейти к цитате {{number}}",
     "stats": {
-      "activeLearners": "Активных учеников",
-      "flashcards": "Карточек",
-      "levelCoverage": "Охват уровней"
+      "activeLearnersValue": "500+",
+      "activeLearnersLabel": "Активных учеников",
+      "flashcardsValue": "2 000+",
+      "flashcardsLabel": "Карточек",
+      "levelCoverageValue": "A1-B2",
+      "levelCoverageLabel": "Охват уровней"
     },
     "quotes": {
       "founder": {
