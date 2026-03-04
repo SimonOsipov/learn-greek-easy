@@ -29,8 +29,8 @@ export default {
   			input: 'hsl(var(--input))',
   			ring: 'hsl(var(--ring))',
   			primary: {
-  				DEFAULT: '#2563eb',
-  				foreground: '#ffffff'
+  				DEFAULT: 'hsl(var(--primary))',
+  				foreground: 'hsl(var(--primary-foreground))'
   			},
   			gradient: {
   				from: '#667eea',

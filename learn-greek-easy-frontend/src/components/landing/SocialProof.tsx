@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { User } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -9,27 +9,69 @@ const SocialProof = () => {
   const quoteKeys = ['founder', 'mariaK', 'dimitrisP', 'annaS', 'georgeM'];
 
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [direction, setDirection] = useState<'left' | 'right'>('left');
+  const [isPaused, setIsPaused] = useState(false);
+  const touchStartX = useRef(0);
+
+  const goToNext = useCallback(() => {
+    setDirection('left');
+    setCurrentIndex((prev) => (prev + 1) % quoteKeys.length);
+  }, [quoteKeys.length]);
+
+  const goToPrev = useCallback(() => {
+    setDirection('right');
+    setCurrentIndex((prev) => (prev - 1 + quoteKeys.length) % quoteKeys.length);
+  }, [quoteKeys.length]);
+
+  const goToIndex = useCallback(
+    (target: number) => {
+      setDirection(target > currentIndex ? 'left' : 'right');
+      setCurrentIndex(target);
+    },
+    [currentIndex]
+  );
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % quoteKeys.length);
-    }, 5000);
+    if (isPaused) return;
+    const interval = setInterval(goToNext, 5000);
     return () => clearInterval(interval);
-  }, [quoteKeys.length]);
+  }, [isPaused, goToNext]);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const delta = touchStartX.current - e.changedTouches[0].clientX;
+    if (Math.abs(delta) > 50) {
+      if (delta > 0) {
+        goToNext();
+      } else {
+        goToPrev();
+      }
+    }
+  };
 
   return (
     <section data-testid="social-proof-section" className="overflow-hidden py-24 md:py-32">
       <div className="container mx-auto px-6">
         <div>
           {/* Sliding quotes container */}
-          <div className="relative h-[280px] md:h-[240px]">
+          {/* Fixed height needed for absolute-positioned slide transitions */}
+          <div
+            className="relative h-[280px] md:h-[240px]"
+            onMouseEnter={() => setIsPaused(true)}
+            onMouseLeave={() => setIsPaused(false)}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+          >
             {quoteKeys.map((key, index) => (
               <div
                 key={index}
                 className={`absolute inset-0 transition-all duration-1000 ease-in-out ${
                   index === currentIndex
                     ? 'translate-x-0 opacity-100'
-                    : index < currentIndex || (currentIndex === 0 && index === quoteKeys.length - 1)
+                    : direction === 'left'
                       ? '-translate-x-full opacity-0'
                       : 'translate-x-full opacity-0'
                 }`}
@@ -71,7 +113,7 @@ const SocialProof = () => {
               <button
                 type="button"
                 key={index}
-                onClick={() => setCurrentIndex(index)}
+                onClick={() => goToIndex(index)}
                 className={`h-2 w-2 rounded-full transition-all duration-300 ${
                   index === currentIndex ? 'w-6 bg-primary' : 'bg-primary/30 hover:bg-primary/50'
                 }`}
@@ -86,21 +128,27 @@ const SocialProof = () => {
             style={{ animationDelay: '0.2s' }}
           >
             <div className="text-center">
-              <p className="text-2xl font-bold text-foreground md:text-3xl">500+</p>
+              <p className="text-2xl font-bold text-foreground md:text-3xl">
+                {t('socialProof.stats.activeLearnersValue')}
+              </p>
               <p className="mt-1 text-sm text-muted-foreground">
-                {t('socialProof.stats.activeLearners')}
+                {t('socialProof.stats.activeLearnersLabel')}
               </p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-foreground md:text-3xl">2,000+</p>
+              <p className="text-2xl font-bold text-foreground md:text-3xl">
+                {t('socialProof.stats.flashcardsValue')}
+              </p>
               <p className="mt-1 text-sm text-muted-foreground">
-                {t('socialProof.stats.flashcards')}
+                {t('socialProof.stats.flashcardsLabel')}
               </p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-foreground md:text-3xl">A1-B2</p>
+              <p className="text-2xl font-bold text-foreground md:text-3xl">
+                {t('socialProof.stats.levelCoverageValue')}
+              </p>
               <p className="mt-1 text-sm text-muted-foreground">
-                {t('socialProof.stats.levelCoverage')}
+                {t('socialProof.stats.levelCoverageLabel')}
               </p>
             </div>
           </div>

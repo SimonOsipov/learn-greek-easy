@@ -4,12 +4,15 @@
     "nav": {
       "features": "Features",
       "pricing": "Pricing",
-      "faq": "FAQ"
+      "faq": "FAQ",
+      "ariaLabel": "Main navigation",
+      "menuLabel": "Open menu"
     },
     "cta": {
       "login": "Log In",
       "getStarted": "Get Started"
-    }
+    },
+    "logoAriaLabel": "Greekly - back to top"
   },
   "hero": {
     "badge": "Now in Beta",
@@ -109,8 +112,6 @@
       "taxAuthority": "Tax Authority",
       "workVocabulary": "Work Vocabulary",
       "restaurantPhrases": "Restaurant Phrases",
-      "progress80": "80%",
-      "progress65": "65%",
       "independenceQuestion": "When did Cyprus gain independence from Britain?",
       "newsHeadline": "The government announced new measures for the economy, focusing on support for small businesses."
     }
@@ -122,12 +123,12 @@
     "guarantee": "All plans include a 14-day money-back guarantee. No questions asked.",
     "badges": {
       "mostPopular": "Most Popular",
-      "limited": "Limited"
+      "limited": "Best Value"
     },
     "plans": {
       "free": {
         "name": "Free",
-        "price": "0 EUR",
+        "price": "€0",
         "period": "forever",
         "description": "Get started with the basics",
         "cta": "Start Free",
@@ -140,8 +141,8 @@
         ]
       },
       "monthly": {
-        "name": "Monthly Premium",
-        "price": "29 EUR",
+        "name": "Monthly",
+        "price": "€49",
         "period": "/month",
         "description": "Full access, billed monthly",
         "cta": "Go Premium",
@@ -154,30 +155,29 @@
           "Priority support"
         ]
       },
-      "yearly": {
-        "name": "Yearly Premium",
-        "price": "200 EUR",
-        "period": "/year",
-        "description": "Save 148 EUR vs monthly",
-        "cta": "Save with Yearly",
+      "quarterly": {
+        "name": "Quarterly",
+        "price": "€129",
+        "period": "/quarter",
+        "description": "Save 12% vs monthly",
+        "cta": "Save with Quarterly",
         "features": [
-          "Everything in Monthly Premium",
-          "2+ months free",
+          "Everything in Monthly",
+          "Save €18 per quarter",
           "Early access to new features"
         ]
       },
-      "founders": {
-        "name": "Founders Edition",
-        "price": "250 EUR",
-        "period": "one-time",
-        "description": "Lifetime access, forever",
-        "cta": "Become a Founder",
+      "semiAnnual": {
+        "name": "Semi-Annual",
+        "price": "€249",
+        "period": "/6 months",
+        "description": "Best value — save 15%",
+        "cta": "Best Value",
         "features": [
-          "Everything in Premium, forever",
-          "Lifetime updates included",
-          "Founders badge on profile",
-          "Direct input on new features",
-          "Support our mission"
+          "Everything in Monthly",
+          "Save €45 over 6 months",
+          "Priority support",
+          "Early access to new features"
         ]
       }
     }
@@ -212,29 +212,32 @@
         "answer": "The Free plan includes access to basic A1 vocabulary cards, limited daily practice sessions, progress tracking, and community access. It is a great way to get started and see if Greekly is right for you before upgrading to Premium."
       },
       "monthlyVsYearly": {
-        "question": "What is the difference between Monthly and Yearly Premium?",
-        "answer": "Both plans include full access to all features: complete vocabulary from A1-B2, unlimited practice, all grammar exercises, real news and audio content, and history/culture questions. The Yearly plan saves you 148 EUR compared to paying monthly (equivalent to getting 2+ months free) and includes early access to new features."
+        "question": "What is the difference between the plans?",
+        "answer": "All paid plans include full access to all features: complete vocabulary from A1-B2, unlimited practice, all grammar exercises, real news and audio content, and history/culture questions. The Quarterly plan (€129) saves you 12% compared to paying monthly, while the Semi-Annual plan (€249) offers the best value at 15% savings."
       },
       "foundersEdition": {
-        "question": "What is the Founders Edition?",
-        "answer": "The Founders Edition is a one-time payment of 250 EUR that gives you lifetime access to Greekly, including all future updates and features. You will also get a Founders badge, direct input on new features, and access to our exclusive founders community. It is perfect for those who want to support our mission while securing permanent access."
+        "question": "What is the Semi-Annual plan?",
+        "answer": "The Semi-Annual plan is €249 for 6 months of full access to Greekly, including all features and priority support. At approximately €41.50 per month, it offers the best value of all our plans. It includes early access to new features and priority support."
       },
       "refundPolicy": {
         "question": "What is your refund policy?",
-        "answer": "We offer a 14-day money-back guarantee on all paid plans, no questions asked. If Greekly is not the right fit for you, simply contact us within 14 days of your purchase for a full refund. For the Founders Edition, the same 14-day guarantee applies."
+        "answer": "We offer a 14-day money-back guarantee on all paid plans, no questions asked. If Greekly is not the right fit for you, simply contact us within 14 days of your purchase for a full refund."
       },
       "offline": {
         "question": "Can I use Greekly offline?",
-        "answer": "Offline mode is coming soon for Yearly Premium and Founders Edition members. This will allow you to download vocabulary decks and practice without an internet connection - perfect for studying on your commute or when traveling."
+        "answer": "Offline mode is coming soon for Quarterly and Semi-Annual plan members. This will allow you to download vocabulary decks and practice without an internet connection - perfect for studying on your commute or when traveling."
       }
     }
   },
   "socialProof": {
     "goToQuote": "Go to quote {{number}}",
     "stats": {
-      "activeLearners": "Active Learners",
-      "flashcards": "Flashcards",
-      "levelCoverage": "Level Coverage"
+      "activeLearnersValue": "500+",
+      "activeLearnersLabel": "Active Learners",
+      "flashcardsValue": "2,000+",
+      "flashcardsLabel": "Flashcards",
+      "levelCoverageValue": "A1-B2",
+      "levelCoverageLabel": "Level Coverage"
     },
     "quotes": {
       "founder": {

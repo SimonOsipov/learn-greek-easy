@@ -16,7 +16,10 @@ const Footer = () => {
           </div>
 
           {/* Links */}
-          <nav className="flex items-center gap-8" data-testid="footer-links">
+          <nav
+            className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 md:gap-8"
+            data-testid="footer-links"
+          >
             <a
               href="#features"
               className="text-sm text-muted-foreground transition-colors hover:text-foreground"
