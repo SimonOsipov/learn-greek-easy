@@ -761,8 +761,7 @@ class TestGenerateWordEntry:
         dup = resp.json()["duplicate_check"]
         assert dup["is_duplicate"] is False
         assert dup["existing_entry"] is None
-        assert dup["matched_deck_id"] is None
-        assert dup["matched_deck_name"] is None
+        assert dup["matched_decks"] == []
 
     @pytest.mark.asyncio
     async def test_200_duplicate_check_found(
@@ -773,17 +772,19 @@ class TestGenerateWordEntry:
         db_session: AsyncSession,
     ):
         """duplicate_check.is_duplicate is True when lemma already exists in a deck."""
-        from src.db.models import PartOfSpeech, WordEntry
+        from src.db.models import DeckWordEntry, PartOfSpeech, WordEntry
 
         existing = WordEntry(
             id=uuid4(),
-            deck_id=v2_deck.id,
+            owner_id=None,
             lemma="γάτα",
             part_of_speech=PartOfSpeech.NOUN,
             translation_en="cat",
             is_active=True,
         )
         db_session.add(existing)
+        await db_session.flush()
+        db_session.add(DeckWordEntry(deck_id=v2_deck.id, word_entry_id=existing.id))
         await db_session.commit()
 
         with patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory:
@@ -800,4 +801,5 @@ class TestGenerateWordEntry:
         assert dup["is_duplicate"] is True
         assert dup["existing_entry"] is not None
         assert dup["existing_entry"]["lemma"] == "γάτα"
-        assert dup["matched_deck_name"] == v2_deck.name_en
+        assert len(dup["matched_decks"]) > 0
+        assert dup["matched_decks"][0]["deck_name"] == v2_deck.name_en
