@@ -6,7 +6,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.db.models import Card, CardSystemVersion, Deck, DeckLevel, WordEntry
+from src.db.models import Card, CardSystemVersion, Deck, DeckLevel, DeckWordEntry, WordEntry
 from src.repositories.base import BaseRepository
 
 
@@ -119,7 +119,8 @@ class DeckRepository(BaseRepository[Deck]):
             query = (
                 select(func.count())
                 .select_from(WordEntry)
-                .where(WordEntry.deck_id == deck_id)
+                .join(DeckWordEntry, DeckWordEntry.word_entry_id == WordEntry.id)
+                .where(DeckWordEntry.deck_id == deck_id)
                 .where(WordEntry.is_active.is_(True))
             )
         else:
@@ -299,10 +300,12 @@ class DeckRepository(BaseRepository[Deck]):
 
         if v2_ids:
             v2_query = (
-                select(WordEntry.deck_id, func.count(WordEntry.id).label("count"))
-                .where(WordEntry.deck_id.in_(v2_ids))
+                select(DeckWordEntry.deck_id, func.count(WordEntry.id).label("count"))
+                .select_from(WordEntry)
+                .join(DeckWordEntry, DeckWordEntry.word_entry_id == WordEntry.id)
+                .where(DeckWordEntry.deck_id.in_(v2_ids))
                 .where(WordEntry.is_active.is_(True))
-                .group_by(WordEntry.deck_id)
+                .group_by(DeckWordEntry.deck_id)
             )
             v2_result = await self.db.execute(v2_query)
             for row in v2_result.all():

@@ -3,7 +3,7 @@
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import Deck, DeckLevel, PartOfSpeech, WordEntry
+from src.db.models import Deck, DeckLevel, DeckWordEntry, PartOfSpeech, User, WordEntry
 from src.repositories.word_entry import WordEntryRepository
 
 
@@ -27,18 +27,34 @@ async def sample_deck(db_session: AsyncSession) -> Deck:
 
 
 @pytest.fixture
-async def sample_word_entries(db_session: AsyncSession, sample_deck: Deck) -> list[WordEntry]:
+async def sample_user(db_session: AsyncSession) -> User:
+    """Create a sample user for testing."""
+    user = User(
+        email="wordentry_test@example.com",
+        full_name="Word Entry Test User",
+        is_active=True,
+    )
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+    return user
+
+
+@pytest.fixture
+async def sample_word_entries(
+    db_session: AsyncSession, sample_deck: Deck, sample_user: User
+) -> list[WordEntry]:
     """Create sample word entries for testing."""
     entries = [
         WordEntry(
-            deck_id=sample_deck.id,
+            owner_id=sample_user.id,
             lemma="house",
             part_of_speech=PartOfSpeech.NOUN,
             translation_en="house",
             is_active=True,
         ),
         WordEntry(
-            deck_id=sample_deck.id,
+            owner_id=sample_user.id,
             lemma="run",
             part_of_speech=PartOfSpeech.VERB,
             translation_en="to run",
@@ -46,6 +62,9 @@ async def sample_word_entries(db_session: AsyncSession, sample_deck: Deck) -> li
         ),
     ]
     db_session.add_all(entries)
+    await db_session.flush()
+    for entry in entries:
+        db_session.add(DeckWordEntry(deck_id=sample_deck.id, word_entry_id=entry.id))
     await db_session.commit()
     for entry in entries:
         await db_session.refresh(entry)
@@ -152,12 +171,13 @@ class TestWordEntryRepositoryBasic:
         self,
         db_session: AsyncSession,
         sample_deck: Deck,
+        sample_user: User,
         sample_word_entries: list[WordEntry],
     ):
         """Test getting entry by lemma and part of speech."""
         repo = WordEntryRepository(db_session)
 
-        entry = await repo.get_by_lemma_pos(sample_deck.id, "house", PartOfSpeech.NOUN)
+        entry = await repo.get_by_owner_lemma_pos(sample_user.id, "house", PartOfSpeech.NOUN)
         assert entry is not None
         assert entry.lemma == "house"
         assert entry.translation_en == "house"
@@ -167,11 +187,12 @@ class TestWordEntryRepositoryBasic:
         self,
         db_session: AsyncSession,
         sample_deck: Deck,
+        sample_user: User,
     ):
         """Test getting non-existent entry returns None."""
         repo = WordEntryRepository(db_session)
 
-        entry = await repo.get_by_lemma_pos(sample_deck.id, "nonexistent", PartOfSpeech.NOUN)
+        entry = await repo.get_by_owner_lemma_pos(sample_user.id, "nonexistent", PartOfSpeech.NOUN)
         assert entry is None
 
 
@@ -179,7 +200,9 @@ class TestWordEntryRepositoryBulkUpsert:
     """Test bulk upsert functionality."""
 
     @pytest.mark.asyncio
-    async def test_bulk_upsert_create_new(self, db_session: AsyncSession, sample_deck: Deck):
+    async def test_bulk_upsert_create_new(
+        self, db_session: AsyncSession, sample_deck: Deck, sample_user: User
+    ):
         """Test bulk upsert creates new entries."""
         repo = WordEntryRepository(db_session)
 
@@ -196,7 +219,7 @@ class TestWordEntryRepositoryBulkUpsert:
             },
         ]
 
-        entries, created, updated = await repo.bulk_upsert(sample_deck.id, entries_data)
+        entries, created, updated = await repo.bulk_upsert(sample_user.id, entries_data)
         await db_session.commit()
 
         assert len(entries) == 2
@@ -208,6 +231,7 @@ class TestWordEntryRepositoryBulkUpsert:
         self,
         db_session: AsyncSession,
         sample_deck: Deck,
+        sample_user: User,
         sample_word_entries: list[WordEntry],
     ):
         """Test bulk upsert updates existing entries."""
@@ -221,7 +245,7 @@ class TestWordEntryRepositoryBulkUpsert:
             },
         ]
 
-        entries, created, updated = await repo.bulk_upsert(sample_deck.id, entries_data)
+        entries, created, updated = await repo.bulk_upsert(sample_user.id, entries_data)
         await db_session.commit()
 
         assert len(entries) == 1
@@ -234,6 +258,7 @@ class TestWordEntryRepositoryBulkUpsert:
         self,
         db_session: AsyncSession,
         sample_deck: Deck,
+        sample_user: User,
         sample_word_entries: list[WordEntry],
     ):
         """Test bulk upsert with mix of creates and updates."""
@@ -254,7 +279,7 @@ class TestWordEntryRepositoryBulkUpsert:
             },
         ]
 
-        entries, created, updated = await repo.bulk_upsert(sample_deck.id, entries_data)
+        entries, created, updated = await repo.bulk_upsert(sample_user.id, entries_data)
         await db_session.commit()
 
         assert len(entries) == 2
@@ -263,14 +288,14 @@ class TestWordEntryRepositoryBulkUpsert:
 
     @pytest.mark.asyncio
     async def test_bulk_upsert_preserves_is_active(
-        self, db_session: AsyncSession, sample_deck: Deck
+        self, db_session: AsyncSession, sample_deck: Deck, sample_user: User
     ):
         """Test that bulk upsert preserves is_active flag."""
         repo = WordEntryRepository(db_session)
 
         # Create an inactive entry
         inactive_entry = WordEntry(
-            deck_id=sample_deck.id,
+            owner_id=sample_user.id,
             lemma="old",
             part_of_speech=PartOfSpeech.ADJECTIVE,
             translation_en="old",
@@ -288,7 +313,7 @@ class TestWordEntryRepositoryBulkUpsert:
             },
         ]
 
-        entries, created, updated = await repo.bulk_upsert(sample_deck.id, entries_data)
+        entries, created, updated = await repo.bulk_upsert(sample_user.id, entries_data)
         await db_session.commit()
 
         # Verify is_active was preserved as False
@@ -297,11 +322,13 @@ class TestWordEntryRepositoryBulkUpsert:
         assert inactive_entry.translation_en == "old, ancient"
 
     @pytest.mark.asyncio
-    async def test_bulk_upsert_empty_list(self, db_session: AsyncSession, sample_deck: Deck):
+    async def test_bulk_upsert_empty_list(
+        self, db_session: AsyncSession, sample_deck: Deck, sample_user: User
+    ):
         """Test bulk upsert with empty list returns empty results."""
         repo = WordEntryRepository(db_session)
 
-        entries, created, updated = await repo.bulk_upsert(sample_deck.id, [])
+        entries, created, updated = await repo.bulk_upsert(sample_user.id, [])
 
         assert entries == []
         assert created == 0
@@ -309,7 +336,7 @@ class TestWordEntryRepositoryBulkUpsert:
 
     @pytest.mark.asyncio
     async def test_bulk_upsert_with_optional_fields(
-        self, db_session: AsyncSession, sample_deck: Deck
+        self, db_session: AsyncSession, sample_deck: Deck, sample_user: User
     ):
         """Test bulk upsert with all optional fields."""
         repo = WordEntryRepository(db_session)
@@ -326,7 +353,7 @@ class TestWordEntryRepositoryBulkUpsert:
             },
         ]
 
-        entries, created, updated = await repo.bulk_upsert(sample_deck.id, entries_data)
+        entries, created, updated = await repo.bulk_upsert(sample_user.id, entries_data)
         await db_session.commit()
 
         assert len(entries) == 1
@@ -341,6 +368,7 @@ class TestWordEntryRepositoryBulkUpsert:
         self,
         db_session: AsyncSession,
         sample_deck: Deck,
+        sample_user: User,
         sample_word_entries: list[WordEntry],
     ):
         """Test that bulk upsert updates the updated_at timestamp."""
@@ -356,7 +384,7 @@ class TestWordEntryRepositoryBulkUpsert:
             },
         ]
 
-        entries, _, _ = await repo.bulk_upsert(sample_deck.id, entries_data)
+        entries, _, _ = await repo.bulk_upsert(sample_user.id, entries_data)
         await db_session.commit()
 
         # The updated_at should be newer
@@ -373,7 +401,7 @@ class TestBulkUpsertAudioKeyMerge:
 
         # Create a WordEntry with an example that has an audio_key
         existing_entry = WordEntry(
-            deck_id=sample_deck.id,
+            owner_id=None,
             lemma="σπίτι",
             part_of_speech=PartOfSpeech.NOUN,
             translation_en="house",
@@ -394,7 +422,7 @@ class TestBulkUpsertAudioKeyMerge:
             }
         ]
 
-        entries, _, _ = await repo.bulk_upsert(sample_deck.id, entries_data)
+        entries, _, _ = await repo.bulk_upsert(None, entries_data)
         await db_session.commit()
 
         assert len(entries) == 1
@@ -410,7 +438,7 @@ class TestBulkUpsertAudioKeyMerge:
 
         # Create a WordEntry with an example that has an audio_key
         existing_entry = WordEntry(
-            deck_id=sample_deck.id,
+            owner_id=None,
             lemma="σπίτι",
             part_of_speech=PartOfSpeech.NOUN,
             translation_en="house",
@@ -431,7 +459,7 @@ class TestBulkUpsertAudioKeyMerge:
             }
         ]
 
-        entries, _, _ = await repo.bulk_upsert(sample_deck.id, entries_data)
+        entries, _, _ = await repo.bulk_upsert(None, entries_data)
         await db_session.commit()
 
         assert len(entries) == 1
@@ -448,7 +476,7 @@ class TestBulkUpsertAudioKeyMerge:
 
         # Create a WordEntry with an old audio_key
         existing_entry = WordEntry(
-            deck_id=sample_deck.id,
+            owner_id=None,
             lemma="σπίτι",
             part_of_speech=PartOfSpeech.NOUN,
             translation_en="house",
@@ -469,7 +497,7 @@ class TestBulkUpsertAudioKeyMerge:
             }
         ]
 
-        entries, _, _ = await repo.bulk_upsert(sample_deck.id, entries_data)
+        entries, _, _ = await repo.bulk_upsert(None, entries_data)
         await db_session.commit()
 
         assert len(entries) == 1
@@ -485,7 +513,7 @@ class TestBulkUpsertAudioKeyMerge:
 
         # Create a WordEntry with two examples, each with an audio_key
         existing_entry = WordEntry(
-            deck_id=sample_deck.id,
+            owner_id=None,
             lemma="σπίτι",
             part_of_speech=PartOfSpeech.NOUN,
             translation_en="house",
@@ -507,10 +535,138 @@ class TestBulkUpsertAudioKeyMerge:
             }
         ]
 
-        entries, _, _ = await repo.bulk_upsert(sample_deck.id, entries_data)
+        entries, _, _ = await repo.bulk_upsert(None, entries_data)
         await db_session.commit()
 
         assert len(entries) == 1
         assert len(entries[0].examples) == 1
         assert entries[0].examples[0]["id"] == "ex1"
         assert entries[0].examples[0]["audio_key"] == "audio/ex1.mp3"
+
+
+class TestWordEntryRepositoryJunction:
+    """Tests for junction table methods."""
+
+    @pytest.mark.asyncio
+    async def test_link_to_deck(
+        self, db_session: AsyncSession, sample_deck: Deck, sample_user: User
+    ) -> None:
+        repo = WordEntryRepository(db_session)
+        entry = WordEntry(
+            owner_id=sample_user.id,
+            lemma="test",
+            part_of_speech=PartOfSpeech.NOUN,
+            translation_en="test",
+            is_active=True,
+        )
+        db_session.add(entry)
+        await db_session.flush()
+
+        await repo.link_to_deck(entry.id, sample_deck.id)
+        await db_session.flush()
+
+        linked = await repo.is_linked_to_deck(entry.id, sample_deck.id)
+        assert linked is True
+
+    @pytest.mark.asyncio
+    async def test_link_to_deck_idempotent(
+        self, db_session: AsyncSession, sample_deck: Deck, sample_user: User
+    ) -> None:
+        repo = WordEntryRepository(db_session)
+        entry = WordEntry(
+            owner_id=sample_user.id,
+            lemma="test2",
+            part_of_speech=PartOfSpeech.NOUN,
+            translation_en="test2",
+            is_active=True,
+        )
+        db_session.add(entry)
+        await db_session.flush()
+
+        await repo.link_to_deck(entry.id, sample_deck.id)
+        await db_session.flush()
+        # Second call should not raise
+        await repo.link_to_deck(entry.id, sample_deck.id)
+        await db_session.flush()
+
+        linked = await repo.is_linked_to_deck(entry.id, sample_deck.id)
+        assert linked is True
+
+    @pytest.mark.asyncio
+    async def test_unlink_from_deck(
+        self, db_session: AsyncSession, sample_deck: Deck, sample_user: User
+    ) -> None:
+        repo = WordEntryRepository(db_session)
+        entry = WordEntry(
+            owner_id=sample_user.id,
+            lemma="test3",
+            part_of_speech=PartOfSpeech.NOUN,
+            translation_en="test3",
+            is_active=True,
+        )
+        db_session.add(entry)
+        await db_session.flush()
+        db_session.add(DeckWordEntry(deck_id=sample_deck.id, word_entry_id=entry.id))
+        await db_session.flush()
+
+        await repo.unlink_from_deck(entry.id, sample_deck.id)
+        await db_session.flush()
+
+        linked = await repo.is_linked_to_deck(entry.id, sample_deck.id)
+        assert linked is False
+
+    @pytest.mark.asyncio
+    async def test_unlink_from_deck_nonexistent(
+        self, db_session: AsyncSession, sample_deck: Deck, sample_user: User
+    ) -> None:
+        repo = WordEntryRepository(db_session)
+        entry = WordEntry(
+            owner_id=sample_user.id,
+            lemma="test4",
+            part_of_speech=PartOfSpeech.NOUN,
+            translation_en="test4",
+            is_active=True,
+        )
+        db_session.add(entry)
+        await db_session.flush()
+
+        # Should not raise even if no junction row exists
+        await repo.unlink_from_deck(entry.id, sample_deck.id)
+
+    @pytest.mark.asyncio
+    async def test_get_decks_for_word_entry(
+        self, db_session: AsyncSession, sample_deck: Deck, sample_user: User
+    ) -> None:
+        repo = WordEntryRepository(db_session)
+        entry = WordEntry(
+            owner_id=sample_user.id,
+            lemma="test5",
+            part_of_speech=PartOfSpeech.NOUN,
+            translation_en="test5",
+            is_active=True,
+        )
+        db_session.add(entry)
+        await db_session.flush()
+        db_session.add(DeckWordEntry(deck_id=sample_deck.id, word_entry_id=entry.id))
+        await db_session.flush()
+
+        deck_ids = await repo.get_decks_for_word_entry(entry.id)
+        assert sample_deck.id in deck_ids
+
+    @pytest.mark.asyncio
+    async def test_is_linked_to_deck_false(
+        self, db_session: AsyncSession, sample_deck: Deck, sample_user: User
+    ) -> None:
+        repo = WordEntryRepository(db_session)
+        entry = WordEntry(
+            owner_id=sample_user.id,
+            lemma="test6",
+            part_of_speech=PartOfSpeech.NOUN,
+            translation_en="test6",
+            is_active=True,
+        )
+        db_session.add(entry)
+        await db_session.flush()
+
+        linked = await repo.is_linked_to_deck(entry.id, sample_deck.id)
+        assert linked is False
