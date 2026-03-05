@@ -95,7 +95,12 @@ from src.schemas.news_item import (
     NewsItemWithCardResponse,
     NewsItemWithQuestionCreate,
 )
-from src.schemas.nlp import CrossAIVerificationResult, NormalizedLemma, VerificationSummary
+from src.schemas.nlp import (
+    CrossAIVerificationResult,
+    GeneratedNounData,
+    NormalizedLemma,
+    VerificationSummary,
+)
 from src.schemas.word_entry import WordEntryResponse
 from src.services.announcement_service import AnnouncementService
 from src.services.card_error_admin_service import CardErrorAdminService
@@ -2316,6 +2321,51 @@ def _extract_gender_article(
     return gender, article
 
 
+async def _run_verification_stage(
+    generated_data: GeneratedNounData,
+    normalized_lemma: NormalizedLemma,
+    lexicon_svc: LexiconService,
+    lemma: str,
+) -> VerificationSummary:
+    """Run local + cross-AI verification in parallel and compute combined tier."""
+    local_svc = get_local_verification_service()
+    cross_svc = get_cross_ai_verification_service()
+
+    # morphology_source: check if lexicon has declension data
+    lexicon_declensions = await lexicon_svc.get_declensions(lemma, pos="NOUN")
+    morphology_source: Literal["lexicon", "llm"] = "lexicon" if lexicon_declensions else "llm"
+
+    # Run local (sync, wrapped) + cross-AI (async) in parallel
+    loop = asyncio.get_running_loop()
+    local_coro = loop.run_in_executor(None, local_svc.verify, generated_data)
+    cross_coro = cross_svc.verify(primary=generated_data, normalized_lemma=normalized_lemma)
+    local_result, cross_result = await asyncio.gather(
+        local_coro, cross_coro, return_exceptions=True
+    )
+
+    # Local failure = hard error
+    if isinstance(local_result, BaseException):
+        logger.error("Local verification failed: %s", local_result)
+        raise HTTPException(status_code=500, detail="Local verification pipeline failed")
+
+    # Cross-AI: check exception OR internal error
+    if isinstance(cross_result, BaseException):
+        logger.warning("Cross-AI verification exception: %s", cross_result)
+        cross_result = CrossAIVerificationResult(error=str(cross_result))
+        combined_tier = local_result.tier
+    elif cross_result.error is None and cross_result.overall_agreement is not None:
+        combined_tier = compute_combined_tier(local_result.tier, cross_result.overall_agreement)
+    else:
+        combined_tier = local_result.tier
+
+    return VerificationSummary(
+        local=local_result,
+        cross_ai=cross_result,
+        morphology_source=morphology_source,
+        combined_tier=combined_tier,
+    )
+
+
 @router.post(
     "/word-entries/generate",
     response_model=GenerateWordEntryResponse,
@@ -2403,10 +2453,6 @@ async def generate_word_entry(
     # Stage 4: Verification (local + cross-AI in parallel)
     verification_summary: VerificationSummary | None = None
     if generated_data is not None:
-        local_svc = get_local_verification_service()
-        cross_svc = get_cross_ai_verification_service()
-
-        # Construct NormalizedLemma from normalization stage data
         normalized_lemma = NormalizedLemma(
             input_word=primary.input_form,
             lemma=primary.morphology.lemma,
@@ -2415,45 +2461,11 @@ async def generate_word_entry(
             pos=primary.morphology.pos,
             confidence=primary.confidence,
         )
-
-        # morphology_source: check if lexicon has declension data
-        lexicon_declensions = await lexicon_svc.get_declensions(
-            primary.morphology.lemma, pos="NOUN"
-        )
-        morphology_source: Literal["lexicon", "llm"] = "lexicon" if lexicon_declensions else "llm"
-
-        # Run local (sync, wrapped) + cross-AI (async) in parallel
-        loop = asyncio.get_running_loop()
-        local_coro = loop.run_in_executor(None, local_svc.verify, generated_data)
-        cross_coro = cross_svc.verify(primary=generated_data, normalized_lemma=normalized_lemma)
-        local_result, cross_result = await asyncio.gather(
-            local_coro, cross_coro, return_exceptions=True
-        )
-
-        # Local failure = hard error
-        if isinstance(local_result, BaseException):
-            logger.error("Local verification failed: %s", local_result)
-            raise HTTPException(status_code=500, detail="Local verification pipeline failed")
-
-        # Cross-AI: check exception OR internal error
-        cross_ai_available = (
-            not isinstance(cross_result, BaseException)
-            and cross_result.error is None
-            and cross_result.overall_agreement is not None
-        )
-        if cross_ai_available:
-            combined_tier = compute_combined_tier(local_result.tier, cross_result.overall_agreement)
-        else:
-            combined_tier = local_result.tier
-            if isinstance(cross_result, BaseException):
-                logger.warning("Cross-AI verification exception: %s", cross_result)
-                cross_result = CrossAIVerificationResult(error=str(cross_result))
-
-        verification_summary = VerificationSummary(
-            local=local_result,
-            cross_ai=cross_result,
-            morphology_source=morphology_source,
-            combined_tier=combined_tier,
+        verification_summary = await _run_verification_stage(
+            generated_data=generated_data,
+            normalized_lemma=normalized_lemma,
+            lexicon_svc=lexicon_svc,
+            lemma=primary.morphology.lemma,
         )
 
     last_stage = "verification" if verification_summary else "duplicate_check"
