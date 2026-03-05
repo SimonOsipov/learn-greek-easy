@@ -99,6 +99,7 @@ from src.services.announcement_service import AnnouncementService
 from src.services.card_error_admin_service import CardErrorAdminService
 from src.services.card_generator_service import CardGeneratorService
 from src.services.changelog_service import ChangelogService
+from src.services.duplicate_detection_service import DuplicateDetectionService
 from src.services.feedback_admin_service import FeedbackAdminService
 from src.services.lemma_normalization_service import detect_article, get_lemma_normalization_service
 from src.services.lexicon_service import LexiconService
@@ -2384,8 +2385,15 @@ async def generate_word_entry(
         for s in smart_result.suggestions
     ]
 
+    # Stage 2: Duplicate check
+    dup_svc = DuplicateDetectionService(db)
+    dup_result = await dup_svc.check(
+        lemma=primary.morphology.lemma,
+        part_of_speech=PartOfSpeech.NOUN,
+    )
+
     return GenerateWordEntryResponse(
-        stage="normalization",
+        stage="duplicate_check",
         normalization=NormalizationStageResult(
             input_word=primary.input_form,
             lemma=primary.morphology.lemma,
@@ -2399,6 +2407,7 @@ async def generate_word_entry(
             corrected_to=primary.corrected_to,
         ),
         suggestions=suggestions,
+        duplicate_check=dup_result,
     )
 
 

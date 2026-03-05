@@ -634,6 +634,22 @@ export interface SuggestionItem {
   strategy: string;
 }
 
+export interface WordEntrySnapshot {
+  id: string;
+  lemma: string;
+  part_of_speech: string;
+  translation_en: string;
+  translation_ru: string | null;
+  pronunciation: string | null;
+}
+
+export interface DuplicateCheckResult {
+  is_duplicate: boolean;
+  existing_entry: WordEntrySnapshot | null;
+  matched_deck_id: string | null;
+  matched_deck_name: string | null;
+}
+
 export interface GenerateWordEntryResponse {
   stage: string;
   normalization: NormalizationStageResult | null;

@@ -15,6 +15,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from src.db.models import DeckLevel
+from src.schemas.nlp import DuplicateCheckResult
 
 # ============================================================================
 # Admin Stats Schemas
@@ -311,7 +312,7 @@ class GenerateWordEntryResponse(BaseModel):
         default_factory=list,
         description="Alternative normalization suggestions (max 3, confidence >= 0.40)",
     )
-    duplicate_check: None = None  # NGEN-08-03
+    duplicate_check: DuplicateCheckResult | None = None
     generation: None = None  # NGEN-08-04
     local_verification: None = None  # NGEN-08-05
     cross_verification: None = None  # NGEN-08-05
