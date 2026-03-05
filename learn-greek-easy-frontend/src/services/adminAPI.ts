@@ -654,14 +654,64 @@ export interface DuplicateCheckResult {
   matched_deck_name: string | null;
 }
 
+// ============================================
+// Verification Pipeline Types
+// ============================================
+
+export type CombinedTier = 'auto_approve' | 'quick_review' | 'manual_review';
+export type MorphologySource = 'lexicon' | 'llm';
+export type CheckStatus = 'pass' | 'fail' | 'warn';
+export type FieldStatus = 'pass' | 'fail' | 'warn' | 'skipped';
+
+export interface CheckResult {
+  check_name: string;
+  status: CheckStatus;
+  message: string | null;
+}
+
+export interface FieldVerificationResult {
+  field_path: string;
+  status: FieldStatus;
+  checks: CheckResult[];
+}
+
+export interface LocalVerificationResult {
+  fields: FieldVerificationResult[];
+  tier: CombinedTier;
+  stages_skipped: string[];
+  summary: string;
+}
+
+export interface FieldComparisonResult {
+  field_path: string;
+  primary_value: string;
+  secondary_value: string;
+  agrees: boolean;
+  weight: number;
+}
+
+export interface CrossAIVerificationResult {
+  comparisons: FieldComparisonResult[];
+  overall_agreement: number | null;
+  secondary_model: string;
+  secondary_generation: Record<string, unknown> | null;
+  error: string | null;
+}
+
+export interface VerificationSummary {
+  local: LocalVerificationResult | null;
+  cross_ai: CrossAIVerificationResult | null;
+  combined_tier: CombinedTier;
+  morphology_source: MorphologySource;
+}
+
 export interface GenerateWordEntryResponse {
   stage: string;
   normalization: NormalizationStageResult | null;
   suggestions: SuggestionItem[];
   duplicate_check: DuplicateCheckStageResult | null;
   generation: null;
-  local_verification: null;
-  cross_verification: null;
+  verification: VerificationSummary | null;
   persist: null;
 }
 

@@ -216,3 +216,24 @@ class CrossAIVerificationResult(BaseModel):
         None, description="Full secondary generation output for admin reference"
     )
     error: str | None = Field(None, description="Error message if cross-AI verification failed")
+
+
+# ── Combined Verification Summary ────────────────────────────────────────────
+
+
+class VerificationSummary(BaseModel):
+    """Combined verification result wrapping local and cross-AI results with a routing decision."""
+
+    local: LocalVerificationResult | None = Field(
+        None, description="Local verification pipeline result (spellcheck + morphology + schema)"
+    )
+    cross_ai: CrossAIVerificationResult | None = Field(
+        None, description="Cross-AI verification result (secondary LLM comparison)"
+    )
+    combined_tier: Literal["auto_approve", "quick_review", "manual_review"] = Field(
+        ..., description="Final routing decision from combined tier matrix"
+    )
+    morphology_source: Literal["lexicon", "llm"] = Field(
+        ...,
+        description='Source of morphology data: "lexicon" (Greek lexicon DB) or "llm" (LLM-generated)',
+    )

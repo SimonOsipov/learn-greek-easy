@@ -15,7 +15,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from src.db.models import DeckLevel
-from src.schemas.nlp import DuplicateCheckResult
+from src.schemas.nlp import DuplicateCheckResult, VerificationSummary
 
 # ============================================================================
 # Admin Stats Schemas
@@ -314,6 +314,5 @@ class GenerateWordEntryResponse(BaseModel):
     )
     duplicate_check: DuplicateCheckResult | None = None
     generation: None = None  # NGEN-08-04
-    local_verification: None = None  # NGEN-08-05
-    cross_verification: None = None  # NGEN-08-05
+    verification: VerificationSummary | None = None  # VRES-01
     persist: None = None  # NGEN-08-06

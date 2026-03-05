@@ -329,8 +329,7 @@ class TestGenerateWordEntry:
         assert data["duplicate_check"] is not None
         assert data["duplicate_check"]["is_duplicate"] is False
         assert data["generation"] is None
-        assert data["local_verification"] is None
-        assert data["cross_verification"] is None
+        assert data["verification"] is None
         assert data["persist"] is None
 
     @pytest.mark.asyncio
