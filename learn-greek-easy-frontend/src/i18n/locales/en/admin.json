@@ -974,6 +974,14 @@
     "errorGeneric": "Something went wrong. Please try again.",
     "accentCorrected": "Accent corrected: {{from}} → {{to}}",
     "suggestionsTitle": "You may also mean",
-    "useSuggestion": "Use"
+    "useSuggestion": "Use",
+    "linkToDeck": "Link to deck",
+    "alreadyInDeck": "This deck already has this word",
+    "linkSuccess": "Word linked to deck successfully",
+    "existsInDecks": "This word exists in {{count}} deck(s)"
+  },
+  "wordEntry": {
+    "unlinkConfirm": "Remove this word from the deck? The word entry itself will not be deleted.",
+    "unlinkSuccess": "Word removed from deck"
   }
 }

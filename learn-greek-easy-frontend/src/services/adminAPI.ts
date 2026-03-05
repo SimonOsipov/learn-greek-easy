@@ -600,6 +600,17 @@ export interface ListWordEntriesParams {
 
 export type ConfidenceTier = 'high' | 'medium' | 'low';
 
+export interface DuplicateCheckMatchedDeck {
+  deck_id: string;
+  deck_name: string;
+}
+
+export interface DuplicateCheckStageResult {
+  is_duplicate: boolean;
+  word_entry_id: string | null;
+  matched_decks: DuplicateCheckMatchedDeck[];
+}
+
 export interface NormalizationStageResult {
   input_word: string;
   lemma: string;
@@ -627,7 +638,7 @@ export interface GenerateWordEntryResponse {
   stage: string;
   normalization: NormalizationStageResult | null;
   suggestions: SuggestionItem[];
-  duplicate_check: null;
+  duplicate_check: DuplicateCheckStageResult | null;
   generation: null;
   local_verification: null;
   cross_verification: null;
@@ -1379,4 +1390,31 @@ export const adminAPI = {
       word,
       deck_id: deckId,
     }),
+
+  /**
+   * Link a word entry to a deck (share it)
+   *
+   * Creates an association between an existing word entry and a deck.
+   * Requires superuser authentication.
+   *
+   * @param deckId - UUID of the target deck
+   * @param wordEntryId - UUID of the word entry to link
+   */
+  linkWordEntry: async (deckId: string, wordEntryId: string): Promise<void> => {
+    return api.post<void>(`/api/v1/admin/decks/${deckId}/word-entries/${wordEntryId}/link`);
+  },
+
+  /**
+   * Unlink a word entry from a deck
+   *
+   * Removes the association between a word entry and a deck.
+   * The word entry itself is not deleted.
+   * Requires superuser authentication.
+   *
+   * @param deckId - UUID of the deck
+   * @param wordEntryId - UUID of the word entry to unlink
+   */
+  unlinkWordEntry: async (deckId: string, wordEntryId: string): Promise<void> => {
+    return api.delete<void>(`/api/v1/admin/decks/${deckId}/word-entries/${wordEntryId}/link`);
+  },
 };

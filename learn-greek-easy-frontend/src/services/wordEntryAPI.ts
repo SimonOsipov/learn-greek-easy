@@ -58,7 +58,7 @@ export interface WordEntryInput {
  */
 export interface WordEntryResponse {
   id: string;
-  deck_id: string;
+  deck_id: string | null;
   lemma: string;
   part_of_speech: PartOfSpeech;
   translation_en: string;

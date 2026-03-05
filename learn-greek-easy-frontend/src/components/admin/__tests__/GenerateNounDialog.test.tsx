@@ -30,6 +30,7 @@ import { GenerateNounDialog, type GenerateNounDialogProps } from '../GenerateNou
 vi.mock('@/services/adminAPI', () => ({
   adminAPI: {
     generateWordEntry: vi.fn(),
+    linkWordEntry: vi.fn().mockResolvedValue(undefined),
   },
 }));
 

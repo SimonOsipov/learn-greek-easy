@@ -986,6 +986,14 @@
     "errorGeneric": "Что-то пошло не так. Попробуйте ещё раз.",
     "accentCorrected": "Ударение исправлено: {{from}} → {{to}}",
     "suggestionsTitle": "Возможно, вы имели в виду",
-    "useSuggestion": "Выбрать"
+    "useSuggestion": "Выбрать",
+    "linkToDeck": "Связать с колодой",
+    "alreadyInDeck": "Это слово уже есть в колоде",
+    "linkSuccess": "Слово успешно связано с колодой",
+    "existsInDecks": "Это слово есть в {{count}} колоде(ах)"
+  },
+  "wordEntry": {
+    "unlinkConfirm": "Удалить это слово из колоды? Запись о слове не будет удалена.",
+    "unlinkSuccess": "Слово удалено из колоды"
   }
 }

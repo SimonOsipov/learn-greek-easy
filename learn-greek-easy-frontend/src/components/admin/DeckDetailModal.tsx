@@ -550,7 +550,14 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
                     </TabsTrigger>
                   </TabsList>
                   <TabsContent value="entry" data-testid="word-entry-tab-content-entry">
-                    <WordEntryContent wordEntryId={selectedWordEntry.id} />
+                    <WordEntryContent
+                      wordEntryId={selectedWordEntry.id}
+                      deckId={deck.id}
+                      onUnlinked={() => {
+                        handleBack();
+                        fetchItems();
+                      }}
+                    />
                   </TabsContent>
                   <TabsContent value="cards" data-testid="word-entry-tab-content-cards">
                     <WordEntryCards entryId={selectedWordEntry.id} />
@@ -1056,6 +1063,10 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
           onOpenChange={setGenerateNounDialogOpen}
           deckId={deck.id}
           deckName={deckName}
+          onWordLinked={() => {
+            fetchItems();
+            onItemDeleted?.();
+          }}
         />
       )}
     </>
