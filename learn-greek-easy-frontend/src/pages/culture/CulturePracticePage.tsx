@@ -112,6 +112,8 @@ export function CulturePracticePage() {
   // XP store - for refreshing XP after answer submission
   const loadXPStats = useXPStore((state) => state.loadXPStats);
 
+  const showLevelToggle = Boolean(currentQuestion?.question.original_article_url);
+
   // Local state
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [showRecoveryDialog, setShowRecoveryDialog] = useState(false);
@@ -658,28 +660,30 @@ export function CulturePracticePage() {
             {t('practice.exit', 'Exit')}
           </Button>
           <div className="flex items-center gap-2">
-            {/* A2/B2 level toggle */}
-            <div
-              className="flex items-center gap-1"
-              aria-label={t('common:news.level.label', 'Content level')}
-            >
-              <Button
-                variant={newsLevel === 'a2' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => handleNewsLevelChange('a2')}
-                data-testid="level-toggle-a2"
+            {/* A2/B2 level toggle - only for news-derived questions */}
+            {showLevelToggle && (
+              <div
+                className="flex items-center gap-1"
+                aria-label={t('common:news.level.label', 'Content level')}
               >
-                {t('common:news.level.a2', 'A2')}
-              </Button>
-              <Button
-                variant={newsLevel === 'b2' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => handleNewsLevelChange('b2')}
-                data-testid="level-toggle-b2"
-              >
-                {t('common:news.level.b2', 'B2')}
-              </Button>
-            </div>
+                <Button
+                  variant={newsLevel === 'a2' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => handleNewsLevelChange('a2')}
+                  data-testid="level-toggle-a2"
+                >
+                  {t('common:news.level.a2', 'A2')}
+                </Button>
+                <Button
+                  variant={newsLevel === 'b2' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => handleNewsLevelChange('b2')}
+                  data-testid="level-toggle-b2"
+                >
+                  {t('common:news.level.b2', 'B2')}
+                </Button>
+              </div>
+            )}
             <LanguageSelector
               value={currentLanguage}
               onChange={handleLanguageChange}

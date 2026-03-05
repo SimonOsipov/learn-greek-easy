@@ -85,6 +85,11 @@ const mockQuestion: CultureQuestionResponse = {
   original_article_url: null,
 };
 
+const mockNewsQuestion: CultureQuestionResponse = {
+  ...mockQuestion,
+  original_article_url: 'https://example.com/article',
+};
+
 function createMockQuestions(count: number): CultureQuestionResponse[] {
   return Array.from({ length: count }, (_, i) => ({
     ...mockQuestion,
@@ -477,6 +482,24 @@ describe('CulturePracticePage', () => {
           session_id: 'test-session',
         })
       );
+    });
+  });
+
+  describe('A2/B2 level toggle visibility', () => {
+    it('hides toggle for cultural questions without original_article_url', () => {
+      useCultureSessionStore.setState(createActiveSessionState(5));
+      render(<CulturePracticePage />);
+
+      expect(screen.queryByTestId('level-toggle-a2')).not.toBeInTheDocument();
+    });
+
+    it('shows toggle for news-derived questions with original_article_url', () => {
+      const state = createActiveSessionState(5);
+      state.currentQuestion.question = mockNewsQuestion;
+      useCultureSessionStore.setState(state);
+      render(<CulturePracticePage />);
+
+      expect(screen.getByTestId('level-toggle-a2')).toBeInTheDocument();
     });
   });
 
