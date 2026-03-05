@@ -929,11 +929,11 @@ async def create_culture_question(
                 question = question.model_copy(update={"audio_s3_key": s3_key})
             except HTTPException:
                 raise
-            except Exception as e:
+            except Exception:
                 raise HTTPException(
                     status_code=status.HTTP_502_BAD_GATEWAY,
-                    detail=f"Audio generation failed: {e}",
-                ) from e
+                    detail="Audio generation failed",
+                )
 
     # Commit the transaction
     await db.commit()

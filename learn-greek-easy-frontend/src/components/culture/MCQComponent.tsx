@@ -177,12 +177,12 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
   }, [question.id, question.original_article_url]);
 
   const handleAudioPlay = useCallback(
-    (duration: number) => {
+    (duration?: number) => {
       if (!deckId) return;
       track('culture_audio_started', {
         deck_id: deckId,
         question_id: question.id,
-        duration_sec: Math.round(duration),
+        duration_sec: Math.round(duration ?? 0),
       });
     },
     [deckId, question.id, track]
@@ -280,7 +280,7 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
               <SpeakerButton
                 audioUrl={question.audio_url}
                 size="sm"
-                onPlay={() => handleAudioPlay(0)}
+                onPlay={() => handleAudioPlay()}
               />
             </div>
           )}

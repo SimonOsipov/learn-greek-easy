@@ -84,11 +84,14 @@ class TestGenerateCultureQuestionAudio:
         superuser_auth_headers: dict,
     ):
         """503 — ElevenLabs not configured."""
+        from src.config import settings
+
         with (
             patch(
                 "src.api.v1.culture.router.is_background_tasks_enabled",
                 return_value=True,
             ),
+            patch.object(settings, "elevenlabs_api_key", ""),
         ):
             response = await client.post(
                 f"/api/v1/culture/questions/{uuid4()}/generate-audio",

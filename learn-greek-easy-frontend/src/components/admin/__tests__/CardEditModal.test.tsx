@@ -651,7 +651,7 @@ describe('CardEditModal', () => {
       await userEvent.click(screen.getByTestId('generate-audio-btn'));
       await waitFor(() => {
         expect(mockToast).toHaveBeenCalledWith(
-          expect.objectContaining({ title: 'Audio generated successfully' })
+          expect.objectContaining({ title: 'Audio generation started' })
         );
       });
     });
