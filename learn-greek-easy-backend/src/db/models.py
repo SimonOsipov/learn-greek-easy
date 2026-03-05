@@ -115,6 +115,13 @@ class VoteType(str, enum.Enum):
     DOWN = "down"
 
 
+class Visibility(str, enum.Enum):
+    """Visibility level for word entries."""
+
+    SHARED = "shared"
+    PRIVATE = "private"
+
+
 class AchievementCategory(str, enum.Enum):
     """Category of achievement."""
 
@@ -607,6 +614,11 @@ class Deck(Base, TimestampMixin):
         lazy="selectin",
         cascade="all, delete-orphan",
     )
+    word_entries: Mapped[List["WordEntry"]] = relationship(
+        secondary="deck_word_entries",
+        lazy="selectin",
+        viewonly=True,
+    )
 
     def __repr__(self) -> str:
         return f"<Deck(id={self.id}, name_en={self.name_en}, level={self.level})>"
@@ -751,8 +763,15 @@ class WordEntry(Base, TimestampMixin):
 
     __tablename__ = "word_entries"
     __table_args__ = (
-        UniqueConstraint("deck_id", "lemma", "part_of_speech", name="uq_word_entry_deck_lemma_pos"),
-        Index("ix_word_entries_deck_id", "deck_id"),
+        UniqueConstraint(
+            "owner_id",
+            "lemma",
+            "part_of_speech",
+            name="uq_word_entry_owner_lemma_pos",
+            postgresql_nulls_not_distinct=True,
+        ),
+        Index("ix_word_entries_owner_id", "owner_id"),
+        Index("ix_word_entries_visibility", "visibility"),
         Index("ix_word_entries_is_active", "is_active"),
         Index("ix_word_entries_lemma", "lemma"),
     )
@@ -763,11 +782,24 @@ class WordEntry(Base, TimestampMixin):
         server_default=func.uuid_generate_v4(),
     )
 
-    # Foreign key - associated deck
-    deck_id: Mapped[UUID] = mapped_column(
-        ForeignKey("decks.id", ondelete="CASCADE"),
+    # Owner (nullable for admin/system-created entries)
+    owner_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        comment="User who created this entry (NULL for admin/system-created)",
+    )
+
+    # Visibility
+    visibility: Mapped[Visibility] = mapped_column(
+        SAEnum(
+            Visibility,
+            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+            name="visibility",
+            create_type=False,
+        ),
         nullable=False,
-        comment="Deck this word entry belongs to",
+        server_default=text("'shared'"),
+        comment="shared = visible to all users; private = only visible to owner",
     )
 
     # Core lexicographic fields
@@ -857,18 +889,37 @@ class WordEntry(Base, TimestampMixin):
     )
 
     # Relationships
-    deck: Mapped["Deck"] = relationship(
+    owner: Mapped["User | None"] = relationship(
         lazy="selectin",
-        foreign_keys=[deck_id],
+        foreign_keys=[owner_id],
     )
-
-    # Relationships
+    decks: Mapped[List["Deck"]] = relationship(
+        secondary="deck_word_entries",
+        lazy="selectin",
+        viewonly=True,
+    )
     card_records: Mapped[List["CardRecord"]] = relationship(
         back_populates="word_entry", lazy="selectin", cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:
         return f"<WordEntry(id={self.id}, lemma={self.lemma}, pos={self.part_of_speech})>"
+
+
+class DeckWordEntry(Base, TimestampMixin):
+    """Junction table for many-to-many Deck <-> WordEntry relationship."""
+
+    __tablename__ = "deck_word_entries"
+    __table_args__ = (Index("ix_deck_word_entries_word_entry_id", "word_entry_id"),)
+
+    deck_id: Mapped[UUID] = mapped_column(
+        ForeignKey("decks.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    word_entry_id: Mapped[UUID] = mapped_column(
+        ForeignKey("word_entries.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
 
 
 # ============================================================================
@@ -886,10 +937,11 @@ class CardRecord(Base, TimestampMixin):
     __tablename__ = "card_records"
     __table_args__ = (
         UniqueConstraint(
+            "deck_id",
             "word_entry_id",
             "card_type",
             "variant_key",
-            name="uq_card_record_entry_type_variant",
+            name="uq_card_record_deck_entry_type_variant",
         ),
         Index("ix_card_records_word_entry_id", "word_entry_id"),
         Index("ix_card_records_deck_id", "deck_id"),
