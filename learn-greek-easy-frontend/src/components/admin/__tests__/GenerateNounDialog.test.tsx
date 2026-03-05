@@ -120,8 +120,7 @@ const mockNormalizationResponse = (
           matched_decks: [],
         },
   generation: null,
-  local_verification: null,
-  cross_verification: null,
+  verification: null,
   persist: null,
 });
 
