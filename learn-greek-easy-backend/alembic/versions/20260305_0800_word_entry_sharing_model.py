@@ -142,6 +142,23 @@ def downgrade() -> None:
             f"{row.cnt} decks. Remove extra links first."
         )
 
+    # Also guard: check no word entry has zero junction rows (orphan - can't restore deck_id)
+    orphan_result = conn.execute(
+        sa.text(
+            """
+            SELECT id FROM word_entries
+            WHERE id NOT IN (SELECT word_entry_id FROM deck_word_entries)
+            LIMIT 1
+        """
+        )
+    )
+    orphan_row = orphan_result.first()
+    if orphan_row:
+        raise RuntimeError(
+            f"Cannot downgrade: word entry {orphan_row.id} has no deck link. "
+            "All word entries must be linked to exactly one deck before downgrading."
+        )
+
     # 1. Restore CardRecord unique constraint
     op.drop_constraint("uq_card_record_deck_entry_type_variant", "card_records", type_="unique")
     op.create_unique_constraint(

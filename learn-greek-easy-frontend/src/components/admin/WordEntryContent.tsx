@@ -53,6 +53,7 @@ export function WordEntryContent({ wordEntryId, deckId, onUnlinked }: WordEntryC
       return adminAPI.unlinkWordEntry(deckId, wordEntry.id);
     },
     onSuccess: () => {
+      setShowUnlinkConfirm(false);
       toast({ description: t('wordEntry.unlinkSuccess') });
       onUnlinked?.();
     },
@@ -123,7 +124,7 @@ export function WordEntryContent({ wordEntryId, deckId, onUnlinked }: WordEntryC
         <AlertDialog open={showUnlinkConfirm} onOpenChange={setShowUnlinkConfirm}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Remove from deck?</AlertDialogTitle>
+              <AlertDialogTitle>{t('wordEntry.unlinkTitle')}</AlertDialogTitle>
               <AlertDialogDescription>{t('wordEntry.unlinkConfirm')}</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -276,7 +277,7 @@ function ContentFields({
             onClick={onUnlinkClick}
             data-testid="word-entry-unlink-btn"
           >
-            {t('wordEntry.unlinkConfirm').split('?')[0]}
+            {t('wordEntry.unlinkButton')}
           </Button>
         )}
         <Button

@@ -556,6 +556,7 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
                       onUnlinked={() => {
                         handleBack();
                         fetchItems();
+                        onItemDeleted?.();
                       }}
                     />
                   </TabsContent>

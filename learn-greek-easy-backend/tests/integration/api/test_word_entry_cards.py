@@ -15,7 +15,16 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import CardRecord, CardType, Deck, DeckLevel, PartOfSpeech, User, WordEntry
+from src.db.models import (
+    CardRecord,
+    CardType,
+    Deck,
+    DeckLevel,
+    DeckWordEntry,
+    PartOfSpeech,
+    User,
+    WordEntry,
+)
 
 
 class TestGetWordEntryCardsEndpoint:
@@ -41,7 +50,7 @@ class TestGetWordEntryCardsEndpoint:
 
         entry = WordEntry(
             id=uuid4(),
-            deck_id=deck.id,
+            owner_id=None,
             is_active=True,
             lemma="σπίτι",
             part_of_speech=PartOfSpeech.NOUN,
@@ -50,6 +59,8 @@ class TestGetWordEntryCardsEndpoint:
             pronunciation="/spi.ti/",
         )
         db_session.add(entry)
+        await db_session.flush()
+        db_session.add(DeckWordEntry(deck_id=deck.id, word_entry_id=entry.id))
         await db_session.flush()
 
         active_card_1 = CardRecord(
@@ -144,13 +155,15 @@ class TestGetWordEntryCardsEndpoint:
 
         entry = WordEntry(
             id=uuid4(),
-            deck_id=deck.id,
+            owner_id=None,
             is_active=True,
             lemma="γράφω",
             part_of_speech=PartOfSpeech.VERB,
             translation_en="to write",
         )
         db_session.add(entry)
+        await db_session.flush()
+        db_session.add(DeckWordEntry(deck_id=deck.id, word_entry_id=entry.id))
         await db_session.commit()
         await db_session.refresh(deck)
         await db_session.refresh(entry)
@@ -186,13 +199,15 @@ class TestGetWordEntryCardsEndpoint:
 
         entry = WordEntry(
             id=uuid4(),
-            deck_id=deck.id,
+            owner_id=None,
             is_active=True,
             lemma="σπίτι",
             part_of_speech=PartOfSpeech.NOUN,
             translation_en="house, home",
         )
         db_session.add(entry)
+        await db_session.flush()
+        db_session.add(DeckWordEntry(deck_id=deck.id, word_entry_id=entry.id))
         await db_session.flush()
 
         card = CardRecord(

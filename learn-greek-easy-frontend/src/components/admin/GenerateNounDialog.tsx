@@ -121,7 +121,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
       adminAPI.linkWordEntry(deckId, wordEntryId),
     onSuccess: () => {
       onWordLinked?.();
-      onOpenChange(false);
+      handleOpenChange(false);
     },
     onError: (error: unknown) => {
       const apiErr = error as { detail?: string; message?: string };

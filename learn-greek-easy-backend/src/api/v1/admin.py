@@ -2437,6 +2437,12 @@ async def link_word_entry_to_deck(
     if deck is None:
         raise NotFoundException(resource="Deck", detail=f"Deck with id '{deck_id}' not found")
 
+    # Validate deck is active and V2 (word entries are only for V2 decks)
+    if not deck.is_active or deck.card_system != CardSystemVersion.V2:
+        raise ConflictException(
+            detail=f"Deck '{deck_id}' is not an active V2 deck. Word entries can only be linked to active V2 decks."
+        )
+
     # Validate word entry exists and is active
     word_entry = await word_entry_repo.get(word_entry_id)
     if word_entry is None or not word_entry.is_active:

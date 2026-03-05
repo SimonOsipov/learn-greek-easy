@@ -982,6 +982,8 @@
   },
   "wordEntry": {
     "unlinkConfirm": "Remove this word from the deck? The word entry itself will not be deleted.",
-    "unlinkSuccess": "Word removed from deck"
+    "unlinkSuccess": "Word removed from deck",
+    "unlinkButton": "Remove from deck",
+    "unlinkTitle": "Remove from deck?"
   }
 }

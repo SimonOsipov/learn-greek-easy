@@ -15,7 +15,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import Deck, DeckLevel, PartOfSpeech, User, WordEntry
+from src.db.models import Deck, DeckLevel, DeckWordEntry, PartOfSpeech, User, WordEntry
 
 
 class TestDeckWordEntriesEndpoint:
@@ -46,7 +46,7 @@ class TestDeckWordEntriesEndpoint:
         entries = [
             WordEntry(
                 id=uuid4(),
-                deck_id=deck_for_word_entries.id,
+                owner_id=None,
                 lemma="σπίτι",
                 part_of_speech=PartOfSpeech.NOUN,
                 translation_en="house, home",
@@ -56,7 +56,7 @@ class TestDeckWordEntriesEndpoint:
             ),
             WordEntry(
                 id=uuid4(),
-                deck_id=deck_for_word_entries.id,
+                owner_id=None,
                 lemma="γράφω",
                 part_of_speech=PartOfSpeech.VERB,
                 translation_en="to write",
@@ -66,7 +66,7 @@ class TestDeckWordEntriesEndpoint:
             ),
             WordEntry(
                 id=uuid4(),
-                deck_id=deck_for_word_entries.id,
+                owner_id=None,
                 lemma="καλός",
                 part_of_speech=PartOfSpeech.ADJECTIVE,
                 translation_en="good, beautiful",
@@ -76,7 +76,7 @@ class TestDeckWordEntriesEndpoint:
             ),
             WordEntry(
                 id=uuid4(),
-                deck_id=deck_for_word_entries.id,
+                owner_id=None,
                 lemma="νερό",
                 part_of_speech=PartOfSpeech.NOUN,
                 translation_en="water",
@@ -86,7 +86,7 @@ class TestDeckWordEntriesEndpoint:
             ),
             WordEntry(
                 id=uuid4(),
-                deck_id=deck_for_word_entries.id,
+                owner_id=None,
                 lemma="τρέχω",
                 part_of_speech=PartOfSpeech.VERB,
                 translation_en="to run",
@@ -97,6 +97,9 @@ class TestDeckWordEntriesEndpoint:
         ]
         for entry in entries:
             db_session.add(entry)
+        await db_session.flush()
+        for entry in entries:
+            db_session.add(DeckWordEntry(deck_id=deck_for_word_entries.id, word_entry_id=entry.id))
         await db_session.commit()
         for entry in entries:
             await db_session.refresh(entry)
@@ -137,13 +140,15 @@ class TestDeckWordEntriesEndpoint:
         # Add a word entry to it
         entry = WordEntry(
             id=uuid4(),
-            deck_id=deck.id,
+            owner_id=None,
             lemma="τεστ",
             part_of_speech=PartOfSpeech.NOUN,
             translation_en="test",
             is_active=True,
         )
         db_session.add(entry)
+        await db_session.flush()
+        db_session.add(DeckWordEntry(deck_id=deck.id, word_entry_id=entry.id))
         await db_session.commit()
         await db_session.refresh(entry)
 

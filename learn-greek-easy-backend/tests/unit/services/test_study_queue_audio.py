@@ -81,9 +81,9 @@ class TestEnrichCardsWithAudio:
         card_result = MagicMock()
         card_result.all.return_value = [(card_id, deck_id)]
 
-        # Second query: WordEntry records
+        # Second query: (WordEntry, junction_deck_id) tuples
         we_result = MagicMock()
-        we_result.scalars.return_value.all.return_value = [word_entry]
+        we_result.all.return_value = [(word_entry, deck_id)]
 
         mock_db.execute = AsyncMock(side_effect=[card_result, we_result])
         service = make_sm2_service(mock_db)
@@ -111,7 +111,7 @@ class TestEnrichCardsWithAudio:
         card_result = MagicMock()
         card_result.all.return_value = [(card_id, deck_id)]
         we_result = MagicMock()
-        we_result.scalars.return_value.all.return_value = []  # no matches
+        we_result.all.return_value = []  # no matches
 
         mock_db.execute = AsyncMock(side_effect=[card_result, we_result])
         service = make_sm2_service(mock_db)
@@ -151,7 +151,7 @@ class TestEnrichCardsWithAudio:
         card_result = MagicMock()
         card_result.all.return_value = [(card_id, deck_id)]
         we_result = MagicMock()
-        we_result.scalars.return_value.all.return_value = [word_entry]
+        we_result.all.return_value = [(word_entry, deck_id)]
         mock_db.execute = AsyncMock(side_effect=[card_result, we_result])
         service = make_sm2_service(mock_db)
 
@@ -187,7 +187,7 @@ class TestEnrichCardsWithAudio:
         card_result = MagicMock()
         card_result.all.return_value = [(card_id, deck_id)]
         we_result = MagicMock()
-        we_result.scalars.return_value.all.return_value = [word_entry]
+        we_result.all.return_value = [(word_entry, deck_id)]
         mock_db.execute = AsyncMock(side_effect=[card_result, we_result])
         service = make_sm2_service(mock_db)
 
@@ -237,7 +237,7 @@ class TestEnrichCardsWithAudio:
         card_result = MagicMock()
         card_result.all.return_value = [(card1_id, deck_id), (card2_id, deck_id)]
         we_result = MagicMock()
-        we_result.scalars.return_value.all.return_value = [word_entry]  # only σπίτι matches
+        we_result.all.return_value = [(word_entry, deck_id)]  # only σπίτι matches
         mock_db.execute = AsyncMock(side_effect=[card_result, we_result])
         service = make_sm2_service(mock_db)
 
@@ -268,7 +268,7 @@ class TestEnrichCardsWithAudio:
         card_result = MagicMock()
         card_result.all.return_value = [(card_id, deck_id)]
         we_result = MagicMock()
-        we_result.scalars.return_value.all.return_value = [word_entry]
+        we_result.all.return_value = [(word_entry, deck_id)]
         mock_db.execute = AsyncMock(side_effect=[card_result, we_result])
         service = make_sm2_service(mock_db)
 

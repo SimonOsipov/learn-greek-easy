@@ -50,7 +50,7 @@ async def test_word_entry(db_session: AsyncSession, test_deck: Deck) -> WordEntr
     """Create a test word entry with examples."""
     entry = WordEntry(
         id=uuid4(),
-        deck_id=test_deck.id,
+        owner_id=None,
         lemma="σπίτι",
         part_of_speech=PartOfSpeech.NOUN,
         translation_en="house",

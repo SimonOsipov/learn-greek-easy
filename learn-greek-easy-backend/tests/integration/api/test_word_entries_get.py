@@ -13,7 +13,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import Deck, DeckLevel, PartOfSpeech, User, WordEntry
+from src.db.models import Deck, DeckLevel, DeckWordEntry, PartOfSpeech, User, WordEntry
 
 # ============================================================================
 # Test Data Fixtures
@@ -90,11 +90,13 @@ class TestGetWordEntryEndpoint:
 
         entry = WordEntry(
             id=uuid4(),
-            deck_id=deck.id,
+            owner_id=None,
             is_active=True,
             **WORD_ENTRY_NOUN,
         )
         db_session.add(entry)
+        await db_session.flush()
+        db_session.add(DeckWordEntry(deck_id=deck.id, word_entry_id=entry.id))
         await db_session.commit()
         await db_session.refresh(deck)
         await db_session.refresh(entry)
@@ -121,11 +123,13 @@ class TestGetWordEntryEndpoint:
 
         entry = WordEntry(
             id=uuid4(),
-            deck_id=deck.id,
+            owner_id=test_user.id,
             is_active=True,
             **WORD_ENTRY_VERB,
         )
         db_session.add(entry)
+        await db_session.flush()
+        db_session.add(DeckWordEntry(deck_id=deck.id, word_entry_id=entry.id))
         await db_session.commit()
         await db_session.refresh(deck)
         await db_session.refresh(entry)
@@ -162,11 +166,13 @@ class TestGetWordEntryEndpoint:
 
         entry = WordEntry(
             id=uuid4(),
-            deck_id=deck.id,
+            owner_id=other_user.id,
             is_active=True,
             **WORD_ENTRY_NOUN,
         )
         db_session.add(entry)
+        await db_session.flush()
+        db_session.add(DeckWordEntry(deck_id=deck.id, word_entry_id=entry.id))
         await db_session.commit()
         await db_session.refresh(entry)
 
@@ -179,13 +185,15 @@ class TestGetWordEntryEndpoint:
 
         entry = WordEntry(
             id=uuid4(),
-            deck_id=deck.id,
+            owner_id=None,
             lemma="inactive_word",
             part_of_speech=PartOfSpeech.NOUN,
             translation_en="inactive",
             is_active=False,  # Inactive entry
         )
         db_session.add(entry)
+        await db_session.flush()
+        db_session.add(DeckWordEntry(deck_id=deck.id, word_entry_id=entry.id))
         await db_session.commit()
         await db_session.refresh(entry)
 

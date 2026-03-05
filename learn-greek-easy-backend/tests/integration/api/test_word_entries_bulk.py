@@ -16,7 +16,15 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import CardRecord, CardType, Deck, DeckLevel, PartOfSpeech, WordEntry
+from src.db.models import (
+    CardRecord,
+    CardType,
+    Deck,
+    DeckLevel,
+    DeckWordEntry,
+    PartOfSpeech,
+    WordEntry,
+)
 
 # ============================================================================
 # Test Data Fixtures
@@ -138,7 +146,7 @@ class TestBulkUpsertWordEntriesEndpoint:
         """Create a deck with an existing word entry for update tests."""
         entry = WordEntry(
             id=uuid4(),
-            deck_id=active_deck_for_bulk.id,
+            owner_id=None,
             lemma="σπίτι",
             part_of_speech=PartOfSpeech.NOUN,
             translation_en="house (old translation)",
@@ -150,6 +158,8 @@ class TestBulkUpsertWordEntriesEndpoint:
             is_active=True,
         )
         db_session.add(entry)
+        await db_session.flush()
+        db_session.add(DeckWordEntry(deck_id=active_deck_for_bulk.id, word_entry_id=entry.id))
         await db_session.commit()
         await db_session.refresh(entry)
         return {"deck": active_deck_for_bulk, "entry": entry}

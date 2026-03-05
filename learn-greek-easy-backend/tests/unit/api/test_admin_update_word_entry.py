@@ -14,7 +14,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import Deck, DeckLevel, PartOfSpeech, WordEntry
+from src.db.models import Deck, DeckLevel, DeckWordEntry, PartOfSpeech, WordEntry
 from src.schemas.admin import WordEntryInlineUpdate
 
 # =============================================================================
@@ -47,7 +47,7 @@ async def test_word_entry(db_session: AsyncSession, test_deck: Deck) -> WordEntr
     """Create a test word entry."""
     entry = WordEntry(
         id=uuid4(),
-        deck_id=test_deck.id,
+        owner_id=None,
         lemma="σπίτι",
         part_of_speech=PartOfSpeech.NOUN,
         translation_en="house",
@@ -66,6 +66,8 @@ async def test_word_entry(db_session: AsyncSession, test_deck: Deck) -> WordEntr
         is_active=True,
     )
     db_session.add(entry)
+    await db_session.flush()
+    db_session.add(DeckWordEntry(deck_id=test_deck.id, word_entry_id=entry.id))
     await db_session.commit()
     await db_session.refresh(entry)
     return entry
@@ -76,7 +78,7 @@ async def noun_word_entry(db_session: AsyncSession, test_deck: Deck) -> WordEntr
     """Create a noun word entry with gender."""
     entry = WordEntry(
         id=uuid4(),
-        deck_id=test_deck.id,
+        owner_id=None,
         lemma="βιβλίο",
         part_of_speech=PartOfSpeech.NOUN,
         translation_en="book",
@@ -85,6 +87,8 @@ async def noun_word_entry(db_session: AsyncSession, test_deck: Deck) -> WordEntr
         is_active=True,
     )
     db_session.add(entry)
+    await db_session.flush()
+    db_session.add(DeckWordEntry(deck_id=test_deck.id, word_entry_id=entry.id))
     await db_session.commit()
     await db_session.refresh(entry)
     return entry
@@ -95,7 +99,7 @@ async def entry_with_translation_ru_plural(db_session: AsyncSession, test_deck: 
     """Create a word entry with translation_ru_plural."""
     entry = WordEntry(
         id=uuid4(),
-        deck_id=test_deck.id,
+        owner_id=None,
         lemma="λέξη",
         part_of_speech=PartOfSpeech.NOUN,
         translation_en="word",
@@ -104,6 +108,8 @@ async def entry_with_translation_ru_plural(db_session: AsyncSession, test_deck: 
         is_active=True,
     )
     db_session.add(entry)
+    await db_session.flush()
+    db_session.add(DeckWordEntry(deck_id=test_deck.id, word_entry_id=entry.id))
     await db_session.commit()
     await db_session.refresh(entry)
     return entry
@@ -114,7 +120,7 @@ async def noun_with_full_grammar(db_session: AsyncSession, test_deck: Deck) -> W
     """Create a noun word entry with rich grammar_data."""
     entry = WordEntry(
         id=uuid4(),
-        deck_id=test_deck.id,
+        owner_id=None,
         lemma="άνδρας",
         part_of_speech=PartOfSpeech.NOUN,
         translation_en="man",
@@ -123,6 +129,8 @@ async def noun_with_full_grammar(db_session: AsyncSession, test_deck: Deck) -> W
         is_active=True,
     )
     db_session.add(entry)
+    await db_session.flush()
+    db_session.add(DeckWordEntry(deck_id=test_deck.id, word_entry_id=entry.id))
     await db_session.commit()
     await db_session.refresh(entry)
     return entry
@@ -133,7 +141,7 @@ async def entry_with_null_grammar(db_session: AsyncSession, test_deck: Deck) -> 
     """Create a word entry with grammar_data=None."""
     entry = WordEntry(
         id=uuid4(),
-        deck_id=test_deck.id,
+        owner_id=None,
         lemma="γρήγορα",
         part_of_speech=PartOfSpeech.ADVERB,
         translation_en="quickly",
@@ -142,6 +150,8 @@ async def entry_with_null_grammar(db_session: AsyncSession, test_deck: Deck) -> 
         is_active=True,
     )
     db_session.add(entry)
+    await db_session.flush()
+    db_session.add(DeckWordEntry(deck_id=test_deck.id, word_entry_id=entry.id))
     await db_session.commit()
     await db_session.refresh(entry)
     return entry
