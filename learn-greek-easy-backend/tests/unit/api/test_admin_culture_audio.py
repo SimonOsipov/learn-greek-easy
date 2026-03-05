@@ -1,6 +1,6 @@
 """Unit tests for culture question audio generation endpoints."""
 
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
@@ -8,6 +8,8 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tests.factories.culture import CultureDeckFactory, CultureQuestionFactory
+
+FAKE_AUDIO = b"\xff\xfb\x90\x00" + b"\x00" * 16000
 
 
 class TestGenerateCultureQuestionAudio:
@@ -160,3 +162,209 @@ class TestGenerateCultureQuestionAudio:
             )
 
             assert response.status_code == 400
+
+
+class TestCreateQuestionAudioGeneration:
+    """Tests for auto-audio generation on POST /api/v1/culture/questions."""
+
+    @pytest.mark.asyncio
+    async def test_create_question_generates_audio_when_elevenlabs_configured(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+    ):
+        """Audio generated and audio_s3_key set when ElevenLabs is configured."""
+        deck = await CultureDeckFactory.create(session=db_session)
+
+        from src.config import settings
+
+        mock_elevenlabs = MagicMock()
+        mock_elevenlabs.generate_speech = AsyncMock(return_value=FAKE_AUDIO)
+        mock_s3 = MagicMock()
+        mock_s3.upload_object = MagicMock(return_value=True)
+
+        with (
+            patch.object(settings, "elevenlabs_api_key", "test-api-key"),
+            patch(
+                "src.services.elevenlabs_service.get_elevenlabs_service",
+                return_value=mock_elevenlabs,
+            ),
+            patch(
+                "src.services.s3_service.get_s3_service",
+                return_value=mock_s3,
+            ),
+        ):
+            response = await client.post(
+                "/api/v1/culture/questions",
+                json={
+                    "deck_id": str(deck.id),
+                    "question_text": {
+                        "el": "Ποια είναι η πρωτεύουσα;",
+                        "en": "What is the capital?",
+                        "ru": "Какая столица?",
+                    },
+                    "option_a": {"el": "Αθήνα", "en": "Athens", "ru": "Афины"},
+                    "option_b": {
+                        "el": "Θεσσαλονίκη",
+                        "en": "Thessaloniki",
+                        "ru": "Салоники",
+                    },
+                    "correct_option": 1,
+                },
+                headers=superuser_auth_headers,
+            )
+
+            assert response.status_code == 201
+            data = response.json()
+            assert data["audio_s3_key"] is not None
+            assert data["audio_s3_key"].startswith("culture/audio/")
+
+            mock_elevenlabs.generate_speech.assert_awaited_once()
+            mock_s3.upload_object.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_create_question_skips_audio_when_elevenlabs_not_configured(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+    ):
+        """No audio generated when ElevenLabs not configured."""
+        deck = await CultureDeckFactory.create(session=db_session)
+
+        response = await client.post(
+            "/api/v1/culture/questions",
+            json={
+                "deck_id": str(deck.id),
+                "question_text": {
+                    "el": "Ποια είναι η πρωτεύουσα;",
+                    "en": "What is the capital?",
+                    "ru": "Какая столица?",
+                },
+                "option_a": {"el": "Αθήνα", "en": "Athens", "ru": "Афины"},
+                "option_b": {
+                    "el": "Θεσσαλονίκη",
+                    "en": "Thessaloniki",
+                    "ru": "Салоники",
+                },
+                "correct_option": 1,
+            },
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["audio_s3_key"] is None
+
+    @pytest.mark.asyncio
+    async def test_create_question_fails_when_tts_fails(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+    ):
+        """502 returned when TTS generation fails."""
+        deck = await CultureDeckFactory.create(session=db_session)
+
+        from src.config import settings
+
+        mock_elevenlabs = MagicMock()
+        mock_elevenlabs.generate_speech = AsyncMock(side_effect=RuntimeError("TTS API error"))
+
+        with (
+            patch.object(settings, "elevenlabs_api_key", "test-api-key"),
+            patch(
+                "src.services.elevenlabs_service.get_elevenlabs_service",
+                return_value=mock_elevenlabs,
+            ),
+        ):
+            response = await client.post(
+                "/api/v1/culture/questions",
+                json={
+                    "deck_id": str(deck.id),
+                    "question_text": {
+                        "el": "Ποια είναι η πρωτεύουσα;",
+                        "en": "What is the capital?",
+                        "ru": "Какая столица?",
+                    },
+                    "option_a": {"el": "Αθήνα", "en": "Athens", "ru": "Афины"},
+                    "option_b": {
+                        "el": "Θεσσαλονίκη",
+                        "en": "Thessaloniki",
+                        "ru": "Салоники",
+                    },
+                    "correct_option": 1,
+                },
+                headers=superuser_auth_headers,
+            )
+
+            assert response.status_code == 502
+
+    @pytest.mark.asyncio
+    async def test_create_question_fails_when_s3_upload_fails(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+    ):
+        """502 returned when S3 upload fails."""
+        deck = await CultureDeckFactory.create(session=db_session)
+
+        from src.config import settings
+
+        mock_elevenlabs = MagicMock()
+        mock_elevenlabs.generate_speech = AsyncMock(return_value=FAKE_AUDIO)
+        mock_s3 = MagicMock()
+        mock_s3.upload_object = MagicMock(return_value=False)
+
+        with (
+            patch.object(settings, "elevenlabs_api_key", "test-api-key"),
+            patch(
+                "src.services.elevenlabs_service.get_elevenlabs_service",
+                return_value=mock_elevenlabs,
+            ),
+            patch(
+                "src.services.s3_service.get_s3_service",
+                return_value=mock_s3,
+            ),
+        ):
+            response = await client.post(
+                "/api/v1/culture/questions",
+                json={
+                    "deck_id": str(deck.id),
+                    "question_text": {
+                        "el": "Ποια είναι η πρωτεύουσα;",
+                        "en": "What is the capital?",
+                        "ru": "Какая столица?",
+                    },
+                    "option_a": {"el": "Αθήνα", "en": "Athens", "ru": "Афины"},
+                    "option_b": {
+                        "el": "Θεσσαλονίκη",
+                        "en": "Thessaloniki",
+                        "ru": "Салоники",
+                    },
+                    "correct_option": 1,
+                },
+                headers=superuser_auth_headers,
+            )
+
+            assert response.status_code == 502
+
+
+class TestAdminCultureQuestionItemSchema:
+    """Tests for AdminCultureQuestionItem schema."""
+
+    def test_audio_s3_key_included_in_schema(self):
+        """audio_s3_key field exists in schema."""
+        from src.schemas.admin import AdminCultureQuestionItem
+
+        fields = AdminCultureQuestionItem.model_fields
+        assert "audio_s3_key" in fields
+
+    def test_audio_s3_key_defaults_to_none(self):
+        """audio_s3_key defaults to None."""
+        from src.schemas.admin import AdminCultureQuestionItem
+
+        fields = AdminCultureQuestionItem.model_fields
+        assert fields["audio_s3_key"].default is None

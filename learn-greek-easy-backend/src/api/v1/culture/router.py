@@ -901,6 +901,40 @@ async def create_culture_question(
     service = CultureQuestionService(db)
     question = await service.create_question(question_data)
 
+    # Auto-generate audio if ElevenLabs is configured
+    if settings.elevenlabs_configured:
+        greek_text = question_data.question_text.el
+        if greek_text.strip():
+            from src.services.elevenlabs_service import get_elevenlabs_service
+            from src.services.s3_service import get_s3_service
+
+            try:
+                audio_bytes = await get_elevenlabs_service().generate_speech(greek_text)
+                s3_key = f"culture/audio/{question.id}.mp3"
+                upload_success = get_s3_service().upload_object(s3_key, audio_bytes, "audio/mpeg")
+                if not upload_success:
+                    raise HTTPException(
+                        status_code=status.HTTP_502_BAD_GATEWAY,
+                        detail="Failed to upload audio to S3",
+                    )
+                from sqlalchemy import update as sa_update
+
+                from src.db.models import CultureQuestion
+
+                await db.execute(
+                    sa_update(CultureQuestion)
+                    .where(CultureQuestion.id == question.id)
+                    .values(audio_s3_key=s3_key)
+                )
+                question = question.model_copy(update={"audio_s3_key": s3_key})
+            except HTTPException:
+                raise
+            except Exception as e:
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail=f"Audio generation failed: {e}",
+                ) from e
+
     # Commit the transaction
     await db.commit()
 
