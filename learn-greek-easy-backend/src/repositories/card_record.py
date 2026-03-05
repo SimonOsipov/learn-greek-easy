@@ -175,7 +175,7 @@ class CardRecordRepository(BaseRepository[CardRecord]):
 
         # ON CONFLICT (word_entry_id, card_type, variant_key) DO UPDATE
         upsert_stmt = insert_stmt.on_conflict_do_update(
-            constraint="uq_card_record_entry_type_variant",
+            constraint="uq_card_record_deck_entry_type_variant",
             set_={col: getattr(insert_stmt.excluded, col) for col in update_columns}
             | {"updated_at": func.now()},
         )

@@ -33,7 +33,7 @@ from src.core.exceptions import DeckNotFoundException
 from src.core.logging import get_logger
 from src.core.posthog import capture_event
 from src.core.sm2 import calculate_next_review_date, calculate_sm2
-from src.db.models import Card, CardStatus, Review, WordEntry
+from src.db.models import Card, CardStatus, DeckWordEntry, Review, WordEntry
 from src.services.s3_service import get_s3_service
 
 if TYPE_CHECKING:
@@ -596,30 +596,34 @@ class SM2Service:
         if not lookup_tuples:
             return {}
 
-        # Batch query WordEntry records using OR conditions
+        # Batch query WordEntry records via junction table using OR conditions
         from sqlalchemy import and_, or_
 
         conditions = [
             and_(
-                WordEntry.deck_id == deck_id,
+                DeckWordEntry.deck_id == deck_id,
                 WordEntry.lemma == lemma,
                 WordEntry.part_of_speech == pos,
             )
             for deck_id, lemma, pos in lookup_tuples
         ]
-        we_query = select(WordEntry).where(or_(*conditions))
+        we_query = (
+            select(WordEntry, DeckWordEntry.deck_id)
+            .join(DeckWordEntry, DeckWordEntry.word_entry_id == WordEntry.id)
+            .where(or_(*conditions))
+        )
         we_result = await self.db.execute(we_query)
-        word_entries = list(we_result.scalars().all())
 
         # Build lookup map: (deck_id, lemma, pos_value) -> WordEntry
         we_map: dict = {}
-        for word_entry in word_entries:
+        for row in we_result.all():
+            word_entry, junction_deck_id = row
             pos_val = (
                 word_entry.part_of_speech.value
                 if hasattr(word_entry.part_of_speech, "value")
                 else str(word_entry.part_of_speech)
             )
-            we_map[(word_entry.deck_id, word_entry.lemma, pos_val)] = word_entry
+            we_map[(junction_deck_id, word_entry.lemma, pos_val)] = word_entry
 
         # Build enrichment dict keyed by card_id
         enrichment: dict = {}

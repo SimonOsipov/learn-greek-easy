@@ -33,6 +33,7 @@ def sample_entry():
     entry = MagicMock()
     entry.id = uuid4()
     entry.deck_id = uuid4()
+    entry.visibility = "shared"
     entry.lemma = "σπίτι"
     entry.part_of_speech = "noun"
     entry.translation_en = "house"

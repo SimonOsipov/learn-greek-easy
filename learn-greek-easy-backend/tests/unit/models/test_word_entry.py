@@ -51,11 +51,12 @@ class TestWordEntryModel:
         assert WordEntry.__tablename__ == "word_entries"
 
     def test_has_all_columns(self):
-        """Model should have all 13 expected columns."""
+        """Model should have all expected columns (NGEN-10: deck_id removed, owner_id+visibility added)."""
         columns = WordEntry.__table__.columns.keys()
         expected_columns = [
             "id",
-            "deck_id",
+            "owner_id",
+            "visibility",
             "lemma",
             "part_of_speech",
             "translation_en",
@@ -68,9 +69,9 @@ class TestWordEntryModel:
             "created_at",
             "updated_at",
         ]
-        assert len(expected_columns) == 13
         for col in expected_columns:
             assert col in columns, f"Missing expected column: {col}"
+        assert "deck_id" not in columns, "deck_id should have been removed by NGEN-10"
 
     # =========================================================================
     # Primary Key Tests
@@ -90,10 +91,10 @@ class TestWordEntryModel:
     # Required Fields (NOT NULL) Tests
     # =========================================================================
 
-    def test_deck_id_not_nullable(self):
-        """deck_id column should not be nullable."""
-        deck_id_col = WordEntry.__table__.columns["deck_id"]
-        assert deck_id_col.nullable is False
+    def test_owner_id_nullable(self):
+        """owner_id column should be nullable (NULL for admin-created entries)."""
+        owner_id_col = WordEntry.__table__.columns["owner_id"]
+        assert owner_id_col.nullable is True
 
     def test_lemma_not_nullable(self):
         """lemma column should not be nullable."""
@@ -196,54 +197,51 @@ class TestWordEntryModel:
     # Foreign Key Tests
     # =========================================================================
 
-    def test_deck_id_has_foreign_key(self):
-        """deck_id should reference decks.id."""
-        deck_id_col = WordEntry.__table__.columns["deck_id"]
-        fk_list = list(deck_id_col.foreign_keys)
+    def test_owner_id_has_foreign_key(self):
+        """owner_id should reference users.id with SET NULL on delete."""
+        owner_id_col = WordEntry.__table__.columns["owner_id"]
+        fk_list = list(owner_id_col.foreign_keys)
         assert len(fk_list) == 1
         fk = fk_list[0]
-        assert str(fk.column) == "decks.id"
-
-    def test_deck_id_cascade_on_delete(self):
-        """deck_id foreign key should cascade on delete."""
-        deck_id_col = WordEntry.__table__.columns["deck_id"]
-        fk = list(deck_id_col.foreign_keys)[0]
-        assert fk.ondelete == "CASCADE"
+        assert str(fk.column) == "users.id"
+        assert fk.ondelete == "SET NULL"
 
     # =========================================================================
     # Unique Constraint Tests
     # =========================================================================
 
     def test_unique_constraint_exists(self):
-        """Should have unique constraint named uq_word_entry_deck_lemma_pos."""
+        """Should have unique constraint named uq_word_entry_owner_lemma_pos (NGEN-10)."""
         constraints = WordEntry.__table__.constraints
         unique_constraints = [c for c in constraints if isinstance(c, UniqueConstraint)]
         constraint_names = [uc.name for uc in unique_constraints]
-        assert "uq_word_entry_deck_lemma_pos" in constraint_names
+        assert "uq_word_entry_owner_lemma_pos" in constraint_names
+        assert "uq_word_entry_deck_lemma_pos" not in constraint_names
 
     def test_unique_constraint_columns(self):
-        """Unique constraint should cover (deck_id, lemma, part_of_speech)."""
+        """Unique constraint should cover (owner_id, lemma, part_of_speech) (NGEN-10)."""
         constraints = WordEntry.__table__.constraints
         unique_constraints = [c for c in constraints if isinstance(c, UniqueConstraint)]
 
         found = False
         for uc in unique_constraints:
-            if uc.name == "uq_word_entry_deck_lemma_pos":
+            if uc.name == "uq_word_entry_owner_lemma_pos":
                 col_names = {c.name for c in uc.columns}
-                assert col_names == {"deck_id", "lemma", "part_of_speech"}
+                assert col_names == {"owner_id", "lemma", "part_of_speech"}
                 found = True
                 break
-        assert found, "Unique constraint uq_word_entry_deck_lemma_pos not found"
+        assert found, "Unique constraint uq_word_entry_owner_lemma_pos not found"
 
     # =========================================================================
     # Index Tests
     # =========================================================================
 
-    def test_deck_id_index_exists(self):
-        """deck_id should have an index."""
+    def test_owner_id_index_exists(self):
+        """owner_id should have an index (NGEN-10: replaces deck_id index)."""
         indexes = WordEntry.__table__.indexes
         index_names = [idx.name for idx in indexes]
-        assert "ix_word_entries_deck_id" in index_names
+        assert "ix_word_entries_owner_id" in index_names
+        assert "ix_word_entries_deck_id" not in index_names
 
     def test_is_active_index_exists(self):
         """is_active should have an index."""
@@ -275,10 +273,11 @@ class TestWordEntryModel:
     # Relationship Tests
     # =========================================================================
 
-    def test_deck_relationship_exists(self):
-        """WordEntry should have a deck relationship."""
+    def test_decks_relationship_exists(self):
+        """WordEntry should have M:N decks relationship (NGEN-10: replaces single deck FK)."""
         relationships = WordEntry.__mapper__.relationships
-        assert "deck" in relationships.keys()
+        assert "decks" in relationships.keys()
+        assert "deck" not in relationships.keys()
 
     # =========================================================================
     # TimestampMixin Tests

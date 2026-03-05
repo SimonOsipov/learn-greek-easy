@@ -13,12 +13,13 @@ from typing import Literal, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
-from sqlalchemy import case, func, select
+from sqlalchemy import case, delete, func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
 from src.core.dependencies import get_current_superuser
-from src.core.exceptions import NotFoundException
+from src.core.exceptions import ConflictException, NotFoundException
 from src.core.logging import get_logger
 from src.db.dependencies import get_db
 from src.db.models import (
@@ -26,10 +27,12 @@ from src.db.models import (
     Card,
     CardErrorCardType,
     CardErrorStatus,
+    CardRecord,
     CardSystemVersion,
     CultureDeck,
     CultureQuestion,
     Deck,
+    DeckWordEntry,
     FeedbackCategory,
     FeedbackStatus,
     NewsItem,
@@ -37,6 +40,7 @@ from src.db.models import (
     User,
     WordEntry,
 )
+from src.repositories.deck import DeckRepository
 from src.repositories.word_entry import WordEntryRepository
 from src.schemas.admin import (
     AdminCultureQuestionItem,
@@ -187,7 +191,8 @@ async def get_admin_stats(
 
     v2_word_count_result = await db.execute(
         select(func.count(WordEntry.id))
-        .join(Deck, WordEntry.deck_id == Deck.id)
+        .join(DeckWordEntry, DeckWordEntry.word_entry_id == WordEntry.id)
+        .join(Deck, DeckWordEntry.deck_id == Deck.id)
         .where(Deck.is_active.is_(True))
         .where(Deck.card_system == CardSystemVersion.V2)
         .where(WordEntry.is_active.is_(True))
@@ -302,9 +307,10 @@ async def list_decks(
 
         # Count V2 active word entries per vocabulary deck
         v2_word_count_subquery = (
-            select(WordEntry.deck_id, func.count(WordEntry.id).label("word_count"))
+            select(DeckWordEntry.deck_id, func.count(WordEntry.id).label("word_count"))
+            .join(WordEntry, WordEntry.id == DeckWordEntry.word_entry_id)
             .where(WordEntry.is_active.is_(True))
-            .group_by(WordEntry.deck_id)
+            .group_by(DeckWordEntry.deck_id)
             .subquery()
         )
 
@@ -2250,7 +2256,17 @@ async def generate_word_entry_cards(
         "sentence_translation": service.generate_sentence_translation_cards,
     }
     generate_fn = method_map[request.card_type]
-    created, updated = await generate_fn([word_entry], word_entry.deck_id)
+    # Look up deck_id via junction table (WordEntry no longer has deck_id)
+    deck_id_result = await db.execute(
+        select(DeckWordEntry.deck_id).where(DeckWordEntry.word_entry_id == word_entry_id).limit(1)
+    )
+    resolved_deck_id = deck_id_result.scalar_one_or_none()
+    if resolved_deck_id is None:
+        raise NotFoundException(
+            resource="Deck link",
+            detail=f"Word entry '{word_entry_id}' is not linked to any deck",
+        )
+    created, updated = await generate_fn([word_entry], resolved_deck_id)
 
     await db.commit()
 
@@ -2393,3 +2409,138 @@ async def generate_word_entry(
         suggestions=suggestions,
         duplicate_check=dup_result,
     )
+
+
+# ============================================================================
+# Word Entry Link/Unlink Endpoints
+# ============================================================================
+
+
+@router.post(
+    "/decks/{deck_id}/word-entries/{word_entry_id}/link",
+    response_model=WordEntryResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Link word entry to deck",
+    description=(
+        "Link an existing shared word entry to a deck. "
+        "Generates card records for the deck automatically."
+    ),
+    responses={
+        201: {"description": "Word entry linked and cards generated"},
+        404: {"description": "Deck or word entry not found"},
+        409: {"description": "Duplicate lemma+POS in deck or already linked"},
+    },
+)
+async def link_word_entry_to_deck(
+    deck_id: UUID,
+    word_entry_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> WordEntryResponse:
+    """Link an existing word entry to a deck and generate its card records."""
+    deck_repo = DeckRepository(db)
+    word_entry_repo = WordEntryRepository(db)
+
+    # Validate deck exists
+    deck = await deck_repo.get(deck_id)
+    if deck is None:
+        raise NotFoundException(resource="Deck", detail=f"Deck with id '{deck_id}' not found")
+
+    # Validate deck is active and V2 (word entries are only for V2 decks)
+    if not deck.is_active or deck.card_system != CardSystemVersion.V2:
+        raise ConflictException(
+            detail=f"Deck '{deck_id}' is not an active V2 deck. Word entries can only be linked to active V2 decks."
+        )
+
+    # Validate word entry exists and is active
+    word_entry = await word_entry_repo.get(word_entry_id)
+    if word_entry is None or not word_entry.is_active:
+        raise NotFoundException(
+            resource="WordEntry",
+            detail=f"Word entry with id '{word_entry_id}' not found or inactive",
+        )
+
+    # Check if deck already has a word entry with same lemma+POS (via junction)
+    duplicate_check = await db.execute(
+        select(WordEntry.id)
+        .join(DeckWordEntry, DeckWordEntry.word_entry_id == WordEntry.id)
+        .where(
+            DeckWordEntry.deck_id == deck_id,
+            WordEntry.lemma == word_entry.lemma,
+            WordEntry.part_of_speech == word_entry.part_of_speech,
+            WordEntry.id != word_entry_id,
+        )
+        .limit(1)
+    )
+    if duplicate_check.scalar_one_or_none() is not None:
+        raise ConflictException(
+            detail=f"Deck already has a word entry for '{word_entry.lemma}' ({word_entry.part_of_speech})"
+        )
+
+    # Check if already linked (since link_to_deck uses on_conflict_do_nothing)
+    already_linked = await word_entry_repo.is_linked_to_deck(word_entry_id, deck_id)
+    if already_linked:
+        raise ConflictException(detail="Word entry is already linked to this deck")
+
+    # Insert junction row
+    try:
+        await word_entry_repo.link_to_deck(word_entry_id, deck_id)
+    except IntegrityError:
+        await db.rollback()
+        raise ConflictException(detail="Word entry is already linked to this deck")
+
+    # Generate card records for this deck
+    card_service = CardGeneratorService(db)
+    await card_service.generate_meaning_cards([word_entry], deck_id)
+    await card_service.generate_plural_form_cards([word_entry], deck_id)
+    await card_service.generate_sentence_translation_cards([word_entry], deck_id)
+    await card_service.generate_article_cards([word_entry], deck_id)
+
+    await db.commit()
+    await db.refresh(word_entry)
+
+    return word_entry_to_response(word_entry, deck_id=deck_id)
+
+
+@router.delete(
+    "/decks/{deck_id}/word-entries/{word_entry_id}/link",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Unlink word entry from deck",
+    description=(
+        "Remove a word entry's link to a deck. "
+        "Deletes associated card records but preserves the word entry."
+    ),
+    responses={
+        204: {"description": "Link removed successfully"},
+        404: {"description": "Link not found"},
+    },
+)
+async def unlink_word_entry_from_deck(
+    deck_id: UUID,
+    word_entry_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> None:
+    """Remove a word entry from a deck, deleting its card records."""
+    word_entry_repo = WordEntryRepository(db)
+
+    # Check link exists
+    linked = await word_entry_repo.is_linked_to_deck(word_entry_id, deck_id)
+    if not linked:
+        raise NotFoundException(
+            resource="Link",
+            detail=f"Word entry '{word_entry_id}' is not linked to deck '{deck_id}'",
+        )
+
+    # Delete card records for (deck_id, word_entry_id)
+    await db.execute(
+        delete(CardRecord).where(
+            CardRecord.deck_id == deck_id,
+            CardRecord.word_entry_id == word_entry_id,
+        )
+    )
+
+    # Remove junction row
+    await word_entry_repo.unlink_from_deck(word_entry_id, deck_id)
+
+    await db.commit()

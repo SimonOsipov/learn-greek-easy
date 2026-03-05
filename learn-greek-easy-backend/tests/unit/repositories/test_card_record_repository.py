@@ -24,6 +24,7 @@ from src.db.models import (
     CardType,
     Deck,
     DeckLevel,
+    DeckWordEntry,
     PartOfSpeech,
     WordEntry,
 )
@@ -78,13 +79,15 @@ async def second_deck(db_session: AsyncSession) -> Deck:
 async def word_entry(db_session: AsyncSession, v2_deck: Deck) -> WordEntry:
     """Create a word entry for card record testing."""
     entry = WordEntry(
-        deck_id=v2_deck.id,
+        owner_id=None,
         lemma="σπίτι",
         part_of_speech=PartOfSpeech.NOUN,
         translation_en="house",
         is_active=True,
     )
     db_session.add(entry)
+    await db_session.flush()
+    db_session.add(DeckWordEntry(deck_id=v2_deck.id, word_entry_id=entry.id))
     await db_session.flush()
     await db_session.refresh(entry)
     return entry
@@ -94,13 +97,15 @@ async def word_entry(db_session: AsyncSession, v2_deck: Deck) -> WordEntry:
 async def second_word_entry(db_session: AsyncSession, v2_deck: Deck) -> WordEntry:
     """Create a second word entry for testing multi-entry scenarios."""
     entry = WordEntry(
-        deck_id=v2_deck.id,
+        owner_id=None,
         lemma="τρέχω",
         part_of_speech=PartOfSpeech.VERB,
         translation_en="to run",
         is_active=True,
     )
     db_session.add(entry)
+    await db_session.flush()
+    db_session.add(DeckWordEntry(deck_id=v2_deck.id, word_entry_id=entry.id))
     await db_session.flush()
     await db_session.refresh(entry)
     return entry

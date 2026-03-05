@@ -7,6 +7,8 @@ from src.schemas.word_entry import WordEntryResponse
 from src.services.s3_service import S3Service, get_s3_service
 
 if TYPE_CHECKING:
+    from uuid import UUID
+
     from src.db.models import AudioStatus, WordEntry
 
 STALE_GENERATING_THRESHOLD = timedelta(minutes=5)
@@ -50,6 +52,7 @@ def _resolve_example_audio_status(
 def word_entry_to_response(
     entry: "WordEntry",
     s3_service: Optional[S3Service] = None,
+    deck_id: Optional["UUID"] = None,
 ) -> WordEntryResponse:
     """Convert WordEntry ORM model to WordEntryResponse with presigned audio URLs.
 
@@ -66,6 +69,9 @@ def word_entry_to_response(
     """
     s3 = s3_service or get_s3_service()
     response = WordEntryResponse.model_validate(entry)
+
+    if deck_id is not None:
+        response.deck_id = deck_id
 
     response.audio_url = s3.generate_presigned_url(entry.audio_key)
     response.audio_status = _resolve_audio_status(

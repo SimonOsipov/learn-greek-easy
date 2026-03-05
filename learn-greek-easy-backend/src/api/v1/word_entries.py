@@ -8,13 +8,14 @@ This module provides HTTP endpoints for word entry operations including:
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
 from src.core.dependencies import get_current_superuser, get_current_user
 from src.core.exceptions import DeckNotFoundException, ForbiddenException, NotFoundException
 from src.db.dependencies import get_db
-from src.db.models import User
+from src.db.models import Deck, DeckWordEntry, User
 from src.repositories.card_record import CardRecordRepository
 from src.repositories.deck import DeckRepository
 from src.repositories.word_entry import WordEntryRepository
@@ -114,22 +115,37 @@ async def get_word_entry(
             detail=f"Word entry with id '{word_entry_id}' not found",
         )
 
-    # Load deck for authorization check
-    deck_repo = DeckRepository(db)
-    deck = await deck_repo.get(word_entry.deck_id)
+    # Find all decks linked to this word entry
+    deck_links_result = await db.execute(
+        select(Deck)
+        .join(DeckWordEntry, DeckWordEntry.deck_id == Deck.id)
+        .where(DeckWordEntry.word_entry_id == word_entry.id)
+    )
+    linked_decks = list(deck_links_result.scalars().all())
 
-    if deck is None:
+    if not linked_decks:
         raise NotFoundException(
             resource="WordEntry",
             detail=f"Word entry with id '{word_entry_id}' not found",
         )
 
-    # Authorization: system decks (owner_id=None) are accessible to all authenticated users
-    # User-created decks require ownership
-    if deck.owner_id is not None and deck.owner_id != current_user.id:
+    # Authorization: user must own a linked deck, or a system deck must be linked
+    user_deck = None
+    system_deck = None
+    for d in linked_decks:
+        if d.owner_id is None:
+            system_deck = d
+        elif d.owner_id == current_user.id:
+            user_deck = d
+
+    if user_deck is None and system_deck is None:
         raise ForbiddenException(detail="You don't have permission to access this word entry")
 
-    return word_entry_to_response(word_entry)
+    # For response: prefer user's deck, fall back to system deck
+    # At this point at least one of user_deck or system_deck is non-None
+    context_deck: Deck = user_deck or system_deck  # type: ignore[assignment]
+
+    return word_entry_to_response(word_entry, s3_service=None, deck_id=context_deck.id)
 
 
 @router.get(
@@ -178,18 +194,30 @@ async def get_word_entry_cards(
             detail=f"Word entry with id '{word_entry_id}' not found",
         )
 
-    # 2. Load deck for authorization
-    deck_repo = DeckRepository(db)
-    deck = await deck_repo.get(word_entry.deck_id)
+    # 2. Find all decks linked to this word entry
+    deck_links_result = await db.execute(
+        select(Deck)
+        .join(DeckWordEntry, DeckWordEntry.deck_id == Deck.id)
+        .where(DeckWordEntry.word_entry_id == word_entry.id)
+    )
+    linked_decks = list(deck_links_result.scalars().all())
 
-    if deck is None:
+    if not linked_decks:
         raise NotFoundException(
             resource="WordEntry",
             detail=f"Word entry with id '{word_entry_id}' not found",
         )
 
-    # 3. Authorization check (system decks accessible to all, user decks require ownership)
-    if deck.owner_id is not None and deck.owner_id != current_user.id:
+    # 3. Authorization: user must own a linked deck, or a system deck must be linked
+    user_deck = None
+    system_deck = None
+    for d in linked_decks:
+        if d.owner_id is None:
+            system_deck = d
+        elif d.owner_id == current_user.id:
+            user_deck = d
+
+    if user_deck is None and system_deck is None:
         raise ForbiddenException(detail="You don't have permission to access this word entry")
 
     # 4. Fetch card records and filter to active only
@@ -329,9 +357,13 @@ async def bulk_upload_word_entries(
     # Perform bulk upsert using repository
     word_entry_repo = WordEntryRepository(db)
     entries, created_count, updated_count = await word_entry_repo.bulk_upsert(
-        deck_id=request.deck_id,
+        owner_id=current_user.id,
         entries_data=entries_data,
     )
+
+    # Link all upserted entries to the target deck via junction table
+    for entry in entries:
+        await word_entry_repo.link_to_deck(entry.id, request.deck_id)
 
     # Generate meaning cards for all upserted word entries
     card_gen = CardGeneratorService(db)
@@ -378,5 +410,8 @@ async def bulk_upload_word_entries(
         updated_count=updated_count,
         cards_created=cards_created,
         cards_updated=cards_updated,
-        word_entries=[word_entry_to_response(entry) for entry in entries],
+        word_entries=[
+            word_entry_to_response(entry, s3_service=None, deck_id=request.deck_id)
+            for entry in entries
+        ],
     )

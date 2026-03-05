@@ -30,6 +30,7 @@ import { GenerateNounDialog, type GenerateNounDialogProps } from '../GenerateNou
 vi.mock('@/services/adminAPI', () => ({
   adminAPI: {
     generateWordEntry: vi.fn(),
+    linkWordEntry: vi.fn().mockResolvedValue(undefined),
   },
 }));
 
@@ -82,6 +83,7 @@ const mockNormalizationResponse = (
     }>;
     duplicate_check: {
       is_duplicate: boolean;
+      word_entry_id: string | null;
       existing_entry: {
         id: string;
         lemma: string;
@@ -90,8 +92,7 @@ const mockNormalizationResponse = (
         translation_ru: string | null;
         pronunciation: string | null;
       } | null;
-      matched_deck_id: string | null;
-      matched_deck_name: string | null;
+      matched_decks: { deck_id: string; deck_name: string }[];
     } | null;
   }>
 ) => ({
@@ -114,9 +115,9 @@ const mockNormalizationResponse = (
       ? overrides.duplicate_check
       : {
           is_duplicate: false,
+          word_entry_id: null,
           existing_entry: null,
-          matched_deck_id: null,
-          matched_deck_name: null,
+          matched_decks: [],
         },
   generation: null,
   local_verification: null,
@@ -674,6 +675,7 @@ describe('GenerateNounDialog', () => {
       mockNormalizationResponse({
         duplicate_check: {
           is_duplicate: true,
+          word_entry_id: 'entry-1',
           existing_entry: {
             id: 'entry-1',
             lemma: 'γάτα',
@@ -682,8 +684,7 @@ describe('GenerateNounDialog', () => {
             translation_ru: null,
             pronunciation: null,
           },
-          matched_deck_id: 'deck-2',
-          matched_deck_name: 'Animals',
+          matched_decks: [{ deck_id: 'deck-2', deck_name: 'Animals' }],
         },
       })
     );
@@ -706,6 +707,7 @@ describe('GenerateNounDialog', () => {
       mockNormalizationResponse({
         duplicate_check: {
           is_duplicate: true,
+          word_entry_id: 'entry-1',
           existing_entry: {
             id: 'entry-1',
             lemma: 'γάτα',
@@ -714,8 +716,7 @@ describe('GenerateNounDialog', () => {
             translation_ru: null,
             pronunciation: null,
           },
-          matched_deck_id: 'deck-2',
-          matched_deck_name: 'Animals',
+          matched_decks: [{ deck_id: 'deck-2', deck_name: 'Animals' }],
         },
       })
     );

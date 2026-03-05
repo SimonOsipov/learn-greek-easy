@@ -978,6 +978,16 @@
     "noDuplicates": "No duplicates found",
     "duplicateFound": "Already exists in deck \"{{deckName}}\"",
     "duplicateTranslation": "Translation: {{translation}}",
-    "duplicateWarning": "You can still continue — the word will be added to the current deck"
+    "duplicateWarning": "You can still continue — the word will be added to the current deck",
+    "linkToDeck": "Link to deck",
+    "alreadyInDeck": "This deck already has this word",
+    "linkSuccess": "Word linked to deck successfully",
+    "existsInDecks": "This word exists in {{count}} deck(s)"
+  },
+  "wordEntry": {
+    "unlinkConfirm": "Remove this word from the deck? The word entry itself will not be deleted.",
+    "unlinkSuccess": "Word removed from deck",
+    "unlinkButton": "Remove from deck",
+    "unlinkTitle": "Remove from deck?"
   }
 }

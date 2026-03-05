@@ -3,11 +3,11 @@
 from collections.abc import Sequence
 from uuid import UUID
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import PartOfSpeech, WordEntry
+from src.db.models import DeckWordEntry, PartOfSpeech, WordEntry
 from src.repositories.base import BaseRepository
 
 
@@ -45,11 +45,13 @@ class WordEntryRepository(BaseRepository[WordEntry]):
         Returns:
             List of word entries ordered by lemma
         """
-        query = select(WordEntry).where(WordEntry.deck_id == deck_id)
-
+        query = (
+            select(WordEntry)
+            .join(DeckWordEntry, DeckWordEntry.word_entry_id == WordEntry.id)
+            .where(DeckWordEntry.deck_id == deck_id)
+        )
         if active_only:
             query = query.where(WordEntry.is_active.is_(True))
-
         query = query.order_by(WordEntry.lemma).offset(skip).limit(limit)
         result = await self.db.execute(query)
         return list(result.scalars().all())
@@ -64,11 +66,14 @@ class WordEntryRepository(BaseRepository[WordEntry]):
         Returns:
             Total number of word entries
         """
-        query = select(func.count()).select_from(WordEntry).where(WordEntry.deck_id == deck_id)
-
+        query = (
+            select(func.count())
+            .select_from(WordEntry)
+            .join(DeckWordEntry, DeckWordEntry.word_entry_id == WordEntry.id)
+            .where(DeckWordEntry.deck_id == deck_id)
+        )
         if active_only:
             query = query.where(WordEntry.is_active.is_(True))
-
         result = await self.db.execute(query)
         return result.scalar_one()
 
@@ -99,7 +104,11 @@ class WordEntryRepository(BaseRepository[WordEntry]):
         Returns:
             List of word entries matching criteria
         """
-        query = select(WordEntry).where(WordEntry.deck_id == deck_id)
+        query = (
+            select(WordEntry)
+            .join(DeckWordEntry, DeckWordEntry.word_entry_id == WordEntry.id)
+            .where(DeckWordEntry.deck_id == deck_id)
+        )
 
         if active_only:
             query = query.where(WordEntry.is_active.is_(True))
@@ -148,7 +157,12 @@ class WordEntryRepository(BaseRepository[WordEntry]):
         Returns:
             Total number of matching word entries
         """
-        query = select(func.count()).select_from(WordEntry).where(WordEntry.deck_id == deck_id)
+        query = (
+            select(func.count())
+            .select_from(WordEntry)
+            .join(DeckWordEntry, DeckWordEntry.word_entry_id == WordEntry.id)
+            .where(DeckWordEntry.deck_id == deck_id)
+        )
 
         if active_only:
             query = query.where(WordEntry.is_active.is_(True))
@@ -170,16 +184,16 @@ class WordEntryRepository(BaseRepository[WordEntry]):
         result = await self.db.execute(query)
         return result.scalar_one()
 
-    async def get_by_lemma_pos(
+    async def get_by_owner_lemma_pos(
         self,
-        deck_id: UUID,
+        owner_id: UUID | None,
         lemma: str,
         part_of_speech: str,
     ) -> WordEntry | None:
         """Get a word entry by its unique constraint fields.
 
         Args:
-            deck_id: Deck UUID
+            owner_id: Owner UUID (None for admin/system entries)
             lemma: Dictionary form of the word
             part_of_speech: Part of speech value
 
@@ -187,7 +201,7 @@ class WordEntryRepository(BaseRepository[WordEntry]):
             WordEntry if found, None otherwise
         """
         query = select(WordEntry).where(
-            WordEntry.deck_id == deck_id,
+            WordEntry.owner_id == owner_id,
             WordEntry.lemma == lemma,
             WordEntry.part_of_speech == part_of_speech,
         )
@@ -234,7 +248,7 @@ class WordEntryRepository(BaseRepository[WordEntry]):
 
     async def bulk_upsert(
         self,
-        deck_id: UUID,
+        owner_id: UUID | None,
         entries_data: list[dict],
     ) -> tuple[list[WordEntry], int, int]:
         """Bulk create or update word entries.
@@ -243,7 +257,7 @@ class WordEntryRepository(BaseRepository[WordEntry]):
         both new entries and updates to existing entries in a single operation.
 
         Args:
-            deck_id: Deck UUID to add entries to
+            owner_id: Owner UUID (None for admin/system entries)
             entries_data: List of dictionaries containing word entry fields.
                 Each dict should have: lemma, part_of_speech, translation_en,
                 and optionally: translation_ru, pronunciation,
@@ -260,7 +274,7 @@ class WordEntryRepository(BaseRepository[WordEntry]):
 
         Example:
             entries, created, updated = await repo.bulk_upsert(
-                deck_id=deck_id,
+                owner_id=owner_id,
                 entries_data=[
                     {"lemma": "σπίτι", "part_of_speech": "NOUN", "translation_en": "house"},
                     {"lemma": "τρέχω", "part_of_speech": "VERB", "translation_en": "to run"},
@@ -275,7 +289,7 @@ class WordEntryRepository(BaseRepository[WordEntry]):
         existing_query = select(
             WordEntry.lemma, WordEntry.part_of_speech, WordEntry.examples
         ).where(
-            WordEntry.deck_id == deck_id,
+            WordEntry.owner_id == owner_id,
         )
         existing_result = await self.db.execute(existing_query)
         existing_rows = existing_result.all()
@@ -294,13 +308,13 @@ class WordEntryRepository(BaseRepository[WordEntry]):
         # Build audio_key lookup: {(lemma, pos): {example_id: audio_key}}
         existing_audio_keys = self._build_audio_key_lookup(existing_rows)
 
-        # Prepare values with deck_id added to each entry
+        # Prepare values with owner_id added to each entry
         values = []
         created_count = 0
         updated_count = 0
 
         for entry in entries_data:
-            entry_with_deck = {"deck_id": deck_id, **entry}
+            entry_with_owner = {"owner_id": owner_id, **entry}
             # Normalize part_of_speech to string for comparison
             pos_value = entry["part_of_speech"]
             if hasattr(pos_value, "value"):
@@ -313,9 +327,9 @@ class WordEntryRepository(BaseRepository[WordEntry]):
                 created_count += 1
 
             # Merge audio_keys from existing examples into incoming examples
-            self._merge_audio_keys(entry_with_deck, key, existing_audio_keys)
+            self._merge_audio_keys(entry_with_owner, key, existing_audio_keys)
 
-            values.append(entry_with_deck)
+            values.append(entry_with_owner)
 
         # Build PostgreSQL upsert statement
         # Columns to update on conflict (all except primary key and constraint columns)
@@ -330,9 +344,9 @@ class WordEntryRepository(BaseRepository[WordEntry]):
 
         insert_stmt = insert(WordEntry).values(values)
 
-        # ON CONFLICT (deck_id, lemma, part_of_speech) DO UPDATE
+        # ON CONFLICT (owner_id, lemma, part_of_speech) DO UPDATE
         upsert_stmt = insert_stmt.on_conflict_do_update(
-            constraint="uq_word_entry_deck_lemma_pos",
+            constraint="uq_word_entry_owner_lemma_pos",
             set_={col: getattr(insert_stmt.excluded, col) for col in update_columns}
             | {"updated_at": func.now()},
         )
@@ -356,3 +370,39 @@ class WordEntryRepository(BaseRepository[WordEntry]):
         entries = list(fetch_result.scalars().all())
 
         return entries, created_count, updated_count
+
+    async def link_to_deck(self, word_entry_id: UUID, deck_id: UUID) -> None:
+        """Link a word entry to a deck via the junction table. Idempotent."""
+        stmt = (
+            insert(DeckWordEntry)
+            .values(word_entry_id=word_entry_id, deck_id=deck_id)
+            .on_conflict_do_nothing()
+        )
+        await self.db.execute(stmt)
+
+    async def unlink_from_deck(self, word_entry_id: UUID, deck_id: UUID) -> None:
+        """Remove a word entry from a deck."""
+        stmt = delete(DeckWordEntry).where(
+            DeckWordEntry.word_entry_id == word_entry_id,
+            DeckWordEntry.deck_id == deck_id,
+        )
+        await self.db.execute(stmt)
+
+    async def get_decks_for_word_entry(self, word_entry_id: UUID) -> list[UUID]:
+        """Get all deck IDs linked to a word entry."""
+        query = select(DeckWordEntry.deck_id).where(DeckWordEntry.word_entry_id == word_entry_id)
+        result = await self.db.execute(query)
+        return [row[0] for row in result.all()]
+
+    async def is_linked_to_deck(self, word_entry_id: UUID, deck_id: UUID) -> bool:
+        """Check if a word entry is linked to a specific deck."""
+        query = (
+            select(func.count())
+            .select_from(DeckWordEntry)
+            .where(
+                DeckWordEntry.word_entry_id == word_entry_id,
+                DeckWordEntry.deck_id == deck_id,
+            )
+        )
+        result = await self.db.execute(query)
+        return result.scalar_one() > 0

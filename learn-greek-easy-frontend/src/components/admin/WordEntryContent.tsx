@@ -1,16 +1,29 @@
 import React, { useState } from 'react';
 
+import { useMutation } from '@tanstack/react-query';
 import { AlertCircle } from 'lucide-react';
 import posthog from 'posthog-js';
 import { useTranslation } from 'react-i18next';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useGenerateAudio } from '@/features/words/hooks';
 import { useWordEntry } from '@/features/words/hooks/useWordEntry';
+import { toast } from '@/hooks/use-toast';
 import { chipColorClasses, type ChipColor } from '@/lib/completeness';
+import { adminAPI } from '@/services/adminAPI';
 import type { WordEntryExampleSentence, WordEntryResponse } from '@/services/wordEntryAPI';
 
 import { AudioGenerateButton } from './AudioGenerateButton';
@@ -21,14 +34,37 @@ import { WordEntryEditForm } from './WordEntryEditForm';
 
 interface WordEntryContentProps {
   wordEntryId: string;
+  deckId?: string;
+  onUnlinked?: () => void;
 }
 
-export function WordEntryContent({ wordEntryId }: WordEntryContentProps) {
+export function WordEntryContent({ wordEntryId, deckId, onUnlinked }: WordEntryContentProps) {
   const { wordEntry, isLoading, isError, refetch } = useWordEntry({
     wordId: wordEntryId,
   });
   const [isEditing, setIsEditing] = useState(false);
   const [isGrammarEditing, setIsGrammarEditing] = useState(false);
+  const [showUnlinkConfirm, setShowUnlinkConfirm] = useState(false);
+  const { t } = useTranslation('admin');
+
+  const unlinkMutation = useMutation({
+    mutationFn: () => {
+      if (!deckId || !wordEntry) throw new Error('Missing deckId or wordEntry');
+      return adminAPI.unlinkWordEntry(deckId, wordEntry.id);
+    },
+    onSuccess: () => {
+      setShowUnlinkConfirm(false);
+      toast({ description: t('wordEntry.unlinkSuccess') });
+      onUnlinked?.();
+    },
+    onError: (error: unknown) => {
+      const apiErr = error as { detail?: string };
+      toast({
+        description: apiErr.detail ?? 'Failed to unlink word entry',
+        variant: 'destructive',
+      });
+    },
+  });
 
   const generateAudioMutation = useGenerateAudio();
   const { isPending, variables: pendingVariables } = generateAudioMutation;
@@ -72,15 +108,39 @@ export function WordEntryContent({ wordEntryId }: WordEntryContentProps) {
   };
 
   return (
-    <ContentFields
-      wordEntry={wordEntry}
-      onEdit={() => setIsEditing(true)}
-      onGenerateClick={handleGenerateClick}
-      isPending={isPending}
-      pendingVariables={pendingVariables}
-      isGrammarEditing={isGrammarEditing}
-      onGrammarEditingChange={setIsGrammarEditing}
-    />
+    <>
+      <ContentFields
+        wordEntry={wordEntry}
+        onEdit={() => setIsEditing(true)}
+        onGenerateClick={handleGenerateClick}
+        isPending={isPending}
+        pendingVariables={pendingVariables}
+        isGrammarEditing={isGrammarEditing}
+        onGrammarEditingChange={setIsGrammarEditing}
+        showUnlinkButton={Boolean(deckId)}
+        onUnlinkClick={() => setShowUnlinkConfirm(true)}
+      />
+      {deckId && (
+        <AlertDialog open={showUnlinkConfirm} onOpenChange={setShowUnlinkConfirm}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t('wordEntry.unlinkTitle')}</AlertDialogTitle>
+              <AlertDialogDescription>{t('wordEntry.unlinkConfirm')}</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => unlinkMutation.mutate()}
+                disabled={unlinkMutation.isPending}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Remove
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+    </>
   );
 }
 
@@ -185,6 +245,8 @@ function ContentFields({
   pendingVariables,
   isGrammarEditing,
   onGrammarEditingChange,
+  showUnlinkButton,
+  onUnlinkClick,
 }: {
   wordEntry: WordEntryResponse;
   onEdit: () => void;
@@ -195,6 +257,8 @@ function ContentFields({
     | undefined;
   isGrammarEditing: boolean;
   onGrammarEditingChange: (isEditing: boolean) => void;
+  showUnlinkButton: boolean;
+  onUnlinkClick: () => void;
 }) {
   const { t } = useTranslation('admin');
 
@@ -204,7 +268,18 @@ function ContentFields({
 
   return (
     <div className="space-y-3" data-testid="word-entry-content-fields">
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        {showUnlinkButton && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="border-destructive text-destructive hover:bg-destructive/10"
+            onClick={onUnlinkClick}
+            data-testid="word-entry-unlink-btn"
+          >
+            {t('wordEntry.unlinkButton')}
+          </Button>
+        )}
         <Button
           variant="outline"
           size="sm"

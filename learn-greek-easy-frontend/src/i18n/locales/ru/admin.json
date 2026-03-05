@@ -990,6 +990,16 @@
     "noDuplicates": "Дубликатов не найдено",
     "duplicateFound": "Уже существует в колоде \"{{deckName}}\"",
     "duplicateTranslation": "Перевод: {{translation}}",
-    "duplicateWarning": "Вы можете продолжить — слово будет добавлено в текущую колоду"
+    "duplicateWarning": "Вы можете продолжить — слово будет добавлено в текущую колоду",
+    "linkToDeck": "Связать с колодой",
+    "alreadyInDeck": "Это слово уже есть в колоде",
+    "linkSuccess": "Слово успешно связано с колодой",
+    "existsInDecks": "Это слово есть в {{count}} колоде(ах)"
+  },
+  "wordEntry": {
+    "unlinkConfirm": "Удалить это слово из колоды? Запись о слове не будет удалена.",
+    "unlinkSuccess": "Слово удалено из колоды",
+    "unlinkButton": "Удалить из колоды",
+    "unlinkTitle": "Удалить из колоды?"
   }
 }

@@ -21,7 +21,7 @@ import { Label } from '@/components/ui/label';
 import {
   adminAPI,
   type ConfidenceTier,
-  type DuplicateCheckResult,
+  type DuplicateCheckStageResult,
   type NormalizationStageResult,
   type SuggestionItem,
 } from '@/services/adminAPI';
@@ -33,6 +33,48 @@ export interface GenerateNounDialogProps {
   onOpenChange: (open: boolean) => void;
   deckId: string;
   deckName: string;
+  onWordLinked?: () => void;
+}
+
+interface DuplicateCheckSectionProps {
+  duplicateCheck: DuplicateCheckStageResult;
+  currentDeckId: string;
+  onLinkToDeck: () => void;
+  isLinking: boolean;
+}
+
+function DuplicateCheckSection({
+  duplicateCheck,
+  currentDeckId,
+  onLinkToDeck,
+  isLinking,
+}: DuplicateCheckSectionProps) {
+  const { t } = useTranslation('admin');
+
+  if (!duplicateCheck.is_duplicate) return null;
+
+  const isAlreadyInCurrentDeck = duplicateCheck.matched_decks.some(
+    (d) => d.deck_id === currentDeckId
+  );
+
+  if (isAlreadyInCurrentDeck) {
+    return (
+      <Alert>
+        <AlertDescription>{t('generateNoun.alreadyInDeck')}</AlertDescription>
+      </Alert>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <p className="text-sm text-muted-foreground">
+        {t('generateNoun.existsInDecks', { count: duplicateCheck.matched_decks.length })}
+      </p>
+      <Button onClick={onLinkToDeck} disabled={isLinking} size="sm">
+        {t('generateNoun.linkToDeck')}
+      </Button>
+    </div>
+  );
 }
 
 const CONFIDENCE_BADGE_CLASSES: Record<ConfidenceTier, string> = {
@@ -46,6 +88,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
   onOpenChange,
   deckName,
   deckId,
+  onWordLinked,
 }) => {
   const { t } = useTranslation('admin');
 
@@ -53,7 +96,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
   const [apiError, setApiError] = useState<string | null>(null);
   const [displayPrimary, setDisplayPrimary] = useState<NormalizationStageResult | null>(null);
   const [displaySuggestions, setDisplaySuggestions] = useState<SuggestionItem[]>([]);
-  const [displayDuplicate, setDisplayDuplicate] = useState<DuplicateCheckResult | null>(null);
+  const [displayDuplicate, setDisplayDuplicate] = useState<DuplicateCheckStageResult | null>(null);
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -71,6 +114,19 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
       } else {
         setApiError(error.message || t('generateNoun.errorGeneric'));
       }
+    },
+  });
+
+  const linkMutation = useMutation({
+    mutationFn: ({ wordEntryId }: { wordEntryId: string }) =>
+      adminAPI.linkWordEntry(deckId, wordEntryId),
+    onSuccess: () => {
+      onWordLinked?.();
+      handleOpenChange(false);
+    },
+    onError: (error: unknown) => {
+      const apiErr = error as { detail?: string; message?: string };
+      setApiError(apiErr.detail ?? String(error));
     },
   });
 
@@ -243,6 +299,19 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                   </div>
                 </div>
               )}
+              {mutation.data?.duplicate_check && (
+                <DuplicateCheckSection
+                  duplicateCheck={mutation.data.duplicate_check}
+                  currentDeckId={deckId}
+                  onLinkToDeck={() => {
+                    const wordEntryId = mutation.data?.duplicate_check?.word_entry_id;
+                    if (wordEntryId) {
+                      linkMutation.mutate({ wordEntryId });
+                    }
+                  }}
+                  isLinking={linkMutation.isPending}
+                />
+              )}
             </div>
 
             {displayDuplicate && (
@@ -257,7 +326,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                       <div>
                         <p className="font-medium">
                           {t('generateNoun.duplicateFound', {
-                            deckName: displayDuplicate.matched_deck_name,
+                            deckName: displayDuplicate.matched_decks[0]?.deck_name ?? '',
                           })}
                         </p>
                         {displayDuplicate.existing_entry && (

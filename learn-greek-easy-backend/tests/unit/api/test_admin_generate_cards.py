@@ -21,7 +21,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import Deck, DeckLevel, PartOfSpeech, WordEntry
+from src.db.models import Deck, DeckLevel, DeckWordEntry, PartOfSpeech, WordEntry
 
 # =============================================================================
 # Helpers: word entry factory
@@ -64,7 +64,7 @@ async def noun_entry_full(db_session: AsyncSession, test_deck: Deck) -> WordEntr
     """Noun with translations, gender, and case data — eligible for meaning, plural_form, article."""
     entry = WordEntry(
         id=uuid4(),
-        deck_id=test_deck.id,
+        owner_id=None,
         lemma="σπίτι",
         part_of_speech=PartOfSpeech.NOUN,
         translation_en="house",
@@ -87,6 +87,8 @@ async def noun_entry_full(db_session: AsyncSession, test_deck: Deck) -> WordEntr
         ],
     )
     db_session.add(entry)
+    await db_session.flush()
+    db_session.add(DeckWordEntry(deck_id=test_deck.id, word_entry_id=entry.id))
     await db_session.commit()
     await db_session.refresh(entry)
     return entry
@@ -97,7 +99,7 @@ async def adjective_entry_full(db_session: AsyncSession, test_deck: Deck) -> Wor
     """Adjective with forms — eligible for meaning and plural_form."""
     entry = WordEntry(
         id=uuid4(),
-        deck_id=test_deck.id,
+        owner_id=None,
         lemma="μεγάλος",
         part_of_speech=PartOfSpeech.ADJECTIVE,
         translation_en="big, large",
@@ -121,6 +123,8 @@ async def adjective_entry_full(db_session: AsyncSession, test_deck: Deck) -> Wor
         },
     )
     db_session.add(entry)
+    await db_session.flush()
+    db_session.add(DeckWordEntry(deck_id=test_deck.id, word_entry_id=entry.id))
     await db_session.commit()
     await db_session.refresh(entry)
     return entry
@@ -131,7 +135,7 @@ async def noun_entry_no_translations(db_session: AsyncSession, test_deck: Deck) 
     """Noun with empty translations — ineligible for meaning (empty string is falsy)."""
     entry = WordEntry(
         id=uuid4(),
-        deck_id=test_deck.id,
+        owner_id=None,
         lemma="βιβλίο",
         part_of_speech=PartOfSpeech.NOUN,
         translation_en="",  # empty string is falsy, triggers eligibility check
@@ -146,6 +150,8 @@ async def noun_entry_no_translations(db_session: AsyncSession, test_deck: Deck) 
         },
     )
     db_session.add(entry)
+    await db_session.flush()
+    db_session.add(DeckWordEntry(deck_id=test_deck.id, word_entry_id=entry.id))
     await db_session.commit()
     await db_session.refresh(entry)
     return entry
@@ -156,7 +162,7 @@ async def noun_entry_no_plural(db_session: AsyncSession, test_deck: Deck) -> Wor
     """Noun with translations but missing plural nominative — ineligible for plural_form."""
     entry = WordEntry(
         id=uuid4(),
-        deck_id=test_deck.id,
+        owner_id=None,
         lemma="θάλασσα",
         part_of_speech=PartOfSpeech.NOUN,
         translation_en="sea",
@@ -171,6 +177,8 @@ async def noun_entry_no_plural(db_session: AsyncSession, test_deck: Deck) -> Wor
         },
     )
     db_session.add(entry)
+    await db_session.flush()
+    db_session.add(DeckWordEntry(deck_id=test_deck.id, word_entry_id=entry.id))
     await db_session.commit()
     await db_session.refresh(entry)
     return entry
@@ -181,7 +189,7 @@ async def noun_entry_no_gender(db_session: AsyncSession, test_deck: Deck) -> Wor
     """Noun without gender — ineligible for article."""
     entry = WordEntry(
         id=uuid4(),
-        deck_id=test_deck.id,
+        owner_id=None,
         lemma="δρόμος",
         part_of_speech=PartOfSpeech.NOUN,
         translation_en="road, street",
@@ -195,6 +203,8 @@ async def noun_entry_no_gender(db_session: AsyncSession, test_deck: Deck) -> Wor
         },
     )
     db_session.add(entry)
+    await db_session.flush()
+    db_session.add(DeckWordEntry(deck_id=test_deck.id, word_entry_id=entry.id))
     await db_session.commit()
     await db_session.refresh(entry)
     return entry
@@ -205,7 +215,7 @@ async def verb_entry(db_session: AsyncSession, test_deck: Deck) -> WordEntry:
     """Verb — ineligible for plural_form and article."""
     entry = WordEntry(
         id=uuid4(),
-        deck_id=test_deck.id,
+        owner_id=None,
         lemma="γράφω",
         part_of_speech=PartOfSpeech.VERB,
         translation_en="to write",
@@ -214,6 +224,8 @@ async def verb_entry(db_session: AsyncSession, test_deck: Deck) -> WordEntry:
         grammar_data={},
     )
     db_session.add(entry)
+    await db_session.flush()
+    db_session.add(DeckWordEntry(deck_id=test_deck.id, word_entry_id=entry.id))
     await db_session.commit()
     await db_session.refresh(entry)
     return entry
@@ -224,7 +236,7 @@ async def noun_entry_no_examples(db_session: AsyncSession, test_deck: Deck) -> W
     """Noun without examples — ineligible for sentence_translation."""
     entry = WordEntry(
         id=uuid4(),
-        deck_id=test_deck.id,
+        owner_id=None,
         lemma="παιδί",
         part_of_speech=PartOfSpeech.NOUN,
         translation_en="child",
@@ -240,6 +252,8 @@ async def noun_entry_no_examples(db_session: AsyncSession, test_deck: Deck) -> W
         examples=[],
     )
     db_session.add(entry)
+    await db_session.flush()
+    db_session.add(DeckWordEntry(deck_id=test_deck.id, word_entry_id=entry.id))
     await db_session.commit()
     await db_session.refresh(entry)
     return entry
@@ -250,7 +264,7 @@ async def noun_entry_incomplete_example(db_session: AsyncSession, test_deck: Dec
     """Noun with example missing english — ineligible for sentence_translation."""
     entry = WordEntry(
         id=uuid4(),
-        deck_id=test_deck.id,
+        owner_id=None,
         lemma="αγόρι",
         part_of_speech=PartOfSpeech.NOUN,
         translation_en="boy",
@@ -272,6 +286,8 @@ async def noun_entry_incomplete_example(db_session: AsyncSession, test_deck: Dec
         ],
     )
     db_session.add(entry)
+    await db_session.flush()
+    db_session.add(DeckWordEntry(deck_id=test_deck.id, word_entry_id=entry.id))
     await db_session.commit()
     await db_session.refresh(entry)
     return entry
@@ -282,7 +298,7 @@ async def adjective_entry_no_forms(db_session: AsyncSession, test_deck: Deck) ->
     """Adjective without forms — ineligible for plural_form."""
     entry = WordEntry(
         id=uuid4(),
-        deck_id=test_deck.id,
+        owner_id=None,
         lemma="ωραίος",
         part_of_speech=PartOfSpeech.ADJECTIVE,
         translation_en="beautiful",
@@ -298,6 +314,8 @@ async def adjective_entry_no_forms(db_session: AsyncSession, test_deck: Deck) ->
         },
     )
     db_session.add(entry)
+    await db_session.flush()
+    db_session.add(DeckWordEntry(deck_id=test_deck.id, word_entry_id=entry.id))
     await db_session.commit()
     await db_session.refresh(entry)
     return entry
@@ -790,6 +808,7 @@ class TestGenerateCardsServiceDispatch:
         client: AsyncClient,
         superuser_auth_headers: dict,
         noun_entry_full: WordEntry,
+        test_deck: Deck,
     ):
         """AC #8: meaning card_type calls generate_meaning_cards with [word_entry] and deck_id."""
         with patch("src.api.v1.admin.CardGeneratorService") as MockService:
@@ -813,7 +832,7 @@ class TestGenerateCardsServiceDispatch:
         deck_id_arg = call_args[0][1]
         assert len(word_entries_arg) == 1
         assert word_entries_arg[0].id == noun_entry_full.id
-        assert deck_id_arg == noun_entry_full.deck_id
+        assert deck_id_arg == test_deck.id
 
         # Other methods must NOT have been called
         mock_instance.generate_plural_form_cards.assert_not_awaited()

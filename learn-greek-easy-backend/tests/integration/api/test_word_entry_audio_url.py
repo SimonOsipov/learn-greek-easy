@@ -6,7 +6,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import Deck, DeckLevel, PartOfSpeech, WordEntry
+from src.db.models import Deck, DeckLevel, DeckWordEntry, PartOfSpeech, WordEntry
 
 
 class TestWordEntryAudioUrlEndpoints:
@@ -27,7 +27,7 @@ class TestWordEntryAudioUrlEndpoints:
         await db_session.flush()
 
         entry = WordEntry(
-            deck_id=deck.id,
+            owner_id=None,
             lemma="σπίτι",
             part_of_speech=PartOfSpeech.NOUN,
             translation_en="house",
@@ -46,6 +46,8 @@ class TestWordEntryAudioUrlEndpoints:
         )
         db_session.add(entry)
         await db_session.flush()
+        db_session.add(DeckWordEntry(deck_id=deck.id, word_entry_id=entry.id))
+        await db_session.flush()
         return deck, entry
 
     @pytest.fixture
@@ -63,7 +65,7 @@ class TestWordEntryAudioUrlEndpoints:
         await db_session.flush()
 
         entry = WordEntry(
-            deck_id=deck.id,
+            owner_id=None,
             lemma="γάτα",
             part_of_speech=PartOfSpeech.NOUN,
             translation_en="cat",
@@ -72,6 +74,8 @@ class TestWordEntryAudioUrlEndpoints:
             is_active=True,
         )
         db_session.add(entry)
+        await db_session.flush()
+        db_session.add(DeckWordEntry(deck_id=deck.id, word_entry_id=entry.id))
         await db_session.flush()
         return deck, entry
 
