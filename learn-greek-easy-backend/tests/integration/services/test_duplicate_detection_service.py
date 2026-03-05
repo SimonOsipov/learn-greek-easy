@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.db.models import DeckWordEntry, PartOfSpeech, WordEntry
 from src.services.duplicate_detection_service import DuplicateDetectionService
 from tests.factories import DeckFactory
+from tests.factories.auth import UserFactory
 
 # ============================================================================
 # Helpers
@@ -185,17 +186,21 @@ class TestDuplicateDetectionOldestWins:
 
     async def test_oldest_match_wins(self, db_session: AsyncSession):
         """Two entries (different owners) — the one with older created_at is returned."""
-        from uuid import uuid4
-
+        user_a = await UserFactory.create(session=db_session)
+        user_b = await UserFactory.create(session=db_session)
         deck_a = await DeckFactory.create(session=db_session)
         deck_b = await DeckFactory.create(session=db_session)
 
-        # Use different owner_ids to avoid unique constraint violation
+        # Use different owner_ids (real users) to avoid unique constraint violation
         # (uq_word_entry_owner_lemma_pos with NULLS NOT DISTINCT prevents two NULL-owner entries)
-        entry_a = await _create_word_entry(db_session, "σπίτι", PartOfSpeech.NOUN, owner_id=uuid4())
+        entry_a = await _create_word_entry(
+            db_session, "σπίτι", PartOfSpeech.NOUN, owner_id=user_a.id
+        )
         await _associate_entry_with_deck(db_session, entry_a, deck_a.id)
 
-        entry_b = await _create_word_entry(db_session, "σπίτι", PartOfSpeech.NOUN, owner_id=uuid4())
+        entry_b = await _create_word_entry(
+            db_session, "σπίτι", PartOfSpeech.NOUN, owner_id=user_b.id
+        )
         await _associate_entry_with_deck(db_session, entry_b, deck_b.id)
 
         # Make entry_b older by setting created_at to 1 day ago
