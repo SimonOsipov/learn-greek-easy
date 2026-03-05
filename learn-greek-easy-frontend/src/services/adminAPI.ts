@@ -317,6 +317,7 @@ export interface AdminCultureQuestion {
   correct_option: number;
   source_article_url: string | null;
   is_pending_review: boolean;
+  audio_s3_key: string | null;
   created_at: string;
 }
 
@@ -1190,6 +1191,14 @@ export const adminAPI = {
     data: CultureQuestionUpdatePayload
   ): Promise<CultureQuestionAdminResponse> => {
     return api.patch<CultureQuestionAdminResponse>(`/api/v1/culture/questions/${questionId}`, data);
+  },
+
+  /**
+   * Generate or regenerate audio for a culture question
+   * Requires superuser authentication.
+   */
+  generateCultureQuestionAudio: async (questionId: string): Promise<void> => {
+    return api.post<void>(`/api/v1/culture/questions/${questionId}/generate-audio`);
   },
 
   // ============================================

@@ -10,6 +10,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
+import { Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
@@ -54,6 +55,8 @@ export function CardEditModal({ open, onOpenChange, question, onSuccess }: CardE
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
+  const [audioCooldown, setAudioCooldown] = useState(false);
 
   // Reset state when modal closes
   useEffect(() => {
@@ -106,6 +109,23 @@ export function CardEditModal({ open, onOpenChange, question, onSuccess }: CardE
     }
   };
 
+  // Handle audio generation
+  const handleGenerateAudio = async () => {
+    if (!question || isGeneratingAudio || audioCooldown) return;
+    setIsGeneratingAudio(true);
+    try {
+      await adminAPI.generateCultureQuestionAudio(question.id);
+      toast({ title: t('cultureAudio.success') });
+      setAudioCooldown(true);
+      setTimeout(() => setAudioCooldown(false), 15000);
+      onSuccess?.();
+    } catch {
+      toast({ title: t('cultureAudio.error'), variant: 'destructive' });
+    } finally {
+      setIsGeneratingAudio(false);
+    }
+  };
+
   // Handle cancel button click
   const handleCancel = () => {
     if (isDirty) {
@@ -148,6 +168,40 @@ export function CardEditModal({ open, onOpenChange, question, onSuccess }: CardE
               onDirtyChange={handleDirtyChange}
               isSubmitting={isSubmitting}
             />
+          )}
+
+          {question && (
+            <div className="flex items-center justify-between px-1 py-2">
+              <span
+                data-testid="audio-status"
+                className={
+                  question.audio_s3_key ? 'text-sm text-green-600' : 'text-sm text-gray-400'
+                }
+              >
+                {question.audio_s3_key
+                  ? t('cultureAudio.status.ready')
+                  : t('cultureAudio.status.missing')}
+              </span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                data-testid="generate-audio-btn"
+                disabled={isGeneratingAudio || audioCooldown}
+                onClick={handleGenerateAudio}
+              >
+                {isGeneratingAudio ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {t('cultureAudio.generating')}
+                  </>
+                ) : question.audio_s3_key ? (
+                  t('cultureAudio.regenerate')
+                ) : (
+                  t('cultureAudio.generate')
+                )}
+              </Button>
+            </div>
           )}
 
           <DialogFooter>
