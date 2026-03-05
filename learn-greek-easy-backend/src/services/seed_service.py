@@ -34,6 +34,7 @@ from src.db.models import (
     CultureQuestionStats,
     Deck,
     DeckLevel,
+    DeckWordEntry,
     Feedback,
     FeedbackCategory,
     FeedbackStatus,
@@ -53,6 +54,7 @@ from src.db.models import (
     UserDeckProgress,
     UserSettings,
     UserXP,
+    Visibility,
     VoteType,
     WordEntry,
     XPTransaction,
@@ -170,6 +172,8 @@ class SeedService:
         "feedback_votes",
         "feedback",
         "cards",
+        "deck_word_entries",
+        "word_entries",
         "users",
         "decks",
     ]
@@ -4942,12 +4946,11 @@ class SeedService:
         }
 
     async def _create_word_entries_from_vocab(
-        self, deck_id: UUID, vocabulary: list[dict[str, Any]]
+        self, vocabulary: list[dict[str, Any]]
     ) -> list[WordEntry]:
         """Create WordEntry objects from a vocabulary list.
 
         Args:
-            deck_id: UUID of the deck to add entries to
             vocabulary: List of word data dicts with keys: lemma, part_of_speech,
                 translation_en, translation_en_plural (optional), translation_ru,
                 translation_ru_plural (optional), pronunciation, grammar_data, examples
@@ -4958,7 +4961,8 @@ class SeedService:
         entries = []
         for word_data in vocabulary:
             word_entry = WordEntry(
-                deck_id=deck_id,
+                owner_id=None,
+                visibility=Visibility.SHARED,
                 lemma=word_data["lemma"],
                 part_of_speech=word_data["part_of_speech"],
                 translation_en=word_data["translation_en"],
@@ -4975,6 +4979,17 @@ class SeedService:
         if entries:
             await self.db.flush()
         return entries
+
+    async def _link_entries_to_deck(self, deck_id: UUID, entries: list[WordEntry]) -> None:
+        """Create junction rows linking word entries to a deck."""
+        for entry in entries:
+            junction = DeckWordEntry(
+                deck_id=deck_id,
+                word_entry_id=entry.id,
+            )
+            self.db.add(junction)
+        if entries:
+            await self.db.flush()
 
     async def _seed_v2_decks(self) -> dict[str, Any]:
         """Create V2 decks with word entries for E2E testing.
@@ -5371,9 +5386,8 @@ class SeedService:
                 ],
             },
         ]
-        v2_nouns_entries = await self._create_word_entries_from_vocab(
-            v2_nouns_deck.id, v2_nouns_vocabulary
-        )
+        v2_nouns_entries = await self._create_word_entries_from_vocab(v2_nouns_vocabulary)
+        await self._link_entries_to_deck(v2_nouns_deck.id, v2_nouns_entries)
         card_gen_nouns = CardGeneratorService(self.db)
         nouns_m_created, nouns_m_updated = await card_gen_nouns.generate_meaning_cards(
             v2_nouns_entries, v2_nouns_deck.id
@@ -5684,9 +5698,8 @@ class SeedService:
                 ],
             },
         ]
-        v2_verbs_entries = await self._create_word_entries_from_vocab(
-            v2_verbs_deck.id, v2_verbs_vocabulary
-        )
+        v2_verbs_entries = await self._create_word_entries_from_vocab(v2_verbs_vocabulary)
+        await self._link_entries_to_deck(v2_verbs_deck.id, v2_verbs_entries)
         card_gen_verbs = CardGeneratorService(self.db)
         verbs_m_created, verbs_m_updated = await card_gen_verbs.generate_meaning_cards(
             v2_verbs_entries, v2_verbs_deck.id
@@ -6036,9 +6049,8 @@ class SeedService:
                 ],
             },
         ]
-        v2_mixed_entries = await self._create_word_entries_from_vocab(
-            v2_mixed_deck.id, v2_mixed_vocabulary
-        )
+        v2_mixed_entries = await self._create_word_entries_from_vocab(v2_mixed_vocabulary)
+        await self._link_entries_to_deck(v2_mixed_deck.id, v2_mixed_entries)
         card_gen_mixed = CardGeneratorService(self.db)
         mixed_m_created, mixed_m_updated = await card_gen_mixed.generate_meaning_cards(
             v2_mixed_entries, v2_mixed_deck.id
