@@ -34,6 +34,7 @@ async def _create_word_entry(
     part_of_speech: PartOfSpeech = PartOfSpeech.NOUN,
     translation_en: str = "test translation",
     is_active: bool = True,
+    owner_id=None,
 ) -> WordEntry:
     """Create and persist a WordEntry (without deck association)."""
     entry = WordEntry(
@@ -41,6 +42,7 @@ async def _create_word_entry(
         part_of_speech=part_of_speech,
         translation_en=translation_en,
         is_active=is_active,
+        owner_id=owner_id,
     )
     db_session.add(entry)
     await db_session.flush()
@@ -182,14 +184,18 @@ class TestDuplicateDetectionOldestWins:
     """Tests for ordering: oldest entry is returned when multiple matches exist."""
 
     async def test_oldest_match_wins(self, db_session: AsyncSession):
-        """Two entries — the one with older created_at is returned."""
+        """Two entries (different owners) — the one with older created_at is returned."""
+        from uuid import uuid4
+
         deck_a = await DeckFactory.create(session=db_session)
         deck_b = await DeckFactory.create(session=db_session)
 
-        entry_a = await _create_word_entry(db_session, "σπίτι", PartOfSpeech.NOUN)
+        # Use different owner_ids to avoid unique constraint violation
+        # (uq_word_entry_owner_lemma_pos with NULLS NOT DISTINCT prevents two NULL-owner entries)
+        entry_a = await _create_word_entry(db_session, "σπίτι", PartOfSpeech.NOUN, owner_id=uuid4())
         await _associate_entry_with_deck(db_session, entry_a, deck_a.id)
 
-        entry_b = await _create_word_entry(db_session, "σπίτι", PartOfSpeech.NOUN)
+        entry_b = await _create_word_entry(db_session, "σπίτι", PartOfSpeech.NOUN, owner_id=uuid4())
         await _associate_entry_with_deck(db_session, entry_b, deck_b.id)
 
         # Make entry_b older by setting created_at to 1 day ago

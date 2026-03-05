@@ -142,11 +142,13 @@ class TestBulkUpsertWordEntriesEndpoint:
         return deck
 
     @pytest.fixture
-    async def deck_with_existing_entry(self, db_session: AsyncSession, active_deck_for_bulk):
+    async def deck_with_existing_entry(
+        self, db_session: AsyncSession, active_deck_for_bulk, test_superuser
+    ):
         """Create a deck with an existing word entry for update tests."""
         entry = WordEntry(
             id=uuid4(),
-            owner_id=None,
+            owner_id=test_superuser.id,  # Must match the authenticated user for upsert conflict
             lemma="σπίτι",
             part_of_speech=PartOfSpeech.NOUN,
             translation_en="house (old translation)",
