@@ -6,8 +6,8 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.logging import get_logger
-from src.db.models import Deck, PartOfSpeech, WordEntry
-from src.schemas.nlp import DuplicateCheckResult, WordEntrySnapshot
+from src.db.models import Deck, DeckWordEntry, PartOfSpeech, WordEntry
+from src.schemas.nlp import DeckSummary, DuplicateCheckResult, WordEntrySnapshot
 
 logger = get_logger(__name__)
 
@@ -42,9 +42,9 @@ class DuplicateDetectionService:
             DuplicateCheckResult with is_duplicate=True and match details if found,
             or is_duplicate=False with no match details.
         """
-        query = (
-            select(WordEntry, Deck.name_en)
-            .join(Deck, WordEntry.deck_id == Deck.id)
+        # Step A: Find the word entry by lemma+pos (no deck filter)
+        entry_query = (
+            select(WordEntry)
             .where(
                 func.immutable_unaccent(WordEntry.lemma) == func.immutable_unaccent(lemma),
                 WordEntry.part_of_speech == part_of_speech,
@@ -53,17 +53,29 @@ class DuplicateDetectionService:
             .order_by(WordEntry.created_at.asc())
             .limit(1)
         )
+        entry_result = await self.db.execute(entry_query)
+        entry = entry_result.scalar_one_or_none()
 
-        if exclude_deck_id is not None:
-            query = query.where(WordEntry.deck_id != exclude_deck_id)
-
-        result = await self.db.execute(query)
-        row = result.first()
-
-        if row is None:
+        if entry is None:
             return DuplicateCheckResult(is_duplicate=False)
 
-        entry, deck_name = row
+        # Step B: Find all decks this word entry belongs to
+        decks_query = (
+            select(Deck.id, Deck.name_en)
+            .join(DeckWordEntry, DeckWordEntry.deck_id == Deck.id)
+            .where(DeckWordEntry.word_entry_id == entry.id)
+        )
+        if exclude_deck_id is not None:
+            decks_query = decks_query.where(Deck.id != exclude_deck_id)
+
+        decks_result = await self.db.execute(decks_query)
+        matched_decks = [
+            DeckSummary(deck_id=row[0], deck_name=row[1]) for row in decks_result.all()
+        ]
+
+        if not matched_decks:
+            return DuplicateCheckResult(is_duplicate=False)
+
         return DuplicateCheckResult(
             is_duplicate=True,
             existing_entry=WordEntrySnapshot(
@@ -76,6 +88,5 @@ class DuplicateDetectionService:
                 grammar_data=entry.grammar_data,
                 examples=entry.examples,
             ),
-            matched_deck_id=entry.deck_id,
-            matched_deck_name=deck_name,
+            matched_decks=matched_decks,
         )

@@ -28,6 +28,7 @@ def sample_entry():
     entry = MagicMock()
     entry.id = uuid4()
     entry.deck_id = uuid4()
+    entry.visibility = "shared"
     entry.lemma = "σπίτι"
     entry.part_of_speech = "noun"
     entry.translation_en = "house"
@@ -162,3 +163,16 @@ class TestWordEntryToResponse:
         assert result.is_active is True
         assert len(result.examples) == 1
         assert result.examples[0].greek == "Το σπίτι μου"
+
+    def test_deck_id_parameter_overrides_entry_deck_id(self, sample_entry, mock_s3_service):
+        """deck_id kwarg overrides the deck_id from the ORM entry."""
+        override_deck_id = uuid4()
+        result = word_entry_to_response(
+            sample_entry, s3_service=mock_s3_service, deck_id=override_deck_id
+        )
+        assert result.deck_id == override_deck_id
+
+    def test_deck_id_parameter_none_uses_entry_deck_id(self, sample_entry, mock_s3_service):
+        """Without deck_id kwarg, deck_id comes from the ORM entry."""
+        result = word_entry_to_response(sample_entry, s3_service=mock_s3_service)
+        assert result.deck_id == sample_entry.deck_id

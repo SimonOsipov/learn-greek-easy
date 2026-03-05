@@ -277,13 +277,17 @@ class WordEntryBase(BaseModel):
 class WordEntryCreate(WordEntryBase):
     """Schema for creating a new WordEntry.
 
-    All required fields must be provided. Inherits from WordEntryBase.
-    Adds deck_id which is required for creation.
+    Deck association is handled separately via the junction table.
     """
 
-    deck_id: UUID = Field(
-        ...,
-        description="UUID of the deck this word entry belongs to",
+    owner_id: UUID | None = Field(
+        default=None,
+        description="Owner user ID. Defaults to authenticated user if not provided.",
+    )
+    visibility: str = Field(
+        default="shared",
+        pattern="^(shared|private)$",
+        description="Visibility: 'shared' (visible to all) or 'private' (owner only)",
     )
 
 
@@ -399,7 +403,10 @@ class WordEntryResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
-    deck_id: UUID
+    deck_id: UUID | None = None
+    visibility: str = Field(
+        default="shared", description="Word entry visibility: 'shared' or 'private'"
+    )
     lemma: str
     part_of_speech: PartOfSpeech
     translation_en: str

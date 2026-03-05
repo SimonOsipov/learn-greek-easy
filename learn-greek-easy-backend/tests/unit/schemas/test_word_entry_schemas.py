@@ -375,23 +375,53 @@ class TestWordEntryCreate:
     """Test WordEntryCreate schema validation."""
 
     def test_valid_create_minimal(self):
-        """Test create with only required fields."""
-        deck_id = uuid4()
+        """Test create with only required fields (no deck_id needed)."""
         entry = WordEntryCreate(
-            deck_id=deck_id,
             lemma="γράφω",
             part_of_speech=PartOfSpeech.VERB,
             translation_en="to write",
         )
-        assert entry.deck_id == deck_id
         assert entry.lemma == "γράφω"
         assert entry.part_of_speech == PartOfSpeech.VERB
+        assert entry.owner_id is None
+        assert entry.visibility == "shared"
+
+    def test_valid_create_with_owner_id(self):
+        """Test create with explicit owner_id."""
+        owner_id = uuid4()
+        entry = WordEntryCreate(
+            owner_id=owner_id,
+            lemma="γράφω",
+            part_of_speech=PartOfSpeech.VERB,
+            translation_en="to write",
+        )
+        assert entry.owner_id == owner_id
+
+    def test_valid_create_private_visibility(self):
+        """Test create with private visibility."""
+        entry = WordEntryCreate(
+            lemma="γράφω",
+            part_of_speech=PartOfSpeech.VERB,
+            translation_en="to write",
+            visibility="private",
+        )
+        assert entry.visibility == "private"
+
+    def test_invalid_visibility_rejected(self):
+        """Test that invalid visibility value is rejected."""
+        with pytest.raises(ValidationError) as exc_info:
+            WordEntryCreate(
+                lemma="γράφω",
+                part_of_speech=PartOfSpeech.VERB,
+                translation_en="to write",
+                visibility="public",
+            )
+        assert "visibility" in str(exc_info.value).lower()
 
     def test_valid_create_full(self):
         """Test create with all optional fields."""
-        deck_id = uuid4()
         entry = WordEntryCreate(
-            deck_id=deck_id,
+            owner_id=uuid4(),
             lemma="καλός",
             part_of_speech=PartOfSpeech.ADJECTIVE,
             translation_en="good, beautiful",
@@ -415,31 +445,9 @@ class TestWordEntryCreate:
         assert entry.grammar_data is not None
         assert len(entry.examples) == 1
 
-    def test_deck_id_required(self):
-        """Test that deck_id is required for create."""
-        with pytest.raises(ValidationError) as exc_info:
-            WordEntryCreate(
-                lemma="λόγος",
-                part_of_speech=PartOfSpeech.NOUN,
-                translation_en="word",
-            )
-        assert "deck_id" in str(exc_info.value).lower()
-
-    def test_deck_id_must_be_uuid(self):
-        """Test that deck_id must be a valid UUID."""
-        with pytest.raises(ValidationError) as exc_info:
-            WordEntryCreate(
-                deck_id="not-a-uuid",
-                lemma="λόγος",
-                part_of_speech=PartOfSpeech.NOUN,
-                translation_en="word",
-            )
-        assert "uuid" in str(exc_info.value).lower()
-
     def test_inherits_base_validators(self):
         """Test that create inherits base validators (lemma stripping)."""
         entry = WordEntryCreate(
-            deck_id=uuid4(),
             lemma="  λόγος  ",
             part_of_speech=PartOfSpeech.NOUN,
             translation_en="word",
@@ -450,7 +458,6 @@ class TestWordEntryCreate:
         """Test that missing lemma field is rejected."""
         with pytest.raises(ValidationError) as exc_info:
             WordEntryCreate(
-                deck_id=uuid4(),
                 part_of_speech=PartOfSpeech.NOUN,
                 translation_en="word",
             )
@@ -465,10 +472,8 @@ class TestWordEntryCreate:
             PartOfSpeech.ADVERB,
             PartOfSpeech.PHRASE,
         ]
-        deck_id = uuid4()
         for pos in all_pos:
             entry = WordEntryCreate(
-                deck_id=deck_id,
                 lemma=f"test_{pos.value}",
                 part_of_speech=pos,
                 translation_en="test",
@@ -478,7 +483,6 @@ class TestWordEntryCreate:
     def test_part_of_speech_string_coercion(self):
         """Test string value coerces to PartOfSpeech enum."""
         entry = WordEntryCreate(
-            deck_id=uuid4(),
             lemma="λόγος",
             part_of_speech="noun",
             translation_en="word",
@@ -579,6 +583,49 @@ class TestWordEntryResponse:
         assert response.lemma == "λόγος"
         assert response.is_active is True
 
+    def test_valid_response_deck_id_optional(self):
+        """Test valid response without deck_id (deck_id is now optional)."""
+        now = datetime.now()
+        response = WordEntryResponse(
+            id=uuid4(),
+            lemma="λόγος",
+            part_of_speech=PartOfSpeech.NOUN,
+            translation_en="word",
+            is_active=True,
+            created_at=now,
+            updated_at=now,
+        )
+        assert response.deck_id is None
+
+    def test_valid_response_visibility_default(self):
+        """Test visibility field defaults to 'shared'."""
+        now = datetime.now()
+        response = WordEntryResponse(
+            id=uuid4(),
+            lemma="λόγος",
+            part_of_speech=PartOfSpeech.NOUN,
+            translation_en="word",
+            is_active=True,
+            created_at=now,
+            updated_at=now,
+        )
+        assert response.visibility == "shared"
+
+    def test_valid_response_visibility_private(self):
+        """Test visibility field accepts 'private'."""
+        now = datetime.now()
+        response = WordEntryResponse(
+            id=uuid4(),
+            lemma="λόγος",
+            part_of_speech=PartOfSpeech.NOUN,
+            translation_en="word",
+            visibility="private",
+            is_active=True,
+            created_at=now,
+            updated_at=now,
+        )
+        assert response.visibility == "private"
+
     def test_response_from_model_attributes(self):
         """Test ConfigDict(from_attributes=True) works with mock ORM object."""
 
@@ -586,7 +633,8 @@ class TestWordEntryResponse:
             """Mock ORM model for testing from_attributes."""
 
             id = uuid4()
-            deck_id = uuid4()
+            deck_id = None
+            visibility = "shared"
             lemma = "γράφω"
             part_of_speech = PartOfSpeech.VERB
             translation_en = "to write"
@@ -603,13 +651,13 @@ class TestWordEntryResponse:
         response = WordEntryResponse.model_validate(MockWordEntry())
         assert response.lemma == "γράφω"
         assert response.part_of_speech == PartOfSpeech.VERB
+        assert response.deck_id is None
 
     def test_response_serializes_datetime(self):
         """Test created_at/updated_at serialize correctly."""
         now = datetime(2024, 1, 15, 10, 30, 0)
         response = WordEntryResponse(
             id=uuid4(),
-            deck_id=uuid4(),
             lemma="test",
             part_of_speech=PartOfSpeech.NOUN,
             translation_en="test",
@@ -641,7 +689,6 @@ class TestWordEntryResponse:
         """Test PartOfSpeech enum serializes correctly."""
         response = WordEntryResponse(
             id=uuid4(),
-            deck_id=uuid4(),
             lemma="test",
             part_of_speech=PartOfSpeech.ADJECTIVE,
             translation_en="test",
@@ -656,13 +703,11 @@ class TestWordEntryResponse:
         assert json_data["part_of_speech"] == "adjective"
 
     def test_response_includes_all_required_fields(self):
-        """Test response includes id, deck_id, created_at, updated_at."""
+        """Test response includes id, created_at, updated_at. deck_id is optional."""
         now = datetime.now()
         entry_id = uuid4()
-        deck_id = uuid4()
         response = WordEntryResponse(
             id=entry_id,
-            deck_id=deck_id,
             lemma="λόγος",
             part_of_speech=PartOfSpeech.NOUN,
             translation_en="word",
@@ -671,7 +716,7 @@ class TestWordEntryResponse:
             updated_at=now,
         )
         assert response.id == entry_id
-        assert response.deck_id == deck_id
+        assert response.deck_id is None
         assert response.created_at == now
         assert response.updated_at == now
 
@@ -958,7 +1003,6 @@ class TestFieldValidators:
     def test_lemma_exactly_at_max_length(self):
         """Test lemma at exactly 100 chars is accepted."""
         entry = WordEntryCreate(
-            deck_id=uuid4(),
             lemma="α" * 100,
             part_of_speech=PartOfSpeech.NOUN,
             translation_en="test",
@@ -969,7 +1013,6 @@ class TestFieldValidators:
         """Test lemma at 101 chars is rejected."""
         with pytest.raises(ValidationError) as exc_info:
             WordEntryCreate(
-                deck_id=uuid4(),
                 lemma="α" * 101,
                 part_of_speech=PartOfSpeech.NOUN,
                 translation_en="test",
@@ -979,7 +1022,6 @@ class TestFieldValidators:
     def test_greek_unicode_preserved(self):
         """Test Greek Unicode characters are preserved correctly."""
         entry = WordEntryCreate(
-            deck_id=uuid4(),
             lemma="Ελληνικά",
             part_of_speech=PartOfSpeech.NOUN,
             translation_en="Greek",
@@ -989,7 +1031,6 @@ class TestFieldValidators:
     def test_cyrillic_unicode_preserved(self):
         """Test Cyrillic Unicode characters are preserved correctly."""
         entry = WordEntryCreate(
-            deck_id=uuid4(),
             lemma="тест",
             part_of_speech=PartOfSpeech.NOUN,
             translation_en="test",
@@ -1002,7 +1043,6 @@ class TestFieldValidators:
         # Missing required field
         with pytest.raises(ValidationError) as exc_info:
             WordEntryCreate(
-                deck_id=uuid4(),
                 part_of_speech=PartOfSpeech.NOUN,
                 translation_en="test",
             )
@@ -1013,7 +1053,6 @@ class TestFieldValidators:
         # Empty lemma
         with pytest.raises(ValidationError) as exc_info:
             WordEntryCreate(
-                deck_id=uuid4(),
                 lemma="  ",
                 part_of_speech=PartOfSpeech.NOUN,
                 translation_en="test",

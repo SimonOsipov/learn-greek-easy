@@ -66,13 +66,22 @@ class WordEntrySnapshot(BaseModel):
     examples: list[dict] | None = None
 
 
+class DeckSummary(BaseModel):
+    """Lightweight deck reference for multi-deck contexts."""
+
+    deck_id: UUID
+    deck_name: str
+
+
 class DuplicateCheckResult(BaseModel):
     """Result of checking whether a word entry is a duplicate."""
 
     is_duplicate: bool
     existing_entry: WordEntrySnapshot | None = None
-    matched_deck_id: UUID | None = None
-    matched_deck_name: str | None = None
+    matched_decks: list[DeckSummary] = Field(
+        default_factory=list,
+        description="Decks containing the matched word entry",
+    )
 
 
 class OpenRouterResponse(BaseModel):
