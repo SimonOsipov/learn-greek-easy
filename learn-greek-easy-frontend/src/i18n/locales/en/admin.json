@@ -982,7 +982,33 @@
     "linkToDeck": "Link to deck",
     "alreadyInDeck": "This deck already has this word",
     "linkSuccess": "Word linked to deck successfully",
-    "existsInDecks": "This word exists in {{count}} deck(s)"
+    "existsInDecks": "This word exists in {{count}} deck(s)",
+    "verification": {
+      "combinedTier": "Verification Tier",
+      "tierAutoApprove": "Auto-approve",
+      "tierQuickReview": "Quick review needed",
+      "tierManualReview": "Manual review required",
+      "localVerification": "Local Verification",
+      "crossAiVerification": "Cross-AI Verification",
+      "agreementScore": "Agreement: {{percentage}}%",
+      "morphologySourceNote": "Comparison scope: translations & examples only (morphology from lexicon)",
+      "crossAiUnavailable": "Cross-AI verification unavailable",
+      "verifying": "Verifying...",
+      "verified": "Verified",
+      "noComparisons": "No comparisons available",
+      "fieldStatus": {
+        "pass": "Pass",
+        "warn": "Warning",
+        "fail": "Fail",
+        "skipped": "Skipped"
+      },
+      "comparisonHeaders": {
+        "field": "Field",
+        "primary": "Primary",
+        "secondary": "Secondary",
+        "match": "Match"
+      }
+    }
   },
   "wordEntry": {
     "unlinkConfirm": "Remove this word from the deck? The word entry itself will not be deleted.",
