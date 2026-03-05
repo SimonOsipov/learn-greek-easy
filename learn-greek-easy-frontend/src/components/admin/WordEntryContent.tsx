@@ -485,47 +485,41 @@ function ExampleCard({
       <div className="mb-1 text-xs font-medium text-muted-foreground">#{index + 1}</div>
 
       {/* Greek — always green dot */}
-      <div className="flex items-start gap-2">
-        <CompletionDot filled={true} />
-        <div className="min-w-0 flex-1">
+      <div className="min-w-0">
+        <div className="flex items-center gap-1.5">
+          <CompletionDot filled={true} />
           <span className="text-xs text-muted-foreground">
             {t('wordEntryContent.exampleGreek')}
           </span>
-          <p className="text-sm">{example.greek}</p>
         </div>
+        <p className="mt-0.5 pl-3.5 text-sm">{example.greek}</p>
       </div>
 
       {/* English — green if present, gray if absent */}
-      <div className="flex items-start gap-2">
-        <CompletionDot filled={hasEnglish} />
-        <div className="min-w-0 flex-1">
+      <div className="min-w-0">
+        <div className="flex items-center gap-1.5">
+          <CompletionDot filled={hasEnglish} />
           <span className="text-xs text-muted-foreground">
             {t('wordEntryContent.exampleEnglish')}
           </span>
-          <p className="text-sm">{example.english || <NotSet />}</p>
         </div>
+        <p className="mt-0.5 pl-3.5 text-sm">{example.english || <NotSet />}</p>
       </div>
 
       {/* Russian — always shown, green/gray dot */}
-      <div className="flex items-start gap-2">
-        <CompletionDot filled={hasRussian} />
-        <div className="min-w-0 flex-1">
+      <div className="min-w-0">
+        <div className="flex items-center gap-1.5">
+          <CompletionDot filled={hasRussian} />
           <span className="text-xs text-muted-foreground">
             {t('wordEntryContent.exampleRussian')}
           </span>
-          {hasRussian ? (
-            <p className="text-sm">{example.russian}</p>
-          ) : (
-            <p className="text-sm">
-              <NotSet />
-            </p>
-          )}
         </div>
+        <p className="mt-0.5 pl-3.5 text-sm">{hasRussian ? example.russian : <NotSet />}</p>
       </div>
 
       {/* Audio — green/gray dot + badge + button */}
       {example.audio_status && (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <CompletionDot filled={hasAudio} />
           <span className="text-xs text-muted-foreground">
             {t('wordEntryContent.exampleAudio')}

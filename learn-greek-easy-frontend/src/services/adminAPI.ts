@@ -10,6 +10,10 @@
  * All endpoints require superuser authentication.
  */
 
+import {
+  normalizeGrammarData,
+  GRAMMAR_FIELD_COUNTS,
+} from '@/components/admin/vocabulary/grammar-display/grammarNormalizer';
 import type {
   AdminCardErrorListParams,
   AdminCardErrorListResponse,
@@ -666,10 +670,7 @@ export interface GenerateWordEntryResponse {
 // ============================================
 
 const GRAMMAR_TOTAL_BY_POS: Record<string, number> = {
-  noun: 9,
-  verb: 33,
-  adjective: 26,
-  adverb: 2,
+  ...GRAMMAR_FIELD_COUNTS,
   phrase: 0,
 };
 
@@ -1016,12 +1017,16 @@ export const adminAPI = {
       deck_id: raw.deck_id,
       cards: raw.word_entries.map((entry) => {
         // Grammar enrichment
-        const grammarData = entry.grammar_data ?? {};
-        const grammarFilled = Object.values(grammarData).filter(
-          (v) => v !== null && v !== '' && v !== undefined
-        ).length;
         const pos = entry.part_of_speech?.toLowerCase() ?? 'phrase';
         const grammarTotal = GRAMMAR_TOTAL_BY_POS[pos] ?? 0;
+        const grammarFilled = (() => {
+          if (grammarTotal === 0 || !entry.grammar_data) return 0;
+          const normalized = normalizeGrammarData(
+            entry.grammar_data as Record<string, unknown>,
+            pos
+          );
+          return Object.values(normalized).filter((v) => v !== null).length;
+        })();
 
         // Example enrichment
         const examples = entry.examples ?? [];
