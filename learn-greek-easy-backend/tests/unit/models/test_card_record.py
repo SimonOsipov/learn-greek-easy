@@ -188,25 +188,26 @@ class TestCardRecordModel:
     # =========================================================================
 
     def test_unique_constraint_exists(self):
-        """Should have unique constraint named uq_card_record_entry_type_variant."""
+        """Should have unique constraint named uq_card_record_deck_entry_type_variant (NGEN-10)."""
         constraints = CardRecord.__table__.constraints
         unique_constraints = [c for c in constraints if isinstance(c, UniqueConstraint)]
         constraint_names = [uc.name for uc in unique_constraints]
-        assert "uq_card_record_entry_type_variant" in constraint_names
+        assert "uq_card_record_deck_entry_type_variant" in constraint_names
+        assert "uq_card_record_entry_type_variant" not in constraint_names
 
     def test_unique_constraint_columns(self):
-        """Unique constraint should cover (word_entry_id, card_type, variant_key)."""
+        """Unique constraint should cover (deck_id, word_entry_id, card_type, variant_key) (NGEN-10)."""
         constraints = CardRecord.__table__.constraints
         unique_constraints = [c for c in constraints if isinstance(c, UniqueConstraint)]
 
         found = False
         for uc in unique_constraints:
-            if uc.name == "uq_card_record_entry_type_variant":
+            if uc.name == "uq_card_record_deck_entry_type_variant":
                 col_names = {c.name for c in uc.columns}
-                assert col_names == {"word_entry_id", "card_type", "variant_key"}
+                assert col_names == {"deck_id", "word_entry_id", "card_type", "variant_key"}
                 found = True
                 break
-        assert found, "Unique constraint uq_card_record_entry_type_variant not found"
+        assert found, "Unique constraint uq_card_record_deck_entry_type_variant not found"
 
     # =========================================================================
     # Index Tests
