@@ -59,7 +59,7 @@ def _make_noun_data() -> GeneratedNounData:
         examples=[
             GeneratedExample(
                 id=1,
-                greek="Το σπίτι είναι μεγάλο.",
+                greek="Το σπίτι είναι μεγάλο.",  # noqa: RUF001 - intentional Greek fixture text
                 english="The house is big.",
                 russian="Дом большой.",
             ),

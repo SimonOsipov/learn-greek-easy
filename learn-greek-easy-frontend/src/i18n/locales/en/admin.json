@@ -983,6 +983,10 @@
     "alreadyInDeck": "This deck already has this word",
     "linkSuccess": "Word linked to deck successfully",
     "existsInDecks": "This word exists in {{count}} deck(s)",
+    "pipeline": {
+      "duplicates": "Duplicates",
+      "generate": "Generate"
+    },
     "verification": {
       "combinedTier": "Verification Tier",
       "tierAutoApprove": "Auto-approve",
@@ -995,6 +999,8 @@
       "crossAiUnavailable": "Cross-AI verification unavailable",
       "verifying": "Verifying...",
       "verified": "Verified",
+      "verify": "Verify",
+      "notAvailable": "N/A",
       "noComparisons": "No comparisons available",
       "fieldStatus": {
         "pass": "Pass",

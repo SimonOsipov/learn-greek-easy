@@ -995,6 +995,10 @@
     "alreadyInDeck": "Это слово уже есть в колоде",
     "linkSuccess": "Слово успешно связано с колодой",
     "existsInDecks": "Это слово есть в {{count}} колоде(ах)",
+    "pipeline": {
+      "duplicates": "Дубликаты",
+      "generate": "Генерация"
+    },
     "verification": {
       "combinedTier": "Уровень верификации",
       "tierAutoApprove": "Автоодобрение",
@@ -1007,6 +1011,8 @@
       "crossAiUnavailable": "Кросс-AI верификация недоступна",
       "verifying": "Верификация...",
       "verified": "Проверено",
+      "verify": "Проверка",
+      "notAvailable": "Н/Д",
       "noComparisons": "Сравнения недоступны",
       "fieldStatus": {
         "pass": "Пройдено",

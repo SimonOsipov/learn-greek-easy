@@ -226,7 +226,7 @@ function CrossAIVerificationPanel({
         <Badge data-testid="cross-ai-agreement" className={agreementColorClass}>
           {agreementPct != null
             ? t('generateNoun.verification.agreementScore', { percentage: agreementPct })
-            : 'N/A'}
+            : t('generateNoun.verification.notAvailable')}
         </Badge>
       </CollapsibleTrigger>
       <CollapsibleContent className="mt-2 space-y-2">
@@ -420,9 +420,9 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
             >
               <span>1. {t('generateNoun.normalizationResult')}</span>
               <span>/</span>
-              <span>2. Duplicates</span>
+              <span>2. {t('generateNoun.pipeline.duplicates')}</span>
               <span>/</span>
-              <span>3. Generate</span>
+              <span>3. {t('generateNoun.pipeline.generate')}</span>
               <span>/</span>
               <span className={displayVerification ? 'font-medium text-foreground' : ''}>
                 4.{' '}
@@ -430,7 +430,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                   ? t('generateNoun.verification.verified')
                   : mutation.isPending
                     ? t('generateNoun.verification.verifying')
-                    : 'Verify'}
+                    : t('generateNoun.verification.verify')}
               </span>
             </div>
           )}

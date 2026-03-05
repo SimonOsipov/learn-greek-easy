@@ -46,6 +46,10 @@ def compute_combined_tier(
     if cross_ai_agreement is None:
         return local_tier
 
+    # Defensive fallback for malformed upstream values
+    if not 0.0 <= cross_ai_agreement <= 1.0:
+        return "manual_review"
+
     # Rows 1-5: both available
     if local_tier == "auto_approve":
         if cross_ai_agreement >= 0.90:
