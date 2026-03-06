@@ -62,6 +62,27 @@ vi.mock('../WaveformPlayer', () => ({
   ),
 }));
 
+vi.mock('@/components/ui/SpeakerButton', () => ({
+  SpeakerButton: ({
+    audioUrl,
+    size,
+    onPlay,
+  }: {
+    audioUrl?: string;
+    size?: string;
+    onPlay?: () => void;
+  }) => (
+    <button
+      data-testid="speaker-button"
+      data-audio-url={audioUrl || ''}
+      data-size={size || ''}
+      onClick={onPlay}
+    >
+      Speaker Button Mock
+    </button>
+  ),
+}));
+
 vi.mock('../ExplanationCard', () => ({
   ExplanationCard: ({
     isCorrect,
@@ -909,10 +930,11 @@ describe('MCQComponent - Audio Player', () => {
     vi.clearAllMocks();
   });
 
-  it('should render WaveformPlayer when question.audio_url is truthy', () => {
+  it('should render WaveformPlayer when audio_url AND original_article_url are present', () => {
     const questionWithAudio = {
       ...mockQuestion,
       audio_url: 'https://example.com/audio.mp3',
+      original_article_url: 'https://example.com/article',
     };
     renderWithProviders(
       <MCQComponent question={questionWithAudio} language="en" onAnswer={mockOnAnswer} />
@@ -921,6 +943,72 @@ describe('MCQComponent - Audio Player', () => {
     const waveformPlayer = screen.getByTestId('waveform-player');
     expect(waveformPlayer).toBeInTheDocument();
     expect(waveformPlayer).toHaveAttribute('data-audio-url', 'https://example.com/audio.mp3');
+  });
+
+  it('should render SpeakerButton when audio_url exists but original_article_url is null', () => {
+    const questionWithAudio = {
+      ...mockQuestion,
+      audio_url: 'https://example.com/audio.mp3',
+      original_article_url: null,
+    };
+    renderWithProviders(
+      <MCQComponent question={questionWithAudio} language="en" onAnswer={mockOnAnswer} />
+    );
+
+    const speakerButton = screen.getByTestId('speaker-button');
+    expect(speakerButton).toBeInTheDocument();
+    expect(speakerButton).toHaveAttribute('data-size', 'sm');
+    expect(screen.queryByTestId('waveform-player')).not.toBeInTheDocument();
+  });
+
+  it('should not render SpeakerButton when audio_url is null', () => {
+    const questionWithNoAudio = {
+      ...mockQuestion,
+      audio_url: null,
+      original_article_url: null,
+    };
+    renderWithProviders(
+      <MCQComponent question={questionWithNoAudio} language="en" onAnswer={mockOnAnswer} />
+    );
+
+    expect(screen.queryByTestId('speaker-button')).not.toBeInTheDocument();
+  });
+
+  it('should render WaveformPlayer (not SpeakerButton) when both audio_url and original_article_url exist', () => {
+    const questionWithBoth = {
+      ...mockQuestion,
+      audio_url: 'https://example.com/audio.mp3',
+      original_article_url: 'https://example.com/article',
+    };
+    renderWithProviders(
+      <MCQComponent question={questionWithBoth} language="en" onAnswer={mockOnAnswer} />
+    );
+
+    expect(screen.getByTestId('waveform-player')).toBeInTheDocument();
+    expect(screen.queryByTestId('speaker-button')).not.toBeInTheDocument();
+  });
+
+  it('SpeakerButton click does not interfere with answer selection', async () => {
+    const user = userEvent.setup();
+    const questionWithAudio = {
+      ...mockQuestion,
+      audio_url: 'https://example.com/audio.mp3',
+      original_article_url: null,
+    };
+    renderWithProviders(
+      <MCQComponent question={questionWithAudio} language="en" onAnswer={mockOnAnswer} />
+    );
+
+    // Click SpeakerButton
+    const speakerButton = screen.getByTestId('speaker-button');
+    await user.click(speakerButton);
+
+    // Select an answer option
+    const optionA = screen.getByTestId('answer-option-a');
+    await user.click(optionA);
+
+    // Verify answer option is selected
+    expect(optionA).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('should not render WaveformPlayer when question.audio_url is null', () => {
@@ -1677,6 +1765,7 @@ describe('MCQComponent - Redesign Features', () => {
       const questionWithBothMedia = {
         ...mockQuestionWithImage,
         audio_url: 'https://example.com/audio.mp3',
+        original_article_url: 'https://example.com/article',
       };
       renderWithProviders(
         <MCQComponent question={questionWithBothMedia} language="en" onAnswer={mockOnAnswer} />

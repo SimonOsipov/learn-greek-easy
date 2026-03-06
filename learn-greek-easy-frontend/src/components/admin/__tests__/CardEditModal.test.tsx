@@ -29,6 +29,7 @@ import i18n from '@/i18n';
 vi.mock('@/services/adminAPI', () => ({
   adminAPI: {
     updateCultureQuestion: vi.fn(),
+    generateCultureQuestionAudio: vi.fn(),
   },
 }));
 
@@ -68,6 +69,7 @@ const createMockQuestion = (
   correct_option: 1,
   source_article_url: null,
   is_pending_review: false,
+  audio_s3_key: null,
   created_at: '2026-01-01T00:00:00Z',
   ...overrides,
 });
@@ -598,6 +600,93 @@ describe('CardEditModal', () => {
       renderModal({ question: createMockQuestion() });
 
       expect(screen.getByTestId('save-btn')).not.toBeDisabled();
+    });
+  });
+
+  // ============================================
+  // Audio Generation Tests
+  // ============================================
+
+  describe('Audio Generation', () => {
+    it('renders Generate Audio button when audio_s3_key is null', () => {
+      const question = createMockQuestion({ audio_s3_key: null });
+      renderModal({ question });
+      expect(screen.getByTestId('generate-audio-btn')).toHaveTextContent('Generate Audio');
+    });
+
+    it('renders Regenerate Audio button when audio_s3_key is set', () => {
+      const question = createMockQuestion({ audio_s3_key: 'culture/audio/abc.mp3' });
+      renderModal({ question });
+      expect(screen.getByTestId('generate-audio-btn')).toHaveTextContent('Regenerate Audio');
+    });
+
+    it('calls generateCultureQuestionAudio on click', async () => {
+      const question = createMockQuestion({ audio_s3_key: null });
+      vi.mocked(adminAPI.generateCultureQuestionAudio).mockResolvedValueOnce(undefined);
+      renderModal({ question });
+      await userEvent.click(screen.getByTestId('generate-audio-btn'));
+      expect(adminAPI.generateCultureQuestionAudio).toHaveBeenCalledWith(question.id);
+    });
+
+    it('shows loading state during generation', async () => {
+      const question = createMockQuestion({ audio_s3_key: null });
+      let resolve: () => void;
+      vi.mocked(adminAPI.generateCultureQuestionAudio).mockImplementationOnce(
+        () =>
+          new Promise<void>((res) => {
+            resolve = res;
+          })
+      );
+      renderModal({ question });
+      await userEvent.click(screen.getByTestId('generate-audio-btn'));
+      expect(screen.getByTestId('generate-audio-btn')).toBeDisabled();
+      expect(screen.getByTestId('generate-audio-btn')).toHaveTextContent('Generating...');
+      resolve!();
+    });
+
+    it('shows success toast on success', async () => {
+      const question = createMockQuestion({ audio_s3_key: null });
+      vi.mocked(adminAPI.generateCultureQuestionAudio).mockResolvedValueOnce(undefined);
+      renderModal({ question });
+      await userEvent.click(screen.getByTestId('generate-audio-btn'));
+      await waitFor(() => {
+        expect(mockToast).toHaveBeenCalledWith(
+          expect.objectContaining({ title: 'Audio generation started' })
+        );
+      });
+    });
+
+    it('shows error toast on failure', async () => {
+      const question = createMockQuestion({ audio_s3_key: null });
+      vi.mocked(adminAPI.generateCultureQuestionAudio).mockRejectedValueOnce(new Error('fail'));
+      renderModal({ question });
+      await userEvent.click(screen.getByTestId('generate-audio-btn'));
+      await waitFor(() => {
+        expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ variant: 'destructive' }));
+      });
+    });
+
+    it('calls onSuccess to refresh data after generation', async () => {
+      const question = createMockQuestion({ audio_s3_key: null });
+      const onSuccess = vi.fn();
+      vi.mocked(adminAPI.generateCultureQuestionAudio).mockResolvedValueOnce(undefined);
+      renderModal({ question, onSuccess });
+      await userEvent.click(screen.getByTestId('generate-audio-btn'));
+      await waitFor(() => {
+        expect(onSuccess).toHaveBeenCalled();
+      });
+    });
+
+    it('shows audio status indicator', () => {
+      const question = createMockQuestion({ audio_s3_key: null });
+      renderModal({ question });
+      expect(screen.getByTestId('audio-status')).toHaveTextContent('No audio');
+    });
+
+    it('shows Audio ready status when audio_s3_key is set', () => {
+      const question = createMockQuestion({ audio_s3_key: 'culture/audio/abc.mp3' });
+      renderModal({ question });
+      expect(screen.getByTestId('audio-status')).toHaveTextContent('Audio ready');
     });
   });
 });

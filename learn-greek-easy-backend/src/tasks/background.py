@@ -1346,6 +1346,124 @@ async def generate_a2_audio_for_news_item_task(
             await engine.dispose()
 
 
+async def generate_audio_for_culture_question_task(
+    question_id: UUID,
+    question_text_el: str,
+    db_url: str,
+) -> None:
+    """Generate audio for a culture question using ElevenLabs TTS.
+
+    This task runs asynchronously after the endpoint response is sent.
+    It generates speech audio from the Greek question text, uploads it
+    to S3, and updates the CultureQuestion record with the audio S3 key.
+
+    Args:
+        question_id: UUID of the culture question
+        question_text_el: Greek text to convert to speech
+        db_url: Database connection URL
+    """
+    if not is_background_tasks_enabled():
+        logger.debug("Background tasks disabled, skipping generate_audio_for_culture_question_task")
+        return
+
+    if not settings.elevenlabs_configured:
+        logger.warning(
+            "ElevenLabs not configured, skipping culture question audio generation",
+            extra={"question_id": str(question_id)},
+        )
+        return
+
+    logger.info(
+        "Starting audio generation for culture question",
+        extra={
+            "question_id": str(question_id),
+            "text_length": len(question_text_el),
+            "task": "generate_audio_for_culture_question",
+        },
+    )
+
+    engine = None
+    try:
+        engine = create_async_engine(
+            db_url,
+            pool_pre_ping=True,
+            connect_args={"ssl": "require"} if settings.is_production else {},
+        )
+        async_session_factory = async_sessionmaker(
+            engine, class_=AsyncSession, expire_on_commit=False
+        )
+
+        session = async_session_factory()
+        try:
+            # Step 1: Generate TTS audio
+            from src.services.elevenlabs_service import get_elevenlabs_service
+
+            audio_bytes = await get_elevenlabs_service().generate_speech(question_text_el)
+
+            # Step 2: Build deterministic S3 key
+            s3_key = f"culture/audio/{question_id}.mp3"
+
+            # Step 3: Upload to S3
+            from src.services.s3_service import get_s3_service
+
+            upload_success = get_s3_service().upload_object(s3_key, audio_bytes, "audio/mpeg")
+            if not upload_success:
+                logger.error(
+                    "Failed to upload culture question audio to S3",
+                    extra={
+                        "question_id": str(question_id),
+                        "s3_key": s3_key,
+                    },
+                )
+                return
+
+            # Step 4: Update CultureQuestion with audio S3 key
+            from sqlalchemy import select
+
+            from src.db.models import CultureQuestion
+
+            result = await session.execute(
+                select(CultureQuestion).where(CultureQuestion.id == question_id)
+            )
+            question = result.scalar_one_or_none()
+
+            if question is None:
+                logger.error(
+                    "CultureQuestion not found for audio update",
+                    extra={"question_id": str(question_id)},
+                )
+                return
+
+            question.audio_s3_key = s3_key
+            await session.commit()
+        finally:
+            await session.close()
+
+        # Step 5: Success log
+        logger.info(
+            "Culture question audio generation complete",
+            extra={
+                "question_id": str(question_id),
+                "s3_key": s3_key,
+                "file_size_bytes": len(audio_bytes),
+            },
+        )
+
+    except Exception as e:
+        logger.error(
+            "Audio generation failed for culture question",
+            extra={
+                "question_id": str(question_id),
+                "error": str(e),
+                "task": "generate_audio_for_culture_question",
+            },
+            exc_info=True,
+        )
+    finally:
+        if engine is not None:
+            await engine.dispose()
+
+
 async def generate_word_entry_audio_task(  # noqa: C901
     word_entry_id: UUID,
     lemma: str,

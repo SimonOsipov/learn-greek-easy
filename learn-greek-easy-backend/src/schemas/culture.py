@@ -717,6 +717,7 @@ class CultureQuestionAdminResponse(BaseModel):
     correct_option: int = Field(..., ge=1, le=4, description="Correct answer (1=A, 2=B, 3=C, 4=D)")
     option_count: int = Field(..., ge=2, le=4, description="Number of answer options (2, 3, or 4)")
     image_key: Optional[str] = Field(None, description="S3 key for question image")
+    audio_s3_key: Optional[str] = Field(None, description="S3 key for TTS audio file")
     order_index: int = Field(..., ge=0, description="Display order within deck")
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")

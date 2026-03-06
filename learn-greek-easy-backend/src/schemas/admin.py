@@ -164,6 +164,7 @@ class AdminCultureQuestionItem(BaseModel):
     correct_option: int
     source_article_url: Optional[str] = None
     is_pending_review: bool = False
+    audio_s3_key: Optional[str] = None
     created_at: datetime
 
 

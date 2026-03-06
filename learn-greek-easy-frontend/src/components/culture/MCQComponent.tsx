@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ExternalLink } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { SpeakerButton } from '@/components/ui/SpeakerButton';
 import { useMCQKeyboardShortcuts } from '@/hooks/useMCQKeyboardShortcuts';
 import { useTrackEvent } from '@/hooks/useTrackEvent';
 import { trackNewsSourceLinkClicked } from '@/lib/analytics';
@@ -176,12 +177,12 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
   }, [question.id, question.original_article_url]);
 
   const handleAudioPlay = useCallback(
-    (duration: number) => {
+    (duration?: number) => {
       if (!deckId) return;
       track('culture_audio_started', {
         deck_id: deckId,
         question_id: question.id,
-        duration_sec: Math.round(duration),
+        duration_sec: Math.round(duration ?? 0),
       });
     },
     [deckId, question.id, track]
@@ -265,14 +266,23 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
             </p>
           )}
 
-          {/* Audio waveform player placeholder */}
-          {question.audio_url && (
+          {/* Audio player: WaveformPlayer for news, SpeakerButton for cultural */}
+          {question.audio_url && question.original_article_url && (
             <WaveformPlayer
               audioUrl={question.audio_url}
               onPlay={handleAudioPlay}
               onComplete={handleAudioComplete}
               onSpeedChange={handleAudioSpeedChange}
             />
+          )}
+          {question.audio_url && !question.original_article_url && (
+            <div className="flex items-center gap-2">
+              <SpeakerButton
+                audioUrl={question.audio_url}
+                size="sm"
+                onPlay={() => handleAudioPlay()}
+              />
+            </div>
           )}
 
           {/* Question image - KEEP EXACTLY AS-IS */}

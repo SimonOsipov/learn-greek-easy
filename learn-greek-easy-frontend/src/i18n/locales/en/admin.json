@@ -598,6 +598,17 @@
     "keepEditing": "Keep Editing",
     "discard": "Discard"
   },
+  "cultureAudio": {
+    "generate": "Generate Audio",
+    "regenerate": "Regenerate Audio",
+    "generating": "Generating...",
+    "success": "Audio generation started",
+    "error": "Failed to generate audio",
+    "status": {
+      "ready": "Audio ready",
+      "missing": "No audio"
+    }
+  },
   "changelog": {
     "stats": {
       "total": "Total Entries",
