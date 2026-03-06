@@ -55,6 +55,7 @@ const CULTURE_CATEGORIES = [
   'culture',
   'traditions',
   'practical',
+  'news',
 ] as const;
 
 type CultureCategory = (typeof CULTURE_CATEGORIES)[number];

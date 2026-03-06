@@ -11,7 +11,8 @@ export type CultureCategory =
   | 'politics'
   | 'culture'
   | 'traditions'
-  | 'practical';
+  | 'practical'
+  | 'news';
 
 export interface MultilingualText {
   el: string;
