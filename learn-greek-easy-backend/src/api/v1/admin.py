@@ -14,7 +14,7 @@ from typing import Literal, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
-from sqlalchemy import case, delete, func, select
+from sqlalchemy import case, delete, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -902,8 +902,11 @@ async def list_deck_questions(
     deck_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_superuser),
-    page: int = Query(1, ge=1, description="Page number"),
-    page_size: int = Query(20, ge=1, le=100, description="Items per page"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    search: Optional[str] = Query(None, max_length=200),
+    sort_by: str = Query("order_index", pattern="^(order_index|created_at)$"),
+    sort_order: str = Query("asc", pattern="^(asc|desc)$"),
 ) -> AdminCultureQuestionsResponse:
     """List all culture questions in a deck for admin management.
 
@@ -916,6 +919,9 @@ async def list_deck_questions(
         current_user: Authenticated superuser (injected)
         page: Page number (1-indexed)
         page_size: Number of items per page (max 100)
+        search: Optional search term to filter by question text
+        sort_by: Field to sort by (order_index or created_at)
+        sort_order: Sort direction (asc or desc)
 
     Returns:
         AdminCultureQuestionsResponse with paginated questions
@@ -923,49 +929,71 @@ async def list_deck_questions(
     Raises:
         404: If deck not found
     """
-    # Verify deck exists
-    deck_result = await db.execute(select(CultureDeck).where(CultureDeck.id == deck_id))
-    deck = deck_result.scalar_one_or_none()
-
+    deck = await db.get(CultureDeck, deck_id)
     if not deck:
-        raise NotFoundException(
-            resource="Culture deck",
-            detail=f"Culture deck with ID '{deck_id}' not found",
+        raise HTTPException(status_code=404, detail="Deck not found")
+
+    # Build base WHERE conditions
+    base_conditions = [CultureQuestion.deck_id == deck_id]
+    if search:
+        search_term = f"%{search}%"
+        base_conditions.append(
+            or_(
+                CultureQuestion.question_text["el"].astext.ilike(search_term),
+                CultureQuestion.question_text["en"].astext.ilike(search_term),
+                CultureQuestion.question_text["ru"].astext.ilike(search_term),
+            )
         )
 
-    # Count total questions in deck (including pending)
-    count_result = await db.execute(
-        select(func.count(CultureQuestion.id)).where(CultureQuestion.deck_id == deck_id)
-    )
-    total = count_result.scalar() or 0
+    # Count query
+    count_query = select(func.count()).select_from(CultureQuestion).where(*base_conditions)
+    total_result = await db.execute(count_query)
+    total = total_result.scalar_one()
 
-    # Get paginated questions
-    offset = (page - 1) * page_size
-    result = await db.execute(
-        select(CultureQuestion)
-        .where(CultureQuestion.deck_id == deck_id)
-        .order_by(CultureQuestion.created_at.desc())
-        .offset(offset)
+    # Sort column
+    sort_col = getattr(CultureQuestion, sort_by)
+    order_expr = sort_col.asc() if sort_order == "asc" else sort_col.desc()
+
+    # Data query with LEFT JOIN for A2 audio
+    data_query = (
+        select(
+            CultureQuestion,
+            NewsItem.audio_a2_s3_key.label("news_item_audio_a2_s3_key"),
+        )
+        .outerjoin(NewsItem, CultureQuestion.news_item_id == NewsItem.id)
+        .where(*base_conditions)
+        .order_by(order_expr)
+        .offset((page - 1) * page_size)
         .limit(page_size)
     )
-    questions = result.scalars().all()
+    result = await db.execute(data_query)
+
+    items = []
+    for row in result.all():
+        question = row[0]
+        news_audio = row[1]
+        items.append(
+            AdminCultureQuestionItem(
+                id=question.id,
+                question_text=question.question_text,
+                option_a=question.option_a,
+                option_b=question.option_b,
+                option_c=question.option_c,
+                option_d=question.option_d,
+                correct_option=question.correct_option,
+                source_article_url=question.source_article_url,
+                is_pending_review=question.is_pending_review,
+                audio_s3_key=question.audio_s3_key,
+                news_item_id=question.news_item_id,
+                original_article_url=question.original_article_url,
+                order_index=question.order_index,
+                news_item_audio_a2_s3_key=news_audio,
+                created_at=question.created_at,
+            )
+        )
 
     return AdminCultureQuestionsResponse(
-        questions=[
-            AdminCultureQuestionItem(
-                id=q.id,
-                question_text=q.question_text,
-                option_a=q.option_a,
-                option_b=q.option_b,
-                option_c=q.option_c,
-                option_d=q.option_d,
-                correct_option=q.correct_option,
-                source_article_url=q.source_article_url,
-                is_pending_review=q.is_pending_review,
-                created_at=q.created_at,
-            )
-            for q in questions
-        ],
+        questions=items,
         total=total,
         page=page,
         page_size=page_size,
