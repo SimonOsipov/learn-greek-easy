@@ -318,6 +318,10 @@ export interface AdminCultureQuestion {
   source_article_url: string | null;
   is_pending_review: boolean;
   audio_s3_key: string | null;
+  news_item_id: string | null;
+  original_article_url: string | null;
+  order_index: number;
+  news_item_audio_a2_s3_key: string | null;
   created_at: string;
 }
 

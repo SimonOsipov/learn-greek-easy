@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { CultureQuestionChips } from '@/components/admin/culture/CultureQuestionChips';
 import { DetailCompletenessChips } from '@/components/admin/vocabulary/DetailCompletenessChips';
 import { EnrichmentChips } from '@/components/admin/vocabulary/EnrichmentChips';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -875,47 +876,50 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
 
               {/* Culture Questions List */}
               {!isLoading && !error && !isVocabulary && questions.length > 0 && (
-                <div className="space-y-2" data-testid="culture-questions-list">
-                  {questions.map((question) => (
-                    <div
-                      key={question.id}
-                      className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50"
-                      data-testid={`question-item-${question.id}`}
-                    >
-                      <div className="min-w-0 flex-1 pr-2">
-                        <p className="break-words font-medium">
-                          {question.question_text[locale] || question.question_text.en}
-                        </p>
-                        {question.is_pending_review && (
-                          <span className="text-xs text-amber-600">
-                            {t('sources.articles.alreadyGenerated')}
-                          </span>
-                        )}
+                <TooltipProvider delayDuration={200}>
+                  <div className="space-y-2" data-testid="culture-questions-list">
+                    {questions.map((question) => (
+                      <div
+                        key={question.id}
+                        className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50"
+                        data-testid={`question-item-${question.id}`}
+                      >
+                        <div className="min-w-0 flex-1 pr-2">
+                          <p className="break-words font-medium">
+                            {question.question_text[locale] || question.question_text.en}
+                          </p>
+                          {question.is_pending_review && (
+                            <span className="text-xs text-amber-600">
+                              {t('sources.articles.alreadyGenerated')}
+                            </span>
+                          )}
+                          <CultureQuestionChips question={question} />
+                        </div>
+                        <div className="flex shrink-0 items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setEditingCard(question)}
+                            data-testid={`edit-question-${question.id}`}
+                          >
+                            <Pencil className="h-4 w-4" />
+                            <span className="sr-only">{t('actions.edit')}</span>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteClick(question)}
+                            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            data-testid={`delete-question-${question.id}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            <span className="sr-only">{t('actions.delete')}</span>
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex shrink-0 items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setEditingCard(question)}
-                          data-testid={`edit-question-${question.id}`}
-                        >
-                          <Pencil className="h-4 w-4" />
-                          <span className="sr-only">{t('actions.edit')}</span>
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteClick(question)}
-                          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                          data-testid={`delete-question-${question.id}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          <span className="sr-only">{t('actions.delete')}</span>
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                </TooltipProvider>
               )}
 
               {/* Pagination */}
