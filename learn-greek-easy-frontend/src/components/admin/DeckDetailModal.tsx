@@ -1,6 +1,6 @@
 // src/components/admin/DeckDetailModal.tsx
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   AlertCircle,
@@ -32,8 +32,10 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
@@ -53,6 +55,7 @@ import {
   trackAdminWordEntryDetailTabSwitched,
 } from '@/lib/analytics/adminAnalytics';
 import { computeCompletionPercentage } from '@/lib/completeness';
+import { isTranslationComplete } from '@/lib/cultureCompleteness';
 import { getLocalizedDeckName } from '@/lib/deckLocale';
 import { cn } from '@/lib/utils';
 import { adminAPI } from '@/services/adminAPI';
@@ -185,6 +188,17 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const totalCountRef = useRef<number | null>(null);
 
+  // Culture question search, filter, and sort state
+  const [cultureSearch, setCultureSearch] = useState('');
+  const [debouncedCultureSearch, setDebouncedCultureSearch] = useState('');
+  const [cultureSortBy, setCultureSortBy] = useState<'order_index' | 'created_at'>('order_index');
+  const [cultureSortOrder, setCultureSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [translationFilter, setTranslationFilter] = useState<'all' | 'complete' | 'incomplete'>(
+    'all'
+  );
+  const [audioFilter, setAudioFilter] = useState<'all' | 'has_audio' | 'missing_audio'>('all');
+  const [optionCountFilter, setOptionCountFilter] = useState<'all' | '2' | '3' | '4'>('all');
+
   // Bulk selection state (V2 word list)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
@@ -216,7 +230,11 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
         }
         setQuestions([]);
       } else {
-        const response = await adminAPI.listCultureQuestions(deck.id, page, pageSize);
+        const response = await adminAPI.listCultureQuestions(deck.id, page, pageSize, {
+          search: debouncedCultureSearch || undefined,
+          sortBy: cultureSortBy,
+          sortOrder: cultureSortOrder,
+        });
         setQuestions(response.questions);
         setTotal(response.total);
         setCards([]);
@@ -227,7 +245,18 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [deck, page, t, debouncedSearch, posFilter, sortBy, sortOrder]);
+  }, [
+    deck,
+    page,
+    t,
+    debouncedSearch,
+    posFilter,
+    sortBy,
+    sortOrder,
+    debouncedCultureSearch,
+    cultureSortBy,
+    cultureSortOrder,
+  ]);
 
   // Fetch items when modal opens or page changes
   useEffect(() => {
@@ -248,6 +277,13 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
     setSortOrder('asc');
     totalCountRef.current = null;
     setSelectedIds(new Set());
+    setCultureSearch('');
+    setDebouncedCultureSearch('');
+    setCultureSortBy('order_index');
+    setCultureSortOrder('asc');
+    setTranslationFilter('all');
+    setAudioFilter('all');
+    setOptionCountFilter('all');
   }, [deck?.id]);
 
   // Debounce search input
@@ -258,10 +294,26 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  // Debounce culture question search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedCultureSearch(cultureSearch);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [cultureSearch]);
+
   // Reset to page 1 when filters change
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch, posFilter, sortBy, sortOrder]);
+  }, [
+    debouncedSearch,
+    posFilter,
+    sortBy,
+    sortOrder,
+    debouncedCultureSearch,
+    cultureSortBy,
+    cultureSortOrder,
+  ]);
 
   const totalPages = Math.ceil(total / pageSize);
 
@@ -421,6 +473,42 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
       v1BackButtonRef.current.focus();
     }
   }, [selectedV1Card]);
+
+  // Client-side filtered view of current page questions
+  const filteredQuestions = useMemo(() => {
+    return questions.filter((q) => {
+      // Translation filter
+      if (translationFilter === 'complete' && !isTranslationComplete(q)) return false;
+      if (translationFilter === 'incomplete' && isTranslationComplete(q)) return false;
+
+      // Audio filter
+      if (audioFilter === 'has_audio' && !q.audio_s3_key) return false;
+      if (audioFilter === 'missing_audio' && q.audio_s3_key) return false;
+
+      // Option count filter
+      if (optionCountFilter !== 'all') {
+        const count = 2 + (q.option_c !== null ? 1 : 0) + (q.option_d !== null ? 1 : 0);
+        if (String(count) !== optionCountFilter) return false;
+      }
+
+      return true;
+    });
+  }, [questions, translationFilter, audioFilter, optionCountFilter]);
+
+  const activeCultureFilterCount =
+    (translationFilter !== 'all' ? 1 : 0) +
+    (audioFilter !== 'all' ? 1 : 0) +
+    (optionCountFilter !== 'all' ? 1 : 0);
+
+  const clearCultureFilters = () => {
+    setCultureSearch('');
+    setDebouncedCultureSearch('');
+    setCultureSortBy('order_index');
+    setCultureSortOrder('asc');
+    setTranslationFilter('all');
+    setAudioFilter('all');
+    setOptionCountFilter('all');
+  };
 
   if (!deck) return null;
 
@@ -695,6 +783,131 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
                 </div>
               )}
 
+              {/* Search/Filter/Sort Toolbar — culture questions */}
+              {!isLoading && !isVocabulary && (
+                <div
+                  className="flex flex-col gap-2 sm:flex-row sm:items-center"
+                  data-testid="culture-list-toolbar"
+                >
+                  <div className="relative flex-1">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder={t('cultureList.search')}
+                      value={cultureSearch}
+                      onChange={(e) => setCultureSearch(e.target.value)}
+                      className="pl-9"
+                      data-testid="culture-list-search"
+                    />
+                  </div>
+                  {(cultureSearch ||
+                    translationFilter !== 'all' ||
+                    audioFilter !== 'all' ||
+                    optionCountFilter !== 'all') && (
+                    <p className="text-sm text-muted-foreground" data-testid="culture-list-count">
+                      {t('cultureList.showingFiltered', {
+                        filtered: filteredQuestions.length,
+                        total,
+                      })}
+                    </p>
+                  )}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" data-testid="culture-list-filter-trigger">
+                        {activeCultureFilterCount > 0
+                          ? t('cultureList.filtersActive', { count: activeCultureFilterCount })
+                          : t('cultureList.filterAll')}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuLabel>{t('cultureList.filterTranslation')}</DropdownMenuLabel>
+                      <DropdownMenuRadioGroup
+                        value={translationFilter}
+                        onValueChange={(v) => setTranslationFilter(v as typeof translationFilter)}
+                      >
+                        <DropdownMenuRadioItem value="all">
+                          {t('cultureList.filterAll')}
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="complete">
+                          {t('cultureList.filterComplete')}
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="incomplete">
+                          {t('cultureList.filterIncomplete')}
+                        </DropdownMenuRadioItem>
+                      </DropdownMenuRadioGroup>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuLabel>{t('cultureList.filterAudioLabel')}</DropdownMenuLabel>
+                      <DropdownMenuRadioGroup
+                        value={audioFilter}
+                        onValueChange={(v) => setAudioFilter(v as typeof audioFilter)}
+                      >
+                        <DropdownMenuRadioItem value="all">
+                          {t('cultureList.filterAll')}
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="has_audio">
+                          {t('cultureList.filterHasAudio')}
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="missing_audio">
+                          {t('cultureList.filterMissingAudio')}
+                        </DropdownMenuRadioItem>
+                      </DropdownMenuRadioGroup>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuLabel>{t('cultureList.filterOptionsLabel')}</DropdownMenuLabel>
+                      <DropdownMenuRadioGroup
+                        value={optionCountFilter}
+                        onValueChange={(v) => setOptionCountFilter(v as typeof optionCountFilter)}
+                      >
+                        <DropdownMenuRadioItem value="all">
+                          {t('cultureList.filterAll')}
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="2">
+                          {t('cultureList.filterOpts2')}
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="3">
+                          {t('cultureList.filterOpts3')}
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="4">
+                          {t('cultureList.filterOpts4')}
+                        </DropdownMenuRadioItem>
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" data-testid="culture-list-sort-trigger">
+                        {t('wordList.sortBy')}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuRadioGroup
+                        value={`${cultureSortBy}-${cultureSortOrder}`}
+                        onValueChange={(val) => {
+                          if (val === 'order_index-asc') {
+                            setCultureSortBy('order_index');
+                            setCultureSortOrder('asc');
+                          } else if (val === 'created_at-desc') {
+                            setCultureSortBy('created_at');
+                            setCultureSortOrder('desc');
+                          } else if (val === 'created_at-asc') {
+                            setCultureSortBy('created_at');
+                            setCultureSortOrder('asc');
+                          }
+                        }}
+                      >
+                        <DropdownMenuRadioItem value="order_index-asc">
+                          {t('cultureList.sortOrderIndex')}
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="created_at-desc">
+                          {t('cultureList.sortNewest')}
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="created_at-asc">
+                          {t('cultureList.sortOldest')}
+                        </DropdownMenuRadioItem>
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              )}
+
               {/* Bulk Actions Bar — V2 vocabulary only */}
               {isV2Vocabulary && !isLoading && !error && cards.length > 0 && (
                 <div className="flex items-center gap-2" data-testid="word-list-bulk-bar">
@@ -760,6 +973,26 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
                     : t(noItemsKey)}
                 </p>
               )}
+
+              {/* Culture filter empty state */}
+              {!isLoading &&
+                !error &&
+                !isVocabulary &&
+                total > 0 &&
+                filteredQuestions.length === 0 && (
+                  <div className="py-8 text-center" data-testid="culture-list-no-results">
+                    <p className="text-muted-foreground">{t('cultureList.noResults')}</p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearCultureFilters}
+                      className="mt-2"
+                      data-testid="culture-list-clear-filters"
+                    >
+                      {t('cultureList.clearFilters')}
+                    </Button>
+                  </div>
+                )}
 
               {/* Vocabulary Cards List */}
               {!isLoading && !error && isVocabulary && cards.length > 0 && (
@@ -875,10 +1108,10 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
               )}
 
               {/* Culture Questions List */}
-              {!isLoading && !error && !isVocabulary && questions.length > 0 && (
+              {!isLoading && !error && !isVocabulary && filteredQuestions.length > 0 && (
                 <TooltipProvider delayDuration={200}>
                   <div className="space-y-2" data-testid="culture-questions-list">
-                    {questions.map((question) => (
+                    {filteredQuestions.map((question) => (
                       <div
                         key={question.id}
                         className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50"

@@ -925,6 +925,27 @@
     "bulkDeleteSuccess": "{{count}} слов удалено",
     "bulkDeleteError": "Не удалось удалить некоторые слова"
   },
+  "cultureList": {
+    "search": "Поиск вопросов...",
+    "showingFiltered": "Показано {{filtered}} из {{total}} вопросов",
+    "filterAll": "Все",
+    "filterTranslation": "Переводы",
+    "filterComplete": "Полные переводы",
+    "filterIncomplete": "Неполные переводы",
+    "filterAudioLabel": "Аудио",
+    "filterHasAudio": "Есть аудио",
+    "filterMissingAudio": "Нет аудио",
+    "filterOptionsLabel": "Варианты",
+    "filterOpts2": "2 варианта",
+    "filterOpts3": "3 варианта",
+    "filterOpts4": "4 варианта",
+    "sortOrderIndex": "Порядковый номер",
+    "sortNewest": "Сначала новые",
+    "sortOldest": "Сначала старые",
+    "noResults": "Нет вопросов по вашим критериям",
+    "clearFilters": "Сбросить фильтры",
+    "filtersActive": "Фильтры ({{count}})"
+  },
   "v1CardEdit": {
     "back": "Вернуться к списку"
   },

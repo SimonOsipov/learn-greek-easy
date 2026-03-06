@@ -1144,9 +1144,16 @@ export const adminAPI = {
   listCultureQuestions: async (
     deckId: string,
     page = 1,
-    pageSize = 20
+    pageSize = 20,
+    params: { search?: string; sortBy?: string; sortOrder?: string } = {}
   ): Promise<AdminCultureQuestionsResponse> => {
-    const queryString = buildQueryString({ page, page_size: pageSize });
+    const queryString = buildQueryString({
+      page,
+      page_size: pageSize,
+      search: params.search || undefined,
+      sort_by: params.sortBy || undefined,
+      sort_order: params.sortOrder || undefined,
+    });
     return api.get<AdminCultureQuestionsResponse>(
       `/api/v1/admin/culture/decks/${deckId}/questions${queryString}`
     );
