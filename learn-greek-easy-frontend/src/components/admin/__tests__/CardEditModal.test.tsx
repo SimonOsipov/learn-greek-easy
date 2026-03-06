@@ -70,6 +70,10 @@ const createMockQuestion = (
   source_article_url: null,
   is_pending_review: false,
   audio_s3_key: null,
+  news_item_id: null,
+  original_article_url: null,
+  order_index: 0,
+  news_item_audio_a2_s3_key: null,
   created_at: '2026-01-01T00:00:00Z',
   ...overrides,
 });
@@ -687,6 +691,24 @@ describe('CardEditModal', () => {
       const question = createMockQuestion({ audio_s3_key: 'culture/audio/abc.mp3' });
       renderModal({ question });
       expect(screen.getByTestId('audio-status-ready')).toBeInTheDocument();
+    });
+
+    it('does NOT show generate audio button when question has news_item_id', () => {
+      const question = createMockQuestion({ news_item_id: 'news-abc-123' });
+      renderModal({ question });
+      expect(screen.queryByTestId('generate-audio-btn')).not.toBeInTheDocument();
+    });
+
+    it('shows "managed by news" label when question has news_item_id', () => {
+      const question = createMockQuestion({ news_item_id: 'news-abc-123' });
+      renderModal({ question });
+      expect(screen.getByTestId('audio-managed-by-news')).toBeInTheDocument();
+    });
+
+    it('shows generate audio button when question has no news_item_id', () => {
+      const question = createMockQuestion({ news_item_id: null });
+      renderModal({ question });
+      expect(screen.getByTestId('generate-audio-btn')).toBeInTheDocument();
     });
   });
 });

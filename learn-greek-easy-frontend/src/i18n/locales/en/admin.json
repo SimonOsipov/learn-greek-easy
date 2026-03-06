@@ -605,6 +605,7 @@
     "generating": "Generating...",
     "success": "Audio generation started",
     "error": "Failed to generate audio",
+    "managedByNews": "Audio managed by news article",
     "status": {
       "ready": "Audio ready",
       "missing": "No audio"

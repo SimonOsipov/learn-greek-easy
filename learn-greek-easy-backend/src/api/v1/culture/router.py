@@ -1179,6 +1179,13 @@ async def generate_culture_question_audio(
     if question is None:
         raise CultureQuestionNotFoundException(question_id=str(question_id))
 
+    # Block audio generation for news-linked questions
+    if question.news_item_id is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Cannot regenerate audio for news-linked questions. Audio is managed by the news item.",
+        )
+
     # Validate Greek text exists
     question_text_el = question.question_text.get("el", "") if question.question_text else ""
     if not question_text_el.strip():

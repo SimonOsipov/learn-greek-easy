@@ -181,12 +181,18 @@ export function CardEditModal({ open, onOpenChange, question, onSuccess }: CardE
           {question && (
             <div className="flex items-center justify-between rounded-lg border px-3 py-2">
               <AudioStatusBadge status={audioStatus} data-testid="audio-status" />
-              <AudioGenerateButton
-                status={audioStatus}
-                onClick={handleGenerateAudio}
-                isLoading={audioCooldown}
-                data-testid="generate-audio-btn"
-              />
+              {question.news_item_id ? (
+                <span className="text-sm text-muted-foreground" data-testid="audio-managed-by-news">
+                  {t('cultureAudio.managedByNews')}
+                </span>
+              ) : (
+                <AudioGenerateButton
+                  status={audioStatus}
+                  onClick={handleGenerateAudio}
+                  isLoading={audioCooldown}
+                  data-testid="generate-audio-btn"
+                />
+              )}
             </div>
           )}
 
