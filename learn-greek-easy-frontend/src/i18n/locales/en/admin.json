@@ -913,6 +913,27 @@
     "bulkDeleteSuccess": "{{count}} words deleted",
     "bulkDeleteError": "Failed to delete some words"
   },
+  "cultureList": {
+    "search": "Search questions...",
+    "showingFiltered": "Showing {{filtered}} of {{total}} questions",
+    "filterAll": "All",
+    "filterTranslation": "Translations",
+    "filterComplete": "Complete translations",
+    "filterIncomplete": "Incomplete translations",
+    "filterAudioLabel": "Audio",
+    "filterHasAudio": "Has audio",
+    "filterMissingAudio": "Missing audio",
+    "filterOptionsLabel": "Options",
+    "filterOpts2": "2 options",
+    "filterOpts3": "3 options",
+    "filterOpts4": "4 options",
+    "sortOrderIndex": "Order index",
+    "sortNewest": "Newest first",
+    "sortOldest": "Oldest first",
+    "noResults": "No questions match your criteria",
+    "clearFilters": "Clear filters",
+    "filtersActive": "Filters ({{count}})"
+  },
   "v1CardEdit": {
     "back": "Back to list"
   },

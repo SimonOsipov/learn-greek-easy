@@ -318,6 +318,10 @@ export interface AdminCultureQuestion {
   source_article_url: string | null;
   is_pending_review: boolean;
   audio_s3_key: string | null;
+  news_item_id: string | null;
+  original_article_url: string | null;
+  order_index: number;
+  news_item_audio_a2_s3_key: string | null;
   created_at: string;
 }
 
@@ -1140,9 +1144,16 @@ export const adminAPI = {
   listCultureQuestions: async (
     deckId: string,
     page = 1,
-    pageSize = 20
+    pageSize = 20,
+    params: { search?: string; sortBy?: string; sortOrder?: string } = {}
   ): Promise<AdminCultureQuestionsResponse> => {
-    const queryString = buildQueryString({ page, page_size: pageSize });
+    const queryString = buildQueryString({
+      page,
+      page_size: pageSize,
+      search: params.search || undefined,
+      sort_by: params.sortBy || undefined,
+      sort_order: params.sortOrder || undefined,
+    });
     return api.get<AdminCultureQuestionsResponse>(
       `/api/v1/admin/culture/decks/${deckId}/questions${queryString}`
     );
