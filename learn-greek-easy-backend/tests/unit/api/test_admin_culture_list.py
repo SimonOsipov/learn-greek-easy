@@ -9,7 +9,7 @@ from tests.factories.news import NewsItemFactory
 
 
 class TestListDeckQuestions:
-    """Tests for GET /api/v1/admin/decks/{deck_id}/questions endpoint."""
+    """Tests for GET /api/v1/admin/culture/decks/{deck_id}/questions endpoint."""
 
     @pytest.mark.asyncio
     async def test_list_questions_returns_new_fields(
@@ -29,7 +29,7 @@ class TestListDeckQuestions:
         await db_session.flush()
 
         resp = await client.get(
-            f"/api/v1/admin/decks/{deck.id}/questions",
+            f"/api/v1/admin/culture/decks/{deck.id}/questions",
             headers=superuser_auth_headers,
         )
         assert resp.status_code == 200
@@ -61,7 +61,7 @@ class TestListDeckQuestions:
         await db_session.flush()
 
         resp = await client.get(
-            f"/api/v1/admin/decks/{deck.id}/questions",
+            f"/api/v1/admin/culture/decks/{deck.id}/questions",
             headers=superuser_auth_headers,
         )
         assert resp.status_code == 200
@@ -81,7 +81,7 @@ class TestListDeckQuestions:
         await db_session.flush()
 
         resp = await client.get(
-            f"/api/v1/admin/decks/{deck.id}/questions",
+            f"/api/v1/admin/culture/decks/{deck.id}/questions",
             headers=superuser_auth_headers,
         )
         assert resp.status_code == 200
@@ -114,7 +114,7 @@ class TestListDeckQuestions:
         await db_session.flush()
 
         resp = await client.get(
-            f"/api/v1/admin/decks/{deck.id}/questions?search=Αθήνα",
+            f"/api/v1/admin/culture/decks/{deck.id}/questions?search=Αθήνα",
             headers=superuser_auth_headers,
         )
         assert resp.status_code == 200
@@ -143,7 +143,7 @@ class TestListDeckQuestions:
         await db_session.flush()
 
         resp = await client.get(
-            f"/api/v1/admin/decks/{deck.id}/questions?search=Athens",
+            f"/api/v1/admin/culture/decks/{deck.id}/questions?search=Athens",
             headers=superuser_auth_headers,
         )
         assert resp.status_code == 200
@@ -167,7 +167,7 @@ class TestListDeckQuestions:
         await db_session.flush()
 
         resp = await client.get(
-            f"/api/v1/admin/decks/{deck.id}/questions?search=athens",
+            f"/api/v1/admin/culture/decks/{deck.id}/questions?search=athens",
             headers=superuser_auth_headers,
         )
         assert resp.status_code == 200
@@ -187,7 +187,7 @@ class TestListDeckQuestions:
         await db_session.flush()
 
         resp = await client.get(
-            f"/api/v1/admin/decks/{deck.id}/questions",
+            f"/api/v1/admin/culture/decks/{deck.id}/questions",
             headers=superuser_auth_headers,
         )
         assert resp.status_code == 200
@@ -209,7 +209,7 @@ class TestListDeckQuestions:
         await db_session.flush()
 
         resp = await client.get(
-            f"/api/v1/admin/decks/{deck.id}/questions?sort_by=created_at&sort_order=desc",
+            f"/api/v1/admin/culture/decks/{deck.id}/questions?sort_by=created_at&sort_order=desc",
             headers=superuser_auth_headers,
         )
         assert resp.status_code == 200
@@ -250,7 +250,7 @@ class TestListDeckQuestions:
         await db_session.flush()
 
         resp = await client.get(
-            f"/api/v1/admin/decks/{deck.id}/questions?search=Athens&page=1&page_size=2",
+            f"/api/v1/admin/culture/decks/{deck.id}/questions?search=Athens&page=1&page_size=2",
             headers=superuser_auth_headers,
         )
         assert resp.status_code == 200

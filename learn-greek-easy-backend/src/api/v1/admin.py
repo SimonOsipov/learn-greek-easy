@@ -939,9 +939,9 @@ async def list_deck_questions(
         search_term = f"%{search}%"
         base_conditions.append(
             or_(
-                CultureQuestion.question_text["el"].astext.ilike(search_term),
-                CultureQuestion.question_text["en"].astext.ilike(search_term),
-                CultureQuestion.question_text["ru"].astext.ilike(search_term),
+                CultureQuestion.question_text.op("->>")("el").ilike(search_term),
+                CultureQuestion.question_text.op("->>")("en").ilike(search_term),
+                CultureQuestion.question_text.op("->>")("ru").ilike(search_term),
             )
         )
 
