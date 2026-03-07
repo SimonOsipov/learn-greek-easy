@@ -267,6 +267,8 @@ omit = [
     # Scheduler/background task modules (standalone processes, not API-testable)
     "src/scheduler_main.py",
     "src/scripts/load_lexicon.py",
+    "src/scripts/load_translations_kaikki.py",
+    "src/scripts/load_translations_freedict.py",
     "src/tasks/scheduled.py",
     "src/tasks/scheduler.py",
     "src/tasks/background.py",
