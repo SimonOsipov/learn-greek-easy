@@ -4611,6 +4611,25 @@ class SeedService:
 
         return {"success": True, "lexicon_entries_created": count}
 
+    async def seed_translations(self) -> dict[str, Any]:
+        """Seed representative translation entries for E2E testing."""
+        self._check_can_seed()
+        from src.services.seed_translation_data import SEED_TRANSLATIONS
+
+        await self.db.execute(text("TRUNCATE reference.translations"))
+        for entry in SEED_TRANSLATIONS:
+            await self.db.execute(
+                text(
+                    "INSERT INTO reference.translations "
+                    "(lemma, language, sense_index, translation, part_of_speech, source) "
+                    "VALUES (:lemma, :language, :sense_index, :translation, :part_of_speech, :source)"
+                ),
+                entry,
+            )
+        result = await self.db.execute(text("SELECT COUNT(*) FROM reference.translations"))
+        count = result.scalar_one()
+        return {"success": True, "translation_entries_created": count}
+
     # =====================
     # Full Seed Orchestration
     # =====================
@@ -4913,6 +4932,9 @@ class SeedService:
         # Step 18: Seed reference lexicon data
         lexicon_result = await self.seed_lexicon()
 
+        # Step 19: Seed reference translation data
+        translations_result = await self.seed_translations()
+
         # Commit all changes
         await self.db.commit()
 
@@ -4943,6 +4965,7 @@ class SeedService:
             "changelog": changelog_result,
             "subscription_users": subscription_users_result,
             "lexicon": lexicon_result,
+            "translations": translations_result,
         }
 
     async def _create_word_entries_from_vocab(
