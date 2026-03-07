@@ -308,6 +308,24 @@ class SuggestionItem(BaseModel):
     )
 
 
+class TranslationSourceInfo(BaseModel):
+    """Translation data from a single language lookup."""
+
+    translations: list[str] = Field(..., description="Individual translation strings")
+    combined_text: str = Field(..., description="Comma-joined translation text for LLM prompt")
+    source: Literal["dictionary", "pivot", "none"] = Field(
+        ..., description="Where translations came from"
+    )
+    sense_count: int = Field(..., ge=0, description="Number of dictionary senses found")
+
+
+class TranslationLookupStageResult(BaseModel):
+    """Stage 2.5 result: bilingual translation lookup."""
+
+    en: TranslationSourceInfo | None = None
+    ru: TranslationSourceInfo | None = None
+
+
 class GenerateWordEntryResponse(BaseModel):
     """Progressive response envelope for the noun generation pipeline."""
 
@@ -318,6 +336,7 @@ class GenerateWordEntryResponse(BaseModel):
         description="Alternative normalization suggestions (max 3, confidence >= 0.40)",
     )
     duplicate_check: DuplicateCheckResult | None = None
+    translation_lookup: TranslationLookupStageResult | None = None
     generation: None = None  # NGEN-08-04
     verification: VerificationSummary | None = None  # VRES-01
     persist: None = None  # NGEN-08-06

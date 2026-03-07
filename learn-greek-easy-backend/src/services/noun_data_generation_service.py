@@ -145,9 +145,14 @@ class NounDataGenerationService:
     def __init__(self, openrouter_service: OpenRouterService) -> None:
         self._openrouter = openrouter_service
 
-    async def generate(self, normalized_lemma: NormalizedLemma) -> GeneratedNounData:
+    async def generate(
+        self,
+        normalized_lemma: NormalizedLemma,
+        pre_filled_en: str | None = None,
+        pre_filled_ru: str | None = None,
+    ) -> GeneratedNounData:
         """Generate complete noun data for a normalized lemma."""
-        messages = self._build_messages(normalized_lemma)
+        messages = self._build_messages(normalized_lemma, pre_filled_en, pre_filled_ru)
         response = await self._openrouter.complete(
             messages=messages,
             response_format={"type": "json_object"},
@@ -156,7 +161,12 @@ class NounDataGenerationService:
         result = self._verify_declension_group(result)
         return result
 
-    def _build_messages(self, normalized_lemma: NormalizedLemma) -> list[dict[str, str]]:
+    def _build_messages(
+        self,
+        normalized_lemma: NormalizedLemma,
+        pre_filled_en: str | None = None,
+        pre_filled_ru: str | None = None,
+    ) -> list[dict[str, str]]:
         user_content = _USER_PROMPT_TEMPLATE.format(
             lemma=normalized_lemma.lemma,
             gender=normalized_lemma.gender or "unknown",
@@ -165,6 +175,14 @@ class NounDataGenerationService:
             confidence=normalized_lemma.confidence,
             schema=json.dumps(GeneratedNounData.model_json_schema(), indent=2),
         )
+        # Append pre-filled translations if available
+        if pre_filled_en or pre_filled_ru:
+            pre_fill_lines = ["\nUse these translations (from dictionary):"]
+            if pre_filled_en:
+                pre_fill_lines.append(f"English: {pre_filled_en}")
+            if pre_filled_ru:
+                pre_fill_lines.append(f"Russian: {pre_filled_ru}")
+            user_content += "\n".join(pre_fill_lines)
         return [
             {"role": "system", "content": _SYSTEM_PROMPT},
             {"role": "user", "content": user_content},

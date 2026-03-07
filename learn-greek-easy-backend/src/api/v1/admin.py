@@ -10,7 +10,7 @@ All endpoints require superuser authentication.
 
 import asyncio
 from datetime import datetime, timezone
-from typing import Literal, Optional
+from typing import Any, Literal, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
@@ -60,6 +60,8 @@ from src.schemas.admin import (
     QuestionApproveRequest,
     QuestionApproveResponse,
     SuggestionItem,
+    TranslationLookupStageResult,
+    TranslationSourceInfo,
     UnifiedDeckItem,
     WordEntryInlineUpdate,
 )
@@ -113,6 +115,7 @@ from src.services.lemma_normalization_service import detect_article, get_lemma_n
 from src.services.lexicon_service import LexiconService
 from src.services.local_verification_service import get_local_verification_service
 from src.services.news_item_service import NewsItemService
+from src.services.translation_service import TranslationLookupService
 from src.services.verification_tier import compute_combined_tier
 from src.services.word_entry_response import word_entry_to_response
 from src.tasks import (
@@ -2394,6 +2397,25 @@ async def _run_verification_stage(
     )
 
 
+def _build_translation_lookup_stage_result(
+    bilingual: dict[str, Any],
+) -> TranslationLookupStageResult:
+    """Build TranslationLookupStageResult from lookup_bilingual() result."""
+
+    def _to_info(result: Any) -> TranslationSourceInfo:
+        return TranslationSourceInfo(
+            translations=[e.translation for e in result.translations],
+            combined_text=result.combined_text,
+            source=result.source,
+            sense_count=len(result.translations),
+        )
+
+    return TranslationLookupStageResult(
+        en=_to_info(bilingual["en"]),
+        ru=_to_info(bilingual["ru"]),
+    )
+
+
 @router.post(
     "/word-entries/generate",
     response_model=GenerateWordEntryResponse,
@@ -2475,6 +2497,18 @@ async def generate_word_entry(
         part_of_speech=PartOfSpeech.NOUN,
     )
 
+    # Stage 2.5: Translation lookup
+    translation_lookup: TranslationLookupStageResult | None = None
+    try:
+        tl_svc = TranslationLookupService(db)
+        tl_bilingual = await tl_svc.lookup_bilingual(
+            lemma=primary.morphology.lemma,
+            pos="NOUN",
+        )
+        translation_lookup = _build_translation_lookup_stage_result(tl_bilingual)
+    except Exception as e:
+        logger.warning(f"Translation lookup failed (non-blocking): {e}")
+
     # Stage 3: Generation (NGEN-08-04 — not yet implemented)
     generated_data = None  # Will be set by generation stage
 
@@ -2496,7 +2530,11 @@ async def generate_word_entry(
             lemma=primary.morphology.lemma,
         )
 
-    last_stage = "verification" if verification_summary else "duplicate_check"
+    last_stage = (
+        "verification"
+        if verification_summary
+        else ("translation_lookup" if translation_lookup else "duplicate_check")
+    )
 
     return GenerateWordEntryResponse(
         stage=last_stage,
@@ -2514,6 +2552,7 @@ async def generate_word_entry(
         ),
         suggestions=suggestions,
         duplicate_check=dup_result,
+        translation_lookup=translation_lookup,
         verification=verification_summary,
     )
 

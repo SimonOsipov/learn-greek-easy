@@ -176,7 +176,7 @@ class TestGenerateWordEntry:
         superuser_auth_headers: dict,
         v2_deck: Deck,
     ):
-        """Returns 200 with stage='duplicate_check' and confidence_tier='high' for confidence=1.0."""
+        """Returns 200 with stage='translation_lookup' and confidence_tier='high' for confidence=1.0."""
         with patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory:
             mock_svc = MagicMock()
             mock_svc.normalize_smart.return_value = _mock_smart_result(confidence=1.0)
@@ -190,7 +190,7 @@ class TestGenerateWordEntry:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["stage"] == "duplicate_check"
+        assert data["stage"] == "translation_lookup"
         norm = data["normalization"]
         assert norm is not None
         assert norm["confidence_tier"] == "high"

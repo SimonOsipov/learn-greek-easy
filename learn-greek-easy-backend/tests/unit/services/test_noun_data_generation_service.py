@@ -321,6 +321,49 @@ class TestGenerate:
         call_kwargs = mock_openrouter.complete.call_args.kwargs
         assert call_kwargs["response_format"] == {"type": "json_object"}
 
+    @pytest.mark.asyncio
+    async def test_generate_includes_prefilled_en_in_prompt(
+        self,
+        service: NounDataGenerationService,
+        mock_openrouter: AsyncMock,
+    ) -> None:
+        """Pre-filled English translation appears in the user prompt."""
+        mock_openrouter.complete.return_value = _make_response(_VALID_NOUN_JSON)
+        await service.generate(_make_lemma(), pre_filled_en="house, home")
+
+        user_content = mock_openrouter.complete.call_args.kwargs["messages"][1]["content"]
+        assert "house, home" in user_content
+        assert "Use these translations (from dictionary):" in user_content
+        assert "English:" in user_content
+
+    @pytest.mark.asyncio
+    async def test_generate_includes_prefilled_ru_in_prompt(
+        self,
+        service: NounDataGenerationService,
+        mock_openrouter: AsyncMock,
+    ) -> None:
+        """Pre-filled Russian translation appears in the user prompt."""
+        mock_openrouter.complete.return_value = _make_response(_VALID_NOUN_JSON)
+        await service.generate(_make_lemma(), pre_filled_ru="дом")
+
+        user_content = mock_openrouter.complete.call_args.kwargs["messages"][1]["content"]
+        assert "дом" in user_content
+        assert "Use these translations (from dictionary):" in user_content
+        assert "Russian:" in user_content
+
+    @pytest.mark.asyncio
+    async def test_generate_no_prefill_omits_section(
+        self,
+        service: NounDataGenerationService,
+        mock_openrouter: AsyncMock,
+    ) -> None:
+        """No pre-fill section is added when both pre_filled_en and pre_filled_ru are None."""
+        mock_openrouter.complete.return_value = _make_response(_VALID_NOUN_JSON)
+        await service.generate(_make_lemma())
+
+        user_content = mock_openrouter.complete.call_args.kwargs["messages"][1]["content"]
+        assert "Use these translations (from dictionary):" not in user_content
+
 
 # ---------------------------------------------------------------------------
 # Tests: declension group verification
