@@ -11,8 +11,9 @@
  * - QuestionCardSkeleton rendering
  */
 
-import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { describe, it, expect, vi } from 'vitest';
 
 import { renderWithProviders } from '@/lib/test-utils';
 import type { CultureQuestionBrowseItem } from '@/types/culture';
@@ -168,11 +169,47 @@ describe('QuestionCard', () => {
       );
     });
   });
-});
 
-// ============================================
-// QuestionCardSkeleton tests
-// ============================================
+  describe('Click Behavior', () => {
+    it('calls onClick with question id when clicked', async () => {
+      const handleClick = vi.fn();
+      const user = userEvent.setup();
+      renderWithProviders(<QuestionCard question={makeQuestion()} onClick={handleClick} />);
+      const card = screen.getByTestId('question-card');
+      await user.click(card);
+      expect(handleClick).toHaveBeenCalledWith('q-1');
+    });
+
+    it('triggers onClick on Enter keypress', () => {
+      const handleClick = vi.fn();
+      renderWithProviders(<QuestionCard question={makeQuestion()} onClick={handleClick} />);
+      const card = screen.getByTestId('question-card');
+      fireEvent.keyDown(card, { key: 'Enter' });
+      expect(handleClick).toHaveBeenCalledWith('q-1');
+    });
+
+    it('triggers onClick on Space keypress', () => {
+      const handleClick = vi.fn();
+      renderWithProviders(<QuestionCard question={makeQuestion()} onClick={handleClick} />);
+      const card = screen.getByTestId('question-card');
+      fireEvent.keyDown(card, { key: ' ' });
+      expect(handleClick).toHaveBeenCalledWith('q-1');
+    });
+
+    it('has cursor-pointer class when onClick provided', () => {
+      const handleClick = vi.fn();
+      renderWithProviders(<QuestionCard question={makeQuestion()} onClick={handleClick} />);
+      const card = screen.getByTestId('question-card');
+      expect(card.className).toContain('cursor-pointer');
+    });
+
+    it('does not have cursor-pointer when onClick omitted', () => {
+      renderWithProviders(<QuestionCard question={makeQuestion()} />);
+      const card = screen.getByTestId('question-card');
+      expect(card.className).not.toContain('cursor-pointer');
+    });
+  });
+});
 
 describe('QuestionCardSkeleton', () => {
   it('renders with data-testid="question-card-skeleton"', () => {
