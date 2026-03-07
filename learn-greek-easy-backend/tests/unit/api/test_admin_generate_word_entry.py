@@ -14,7 +14,7 @@ Tests cover:
 - 422 for invalid / missing request fields
 """
 
-from unittest.mock import ANY, MagicMock, patch
+from unittest.mock import ANY, AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
@@ -22,7 +22,16 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.models import CardSystemVersion, Deck, DeckLevel
-from src.schemas.nlp import MorphologyResult, NormalizedLemma
+from src.schemas.nlp import (
+    GeneratedExample,
+    GeneratedNounCases,
+    GeneratedNounCaseSet,
+    GeneratedNounData,
+    GeneratedNounGrammar,
+    MorphologyResult,
+    NormalizedLemma,
+    VerificationSummary,
+)
 from src.services.lemma_normalization_service import (
     NormalizationCandidate,
     SmartNormalizationResult,
@@ -85,6 +94,56 @@ def _mock_smart_result(
         primary=primary,
         suggestions=suggestions or [],
         detected_article=None,
+    )
+
+
+def _mock_generated_data(lemma: str = "γάτα") -> GeneratedNounData:
+    return GeneratedNounData(
+        lemma=lemma,
+        part_of_speech="noun",
+        translation_en="cat",
+        translation_en_plural="cats",
+        translation_ru="кошка",
+        pronunciation="/ˈɣa.ta/",
+        grammar_data=GeneratedNounGrammar(
+            gender="feminine",
+            declension_group="feminine_a",
+            cases=GeneratedNounCases(
+                singular=GeneratedNounCaseSet(
+                    nominative="η γάτα",
+                    genitive="της γάτας",
+                    accusative="τη γάτα",
+                    vocative="γάτα",
+                ),
+                plural=GeneratedNounCaseSet(
+                    nominative="οι γάτες",
+                    genitive="των γατών",
+                    accusative="τις γάτες",
+                    vocative="γάτες",
+                ),
+            ),
+        ),
+        examples=[
+            GeneratedExample(
+                id=1,
+                greek="Η γάτα κοιμάται.",
+                english="The cat is sleeping.",
+                russian="Кошка спит.",
+            ),
+            GeneratedExample(
+                id=2,
+                greek="Οι γάτες παίζουν.",
+                english="The cats are playing.",
+                russian="Кошки играют.",
+            ),
+        ],
+    )
+
+
+def _mock_verification_summary() -> VerificationSummary:
+    return VerificationSummary(
+        combined_tier="auto_approve",
+        morphology_source="llm",
     )
 
 
@@ -176,8 +235,20 @@ class TestGenerateWordEntry:
         superuser_auth_headers: dict,
         v2_deck: Deck,
     ):
-        """Returns 200 with stage='translation_lookup' and confidence_tier='high' for confidence=1.0."""
-        with patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory:
+        """Returns 200 with stage='verification' and confidence_tier='high' for confidence=1.0."""
+        with (
+            patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory,
+            patch(
+                "src.api.v1.admin._run_generation_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_generated_data(),
+            ),
+            patch(
+                "src.api.v1.admin._run_verification_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_verification_summary(),
+            ),
+        ):
             mock_svc = MagicMock()
             mock_svc.normalize_smart.return_value = _mock_smart_result(confidence=1.0)
             mock_factory.return_value = mock_svc
@@ -190,7 +261,7 @@ class TestGenerateWordEntry:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["stage"] == "translation_lookup"
+        assert data["stage"] == "verification"
         norm = data["normalization"]
         assert norm is not None
         assert norm["confidence_tier"] == "high"
@@ -203,7 +274,19 @@ class TestGenerateWordEntry:
         v2_deck: Deck,
     ):
         """confidence=0.6 maps to confidence_tier='medium'."""
-        with patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory:
+        with (
+            patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory,
+            patch(
+                "src.api.v1.admin._run_generation_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_generated_data(),
+            ),
+            patch(
+                "src.api.v1.admin._run_verification_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_verification_summary(),
+            ),
+        ):
             mock_svc = MagicMock()
             mock_svc.normalize_smart.return_value = _mock_smart_result(confidence=0.6)
             mock_factory.return_value = mock_svc
@@ -225,7 +308,19 @@ class TestGenerateWordEntry:
         v2_deck: Deck,
     ):
         """confidence=0.2 maps to confidence_tier='low'."""
-        with patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory:
+        with (
+            patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory,
+            patch(
+                "src.api.v1.admin._run_generation_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_generated_data(),
+            ),
+            patch(
+                "src.api.v1.admin._run_verification_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_verification_summary(),
+            ),
+        ):
             mock_svc = MagicMock()
             mock_svc.normalize_smart.return_value = _mock_smart_result(confidence=0.2)
             mock_factory.return_value = mock_svc
@@ -247,7 +342,19 @@ class TestGenerateWordEntry:
         v2_deck: Deck,
     ):
         """confidence=0.0 still returns 200 with confidence_tier='low'."""
-        with patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory:
+        with (
+            patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory,
+            patch(
+                "src.api.v1.admin._run_generation_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_generated_data(),
+            ),
+            patch(
+                "src.api.v1.admin._run_verification_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_verification_summary(),
+            ),
+        ):
             mock_svc = MagicMock()
             mock_svc.normalize_smart.return_value = _mock_smart_result(confidence=0.0)
             mock_factory.return_value = mock_svc
@@ -269,7 +376,19 @@ class TestGenerateWordEntry:
         v2_deck: Deck,
     ):
         """confidence=0.8 (exact boundary) maps to confidence_tier='high'."""
-        with patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory:
+        with (
+            patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory,
+            patch(
+                "src.api.v1.admin._run_generation_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_generated_data(),
+            ),
+            patch(
+                "src.api.v1.admin._run_verification_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_verification_summary(),
+            ),
+        ):
             mock_svc = MagicMock()
             mock_svc.normalize_smart.return_value = _mock_smart_result(confidence=0.8)
             mock_factory.return_value = mock_svc
@@ -291,7 +410,19 @@ class TestGenerateWordEntry:
         v2_deck: Deck,
     ):
         """confidence=0.5 (exact boundary) maps to confidence_tier='medium'."""
-        with patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory:
+        with (
+            patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory,
+            patch(
+                "src.api.v1.admin._run_generation_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_generated_data(),
+            ),
+            patch(
+                "src.api.v1.admin._run_verification_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_verification_summary(),
+            ),
+        ):
             mock_svc = MagicMock()
             mock_svc.normalize_smart.return_value = _mock_smart_result(confidence=0.5)
             mock_factory.return_value = mock_svc
@@ -312,8 +443,20 @@ class TestGenerateWordEntry:
         superuser_auth_headers: dict,
         v2_deck: Deck,
     ):
-        """duplicate_check is populated, future pipeline stages are all None."""
-        with patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory:
+        """duplicate_check, generation, and verification are all populated."""
+        with (
+            patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory,
+            patch(
+                "src.api.v1.admin._run_generation_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_generated_data(),
+            ),
+            patch(
+                "src.api.v1.admin._run_verification_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_verification_summary(),
+            ),
+        ):
             mock_svc = MagicMock()
             mock_svc.normalize_smart.return_value = _mock_smart_result()
             mock_factory.return_value = mock_svc
@@ -329,8 +472,8 @@ class TestGenerateWordEntry:
         assert data["duplicate_check"] is not None
         assert data["duplicate_check"]["is_duplicate"] is False
         assert data["translation_lookup"] is not None
-        assert data["generation"] is None
-        assert data["verification"] is None
+        assert data["generation"] is not None
+        assert data["verification"] is not None
         assert data["persist"] is None
 
     @pytest.mark.asyncio
@@ -341,7 +484,19 @@ class TestGenerateWordEntry:
         v2_deck: Deck,
     ):
         """normalize_smart() is called exactly once with the submitted word."""
-        with patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory:
+        with (
+            patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory,
+            patch(
+                "src.api.v1.admin._run_generation_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_generated_data(),
+            ),
+            patch(
+                "src.api.v1.admin._run_verification_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_verification_summary(),
+            ),
+        ):
             mock_svc = MagicMock()
             mock_svc.normalize_smart.return_value = _mock_smart_result()
             mock_factory.return_value = mock_svc
@@ -504,7 +659,19 @@ class TestGenerateWordEntry:
         v2_deck: Deck,
     ):
         """Strategy field is 'direct' for direct normalization."""
-        with patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory:
+        with (
+            patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory,
+            patch(
+                "src.api.v1.admin._run_generation_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_generated_data(),
+            ),
+            patch(
+                "src.api.v1.admin._run_verification_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_verification_summary(),
+            ),
+        ):
             mock_svc = MagicMock()
             mock_svc.normalize_smart.return_value = _mock_smart_result(strategy="direct")
             mock_factory.return_value = mock_svc
@@ -524,7 +691,19 @@ class TestGenerateWordEntry:
         v2_deck: Deck,
     ):
         """Strategy field is 'spellcheck' when correction was needed."""
-        with patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory:
+        with (
+            patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory,
+            patch(
+                "src.api.v1.admin._run_generation_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_generated_data(),
+            ),
+            patch(
+                "src.api.v1.admin._run_verification_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_verification_summary(),
+            ),
+        ):
             mock_svc = MagicMock()
             mock_svc.normalize_smart.return_value = _mock_smart_result(
                 strategy="spellcheck", corrected_from="γατα"
@@ -547,7 +726,19 @@ class TestGenerateWordEntry:
         v2_deck: Deck,
     ):
         """corrected_from is null when no correction needed."""
-        with patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory:
+        with (
+            patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory,
+            patch(
+                "src.api.v1.admin._run_generation_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_generated_data(),
+            ),
+            patch(
+                "src.api.v1.admin._run_verification_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_verification_summary(),
+            ),
+        ):
             mock_svc = MagicMock()
             mock_svc.normalize_smart.return_value = _mock_smart_result()
             mock_factory.return_value = mock_svc
@@ -567,7 +758,19 @@ class TestGenerateWordEntry:
         v2_deck: Deck,
     ):
         """Suggestions array empty when no alternatives."""
-        with patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory:
+        with (
+            patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory,
+            patch(
+                "src.api.v1.admin._run_generation_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_generated_data(),
+            ),
+            patch(
+                "src.api.v1.admin._run_verification_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_verification_summary(),
+            ),
+        ):
             mock_svc = MagicMock()
             mock_svc.normalize_smart.return_value = _mock_smart_result()
             mock_factory.return_value = mock_svc
@@ -601,7 +804,19 @@ class TestGenerateWordEntry:
             confidence=0.8,
             corrected_from=None,
         )
-        with patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory:
+        with (
+            patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory,
+            patch(
+                "src.api.v1.admin._run_generation_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_generated_data(),
+            ),
+            patch(
+                "src.api.v1.admin._run_verification_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_verification_summary(),
+            ),
+        ):
             mock_svc = MagicMock()
             mock_svc.normalize_smart.return_value = _mock_smart_result(suggestions=[suggestion])
             mock_factory.return_value = mock_svc
@@ -653,7 +868,19 @@ class TestGenerateWordEntry:
         v2_deck: Deck,
     ):
         """strategy='lexicon' appears in response for known lexicon words."""
-        with patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory:
+        with (
+            patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory,
+            patch(
+                "src.api.v1.admin._run_generation_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_generated_data(),
+            ),
+            patch(
+                "src.api.v1.admin._run_verification_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_verification_summary(),
+            ),
+        ):
             mock_svc = MagicMock()
             mock_svc.normalize_smart.return_value = _mock_smart_result(
                 strategy="lexicon", confidence=1.0
@@ -678,7 +905,19 @@ class TestGenerateWordEntry:
         v2_deck: Deck,
     ):
         """When word is not in lexicon, falls back to direct strategy."""
-        with patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory:
+        with (
+            patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory,
+            patch(
+                "src.api.v1.admin._run_generation_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_generated_data(),
+            ),
+            patch(
+                "src.api.v1.admin._run_verification_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_verification_summary(),
+            ),
+        ):
             mock_svc = MagicMock()
             mock_svc.normalize_smart.return_value = _mock_smart_result(
                 strategy="direct", confidence=0.8
@@ -719,7 +958,19 @@ class TestGenerateWordEntry:
         )
         await db_session.flush()
 
-        with patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory:
+        with (
+            patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory,
+            patch(
+                "src.api.v1.admin._run_generation_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_generated_data(),
+            ),
+            patch(
+                "src.api.v1.admin._run_verification_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_verification_summary(),
+            ),
+        ):
             mock_svc = MagicMock()
             mock_svc.normalize_smart.return_value = _mock_smart_result(strategy="lexicon")
             mock_factory.return_value = mock_svc
@@ -748,7 +999,19 @@ class TestGenerateWordEntry:
         v2_deck: Deck,
     ):
         """duplicate_check.is_duplicate is False when word is new."""
-        with patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory:
+        with (
+            patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory,
+            patch(
+                "src.api.v1.admin._run_generation_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_generated_data(),
+            ),
+            patch(
+                "src.api.v1.admin._run_verification_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_verification_summary(),
+            ),
+        ):
             mock_svc = MagicMock()
             mock_svc.normalize_smart.return_value = _mock_smart_result()
             mock_factory.return_value = mock_svc
@@ -787,7 +1050,19 @@ class TestGenerateWordEntry:
         db_session.add(DeckWordEntry(deck_id=v2_deck.id, word_entry_id=existing.id))
         await db_session.commit()
 
-        with patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory:
+        with (
+            patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory,
+            patch(
+                "src.api.v1.admin._run_generation_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_generated_data(),
+            ),
+            patch(
+                "src.api.v1.admin._run_verification_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_verification_summary(),
+            ),
+        ):
             mock_svc = MagicMock()
             mock_svc.normalize_smart.return_value = _mock_smart_result()
             mock_factory.return_value = mock_svc
@@ -805,6 +1080,237 @@ class TestGenerateWordEntry:
         assert dup["matched_decks"][0]["deck_name"] == v2_deck.name_en
 
     # -------------------------------------------------------------------------
+    # Generation wiring (NGEN-08-04-01)
+    # -------------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_200_generation_data_present(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        v2_deck: Deck,
+    ):
+        """Response includes generation data with all expected fields."""
+        with (
+            patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory,
+            patch(
+                "src.api.v1.admin._run_generation_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_generated_data(),
+            ),
+            patch(
+                "src.api.v1.admin._run_verification_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_verification_summary(),
+            ),
+        ):
+            mock_svc = MagicMock()
+            mock_svc.normalize_smart.return_value = _mock_smart_result()
+            mock_factory.return_value = mock_svc
+            resp = await client.post(
+                ENDPOINT,
+                json={"word": "γάτα", "deck_id": str(v2_deck.id)},
+                headers=superuser_auth_headers,
+            )
+        assert resp.status_code == 200
+        gen = resp.json()["generation"]
+        assert gen is not None
+        assert gen["lemma"] == "γάτα"
+        assert gen["part_of_speech"] == "noun"
+        assert gen["translation_en"] == "cat"
+        assert gen["translation_ru"] == "кошка"
+        assert gen["pronunciation"] == "/ˈɣa.ta/"
+        assert gen["grammar_data"]["gender"] == "feminine"
+        assert gen["grammar_data"]["declension_group"] == "feminine_a"
+        assert len(gen["grammar_data"]["cases"]["singular"]) == 4
+        assert len(gen["grammar_data"]["cases"]["plural"]) == 4
+        assert len(gen["examples"]) == 2
+
+    @pytest.mark.asyncio
+    async def test_200_tdict_passthrough_en_ru(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        v2_deck: Deck,
+    ):
+        """TDICT combined_text values are forwarded as pre_filled_en/pre_filled_ru to generate()."""
+        from src.services.translation_service import TranslationEntry, TranslationResult
+
+        mock_en = TranslationResult(
+            translations=[
+                TranslationEntry(
+                    lemma="γάτα",
+                    language="en",
+                    sense_index=0,
+                    translation="cat",
+                    part_of_speech="NOUN",
+                    source="kaikki",
+                )
+            ],
+            source="dictionary",
+            combined_text="cat",
+        )
+        mock_ru = TranslationResult(
+            translations=[
+                TranslationEntry(
+                    lemma="γάτα",
+                    language="ru",
+                    sense_index=0,
+                    translation="кошка",
+                    part_of_speech="NOUN",
+                    source="freedict",
+                )
+            ],
+            source="dictionary",
+            combined_text="кошка",
+        )
+
+        mock_gen_svc = MagicMock()
+        mock_gen_svc.generate = AsyncMock(return_value=_mock_generated_data())
+
+        with (
+            patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory,
+            patch("src.api.v1.admin.TranslationLookupService") as mock_tl_cls,
+            patch("src.api.v1.admin.get_noun_data_generation_service", return_value=mock_gen_svc),
+            patch(
+                "src.api.v1.admin._run_verification_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_verification_summary(),
+            ),
+        ):
+            mock_svc = MagicMock()
+            mock_svc.normalize_smart.return_value = _mock_smart_result()
+            mock_factory.return_value = mock_svc
+
+            mock_tl_instance = MagicMock()
+            mock_tl_instance.lookup_bilingual = AsyncMock(
+                return_value={"en": mock_en, "ru": mock_ru}
+            )
+            mock_tl_cls.return_value = mock_tl_instance
+
+            resp = await client.post(
+                ENDPOINT,
+                json={"word": "γάτα", "deck_id": str(v2_deck.id)},
+                headers=superuser_auth_headers,
+            )
+
+        assert resp.status_code == 200
+        mock_gen_svc.generate.assert_called_once()
+        call_kwargs = mock_gen_svc.generate.call_args
+        assert call_kwargs.kwargs.get("pre_filled_en") == "cat"
+        assert call_kwargs.kwargs.get("pre_filled_ru") == "кошка"
+
+    @pytest.mark.asyncio
+    async def test_200_tdict_none_source_not_passed(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        v2_deck: Deck,
+    ):
+        """TDICT source='none' results in pre_filled_en=None passed to generate()."""
+        from src.services.translation_service import TranslationResult
+
+        mock_empty = TranslationResult(translations=[], source="none", combined_text="")
+
+        mock_gen_svc = MagicMock()
+        mock_gen_svc.generate = AsyncMock(return_value=_mock_generated_data())
+
+        with (
+            patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory,
+            patch("src.api.v1.admin.TranslationLookupService") as mock_tl_cls,
+            patch("src.api.v1.admin.get_noun_data_generation_service", return_value=mock_gen_svc),
+            patch(
+                "src.api.v1.admin._run_verification_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_verification_summary(),
+            ),
+        ):
+            mock_svc = MagicMock()
+            mock_svc.normalize_smart.return_value = _mock_smart_result()
+            mock_factory.return_value = mock_svc
+
+            mock_tl_instance = MagicMock()
+            mock_tl_instance.lookup_bilingual = AsyncMock(
+                return_value={"en": mock_empty, "ru": mock_empty}
+            )
+            mock_tl_cls.return_value = mock_tl_instance
+
+            resp = await client.post(
+                ENDPOINT,
+                json={"word": "γάτα", "deck_id": str(v2_deck.id)},
+                headers=superuser_auth_headers,
+            )
+
+        assert resp.status_code == 200
+        call_kwargs = mock_gen_svc.generate.call_args
+        assert call_kwargs.kwargs.get("pre_filled_en") is None
+        assert call_kwargs.kwargs.get("pre_filled_ru") is None
+
+    @pytest.mark.asyncio
+    async def test_400_noun_generation_error(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        v2_deck: Deck,
+    ):
+        """NounGenerationError from generation service returns 400 with detail."""
+        from src.core.exceptions import NounGenerationError
+
+        mock_gen_svc = MagicMock()
+        mock_gen_svc.generate = AsyncMock(side_effect=NounGenerationError(detail="parse failed"))
+
+        with (
+            patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory,
+            patch("src.api.v1.admin.get_noun_data_generation_service", return_value=mock_gen_svc),
+        ):
+            mock_svc = MagicMock()
+            mock_svc.normalize_smart.return_value = _mock_smart_result()
+            mock_factory.return_value = mock_svc
+
+            resp = await client.post(
+                ENDPOINT,
+                json={"word": "γάτα", "deck_id": str(v2_deck.id)},
+                headers=superuser_auth_headers,
+            )
+
+        assert resp.status_code == 400
+        assert "parse failed" in resp.json()["error"]["message"]
+
+    @pytest.mark.asyncio
+    async def test_200_stage_is_verification(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        v2_deck: Deck,
+    ):
+        """When generation and verification both succeed, stage is 'verification'."""
+        with (
+            patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory,
+            patch(
+                "src.api.v1.admin._run_generation_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_generated_data(),
+            ),
+            patch(
+                "src.api.v1.admin._run_verification_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_verification_summary(),
+            ),
+        ):
+            mock_svc = MagicMock()
+            mock_svc.normalize_smart.return_value = _mock_smart_result()
+            mock_factory.return_value = mock_svc
+
+            resp = await client.post(
+                ENDPOINT,
+                json={"word": "γάτα", "deck_id": str(v2_deck.id)},
+                headers=superuser_auth_headers,
+            )
+
+        assert resp.status_code == 200
+        assert resp.json()["stage"] == "verification"
+
+    # -------------------------------------------------------------------------
     # Translation Lookup Stage (Stage 2.5)
     # -------------------------------------------------------------------------
 
@@ -816,8 +1322,6 @@ class TestGenerateWordEntry:
         v2_deck: Deck,
     ):
         """translation_lookup contains source='dictionary' when kaikki/freedict rows exist."""
-        from unittest.mock import AsyncMock
-
         from src.services.translation_service import TranslationEntry, TranslationResult
 
         mock_en = TranslationResult(
@@ -852,6 +1356,16 @@ class TestGenerateWordEntry:
         with (
             patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory,
             patch("src.api.v1.admin.TranslationLookupService") as mock_tl_cls,
+            patch(
+                "src.api.v1.admin._run_generation_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_generated_data(),
+            ),
+            patch(
+                "src.api.v1.admin._run_verification_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_verification_summary(),
+            ),
         ):
             mock_svc = MagicMock()
             mock_svc.normalize_smart.return_value = _mock_smart_result()
@@ -886,8 +1400,6 @@ class TestGenerateWordEntry:
         v2_deck: Deck,
     ):
         """translation_lookup contains source='pivot' when only pivot rows exist."""
-        from unittest.mock import AsyncMock
-
         from src.services.translation_service import TranslationEntry, TranslationResult
 
         mock_pivot = TranslationResult(
@@ -909,6 +1421,16 @@ class TestGenerateWordEntry:
         with (
             patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory,
             patch("src.api.v1.admin.TranslationLookupService") as mock_tl_cls,
+            patch(
+                "src.api.v1.admin._run_generation_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_generated_data(),
+            ),
+            patch(
+                "src.api.v1.admin._run_verification_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_verification_summary(),
+            ),
         ):
             mock_svc = MagicMock()
             mock_svc.normalize_smart.return_value = _mock_smart_result()
@@ -942,8 +1464,6 @@ class TestGenerateWordEntry:
         v2_deck: Deck,
     ):
         """translation_lookup has source='none' for both languages when table is empty."""
-        from unittest.mock import AsyncMock
-
         from src.services.translation_service import TranslationResult
 
         mock_empty = TranslationResult(translations=[], source="none", combined_text="")
@@ -951,6 +1471,16 @@ class TestGenerateWordEntry:
         with (
             patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory,
             patch("src.api.v1.admin.TranslationLookupService") as mock_tl_cls,
+            patch(
+                "src.api.v1.admin._run_generation_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_generated_data(),
+            ),
+            patch(
+                "src.api.v1.admin._run_verification_stage",
+                new_callable=AsyncMock,
+                return_value=_mock_verification_summary(),
+            ),
         ):
             mock_svc = MagicMock()
             mock_svc.normalize_smart.return_value = _mock_smart_result()
