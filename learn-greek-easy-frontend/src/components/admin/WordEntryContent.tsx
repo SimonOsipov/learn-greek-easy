@@ -300,7 +300,7 @@ function ContentFields({
           </div>
         </CardHeader>
         <CardContent className="px-4 pb-4">
-          <dl className="space-y-3">
+          <dl className="flex flex-wrap items-start gap-x-6 gap-y-3">
             {/* Part of Speech */}
             <FieldRow
               label={t('wordEntryContent.partOfSpeech')}
@@ -347,28 +347,32 @@ function ContentFields({
         </CardHeader>
         <CardContent className="px-4 pb-4">
           <dl className="space-y-3" id="section-en">
-            <FieldRow
-              label={t('wordEntryContent.translationEn')}
-              value={wordEntry.translation_en || <NotSet />}
-              testId="word-entry-content-translation-en"
-            />
-            <FieldRow
-              label={t('wordEntryContent.translationEnPlural')}
-              value={wordEntry.translation_en_plural || <NotSet />}
-              testId="word-entry-content-translation-en-plural"
-            />
-            <div id="section-ru">
+            <div className="flex flex-wrap gap-x-6 gap-y-3">
               <FieldRow
-                label={t('wordEntryContent.translationRu')}
-                value={wordEntry.translation_ru || <NotSet />}
-                testId="word-entry-content-translation-ru"
+                label={t('wordEntryContent.translationEn')}
+                value={wordEntry.translation_en || <NotSet />}
+                testId="word-entry-content-translation-en"
+              />
+              <div id="section-ru">
+                <FieldRow
+                  label={t('wordEntryContent.translationRu')}
+                  value={wordEntry.translation_ru || <NotSet />}
+                  testId="word-entry-content-translation-ru"
+                />
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-x-6 gap-y-3">
+              <FieldRow
+                label={t('wordEntryContent.translationEnPlural')}
+                value={wordEntry.translation_en_plural || <NotSet />}
+                testId="word-entry-content-translation-en-plural"
+              />
+              <FieldRow
+                label={t('wordEntryContent.translationRuPlural')}
+                value={wordEntry.translation_ru_plural || <NotSet />}
+                testId="word-entry-content-translation-ru-plural"
               />
             </div>
-            <FieldRow
-              label={t('wordEntryContent.translationRuPlural')}
-              value={wordEntry.translation_ru_plural || <NotSet />}
-              testId="word-entry-content-translation-ru-plural"
-            />
           </dl>
         </CardContent>
       </Card>
