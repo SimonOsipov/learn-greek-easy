@@ -57,29 +57,8 @@ vi.mock('../SourceImage', () => ({
 vi.mock('../WaveformPlayer', () => ({
   WaveformPlayer: ({ audioUrl, className }: { audioUrl?: string; className?: string }) => (
     <div data-testid="waveform-player" data-audio-url={audioUrl || ''} className={className}>
-      Waveform Player Mock
+      <button data-testid="waveform-play-button">Play</button>
     </div>
-  ),
-}));
-
-vi.mock('@/components/ui/SpeakerButton', () => ({
-  SpeakerButton: ({
-    audioUrl,
-    size,
-    onPlay,
-  }: {
-    audioUrl?: string;
-    size?: string;
-    onPlay?: () => void;
-  }) => (
-    <button
-      data-testid="speaker-button"
-      data-audio-url={audioUrl || ''}
-      data-size={size || ''}
-      onClick={onPlay}
-    >
-      Speaker Button Mock
-    </button>
   ),
 }));
 
@@ -945,7 +924,7 @@ describe('MCQComponent - Audio Player', () => {
     expect(waveformPlayer).toHaveAttribute('data-audio-url', 'https://example.com/audio.mp3');
   });
 
-  it('should render SpeakerButton when audio_url exists but original_article_url is null', () => {
+  it('should render WaveformPlayer when audio_url exists and original_article_url is null', () => {
     const questionWithAudio = {
       ...mockQuestion,
       audio_url: 'https://example.com/audio.mp3',
@@ -955,13 +934,10 @@ describe('MCQComponent - Audio Player', () => {
       <MCQComponent question={questionWithAudio} language="en" onAnswer={mockOnAnswer} />
     );
 
-    const speakerButton = screen.getByTestId('speaker-button');
-    expect(speakerButton).toBeInTheDocument();
-    expect(speakerButton).toHaveAttribute('data-size', 'sm');
-    expect(screen.queryByTestId('waveform-player')).not.toBeInTheDocument();
+    expect(screen.getByTestId('waveform-player')).toBeInTheDocument();
   });
 
-  it('should not render SpeakerButton when audio_url is null', () => {
+  it('should not render WaveformPlayer when audio_url is null', () => {
     const questionWithNoAudio = {
       ...mockQuestion,
       audio_url: null,
@@ -971,10 +947,10 @@ describe('MCQComponent - Audio Player', () => {
       <MCQComponent question={questionWithNoAudio} language="en" onAnswer={mockOnAnswer} />
     );
 
-    expect(screen.queryByTestId('speaker-button')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('waveform-player')).not.toBeInTheDocument();
   });
 
-  it('should render WaveformPlayer (not SpeakerButton) when both audio_url and original_article_url exist', () => {
+  it('should render WaveformPlayer when both audio_url and original_article_url exist', () => {
     const questionWithBoth = {
       ...mockQuestion,
       audio_url: 'https://example.com/audio.mp3',
@@ -985,10 +961,9 @@ describe('MCQComponent - Audio Player', () => {
     );
 
     expect(screen.getByTestId('waveform-player')).toBeInTheDocument();
-    expect(screen.queryByTestId('speaker-button')).not.toBeInTheDocument();
   });
 
-  it('SpeakerButton click does not interfere with answer selection', async () => {
+  it('WaveformPlayer does not interfere with answer selection', async () => {
     const user = userEvent.setup();
     const questionWithAudio = {
       ...mockQuestion,
@@ -999,9 +974,9 @@ describe('MCQComponent - Audio Player', () => {
       <MCQComponent question={questionWithAudio} language="en" onAnswer={mockOnAnswer} />
     );
 
-    // Click SpeakerButton
-    const speakerButton = screen.getByTestId('speaker-button');
-    await user.click(speakerButton);
+    // Click WaveformPlayer play button
+    const playButton = screen.getByTestId('waveform-play-button');
+    await user.click(playButton);
 
     // Select an answer option
     const optionA = screen.getByTestId('answer-option-a');

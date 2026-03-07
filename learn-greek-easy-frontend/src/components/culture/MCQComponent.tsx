@@ -3,7 +3,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ExternalLink } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { SpeakerButton } from '@/components/ui/SpeakerButton';
 import { useMCQKeyboardShortcuts } from '@/hooks/useMCQKeyboardShortcuts';
 import { useTrackEvent } from '@/hooks/useTrackEvent';
 import { trackNewsSourceLinkClicked } from '@/lib/analytics';
@@ -266,23 +265,14 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
             </p>
           )}
 
-          {/* Audio player: WaveformPlayer for news, SpeakerButton for cultural */}
-          {question.audio_url && question.original_article_url && (
+          {/* Audio player */}
+          {question.audio_url && (
             <WaveformPlayer
               audioUrl={question.audio_url}
               onPlay={handleAudioPlay}
               onComplete={handleAudioComplete}
               onSpeedChange={handleAudioSpeedChange}
             />
-          )}
-          {question.audio_url && !question.original_article_url && (
-            <div className="flex items-center gap-2">
-              <SpeakerButton
-                audioUrl={question.audio_url}
-                size="sm"
-                onPlay={() => handleAudioPlay()}
-              />
-            </div>
           )}
 
           {/* Question image - KEEP EXACTLY AS-IS */}
