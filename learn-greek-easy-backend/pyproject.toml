@@ -269,6 +269,7 @@ omit = [
     "src/scripts/load_lexicon.py",
     "src/scripts/load_translations_kaikki.py",
     "src/scripts/load_translations_freedict.py",
+    "src/scripts/load_translations_pivot.py",
     "src/tasks/scheduled.py",
     "src/tasks/scheduler.py",
     "src/tasks/background.py",
