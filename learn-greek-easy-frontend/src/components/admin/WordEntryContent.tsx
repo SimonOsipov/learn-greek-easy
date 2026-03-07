@@ -268,39 +268,40 @@ function ContentFields({
 
   return (
     <div className="space-y-3" data-testid="word-entry-content-fields">
-      <div className="flex justify-end gap-2">
-        {showUnlinkButton && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="border-destructive text-destructive hover:bg-destructive/10"
-            onClick={onUnlinkClick}
-            data-testid="word-entry-unlink-btn"
-          >
-            {t('wordEntry.unlinkButton')}
-          </Button>
-        )}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onEdit}
-          disabled={isGrammarEditing}
-          data-testid="word-entry-edit-btn"
-        >
-          {t('wordEntryEdit.edit')}
-        </Button>
-      </div>
-
       {/* ── Identity Card ── */}
       <Card id="section-identity">
         <CardHeader className="px-4 pb-2 pt-4">
-          <div className="flex items-center text-sm font-semibold">
-            {t('wordEntryContent.sectionIdentity')}
-            <SectionBadge filled={identityCompl.filled} total={identityCompl.total} />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center text-sm font-semibold">
+              {t('wordEntryContent.sectionIdentity')}
+              <SectionBadge filled={identityCompl.filled} total={identityCompl.total} />
+            </div>
+            <div className="flex gap-2">
+              {showUnlinkButton && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-destructive text-destructive hover:bg-destructive/10"
+                  onClick={onUnlinkClick}
+                  data-testid="word-entry-unlink-btn"
+                >
+                  {t('wordEntry.unlinkButton')}
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onEdit}
+                disabled={isGrammarEditing}
+                data-testid="word-entry-edit-btn"
+              >
+                {t('wordEntryEdit.edit')}
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="px-4 pb-4">
-          <dl className="flex flex-wrap items-start gap-x-6 gap-y-3">
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-3">
             {/* Part of Speech */}
             <FieldRow
               label={t('wordEntryContent.partOfSpeech')}
@@ -347,7 +348,7 @@ function ContentFields({
         </CardHeader>
         <CardContent className="px-4 pb-4">
           <dl className="space-y-3" id="section-en">
-            <div className="flex flex-wrap gap-x-6 gap-y-3">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-3">
               <FieldRow
                 label={t('wordEntryContent.translationEn')}
                 value={wordEntry.translation_en || <NotSet />}
@@ -361,7 +362,7 @@ function ContentFields({
                 />
               </div>
             </div>
-            <div className="flex flex-wrap gap-x-6 gap-y-3">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-3">
               <FieldRow
                 label={t('wordEntryContent.translationEnPlural')}
                 value={wordEntry.translation_en_plural || <NotSet />}
@@ -485,8 +486,25 @@ function ExampleCard({
       className="space-y-1.5 rounded-md border p-3"
       data-testid={`word-entry-content-example-${index}`}
     >
-      {/* Example number header */}
-      <div className="mb-1 text-xs font-medium text-muted-foreground">#{index + 1}</div>
+      {/* Example number header with audio inline */}
+      <div className="mb-1 flex items-center justify-between">
+        <span className="text-xs font-medium text-muted-foreground">#{index + 1}</span>
+        {example.audio_status && (
+          <div className="flex items-center gap-1.5">
+            <CompletionDot filled={hasAudio} />
+            <AudioStatusBadge
+              status={example.audio_status}
+              data-testid={`audio-status-badge-example-${index}`}
+            />
+            <AudioGenerateButton
+              status={example.audio_status}
+              onClick={() => onGenerateClick('example', example.id)}
+              isLoading={isPending && pendingVariables?.exampleId === example.id}
+              data-testid={`audio-generate-btn-example-${index}`}
+            />
+          </div>
+        )}
+      </div>
 
       {/* Greek — always green dot */}
       <div className="min-w-0">
@@ -499,47 +517,30 @@ function ExampleCard({
         <p className="mt-0.5 pl-3.5 text-sm">{example.greek}</p>
       </div>
 
-      {/* English — green if present, gray if absent */}
-      <div className="min-w-0">
-        <div className="flex items-center gap-1.5">
-          <CompletionDot filled={hasEnglish} />
-          <span className="text-xs text-muted-foreground">
-            {t('wordEntryContent.exampleEnglish')}
-          </span>
+      {/* English and Russian side by side */}
+      <div className="grid grid-cols-2 gap-x-6">
+        {/* English — green if present, gray if absent */}
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5">
+            <CompletionDot filled={hasEnglish} />
+            <span className="text-xs text-muted-foreground">
+              {t('wordEntryContent.exampleEnglish')}
+            </span>
+          </div>
+          <p className="mt-0.5 pl-3.5 text-sm">{example.english || <NotSet />}</p>
         </div>
-        <p className="mt-0.5 pl-3.5 text-sm">{example.english || <NotSet />}</p>
-      </div>
 
-      {/* Russian — always shown, green/gray dot */}
-      <div className="min-w-0">
-        <div className="flex items-center gap-1.5">
-          <CompletionDot filled={hasRussian} />
-          <span className="text-xs text-muted-foreground">
-            {t('wordEntryContent.exampleRussian')}
-          </span>
+        {/* Russian — always shown, green/gray dot */}
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5">
+            <CompletionDot filled={hasRussian} />
+            <span className="text-xs text-muted-foreground">
+              {t('wordEntryContent.exampleRussian')}
+            </span>
+          </div>
+          <p className="mt-0.5 pl-3.5 text-sm">{hasRussian ? example.russian : <NotSet />}</p>
         </div>
-        <p className="mt-0.5 pl-3.5 text-sm">{hasRussian ? example.russian : <NotSet />}</p>
       </div>
-
-      {/* Audio — green/gray dot + badge + button */}
-      {example.audio_status && (
-        <div className="flex items-center gap-1.5">
-          <CompletionDot filled={hasAudio} />
-          <span className="text-xs text-muted-foreground">
-            {t('wordEntryContent.exampleAudio')}
-          </span>
-          <AudioStatusBadge
-            status={example.audio_status}
-            data-testid={`audio-status-badge-example-${index}`}
-          />
-          <AudioGenerateButton
-            status={example.audio_status}
-            onClick={() => onGenerateClick('example', example.id)}
-            isLoading={isPending && pendingVariables?.exampleId === example.id}
-            data-testid={`audio-generate-btn-example-${index}`}
-          />
-        </div>
-      )}
 
       {/* Context — only shown when present */}
       {example.context && (
