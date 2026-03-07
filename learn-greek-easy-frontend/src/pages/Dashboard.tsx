@@ -11,6 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { useTourAutoTrigger } from '@/hooks/useTourAutoTrigger';
+import { getLocalizedDeckDescription, getLocalizedDeckName } from '@/lib/deckLocale';
 import { reportAPIError } from '@/lib/errorReporting';
 import { formatStudyTime } from '@/lib/timeFormatUtils';
 import { useAuthStore } from '@/stores/authStore';
@@ -29,7 +30,7 @@ import type { Metric } from '@/types/dashboard';
  * Uses real backend API data via analyticsStore and deckStore.
  */
 export const Dashboard: React.FC = () => {
-  const { t } = useTranslation('common');
+  const { t, i18n } = useTranslation('common');
   const navigate = useNavigate();
 
   // Auth state
@@ -166,8 +167,8 @@ export const Dashboard: React.FC = () => {
     () =>
       activeDecks.map((deck) => ({
         id: deck.id,
-        title: deck.titleGreek || deck.title,
-        description: deck.description,
+        title: getLocalizedDeckName(deck, i18n.language),
+        description: getLocalizedDeckDescription(deck, i18n.language) || deck.description,
         status: deck.progress?.status ?? 'not-started',
         level: deck.level,
         progress: {
@@ -190,7 +191,7 @@ export const Dashboard: React.FC = () => {
         lastStudied: deck.progress?.lastStudied,
         isCulture: deck.category === 'culture',
       })),
-    [activeDecks]
+    [activeDecks, i18n.language]
   );
 
   // Loading state
