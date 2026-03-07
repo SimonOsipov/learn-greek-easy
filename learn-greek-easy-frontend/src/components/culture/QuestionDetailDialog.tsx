@@ -64,7 +64,7 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['cultureQuestionDetail', questionId],
-    queryFn: () => cultureDeckAPI.getQuestionDetail(questionId!),
+    queryFn: () => cultureDeckAPI.getQuestionDetail(questionId ?? ''),
     enabled: !!questionId,
     staleTime: 5 * 60 * 1000,
   });

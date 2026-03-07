@@ -249,6 +249,34 @@ class TestCultureQuestionDetailEndpoint:
         assert response.status_code == 404
 
     @pytest.mark.asyncio
+    async def test_get_question_detail_pending_review(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        db_session: AsyncSession,
+        culture_deck: CultureDeck,
+    ):
+        """Question with is_pending_review=True returns 404."""
+        q = CultureQuestion(
+            deck_id=culture_deck.id,
+            question_text={"en": "Pending Q?", "el": "Εκκρεμές;", "ru": "На рассмотрении?"},
+            option_a={"en": "A", "el": "Α", "ru": "А"},
+            option_b={"en": "B", "el": "Β", "ru": "Б"},
+            correct_option=1,
+            order_index=99,
+            is_pending_review=True,
+        )
+        db_session.add(q)
+        await db_session.flush()
+        await db_session.refresh(q)
+
+        response = await client.get(
+            f"/api/v1/culture/questions/{q.id}",
+            headers=auth_headers,
+        )
+        assert response.status_code == 404
+
+    @pytest.mark.asyncio
     async def test_get_question_detail_unauthenticated(
         self,
         client: AsyncClient,
