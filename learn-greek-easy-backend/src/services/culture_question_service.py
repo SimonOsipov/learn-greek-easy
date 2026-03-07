@@ -62,6 +62,7 @@ from src.db.models import (
 from src.repositories import CultureQuestionRepository
 from src.repositories.culture_question_stats import CultureQuestionStatsRepository
 from src.schemas.culture import (
+    AlsoInDeck,
     CategoryReadiness,
     CultureAnswerResponseFast,
     CultureAnswerResponseWithSM2,
@@ -74,6 +75,7 @@ from src.schemas.culture import (
     CultureQuestionBulkCreateRequest,
     CultureQuestionBulkCreateResponse,
     CultureQuestionCreate,
+    CultureQuestionDetailResponse,
     CultureQuestionQueue,
     CultureQuestionQueueItem,
     CultureQuestionUpdate,
@@ -317,6 +319,127 @@ class CultureQuestionService:
             cross_deck_map.setdefault(qid, []).append(name)
 
         return cross_deck_map
+
+    async def _get_also_in_decks_for_question(
+        self,
+        question_id: UUID,
+        current_deck_id: UUID,
+        locale: str = "en",
+    ) -> list[AlsoInDeck]:
+        """Return list of AlsoInDeck(id, name) for other active decks containing this question.
+
+        Uses the same question_text::text cast matching as _get_cross_deck_map.
+        """
+        q1 = aliased(CultureQuestion, name="q1")
+        q2 = aliased(CultureQuestion, name="q2")
+
+        stmt = (
+            select(CultureDeck.id, CultureDeck.name_en, CultureDeck.name_el, CultureDeck.name_ru)
+            .select_from(q1)
+            .join(
+                q2,
+                sa.and_(
+                    func.cast(q2.question_text, sa.Text) == func.cast(q1.question_text, sa.Text),
+                    q2.deck_id != current_deck_id,
+                    q2.deck_id.isnot(None),
+                ),
+            )
+            .join(CultureDeck, CultureDeck.id == q2.deck_id)
+            .where(
+                q1.id == question_id,
+                CultureDeck.is_active == True,  # noqa: E712
+            )
+            .distinct()
+        )
+
+        result = await self.db.execute(stmt)
+        rows = result.all()
+
+        also_in: list[AlsoInDeck] = []
+        for row in rows:
+            if locale == "el":
+                name = row.name_el or row.name_en
+            elif locale == "ru":
+                name = row.name_ru or row.name_en
+            else:
+                name = row.name_en
+            also_in.append(AlsoInDeck(id=row.id, name=name))
+        return also_in
+
+    async def get_question_detail(
+        self,
+        user_id: UUID,
+        question_id: UUID,
+        locale: str = "en",
+    ) -> CultureQuestionDetailResponse:
+        """Return full question detail with user status and presigned S3 URLs."""
+        # 1. Fetch question with deck eagerly loaded
+        stmt = (
+            select(CultureQuestion)
+            .options(selectinload(CultureQuestion.deck))
+            .where(CultureQuestion.id == question_id)
+        )
+        result = await self.db.execute(stmt)
+        question = result.scalar_one_or_none()
+
+        # 2. Validate: exists, active deck, not pending review
+        if (
+            question is None
+            or question.deck_id is None
+            or question.deck is None
+            or not question.deck.is_active
+            or question.is_pending_review  # noqa: E712
+        ):
+            raise CultureQuestionNotFoundException(question_id=str(question_id))
+
+        # 3. Fetch user stats (default to NEW if no row)
+        stats_stmt = select(CultureQuestionStats).where(
+            CultureQuestionStats.user_id == user_id,
+            CultureQuestionStats.question_id == question_id,
+        )
+        stats_result = await self.db.execute(stats_stmt)
+        stats = stats_result.scalar_one_or_none()
+        status = stats.status.value if stats else CardStatus.NEW.value
+
+        # 4. Presigned S3 URLs
+        image_url = (
+            self.s3_service.generate_presigned_url(question.image_key)
+            if question.image_key
+            else None
+        )
+        audio_url = (
+            self.s3_service.generate_presigned_url(question.audio_s3_key)
+            if question.audio_s3_key
+            else None
+        )
+
+        # 5. Build options array
+        options = [question.option_a, question.option_b]
+        if question.option_c is not None:
+            options.append(question.option_c)
+        if question.option_d is not None:
+            options.append(question.option_d)
+
+        # 6. Cross-deck membership
+        also_in_decks = await self._get_also_in_decks_for_question(
+            question_id=question_id,
+            current_deck_id=question.deck_id,
+            locale=locale,
+        )
+
+        return CultureQuestionDetailResponse(
+            id=question.id,
+            question_text=question.question_text,
+            options=options,
+            option_count=len(options),
+            correct_option=question.correct_option,
+            image_url=image_url,
+            audio_url=audio_url,
+            order_index=question.order_index,
+            original_article_url=question.original_article_url,
+            also_in_decks=also_in_decks,
+            status=status,
+        )
 
     async def browse_questions(
         self, user_id: UUID, deck_id: UUID, offset: int = 0, limit: int = 100

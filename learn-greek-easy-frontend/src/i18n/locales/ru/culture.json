@@ -118,5 +118,13 @@
     "total": "Всего",
     "tryAgain": "Попробовать снова",
     "srScore": "Счёт: {{correct}} из {{total}}, {{percentage}} процентов"
+  },
+  "questionDetail": {
+    "title": "Детали вопроса",
+    "correctAnswer": "Правильный ответ",
+    "newsSource": "Читать исходную статью",
+    "alsoInDecks": "Также в",
+    "loadError": "Не удалось загрузить вопрос",
+    "retry": "Попробовать снова"
   }
 }

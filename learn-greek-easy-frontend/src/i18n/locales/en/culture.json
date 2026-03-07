@@ -118,5 +118,13 @@
     "total": "Total",
     "tryAgain": "Try Again",
     "srScore": "Score: {{correct}} out of {{total}}, {{percentage}} percent"
+  },
+  "questionDetail": {
+    "title": "Question Details",
+    "correctAnswer": "Correct answer",
+    "newsSource": "Read source article",
+    "alsoInDecks": "Also in",
+    "loadError": "Failed to load question",
+    "retry": "Try again"
   }
 }

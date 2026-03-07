@@ -13,7 +13,7 @@ import { ChevronLeft, BookOpen, AlertCircle, Play, TrendingUp } from 'lucide-rea
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 
-import { CultureBadge, type CultureCategory } from '@/components/culture';
+import { CultureBadge } from '@/components/culture';
 import { QuestionBrowser } from '@/components/culture/QuestionBrowser';
 import { DeckProgressBar } from '@/components/decks/DeckProgressBar';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -120,7 +120,7 @@ export function CultureDeckDetailPage() {
   };
 
   // Get culture category from deck
-  const cultureCategory = deck.category as CultureCategory | undefined;
+  const cultureCategory = deck.category;
 
   return (
     <div data-testid="deck-detail" className="container mx-auto max-w-4xl px-4 py-6 md:py-8">
@@ -219,7 +219,11 @@ export function CultureDeckDetailPage() {
         </Card>
 
         {/* Question Browser */}
-        <QuestionBrowser deckId={deckId} totalQuestions={deck.question_count} />
+        <QuestionBrowser
+          deckId={deckId}
+          totalQuestions={deck.question_count}
+          category={cultureCategory}
+        />
       </div>
     </div>
   );

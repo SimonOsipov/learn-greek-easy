@@ -76,6 +76,12 @@ export interface CultureQuestionGridFilteredProperties {
   result_count: number;
 }
 
+export interface CultureQuestionDetailViewedProperties {
+  question_id: string;
+  deck_id: string;
+  question_status: string;
+}
+
 // ============================================================================
 // Tracking Functions
 // ============================================================================
@@ -187,6 +193,17 @@ export function trackCultureQuestionGridFiltered(
 ): void {
   if (typeof posthog?.capture === 'function') {
     posthog.capture('culture_question_grid_filtered', properties);
+  }
+}
+
+/**
+ * Track when user views a culture question detail modal.
+ */
+export function trackCultureQuestionDetailViewed(
+  properties: CultureQuestionDetailViewedProperties
+): void {
+  if (typeof posthog?.capture === 'function') {
+    posthog.capture('culture_question_detail_viewed', properties);
   }
 }
 

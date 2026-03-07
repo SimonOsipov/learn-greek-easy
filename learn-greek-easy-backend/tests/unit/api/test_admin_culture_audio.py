@@ -199,7 +199,7 @@ class TestGenerateCultureQuestionAudio:
 
             assert response.status_code == 409
             data = response.json()
-            assert "news" in data["detail"].lower()
+            assert "news" in data["error"]["message"].lower()
 
 
 class TestCreateQuestionAudioGeneration:

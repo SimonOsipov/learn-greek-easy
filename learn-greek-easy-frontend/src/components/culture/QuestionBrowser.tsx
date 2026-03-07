@@ -21,6 +21,9 @@ import type { CultureQuestionBrowseItem, CultureQuestionStatus } from '@/types/c
 
 import { LanguageSelector } from './LanguageSelector';
 import { QuestionCard, QuestionCardSkeleton } from './QuestionCard';
+import { QuestionDetailDialog } from './QuestionDetailDialog';
+
+import type { CultureCategory } from './CultureBadge';
 
 // ============================================
 // Types
@@ -29,6 +32,7 @@ import { QuestionCard, QuestionCardSkeleton } from './QuestionCard';
 export interface QuestionBrowserProps {
   deckId: string;
   totalQuestions: number;
+  category?: CultureCategory;
   className?: string;
 }
 
@@ -114,6 +118,7 @@ function FilterPills({ activeFilter, counts, onFilterChange }: FilterPillsProps)
 export const QuestionBrowser: React.FC<QuestionBrowserProps> = ({
   deckId,
   totalQuestions,
+  category,
   className,
 }) => {
   const { t } = useTranslation('culture');
@@ -133,6 +138,7 @@ export const QuestionBrowser: React.FC<QuestionBrowserProps> = ({
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<QuestionFilterStatus>('all');
+  const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null);
 
   // Debounced search handler
   const debouncedSetSearch = useMemo(
@@ -316,10 +322,23 @@ export const QuestionBrowser: React.FC<QuestionBrowserProps> = ({
           className="grid gap-4"
         >
           {filteredQuestions.map((question) => (
-            <QuestionCard key={question.id} question={question} language={questionLanguage} />
+            <QuestionCard
+              key={question.id}
+              question={question}
+              language={questionLanguage}
+              onClick={setSelectedQuestionId}
+            />
           ))}
         </div>
       )}
+
+      {/* Question Detail Dialog */}
+      <QuestionDetailDialog
+        questionId={selectedQuestionId}
+        deckId={deckId}
+        category={category}
+        onClose={() => setSelectedQuestionId(null)}
+      />
     </div>
   );
 };

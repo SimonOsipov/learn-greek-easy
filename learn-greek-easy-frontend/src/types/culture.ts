@@ -93,6 +93,25 @@ export interface CultureQuestionBrowseItem {
   status: CultureQuestionStatus;
 }
 
+export interface AlsoInDeck {
+  id: string;
+  name: string;
+}
+
+export interface CultureQuestionDetailResponse {
+  id: string;
+  question_text: MultilingualText;
+  options: MultilingualText[];
+  option_count: number;
+  correct_option: number;
+  image_url: string | null;
+  audio_url: string | null;
+  order_index: number;
+  original_article_url: string | null;
+  also_in_decks: AlsoInDeck[];
+  status: CultureQuestionStatus;
+}
+
 export interface CultureQuestionBrowseResponse {
   deck_id: string;
   deck_name: string;
