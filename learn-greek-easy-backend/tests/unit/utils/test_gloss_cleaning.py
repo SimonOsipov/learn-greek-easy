@@ -8,7 +8,9 @@ import pytest
 from src.utils.gloss_cleaning import clean_gloss, is_cross_reference
 
 GOLDEN_DATA = json.loads(
-    (Path(__file__).parent.parent.parent / "fixtures" / "gloss_cleaning_golden.json").read_text()
+    (Path(__file__).parent.parent.parent / "fixtures" / "gloss_cleaning_golden.json").read_text(
+        encoding="utf-8"
+    )
 )
 
 

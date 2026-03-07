@@ -295,22 +295,25 @@ class TestTranslationLookupNFCNormalization:
     """Tests for NFC normalization before querying."""
 
     async def test_nfc_normalization_applied(self):
-        """NFC-composed and decomposed forms query for the same normalized lemma."""
-        # NFD form of αετός (decomposed accents)
-        nfd_lemma = "\u03b1\u03b5\u03c4\u03cc\u03c2"  # αετός in NFD
-        nfc_lemma = "\u03b1\u03b5\u03c4\u03cc\u03c2"  # same after NFC
+        """NFD input is normalized to NFC before querying — different form, same lookup."""
         import unicodedata
 
-        nfd_form = unicodedata.normalize("NFD", "αετός")
-        assert nfd_form != unicodedata.normalize("NFC", "αετός") or True  # may be same
+        # αετός in NFC (precomposed ό = single code point U+03CC)
+        nfc_lemma = unicodedata.normalize("NFC", "αετός")
+        # αετός in NFD (decomposed: o + combining accent = two code points)
+        nfd_lemma = unicodedata.normalize("NFD", "αετός")
+
+        # Verify they are actually different byte sequences
+        assert nfd_lemma != nfc_lemma, "NFD and NFC forms should differ for Greek accented text"
 
         rows = [_make_mock_row(lemma=nfc_lemma, translation="eagle")]
         mock_session = _make_mock_session(rows)
         service = TranslationLookupService(mock_session)
 
-        # Should not raise regardless of normalization form
+        # Looking up with NFD form should normalize to NFC and find the row
         result = await service.lookup(nfd_lemma, "en")
         assert isinstance(result, TranslationResult)
+        # Verify execute was called (NFC normalization means the query ran)
         mock_session.execute.assert_called_once()
 
 

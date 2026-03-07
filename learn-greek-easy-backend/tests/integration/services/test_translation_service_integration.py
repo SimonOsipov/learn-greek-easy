@@ -321,11 +321,12 @@ class TestTranslationLookupBilingual:
         assert result["ru"].translations[0].part_of_speech == "NOUN"
 
     async def test_bilingual_empty_when_not_found(self, db_session: AsyncSession):
-        """lookup_bilingual() returns empty results for unknown lemma via sequential lookups.
+        """lookup() returns empty TranslationResults for an unknown lemma in both languages.
 
-        Note: asyncio.gather() with a shared test session can cause concurrent
-        connection errors. We verify empty-result behavior via sequential lookups
-        to keep the test deterministic in the single-session fixture context.
+        Note: asyncio.gather() on a shared test session raises InvalidRequestError
+        ("concurrent operations are not permitted"). Verifying both language lookups
+        sequentially tests the same code paths as lookup_bilingual() without
+        triggering SQLAlchemy's single-connection concurrency guard.
         """
         service = TranslationLookupService(db_session)
         en_result = await service.lookup("zzz_nonexistent", "en")
@@ -333,3 +334,5 @@ class TestTranslationLookupBilingual:
 
         assert en_result.source == "none"
         assert ru_result.source == "none"
+        assert en_result.translations == []
+        assert ru_result.translations == []
