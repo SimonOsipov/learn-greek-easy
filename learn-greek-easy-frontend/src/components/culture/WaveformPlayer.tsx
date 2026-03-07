@@ -474,17 +474,25 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
                       isSelected
                         ? isAdmin
                           ? 'bg-primary text-primary-foreground'
-                          : 'text-white'
+                          : isNewsMini
+                            ? 'bg-white/30 text-white'
+                            : 'text-white'
                         : !disabled
                           ? isAdmin
                             ? 'text-muted-foreground hover:bg-muted'
-                            : 'text-[var(--cult-text-muted)] hover:bg-[var(--cult-accent-soft)]'
+                            : isNewsMini
+                              ? 'text-white/60 hover:bg-white/15'
+                              : 'text-[var(--cult-text-muted)] hover:bg-[var(--cult-accent-soft)]'
                           : isAdmin
                             ? 'text-muted-foreground'
-                            : 'text-[var(--cult-text-muted)]'
+                            : isNewsMini
+                              ? 'text-white/40'
+                              : 'text-[var(--cult-text-muted)]'
                     )}
                     style={
-                      isSelected && !isAdmin ? { backgroundColor: 'var(--cult-accent)' } : undefined
+                      isSelected && !isAdmin && !isNewsMini
+                        ? { backgroundColor: 'var(--cult-accent)' }
+                        : undefined
                     }
                   >
                     {opt}x

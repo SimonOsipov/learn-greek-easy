@@ -230,7 +230,6 @@ export const NewsCard: React.FC<NewsCardProps> = ({
               variant="news-mini"
               audioUrl={audioUrl ?? undefined}
               barCount={20}
-              showSpeedControl={false}
               disableScrub
               disabled={!audioUrl}
               onPlay={handlePlay}
