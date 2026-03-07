@@ -15,6 +15,7 @@ export {
   type CultureQuestionGridViewedProperties,
   type CultureQuestionGridSearchedProperties,
   type CultureQuestionGridFilteredProperties,
+  type CultureQuestionDetailViewedProperties,
   // Tracking functions
   trackCultureDeckViewed,
   trackCultureSessionStarted,
@@ -27,6 +28,7 @@ export {
   trackCultureQuestionGridViewed,
   trackCultureQuestionGridSearched,
   trackCultureQuestionGridFiltered,
+  trackCultureQuestionDetailViewed,
 } from './cultureAnalytics';
 export {
   // Type interfaces

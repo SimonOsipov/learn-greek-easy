@@ -8,7 +8,7 @@
  * - Getting culture deck details
  */
 
-import type { CultureQuestionBrowseResponse } from '@/types/culture';
+import type { CultureQuestionBrowseResponse, CultureQuestionDetailResponse } from '@/types/culture';
 
 import { api } from './api';
 
@@ -248,5 +248,12 @@ export const cultureDeckAPI = {
     return api.get<CultureQuestionBrowseResponse>(
       `/api/v1/culture/decks/${deckId}/questions/browse${query}`
     );
+  },
+
+  /**
+   * Get full detail for a single culture question
+   */
+  getQuestionDetail: async (questionId: string): Promise<CultureQuestionDetailResponse> => {
+    return api.get<CultureQuestionDetailResponse>(`/api/v1/culture/questions/${questionId}`);
   },
 };
