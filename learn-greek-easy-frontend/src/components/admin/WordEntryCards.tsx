@@ -334,7 +334,7 @@ function CardTypeSection({
           />
         )}
       </div>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 gap-2">
         {group.cards.map((card) => {
           const audioStatus = AUDIO_CARD_TYPES.has(card.card_type)
             ? getCardAudioStatus(card, wordEntry)
@@ -405,47 +405,86 @@ function CardRecord({
     );
   }
 
+  const isSentenceTranslation = card.card_type === 'sentence_translation';
+
   return (
     <div
       className="space-y-1.5 rounded-md border p-3 text-sm"
       data-testid={`card-record-${card.id}`}
     >
-      {/* Top row: front content left, footer badges right */}
-      <div className="flex items-start justify-between gap-2">
-        {/* Front: prompt + question inline */}
-        <div className="flex items-baseline gap-1.5">
-          {frontPrompt && (
-            <span className="shrink-0 text-xs text-muted-foreground">{frontPrompt}</span>
-          )}
-          {frontMain && <span className="font-medium">{frontMain}</span>}
-        </div>
-        {/* Footer badges */}
-        <div className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
-          {footerItems.map((item, i) => (
-            <React.Fragment key={String(i)}>
-              {i > 0 && <Separator orientation="vertical" className="h-3" />}
-              {item}
-            </React.Fragment>
-          ))}
-        </div>
-      </div>
-      <Separator />
-      {/* Back content */}
-      <div className={showRuRow ? 'grid grid-cols-2 gap-2' : undefined}>
-        <div>
-          {backAnswer && <p className="text-muted-foreground">{backAnswer}</p>}
-          {backAnswerSub && <p className="text-xs text-muted-foreground">{backAnswerSub}</p>}
-        </div>
-        {showRuRow && (
-          <div className="text-right">
-            {ruTranslation ? (
-              <p className="text-xs text-muted-foreground">{ruTranslation}</p>
-            ) : (
-              <NotSet />
+      {isSentenceTranslation ? (
+        <>
+          <div>
+            {frontPrompt && <p className="text-xs text-muted-foreground">{frontPrompt}</p>}
+            {frontMain && <p className="font-medium">{frontMain}</p>}
+          </div>
+          <Separator />
+          <div className={showRuRow ? 'grid grid-cols-2 gap-2' : undefined}>
+            <div>
+              {backAnswer && <p className="text-muted-foreground">{backAnswer}</p>}
+              {backAnswerSub && <p className="text-xs text-muted-foreground">{backAnswerSub}</p>}
+            </div>
+            {showRuRow && (
+              <div className="text-right">
+                {ruTranslation ? (
+                  <p className="text-xs text-muted-foreground">{ruTranslation}</p>
+                ) : (
+                  <NotSet />
+                )}
+              </div>
             )}
           </div>
-        )}
-      </div>
+          {footerItems.length > 0 && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              {footerItems.map((item, i) => (
+                <React.Fragment key={String(i)}>
+                  {i > 0 && <Separator orientation="vertical" className="h-3" />}
+                  {item}
+                </React.Fragment>
+              ))}
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          {/* Top row: front content left, footer badges right */}
+          <div className="flex items-start justify-between gap-2">
+            {/* Front: prompt + question inline */}
+            <div className="flex items-baseline gap-1.5">
+              {frontPrompt && (
+                <span className="shrink-0 text-xs text-muted-foreground">{frontPrompt}</span>
+              )}
+              {frontMain && <span className="font-medium">{frontMain}</span>}
+            </div>
+            {/* Footer badges */}
+            <div className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
+              {footerItems.map((item, i) => (
+                <React.Fragment key={String(i)}>
+                  {i > 0 && <Separator orientation="vertical" className="h-3" />}
+                  {item}
+                </React.Fragment>
+              ))}
+            </div>
+          </div>
+          <Separator />
+          {/* Back content */}
+          <div className={showRuRow ? 'grid grid-cols-2 gap-2' : undefined}>
+            <div>
+              {backAnswer && <p className="text-muted-foreground">{backAnswer}</p>}
+              {backAnswerSub && <p className="text-xs text-muted-foreground">{backAnswerSub}</p>}
+            </div>
+            {showRuRow && (
+              <div className="text-right">
+                {ruTranslation ? (
+                  <p className="text-xs text-muted-foreground">{ruTranslation}</p>
+                ) : (
+                  <NotSet />
+                )}
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }
