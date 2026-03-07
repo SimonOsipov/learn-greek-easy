@@ -36,14 +36,18 @@ import {
   type DuplicateCheckStageResult,
   type FieldStatus,
   type FieldVerificationResult,
+  type GeneratedNounData,
   type LocalVerificationResult,
   type MorphologySource,
   type NormalizationStageResult,
   type SuggestionItem,
+  type TranslationLookupStageResult,
   type VerificationSummary,
 } from '@/services/adminAPI';
 import { type APIRequestError } from '@/services/api';
 import { isValidGreekInput } from '@/utils/greekValidation';
+
+import { DeclensionTable } from './DeclensionTable';
 
 export interface GenerateNounDialogProps {
   open: boolean;
@@ -300,6 +304,9 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
   const [displayDuplicate, setDisplayDuplicate] = useState<DuplicateCheckStageResult | null>(null);
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [displayVerification, setDisplayVerification] = useState<VerificationSummary | null>(null);
+  const [displayGeneration, setDisplayGeneration] = useState<GeneratedNounData | null>(null);
+  const [displayTranslationLookup, setDisplayTranslationLookup] =
+    useState<TranslationLookupStageResult | null>(null);
 
   useEffect(() => {
     return () => {
@@ -342,12 +349,16 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
       setDisplaySuggestions(mutation.data?.suggestions ?? []);
       setDisplayDuplicate(mutation.data?.duplicate_check ?? null);
       setDisplayVerification(mutation.data?.verification ?? null);
+      setDisplayGeneration(mutation.data?.generation ?? null);
+      setDisplayTranslationLookup(mutation.data?.translation_lookup ?? null);
     }
   }, [
     normalizationResult,
     mutation.data?.suggestions,
     mutation.data?.duplicate_check,
     mutation.data?.verification,
+    mutation.data?.generation,
+    mutation.data?.translation_lookup,
   ]);
 
   const trimmedWord = greekWord.trim();
@@ -401,6 +412,8 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
         setDisplaySuggestions([]);
         setDisplayDuplicate(null);
         setDisplayVerification(null);
+        setDisplayGeneration(null);
+        setDisplayTranslationLookup(null);
         mutation.reset();
         resetTimerRef.current = null;
       }, 200);
@@ -422,7 +435,14 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
               <span>/</span>
               <span>2. {t('generateNoun.pipeline.duplicates')}</span>
               <span>/</span>
-              <span>3. {t('generateNoun.pipeline.generate')}</span>
+              <span className={displayGeneration ? 'font-medium text-foreground' : ''}>
+                3.{' '}
+                {displayGeneration
+                  ? t('generateNoun.pipeline.generated')
+                  : mutation.isPending
+                    ? t('generateNoun.pipeline.generating')
+                    : t('generateNoun.pipeline.generate')}
+              </span>
               <span>/</span>
               <span className={displayVerification ? 'font-medium text-foreground' : ''}>
                 4.{' '}
@@ -584,6 +604,119 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
               </div>
             )}
 
+            {displayTranslationLookup &&
+              (displayTranslationLookup.en?.source !== 'none' ||
+                displayTranslationLookup.ru?.source !== 'none') && (
+                <Collapsible data-testid="tdict-section">
+                  <CollapsibleTrigger className="flex w-full items-center justify-between rounded-md border p-3 text-sm font-medium hover:bg-muted/50">
+                    <span>{t('generateNoun.tdict.title')}</span>
+                    <ChevronDown className="h-4 w-4" />
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-2 space-y-2 px-1">
+                    {displayTranslationLookup.en &&
+                      displayTranslationLookup.en.source !== 'none' && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className="text-muted-foreground">EN:</span>
+                          <span>{displayTranslationLookup.en.combined_text}</span>
+                          <Badge variant="outline" className="text-xs">
+                            {displayTranslationLookup.en.source}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            ({displayTranslationLookup.en.sense_count})
+                          </span>
+                        </div>
+                      )}
+                    {displayTranslationLookup.ru &&
+                      displayTranslationLookup.ru.source !== 'none' && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className="text-muted-foreground">RU:</span>
+                          <span>{displayTranslationLookup.ru.combined_text}</span>
+                          <Badge variant="outline" className="text-xs">
+                            {displayTranslationLookup.ru.source}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            ({displayTranslationLookup.ru.sense_count})
+                          </span>
+                        </div>
+                      )}
+                  </CollapsibleContent>
+                </Collapsible>
+              )}
+
+            {displayGeneration && (
+              <div data-testid="generation-section" className="space-y-3">
+                <h3 className="text-sm font-medium">{t('generateNoun.generation.title')}</h3>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">
+                      {t('generateNoun.generation.translationEn')}
+                    </span>
+                    <p data-testid="gen-translation-en" className="font-medium">
+                      {displayGeneration.translation_en}
+                      {displayGeneration.translation_en_plural && (
+                        <span className="text-muted-foreground">
+                          {' '}
+                          (pl. {displayGeneration.translation_en_plural})
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">
+                      {t('generateNoun.generation.translationRu')}
+                    </span>
+                    <p data-testid="gen-translation-ru" className="font-medium">
+                      {displayGeneration.translation_ru}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">
+                      {t('generateNoun.generation.pronunciation')}
+                    </span>
+                    <p data-testid="gen-pronunciation" className="font-medium">
+                      {displayGeneration.pronunciation}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">
+                      {t('generateNoun.generation.declensionGroup')}
+                    </span>
+                    <p>
+                      <Badge data-testid="gen-declension-group" variant="outline">
+                        {displayGeneration.grammar_data.declension_group}
+                      </Badge>
+                    </p>
+                  </div>
+                </div>
+                <div>
+                  <h4 className="mb-1 text-sm font-medium text-muted-foreground">
+                    {t('generateNoun.generation.declensionTable')}
+                  </h4>
+                  <DeclensionTable cases={displayGeneration.grammar_data.cases} />
+                </div>
+                {displayGeneration.examples.length > 0 && (
+                  <div>
+                    <h4 className="mb-1 text-sm font-medium text-muted-foreground">
+                      {t('generateNoun.generation.examples')}
+                    </h4>
+                    <div className="space-y-2">
+                      {displayGeneration.examples.map((ex) => (
+                        <div
+                          key={ex.id}
+                          data-testid={`gen-example-${ex.id}`}
+                          className="rounded-md border p-2 text-sm"
+                        >
+                          <p className="font-medium">{ex.greek}</p>
+                          <p className="text-muted-foreground">{ex.english}</p>
+                          <p className="text-muted-foreground">{ex.russian}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {displayVerification && (
               <div data-testid="verification-section" className="space-y-3">
                 <div className="flex items-center gap-2">
@@ -614,14 +747,13 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                   setDisplaySuggestions([]);
                   setDisplayDuplicate(null);
                   setDisplayVerification(null);
+                  setDisplayGeneration(null);
+                  setDisplayTranslationLookup(null);
                   mutation.reset();
                 }}
                 data-testid="generate-noun-start-over"
               >
                 {t('generateNoun.startOverButton')}
-              </Button>
-              <Button disabled={mutation.isPending} data-testid="generate-noun-continue">
-                {t('generateNoun.continueButton')}
               </Button>
             </DialogFooter>
           </>

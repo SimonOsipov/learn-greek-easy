@@ -119,9 +119,80 @@ const mockNormalizationResponse = (
           existing_entry: null,
           matched_decks: [],
         },
+  translation_lookup: null,
   generation: null,
   verification: null,
   persist: null,
+});
+
+const mockGenerationResponse = (
+  overrides?: Partial<{
+    generation: ReturnType<typeof mockNormalizationResponse>['generation'];
+    translation_lookup: ReturnType<typeof mockNormalizationResponse>['translation_lookup'];
+  }>
+) => ({
+  ...mockNormalizationResponse(),
+  stage: 'verification',
+  generation:
+    overrides?.generation !== undefined
+      ? overrides.generation
+      : {
+          lemma: 'γάτα',
+          part_of_speech: 'noun' as const,
+          translation_en: 'cat',
+          translation_en_plural: 'cats',
+          translation_ru: 'кошка',
+          pronunciation: '/ˈɣa.ta/',
+          grammar_data: {
+            gender: 'feminine' as const,
+            declension_group: 'feminine_a',
+            cases: {
+              singular: {
+                nominative: 'η γάτα',
+                genitive: 'της γάτας',
+                accusative: 'τη γάτα',
+                vocative: 'γάτα',
+              },
+              plural: {
+                nominative: 'οι γάτες',
+                genitive: 'των γατών',
+                accusative: 'τις γάτες',
+                vocative: 'γάτες',
+              },
+            },
+          },
+          examples: [
+            {
+              id: 1,
+              greek: 'Η γάτα κοιμάται.',
+              english: 'The cat is sleeping.',
+              russian: 'Кошка спит.',
+            },
+            {
+              id: 2,
+              greek: 'Οι γάτες παίζουν.',
+              english: 'The cats are playing.',
+              russian: 'Кошки играют.',
+            },
+          ],
+        },
+  translation_lookup:
+    overrides?.translation_lookup !== undefined
+      ? overrides.translation_lookup
+      : {
+          en: {
+            translations: ['cat'],
+            combined_text: 'cat',
+            source: 'dictionary' as const,
+            sense_count: 1,
+          },
+          ru: {
+            translations: ['кошка'],
+            combined_text: 'кошка',
+            source: 'dictionary' as const,
+            sense_count: 1,
+          },
+        },
 });
 
 // ============================================
@@ -472,8 +543,8 @@ describe('GenerateNounDialog', () => {
     expect(screen.getByTestId('generate-noun-submit')).not.toBeDisabled();
   });
 
-  // 24. Continue button is enabled after duplicate check
-  it('Continue button is enabled after duplicate check completes', async () => {
+  // 24. Continue button removed — only Start Over remains
+  it('does not render Continue button after result', async () => {
     const user = userEvent.setup();
     vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(mockNormalizationResponse());
     renderDialog();
@@ -483,7 +554,7 @@ describe('GenerateNounDialog', () => {
     await waitFor(() => {
       expect(screen.getByTestId('generate-noun-result')).toBeInTheDocument();
     });
-    expect(screen.getByTestId('generate-noun-continue')).not.toBeDisabled();
+    expect(screen.queryByTestId('generate-noun-continue')).not.toBeInTheDocument();
   });
 
   // 25. No correction note when corrected_from is null
@@ -699,8 +770,8 @@ describe('GenerateNounDialog', () => {
     expect(screen.getByTestId('duplicate-found-warning')).toHaveTextContent('cat');
   });
 
-  // 33. Continue button enabled even when duplicate found
-  it('Continue button is enabled even when duplicate found', async () => {
+  // 33. Continue button removed even when duplicate found
+  it('does not render Continue button even when duplicate found', async () => {
     const user = userEvent.setup();
     vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(
       mockNormalizationResponse({
@@ -727,10 +798,129 @@ describe('GenerateNounDialog', () => {
     await waitFor(() => {
       expect(screen.getByTestId('duplicate-found-warning')).toBeInTheDocument();
     });
-    expect(screen.getByTestId('generate-noun-continue')).not.toBeDisabled();
+    expect(screen.queryByTestId('generate-noun-continue')).not.toBeInTheDocument();
   });
 
-  // 34. Start Over clears swap state
+  // 34. Displays generation data
+  it('displays generation data when present', async () => {
+    const user = userEvent.setup();
+    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(mockGenerationResponse());
+    renderDialog();
+
+    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
+    await user.click(screen.getByTestId('generate-noun-submit'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('generation-section')).toBeInTheDocument();
+    });
+    expect(screen.getByTestId('gen-translation-en')).toHaveTextContent('cat');
+    expect(screen.getByTestId('gen-translation-ru')).toHaveTextContent('кошка');
+    expect(screen.getByTestId('gen-pronunciation')).toHaveTextContent('/ˈɣa.ta/');
+    expect(screen.getByTestId('gen-declension-group')).toHaveTextContent('feminine_a');
+    expect(screen.getByTestId('declension-table')).toBeInTheDocument();
+  });
+
+  // 35. Displays examples
+  it('displays example sentences', async () => {
+    const user = userEvent.setup();
+    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(mockGenerationResponse());
+    renderDialog();
+
+    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
+    await user.click(screen.getByTestId('generate-noun-submit'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('gen-example-1')).toBeInTheDocument();
+    });
+    expect(screen.getByTestId('gen-example-1')).toHaveTextContent('Η γάτα κοιμάται.');
+    expect(screen.getByTestId('gen-example-2')).toHaveTextContent('Οι γάτες παίζουν.');
+  });
+
+  // 36. Displays TDICT section
+  it('displays TDICT section with dictionary badge', async () => {
+    const user = userEvent.setup();
+    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(mockGenerationResponse());
+    renderDialog();
+
+    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
+    await user.click(screen.getByTestId('generate-noun-submit'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('tdict-section')).toBeInTheDocument();
+    });
+    expect(screen.getByTestId('tdict-section')).toHaveTextContent('Dictionary Translations');
+  });
+
+  // 37. Hides TDICT when null
+  it('hides TDICT section when translation_lookup is null', async () => {
+    const user = userEvent.setup();
+    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(
+      mockGenerationResponse({ translation_lookup: null })
+    );
+    renderDialog();
+
+    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
+    await user.click(screen.getByTestId('generate-noun-submit'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('generation-section')).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId('tdict-section')).not.toBeInTheDocument();
+  });
+
+  // 38. Hides generation when null
+  it('hides generation section when generation is null', async () => {
+    const user = userEvent.setup();
+    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(mockNormalizationResponse());
+    renderDialog();
+
+    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
+    await user.click(screen.getByTestId('generate-noun-submit'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('generate-noun-result')).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId('generation-section')).not.toBeInTheDocument();
+  });
+
+  // 39. Pipeline step 3 highlighted when generation present
+  it('highlights pipeline step 3 when generation data is present', async () => {
+    const user = userEvent.setup();
+    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(mockGenerationResponse());
+    renderDialog();
+
+    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
+    await user.click(screen.getByTestId('generate-noun-submit'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('pipeline-steps')).toBeInTheDocument();
+    });
+    const pipelineSteps = screen.getByTestId('pipeline-steps');
+    const step3 = pipelineSteps.querySelector('.font-medium');
+    expect(step3).toBeTruthy();
+    expect(step3?.textContent).toContain('Generated');
+  });
+
+  // 40. Start Over clears generation
+  it('Start Over clears generation section', async () => {
+    const user = userEvent.setup();
+    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(mockGenerationResponse());
+    renderDialog();
+
+    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
+    await user.click(screen.getByTestId('generate-noun-submit'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('generation-section')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByTestId('generate-noun-start-over'));
+
+    expect(screen.queryByTestId('generation-section')).not.toBeInTheDocument();
+    expect(screen.getByTestId('generate-noun-input')).toBeInTheDocument();
+  });
+
+  // 41. Start Over clears swap state (existing test)
   it('Start Over clears swap state and returns to input form', async () => {
     const user = userEvent.setup();
     vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(

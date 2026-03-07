@@ -710,12 +710,69 @@ export interface VerificationSummary {
   morphology_source: MorphologySource;
 }
 
+// ============================================
+// Translation Lookup Types
+// ============================================
+
+export interface TranslationSourceInfo {
+  translations: string[];
+  combined_text: string;
+  source: 'dictionary' | 'pivot' | 'none';
+  sense_count: number;
+}
+
+export interface TranslationLookupStageResult {
+  en: TranslationSourceInfo | null;
+  ru: TranslationSourceInfo | null;
+}
+
+// ============================================
+// Generation Types
+// ============================================
+
+export interface GeneratedNounCaseSet {
+  nominative: string;
+  genitive: string;
+  accusative: string;
+  vocative: string;
+}
+
+export interface GeneratedNounCases {
+  singular: GeneratedNounCaseSet;
+  plural: GeneratedNounCaseSet;
+}
+
+export interface GeneratedNounGrammar {
+  gender: 'masculine' | 'feminine' | 'neuter';
+  declension_group: string;
+  cases: GeneratedNounCases;
+}
+
+export interface GeneratedExample {
+  id: number;
+  greek: string;
+  english: string;
+  russian: string;
+}
+
+export interface GeneratedNounData {
+  lemma: string;
+  part_of_speech: 'noun';
+  translation_en: string;
+  translation_en_plural: string | null;
+  translation_ru: string;
+  pronunciation: string;
+  grammar_data: GeneratedNounGrammar;
+  examples: GeneratedExample[];
+}
+
 export interface GenerateWordEntryResponse {
   stage: string;
   normalization: NormalizationStageResult | null;
   suggestions: SuggestionItem[];
   duplicate_check: DuplicateCheckStageResult | null;
-  generation: null;
+  translation_lookup: TranslationLookupStageResult | null;
+  generation: GeneratedNounData | null;
   verification: VerificationSummary | null;
   persist: null;
 }

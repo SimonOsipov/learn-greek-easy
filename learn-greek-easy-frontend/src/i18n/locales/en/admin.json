@@ -1003,7 +1003,6 @@
       "low": "Low"
     },
     "lowConfidenceWarning": "Low confidence — result may be unreliable. You can still proceed.",
-    "continueButton": "Continue",
     "startOverButton": "Start Over",
     "errorGeneric": "Something went wrong. Please try again.",
     "accentCorrected": "Accent corrected: {{from}} → {{to}}",
@@ -1019,7 +1018,27 @@
     "existsInDecks": "This word exists in {{count}} deck(s)",
     "pipeline": {
       "duplicates": "Duplicates",
-      "generate": "Generate"
+      "generate": "Generate",
+      "generated": "Generated",
+      "generating": "Generating..."
+    },
+    "generation": {
+      "title": "Generated Data",
+      "translationEn": "Translation (EN)",
+      "translationRu": "Translation (RU)",
+      "pronunciation": "Pronunciation",
+      "declensionGroup": "Declension Group",
+      "examples": "Example Sentences",
+      "declensionTable": "Declension Table",
+      "caseNominative": "Nominative",
+      "caseGenitive": "Genitive",
+      "caseAccusative": "Accusative",
+      "caseVocative": "Vocative",
+      "singular": "Singular",
+      "plural": "Plural"
+    },
+    "tdict": {
+      "title": "Dictionary Translations"
     },
     "verification": {
       "combinedTier": "Verification Tier",
