@@ -1015,7 +1015,6 @@
       "low": "Низкая"
     },
     "lowConfidenceWarning": "Низкая уверенность — результат может быть ненадёжным. Вы всё равно можете продолжить.",
-    "continueButton": "Продолжить",
     "startOverButton": "Начать заново",
     "errorGeneric": "Что-то пошло не так. Попробуйте ещё раз.",
     "accentCorrected": "Ударение исправлено: {{from}} → {{to}}",
@@ -1031,7 +1030,27 @@
     "existsInDecks": "Это слово есть в {{count}} колоде(ах)",
     "pipeline": {
       "duplicates": "Дубликаты",
-      "generate": "Генерация"
+      "generate": "Генерация",
+      "generated": "Сгенерировано",
+      "generating": "Генерация..."
+    },
+    "generation": {
+      "title": "Сгенерированные данные",
+      "translationEn": "Перевод (EN)",
+      "translationRu": "Перевод (RU)",
+      "pronunciation": "Произношение",
+      "declensionGroup": "Группа склонения",
+      "examples": "Примеры предложений",
+      "declensionTable": "Таблица склонения",
+      "caseNominative": "Именительный",
+      "caseGenitive": "Родительный",
+      "caseAccusative": "Винительный",
+      "caseVocative": "Звательный",
+      "singular": "Единственное",
+      "plural": "Множественное"
+    },
+    "tdict": {
+      "title": "Словарные переводы"
     },
     "verification": {
       "combinedTier": "Уровень верификации",

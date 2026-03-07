@@ -20,7 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
 from src.core.dependencies import get_current_superuser
-from src.core.exceptions import ConflictException, NotFoundException
+from src.core.exceptions import ConflictException, NotFoundException, NounGenerationError
 from src.core.logging import get_logger
 from src.db.dependencies import get_db
 from src.db.models import (
@@ -115,6 +115,7 @@ from src.services.lemma_normalization_service import detect_article, get_lemma_n
 from src.services.lexicon_service import LexiconService
 from src.services.local_verification_service import get_local_verification_service
 from src.services.news_item_service import NewsItemService
+from src.services.noun_data_generation_service import get_noun_data_generation_service
 from src.services.translation_service import TranslationLookupService
 from src.services.verification_tier import compute_combined_tier
 from src.services.word_entry_response import word_entry_to_response
@@ -2352,6 +2353,36 @@ def _extract_gender_article(
     return gender, article
 
 
+async def _run_generation_stage(
+    normalized_lemma: NormalizedLemma,
+    translation_lookup: TranslationLookupStageResult | None,
+) -> GeneratedNounData:
+    """Run LLM noun data generation, passing TDICT pre-filled translations."""
+    pre_filled_en = (
+        translation_lookup.en.combined_text
+        if translation_lookup and translation_lookup.en and translation_lookup.en.source != "none"
+        else None
+    )
+    pre_filled_ru = (
+        translation_lookup.ru.combined_text
+        if translation_lookup and translation_lookup.ru and translation_lookup.ru.source != "none"
+        else None
+    )
+
+    try:
+        gen_svc = get_noun_data_generation_service()
+        return await gen_svc.generate(
+            normalized_lemma,
+            pre_filled_en=pre_filled_en,
+            pre_filled_ru=pre_filled_ru,
+        )
+    except NounGenerationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Noun generation failed: {exc.detail}",
+        ) from exc
+
+
 async def _run_verification_stage(
     generated_data: GeneratedNounData,
     normalized_lemma: NormalizedLemma,
@@ -2509,20 +2540,24 @@ async def generate_word_entry(
     except Exception as e:
         logger.warning(f"Translation lookup failed (non-blocking): {e}")
 
-    # Stage 3: Generation (NGEN-08-04 — not yet implemented)
-    generated_data = None  # Will be set by generation stage
+    # Stage 3: Generation
+    normalized_lemma = NormalizedLemma(
+        input_word=primary.input_form,
+        lemma=primary.morphology.lemma,
+        gender=primary_gender,
+        article=primary_article,
+        pos=primary.morphology.pos,
+        confidence=primary.confidence,
+    )
+
+    generated_data = await _run_generation_stage(
+        normalized_lemma=normalized_lemma,
+        translation_lookup=translation_lookup,
+    )
 
     # Stage 4: Verification (local + cross-AI in parallel)
     verification_summary: VerificationSummary | None = None
     if generated_data is not None:
-        normalized_lemma = NormalizedLemma(
-            input_word=primary.input_form,
-            lemma=primary.morphology.lemma,
-            gender=primary_gender,
-            article=primary_article,
-            pos=primary.morphology.pos,
-            confidence=primary.confidence,
-        )
         verification_summary = await _run_verification_stage(
             generated_data=generated_data,
             normalized_lemma=normalized_lemma,
@@ -2533,7 +2568,11 @@ async def generate_word_entry(
     last_stage = (
         "verification"
         if verification_summary
-        else ("translation_lookup" if translation_lookup else "duplicate_check")
+        else (
+            "generation"
+            if generated_data
+            else ("translation_lookup" if translation_lookup else "duplicate_check")
+        )
     )
 
     return GenerateWordEntryResponse(
@@ -2553,6 +2592,7 @@ async def generate_word_entry(
         suggestions=suggestions,
         duplicate_check=dup_result,
         translation_lookup=translation_lookup,
+        generation=generated_data,
         verification=verification_summary,
     )
 
