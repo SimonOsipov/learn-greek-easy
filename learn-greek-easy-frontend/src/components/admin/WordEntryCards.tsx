@@ -334,7 +334,7 @@ function CardTypeSection({
           />
         )}
       </div>
-      <div className="space-y-2">
+      <div className="grid grid-cols-2 gap-2">
         {group.cards.map((card) => {
           const audioStatus = AUDIO_CARD_TYPES.has(card.card_type)
             ? getCardAudioStatus(card, wordEntry)
@@ -374,69 +374,78 @@ function CardRecord({
       (front as Record<string, unknown>).direction === 'target_to_el'
     );
 
+  const footerItems: React.ReactNode[] = [];
+  if (card.tier !== null) {
+    footerItems.push(
+      <Tooltip key="tier">
+        <TooltipTrigger asChild>
+          <span className="cursor-default">
+            {t('wordEntryDetail.cardTier')}: {card.tier}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-xs text-xs">
+          {t('wordEntryDetail.cards.tierTooltip')}
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+  footerItems.push(
+    <span key="variant" className="flex flex-col leading-tight">
+      <span>{getVariantKeyLabel(card.variant_key)}</span>
+      <span className="font-mono text-[10px] text-muted-foreground/60">{card.variant_key}</span>
+    </span>
+  );
+  if (audioStatus) {
+    footerItems.push(
+      <AudioStatusBadge
+        key="audio"
+        status={audioStatus}
+        data-testid={`card-audio-badge-${card.id}`}
+      />
+    );
+  }
+
   return (
-    <div className="rounded-md border p-3 text-sm" data-testid={`card-record-${card.id}`}>
-      <div className="space-y-1.5">
-        <div>
-          {frontPrompt && <p className="text-xs text-muted-foreground">{frontPrompt}</p>}
-          {frontMain && <p className="font-medium">{frontMain}</p>}
+    <div
+      className="space-y-1.5 rounded-md border p-3 text-sm"
+      data-testid={`card-record-${card.id}`}
+    >
+      {/* Top row: front content left, footer badges right */}
+      <div className="flex items-start justify-between gap-2">
+        {/* Front: prompt + question inline */}
+        <div className="flex items-baseline gap-1.5">
+          {frontPrompt && (
+            <span className="shrink-0 text-xs text-muted-foreground">{frontPrompt}</span>
+          )}
+          {frontMain && <span className="font-medium">{frontMain}</span>}
         </div>
-        <Separator />
+        {/* Footer badges */}
+        <div className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
+          {footerItems.map((item, i) => (
+            <React.Fragment key={String(i)}>
+              {i > 0 && <Separator orientation="vertical" className="h-3" />}
+              {item}
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+      <Separator />
+      {/* Back content */}
+      <div className={showRuRow ? 'grid grid-cols-2 gap-2' : undefined}>
         <div>
           {backAnswer && <p className="text-muted-foreground">{backAnswer}</p>}
           {backAnswerSub && <p className="text-xs text-muted-foreground">{backAnswerSub}</p>}
-          {showRuRow &&
-            (ruTranslation ? (
+        </div>
+        {showRuRow && (
+          <div className="text-right">
+            {ruTranslation ? (
               <p className="text-xs text-muted-foreground">{ruTranslation}</p>
             ) : (
               <NotSet />
-            ))}
-        </div>
-      </div>
-      {(() => {
-        const footerItems: React.ReactNode[] = [];
-        if (card.tier !== null) {
-          footerItems.push(
-            <Tooltip key="tier">
-              <TooltipTrigger asChild>
-                <span className="cursor-default">
-                  {t('wordEntryDetail.cardTier')}: {card.tier}
-                </span>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="max-w-xs text-xs">
-                {t('wordEntryDetail.cards.tierTooltip')}
-              </TooltipContent>
-            </Tooltip>
-          );
-        }
-        footerItems.push(
-          <span key="variant" className="flex flex-col leading-tight">
-            <span>{getVariantKeyLabel(card.variant_key)}</span>
-            <span className="font-mono text-[10px] text-muted-foreground/60">
-              {card.variant_key}
-            </span>
-          </span>
-        );
-        if (audioStatus) {
-          footerItems.push(
-            <AudioStatusBadge
-              key="audio"
-              status={audioStatus}
-              data-testid={`card-audio-badge-${card.id}`}
-            />
-          );
-        }
-        return (
-          <div className="mt-1.5 flex items-center gap-3 text-xs text-muted-foreground">
-            {footerItems.map((item, i) => (
-              <React.Fragment key={String(i)}>
-                {i > 0 && <Separator orientation="vertical" className="h-3" />}
-                {item}
-              </React.Fragment>
-            ))}
+            )}
           </div>
-        );
-      })()}
+        )}
+      </div>
     </div>
   );
 }
