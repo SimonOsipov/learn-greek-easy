@@ -8,6 +8,7 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tests.factories.culture import CultureDeckFactory, CultureQuestionFactory
+from tests.factories.news import NewsItemFactory
 
 FAKE_AUDIO = b"\xff\xfb\x90\x00" + b"\x00" * 16000
 
@@ -165,6 +166,40 @@ class TestGenerateCultureQuestionAudio:
             )
 
             assert response.status_code == 400
+
+    @pytest.mark.asyncio
+    async def test_generate_audio_news_linked_question_returns_409(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+    ):
+        """409 — question linked to a news item cannot have audio regenerated."""
+        news_item = await NewsItemFactory.create(session=db_session)
+        deck = await CultureDeckFactory.create(session=db_session)
+        question = await CultureQuestionFactory.create(
+            session=db_session,
+            deck_id=deck.id,
+            news_item_id=news_item.id,
+        )
+
+        from src.config import settings
+
+        with (
+            patch(
+                "src.api.v1.culture.router.is_background_tasks_enabled",
+                return_value=True,
+            ),
+            patch.object(settings, "elevenlabs_api_key", "test-api-key"),
+        ):
+            response = await client.post(
+                f"/api/v1/culture/questions/{question.id}/generate-audio",
+                headers=superuser_auth_headers,
+            )
+
+            assert response.status_code == 409
+            data = response.json()
+            assert "news" in data["detail"].lower()
 
 
 class TestCreateQuestionAudioGeneration:

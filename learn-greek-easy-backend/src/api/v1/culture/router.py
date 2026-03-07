@@ -85,7 +85,7 @@ router = APIRouter(
     - Authenticated users receive progress data for each deck
     - Anonymous users receive decks without progress
 
-    **Categories**: history, geography, politics, culture, traditions
+    **Categories**: history, geography, politics, culture, traditions, practical, news
 
     **Response includes**:
     - Deck name and description (multilingual JSON)
@@ -128,7 +128,7 @@ async def list_culture_decks(
     page_size: int = Query(default=20, ge=1, le=100, description="Items per page (max 100)"),
     category: Optional[str] = Query(
         default=None,
-        description="Filter by category (history, geography, politics, culture, traditions)",
+        description="Filter by category (history, geography, politics, culture, traditions, practical, news)",
     ),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -275,7 +275,7 @@ async def get_culture_deck(
 
     **Use Case**: Populate category filter dropdown in the UI.
 
-    **Possible categories**: history, geography, politics, culture, traditions
+    **Possible categories**: history, geography, politics, culture, traditions, practical, news
     """,
     responses={
         200: {
@@ -719,7 +719,7 @@ router.include_router(mock_exam_router)
 
     **Required fields**:
     - name_el, name_en, name_ru: Deck name in all languages
-    - category: history, geography, politics, culture, traditions
+    - category: history, geography, politics, culture, traditions, practical, news
 
     **Optional fields**:
     - description_el, description_en, description_ru: Descriptions
@@ -1207,6 +1207,13 @@ async def generate_culture_question_audio(
     question = result.scalar_one_or_none()
     if question is None:
         raise CultureQuestionNotFoundException(question_id=str(question_id))
+
+    # Block audio generation for news-linked questions
+    if question.news_item_id is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Cannot regenerate audio for news-linked questions. Audio is managed by the news item.",
+        )
 
     # Validate Greek text exists
     question_text_el = question.question_text.get("el", "") if question.question_text else ""

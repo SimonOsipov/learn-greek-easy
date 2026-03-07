@@ -10,7 +10,6 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-import { Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
@@ -29,7 +28,10 @@ import type {
   CultureQuestionUpdatePayload,
 } from '@/services/adminAPI';
 import { adminAPI } from '@/services/adminAPI';
+import type { AudioStatus } from '@/services/wordEntryAPI';
 
+import { AudioGenerateButton } from './AudioGenerateButton';
+import { AudioStatusBadge } from './AudioStatusBadge';
 import { CultureCardForm } from './CultureCardForm';
 import { AlertDialog } from '../dialogs/AlertDialog';
 
@@ -118,7 +120,6 @@ export function CardEditModal({ open, onOpenChange, question, onSuccess }: CardE
       toast({ title: t('cultureAudio.success') });
       setAudioCooldown(true);
       setTimeout(() => setAudioCooldown(false), 15000);
-      onSuccess?.();
     } catch {
       toast({ title: t('cultureAudio.error'), variant: 'destructive' });
     } finally {
@@ -141,6 +142,13 @@ export function CardEditModal({ open, onOpenChange, question, onSuccess }: CardE
     setIsDirty(false);
     onOpenChange(false);
   };
+
+  // Derive audio status for AudioStatusBadge / AudioGenerateButton
+  const audioStatus: AudioStatus = isGeneratingAudio
+    ? 'generating'
+    : question?.audio_s3_key
+      ? 'ready'
+      : 'missing';
 
   // Prevent closing when dirty
   const handleOpenChange = (newOpen: boolean) => {
@@ -171,36 +179,20 @@ export function CardEditModal({ open, onOpenChange, question, onSuccess }: CardE
           )}
 
           {question && (
-            <div className="flex items-center justify-between px-1 py-2">
-              <span
-                data-testid="audio-status"
-                className={
-                  question.audio_s3_key ? 'text-sm text-green-600' : 'text-sm text-gray-400'
-                }
-              >
-                {question.audio_s3_key
-                  ? t('cultureAudio.status.ready')
-                  : t('cultureAudio.status.missing')}
-              </span>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                data-testid="generate-audio-btn"
-                disabled={isGeneratingAudio || audioCooldown}
-                onClick={handleGenerateAudio}
-              >
-                {isGeneratingAudio ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {t('cultureAudio.generating')}
-                  </>
-                ) : question.audio_s3_key ? (
-                  t('cultureAudio.regenerate')
-                ) : (
-                  t('cultureAudio.generate')
-                )}
-              </Button>
+            <div className="flex items-center justify-between rounded-lg border px-3 py-2">
+              <AudioStatusBadge status={audioStatus} data-testid="audio-status" />
+              {question.news_item_id ? (
+                <span className="text-sm text-muted-foreground" data-testid="audio-managed-by-news">
+                  {t('cultureAudio.managedByNews')}
+                </span>
+              ) : (
+                <AudioGenerateButton
+                  status={audioStatus}
+                  onClick={handleGenerateAudio}
+                  isLoading={audioCooldown}
+                  data-testid="generate-audio-btn"
+                />
+              )}
             </div>
           )}
 

@@ -8,7 +8,8 @@ export type CultureCategory =
   | 'politics'
   | 'culture'
   | 'traditions'
-  | 'practical';
+  | 'practical'
+  | 'news';
 
 export interface CultureBadgeProps {
   category?: CultureCategory;
@@ -64,6 +65,12 @@ const CATEGORY_COLORS: Record<CultureCategory, CategoryColorConfig> = {
     text: 'text-teal-700 dark:text-teal-300',
     bg: 'bg-teal-500/10',
     border: 'border-teal-500/20',
+  },
+  news: {
+    dot: 'bg-sky-500',
+    text: 'text-sky-700 dark:text-sky-300',
+    bg: 'bg-sky-500/10',
+    border: 'border-sky-500/20',
   },
 };
 

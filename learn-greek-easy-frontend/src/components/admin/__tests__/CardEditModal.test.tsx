@@ -70,6 +70,10 @@ const createMockQuestion = (
   source_article_url: null,
   is_pending_review: false,
   audio_s3_key: null,
+  news_item_id: null,
+  original_article_url: null,
+  order_index: 0,
+  news_item_audio_a2_s3_key: null,
   created_at: '2026-01-01T00:00:00Z',
   ...overrides,
 });
@@ -608,16 +612,16 @@ describe('CardEditModal', () => {
   // ============================================
 
   describe('Audio Generation', () => {
-    it('renders Generate Audio button when audio_s3_key is null', () => {
+    it('renders Generate button when audio_s3_key is null', () => {
       const question = createMockQuestion({ audio_s3_key: null });
       renderModal({ question });
-      expect(screen.getByTestId('generate-audio-btn')).toHaveTextContent('Generate Audio');
+      expect(screen.getByTestId('generate-audio-btn')).toHaveTextContent('Generate');
     });
 
-    it('renders Regenerate Audio button when audio_s3_key is set', () => {
+    it('renders Regenerate button when audio_s3_key is set', () => {
       const question = createMockQuestion({ audio_s3_key: 'culture/audio/abc.mp3' });
       renderModal({ question });
-      expect(screen.getByTestId('generate-audio-btn')).toHaveTextContent('Regenerate Audio');
+      expect(screen.getByTestId('generate-audio-btn')).toHaveTextContent('Regenerate');
     });
 
     it('calls generateCultureQuestionAudio on click', async () => {
@@ -640,7 +644,6 @@ describe('CardEditModal', () => {
       renderModal({ question });
       await userEvent.click(screen.getByTestId('generate-audio-btn'));
       expect(screen.getByTestId('generate-audio-btn')).toBeDisabled();
-      expect(screen.getByTestId('generate-audio-btn')).toHaveTextContent('Generating...');
       resolve!();
     });
 
@@ -666,27 +669,46 @@ describe('CardEditModal', () => {
       });
     });
 
-    it('calls onSuccess to refresh data after generation', async () => {
+    it('does not call onSuccess after audio generation (modal stays open)', async () => {
       const question = createMockQuestion({ audio_s3_key: null });
       const onSuccess = vi.fn();
       vi.mocked(adminAPI.generateCultureQuestionAudio).mockResolvedValueOnce(undefined);
       renderModal({ question, onSuccess });
       await userEvent.click(screen.getByTestId('generate-audio-btn'));
       await waitFor(() => {
-        expect(onSuccess).toHaveBeenCalled();
+        expect(mockToast).toHaveBeenCalled();
       });
+      expect(onSuccess).not.toHaveBeenCalled();
     });
 
-    it('shows audio status indicator', () => {
+    it('shows missing audio status badge when audio_s3_key is null', () => {
       const question = createMockQuestion({ audio_s3_key: null });
       renderModal({ question });
-      expect(screen.getByTestId('audio-status')).toHaveTextContent('No audio');
+      expect(screen.getByTestId('audio-status-missing')).toBeInTheDocument();
     });
 
-    it('shows Audio ready status when audio_s3_key is set', () => {
+    it('shows ready audio status badge when audio_s3_key is set', () => {
       const question = createMockQuestion({ audio_s3_key: 'culture/audio/abc.mp3' });
       renderModal({ question });
-      expect(screen.getByTestId('audio-status')).toHaveTextContent('Audio ready');
+      expect(screen.getByTestId('audio-status-ready')).toBeInTheDocument();
+    });
+
+    it('does NOT show generate audio button when question has news_item_id', () => {
+      const question = createMockQuestion({ news_item_id: 'news-abc-123' });
+      renderModal({ question });
+      expect(screen.queryByTestId('generate-audio-btn')).not.toBeInTheDocument();
+    });
+
+    it('shows "managed by news" label when question has news_item_id', () => {
+      const question = createMockQuestion({ news_item_id: 'news-abc-123' });
+      renderModal({ question });
+      expect(screen.getByTestId('audio-managed-by-news')).toBeInTheDocument();
+    });
+
+    it('shows generate audio button when question has no news_item_id', () => {
+      const question = createMockQuestion({ news_item_id: null });
+      renderModal({ question });
+      expect(screen.getByTestId('generate-audio-btn')).toBeInTheDocument();
     });
   });
 });

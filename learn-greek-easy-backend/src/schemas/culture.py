@@ -34,9 +34,9 @@ class GeneratedQuestionResponse(BaseModel):
     question_text: MultilingualText = Field(..., description="The question in all three languages")
     options: list[MultilingualText] = Field(..., description="Answer options (2 or 4)")
     correct_option: int = Field(..., ge=1, le=4, description="Correct answer index (1-based)")
-    category: Literal["history", "geography", "politics", "culture", "traditions", "practical"] = (
-        Field(..., description="Question category")
-    )
+    category: Literal[
+        "history", "geography", "politics", "culture", "traditions", "practical", "news"
+    ] = Field(..., description="Question category")
     difficulty: Literal["easy", "medium", "hard"] = Field(..., description="Difficulty level")
     explanation: MultilingualText = Field(..., description="Explanation of the correct answer")
     source_context: str = Field(..., description="Brief context about the source article used")
@@ -111,7 +111,7 @@ class CultureDeckResponse(BaseModel):
     category: str = Field(
         ...,
         max_length=50,
-        description="Category: history, geography, politics, culture, traditions",
+        description="Category: history, geography, politics, culture, traditions, practical, news",
     )
     question_count: int = Field(..., ge=0, description="Total questions in deck")
     is_premium: bool = Field(
@@ -340,7 +340,8 @@ class CategoryReadiness(BaseModel):
     """Readiness data for a single logical culture category."""
 
     category: str = Field(
-        ..., description="Logical category key: history, geography, politics, culture"
+        ...,
+        description="Logical category key: history, geography, politics, culture, traditions, practical, news",
     )
     readiness_percentage: float = Field(..., ge=0, le=100, description="Weighted readiness 0-100")
     questions_mastered: int = Field(..., ge=0, description="Questions with MASTERED status")
@@ -452,7 +453,7 @@ class CultureQuestionQueue(BaseModel):
     category: str = Field(
         ...,
         max_length=50,
-        description="Deck category: history, geography, politics, culture, traditions, practical",
+        description="Deck category: history, geography, politics, culture, traditions, practical, news",
     )
     total_due: int = Field(..., ge=0, description="Number of due questions in queue")
     total_new: int = Field(..., ge=0, description="Number of new questions in queue")
@@ -502,7 +503,7 @@ class CultureAnswerResponseWithSM2(BaseModel):
     message: Optional[str] = Field(None, description="Feedback message for UI")
     deck_category: str = Field(
         ...,
-        description="Deck category for achievement tracking (history, geography, politics, culture, traditions, practical)",
+        description="Deck category for achievement tracking (history, geography, politics, culture, traditions, practical, news)",
     )
 
 
@@ -551,7 +552,7 @@ class CultureDeckCreate(BaseModel):
     category: str = Field(
         ...,
         max_length=50,
-        description="Category: history, geography, politics, culture, traditions",
+        description="Category: history, geography, politics, culture, traditions, practical, news",
     )
     order_index: int = Field(default=0, ge=0, description="Display order within category")
     is_premium: bool = Field(
@@ -586,7 +587,7 @@ class CultureDeckUpdate(BaseModel):
     category: Optional[str] = Field(
         None,
         max_length=50,
-        description="Category: history, geography, politics, culture, traditions",
+        description="Category: history, geography, politics, culture, traditions, practical, news",
     )
     order_index: Optional[int] = Field(None, ge=0, description="Display order within category")
     is_active: Optional[bool] = Field(None, description="Whether deck is active")
@@ -619,7 +620,7 @@ class CultureDeckAdminResponse(BaseModel):
     category: str = Field(
         ...,
         max_length=50,
-        description="Category: history, geography, politics, culture, traditions",
+        description="Category: history, geography, politics, culture, traditions, practical, news",
     )
     question_count: int = Field(..., ge=0, description="Total questions in deck")
     is_active: bool = Field(..., description="Whether deck is active")

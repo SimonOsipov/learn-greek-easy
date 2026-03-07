@@ -52,6 +52,7 @@ class CultureDeckFactory(BaseFactory):
         geography: Geography category deck
         politics: Politics category deck
         culture: Culture category deck
+        news: News category deck
 
     Example:
         deck = await CultureDeckFactory.create()
@@ -127,6 +128,17 @@ class CultureDeckFactory(BaseFactory):
             description_el="Ερωτήσεις παραδόσεων",
             description_en="Traditions questions",
             description_ru="Вопросы о традициях",
+        )
+
+        # News category deck
+        news = factory.Trait(
+            category="news",
+            name_el="Ειδήσεις",
+            name_en="News",
+            name_ru="Новости",
+            description_el="Ερωτήσεις από ειδήσεις",
+            description_en="News-based questions",
+            description_ru="Вопросы по новостям",
         )
 
 
