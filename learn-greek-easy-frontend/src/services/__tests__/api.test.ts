@@ -44,6 +44,10 @@ import { supabase } from '@/lib/supabaseClient';
 const mockGetSession = vi.mocked(supabase.auth.getSession);
 const mockSignOut = vi.mocked(supabase.auth.signOut);
 
+vi.mock('@/i18n', () => ({
+  default: { language: 'en' },
+}));
+
 // Mock the sleep function for retry tests to avoid slow tests
 vi.mock('@/lib/retryUtils', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/retryUtils')>();
@@ -106,6 +110,26 @@ describe('Supabase Token Injection', () => {
 
     const fetchCall = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(fetchCall[1].headers).not.toHaveProperty('Authorization');
+  });
+
+  it('should inject Accept-Language header from i18n', async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ data: 'test' }),
+      headers: new Headers(),
+    });
+
+    await api.get('/api/v1/test', { skipAuth: true });
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          'Accept-Language': 'en',
+        }),
+      })
+    );
   });
 
   it('should skip auth when skipAuth option is true', async () => {

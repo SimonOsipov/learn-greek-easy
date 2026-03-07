@@ -22,6 +22,7 @@ import type { CultureLanguage } from '@/types/culture';
 import { CultureBadge } from './CultureBadge';
 import { LanguageSelector } from './LanguageSelector';
 import { SourceImage } from './SourceImage';
+import { WaveformPlayer } from './WaveformPlayer';
 
 import type { CultureCategory } from './CultureBadge';
 
@@ -154,9 +155,7 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
             {/* Audio */}
             {data.audio_url && (
               <div data-testid="question-detail-audio">
-                <audio controls className="w-full" src={data.audio_url}>
-                  <track kind="captions" />
-                </audio>
+                <WaveformPlayer audioUrl={data.audio_url} />
               </div>
             )}
 
@@ -188,14 +187,6 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
                 );
               })}
             </div>
-
-            {/* Correct Answer Label */}
-            {data.options[data.correct_option - 1] && (
-              <p className="text-xs text-muted-foreground">
-                {t('questionDetail.correctAnswer')}:{' '}
-                {String.fromCharCode(65 + data.correct_option - 1)}
-              </p>
-            )}
 
             {/* News Source Link */}
             {data.original_article_url && (

@@ -41,6 +41,14 @@ vi.mock('@/lib/analytics', async (importOriginal) => {
   };
 });
 
+vi.mock('../WaveformPlayer', () => ({
+  WaveformPlayer: ({ audioUrl, className }: { audioUrl?: string; className?: string }) => (
+    <div data-testid="waveform-player" data-audio-url={audioUrl || ''} className={className}>
+      <button data-testid="waveform-play-button">Play</button>
+    </div>
+  ),
+}));
+
 // Import after mock so we get the mocked version
 import { trackCultureQuestionDetailViewed } from '@/lib/analytics';
 
@@ -148,6 +156,18 @@ describe('QuestionDetailDialog', () => {
         expect(screen.getByTestId('question-detail-text')).toBeInTheDocument();
       });
       expect(screen.queryByTestId('question-detail-audio')).not.toBeInTheDocument();
+    });
+
+    it('shows WaveformPlayer when audio_url is present', async () => {
+      vi.mocked(cultureDeckAPI.getQuestionDetail).mockResolvedValue(
+        makeDetailResponse({ audio_url: 'https://example.com/audio.mp3' })
+      );
+      renderDialog();
+
+      await waitFor(() => {
+        expect(screen.getByTestId('question-detail-audio')).toBeInTheDocument();
+      });
+      expect(screen.getByTestId('waveform-player')).toBeInTheDocument();
     });
 
     it('hides image section when image_url is null', async () => {

@@ -121,7 +121,6 @@
   },
   "questionDetail": {
     "title": "Question Details",
-    "correctAnswer": "Correct answer",
     "newsSource": "Read source article",
     "alsoInDecks": "Also in",
     "loadError": "Failed to load question",

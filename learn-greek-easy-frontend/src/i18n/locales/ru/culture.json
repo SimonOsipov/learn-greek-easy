@@ -121,7 +121,6 @@
   },
   "questionDetail": {
     "title": "Детали вопроса",
-    "correctAnswer": "Правильный ответ",
     "newsSource": "Читать исходную статью",
     "alsoInDecks": "Также в",
     "loadError": "Не удалось загрузить вопрос",
