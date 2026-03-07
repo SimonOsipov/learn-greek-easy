@@ -24,7 +24,7 @@ logger = get_logger(__name__)
 class CrossAIVerificationService:
     """Verifies LLM-generated noun data by comparing with a secondary model generation."""
 
-    _SECONDARY_MODEL = "openai/gpt-4.1-mini"
+    _SECONDARY_MODEL = "minimax/minimax-m2.5"
     _FIELD_WEIGHTS: ClassVar[dict[str, float]] = {
         "lemma": 3.0,
         "grammar_data.gender": 3.0,
