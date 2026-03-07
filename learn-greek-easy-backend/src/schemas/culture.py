@@ -194,6 +194,31 @@ class CultureQuestionBrowseResponse(BaseModel):
     questions: list[CultureQuestionBrowseItem]
 
 
+class AlsoInDeck(BaseModel):
+    """A deck that also contains a given question."""
+
+    id: UUID
+    name: str
+
+
+class CultureQuestionDetailResponse(BaseModel):
+    """Full detail response for a single culture question with user status."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    question_text: dict[str, str]
+    options: list[dict[str, str]]
+    option_count: int = Field(..., ge=2, le=4)
+    correct_option: int = Field(..., ge=1, le=4)
+    image_url: Optional[str] = Field(None)
+    audio_url: Optional[str] = Field(None)
+    order_index: int = Field(..., ge=0)
+    original_article_url: Optional[str] = Field(None)
+    also_in_decks: list[AlsoInDeck] = Field(default_factory=list)
+    status: str = Field(..., description="new | learning | review | mastered")
+
+
 # ============================================================================
 # Culture Question Stats Schemas
 # ============================================================================

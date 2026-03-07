@@ -50,6 +50,7 @@ from src.schemas.culture import (
     CultureQuestionBulkCreateRequest,
     CultureQuestionBulkCreateResponse,
     CultureQuestionCreate,
+    CultureQuestionDetailResponse,
     CultureQuestionQueue,
     CultureQuestionUpdate,
     CultureReadinessResponse,
@@ -439,6 +440,34 @@ async def browse_deck_questions(
     service = CultureQuestionService(db)
     return await service.browse_questions(
         user_id=current_user.id, deck_id=deck_id, offset=offset, limit=limit
+    )
+
+
+@router.get(
+    "/questions/{question_id}",
+    response_model=CultureQuestionDetailResponse,
+    summary="Get culture question detail",
+    description=(
+        "Get full question data with user-specific learning status, "
+        "presigned S3 media URLs, and cross-deck membership."
+    ),
+    responses={
+        200: {"description": "Question detail"},
+        401: {"description": "Not authenticated"},
+        404: {"description": "Question not found or inactive deck"},
+    },
+)
+async def get_question_detail(
+    question_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    locale: str = Depends(get_locale_from_header),
+) -> CultureQuestionDetailResponse:
+    service = CultureQuestionService(db)
+    return await service.get_question_detail(
+        user_id=current_user.id,
+        question_id=question_id,
+        locale=locale,
     )
 
 
