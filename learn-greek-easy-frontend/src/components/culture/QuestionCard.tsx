@@ -18,6 +18,8 @@ export interface QuestionCardProps {
   question: CultureQuestionBrowseItem;
   /** Override language for question text display. Falls back to i18n.language when omitted. */
   language?: string;
+  /** Callback when card is clicked. Receives the question ID. */
+  onClick?: (questionId: string) => void;
 }
 
 // ============================================
@@ -88,7 +90,7 @@ QuestionCardSkeleton.displayName = 'QuestionCardSkeleton';
 // QuestionCard Component
 // ============================================
 
-export const QuestionCard: React.FC<QuestionCardProps> = ({ question, language }) => {
+export const QuestionCard: React.FC<QuestionCardProps> = ({ question, language, onClick }) => {
   const { t, i18n } = useTranslation('culture');
   const lang = language ?? i18n.language;
 
@@ -97,8 +99,28 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question, language }
   const filled = STATUS_TO_MASTERY[question.status];
   const dotClass = STATUS_DOT_CLASS[question.status];
 
+  const isClickable = !!onClick;
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (onClick && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      onClick(question.id);
+    }
+  };
+
   return (
-    <Card data-testid="question-card" className="relative overflow-hidden">
+    <Card
+      data-testid="question-card"
+      className={cn(
+        'relative overflow-hidden',
+        isClickable && 'cursor-pointer hover:border-primary/30'
+      )}
+      onClick={isClickable ? () => onClick(question.id) : undefined}
+      onKeyDown={isClickable ? handleKeyDown : undefined}
+      role={isClickable ? 'button' : undefined}
+      tabIndex={isClickable ? 0 : undefined}
+      aria-label={isClickable ? questionText : undefined}
+    >
       <CardContent className="p-4">
         {/* Top-left: question number */}
         <span

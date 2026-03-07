@@ -27,3 +27,6 @@ export type { QuestionCardProps } from './QuestionCard';
 
 export { QuestionBrowser } from './QuestionBrowser';
 export type { QuestionBrowserProps } from './QuestionBrowser';
+
+export { QuestionDetailDialog } from './QuestionDetailDialog';
+export type { QuestionDetailDialogProps } from './QuestionDetailDialog';

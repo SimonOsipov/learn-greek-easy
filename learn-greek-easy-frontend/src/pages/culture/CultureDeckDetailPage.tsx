@@ -219,7 +219,11 @@ export function CultureDeckDetailPage() {
         </Card>
 
         {/* Question Browser */}
-        <QuestionBrowser deckId={deckId} totalQuestions={deck.question_count} />
+        <QuestionBrowser
+          deckId={deckId}
+          totalQuestions={deck.question_count}
+          category={cultureCategory}
+        />
       </div>
     </div>
   );
