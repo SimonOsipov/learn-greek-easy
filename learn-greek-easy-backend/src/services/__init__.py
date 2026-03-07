@@ -43,6 +43,11 @@ from src.services.s3_service import S3Service, get_s3_service
 from src.services.seed_service import SeedService
 from src.services.sm2_service import SM2Service
 from src.services.spellcheck_service import SpellcheckService, get_spellcheck_service
+from src.services.translation_service import (
+    TranslationEntry,
+    TranslationLookupService,
+    TranslationResult,
+)
 from src.services.user_deletion_service import DeletionResult, UserDeletionService
 from src.services.user_progress_reset_service import UserProgressResetService
 from src.services.webhook_service import WebhookService
@@ -77,6 +82,9 @@ __all__ = [
     "SeedService",
     "SpellcheckService",
     "SM2Service",
+    "TranslationEntry",
+    "TranslationLookupService",
+    "TranslationResult",
     "UserDeletionService",
     "UserProgressResetService",
     "WebhookService",

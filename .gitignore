@@ -12,3 +12,6 @@ backlog/
 # k6 Performance Testing
 k6/reports/*
 !k6/reports/.gitkeep
+
+# ETL source data files (large, not tracked)
+data/

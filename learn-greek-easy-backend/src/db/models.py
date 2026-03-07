@@ -2706,3 +2706,63 @@ class GreekLexicon(Base):
             f"<GreekLexicon(id={self.id}, form={self.form!r}, "
             f"lemma={self.lemma!r}, pos={self.pos!r})>"
         )
+
+
+class Translation(Base):
+    """Bilingual translation entry for Greek lemmas.
+
+    Stored in the 'reference' PostgreSQL schema alongside greek_lexicon.
+    Contains translations from multiple sources (kaikki, freedict, pivot).
+    """
+
+    __tablename__ = "translations"
+    __table_args__ = {"schema": "reference"}
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+        comment="Auto-incrementing primary key",
+    )
+    lemma: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        comment="Greek lemma (dictionary form)",
+    )
+    language: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        comment="Target language code (en, ru)",
+    )
+    sense_index: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        comment="Sense ordering index (0-based) for multi-sense lemmas",
+    )
+    translation: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        comment="Translation text in the target language",
+    )
+    part_of_speech: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Part of speech (noun, verb, adj, etc.)",
+    )
+    source: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        comment="Data source identifier (kaikki, freedict, pivot)",
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+        comment="Row creation timestamp",
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<Translation(id={self.id}, lemma={self.lemma!r}, "
+            f"language={self.language!r}, source={self.source!r})>"
+        )

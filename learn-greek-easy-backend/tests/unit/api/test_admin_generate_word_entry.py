@@ -176,7 +176,7 @@ class TestGenerateWordEntry:
         superuser_auth_headers: dict,
         v2_deck: Deck,
     ):
-        """Returns 200 with stage='duplicate_check' and confidence_tier='high' for confidence=1.0."""
+        """Returns 200 with stage='translation_lookup' and confidence_tier='high' for confidence=1.0."""
         with patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory:
             mock_svc = MagicMock()
             mock_svc.normalize_smart.return_value = _mock_smart_result(confidence=1.0)
@@ -190,7 +190,7 @@ class TestGenerateWordEntry:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["stage"] == "duplicate_check"
+        assert data["stage"] == "translation_lookup"
         norm = data["normalization"]
         assert norm is not None
         assert norm["confidence_tier"] == "high"
@@ -328,6 +328,7 @@ class TestGenerateWordEntry:
         data = response.json()
         assert data["duplicate_check"] is not None
         assert data["duplicate_check"]["is_duplicate"] is False
+        assert data["translation_lookup"] is not None
         assert data["generation"] is None
         assert data["verification"] is None
         assert data["persist"] is None
@@ -802,3 +803,176 @@ class TestGenerateWordEntry:
         assert dup["existing_entry"]["lemma"] == "γάτα"
         assert len(dup["matched_decks"]) > 0
         assert dup["matched_decks"][0]["deck_name"] == v2_deck.name_en
+
+    # -------------------------------------------------------------------------
+    # Translation Lookup Stage (Stage 2.5)
+    # -------------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_generate_includes_dictionary_translations(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        v2_deck: Deck,
+    ):
+        """translation_lookup contains source='dictionary' when kaikki/freedict rows exist."""
+        from unittest.mock import AsyncMock
+
+        from src.services.translation_service import TranslationEntry, TranslationResult
+
+        mock_en = TranslationResult(
+            translations=[
+                TranslationEntry(
+                    lemma="γάτα",
+                    language="en",
+                    sense_index=0,
+                    translation="cat",
+                    part_of_speech="NOUN",
+                    source="kaikki",
+                )
+            ],
+            source="dictionary",
+            combined_text="cat",
+        )
+        mock_ru = TranslationResult(
+            translations=[
+                TranslationEntry(
+                    lemma="γάτα",
+                    language="ru",
+                    sense_index=0,
+                    translation="кошка",
+                    part_of_speech="NOUN",
+                    source="freedict",
+                )
+            ],
+            source="dictionary",
+            combined_text="кошка",
+        )
+
+        with (
+            patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory,
+            patch("src.api.v1.admin.TranslationLookupService") as mock_tl_cls,
+        ):
+            mock_svc = MagicMock()
+            mock_svc.normalize_smart.return_value = _mock_smart_result()
+            mock_factory.return_value = mock_svc
+
+            mock_tl_instance = MagicMock()
+            mock_tl_instance.lookup_bilingual = AsyncMock(
+                return_value={"en": mock_en, "ru": mock_ru}
+            )
+            mock_tl_cls.return_value = mock_tl_instance
+
+            resp = await client.post(
+                ENDPOINT,
+                json={"word": "γάτα", "deck_id": str(v2_deck.id)},
+                headers=superuser_auth_headers,
+            )
+
+        assert resp.status_code == 200
+        data = resp.json()
+        tl = data["translation_lookup"]
+        assert tl is not None
+        assert tl["en"]["source"] == "dictionary"
+        assert tl["ru"]["source"] == "dictionary"
+        assert "cat" in tl["en"]["combined_text"]
+        assert tl["en"]["sense_count"] == 1
+
+    @pytest.mark.asyncio
+    async def test_generate_includes_pivot_translations(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        v2_deck: Deck,
+    ):
+        """translation_lookup contains source='pivot' when only pivot rows exist."""
+        from unittest.mock import AsyncMock
+
+        from src.services.translation_service import TranslationEntry, TranslationResult
+
+        mock_pivot = TranslationResult(
+            translations=[
+                TranslationEntry(
+                    lemma="γάτα",
+                    language="ru",
+                    sense_index=0,
+                    translation="кот",
+                    part_of_speech="NOUN",
+                    source="pivot",
+                )
+            ],
+            source="pivot",
+            combined_text="кот",
+        )
+        mock_empty = TranslationResult(translations=[], source="none", combined_text="")
+
+        with (
+            patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory,
+            patch("src.api.v1.admin.TranslationLookupService") as mock_tl_cls,
+        ):
+            mock_svc = MagicMock()
+            mock_svc.normalize_smart.return_value = _mock_smart_result()
+            mock_factory.return_value = mock_svc
+
+            mock_tl_instance = MagicMock()
+            mock_tl_instance.lookup_bilingual = AsyncMock(
+                return_value={"en": mock_empty, "ru": mock_pivot}
+            )
+            mock_tl_cls.return_value = mock_tl_instance
+
+            resp = await client.post(
+                ENDPOINT,
+                json={"word": "γάτα", "deck_id": str(v2_deck.id)},
+                headers=superuser_auth_headers,
+            )
+
+        assert resp.status_code == 200
+        data = resp.json()
+        tl = data["translation_lookup"]
+        assert tl is not None
+        assert tl["en"]["source"] == "none"
+        assert tl["ru"]["source"] == "pivot"
+        assert tl["ru"]["combined_text"] == "кот"
+
+    @pytest.mark.asyncio
+    async def test_generate_no_translations_source_none(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        v2_deck: Deck,
+    ):
+        """translation_lookup has source='none' for both languages when table is empty."""
+        from unittest.mock import AsyncMock
+
+        from src.services.translation_service import TranslationResult
+
+        mock_empty = TranslationResult(translations=[], source="none", combined_text="")
+
+        with (
+            patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory,
+            patch("src.api.v1.admin.TranslationLookupService") as mock_tl_cls,
+        ):
+            mock_svc = MagicMock()
+            mock_svc.normalize_smart.return_value = _mock_smart_result()
+            mock_factory.return_value = mock_svc
+
+            mock_tl_instance = MagicMock()
+            mock_tl_instance.lookup_bilingual = AsyncMock(
+                return_value={"en": mock_empty, "ru": mock_empty}
+            )
+            mock_tl_cls.return_value = mock_tl_instance
+
+            resp = await client.post(
+                ENDPOINT,
+                json={"word": "γάτα", "deck_id": str(v2_deck.id)},
+                headers=superuser_auth_headers,
+            )
+
+        assert resp.status_code == 200
+        data = resp.json()
+        tl = data["translation_lookup"]
+        assert tl is not None
+        assert tl["en"]["source"] == "none"
+        assert tl["ru"]["source"] == "none"
+        assert tl["en"]["sense_count"] == 0
+        assert tl["ru"]["sense_count"] == 0
