@@ -342,6 +342,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
   const isSubmitting = mutation.isPending;
   const normalizationResult = mutation.data?.normalization ?? null;
   const hasResult = normalizationResult !== null;
+  const showPipeline = isSubmitting || hasResult;
 
   useEffect(() => {
     if (normalizationResult) {
@@ -393,6 +394,8 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
       strategy: chosen.strategy,
     });
     setDisplaySuggestions(newSuggestions);
+    setDisplayGeneration(null);
+    setDisplayTranslationLookup(null);
   };
 
   const handleSubmit = () => {
@@ -426,7 +429,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
       <DialogContent className="sm:max-w-[650px]" data-testid="generate-noun-dialog">
         <DialogHeader>
           <DialogTitle>{t('generateNoun.title')}</DialogTitle>
-          {hasResult && (
+          {showPipeline && (
             <div
               data-testid="pipeline-steps"
               className="flex items-center gap-1 text-xs text-muted-foreground"

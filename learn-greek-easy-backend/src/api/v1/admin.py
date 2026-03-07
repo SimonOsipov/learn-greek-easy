@@ -20,7 +20,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
 from src.core.dependencies import get_current_superuser
-from src.core.exceptions import ConflictException, NotFoundException, NounGenerationError
+from src.core.exceptions import (
+    ConflictException,
+    NotFoundException,
+    NounGenerationError,
+    OpenRouterError,
+)
 from src.core.logging import get_logger
 from src.db.dependencies import get_db
 from src.db.models import (
@@ -2380,6 +2385,11 @@ async def _run_generation_stage(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Noun generation failed: {exc.detail}",
+        ) from exc
+    except OpenRouterError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"LLM provider error: {exc}",
         ) from exc
 
 
