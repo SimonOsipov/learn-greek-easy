@@ -546,3 +546,70 @@ class TestRetryBehavior:
 
         assert result.content == "recovered"
         assert mock_client.post.call_count == 3
+
+
+# ============================================================================
+# TestClientReuse — shared httpx.AsyncClient lifecycle
+# ============================================================================
+
+
+class TestClientReuse:
+    """Tests for shared httpx.AsyncClient lifecycle."""
+
+    def test_init_client_is_none(self) -> None:
+        """_client is None before start() is called."""
+        service = OpenRouterService()
+        assert service._client is None
+
+    @pytest.mark.asyncio
+    async def test_start_creates_client(self, mock_settings_configured: None) -> None:
+        """start() creates an httpx.AsyncClient."""
+        service = OpenRouterService()
+        await service.start()
+        assert service._client is not None
+        assert isinstance(service._client, httpx.AsyncClient)
+        await service.close()
+
+    @pytest.mark.asyncio
+    async def test_close_sets_client_to_none(self, mock_settings_configured: None) -> None:
+        """close() sets _client back to None."""
+        service = OpenRouterService()
+        await service.start()
+        await service.close()
+        assert service._client is None
+
+    @pytest.mark.asyncio
+    async def test_close_idempotent(self) -> None:
+        """close() is safe to call when _client is already None."""
+        service = OpenRouterService()
+        await service.close()  # Should not raise
+
+    @pytest.mark.asyncio
+    async def test_complete_reuses_shared_client(self, mock_settings_configured: None) -> None:
+        """complete() uses self._client when available (no new AsyncClient constructor call)."""
+        service = OpenRouterService()
+        mock_client = AsyncMock()
+        mock_client.post.return_value = _make_success_response()
+        service._client = mock_client
+
+        with patch("src.services.openrouter_service.httpx.AsyncClient") as mock_cls:
+            await service.complete([{"role": "user", "content": "call 1"}])
+            await service.complete([{"role": "user", "content": "call 2"}])
+            mock_cls.assert_not_called()
+
+        assert mock_client.post.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_complete_falls_back_to_ephemeral(self, mock_settings_configured: None) -> None:
+        """complete() creates ephemeral client when _client is None."""
+        service = OpenRouterService()
+        assert service._client is None
+
+        mock_client = AsyncMock()
+        mock_client.post.return_value = _make_success_response()
+
+        with patch("src.services.openrouter_service.httpx.AsyncClient") as mock_cls:
+            mock_cls.return_value.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_cls.return_value.__aexit__ = AsyncMock(return_value=None)
+            await service.complete([{"role": "user", "content": "test"}])
+            mock_cls.assert_called_once()

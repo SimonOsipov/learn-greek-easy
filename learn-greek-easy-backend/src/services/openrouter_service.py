@@ -40,6 +40,26 @@ BACKOFF_SECONDS = [1, 2]
 class OpenRouterService:
     """Service for OpenRouter chat completions API."""
 
+    def __init__(self) -> None:
+        self._client: httpx.AsyncClient | None = None
+
+    async def start(self) -> None:
+        """Create the long-lived HTTP client with connection pooling and HTTP/2."""
+        self._client = httpx.AsyncClient(
+            timeout=settings.openrouter_timeout,
+            http2=True,
+            limits=httpx.Limits(
+                max_connections=10,
+                max_keepalive_connections=5,
+            ),
+        )
+
+    async def close(self) -> None:
+        """Close the HTTP client and release connection pool."""
+        if self._client is not None:
+            await self._client.aclose()
+            self._client = None
+
     def _check_configured(self) -> None:
         """Raise OpenRouterNotConfiguredError if API key is not set."""
         if not settings.openrouter_configured:
@@ -90,8 +110,11 @@ class OpenRouterService:
         for attempt in range(1, MAX_ATTEMPTS + 1):
             start_time = time.monotonic()
             try:
-                async with httpx.AsyncClient(timeout=settings.openrouter_timeout) as client:
-                    response = await client.post(url, headers=self._get_headers(), json=body)
+                if self._client is not None:
+                    response = await self._client.post(url, headers=self._get_headers(), json=body)
+                else:
+                    async with httpx.AsyncClient(timeout=settings.openrouter_timeout) as client:
+                        response = await client.post(url, headers=self._get_headers(), json=body)
 
                 latency_ms = round((time.monotonic() - start_time) * 1000)
 
