@@ -145,7 +145,7 @@ class TestFullAgreement:
         assert result.overall_agreement == 1.0
         assert len(result.comparisons) == 15
         assert all(c.agrees for c in result.comparisons)
-        assert result.secondary_model == "anthropic/claude-haiku-4.5"
+        assert result.secondary_model == "minimax/minimax-m2.5"
         assert result.secondary_generation is not None
         assert result.error is None
 

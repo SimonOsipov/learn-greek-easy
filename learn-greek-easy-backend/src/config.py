@@ -529,7 +529,7 @@ class Settings(BaseSettings):
         description="OpenRouter API key for LLM-powered text generation",
     )
     openrouter_default_model: str = Field(
-        default="google/gemini-3-flash-preview",
+        default="google/gemini-2.5-flash-lite",
         description="Default OpenRouter model for text generation",
     )
     openrouter_timeout: int = Field(
