@@ -80,6 +80,7 @@ class OpenRouterService:
         response_format: dict[str, Any] | None = None,
         temperature: float = 0.3,
         max_tokens: int = 2048,
+        reasoning: dict[str, Any] | None = None,
     ) -> OpenRouterResponse:
         """Call OpenRouter chat completions API with retry and structured logging."""
         self._check_configured()
@@ -94,6 +95,8 @@ class OpenRouterService:
         }
         if response_format is not None:
             body["response_format"] = response_format
+        if reasoning is not None:
+            body["reasoning"] = reasoning
 
         logger.debug(
             "OpenRouter request",

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import logging
 from unittest.mock import AsyncMock, patch
 
@@ -146,7 +145,7 @@ class TestFullAgreement:
         assert result.overall_agreement == 1.0
         assert len(result.comparisons) == 15
         assert all(c.agrees for c in result.comparisons)
-        assert result.secondary_model == "openai/gpt-4.1-mini"
+        assert result.secondary_model == "anthropic/claude-haiku-4.5"
         assert result.secondary_generation is not None
         assert result.error is None
 
@@ -510,12 +509,12 @@ class TestPromptConstruction:
         service: CrossAIVerificationService,
         mock_openrouter: AsyncMock,
     ) -> None:
-        """verify() passes model='openai/gpt-4.1-mini' to complete()."""
+        """verify() passes the correct secondary model to complete()."""
         primary = _make_noun_data()
         mock_openrouter.complete.return_value = _make_response(_noun_data_to_json(primary))
         await service.verify(primary, _make_lemma())
         call_kwargs = mock_openrouter.complete.call_args
-        assert call_kwargs.kwargs["model"] == "openai/gpt-4.1-mini"
+        assert call_kwargs.kwargs["model"] == "anthropic/claude-haiku-4.5"
 
     @pytest.mark.asyncio
     async def test_response_format(
@@ -550,7 +549,7 @@ class TestPromptConstruction:
         service: CrossAIVerificationService,
         mock_openrouter: AsyncMock,
     ) -> None:
-        """User message includes lemma, gender, article, pos, confidence."""
+        """User message includes lemma, gender, article, pos."""
         primary = _make_noun_data()
         lemma = _make_lemma(
             lemma="σπίτι", gender="neuter", article="το", pos="NOUN", confidence=1.0
@@ -564,19 +563,18 @@ class TestPromptConstruction:
         assert "το" in user_content
 
     @pytest.mark.asyncio
-    async def test_user_prompt_has_json_schema(
+    async def test_user_prompt_has_response_instruction(
         self,
         service: CrossAIVerificationService,
         mock_openrouter: AsyncMock,
     ) -> None:
-        """User message includes the GeneratedNounData JSON schema."""
+        """User message includes instruction to respond with JSON matching examples."""
         primary = _make_noun_data()
         mock_openrouter.complete.return_value = _make_response(_noun_data_to_json(primary))
         await service.verify(primary, _make_lemma())
         messages = mock_openrouter.complete.call_args.kwargs["messages"]
         user_content = messages[1]["content"]
-        schema_str = json.dumps(GeneratedNounData.model_json_schema(), indent=2)
-        assert schema_str in user_content
+        assert "valid JSON" in user_content
 
     @pytest.mark.asyncio
     async def test_none_gender_uses_empty_string(

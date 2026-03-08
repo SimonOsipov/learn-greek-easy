@@ -92,7 +92,6 @@ class LexiconService:
                 GreekLexicon.lemma == lemma,
                 GreekLexicon.pos == pos,
             )
-            .distinct()
             .order_by(
                 case((GreekLexicon.number == "Sing", 0), else_=1),
                 case(

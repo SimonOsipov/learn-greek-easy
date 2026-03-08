@@ -45,6 +45,8 @@ export interface PracticeCardProps {
   translationRu?: string | null;
   /** Russian plural translation from word entry, null if unavailable */
   translationRuPlural?: string | null;
+  /** Russian sentence text for target_to_el cards (looked up from example), null if unavailable */
+  sentenceRu?: string | null;
   /** Callback when user rates the card (1=again, 2=hard, 3=good, 4=easy) */
   onRate?: (rating: number) => void;
   /** Lifted audio state from the page, includes URL + playback state + toggle */
@@ -339,6 +341,7 @@ export function PracticeCard({
   onFlip,
   translationRu,
   translationRuPlural,
+  sentenceRu,
   onRate,
   audioState,
   wordEntryId,
@@ -426,8 +429,9 @@ export function PracticeCard({
     if (isSentenceCard) {
       let mainText = front.main;
       // For target_to_el sentences, swap front text when RU is selected
-      if (isSentenceTargetToEl && currentLang === 'ru' && sentenceBack.answer_ru) {
-        mainText = sentenceBack.answer_ru;
+      if (isSentenceTargetToEl && currentLang === 'ru') {
+        const ruText = sentenceBack.answer_ru || sentenceRu;
+        if (ruText) mainText = ruText;
       }
       return { ...front, sub: null, main: mainText };
     }

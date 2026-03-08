@@ -18,15 +18,15 @@ logger = get_logger(__name__)
 _SYSTEM_PROMPT = """You are a Greek linguistics expert. Generate complete noun data as structured JSON.
 
 Rules:
-1. Generate complete noun declension data in JSON format.
-2. Include all 4 cases (nominative, genitive, accusative, vocative) for both singular and plural.
-3. Use standard Modern Greek declension forms.
-4. Gender must be exactly one of: masculine, feminine, neuter.
-5. Include the correct definite article matching the gender.
-6. Include declension_group (e.g., masculine_os, masculine_as, masculine_is, feminine_a, feminine_i, feminine_os, neuter_o, neuter_i, neuter_ma, neuter_os).
-7. Include exactly 2 example sentences with Greek, English, and Russian translations. Use id values 1 and 2.
-8. Include English and Russian translations of the lemma.
-9. Output MUST be valid JSON matching the provided schema exactly.
+1. Include all 4 cases (nominative, genitive, accusative, vocative) for both singular and plural.
+2. Use standard Modern Greek declension forms.
+3. Gender must be exactly one of: masculine, feminine, neuter.
+4. Declension forms: include the definite article in nominative, genitive, and accusative. Vocative has NO article.
+5. Include declension_group: masculine_os, masculine_as, masculine_is, feminine_a, feminine_i, feminine_os, neuter_o, neuter_i, neuter_ma, neuter_os.
+6. Include exactly 2 example sentences with Greek, English, and Russian translations. Use id values 1 and 2. Examples should use the noun naturally in context.
+7. Include English and Russian translations of the lemma. Include translation_en_plural for the English plural form.
+8. Pronunciation must be in IPA format.
+9. For indeclinable nouns (e.g., foreign loanwords like σουπερμάρκετ), all case forms are identical (the bare word), with no article change except the standard article for that gender/case.
 
 Example 1 (masculine, masculine_os):
 {
@@ -60,7 +60,39 @@ Example 1 (masculine, masculine_os):
   ]
 }
 
-Example 2 (neuter, neuter_o):
+Example 2 (feminine, feminine_a):
+{
+  "lemma": "θάλασσα",
+  "part_of_speech": "noun",
+  "translation_en": "sea",
+  "translation_en_plural": "seas",
+  "translation_ru": "море",
+  "pronunciation": "/ˈθa.la.sa/",
+  "grammar_data": {
+    "gender": "feminine",
+    "declension_group": "feminine_a",
+    "cases": {
+      "singular": {
+        "nominative": "η θάλασσα",
+        "genitive": "της θάλασσας",
+        "accusative": "τη θάλασσα",
+        "vocative": "θάλασσα"
+      },
+      "plural": {
+        "nominative": "οι θάλασσες",
+        "genitive": "των θαλασσών",
+        "accusative": "τις θάλασσες",
+        "vocative": "θάλασσες"
+      }
+    }
+  },
+  "examples": [
+    {"id": 1, "greek": "Η θάλασσα είναι γαλάζια σήμερα.", "english": "The sea is blue today.", "russian": "Море сегодня голубое."},
+    {"id": 2, "greek": "Μου αρέσει να κολυμπάω στη θάλασσα.", "english": "I like to swim in the sea.", "russian": "Мне нравится плавать в море."}
+  ]
+}
+
+Example 3 (neuter, neuter_o):
 {
   "lemma": "βιβλίο",
   "part_of_speech": "noun",
@@ -99,10 +131,8 @@ Lemma: {lemma}
 Gender: {gender}
 Article: {article}
 Part of Speech: {pos}
-NLP Confidence: {confidence}
 
-Respond with JSON matching this exact schema:
-{schema}"""
+Respond with valid JSON matching the exact structure shown in the examples above."""
 
 _DECLENSION_RULES: dict[str, list[tuple[str, str]]] = {
     "masculine": [
@@ -172,12 +202,12 @@ class NounDataGenerationService:
             gender=normalized_lemma.gender or "unknown",
             article=normalized_lemma.article or "unknown",
             pos=normalized_lemma.pos,
-            confidence=normalized_lemma.confidence,
-            schema=json.dumps(GeneratedNounData.model_json_schema(), indent=2),
         )
         # Append pre-filled translations if available
         if pre_filled_en or pre_filled_ru:
-            pre_fill_lines = ["\nUse these translations (from dictionary):"]
+            pre_fill_lines = [
+                "\nUse these exact translations from our dictionary (do not rephrase):"
+            ]
             if pre_filled_en:
                 pre_fill_lines.append(f"English: {pre_filled_en}")
             if pre_filled_ru:
