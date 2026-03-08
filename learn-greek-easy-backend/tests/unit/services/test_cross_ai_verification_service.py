@@ -509,12 +509,12 @@ class TestPromptConstruction:
         service: CrossAIVerificationService,
         mock_openrouter: AsyncMock,
     ) -> None:
-        """verify() passes model='openai/gpt-4.1-mini' to complete()."""
+        """verify() passes the correct secondary model to complete()."""
         primary = _make_noun_data()
         mock_openrouter.complete.return_value = _make_response(_noun_data_to_json(primary))
         await service.verify(primary, _make_lemma())
         call_kwargs = mock_openrouter.complete.call_args
-        assert call_kwargs.kwargs["model"] == "openai/gpt-4.1-mini"
+        assert call_kwargs.kwargs["model"] == "minimax/minimax-m2.5"
 
     @pytest.mark.asyncio
     async def test_response_format(
@@ -702,6 +702,74 @@ class TestLogging:
         with caplog_loguru.at_level(logging.WARNING):
             await service.verify(_make_noun_data(), _make_lemma())
         assert any("Cross-AI verification failed" in r.message for r in caplog_loguru.records)
+
+
+# ---------------------------------------------------------------------------
+# Tests: generate_secondary()
+# ---------------------------------------------------------------------------
+
+
+class TestGenerateSecondary:
+    """Tests for generate_secondary() method."""
+
+    @pytest.mark.asyncio
+    async def test_returns_parsed_noun_data(
+        self, service: CrossAIVerificationService, mock_openrouter: AsyncMock
+    ) -> None:
+        """generate_secondary() calls LLM and returns parsed GeneratedNounData."""
+        expected = _make_noun_data()
+        mock_openrouter.complete.return_value = _make_response(_noun_data_to_json(expected))
+        result = await service.generate_secondary(_make_lemma())
+        assert result.lemma == expected.lemma
+
+    @pytest.mark.asyncio
+    async def test_raises_on_llm_failure(
+        self, service: CrossAIVerificationService, mock_openrouter: AsyncMock
+    ) -> None:
+        """generate_secondary() raises when LLM call fails (no exception swallowing)."""
+        mock_openrouter.complete.side_effect = OpenRouterAPIError(status_code=500, detail="fail")
+        with pytest.raises(OpenRouterAPIError):
+            await service.generate_secondary(_make_lemma())
+
+    @pytest.mark.asyncio
+    async def test_raises_on_invalid_json(
+        self, service: CrossAIVerificationService, mock_openrouter: AsyncMock
+    ) -> None:
+        """generate_secondary() raises when LLM returns invalid JSON."""
+        mock_openrouter.complete.return_value = _make_response("not valid json {")
+        with pytest.raises(Exception):
+            await service.generate_secondary(_make_lemma())
+
+
+# ---------------------------------------------------------------------------
+# Tests: compare()
+# ---------------------------------------------------------------------------
+
+
+class TestCompare:
+    """Tests for compare() method."""
+
+    def test_full_agreement(self, service: CrossAIVerificationService) -> None:
+        """Identical primary and secondary → overall_agreement == 1.0."""
+        primary = _make_noun_data()
+        secondary = _make_noun_data()
+        result = service.compare(primary, secondary)
+        assert result.overall_agreement == 1.0
+        assert result.error is None
+
+    def test_partial_disagreement(self, service: CrossAIVerificationService) -> None:
+        """translation_en differs (weight 1.0) → agreement = 20.5/21.5."""
+        primary = _make_noun_data()
+        secondary = _make_noun_data(translation_en="home")
+        result = service.compare(primary, secondary)
+        assert result.overall_agreement == pytest.approx(20.5 / 21.5)
+
+    def test_returns_secondary_generation(self, service: CrossAIVerificationService) -> None:
+        """compare() sets secondary_generation on result."""
+        primary = _make_noun_data()
+        secondary = _make_noun_data(translation_en="bus")
+        result = service.compare(primary, secondary)
+        assert result.secondary_generation == secondary
 
 
 # ---------------------------------------------------------------------------

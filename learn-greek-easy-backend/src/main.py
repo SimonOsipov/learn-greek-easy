@@ -39,6 +39,27 @@ setup_logging()
 logger = get_logger(__name__)
 
 
+async def _start_openrouter_client() -> None:
+    """Initialize OpenRouter HTTP client (connection pooling + HTTP/2)."""
+    try:
+        from src.services.openrouter_service import get_openrouter_service
+
+        await get_openrouter_service().start()
+        logger.info("OpenRouter HTTP client initialized")
+    except Exception as exc:
+        logger.warning("OpenRouter client initialization failed: {error}", error=str(exc))
+
+
+async def _close_openrouter_client() -> None:
+    """Close OpenRouter HTTP client and release connection pool."""
+    try:
+        from src.services.openrouter_service import get_openrouter_service
+
+        await get_openrouter_service().close()
+    except Exception as exc:
+        logger.warning("OpenRouter client shutdown failed: {error}", error=str(exc))
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan manager."""
@@ -101,6 +122,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         spellcheck_ok=spellcheck_ok,
     )
 
+    await _start_openrouter_client()
+
     # Auto-seed on deploy (local dev only)
     if settings.seed_on_deploy and settings.can_seed_database():
         logger.info("SEED_ON_DEPLOY enabled, auto-seeding database...")
@@ -131,6 +154,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Shutdown PostHog analytics (flush events before closing connections)
     shutdown_posthog()
+
+    await _close_openrouter_client()
 
     # Close Redis connection
     await close_redis()

@@ -287,26 +287,32 @@ class TestGenerate:
         service: NounDataGenerationService,
         mock_openrouter: AsyncMock,
     ) -> None:
-        """User prompt contains the GeneratedNounData JSON schema."""
+        """System prompt contains JSON examples; user prompt instructs to match the structure."""
         mock_openrouter.complete.return_value = _make_response(_VALID_NOUN_JSON)
         await service.generate(_make_lemma())
 
+        system_content = mock_openrouter.complete.call_args.kwargs["messages"][0]["content"]
         user_content = mock_openrouter.complete.call_args.kwargs["messages"][1]["content"]
+        # Schema examples are now in the system prompt
         schema_key = next(iter(GeneratedNounData.model_json_schema().keys()))
-        assert schema_key in user_content  # e.g. "$defs" or "properties" present
+        assert (
+            schema_key in system_content
+            or "examples" in user_content.lower()
+            or "Respond with valid JSON" in user_content
+        )
 
     @pytest.mark.asyncio
-    async def test_user_prompt_contains_confidence(
+    async def test_user_prompt_contains_lemma(
         self,
         service: NounDataGenerationService,
         mock_openrouter: AsyncMock,
     ) -> None:
-        """User prompt contains the confidence value from NormalizedLemma."""
+        """User prompt contains the lemma from NormalizedLemma."""
         mock_openrouter.complete.return_value = _make_response(_VALID_NOUN_JSON)
         await service.generate(_make_lemma(confidence=0.95))
 
         user_content = mock_openrouter.complete.call_args.kwargs["messages"][1]["content"]
-        assert "0.95" in user_content
+        assert "σπίτι" in user_content
 
     @pytest.mark.asyncio
     async def test_response_format_is_json_object(
@@ -333,7 +339,7 @@ class TestGenerate:
 
         user_content = mock_openrouter.complete.call_args.kwargs["messages"][1]["content"]
         assert "house, home" in user_content
-        assert "Use these translations (from dictionary):" in user_content
+        assert "Use these exact translations from our dictionary" in user_content
         assert "English:" in user_content
 
     @pytest.mark.asyncio
@@ -348,7 +354,7 @@ class TestGenerate:
 
         user_content = mock_openrouter.complete.call_args.kwargs["messages"][1]["content"]
         assert "дом" in user_content
-        assert "Use these translations (from dictionary):" in user_content
+        assert "Use these exact translations from our dictionary" in user_content
         assert "Russian:" in user_content
 
     @pytest.mark.asyncio

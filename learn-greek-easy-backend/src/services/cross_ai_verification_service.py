@@ -46,31 +46,41 @@ class CrossAIVerificationService:
     def __init__(self, openrouter_service: OpenRouterService) -> None:
         self._openrouter = openrouter_service
 
+    async def generate_secondary(self, normalized_lemma: NormalizedLemma) -> GeneratedNounData:
+        """Fire secondary LLM call and return parsed noun data. Raises on failure."""
+        messages = self._build_messages(normalized_lemma)
+        response = await self._openrouter.complete(
+            messages=messages,
+            model=self._SECONDARY_MODEL,
+            response_format={"type": "json_object"},
+        )
+        return self._parse_response(response.content)
+
+    def compare(
+        self, primary: GeneratedNounData, secondary: GeneratedNounData
+    ) -> CrossAIVerificationResult:
+        """Compare primary and secondary generations and return verification result."""
+        comparisons = self._compare_fields(primary, secondary)
+        total_weight = sum(self._FIELD_WEIGHTS.values())
+        agreement = sum(c.weight for c in comparisons if c.agrees) / total_weight
+        logger.info(
+            "Cross-AI verification complete",
+            extra={"lemma": primary.lemma, "overall_agreement": agreement},
+        )
+        return CrossAIVerificationResult(
+            comparisons=comparisons,
+            overall_agreement=agreement,
+            secondary_model=self._SECONDARY_MODEL,
+            secondary_generation=secondary,
+        )
+
     async def verify(
         self, primary: GeneratedNounData, normalized_lemma: NormalizedLemma
     ) -> CrossAIVerificationResult:
-        """Compare primary generation against a secondary model generation."""
+        """Compare primary generation against a secondary model generation (convenience wrapper)."""
         try:
-            messages = self._build_messages(normalized_lemma)
-            response = await self._openrouter.complete(
-                messages=messages,
-                model=self._SECONDARY_MODEL,
-                response_format={"type": "json_object"},
-            )
-            secondary_data = self._parse_response(response.content)
-            comparisons = self._compare_fields(primary, secondary_data)
-            total_weight = sum(self._FIELD_WEIGHTS.values())
-            agreement = sum(c.weight for c in comparisons if c.agrees) / total_weight
-            logger.info(
-                "Cross-AI verification complete",
-                extra={"lemma": normalized_lemma.lemma, "overall_agreement": agreement},
-            )
-            return CrossAIVerificationResult(
-                comparisons=comparisons,
-                overall_agreement=agreement,
-                secondary_model=self._SECONDARY_MODEL,
-                secondary_generation=secondary_data,
-            )
+            secondary_data = await self.generate_secondary(normalized_lemma)
+            return self.compare(primary, secondary_data)
         except Exception as exc:  # noqa: BLE001
             logger.warning(
                 "Cross-AI verification failed: %s",

@@ -2398,8 +2398,9 @@ async def _run_verification_stage(
     normalized_lemma: NormalizedLemma,
     lexicon_svc: LexiconService,
     lemma: str,
+    secondary_data: GeneratedNounData | None = None,
 ) -> VerificationSummary:
-    """Run local + cross-AI verification in parallel and compute combined tier."""
+    """Run local + cross-AI verification and compute combined tier."""
     local_svc = get_local_verification_service()
     cross_svc = get_cross_ai_verification_service()
 
@@ -2407,25 +2408,21 @@ async def _run_verification_stage(
     lexicon_declensions = await lexicon_svc.get_declensions(lemma, pos="NOUN")
     morphology_source: Literal["lexicon", "llm"] = "lexicon" if lexicon_declensions else "llm"
 
-    # Run local (sync, wrapped) + cross-AI (async) in parallel
+    # Run local verification (sync service, wrapped in executor)
     loop = asyncio.get_running_loop()
-    local_coro = loop.run_in_executor(None, local_svc.verify, generated_data)
-    cross_coro = cross_svc.verify(primary=generated_data, normalized_lemma=normalized_lemma)
-    local_result, cross_result = await asyncio.gather(
-        local_coro, cross_coro, return_exceptions=True
-    )
+    try:
+        local_result = await loop.run_in_executor(None, local_svc.verify, generated_data)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Local verification pipeline failed") from exc
 
-    # Local failure = hard error
-    if isinstance(local_result, BaseException):
-        logger.error("Local verification failed: %s", local_result)
-        raise HTTPException(status_code=500, detail="Local verification pipeline failed")
+    # Cross-AI: compare if secondary_data available, otherwise error result
+    if secondary_data is not None:
+        cross_result = cross_svc.compare(generated_data, secondary_data)
+    else:
+        cross_result = CrossAIVerificationResult(error="Secondary generation failed or skipped")
 
-    # Cross-AI: check exception OR internal error
-    if isinstance(cross_result, BaseException):
-        logger.warning("Cross-AI verification exception: %s", cross_result)
-        cross_result = CrossAIVerificationResult(error=str(cross_result))
-        combined_tier = local_result.tier
-    elif cross_result.error is None and cross_result.overall_agreement is not None:
+    # Combined tier logic
+    if cross_result.error is None and cross_result.overall_agreement is not None:
         combined_tier = compute_combined_tier(local_result.tier, cross_result.overall_agreement)
     else:
         combined_tier = local_result.tier
@@ -2436,6 +2433,40 @@ async def _run_verification_stage(
         morphology_source=morphology_source,
         combined_tier=combined_tier,
     )
+
+
+async def _run_generation_with_secondary(
+    normalized_lemma: NormalizedLemma,
+    translation_lookup: TranslationLookupStageResult | None,
+) -> tuple[GeneratedNounData, GeneratedNounData | None]:
+    """Run primary generation and cross-AI secondary LLM call concurrently.
+
+    Returns (generated_data, secondary_data). Raises on primary failure; secondary
+    failure is soft — returns None for secondary_data and logs a warning.
+    """
+    cross_svc = get_cross_ai_verification_service()
+    gen_coro = _run_generation_stage(
+        normalized_lemma=normalized_lemma,
+        translation_lookup=translation_lookup,
+    )
+    cross_coro = cross_svc.generate_secondary(normalized_lemma)
+
+    results = await asyncio.gather(gen_coro, cross_coro, return_exceptions=True)
+    generated_data_or_exc, secondary_data_or_exc = results
+
+    # Primary generation failure is a hard error — re-raise
+    if isinstance(generated_data_or_exc, BaseException):
+        raise generated_data_or_exc
+    generated_data: GeneratedNounData = generated_data_or_exc
+
+    # Cross-AI secondary failure is soft — proceed without
+    secondary_data: GeneratedNounData | None = None
+    if isinstance(secondary_data_or_exc, BaseException):
+        logger.warning("Cross-AI secondary generation failed: %s", secondary_data_or_exc)
+    else:
+        secondary_data = secondary_data_or_exc
+
+    return generated_data, secondary_data
 
 
 def _build_translation_lookup_stage_result(
@@ -2560,12 +2591,13 @@ async def generate_word_entry(
         confidence=primary.confidence,
     )
 
-    generated_data = await _run_generation_stage(
+    # Stage 3 + Cross-AI LLM (concurrent)
+    generated_data, secondary_data = await _run_generation_with_secondary(
         normalized_lemma=normalized_lemma,
         translation_lookup=translation_lookup,
     )
 
-    # Stage 4: Verification (local + cross-AI in parallel)
+    # Stage 4: Verification (local + cross-AI comparison)
     verification_summary: VerificationSummary | None = None
     if generated_data is not None:
         verification_summary = await _run_verification_stage(
@@ -2573,6 +2605,7 @@ async def generate_word_entry(
             normalized_lemma=normalized_lemma,
             lexicon_svc=lexicon_svc,
             lemma=primary.morphology.lemma,
+            secondary_data=secondary_data,
         )
 
     last_stage = (
