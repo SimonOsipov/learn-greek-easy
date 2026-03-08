@@ -374,12 +374,10 @@ function CardRecord({
   const backAnswerSub = typeof back.answer_sub === 'string' ? back.answer_sub : undefined;
 
   const ruTranslation = getCardRuTranslation(card, wordEntry);
-  const showRuRow =
-    RU_CARD_TYPES.has(card.card_type) &&
-    !(
-      card.card_type === 'sentence_translation' &&
-      (front as Record<string, unknown>).direction === 'target_to_el'
-    );
+  const showRuRow = RU_CARD_TYPES.has(card.card_type);
+  const isTargetToEl =
+    card.card_type === 'sentence_translation' &&
+    (card.front_content as Record<string, unknown>).direction === 'target_to_el';
 
   const footerItems: React.ReactNode[] = [];
   if (card.tier !== null) {
@@ -424,14 +422,17 @@ function CardRecord({
           <div>
             {frontPrompt && <p className="text-xs text-muted-foreground">{frontPrompt}</p>}
             {frontMain && <p className="font-medium">{frontMain}</p>}
+            {isTargetToEl && ruTranslation && (
+              <p className="text-muted-foreground">{ruTranslation}</p>
+            )}
           </div>
           <Separator />
-          <div className={showRuRow ? 'grid grid-cols-2 gap-2' : undefined}>
+          <div className={showRuRow && !isTargetToEl ? 'grid grid-cols-2 gap-2' : undefined}>
             <div>
               {backAnswer && <p className="text-muted-foreground">{backAnswer}</p>}
               {backAnswerSub && <p className="text-xs text-muted-foreground">{backAnswerSub}</p>}
             </div>
-            {showRuRow && (
+            {showRuRow && !isTargetToEl && (
               <div className="text-right">
                 {ruTranslation ? (
                   <p className="text-muted-foreground">{ruTranslation}</p>

@@ -248,6 +248,16 @@ export function WordPracticePage() {
   // Ready state — guard currentIndex against stale data
   const safeIndex = Math.min(currentIndex, cards.length - 1);
   const currentCard = cards[safeIndex];
+
+  const sentenceRu = (() => {
+    if (!currentCard || currentCard.card_type !== 'sentence_translation') return null;
+    const front = currentCard.front_content as Record<string, unknown>;
+    if (front.direction !== 'target_to_el') return null;
+    const exampleId = typeof front.example_id === 'string' ? front.example_id : null;
+    if (!exampleId || !wordEntry?.examples) return null;
+    const example = wordEntry.examples.find((ex: { id: string }) => ex.id === exampleId);
+    return example?.russian ?? null;
+  })();
   const audioState = {
     audioUrl: resolveCardAudioUrl(currentCard, wordEntry),
     isPlaying: audioIsPlaying,
@@ -286,6 +296,7 @@ export function WordPracticePage() {
           onFlip={handleFlip}
           translationRu={wordEntry?.translation_ru ?? null}
           translationRuPlural={wordEntry?.translation_ru_plural ?? null}
+          sentenceRu={sentenceRu}
           onRate={handleRate}
           audioState={audioState}
           wordEntryId={wordId}
