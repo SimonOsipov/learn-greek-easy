@@ -56,6 +56,7 @@ class CrossAIVerificationService:
                 messages=messages,
                 model=self._SECONDARY_MODEL,
                 response_format={"type": "json_object"},
+                reasoning={"effort": "none"},
             )
             secondary_data = self._parse_response(response.content)
             comparisons = self._compare_fields(primary, secondary_data)
