@@ -85,8 +85,6 @@ class CrossAIVerificationService:
             gender=normalized_lemma.gender or "",
             article=normalized_lemma.article or "",
             pos=normalized_lemma.pos,
-            confidence=normalized_lemma.confidence,
-            schema=json.dumps(GeneratedNounData.model_json_schema(), indent=2),
         )
         return [
             {"role": "system", "content": _SYSTEM_PROMPT},

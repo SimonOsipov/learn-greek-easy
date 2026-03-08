@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import logging
 from unittest.mock import AsyncMock, patch
 
@@ -550,7 +549,7 @@ class TestPromptConstruction:
         service: CrossAIVerificationService,
         mock_openrouter: AsyncMock,
     ) -> None:
-        """User message includes lemma, gender, article, pos, confidence."""
+        """User message includes lemma, gender, article, pos."""
         primary = _make_noun_data()
         lemma = _make_lemma(
             lemma="σπίτι", gender="neuter", article="το", pos="NOUN", confidence=1.0
@@ -564,19 +563,18 @@ class TestPromptConstruction:
         assert "το" in user_content
 
     @pytest.mark.asyncio
-    async def test_user_prompt_has_json_schema(
+    async def test_user_prompt_has_response_instruction(
         self,
         service: CrossAIVerificationService,
         mock_openrouter: AsyncMock,
     ) -> None:
-        """User message includes the GeneratedNounData JSON schema."""
+        """User message includes instruction to respond with JSON matching examples."""
         primary = _make_noun_data()
         mock_openrouter.complete.return_value = _make_response(_noun_data_to_json(primary))
         await service.verify(primary, _make_lemma())
         messages = mock_openrouter.complete.call_args.kwargs["messages"]
         user_content = messages[1]["content"]
-        schema_str = json.dumps(GeneratedNounData.model_json_schema(), indent=2)
-        assert schema_str in user_content
+        assert "valid JSON" in user_content
 
     @pytest.mark.asyncio
     async def test_none_gender_uses_empty_string(
