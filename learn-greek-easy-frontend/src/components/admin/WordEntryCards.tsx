@@ -115,9 +115,16 @@ function getCardRuTranslation(
   }
   if (card.card_type === 'sentence_translation') {
     const back = card.back_content as Record<string, unknown>;
-    const direction = (card.front_content as Record<string, unknown>).direction;
-    if (direction === 'target_to_el') return null;
-    return typeof back.answer_ru === 'string' ? back.answer_ru : null;
+    const front = card.front_content as Record<string, unknown>;
+    // el_to_target cards store answer_ru in back_content
+    if (typeof back.answer_ru === 'string') return back.answer_ru;
+    // target_to_el cards don't store answer_ru — look up from the example
+    const exampleId = typeof front.example_id === 'string' ? front.example_id : undefined;
+    if (exampleId) {
+      const example = wordEntry.examples?.find((ex) => ex.id === exampleId);
+      if (example?.russian) return example.russian;
+    }
+    return null;
   }
   if (card.card_type === 'plural_form') {
     const back = card.back_content as Record<string, unknown>;
@@ -427,7 +434,7 @@ function CardRecord({
             {showRuRow && (
               <div className="text-right">
                 {ruTranslation ? (
-                  <p className="text-xs text-muted-foreground">{ruTranslation}</p>
+                  <p className="text-muted-foreground">{ruTranslation}</p>
                 ) : (
                   <NotSet />
                 )}
@@ -476,7 +483,7 @@ function CardRecord({
             {showRuRow && (
               <div className="text-right">
                 {ruTranslation ? (
-                  <p className="text-xs text-muted-foreground">{ruTranslation}</p>
+                  <p className="text-muted-foreground">{ruTranslation}</p>
                 ) : (
                   <NotSet />
                 )}
