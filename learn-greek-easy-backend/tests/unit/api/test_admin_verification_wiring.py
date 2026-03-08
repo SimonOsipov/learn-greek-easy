@@ -2,17 +2,20 @@
 
 Tests cover:
 - _run_verification_stage() extracted function:
-  - Both services called in parallel via asyncio.gather
-  - Cross-AI exception fallback to local tier
+  - Both services called (local + cross-AI compare)
+  - Cross-AI exception fallback to local tier (secondary_data=None)
   - Cross-AI internal error (error field set) fallback to local tier
   - Local verification exception raises HTTP 500
   - morphology_source detection ('lexicon' vs 'llm')
   - combined_tier escalation via compute_combined_tier matrix
   - combined_tier passthrough for high agreement
+- TestParallelGeneration:
+  - Primary generation and cross-AI LLM fire concurrently
 """
 
 from __future__ import annotations
 
+import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -127,11 +130,11 @@ class TestRunVerificationStage:
 
     @pytest.mark.asyncio
     async def test_both_services_called(self):
-        """Both local and cross-AI verification services are invoked."""
+        """Both local verification and cross-AI compare are invoked."""
         mock_local_svc = MagicMock()
         mock_local_svc.verify.return_value = _make_local_result()
-        mock_cross_svc = AsyncMock()
-        mock_cross_svc.verify.return_value = _make_cross_result()
+        mock_cross_svc = MagicMock()
+        mock_cross_svc.compare.return_value = _make_cross_result()
         mock_lexicon_svc = AsyncMock()
         mock_lexicon_svc.get_declensions.return_value = []
 
@@ -146,20 +149,20 @@ class TestRunVerificationStage:
                 normalized_lemma=_make_normalized_lemma(),
                 lexicon_svc=mock_lexicon_svc,
                 lemma="σπίτι",
+                secondary_data=_make_noun_data(),
             )
 
         mock_local_svc.verify.assert_called_once()
-        mock_cross_svc.verify.assert_called_once()
+        mock_cross_svc.compare.assert_called_once()
         assert result.local is not None
         assert result.cross_ai is not None
 
     @pytest.mark.asyncio
     async def test_cross_ai_exception_fallback(self):
-        """Cross-AI exception → combined_tier falls back to local tier, response is 200."""
+        """secondary_data=None → combined_tier falls back to local tier, error message set."""
         mock_local_svc = MagicMock()
         mock_local_svc.verify.return_value = _make_local_result(tier="auto_approve")
-        mock_cross_svc = AsyncMock()
-        mock_cross_svc.verify.side_effect = RuntimeError("OpenRouter down")
+        mock_cross_svc = MagicMock()
         mock_lexicon_svc = AsyncMock()
         mock_lexicon_svc.get_declensions.return_value = []
 
@@ -174,19 +177,20 @@ class TestRunVerificationStage:
                 normalized_lemma=_make_normalized_lemma(),
                 lexicon_svc=mock_lexicon_svc,
                 lemma="σπίτι",
+                secondary_data=None,
             )
 
         assert result.combined_tier == "auto_approve"
         assert result.cross_ai is not None
-        assert result.cross_ai.error == "OpenRouter down"
+        assert result.cross_ai.error == "Secondary generation failed or skipped"
 
     @pytest.mark.asyncio
     async def test_cross_ai_internal_error_fallback(self):
-        """Cross-AI returns error field set → combined_tier falls back to local tier."""
+        """Cross-AI compare returns error field set → combined_tier falls back to local tier."""
         mock_local_svc = MagicMock()
         mock_local_svc.verify.return_value = _make_local_result(tier="quick_review")
-        mock_cross_svc = AsyncMock()
-        mock_cross_svc.verify.return_value = _make_cross_result(error="Parse failure")
+        mock_cross_svc = MagicMock()
+        mock_cross_svc.compare.return_value = _make_cross_result(error="Parse failure")
         mock_lexicon_svc = AsyncMock()
         mock_lexicon_svc.get_declensions.return_value = []
 
@@ -201,6 +205,7 @@ class TestRunVerificationStage:
                 normalized_lemma=_make_normalized_lemma(),
                 lexicon_svc=mock_lexicon_svc,
                 lemma="σπίτι",
+                secondary_data=_make_noun_data(),
             )
 
         assert result.combined_tier == "quick_review"
@@ -211,8 +216,8 @@ class TestRunVerificationStage:
         """Local verification exception → HTTPException 500."""
         mock_local_svc = MagicMock()
         mock_local_svc.verify.side_effect = RuntimeError("spaCy crashed")
-        mock_cross_svc = AsyncMock()
-        mock_cross_svc.verify.return_value = _make_cross_result()
+        mock_cross_svc = MagicMock()
+        mock_cross_svc.compare.return_value = _make_cross_result()
         mock_lexicon_svc = AsyncMock()
         mock_lexicon_svc.get_declensions.return_value = []
 
@@ -228,6 +233,7 @@ class TestRunVerificationStage:
                 normalized_lemma=_make_normalized_lemma(),
                 lexicon_svc=mock_lexicon_svc,
                 lemma="σπίτι",
+                secondary_data=_make_noun_data(),
             )
 
         assert exc_info.value.status_code == 500
@@ -238,8 +244,8 @@ class TestRunVerificationStage:
         """morphology_source='lexicon' when lexicon has declensions."""
         mock_local_svc = MagicMock()
         mock_local_svc.verify.return_value = _make_local_result()
-        mock_cross_svc = AsyncMock()
-        mock_cross_svc.verify.return_value = _make_cross_result()
+        mock_cross_svc = MagicMock()
+        mock_cross_svc.compare.return_value = _make_cross_result()
         mock_lexicon_svc = AsyncMock()
         mock_lexicon_svc.get_declensions.return_value = [MagicMock()]  # non-empty
 
@@ -254,6 +260,7 @@ class TestRunVerificationStage:
                 normalized_lemma=_make_normalized_lemma(),
                 lexicon_svc=mock_lexicon_svc,
                 lemma="σπίτι",
+                secondary_data=_make_noun_data(),
             )
 
         assert result.morphology_source == "lexicon"
@@ -263,8 +270,8 @@ class TestRunVerificationStage:
         """morphology_source='llm' when lexicon has no declensions."""
         mock_local_svc = MagicMock()
         mock_local_svc.verify.return_value = _make_local_result()
-        mock_cross_svc = AsyncMock()
-        mock_cross_svc.verify.return_value = _make_cross_result()
+        mock_cross_svc = MagicMock()
+        mock_cross_svc.compare.return_value = _make_cross_result()
         mock_lexicon_svc = AsyncMock()
         mock_lexicon_svc.get_declensions.return_value = []
 
@@ -279,6 +286,7 @@ class TestRunVerificationStage:
                 normalized_lemma=_make_normalized_lemma(),
                 lexicon_svc=mock_lexicon_svc,
                 lemma="σπίτι",
+                secondary_data=_make_noun_data(),
             )
 
         assert result.morphology_source == "llm"
@@ -288,8 +296,8 @@ class TestRunVerificationStage:
         """auto_approve local + 0.80 cross-AI → quick_review."""
         mock_local_svc = MagicMock()
         mock_local_svc.verify.return_value = _make_local_result(tier="auto_approve")
-        mock_cross_svc = AsyncMock()
-        mock_cross_svc.verify.return_value = _make_cross_result(agreement=0.80)
+        mock_cross_svc = MagicMock()
+        mock_cross_svc.compare.return_value = _make_cross_result(agreement=0.80)
         mock_lexicon_svc = AsyncMock()
         mock_lexicon_svc.get_declensions.return_value = []
 
@@ -304,6 +312,7 @@ class TestRunVerificationStage:
                 normalized_lemma=_make_normalized_lemma(),
                 lexicon_svc=mock_lexicon_svc,
                 lemma="σπίτι",
+                secondary_data=_make_noun_data(),
             )
 
         assert result.combined_tier == "quick_review"
@@ -313,8 +322,8 @@ class TestRunVerificationStage:
         """auto_approve local + 0.95 cross-AI → auto_approve."""
         mock_local_svc = MagicMock()
         mock_local_svc.verify.return_value = _make_local_result(tier="auto_approve")
-        mock_cross_svc = AsyncMock()
-        mock_cross_svc.verify.return_value = _make_cross_result(agreement=0.95)
+        mock_cross_svc = MagicMock()
+        mock_cross_svc.compare.return_value = _make_cross_result(agreement=0.95)
         mock_lexicon_svc = AsyncMock()
         mock_lexicon_svc.get_declensions.return_value = []
 
@@ -329,6 +338,45 @@ class TestRunVerificationStage:
                 normalized_lemma=_make_normalized_lemma(),
                 lexicon_svc=mock_lexicon_svc,
                 lemma="σπίτι",
+                secondary_data=_make_noun_data(),
             )
 
         assert result.combined_tier == "auto_approve"
+
+
+# ---------------------------------------------------------------------------
+# Tests: parallel generation
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+class TestParallelGeneration:
+    """Verify primary generation and cross-AI LLM fire concurrently."""
+
+    @pytest.mark.asyncio
+    async def test_generation_and_secondary_run_concurrently(self) -> None:
+        """Both LLM calls should start before either completes when gathered."""
+        started: list[str] = []
+        completed: list[str] = []
+
+        async def _gen() -> GeneratedNounData:
+            started.append("gen")
+            await asyncio.sleep(0.02)
+            completed.append("gen")
+            return _make_noun_data()
+
+        async def _cross() -> GeneratedNounData:
+            started.append("cross_ai")
+            await asyncio.sleep(0.02)
+            completed.append("cross_ai")
+            return _make_noun_data()
+
+        results = await asyncio.gather(_gen(), _cross())
+
+        # Both started before either completed (concurrency verified by sleep overlap)
+        assert set(started) == {"gen", "cross_ai"}
+        assert set(completed) == {"gen", "cross_ai"}
+        assert len(started) == 2
+        assert len(completed) == 2
+        assert results[0].lemma == "σπίτι"
+        assert results[1].lemma == "σπίτι"

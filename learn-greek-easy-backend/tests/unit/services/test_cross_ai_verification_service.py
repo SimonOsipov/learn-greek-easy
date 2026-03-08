@@ -707,6 +707,74 @@ class TestLogging:
 
 
 # ---------------------------------------------------------------------------
+# Tests: generate_secondary()
+# ---------------------------------------------------------------------------
+
+
+class TestGenerateSecondary:
+    """Tests for generate_secondary() method."""
+
+    @pytest.mark.asyncio
+    async def test_returns_parsed_noun_data(
+        self, service: CrossAIVerificationService, mock_openrouter: AsyncMock
+    ) -> None:
+        """generate_secondary() calls LLM and returns parsed GeneratedNounData."""
+        expected = _make_noun_data()
+        mock_openrouter.complete.return_value = _make_response(_noun_data_to_json(expected))
+        result = await service.generate_secondary(_make_lemma())
+        assert result.lemma == expected.lemma
+
+    @pytest.mark.asyncio
+    async def test_raises_on_llm_failure(
+        self, service: CrossAIVerificationService, mock_openrouter: AsyncMock
+    ) -> None:
+        """generate_secondary() raises when LLM call fails (no exception swallowing)."""
+        mock_openrouter.complete.side_effect = OpenRouterAPIError(status_code=500, detail="fail")
+        with pytest.raises(OpenRouterAPIError):
+            await service.generate_secondary(_make_lemma())
+
+    @pytest.mark.asyncio
+    async def test_raises_on_invalid_json(
+        self, service: CrossAIVerificationService, mock_openrouter: AsyncMock
+    ) -> None:
+        """generate_secondary() raises when LLM returns invalid JSON."""
+        mock_openrouter.complete.return_value = _make_response("not valid json {")
+        with pytest.raises(Exception):
+            await service.generate_secondary(_make_lemma())
+
+
+# ---------------------------------------------------------------------------
+# Tests: compare()
+# ---------------------------------------------------------------------------
+
+
+class TestCompare:
+    """Tests for compare() method."""
+
+    def test_full_agreement(self, service: CrossAIVerificationService) -> None:
+        """Identical primary and secondary → overall_agreement == 1.0."""
+        primary = _make_noun_data()
+        secondary = _make_noun_data()
+        result = service.compare(primary, secondary)
+        assert result.overall_agreement == 1.0
+        assert result.error is None
+
+    def test_partial_disagreement(self, service: CrossAIVerificationService) -> None:
+        """translation_en differs (weight 1.0) → agreement = 20.5/21.5."""
+        primary = _make_noun_data()
+        secondary = _make_noun_data(translation_en="home")
+        result = service.compare(primary, secondary)
+        assert result.overall_agreement == pytest.approx(20.5 / 21.5)
+
+    def test_returns_secondary_generation(self, service: CrossAIVerificationService) -> None:
+        """compare() sets secondary_generation on result."""
+        primary = _make_noun_data()
+        secondary = _make_noun_data(translation_en="bus")
+        result = service.compare(primary, secondary)
+        assert result.secondary_generation == secondary
+
+
+# ---------------------------------------------------------------------------
 # Tests: singleton factory
 # ---------------------------------------------------------------------------
 
