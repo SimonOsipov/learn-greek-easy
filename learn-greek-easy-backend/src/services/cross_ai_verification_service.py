@@ -24,7 +24,7 @@ logger = get_logger(__name__)
 class CrossAIVerificationService:
     """Verifies LLM-generated noun data by comparing with a secondary model generation."""
 
-    _SECONDARY_MODEL = "anthropic/claude-haiku-4.5"
+    _SECONDARY_MODEL = "minimax/minimax-m2.5"
     _FIELD_WEIGHTS: ClassVar[dict[str, float]] = {
         "lemma": 3.0,
         "grammar_data.gender": 3.0,
@@ -53,7 +53,6 @@ class CrossAIVerificationService:
             messages=messages,
             model=self._SECONDARY_MODEL,
             response_format={"type": "json_object"},
-            reasoning={"effort": "none"},
         )
         return self._parse_response(response.content)
 

@@ -115,7 +115,7 @@ def _make_cross_result(
             ),
         ],
         overall_agreement=agreement,
-        secondary_model="anthropic/claude-haiku-4.5",
+        secondary_model="minimax/minimax-m2.5",
     )
 
 
