@@ -137,3 +137,61 @@ class NotificationEventBus:
 # ============================================================
 
 notification_event_bus = NotificationEventBus()
+
+
+# ============================================================
+# Generic string-keyed event bus
+# ============================================================
+
+
+class GenericEventBus:
+    """String-keyed publish/subscribe bus for non-user-specific events.
+
+    Used for events keyed by arbitrary strings (e.g. ``"word_audio:<uuid>"``).
+    Follows the same asyncio.Queue pattern as NotificationEventBus but accepts
+    str keys instead of UUID and delivers plain dict payloads.
+    """
+
+    def __init__(self) -> None:
+        self._subscribers: dict[str, set[asyncio.Queue[dict]]] = {}
+        self._lock: asyncio.Lock = asyncio.Lock()
+
+    async def subscribe(self, key: str) -> asyncio.Queue[dict]:
+        """Register a new queue for *key* and return it."""
+        queue: asyncio.Queue[dict] = asyncio.Queue(maxsize=100)
+        async with self._lock:
+            if key not in self._subscribers:
+                self._subscribers[key] = set()
+            self._subscribers[key].add(queue)
+        return queue
+
+    async def unsubscribe(self, key: str, queue: asyncio.Queue[dict]) -> None:
+        """Remove *queue* from the subscriber registry for *key*."""
+        async with self._lock:
+            queues = self._subscribers.get(key)
+            if queues is not None:
+                queues.discard(queue)
+                if not queues:
+                    del self._subscribers[key]
+
+    async def signal(self, key: str, payload: dict) -> None:
+        """Deliver *payload* to all subscribed queues for *key*.
+
+        Uses put_nowait() — drops the payload with a warning if a queue is
+        full rather than blocking the caller.
+        """
+        async with self._lock:
+            queues = self._subscribers.get(key)
+            if not queues:
+                return
+            for queue in queues:
+                try:
+                    queue.put_nowait(payload)
+                except asyncio.QueueFull:
+                    logger.warning(
+                        "Audio event bus queue full, dropping payload",
+                        extra={"key": key},
+                    )
+
+
+audio_event_bus = GenericEventBus()
