@@ -76,3 +76,9 @@
   background-color: hsl(var(--popover)) !important;
   border: 1px solid hsl(var(--border)) !important;
 }
+
+/* Override driver-active pointer-events block for alert dialogs (e.g. tour dismiss confirmation) */
+.driver-active [role='alertdialog'],
+.driver-active [role='alertdialog'] * {
+  pointer-events: auto !important;
+}
