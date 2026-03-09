@@ -146,6 +146,7 @@ export const WordCard: React.FC<WordCardProps> = ({ wordEntry, onClick, loading 
       <CardContent className="p-4">
         {/* Top-right mastery indicator (placeholder) */}
         <div className="absolute right-3 top-3">
+          {/* TODO: pass status from word entry data when mastery tracking is wired up */}
           <MasteryIndicator level={0} />
         </div>
 
