@@ -273,14 +273,42 @@ describe('CulturePracticePage', () => {
   });
 
   describe('ScoreCard try-again', () => {
-    it('calls resetSession and navigates on Try Again click', async () => {
+    it('calls initializeSession (via API) and does NOT navigate on Try Again click', async () => {
+      const { cultureDeckAPI } = await import('@/services/cultureDeckAPI');
       const user = userEvent.setup();
       useCultureSessionStore.setState(createSummaryState());
       render(<CulturePracticePage />);
 
       await user.click(screen.getByTestId('score-card-try-again'));
 
-      expect(mockNavigate).toHaveBeenCalledWith('/culture/test-deck-1/practice');
+      expect(mockNavigate).not.toHaveBeenCalled();
+      expect(cultureDeckAPI.getQuestionQueue).toHaveBeenCalledWith(
+        'test-deck-1',
+        expect.objectContaining({ limit: 50 })
+      );
+    });
+
+    it('transitions from ScoreCard back to active session view after Try Again', async () => {
+      const { cultureDeckAPI } = await import('@/services/cultureDeckAPI');
+      const questions = createMockQuestions(3);
+      vi.mocked(cultureDeckAPI.getQuestionQueue).mockResolvedValueOnce({
+        questions,
+        deck_name: { en: 'Test Deck', el: 'Test Deck', ru: 'Test Deck' },
+        category: 'history',
+        has_studied_questions: false,
+      });
+
+      const user = userEvent.setup();
+      useCultureSessionStore.setState(createSummaryState());
+      render(<CulturePracticePage />);
+
+      expect(screen.getByTestId('score-card')).toBeInTheDocument();
+
+      await user.click(screen.getByTestId('score-card-try-again'));
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('score-card')).not.toBeInTheDocument();
+      });
     });
   });
 

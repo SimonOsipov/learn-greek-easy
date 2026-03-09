@@ -435,8 +435,10 @@ export function CulturePracticePage() {
    */
   const handleTryAgain = useCallback(() => {
     resetSession();
-    navigate(`/culture/${deckId}/practice`);
-  }, [resetSession, navigate, deckId]);
+    hasTrackedStart.current = false;
+    hasTrackedComplete.current = false;
+    initializeSession();
+  }, [resetSession, initializeSession]);
 
   /**
    * Handle "Practice Anyway" - fetch weakest questions when no questions are due
