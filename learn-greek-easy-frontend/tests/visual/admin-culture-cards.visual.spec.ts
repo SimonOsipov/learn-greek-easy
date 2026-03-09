@@ -153,32 +153,49 @@ test.describe('CardCreateModal - Visual Tests', () => {
     });
   });
 
-  // Scenario: CardCreateModal - Default (from action bar with deck dropdown)
+  // Scenario: CardCreateModal - Default (from deck detail)
   test('CardCreateModal - Default State', async ({ page }, testInfo) => {
     await page.setViewportSize(VIEWPORTS.desktop);
 
-    // Mock decks API
+    // Mock decks API with a culture deck
     await page.route('**/api/v1/admin/decks*', (route) => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          decks: [],
-          total: 0,
+          decks: [
+            {
+              id: 'deck-001',
+              name: 'Greek Traditions',
+              type: 'culture',
+              level: null,
+              category: 'Culture',
+              item_count: 25,
+              is_active: true,
+              is_premium: false,
+              created_at: '2026-01-01T00:00:00Z',
+              owner_id: null,
+              owner_name: null,
+            },
+          ],
+          total: 1,
           page: 1,
           page_size: 10,
         }),
       });
     });
 
-    // Mock culture decks for dropdown
-    await page.route('**/api/v1/culture/decks*', (route) => {
+    // Mock culture questions for deck detail
+    await page.route('**/api/v1/admin/culture/decks/deck-001/questions*', (route) => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          decks: mockCultureDecks,
-          total: mockCultureDecks.length,
+          questions: [],
+          total: 0,
+          page: 1,
+          page_size: 20,
+          deck_id: 'deck-001',
         }),
       });
     });
@@ -202,10 +219,17 @@ test.describe('CardCreateModal - Visual Tests', () => {
     await page.goto('/admin');
     await waitForPageReady(page, '[data-testid="admin-page"]');
 
-    // Click add card button (from action bar)
-    await page.getByTestId('create-card-button').click();
+    // Click on deck row to open detail modal
+    await page.getByTestId('deck-row-deck-001').click();
 
-    // Wait for modal to open
+    // Wait for deck detail modal
+    await expect(page.getByTestId('deck-detail-modal')).toBeVisible();
+    await page.waitForTimeout(300);
+
+    // Click add card button within deck detail
+    await page.getByTestId('create-card-btn').click();
+
+    // Wait for card create modal
     await expect(page.getByTestId('card-create-modal')).toBeVisible();
     await page.waitForTimeout(500);
 
@@ -299,28 +323,45 @@ test.describe('CardCreateModal - Visual Tests', () => {
   test('CardCreateModal - All Tabs Complete', async ({ page }, testInfo) => {
     await page.setViewportSize(VIEWPORTS.desktop);
 
-    // Mock culture decks for dropdown
-    await page.route('**/api/v1/culture/decks*', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          decks: mockCultureDecks,
-          total: mockCultureDecks.length,
-        }),
-      });
-    });
-
-    // Mock decks API
+    // Mock decks API with a culture deck
     await page.route('**/api/v1/admin/decks*', (route) => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          decks: [],
-          total: 0,
+          decks: [
+            {
+              id: 'deck-001',
+              name: 'Greek Traditions',
+              type: 'culture',
+              level: null,
+              category: 'Culture',
+              item_count: 25,
+              is_active: true,
+              is_premium: false,
+              created_at: '2026-01-01T00:00:00Z',
+              owner_id: null,
+              owner_name: null,
+            },
+          ],
+          total: 1,
           page: 1,
           page_size: 10,
+        }),
+      });
+    });
+
+    // Mock culture questions for deck detail
+    await page.route('**/api/v1/admin/culture/decks/deck-001/questions*', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          questions: [],
+          total: 0,
+          page: 1,
+          page_size: 20,
+          deck_id: 'deck-001',
         }),
       });
     });
@@ -344,14 +385,17 @@ test.describe('CardCreateModal - Visual Tests', () => {
     await page.goto('/admin');
     await waitForPageReady(page, '[data-testid="admin-page"]');
 
-    // Click add card button
-    await page.getByTestId('create-card-button').click();
-    await expect(page.getByTestId('card-create-modal')).toBeVisible();
+    // Click on deck row to open detail modal
+    await page.getByTestId('deck-row-deck-001').click();
+
+    // Wait for deck detail modal
+    await expect(page.getByTestId('deck-detail-modal')).toBeVisible();
     await page.waitForTimeout(300);
 
-    // Select a deck
-    await page.getByTestId('deck-select').click();
-    await page.getByRole('option', { name: 'Greek Traditions' }).click();
+    // Click add card button within deck detail
+    await page.getByTestId('create-card-btn').click();
+    await expect(page.getByTestId('card-create-modal')).toBeVisible();
+    await page.waitForTimeout(300);
 
     // Fill Russian tab
     await page.getByTestId('question-input-ru').fill('Какой город является столицей Греции?');
@@ -382,28 +426,45 @@ test.describe('CardCreateModal - Visual Tests', () => {
   test('CardCreateModal - Incomplete Tab Indicators', async ({ page }, testInfo) => {
     await page.setViewportSize(VIEWPORTS.desktop);
 
-    // Mock culture decks for dropdown
-    await page.route('**/api/v1/culture/decks*', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          decks: mockCultureDecks,
-          total: mockCultureDecks.length,
-        }),
-      });
-    });
-
-    // Mock decks API
+    // Mock decks API with a culture deck
     await page.route('**/api/v1/admin/decks*', (route) => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          decks: [],
-          total: 0,
+          decks: [
+            {
+              id: 'deck-001',
+              name: 'Greek Traditions',
+              type: 'culture',
+              level: null,
+              category: 'Culture',
+              item_count: 25,
+              is_active: true,
+              is_premium: false,
+              created_at: '2026-01-01T00:00:00Z',
+              owner_id: null,
+              owner_name: null,
+            },
+          ],
+          total: 1,
           page: 1,
           page_size: 10,
+        }),
+      });
+    });
+
+    // Mock culture questions for deck detail
+    await page.route('**/api/v1/admin/culture/decks/deck-001/questions*', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          questions: [],
+          total: 0,
+          page: 1,
+          page_size: 20,
+          deck_id: 'deck-001',
         }),
       });
     });
@@ -427,14 +488,17 @@ test.describe('CardCreateModal - Visual Tests', () => {
     await page.goto('/admin');
     await waitForPageReady(page, '[data-testid="admin-page"]');
 
-    // Click add card button
-    await page.getByTestId('create-card-button').click();
-    await expect(page.getByTestId('card-create-modal')).toBeVisible();
+    // Click on deck row to open detail modal
+    await page.getByTestId('deck-row-deck-001').click();
+
+    // Wait for deck detail modal
+    await expect(page.getByTestId('deck-detail-modal')).toBeVisible();
     await page.waitForTimeout(300);
 
-    // Select a deck
-    await page.getByTestId('deck-select').click();
-    await page.getByRole('option', { name: 'Greek Traditions' }).click();
+    // Click add card button within deck detail
+    await page.getByTestId('create-card-btn').click();
+    await expect(page.getByTestId('card-create-modal')).toBeVisible();
+    await page.waitForTimeout(300);
 
     // Fill only Russian tab (EL and EN tabs should show incomplete indicators)
     await page.getByTestId('question-input-ru').fill('Какой город является столицей Греции?');
@@ -452,28 +516,45 @@ test.describe('CardCreateModal - Visual Tests', () => {
   test('CardCreateModal - Four Answers', async ({ page }, testInfo) => {
     await page.setViewportSize(VIEWPORTS.desktop);
 
-    // Mock culture decks for dropdown
-    await page.route('**/api/v1/culture/decks*', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          decks: mockCultureDecks,
-          total: mockCultureDecks.length,
-        }),
-      });
-    });
-
-    // Mock decks API
+    // Mock decks API with a culture deck
     await page.route('**/api/v1/admin/decks*', (route) => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          decks: [],
-          total: 0,
+          decks: [
+            {
+              id: 'deck-001',
+              name: 'Greek Traditions',
+              type: 'culture',
+              level: null,
+              category: 'Culture',
+              item_count: 25,
+              is_active: true,
+              is_premium: false,
+              created_at: '2026-01-01T00:00:00Z',
+              owner_id: null,
+              owner_name: null,
+            },
+          ],
+          total: 1,
           page: 1,
           page_size: 10,
+        }),
+      });
+    });
+
+    // Mock culture questions for deck detail
+    await page.route('**/api/v1/admin/culture/decks/deck-001/questions*', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          questions: [],
+          total: 0,
+          page: 1,
+          page_size: 20,
+          deck_id: 'deck-001',
         }),
       });
     });
@@ -497,8 +578,15 @@ test.describe('CardCreateModal - Visual Tests', () => {
     await page.goto('/admin');
     await waitForPageReady(page, '[data-testid="admin-page"]');
 
-    // Click add card button
-    await page.getByTestId('create-card-button').click();
+    // Click on deck row to open detail modal
+    await page.getByTestId('deck-row-deck-001').click();
+
+    // Wait for deck detail modal
+    await expect(page.getByTestId('deck-detail-modal')).toBeVisible();
+    await page.waitForTimeout(300);
+
+    // Click add card button within deck detail
+    await page.getByTestId('create-card-btn').click();
     await expect(page.getByTestId('card-create-modal')).toBeVisible();
     await page.waitForTimeout(300);
 
@@ -515,28 +603,45 @@ test.describe('CardCreateModal - Visual Tests', () => {
   test('CardCreateModal - Success State', async ({ page }, testInfo) => {
     await page.setViewportSize(VIEWPORTS.desktop);
 
-    // Mock culture decks for dropdown
-    await page.route('**/api/v1/culture/decks*', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          decks: mockCultureDecks,
-          total: mockCultureDecks.length,
-        }),
-      });
-    });
-
-    // Mock decks API
+    // Mock decks API with a culture deck
     await page.route('**/api/v1/admin/decks*', (route) => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          decks: [],
-          total: 0,
+          decks: [
+            {
+              id: 'deck-001',
+              name: 'Greek Traditions',
+              type: 'culture',
+              level: null,
+              category: 'Culture',
+              item_count: 25,
+              is_active: true,
+              is_premium: false,
+              created_at: '2026-01-01T00:00:00Z',
+              owner_id: null,
+              owner_name: null,
+            },
+          ],
+          total: 1,
           page: 1,
           page_size: 10,
+        }),
+      });
+    });
+
+    // Mock culture questions for deck detail
+    await page.route('**/api/v1/admin/culture/decks/deck-001/questions*', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          questions: [],
+          total: 0,
+          page: 1,
+          page_size: 20,
+          deck_id: 'deck-001',
         }),
       });
     });
@@ -587,14 +692,17 @@ test.describe('CardCreateModal - Visual Tests', () => {
     await page.goto('/admin');
     await waitForPageReady(page, '[data-testid="admin-page"]');
 
-    // Click add card button
-    await page.getByTestId('create-card-button').click();
-    await expect(page.getByTestId('card-create-modal')).toBeVisible();
+    // Click on deck row to open detail modal
+    await page.getByTestId('deck-row-deck-001').click();
+
+    // Wait for deck detail modal
+    await expect(page.getByTestId('deck-detail-modal')).toBeVisible();
     await page.waitForTimeout(300);
 
-    // Select a deck
-    await page.getByTestId('deck-select').click();
-    await page.getByRole('option', { name: 'Greek Traditions' }).click();
+    // Click add card button within deck detail
+    await page.getByTestId('create-card-btn').click();
+    await expect(page.getByTestId('card-create-modal')).toBeVisible();
+    await page.waitForTimeout(300);
 
     // Fill all languages
     // Russian

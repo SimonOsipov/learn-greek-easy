@@ -28,7 +28,6 @@ import {
   AdminCardErrorSection,
   AdminFeedbackSection,
   AnnouncementsTab,
-  CardCreateModal,
   ChangelogTab,
   DeckCreateModal,
   type DeckCreateFormData,
@@ -604,9 +603,6 @@ const AdminPage: React.FC = () => {
   // Deck detail modal state
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [detailDeck, setDetailDeck] = useState<UnifiedDeckItem | null>(null);
-
-  // Card create modal state
-  const [cardCreateModalOpen, setCardCreateModalOpen] = useState(false);
 
   // Ref for refreshing the deck list
   const allDecksListRef = useRef<AllDecksListHandle>(null);
@@ -1188,10 +1184,6 @@ const AdminPage: React.FC = () => {
 
           {/* Action Bar */}
           <div className="flex justify-end gap-2">
-            <Button onClick={() => setCardCreateModalOpen(true)} data-testid="create-card-button">
-              <Plus className="mr-2 h-4 w-4" />
-              {t('actions.createCard')}
-            </Button>
             <Button onClick={handleOpenCreateModal} data-testid="create-deck-button">
               <Plus className="mr-2 h-4 w-4" />
               {t('actions.createDeck')}
@@ -1295,16 +1287,6 @@ const AdminPage: React.FC = () => {
         onOpenChange={handleDetailModalClose}
         deck={detailDeck}
         onItemDeleted={handleItemDeleted}
-      />
-
-      {/* Card Create Modal */}
-      <CardCreateModal
-        open={cardCreateModalOpen}
-        onOpenChange={setCardCreateModalOpen}
-        onSuccess={() => {
-          allDecksListRef.current?.refresh();
-          fetchStats();
-        }}
       />
     </div>
   );
