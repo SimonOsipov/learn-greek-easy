@@ -268,6 +268,8 @@ class NewsItemService:
                     is_pending_review=False,  # Admin-created = auto-approved
                     image_key=s3_key,
                     news_item_id=news_item.id,
+                    audio_s3_key=news_item.audio_s3_key,
+                    audio_a2_s3_key=news_item.audio_a2_s3_key,
                 )
                 self.db.add(culture_question)
                 await self.db.flush()

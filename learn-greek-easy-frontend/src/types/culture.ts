@@ -27,6 +27,7 @@ export interface CultureQuestionResponse {
   option_count: number; // Number of answer options (2, 3, or 4)
   image_url: string | null;
   audio_url: string | null;
+  audio_a2_url: string | null;
   order_index: number;
   correct_option: number;
   original_article_url: string | null; // Source news article URL
@@ -106,6 +107,7 @@ export interface CultureQuestionDetailResponse {
   correct_option: number;
   image_url: string | null;
   audio_url: string | null;
+  audio_a2_url: string | null;
   order_index: number;
   original_article_url: string | null;
   also_in_decks: AlsoInDeck[];

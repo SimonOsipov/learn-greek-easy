@@ -1945,6 +1945,13 @@ class CultureQuestion(Base, TimestampMixin):
         comment="S3 key for TTS-generated audio file (e.g., culture/audio/{uuid}.mp3)",
     )
 
+    # A2-level audio file reference
+    audio_a2_s3_key: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+        comment="S3 key for A2-level TTS-generated audio file (e.g., culture/audio/a2/{uuid}.mp3)",
+    )
+
     # Relationships
     # Note: lazy="raise" prevents N+1 queries by forcing explicit loading.
     # Use selectinload() or joinedload() when you actually need these relationships.

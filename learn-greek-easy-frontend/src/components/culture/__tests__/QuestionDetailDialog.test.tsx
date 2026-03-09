@@ -225,8 +225,8 @@ describe('QuestionDetailDialog', () => {
 
       const links = screen.getByTestId('question-detail-also-in-decks').querySelectorAll('a');
       expect(links).toHaveLength(2);
-      expect(links[0]).toHaveAttribute('href', '/culture/deck-abc');
-      expect(links[1]).toHaveAttribute('href', '/culture/deck-def');
+      expect(links[0]).toHaveAttribute('href', '/culture/decks/deck-abc');
+      expect(links[1]).toHaveAttribute('href', '/culture/decks/deck-def');
     });
 
     it('hides also-in-decks when array is empty', async () => {

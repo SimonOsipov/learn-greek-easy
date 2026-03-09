@@ -213,6 +213,7 @@ class CultureQuestionDetailResponse(BaseModel):
     correct_option: int = Field(..., ge=1, le=4)
     image_url: Optional[str] = Field(None)
     audio_url: Optional[str] = Field(None)
+    audio_a2_url: Optional[str] = Field(None)
     order_index: int = Field(..., ge=0)
     original_article_url: Optional[str] = Field(None)
     also_in_decks: list[AlsoInDeck] = Field(default_factory=list)
@@ -433,6 +434,9 @@ class CultureQuestionQueueItem(BaseModel):
     option_count: int = Field(..., ge=2, le=4, description="Number of answer options (2, 3, or 4)")
     image_url: Optional[str] = Field(None, description="Pre-signed S3 URL for question image")
     audio_url: Optional[str] = Field(None, description="Pre-signed S3 URL for question audio")
+    audio_a2_url: Optional[str] = Field(
+        None, description="Pre-signed S3 URL for A2-level question audio"
+    )
     order_index: int = Field(..., ge=0, description="Question order within deck")
     correct_option: int = Field(..., ge=1, le=4, description="Correct answer option (1-based)")
     is_new: bool = Field(..., description="True if user hasn't studied this question yet")

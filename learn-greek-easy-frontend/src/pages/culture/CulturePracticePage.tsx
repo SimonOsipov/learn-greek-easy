@@ -14,7 +14,7 @@
  * - PostHog analytics events
  */
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 
 import { AlertCircle, CheckCircle, ChevronLeft, Loader2 } from 'lucide-react';
 import posthog from 'posthog-js';
@@ -122,6 +122,17 @@ export function CulturePracticePage() {
   const [hasStudiedQuestions, setHasStudiedQuestions] = useState(false);
   const [isPracticeAnywayLoading, setIsPracticeAnywayLoading] = useState(false);
   const [newsLevel, setNewsLevel] = useState<NewsLevel>(getPersistedNewsLevel);
+
+  // Compute effective question with audio URL based on selected news level.
+  // A2 level prefers audio_a2_url, falling back to audio_url.
+  // B2 level prefers audio_url, falling back to audio_a2_url.
+  const effectiveQuestion = useMemo(() => {
+    if (!currentQuestion) return null;
+    const q = currentQuestion.question;
+    const effectiveAudioUrl =
+      newsLevel === 'a2' ? (q.audio_a2_url ?? q.audio_url) : (q.audio_url ?? q.audio_a2_url);
+    return { ...q, audio_url: effectiveAudioUrl };
+  }, [currentQuestion, newsLevel]);
 
   // Refs for tracking
   const hasTrackedStart = useRef(false);
@@ -263,6 +274,7 @@ export function CulturePracticePage() {
         option_count: q.option_count,
         image_url: q.image_url,
         audio_url: q.audio_url,
+        audio_a2_url: q.audio_a2_url,
         order_index: q.order_index,
         correct_option: q.correct_option,
         original_article_url: q.original_article_url,
@@ -456,6 +468,7 @@ export function CulturePracticePage() {
         option_count: q.option_count,
         image_url: q.image_url,
         audio_url: q.audio_url,
+        audio_a2_url: q.audio_a2_url,
         order_index: q.order_index,
         correct_option: q.correct_option,
         original_article_url: q.original_article_url,
@@ -666,6 +679,9 @@ export function CulturePracticePage() {
                 className="flex items-center gap-1"
                 aria-label={t('common:news.level.label', 'Content level')}
               >
+                <span className="whitespace-nowrap text-sm text-muted-foreground">
+                  {t('common:news.level.difficulty')}
+                </span>
                 <Button
                   variant={newsLevel === 'a2' ? 'default' : 'outline'}
                   size="sm"
@@ -684,6 +700,7 @@ export function CulturePracticePage() {
                 </Button>
               </div>
             )}
+            {showLevelToggle && <div className="h-6 w-px bg-border" aria-hidden="true" />}
             <LanguageSelector
               value={currentLanguage}
               onChange={handleLanguageChange}
@@ -696,7 +713,7 @@ export function CulturePracticePage() {
         {/* Question with inline feedback */}
         <div key={session.currentIndex} className="flex justify-center">
           <MCQComponent
-            question={currentQuestion.question}
+            question={effectiveQuestion as NonNullable<typeof effectiveQuestion>}
             language={currentLanguage}
             onAnswer={handleAnswer}
             questionNumber={progress.current}
