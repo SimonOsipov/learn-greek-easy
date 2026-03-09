@@ -22,7 +22,7 @@ from starlette.responses import StreamingResponse
 
 from src.config import settings
 from src.core.dependencies import SSEAuthResult, get_current_superuser, get_sse_auth
-from src.core.event_bus import audio_event_bus
+from src.core.event_bus import audio_event_bus, news_audio_event_bus
 from src.core.exceptions import (
     ConflictException,
     NotFoundException,
@@ -1332,6 +1332,94 @@ async def regenerate_a2_news_audio(
     )
 
     return {"message": "A2 audio regeneration started"}
+
+
+async def _fetch_news_item_for_sse(news_item_id: UUID) -> NewsItem | None:
+    """Load a NewsItem using a short-lived session (DB-free generator pattern)."""
+    factory = get_session_factory()
+    async with factory() as db:
+        stmt = select(NewsItem).where(NewsItem.id == news_item_id)
+        result = await db.execute(stmt)
+        return result.scalar_one_or_none()
+
+
+_NEWS_AUDIO_TERMINAL_EVENTS = {"audio_completed", "audio_failed"}
+_NEWS_AUDIO_SAFETY_TIMEOUT = 300.0  # 5 minutes
+
+
+async def _news_audio_queue_generator(
+    queue: asyncio.Queue,
+    bus_key: str,
+) -> AsyncGenerator[str, None]:
+    """Read from news_audio_event_bus until all started levels are terminal or timeout."""
+    started_levels: set[str] = set()
+    terminal_levels: set[str] = set()
+    deadline = asyncio.get_event_loop().time() + _NEWS_AUDIO_SAFETY_TIMEOUT
+
+    try:
+        while True:
+            remaining = deadline - asyncio.get_event_loop().time()
+            if remaining <= 0:
+                break
+
+            try:
+                event_data = await asyncio.wait_for(queue.get(), timeout=min(remaining, 30.0))
+            except (asyncio.TimeoutError, TimeoutError):
+                break
+
+            level = event_data.get("level") or event_data.get("data", {}).get("level")
+            event_type = event_data.get("type", "audio_progress")
+
+            if level:
+                started_levels.add(level)
+                if event_type in _NEWS_AUDIO_TERMINAL_EVENTS:
+                    terminal_levels.add(level)
+
+            yield format_sse_event(event_data, event=event_type)
+
+            if started_levels and terminal_levels >= started_levels:
+                break
+    except asyncio.CancelledError:
+        pass
+    finally:
+        await news_audio_event_bus.unsubscribe(bus_key, queue)
+
+
+async def _news_audio_event_generator(news_item_id: UUID) -> AsyncGenerator[str, None]:
+    """Yield a connected event then stream news audio progress events from the bus."""
+    yield format_sse_event({}, event="connected")
+
+    bus_key = f"news_audio:{news_item_id}"
+    queue = await news_audio_event_bus.subscribe(bus_key)
+    async for chunk in sse_stream(_news_audio_queue_generator(queue, bus_key)):
+        yield chunk
+
+
+@router.get(
+    "/news/{news_item_id}/audio/stream",
+    summary="Stream news audio generation progress via SSE",
+    responses={200: {"content": {"text/event-stream": {}}}},
+)
+async def stream_news_audio(
+    news_item_id: UUID,
+    sse_auth: SSEAuthResult = Depends(get_sse_auth),
+) -> StreamingResponse:
+    """SSE stream for news item audio generation progress. Admin only."""
+    if not sse_auth.is_authenticated:
+        return _sse_single_error(
+            sse_auth.error_code or "auth_required",
+            sse_auth.error_message or "Authentication required",
+        )
+
+    assert sse_auth.user is not None
+    if not sse_auth.user.is_superuser:
+        return _sse_single_error("forbidden", "Superuser privileges required")
+
+    news_item = await _fetch_news_item_for_sse(news_item_id)
+    if news_item is None:
+        return _sse_single_error("not_found", f"News item {news_item_id} not found")
+
+    return create_sse_response(_news_audio_event_generator(news_item_id))
 
 
 @router.get(
