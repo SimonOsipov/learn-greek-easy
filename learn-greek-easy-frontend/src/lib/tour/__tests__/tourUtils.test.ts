@@ -134,5 +134,52 @@ describe('tourUtils', () => {
         expect(step.popover?.description).toBeDefined();
       }
     });
+
+    it('steps 1 and 2 have onHighlightStarted callbacks', () => {
+      const mockNavigate = vi.fn();
+      const mockT = vi.fn((key: string) => key);
+      const steps = buildTourSteps(mockNavigate, mockT as any);
+      expect(typeof steps[0].onHighlightStarted).toBe('function');
+      expect(typeof steps[1].onHighlightStarted).toBe('function');
+    });
+
+    it('steps 3-7 do not have onHighlightStarted (stay on dashboard)', () => {
+      const mockNavigate = vi.fn();
+      const mockT = vi.fn((key: string) => key);
+      const steps = buildTourSteps(mockNavigate, mockT as any);
+      for (let i = 2; i <= 6; i++) {
+        expect(steps[i].onHighlightStarted).toBeUndefined();
+      }
+    });
+
+    it('step 8 targets decks-dropdown-trigger with no onHighlightStarted', () => {
+      const mockNavigate = vi.fn();
+      const mockT = vi.fn((key: string) => key);
+      const steps = buildTourSteps(mockNavigate, mockT as any);
+      expect(steps[7].element).toBe('[data-testid="decks-dropdown-trigger"]');
+      expect(mockT).toHaveBeenCalledWith('tour.steps.decks_dropdown.title');
+      expect(mockT).toHaveBeenCalledWith('tour.steps.decks_dropdown.description');
+      expect(steps[7].onHighlightStarted).toBeUndefined();
+    });
+
+    it('step 9 targets deck-filters with onHighlightStarted navigating to /decks', () => {
+      const mockNavigate = vi.fn();
+      const mockT = vi.fn((key: string) => key);
+      const steps = buildTourSteps(mockNavigate, mockT as any);
+      expect(steps[8].element).toBe('[data-testid="deck-filters"]');
+      expect(mockT).toHaveBeenCalledWith('tour.steps.deck_filters.title');
+      expect(mockT).toHaveBeenCalledWith('tour.steps.deck_filters.description');
+      expect(typeof steps[8].onHighlightStarted).toBe('function');
+    });
+
+    it('step 10 targets deck card via element function with onHighlightStarted', () => {
+      const mockNavigate = vi.fn();
+      const mockT = vi.fn((key: string) => key);
+      const steps = buildTourSteps(mockNavigate, mockT as any);
+      expect(typeof steps[9].element).toBe('function');
+      expect(mockT).toHaveBeenCalledWith('tour.steps.vocab_deck.title');
+      expect(mockT).toHaveBeenCalledWith('tour.steps.vocab_deck.description');
+      expect(typeof steps[9].onHighlightStarted).toBe('function');
+    });
   });
 });
