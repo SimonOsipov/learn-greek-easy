@@ -4,6 +4,7 @@ This module provides HTTP endpoints for flashcard review operations,
 allowing users to submit card reviews and receive SM-2 algorithm results.
 """
 
+import asyncio
 from datetime import date
 from typing import Optional
 from uuid import UUID
@@ -14,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
 from src.core.dependencies import get_current_user
+from src.core.event_bus import dashboard_event_bus
 from src.core.exceptions import CardNotFoundException, DeckNotFoundException
 from src.core.logging import get_logger
 from src.core.posthog import capture_event
@@ -401,6 +403,16 @@ async def submit_review(
             },
         )
 
+    # Signal event bus for SSE dashboard refresh
+    loop = asyncio.get_event_loop()
+    if loop.is_running():
+        loop.create_task(
+            dashboard_event_bus.signal(
+                f"dashboard:{current_user.id}",
+                {"reason": "review_completed"},
+            )
+        )
+
     return result
 
 
@@ -529,6 +541,16 @@ async def submit_bulk_reviews(
                 "successful": result.successful,
                 "failed": result.failed,
             },
+        )
+
+    # Signal event bus for SSE dashboard refresh
+    loop = asyncio.get_event_loop()
+    if loop.is_running():
+        loop.create_task(
+            dashboard_event_bus.signal(
+                f"dashboard:{current_user.id}",
+                {"reason": "review_completed"},
+            )
         )
 
     return result
