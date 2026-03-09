@@ -8,7 +8,6 @@ import { startTour, buildTourSteps } from '@/lib/tour';
 import { useAnalyticsStore } from '@/stores/analyticsStore';
 import { useAppStore, selectIsReady } from '@/stores/appStore';
 import { useAuthStore } from '@/stores/authStore';
-import { useDeckStore } from '@/stores/deckStore';
 import { isTourCompleted } from '@/utils/tourStatus';
 
 const POST_READY_DELAY_MS = 250;
@@ -36,12 +35,7 @@ export function useTourAutoTrigger(): void {
     if (isDashboardReady) {
       triggeredRef.current = true;
       const timer = setTimeout(() => {
-        const decks = useDeckStore.getState().decks;
-        const essentialDeck = decks.find((d) => d.title.includes('Essential Greek Nouns'));
-        const deckInfo = essentialDeck
-          ? { id: essentialDeck.id, title: essentialDeck.title }
-          : null;
-        const steps = buildTourSteps(navigate, t, deckInfo);
+        const steps = buildTourSteps(navigate, t);
         if (steps.length === 0) return;
 
         startTour(steps, {
