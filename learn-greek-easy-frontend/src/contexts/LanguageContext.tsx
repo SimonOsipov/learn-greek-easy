@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useCallback, useEffect, useState, useMemo } from 'react';
 
-import { useTranslation } from 'react-i18next';
+import i18n from 'i18next';
 
 import {
   SUPPORTED_LANGUAGES,
@@ -44,7 +44,18 @@ const LanguageContext = createContext<LanguageContextValue | undefined>(undefine
  * - Provides language change functionality with error handling
  */
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { i18n } = useTranslation();
+  const [i18nLanguage, setI18nLanguage] = useState<string>(i18n.language);
+
+  useEffect(() => {
+    const handleLanguageChanged = (lng: string) => {
+      setI18nLanguage(lng);
+    };
+    i18n.on('languageChanged', handleLanguageChanged);
+    return () => {
+      i18n.off('languageChanged', handleLanguageChanged);
+    };
+  }, []);
+
   const { user, isAuthenticated } = useAuthStore();
   const [isChanging, setIsChanging] = useState(false);
 
@@ -52,7 +63,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
    * Get current language from i18next, validated against supported languages
    */
   const currentLanguage = useMemo((): SupportedLanguage => {
-    const lang = i18n.language;
+    const lang = i18nLanguage;
     // Handle language codes with region (e.g., 'en-US' -> 'en')
     const baseLanguage = lang?.split('-')[0] as SupportedLanguage;
 
@@ -60,7 +71,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return baseLanguage;
     }
     return DEFAULT_LANGUAGE;
-  }, [i18n.language]);
+  }, [i18nLanguage]);
 
   /**
    * Register current language with PostHog on initial load
@@ -100,7 +111,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       };
       syncLanguage();
     }
-  }, [isAuthenticated, user, currentLanguage, i18n]);
+  }, [isAuthenticated, user, currentLanguage]);
 
   /**
    * Change language with persistence and optional backend sync
@@ -175,7 +186,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setIsChanging(false);
       }
     },
-    [currentLanguage, i18n, isAuthenticated]
+    [currentLanguage, isAuthenticated]
   );
 
   /**
