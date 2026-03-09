@@ -113,7 +113,7 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
   const isLevelFilterDisabled = deckType === 'culture';
 
   return (
-    <div className="mb-6 space-y-3">
+    <div className="mb-6 space-y-3" data-testid="deck-filters">
       {/* Row 1: Search + Counter */}
       <div className="flex items-center gap-3">
         <div className="relative flex-1">

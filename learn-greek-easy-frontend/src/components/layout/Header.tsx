@@ -180,7 +180,11 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="start">
                       {item.children.map((child) => (
-                        <DropdownMenuItem key={child.path} asChild>
+                        <DropdownMenuItem
+                          key={child.path}
+                          asChild
+                          data-testid={`nav-item-${child.path.replace(/^\//, '').replace(/\//g, '-')}`}
+                        >
                           <Link
                             to={child.path}
                             className={cn(
