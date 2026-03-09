@@ -12,12 +12,15 @@ CRITICAL: Route order matters! Specific paths MUST come before parameterized pat
 to prevent FastAPI from matching '/read-all' as '/{notification_id}'.
 """
 
+from collections.abc import AsyncGenerator
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.responses import StreamingResponse
 
-from src.core.dependencies import get_current_user
+from src.core.dependencies import SSEAuthResult, get_current_user, get_sse_auth
+from src.core.event_bus import notification_event_bus
 from src.db.dependencies import get_db
 from src.db.models import User
 from src.schemas.notification import (
@@ -28,6 +31,7 @@ from src.schemas.notification import (
     UnreadCountResponse,
 )
 from src.services.notification_service import NotificationService
+from src.utils.sse import create_sse_response, format_sse_error, format_sse_event, sse_stream
 
 router = APIRouter(
     tags=["Notifications"],
@@ -103,6 +107,58 @@ async def get_unread_count(
     service = NotificationService(db)
     count = await service.get_unread_count(current_user.id)
     return UnreadCountResponse(count=count)
+
+
+# =============================================================================
+# SSE Stream (specific path BEFORE parameterized)
+# =============================================================================
+
+
+@router.get("/stream", summary="SSE notification stream")
+async def notification_stream(
+    request: Request,
+    sse_auth: SSEAuthResult = Depends(get_sse_auth),
+    db: AsyncSession = Depends(get_db),
+) -> StreamingResponse:
+    """Stream real-time notification events via SSE.
+
+    Authenticates via query parameter token or Authorization header.
+    Sends initial unread count, then forwards events from the event bus.
+    Heartbeats prevent Railway proxy from closing idle connections.
+    """
+    # Auth check — yield SSE error event if not authenticated
+    if not sse_auth.is_authenticated:
+
+        async def auth_error_gen() -> AsyncGenerator[str, None]:
+            yield format_sse_error(
+                sse_auth.error_code or "auth_required",
+                sse_auth.error_message or "Authentication required",
+            )
+
+        return create_sse_response(auth_error_gen())
+
+    assert sse_auth.user is not None
+    user = sse_auth.user
+
+    # Query initial unread count BEFORE entering the generator
+    # (keeps the long-lived generator free from DB session concerns)
+    notification_service = NotificationService(db)
+    initial_count = await notification_service.get_unread_count(user.id)
+
+    async def event_generator() -> AsyncGenerator[str, None]:
+        queue = await notification_event_bus.subscribe(user.id)
+        try:
+            # Send initial unread count as first event
+            yield format_sse_event({"count": initial_count}, event="unread_count")
+
+            # Forward events from the event bus
+            while True:
+                event = await queue.get()
+                yield format_sse_event(event.payload, event=event.event_type)
+        finally:
+            await notification_event_bus.unsubscribe(user.id, queue)
+
+    return create_sse_response(sse_stream(event_generator()))
 
 
 # =============================================================================
