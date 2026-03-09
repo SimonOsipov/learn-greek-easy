@@ -412,6 +412,11 @@ class CultureQuestionService:
             if question.audio_s3_key
             else None
         )
+        audio_a2_url = (
+            self.s3_service.generate_presigned_url(question.audio_a2_s3_key)
+            if question.audio_a2_s3_key
+            else None
+        )
 
         # 5. Build options array
         options = [question.option_a, question.option_b]
@@ -435,6 +440,7 @@ class CultureQuestionService:
             correct_option=question.correct_option,
             image_url=image_url,
             audio_url=audio_url,
+            audio_a2_url=audio_a2_url,
             order_index=question.order_index,
             original_article_url=question.original_article_url,
             also_in_decks=also_in_decks,
@@ -1511,6 +1517,11 @@ class CultureQuestionService:
         if question.audio_s3_key:
             audio_url = self.s3_service.generate_presigned_url(question.audio_s3_key)
 
+        # Generate presigned URL if A2 audio exists
+        audio_a2_url = None
+        if question.audio_a2_s3_key:
+            audio_a2_url = self.s3_service.generate_presigned_url(question.audio_a2_s3_key)
+
         # Build dynamic options array (2-4 options)
         options = [question.option_a, question.option_b]
         if question.option_c is not None:
@@ -1525,6 +1536,7 @@ class CultureQuestionService:
             option_count=question.option_count,
             image_url=image_url,
             audio_url=audio_url,
+            audio_a2_url=audio_a2_url,
             order_index=question.order_index,
             correct_option=question.correct_option,
             is_new=stats is None,
