@@ -195,3 +195,4 @@ class GenericEventBus:
 
 
 audio_event_bus = GenericEventBus()
+dashboard_event_bus = GenericEventBus()
