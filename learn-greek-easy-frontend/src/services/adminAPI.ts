@@ -786,6 +786,8 @@ const GRAMMAR_TOTAL_BY_POS: Record<string, number> = {
   phrase: 0,
 };
 
+export const GENERATE_WORD_ENTRY_STREAM_URL = '/api/v1/admin/word-entries/generate/stream';
+
 export const adminAPI = {
   /**
    * Get content statistics for admin dashboard

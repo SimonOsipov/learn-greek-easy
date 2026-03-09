@@ -96,6 +96,8 @@ const DEFAULT_MAX_RETRIES = 10;
 export function useSSE<T = unknown>(url: string, options: SSEOptions<T>): UseSSEReturn {
   const {
     headers: extraHeaders,
+    method = 'GET',
+    body,
     onEvent,
     onError,
     onStateChange,
@@ -145,7 +147,12 @@ export function useSSE<T = unknown>(url: string, options: SSEOptions<T>): UseSSE
       }
 
       const response = await fetch(url, {
-        headers: requestHeaders,
+        method,
+        headers: {
+          ...requestHeaders,
+          ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+        },
+        body: body !== undefined ? JSON.stringify(body) : undefined,
         signal,
       });
 

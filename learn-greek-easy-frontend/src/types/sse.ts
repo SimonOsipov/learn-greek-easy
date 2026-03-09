@@ -29,6 +29,10 @@ export interface SSEErrorEvent {
 export interface SSEOptions<T = unknown> {
   /** Additional request headers (Authorization is injected automatically). */
   headers?: Record<string, string>;
+  /** HTTP method to use. Defaults to 'GET'. */
+  method?: 'GET' | 'POST';
+  /** Request body (serialized as JSON). Only used when method is 'POST'. */
+  body?: unknown;
   /** Called for each parsed SSE event received. */
   onEvent?: (event: SSEEvent<T>) => void;
   /** Called on connection errors or server-sent error events. */

@@ -1,6 +1,6 @@
 // src/components/admin/GenerateNounDialog.tsx
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useMutation } from '@tanstack/react-query';
 import {
@@ -28,7 +28,9 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useSSE } from '@/hooks/useSSE';
 import {
+  GENERATE_WORD_ENTRY_STREAM_URL,
   adminAPI,
   type CombinedTier,
   type ConfidenceTier,
@@ -44,7 +46,7 @@ import {
   type TranslationLookupStageResult,
   type VerificationSummary,
 } from '@/services/adminAPI';
-import { type APIRequestError } from '@/services/api';
+import type { SSEEvent } from '@/types/sse';
 import { isValidGreekInput } from '@/utils/greekValidation';
 
 import { DeclensionTable } from './DeclensionTable';
@@ -308,22 +310,87 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
   const [displayTranslationLookup, setDisplayTranslationLookup] =
     useState<TranslationLookupStageResult | null>(null);
 
+  // SSE pipeline state
+  const [pipelineStatus, setPipelineStatus] = useState<'idle' | 'streaming' | 'done' | 'error'>(
+    'idle'
+  );
+  const [generationLoading, setGenerationLoading] = useState(false);
+  const [verificationLoading, setVerificationLoading] = useState(false);
+  const [stageError, setStageError] = useState<string | null>(null);
+  const [streamBody, setStreamBody] = useState<unknown>(null);
+  const [streamEnabled, setStreamEnabled] = useState(false);
+
   useEffect(() => {
     return () => {
       if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
     };
   }, []);
 
-  const mutation = useMutation({
-    mutationFn: (word: string) => adminAPI.generateWordEntry(word, deckId),
-    onError: (error: Error) => {
-      const apiErr = error as APIRequestError;
-      if (apiErr.detail && typeof apiErr.detail === 'string') {
-        setApiError(apiErr.detail);
-      } else {
-        setApiError(error.message || t('generateNoun.errorGeneric'));
-      }
+  const handleSSEEvent = useCallback((event: SSEEvent<unknown>) => {
+    const data = event.data as Record<string, unknown>;
+    switch (event.type) {
+      case 'normalization_complete':
+        setDisplayPrimary(data['normalization'] as NormalizationStageResult);
+        setDisplaySuggestions((data['suggestions'] as SuggestionItem[]) ?? []);
+        break;
+      case 'duplicates_checked':
+        setDisplayDuplicate(data as unknown as DuplicateCheckStageResult);
+        break;
+      case 'translations_found':
+        setDisplayTranslationLookup((data['data'] as TranslationLookupStageResult) ?? null);
+        break;
+      case 'generation_started':
+        setGenerationLoading(true);
+        break;
+      case 'generation_complete':
+        setDisplayGeneration(data as unknown as GeneratedNounData);
+        setGenerationLoading(false);
+        break;
+      case 'generation_failed':
+        setStageError((data['error'] as string) ?? 'Generation failed');
+        setGenerationLoading(false);
+        setPipelineStatus('error');
+        break;
+      case 'verification_started':
+        setVerificationLoading(true);
+        break;
+      case 'verification_complete':
+        setDisplayVerification(data as unknown as VerificationSummary);
+        setVerificationLoading(false);
+        break;
+      case 'verification_failed':
+        setVerificationLoading(false);
+        break;
+      case 'pipeline_complete':
+        setPipelineStatus('done');
+        setStreamEnabled(false);
+        setStreamBody(null);
+        break;
+      case 'pipeline_failed':
+        setStageError((data['error'] as string) ?? 'Pipeline failed');
+        setPipelineStatus('error');
+        setStreamEnabled(false);
+        setStreamBody(null);
+        break;
+    }
+  }, []);
+
+  const { close: closeStream } = useSSE(GENERATE_WORD_ENTRY_STREAM_URL, {
+    method: 'POST',
+    body: streamBody,
+    enabled: streamEnabled,
+    onEvent: handleSSEEvent,
+    onError: (err) => {
+      const msg =
+        err instanceof Error
+          ? err.message
+          : ((err as { message?: string }).message ?? 'Stream error');
+      setApiError(msg);
+      setPipelineStatus('error');
+      setStreamEnabled(false);
+      setStreamBody(null);
     },
+    maxRetries: 0,
   });
 
   const linkMutation = useMutation({
@@ -339,28 +406,9 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
     },
   });
 
-  const isSubmitting = mutation.isPending;
-  const normalizationResult = mutation.data?.normalization ?? null;
-  const hasResult = normalizationResult !== null;
+  const isSubmitting = pipelineStatus === 'streaming';
+  const hasResult = displayPrimary !== null;
   const showPipeline = isSubmitting || hasResult;
-
-  useEffect(() => {
-    if (normalizationResult) {
-      setDisplayPrimary(normalizationResult);
-      setDisplaySuggestions(mutation.data?.suggestions ?? []);
-      setDisplayDuplicate(mutation.data?.duplicate_check ?? null);
-      setDisplayVerification(mutation.data?.verification ?? null);
-      setDisplayGeneration(mutation.data?.generation ?? null);
-      setDisplayTranslationLookup(mutation.data?.translation_lookup ?? null);
-    }
-  }, [
-    normalizationResult,
-    mutation.data?.suggestions,
-    mutation.data?.duplicate_check,
-    mutation.data?.verification,
-    mutation.data?.generation,
-    mutation.data?.translation_lookup,
-  ]);
 
   const trimmedWord = greekWord.trim();
   const validation = trimmedWord ? isValidGreekInput(trimmedWord) : { valid: false };
@@ -398,26 +446,50 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
     setDisplayTranslationLookup(null);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = useCallback(() => {
     const trimmed = greekWord.trim();
-    if (!trimmed) return;
+    if (!trimmed || !deckId) return;
+
+    // Reset all display state
+    setDisplayPrimary(null);
+    setDisplaySuggestions([]);
+    setDisplayDuplicate(null);
+    setDisplayGeneration(null);
+    setDisplayVerification(null);
+    setDisplayTranslationLookup(null);
+    setGenerationLoading(false);
+    setVerificationLoading(false);
+    setStageError(null);
     setApiError(null);
-    mutation.mutate(trimmed);
-  };
+    setPipelineStatus('streaming');
+
+    setStreamBody({ word: trimmed, deck_id: deckId });
+    setStreamEnabled(true);
+  }, [greekWord, deckId]);
+
+  const resetAllState = useCallback(() => {
+    setGreekWord('');
+    setApiError(null);
+    setDisplayPrimary(null);
+    setDisplaySuggestions([]);
+    setDisplayDuplicate(null);
+    setDisplayVerification(null);
+    setDisplayGeneration(null);
+    setDisplayTranslationLookup(null);
+    setPipelineStatus('idle');
+    setGenerationLoading(false);
+    setVerificationLoading(false);
+    setStageError(null);
+    setStreamEnabled(false);
+    setStreamBody(null);
+    closeStream();
+  }, [closeStream]);
 
   const handleOpenChange = (open: boolean) => {
     if (!open) {
       if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
       resetTimerRef.current = setTimeout(() => {
-        setGreekWord('');
-        setApiError(null);
-        setDisplayPrimary(null);
-        setDisplaySuggestions([]);
-        setDisplayDuplicate(null);
-        setDisplayVerification(null);
-        setDisplayGeneration(null);
-        setDisplayTranslationLookup(null);
-        mutation.reset();
+        resetAllState();
         resetTimerRef.current = null;
       }, 200);
     }
@@ -442,7 +514,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                 3.{' '}
                 {displayGeneration
                   ? t('generateNoun.pipeline.generated')
-                  : mutation.isPending
+                  : isSubmitting
                     ? t('generateNoun.pipeline.generating')
                     : t('generateNoun.pipeline.generate')}
               </span>
@@ -451,7 +523,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                 4.{' '}
                 {displayVerification
                   ? t('generateNoun.verification.verified')
-                  : mutation.isPending
+                  : isSubmitting
                     ? t('generateNoun.verification.verifying')
                     : t('generateNoun.verification.verify')}
               </span>
@@ -459,11 +531,11 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
           )}
         </DialogHeader>
 
-        {hasResult && normalizationResult ? (
+        {hasResult && displayPrimary ? (
           <>
             <div data-testid="generate-noun-result" className="space-y-4">
               <h3 className="font-medium">{t('generateNoun.normalizationResult')}</h3>
-              {normalizationResult.corrected_from && normalizationResult.corrected_to && (
+              {displayPrimary.corrected_from && displayPrimary.corrected_to && (
                 <div
                   data-testid="correction-note"
                   className="flex items-start gap-2 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm dark:border-blue-800 dark:bg-blue-950"
@@ -471,8 +543,8 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                   <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
                   <span>
                     {t('generateNoun.accentCorrected', {
-                      from: normalizationResult.corrected_from,
-                      to: normalizationResult.corrected_to,
+                      from: displayPrimary.corrected_from,
+                      to: displayPrimary.corrected_to,
                     })}
                   </span>
                 </div>
@@ -552,12 +624,12 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                   </div>
                 </div>
               )}
-              {mutation.data?.duplicate_check && (
+              {displayDuplicate && (
                 <DuplicateCheckSection
-                  duplicateCheck={mutation.data.duplicate_check}
+                  duplicateCheck={displayDuplicate}
                   currentDeckId={deckId}
                   onLinkToDeck={() => {
-                    const wordEntryId = mutation.data?.duplicate_check?.word_entry_id;
+                    const wordEntryId = displayDuplicate.word_entry_id;
                     if (wordEntryId) {
                       linkMutation.mutate({ wordEntryId });
                     }
@@ -646,6 +718,20 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                 </Collapsible>
               )}
 
+            {generationLoading && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Generating with AI...
+              </div>
+            )}
+
+            {stageError && (
+              <Alert variant="destructive" data-testid="stage-error">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{stageError}</AlertDescription>
+              </Alert>
+            )}
+
             {displayGeneration && (
               <div data-testid="generation-section" className="space-y-3">
                 <h3 className="text-sm font-medium">{t('generateNoun.generation.title')}</h3>
@@ -720,6 +806,13 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
               </div>
             )}
 
+            {verificationLoading && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Running verification...
+              </div>
+            )}
+
             {displayVerification && (
               <div data-testid="verification-section" className="space-y-3">
                 <div className="flex items-center gap-2">
@@ -743,17 +836,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
             <DialogFooter>
               <Button
                 variant="outline"
-                onClick={() => {
-                  setGreekWord('');
-                  setApiError(null);
-                  setDisplayPrimary(null);
-                  setDisplaySuggestions([]);
-                  setDisplayDuplicate(null);
-                  setDisplayVerification(null);
-                  setDisplayGeneration(null);
-                  setDisplayTranslationLookup(null);
-                  mutation.reset();
-                }}
+                onClick={resetAllState}
                 data-testid="generate-noun-start-over"
               >
                 {t('generateNoun.startOverButton')}
@@ -785,7 +868,6 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                   onChange={(e) => {
                     setGreekWord(e.target.value);
                     setApiError(null);
-                    mutation.reset();
                   }}
                   placeholder={t('generateNoun.inputPlaceholder')}
                 />

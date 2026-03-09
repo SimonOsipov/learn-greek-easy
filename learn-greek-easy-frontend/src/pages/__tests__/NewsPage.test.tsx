@@ -20,6 +20,7 @@ import * as newsAnalytics from '@/lib/analytics/newsAnalytics';
 
 // Mock adminAPI
 vi.mock('@/services/adminAPI', () => ({
+  GENERATE_WORD_ENTRY_STREAM_URL: '/api/v1/admin/word-entries/generate/stream',
   adminAPI: {
     getNewsItems: vi.fn(),
   },
