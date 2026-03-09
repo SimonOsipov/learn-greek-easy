@@ -245,7 +245,9 @@
     "emptySearchDescription": "No words match your search. Try a different term.",
     "emptyFilterDescription": "No words in this category.",
     "errorTitle": "Failed to load words",
-    "errorDescription": "There was an error loading the word entries. Please try again."
+    "errorDescription": "There was an error loading the word entries. Please try again.",
+    "masteryDotsLegend": "Correct answers toward mastery — 4 needed to master a card.",
+    "masteryDotsInfo": "Mastery dots info"
   },
   "wordReference": {
     "backToDeck": "Back to Deck",

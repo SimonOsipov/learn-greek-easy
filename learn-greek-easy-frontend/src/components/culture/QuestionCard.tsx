@@ -4,11 +4,12 @@ import React from 'react';
 
 import { useTranslation } from 'react-i18next';
 
+import { STATUS_DOT_CLASS, STATUS_TO_MASTERY } from '@/components/shared/cardStatusColors';
 import { MasteryDots } from '@/components/shared/MasteryDots';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import type { CultureQuestionBrowseItem, CultureQuestionStatus } from '@/types/culture';
+import type { CultureQuestionBrowseItem } from '@/types/culture';
 
 // ============================================
 // Types
@@ -21,24 +22,6 @@ export interface QuestionCardProps {
   /** Callback when card is clicked. Receives the question ID. */
   onClick?: (questionId: string) => void;
 }
-
-// ============================================
-// Constants
-// ============================================
-
-const STATUS_DOT_CLASS: Record<CultureQuestionStatus, string> = {
-  new: 'bg-muted-foreground/30',
-  learning: 'bg-yellow-500',
-  review: 'bg-blue-500',
-  mastered: 'bg-green-500',
-};
-
-const STATUS_TO_MASTERY: Record<CultureQuestionStatus, number> = {
-  new: 0,
-  learning: 1,
-  review: 2,
-  mastered: 4,
-};
 
 // ============================================
 // Helper: getLocalizedText (mirrors MCQComponent pattern)

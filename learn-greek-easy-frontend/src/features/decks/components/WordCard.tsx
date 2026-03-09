@@ -17,6 +17,8 @@ import React from 'react';
 
 import { useTranslation } from 'react-i18next';
 
+import { STATUS_DOT_CLASS } from '@/components/shared/cardStatusColors';
+import type { CardStatus } from '@/components/shared/cardStatusColors';
 import { MasteryDots } from '@/components/shared/MasteryDots';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -40,6 +42,7 @@ export interface WordCardProps {
 interface MasteryIndicatorProps {
   /** 0-5, where 0 = not started, 5 = mastered */
   level: number;
+  status?: CardStatus;
 }
 
 // ============================================
@@ -51,11 +54,11 @@ interface MasteryIndicatorProps {
  * V2 placeholder: always gray for now.
  * Future: color based on level (green for mastered, yellow for learning, etc.)
  */
-const MasteryIndicator: React.FC<MasteryIndicatorProps> = ({ level }) => {
+const MasteryIndicator: React.FC<MasteryIndicatorProps> = ({ level, status = 'new' }) => {
   return (
     <div
       data-testid="word-card-mastery-indicator"
-      className="h-2.5 w-2.5 rounded-full bg-muted-foreground/30"
+      className={cn('h-2.5 w-2.5 rounded-full', STATUS_DOT_CLASS[status])}
       aria-label={`Mastery level: ${level} of 5`}
     />
   );
@@ -143,6 +146,7 @@ export const WordCard: React.FC<WordCardProps> = ({ wordEntry, onClick, loading 
       <CardContent className="p-4">
         {/* Top-right mastery indicator (placeholder) */}
         <div className="absolute right-3 top-3">
+          {/* TODO: pass status from word entry data when mastery tracking is wired up */}
           <MasteryIndicator level={0} />
         </div>
 
