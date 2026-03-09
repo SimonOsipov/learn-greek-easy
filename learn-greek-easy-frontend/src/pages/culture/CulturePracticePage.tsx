@@ -666,6 +666,9 @@ export function CulturePracticePage() {
                 className="flex items-center gap-1"
                 aria-label={t('common:news.level.label', 'Content level')}
               >
+                <span className="whitespace-nowrap text-sm text-muted-foreground">
+                  {t('common:news.level.difficulty')}
+                </span>
                 <Button
                   variant={newsLevel === 'a2' ? 'default' : 'outline'}
                   size="sm"
@@ -684,6 +687,7 @@ export function CulturePracticePage() {
                 </Button>
               </div>
             )}
+            {showLevelToggle && <div className="h-6 w-px bg-border" aria-hidden="true" />}
             <LanguageSelector
               value={currentLanguage}
               onChange={handleLanguageChange}
