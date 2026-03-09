@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useLayoutContext } from '@/contexts/LayoutContext';
 import { useAuth } from '@/hooks/useAuth';
-import { startTour, buildTourSteps } from '@/lib/tour';
+import { startTour, buildTourSteps, waitForElement } from '@/lib/tour';
 import { cn } from '@/lib/utils';
 import { useDeckStore } from '@/stores/deckStore';
 
@@ -55,6 +55,10 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
     if (tourRunning) return;
     setTourRunning(true);
     try {
+      if (location.pathname !== '/dashboard') {
+        navigate('/dashboard');
+        await waitForElement('[data-testid="metrics-section"]', 3000);
+      }
       const decks = useDeckStore.getState().decks;
       const essentialDeck = decks.find((d) => d.title.includes('Essential Greek Nouns'));
       const deckInfo = essentialDeck ? { id: essentialDeck.id, title: essentialDeck.title } : null;

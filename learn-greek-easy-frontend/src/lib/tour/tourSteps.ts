@@ -25,6 +25,10 @@ export function buildTourSteps(
       side: 'bottom',
       align: 'center',
     },
+    onHighlightStarted: async () => {
+      navigate('/dashboard');
+      await waitForElement('[data-testid="metrics-section"]', 3000);
+    },
   });
 
   // Step 2: Progress Metrics (dashboard page)
@@ -35,6 +39,10 @@ export function buildTourSteps(
       description: t('tour.steps.progress.description'),
       side: 'bottom',
       align: 'start',
+    },
+    onHighlightStarted: async () => {
+      navigate('/dashboard');
+      await waitForElement('[data-testid="metrics-section"]', 3000);
     },
   });
 
