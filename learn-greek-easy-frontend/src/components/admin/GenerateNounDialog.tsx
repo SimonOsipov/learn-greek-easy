@@ -16,6 +16,16 @@ import {
 import { useTranslation } from 'react-i18next';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -319,6 +329,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
   const [stageError, setStageError] = useState<string | null>(null);
   const [streamBody, setStreamBody] = useState<unknown>(null);
   const [streamEnabled, setStreamEnabled] = useState(false);
+  const [swapConfirmation, setSwapConfirmation] = useState<{ index: number } | null>(null);
 
   useEffect(() => {
     return () => {
@@ -418,33 +429,70 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
   const warningKey =
     validation.reason === 'tooLong' ? 'generateNoun.tooLong' : 'generateNoun.invalidGreek';
 
-  const handleSwap = (suggestionIndex: number) => {
-    if (!displayPrimary) return;
-    const chosen = displaySuggestions[suggestionIndex];
-    const newSuggestions = [...displaySuggestions];
-    newSuggestions[suggestionIndex] = {
-      lemma: displayPrimary.lemma,
-      pos: displayPrimary.pos,
-      gender: displayPrimary.gender,
-      article: displayPrimary.article,
-      confidence: displayPrimary.confidence,
-      confidence_tier: displayPrimary.confidence_tier,
-      strategy: displayPrimary.strategy ?? 'direct',
-    };
-    setDisplayPrimary({
-      ...displayPrimary,
-      lemma: chosen.lemma,
-      pos: chosen.pos,
-      gender: chosen.gender,
-      article: chosen.article,
-      confidence: chosen.confidence,
-      confidence_tier: chosen.confidence_tier,
-      strategy: chosen.strategy,
-    });
-    setDisplaySuggestions(newSuggestions);
-    setDisplayGeneration(null);
-    setDisplayTranslationLookup(null);
-  };
+  const executeSwap = useCallback(
+    (suggestionIndex: number) => {
+      const chosen = displaySuggestions[suggestionIndex];
+      if (!displayPrimary || !chosen) return;
+
+      // Client-side swap
+      const newSuggestions = [...displaySuggestions];
+      newSuggestions[suggestionIndex] = {
+        lemma: displayPrimary.lemma,
+        gender: displayPrimary.gender,
+        article: displayPrimary.article,
+        pos: displayPrimary.pos,
+        confidence: displayPrimary.confidence,
+        confidence_tier: displayPrimary.confidence_tier,
+        strategy: displayPrimary.strategy ?? 'direct',
+      };
+      setDisplaySuggestions(newSuggestions);
+      setDisplayPrimary({
+        ...displayPrimary,
+        lemma: chosen.lemma,
+        gender: chosen.gender,
+        article: chosen.article,
+      });
+
+      // Clear generation/verification
+      setDisplayGeneration(null);
+      setDisplayVerification(null);
+      setGenerationLoading(false);
+      setVerificationLoading(false);
+      setStageError(null);
+      setPipelineStatus('streaming');
+
+      // Start new SSE stream from generation stage
+      const word = greekWord.trim();
+      setStreamBody({
+        word,
+        deck_id: deckId,
+        lemma: chosen.lemma,
+        gender: chosen.gender,
+        article: chosen.article,
+        translation_lookup: displayTranslationLookup,
+      });
+      // Toggle stream to restart (if already streaming, need to reset)
+      setStreamEnabled(false);
+      setTimeout(() => setStreamEnabled(true), 0);
+
+      setSwapConfirmation(null);
+    },
+    [displayPrimary, displaySuggestions, displayTranslationLookup, greekWord, deckId]
+  );
+
+  const handleSwap = useCallback(
+    (suggestionIndex: number) => {
+      if (!displayPrimary) return;
+      if (displayGeneration) {
+        // Generation done — need confirmation
+        setSwapConfirmation({ index: suggestionIndex });
+      } else {
+        // Still generating — swap immediately
+        executeSwap(suggestionIndex);
+      }
+    },
+    [displayPrimary, displayGeneration, executeSwap]
+  );
 
   const handleSubmit = useCallback(() => {
     const trimmed = greekWord.trim();
@@ -497,414 +545,440 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[650px]" data-testid="generate-noun-dialog">
-        <DialogHeader>
-          <DialogTitle>{t('generateNoun.title')}</DialogTitle>
-          {showPipeline && (
-            <div
-              data-testid="pipeline-steps"
-              className="flex items-center gap-1 text-xs text-muted-foreground"
-            >
-              <span>1. {t('generateNoun.normalizationResult')}</span>
-              <span>/</span>
-              <span>2. {t('generateNoun.pipeline.duplicates')}</span>
-              <span>/</span>
-              <span className={displayGeneration ? 'font-medium text-foreground' : ''}>
-                3.{' '}
-                {displayGeneration
-                  ? t('generateNoun.pipeline.generated')
-                  : isSubmitting
-                    ? t('generateNoun.pipeline.generating')
-                    : t('generateNoun.pipeline.generate')}
-              </span>
-              <span>/</span>
-              <span className={displayVerification ? 'font-medium text-foreground' : ''}>
-                4.{' '}
-                {displayVerification
-                  ? t('generateNoun.verification.verified')
-                  : isSubmitting
-                    ? t('generateNoun.verification.verifying')
-                    : t('generateNoun.verification.verify')}
-              </span>
-            </div>
-          )}
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent className="sm:max-w-[650px]" data-testid="generate-noun-dialog">
+          <DialogHeader>
+            <DialogTitle>{t('generateNoun.title')}</DialogTitle>
+            {showPipeline && (
+              <div
+                data-testid="pipeline-steps"
+                className="flex items-center gap-1 text-xs text-muted-foreground"
+              >
+                <span>1. {t('generateNoun.normalizationResult')}</span>
+                <span>/</span>
+                <span>2. {t('generateNoun.pipeline.duplicates')}</span>
+                <span>/</span>
+                <span className={displayGeneration ? 'font-medium text-foreground' : ''}>
+                  3.{' '}
+                  {displayGeneration
+                    ? t('generateNoun.pipeline.generated')
+                    : isSubmitting
+                      ? t('generateNoun.pipeline.generating')
+                      : t('generateNoun.pipeline.generate')}
+                </span>
+                <span>/</span>
+                <span className={displayVerification ? 'font-medium text-foreground' : ''}>
+                  4.{' '}
+                  {displayVerification
+                    ? t('generateNoun.verification.verified')
+                    : isSubmitting
+                      ? t('generateNoun.verification.verifying')
+                      : t('generateNoun.verification.verify')}
+                </span>
+              </div>
+            )}
+          </DialogHeader>
 
-        {hasResult && displayPrimary ? (
-          <>
-            <div data-testid="generate-noun-result" className="space-y-4">
-              <h3 className="font-medium">{t('generateNoun.normalizationResult')}</h3>
-              {displayPrimary.corrected_from && displayPrimary.corrected_to && (
-                <div
-                  data-testid="correction-note"
-                  className="flex items-start gap-2 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm dark:border-blue-800 dark:bg-blue-950"
-                >
-                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
-                  <span>
-                    {t('generateNoun.accentCorrected', {
-                      from: displayPrimary.corrected_from,
-                      to: displayPrimary.corrected_to,
-                    })}
-                  </span>
-                </div>
-              )}
-              {displayPrimary && (
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">{t('generateNoun.lemmaLabel')}</span>
-                    <p data-testid="result-lemma" className="font-medium">
-                      {displayPrimary.lemma}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">{t('generateNoun.genderLabel')}</span>
-                    <p data-testid="result-gender" className="font-medium">
-                      {displayPrimary.gender
-                        ? `${displayPrimary.gender}${displayPrimary.article ? ` (${displayPrimary.article})` : ''}`
-                        : t('generateNoun.genderUnknown')}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">{t('generateNoun.posLabel')}</span>
-                    <p data-testid="result-pos" className="font-medium">
-                      {displayPrimary.pos}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">
-                      {t('generateNoun.confidenceLabel')}
-                    </span>
-                    <Badge
-                      data-testid="result-confidence-badge"
-                      className={CONFIDENCE_BADGE_CLASSES[displayPrimary.confidence_tier]}
-                    >
-                      {displayPrimary.confidence.toFixed(2)} —{' '}
-                      {t(`generateNoun.confidence.${displayPrimary.confidence_tier}`)}
-                    </Badge>
-                  </div>
-                </div>
-              )}
-              {displayPrimary?.confidence_tier === 'low' && (
-                <Alert data-testid="result-low-confidence-warning">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{t('generateNoun.lowConfidenceWarning')}</AlertDescription>
-                </Alert>
-              )}
-              {displaySuggestions.length > 0 && (
-                <div data-testid="suggestions-section" className="space-y-2">
-                  <h4 className="text-sm font-medium text-muted-foreground">
-                    {t('generateNoun.suggestionsTitle')}
-                  </h4>
-                  <div className="space-y-1">
-                    {displaySuggestions.map((suggestion, index) => (
-                      <div
-                        key={`${suggestion.lemma}-${suggestion.pos}-${index}`}
-                        data-testid={`suggestion-row-${index}`}
-                        className="flex items-center justify-between rounded-md border p-2 text-sm"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="font-bold">{suggestion.lemma}</span>
-                          <span className="text-muted-foreground">{suggestion.pos}</span>
-                          <Badge className={CONFIDENCE_BADGE_CLASSES[suggestion.confidence_tier]}>
-                            {suggestion.confidence.toFixed(2)}{' '}
-                            {t(`generateNoun.confidence.${suggestion.confidence_tier}`)}
-                          </Badge>
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          data-testid={`suggestion-use-${index}`}
-                          onClick={() => handleSwap(index)}
-                        >
-                          {t('generateNoun.useSuggestion')}
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {displayDuplicate && (
-                <DuplicateCheckSection
-                  duplicateCheck={displayDuplicate}
-                  currentDeckId={deckId}
-                  onLinkToDeck={() => {
-                    const wordEntryId = displayDuplicate.word_entry_id;
-                    if (wordEntryId) {
-                      linkMutation.mutate({ wordEntryId });
-                    }
-                  }}
-                  isLinking={linkMutation.isPending}
-                />
-              )}
-            </div>
-
-            {displayDuplicate && (
-              <div data-testid="duplicate-check-section">
-                {displayDuplicate.is_duplicate ? (
-                  <div className="space-y-2">
-                    <div
-                      data-testid="duplicate-found-warning"
-                      className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm dark:border-amber-800 dark:bg-amber-950"
-                    >
-                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-                      <div>
-                        <p className="font-medium">
-                          {t('generateNoun.duplicateFound', {
-                            deckName: displayDuplicate.matched_decks[0]?.deck_name ?? '',
-                          })}
-                        </p>
-                        {displayDuplicate.existing_entry && (
-                          <p className="mt-1 text-muted-foreground">
-                            {t('generateNoun.duplicateTranslation', {
-                              translation: displayDuplicate.existing_entry.translation_en,
-                            })}
-                          </p>
-                        )}
-                        <p className="mt-1 text-muted-foreground">
-                          {t('generateNoun.duplicateWarning')}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
+          {hasResult && displayPrimary ? (
+            <>
+              <div data-testid="generate-noun-result" className="space-y-4">
+                <h3 className="font-medium">{t('generateNoun.normalizationResult')}</h3>
+                {displayPrimary.corrected_from && displayPrimary.corrected_to && (
                   <div
-                    data-testid="no-duplicate-banner"
-                    className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 p-3 text-sm dark:border-green-800 dark:bg-green-950"
+                    data-testid="correction-note"
+                    className="flex items-start gap-2 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm dark:border-blue-800 dark:bg-blue-950"
                   >
-                    <Info className="h-4 w-4 shrink-0 text-green-600 dark:text-green-400" />
-                    <span>{t('generateNoun.noDuplicates')}</span>
+                    <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
+                    <span>
+                      {t('generateNoun.accentCorrected', {
+                        from: displayPrimary.corrected_from,
+                        to: displayPrimary.corrected_to,
+                      })}
+                    </span>
                   </div>
                 )}
-              </div>
-            )}
-
-            {displayTranslationLookup &&
-              (displayTranslationLookup.en?.source !== 'none' ||
-                displayTranslationLookup.ru?.source !== 'none') && (
-                <Collapsible data-testid="tdict-section">
-                  <CollapsibleTrigger className="flex w-full items-center justify-between rounded-md border p-3 text-sm font-medium hover:bg-muted/50">
-                    <span>{t('generateNoun.tdict.title')}</span>
-                    <ChevronDown className="h-4 w-4" />
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="mt-2 space-y-2 px-1">
-                    {displayTranslationLookup.en &&
-                      displayTranslationLookup.en.source !== 'none' && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <span className="text-muted-foreground">EN:</span>
-                          <span>{displayTranslationLookup.en.combined_text}</span>
-                          <Badge variant="outline" className="text-xs">
-                            {displayTranslationLookup.en.source}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">
-                            ({displayTranslationLookup.en.sense_count})
-                          </span>
-                        </div>
-                      )}
-                    {displayTranslationLookup.ru &&
-                      displayTranslationLookup.ru.source !== 'none' && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <span className="text-muted-foreground">RU:</span>
-                          <span>{displayTranslationLookup.ru.combined_text}</span>
-                          <Badge variant="outline" className="text-xs">
-                            {displayTranslationLookup.ru.source}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">
-                            ({displayTranslationLookup.ru.sense_count})
-                          </span>
-                        </div>
-                      )}
-                  </CollapsibleContent>
-                </Collapsible>
-              )}
-
-            {generationLoading && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Generating with AI...
-              </div>
-            )}
-
-            {stageError && (
-              <Alert variant="destructive" data-testid="stage-error">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{stageError}</AlertDescription>
-              </Alert>
-            )}
-
-            {displayGeneration && (
-              <div data-testid="generation-section" className="space-y-3">
-                <h3 className="text-sm font-medium">{t('generateNoun.generation.title')}</h3>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">
-                      {t('generateNoun.generation.translationEn')}
-                    </span>
-                    <p data-testid="gen-translation-en" className="font-medium">
-                      {displayGeneration.translation_en}
-                      {displayGeneration.translation_en_plural && (
-                        <span className="text-muted-foreground">
-                          {' '}
-                          (pl. {displayGeneration.translation_en_plural})
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">
-                      {t('generateNoun.generation.translationRu')}
-                    </span>
-                    <p data-testid="gen-translation-ru" className="font-medium">
-                      {displayGeneration.translation_ru}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">
-                      {t('generateNoun.generation.pronunciation')}
-                    </span>
-                    <p data-testid="gen-pronunciation" className="font-medium">
-                      {displayGeneration.pronunciation}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">
-                      {t('generateNoun.generation.declensionGroup')}
-                    </span>
-                    <p>
-                      <Badge data-testid="gen-declension-group" variant="outline">
-                        {displayGeneration.grammar_data.declension_group}
+                {displayPrimary && (
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">{t('generateNoun.lemmaLabel')}</span>
+                      <p data-testid="result-lemma" className="font-medium">
+                        {displayPrimary.lemma}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">{t('generateNoun.genderLabel')}</span>
+                      <p data-testid="result-gender" className="font-medium">
+                        {displayPrimary.gender
+                          ? `${displayPrimary.gender}${displayPrimary.article ? ` (${displayPrimary.article})` : ''}`
+                          : t('generateNoun.genderUnknown')}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">{t('generateNoun.posLabel')}</span>
+                      <p data-testid="result-pos" className="font-medium">
+                        {displayPrimary.pos}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">
+                        {t('generateNoun.confidenceLabel')}
+                      </span>
+                      <Badge
+                        data-testid="result-confidence-badge"
+                        className={CONFIDENCE_BADGE_CLASSES[displayPrimary.confidence_tier]}
+                      >
+                        {displayPrimary.confidence.toFixed(2)} —{' '}
+                        {t(`generateNoun.confidence.${displayPrimary.confidence_tier}`)}
                       </Badge>
-                    </p>
+                    </div>
                   </div>
-                </div>
-                <div>
-                  <h4 className="mb-1 text-sm font-medium text-muted-foreground">
-                    {t('generateNoun.generation.declensionTable')}
-                  </h4>
-                  <DeclensionTable cases={displayGeneration.grammar_data.cases} />
-                </div>
-                {displayGeneration.examples.length > 0 && (
-                  <div>
-                    <h4 className="mb-1 text-sm font-medium text-muted-foreground">
-                      {t('generateNoun.generation.examples')}
+                )}
+                {displayPrimary?.confidence_tier === 'low' && (
+                  <Alert data-testid="result-low-confidence-warning">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{t('generateNoun.lowConfidenceWarning')}</AlertDescription>
+                  </Alert>
+                )}
+                {displaySuggestions.length > 0 && (
+                  <div data-testid="suggestions-section" className="space-y-2">
+                    <h4 className="text-sm font-medium text-muted-foreground">
+                      {t('generateNoun.suggestionsTitle')}
                     </h4>
-                    <div className="space-y-2">
-                      {displayGeneration.examples.map((ex) => (
+                    <div className="space-y-1">
+                      {displaySuggestions.map((suggestion, index) => (
                         <div
-                          key={ex.id}
-                          data-testid={`gen-example-${ex.id}`}
-                          className="rounded-md border p-2 text-sm"
+                          key={`${suggestion.lemma}-${suggestion.pos}-${index}`}
+                          data-testid={`suggestion-row-${index}`}
+                          className="flex items-center justify-between rounded-md border p-2 text-sm"
                         >
-                          <p className="font-medium">{ex.greek}</p>
-                          <p className="text-muted-foreground">{ex.english}</p>
-                          <p className="text-muted-foreground">{ex.russian}</p>
+                          <div className="flex items-center gap-3">
+                            <span className="font-bold">{suggestion.lemma}</span>
+                            <span className="text-muted-foreground">{suggestion.pos}</span>
+                            <Badge className={CONFIDENCE_BADGE_CLASSES[suggestion.confidence_tier]}>
+                              {suggestion.confidence.toFixed(2)}{' '}
+                              {t(`generateNoun.confidence.${suggestion.confidence_tier}`)}
+                            </Badge>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            data-testid={`suggestion-use-${index}`}
+                            onClick={() => handleSwap(index)}
+                          >
+                            {t('generateNoun.useSuggestion')}
+                          </Button>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
-              </div>
-            )}
-
-            {verificationLoading && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Running verification...
-              </div>
-            )}
-
-            {displayVerification && (
-              <div data-testid="verification-section" className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-medium">
-                    {t('generateNoun.verification.combinedTier')}
-                  </h3>
-                  <VerificationTierBadge tier={displayVerification.combined_tier} />
-                </div>
-                {displayVerification.local && (
-                  <LocalVerificationPanel result={displayVerification.local} />
-                )}
-                {displayVerification.cross_ai && (
-                  <CrossAIVerificationPanel
-                    result={displayVerification.cross_ai}
-                    morphologySource={displayVerification.morphology_source}
+                {displayDuplicate && (
+                  <DuplicateCheckSection
+                    duplicateCheck={displayDuplicate}
+                    currentDeckId={deckId}
+                    onLinkToDeck={() => {
+                      const wordEntryId = displayDuplicate.word_entry_id;
+                      if (wordEntryId) {
+                        linkMutation.mutate({ wordEntryId });
+                      }
+                    }}
+                    isLinking={linkMutation.isPending}
                   />
                 )}
               </div>
-            )}
 
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={resetAllState}
-                data-testid="generate-noun-start-over"
-              >
-                {t('generateNoun.startOverButton')}
-              </Button>
-            </DialogFooter>
-          </>
-        ) : (
-          <>
-            <div className="space-y-4">
-              {apiError && (
-                <Alert variant="destructive" data-testid="generate-noun-error">
+              {displayDuplicate && (
+                <div data-testid="duplicate-check-section">
+                  {displayDuplicate.is_duplicate ? (
+                    <div className="space-y-2">
+                      <div
+                        data-testid="duplicate-found-warning"
+                        className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm dark:border-amber-800 dark:bg-amber-950"
+                      >
+                        <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                        <div>
+                          <p className="font-medium">
+                            {t('generateNoun.duplicateFound', {
+                              deckName: displayDuplicate.matched_decks[0]?.deck_name ?? '',
+                            })}
+                          </p>
+                          {displayDuplicate.existing_entry && (
+                            <p className="mt-1 text-muted-foreground">
+                              {t('generateNoun.duplicateTranslation', {
+                                translation: displayDuplicate.existing_entry.translation_en,
+                              })}
+                            </p>
+                          )}
+                          <p className="mt-1 text-muted-foreground">
+                            {t('generateNoun.duplicateWarning')}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      data-testid="no-duplicate-banner"
+                      className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 p-3 text-sm dark:border-green-800 dark:bg-green-950"
+                    >
+                      <Info className="h-4 w-4 shrink-0 text-green-600 dark:text-green-400" />
+                      <span>{t('generateNoun.noDuplicates')}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {displayTranslationLookup &&
+                (displayTranslationLookup.en?.source !== 'none' ||
+                  displayTranslationLookup.ru?.source !== 'none') && (
+                  <Collapsible data-testid="tdict-section">
+                    <CollapsibleTrigger className="flex w-full items-center justify-between rounded-md border p-3 text-sm font-medium hover:bg-muted/50">
+                      <span>{t('generateNoun.tdict.title')}</span>
+                      <ChevronDown className="h-4 w-4" />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="mt-2 space-y-2 px-1">
+                      {displayTranslationLookup.en &&
+                        displayTranslationLookup.en.source !== 'none' && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <span className="text-muted-foreground">EN:</span>
+                            <span>{displayTranslationLookup.en.combined_text}</span>
+                            <Badge variant="outline" className="text-xs">
+                              {displayTranslationLookup.en.source}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              ({displayTranslationLookup.en.sense_count})
+                            </span>
+                          </div>
+                        )}
+                      {displayTranslationLookup.ru &&
+                        displayTranslationLookup.ru.source !== 'none' && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <span className="text-muted-foreground">RU:</span>
+                            <span>{displayTranslationLookup.ru.combined_text}</span>
+                            <Badge variant="outline" className="text-xs">
+                              {displayTranslationLookup.ru.source}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              ({displayTranslationLookup.ru.sense_count})
+                            </span>
+                          </div>
+                        )}
+                    </CollapsibleContent>
+                  </Collapsible>
+                )}
+
+              {generationLoading && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Generating with AI...
+                </div>
+              )}
+
+              {stageError && (
+                <Alert variant="destructive" data-testid="stage-error">
                   <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{apiError}</AlertDescription>
+                  <AlertDescription>{stageError}</AlertDescription>
                 </Alert>
               )}
 
-              <div className="space-y-1">
-                <Label>{t('generateNoun.deckLabel')}</Label>
-                <p>
-                  <span data-testid="generate-noun-deck-name">{deckName}</span>
-                </p>
-              </div>
+              {displayGeneration && (
+                <div data-testid="generation-section" className="space-y-3">
+                  <h3 className="text-sm font-medium">{t('generateNoun.generation.title')}</h3>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">
+                        {t('generateNoun.generation.translationEn')}
+                      </span>
+                      <p data-testid="gen-translation-en" className="font-medium">
+                        {displayGeneration.translation_en}
+                        {displayGeneration.translation_en_plural && (
+                          <span className="text-muted-foreground">
+                            {' '}
+                            (pl. {displayGeneration.translation_en_plural})
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">
+                        {t('generateNoun.generation.translationRu')}
+                      </span>
+                      <p data-testid="gen-translation-ru" className="font-medium">
+                        {displayGeneration.translation_ru}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">
+                        {t('generateNoun.generation.pronunciation')}
+                      </span>
+                      <p data-testid="gen-pronunciation" className="font-medium">
+                        {displayGeneration.pronunciation}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">
+                        {t('generateNoun.generation.declensionGroup')}
+                      </span>
+                      <p>
+                        <Badge data-testid="gen-declension-group" variant="outline">
+                          {displayGeneration.grammar_data.declension_group}
+                        </Badge>
+                      </p>
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="mb-1 text-sm font-medium text-muted-foreground">
+                      {t('generateNoun.generation.declensionTable')}
+                    </h4>
+                    <DeclensionTable cases={displayGeneration.grammar_data.cases} />
+                  </div>
+                  {displayGeneration.examples.length > 0 && (
+                    <div>
+                      <h4 className="mb-1 text-sm font-medium text-muted-foreground">
+                        {t('generateNoun.generation.examples')}
+                      </h4>
+                      <div className="space-y-2">
+                        {displayGeneration.examples.map((ex) => (
+                          <div
+                            key={ex.id}
+                            data-testid={`gen-example-${ex.id}`}
+                            className="rounded-md border p-2 text-sm"
+                          >
+                            <p className="font-medium">{ex.greek}</p>
+                            <p className="text-muted-foreground">{ex.english}</p>
+                            <p className="text-muted-foreground">{ex.russian}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
-              <div className="space-y-1">
-                <Input
-                  data-testid="generate-noun-input"
-                  value={greekWord}
-                  disabled={isSubmitting}
-                  onChange={(e) => {
-                    setGreekWord(e.target.value);
-                    setApiError(null);
-                  }}
-                  placeholder={t('generateNoun.inputPlaceholder')}
-                />
-                {showWarning && (
-                  <p data-testid="generate-noun-warning" className="text-sm text-destructive">
-                    {t(warningKey)}
+              {verificationLoading && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Running verification...
+                </div>
+              )}
+
+              {displayVerification && (
+                <div data-testid="verification-section" className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-medium">
+                      {t('generateNoun.verification.combinedTier')}
+                    </h3>
+                    <VerificationTierBadge tier={displayVerification.combined_tier} />
+                  </div>
+                  {displayVerification.local && (
+                    <LocalVerificationPanel result={displayVerification.local} />
+                  )}
+                  {displayVerification.cross_ai && (
+                    <CrossAIVerificationPanel
+                      result={displayVerification.cross_ai}
+                      morphologySource={displayVerification.morphology_source}
+                    />
+                  )}
+                </div>
+              )}
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={resetAllState}
+                  data-testid="generate-noun-start-over"
+                >
+                  {t('generateNoun.startOverButton')}
+                </Button>
+              </DialogFooter>
+            </>
+          ) : (
+            <>
+              <div className="space-y-4">
+                {apiError && (
+                  <Alert variant="destructive" data-testid="generate-noun-error">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{apiError}</AlertDescription>
+                  </Alert>
+                )}
+
+                <div className="space-y-1">
+                  <Label>{t('generateNoun.deckLabel')}</Label>
+                  <p>
+                    <span data-testid="generate-noun-deck-name">{deckName}</span>
                   </p>
-                )}
-              </div>
-            </div>
+                </div>
 
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                data-testid="generate-noun-cancel"
-              >
-                {t('generateNoun.cancel')}
-              </Button>
-              <Button
-                onClick={handleSubmit}
-                disabled={!canSubmit}
-                data-testid="generate-noun-submit"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {t('generateNoun.creatingButton')}
-                  </>
-                ) : (
-                  t('generateNoun.createButton')
-                )}
-              </Button>
-            </DialogFooter>
-          </>
-        )}
-      </DialogContent>
-    </Dialog>
+                <div className="space-y-1">
+                  <Input
+                    data-testid="generate-noun-input"
+                    value={greekWord}
+                    disabled={isSubmitting}
+                    onChange={(e) => {
+                      setGreekWord(e.target.value);
+                      setApiError(null);
+                    }}
+                    placeholder={t('generateNoun.inputPlaceholder')}
+                  />
+                  {showWarning && (
+                    <p data-testid="generate-noun-warning" className="text-sm text-destructive">
+                      {t(warningKey)}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                  data-testid="generate-noun-cancel"
+                >
+                  {t('generateNoun.cancel')}
+                </Button>
+                <Button
+                  onClick={handleSubmit}
+                  disabled={!canSubmit}
+                  data-testid="generate-noun-submit"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      {t('generateNoun.creatingButton')}
+                    </>
+                  ) : (
+                    t('generateNoun.createButton')
+                  )}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog
+        open={swapConfirmation !== null}
+        onOpenChange={(open) => {
+          if (!open) setSwapConfirmation(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('generateNoun.swapConfirmTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('generateNoun.swapConfirmDescription')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common:cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => swapConfirmation && executeSwap(swapConfirmation.index)}
+            >
+              {t('generateNoun.swapConfirmAction')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };

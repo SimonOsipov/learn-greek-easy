@@ -1037,6 +1037,9 @@
       "singular": "Singular",
       "plural": "Plural"
     },
+    "swapConfirmTitle": "Switch suggestion?",
+    "swapConfirmDescription": "Generation results will be replaced for the new suggestion. Normalization and translations will be preserved.",
+    "swapConfirmAction": "Switch and regenerate",
     "tdict": {
       "title": "Dictionary Translations"
     },
