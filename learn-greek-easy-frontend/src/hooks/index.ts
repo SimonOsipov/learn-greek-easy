@@ -45,3 +45,6 @@ export type { AudioSpeed } from './useAudioPlayer';
 // Checkout hooks
 export { useCheckout } from './useCheckout';
 export { useSubscriptionActions } from './useSubscriptionActions';
+
+// SSE hooks
+export { parseSSEChunk, useSSE } from './useSSE';
