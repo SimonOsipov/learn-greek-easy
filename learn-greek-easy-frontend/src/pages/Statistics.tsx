@@ -12,11 +12,9 @@ import {
   StatsGrid,
   LevelProgressCard,
   AchievementsGrid,
-  achievementConfigs,
   CultureReadinessCard,
   MotivationalMessageCard,
 } from '@/components/statistics';
-import type { Achievement } from '@/components/statistics';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -117,11 +115,14 @@ const Statistics: React.FC = () => {
   const { data: analyticsData } = useAnalytics(true); // Auto-load analytics on mount
   const xpStats = useXPStore(selectXPStats);
   const loadXPStats = useXPStore((state) => state.loadXPStats);
+  const loadAchievements = useXPStore((state) => state.loadAchievements);
 
-  // Load XP stats on mount
+  // Load XP stats on mount, but only after auth state is resolved
   useEffect(() => {
+    if (isLoading || !user) return;
     loadXPStats();
-  }, [loadXPStats]);
+    loadAchievements();
+  }, [isLoading, user, loadXPStats, loadAchievements]);
 
   // Show loading skeleton while user data is loading
   if (isLoading) {
@@ -161,15 +162,6 @@ const Statistics: React.FC = () => {
   // Get streak from analytics data (fetched from backend API)
   const currentStreak = analyticsData?.streak?.currentStreak ?? 0;
 
-  const wordsLearned = analyticsData?.summary?.totalCardsReviewed ?? 0;
-  const achievements: Achievement[] = achievementConfigs.map((config) => ({
-    id: config.id,
-    name: t(config.nameKey),
-    icon: config.icon,
-    unlocked: config.checkUnlocked(wordsLearned, currentStreak),
-    description: t(config.descriptionKey),
-  }));
-
   return (
     <div className="space-y-6 pb-8" data-testid="statistics-page">
       {/* Page Header */}
@@ -206,7 +198,7 @@ const Statistics: React.FC = () => {
       <Separator />
 
       {/* Achievements */}
-      <AchievementsGrid achievements={achievements} />
+      <AchievementsGrid />
 
       {/* Analytics Charts Section */}
       <section>
