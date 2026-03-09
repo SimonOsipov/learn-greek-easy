@@ -4,7 +4,7 @@
  * Tests for the GenerateNounDialog component covering:
  * - Modal open/close states
  * - Greek input validation (valid, Latin, mixed, empty)
- * - Real useMutation API integration (loading, success, error states)
+ * - SSE-based streaming integration (loading, success, error states)
  * - Normalization result display (lemma, gender, POS, confidence badge)
  * - Start Over / Continue footer actions
  *
@@ -15,11 +15,10 @@ import React from 'react';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { adminAPI } from '@/services/adminAPI';
-import { APIRequestError } from '@/services/api';
 
 import { GenerateNounDialog, type GenerateNounDialogProps } from '../GenerateNounDialog';
 
@@ -28,10 +27,31 @@ import { GenerateNounDialog, type GenerateNounDialogProps } from '../GenerateNou
 // ============================================
 
 vi.mock('@/services/adminAPI', () => ({
+  GENERATE_WORD_ENTRY_STREAM_URL: '/api/v1/admin/word-entries/generate/stream',
   adminAPI: {
     generateWordEntry: vi.fn(),
     linkWordEntry: vi.fn().mockResolvedValue(undefined),
   },
+}));
+
+// Capture the onEvent callback so tests can fire SSE events
+let capturedOnEvent: ((event: { type: string; data: unknown }) => void) | undefined;
+let capturedOnError: ((err: Error) => void) | undefined;
+const mockClose = vi.fn();
+
+vi.mock('@/hooks/useSSE', () => ({
+  useSSE: vi.fn(
+    (
+      _url: string,
+      options: { onEvent?: (e: unknown) => void; onError?: (e: unknown) => void; enabled?: boolean }
+    ) => {
+      if (options.enabled) {
+        capturedOnEvent = options.onEvent as typeof capturedOnEvent;
+        capturedOnError = options.onError as typeof capturedOnError;
+      }
+      return { state: 'disconnected', close: mockClose };
+    }
+  ),
 }));
 
 // ============================================
@@ -63,137 +83,152 @@ const renderDialog = (overrides?: Partial<GenerateNounDialogProps>) => {
   };
 };
 
-const mockNormalizationResponse = (
-  overrides?: Partial<{
-    confidence: number;
-    confidence_tier: string;
+/** Fire normalization_complete + duplicates_checked events to simulate basic pipeline result */
+const fireNormalizationEvents = (overrides?: {
+  confidence?: number;
+  confidence_tier?: string;
+  gender?: string | null;
+  article?: string | null;
+  corrected_from?: string | null;
+  corrected_to?: string | null;
+  strategy?: string | null;
+  suggestions?: Array<{
+    lemma: string;
+    pos: string;
     gender: string | null;
     article: string | null;
-    corrected_from: string | null;
-    corrected_to: string | null;
-    strategy: string | null;
-    suggestions: Array<{
+    confidence: number;
+    confidence_tier: string;
+    strategy: string;
+  }>;
+  duplicate?: {
+    is_duplicate: boolean;
+    word_entry_id: string | null;
+    existing_entry: {
+      id: string;
       lemma: string;
-      pos: string;
-      gender: string | null;
-      article: string | null;
-      confidence: number;
-      confidence_tier: string;
-      strategy: string;
-    }>;
-    duplicate_check: {
-      is_duplicate: boolean;
-      word_entry_id: string | null;
-      existing_entry: {
-        id: string;
-        lemma: string;
-        part_of_speech: string;
-        translation_en: string;
-        translation_ru: string | null;
-        pronunciation: string | null;
-      } | null;
-      matched_decks: { deck_id: string; deck_name: string }[];
+      part_of_speech: string;
+      translation_en: string;
+      translation_ru: string | null;
+      pronunciation: string | null;
     } | null;
-  }>
-) => ({
-  stage: 'duplicate_check',
-  normalization: {
-    input_word: 'γάτα',
-    lemma: 'γάτα',
-    gender: overrides?.gender !== undefined ? overrides.gender : 'feminine',
-    article: overrides?.article !== undefined ? overrides.article : 'η',
-    pos: 'NOUN',
-    confidence: overrides?.confidence ?? 1.0,
-    confidence_tier: overrides?.confidence_tier ?? 'high',
-    strategy: overrides?.strategy !== undefined ? overrides.strategy : null,
-    corrected_from: overrides?.corrected_from !== undefined ? overrides.corrected_from : null,
-    corrected_to: overrides?.corrected_to !== undefined ? overrides.corrected_to : null,
-  },
-  suggestions: overrides?.suggestions ?? [],
-  duplicate_check:
-    overrides?.duplicate_check !== undefined
-      ? overrides.duplicate_check
-      : {
-          is_duplicate: false,
-          word_entry_id: null,
-          existing_entry: null,
-          matched_decks: [],
-        },
-  translation_lookup: null,
-  generation: null,
-  verification: null,
-  persist: null,
-});
-
-const mockGenerationResponse = (
-  overrides?: Partial<{
-    generation: ReturnType<typeof mockNormalizationResponse>['generation'];
-    translation_lookup: ReturnType<typeof mockNormalizationResponse>['translation_lookup'];
-  }>
-) => ({
-  ...mockNormalizationResponse(),
-  stage: 'verification',
-  generation:
-    overrides?.generation !== undefined
-      ? overrides.generation
-      : {
+    matched_decks: { deck_id: string; deck_name: string }[];
+  };
+}) => {
+  act(() => {
+    capturedOnEvent?.({
+      type: 'normalization_complete',
+      data: {
+        normalization: {
+          input_word: 'γάτα',
           lemma: 'γάτα',
-          part_of_speech: 'noun' as const,
-          translation_en: 'cat',
-          translation_en_plural: 'cats',
-          translation_ru: 'кошка',
-          pronunciation: '/ˈɣa.ta/',
-          grammar_data: {
-            gender: 'feminine' as const,
-            declension_group: 'feminine_a',
-            cases: {
-              singular: {
-                nominative: 'η γάτα',
-                genitive: 'της γάτας',
-                accusative: 'τη γάτα',
-                vocative: 'γάτα',
-              },
-              plural: {
-                nominative: 'οι γάτες',
-                genitive: 'των γατών',
-                accusative: 'τις γάτες',
-                vocative: 'γάτες',
-              },
-            },
-          },
-          examples: [
-            {
-              id: 1,
-              greek: 'Η γάτα κοιμάται.',
-              english: 'The cat is sleeping.',
-              russian: 'Кошка спит.',
-            },
-            {
-              id: 2,
-              greek: 'Οι γάτες παίζουν.',
-              english: 'The cats are playing.',
-              russian: 'Кошки играют.',
-            },
-          ],
+          gender: overrides?.gender !== undefined ? overrides.gender : 'feminine',
+          article: overrides?.article !== undefined ? overrides.article : 'η',
+          pos: 'NOUN',
+          confidence: overrides?.confidence ?? 1.0,
+          confidence_tier: overrides?.confidence_tier ?? 'high',
+          strategy: overrides?.strategy !== undefined ? overrides.strategy : null,
+          corrected_from: overrides?.corrected_from !== undefined ? overrides.corrected_from : null,
+          corrected_to: overrides?.corrected_to !== undefined ? overrides.corrected_to : null,
         },
-  translation_lookup:
-    overrides?.translation_lookup !== undefined
-      ? overrides.translation_lookup
-      : {
-          en: {
-            translations: ['cat'],
-            combined_text: 'cat',
-            source: 'dictionary' as const,
-            sense_count: 1,
-          },
-          ru: {
-            translations: ['кошка'],
-            combined_text: 'кошка',
-            source: 'dictionary' as const,
-            sense_count: 1,
-          },
+        suggestions: overrides?.suggestions ?? [],
+      },
+    });
+    capturedOnEvent?.({
+      type: 'duplicates_checked',
+      data: overrides?.duplicate ?? {
+        is_duplicate: false,
+        word_entry_id: null,
+        existing_entry: null,
+        matched_decks: [],
+      },
+    });
+  });
+};
+
+const mockGenerationData = {
+  lemma: 'γάτα',
+  part_of_speech: 'noun' as const,
+  translation_en: 'cat',
+  translation_en_plural: 'cats',
+  translation_ru: 'кошка',
+  pronunciation: '/ˈɣa.ta/',
+  grammar_data: {
+    gender: 'feminine' as const,
+    declension_group: 'feminine_a',
+    cases: {
+      singular: {
+        nominative: 'η γάτα',
+        genitive: 'της γάτας',
+        accusative: 'τη γάτα',
+        vocative: 'γάτα',
+      },
+      plural: {
+        nominative: 'οι γάτες',
+        genitive: 'των γατών',
+        accusative: 'τις γάτες',
+        vocative: 'γάτες',
+      },
+    },
+  },
+  examples: [
+    { id: 1, greek: 'Η γάτα κοιμάται.', english: 'The cat is sleeping.', russian: 'Кошка спит.' },
+    {
+      id: 2,
+      greek: 'Οι γάτες παίζουν.',
+      english: 'The cats are playing.',
+      russian: 'Кошки играют.',
+    },
+  ],
+};
+
+const mockTranslationLookup = {
+  en: {
+    translations: ['cat'],
+    combined_text: 'cat',
+    source: 'dictionary' as const,
+    sense_count: 1,
+  },
+  ru: {
+    translations: ['кошка'],
+    combined_text: 'кошка',
+    source: 'dictionary' as const,
+    sense_count: 1,
+  },
+};
+
+/** Fire full pipeline events including generation */
+const fireGenerationEvents = (overrides?: {
+  generation?: typeof mockGenerationData | null;
+  translation_lookup?: typeof mockTranslationLookup | null;
+}) => {
+  fireNormalizationEvents();
+  act(() => {
+    capturedOnEvent?.({ type: 'generation_started', data: {} });
+    capturedOnEvent?.({
+      type: 'generation_complete',
+      data: overrides?.generation !== undefined ? overrides.generation : mockGenerationData,
+    });
+    if (overrides?.translation_lookup !== null) {
+      capturedOnEvent?.({
+        type: 'translations_found',
+        data: {
+          data:
+            overrides?.translation_lookup !== undefined
+              ? overrides.translation_lookup
+              : mockTranslationLookup,
         },
-});
+      });
+    }
+    capturedOnEvent?.({ type: 'pipeline_complete', data: {} });
+  });
+};
+
+/** Helper: type a word and click submit */
+const submitWord = async (user: ReturnType<typeof userEvent.setup>, word = 'γάτα') => {
+  await user.type(screen.getByTestId('generate-noun-input'), word);
+  await user.click(screen.getByTestId('generate-noun-submit'));
+};
 
 // ============================================
 // Tests
@@ -202,6 +237,8 @@ const mockGenerationResponse = (
 describe('GenerateNounDialog', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    capturedOnEvent = undefined;
+    capturedOnError = undefined;
   });
 
   // 1. Renders modal when open
@@ -269,17 +306,14 @@ describe('GenerateNounDialog', () => {
     expect(screen.queryByTestId('generate-noun-warning')).not.toBeInTheDocument();
   });
 
-  // 8. Submit shows loading spinner
+  // 8. Submit shows loading spinner (streaming state)
   it('shows loading spinner after clicking Create', async () => {
     const user = userEvent.setup();
-    vi.mocked(adminAPI.generateWordEntry).mockReturnValue(new Promise(() => {}));
     renderDialog();
 
-    await user.type(screen.getByTestId('generate-noun-input'), 'σπίτι');
-    await user.click(screen.getByTestId('generate-noun-submit'));
+    await submitWord(user);
 
     expect(screen.getByTestId('generate-noun-submit')).toBeDisabled();
-    // The Loader2 spinner is present (Creating... text from i18n key fallback)
     const submitBtn = screen.getByTestId('generate-noun-submit');
     expect(submitBtn.querySelector('svg')).toBeTruthy();
   });
@@ -287,11 +321,9 @@ describe('GenerateNounDialog', () => {
   // 9. Input disabled during loading
   it('disables input during loading', async () => {
     const user = userEvent.setup();
-    vi.mocked(adminAPI.generateWordEntry).mockReturnValue(new Promise(() => {}));
     renderDialog();
 
-    await user.type(screen.getByTestId('generate-noun-input'), 'σπίτι');
-    await user.click(screen.getByTestId('generate-noun-submit'));
+    await submitWord(user);
 
     expect(screen.getByTestId('generate-noun-input')).toBeDisabled();
   });
@@ -299,11 +331,10 @@ describe('GenerateNounDialog', () => {
   // 10. Result card displayed on success
   it('displays normalization result card on success', async () => {
     const user = userEvent.setup();
-    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(mockNormalizationResponse());
     renderDialog();
 
-    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
-    await user.click(screen.getByTestId('generate-noun-submit'));
+    await submitWord(user);
+    fireNormalizationEvents();
 
     await waitFor(() => {
       expect(screen.getByTestId('generate-noun-result')).toBeInTheDocument();
@@ -313,11 +344,10 @@ describe('GenerateNounDialog', () => {
   // 11. Lemma displayed correctly
   it('shows lemma in result', async () => {
     const user = userEvent.setup();
-    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(mockNormalizationResponse());
     renderDialog();
 
-    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
-    await user.click(screen.getByTestId('generate-noun-submit'));
+    await submitWord(user);
+    fireNormalizationEvents();
 
     await waitFor(() => {
       expect(screen.getByTestId('result-lemma')).toHaveTextContent('γάτα');
@@ -327,11 +357,10 @@ describe('GenerateNounDialog', () => {
   // 12. Gender + article displayed
   it('shows gender with article in result', async () => {
     const user = userEvent.setup();
-    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(mockNormalizationResponse());
     renderDialog();
 
-    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
-    await user.click(screen.getByTestId('generate-noun-submit'));
+    await submitWord(user);
+    fireNormalizationEvents();
 
     await waitFor(() => {
       expect(screen.getByTestId('result-gender')).toHaveTextContent('feminine (η)');
@@ -341,11 +370,10 @@ describe('GenerateNounDialog', () => {
   // 13. POS displayed
   it('shows POS in result', async () => {
     const user = userEvent.setup();
-    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(mockNormalizationResponse());
     renderDialog();
 
-    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
-    await user.click(screen.getByTestId('generate-noun-submit'));
+    await submitWord(user);
+    fireNormalizationEvents();
 
     await waitFor(() => {
       expect(screen.getByTestId('result-pos')).toHaveTextContent('NOUN');
@@ -355,13 +383,10 @@ describe('GenerateNounDialog', () => {
   // 14. High confidence badge has green class
   it('shows high confidence badge with green class', async () => {
     const user = userEvent.setup();
-    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(
-      mockNormalizationResponse({ confidence: 0.9, confidence_tier: 'high' })
-    );
     renderDialog();
 
-    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
-    await user.click(screen.getByTestId('generate-noun-submit'));
+    await submitWord(user);
+    fireNormalizationEvents({ confidence: 0.9, confidence_tier: 'high' });
 
     await waitFor(() => {
       const badge = screen.getByTestId('result-confidence-badge');
@@ -372,13 +397,10 @@ describe('GenerateNounDialog', () => {
   // 15. Medium confidence badge has amber class
   it('shows medium confidence badge with amber class', async () => {
     const user = userEvent.setup();
-    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(
-      mockNormalizationResponse({ confidence: 0.6, confidence_tier: 'medium' })
-    );
     renderDialog();
 
-    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
-    await user.click(screen.getByTestId('generate-noun-submit'));
+    await submitWord(user);
+    fireNormalizationEvents({ confidence: 0.6, confidence_tier: 'medium' });
 
     await waitFor(() => {
       const badge = screen.getByTestId('result-confidence-badge');
@@ -389,13 +411,10 @@ describe('GenerateNounDialog', () => {
   // 16. Low confidence badge has red class
   it('shows low confidence badge with red class', async () => {
     const user = userEvent.setup();
-    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(
-      mockNormalizationResponse({ confidence: 0.2, confidence_tier: 'low' })
-    );
     renderDialog();
 
-    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
-    await user.click(screen.getByTestId('generate-noun-submit'));
+    await submitWord(user);
+    fireNormalizationEvents({ confidence: 0.2, confidence_tier: 'low' });
 
     await waitFor(() => {
       const badge = screen.getByTestId('result-confidence-badge');
@@ -406,13 +425,10 @@ describe('GenerateNounDialog', () => {
   // 17. Badge shows numeric score and tier label
   it('shows confidence score and tier label in badge', async () => {
     const user = userEvent.setup();
-    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(
-      mockNormalizationResponse({ confidence: 1.0, confidence_tier: 'high' })
-    );
     renderDialog();
 
-    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
-    await user.click(screen.getByTestId('generate-noun-submit'));
+    await submitWord(user);
+    fireNormalizationEvents({ confidence: 1.0, confidence_tier: 'high' });
 
     await waitFor(() => {
       const badge = screen.getByTestId('result-confidence-badge');
@@ -423,13 +439,10 @@ describe('GenerateNounDialog', () => {
   // 18. Low confidence warning shown when tier is low
   it('shows low confidence warning when tier is low', async () => {
     const user = userEvent.setup();
-    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(
-      mockNormalizationResponse({ confidence: 0.2, confidence_tier: 'low' })
-    );
     renderDialog();
 
-    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
-    await user.click(screen.getByTestId('generate-noun-submit'));
+    await submitWord(user);
+    fireNormalizationEvents({ confidence: 0.2, confidence_tier: 'low' });
 
     await waitFor(() => {
       expect(screen.getByTestId('result-low-confidence-warning')).toBeInTheDocument();
@@ -439,13 +452,10 @@ describe('GenerateNounDialog', () => {
   // 19. Low confidence warning hidden when tier is high
   it('hides low confidence warning when tier is high', async () => {
     const user = userEvent.setup();
-    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(
-      mockNormalizationResponse({ confidence: 1.0, confidence_tier: 'high' })
-    );
     renderDialog();
 
-    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
-    await user.click(screen.getByTestId('generate-noun-submit'));
+    await submitWord(user);
+    fireNormalizationEvents({ confidence: 1.0, confidence_tier: 'high' });
 
     await waitFor(() => {
       expect(screen.getByTestId('generate-noun-result')).toBeInTheDocument();
@@ -454,21 +464,16 @@ describe('GenerateNounDialog', () => {
     expect(screen.queryByTestId('result-low-confidence-warning')).not.toBeInTheDocument();
   });
 
-  // 20. Error alert on API error
-  it('shows error alert on API error', async () => {
+  // 20. Error alert on stream error
+  it('shows error alert on stream error', async () => {
     const user = userEvent.setup();
-    vi.mocked(adminAPI.generateWordEntry).mockRejectedValue(
-      new APIRequestError({
-        status: 404,
-        statusText: 'Not Found',
-        message: 'Active deck not found',
-        detail: 'Active deck not found',
-      })
-    );
     renderDialog();
 
-    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
-    await user.click(screen.getByTestId('generate-noun-submit'));
+    await submitWord(user);
+
+    act(() => {
+      capturedOnError?.(new Error('Active deck not found'));
+    });
 
     await waitFor(() => {
       expect(screen.getByTestId('generate-noun-error')).toBeInTheDocument();
@@ -480,23 +485,20 @@ describe('GenerateNounDialog', () => {
   // 21. Error clears when input changes
   it('clears error when input changes', async () => {
     const user = userEvent.setup();
-    vi.mocked(adminAPI.generateWordEntry).mockRejectedValue(
-      new APIRequestError({
-        status: 404,
-        statusText: 'Not Found',
-        message: 'Active deck not found',
-        detail: 'Active deck not found',
-      })
-    );
     renderDialog();
 
-    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
-    await user.click(screen.getByTestId('generate-noun-submit'));
+    await submitWord(user);
+
+    act(() => {
+      capturedOnError?.(new Error('Active deck not found'));
+    });
 
     await waitFor(() => {
       expect(screen.getByTestId('generate-noun-error')).toBeInTheDocument();
     });
 
+    // Error is shown in the pre-result panel, so we need to be in error state (no result yet)
+    // Typing in input clears apiError
     await user.type(screen.getByTestId('generate-noun-input'), 'α');
 
     expect(screen.queryByTestId('generate-noun-error')).not.toBeInTheDocument();
@@ -505,11 +507,10 @@ describe('GenerateNounDialog', () => {
   // 22. Start Over resets to input state
   it('Start Over resets to input state after result', async () => {
     const user = userEvent.setup();
-    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(mockNormalizationResponse());
     renderDialog();
 
-    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
-    await user.click(screen.getByTestId('generate-noun-submit'));
+    await submitWord(user);
+    fireNormalizationEvents();
 
     await waitFor(() => {
       expect(screen.getByTestId('generate-noun-result')).toBeInTheDocument();
@@ -522,35 +523,33 @@ describe('GenerateNounDialog', () => {
     expect(screen.getByTestId('generate-noun-input')).toHaveValue('');
   });
 
-  // 23. Create button enabled after error (retry)
-  it('Create button remains enabled after error for retry', async () => {
+  // 23. Create button enabled after pipeline_failed (retry)
+  it('Create button remains enabled after pipeline error for retry', async () => {
     const user = userEvent.setup();
-    vi.mocked(adminAPI.generateWordEntry).mockRejectedValue(
-      new APIRequestError({
-        status: 404,
-        statusText: 'Not Found',
-        message: 'Active deck not found',
-        detail: 'Active deck not found',
-      })
-    );
     renderDialog();
-    const input = screen.getByTestId('generate-noun-input');
-    await user.type(input, 'γάτα');
-    await user.click(screen.getByTestId('generate-noun-submit'));
-    await waitFor(() => {
-      expect(screen.getByTestId('generate-noun-error')).toBeInTheDocument();
+
+    await submitWord(user);
+
+    act(() => {
+      capturedOnEvent?.({
+        type: 'pipeline_failed',
+        data: { error: 'Pipeline failed' },
+      });
     });
-    expect(screen.getByTestId('generate-noun-submit')).not.toBeDisabled();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('generate-noun-submit')).not.toBeDisabled();
+    });
   });
 
   // 24. Continue button removed — only Start Over remains
   it('does not render Continue button after result', async () => {
     const user = userEvent.setup();
-    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(mockNormalizationResponse());
     renderDialog();
-    const input = screen.getByTestId('generate-noun-input');
-    await user.type(input, 'γάτα');
-    await user.click(screen.getByTestId('generate-noun-submit'));
+
+    await submitWord(user);
+    fireNormalizationEvents();
+
     await waitFor(() => {
       expect(screen.getByTestId('generate-noun-result')).toBeInTheDocument();
     });
@@ -560,11 +559,10 @@ describe('GenerateNounDialog', () => {
   // 25. No correction note when corrected_from is null
   it('does not show correction note when corrected_from is null', async () => {
     const user = userEvent.setup();
-    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(mockNormalizationResponse());
     renderDialog();
 
-    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
-    await user.click(screen.getByTestId('generate-noun-submit'));
+    await submitWord(user);
+    fireNormalizationEvents();
 
     await waitFor(() => {
       expect(screen.getByTestId('generate-noun-result')).toBeInTheDocument();
@@ -576,13 +574,10 @@ describe('GenerateNounDialog', () => {
   // 26. Shows correction note when corrected_from and corrected_to are set
   it('shows correction note when corrected_from and corrected_to are set', async () => {
     const user = userEvent.setup();
-    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(
-      mockNormalizationResponse({ corrected_from: 'σπιτι', corrected_to: 'σπίτι' })
-    );
     renderDialog();
 
-    await user.type(screen.getByTestId('generate-noun-input'), 'σπιτι');
-    await user.click(screen.getByTestId('generate-noun-submit'));
+    await submitWord(user, 'σπιτι');
+    fireNormalizationEvents({ corrected_from: 'σπιτι', corrected_to: 'σπίτι' });
 
     await waitFor(() => {
       expect(screen.getByTestId('correction-note')).toBeInTheDocument();
@@ -594,11 +589,10 @@ describe('GenerateNounDialog', () => {
   // 27. No suggestions section when suggestions is empty
   it('does not show suggestions section when suggestions is empty', async () => {
     const user = userEvent.setup();
-    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(mockNormalizationResponse());
     renderDialog();
 
-    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
-    await user.click(screen.getByTestId('generate-noun-submit'));
+    await submitWord(user);
+    fireNormalizationEvents();
 
     await waitFor(() => {
       expect(screen.getByTestId('generate-noun-result')).toBeInTheDocument();
@@ -610,34 +604,31 @@ describe('GenerateNounDialog', () => {
   // 28. Renders suggestion rows
   it('renders suggestion rows when suggestions are provided', async () => {
     const user = userEvent.setup();
-    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(
-      mockNormalizationResponse({
-        suggestions: [
-          {
-            lemma: 'γάτος',
-            pos: 'NOUN',
-            gender: 'masculine',
-            article: 'ο',
-            confidence: 0.8,
-            confidence_tier: 'medium',
-            strategy: 'article_prefix',
-          },
-          {
-            lemma: 'γατάκι',
-            pos: 'NOUN',
-            gender: 'neuter',
-            article: 'το',
-            confidence: 0.6,
-            confidence_tier: 'medium',
-            strategy: 'article_prefix',
-          },
-        ],
-      })
-    );
     renderDialog();
 
-    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
-    await user.click(screen.getByTestId('generate-noun-submit'));
+    await submitWord(user);
+    fireNormalizationEvents({
+      suggestions: [
+        {
+          lemma: 'γάτος',
+          pos: 'NOUN',
+          gender: 'masculine',
+          article: 'ο',
+          confidence: 0.8,
+          confidence_tier: 'medium',
+          strategy: 'article_prefix',
+        },
+        {
+          lemma: 'γατάκι',
+          pos: 'NOUN',
+          gender: 'neuter',
+          article: 'το',
+          confidence: 0.6,
+          confidence_tier: 'medium',
+          strategy: 'article_prefix',
+        },
+      ],
+    });
 
     await waitFor(() => {
       expect(screen.getByTestId('suggestions-section')).toBeInTheDocument();
@@ -652,73 +643,62 @@ describe('GenerateNounDialog', () => {
   // 29. Click Use swaps suggestion into primary display
   it('swaps suggestion into primary display when Use is clicked', async () => {
     const user = userEvent.setup();
-    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(
-      mockNormalizationResponse({
-        suggestions: [
-          {
-            lemma: 'γάτος',
-            pos: 'NOUN',
-            gender: 'masculine',
-            article: 'ο',
-            confidence: 0.8,
-            confidence_tier: 'medium',
-            strategy: 'article_prefix',
-          },
-        ],
-      })
-    );
     renderDialog();
 
-    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
-    await user.click(screen.getByTestId('generate-noun-submit'));
+    await submitWord(user);
+    fireNormalizationEvents({
+      suggestions: [
+        {
+          lemma: 'γάτος',
+          pos: 'NOUN',
+          gender: 'masculine',
+          article: 'ο',
+          confidence: 0.8,
+          confidence_tier: 'medium',
+          strategy: 'article_prefix',
+        },
+      ],
+    });
 
     await waitFor(() => {
       expect(screen.getByTestId('suggestion-row-0')).toBeInTheDocument();
     });
 
-    // Before swap: primary is γάτα, suggestion is γάτος
     expect(screen.getByTestId('result-lemma')).toHaveTextContent('γάτα');
 
     await user.click(screen.getByTestId('suggestion-use-0'));
 
-    // After swap: primary should be γάτος
     expect(screen.getByTestId('result-lemma')).toHaveTextContent('γάτος');
-    // Old primary (γάτα) should now be in suggestion row
     expect(screen.getByTestId('suggestion-row-0')).toHaveTextContent('γάτα');
   });
 
   // 30. Round-trip swap — swap A→B→A returns to original
   it('round-trip swap returns to original values', async () => {
     const user = userEvent.setup();
-    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(
-      mockNormalizationResponse({
-        suggestions: [
-          {
-            lemma: 'γάτος',
-            pos: 'NOUN',
-            gender: 'masculine',
-            article: 'ο',
-            confidence: 0.8,
-            confidence_tier: 'medium',
-            strategy: 'article_prefix',
-          },
-        ],
-      })
-    );
     renderDialog();
 
-    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
-    await user.click(screen.getByTestId('generate-noun-submit'));
+    await submitWord(user);
+    fireNormalizationEvents({
+      suggestions: [
+        {
+          lemma: 'γάτος',
+          pos: 'NOUN',
+          gender: 'masculine',
+          article: 'ο',
+          confidence: 0.8,
+          confidence_tier: 'medium',
+          strategy: 'article_prefix',
+        },
+      ],
+    });
 
     await waitFor(() => {
       expect(screen.getByTestId('suggestion-row-0')).toBeInTheDocument();
     });
 
-    // Swap A→B
     await user.click(screen.getByTestId('suggestion-use-0'));
     expect(screen.getByTestId('result-lemma')).toHaveTextContent('γάτος');
 
-    // Swap B→A
     await user.click(screen.getByTestId('suggestion-use-0'));
     expect(screen.getByTestId('result-lemma')).toHaveTextContent('γάτα');
     expect(screen.getByTestId('suggestion-row-0')).toHaveTextContent('γάτος');
@@ -727,11 +707,10 @@ describe('GenerateNounDialog', () => {
   // 31. No-duplicate banner shown
   it('shows no-duplicate banner when is_duplicate is false', async () => {
     const user = userEvent.setup();
-    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(mockNormalizationResponse());
     renderDialog();
 
-    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
-    await user.click(screen.getByTestId('generate-noun-submit'));
+    await submitWord(user);
+    fireNormalizationEvents();
 
     await waitFor(() => {
       expect(screen.getByTestId('no-duplicate-banner')).toBeInTheDocument();
@@ -741,27 +720,24 @@ describe('GenerateNounDialog', () => {
   // 32. Duplicate found warning shown
   it('shows duplicate warning when is_duplicate is true', async () => {
     const user = userEvent.setup();
-    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(
-      mockNormalizationResponse({
-        duplicate_check: {
-          is_duplicate: true,
-          word_entry_id: 'entry-1',
-          existing_entry: {
-            id: 'entry-1',
-            lemma: 'γάτα',
-            part_of_speech: 'NOUN',
-            translation_en: 'cat',
-            translation_ru: null,
-            pronunciation: null,
-          },
-          matched_decks: [{ deck_id: 'deck-2', deck_name: 'Animals' }],
-        },
-      })
-    );
     renderDialog();
 
-    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
-    await user.click(screen.getByTestId('generate-noun-submit'));
+    await submitWord(user);
+    fireNormalizationEvents({
+      duplicate: {
+        is_duplicate: true,
+        word_entry_id: 'entry-1',
+        existing_entry: {
+          id: 'entry-1',
+          lemma: 'γάτα',
+          part_of_speech: 'NOUN',
+          translation_en: 'cat',
+          translation_ru: null,
+          pronunciation: null,
+        },
+        matched_decks: [{ deck_id: 'deck-2', deck_name: 'Animals' }],
+      },
+    });
 
     await waitFor(() => {
       expect(screen.getByTestId('duplicate-found-warning')).toBeInTheDocument();
@@ -773,27 +749,24 @@ describe('GenerateNounDialog', () => {
   // 33. Continue button removed even when duplicate found
   it('does not render Continue button even when duplicate found', async () => {
     const user = userEvent.setup();
-    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(
-      mockNormalizationResponse({
-        duplicate_check: {
-          is_duplicate: true,
-          word_entry_id: 'entry-1',
-          existing_entry: {
-            id: 'entry-1',
-            lemma: 'γάτα',
-            part_of_speech: 'NOUN',
-            translation_en: 'cat',
-            translation_ru: null,
-            pronunciation: null,
-          },
-          matched_decks: [{ deck_id: 'deck-2', deck_name: 'Animals' }],
-        },
-      })
-    );
     renderDialog();
 
-    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
-    await user.click(screen.getByTestId('generate-noun-submit'));
+    await submitWord(user);
+    fireNormalizationEvents({
+      duplicate: {
+        is_duplicate: true,
+        word_entry_id: 'entry-1',
+        existing_entry: {
+          id: 'entry-1',
+          lemma: 'γάτα',
+          part_of_speech: 'NOUN',
+          translation_en: 'cat',
+          translation_ru: null,
+          pronunciation: null,
+        },
+        matched_decks: [{ deck_id: 'deck-2', deck_name: 'Animals' }],
+      },
+    });
 
     await waitFor(() => {
       expect(screen.getByTestId('duplicate-found-warning')).toBeInTheDocument();
@@ -804,11 +777,10 @@ describe('GenerateNounDialog', () => {
   // 34. Displays generation data
   it('displays generation data when present', async () => {
     const user = userEvent.setup();
-    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(mockGenerationResponse());
     renderDialog();
 
-    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
-    await user.click(screen.getByTestId('generate-noun-submit'));
+    await submitWord(user);
+    fireGenerationEvents();
 
     await waitFor(() => {
       expect(screen.getByTestId('generation-section')).toBeInTheDocument();
@@ -823,11 +795,10 @@ describe('GenerateNounDialog', () => {
   // 35. Displays examples
   it('displays example sentences', async () => {
     const user = userEvent.setup();
-    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(mockGenerationResponse());
     renderDialog();
 
-    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
-    await user.click(screen.getByTestId('generate-noun-submit'));
+    await submitWord(user);
+    fireGenerationEvents();
 
     await waitFor(() => {
       expect(screen.getByTestId('gen-example-1')).toBeInTheDocument();
@@ -839,11 +810,10 @@ describe('GenerateNounDialog', () => {
   // 36. Displays TDICT section
   it('displays TDICT section with dictionary badge', async () => {
     const user = userEvent.setup();
-    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(mockGenerationResponse());
     renderDialog();
 
-    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
-    await user.click(screen.getByTestId('generate-noun-submit'));
+    await submitWord(user);
+    fireGenerationEvents();
 
     await waitFor(() => {
       expect(screen.getByTestId('tdict-section')).toBeInTheDocument();
@@ -854,13 +824,10 @@ describe('GenerateNounDialog', () => {
   // 37. Hides TDICT when null
   it('hides TDICT section when translation_lookup is null', async () => {
     const user = userEvent.setup();
-    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(
-      mockGenerationResponse({ translation_lookup: null })
-    );
     renderDialog();
 
-    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
-    await user.click(screen.getByTestId('generate-noun-submit'));
+    await submitWord(user);
+    fireGenerationEvents({ translation_lookup: null });
 
     await waitFor(() => {
       expect(screen.getByTestId('generation-section')).toBeInTheDocument();
@@ -868,14 +835,13 @@ describe('GenerateNounDialog', () => {
     expect(screen.queryByTestId('tdict-section')).not.toBeInTheDocument();
   });
 
-  // 38. Hides generation when null
-  it('hides generation section when generation is null', async () => {
+  // 38. Hides generation when null (pipeline_complete without generation)
+  it('hides generation section when generation event not fired', async () => {
     const user = userEvent.setup();
-    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(mockNormalizationResponse());
     renderDialog();
 
-    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
-    await user.click(screen.getByTestId('generate-noun-submit'));
+    await submitWord(user);
+    fireNormalizationEvents();
 
     await waitFor(() => {
       expect(screen.getByTestId('generate-noun-result')).toBeInTheDocument();
@@ -886,11 +852,10 @@ describe('GenerateNounDialog', () => {
   // 39. Pipeline step 3 highlighted when generation present
   it('highlights pipeline step 3 when generation data is present', async () => {
     const user = userEvent.setup();
-    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(mockGenerationResponse());
     renderDialog();
 
-    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
-    await user.click(screen.getByTestId('generate-noun-submit'));
+    await submitWord(user);
+    fireGenerationEvents();
 
     await waitFor(() => {
       expect(screen.getByTestId('pipeline-steps')).toBeInTheDocument();
@@ -904,11 +869,10 @@ describe('GenerateNounDialog', () => {
   // 40. Start Over clears generation
   it('Start Over clears generation section', async () => {
     const user = userEvent.setup();
-    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(mockGenerationResponse());
     renderDialog();
 
-    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
-    await user.click(screen.getByTestId('generate-noun-submit'));
+    await submitWord(user);
+    fireGenerationEvents();
 
     await waitFor(() => {
       expect(screen.getByTestId('generation-section')).toBeInTheDocument();
@@ -923,38 +887,32 @@ describe('GenerateNounDialog', () => {
   // 41. Start Over clears swap state (existing test)
   it('Start Over clears swap state and returns to input form', async () => {
     const user = userEvent.setup();
-    vi.mocked(adminAPI.generateWordEntry).mockResolvedValue(
-      mockNormalizationResponse({
-        suggestions: [
-          {
-            lemma: 'γάτος',
-            pos: 'NOUN',
-            gender: 'masculine',
-            article: 'ο',
-            confidence: 0.8,
-            confidence_tier: 'medium',
-            strategy: 'article_prefix',
-          },
-        ],
-      })
-    );
     renderDialog();
 
-    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
-    await user.click(screen.getByTestId('generate-noun-submit'));
+    await submitWord(user);
+    fireNormalizationEvents({
+      suggestions: [
+        {
+          lemma: 'γάτος',
+          pos: 'NOUN',
+          gender: 'masculine',
+          article: 'ο',
+          confidence: 0.8,
+          confidence_tier: 'medium',
+          strategy: 'article_prefix',
+        },
+      ],
+    });
 
     await waitFor(() => {
       expect(screen.getByTestId('suggestion-row-0')).toBeInTheDocument();
     });
 
-    // Swap
     await user.click(screen.getByTestId('suggestion-use-0'));
     expect(screen.getByTestId('result-lemma')).toHaveTextContent('γάτος');
 
-    // Start Over
     await user.click(screen.getByTestId('generate-noun-start-over'));
 
-    // Should be back at input form, not result
     expect(screen.queryByTestId('generate-noun-result')).not.toBeInTheDocument();
     expect(screen.getByTestId('generate-noun-input')).toBeInTheDocument();
     expect(screen.queryByTestId('suggestions-section')).not.toBeInTheDocument();

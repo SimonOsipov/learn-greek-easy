@@ -268,6 +268,13 @@ class GenerateWordEntryRequest(BaseModel):
 
     word: str = Field(..., min_length=1, max_length=50, description="Greek word (any form)")
     deck_id: UUID = Field(..., description="Target V2 vocabulary deck UUID")
+    # Optional fields for from_stage=generation (suggestion swap)
+    lemma: str | None = Field(None, description="Pre-resolved lemma for partial re-generation")
+    gender: str | None = Field(None, description="Pre-resolved gender")
+    article: str | None = Field(None, description="Pre-resolved article")
+    translation_lookup: "TranslationLookupStageResult | None" = Field(
+        None, description="Cached translation data"
+    )
 
 
 class NormalizationStageResult(BaseModel):
@@ -340,3 +347,7 @@ class GenerateWordEntryResponse(BaseModel):
     generation: GeneratedNounData | None = None  # NGEN-08-04
     verification: VerificationSummary | None = None  # VRES-01
     persist: None = None  # NGEN-08-06
+
+
+# Resolve forward references (GenerateWordEntryRequest references TranslationLookupStageResult)
+GenerateWordEntryRequest.model_rebuild()

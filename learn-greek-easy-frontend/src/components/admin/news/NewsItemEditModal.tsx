@@ -11,7 +11,7 @@
  * - JSON validation
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 import { format } from 'date-fns';
 import { el } from 'date-fns/locale/el';
@@ -34,6 +34,7 @@ import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
 import { useLanguage } from '@/hooks/useLanguage';
+import { useSSE } from '@/hooks/useSSE';
 import { adminAPI } from '@/services/adminAPI';
 import type { NewsItemResponse, NewsItemUpdate, PendingQuestion } from '@/services/adminAPI';
 import { useAdminNewsStore } from '@/stores/adminNewsStore';
@@ -239,19 +240,55 @@ export const NewsItemEditModal: React.FC<NewsItemEditModalProps> = ({
   const { t } = useTranslation('admin');
   const { currentLanguage } = useLanguage();
   const [jsonInput, setJsonInput] = useState('');
-  const { updateNewsItem, isUpdating, regenerateAudio, regenerateA2Audio } = useAdminNewsStore();
+  const { updateNewsItem, isUpdating, regenerateAudio, regenerateA2Audio, updateItemAudioFromSSE } =
+    useAdminNewsStore();
   const [audioError, setAudioError] = useState(false);
 
-  const [cooldownB2Remaining, setCooldownB2Remaining] = useState(0);
-  const [isRegeneratingB2, setIsRegeneratingB2] = useState(false);
-  const cooldownB2TimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const [cooldownA2Remaining, setCooldownA2Remaining] = useState(0);
-  const [isRegeneratingA2, setIsRegeneratingA2] = useState(false);
-  const cooldownA2TimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [b2Stage, setB2Stage] = useState<string | null>(null);
+  const [a2Stage, setA2Stage] = useState<string | null>(null);
+  const [sseUrl, setSseUrl] = useState<string | null>(null);
 
   const [audioA2Error, setAudioA2Error] = useState<string | null>(null);
   const [questionData, setQuestionData] = useState<PendingQuestion | null>(null);
+
+  useSSE(sseUrl ?? '', {
+    enabled: sseUrl !== null,
+    onEvent: (event) => {
+      const data = event.data as any;
+      const level = data?.level as 'b2' | 'a2';
+      switch (event.type) {
+        case 'audio_progress':
+          if (level === 'b2') setB2Stage(data.stage ?? data.message ?? 'Generating...');
+          else setA2Stage(data.stage ?? data.message ?? 'Generating...');
+          break;
+        case 'audio_completed':
+          if (level === 'b2') {
+            setB2Stage(null);
+            if (data.audio_url)
+              updateItemAudioFromSSE(data.news_item_id, 'b2', data.audio_url, null);
+          } else {
+            setA2Stage(null);
+            if (data.audio_url)
+              updateItemAudioFromSSE(data.news_item_id, 'a2', data.audio_url, null);
+          }
+          break;
+        case 'audio_failed':
+          if (level === 'b2') setB2Stage(null);
+          else setA2Stage(null);
+          toast({
+            title:
+              level === 'b2' ? t('news.audio.regenerateError') : t('news.audio.regenerateA2Error'),
+            description: data.error ?? 'Audio generation failed',
+            variant: 'destructive',
+          });
+          break;
+      }
+    },
+    onError: () => {
+      setB2Stage(null);
+      setA2Stage(null);
+    },
+  });
 
   // Fetch question preview when card_id changes
   useEffect(() => {
@@ -281,97 +318,39 @@ export const NewsItemEditModal: React.FC<NewsItemEditModalProps> = ({
     }
   }, [item, t]);
 
-  // Clear cooldown when modal closes
+  // Clear SSE state when modal closes
   useEffect(() => {
     if (!open) {
-      setCooldownB2Remaining(0);
-      setIsRegeneratingB2(false);
-      if (cooldownB2TimerRef.current) {
-        clearInterval(cooldownB2TimerRef.current);
-        cooldownB2TimerRef.current = null;
-      }
-      setCooldownA2Remaining(0);
-      setIsRegeneratingA2(false);
-      if (cooldownA2TimerRef.current) {
-        clearInterval(cooldownA2TimerRef.current);
-        cooldownA2TimerRef.current = null;
-      }
+      setSseUrl(null);
+      setB2Stage(null);
+      setA2Stage(null);
       setAudioA2Error(null);
     }
   }, [open]);
 
-  // Cleanup intervals on unmount
-  useEffect(() => {
-    return () => {
-      if (cooldownB2TimerRef.current) {
-        clearInterval(cooldownB2TimerRef.current);
-      }
-      if (cooldownA2TimerRef.current) {
-        clearInterval(cooldownA2TimerRef.current);
-      }
-    };
-  }, []);
-
   const handleRegenerateB2 = useCallback(async () => {
-    if (!item || isRegeneratingB2 || cooldownB2Remaining > 0) return;
-
-    setIsRegeneratingB2(true);
+    if (!item || b2Stage !== null) return;
+    setB2Stage('Starting...');
+    setSseUrl(`/api/v1/admin/news/${item.id}/audio/stream`);
     try {
       await regenerateAudio(item.id);
-      toast({ title: t('news.audio.regenerateSuccess') });
-
-      setCooldownB2Remaining(15);
-      cooldownB2TimerRef.current = setInterval(() => {
-        setCooldownB2Remaining((prev) => {
-          if (prev <= 1) {
-            if (cooldownB2TimerRef.current) {
-              clearInterval(cooldownB2TimerRef.current);
-              cooldownB2TimerRef.current = null;
-            }
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      toast({
-        title: t('news.audio.regenerateError'),
-        description: errorMessage,
-        variant: 'destructive',
-      });
-    } finally {
-      setIsRegeneratingB2(false);
+      setB2Stage(null);
+      toast({ title: t('news.audio.regenerateError'), variant: 'destructive' });
     }
-  }, [item, isRegeneratingB2, cooldownB2Remaining, regenerateAudio, t]);
+  }, [item, b2Stage, regenerateAudio, t]);
 
   const handleRegenerateA2 = useCallback(async () => {
-    if (!item || !item.has_a2_content || isRegeneratingA2 || cooldownA2Remaining > 0) return;
-
-    setIsRegeneratingA2(true);
+    if (!item || !item.has_a2_content || a2Stage !== null) return;
+    setA2Stage('Starting...');
+    setSseUrl(`/api/v1/admin/news/${item.id}/audio/stream`);
     try {
       await regenerateA2Audio(item.id);
-      toast({ title: t('news.audio.regenerateA2Success') });
-      // Start A2 cooldown timer (same pattern as B2)
-      setCooldownA2Remaining(30);
-      cooldownA2TimerRef.current = setInterval(() => {
-        setCooldownA2Remaining((prev) => {
-          if (prev <= 1) {
-            if (cooldownA2TimerRef.current) {
-              clearInterval(cooldownA2TimerRef.current);
-              cooldownA2TimerRef.current = null;
-            }
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
     } catch {
+      setA2Stage(null);
       toast({ title: t('news.audio.regenerateA2Error'), variant: 'destructive' });
-    } finally {
-      setIsRegeneratingA2(false);
     }
-  }, [item, isRegeneratingA2, cooldownA2Remaining, regenerateA2Audio, t]);
+  }, [item, a2Stage, regenerateA2Audio, t]);
 
   const handleAudioError = useCallback(() => {
     setAudioError(true);
@@ -480,16 +459,14 @@ export const NewsItemEditModal: React.FC<NewsItemEditModalProps> = ({
                 variant="outline"
                 size="sm"
                 onClick={handleRegenerateB2}
-                disabled={isRegeneratingB2 || cooldownB2Remaining > 0}
+                disabled={b2Stage !== null}
                 data-testid="modal-regenerate-b2-audio"
               >
-                {isRegeneratingB2 ? (
+                {b2Stage !== null ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {t('news.audio.regeneratingB2')}
+                    {b2Stage}
                   </>
-                ) : cooldownB2Remaining > 0 ? (
-                  `${cooldownB2Remaining}s`
                 ) : (
                   <>
                     <RefreshCw className="mr-2 h-4 w-4" />
@@ -560,15 +537,18 @@ export const NewsItemEditModal: React.FC<NewsItemEditModalProps> = ({
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={isRegeneratingA2 || cooldownA2Remaining > 0 || !item.has_a2_content}
+                  disabled={a2Stage !== null || !item.has_a2_content}
                   onClick={handleRegenerateA2}
                   data-testid="modal-regenerate-a2-audio"
                 >
-                  {isRegeneratingA2
-                    ? t('news.audio.regeneratingA2')
-                    : cooldownA2Remaining > 0
-                      ? `${cooldownA2Remaining}s`
-                      : t('news.audio.regenerateA2')}
+                  {a2Stage !== null ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      {a2Stage}
+                    </>
+                  ) : (
+                    t('news.audio.regenerateA2')
+                  )}
                 </Button>
               </div>
               {audioA2Error && <p className="mt-1 text-xs text-destructive">{audioA2Error}</p>}

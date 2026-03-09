@@ -8,12 +8,16 @@ import React, {
   useState,
 } from 'react';
 
+import { toast } from '@/hooks/use-toast';
+import { useSSE } from '@/hooks/useSSE';
 import { reportAPIError } from '@/lib/errorReporting';
+import { supabase } from '@/lib/supabaseClient';
 import { APIRequestError } from '@/services/api';
 import * as notificationAPI from '@/services/notificationAPI';
 import { useAppStore } from '@/stores/appStore';
 import { useAuthStore, useHasHydrated } from '@/stores/authStore';
 import type { Notification } from '@/types/notification';
+import type { SSEConnectionState, SSEEvent } from '@/types/sse';
 
 // Export for testing purposes
 export const NOTIFICATIONS_ENABLED_DEFAULT = true;
@@ -51,6 +55,11 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [offset, setOffset] = useState(0);
   const previousUnreadCountRef = useRef(0);
   const isFetchingRef = useRef(false);
+  const [tabVisible, setTabVisible] = useState(() =>
+    typeof document !== 'undefined' ? document.visibilityState === 'visible' : true
+  );
+  const [tokenVersion, setTokenVersion] = useState(0);
+  const [useFallbackPolling, setUseFallbackPolling] = useState(false);
 
   // Get auth state from store
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -62,6 +71,25 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const notificationsEnabled = useAuthStore(
     (state) => state.user?.preferences?.notifications ?? NOTIFICATIONS_ENABLED_DEFAULT
   );
+
+  // Tab visibility tracking
+  useEffect(() => {
+    const handler = () => setTabVisible(document.visibilityState === 'visible');
+    document.addEventListener('visibilitychange', handler);
+    return () => document.removeEventListener('visibilitychange', handler);
+  }, []);
+
+  // Token refresh listener — bump version to reconnect SSE with fresh token
+  useEffect(() => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'TOKEN_REFRESHED') {
+        setTokenVersion((v) => v + 1);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   // Fetch notifications
   const fetchNotifications = useCallback(
@@ -154,6 +182,56 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     fetchNotifications,
   ]);
 
+  // SSE event handler
+  const handleSSEEvent = useCallback((event: SSEEvent<unknown>) => {
+    if (event.type === 'unread_count') {
+      setUnreadCount((event.data as { count: number }).count);
+    } else if (event.type === 'new_notification') {
+      const notifData = event.data as {
+        id: string;
+        type: string;
+        title: string;
+        message: string;
+        icon?: string;
+        action_url?: string;
+      };
+      setNotifications((prev) => [
+        {
+          id: notifData.id,
+          type: notifData.type,
+          title: notifData.title,
+          message: notifData.message,
+          icon: notifData.icon ?? null,
+          action_url: notifData.action_url ?? null,
+          read: false,
+          read_at: null,
+          created_at: new Date().toISOString(),
+        } as any,
+        ...prev,
+      ]);
+      setUnreadCount((prev) => prev + 1);
+      toast({ title: notifData.title, description: notifData.message });
+    }
+  }, []);
+
+  // SSE state change handler — fall back to polling on persistent error
+  const handleSSEStateChange = useCallback((state: SSEConnectionState) => {
+    if (state === 'error') {
+      setUseFallbackPolling(true);
+    } else if (state === 'connected') {
+      setUseFallbackPolling(false);
+    }
+  }, []);
+
+  // SSE connection — primary real-time channel
+  useSSE(`/api/v1/notifications/stream?v=${tokenVersion}`, {
+    enabled:
+      hasHydrated && isAuthenticated && authInitialized && notificationsEnabled && tabVisible,
+    onEvent: handleSSEEvent,
+    onStateChange: handleSSEStateChange,
+    maxRetries: 10,
+  });
+
   // Mark single notification as read
   const markAsRead = useCallback(async (id: string) => {
     try {
@@ -225,48 +303,13 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasHydrated, isAuthenticated, authInitialized, notificationsEnabled]); // Depend on hydration, auth state, auth validation, and notification preference
 
-  // Polling for new notifications - use ref to avoid recreating interval
-  const refreshUnreadCountRef = useRef(refreshUnreadCount);
-  refreshUnreadCountRef.current = refreshUnreadCount;
-
+  // Fallback polling — only active when SSE fails permanently
   useEffect(() => {
-    if (!hasHydrated || !isAuthenticated || !authInitialized) return;
-
-    let intervalId: ReturnType<typeof setInterval> | null = null;
-
-    const startPolling = () => {
-      if (intervalId !== null) clearInterval(intervalId);
-      intervalId = setInterval(() => {
-        refreshUnreadCountRef.current();
-      }, POLLING_INTERVAL);
-    };
-
-    const stopPolling = () => {
-      if (intervalId !== null) {
-        clearInterval(intervalId);
-        intervalId = null;
-      }
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') {
-        stopPolling();
-      } else {
-        refreshUnreadCountRef.current();
-        startPolling();
-      }
-    };
-
-    if (document.visibilityState === 'visible') {
-      startPolling();
-    }
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      stopPolling();
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [hasHydrated, isAuthenticated, authInitialized]); // Depend on hydration, auth, and auth validation for stable interval
+    if (!useFallbackPolling || !hasHydrated || !isAuthenticated || !authInitialized) return;
+    refreshUnreadCount();
+    const intervalId = setInterval(() => refreshUnreadCount(), POLLING_INTERVAL);
+    return () => clearInterval(intervalId);
+  }, [useFallbackPolling, hasHydrated, isAuthenticated, authInitialized, refreshUnreadCount]);
 
   const value = useMemo<NotificationContextValue>(
     () => ({

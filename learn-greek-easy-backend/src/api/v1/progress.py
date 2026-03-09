@@ -4,13 +4,18 @@ This module provides endpoints for progress tracking and analytics,
 including dashboard statistics, deck progress, and learning trends.
 """
 
+import asyncio
+from collections.abc import AsyncGenerator
+from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.responses import StreamingResponse
 
-from src.core.dependencies import get_current_user
+from src.core.dependencies import SSEAuthResult, get_current_user, get_sse_auth
+from src.core.event_bus import dashboard_event_bus
 from src.db.dependencies import get_db
 from src.db.models import User
 from src.schemas.progress import (
@@ -21,6 +26,7 @@ from src.schemas.progress import (
     LearningTrendsResponse,
 )
 from src.services.progress_service import ProgressService
+from src.utils.sse import create_sse_response, format_sse_error, format_sse_event, sse_stream
 
 router = APIRouter(
     # Note: prefix is set by parent router in v1/router.py
@@ -486,3 +492,70 @@ async def get_achievements(
     """
     service = ProgressService(db)
     return await service.get_achievements(current_user.id)
+
+
+DEBOUNCE_SECONDS = 1.5
+
+
+@router.get(
+    "/stream",
+    summary="Stream progress updates via SSE",
+    responses={200: {"content": {"text/event-stream": {}}}},
+)
+async def stream_progress(
+    sse_auth: SSEAuthResult = Depends(get_sse_auth),
+) -> StreamingResponse:
+    """SSE endpoint for real-time progress update notifications.
+
+    Streams dashboard_updated events when the user's progress changes.
+    Uses per-connection 1.5s debouncing to coalesce rapid updates.
+    """
+
+    async def event_generator() -> AsyncGenerator[str, None]:
+        # Auth check
+        if not sse_auth.is_authenticated:
+            yield format_sse_error(
+                sse_auth.error_code or "auth_required",
+                sse_auth.error_message or "Authentication required",
+            )
+            return
+
+        # Subscribe to dashboard events for this user BEFORE sending connected,
+        # so no events are missed between the two operations.
+        assert sse_auth.user is not None  # guaranteed by is_authenticated check above
+        key = f"dashboard:{sse_auth.user.id}"
+        queue = await dashboard_event_bus.subscribe(key)
+
+        yield format_sse_event({}, event="connected")
+
+        try:
+            while True:
+                # Wait for first event
+                first_event = await queue.get()
+                reason = first_event.get("reason", "unknown")
+
+                # Debounce: drain additional events within the window
+                deadline = asyncio.get_event_loop().time() + DEBOUNCE_SECONDS
+                while True:
+                    remaining = deadline - asyncio.get_event_loop().time()
+                    if remaining <= 0:
+                        break
+                    try:
+                        await asyncio.wait_for(queue.get(), timeout=remaining)
+                        # Keep first reason, discard subsequent
+                    except (asyncio.TimeoutError, TimeoutError):
+                        break
+
+                yield format_sse_event(
+                    {
+                        "reason": reason,
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                    },
+                    event="dashboard_updated",
+                )
+        except asyncio.CancelledError:
+            pass
+        finally:
+            await dashboard_event_bus.unsubscribe(key, queue)
+
+    return create_sse_response(sse_stream(event_generator()))

@@ -9,6 +9,7 @@ All endpoints require superuser authentication.
 """
 
 import asyncio
+from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
 from typing import Any, Literal, Optional
 from uuid import UUID
@@ -17,9 +18,11 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, s
 from sqlalchemy import case, delete, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.responses import StreamingResponse
 
 from src.config import settings
-from src.core.dependencies import get_current_superuser
+from src.core.dependencies import SSEAuthResult, get_current_superuser, get_sse_auth
+from src.core.event_bus import audio_event_bus, news_audio_event_bus
 from src.core.exceptions import (
     ConflictException,
     NotFoundException,
@@ -46,6 +49,7 @@ from src.db.models import (
     User,
     WordEntry,
 )
+from src.db.session import get_session_factory
 from src.repositories.deck import DeckRepository
 from src.repositories.word_entry import WordEntryRepository
 from src.schemas.admin import (
@@ -121,6 +125,7 @@ from src.services.lexicon_service import LexiconService
 from src.services.local_verification_service import get_local_verification_service
 from src.services.news_item_service import NewsItemService
 from src.services.noun_data_generation_service import get_noun_data_generation_service
+from src.services.s3_service import get_s3_service
 from src.services.translation_service import TranslationLookupService
 from src.services.verification_tier import compute_combined_tier
 from src.services.word_entry_response import word_entry_to_response
@@ -132,6 +137,7 @@ from src.tasks import (
     is_background_tasks_enabled,
 )
 from src.utils.greek_text import resolve_tts_text
+from src.utils.sse import create_sse_response, format_sse_error, format_sse_event, sse_stream
 
 logger = get_logger(__name__)
 
@@ -1328,6 +1334,110 @@ async def regenerate_a2_news_audio(
     return {"message": "A2 audio regeneration started"}
 
 
+async def _fetch_news_item_for_sse(news_item_id: UUID) -> NewsItem | None:
+    """Load a NewsItem using a short-lived session (DB-free generator pattern)."""
+    factory = get_session_factory()
+    async with factory() as db:
+        stmt = select(NewsItem).where(NewsItem.id == news_item_id)
+        result = await db.execute(stmt)
+        return result.scalar_one_or_none()
+
+
+_NEWS_AUDIO_TERMINAL_EVENTS = {"audio_completed", "audio_failed"}
+_NEWS_AUDIO_SAFETY_TIMEOUT = 300.0  # 5 minutes
+
+
+async def _wait_for_news_audio_event(
+    queue: asyncio.Queue,
+    deadline: float,
+) -> dict | None:
+    """Wait for the next event respecting the 5-minute deadline.
+
+    Returns the event dict, or None if the overall deadline has been exceeded.
+    Uses 30s sub-timeouts to keep the loop responsive without breaking early.
+    """
+    while True:
+        remaining = deadline - asyncio.get_event_loop().time()
+        if remaining <= 0:
+            return None
+        try:
+            return await asyncio.wait_for(queue.get(), timeout=min(remaining, 30.0))
+        except (asyncio.TimeoutError, TimeoutError):
+            # 30s slice elapsed; re-check overall deadline before retrying.
+            if asyncio.get_event_loop().time() >= deadline:
+                return None
+
+
+async def _news_audio_queue_generator(
+    queue: asyncio.Queue,
+    bus_key: str,
+) -> AsyncGenerator[str, None]:
+    """Read from news_audio_event_bus until all started levels are terminal or timeout."""
+    started_levels: set[str] = set()
+    terminal_levels: set[str] = set()
+    deadline = asyncio.get_event_loop().time() + _NEWS_AUDIO_SAFETY_TIMEOUT
+
+    try:
+        while True:
+            event_data = await _wait_for_news_audio_event(queue, deadline)
+            if event_data is None:
+                break
+
+            level = event_data.get("level") or event_data.get("data", {}).get("level")
+            event_type = event_data.get("type", "audio_progress")
+
+            if level:
+                started_levels.add(level)
+                if event_type in _NEWS_AUDIO_TERMINAL_EVENTS:
+                    terminal_levels.add(level)
+
+            yield format_sse_event(event_data, event=event_type)
+
+            if started_levels and terminal_levels >= started_levels:
+                break
+    except asyncio.CancelledError:
+        pass
+    finally:
+        await news_audio_event_bus.unsubscribe(bus_key, queue)
+
+
+async def _news_audio_event_generator(news_item_id: UUID) -> AsyncGenerator[str, None]:
+    """Yield a connected event then stream news audio progress events from the bus."""
+    yield format_sse_event({}, event="connected")
+
+    bus_key = f"news_audio:{news_item_id}"
+    queue = await news_audio_event_bus.subscribe(bus_key)
+    async for chunk in sse_stream(_news_audio_queue_generator(queue, bus_key)):
+        yield chunk
+
+
+@router.get(
+    "/news/{news_item_id}/audio/stream",
+    summary="Stream news audio generation progress via SSE",
+    responses={200: {"content": {"text/event-stream": {}}}},
+)
+async def stream_news_audio(
+    news_item_id: UUID,
+    sse_auth: SSEAuthResult = Depends(get_sse_auth),
+) -> StreamingResponse:
+    """SSE stream for news item audio generation progress. Admin only."""
+    if not sse_auth.is_authenticated:
+        return _sse_single_error(
+            sse_auth.error_code or "auth_required",
+            sse_auth.error_message or "Authentication required",
+        )
+
+    assert sse_auth.user is not None
+    if not sse_auth.user.is_superuser:
+        return _sse_single_error("forbidden", "Superuser privileges required")
+
+    news_item = await _fetch_news_item_for_sse(news_item_id)
+    if news_item is None:
+        return _sse_single_error("not_found", f"News item {news_item_id} not found")
+
+    return create_sse_response(_news_audio_event_generator(news_item_id))
+
+
 @router.get(
     "/news/questions/{question_id}",
     response_model=PendingQuestionItem,
@@ -2182,6 +2292,181 @@ async def generate_word_entry_audio(
     return {"message": "Audio generation started"}
 
 
+# ============================================================
+# Audio SSE helpers
+# ============================================================
+
+_TERMINAL_AUDIO_STATUSES = {"ready", "failed", "missing"}
+
+
+def _build_audio_status_event(
+    word_entry_id: UUID,
+    part: str,
+    example_id: str | None,
+    audio_status: str,
+    audio_key: str | None,
+) -> dict:
+    """Build a single audio status event payload."""
+    s3 = get_s3_service()
+    audio_url = (
+        s3.generate_presigned_url(audio_key) if audio_status == "ready" and audio_key else None
+    )
+    return {
+        "word_entry_id": str(word_entry_id),
+        "part": part,
+        "example_id": example_id,
+        "status": audio_status,
+        "audio_url": audio_url,
+    }
+
+
+def _collect_initial_audio_events(word_entry: Any) -> list[dict]:
+    """Collect current audio status for lemma and all examples."""
+    events: list[dict] = []
+
+    # Lemma
+    lemma_status = (
+        word_entry.audio_status.value
+        if hasattr(word_entry.audio_status, "value")
+        else str(word_entry.audio_status)
+    )
+    events.append(
+        _build_audio_status_event(
+            word_entry_id=word_entry.id,
+            part="lemma",
+            example_id=None,
+            audio_status=lemma_status,
+            audio_key=word_entry.audio_key,
+        )
+    )
+
+    # Examples
+    for ex in word_entry.examples or []:
+        ex_id = ex.get("id")
+        if not ex_id:
+            continue
+        ex_status = ex.get("audio_status") or "missing"
+        events.append(
+            _build_audio_status_event(
+                word_entry_id=word_entry.id,
+                part="example",
+                example_id=str(ex_id),
+                audio_status=ex_status,
+                audio_key=ex.get("audio_key"),
+            )
+        )
+
+    return events
+
+
+# ============================================================
+# Audio SSE endpoint
+# ============================================================
+
+
+def _sse_single_error(code: str, message: str) -> StreamingResponse:
+    """Return an SSE response containing a single error event."""
+
+    async def _gen() -> AsyncGenerator[str, None]:
+        yield format_sse_error(code, message)
+
+    return create_sse_response(_gen())
+
+
+async def _fetch_word_entry_for_sse(word_entry_id: UUID) -> WordEntry | None:
+    """Load a WordEntry using a short-lived session (DB-free generator pattern)."""
+    factory = get_session_factory()
+    async with factory() as db:
+        stmt = select(WordEntry).where(WordEntry.id == word_entry_id)
+        result = await db.execute(stmt)
+        return result.scalar_one_or_none()
+
+
+async def _word_audio_event_generator(
+    word_entry_id: UUID,
+    initial_events: list[dict],
+    all_terminal: bool,
+) -> AsyncGenerator[str, None]:
+    """Yield initial status events, then subscribe to the bus until all parts are terminal."""
+    bus_key = f"word_audio:{word_entry_id}"
+
+    if not all_terminal:
+        # Subscribe BEFORE yielding initial events so no ready/failed update
+        # published in the gap between the DB snapshot and subscribe is missed.
+        queue = await audio_event_bus.subscribe(bus_key)
+
+    for ev in initial_events:
+        yield format_sse_event(ev, event="audio_status_changed")
+
+    if all_terminal:
+        return
+
+    terminal_parts: set[tuple[str, str | None]] = {
+        (ev["part"], ev.get("example_id"))
+        for ev in initial_events
+        if ev["status"] in _TERMINAL_AUDIO_STATUSES
+    }
+    all_part_keys: set[tuple[str, str | None]] = {
+        (ev["part"], ev.get("example_id")) for ev in initial_events
+    }
+
+    try:
+        async for chunk in sse_stream(
+            _audio_queue_generator(queue, all_part_keys, terminal_parts),
+        ):
+            yield chunk
+    finally:
+        await audio_event_bus.unsubscribe(bus_key, queue)
+
+
+@router.get(
+    "/word-entries/{word_entry_id}/audio/stream",
+    summary="Stream word entry audio generation status via SSE",
+    responses={200: {"content": {"text/event-stream": {}}}},
+)
+async def stream_word_entry_audio(
+    word_entry_id: UUID,
+    sse_auth: SSEAuthResult = Depends(get_sse_auth),
+) -> StreamingResponse:
+    """SSE stream for real-time audio generation status updates. Admin only."""
+    if not sse_auth.is_authenticated:
+        return _sse_single_error(
+            sse_auth.error_code or "auth_required",
+            sse_auth.error_message or "Authentication required",
+        )
+
+    assert sse_auth.user is not None
+    if not sse_auth.user.is_superuser:
+        return _sse_single_error("forbidden", "Superuser privileges required")
+
+    word_entry = await _fetch_word_entry_for_sse(word_entry_id)
+    if word_entry is None:
+        return _sse_single_error("not_found", f"Word entry {word_entry_id} not found")
+
+    initial_events = _collect_initial_audio_events(word_entry)
+    all_terminal = all(ev["status"] in _TERMINAL_AUDIO_STATUSES for ev in initial_events)
+
+    return create_sse_response(
+        _word_audio_event_generator(word_entry_id, initial_events, all_terminal)
+    )
+
+
+async def _audio_queue_generator(
+    queue: asyncio.Queue,
+    all_part_keys: set[tuple[str, str | None]],
+    terminal_parts: set[tuple[str, str | None]],
+) -> AsyncGenerator[str, None]:
+    """Inner generator that reads from the audio event bus queue until all parts are terminal."""
+    while True:
+        payload: dict = await queue.get()
+        pk = (payload.get("part", ""), payload.get("example_id"))
+        yield format_sse_event(payload, event="audio_status_changed")
+        if payload.get("status") in _TERMINAL_AUDIO_STATUSES:
+            terminal_parts.add(pk)
+        if terminal_parts >= all_part_keys:
+            break
+
+
 def _validate_meaning_eligibility(word_entry: "WordEntry") -> None:
     if not word_entry.translation_en or not word_entry.translation_ru:
         raise HTTPException(
@@ -2568,6 +2853,14 @@ async def generate_word_entry(
         lemma=primary.morphology.lemma,
         part_of_speech=PartOfSpeech.NOUN,
     )
+    if dup_result.is_duplicate:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "error": "Duplicate word entry found",
+                "duplicate_check": dup_result.model_dump(mode="json"),
+            },
+        )
 
     # Stage 2.5: Translation lookup
     translation_lookup: TranslationLookupStageResult | None = None
@@ -2637,6 +2930,308 @@ async def generate_word_entry(
         translation_lookup=translation_lookup,
         generation=generated_data,
         verification=verification_summary,
+    )
+
+
+async def _sse_generation_and_verification(
+    normalized_lemma: NormalizedLemma,
+    translation_lookup: TranslationLookupStageResult | None,
+    lexicon_svc: LexiconService,
+    lemma: str,
+) -> AsyncGenerator[str, None]:
+    """Emit SSE events for stages 3 (generation) and 4 (verification)."""
+    yield format_sse_event({"message": "Generating with AI..."}, event="generation_started")
+    try:
+        generated_data, secondary_data = await _run_generation_with_secondary(
+            normalized_lemma=normalized_lemma,
+            translation_lookup=translation_lookup,
+        )
+        yield format_sse_event(generated_data, event="generation_complete")
+    except HTTPException as exc:
+        yield format_sse_event(
+            {"error": exc.detail, "status_code": exc.status_code},
+            event="generation_failed",
+        )
+        yield format_sse_event(
+            {"error": exc.detail, "stage": "generation"},
+            event="pipeline_failed",
+        )
+        return
+
+    yield format_sse_event({"message": "Running verification..."}, event="verification_started")
+    verification_summary: VerificationSummary | None = None
+    try:
+        verification_summary = await _run_verification_stage(
+            generated_data=generated_data,
+            normalized_lemma=normalized_lemma,
+            lexicon_svc=lexicon_svc,
+            lemma=lemma,
+            secondary_data=secondary_data,
+        )
+        yield format_sse_event(verification_summary, event="verification_complete")
+    except Exception as exc:
+        logger.warning("Verification failed (non-fatal): %s", exc)
+        yield format_sse_event({"error": str(exc)}, event="verification_failed")
+
+    last_stage = "verification" if verification_summary else "generation"
+    yield format_sse_event({"stage": last_stage}, event="pipeline_complete")
+
+
+def _build_normalization_sse_event(
+    smart_result: Any,
+) -> tuple[str, str | None, str | None]:
+    """Extract gender/article from smart result and return (sse_event_str, gender, article)."""
+    primary = smart_result.primary
+    primary_gender, primary_article = _extract_gender_article(primary.morphology.morph_features)
+
+    _ARTICLE_GENDER_OVERRIDE = {"ο": "masculine", "η": "feminine", "το": "neuter"}
+    if smart_result.detected_article in _ARTICLE_GENDER_OVERRIDE:
+        primary_gender = _ARTICLE_GENDER_OVERRIDE[smart_result.detected_article]
+        primary_article = smart_result.detected_article
+
+    suggestions = [
+        SuggestionItem(
+            lemma=s.morphology.lemma,
+            pos=s.morphology.pos,
+            gender=_extract_gender_article(s.morphology.morph_features)[0],
+            article=_extract_gender_article(s.morphology.morph_features)[1],
+            confidence=s.confidence,
+            confidence_tier=_confidence_tier(s.confidence),
+            strategy=s.strategy,
+        )
+        for s in smart_result.suggestions
+    ]
+    event_str = format_sse_event(
+        {
+            "normalization": NormalizationStageResult(
+                input_word=primary.input_form,
+                lemma=primary.morphology.lemma,
+                gender=primary_gender,
+                article=primary_article,
+                pos=primary.morphology.pos,
+                confidence=primary.confidence,
+                confidence_tier=_confidence_tier(primary.confidence),
+                strategy=primary.strategy,
+                corrected_from=primary.corrected_from,
+                corrected_to=primary.corrected_to,
+            ).model_dump(),
+            "suggestions": [s.model_dump() for s in suggestions],
+        },
+        event="normalization_complete",
+    )
+    return event_str, primary_gender, primary_article
+
+
+async def _generate_word_entry_sse_pipeline(  # noqa: C901
+    request: GenerateWordEntryRequest,
+    db: AsyncSession,
+    from_stage: str | None = None,
+) -> AsyncGenerator[str, None]:
+    """Async generator that emits SSE events for each noun generation pipeline stage."""
+    yield format_sse_event("", event="connected")
+
+    # Validate from_stage param
+    if from_stage is not None and from_stage != "generation":
+        yield format_sse_error(
+            "invalid_param", f"Invalid from_stage: '{from_stage}'. Only 'generation' is supported."
+        )
+        return
+
+    if from_stage == "generation":
+        if not request.lemma:
+            yield format_sse_error(
+                "missing_field", "'lemma' is required when from_stage=generation"
+            )
+            return
+
+        # Validate deck (active + V2)
+        result = await db.execute(select(Deck).where(Deck.id == request.deck_id))
+        deck = result.scalar_one_or_none()
+        if deck is None or not deck.is_active:
+            yield format_sse_event(
+                {
+                    "error": f"Active deck with ID '{request.deck_id}' not found",
+                    "stage": "validation",
+                },
+                event="pipeline_failed",
+            )
+            return
+
+        if deck.card_system != CardSystemVersion.V2:
+            yield format_sse_event(
+                {
+                    "error": "Word generation is only supported for V2 vocabulary decks",
+                    "stage": "validation",
+                },
+                event="pipeline_failed",
+            )
+            return
+
+        # Build NormalizedLemma from pre-resolved fields in the request
+        lexicon_svc = LexiconService(db)
+        normalized_lemma = NormalizedLemma(
+            input_word=request.word,
+            lemma=request.lemma,
+            gender=request.gender,
+            article=request.article,
+            pos="NOUN",
+            confidence=1.0,
+        )
+        async for event in _sse_generation_and_verification(
+            normalized_lemma=normalized_lemma,
+            translation_lookup=request.translation_lookup,
+            lexicon_svc=lexicon_svc,
+            lemma=request.lemma,
+        ):
+            yield event
+        return
+
+    # Validate deck (active + V2)
+    result = await db.execute(select(Deck).where(Deck.id == request.deck_id))
+    deck = result.scalar_one_or_none()
+    if deck is None or not deck.is_active:
+        yield format_sse_event(
+            {"error": f"Active deck with ID '{request.deck_id}' not found", "stage": "validation"},
+            event="pipeline_failed",
+        )
+        return
+
+    if deck.card_system != CardSystemVersion.V2:
+        yield format_sse_event(
+            {
+                "error": "Word generation is only supported for V2 vocabulary decks",
+                "stage": "validation",
+            },
+            event="pipeline_failed",
+        )
+        return
+
+    # Stage 0.5: Lexicon lookup
+    _, bare_word = detect_article(request.word)
+    lexicon_svc = LexiconService(db)
+    try:
+        lexicon_entry = await lexicon_svc.lookup(bare_word, pos="NOUN")
+    except Exception:
+        lexicon_entry = None
+
+    # Stage 1: Normalization
+    svc = get_lemma_normalization_service()
+    try:
+        smart_result = svc.normalize_smart(
+            request.word, expected_pos="NOUN", lexicon_entry=lexicon_entry
+        )
+    except ValueError as exc:
+        yield format_sse_event(
+            {"error": str(exc), "stage": "normalization"},
+            event="pipeline_failed",
+        )
+        return
+
+    norm_event, primary_gender, primary_article = _build_normalization_sse_event(smart_result)
+    yield norm_event
+    primary = smart_result.primary
+
+    # Stage 2: Duplicate check
+    try:
+        dup_svc = DuplicateDetectionService(db)
+        dup_result = await dup_svc.check(
+            lemma=primary.morphology.lemma,
+            part_of_speech=PartOfSpeech.NOUN,
+        )
+        yield format_sse_event(dup_result, event="duplicates_checked")
+        if dup_result.is_duplicate:
+            yield format_sse_event(
+                {
+                    "error": "Duplicate word entry found",
+                    "stage": "duplicate_check",
+                    "existing_entry": (
+                        dup_result.existing_entry.model_dump()
+                        if dup_result.existing_entry
+                        else None
+                    ),
+                },
+                event="pipeline_stopped",
+            )
+            return
+    except Exception as exc:
+        logger.warning("Duplicate check failed: %s", exc)
+        yield format_sse_event(
+            {"error": str(exc), "stage": "duplicate_check"},
+            event="duplicates_checked",
+        )
+
+    # Stage 2.5: Translation lookup (non-fatal)
+    translation_lookup: TranslationLookupStageResult | None = None
+    try:
+        tl_svc = TranslationLookupService(db)
+        tl_bilingual = await tl_svc.lookup_bilingual(
+            lemma=primary.morphology.lemma,
+            pos="NOUN",
+        )
+        translation_lookup = _build_translation_lookup_stage_result(tl_bilingual)
+        yield format_sse_event(
+            {"data": translation_lookup.model_dump()}, event="translations_found"
+        )
+    except Exception as exc:
+        logger.warning("Translation lookup failed (non-blocking): %s", exc)
+        yield format_sse_event({"data": None}, event="translations_found")
+
+    # Build NormalizedLemma and run stages 3+4 via sub-generator
+    normalized_lemma = NormalizedLemma(
+        input_word=primary.input_form,
+        lemma=primary.morphology.lemma,
+        gender=primary_gender,
+        article=primary_article,
+        pos=primary.morphology.pos,
+        confidence=primary.confidence,
+    )
+    async for event in _sse_generation_and_verification(
+        normalized_lemma=normalized_lemma,
+        translation_lookup=translation_lookup,
+        lexicon_svc=lexicon_svc,
+        lemma=primary.morphology.lemma,
+    ):
+        yield event
+
+
+@router.post(
+    "/word-entries/generate/stream",
+    summary="Run noun generation pipeline as SSE stream",
+    response_class=StreamingResponse,
+)
+async def generate_word_entry_stream(
+    request: GenerateWordEntryRequest,
+    sse_auth: SSEAuthResult = Depends(get_sse_auth),
+    db: AsyncSession = Depends(get_db),
+    from_stage: str | None = Query(
+        None, description="Pipeline stage to start from. Only 'generation' is supported."
+    ),
+) -> StreamingResponse:
+    """Stream noun generation pipeline stages as SSE events.
+
+    Returns events in sequence:
+    connected → normalization_complete → duplicates_checked → translations_found
+    → generation_started → generation_complete → verification_started
+    → verification_complete → pipeline_complete
+
+    On failure: pipeline_failed (normalization/generation) or verification_failed (non-fatal).
+    The existing sync endpoint POST /generate remains unchanged.
+    """
+    if not sse_auth.is_authenticated:
+        return _sse_single_error(
+            sse_auth.error_code or "auth_required",
+            sse_auth.error_message or "Authentication required",
+        )
+
+    assert sse_auth.user is not None
+    if not sse_auth.user.is_superuser:
+        return _sse_single_error("forbidden", "Superuser privileges required")
+
+    return create_sse_response(
+        sse_stream(
+            _generate_word_entry_sse_pipeline(request, db, from_stage=from_stage),
+            heartbeat_interval=15,
+        )
     )
 
 

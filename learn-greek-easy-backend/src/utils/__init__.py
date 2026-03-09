@@ -21,6 +21,15 @@ from src.utils.responses import (
     create_paginated_response,
     create_success_response,
 )
+from src.utils.sse import (
+    SSE_AUTH_FAILED,
+    SSE_RATE_LIMITED,
+    SSE_STREAM_ERROR,
+    create_sse_response,
+    format_sse_error,
+    format_sse_event,
+    sse_stream,
+)
 from src.utils.validation import (
     EMAIL_REGEX,
     UUID_REGEX,
@@ -50,4 +59,12 @@ __all__ = [
     "normalize_greek_accents",
     "extract_searchable_forms",
     "generate_normalized_forms",
+    # SSE utilities
+    "SSE_AUTH_FAILED",
+    "SSE_STREAM_ERROR",
+    "SSE_RATE_LIMITED",
+    "format_sse_event",
+    "format_sse_error",
+    "sse_stream",
+    "create_sse_response",
 ]

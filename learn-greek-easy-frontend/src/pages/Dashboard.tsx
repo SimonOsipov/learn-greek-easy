@@ -10,6 +10,7 @@ import { WelcomeSection } from '@/components/display/WelcomeSection';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAnalytics } from '@/hooks/useAnalytics';
+import { useAnalyticsSSE } from '@/hooks/useAnalyticsSSE';
 import { useTourAutoTrigger } from '@/hooks/useTourAutoTrigger';
 import { getLocalizedDeckDescription, getLocalizedDeckName } from '@/lib/deckLocale';
 import { reportAPIError } from '@/lib/errorReporting';
@@ -55,6 +56,7 @@ export const Dashboard: React.FC = () => {
     });
   }, [fetchDecks]);
 
+  useAnalyticsSSE();
   useTourAutoTrigger();
 
   // Memoized navigation handler for decks page

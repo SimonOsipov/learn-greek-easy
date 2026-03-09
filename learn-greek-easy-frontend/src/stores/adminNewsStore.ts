@@ -48,9 +48,7 @@ interface AdminNewsState {
 
   // Regeneration state
   regeneratingId: string | null;
-  cooldownEndTime: number | null;
   regeneratingA2Id: string | null;
-  cooldownA2EndTime: number | null;
 
   // Actions
   fetchNewsItems: () => Promise<void>;
@@ -59,6 +57,12 @@ interface AdminNewsState {
   deleteNewsItem: (id: string) => Promise<void>;
   regenerateAudio: (id: string) => Promise<void>;
   regenerateA2Audio: (id: string) => Promise<void>;
+  updateItemAudioFromSSE: (
+    id: string,
+    level: 'b2' | 'a2',
+    audioUrl: string,
+    generatedAt: string | null
+  ) => void;
   setPage: (page: number) => void;
   setSelectedItem: (item: NewsItemResponse | null) => void;
   setCountryFilter: (filter: NewsCountry | 'all') => void;
@@ -86,9 +90,7 @@ export const useAdminNewsStore = create<AdminNewsState>()(
       error: null,
       countryFilter: 'all' as NewsCountry | 'all',
       regeneratingId: null,
-      cooldownEndTime: null,
       regeneratingA2Id: null,
-      cooldownA2EndTime: null,
 
       /**
        * Fetch paginated news items list from admin API
@@ -200,19 +202,10 @@ export const useAdminNewsStore = create<AdminNewsState>()(
 
         try {
           await adminAPI.regenerateAudio(id);
-
-          set({
-            regeneratingId: null,
-            cooldownEndTime: Date.now() + 15_000,
-          });
-
-          setTimeout(() => {
-            set({ cooldownEndTime: null });
-            get().fetchNewsItems();
-          }, 15_000);
+          set({ regeneratingId: null });
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Failed to regenerate audio';
-          set({ regeneratingId: null, cooldownEndTime: null, error: message });
+          set({ regeneratingId: null, error: message });
           throw error;
         }
       },
@@ -227,21 +220,39 @@ export const useAdminNewsStore = create<AdminNewsState>()(
 
         try {
           await adminAPI.regenerateA2Audio(id);
-
-          set({
-            regeneratingA2Id: null,
-            cooldownA2EndTime: Date.now() + 15_000,
-          });
-
-          setTimeout(() => {
-            set({ cooldownA2EndTime: null });
-            get().fetchNewsItems();
-          }, 15_000);
+          set({ regeneratingA2Id: null });
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Failed to regenerate A2 audio';
-          set({ regeneratingA2Id: null, cooldownA2EndTime: null, error: message });
+          set({ regeneratingA2Id: null, error: message });
           throw error;
         }
+      },
+
+      /**
+       * Update a news item's audio URL from an SSE audio_completed event
+       */
+      updateItemAudioFromSSE: (
+        id: string,
+        level: 'b2' | 'a2',
+        audioUrl: string,
+        generatedAt: string | null
+      ) => {
+        set((state) => {
+          const patch =
+            level === 'b2'
+              ? { audio_url: audioUrl, audio_generated_at: generatedAt }
+              : { audio_a2_url: audioUrl, audio_a2_generated_at: generatedAt };
+
+          return {
+            newsItems: state.newsItems.map((item) =>
+              item.id === id ? { ...item, ...patch } : item
+            ),
+            selectedItem:
+              state.selectedItem?.id === id
+                ? { ...state.selectedItem, ...patch }
+                : state.selectedItem,
+          };
+        });
       },
 
       /**
@@ -292,7 +303,5 @@ export const selectPagination = (state: AdminNewsState) => ({
   totalPages: state.totalPages,
 });
 export const selectRegeneratingId = (state: AdminNewsState) => state.regeneratingId;
-export const selectCooldownEndTime = (state: AdminNewsState) => state.cooldownEndTime;
 export const selectRegeneratingA2Id = (state: AdminNewsState) => state.regeneratingA2Id;
-export const selectCooldownA2EndTime = (state: AdminNewsState) => state.cooldownA2EndTime;
 export const selectCountryFilter = (state: AdminNewsState) => state.countryFilter;
