@@ -61,7 +61,7 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
   category,
   onClose,
 }) => {
-  const { t } = useTranslation('culture');
+  const { t } = useTranslation(['culture', 'common']);
   const [lang, setLang] = useState<CultureLanguage>('en');
   const [newsLevel, setNewsLevelState] = useState<NewsLevel>(getPersistedNewsLevel);
 
@@ -152,7 +152,10 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
                 <div className="flex items-center gap-2">
                   {showLevelToggle && (
                     <>
-                      <div className="flex items-center gap-1" aria-label="Content level">
+                      <div
+                        className="flex items-center gap-1"
+                        aria-label={t('common:news.level.label', 'Content level')}
+                      >
                         <Button
                           variant={newsLevel === 'a2' ? 'default' : 'outline'}
                           size="sm"
@@ -251,7 +254,7 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
                       {data.also_in_decks.map((deck) => (
                         <Link
                           key={deck.id}
-                          to={`/culture/${deck.id}`}
+                          to={`/culture/decks/${deck.id}`}
                           className="inline-flex rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground"
                         >
                           {deck.name}
