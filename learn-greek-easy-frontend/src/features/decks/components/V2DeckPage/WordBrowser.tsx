@@ -11,6 +11,7 @@ import { Search, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '@/components/feedback/EmptyState';
+import { MasteryDotsLegend } from '@/components/shared/MasteryDotsLegend';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { debounce } from '@/lib/utils';
@@ -228,11 +229,16 @@ export const WordBrowser: React.FC<WordBrowserProps> = ({ deckId, className }) =
         />
 
         {/* Results Count */}
-        <p className="text-sm text-muted-foreground">
+        <p className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
           {t('wordBrowser.showing', {
             count: filteredEntries.length,
             total: wordEntries.length,
           })}
+          <MasteryDotsLegend
+            namespace="deck"
+            legendKey="wordBrowser.masteryDotsLegend"
+            ariaLabelKey="wordBrowser.masteryDotsInfo"
+          />
         </p>
       </div>
 

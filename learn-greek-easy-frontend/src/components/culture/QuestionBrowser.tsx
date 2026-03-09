@@ -7,6 +7,7 @@ import { Search, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '@/components/feedback/EmptyState';
+import { MasteryDotsLegend } from '@/components/shared/MasteryDotsLegend';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useQuestionLanguage } from '@/hooks/useQuestionLanguage';
@@ -284,11 +285,16 @@ export const QuestionBrowser: React.FC<QuestionBrowserProps> = ({
 
         {/* Results Counter */}
         {!isLoading && (
-          <p className="text-sm text-muted-foreground">
+          <p className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
             {t('deck.showingQuestions', {
               shown: filteredQuestions.length,
               total: totalQuestions,
             })}
+            <MasteryDotsLegend
+              namespace="culture"
+              legendKey="deck.masteryDotsLegend"
+              ariaLabelKey="deck.masteryDotsInfo"
+            />
           </p>
         )}
       </div>

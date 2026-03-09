@@ -16,7 +16,9 @@
     "clearSearch": "Clear search",
     "filterGroup": "Filter by status",
     "loadError": "Failed to load questions",
-    "retry": "Retry"
+    "retry": "Retry",
+    "masteryDotsLegend": "Correct answers toward mastery — 4 needed to master a card.",
+    "masteryDotsInfo": "Mastery dots info"
   },
   "crossDeck": {
     "alsoIn": "Also in: {{deckNames}}"
