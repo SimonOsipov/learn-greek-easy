@@ -8,7 +8,8 @@
  * - AC-5: Greek locale shows Greek month names
  */
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 import { adminAPI } from '@/services/adminAPI';
@@ -93,13 +94,29 @@ vi.mock('@/hooks/use-toast', () => ({
 const mockUpdateNewsItem = vi.fn();
 const mockRegenerateAudio = vi.fn();
 const mockRegenerateA2Audio = vi.fn();
+const mockUpdateItemAudioFromSSE = vi.fn();
 vi.mock('@/stores/adminNewsStore', () => ({
   useAdminNewsStore: () => ({
     updateNewsItem: mockUpdateNewsItem,
     isUpdating: false,
     regenerateAudio: mockRegenerateAudio,
     regenerateA2Audio: mockRegenerateA2Audio,
+    updateItemAudioFromSSE: mockUpdateItemAudioFromSSE,
   }),
+}));
+
+// Mock useSSE
+type SSEOptions = {
+  enabled?: boolean;
+  onEvent?: (event: { type: string; data: unknown }) => void;
+  onError?: () => void;
+};
+const mockUseSSE = vi.fn((_url: string, _options: SSEOptions) => ({
+  state: 'disconnected',
+  close: vi.fn(),
+}));
+vi.mock('@/hooks/useSSE', () => ({
+  useSSE: (url: string, options: SSEOptions) => mockUseSSE(url, options),
 }));
 
 // Mock WaveformPlayer to avoid audio complexities
@@ -546,5 +563,141 @@ describe('NewsItemEditModal — Question preview card', () => {
     expect(screen.getByText('B.')).toBeInTheDocument();
     expect(screen.queryByText('C.')).not.toBeInTheDocument();
     expect(screen.queryByText('D.')).not.toBeInTheDocument();
+  });
+});
+
+describe('NewsItemEditModal — SSE audio regeneration', () => {
+  let capturedSSECallbacks: SSEOptions = {};
+
+  beforeEach(() => {
+    mockCurrentLanguage.value = 'en';
+    vi.clearAllMocks();
+    capturedSSECallbacks = {};
+    mockUseSSE.mockImplementation((_url: string, options: SSEOptions) => {
+      capturedSSECallbacks = options;
+      return { state: 'disconnected', close: vi.fn() };
+    });
+    mockRegenerateAudio.mockResolvedValue(undefined);
+    mockRegenerateA2Audio.mockResolvedValue(undefined);
+  });
+
+  it('calls useSSE with URL containing news item id when B2 regenerate is clicked', async () => {
+    const item = makeNewsItem({ id: 'item-abc' });
+    render(<NewsItemEditModal open={true} onOpenChange={vi.fn()} item={item} />);
+
+    const button = screen.getByTestId('modal-regenerate-b2-audio');
+    await userEvent.click(button);
+
+    // useSSE should have been called with the SSE URL for the item
+    expect(mockUseSSE).toHaveBeenCalledWith(
+      expect.stringContaining('item-abc'),
+      expect.objectContaining({ enabled: true })
+    );
+  });
+
+  it('calls regenerateAudio when B2 regenerate is clicked', async () => {
+    const item = makeNewsItem({ id: 'item-abc' });
+    render(<NewsItemEditModal open={true} onOpenChange={vi.fn()} item={item} />);
+
+    const button = screen.getByTestId('modal-regenerate-b2-audio');
+    await userEvent.click(button);
+
+    expect(mockRegenerateAudio).toHaveBeenCalledWith('item-abc');
+  });
+
+  it('shows stage text during B2 generation via audio_progress event', async () => {
+    const item = makeNewsItem({ id: 'item-abc' });
+    render(<NewsItemEditModal open={true} onOpenChange={vi.fn()} item={item} />);
+
+    // Click B2 regenerate to open SSE connection
+    const button = screen.getByTestId('modal-regenerate-b2-audio');
+    await userEvent.click(button);
+
+    // Simulate audio_progress SSE event
+    act(() => {
+      capturedSSECallbacks.onEvent?.({
+        type: 'audio_progress',
+        data: { level: 'b2', stage: 'Synthesizing speech' },
+      });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Synthesizing speech')).toBeInTheDocument();
+    });
+  });
+
+  it('clears B2 stage text on audio_completed event', async () => {
+    const item = makeNewsItem({ id: 'item-abc' });
+    render(<NewsItemEditModal open={true} onOpenChange={vi.fn()} item={item} />);
+
+    const button = screen.getByTestId('modal-regenerate-b2-audio');
+    await userEvent.click(button);
+
+    // First fire progress to set stage text
+    act(() => {
+      capturedSSECallbacks.onEvent?.({
+        type: 'audio_progress',
+        data: { level: 'b2', stage: 'Uploading' },
+      });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Uploading')).toBeInTheDocument();
+    });
+
+    // Then fire completed to clear it
+    act(() => {
+      capturedSSECallbacks.onEvent?.({
+        type: 'audio_completed',
+        data: { level: 'b2', news_item_id: 'item-abc', audio_url: 'https://cdn/audio.mp3' },
+      });
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText('Uploading')).not.toBeInTheDocument();
+    });
+  });
+
+  it('shows destructive toast on audio_failed event', async () => {
+    const item = makeNewsItem({ id: 'item-abc' });
+    render(<NewsItemEditModal open={true} onOpenChange={vi.fn()} item={item} />);
+
+    const button = screen.getByTestId('modal-regenerate-b2-audio');
+    await userEvent.click(button);
+
+    act(() => {
+      capturedSSECallbacks.onEvent?.({
+        type: 'audio_failed',
+        data: { level: 'b2', error: 'TTS service unavailable' },
+      });
+    });
+
+    await waitFor(() => {
+      expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ variant: 'destructive' }));
+    });
+  });
+
+  it('calls updateItemAudioFromSSE on audio_completed with b2 level', async () => {
+    const item = makeNewsItem({ id: 'item-abc' });
+    render(<NewsItemEditModal open={true} onOpenChange={vi.fn()} item={item} />);
+
+    const button = screen.getByTestId('modal-regenerate-b2-audio');
+    await userEvent.click(button);
+
+    act(() => {
+      capturedSSECallbacks.onEvent?.({
+        type: 'audio_completed',
+        data: { level: 'b2', news_item_id: 'item-abc', audio_url: 'https://cdn/audio.mp3' },
+      });
+    });
+
+    await waitFor(() => {
+      expect(mockUpdateItemAudioFromSSE).toHaveBeenCalledWith(
+        'item-abc',
+        'b2',
+        'https://cdn/audio.mp3',
+        null
+      );
+    });
   });
 });
