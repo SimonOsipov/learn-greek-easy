@@ -2996,9 +2996,66 @@ def _build_normalization_sse_event(
 async def _generate_word_entry_sse_pipeline(  # noqa: C901
     request: GenerateWordEntryRequest,
     db: AsyncSession,
+    from_stage: str | None = None,
 ) -> AsyncGenerator[str, None]:
     """Async generator that emits SSE events for each noun generation pipeline stage."""
     yield format_sse_event("", event="connected")
+
+    # Validate from_stage param
+    if from_stage is not None and from_stage != "generation":
+        yield format_sse_error(
+            "invalid_param", f"Invalid from_stage: '{from_stage}'. Only 'generation' is supported."
+        )
+        return
+
+    if from_stage == "generation":
+        if not request.lemma:
+            yield format_sse_error(
+                "missing_field", "'lemma' is required when from_stage=generation"
+            )
+            return
+
+        # Validate deck (active + V2)
+        result = await db.execute(select(Deck).where(Deck.id == request.deck_id))
+        deck = result.scalar_one_or_none()
+        if deck is None or not deck.is_active:
+            yield format_sse_event(
+                {
+                    "error": f"Active deck with ID '{request.deck_id}' not found",
+                    "stage": "validation",
+                },
+                event="pipeline_failed",
+            )
+            return
+
+        if deck.card_system != CardSystemVersion.V2:
+            yield format_sse_event(
+                {
+                    "error": "Word generation is only supported for V2 vocabulary decks",
+                    "stage": "validation",
+                },
+                event="pipeline_failed",
+            )
+            return
+
+        # Build NormalizedLemma from pre-resolved fields in the request
+        lexicon_svc = LexiconService(db)
+        normalized_lemma = NormalizedLemma(
+            input_word=request.word,
+            lemma=request.lemma,
+            gender=request.gender,
+            article=request.article,
+            pos="NOUN",
+            confidence=1.0,
+        )
+        async for event in _sse_generation_and_verification(
+            normalized_lemma=normalized_lemma,
+            translation_lookup=request.translation_lookup,
+            lexicon_svc=lexicon_svc,
+            lemma=request.lemma,
+        ):
+            yield event
+        return
 
     # Validate deck (active + V2)
     result = await db.execute(select(Deck).where(Deck.id == request.deck_id))
@@ -3099,6 +3156,9 @@ async def generate_word_entry_stream(
     request: GenerateWordEntryRequest,
     sse_auth: SSEAuthResult = Depends(get_sse_auth),
     db: AsyncSession = Depends(get_db),
+    from_stage: str | None = Query(
+        None, description="Pipeline stage to start from. Only 'generation' is supported."
+    ),
 ) -> StreamingResponse:
     """Stream noun generation pipeline stages as SSE events.
 
@@ -3121,7 +3181,10 @@ async def generate_word_entry_stream(
         return _sse_single_error("forbidden", "Superuser privileges required")
 
     return create_sse_response(
-        sse_stream(_generate_word_entry_sse_pipeline(request, db), heartbeat_interval=15)
+        sse_stream(
+            _generate_word_entry_sse_pipeline(request, db, from_stage=from_stage),
+            heartbeat_interval=15,
+        )
     )
 
 
