@@ -79,10 +79,10 @@ describe('QuestionCard', () => {
       expect(dot.className).toContain('bg-muted-foreground/30');
     });
 
-    it('status "learning" shows yellow dot', () => {
+    it('status "learning" shows blue dot', () => {
       renderWithProviders(<QuestionCard question={makeQuestion({ status: 'learning' })} />);
       const dot = screen.getByTestId('question-card-status-dot');
-      expect(dot.className).toContain('bg-yellow-500');
+      expect(dot.className).toContain('bg-blue-500');
     });
 
     it('status "review" shows blue dot', () => {
