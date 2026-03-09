@@ -34,6 +34,42 @@ WORD_AUDIO_S3_PREFIX = "word-audio"
 WORD_AUDIO_VOICE_ID = "n0vzWypeCK1NlWPVwhOc"
 
 
+def _signal_audio_event(
+    word_entry_id: Any,
+    part: str,
+    status: str,
+    example_id: str | None = None,
+    s3_key: str | None = None,
+) -> None:
+    """Fire-and-forget event bus signal for audio status changes."""
+    try:
+        from src.core.event_bus import audio_event_bus
+        from src.services.s3_service import get_s3_service
+
+        audio_url: str | None = None
+        if status == "ready" and s3_key:
+            audio_url = get_s3_service().generate_presigned_url(s3_key)
+
+        import asyncio
+
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            loop.create_task(
+                audio_event_bus.signal(
+                    f"word_audio:{word_entry_id}",
+                    {
+                        "word_entry_id": str(word_entry_id),
+                        "part": part,
+                        "example_id": example_id,
+                        "status": status,
+                        "audio_url": audio_url,
+                    },
+                )
+            )
+    except Exception:
+        pass  # Fire-and-forget: never let signaling break the task
+
+
 def is_background_tasks_enabled() -> bool:
     """Check if background tasks feature is enabled.
 
@@ -1581,6 +1617,21 @@ async def generate_word_entry_audio_task(  # noqa: C901
                 word_entry.examples = updated_examples_pre
             await session.commit()
 
+            # Signal "generating" for each part that needs audio
+            if lemma_needs_audio:
+                _signal_audio_event(
+                    word_entry_id=word_entry_id,
+                    part="lemma",
+                    status="generating",
+                )
+            for ex in examples_needing_audio:
+                _signal_audio_event(
+                    word_entry_id=word_entry_id,
+                    part="example",
+                    status="generating",
+                    example_id=ex.get("id"),
+                )
+
             # --- Lemma audio ---
             if not lemma_needs_audio:
                 logger.debug(
@@ -1619,6 +1670,13 @@ async def generate_word_entry_audio_task(  # noqa: C901
                     failed_count += 1
                     word_entry.audio_status = AudioStatus.FAILED
 
+                _signal_audio_event(
+                    word_entry_id=word_entry_id,
+                    part="lemma",
+                    status="ready" if new_lemma_audio_key else "failed",
+                    s3_key=new_lemma_audio_key,
+                )
+
             # --- Example audio ---
             for example in examples_needing_audio:
                 # ex_id and greek_text are guaranteed non-None (filtered above)
@@ -1654,6 +1712,15 @@ async def generate_word_entry_audio_task(  # noqa: C901
                         exc_info=True,
                     )
                     failed_count += 1
+
+                ex_s3_key = new_example_audio_keys.get(gen_ex_id)
+                _signal_audio_event(
+                    word_entry_id=word_entry_id,
+                    part="example",
+                    status="ready" if ex_s3_key else "failed",
+                    example_id=gen_ex_id,
+                    s3_key=ex_s3_key,
+                )
 
             # --- DB update: audio keys + per-example status + clear generating_since ---
             # Note: this bulk task uses a read-modify-write on examples, which has a
@@ -1835,6 +1902,13 @@ async def generate_word_entry_part_audio_task(  # noqa: C901
                     )
 
                 await session.commit()
+                _signal_audio_event(
+                    word_entry_id=word_entry_id,
+                    part=part,
+                    status="ready" if success else "failed",
+                    example_id=example_id if part == "example" else None,
+                    s3_key=s3_key if success else None,
+                )
             except Exception:
                 await session.rollback()
                 raise
