@@ -520,13 +520,13 @@ async def stream_progress(
             )
             return
 
-        # Send connected event
-        yield format_sse_event({}, event="connected")
-
-        # Subscribe to dashboard events for this user
+        # Subscribe to dashboard events for this user BEFORE sending connected,
+        # so no events are missed between the two operations.
         assert sse_auth.user is not None  # guaranteed by is_authenticated check above
         key = f"dashboard:{sse_auth.user.id}"
         queue = await dashboard_event_bus.subscribe(key)
+
+        yield format_sse_event({}, event="connected")
 
         try:
             while True:

@@ -140,14 +140,14 @@ async def notification_stream(
     assert sse_auth.user is not None
     user = sse_auth.user
 
-    # Query initial unread count BEFORE entering the generator
-    # (keeps the long-lived generator free from DB session concerns)
-    notification_service = NotificationService(db)
-    initial_count = await notification_service.get_unread_count(user.id)
-
     async def event_generator() -> AsyncGenerator[str, None]:
+        # Subscribe BEFORE taking the unread count snapshot so no notification
+        # committed between the two operations is missed.
         queue = await notification_event_bus.subscribe(user.id)
         try:
+            notification_service = NotificationService(db)
+            initial_count = await notification_service.get_unread_count(user.id)
+
             # Send initial unread count as first event
             yield format_sse_event({"count": initial_count}, event="unread_count")
 

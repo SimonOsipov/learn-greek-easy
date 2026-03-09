@@ -1347,6 +1347,27 @@ _NEWS_AUDIO_TERMINAL_EVENTS = {"audio_completed", "audio_failed"}
 _NEWS_AUDIO_SAFETY_TIMEOUT = 300.0  # 5 minutes
 
 
+async def _wait_for_news_audio_event(
+    queue: asyncio.Queue,
+    deadline: float,
+) -> dict | None:
+    """Wait for the next event respecting the 5-minute deadline.
+
+    Returns the event dict, or None if the overall deadline has been exceeded.
+    Uses 30s sub-timeouts to keep the loop responsive without breaking early.
+    """
+    while True:
+        remaining = deadline - asyncio.get_event_loop().time()
+        if remaining <= 0:
+            return None
+        try:
+            return await asyncio.wait_for(queue.get(), timeout=min(remaining, 30.0))
+        except (asyncio.TimeoutError, TimeoutError):
+            # 30s slice elapsed; re-check overall deadline before retrying.
+            if asyncio.get_event_loop().time() >= deadline:
+                return None
+
+
 async def _news_audio_queue_generator(
     queue: asyncio.Queue,
     bus_key: str,
@@ -1358,13 +1379,8 @@ async def _news_audio_queue_generator(
 
     try:
         while True:
-            remaining = deadline - asyncio.get_event_loop().time()
-            if remaining <= 0:
-                break
-
-            try:
-                event_data = await asyncio.wait_for(queue.get(), timeout=min(remaining, 30.0))
-            except (asyncio.TimeoutError, TimeoutError):
+            event_data = await _wait_for_news_audio_event(queue, deadline)
+            if event_data is None:
                 break
 
             level = event_data.get("level") or event_data.get("data", {}).get("level")
@@ -2372,13 +2388,19 @@ async def _word_audio_event_generator(
     all_terminal: bool,
 ) -> AsyncGenerator[str, None]:
     """Yield initial status events, then subscribe to the bus until all parts are terminal."""
+    bus_key = f"word_audio:{word_entry_id}"
+
+    if not all_terminal:
+        # Subscribe BEFORE yielding initial events so no ready/failed update
+        # published in the gap between the DB snapshot and subscribe is missed.
+        queue = await audio_event_bus.subscribe(bus_key)
+
     for ev in initial_events:
         yield format_sse_event(ev, event="audio_status_changed")
 
     if all_terminal:
         return
 
-    bus_key = f"word_audio:{word_entry_id}"
     terminal_parts: set[tuple[str, str | None]] = {
         (ev["part"], ev.get("example_id"))
         for ev in initial_events
@@ -2388,7 +2410,6 @@ async def _word_audio_event_generator(
         (ev["part"], ev.get("example_id")) for ev in initial_events
     }
 
-    queue = await audio_event_bus.subscribe(bus_key)
     try:
         async for chunk in sse_stream(
             _audio_queue_generator(queue, all_part_keys, terminal_parts),
