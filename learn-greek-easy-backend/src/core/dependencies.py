@@ -18,10 +18,11 @@ Usage:
         return await get_all_users()
 """
 
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from fastapi import Depends, Header, Request
+from fastapi import Depends, Header, Query, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -45,6 +46,25 @@ from src.db.models import SubscriptionStatus, User, UserSettings
 # HTTPBearer security scheme with auto_error=False
 # This allows us to handle missing auth gracefully for optional auth endpoints
 security_scheme = HTTPBearer(auto_error=False)
+
+
+@dataclass
+class SSEAuthResult:
+    """Result of SSE authentication attempt.
+
+    Unlike get_current_user which raises HTTPException on failure,
+    SSE auth returns a result object so endpoints can send an SSE error
+    event before closing the stream.
+    """
+
+    user: Optional[User] = None
+    error_code: Optional[str] = None
+    error_message: Optional[str] = None
+
+    @property
+    def is_authenticated(self) -> bool:
+        """Return True if authentication was successful."""
+        return self.user is not None
 
 
 async def get_or_create_user(db: AsyncSession, claims: SupabaseUserClaims) -> User:
@@ -341,6 +361,79 @@ async def get_current_user_optional(
     return user
 
 
+async def get_sse_auth(
+    request: Request,
+    token: Optional[str] = Query(None, description="JWT token for EventSource clients"),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
+    db: AsyncSession = Depends(get_db),
+) -> SSEAuthResult:
+    """Authenticate for SSE endpoints without raising exceptions.
+
+    Supports two token sources (header takes precedence):
+    1. Authorization: Bearer <token> header (fetch-based SSE clients)
+    2. ?token=<jwt> query parameter (native EventSource which cannot set headers)
+
+    Returns SSEAuthResult with user on success, or error details on failure.
+    Never raises HTTPException.
+    """
+    # 1. Resolve token: header first, then query param
+    raw_token: Optional[str] = None
+    if credentials:
+        raw_token = credentials.credentials
+    elif token:
+        raw_token = token
+
+    if not raw_token:
+        return SSEAuthResult(
+            error_code="auth_required",
+            error_message="Authentication required. Provide token via Authorization header or ?token= query parameter.",
+        )
+
+    # 2. Verify Supabase token
+    try:
+        claims = await verify_supabase_token(raw_token)
+    except TokenExpiredException:
+        return SSEAuthResult(
+            error_code="token_expired",
+            error_message="Access token has expired. Please refresh your token.",
+        )
+    except (TokenInvalidException, UnauthorizedException) as e:
+        return SSEAuthResult(
+            error_code="auth_failed",
+            error_message=f"Invalid access token: {e.detail}",
+        )
+
+    # 3. Store claims on request.state
+    request.state.supabase_claims = claims
+
+    # 4. Get or create user
+    try:
+        user = await get_or_create_user(db, claims)
+    except ConflictException:
+        return SSEAuthResult(
+            error_code="auth_failed",
+            error_message="Authentication failed due to account conflict.",
+        )
+
+    # 5. Check if user is active
+    if not user.is_active:
+        return SSEAuthResult(
+            error_code="auth_failed",
+            error_message="User account has been deactivated.",
+        )
+
+    # 6. Set Sentry and logging context
+    set_user_context(
+        user_id=str(user.id),
+        email=user.email,
+        username=user.full_name,
+    )
+    bind_log_context(user_id=str(user.id))
+    request.state.user_email = user.email
+
+    return SSEAuthResult(user=user)
+
+
 def get_locale_from_header(
     accept_language: str | None = Header(default=None, alias="Accept-Language"),
 ) -> str:
@@ -395,10 +488,12 @@ def get_locale_from_header(
 # ============================================================================
 
 __all__ = [
+    "SSEAuthResult",
     "get_current_user",
     "get_current_superuser",
     "get_current_user_optional",
     "get_locale_from_header",
     "get_or_create_user",
+    "get_sse_auth",
     "security_scheme",
 ]
