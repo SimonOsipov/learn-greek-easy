@@ -2904,6 +2904,227 @@ async def generate_word_entry(
     )
 
 
+async def _sse_generation_and_verification(
+    normalized_lemma: NormalizedLemma,
+    translation_lookup: TranslationLookupStageResult | None,
+    lexicon_svc: LexiconService,
+    lemma: str,
+) -> AsyncGenerator[str, None]:
+    """Emit SSE events for stages 3 (generation) and 4 (verification)."""
+    yield format_sse_event({"message": "Generating with AI..."}, event="generation_started")
+    try:
+        generated_data, secondary_data = await _run_generation_with_secondary(
+            normalized_lemma=normalized_lemma,
+            translation_lookup=translation_lookup,
+        )
+        yield format_sse_event(generated_data, event="generation_complete")
+    except HTTPException as exc:
+        yield format_sse_event(
+            {"error": exc.detail, "status_code": exc.status_code},
+            event="generation_failed",
+        )
+        yield format_sse_event(
+            {"error": exc.detail, "stage": "generation"},
+            event="pipeline_failed",
+        )
+        return
+
+    yield format_sse_event({"message": "Running verification..."}, event="verification_started")
+    verification_summary: VerificationSummary | None = None
+    try:
+        verification_summary = await _run_verification_stage(
+            generated_data=generated_data,
+            normalized_lemma=normalized_lemma,
+            lexicon_svc=lexicon_svc,
+            lemma=lemma,
+            secondary_data=secondary_data,
+        )
+        yield format_sse_event(verification_summary, event="verification_complete")
+    except Exception as exc:
+        logger.warning("Verification failed (non-fatal): %s", exc)
+        yield format_sse_event({"error": str(exc)}, event="verification_failed")
+
+    last_stage = "verification" if verification_summary else "generation"
+    yield format_sse_event({"stage": last_stage}, event="pipeline_complete")
+
+
+def _build_normalization_sse_event(
+    smart_result: Any,
+) -> tuple[str, str | None, str | None]:
+    """Extract gender/article from smart result and return (sse_event_str, gender, article)."""
+    primary = smart_result.primary
+    primary_gender, primary_article = _extract_gender_article(primary.morphology.morph_features)
+
+    _ARTICLE_GENDER_OVERRIDE = {"ο": "masculine", "η": "feminine", "το": "neuter"}
+    if smart_result.detected_article in _ARTICLE_GENDER_OVERRIDE:
+        primary_gender = _ARTICLE_GENDER_OVERRIDE[smart_result.detected_article]
+        primary_article = smart_result.detected_article
+
+    suggestions = [
+        SuggestionItem(
+            lemma=s.morphology.lemma,
+            pos=s.morphology.pos,
+            gender=_extract_gender_article(s.morphology.morph_features)[0],
+            article=_extract_gender_article(s.morphology.morph_features)[1],
+            confidence=s.confidence,
+            confidence_tier=_confidence_tier(s.confidence),
+            strategy=s.strategy,
+        )
+        for s in smart_result.suggestions
+    ]
+    event_str = format_sse_event(
+        {
+            "normalization": NormalizationStageResult(
+                input_word=primary.input_form,
+                lemma=primary.morphology.lemma,
+                gender=primary_gender,
+                article=primary_article,
+                pos=primary.morphology.pos,
+                confidence=primary.confidence,
+                confidence_tier=_confidence_tier(primary.confidence),
+                strategy=primary.strategy,
+                corrected_from=primary.corrected_from,
+                corrected_to=primary.corrected_to,
+            ).model_dump(),
+            "suggestions": [s.model_dump() for s in suggestions],
+        },
+        event="normalization_complete",
+    )
+    return event_str, primary_gender, primary_article
+
+
+async def _generate_word_entry_sse_pipeline(  # noqa: C901
+    request: GenerateWordEntryRequest,
+    db: AsyncSession,
+) -> AsyncGenerator[str, None]:
+    """Async generator that emits SSE events for each noun generation pipeline stage."""
+    yield format_sse_event("", event="connected")
+
+    # Validate deck (active + V2)
+    result = await db.execute(select(Deck).where(Deck.id == request.deck_id))
+    deck = result.scalar_one_or_none()
+    if deck is None or not deck.is_active:
+        yield format_sse_event(
+            {"error": f"Active deck with ID '{request.deck_id}' not found", "stage": "validation"},
+            event="pipeline_failed",
+        )
+        return
+
+    if deck.card_system != CardSystemVersion.V2:
+        yield format_sse_event(
+            {
+                "error": "Word generation is only supported for V2 vocabulary decks",
+                "stage": "validation",
+            },
+            event="pipeline_failed",
+        )
+        return
+
+    # Stage 0.5: Lexicon lookup
+    _, bare_word = detect_article(request.word)
+    lexicon_svc = LexiconService(db)
+    try:
+        lexicon_entry = await lexicon_svc.lookup(bare_word, pos="NOUN")
+    except Exception:
+        lexicon_entry = None
+
+    # Stage 1: Normalization
+    svc = get_lemma_normalization_service()
+    try:
+        smart_result = svc.normalize_smart(
+            request.word, expected_pos="NOUN", lexicon_entry=lexicon_entry
+        )
+    except ValueError as exc:
+        yield format_sse_event(
+            {"error": str(exc), "stage": "normalization"},
+            event="pipeline_failed",
+        )
+        return
+
+    norm_event, primary_gender, primary_article = _build_normalization_sse_event(smart_result)
+    yield norm_event
+    primary = smart_result.primary
+
+    # Stage 2: Duplicate check (non-fatal)
+    try:
+        dup_svc = DuplicateDetectionService(db)
+        dup_result = await dup_svc.check(
+            lemma=primary.morphology.lemma,
+            part_of_speech=PartOfSpeech.NOUN,
+        )
+        yield format_sse_event(dup_result, event="duplicates_checked")
+    except Exception:
+        pass
+
+    # Stage 2.5: Translation lookup (non-fatal)
+    translation_lookup: TranslationLookupStageResult | None = None
+    try:
+        tl_svc = TranslationLookupService(db)
+        tl_bilingual = await tl_svc.lookup_bilingual(
+            lemma=primary.morphology.lemma,
+            pos="NOUN",
+        )
+        translation_lookup = _build_translation_lookup_stage_result(tl_bilingual)
+        yield format_sse_event(
+            {"data": translation_lookup.model_dump()}, event="translations_found"
+        )
+    except Exception as exc:
+        logger.warning("Translation lookup failed (non-blocking): %s", exc)
+        yield format_sse_event({"data": None}, event="translations_found")
+
+    # Build NormalizedLemma and run stages 3+4 via sub-generator
+    normalized_lemma = NormalizedLemma(
+        input_word=primary.input_form,
+        lemma=primary.morphology.lemma,
+        gender=primary_gender,
+        article=primary_article,
+        pos=primary.morphology.pos,
+        confidence=primary.confidence,
+    )
+    async for event in _sse_generation_and_verification(
+        normalized_lemma=normalized_lemma,
+        translation_lookup=translation_lookup,
+        lexicon_svc=lexicon_svc,
+        lemma=primary.morphology.lemma,
+    ):
+        yield event
+
+
+@router.post(
+    "/word-entries/generate/stream",
+    summary="Run noun generation pipeline as SSE stream",
+    response_class=StreamingResponse,
+)
+async def generate_word_entry_stream(
+    request: GenerateWordEntryRequest,
+    sse_auth: SSEAuthResult = Depends(get_sse_auth),
+    db: AsyncSession = Depends(get_db),
+) -> StreamingResponse:
+    """Stream noun generation pipeline stages as SSE events.
+
+    Returns events in sequence:
+    connected → normalization_complete → duplicates_checked → translations_found
+    → generation_started → generation_complete → verification_started
+    → verification_complete → pipeline_complete
+
+    On failure: pipeline_failed (normalization/generation) or verification_failed (non-fatal).
+    The existing sync endpoint POST /generate remains unchanged.
+    """
+    if not sse_auth.is_authenticated:
+        return _sse_single_error(
+            sse_auth.error_code or "auth_required",
+            sse_auth.error_message or "Authentication required",
+        )
+
+    assert sse_auth.user is not None
+    if not sse_auth.user.is_superuser:
+        return _sse_single_error("forbidden", "Superuser privileges required")
+
+    return create_sse_response(
+        sse_stream(_generate_word_entry_sse_pipeline(request, db), heartbeat_interval=15)
+    )
+
+
 # ============================================================================
 # Word Entry Link/Unlink Endpoints
 # ============================================================================
