@@ -43,6 +43,13 @@
       "xpEarned": "{{xp}} XP заработано",
       "viewAll": "Все достижения"
     },
+    "recentlyUnlocked": {
+      "title": "Недавно разблокировано"
+    },
+    "nextUp": {
+      "title": "Следующая цель",
+      "progress": "Прогресс"
+    },
     "firstSteps": {
       "name": "Первые шаги",
       "description": "Выучите 10 слов"

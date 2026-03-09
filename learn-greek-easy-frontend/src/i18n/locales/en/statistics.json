@@ -43,6 +43,13 @@
       "xpEarned": "{{xp}} XP Earned",
       "viewAll": "View All Achievements"
     },
+    "recentlyUnlocked": {
+      "title": "Recently Unlocked"
+    },
+    "nextUp": {
+      "title": "Next Up",
+      "progress": "Progress"
+    },
     "firstSteps": {
       "name": "First Steps",
       "description": "Learn 10 words"
