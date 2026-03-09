@@ -1,89 +1,64 @@
 import React from 'react';
 
-import { Award } from 'lucide-react';
+import { Award, ArrowRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import {
+  useXPStore,
+  selectAchievements,
+  selectIsLoadingAchievements,
+  selectXPError,
+} from '@/stores/xpStore';
 
-export interface Achievement {
-  /** Unique identifier for the achievement */
-  id?: string;
-  /** Display name of the achievement */
-  name: string;
-  /** Icon or emoji to display */
-  icon: string;
-  /** Whether the achievement has been unlocked */
-  unlocked: boolean;
-  /** Optional description of how to unlock */
-  description?: string;
-}
-
-export interface AchievementsGridProps {
-  /** Array of achievements to display */
-  achievements: Achievement[];
-  /** Optional CSS class name */
+interface AchievementsGridProps {
   className?: string;
-  /** Optional footer text (deprecated, use translations) */
-  footerText?: string;
 }
 
-/**
- * Achievement metadata with translation keys
- */
-export interface AchievementConfig {
-  id: string;
-  icon: string;
-  nameKey: string;
-  descriptionKey: string;
-  checkUnlocked: (wordsLearned: number, streak: number) => boolean;
-}
-
-/**
- * Achievement configurations with translation keys
- */
-export const achievementConfigs: AchievementConfig[] = [
-  {
-    id: 'first-steps',
-    icon: '\uD83D\uDC63',
-    nameKey: 'achievements.firstSteps.name',
-    descriptionKey: 'achievements.firstSteps.description',
-    checkUnlocked: (wordsLearned) => wordsLearned >= 10,
-  },
-  {
-    id: 'week-warrior',
-    icon: '\u2694\uFE0F',
-    nameKey: 'achievements.weekWarrior.name',
-    descriptionKey: 'achievements.weekWarrior.description',
-    checkUnlocked: (_, streak) => streak >= 7,
-  },
-  {
-    id: 'century-club',
-    icon: '\uD83D\uDCAF',
-    nameKey: 'achievements.centuryClub.name',
-    descriptionKey: 'achievements.centuryClub.description',
-    checkUnlocked: (wordsLearned) => wordsLearned >= 100,
-  },
-  {
-    id: 'fire-keeper',
-    icon: '\uD83D\uDD25',
-    nameKey: 'achievements.fireKeeper.name',
-    descriptionKey: 'achievements.fireKeeper.description',
-    checkUnlocked: (_, streak) => streak >= 30,
-  },
-];
-
-/**
- * AchievementsGrid displays a grid of achievement badges.
- * Shows locked/unlocked states with visual differentiation.
- */
-export const AchievementsGrid: React.FC<AchievementsGridProps> = ({
-  achievements,
-  className,
-  footerText,
-}) => {
+export const AchievementsGrid: React.FC<AchievementsGridProps> = ({ className }) => {
   const { t } = useTranslation('statistics');
+  const achievements = useXPStore(selectAchievements);
+  const isLoading = useXPStore(selectIsLoadingAchievements);
+  const error = useXPStore(selectXPError);
+
+  if (isLoading && !achievements) {
+    return (
+      <Card className={cn(className)}>
+        <CardHeader>
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="h-4 w-64" />
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-10 w-56" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error && !achievements) {
+    return (
+      <Card className={cn(className)}>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Award className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+            {t('achievements.title')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-destructive">{t('error.loadingData', { error })}</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!achievements) {
+    return null;
+  }
 
   return (
     <Card className={cn(className)}>
@@ -92,40 +67,28 @@ export const AchievementsGrid: React.FC<AchievementsGridProps> = ({
           <Award className="h-5 w-5 text-purple-600 dark:text-purple-400" />
           {t('achievements.title')}
         </CardTitle>
-        <CardDescription>{t('achievements.subtitle')}</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          {achievements.map((achievement, index) => (
-            <div
-              key={achievement.id || index}
-              className={cn(
-                'flex flex-col items-center rounded-lg border-2 p-4 text-center transition-all',
-                achievement.unlocked
-                  ? 'border-purple-300 bg-purple-50 dark:border-purple-700 dark:bg-purple-900/30'
-                  : 'border-border bg-muted/50 opacity-60'
-              )}
-            >
-              <div className="mb-2 text-3xl">{achievement.icon}</div>
-              <p className="text-xs font-medium text-foreground">{achievement.name}</p>
-              {achievement.unlocked ? (
-                <Badge
-                  variant="secondary"
-                  className="mt-2 bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300"
-                >
-                  {t('achievements.unlocked')}
-                </Badge>
-              ) : (
-                <Badge variant="outline" className="mt-2 text-muted-foreground">
-                  {t('achievements.locked')}
-                </Badge>
-              )}
-            </div>
-          ))}
+        <div className="flex items-center gap-4 text-sm">
+          <span className="font-semibold">
+            {t('achievements.summary.unlocked', {
+              unlocked: achievements.unlocked_count,
+              total: achievements.total_count,
+            })}
+          </span>
+          <span className="text-muted-foreground">
+            {t('achievements.summary.xpEarned', {
+              xp: achievements.total_xp_earned,
+            })}
+          </span>
         </div>
-        <p className="mt-6 text-center text-sm text-muted-foreground">
-          {footerText || t('achievements.comingSoon')}
-        </p>
+        <Link
+          to="/achievements"
+          className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300"
+        >
+          {t('achievements.summary.viewAll')}
+          <ArrowRight className="h-4 w-4" />
+        </Link>
       </CardContent>
     </Card>
   );

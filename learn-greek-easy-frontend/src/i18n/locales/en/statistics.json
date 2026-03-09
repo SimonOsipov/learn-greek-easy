@@ -38,6 +38,11 @@
     "locked": "Locked",
     "unlocked": "Unlocked",
     "comingSoon": "More achievements coming soon! Keep learning to unlock special badges.",
+    "summary": {
+      "unlocked": "{{unlocked}}/{{total}} Unlocked",
+      "xpEarned": "{{xp}} XP Earned",
+      "viewAll": "View All Achievements"
+    },
     "firstSteps": {
       "name": "First Steps",
       "description": "Learn 10 words"
