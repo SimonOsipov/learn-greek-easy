@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react';
 
 import { formatDistanceToNow } from 'date-fns';
+import { el } from 'date-fns/locale/el';
+import { ru } from 'date-fns/locale/ru';
 import { Award, ArrowRight, Star } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
@@ -19,21 +21,38 @@ import {
   selectXPError,
 } from '@/stores/xpStore';
 
+import type { Locale } from 'date-fns';
+
 interface AchievementsGridProps {
   className?: string;
 }
 
-function getRelativeTime(dateStr: string | null | undefined): string {
+function getDateLocale(language: string): Locale | undefined {
+  switch (language) {
+    case 'el':
+      return el;
+    case 'ru':
+      return ru;
+    default:
+      return undefined;
+  }
+}
+
+function getRelativeTime(dateStr: string | null | undefined, language: string): string {
   if (!dateStr) return '';
-  return formatDistanceToNow(new Date(dateStr), { addSuffix: true });
+  return formatDistanceToNow(new Date(dateStr), {
+    addSuffix: true,
+    locale: getDateLocale(language),
+  });
 }
 
 interface RecentUnlockCardProps {
   achievement: AchievementResponse;
   tAch: (key: string, fallback: string) => string;
+  language: string;
 }
 
-function RecentUnlockCard({ achievement: a, tAch }: RecentUnlockCardProps) {
+function RecentUnlockCard({ achievement: a, tAch, language }: RecentUnlockCardProps) {
   return (
     <div className="flex items-center gap-3 rounded-lg border border-purple-200 bg-purple-50 p-3 dark:border-purple-800 dark:bg-purple-900/30 sm:flex-1">
       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-purple-100 text-purple-600 dark:bg-purple-800/50 dark:text-purple-300">
@@ -43,7 +62,7 @@ function RecentUnlockCard({ achievement: a, tAch }: RecentUnlockCardProps) {
         <p className="truncate text-sm font-medium text-foreground">
           {tAch(`items.${a.id}.name`, a.name)}
         </p>
-        <p className="text-xs text-muted-foreground">{getRelativeTime(a.unlocked_at)}</p>
+        <p className="text-xs text-muted-foreground">{getRelativeTime(a.unlocked_at, language)}</p>
       </div>
       <Badge
         variant="secondary"
@@ -57,7 +76,7 @@ function RecentUnlockCard({ achievement: a, tAch }: RecentUnlockCardProps) {
 }
 
 export const AchievementsGrid: React.FC<AchievementsGridProps> = ({ className }) => {
-  const { t } = useTranslation('statistics');
+  const { t, i18n } = useTranslation('statistics');
   const { t: tAch } = useTranslation('achievements');
   const achievements = useXPStore(selectAchievements);
   const isLoading = useXPStore(selectIsLoadingAchievements);
@@ -179,7 +198,7 @@ export const AchievementsGrid: React.FC<AchievementsGridProps> = ({ className })
             </h4>
             <div className="flex flex-col gap-3 sm:flex-row">
               {recentlyUnlocked.map((a) => (
-                <RecentUnlockCard key={a.id} achievement={a} tAch={tAch} />
+                <RecentUnlockCard key={a.id} achievement={a} tAch={tAch} language={i18n.language} />
               ))}
             </div>
           </section>
@@ -219,7 +238,9 @@ export const AchievementsGrid: React.FC<AchievementsGridProps> = ({ className })
                 <Progress
                   value={nextUp.progress}
                   className="h-2"
-                  aria-label={`Progress: ${Math.round(nextUp.progress)}%`}
+                  aria-label={t('achievements.nextUp.progressLabel', {
+                    percent: Math.round(nextUp.progress),
+                  })}
                 />
               </div>
             </div>

@@ -117,11 +117,12 @@ const Statistics: React.FC = () => {
   const loadXPStats = useXPStore((state) => state.loadXPStats);
   const loadAchievements = useXPStore((state) => state.loadAchievements);
 
-  // Load XP stats on mount
+  // Load XP stats on mount, but only after auth state is resolved
   useEffect(() => {
+    if (isLoading || !user) return;
     loadXPStats();
     loadAchievements();
-  }, [loadXPStats, loadAchievements]);
+  }, [isLoading, user, loadXPStats, loadAchievements]);
 
   // Show loading skeleton while user data is loading
   if (isLoading) {

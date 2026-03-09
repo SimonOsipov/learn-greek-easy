@@ -7,17 +7,15 @@ import { AchievementsGrid } from '../AchievementsGrid';
 vi.mock('react-i18next', () => ({
   useTranslation: (ns?: string) => ({
     t: (key: string, opts?: Record<string, unknown>) => {
-      if (ns === 'achievements' || key.startsWith('items.')) return key;
-      // Return last segment of key for statistics namespace
-      const parts = key.split('.');
-      const last = parts[parts.length - 1];
+      // Return full namespaced key for stable, distinct test assertions
+      const namespaced = ns ? `${ns}:${key}` : key;
       if (opts) {
         return Object.entries(opts).reduce(
           (acc, [k, v]) => acc.replace(`{{${k}}}`, String(v)),
-          last
+          namespaced
         );
       }
-      return last;
+      return namespaced;
     },
     i18n: { language: 'en' },
   }),
@@ -84,12 +82,14 @@ describe('AchievementsGrid', () => {
   it('shows loading skeleton when loading and no achievements', () => {
     renderGrid(makeStoreState({ loadingAchievements: true, achievements: null }));
     // Skeletons render inside Card — just confirm no loaded content
-    expect(screen.queryByText('unlocked')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/statistics:achievements\.summary\.unlocked/)
+    ).not.toBeInTheDocument();
   });
 
   it('shows error message when error and no achievements', () => {
     renderGrid(makeStoreState({ error: 'Network error', achievements: null }));
-    expect(screen.getByText('loadingData')).toBeInTheDocument();
+    expect(screen.getByText(/statistics:error\.loadingData/)).toBeInTheDocument();
   });
 
   it('shows noProgress empty state when 0 unlocked and 0 progress', () => {
@@ -103,12 +103,16 @@ describe('AchievementsGrid', () => {
       total_xp_earned: 0,
     };
     renderGrid(makeStoreState({ achievements }));
-    expect(screen.getByText('noProgress')).toBeInTheDocument();
-    expect(screen.queryByText('someProgress')).not.toBeInTheDocument();
-    expect(screen.queryByText('recentlyUnlocked')).not.toBeInTheDocument();
-    expect(screen.queryByText('nextUp')).not.toBeInTheDocument();
+    expect(screen.getByText('statistics:achievements.emptyState.noProgress')).toBeInTheDocument();
+    expect(
+      screen.queryByText('statistics:achievements.emptyState.someProgress')
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('statistics:achievements.recentlyUnlocked.title')
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText('statistics:achievements.nextUp.title')).not.toBeInTheDocument();
     // CTA link still present
-    expect(screen.getByRole('link', { name: /viewAll/i })).toBeInTheDocument();
+    expect(screen.getByRole('link')).toBeInTheDocument();
   });
 
   it('shows someProgress empty state when 0 unlocked but some progress exists', () => {
@@ -122,12 +126,14 @@ describe('AchievementsGrid', () => {
       total_xp_earned: 0,
     };
     renderGrid(makeStoreState({ achievements }));
-    expect(screen.getByText('someProgress')).toBeInTheDocument();
-    expect(screen.queryByText('noProgress')).not.toBeInTheDocument();
-    // Next Up section is visible (nextUp !== null) — t('achievements.nextUp.title') → 'title'
-    expect(screen.getAllByText('title').length).toBeGreaterThan(0);
+    expect(screen.getByText('statistics:achievements.emptyState.someProgress')).toBeInTheDocument();
+    expect(
+      screen.queryByText('statistics:achievements.emptyState.noProgress')
+    ).not.toBeInTheDocument();
+    // Next Up section is visible
+    expect(screen.getByText('statistics:achievements.nextUp.title')).toBeInTheDocument();
     // CTA link still present
-    expect(screen.getByRole('link', { name: /viewAll/i })).toBeInTheDocument();
+    expect(screen.getByRole('link')).toBeInTheDocument();
   });
 
   it('shows normal state when some achievements are unlocked', () => {
@@ -146,9 +152,14 @@ describe('AchievementsGrid', () => {
       total_xp_earned: 50,
     };
     renderGrid(makeStoreState({ achievements }));
-    expect(screen.queryByText('someProgress')).not.toBeInTheDocument();
-    expect(screen.queryByText('noProgress')).not.toBeInTheDocument();
-    // Recently Unlocked and Next Up headings visible — t('achievements.recentlyUnlocked.title') → 'title'
-    expect(screen.getAllByText('title').length).toBeGreaterThanOrEqual(2);
+    expect(
+      screen.queryByText('statistics:achievements.emptyState.someProgress')
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('statistics:achievements.emptyState.noProgress')
+    ).not.toBeInTheDocument();
+    // Recently Unlocked and Next Up headings visible
+    expect(screen.getByText('statistics:achievements.recentlyUnlocked.title')).toBeInTheDocument();
+    expect(screen.getByText('statistics:achievements.nextUp.title')).toBeInTheDocument();
   });
 });

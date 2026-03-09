@@ -48,7 +48,8 @@
     },
     "nextUp": {
       "title": "Next Up",
-      "progress": "Progress"
+      "progress": "Progress",
+      "progressLabel": "Progress: {{percent}}%"
     },
     "emptyState": {
       "someProgress": "You're making progress! Keep going to unlock your first achievement.",

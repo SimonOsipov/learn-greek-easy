@@ -48,7 +48,8 @@
     },
     "nextUp": {
       "title": "Следующая цель",
-      "progress": "Прогресс"
+      "progress": "Прогресс",
+      "progressLabel": "Прогресс: {{percent}}%"
     },
     "emptyState": {
       "someProgress": "У вас есть прогресс! Продолжайте, чтобы открыть первое достижение.",
