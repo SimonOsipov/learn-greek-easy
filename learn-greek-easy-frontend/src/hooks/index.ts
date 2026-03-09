@@ -48,3 +48,4 @@ export { useSubscriptionActions } from './useSubscriptionActions';
 
 // SSE hooks
 export { parseSSEChunk, useSSE } from './useSSE';
+export { useAnalyticsSSE } from './useAnalyticsSSE';

@@ -49,7 +49,11 @@ export type AnalyticsEventName =
   | 'culture_weak_area_cta_clicked'
   | 'culture_motivation_viewed'
   | 'culture_accuracy_viewed'
-  | 'culture_reinforcement_badge_seen';
+  | 'culture_reinforcement_badge_seen'
+  // SSE analytics events
+  | 'analytics_sse_connected'
+  | 'analytics_sse_fallback_polling'
+  | 'analytics_sse_update_received';
 
 // Base properties included with all events
 interface BaseEventProperties {
