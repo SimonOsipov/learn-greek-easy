@@ -138,6 +138,9 @@ export {
   getContentField,
 } from './changelog';
 
+// Export SSE types explicitly
+export type { SSEConnectionState, SSEErrorEvent, SSEEvent, SSEOptions, UseSSEReturn } from './sse';
+
 // Component prop types (to be expanded as components are built)
 export interface BaseComponentProps {
   className?: string;
