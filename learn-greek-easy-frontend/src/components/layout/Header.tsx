@@ -77,7 +77,7 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
     } finally {
       setTourRunning(false);
     }
-  }, [tourRunning, navigate, t, updateProfile]);
+  }, [tourRunning, location.pathname, navigate, t, updateProfile]);
 
   // Generate initials from user name (e.g., "John Doe" -> "JD")
   const initials =
