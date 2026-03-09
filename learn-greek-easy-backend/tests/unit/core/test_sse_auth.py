@@ -73,7 +73,6 @@ class TestGetSSEAuth:
             request=_make_mock_request(),
             token=None,
             credentials=None,
-            db=AsyncMock(),
         )
         assert result.is_authenticated is False
         assert result.error_code == "auth_required"
@@ -82,12 +81,19 @@ class TestGetSSEAuth:
     async def test_valid_token_from_header(self) -> None:
         mock_user = _make_mock_user()
         mock_claims = MagicMock()
+        mock_db = AsyncMock()
+        mock_factory = MagicMock(
+            return_value=AsyncMock(
+                __aenter__=AsyncMock(return_value=mock_db), __aexit__=AsyncMock(return_value=False)
+            )
+        )
 
         with (
             patch(
                 "src.core.dependencies.verify_supabase_token", return_value=mock_claims
             ) as mock_verify,
             patch("src.core.dependencies.get_or_create_user", return_value=mock_user),
+            patch("src.core.dependencies.get_session_factory", return_value=mock_factory),
             patch("src.core.dependencies.set_user_context"),
             patch("src.core.dependencies.bind_log_context"),
         ):
@@ -95,7 +101,6 @@ class TestGetSSEAuth:
                 request=_make_mock_request(),
                 token=None,
                 credentials=_make_mock_credentials("valid-header-token"),
-                db=AsyncMock(),
             )
             mock_verify.assert_called_once_with("valid-header-token")
 
@@ -106,12 +111,19 @@ class TestGetSSEAuth:
     async def test_valid_token_from_query_param(self) -> None:
         mock_user = _make_mock_user()
         mock_claims = MagicMock()
+        mock_db = AsyncMock()
+        mock_factory = MagicMock(
+            return_value=AsyncMock(
+                __aenter__=AsyncMock(return_value=mock_db), __aexit__=AsyncMock(return_value=False)
+            )
+        )
 
         with (
             patch(
                 "src.core.dependencies.verify_supabase_token", return_value=mock_claims
             ) as mock_verify,
             patch("src.core.dependencies.get_or_create_user", return_value=mock_user),
+            patch("src.core.dependencies.get_session_factory", return_value=mock_factory),
             patch("src.core.dependencies.set_user_context"),
             patch("src.core.dependencies.bind_log_context"),
         ):
@@ -119,7 +131,6 @@ class TestGetSSEAuth:
                 request=_make_mock_request(),
                 token="valid-query-token",
                 credentials=None,
-                db=AsyncMock(),
             )
             mock_verify.assert_called_once_with("valid-query-token")
 
@@ -129,12 +140,19 @@ class TestGetSSEAuth:
     async def test_header_takes_precedence_over_query_param(self) -> None:
         mock_user = _make_mock_user()
         mock_claims = MagicMock()
+        mock_db = AsyncMock()
+        mock_factory = MagicMock(
+            return_value=AsyncMock(
+                __aenter__=AsyncMock(return_value=mock_db), __aexit__=AsyncMock(return_value=False)
+            )
+        )
 
         with (
             patch(
                 "src.core.dependencies.verify_supabase_token", return_value=mock_claims
             ) as mock_verify,
             patch("src.core.dependencies.get_or_create_user", return_value=mock_user),
+            patch("src.core.dependencies.get_session_factory", return_value=mock_factory),
             patch("src.core.dependencies.set_user_context"),
             patch("src.core.dependencies.bind_log_context"),
         ):
@@ -142,7 +160,6 @@ class TestGetSSEAuth:
                 request=_make_mock_request(),
                 token="query-token",
                 credentials=_make_mock_credentials("header-token"),
-                db=AsyncMock(),
             )
             mock_verify.assert_called_once_with("header-token")
 
@@ -157,7 +174,6 @@ class TestGetSSEAuth:
                 request=_make_mock_request(),
                 token="expired-token",
                 credentials=None,
-                db=AsyncMock(),
             )
         assert result.is_authenticated is False
         assert result.error_code == "token_expired"
@@ -173,7 +189,6 @@ class TestGetSSEAuth:
                 request=_make_mock_request(),
                 token="bad-token",
                 credentials=None,
-                db=AsyncMock(),
             )
         assert result.is_authenticated is False
         assert result.error_code == "auth_failed"

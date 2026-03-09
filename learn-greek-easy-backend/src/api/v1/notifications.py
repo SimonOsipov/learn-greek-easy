@@ -23,6 +23,7 @@ from src.core.dependencies import SSEAuthResult, get_current_user, get_sse_auth
 from src.core.event_bus import notification_event_bus
 from src.db.dependencies import get_db
 from src.db.models import User
+from src.db.session import get_session_factory
 from src.schemas.notification import (
     ClearResponse,
     MarkReadResponse,
@@ -118,7 +119,6 @@ async def get_unread_count(
 async def notification_stream(
     request: Request,
     sse_auth: SSEAuthResult = Depends(get_sse_auth),
-    db: AsyncSession = Depends(get_db),
 ) -> StreamingResponse:
     """Stream real-time notification events via SSE.
 
@@ -126,7 +126,6 @@ async def notification_stream(
     Sends initial unread count, then forwards events from the event bus.
     Heartbeats prevent Railway proxy from closing idle connections.
     """
-    # Auth check — yield SSE error event if not authenticated
     if not sse_auth.is_authenticated:
 
         async def auth_error_gen() -> AsyncGenerator[str, None]:
@@ -140,18 +139,18 @@ async def notification_stream(
     assert sse_auth.user is not None
     user = sse_auth.user
 
+    # Subscribe BEFORE taking the unread count snapshot so no notification
+    # committed between the two operations is missed.
+    queue = await notification_event_bus.subscribe(user.id)
+
+    factory = get_session_factory()
+    async with factory() as db:
+        notification_service = NotificationService(db)
+        initial_count = await notification_service.get_unread_count(user.id)
+
     async def event_generator() -> AsyncGenerator[str, None]:
-        # Subscribe BEFORE taking the unread count snapshot so no notification
-        # committed between the two operations is missed.
-        queue = await notification_event_bus.subscribe(user.id)
         try:
-            notification_service = NotificationService(db)
-            initial_count = await notification_service.get_unread_count(user.id)
-
-            # Send initial unread count as first event
             yield format_sse_event({"count": initial_count}, event="unread_count")
-
-            # Forward events from the event bus
             while True:
                 event = await queue.get()
                 yield format_sse_event(event.payload, event=event.event_type)

@@ -42,6 +42,7 @@ from src.core.sentry import set_user_context
 from src.core.supabase_auth import SupabaseUserClaims, verify_supabase_token
 from src.db.dependencies import get_db
 from src.db.models import SubscriptionStatus, User, UserSettings
+from src.db.session import get_session_factory
 
 # HTTPBearer security scheme with auto_error=False
 # This allows us to handle missing auth gracefully for optional auth endpoints
@@ -365,7 +366,6 @@ async def get_sse_auth(
     request: Request,
     token: Optional[str] = Query(None, description="JWT token for EventSource clients"),
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
-    db: AsyncSession = Depends(get_db),
 ) -> SSEAuthResult:
     """Authenticate for SSE endpoints without raising exceptions.
 
@@ -407,13 +407,16 @@ async def get_sse_auth(
     request.state.supabase_claims = claims
 
     # 4. Get or create user
-    try:
-        user = await get_or_create_user(db, claims)
-    except ConflictException:
-        return SSEAuthResult(
-            error_code="auth_failed",
-            error_message="Authentication failed due to account conflict.",
-        )
+    factory = get_session_factory()
+    async with factory() as db:
+        try:
+            user = await get_or_create_user(db, claims)
+        except ConflictException:
+            return SSEAuthResult(
+                error_code="auth_failed",
+                error_message="Authentication failed due to account conflict.",
+            )
+        await db.commit()
 
     # 5. Check if user is active
     if not user.is_active:
