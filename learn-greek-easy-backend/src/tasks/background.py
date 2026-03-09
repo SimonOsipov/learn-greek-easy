@@ -70,6 +70,44 @@ def _signal_audio_event(
         pass  # Fire-and-forget: never let signaling break the task
 
 
+def _signal_news_audio_event(
+    news_item_id: Any,
+    level: str,  # "b2" or "a2"
+    event_type: str,  # "audio_progress", "audio_completed", "audio_failed"
+    stage: str | None = None,
+    audio_url: str | None = None,
+    error: str | None = None,
+) -> None:
+    """Fire-and-forget event bus signal for news audio status changes."""
+    try:
+        from src.core.event_bus import news_audio_event_bus
+
+        payload: dict = {
+            "type": event_type,
+            "news_item_id": str(news_item_id),
+            "level": level,
+        }
+        if stage is not None:
+            payload["stage"] = stage
+        if audio_url is not None:
+            payload["audio_url"] = audio_url
+        if error is not None:
+            payload["error"] = error
+
+        import asyncio
+
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            loop.create_task(
+                news_audio_event_bus.signal(
+                    f"news_audio:{news_item_id}",
+                    payload,
+                )
+            )
+    except Exception:
+        pass  # Fire-and-forget
+
+
 def is_background_tasks_enabled() -> bool:
     """Check if background tasks feature is enabled.
 
@@ -1164,6 +1202,7 @@ async def generate_audio_for_news_item_task(
             # Step 1: Generate TTS audio
             from src.services.elevenlabs_service import get_elevenlabs_service
 
+            _signal_news_audio_event(news_item_id, "b2", "audio_progress", stage="generating_tts")
             audio_bytes = await get_elevenlabs_service().generate_speech(
                 description_el, news_item_id=news_item_id
             )
@@ -1174,6 +1213,7 @@ async def generate_audio_for_news_item_task(
             # Step 3: Upload to S3
             from src.services.s3_service import get_s3_service
 
+            _signal_news_audio_event(news_item_id, "b2", "audio_progress", stage="uploading_s3")
             upload_success = get_s3_service().upload_object(s3_key, audio_bytes, "audio/mpeg")
             if not upload_success:
                 logger.error(
@@ -1182,6 +1222,9 @@ async def generate_audio_for_news_item_task(
                         "news_item_id": str(news_item_id),
                         "s3_key": s3_key,
                     },
+                )
+                _signal_news_audio_event(
+                    news_item_id, "b2", "audio_failed", error="S3 upload failed"
                 )
                 return
 
@@ -1193,6 +1236,7 @@ async def generate_audio_for_news_item_task(
 
             from src.db.models import CultureQuestion, NewsItem
 
+            _signal_news_audio_event(news_item_id, "b2", "audio_progress", stage="persisting")
             result = await session.execute(select(NewsItem).where(NewsItem.id == news_item_id))
             news_item = result.scalar_one_or_none()
 
@@ -1225,6 +1269,8 @@ async def generate_audio_for_news_item_task(
             )
 
             await session.commit()
+            presigned_url = get_s3_service().generate_presigned_url(s3_key)
+            _signal_news_audio_event(news_item_id, "b2", "audio_completed", audio_url=presigned_url)
         finally:
             await session.close()
 
@@ -1250,6 +1296,7 @@ async def generate_audio_for_news_item_task(
             },
             exc_info=True,
         )
+        _signal_news_audio_event(news_item_id, "b2", "audio_failed", error=str(e))
     finally:
         if engine is not None:
             await engine.dispose()
@@ -1318,6 +1365,7 @@ async def generate_a2_audio_for_news_item_task(
             # Step 1: Generate TTS audio
             from src.services.elevenlabs_service import get_elevenlabs_service
 
+            _signal_news_audio_event(news_item_id, "a2", "audio_progress", stage="generating_tts")
             audio_bytes = await get_elevenlabs_service().generate_speech(
                 description_el_a2, news_item_id=news_item_id
             )
@@ -1328,6 +1376,7 @@ async def generate_a2_audio_for_news_item_task(
             # Step 3: Upload to S3
             from src.services.s3_service import get_s3_service
 
+            _signal_news_audio_event(news_item_id, "a2", "audio_progress", stage="uploading_s3")
             upload_success = get_s3_service().upload_object(s3_key, audio_bytes, "audio/mpeg")
             if not upload_success:
                 logger.error(
@@ -1337,6 +1386,9 @@ async def generate_a2_audio_for_news_item_task(
                         "s3_key": s3_key,
                         "task": "generate_a2_audio_for_news_item",
                     },
+                )
+                _signal_news_audio_event(
+                    news_item_id, "a2", "audio_failed", error="S3 upload failed"
                 )
                 return
 
@@ -1348,6 +1400,7 @@ async def generate_a2_audio_for_news_item_task(
 
             from src.db.models import NewsItem
 
+            _signal_news_audio_event(news_item_id, "a2", "audio_progress", stage="persisting")
             result = await session.execute(select(NewsItem).where(NewsItem.id == news_item_id))
             news_item = result.scalar_one_or_none()
 
@@ -1367,6 +1420,8 @@ async def generate_a2_audio_for_news_item_task(
             news_item.audio_a2_duration_seconds = audio_duration_seconds
 
             await session.commit()
+            presigned_url = get_s3_service().generate_presigned_url(s3_key)
+            _signal_news_audio_event(news_item_id, "a2", "audio_completed", audio_url=presigned_url)
         finally:
             await session.close()
 
@@ -1394,6 +1449,7 @@ async def generate_a2_audio_for_news_item_task(
             },
             exc_info=True,
         )
+        _signal_news_audio_event(news_item_id, "a2", "audio_failed", error=str(e))
     finally:
         if engine is not None:
             await engine.dispose()
