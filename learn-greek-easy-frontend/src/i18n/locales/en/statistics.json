@@ -50,6 +50,10 @@
       "title": "Next Up",
       "progress": "Progress"
     },
+    "emptyState": {
+      "someProgress": "You're making progress! Keep going to unlock your first achievement.",
+      "noProgress": "Start learning to begin unlocking achievements and earning XP."
+    },
     "firstSteps": {
       "name": "First Steps",
       "description": "Learn 10 words"

@@ -123,6 +123,9 @@ export const AchievementsGrid: React.FC<AchievementsGridProps> = ({ className })
     return null;
   }
 
+  const isEmptyWithProgress = achievements.unlocked_count === 0 && nextUp !== null;
+  const isEmptyNoProgress = achievements.unlocked_count === 0 && nextUp === null;
+
   return (
     <Card className={cn(className)}>
       <CardHeader>
@@ -146,6 +149,27 @@ export const AchievementsGrid: React.FC<AchievementsGridProps> = ({ className })
             })}
           </span>
         </div>
+
+        {/* Empty State 1: 0 unlocked but some progress toward achievements */}
+        {isEmptyWithProgress && (
+          <div
+            role="status"
+            className="mt-4 rounded-lg border bg-purple-50/80 p-4 dark:bg-purple-950/20"
+          >
+            <p className="text-center text-sm text-muted-foreground">
+              {t('achievements.emptyState.someProgress')}
+            </p>
+          </div>
+        )}
+
+        {/* Empty State 2: 0 unlocked and 0 progress */}
+        {isEmptyNoProgress && (
+          <div className="flex flex-col items-center gap-2 py-6 text-center">
+            <p className="text-sm text-muted-foreground">
+              {t('achievements.emptyState.noProgress')}
+            </p>
+          </div>
+        )}
 
         {/* Recently Unlocked */}
         {recentlyUnlocked.length > 0 && (
