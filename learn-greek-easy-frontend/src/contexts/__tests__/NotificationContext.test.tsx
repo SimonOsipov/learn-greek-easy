@@ -3,7 +3,7 @@
  *
  * Tests for:
  * - Change A: Filtering expected polling errors (401, 408) from Sentry reporting
- * - Change B: Pausing polling when the tab becomes hidden
+ * - Change B: Tab visibility drives SSE connection (SSE enabled only when tab is visible)
  */
 
 import React from 'react';
@@ -51,6 +51,14 @@ vi.mock('@/services/notificationAPI', () => ({
 
 vi.mock('@/lib/errorReporting', () => ({
   reportAPIError: vi.fn(),
+}));
+
+vi.mock('@/hooks/useSSE', () => ({
+  useSSE: vi.fn(),
+}));
+
+vi.mock('@/hooks/use-toast', () => ({
+  toast: vi.fn(),
 }));
 
 // ---------------------------------------------------------------------------
@@ -219,7 +227,7 @@ describe('Change B — visibility-aware polling', () => {
     unmount();
   });
 
-  it('should resume polling and do an immediate refresh when tab becomes visible', async () => {
+  it('should not trigger polling refresh when tab becomes visible (SSE reconnects instead)', async () => {
     const { unmount } = renderHook(() => useNotifications(), { wrapper });
 
     // Let the initial effects settle
@@ -227,7 +235,7 @@ describe('Change B — visibility-aware polling', () => {
       await Promise.resolve();
     });
 
-    // First hide the tab to stop polling
+    // First hide the tab
     act(() => {
       Object.defineProperty(document, 'visibilityState', {
         configurable: true,
@@ -248,19 +256,17 @@ describe('Change B — visibility-aware polling', () => {
       await Promise.resolve();
     });
 
-    // An immediate refresh should have fired
+    // No extra polling calls — SSE handles reconnection, not fetchUnreadCount
     const callsAfterVisible = vi.mocked(notificationAPI.fetchUnreadCount).mock.calls.length;
-    expect(callsAfterVisible).toBeGreaterThan(callsWhileHidden);
+    expect(callsAfterVisible).toBe(callsWhileHidden);
 
-    // And the interval should be running again
+    // Polling interval should NOT fire (fallback polling is not active)
     await act(async () => {
       vi.advanceTimersByTime(60000);
       await Promise.resolve();
     });
 
-    expect(vi.mocked(notificationAPI.fetchUnreadCount).mock.calls.length).toBeGreaterThan(
-      callsAfterVisible
-    );
+    expect(vi.mocked(notificationAPI.fetchUnreadCount).mock.calls.length).toBe(callsAfterVisible);
 
     unmount();
   });
@@ -281,7 +287,7 @@ describe('Change B — visibility-aware polling', () => {
     removeEventListenerSpy.mockRestore();
   });
 
-  it('should not start polling when tab is hidden at mount time', async () => {
+  it('should not poll when tab is hidden (SSE disabled when hidden)', async () => {
     // Set hidden BEFORE mounting
     Object.defineProperty(document, 'visibilityState', {
       configurable: true,
@@ -298,7 +304,7 @@ describe('Change B — visibility-aware polling', () => {
     // Isolate from the initial fetch by clearing the mock now
     vi.mocked(notificationAPI.fetchUnreadCount).mockClear();
 
-    // Advance 3 full polling intervals — polling should NOT have fired
+    // Advance 3 full polling intervals — polling should NOT have fired (no fallback polling active)
     await act(async () => {
       vi.advanceTimersByTime(180000);
       await Promise.resolve();
@@ -306,7 +312,7 @@ describe('Change B — visibility-aware polling', () => {
 
     expect(vi.mocked(notificationAPI.fetchUnreadCount)).not.toHaveBeenCalled();
 
-    // Now make the tab visible — should trigger an immediate refresh
+    // Now make the tab visible — SSE reconnects, no polling refresh triggered
     await act(async () => {
       Object.defineProperty(document, 'visibilityState', {
         configurable: true,
@@ -316,16 +322,16 @@ describe('Change B — visibility-aware polling', () => {
       await Promise.resolve();
     });
 
-    // Immediate refresh on visibility restore
-    expect(vi.mocked(notificationAPI.fetchUnreadCount).mock.calls.length).toBe(1);
+    // No polling refresh — SSE handles real-time updates
+    expect(vi.mocked(notificationAPI.fetchUnreadCount)).not.toHaveBeenCalled();
 
-    // Advance another interval — polling should now be running
+    // Advance another interval — polling still should not fire (SSE is primary)
     await act(async () => {
       vi.advanceTimersByTime(60000);
       await Promise.resolve();
     });
 
-    expect(vi.mocked(notificationAPI.fetchUnreadCount).mock.calls.length).toBe(2);
+    expect(vi.mocked(notificationAPI.fetchUnreadCount)).not.toHaveBeenCalled();
 
     unmount();
   });
