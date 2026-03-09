@@ -82,6 +82,10 @@ async function getNotificationContext() {
 
 import * as notificationAPI from '@/services/notificationAPI';
 import { reportAPIError } from '@/lib/errorReporting';
+import { useSSE } from '@/hooks/useSSE';
+import { useAuthStore, useHasHydrated } from '@/stores/authStore';
+import { useAppStore } from '@/stores/appStore';
+import type { SSEConnectionState, SSEEvent, SSEOptions } from '@/types/sse';
 
 // ---------------------------------------------------------------------------
 // Change A: Error filtering
@@ -334,5 +338,129 @@ describe('Change B — visibility-aware polling', () => {
     expect(vi.mocked(notificationAPI.fetchUnreadCount)).not.toHaveBeenCalled();
 
     unmount();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// SSE integration
+// ---------------------------------------------------------------------------
+
+describe('SSE integration', () => {
+  let capturedOnEvent: ((event: SSEEvent<unknown>) => void) | undefined;
+  let capturedOnStateChange: ((state: SSEConnectionState) => void) | undefined;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    // Restore store mocks cleared by clearAllMocks
+    vi.mocked(useAuthStore).mockImplementation((selector: (state: any) => any) =>
+      selector({
+        isAuthenticated: true,
+        user: { preferences: { notifications: true } },
+      })
+    );
+    vi.mocked(useHasHydrated).mockReturnValue(true);
+    vi.mocked(useAppStore).mockImplementation((selector: (state: any) => any) =>
+      selector({ authInitialized: true })
+    );
+
+    vi.mocked(notificationAPI.fetchNotifications).mockResolvedValue({
+      notifications: [],
+      unread_count: 0,
+      has_more: false,
+    });
+    vi.mocked(notificationAPI.fetchUnreadCount).mockResolvedValue(0);
+
+    // Reset visibility to visible
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => 'visible',
+    });
+
+    capturedOnEvent = undefined;
+    capturedOnStateChange = undefined;
+    vi.mocked(useSSE).mockImplementation((_url: string, options: SSEOptions<unknown>) => {
+      capturedOnEvent = options.onEvent;
+      capturedOnStateChange = options.onStateChange;
+      return { state: 'connected' as SSEConnectionState, close: vi.fn() };
+    });
+  });
+
+  it('calls useSSE with correct URL and enabled:true when authenticated', async () => {
+    renderHook(() => useNotifications(), { wrapper });
+    await waitFor(() => {
+      expect(vi.mocked(useSSE)).toHaveBeenCalledWith(
+        expect.stringContaining('/api/v1/notifications/stream'),
+        expect.objectContaining({ enabled: true })
+      );
+    });
+  });
+
+  it('calls useSSE with enabled:false when not authenticated', async () => {
+    // Override auth to return not authenticated
+    vi.mocked(useAuthStore).mockImplementation((selector: (state: any) => any) =>
+      selector({
+        isAuthenticated: false,
+        user: { preferences: { notifications: true } },
+      })
+    );
+    renderHook(() => useNotifications(), { wrapper });
+    await waitFor(() => {
+      expect(vi.mocked(useSSE)).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({ enabled: false })
+      );
+    });
+  });
+
+  it('updates unreadCount on unread_count SSE event', async () => {
+    const { result } = renderHook(() => useNotifications(), { wrapper });
+    await waitFor(() => expect(capturedOnEvent).toBeDefined());
+
+    act(() => {
+      capturedOnEvent!({ type: 'unread_count', data: { count: 7 } });
+    });
+
+    expect(result.current.unreadCount).toBe(7);
+  });
+
+  it('activates fallback polling when SSE state becomes error', async () => {
+    // Render with real timers to capture callbacks synchronously
+    renderHook(() => useNotifications(), { wrapper });
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(capturedOnStateChange).toBeDefined();
+
+    // Trigger SSE error state — this sets useFallbackPolling=true
+    // which triggers the fallback polling useEffect to call refreshUnreadCount immediately
+    await act(async () => {
+      capturedOnStateChange!('error');
+      // Flush microtasks and React state updates
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(vi.mocked(notificationAPI.fetchUnreadCount)).toHaveBeenCalled();
+  });
+
+  it('no polling interval when SSE is connected', async () => {
+    vi.useFakeTimers();
+    try {
+      renderHook(() => useNotifications(), { wrapper });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      vi.mocked(notificationAPI.fetchUnreadCount).mockClear();
+      await act(async () => {
+        vi.advanceTimersByTime(120000);
+        await Promise.resolve();
+      });
+
+      expect(vi.mocked(notificationAPI.fetchUnreadCount)).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
