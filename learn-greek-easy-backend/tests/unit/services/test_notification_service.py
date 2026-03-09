@@ -381,3 +381,70 @@ class TestCleanupOldNotifications:
 
         assert count == 100
         mock_repo.delete_older_than.assert_awaited_once_with(30)
+
+
+@pytest.mark.unit
+class TestEventBusSignals:
+    """Tests for event bus signals in NotificationService mutations."""
+
+    @pytest.mark.asyncio
+    async def test_create_notification_signals_new_notification(
+        self, service, mock_db_session
+    ) -> None:
+        from unittest.mock import patch
+
+        mock_notification = MagicMock()
+        mock_notification.id = uuid4()
+        mock_notification.type = MagicMock(value="info")
+        mock_notification.title = "Test"
+        mock_notification.message = "Msg"
+        mock_notification.icon = None
+        mock_notification.action_url = None
+
+        service.repo = MagicMock()
+        service.repo.create = AsyncMock(return_value=mock_notification)
+        service.repo.get_unread_count = AsyncMock(return_value=3)
+        mock_db_session.flush = AsyncMock()
+
+        with patch("src.services.notification_service.notification_event_bus") as mock_bus:
+            mock_bus.signal = AsyncMock()
+            await service.create_notification(
+                user_id=uuid4(),
+                type=NotificationType.WELCOME,
+                title="Test",
+                message="Msg",
+            )
+            assert mock_bus.signal.called
+
+    @pytest.mark.asyncio
+    async def test_mark_all_as_read_signals_unread_count_zero(
+        self, service, mock_db_session
+    ) -> None:
+        from unittest.mock import patch
+
+        service.repo = MagicMock()
+        service.repo.mark_all_as_read = AsyncMock()
+        mock_db_session.flush = AsyncMock()
+
+        with patch("src.services.notification_service.notification_event_bus") as mock_bus:
+            mock_bus.signal = AsyncMock()
+            await service.mark_all_as_read(user_id=uuid4())
+            # Should signal with count=0
+            calls = mock_bus.signal.call_args_list
+            payloads = [call.args[1].payload for call in calls]
+            assert any(p.get("count") == 0 for p in payloads)
+
+    @pytest.mark.asyncio
+    async def test_clear_all_signals_unread_count_zero(self, service, mock_db_session) -> None:
+        from unittest.mock import patch
+
+        service.repo = MagicMock()
+        service.repo.delete_all_by_user = AsyncMock(return_value=5)
+        mock_db_session.flush = AsyncMock()
+
+        with patch("src.services.notification_service.notification_event_bus") as mock_bus:
+            mock_bus.signal = AsyncMock()
+            await service.clear_all(user_id=uuid4())
+            calls = mock_bus.signal.call_args_list
+            payloads = [call.args[1].payload for call in calls]
+            assert any(p.get("count") == 0 for p in payloads)
