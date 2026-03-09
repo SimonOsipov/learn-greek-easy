@@ -1,4 +1,4 @@
-import { getNavElement, waitForElement } from './tourUtils';
+import { findDeckCardByTitle, getNavElement, waitForElement } from './tourUtils';
 
 import type { DriveStep } from 'driver.js';
 import type { TFunction } from 'i18next';
@@ -84,6 +84,46 @@ export function buildTourSteps(navigate: NavigateFunction, t: TFunction): DriveS
       description: t('tour.steps.news_all.description'),
       side: 'bottom',
       align: 'start',
+    },
+  });
+
+  steps.push({
+    element: '[data-testid="decks-dropdown-trigger"]',
+    popover: {
+      title: t('tour.steps.decks_dropdown.title'),
+      description: t('tour.steps.decks_dropdown.description'),
+      side: 'bottom',
+      align: 'start',
+    },
+  });
+
+  steps.push({
+    element: '[data-testid="deck-filters"]',
+    popover: {
+      title: t('tour.steps.deck_filters.title'),
+      description: t('tour.steps.deck_filters.description'),
+      side: 'bottom',
+      align: 'start',
+    },
+    onHighlightStarted: async () => {
+      navigate('/decks');
+      await waitForElement('[data-testid="deck-filters"]', 5000);
+    },
+  });
+
+  steps.push({
+    element: () =>
+      findDeckCardByTitle('Essential Greek Nouns') ??
+      document.querySelector('[data-testid="deck-card"]')!,
+    popover: {
+      title: t('tour.steps.vocab_deck.title'),
+      description: t('tour.steps.vocab_deck.description'),
+      side: 'top',
+      align: 'start',
+    },
+    onHighlightStarted: async () => {
+      navigate('/decks');
+      await waitForElement('[data-testid="deck-card"]', 5000);
     },
   });
 

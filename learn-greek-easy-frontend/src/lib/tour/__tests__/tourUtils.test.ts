@@ -89,11 +89,11 @@ describe('tourUtils', () => {
   });
 
   describe('buildTourSteps', () => {
-    it('returns 7 steps', () => {
+    it('returns 10 steps', () => {
       const mockNavigate = vi.fn();
       const mockT = vi.fn((key: string) => key);
       const steps = buildTourSteps(mockNavigate, mockT as any);
-      expect(steps).toHaveLength(7);
+      expect(steps).toHaveLength(10);
     });
 
     it('step 1 uses tour.steps.navigation keys', () => {

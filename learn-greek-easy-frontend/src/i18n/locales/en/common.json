@@ -265,6 +265,18 @@
       "news_all": {
         "title": "Explore All News",
         "description": "See all available articles here, or find them anytime under Practice → News in the top menu."
+      },
+      "decks_dropdown": {
+        "title": "Browse Your Decks",
+        "description": "Open the Decks menu to see your options. Public Decks contains community-created vocabulary sets ready to use."
+      },
+      "deck_filters": {
+        "title": "Find the Right Deck",
+        "description": "Use filters to search by name, category, or level. Find exactly the deck that matches your current learning goals."
+      },
+      "vocab_deck": {
+        "title": "Start with Vocabulary",
+        "description": "This vocabulary deck covers essential Greek nouns — a great place to start building your foundation. Click any deck to begin learning."
       }
     },
     "dismiss": {
