@@ -377,6 +377,12 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
         setStreamEnabled(false);
         setStreamBody(null);
         break;
+      case 'pipeline_stopped':
+        setPipelineStatus('done');
+        setStageError((data['error'] as string) ?? 'Pipeline stopped');
+        setStreamEnabled(false);
+        setStreamBody(null);
+        break;
       case 'pipeline_failed':
         setStageError((data['error'] as string) ?? 'Pipeline failed');
         setPipelineStatus('error');

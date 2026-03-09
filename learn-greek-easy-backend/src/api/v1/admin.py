@@ -2853,6 +2853,14 @@ async def generate_word_entry(
         lemma=primary.morphology.lemma,
         part_of_speech=PartOfSpeech.NOUN,
     )
+    if dup_result.is_duplicate:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "error": "Duplicate word entry found",
+                "duplicate_check": dup_result.model_dump(mode="json"),
+            },
+        )
 
     # Stage 2.5: Translation lookup
     translation_lookup: TranslationLookupStageResult | None = None
@@ -3123,7 +3131,7 @@ async def _generate_word_entry_sse_pipeline(  # noqa: C901
     yield norm_event
     primary = smart_result.primary
 
-    # Stage 2: Duplicate check (non-fatal)
+    # Stage 2: Duplicate check
     try:
         dup_svc = DuplicateDetectionService(db)
         dup_result = await dup_svc.check(
@@ -3131,8 +3139,26 @@ async def _generate_word_entry_sse_pipeline(  # noqa: C901
             part_of_speech=PartOfSpeech.NOUN,
         )
         yield format_sse_event(dup_result, event="duplicates_checked")
-    except Exception:
-        pass
+        if dup_result.is_duplicate:
+            yield format_sse_event(
+                {
+                    "error": "Duplicate word entry found",
+                    "stage": "duplicate_check",
+                    "existing_entry": (
+                        dup_result.existing_entry.model_dump()
+                        if dup_result.existing_entry
+                        else None
+                    ),
+                },
+                event="pipeline_stopped",
+            )
+            return
+    except Exception as exc:
+        logger.warning("Duplicate check failed: %s", exc)
+        yield format_sse_event(
+            {"error": str(exc), "stage": "duplicate_check"},
+            event="duplicates_checked",
+        )
 
     # Stage 2.5: Translation lookup (non-fatal)
     translation_lookup: TranslationLookupStageResult | None = None

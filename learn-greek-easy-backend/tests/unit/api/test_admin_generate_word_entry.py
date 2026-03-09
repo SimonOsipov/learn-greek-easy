@@ -1027,14 +1027,14 @@ class TestGenerateWordEntry:
         assert dup["matched_decks"] == []
 
     @pytest.mark.asyncio
-    async def test_200_duplicate_check_found(
+    async def test_409_duplicate_check_found(
         self,
         client: AsyncClient,
         superuser_auth_headers: dict,
         v2_deck: Deck,
         db_session: AsyncSession,
     ):
-        """duplicate_check.is_duplicate is True when lemma already exists in a deck."""
+        """Duplicate word entry returns 409 with duplicate_check detail."""
         from src.db.models import DeckWordEntry, PartOfSpeech, WordEntry
 
         existing = WordEntry(
@@ -1050,19 +1050,7 @@ class TestGenerateWordEntry:
         db_session.add(DeckWordEntry(deck_id=v2_deck.id, word_entry_id=existing.id))
         await db_session.commit()
 
-        with (
-            patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory,
-            patch(
-                "src.api.v1.admin._run_generation_stage",
-                new_callable=AsyncMock,
-                return_value=_mock_generated_data(),
-            ),
-            patch(
-                "src.api.v1.admin._run_verification_stage",
-                new_callable=AsyncMock,
-                return_value=_mock_verification_summary(),
-            ),
-        ):
+        with patch("src.api.v1.admin.get_lemma_normalization_service") as mock_factory:
             mock_svc = MagicMock()
             mock_svc.normalize_smart.return_value = _mock_smart_result()
             mock_factory.return_value = mock_svc
@@ -1071,8 +1059,10 @@ class TestGenerateWordEntry:
                 json={"word": "γάτα", "deck_id": str(v2_deck.id)},
                 headers=superuser_auth_headers,
             )
-        assert resp.status_code == 200
-        dup = resp.json()["duplicate_check"]
+        assert resp.status_code == 409
+        message = resp.json()["error"]["message"]
+        assert message["error"] == "Duplicate word entry found"
+        dup = message["duplicate_check"]
         assert dup["is_duplicate"] is True
         assert dup["existing_entry"] is not None
         assert dup["existing_entry"]["lemma"] == "γάτα"
