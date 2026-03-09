@@ -5,6 +5,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.event_bus import NotificationEvent, notification_event_bus
 from src.core.logging import get_logger
 from src.db.models import FeedbackStatus, Notification, NotificationType
 from src.repositories.notification import NotificationRepository
@@ -28,6 +29,31 @@ class NotificationService:
     def __init__(self, db: AsyncSession):
         self.db = db
         self.repo = NotificationRepository(db)
+
+    async def _signal_unread_count(self, user_id: UUID, count: int) -> None:
+        """Signal unread count change to active SSE streams."""
+        await notification_event_bus.signal(
+            user_id,
+            NotificationEvent(event_type="unread_count", user_id=user_id, payload={"count": count}),
+        )
+
+    async def _signal_new_notification(self, user_id: UUID, notification: Notification) -> None:
+        """Signal new notification to active SSE streams."""
+        await notification_event_bus.signal(
+            user_id,
+            NotificationEvent(
+                event_type="new_notification",
+                user_id=user_id,
+                payload={
+                    "id": str(notification.id),
+                    "type": notification.type.value,
+                    "title": notification.title,
+                    "message": notification.message,
+                    "icon": notification.icon,
+                    "action_url": notification.action_url,
+                },
+            ),
+        )
 
     # =========================================================================
     # Core CRUD Operations
@@ -65,6 +91,10 @@ class NotificationService:
             },
         )
 
+        await self._signal_new_notification(user_id, notification)
+        count = await self.get_unread_count(user_id)
+        await self._signal_unread_count(user_id, count)
+
         return notification
 
     async def get_notifications(
@@ -96,6 +126,8 @@ class NotificationService:
                 "Notification marked as read",
                 extra={"notification_id": str(notification_id)},
             )
+            count = await self.get_unread_count(user_id)
+            await self._signal_unread_count(user_id, count)
         return updated
 
     async def mark_all_as_read(self, user_id: UUID) -> int:
@@ -105,11 +137,16 @@ class NotificationService:
             "All notifications marked as read",
             extra={"user_id": str(user_id), "count": count},
         )
+        await self._signal_unread_count(user_id, 0)
         return count
 
     async def delete_notification(self, notification_id: UUID, user_id: UUID) -> bool:
         """Delete a notification."""
-        return await self.repo.delete_by_id(notification_id, user_id)
+        success = await self.repo.delete_by_id(notification_id, user_id)
+        if success:
+            count = await self.get_unread_count(user_id)
+            await self._signal_unread_count(user_id, count)
+        return success
 
     async def clear_all(self, user_id: UUID) -> int:
         """Clear all notifications. Returns count deleted."""
@@ -118,6 +155,7 @@ class NotificationService:
             "All notifications cleared",
             extra={"user_id": str(user_id), "count": count},
         )
+        await self._signal_unread_count(user_id, 0)
         return count
 
     async def cleanup_old_notifications(self, days: int = 30) -> int:
