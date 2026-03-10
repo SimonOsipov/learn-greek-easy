@@ -115,7 +115,7 @@ def _make_cross_result(
             ),
         ],
         overall_agreement=agreement,
-        secondary_model="minimax/minimax-m2.5",
+        secondary_model="qwen/qwen3-30b-a3b",
     )
 
 
