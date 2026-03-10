@@ -414,11 +414,13 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                       <div className="grid grid-cols-2 gap-3 text-sm">
                         <div>
                           <span className="font-medium">{t('generateNoun.lemmaLabel')}</span>
-                          <p data-testid="result-lemma">{displayPrimary.lemma}</p>
+                          <p data-testid="result-lemma" className="text-muted-foreground">
+                            {displayPrimary.lemma}
+                          </p>
                         </div>
                         <div>
                           <span className="font-medium">{t('generateNoun.genderLabel')}</span>
-                          <p data-testid="result-gender">
+                          <p data-testid="result-gender" className="text-muted-foreground">
                             {displayPrimary.gender
                               ? `${displayPrimary.gender}${displayPrimary.article ? ` (${displayPrimary.article})` : ''}`
                               : t('generateNoun.genderUnknown')}
@@ -426,7 +428,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                         </div>
                         <div>
                           <span className="font-medium">{t('generateNoun.posLabel')}</span>
-                          <p data-testid="result-pos">
+                          <p data-testid="result-pos" className="text-muted-foreground">
                             {displayPrimary.pos.charAt(0).toUpperCase() +
                               displayPrimary.pos.slice(1).toLowerCase()}
                           </p>
@@ -616,7 +618,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                             <span className="font-medium">
                               {t('generateNoun.generation.translationEn')}
                             </span>
-                            <p data-testid="gen-translation-en">
+                            <p data-testid="gen-translation-en" className="text-muted-foreground">
                               {displayGeneration.translation_en}
                             </p>
                           </div>
@@ -624,7 +626,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                             <span className="font-medium">
                               {t('generateNoun.generation.translationRu')}
                             </span>
-                            <p data-testid="gen-translation-ru">
+                            <p data-testid="gen-translation-ru" className="text-muted-foreground">
                               {displayGeneration.translation_ru}
                             </p>
                           </div>
@@ -632,7 +634,10 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                             <span className="font-medium">
                               {t('generateNoun.generation.translationEnPlural')}
                             </span>
-                            <p data-testid="gen-translation-en-plural">
+                            <p
+                              data-testid="gen-translation-en-plural"
+                              className="text-muted-foreground"
+                            >
                               {displayGeneration.translation_en_plural ?? '—'}
                             </p>
                           </div>
@@ -640,7 +645,10 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                             <span className="font-medium">
                               {t('generateNoun.generation.translationRuPlural')}
                             </span>
-                            <p data-testid="gen-translation-ru-plural">
+                            <p
+                              data-testid="gen-translation-ru-plural"
+                              className="text-muted-foreground"
+                            >
                               {displayGeneration.translation_ru_plural ?? '—'}
                             </p>
                           </div>
@@ -648,7 +656,9 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                             <span className="font-medium">
                               {t('generateNoun.generation.pronunciation')}
                             </span>
-                            <p data-testid="gen-pronunciation">{displayGeneration.pronunciation}</p>
+                            <p data-testid="gen-pronunciation" className="text-muted-foreground">
+                              {displayGeneration.pronunciation}
+                            </p>
                           </div>
                           <div>
                             <span className="font-medium">
