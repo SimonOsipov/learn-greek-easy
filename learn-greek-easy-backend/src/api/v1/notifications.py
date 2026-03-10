@@ -143,13 +143,13 @@ async def notification_stream(
     # committed between the two operations is missed.
     queue = await notification_event_bus.subscribe(user.id)
 
-    factory = get_session_factory()
-    async with factory.begin() as db:
-        notification_service = NotificationService(db)
-        initial_count = await notification_service.get_unread_count(user.id)
-
     async def event_generator() -> AsyncGenerator[str, None]:
         try:
+            factory = get_session_factory()
+            async with factory.begin() as db:
+                notification_service = NotificationService(db)
+                initial_count = await notification_service.get_unread_count(user.id)
+
             yield format_sse_event({"count": initial_count}, event="unread_count")
             while True:
                 event = await queue.get()

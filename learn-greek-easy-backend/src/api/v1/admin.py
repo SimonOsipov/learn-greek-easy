@@ -1431,7 +1431,7 @@ async def stream_news_audio(
     if not sse_auth.user.is_superuser:
         return _sse_single_error("forbidden", "Superuser privileges required")
 
-    news_item = await _fetch_news_item_for_sse(news_item_id)
+    news_item = await asyncio.shield(_fetch_news_item_for_sse(news_item_id))
     if news_item is None:
         return _sse_single_error("not_found", f"News item {news_item_id} not found")
 
@@ -2439,7 +2439,7 @@ async def stream_word_entry_audio(
     if not sse_auth.user.is_superuser:
         return _sse_single_error("forbidden", "Superuser privileges required")
 
-    word_entry = await _fetch_word_entry_for_sse(word_entry_id)
+    word_entry = await asyncio.shield(_fetch_word_entry_for_sse(word_entry_id))
     if word_entry is None:
         return _sse_single_error("not_found", f"Word entry {word_entry_id} not found")
 
