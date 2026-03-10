@@ -763,8 +763,10 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                   )}
 
                   {displayTranslationLookup &&
-                    (displayTranslationLookup.en?.source !== 'none' ||
-                      displayTranslationLookup.ru?.source !== 'none') && (
+                    ((displayTranslationLookup.en &&
+                      displayTranslationLookup.en.source !== 'none') ||
+                      (displayTranslationLookup.ru &&
+                        displayTranslationLookup.ru.source !== 'none')) && (
                       <Collapsible data-testid="tdict-section">
                         <CollapsibleTrigger className="flex w-full items-center justify-between rounded-md border p-3 text-sm font-medium hover:bg-muted/50">
                           <span>{t('generateNoun.tdict.title')}</span>
@@ -804,7 +806,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                   {generationLoading && (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      Generating with AI...
+                      {t('generateNoun.generatingWithAI')}
                     </div>
                   )}
 
@@ -912,7 +914,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                   {verificationLoading && (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      Running verification...
+                      {t('generateNoun.runningVerification')}
                     </div>
                   )}
                 </div>

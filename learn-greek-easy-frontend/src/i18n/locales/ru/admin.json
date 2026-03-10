@@ -1057,6 +1057,8 @@
     "tdict": {
       "title": "Словарные переводы"
     },
+    "generatingWithAI": "Генерация с помощью ИИ...",
+    "runningVerification": "Запуск верификации...",
     "verification": {
       "combinedTier": "Уровень верификации",
       "tierAutoApprove": "Автоодобрение",
