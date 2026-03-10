@@ -12,6 +12,7 @@ CRITICAL: Route order matters! Specific paths MUST come before parameterized pat
 to prevent FastAPI from matching '/read-all' as '/{notification_id}'.
 """
 
+import asyncio
 from collections.abc import AsyncGenerator
 from uuid import UUID
 
@@ -143,12 +144,15 @@ async def notification_stream(
     # committed between the two operations is missed.
     queue = await notification_event_bus.subscribe(user.id)
 
+    async def _fetch_initial_unread_count() -> int:
+        factory = get_session_factory()
+        async with factory.begin() as db:
+            notification_service = NotificationService(db)
+            return await notification_service.get_unread_count(user.id)
+
     async def event_generator() -> AsyncGenerator[str, None]:
         try:
-            factory = get_session_factory()
-            async with factory.begin() as db:
-                notification_service = NotificationService(db)
-                initial_count = await notification_service.get_unread_count(user.id)
+            initial_count = await asyncio.shield(_fetch_initial_unread_count())
 
             yield format_sse_event({"count": initial_count}, event="unread_count")
             while True:
