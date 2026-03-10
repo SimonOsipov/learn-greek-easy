@@ -18,6 +18,7 @@ Usage:
         return await get_all_users()
 """
 
+import asyncio
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -362,6 +363,23 @@ async def get_current_user_optional(
     return user
 
 
+async def _lookup_user_shielded(claims: SupabaseUserClaims) -> User | SSEAuthResult:
+    """Fetch/create user in a cancellation-safe DB session.
+
+    Using asyncio.shield() ensures factory.begin().__aexit__ always completes
+    even when the outer SSE task is cancelled on client disconnect.
+    """
+    factory = get_session_factory()
+    async with factory.begin() as db:
+        try:
+            return await get_or_create_user(db, claims)
+        except ConflictException:
+            return SSEAuthResult(
+                error_code="auth_failed",
+                error_message="Authentication failed due to account conflict.",
+            )
+
+
 async def get_sse_auth(
     request: Request,
     token: Optional[str] = Query(None, description="JWT token for EventSource clients"),
@@ -406,16 +424,11 @@ async def get_sse_auth(
     # 3. Store claims on request.state
     request.state.supabase_claims = claims
 
-    # 4. Get or create user
-    factory = get_session_factory()
-    async with factory.begin() as db:
-        try:
-            user = await get_or_create_user(db, claims)
-        except ConflictException:
-            return SSEAuthResult(
-                error_code="auth_failed",
-                error_message="Authentication failed due to account conflict.",
-            )
+    # 4. Get or create user (shielded from cancellation)
+    result = await asyncio.shield(_lookup_user_shielded(claims))
+    if isinstance(result, SSEAuthResult):
+        return result
+    user = result
 
     # 5. Check if user is active
     if not user.is_active:
