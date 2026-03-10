@@ -1003,7 +1003,7 @@
     "cancel": "Отмена",
     "close": "Закрыть",
     "successMocked": "Генерация существительного поставлена в очередь (мок). Полный пайплайн будет в NGEN-08-02.",
-    "normalizationResult": "Результат нормализации",
+    "normalizationResult": "Результат",
     "lemmaLabel": "Лемма",
     "genderLabel": "Род",
     "genderUnknown": "Неизвестен",
@@ -1028,12 +1028,6 @@
     "alreadyInDeck": "Это слово уже есть в колоде",
     "linkSuccess": "Слово успешно связано с колодой",
     "existsInDecks": "Это слово есть в {{count}} колоде(ах)",
-    "pipeline": {
-      "duplicates": "Дубликаты",
-      "generate": "Генерация",
-      "generated": "Сгенерировано",
-      "generating": "Генерация..."
-    },
     "generation": {
       "title": "Сгенерированные данные",
       "translationEn": "Перевод (EN)",
@@ -1069,9 +1063,6 @@
       "agreementScore": "Согласованность: {{percentage}}%",
       "morphologySourceNote": "Область сравнения: только переводы и примеры (морфология из лексикона)",
       "crossAiUnavailable": "Кросс-AI верификация недоступна",
-      "verifying": "Верификация...",
-      "verified": "Проверено",
-      "verify": "Проверка",
       "notAvailable": "Н/Д",
       "noComparisons": "Сравнения недоступны",
       "fieldStatus": {

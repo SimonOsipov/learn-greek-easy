@@ -426,7 +426,6 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
 
   const isSubmitting = pipelineStatus === 'streaming';
   const hasResult = displayPrimary !== null;
-  const showPipeline = isSubmitting || hasResult;
 
   const trimmedWord = greekWord.trim();
   const validation = trimmedWord ? isValidGreekInput(trimmedWord) : { valid: false };
@@ -560,34 +559,6 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
         >
           <DialogHeader>
             <DialogTitle>{t('generateNoun.title')}</DialogTitle>
-            {showPipeline && (
-              <div
-                data-testid="pipeline-steps"
-                className="flex items-center gap-1 text-xs text-muted-foreground"
-              >
-                <span>1. {t('generateNoun.normalizationResult')}</span>
-                <span>/</span>
-                <span>2. {t('generateNoun.pipeline.duplicates')}</span>
-                <span>/</span>
-                <span className={displayGeneration ? 'font-medium text-foreground' : ''}>
-                  3.{' '}
-                  {displayGeneration
-                    ? t('generateNoun.pipeline.generated')
-                    : isSubmitting
-                      ? t('generateNoun.pipeline.generating')
-                      : t('generateNoun.pipeline.generate')}
-                </span>
-                <span>/</span>
-                <span className={displayVerification ? 'font-medium text-foreground' : ''}>
-                  4.{' '}
-                  {displayVerification
-                    ? t('generateNoun.verification.verified')
-                    : isSubmitting
-                      ? t('generateNoun.verification.verifying')
-                      : t('generateNoun.verification.verify')}
-                </span>
-              </div>
-            )}
           </DialogHeader>
 
           {hasResult && displayPrimary ? (
@@ -767,7 +738,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                       displayTranslationLookup.en.source !== 'none') ||
                       (displayTranslationLookup.ru &&
                         displayTranslationLookup.ru.source !== 'none')) && (
-                      <Collapsible data-testid="tdict-section">
+                      <Collapsible data-testid="tdict-section" defaultOpen>
                         <CollapsibleTrigger className="flex w-full items-center justify-between rounded-md border p-3 text-sm font-medium hover:bg-muted/50">
                           <span>{t('generateNoun.tdict.title')}</span>
                           <ChevronDown className="h-4 w-4" />
@@ -818,7 +789,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                   )}
 
                   {displayGeneration && (
-                    <Collapsible data-testid="generation-section">
+                    <Collapsible data-testid="generation-section" defaultOpen>
                       <CollapsibleTrigger
                         data-testid="generation-section-trigger"
                         className="flex w-full items-center justify-between rounded-md border p-3 text-sm font-medium hover:bg-muted/50"
