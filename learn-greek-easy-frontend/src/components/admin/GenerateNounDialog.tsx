@@ -962,6 +962,12 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                     <AlertDescription>{apiError}</AlertDescription>
                   </Alert>
                 )}
+                {stageError && (
+                  <Alert variant="destructive" data-testid="stage-error-early">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{stageError}</AlertDescription>
+                  </Alert>
+                )}
 
                 <div className="space-y-1">
                   <Label>{t('generateNoun.deckLabel')}</Label>
