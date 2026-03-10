@@ -140,6 +140,7 @@ class GeneratedNounData(BaseModel):
     translation_en: str = Field(..., min_length=1)
     translation_en_plural: str | None = None
     translation_ru: str = Field(..., min_length=1)
+    translation_ru_plural: str | None = None
     pronunciation: str = Field(..., min_length=1)
     grammar_data: GeneratedNounGrammar
     examples: list[GeneratedExample] = Field(..., min_length=2, max_length=2)

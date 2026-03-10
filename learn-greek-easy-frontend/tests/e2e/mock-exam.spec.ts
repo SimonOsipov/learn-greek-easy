@@ -33,11 +33,8 @@ async function navigateToMockExamLanding(page: Page): Promise<void> {
 async function startMockExam(page: Page): Promise<boolean> {
   await navigateToMockExamLanding(page);
 
-  // Wait for page to fully load (network idle)
-  await page.waitForLoadState('networkidle');
-
-  // Wait a bit for queue API to return
-  await page.waitForTimeout(1000);
+  // Wait for start button to be visible (means page + queue API have resolved)
+  await expect(page.getByTestId('start-exam-button')).toBeVisible({ timeout: 10000 });
 
   // Click start exam button - may need to wait for it to become enabled
   const startButton = page.getByTestId('start-exam-button');
@@ -220,8 +217,8 @@ test.describe('Mock Exam Session', () => {
     await navigateToMockExamLanding(page);
 
     // Verify statistics section is present
-    // The stats grid should be visible after loading
-    await page.waitForLoadState('networkidle');
+    // Wait for start button visibility — confirms page data (stats/queue) has loaded
+    await expect(page.getByTestId('start-exam-button')).toBeVisible({ timeout: 10000 });
 
     // Look for stat cards or empty state
     const pageContent = page.getByTestId('mock-exam-page');
@@ -299,12 +296,9 @@ test.describe('Mock Exam Session', () => {
       await beginnerPage.goto('/practice/culture-exam');
       await expect(beginnerPage.getByTestId('mock-exam-page')).toBeVisible({ timeout: 15000 });
 
-      // For new user, should show welcome/empty state for history
-      await beginnerPage.waitForLoadState('networkidle');
-
-      // Start button should be visible and enabled
+      // Start button should be visible (also confirms queue API has resolved)
       const startButton = beginnerPage.getByTestId('start-exam-button');
-      await expect(startButton).toBeVisible();
+      await expect(startButton).toBeVisible({ timeout: 10000 });
 
       // Check if button is enabled (depends on question availability)
       const isEnabled = await startButton.isEnabled();

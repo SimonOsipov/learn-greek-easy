@@ -730,10 +730,16 @@ class TestSkippedFields:
     """Tests for fields that cannot be locally verified."""
 
     def test_skipped_fields(self, service_no_nlp: LocalVerificationService) -> None:
-        """translation_en, translation_ru, translation_en_plural, examples → all skipped."""
+        """translation_en, translation_ru, translation_en_plural, translation_ru_plural, examples → all skipped."""
         result = service_no_nlp.verify(_make_noun_data())
 
-        for path in ("translation_en", "translation_ru", "translation_en_plural", "examples"):
+        for path in (
+            "translation_en",
+            "translation_ru",
+            "translation_en_plural",
+            "translation_ru_plural",
+            "examples",
+        ):
             field = _find_field(result, path)
             assert field is not None, f"Missing skipped field: {path}"
             assert field.status == "skipped", f"Expected skipped for {path}, got {field.status}"

@@ -67,6 +67,7 @@ def _make_noun_data(**overrides: object) -> GeneratedNounData:
         "translation_en": "house",
         "translation_en_plural": "houses",
         "translation_ru": "дом",
+        "translation_ru_plural": "дома",
         "pronunciation": "/spí.ti/",
         "grammar_data": GeneratedNounGrammar(
             gender="neuter",
@@ -143,7 +144,7 @@ class TestFullAgreement:
         result = await service.verify(primary, _make_lemma())
 
         assert result.overall_agreement == 1.0
-        assert len(result.comparisons) == 15
+        assert len(result.comparisons) == 16
         assert all(c.agrees for c in result.comparisons)
         assert result.secondary_model == "qwen/qwen3-30b-a3b"
         assert result.secondary_generation is not None
@@ -164,14 +165,14 @@ class TestPartialDisagreement:
         service: CrossAIVerificationService,
         mock_openrouter: AsyncMock,
     ) -> None:
-        """translation_en_plural (weight 0.5) differs → agreement = 21.0/21.5."""
+        """translation_en_plural (weight 0.5) differs → agreement = 21.5/22.0."""
         primary = _make_noun_data()
         secondary = _make_noun_data(translation_en_plural="homes")
         mock_openrouter.complete.return_value = _make_response(_noun_data_to_json(secondary))
 
         result = await service.verify(primary, _make_lemma())
 
-        assert result.overall_agreement == pytest.approx(21.0 / 21.5)
+        assert result.overall_agreement == pytest.approx(21.5 / 22.0)
 
     @pytest.mark.asyncio
     async def test_high_weight_field_disagrees(
@@ -179,14 +180,14 @@ class TestPartialDisagreement:
         service: CrossAIVerificationService,
         mock_openrouter: AsyncMock,
     ) -> None:
-        """lemma (weight 3.0) differs → agreement = 18.5/21.5."""
+        """lemma (weight 3.0) differs → agreement = 19.0/22.0."""
         primary = _make_noun_data()
         secondary = _make_noun_data(lemma="different")
         mock_openrouter.complete.return_value = _make_response(_noun_data_to_json(secondary))
 
         result = await service.verify(primary, _make_lemma())
 
-        assert result.overall_agreement == pytest.approx(18.5 / 21.5)
+        assert result.overall_agreement == pytest.approx(19.0 / 22.0)
 
     @pytest.mark.asyncio
     async def test_three_critical_fields_disagree_below_threshold(
@@ -194,7 +195,7 @@ class TestPartialDisagreement:
         service: CrossAIVerificationService,
         mock_openrouter: AsyncMock,
     ) -> None:
-        """lemma (3.0) + gender (3.0) + declension_group (2.0) differ → agreement ≈ 13.5/21.5."""
+        """lemma (3.0) + gender (3.0) + declension_group (2.0) differ → agreement ≈ 14.0/22.0."""
         primary = _make_noun_data()
         case_set = GeneratedNounCaseSet(
             nominative="το σπίτι",
@@ -212,7 +213,7 @@ class TestPartialDisagreement:
 
         result = await service.verify(primary, _make_lemma())
 
-        assert result.overall_agreement == pytest.approx(13.5 / 21.5)
+        assert result.overall_agreement == pytest.approx(14.0 / 22.0)
         assert result.overall_agreement is not None
         assert result.overall_agreement < 0.70
 
@@ -222,14 +223,14 @@ class TestPartialDisagreement:
         service: CrossAIVerificationService,
         mock_openrouter: AsyncMock,
     ) -> None:
-        """translation_en (weight 1.0) differs → agreement = 20.5/21.5."""
+        """translation_en (weight 1.0) differs → agreement = 21.0/22.0."""
         primary = _make_noun_data()
         secondary = _make_noun_data(translation_en="home")
         mock_openrouter.complete.return_value = _make_response(_noun_data_to_json(secondary))
 
         result = await service.verify(primary, _make_lemma())
 
-        assert result.overall_agreement == pytest.approx(20.5 / 21.5)
+        assert result.overall_agreement == pytest.approx(21.0 / 22.0)
 
 
 # ---------------------------------------------------------------------------
@@ -468,18 +469,19 @@ class TestWeightCorrectness:
             "cases.plural.vocative": 0.5,
             "translation_en": 1.0,
             "translation_en_plural": 0.5,
+            "translation_ru_plural": 0.5,
             "translation_ru": 1.0,
             "pronunciation": 1.0,
         }
         assert CrossAIVerificationService._FIELD_WEIGHTS == expected
 
     def test_total_weight_sum(self) -> None:
-        """Total weight = 21.5."""
-        assert sum(CrossAIVerificationService._FIELD_WEIGHTS.values()) == pytest.approx(21.5)
+        """Total weight = 22.0."""
+        assert sum(CrossAIVerificationService._FIELD_WEIGHTS.values()) == pytest.approx(22.0)
 
-    def test_field_count_is_fifteen(self) -> None:
-        """There are exactly 15 tracked fields."""
-        assert len(CrossAIVerificationService._FIELD_WEIGHTS) == 15
+    def test_field_count_is_sixteen(self) -> None:
+        """There are exactly 16 tracked fields."""
+        assert len(CrossAIVerificationService._FIELD_WEIGHTS) == 16
 
     @pytest.mark.asyncio
     async def test_comparisons_carry_correct_weights(
@@ -758,11 +760,11 @@ class TestCompare:
         assert result.error is None
 
     def test_partial_disagreement(self, service: CrossAIVerificationService) -> None:
-        """translation_en differs (weight 1.0) → agreement = 20.5/21.5."""
+        """translation_en differs (weight 1.0) → agreement = 21.0/22.0."""
         primary = _make_noun_data()
         secondary = _make_noun_data(translation_en="home")
         result = service.compare(primary, secondary)
-        assert result.overall_agreement == pytest.approx(20.5 / 21.5)
+        assert result.overall_agreement == pytest.approx(21.0 / 22.0)
 
     def test_returns_secondary_generation(self, service: CrossAIVerificationService) -> None:
         """compare() sets secondary_generation on result."""

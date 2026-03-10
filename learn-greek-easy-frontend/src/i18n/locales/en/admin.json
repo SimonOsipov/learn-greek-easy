@@ -991,7 +991,7 @@
     "cancel": "Cancel",
     "close": "Close",
     "successMocked": "Noun generation queued (mock). Full pipeline coming in NGEN-08-02.",
-    "normalizationResult": "Normalization Result",
+    "normalizationResult": "Result",
     "lemmaLabel": "Lemma",
     "genderLabel": "Gender",
     "genderUnknown": "Unknown",
@@ -1016,12 +1016,6 @@
     "alreadyInDeck": "This deck already has this word",
     "linkSuccess": "Word linked to deck successfully",
     "existsInDecks": "This word exists in {{count}} deck(s)",
-    "pipeline": {
-      "duplicates": "Duplicates",
-      "generate": "Generate",
-      "generated": "Generated",
-      "generating": "Generating..."
-    },
     "generation": {
       "title": "Generated Data",
       "translationEn": "Translation (EN)",
@@ -1057,9 +1051,6 @@
       "agreementScore": "Agreement: {{percentage}}%",
       "morphologySourceNote": "Comparison scope: translations & examples only (morphology from lexicon)",
       "crossAiUnavailable": "Cross-AI verification unavailable",
-      "verifying": "Verifying...",
-      "verified": "Verified",
-      "verify": "Verify",
       "notAvailable": "N/A",
       "noComparisons": "No comparisons available",
       "fieldStatus": {
@@ -1072,8 +1063,14 @@
         "field": "Field",
         "primary": "Primary",
         "secondary": "Secondary",
-        "match": "Match"
-      }
+        "match": "Match",
+        "mismatch": "Mismatch"
+      },
+      "headers": {
+        "local": "Local",
+        "crossAi": "Cross-AI"
+      },
+      "passingFieldsCount": "{{count}} fields passed"
     }
   },
   "wordEntry": {

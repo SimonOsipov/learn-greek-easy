@@ -89,12 +89,19 @@ test.describe('Flashcard Review Session', () => {
       const isRatingVisible = await goodButton.isVisible({ timeout: 3000 }).catch(() => false);
       if (isRatingVisible) {
         await goodButton.click();
-        // Wait for next card or session end
-        await page.waitForLoadState('networkidle');
+        // Wait for next card (front face reappears) or session end
+        await Promise.any([
+          page.getByText(/click to reveal/i).waitFor({ state: 'visible', timeout: 5000 }),
+          page.waitForURL(/\/summary|\/decks/, { timeout: 5000 }),
+        ]).catch(() => {});
       } else {
         // Try keyboard shortcut
         await page.keyboard.press('4');
-        await page.waitForLoadState('networkidle');
+        // Wait for next card (front face reappears) or session end
+        await Promise.any([
+          page.getByText(/click to reveal/i).waitFor({ state: 'visible', timeout: 5000 }),
+          page.waitForURL(/\/summary|\/decks/, { timeout: 5000 }),
+        ]).catch(() => {});
       }
     }
 
@@ -173,8 +180,11 @@ test.describe('Flashcard Review Session', () => {
     // Rate with keyboard (4 = Good)
     await page.keyboard.press('4');
 
-    // Wait for state change - either next card or session end
-    await page.waitForLoadState('networkidle');
+    // Wait for next card (front face reappears) or session end
+    await Promise.any([
+      page.getByText(/click to reveal/i).waitFor({ state: 'visible', timeout: 5000 }),
+      page.waitForURL(/\/summary|\/decks/, { timeout: 5000 }),
+    ]).catch(() => {});
 
     // Verify something changed (URL or content)
     const afterRatingUrl = page.url();
@@ -213,8 +223,8 @@ test.describe('Flashcard Review Session', () => {
 
     if (isConfirmVisible) {
       await confirmButton.click();
-      // Wait for navigation after confirming exit
-      await page.waitForLoadState('networkidle');
+      // Wait for navigation away from review page back to deck/decks/dashboard
+      await page.waitForURL(/\/decks\/[^/]+$|\/decks$|\/$/, { timeout: 10000 });
     }
 
     // Should have exited review (back to deck detail or decks page)
@@ -265,8 +275,11 @@ test.describe('Flashcard Review Session', () => {
 
       // Rate as Good (4)
       await page.keyboard.press('4');
-      // Wait for next card or session end
-      await page.waitForLoadState('networkidle');
+      // Wait for next card (front face reappears) or session end
+      await Promise.any([
+        page.getByText(/click to reveal/i).waitFor({ state: 'visible', timeout: 5000 }),
+        page.waitForURL(/\/summary|\/decks/, { timeout: 5000 }),
+      ]).catch(() => {});
     }
 
     // Return to dashboard (either via button or navigation)

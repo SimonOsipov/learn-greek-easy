@@ -809,8 +809,6 @@ describe('GenerateNounDialog', () => {
     await waitFor(() => {
       expect(screen.getByTestId('generation-section')).toBeInTheDocument();
     });
-    // Open the collapsible to access inner content
-    await user.click(screen.getByTestId('generation-section-trigger'));
     expect(screen.getByTestId('gen-translation-en')).toHaveTextContent('cat');
     expect(screen.getByTestId('gen-translation-ru')).toHaveTextContent('кошка');
     expect(screen.getByTestId('gen-pronunciation')).toHaveTextContent('/ˈɣa.ta/');
@@ -829,8 +827,6 @@ describe('GenerateNounDialog', () => {
     await waitFor(() => {
       expect(screen.getByTestId('generation-section')).toBeInTheDocument();
     });
-    // Open the collapsible to access inner content
-    await user.click(screen.getByTestId('generation-section-trigger'));
     await waitFor(() => {
       expect(screen.getByTestId('gen-example-1')).toBeInTheDocument();
     });
@@ -849,7 +845,6 @@ describe('GenerateNounDialog', () => {
     await waitFor(() => {
       expect(screen.getByTestId('generation-section')).toBeInTheDocument();
     });
-    await user.click(screen.getByTestId('generation-section-trigger'));
     expect(screen.getByTestId('gen-translation-en-plural')).toHaveTextContent('cats');
   });
 
@@ -864,12 +859,11 @@ describe('GenerateNounDialog', () => {
     await waitFor(() => {
       expect(screen.getByTestId('generation-section')).toBeInTheDocument();
     });
-    await user.click(screen.getByTestId('generation-section-trigger'));
     expect(screen.getByTestId('gen-translation-ru-plural')).toHaveTextContent('кошки');
   });
 
-  // 38. RU plural hidden when null
-  it('hides RU plural when null', async () => {
+  // 38. RU plural shows dash when null
+  it('shows dash for RU plural when null', async () => {
     const user = userEvent.setup();
     renderDialog();
 
@@ -879,12 +873,11 @@ describe('GenerateNounDialog', () => {
     await waitFor(() => {
       expect(screen.getByTestId('generation-section')).toBeInTheDocument();
     });
-    await user.click(screen.getByTestId('generation-section-trigger'));
-    expect(screen.queryByTestId('gen-translation-ru-plural')).not.toBeInTheDocument();
+    expect(screen.getByTestId('gen-translation-ru-plural')).toHaveTextContent('—');
   });
 
   // 39. Generation section is collapsible
-  it('generation section is collapsible and starts collapsed', async () => {
+  it('generation section is collapsible and starts expanded', async () => {
     const user = userEvent.setup();
     renderDialog();
 
@@ -895,18 +888,19 @@ describe('GenerateNounDialog', () => {
       expect(screen.getByTestId('generation-section')).toBeInTheDocument();
     });
 
-    // Starts closed
-    expect(screen.getByTestId('generation-section').getAttribute('data-state')).toBe('closed');
-    expect(screen.queryByTestId('gen-translation-en')).not.toBeInTheDocument();
-
-    // Click to open
-    await user.click(screen.getByTestId('generation-section-trigger'));
+    // Starts open (defaultOpen)
     expect(screen.getByTestId('generation-section').getAttribute('data-state')).toBe('open');
     expect(screen.getByTestId('gen-translation-en')).toBeInTheDocument();
 
     // Click to close
     await user.click(screen.getByTestId('generation-section-trigger'));
     expect(screen.getByTestId('generation-section').getAttribute('data-state')).toBe('closed');
+    expect(screen.queryByTestId('gen-translation-en')).not.toBeInTheDocument();
+
+    // Click to open again
+    await user.click(screen.getByTestId('generation-section-trigger'));
+    expect(screen.getByTestId('generation-section').getAttribute('data-state')).toBe('open');
+    expect(screen.getByTestId('gen-translation-en')).toBeInTheDocument();
   });
 
   // 40. Wide layout when verification present
@@ -990,23 +984,6 @@ describe('GenerateNounDialog', () => {
       expect(screen.getByTestId('generate-noun-result')).toBeInTheDocument();
     });
     expect(screen.queryByTestId('generation-section')).not.toBeInTheDocument();
-  });
-
-  // 39. Pipeline step 3 highlighted when generation present
-  it('highlights pipeline step 3 when generation data is present', async () => {
-    const user = userEvent.setup();
-    renderDialog();
-
-    await submitWord(user);
-    fireGenerationEvents();
-
-    await waitFor(() => {
-      expect(screen.getByTestId('pipeline-steps')).toBeInTheDocument();
-    });
-    const pipelineSteps = screen.getByTestId('pipeline-steps');
-    const step3 = pipelineSteps.querySelector('.font-medium');
-    expect(step3).toBeTruthy();
-    expect(step3?.textContent).toContain('Generated');
   });
 
   // 40. Start Over clears generation

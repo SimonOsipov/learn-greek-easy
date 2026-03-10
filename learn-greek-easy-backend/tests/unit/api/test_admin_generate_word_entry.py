@@ -104,6 +104,7 @@ def _mock_generated_data(lemma: str = "γάτα") -> GeneratedNounData:
         translation_en="cat",
         translation_en_plural="cats",
         translation_ru="кошка",
+        translation_ru_plural="кошки",
         pronunciation="/ˈɣa.ta/",
         grammar_data=GeneratedNounGrammar(
             gender="feminine",

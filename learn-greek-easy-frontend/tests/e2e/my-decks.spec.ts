@@ -697,11 +697,8 @@ test.describe('My Decks - Admin Flows', () => {
     const allDecksSection = page.locator('[data-testid="all-decks-title"]');
     await expect(allDecksSection).toBeVisible({ timeout: 10000 });
 
-    // Wait for decks to load in the All Decks list
-    // The admin panel lists all decks with pagination
-    await page.waitForLoadState('networkidle');
-
     // Find the search input within the All Decks section to scope our searches
+    // Waiting for this element confirms the deck list has rendered
     const searchInput = page.locator('[data-testid="deck-search-input"]');
     await expect(searchInput).toBeVisible({ timeout: 10000 });
 

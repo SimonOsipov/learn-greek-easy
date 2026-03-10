@@ -35,6 +35,7 @@ _VALID_NOUN_JSON = json.dumps(
         "translation_en": "house, home",
         "translation_en_plural": "houses",
         "translation_ru": "дом",
+        "translation_ru_plural": "дома",
         "pronunciation": "/spí·ti/",
         "grammar_data": {
             "gender": "neuter",
@@ -113,6 +114,7 @@ def _make_noun_data(
         part_of_speech="noun",
         translation_en="person",
         translation_ru="человек",
+        translation_ru_plural="люди",
         pronunciation="/ˈan.θro.pos/",
         grammar_data=GeneratedNounGrammar(
             gender=gender,  # type: ignore[arg-type]
