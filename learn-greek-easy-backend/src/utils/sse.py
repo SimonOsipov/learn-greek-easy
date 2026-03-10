@@ -132,20 +132,28 @@ async def sse_stream(
     # First message: set client reconnect interval to 3 seconds
     yield "retry: 3000\n\n"
 
+    _SENTINEL = object()
     try:
+        task: asyncio.Task | None = None
         while True:
-            try:
-                event = await asyncio.wait_for(
-                    anext(event_generator),
-                    timeout=heartbeat_interval,
-                )
-                yield event
-            except StopAsyncIteration:
-                break
-            except TimeoutError:
-                # No event within heartbeat window — keep connection alive
+            if task is None:
+                task = asyncio.ensure_future(anext(event_generator, _SENTINEL))
+            done, _ = await asyncio.wait({task}, timeout=heartbeat_interval)
+            if done:
+                result = task.result()
+                task = None
+                if result is _SENTINEL:
+                    break
+                yield result
+            else:
                 yield ": heartbeat\n\n"
     finally:
+        if task is not None and not task.done():
+            task.cancel()
+            try:
+                await task
+            except (asyncio.CancelledError, StopAsyncIteration):
+                pass
         if on_cleanup is not None:
             if asyncio.iscoroutinefunction(on_cleanup):
                 await on_cleanup()

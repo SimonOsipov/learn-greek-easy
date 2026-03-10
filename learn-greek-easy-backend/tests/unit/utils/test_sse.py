@@ -156,19 +156,51 @@ class TestSSEStream:
 
     @pytest.mark.asyncio
     async def test_heartbeat_on_inactivity(self) -> None:
-        # asyncio.wait_for cancels timed-out coroutines, so the generator
-        # terminates after the first heartbeat when it has no pending events.
-        # We verify that the heartbeat comment is emitted during the idle period.
-        async def _empty_gen() -> AsyncGenerator[str, None]:
-            # Never yields — causes sse_stream to emit a heartbeat then stop
-            # on the next timeout (StopAsyncIteration is raised by cancelled gen)
-            await asyncio.sleep(1)
-            yield "unreachable"
+        async def _slow_gen() -> AsyncGenerator[str, None]:
+            await asyncio.sleep(0.2)
+            yield "delayed_event"
 
-        items = [item async for item in sse_stream(_empty_gen(), heartbeat_interval=0.05)]
-        # Should have: retry directive, then at least one heartbeat comment
+        items = [item async for item in sse_stream(_slow_gen(), heartbeat_interval=0.05)]
         assert items[0] == "retry: 3000\n\n"
-        assert ": heartbeat\n\n" in items
+        heartbeats = [i for i in items if i == ": heartbeat\n\n"]
+        assert len(heartbeats) >= 1
+        assert "delayed_event" in items
+
+    @pytest.mark.asyncio
+    async def test_long_running_generator_survives_heartbeats(self) -> None:
+        async def _multi_slow() -> AsyncGenerator[str, None]:
+            await asyncio.sleep(0.15)
+            yield "event_1"
+            await asyncio.sleep(0.15)
+            yield "event_2"
+
+        items = [item async for item in sse_stream(_multi_slow(), heartbeat_interval=0.05)]
+        assert items[0] == "retry: 3000\n\n"
+        events = [i for i in items if not i.startswith(("retry:", ":"))]
+        assert events == ["event_1", "event_2"]
+        heartbeats = [i for i in items if i == ": heartbeat\n\n"]
+        assert len(heartbeats) >= 2
+
+    @pytest.mark.asyncio
+    async def test_cleanup_called_when_generator_cancelled(self) -> None:
+        cleanup = AsyncMock()
+
+        async def _infinite() -> AsyncGenerator[str, None]:
+            while True:
+                await asyncio.sleep(10)
+                yield "never"
+
+        stream = sse_stream(_infinite(), heartbeat_interval=0.05, on_cleanup=cleanup)
+        items = []
+        async for item in stream:
+            items.append(item)
+            if len(items) >= 3:
+                break
+
+        # Explicitly close the async generator to trigger cleanup; Python does
+        # not automatically await aclose() when breaking out of an async for.
+        await stream.aclose()
+        cleanup.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_cleanup_callback_on_exhaustion_async(self) -> None:
