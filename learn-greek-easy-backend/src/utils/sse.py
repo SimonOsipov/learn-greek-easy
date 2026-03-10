@@ -25,11 +25,17 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from typing import Union
 
 from pydantic import BaseModel
 from starlette.responses import StreamingResponse
+
+# In test/CI mode (TESTING=true), use a very long heartbeat interval so that
+# waitForLoadState('networkidle') in Playwright E2E tests can settle without SSE
+# heartbeat comments keeping the network active.
+_DEFAULT_HEARTBEAT: float = 3600.0 if os.getenv("TESTING", "").lower() == "true" else 30.0
 
 # ============================================================
 # Error code constants
@@ -110,7 +116,7 @@ def format_sse_error(code: str, message: str) -> str:
 
 async def sse_stream(
     event_generator: AsyncGenerator[str, None],
-    heartbeat_interval: float = 30,
+    heartbeat_interval: float = _DEFAULT_HEARTBEAT,
     on_cleanup: Callable[[], None] | Callable[[], Awaitable[None]] | None = None,
 ) -> AsyncGenerator[str, None]:
     """Wrap an async generator with SSE infrastructure.

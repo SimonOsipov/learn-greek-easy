@@ -3838,7 +3838,7 @@ class SeedService:
             user_settings = UserSettings(
                 user_id=user.id,
                 daily_goal=20,
-                email_notifications=False,
+                email_notifications=True,
             )
             self.db.add(user_settings)
             await self.db.flush()
@@ -4532,7 +4532,7 @@ class SeedService:
                 settings = UserSettings(
                     user_id=user.id,
                     daily_goal=20,
-                    email_notifications=False,
+                    email_notifications=True,
                 )
                 self.db.add(settings)
                 await self.db.flush()
@@ -4696,7 +4696,7 @@ class SeedService:
                 settings = UserSettings(
                     user_id=user.id,
                     daily_goal=20,
-                    email_notifications=False,
+                    email_notifications=True,
                 )
                 self.db.add(settings)
                 await self.db.flush()
@@ -4807,7 +4807,7 @@ class SeedService:
                 settings = UserSettings(
                     user_id=user.id,
                     daily_goal=20,
-                    email_notifications=False,
+                    email_notifications=True,
                 )
                 self.db.add(settings)
                 await self.db.flush()
