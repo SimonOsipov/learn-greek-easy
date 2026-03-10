@@ -916,11 +916,7 @@ describe('GenerateNounDialog', () => {
     });
 
     const dialog = screen.getByTestId('generate-noun-dialog');
-    expect(dialog.className).toContain('sm:max-w-[1100px]');
-
-    const contentArea = screen.getByTestId('generate-noun-content-area');
-    expect(contentArea.className).toContain('grid');
-    expect(contentArea.className).toContain('lg:grid-cols-2');
+    expect(dialog.className).toContain('sm:max-w-[95vw]');
   });
 
   // 41. Narrow layout before verification

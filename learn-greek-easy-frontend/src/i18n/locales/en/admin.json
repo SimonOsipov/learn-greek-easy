@@ -1064,7 +1064,8 @@
         "primary": "Primary",
         "secondary": "Secondary",
         "match": "Match",
-        "mismatch": "Mismatch"
+        "mismatch": "Mismatch",
+        "decision": "Decision"
       },
       "headers": {
         "local": "Local",

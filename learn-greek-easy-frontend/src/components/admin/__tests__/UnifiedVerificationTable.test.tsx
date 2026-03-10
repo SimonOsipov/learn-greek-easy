@@ -119,7 +119,8 @@ describe('UnifiedVerificationTable', () => {
     renderComponent(null, crossAI);
 
     expect(screen.getByTestId('unified-row-translation_en')).toBeInTheDocument();
-    expect(screen.getByText(/mismatch/i)).toBeInTheDocument();
+    expect(screen.getByText('house')).toBeInTheDocument();
+    expect(screen.getByText('home')).toBeInTheDocument();
   });
 
   it('shows em-dash in Local column when local is null', () => {

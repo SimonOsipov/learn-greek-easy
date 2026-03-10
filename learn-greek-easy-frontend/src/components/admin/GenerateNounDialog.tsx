@@ -377,7 +377,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent
-          className={cn('sm:max-w-[650px]', displayVerification && 'sm:max-w-[1100px]')}
+          className={cn('sm:max-w-[650px]', displayVerification && 'sm:max-w-[95vw]')}
           data-testid="generate-noun-dialog"
         >
           <DialogHeader>
@@ -386,12 +386,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
 
           {hasResult && displayPrimary ? (
             <>
-              <div
-                data-testid="generate-noun-content-area"
-                className={cn(
-                  displayVerification ? 'grid grid-cols-1 gap-6 lg:grid-cols-2' : 'space-y-4'
-                )}
-              >
+              <div data-testid="generate-noun-content-area" className="space-y-4">
                 {/* LEFT COLUMN - always shown */}
                 <div className="space-y-4">
                   <div data-testid="generate-noun-result" className="space-y-4">
@@ -709,22 +704,20 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                   )}
                 </div>
 
-                {/* RIGHT COLUMN - only when verification present */}
+                {/* Verification section - shown below when verification present */}
                 {displayVerification && (
-                  <div className="space-y-3">
-                    <div data-testid="verification-section" className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-medium">
-                          {t('generateNoun.verification.combinedTier')}
-                        </h3>
-                        <VerificationTierBadge tier={displayVerification.combined_tier} />
-                      </div>
-                      <UnifiedVerificationTable
-                        local={displayVerification.local}
-                        crossAI={displayVerification.cross_ai}
-                        morphologySource={displayVerification.morphology_source}
-                      />
+                  <div data-testid="verification-section" className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-medium">
+                        {t('generateNoun.verification.combinedTier')}
+                      </h3>
+                      <VerificationTierBadge tier={displayVerification.combined_tier} />
                     </div>
+                    <UnifiedVerificationTable
+                      local={displayVerification.local}
+                      crossAI={displayVerification.cross_ai}
+                      morphologySource={displayVerification.morphology_source}
+                    />
                   </div>
                 )}
               </div>
