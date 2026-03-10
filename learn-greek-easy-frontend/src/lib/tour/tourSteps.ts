@@ -4,16 +4,7 @@ import type { DriveStep } from 'driver.js';
 import type { TFunction } from 'i18next';
 import type { NavigateFunction } from 'react-router-dom';
 
-interface DeckInfo {
-  id: string;
-  title: string;
-}
-
-export function buildTourSteps(
-  navigate: NavigateFunction,
-  t: TFunction,
-  essentialDeck?: DeckInfo | null
-): DriveStep[] {
+export function buildTourSteps(navigate: NavigateFunction, t: TFunction): DriveStep[] {
   const steps: DriveStep[] = [];
 
   // Step 1: Navigation Bar (dashboard page)
@@ -24,6 +15,10 @@ export function buildTourSteps(
       description: t('tour.steps.navigation.description'),
       side: 'bottom',
       align: 'center',
+    },
+    onHighlightStarted: async () => {
+      navigate('/dashboard');
+      await waitForElement('[data-testid="metrics-section"]', 3000);
     },
   });
 
@@ -36,67 +31,99 @@ export function buildTourSteps(
       side: 'bottom',
       align: 'start',
     },
-  });
-
-  // Step 3: Vocabulary Decks (navigates to /decks)
-  steps.push({
-    element: findDeckCardByTitle('Essential Greek Nouns') ?? '[data-testid="deck-list"]',
-    popover: {
-      title: t('tour.steps.decks.title'),
-      description: t('tour.steps.decks.description'),
-      side: 'right',
-      align: 'start',
-    },
     onHighlightStarted: async () => {
-      navigate('/decks');
-      await waitForElement('[data-testid="deck-card"]', 3000);
+      navigate('/dashboard');
+      await waitForElement('[data-testid="metrics-section"]', 3000);
     },
   });
 
-  // Step 4: Inside a Deck (conditional — only if Essential Greek Nouns found)
-  if (essentialDeck) {
-    steps.push({
-      element: '[data-testid="word-card"]',
-      popover: {
-        title: t('tour.steps.card.title'),
-        description: t('tour.steps.card.description'),
-        side: 'top',
-        align: 'start',
-      },
-      onHighlightStarted: async () => {
-        navigate(`/decks/${essentialDeck.id}`);
-        await waitForElement('[data-testid="word-card"]', 5000);
-      },
-    });
-  }
-
-  // Step 5: Culture Exam (navigates to /practice/culture-exam)
   steps.push({
-    element: '[data-testid="start-exam-button"]',
+    element: '[data-testid="news-section"]',
     popover: {
-      title: t('tour.steps.culture.title'),
-      description: t('tour.steps.culture.description'),
+      title: t('tour.steps.news_section.title'),
+      description: t('tour.steps.news_section.description'),
       side: 'top',
       align: 'start',
     },
-    onHighlightStarted: async () => {
-      navigate('/practice/culture-exam');
-      await waitForElement('[data-testid="start-exam-button"]', 3000);
+  });
+
+  steps.push({
+    element: '[data-testid="news-country-filters"]',
+    popover: {
+      title: t('tour.steps.news_country.title'),
+      description: t('tour.steps.news_country.description'),
+      side: 'bottom',
+      align: 'start',
     },
   });
 
-  // Step 6: News Feed (navigates to /news)
   steps.push({
-    element: '[data-testid="news-filters"]',
+    element: '[data-testid="news-difficulty-selector"]',
     popover: {
-      title: t('tour.steps.news.title'),
-      description: t('tour.steps.news.description'),
+      title: t('tour.steps.news_difficulty.title'),
+      description: t('tour.steps.news_difficulty.description'),
+      side: 'bottom',
+      align: 'start',
+    },
+  });
+
+  steps.push({
+    element: '[data-testid^="news-card-"]',
+    popover: {
+      title: t('tour.steps.news_card.title'),
+      description: t('tour.steps.news_card.description'),
+      side: 'top',
+      align: 'start',
+    },
+  });
+
+  steps.push({
+    element: '[data-testid="news-section-see-all"]',
+    popover: {
+      title: t('tour.steps.news_all.title'),
+      description: t('tour.steps.news_all.description'),
+      side: 'bottom',
+      align: 'start',
+    },
+  });
+
+  steps.push({
+    element: '[data-testid="decks-dropdown-trigger"]',
+    popover: {
+      title: t('tour.steps.decks_dropdown.title'),
+      description: t('tour.steps.decks_dropdown.description'),
+      side: 'bottom',
+      align: 'start',
+    },
+  });
+
+  steps.push({
+    element: '[data-testid="deck-filters"]',
+    popover: {
+      title: t('tour.steps.deck_filters.title'),
+      description: t('tour.steps.deck_filters.description'),
       side: 'bottom',
       align: 'start',
     },
     onHighlightStarted: async () => {
-      navigate('/news');
-      await waitForElement('[data-testid="news-filters"]', 3000);
+      navigate('/decks');
+      await waitForElement('[data-testid="deck-filters"]', 5000);
+    },
+  });
+
+  steps.push({
+    element: () =>
+      findDeckCardByTitle('Essential Greek Nouns') ??
+      document.querySelector('[data-testid="deck-card"]')!,
+    popover: {
+      title: t('tour.steps.vocab_deck.title'),
+      description: t('tour.steps.vocab_deck.description'),
+      side: 'top',
+      align: 'start',
+    },
+    onHighlightStarted: async () => {
+      navigate('/decks');
+      await waitForElement('[data-testid="deck-card"]', 5000);
     },
   });
 

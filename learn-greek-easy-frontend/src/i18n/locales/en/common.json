@@ -246,21 +246,37 @@
         "title": "Track Your Progress",
         "description": "These metrics show your learning at a glance — cards due today, your current streak, mastered words, and total study time."
       },
-      "decks": {
-        "title": "Vocabulary Decks",
-        "description": "Browse vocabulary decks organized by topic and level. This one covers essential Greek nouns — a great place to start!"
+      "news_section": {
+        "title": "Cyprus News To Learn And Practice",
+        "description": "Real news from Cyprus and Greece, simplified for language learners. Read, listen, and build vocabulary with current events."
       },
-      "card": {
-        "title": "Learn with Cards",
-        "description": "Each card tests you on a Greek word with its translation, grammar details, and audio pronunciation."
+      "news_country": {
+        "title": "Filter by Country",
+        "description": "Filter news by country — focus on Cyprus, Greece, or world news depending on your interests."
       },
-      "culture": {
-        "title": "Culture Exam Practice",
-        "description": "Practice real questions from the Cypriot citizenship exam — history, geography, and traditions."
+      "news_difficulty": {
+        "title": "Choose Your Level",
+        "description": "Switch between A2 (simpler) and B2 (advanced) versions of the same article. Start with A2 and progress to B2 as you improve."
       },
-      "news": {
-        "title": "Greek News Feed",
-        "description": "Read real Greek news with audio. Choose your difficulty — A2 for beginners or B2 for intermediate."
+      "news_card": {
+        "title": "Read Real Greek News",
+        "description": "Click any article to read it on the original news site — practice reading real Greek in context. Each card shows a summary to help you decide what to read."
+      },
+      "news_all": {
+        "title": "Explore All News",
+        "description": "See all available articles here, or find them anytime under Practice → News in the top menu."
+      },
+      "decks_dropdown": {
+        "title": "Browse Your Decks",
+        "description": "Open the Decks menu to see your options. Public Decks contains community-created vocabulary sets ready to use."
+      },
+      "deck_filters": {
+        "title": "Find the Right Deck",
+        "description": "Use filters to search by name, category, or level. Find exactly the deck that matches your current learning goals."
+      },
+      "vocab_deck": {
+        "title": "Start with Vocabulary",
+        "description": "This vocabulary deck covers essential Greek nouns — a great place to start building your foundation. Click any deck to begin learning."
       }
     },
     "dismiss": {

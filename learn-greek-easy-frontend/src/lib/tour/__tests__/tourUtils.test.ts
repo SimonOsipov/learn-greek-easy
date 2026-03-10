@@ -89,28 +89,11 @@ describe('tourUtils', () => {
   });
 
   describe('buildTourSteps', () => {
-    it('returns 6 steps when essentialDeck is provided', () => {
-      const mockNavigate = vi.fn();
-      const mockT = vi.fn((key: string) => key);
-      const steps = buildTourSteps(mockNavigate, mockT as any, {
-        id: 'deck-1',
-        title: 'Essential Greek Nouns',
-      });
-      expect(steps).toHaveLength(6);
-    });
-
-    it('returns 5 steps when essentialDeck is null', () => {
-      const mockNavigate = vi.fn();
-      const mockT = vi.fn((key: string) => key);
-      const steps = buildTourSteps(mockNavigate, mockT as any, null);
-      expect(steps).toHaveLength(5);
-    });
-
-    it('returns 5 steps when essentialDeck is omitted', () => {
+    it('returns 10 steps', () => {
       const mockNavigate = vi.fn();
       const mockT = vi.fn((key: string) => key);
       const steps = buildTourSteps(mockNavigate, mockT as any);
-      expect(steps).toHaveLength(5);
+      expect(steps).toHaveLength(10);
     });
 
     it('step 1 uses tour.steps.navigation keys', () => {
@@ -132,26 +115,71 @@ describe('tourUtils', () => {
       expect(steps[1].element).toBe('[data-testid="metrics-section"]');
     });
 
-    it('step 3 uses tour.steps.decks keys', () => {
+    it('step 3 targets news-section with tour.steps.news_section keys', () => {
       const mockNavigate = vi.fn();
       const mockT = vi.fn((key: string) => key);
       const steps = buildTourSteps(mockNavigate, mockT as any);
-      expect(mockT).toHaveBeenCalledWith('tour.steps.decks.title');
-      expect(mockT).toHaveBeenCalledWith('tour.steps.decks.description');
+      expect(mockT).toHaveBeenCalledWith('tour.steps.news_section.title');
+      expect(mockT).toHaveBeenCalledWith('tour.steps.news_section.description');
+      expect(steps[2].element).toBe('[data-testid="news-section"]');
     });
 
     it('all steps have title and description in popover', () => {
       const mockNavigate = vi.fn();
       const mockT = vi.fn((key: string) => key);
-      const steps = buildTourSteps(mockNavigate, mockT as any, {
-        id: 'deck-1',
-        title: 'Essential Greek Nouns',
-      });
+      const steps = buildTourSteps(mockNavigate, mockT as any);
       for (const step of steps) {
         expect(step.popover).toBeDefined();
         expect(step.popover?.title).toBeDefined();
         expect(step.popover?.description).toBeDefined();
       }
+    });
+
+    it('steps 1 and 2 have onHighlightStarted callbacks', () => {
+      const mockNavigate = vi.fn();
+      const mockT = vi.fn((key: string) => key);
+      const steps = buildTourSteps(mockNavigate, mockT as any);
+      expect(typeof steps[0].onHighlightStarted).toBe('function');
+      expect(typeof steps[1].onHighlightStarted).toBe('function');
+    });
+
+    it('steps 3-7 do not have onHighlightStarted (stay on dashboard)', () => {
+      const mockNavigate = vi.fn();
+      const mockT = vi.fn((key: string) => key);
+      const steps = buildTourSteps(mockNavigate, mockT as any);
+      for (let i = 2; i <= 6; i++) {
+        expect(steps[i].onHighlightStarted).toBeUndefined();
+      }
+    });
+
+    it('step 8 targets decks-dropdown-trigger with no onHighlightStarted', () => {
+      const mockNavigate = vi.fn();
+      const mockT = vi.fn((key: string) => key);
+      const steps = buildTourSteps(mockNavigate, mockT as any);
+      expect(steps[7].element).toBe('[data-testid="decks-dropdown-trigger"]');
+      expect(mockT).toHaveBeenCalledWith('tour.steps.decks_dropdown.title');
+      expect(mockT).toHaveBeenCalledWith('tour.steps.decks_dropdown.description');
+      expect(steps[7].onHighlightStarted).toBeUndefined();
+    });
+
+    it('step 9 targets deck-filters with onHighlightStarted navigating to /decks', () => {
+      const mockNavigate = vi.fn();
+      const mockT = vi.fn((key: string) => key);
+      const steps = buildTourSteps(mockNavigate, mockT as any);
+      expect(steps[8].element).toBe('[data-testid="deck-filters"]');
+      expect(mockT).toHaveBeenCalledWith('tour.steps.deck_filters.title');
+      expect(mockT).toHaveBeenCalledWith('tour.steps.deck_filters.description');
+      expect(typeof steps[8].onHighlightStarted).toBe('function');
+    });
+
+    it('step 10 targets deck card via element function with onHighlightStarted', () => {
+      const mockNavigate = vi.fn();
+      const mockT = vi.fn((key: string) => key);
+      const steps = buildTourSteps(mockNavigate, mockT as any);
+      expect(typeof steps[9].element).toBe('function');
+      expect(mockT).toHaveBeenCalledWith('tour.steps.vocab_deck.title');
+      expect(mockT).toHaveBeenCalledWith('tour.steps.vocab_deck.description');
+      expect(typeof steps[9].onHighlightStarted).toBe('function');
     });
   });
 });

@@ -21,9 +21,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useLayoutContext } from '@/contexts/LayoutContext';
 import { useAuth } from '@/hooks/useAuth';
-import { startTour, buildTourSteps } from '@/lib/tour';
+import { startTour, buildTourSteps, waitForElement } from '@/lib/tour';
 import { cn } from '@/lib/utils';
-import { useDeckStore } from '@/stores/deckStore';
 
 import { PageContainer } from './PageContainer';
 
@@ -55,10 +54,11 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
     if (tourRunning) return;
     setTourRunning(true);
     try {
-      const decks = useDeckStore.getState().decks;
-      const essentialDeck = decks.find((d) => d.title.includes('Essential Greek Nouns'));
-      const deckInfo = essentialDeck ? { id: essentialDeck.id, title: essentialDeck.title } : null;
-      await startTour(buildTourSteps(navigate, t, deckInfo), {
+      if (location.pathname !== '/dashboard') {
+        navigate('/dashboard');
+        await waitForElement('[data-testid="metrics-section"]', 3000);
+      }
+      await startTour(buildTourSteps(navigate, t), {
         trigger: 'manual',
         t,
         onAnalyticsEvent: (event, props) => {
@@ -77,7 +77,7 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
     } finally {
       setTourRunning(false);
     }
-  }, [tourRunning, navigate, t, updateProfile]);
+  }, [tourRunning, location.pathname, navigate, t, updateProfile]);
 
   // Generate initials from user name (e.g., "John Doe" -> "JD")
   const initials =
@@ -176,7 +176,11 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="start">
                       {item.children.map((child) => (
-                        <DropdownMenuItem key={child.path} asChild>
+                        <DropdownMenuItem
+                          key={child.path}
+                          asChild
+                          data-testid={`nav-item-${child.path.replace(/^\//, '').replace(/\//g, '-')}`}
+                        >
                           <Link
                             to={child.path}
                             className={cn(
