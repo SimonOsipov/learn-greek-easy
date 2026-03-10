@@ -1076,7 +1076,12 @@
         "primary": "Основной",
         "secondary": "Вторичный",
         "match": "Совпадение"
-      }
+      },
+      "headers": {
+        "local": "Локальная",
+        "crossAi": "Кросс-AI"
+      },
+      "passingFieldsCount": "{{count}} полей пройдено"
     }
   },
   "wordEntry": {

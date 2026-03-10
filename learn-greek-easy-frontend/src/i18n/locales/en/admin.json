@@ -1064,7 +1064,12 @@
         "primary": "Primary",
         "secondary": "Secondary",
         "match": "Match"
-      }
+      },
+      "headers": {
+        "local": "Local",
+        "crossAi": "Cross-AI"
+      },
+      "passingFieldsCount": "{{count}} fields passed"
     }
   },
   "wordEntry": {
