@@ -593,6 +593,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
           {hasResult && displayPrimary ? (
             <>
               <div
+                data-testid="generate-noun-content-area"
                 className={cn(
                   displayVerification ? 'grid grid-cols-1 gap-6 lg:grid-cols-2' : 'space-y-4'
                 )}

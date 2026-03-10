@@ -152,6 +152,7 @@ const mockGenerationData = {
   translation_en: 'cat',
   translation_en_plural: 'cats',
   translation_ru: 'кошка',
+  translation_ru_plural: 'кошки',
   pronunciation: '/ˈɣa.ta/',
   grammar_data: {
     gender: 'feminine' as const,
@@ -197,6 +198,18 @@ const mockTranslationLookup = {
   },
 };
 
+const mockVerificationData = {
+  combined_tier: 'auto_approve' as const,
+  morphology_source: 'spacy' as const,
+  local: {
+    tier: 'auto_approve' as const,
+    fail_count: 0,
+    warn_count: 0,
+    fields: [],
+  },
+  cross_ai: null,
+};
+
 /** Fire full pipeline events including generation */
 const fireGenerationEvents = (overrides?: {
   generation?: typeof mockGenerationData | null;
@@ -220,6 +233,17 @@ const fireGenerationEvents = (overrides?: {
         },
       });
     }
+    capturedOnEvent?.({ type: 'pipeline_complete', data: {} });
+  });
+};
+
+/** Fire full pipeline events including generation and verification */
+const fireFullPipelineEvents = () => {
+  fireNormalizationEvents();
+  act(() => {
+    capturedOnEvent?.({ type: 'generation_started', data: {} });
+    capturedOnEvent?.({ type: 'generation_complete', data: mockGenerationData });
+    capturedOnEvent?.({ type: 'verification_complete', data: mockVerificationData });
     capturedOnEvent?.({ type: 'pipeline_complete', data: {} });
   });
 };
@@ -367,7 +391,7 @@ describe('GenerateNounDialog', () => {
     });
   });
 
-  // 13. POS displayed
+  // 13. POS displayed (title-cased: NOUN → Noun)
   it('shows POS in result', async () => {
     const user = userEvent.setup();
     renderDialog();
@@ -814,7 +838,119 @@ describe('GenerateNounDialog', () => {
     expect(screen.getByTestId('gen-example-2')).toHaveTextContent('Οι γάτες παίζουν.');
   });
 
-  // 36. Displays TDICT section
+  // 36. EN plural rendered as separate field
+  it('displays EN plural as a separate field', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    await submitWord(user);
+    fireGenerationEvents();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('generation-section')).toBeInTheDocument();
+    });
+    await user.click(screen.getByTestId('generation-section-trigger'));
+    expect(screen.getByTestId('gen-translation-en-plural')).toHaveTextContent('cats');
+  });
+
+  // 37. RU plural rendered when present
+  it('displays RU plural when present', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    await submitWord(user);
+    fireGenerationEvents();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('generation-section')).toBeInTheDocument();
+    });
+    await user.click(screen.getByTestId('generation-section-trigger'));
+    expect(screen.getByTestId('gen-translation-ru-plural')).toHaveTextContent('кошки');
+  });
+
+  // 38. RU plural hidden when null
+  it('hides RU plural when null', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    await submitWord(user);
+    fireGenerationEvents({ generation: { ...mockGenerationData, translation_ru_plural: null } });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('generation-section')).toBeInTheDocument();
+    });
+    await user.click(screen.getByTestId('generation-section-trigger'));
+    expect(screen.queryByTestId('gen-translation-ru-plural')).not.toBeInTheDocument();
+  });
+
+  // 39. Generation section is collapsible
+  it('generation section is collapsible and starts collapsed', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    await submitWord(user);
+    fireGenerationEvents();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('generation-section')).toBeInTheDocument();
+    });
+
+    // Starts closed
+    expect(screen.getByTestId('generation-section').getAttribute('data-state')).toBe('closed');
+    expect(screen.queryByTestId('gen-translation-en')).not.toBeInTheDocument();
+
+    // Click to open
+    await user.click(screen.getByTestId('generation-section-trigger'));
+    expect(screen.getByTestId('generation-section').getAttribute('data-state')).toBe('open');
+    expect(screen.getByTestId('gen-translation-en')).toBeInTheDocument();
+
+    // Click to close
+    await user.click(screen.getByTestId('generation-section-trigger'));
+    expect(screen.getByTestId('generation-section').getAttribute('data-state')).toBe('closed');
+  });
+
+  // 40. Wide layout when verification present
+  it('expands dialog to wide layout when verification is present', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    await submitWord(user);
+    fireFullPipelineEvents();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('verification-section')).toBeInTheDocument();
+    });
+
+    const dialog = screen.getByTestId('generate-noun-dialog');
+    expect(dialog.className).toContain('sm:max-w-[1100px]');
+
+    const contentArea = screen.getByTestId('generate-noun-content-area');
+    expect(contentArea.className).toContain('grid');
+    expect(contentArea.className).toContain('lg:grid-cols-2');
+  });
+
+  // 41. Narrow layout before verification
+  it('keeps narrow layout before verification completes', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    await submitWord(user);
+    fireGenerationEvents();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('generation-section')).toBeInTheDocument();
+    });
+
+    const dialog = screen.getByTestId('generate-noun-dialog');
+    expect(dialog.className).not.toContain('sm:max-w-[1100px]');
+    expect(dialog.className).toContain('sm:max-w-[650px]');
+
+    const contentArea = screen.getByTestId('generate-noun-content-area');
+    expect(contentArea.className).not.toContain('grid-cols-2');
+    expect(contentArea.className).toContain('space-y-4');
+  });
+
+  // 42. Displays TDICT section (renumbered)
   it('displays TDICT section with dictionary badge', async () => {
     const user = userEvent.setup();
     renderDialog();
