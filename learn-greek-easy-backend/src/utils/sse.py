@@ -32,10 +32,16 @@ from typing import Union
 from pydantic import BaseModel
 from starlette.responses import StreamingResponse
 
-# In test/CI mode (TESTING=true), use a very long heartbeat interval so that
-# waitForLoadState('networkidle') in Playwright E2E tests can settle without SSE
-# heartbeat comments keeping the network active.
-_DEFAULT_HEARTBEAT: float = 3600.0 if os.getenv("TESTING", "").lower() == "true" else 30.0
+
+def _default_heartbeat_interval() -> float:
+    """Return heartbeat interval based on current environment.
+
+    In test/CI mode (TESTING=true), use a very long interval so that
+    waitForLoadState('networkidle') in Playwright E2E tests can settle
+    without SSE heartbeat comments keeping the network active.
+    """
+    return 3600.0 if os.getenv("TESTING", "").lower() == "true" else 30.0
+
 
 # ============================================================
 # Error code constants
@@ -116,7 +122,7 @@ def format_sse_error(code: str, message: str) -> str:
 
 async def sse_stream(
     event_generator: AsyncGenerator[str, None],
-    heartbeat_interval: float = _DEFAULT_HEARTBEAT,
+    heartbeat_interval: float | None = None,
     on_cleanup: Callable[[], None] | Callable[[], Awaitable[None]] | None = None,
 ) -> AsyncGenerator[str, None]:
     """Wrap an async generator with SSE infrastructure.
@@ -128,13 +134,16 @@ async def sse_stream(
     Args:
         event_generator: The inner async generator producing SSE event strings.
         heartbeat_interval: Seconds of inactivity before yielding a heartbeat
-                            comment. Defaults to 30.
+                            comment. Defaults to 30 (or 3600 in TESTING mode).
         on_cleanup: Optional callback (sync or async) called after the stream
                     ends, whether by exhaustion, cancellation, or error.
 
     Yields:
         SSE-formatted strings: the retry directive, events, and heartbeats.
     """
+    if heartbeat_interval is None:
+        heartbeat_interval = _default_heartbeat_interval()
+
     # First message: set client reconnect interval to 3 seconds
     yield "retry: 3000\n\n"
 

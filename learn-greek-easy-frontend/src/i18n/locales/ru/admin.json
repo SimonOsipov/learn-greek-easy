@@ -1075,13 +1075,17 @@
         "field": "Поле",
         "primary": "Основной",
         "secondary": "Вторичный",
-        "match": "Совпадение"
+        "match": "Совпадение",
+        "mismatch": "Несоответствие"
       },
       "headers": {
         "local": "Локальная",
         "crossAi": "Кросс-AI"
       },
-      "passingFieldsCount": "{{count}} полей пройдено"
+      "passingFieldsCount_one": "{{count}} поле пройдено",
+      "passingFieldsCount_few": "{{count}} поля пройдено",
+      "passingFieldsCount_many": "{{count}} полей пройдено",
+      "passingFieldsCount_other": "{{count}} полей пройдено"
     }
   },
   "wordEntry": {

@@ -554,7 +554,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                       <Collapsible data-testid="tdict-section" defaultOpen>
                         <CollapsibleTrigger className="flex w-full items-center justify-between rounded-md border p-3 text-sm font-medium hover:bg-muted/50">
                           <span>{t('generateNoun.tdict.title')}</span>
-                          <ChevronDown className="h-4 w-4" />
+                          <ChevronDown className="h-4 w-4 transition-transform [[data-state=open]_&]:rotate-180" />
                         </CollapsibleTrigger>
                         <CollapsibleContent className="mt-2 space-y-2 px-1">
                           {displayTranslationLookup.en &&
@@ -608,7 +608,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                         className="flex w-full items-center justify-between rounded-md border p-3 text-sm font-medium hover:bg-muted/50"
                       >
                         <span>{t('generateNoun.generation.title')}</span>
-                        <ChevronDown className="h-4 w-4" />
+                        <ChevronDown className="h-4 w-4 transition-transform [[data-state=open]_&]:rotate-180" />
                       </CollapsibleTrigger>
                       <CollapsibleContent className="mt-2 space-y-3 px-1">
                         <div className="grid grid-cols-2 gap-3 text-sm">

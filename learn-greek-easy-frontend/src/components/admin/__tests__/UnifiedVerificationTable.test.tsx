@@ -119,23 +119,12 @@ describe('UnifiedVerificationTable', () => {
     renderComponent(null, crossAI);
 
     expect(screen.getByTestId('unified-row-translation_en')).toBeInTheDocument();
-    expect(screen.getByText(/mismatch/)).toBeInTheDocument();
+    expect(screen.getByText(/mismatch/i)).toBeInTheDocument();
   });
 
   it('shows em-dash in Local column when local is null', () => {
-    const crossAI = makeCrossAI([makeComparison('lemma', true)]);
-    renderComponent(null, crossAI);
-
-    // lemma agrees=true so it's in passing group
-    // cross-AI match is visible, local should show em-dash
-    // (toggle needed to see passing rows)
-    // Let's use a fail comparison so it shows immediately
     const crossAIFail = makeCrossAI([makeComparison('lemma', false, 'a', 'b')]);
-    render(
-      <I18nextProvider i18n={i18n}>
-        <UnifiedVerificationTable local={null} crossAI={crossAIFail} />
-      </I18nextProvider>
-    );
+    renderComponent(null, crossAIFail);
     expect(screen.getByTestId('unified-row-lemma')).toBeInTheDocument();
   });
 

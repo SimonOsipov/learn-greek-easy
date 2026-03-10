@@ -1063,7 +1063,8 @@
         "field": "Field",
         "primary": "Primary",
         "secondary": "Secondary",
-        "match": "Match"
+        "match": "Match",
+        "mismatch": "Mismatch"
       },
       "headers": {
         "local": "Local",

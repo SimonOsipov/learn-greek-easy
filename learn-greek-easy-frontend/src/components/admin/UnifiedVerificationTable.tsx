@@ -49,14 +49,22 @@ function buildRows(
   crossAI: CrossAIVerificationResult | null
 ): UnifiedRow[] {
   const paths = new Set<string>();
-  (local?.fields ?? []).forEach((f) => paths.add(f.field_path));
-  (crossAI?.comparisons ?? []).forEach((c) => paths.add(c.field_path));
+  (local?.fields ?? []).forEach((f) => {
+    paths.add(f.field_path);
+  });
+  (crossAI?.comparisons ?? []).forEach((c) => {
+    paths.add(c.field_path);
+  });
 
   const localMap = new Map<string, FieldVerificationResult>();
-  (local?.fields ?? []).forEach((f) => localMap.set(f.field_path, f));
+  (local?.fields ?? []).forEach((f) => {
+    localMap.set(f.field_path, f);
+  });
 
   const crossAIMap = new Map<string, FieldComparisonResult>();
-  (crossAI?.comparisons ?? []).forEach((c) => crossAIMap.set(c.field_path, c));
+  (crossAI?.comparisons ?? []).forEach((c) => {
+    crossAIMap.set(c.field_path, c);
+  });
 
   return Array.from(paths).map((path) => ({
     field_path: path,
@@ -74,9 +82,11 @@ function isAttention(row: UnifiedRow): boolean {
 function LocalCell({
   field,
   hasLocalData,
+  t,
 }: {
   field: FieldVerificationResult | null;
   hasLocalData: boolean;
+  t: (key: string) => string;
 }) {
   if (!hasLocalData) return <span className="text-muted-foreground">—</span>;
   if (!field) return <span className="text-muted-foreground">—</span>;
@@ -89,7 +99,7 @@ function LocalCell({
     <span className={cn('flex items-start gap-1 text-xs', className)}>
       <Icon className="mt-0.5 h-3 w-3 shrink-0" />
       <span>
-        {field.status}
+        {t(`generateNoun.verification.fieldStatus.${field.status}`)}
         {firstMsg && <span className="ml-1 text-muted-foreground">{firstMsg}</span>}
       </span>
     </span>
@@ -99,9 +109,11 @@ function LocalCell({
 function CrossAICell({
   comparison,
   hasData,
+  t,
 }: {
   comparison: FieldComparisonResult | null;
   hasData: boolean;
+  t: (key: string, options?: Record<string, unknown>) => string;
 }) {
   if (!hasData) return <span className="text-muted-foreground">—</span>;
   if (!comparison) return <span className="text-muted-foreground">—</span>;
@@ -110,7 +122,7 @@ function CrossAICell({
     return (
       <span className="flex items-center gap-1 text-xs text-green-500">
         <Check className="h-3 w-3" />
-        <span>match</span>
+        <span>{t('generateNoun.verification.comparisonHeaders.match')}</span>
       </span>
     );
   }
@@ -119,7 +131,8 @@ function CrossAICell({
     <span className="flex items-start gap-1 text-xs text-red-500">
       <XCircle className="mt-0.5 h-3 w-3 shrink-0" />
       <span>
-        mismatch: <span className="font-mono">"{comparison.primary_value}"</span>
+        {t('generateNoun.verification.comparisonHeaders.mismatch')}:{' '}
+        <span className="font-mono">"{comparison.primary_value}"</span>
         {' vs '}
         <span className="font-mono">"{comparison.secondary_value}"</span>
       </span>
@@ -131,13 +144,28 @@ function RowsTable({
   rows,
   hasLocalData,
   hasCrossAIData,
+  showHeader = false,
+  t,
 }: {
   rows: UnifiedRow[];
   hasLocalData: boolean;
   hasCrossAIData: boolean;
+  showHeader?: boolean;
+  t: (key: string, options?: Record<string, unknown>) => string;
 }) {
   return (
     <table className="w-full text-sm">
+      {showHeader && (
+        <thead>
+          <tr className="border-b text-xs font-medium">
+            <th className="pb-1 pr-2 text-left">
+              {t('generateNoun.verification.comparisonHeaders.field')}
+            </th>
+            <th className="pb-1 pr-2 text-left">{t('generateNoun.verification.headers.local')}</th>
+            <th className="pb-1 text-left">{t('generateNoun.verification.headers.crossAi')}</th>
+          </tr>
+        </thead>
+      )}
       <tbody>
         {rows.map((row) => (
           <tr
@@ -147,10 +175,10 @@ function RowsTable({
           >
             <td className="py-1 pr-2 font-mono text-xs">{row.field_path}</td>
             <td className="py-1 pr-2">
-              <LocalCell field={row.local} hasLocalData={hasLocalData} />
+              <LocalCell field={row.local} hasLocalData={hasLocalData} t={t} />
             </td>
             <td className="py-1">
-              <CrossAICell comparison={row.crossAI} hasData={hasCrossAIData} />
+              <CrossAICell comparison={row.crossAI} hasData={hasCrossAIData} t={t} />
             </td>
           </tr>
         ))}
@@ -214,29 +242,14 @@ export function UnifiedVerificationTable({
         </div>
       )}
 
-      {/* Table header */}
-      {allRows.length > 0 && (
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b text-xs font-medium">
-              <th className="pb-1 pr-2 text-left">
-                {t('generateNoun.verification.comparisonHeaders.field')}
-              </th>
-              <th className="pb-1 pr-2 text-left">
-                {t('generateNoun.verification.headers.local')}
-              </th>
-              <th className="pb-1 text-left">{t('generateNoun.verification.headers.crossAi')}</th>
-            </tr>
-          </thead>
-        </table>
-      )}
-
       {/* Attention rows */}
       {attentionRows.length > 0 && (
         <RowsTable
           rows={attentionRows}
           hasLocalData={hasLocalData}
           hasCrossAIData={hasCrossAIData}
+          showHeader
+          t={t}
         />
       )}
 
@@ -259,6 +272,8 @@ export function UnifiedVerificationTable({
               rows={passingRows}
               hasLocalData={hasLocalData}
               hasCrossAIData={hasCrossAIData}
+              showHeader={attentionRows.length === 0}
+              t={t}
             />
           </CollapsibleContent>
         </Collapsible>
