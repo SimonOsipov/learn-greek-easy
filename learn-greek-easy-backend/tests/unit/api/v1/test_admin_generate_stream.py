@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
@@ -60,7 +60,6 @@ class TestGenerateStreamAuth:
         response = await generate_word_entry_stream(
             request=request,
             sse_auth=sse_auth,
-            db=AsyncMock(),
         )
         events = await _collect_stream(response)
         error_events = [e for e in events if e.get("event") == "error"]
@@ -80,7 +79,6 @@ class TestGenerateStreamAuth:
         response = await generate_word_entry_stream(
             request=request,
             sse_auth=sse_auth,
-            db=AsyncMock(),
         )
         events = await _collect_stream(response)
         error_events = [e for e in events if e.get("event") == "error"]
@@ -102,7 +100,6 @@ class TestGenerateStreamFromStage:
         response = await generate_word_entry_stream(
             request=request,
             sse_auth=sse_auth,
-            db=AsyncMock(),
             from_stage="generation",
         )
         events = await _collect_stream(response)
@@ -121,7 +118,6 @@ class TestGenerateStreamFromStage:
         response = await generate_word_entry_stream(
             request=request,
             sse_auth=sse_auth,
-            db=AsyncMock(),
             from_stage="normalization",  # invalid value
         )
         events = await _collect_stream(response)
@@ -167,7 +163,6 @@ class TestGenerateStreamConnectedEvent:
             response = await generate_word_entry_stream(
                 request=request,
                 sse_auth=sse_auth,
-                db=AsyncMock(),
             )
 
         events = await _collect_stream(response)

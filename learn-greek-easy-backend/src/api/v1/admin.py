@@ -2681,7 +2681,7 @@ async def _run_generation_stage(
 async def _run_verification_stage(
     generated_data: GeneratedNounData,
     normalized_lemma: NormalizedLemma,
-    lexicon_svc: LexiconService,
+    lexicon_svc: LexiconService | None,
     lemma: str,
     secondary_data: GeneratedNounData | None = None,
 ) -> VerificationSummary:
@@ -2690,7 +2690,13 @@ async def _run_verification_stage(
     cross_svc = get_cross_ai_verification_service()
 
     # morphology_source: check if lexicon has declension data
-    lexicon_declensions = await lexicon_svc.get_declensions(lemma, pos="NOUN")
+    if lexicon_svc is not None:
+        lexicon_declensions = await lexicon_svc.get_declensions(lemma, pos="NOUN")
+    else:
+        factory = get_session_factory()
+        async with factory.begin() as _db:
+            _lex_svc = LexiconService(_db)
+            lexicon_declensions = await _lex_svc.get_declensions(lemma, pos="NOUN")
     morphology_source: Literal["lexicon", "llm"] = "lexicon" if lexicon_declensions else "llm"
 
     # Run local verification (sync service, wrapped in executor)
@@ -2936,7 +2942,6 @@ async def generate_word_entry(
 async def _sse_generation_and_verification(
     normalized_lemma: NormalizedLemma,
     translation_lookup: TranslationLookupStageResult | None,
-    lexicon_svc: LexiconService,
     lemma: str,
 ) -> AsyncGenerator[str, None]:
     """Emit SSE events for stages 3 (generation) and 4 (verification)."""
@@ -2964,7 +2969,7 @@ async def _sse_generation_and_verification(
         verification_summary = await _run_verification_stage(
             generated_data=generated_data,
             normalized_lemma=normalized_lemma,
-            lexicon_svc=lexicon_svc,
+            lexicon_svc=None,
             lemma=lemma,
             secondary_data=secondary_data,
         )
@@ -3024,7 +3029,6 @@ def _build_normalization_sse_event(
 
 async def _generate_word_entry_sse_pipeline(  # noqa: C901
     request: GenerateWordEntryRequest,
-    db: AsyncSession,
     from_stage: str | None = None,
 ) -> AsyncGenerator[str, None]:
     """Async generator that emits SSE events for each noun generation pipeline stage."""
@@ -3045,8 +3049,11 @@ async def _generate_word_entry_sse_pipeline(  # noqa: C901
             return
 
         # Validate deck (active + V2)
-        result = await db.execute(select(Deck).where(Deck.id == request.deck_id))
-        deck = result.scalar_one_or_none()
+        factory = get_session_factory()
+        async with factory.begin() as _db:
+            result = await _db.execute(select(Deck).where(Deck.id == request.deck_id))
+            deck = result.scalar_one_or_none()
+
         if deck is None or not deck.is_active:
             yield format_sse_event(
                 {
@@ -3068,7 +3075,6 @@ async def _generate_word_entry_sse_pipeline(  # noqa: C901
             return
 
         # Build NormalizedLemma from pre-resolved fields in the request
-        lexicon_svc = LexiconService(db)
         normalized_lemma = NormalizedLemma(
             input_word=request.word,
             lemma=request.lemma,
@@ -3080,15 +3086,25 @@ async def _generate_word_entry_sse_pipeline(  # noqa: C901
         async for event in _sse_generation_and_verification(
             normalized_lemma=normalized_lemma,
             translation_lookup=request.translation_lookup,
-            lexicon_svc=lexicon_svc,
             lemma=request.lemma,
         ):
             yield event
         return
 
-    # Validate deck (active + V2)
-    result = await db.execute(select(Deck).where(Deck.id == request.deck_id))
-    deck = result.scalar_one_or_none()
+    # Validate deck (active + V2) and lexicon lookup — share one session
+    _, bare_word = detect_article(request.word)
+    factory = get_session_factory()
+    async with factory.begin() as _db:
+        result = await _db.execute(select(Deck).where(Deck.id == request.deck_id))
+        deck = result.scalar_one_or_none()
+        lexicon_entry = None
+        if deck is not None and deck.is_active and deck.card_system == CardSystemVersion.V2:
+            lexicon_svc_inner = LexiconService(_db)
+            try:
+                lexicon_entry = await lexicon_svc_inner.lookup(bare_word, pos="NOUN")
+            except Exception:
+                lexicon_entry = None
+
     if deck is None or not deck.is_active:
         yield format_sse_event(
             {"error": f"Active deck with ID '{request.deck_id}' not found", "stage": "validation"},
@@ -3105,14 +3121,6 @@ async def _generate_word_entry_sse_pipeline(  # noqa: C901
             event="pipeline_failed",
         )
         return
-
-    # Stage 0.5: Lexicon lookup
-    _, bare_word = detect_article(request.word)
-    lexicon_svc = LexiconService(db)
-    try:
-        lexicon_entry = await lexicon_svc.lookup(bare_word, pos="NOUN")
-    except Exception:
-        lexicon_entry = None
 
     # Stage 1: Normalization
     svc = get_lemma_normalization_service()
@@ -3132,12 +3140,25 @@ async def _generate_word_entry_sse_pipeline(  # noqa: C901
     primary = smart_result.primary
 
     # Stage 2: Duplicate check
+    dup_result = None
+    dup_exc = None
     try:
-        dup_svc = DuplicateDetectionService(db)
-        dup_result = await dup_svc.check(
-            lemma=primary.morphology.lemma,
-            part_of_speech=PartOfSpeech.NOUN,
+        async with factory.begin() as _db:
+            dup_svc = DuplicateDetectionService(_db)
+            dup_result = await dup_svc.check(
+                lemma=primary.morphology.lemma,
+                part_of_speech=PartOfSpeech.NOUN,
+            )
+    except Exception as exc:
+        dup_exc = exc
+        logger.warning("Duplicate check failed: %s", exc)
+
+    if dup_exc is not None:
+        yield format_sse_event(
+            {"error": str(dup_exc), "stage": "duplicate_check"},
+            event="duplicates_checked",
         )
+    elif dup_result is not None:
         yield format_sse_event(dup_result, event="duplicates_checked")
         if dup_result.is_duplicate:
             yield format_sse_event(
@@ -3153,21 +3174,16 @@ async def _generate_word_entry_sse_pipeline(  # noqa: C901
                 event="pipeline_stopped",
             )
             return
-    except Exception as exc:
-        logger.warning("Duplicate check failed: %s", exc)
-        yield format_sse_event(
-            {"error": str(exc), "stage": "duplicate_check"},
-            event="duplicates_checked",
-        )
 
     # Stage 2.5: Translation lookup (non-fatal)
     translation_lookup: TranslationLookupStageResult | None = None
     try:
-        tl_svc = TranslationLookupService(db)
-        tl_bilingual = await tl_svc.lookup_bilingual(
-            lemma=primary.morphology.lemma,
-            pos="NOUN",
-        )
+        async with factory.begin() as _db:
+            tl_svc = TranslationLookupService(_db)
+            tl_bilingual = await tl_svc.lookup_bilingual(
+                lemma=primary.morphology.lemma,
+                pos="NOUN",
+            )
         translation_lookup = _build_translation_lookup_stage_result(tl_bilingual)
         yield format_sse_event(
             {"data": translation_lookup.model_dump()}, event="translations_found"
@@ -3188,7 +3204,6 @@ async def _generate_word_entry_sse_pipeline(  # noqa: C901
     async for event in _sse_generation_and_verification(
         normalized_lemma=normalized_lemma,
         translation_lookup=translation_lookup,
-        lexicon_svc=lexicon_svc,
         lemma=primary.morphology.lemma,
     ):
         yield event
@@ -3202,7 +3217,6 @@ async def _generate_word_entry_sse_pipeline(  # noqa: C901
 async def generate_word_entry_stream(
     request: GenerateWordEntryRequest,
     sse_auth: SSEAuthResult = Depends(get_sse_auth),
-    db: AsyncSession = Depends(get_db),
     from_stage: str | None = Query(
         None, description="Pipeline stage to start from. Only 'generation' is supported."
     ),
@@ -3229,7 +3243,7 @@ async def generate_word_entry_stream(
 
     return create_sse_response(
         sse_stream(
-            _generate_word_entry_sse_pipeline(request, db, from_stage=from_stage),
+            _generate_word_entry_sse_pipeline(request, from_stage=from_stage),
             heartbeat_interval=15,
         )
     )
