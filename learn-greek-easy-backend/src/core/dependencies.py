@@ -408,7 +408,7 @@ async def get_sse_auth(
 
     # 4. Get or create user
     factory = get_session_factory()
-    async with factory() as db:
+    async with factory.begin() as db:
         try:
             user = await get_or_create_user(db, claims)
         except ConflictException:
@@ -416,7 +416,6 @@ async def get_sse_auth(
                 error_code="auth_failed",
                 error_message="Authentication failed due to account conflict.",
             )
-        await db.commit()
 
     # 5. Check if user is active
     if not user.is_active:

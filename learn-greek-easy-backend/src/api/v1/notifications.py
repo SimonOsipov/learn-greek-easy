@@ -144,7 +144,7 @@ async def notification_stream(
     queue = await notification_event_bus.subscribe(user.id)
 
     factory = get_session_factory()
-    async with factory() as db:
+    async with factory.begin() as db:
         notification_service = NotificationService(db)
         initial_count = await notification_service.get_unread_count(user.id)
 

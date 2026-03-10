@@ -1337,7 +1337,7 @@ async def regenerate_a2_news_audio(
 async def _fetch_news_item_for_sse(news_item_id: UUID) -> NewsItem | None:
     """Load a NewsItem using a short-lived session (DB-free generator pattern)."""
     factory = get_session_factory()
-    async with factory() as db:
+    async with factory.begin() as db:
         stmt = select(NewsItem).where(NewsItem.id == news_item_id)
         result = await db.execute(stmt)
         return result.scalar_one_or_none()
@@ -2376,7 +2376,7 @@ def _sse_single_error(code: str, message: str) -> StreamingResponse:
 async def _fetch_word_entry_for_sse(word_entry_id: UUID) -> WordEntry | None:
     """Load a WordEntry using a short-lived session (DB-free generator pattern)."""
     factory = get_session_factory()
-    async with factory() as db:
+    async with factory.begin() as db:
         stmt = select(WordEntry).where(WordEntry.id == word_entry_id)
         result = await db.execute(stmt)
         return result.scalar_one_or_none()
