@@ -448,7 +448,13 @@ class LocalVerificationService:
         logger.debug("Schema pronunciation_format: %s", pronunciation_status)
 
     def _add_skipped_fields(self, fields_by_path: dict[str, FieldVerificationResult]) -> None:
-        for path in ("translation_en", "translation_ru", "translation_en_plural", "examples"):
+        for path in (
+            "translation_en",
+            "translation_ru",
+            "translation_en_plural",
+            "translation_ru_plural",
+            "examples",
+        ):
             fields_by_path[path] = FieldVerificationResult(
                 field_path=path, status="skipped", checks=[]
             )

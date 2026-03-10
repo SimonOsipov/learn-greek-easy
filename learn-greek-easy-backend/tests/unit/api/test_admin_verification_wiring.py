@@ -53,6 +53,7 @@ def _make_noun_data() -> GeneratedNounData:
         translation_en="house",
         translation_en_plural="houses",
         translation_ru="дом",
+        translation_ru_plural="дома",
         pronunciation="/spí.ti/",
         grammar_data=GeneratedNounGrammar(
             gender="neuter",

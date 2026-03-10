@@ -24,7 +24,7 @@ Rules:
 4. Declension forms: include the definite article in nominative, genitive, and accusative. Vocative has NO article.
 5. Include declension_group: masculine_os, masculine_as, masculine_is, feminine_a, feminine_i, feminine_os, neuter_o, neuter_i, neuter_ma, neuter_os.
 6. Include exactly 2 example sentences with Greek, English, and Russian translations. Use id values 1 and 2. Examples should use the noun naturally in context.
-7. Include English and Russian translations of the lemma. Include translation_en_plural for the English plural form.
+7. Include English and Russian translations of the lemma. Include translation_en_plural for the English plural form. Include translation_ru_plural for the Russian plural form.
 8. Pronunciation must be in IPA format.
 9. For indeclinable nouns (e.g., foreign loanwords like σουπερμάρκετ), all case forms are identical (the bare word), with no article change except the standard article for that gender/case.
 
@@ -35,6 +35,7 @@ Example 1 (masculine, masculine_os):
   "translation_en": "human, person",
   "translation_en_plural": "humans, people",
   "translation_ru": "человек",
+  "translation_ru_plural": "люди",
   "pronunciation": "/ˈan.θro.pos/",
   "grammar_data": {
     "gender": "masculine",
@@ -67,6 +68,7 @@ Example 2 (feminine, feminine_a):
   "translation_en": "sea",
   "translation_en_plural": "seas",
   "translation_ru": "море",
+  "translation_ru_plural": "моря",
   "pronunciation": "/ˈθa.la.sa/",
   "grammar_data": {
     "gender": "feminine",
@@ -99,6 +101,7 @@ Example 3 (neuter, neuter_o):
   "translation_en": "book",
   "translation_en_plural": "books",
   "translation_ru": "книга",
+  "translation_ru_plural": "книги",
   "pronunciation": "/viˈvli.o/",
   "grammar_data": {
     "gender": "neuter",

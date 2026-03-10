@@ -862,8 +862,8 @@ describe('GenerateNounDialog', () => {
     expect(screen.getByTestId('gen-translation-ru-plural')).toHaveTextContent('кошки');
   });
 
-  // 38. RU plural hidden when null
-  it('hides RU plural when null', async () => {
+  // 38. RU plural shows dash when null
+  it('shows dash for RU plural when null', async () => {
     const user = userEvent.setup();
     renderDialog();
 
@@ -873,7 +873,7 @@ describe('GenerateNounDialog', () => {
     await waitFor(() => {
       expect(screen.getByTestId('generation-section')).toBeInTheDocument();
     });
-    expect(screen.queryByTestId('gen-translation-ru-plural')).not.toBeInTheDocument();
+    expect(screen.getByTestId('gen-translation-ru-plural')).toHaveTextContent('—');
   });
 
   // 39. Generation section is collapsible

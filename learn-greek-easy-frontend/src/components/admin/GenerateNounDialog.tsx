@@ -813,16 +813,14 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                               {displayGeneration.translation_en_plural ?? '—'}
                             </p>
                           </div>
-                          {displayGeneration.translation_ru_plural != null && (
-                            <div>
-                              <span className="font-medium">
-                                {t('generateNoun.generation.translationRuPlural')}
-                              </span>
-                              <p data-testid="gen-translation-ru-plural">
-                                {displayGeneration.translation_ru_plural}
-                              </p>
-                            </div>
-                          )}
+                          <div>
+                            <span className="font-medium">
+                              {t('generateNoun.generation.translationRuPlural')}
+                            </span>
+                            <p data-testid="gen-translation-ru-plural">
+                              {displayGeneration.translation_ru_plural ?? '—'}
+                            </p>
+                          </div>
                           <div>
                             <span className="font-medium">
                               {t('generateNoun.generation.pronunciation')}

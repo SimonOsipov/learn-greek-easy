@@ -39,6 +39,7 @@ class CrossAIVerificationService:
         "cases.plural.vocative": 0.5,
         "translation_en": 1.0,
         "translation_en_plural": 0.5,
+        "translation_ru_plural": 0.5,
         "translation_ru": 1.0,
         "pronunciation": 1.0,
     }
@@ -113,7 +114,7 @@ class CrossAIVerificationService:
             primary_val = self._get_field_value(primary, field_path)
             secondary_val = self._get_field_value(secondary, field_path)
 
-            if field_path == "translation_en_plural":
+            if field_path in ("translation_en_plural", "translation_ru_plural"):
                 agrees = primary_val == secondary_val
             elif field_path.startswith("cases."):
                 primary_bare = _strip_article(primary_val) if primary_val is not None else None
@@ -163,6 +164,7 @@ class CrossAIVerificationService:
             "cases.plural.vocative": lambda d: d.grammar_data.cases.plural.vocative,
             "translation_en": lambda d: d.translation_en,
             "translation_en_plural": lambda d: d.translation_en_plural,
+            "translation_ru_plural": lambda d: d.translation_ru_plural,
             "translation_ru": lambda d: d.translation_ru,
             "pronunciation": lambda d: d.pronunciation,
         }
