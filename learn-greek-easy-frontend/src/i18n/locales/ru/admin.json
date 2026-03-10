@@ -1037,7 +1037,9 @@
     "generation": {
       "title": "Сгенерированные данные",
       "translationEn": "Перевод (EN)",
+      "translationEnPlural": "Перевод мн.ч. (EN)",
       "translationRu": "Перевод (RU)",
+      "translationRuPlural": "Перевод мн.ч. (RU)",
       "pronunciation": "Произношение",
       "declensionGroup": "Группа склонения",
       "examples": "Примеры предложений",

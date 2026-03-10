@@ -298,6 +298,8 @@ describe('GenerateNounDialog SSE integration', () => {
     await waitFor(() => {
       expect(screen.getByTestId('generation-section')).toBeInTheDocument();
     });
+    // Open the collapsible to access inner content
+    await user.click(screen.getByTestId('generation-section-trigger'));
     expect(screen.getByTestId('declension-table')).toBeInTheDocument();
     expect(screen.getByTestId('gen-translation-en')).toHaveTextContent('cat');
   });

@@ -1025,7 +1025,9 @@
     "generation": {
       "title": "Generated Data",
       "translationEn": "Translation (EN)",
+      "translationEnPlural": "Translation Plural (EN)",
       "translationRu": "Translation (RU)",
+      "translationRuPlural": "Translation Plural (RU)",
       "pronunciation": "Pronunciation",
       "declensionGroup": "Declension Group",
       "examples": "Example Sentences",

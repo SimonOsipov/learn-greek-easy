@@ -376,7 +376,7 @@ describe('GenerateNounDialog', () => {
     fireNormalizationEvents();
 
     await waitFor(() => {
-      expect(screen.getByTestId('result-pos')).toHaveTextContent('NOUN');
+      expect(screen.getByTestId('result-pos')).toHaveTextContent('Noun');
     });
   });
 
@@ -785,6 +785,8 @@ describe('GenerateNounDialog', () => {
     await waitFor(() => {
       expect(screen.getByTestId('generation-section')).toBeInTheDocument();
     });
+    // Open the collapsible to access inner content
+    await user.click(screen.getByTestId('generation-section-trigger'));
     expect(screen.getByTestId('gen-translation-en')).toHaveTextContent('cat');
     expect(screen.getByTestId('gen-translation-ru')).toHaveTextContent('кошка');
     expect(screen.getByTestId('gen-pronunciation')).toHaveTextContent('/ˈɣa.ta/');
@@ -800,6 +802,11 @@ describe('GenerateNounDialog', () => {
     await submitWord(user);
     fireGenerationEvents();
 
+    await waitFor(() => {
+      expect(screen.getByTestId('generation-section')).toBeInTheDocument();
+    });
+    // Open the collapsible to access inner content
+    await user.click(screen.getByTestId('generation-section-trigger'));
     await waitFor(() => {
       expect(screen.getByTestId('gen-example-1')).toBeInTheDocument();
     });

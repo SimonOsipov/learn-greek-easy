@@ -623,20 +623,23 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                     <div>
                       <span className="text-muted-foreground">{t('generateNoun.posLabel')}</span>
                       <p data-testid="result-pos" className="font-medium">
-                        {displayPrimary.pos}
+                        {displayPrimary.pos.charAt(0).toUpperCase() +
+                          displayPrimary.pos.slice(1).toLowerCase()}
                       </p>
                     </div>
                     <div>
                       <span className="text-muted-foreground">
                         {t('generateNoun.confidenceLabel')}
                       </span>
-                      <Badge
-                        data-testid="result-confidence-badge"
-                        className={CONFIDENCE_BADGE_CLASSES[displayPrimary.confidence_tier]}
-                      >
-                        {displayPrimary.confidence.toFixed(2)} —{' '}
-                        {t(`generateNoun.confidence.${displayPrimary.confidence_tier}`)}
-                      </Badge>
+                      <p>
+                        <Badge
+                          data-testid="result-confidence-badge"
+                          className={CONFIDENCE_BADGE_CLASSES[displayPrimary.confidence_tier]}
+                        >
+                          {displayPrimary.confidence.toFixed(2)} —{' '}
+                          {t(`generateNoun.confidence.${displayPrimary.confidence_tier}`)}
+                        </Badge>
+                      </p>
                     </div>
                   </div>
                 )}
@@ -660,7 +663,10 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                         >
                           <div className="flex items-center gap-3">
                             <span className="font-bold">{suggestion.lemma}</span>
-                            <span className="text-muted-foreground">{suggestion.pos}</span>
+                            <span className="text-muted-foreground">
+                              {suggestion.pos.charAt(0).toUpperCase() +
+                                suggestion.pos.slice(1).toLowerCase()}
+                            </span>
                             <Badge className={CONFIDENCE_BADGE_CLASSES[suggestion.confidence_tier]}>
                               {suggestion.confidence.toFixed(2)}{' '}
                               {t(`generateNoun.confidence.${suggestion.confidence_tier}`)}
@@ -788,77 +794,97 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
               )}
 
               {displayGeneration && (
-                <div data-testid="generation-section" className="space-y-3">
-                  <h3 className="text-sm font-medium">{t('generateNoun.generation.title')}</h3>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">
-                        {t('generateNoun.generation.translationEn')}
-                      </span>
-                      <p data-testid="gen-translation-en" className="font-medium">
-                        {displayGeneration.translation_en}
-                        {displayGeneration.translation_en_plural && (
+                <Collapsible data-testid="generation-section">
+                  <CollapsibleTrigger
+                    data-testid="generation-section-trigger"
+                    className="flex w-full items-center justify-between rounded-md border p-3 text-sm font-medium hover:bg-muted/50"
+                  >
+                    <span>{t('generateNoun.generation.title')}</span>
+                    <ChevronDown className="h-4 w-4" />
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-2 space-y-3 px-1">
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">
+                          {t('generateNoun.generation.translationEn')}
+                        </span>
+                        <p data-testid="gen-translation-en" className="font-medium">
+                          {displayGeneration.translation_en}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">
+                          {t('generateNoun.generation.translationRu')}
+                        </span>
+                        <p data-testid="gen-translation-ru" className="font-medium">
+                          {displayGeneration.translation_ru}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">
+                          {t('generateNoun.generation.translationEnPlural')}
+                        </span>
+                        <p data-testid="gen-translation-en-plural" className="font-medium">
+                          {displayGeneration.translation_en_plural ?? '—'}
+                        </p>
+                      </div>
+                      {displayGeneration.translation_ru_plural != null && (
+                        <div>
                           <span className="text-muted-foreground">
-                            {' '}
-                            (pl. {displayGeneration.translation_en_plural})
+                            {t('generateNoun.generation.translationRuPlural')}
                           </span>
-                        )}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">
-                        {t('generateNoun.generation.translationRu')}
-                      </span>
-                      <p data-testid="gen-translation-ru" className="font-medium">
-                        {displayGeneration.translation_ru}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">
-                        {t('generateNoun.generation.pronunciation')}
-                      </span>
-                      <p data-testid="gen-pronunciation" className="font-medium">
-                        {displayGeneration.pronunciation}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">
-                        {t('generateNoun.generation.declensionGroup')}
-                      </span>
-                      <p>
-                        <Badge data-testid="gen-declension-group" variant="outline">
-                          {displayGeneration.grammar_data.declension_group}
-                        </Badge>
-                      </p>
-                    </div>
-                  </div>
-                  <div>
-                    <h4 className="mb-1 text-sm font-medium text-muted-foreground">
-                      {t('generateNoun.generation.declensionTable')}
-                    </h4>
-                    <DeclensionTable cases={displayGeneration.grammar_data.cases} />
-                  </div>
-                  {displayGeneration.examples.length > 0 && (
-                    <div>
-                      <h4 className="mb-1 text-sm font-medium text-muted-foreground">
-                        {t('generateNoun.generation.examples')}
-                      </h4>
-                      <div className="space-y-2">
-                        {displayGeneration.examples.map((ex) => (
-                          <div
-                            key={ex.id}
-                            data-testid={`gen-example-${ex.id}`}
-                            className="rounded-md border p-2 text-sm"
-                          >
-                            <p className="font-medium">{ex.greek}</p>
-                            <p className="text-muted-foreground">{ex.english}</p>
-                            <p className="text-muted-foreground">{ex.russian}</p>
-                          </div>
-                        ))}
+                          <p data-testid="gen-translation-ru-plural" className="font-medium">
+                            {displayGeneration.translation_ru_plural}
+                          </p>
+                        </div>
+                      )}
+                      <div>
+                        <span className="text-muted-foreground">
+                          {t('generateNoun.generation.pronunciation')}
+                        </span>
+                        <p data-testid="gen-pronunciation" className="font-medium">
+                          {displayGeneration.pronunciation}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">
+                          {t('generateNoun.generation.declensionGroup')}
+                        </span>
+                        <p>
+                          <Badge data-testid="gen-declension-group" variant="outline">
+                            {displayGeneration.grammar_data.declension_group}
+                          </Badge>
+                        </p>
                       </div>
                     </div>
-                  )}
-                </div>
+                    <div>
+                      <h4 className="mb-1 text-sm font-medium text-muted-foreground">
+                        {t('generateNoun.generation.declensionTable')}
+                      </h4>
+                      <DeclensionTable cases={displayGeneration.grammar_data.cases} />
+                    </div>
+                    {displayGeneration.examples.length > 0 && (
+                      <div>
+                        <h4 className="mb-1 text-sm font-medium text-muted-foreground">
+                          {t('generateNoun.generation.examples')}
+                        </h4>
+                        <div className="space-y-2">
+                          {displayGeneration.examples.map((ex) => (
+                            <div
+                              key={ex.id}
+                              data-testid={`gen-example-${ex.id}`}
+                              className="rounded-md border p-2 text-sm"
+                            >
+                              <p className="font-medium">{ex.greek}</p>
+                              <p className="text-muted-foreground">{ex.english}</p>
+                              <p className="text-muted-foreground">{ex.russian}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </CollapsibleContent>
+                </Collapsible>
               )}
 
               {verificationLoading && (
