@@ -119,7 +119,8 @@ describe('UnifiedVerificationTable', () => {
     renderComponent(null, crossAI);
 
     expect(screen.getByTestId('unified-row-translation_en')).toBeInTheDocument();
-    expect(screen.getByText(/mismatch/i)).toBeInTheDocument();
+    expect(screen.getByText('house')).toBeInTheDocument();
+    expect(screen.getByText('home')).toBeInTheDocument();
   });
 
   it('shows em-dash in Local column when local is null', () => {
@@ -183,5 +184,59 @@ describe('UnifiedVerificationTable', () => {
     // skipped is not in attention group
     await user.click(screen.getByTestId('unified-passing-toggle'));
     expect(screen.getByTestId('unified-row-translation_en')).toBeInTheDocument();
+  });
+
+  it('displays human-readable field label instead of raw path', () => {
+    const local = makeLocalResult([makeLocalField('cases.singular.nominative', 'fail')]);
+    renderComponent(local, null);
+    expect(screen.getByText('Singular Nominative')).toBeInTheDocument();
+  });
+
+  it('shows severity dot with correct color for fail row', () => {
+    const local = makeLocalResult([makeLocalField('lemma', 'fail', 'bad value')]);
+    renderComponent(local, null);
+    const row = screen.getByTestId('unified-row-lemma');
+    expect(row.querySelector('.bg-red-500')).toBeTruthy();
+  });
+
+  it('shows severity dot with correct color for warn row', () => {
+    const local = makeLocalResult([makeLocalField('lemma', 'warn', 'weak match')]);
+    renderComponent(local, null);
+    const row = screen.getByTestId('unified-row-lemma');
+    expect(row.querySelector('.bg-yellow-500')).toBeTruthy();
+  });
+
+  it('shows primary and secondary values in separate columns', () => {
+    const crossAI = makeCrossAI([makeComparison('translation_en', false, 'cat', 'κατ')]);
+    renderComponent(null, crossAI);
+    expect(screen.getByText('cat')).toBeInTheDocument();
+    expect(screen.getByText('κατ')).toBeInTheDocument();
+  });
+
+  it('decision column shows check icon when agrees is true', () => {
+    const local = makeLocalResult([makeLocalField('lemma', 'fail')]);
+    const crossAI = makeCrossAI([makeComparison('lemma', true, 'house', 'house')]);
+    renderComponent(local, crossAI);
+    const row = screen.getByTestId('unified-row-lemma');
+    // DecisionCell renders Check icon (SVG) for agrees=true
+    const svg = row.querySelector('td:last-child svg');
+    expect(svg).toBeTruthy();
+  });
+
+  it('decision column shows X icon when agrees is false', () => {
+    const crossAI = makeCrossAI([makeComparison('lemma', false, 'house', 'home')]);
+    renderComponent(null, crossAI);
+    const row = screen.getByTestId('unified-row-lemma');
+    // DecisionCell renders XCircle icon (SVG) for agrees=false
+    const svg = row.querySelector('td:last-child svg');
+    expect(svg).toBeTruthy();
+  });
+
+  it('Local column shows icon only (no text label)', () => {
+    const local = makeLocalResult([makeLocalField('lemma', 'warn', 'weak match')]);
+    renderComponent(local, null);
+    expect(screen.queryByText('Warning')).not.toBeInTheDocument();
+    expect(screen.queryByText('Pass')).not.toBeInTheDocument();
+    expect(screen.queryByText('Fail')).not.toBeInTheDocument();
   });
 });
