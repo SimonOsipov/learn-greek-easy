@@ -761,6 +761,7 @@ export interface GeneratedNounData {
   translation_en: string;
   translation_en_plural: string | null;
   translation_ru: string;
+  translation_ru_plural: string | null;
   pronunciation: string;
   grammar_data: GeneratedNounGrammar;
   examples: GeneratedExample[];

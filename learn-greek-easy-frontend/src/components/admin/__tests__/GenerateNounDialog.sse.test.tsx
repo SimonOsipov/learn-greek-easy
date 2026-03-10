@@ -144,6 +144,7 @@ const mockGenerationData = {
   translation_en: 'cat',
   translation_en_plural: 'cats',
   translation_ru: 'кошка',
+  translation_ru_plural: 'кошки',
   pronunciation: '/ˈɣa.ta/',
   grammar_data: {
     gender: 'feminine' as const,
@@ -298,6 +299,8 @@ describe('GenerateNounDialog SSE integration', () => {
     await waitFor(() => {
       expect(screen.getByTestId('generation-section')).toBeInTheDocument();
     });
+    // Open the collapsible to access inner content
+    await user.click(screen.getByTestId('generation-section-trigger'));
     expect(screen.getByTestId('declension-table')).toBeInTheDocument();
     expect(screen.getByTestId('gen-translation-en')).toHaveTextContent('cat');
   });

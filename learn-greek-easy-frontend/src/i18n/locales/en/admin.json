@@ -1025,7 +1025,9 @@
     "generation": {
       "title": "Generated Data",
       "translationEn": "Translation (EN)",
+      "translationEnPlural": "Translation Plural (EN)",
       "translationRu": "Translation (RU)",
+      "translationRuPlural": "Translation Plural (RU)",
       "pronunciation": "Pronunciation",
       "declensionGroup": "Declension Group",
       "examples": "Example Sentences",
@@ -1043,6 +1045,8 @@
     "tdict": {
       "title": "Dictionary Translations"
     },
+    "generatingWithAI": "Generating with AI...",
+    "runningVerification": "Running verification...",
     "verification": {
       "combinedTier": "Verification Tier",
       "tierAutoApprove": "Auto-approve",
