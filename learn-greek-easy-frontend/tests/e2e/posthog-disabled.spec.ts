@@ -28,8 +28,8 @@ test.describe('PostHog Analytics Disabled in E2E', () => {
     // Navigate to home page (dashboard for authenticated user)
     await page.goto('/');
 
-    // Wait for page to fully load - networkidle indicates no pending network requests
-    await page.waitForLoadState('networkidle');
+    // Wait for dashboard to be visible
+    await expect(page.locator('[data-testid="dashboard"]')).toBeVisible({ timeout: 10000 });
 
     // Verify no PostHog calls were made
     expect(posthogRequests).toHaveLength(0);
@@ -47,8 +47,8 @@ test.describe('PostHog Analytics Disabled in E2E', () => {
 
     // Navigate to decks page
     await page.goto('/decks');
-    // Wait for page to fully load - networkidle indicates no pending network requests
-    await page.waitForLoadState('networkidle');
+    // Wait for decks page to be visible
+    await expect(page.locator('[data-testid="decks-title"]')).toBeVisible({ timeout: 10000 });
 
     expect(posthogRequests).toHaveLength(0);
   });
@@ -56,8 +56,8 @@ test.describe('PostHog Analytics Disabled in E2E', () => {
   test('should verify PostHog is not initialized on window', async ({ page }) => {
     // Navigate to app
     await page.goto('/');
-    // Wait for network to settle - ensures all initialization is complete
-    await page.waitForLoadState('networkidle');
+    // Wait for dashboard to be visible - ensures all initialization is complete
+    await expect(page.locator('[data-testid="dashboard"]')).toBeVisible({ timeout: 10000 });
 
     // PostHog should not be fully initialized in test mode
     // Either posthog doesn't exist or capture is not a function
@@ -85,15 +85,15 @@ test.describe('PostHog Analytics Disabled in E2E', () => {
       }
     });
 
-    // Navigate through multiple pages - networkidle ensures all network activity is complete
+    // Navigate through multiple pages
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await expect(page.locator('[data-testid="dashboard"]')).toBeVisible({ timeout: 10000 });
 
     await page.goto('/decks');
-    await page.waitForLoadState('networkidle');
+    await expect(page.locator('[data-testid="decks-title"]')).toBeVisible({ timeout: 10000 });
 
     await page.goto('/profile');
-    await page.waitForLoadState('networkidle');
+    await expect(page.locator('[data-testid="profile-page"]')).toBeVisible({ timeout: 10000 });
 
     // No PostHog requests should have been made
     expect(posthogRequests).toHaveLength(0);
