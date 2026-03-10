@@ -115,7 +115,7 @@ export function NounDeclensionTable({ grammarData }: NounDeclensionTableProps) {
               <TableBody>
                 {caseData.map(({ case: caseKey, singular, plural }) => (
                   <TableRow key={caseKey} className="hover:bg-transparent">
-                    <TableCell className="bg-muted/50 px-4 py-2 font-medium text-muted-foreground">
+                    <TableCell className="bg-muted/50 px-4 py-2 font-medium">
                       {t(`grammar.nounDeclension.cases.${caseKey}`)}
                     </TableCell>
                     <TableCell className="px-4 py-3 text-center text-foreground">
@@ -238,7 +238,7 @@ function GenderTable({ gender, data, na, t }: GenderTableProps) {
           <TableBody>
             {CASES.map((caseKey) => (
               <TableRow key={caseKey} className="hover:bg-transparent">
-                <TableCell className="bg-muted/50 px-4 py-2 font-medium text-muted-foreground">
+                <TableCell className="bg-muted/50 px-4 py-2 font-medium">
                   {t(`grammar.nounDeclension.cases.${caseKey}`)}
                 </TableCell>
                 <TableCell className="px-4 py-2 text-center text-foreground">

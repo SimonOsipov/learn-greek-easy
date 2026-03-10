@@ -53,7 +53,7 @@ export function NounDeclensionTable({ nounData, isFlipped = true }: NounDeclensi
         <TableBody>
           {cases.map(({ key, singular, plural }) => (
             <TableRow key={key} className="hover:bg-transparent">
-              <TableCell className="bg-muted/50 px-3 py-2 font-medium text-muted-foreground">
+              <TableCell className="bg-muted/50 px-3 py-2 font-medium">
                 {t(`grammar.nounDeclension.cases.${key}`)}
               </TableCell>
               <TableCell

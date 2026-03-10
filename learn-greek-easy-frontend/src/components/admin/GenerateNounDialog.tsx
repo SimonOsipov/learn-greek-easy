@@ -590,36 +590,26 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                     {displayPrimary && (
                       <div className="grid grid-cols-2 gap-3 text-sm">
                         <div>
-                          <span className="text-muted-foreground">
-                            {t('generateNoun.lemmaLabel')}
-                          </span>
-                          <p data-testid="result-lemma" className="font-medium">
-                            {displayPrimary.lemma}
-                          </p>
+                          <span className="font-medium">{t('generateNoun.lemmaLabel')}</span>
+                          <p data-testid="result-lemma">{displayPrimary.lemma}</p>
                         </div>
                         <div>
-                          <span className="text-muted-foreground">
-                            {t('generateNoun.genderLabel')}
-                          </span>
-                          <p data-testid="result-gender" className="font-medium">
+                          <span className="font-medium">{t('generateNoun.genderLabel')}</span>
+                          <p data-testid="result-gender">
                             {displayPrimary.gender
                               ? `${displayPrimary.gender}${displayPrimary.article ? ` (${displayPrimary.article})` : ''}`
                               : t('generateNoun.genderUnknown')}
                           </p>
                         </div>
                         <div>
-                          <span className="text-muted-foreground">
-                            {t('generateNoun.posLabel')}
-                          </span>
-                          <p data-testid="result-pos" className="font-medium">
+                          <span className="font-medium">{t('generateNoun.posLabel')}</span>
+                          <p data-testid="result-pos">
                             {displayPrimary.pos.charAt(0).toUpperCase() +
                               displayPrimary.pos.slice(1).toLowerCase()}
                           </p>
                         </div>
                         <div>
-                          <span className="text-muted-foreground">
-                            {t('generateNoun.confidenceLabel')}
-                          </span>
+                          <span className="font-medium">{t('generateNoun.confidenceLabel')}</span>
                           <p>
                             <Badge
                               data-testid="result-confidence-badge"
@@ -642,7 +632,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                     )}
                     {displaySuggestions.length > 0 && (
                       <div data-testid="suggestions-section" className="space-y-2">
-                        <h4 className="text-sm font-medium text-muted-foreground">
+                        <h4 className="text-sm font-medium">
                           {t('generateNoun.suggestionsTitle')}
                         </h4>
                         <div className="space-y-1">
@@ -747,7 +737,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                           {displayTranslationLookup.en &&
                             displayTranslationLookup.en.source !== 'none' && (
                               <div className="flex items-center gap-2 text-sm">
-                                <span className="text-muted-foreground">EN:</span>
+                                <span className="font-medium">EN:</span>
                                 <span>{displayTranslationLookup.en.combined_text}</span>
                                 <Badge variant="outline" className="text-xs">
                                   {displayTranslationLookup.en.source}
@@ -760,7 +750,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                           {displayTranslationLookup.ru &&
                             displayTranslationLookup.ru.source !== 'none' && (
                               <div className="flex items-center gap-2 text-sm">
-                                <span className="text-muted-foreground">RU:</span>
+                                <span className="font-medium">RU:</span>
                                 <span>{displayTranslationLookup.ru.combined_text}</span>
                                 <Badge variant="outline" className="text-xs">
                                   {displayTranslationLookup.ru.source}
@@ -800,49 +790,47 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                       <CollapsibleContent className="mt-2 space-y-3 px-1">
                         <div className="grid grid-cols-2 gap-3 text-sm">
                           <div>
-                            <span className="text-muted-foreground">
+                            <span className="font-medium">
                               {t('generateNoun.generation.translationEn')}
                             </span>
-                            <p data-testid="gen-translation-en" className="font-medium">
+                            <p data-testid="gen-translation-en">
                               {displayGeneration.translation_en}
                             </p>
                           </div>
                           <div>
-                            <span className="text-muted-foreground">
+                            <span className="font-medium">
                               {t('generateNoun.generation.translationRu')}
                             </span>
-                            <p data-testid="gen-translation-ru" className="font-medium">
+                            <p data-testid="gen-translation-ru">
                               {displayGeneration.translation_ru}
                             </p>
                           </div>
                           <div>
-                            <span className="text-muted-foreground">
+                            <span className="font-medium">
                               {t('generateNoun.generation.translationEnPlural')}
                             </span>
-                            <p data-testid="gen-translation-en-plural" className="font-medium">
+                            <p data-testid="gen-translation-en-plural">
                               {displayGeneration.translation_en_plural ?? '—'}
                             </p>
                           </div>
                           {displayGeneration.translation_ru_plural != null && (
                             <div>
-                              <span className="text-muted-foreground">
+                              <span className="font-medium">
                                 {t('generateNoun.generation.translationRuPlural')}
                               </span>
-                              <p data-testid="gen-translation-ru-plural" className="font-medium">
+                              <p data-testid="gen-translation-ru-plural">
                                 {displayGeneration.translation_ru_plural}
                               </p>
                             </div>
                           )}
                           <div>
-                            <span className="text-muted-foreground">
+                            <span className="font-medium">
                               {t('generateNoun.generation.pronunciation')}
                             </span>
-                            <p data-testid="gen-pronunciation" className="font-medium">
-                              {displayGeneration.pronunciation}
-                            </p>
+                            <p data-testid="gen-pronunciation">{displayGeneration.pronunciation}</p>
                           </div>
                           <div>
-                            <span className="text-muted-foreground">
+                            <span className="font-medium">
                               {t('generateNoun.generation.declensionGroup')}
                             </span>
                             <p>
@@ -853,14 +841,14 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                           </div>
                         </div>
                         <div>
-                          <h4 className="mb-1 text-sm font-medium text-muted-foreground">
+                          <h4 className="mb-1 text-sm font-medium">
                             {t('generateNoun.generation.declensionTable')}
                           </h4>
                           <DeclensionTable cases={displayGeneration.grammar_data.cases} />
                         </div>
                         {displayGeneration.examples.length > 0 && (
                           <div>
-                            <h4 className="mb-1 text-sm font-medium text-muted-foreground">
+                            <h4 className="mb-1 text-sm font-medium">
                               {t('generateNoun.generation.examples')}
                             </h4>
                             <div className="space-y-2">
