@@ -952,3 +952,216 @@ class TestSingleton:
             second = get_local_verification_service()
 
         assert first is second
+
+
+class TestReferenceValues:
+    """Tests for reference_value and reference_source fields on CheckResult."""
+
+    def _make_lexicon_entries(
+        self,
+        lemma: str = "σπίτι",
+        gender: str = "Neut",
+    ) -> list:
+        from src.services.lexicon_service import LexiconEntry
+
+        return [
+            LexiconEntry(
+                form="το σπίτι", lemma=lemma, pos="NOUN", gender=gender, ptosi="Nom", number="Sing"
+            ),
+            LexiconEntry(
+                form="του σπιτιού",
+                lemma=lemma,
+                pos="NOUN",
+                gender=gender,
+                ptosi="Gen",
+                number="Sing",
+            ),
+            LexiconEntry(
+                form="το σπίτι", lemma=lemma, pos="NOUN", gender=gender, ptosi="Acc", number="Sing"
+            ),
+            LexiconEntry(
+                form="σπίτι", lemma=lemma, pos="NOUN", gender=gender, ptosi="Voc", number="Sing"
+            ),
+            LexiconEntry(
+                form="τα σπίτια", lemma=lemma, pos="NOUN", gender=gender, ptosi="Nom", number="Plur"
+            ),
+            LexiconEntry(
+                form="των σπιτιών",
+                lemma=lemma,
+                pos="NOUN",
+                gender=gender,
+                ptosi="Gen",
+                number="Plur",
+            ),
+            LexiconEntry(
+                form="τα σπίτια", lemma=lemma, pos="NOUN", gender=gender, ptosi="Acc", number="Plur"
+            ),
+            LexiconEntry(
+                form="σπίτια", lemma=lemma, pos="NOUN", gender=gender, ptosi="Voc", number="Plur"
+            ),
+        ]
+
+    def test_build_lexicon_map_basic(self) -> None:
+        """_build_lexicon_map builds correct (number, case) -> form mapping."""
+        svc = LocalVerificationService(spellcheck_service=None, morphology_service=None)
+        entries = self._make_lexicon_entries()
+        result = svc._build_lexicon_map(entries)
+
+        assert result[("singular", "nominative")] == "το σπίτι"
+        assert result[("singular", "genitive")] == "του σπιτιού"
+        assert result[("plural", "nominative")] == "τα σπίτια"
+        assert result[("plural", "vocative")] == "σπίτια"
+
+    def test_build_lexicon_map_none_fields(self) -> None:
+        """Entries with None ptosi or number are skipped."""
+        from src.services.lexicon_service import LexiconEntry
+
+        svc = LocalVerificationService(spellcheck_service=None, morphology_service=None)
+        entries = [
+            LexiconEntry(
+                form="foo", lemma="bar", pos="NOUN", gender="Neut", ptosi=None, number="Sing"
+            ),
+            LexiconEntry(
+                form="baz", lemma="bar", pos="NOUN", gender="Neut", ptosi="Nom", number=None
+            ),
+            LexiconEntry(
+                form="το σπίτι",
+                lemma="σπίτι",
+                pos="NOUN",
+                gender="Neut",
+                ptosi="Nom",
+                number="Sing",
+            ),
+        ]
+        result = svc._build_lexicon_map(entries)
+
+        assert len(result) == 1
+        assert result[("singular", "nominative")] == "το σπίτι"
+
+    def test_spellcheck_reference_from_lexicon(self) -> None:
+        """Spellcheck CheckResult for case form gets reference_value from lexicon map."""
+        mock_spell = MagicMock()
+        mock_spell.check.return_value = _make_spellcheck_result(is_valid=True)
+        svc = LocalVerificationService(spellcheck_service=mock_spell, morphology_service=None)
+        entries = self._make_lexicon_entries()
+
+        result = svc.verify(_make_noun_data(), lexicon_declensions=entries)
+
+        field = _find_field(result, "cases.singular.nominative")
+        assert field is not None
+        check = _find_check(field, "spellcheck")
+        assert check is not None
+        assert check.reference_value == "το σπίτι"
+        assert check.reference_source == "lexicon"
+
+    def test_lemma_reference_from_lexicon(self) -> None:
+        """Lemma spellcheck CheckResult gets reference_value = lexicon lemma."""
+        mock_spell = MagicMock()
+        mock_spell.check.return_value = _make_spellcheck_result(is_valid=True)
+        svc = LocalVerificationService(spellcheck_service=mock_spell, morphology_service=None)
+        entries = self._make_lexicon_entries(lemma="σπίτι")
+
+        result = svc.verify(_make_noun_data(), lexicon_declensions=entries)
+
+        field = _find_field(result, "lemma")
+        assert field is not None
+        check = _find_check(field, "spellcheck")
+        assert check is not None
+        assert check.reference_value == "σπίτι"
+        assert check.reference_source == "lexicon"
+
+    def test_no_lexicon_data_reference_none(self) -> None:
+        """Without lexicon_declensions, all reference_value fields remain None."""
+        mock_spell = MagicMock()
+        mock_spell.check.return_value = _make_spellcheck_result(is_valid=True)
+        svc = LocalVerificationService(spellcheck_service=mock_spell, morphology_service=None)
+
+        result = svc.verify(_make_noun_data())
+
+        for field in result.fields:
+            for check in field.checks:
+                assert (
+                    check.reference_value is None
+                ), f"Expected None reference_value on {field.field_path}.{check.check_name}"
+                assert (
+                    check.reference_source is None
+                ), f"Expected None reference_source on {field.field_path}.{check.check_name}"
+
+    def test_translation_reference_from_tdict_dictionary(self) -> None:
+        """Dictionary source sets combined_text as reference_value on translation CheckResult."""
+        from src.schemas.admin import TranslationLookupStageResult, TranslationSourceInfo
+
+        svc = LocalVerificationService(spellcheck_service=None, morphology_service=None)
+        tdict = TranslationLookupStageResult(
+            en=TranslationSourceInfo(
+                translations=["house", "home"],
+                combined_text="house, home",
+                source="dictionary",
+                sense_count=2,
+            ),
+            ru=None,
+        )
+        data = _make_noun_data()
+
+        result = svc.verify(data, tdict_translations=tdict)
+
+        field = _find_field(result, "translation_en")
+        assert field is not None
+        check = _find_check(field, "translation_tdict")
+        assert check is not None
+        assert check.reference_value == "house, home"
+        assert check.reference_source == "dictionary"
+
+    def test_translation_reference_pivot(self) -> None:
+        """Pivot source sets combined_text as reference_value on translation CheckResult."""
+        from src.schemas.admin import TranslationLookupStageResult, TranslationSourceInfo
+
+        svc = LocalVerificationService(spellcheck_service=None, morphology_service=None)
+        tdict = TranslationLookupStageResult(
+            en=TranslationSourceInfo(
+                translations=["house"],
+                combined_text="house",
+                source="pivot",
+                sense_count=1,
+            ),
+            ru=None,
+        )
+        data = _make_noun_data()
+
+        result = svc.verify(data, tdict_translations=tdict)
+
+        field = _find_field(result, "translation_en")
+        assert field is not None
+        check = _find_check(field, "translation_tdict")
+        assert check is not None
+        assert check.reference_value == "house"
+        assert check.reference_source == "pivot"
+
+    def test_schema_gender_reference_from_lexicon(self) -> None:
+        """gender_reference CheckResult is appended to article_checks when lexicon has gender."""
+        svc = LocalVerificationService(spellcheck_service=None, morphology_service=None)
+        entries = self._make_lexicon_entries(gender="Neut")
+
+        result = svc.verify(_make_noun_data(), lexicon_declensions=entries)
+
+        field = _find_field(result, "grammar_data.gender")
+        assert field is not None
+        ref_check = _find_check(field, "gender_reference")
+        assert ref_check is not None
+        assert ref_check.reference_value == "neuter"
+        assert ref_check.reference_source == "lexicon"
+        assert ref_check.status == "pass"
+
+    def test_schema_declension_reference_from_lexicon(self) -> None:
+        """declension_group CheckResult gets reference_value derived from lexicon gender."""
+        svc = LocalVerificationService(spellcheck_service=None, morphology_service=None)
+        entries = self._make_lexicon_entries(gender="Neut")
+
+        result = svc.verify(_make_noun_data(), lexicon_declensions=entries)
+
+        field = _find_field(result, "grammar_data.declension_group")
+        assert field is not None
+        check = _find_check(field, "declension_group")
+        assert check is not None
+        assert check.reference_value == "neuter_i"
+        assert check.reference_source == "lexicon"

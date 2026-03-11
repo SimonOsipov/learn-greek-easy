@@ -13,6 +13,7 @@ from src.schemas.nlp import (
     GeneratedNounData,
     LocalVerificationResult,
 )
+from src.services.lexicon_service import LexiconEntry
 from src.services.morphology_service import MorphologyService, get_morphology_service
 from src.services.noun_data_generation_service import (  # noqa: WPS450 (private import by design)
     _derive_declension_group,
@@ -41,6 +42,13 @@ _ACCUSATIVE_ARTICLES = {
 _GENDER_MAP = {"Masc": "masculine", "Fem": "feminine", "Neut": "neuter"}
 _CASE_MAP = {"nominative": "Nom", "genitive": "Gen", "accusative": "Acc", "vocative": "Voc"}
 _NUMBER_MAP = {"singular": "Sing", "plural": "Plur"}
+_LEXICON_NUMBER_TO_FIELD = {"Sing": "singular", "Plur": "plural"}
+_LEXICON_CASE_TO_FIELD = {
+    "Nom": "nominative",
+    "Gen": "genitive",
+    "Acc": "accusative",
+    "Voc": "vocative",
+}
 
 _ARTICLE_MAP = {
     "nominative": _NOMINATIVE_ARTICLES,
@@ -80,14 +88,22 @@ class LocalVerificationService:
         self,
         data: GeneratedNounData,
         tdict_translations: TranslationLookupStageResult | None = None,
+        lexicon_declensions: list[LexiconEntry] | None = None,
     ) -> LocalVerificationResult:
         """Run local verification pipeline on generated noun data."""
         fields_by_path: dict[str, FieldVerificationResult] = {}
         stages_skipped: list[str] = []
 
-        self._run_spellcheck_stage(data, fields_by_path, stages_skipped)
+        lexicon_map = self._build_lexicon_map(lexicon_declensions) if lexicon_declensions else {}
+        self._run_spellcheck_stage(
+            data,
+            fields_by_path,
+            stages_skipped,
+            lexicon_map=lexicon_map,
+            lexicon_declensions=lexicon_declensions,
+        )
         self._run_morphology_stage(data, fields_by_path, stages_skipped)
-        self._run_schema_stage(data, fields_by_path)
+        self._run_schema_stage(data, fields_by_path, lexicon_declensions=lexicon_declensions)
         if tdict_translations is not None:
             self._run_translation_stage(data, tdict_translations, fields_by_path)
         self._add_skipped_fields(fields_by_path, tdict_translations)
@@ -109,11 +125,28 @@ class LocalVerificationService:
             summary=summary,
         )
 
+    def _build_lexicon_map(self, entries: list[LexiconEntry]) -> dict[tuple[str, str], str]:
+        """Build a (number, case) -> form mapping from lexicon entries (first-entry-wins)."""
+        result: dict[tuple[str, str], str] = {}
+        for entry in entries:
+            if entry.number is None or entry.ptosi is None:
+                continue
+            number = _LEXICON_NUMBER_TO_FIELD.get(entry.number)
+            case = _LEXICON_CASE_TO_FIELD.get(entry.ptosi)
+            if number is None or case is None:
+                continue
+            key = (number, case)
+            if key not in result:
+                result[key] = entry.form
+        return result
+
     def _run_spellcheck_stage(  # noqa: C901
         self,
         data: GeneratedNounData,
         fields_by_path: dict[str, FieldVerificationResult],
         stages_skipped: list[str],
+        lexicon_map: dict[tuple[str, str], str] | None = None,
+        lexicon_declensions: list[LexiconEntry] | None = None,
     ) -> None:
         if self._spellcheck is None:
             logger.warning("Spellcheck service unavailable — skipping spellcheck stage")
@@ -159,17 +192,27 @@ class LocalVerificationService:
                 logger.warning("Spellcheck failed for %s: %s", path, exc)
                 # Use warn (not skipped with empty checks) so morphology cannot
                 # silently promote this field to 'pass' via _recompute_field_status.
+                ref_value = lexicon_map.get((number, case)) if lexicon_map else None
                 exc_check = CheckResult(
                     check_name="spellcheck",
                     status="warn",
                     message=f"Spellcheck raised an exception: {exc}",
+                    reference_value=ref_value,
+                    reference_source="lexicon" if ref_value else None,
                 )
                 fields_by_path[path] = FieldVerificationResult(
                     field_path=path, status="warn", checks=[exc_check]
                 )
                 continue
 
-            check = CheckResult(check_name="spellcheck", status=status, message=message)
+            ref_value = lexicon_map.get((number, case)) if lexicon_map else None
+            check = CheckResult(
+                check_name="spellcheck",
+                status=status,
+                message=message,
+                reference_value=ref_value,
+                reference_source="lexicon" if ref_value else None,
+            )
             logger.debug("Spellcheck %s: %s", path, status)
             fields_by_path[path] = FieldVerificationResult(
                 field_path=path, status=status, checks=[check]
@@ -187,17 +230,27 @@ class LocalVerificationService:
                 message = f"'{bare_lemma}' not in dictionary"
         except Exception as exc:  # noqa: BLE001
             logger.warning("Spellcheck failed for lemma: %s", exc)
+            ref_lemma = lexicon_declensions[0].lemma if lexicon_declensions else None
             exc_check = CheckResult(
                 check_name="spellcheck",
                 status="warn",
                 message=f"Spellcheck raised an exception: {exc}",
+                reference_value=ref_lemma,
+                reference_source="lexicon" if ref_lemma else None,
             )
             fields_by_path["lemma"] = FieldVerificationResult(
                 field_path="lemma", status="warn", checks=[exc_check]
             )
             return
 
-        check = CheckResult(check_name="spellcheck", status=status, message=message)
+        ref_lemma = lexicon_declensions[0].lemma if lexicon_declensions else None
+        check = CheckResult(
+            check_name="spellcheck",
+            status=status,
+            message=message,
+            reference_value=ref_lemma,
+            reference_source="lexicon" if ref_lemma else None,
+        )
         logger.debug("Spellcheck lemma: %s", status)
         fields_by_path["lemma"] = FieldVerificationResult(
             field_path="lemma", status=status, checks=[check]
@@ -352,10 +405,11 @@ class LocalVerificationService:
             field = FieldVerificationResult(field_path=path, status="warn", checks=new_checks)
             fields_by_path[path] = _recompute_field_status(field)
 
-    def _run_schema_stage(
+    def _run_schema_stage(  # noqa: C901
         self,
         data: GeneratedNounData,
         fields_by_path: dict[str, FieldVerificationResult],
+        lexicon_declensions: list[LexiconEntry] | None = None,
     ) -> None:
         gender = data.grammar_data.gender
         cases = data.grammar_data.cases
@@ -385,6 +439,20 @@ class LocalVerificationService:
                             ),
                         )
                     )
+
+        if lexicon_declensions:
+            lex_gender = next((e.gender for e in lexicon_declensions if e.gender), None)
+            if lex_gender and lex_gender in _GENDER_MAP:
+                mapped_gender = _GENDER_MAP[lex_gender]
+                article_checks.append(
+                    CheckResult(
+                        check_name="gender_reference",
+                        status="pass",
+                        message=f"Lexicon gender: {mapped_gender}",
+                        reference_value=mapped_gender,
+                        reference_source="lexicon",
+                    )
+                )
 
         gender_statuses = {c.status for c in article_checks}
         gender_status: str
@@ -425,6 +493,20 @@ class LocalVerificationService:
                 message=f"Expected '{derived}', declared '{declared}'",
             )
             declension_status = "fail"
+
+        if lexicon_declensions:
+            lex_gender = next((e.gender for e in lexicon_declensions if e.gender), None)
+            if lex_gender and lex_gender in _GENDER_MAP:
+                mapped_gender = _GENDER_MAP[lex_gender]
+                nom_sg_bare = cases.singular.nominative
+                derived_ref = _derive_declension_group(mapped_gender, nom_sg_bare)
+                if derived_ref:
+                    declension_check = declension_check.model_copy(
+                        update={
+                            "reference_value": derived_ref,
+                            "reference_source": "lexicon",
+                        }
+                    )
 
         fields_by_path["grammar_data.declension_group"] = FieldVerificationResult(
             field_path="grammar_data.declension_group",
@@ -492,6 +574,8 @@ class LocalVerificationService:
                     check_name="translation_tdict",
                     status="warn",
                     message="Generated translation is empty",
+                    reference_value=source_info.combined_text,
+                    reference_source=source_info.source,
                 )
                 fields_by_path[field_path] = FieldVerificationResult(
                     field_path=field_path, status="warn", checks=[check]
@@ -517,6 +601,8 @@ class LocalVerificationService:
                 check_name="translation_tdict",
                 status=status,
                 message=message,
+                reference_value=source_info.combined_text,
+                reference_source=source_info.source,
             )
             fields_by_path[field_path] = FieldVerificationResult(
                 field_path=field_path, status=status, checks=[check]

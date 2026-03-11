@@ -2705,7 +2705,11 @@ async def _run_verification_stage(
     try:
         local_result = await loop.run_in_executor(
             None,
-            lambda: local_svc.verify(generated_data, tdict_translations=translation_lookup),
+            lambda: local_svc.verify(
+                generated_data,
+                tdict_translations=translation_lookup,
+                lexicon_declensions=lexicon_declensions,
+            ),
         )
     except Exception as exc:
         raise HTTPException(status_code=500, detail="Local verification pipeline failed") from exc

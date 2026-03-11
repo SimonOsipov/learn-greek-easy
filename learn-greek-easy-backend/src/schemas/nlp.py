@@ -157,6 +157,8 @@ class CheckResult(BaseModel):
     )
     status: Literal["pass", "fail", "warn"] = Field(..., description="Check outcome")
     message: str | None = Field(None, description="Human-readable detail for non-pass results")
+    reference_value: str | None = None
+    reference_source: str | None = None
 
 
 class FieldVerificationResult(BaseModel):
