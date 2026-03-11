@@ -169,6 +169,14 @@ async def sse_stream(
                 await task
             except (asyncio.CancelledError, StopAsyncIteration):
                 pass
+        # Explicitly close the inner generator so its async context managers
+        # (e.g. factory.begin() DB sessions) run __aexit__ deterministically
+        # instead of being left for the garbage collector.  Shield prevents a
+        # concurrent CancelledError from interrupting the cleanup.
+        try:
+            await asyncio.shield(event_generator.aclose())
+        except (asyncio.CancelledError, GeneratorExit):
+            pass
         if on_cleanup is not None:
             if asyncio.iscoroutinefunction(on_cleanup):
                 await on_cleanup()
