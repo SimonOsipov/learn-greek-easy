@@ -761,10 +761,12 @@ class TestTranslationStage:
         """Build a TranslationLookupStageResult for testing."""
         from src.schemas.admin import TranslationLookupStageResult, TranslationSourceInfo
 
+        resolved_en = ["house"] if en_translations is None else en_translations
+        resolved_ru = ["дом"] if ru_translations is None else ru_translations
         en = (
             TranslationSourceInfo(
-                translations=en_translations or ["house"],
-                combined_text=", ".join(en_translations or ["house"]),
+                translations=resolved_en,
+                combined_text=", ".join(resolved_en),
                 source=en_source,  # type: ignore[arg-type]
                 sense_count=1,
             )
@@ -773,8 +775,8 @@ class TestTranslationStage:
         )
         ru = (
             TranslationSourceInfo(
-                translations=ru_translations or ["дом"],
-                combined_text=", ".join(ru_translations or ["дом"]),
+                translations=resolved_ru,
+                combined_text=", ".join(resolved_ru),
                 source=ru_source,  # type: ignore[arg-type]
                 sense_count=1,
             )

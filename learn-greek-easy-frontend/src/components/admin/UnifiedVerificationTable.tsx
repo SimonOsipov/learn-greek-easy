@@ -170,7 +170,7 @@ function LocalCell({
 
   if (referenceValue != null) {
     return (
-      <span className="inline-flex items-center gap-1">
+      <span className="inline-flex min-w-0 items-center gap-1">
         <Tooltip>
           <TooltipTrigger asChild>
             <span className={cn('inline-flex items-center', className)}>
@@ -183,7 +183,7 @@ function LocalCell({
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
-            <span className="max-w-[150px] truncate text-xs">{referenceValue}</span>
+            <span className="block max-w-[150px] truncate text-xs">{referenceValue}</span>
           </TooltipTrigger>
           <TooltipContent>
             <span className="text-xs">{referenceValue}</span>

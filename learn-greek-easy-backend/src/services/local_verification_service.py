@@ -562,7 +562,11 @@ class LocalVerificationService:
                 continue
 
             # No TDICT data available
-            if source_info is None or source_info.source == "none":
+            if (
+                source_info is None
+                or source_info.source == "none"
+                or not any(t.strip() for t in source_info.translations)
+            ):
                 fields_by_path[field_path] = FieldVerificationResult(
                     field_path=field_path, status="skipped", checks=[]
                 )
