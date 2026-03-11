@@ -383,23 +383,33 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
 
           {hasResult && displayPrimary ? (
             <>
-              <div data-testid="generate-noun-content-area" className="space-y-4">
-                <div data-testid="generate-noun-result" className="space-y-4">
-                  <h3 className="font-medium">{t('generateNoun.normalizationResult')}</h3>
-                  {displayPrimary.corrected_from && displayPrimary.corrected_to && (
-                    <div
-                      data-testid="correction-note"
-                      className="flex items-start gap-2 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm dark:border-blue-800 dark:bg-blue-950"
-                    >
-                      <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
-                      <span>
-                        {t('generateNoun.accentCorrected', {
-                          from: displayPrimary.corrected_from,
-                          to: displayPrimary.corrected_to,
-                        })}
-                      </span>
-                    </div>
-                  )}
+              <div
+                data-testid="generate-noun-content-area"
+                className={cn(
+                  displayVerification
+                    ? 'grid grid-cols-1 gap-6 md:grid-cols-[45%_55%]'
+                    : 'space-y-4'
+                )}
+              >
+                {/* LEFT PANEL - always shown */}
+                <div className="space-y-4">
+                  <div data-testid="generate-noun-result" className="space-y-4">
+                    <h3 className="font-medium">{t('generateNoun.normalizationResult')}</h3>
+                    {displayPrimary.corrected_from && displayPrimary.corrected_to && (
+                      <div
+                        data-testid="correction-note"
+                        className="flex items-start gap-2 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm dark:border-blue-800 dark:bg-blue-950"
+                      >
+                        <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
+                        <span>
+                          {t('generateNoun.accentCorrected', {
+                            from: displayPrimary.corrected_from,
+                            to: displayPrimary.corrected_to,
+                          })}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                   {displayPrimary && (
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       <div>
@@ -492,69 +502,70 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                       isLinking={linkMutation.isPending}
                     />
                   )}
-                </div>
 
-                {displayDuplicate && (
-                  <div data-testid="duplicate-check-section">
-                    {displayDuplicate.is_duplicate ? (
-                      <div className="space-y-2">
-                        <div
-                          data-testid="duplicate-found-warning"
-                          className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm dark:border-amber-800 dark:bg-amber-950"
-                        >
-                          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-                          <div>
-                            <p className="font-medium">
-                              {t('generateNoun.duplicateFound', {
-                                deckName: displayDuplicate.matched_decks[0]?.deck_name ?? '',
-                              })}
-                            </p>
-                            {displayDuplicate.existing_entry && (
-                              <p className="mt-1 text-muted-foreground">
-                                {t('generateNoun.duplicateTranslation', {
-                                  translation: displayDuplicate.existing_entry.translation_en,
+                  {displayDuplicate && (
+                    <div data-testid="duplicate-check-section">
+                      {displayDuplicate.is_duplicate ? (
+                        <div className="space-y-2">
+                          <div
+                            data-testid="duplicate-found-warning"
+                            className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm dark:border-amber-800 dark:bg-amber-950"
+                          >
+                            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                            <div>
+                              <p className="font-medium">
+                                {t('generateNoun.duplicateFound', {
+                                  deckName: displayDuplicate.matched_decks[0]?.deck_name ?? '',
                                 })}
                               </p>
-                            )}
-                            <p className="mt-1 text-muted-foreground">
-                              {t('generateNoun.duplicateWarning')}
-                            </p>
+                              {displayDuplicate.existing_entry && (
+                                <p className="mt-1 text-muted-foreground">
+                                  {t('generateNoun.duplicateTranslation', {
+                                    translation: displayDuplicate.existing_entry.translation_en,
+                                  })}
+                                </p>
+                              )}
+                              <p className="mt-1 text-muted-foreground">
+                                {t('generateNoun.duplicateWarning')}
+                              </p>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ) : (
-                      <div
-                        data-testid="no-duplicate-banner"
-                        className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 p-3 text-sm dark:border-green-800 dark:bg-green-950"
-                      >
-                        <Info className="h-4 w-4 shrink-0 text-green-600 dark:text-green-400" />
-                        <span>{t('generateNoun.noDuplicates')}</span>
-                      </div>
-                    )}
-                  </div>
-                )}
+                      ) : (
+                        <div
+                          data-testid="no-duplicate-banner"
+                          className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 p-3 text-sm dark:border-green-800 dark:bg-green-950"
+                        >
+                          <Info className="h-4 w-4 shrink-0 text-green-600 dark:text-green-400" />
+                          <span>{t('generateNoun.noDuplicates')}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
-                {generationLoading && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    {t('generateNoun.generatingWithAI')}
-                  </div>
-                )}
+                  {generationLoading && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      {t('generateNoun.generatingWithAI')}
+                    </div>
+                  )}
 
-                {stageError && (
-                  <Alert variant="destructive" data-testid="stage-error">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>{stageError}</AlertDescription>
-                  </Alert>
-                )}
+                  {stageError && (
+                    <Alert variant="destructive" data-testid="stage-error">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>{stageError}</AlertDescription>
+                    </Alert>
+                  )}
 
-                {verificationLoading && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    {t('generateNoun.runningVerification')}
-                  </div>
-                )}
+                  {verificationLoading && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      {t('generateNoun.runningVerification')}
+                    </div>
+                  )}
+                </div>
 
+                {/* RIGHT PANEL - verification, only shown when verification present */}
                 {displayVerification && (
                   <div data-testid="verification-section" className="space-y-3">
                     <div className="flex items-center gap-2">

@@ -438,7 +438,7 @@ class TestTranslationLookupBilingual:
         assert result["en"].combined_text == "eagle"
         assert result["ru"].combined_text == "орёл"
 
-    async def test_bilingual_uses_asyncio_gather(self):
+    async def test_bilingual_calls_both_languages(self):
         """lookup_bilingual() calls lookup for both languages."""
         service = TranslationLookupService(MagicMock())
         empty = TranslationResult(translations=[], source="none", combined_text="")

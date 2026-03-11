@@ -203,6 +203,36 @@ class TestSSEStream:
         cleanup.assert_called_once()
 
     @pytest.mark.asyncio
+    async def test_inner_generator_closed_on_cancellation(self) -> None:
+        """Verify inner generator's aclose() is called when sse_stream is cancelled.
+
+        Prevents connection pool leaks: without explicit aclose(), async context
+        managers inside the inner generator (e.g. DB sessions) aren't cleaned up
+        until the garbage collector runs — triggering SQLAlchemy pool warnings.
+        Fixes GREEKLY-BACKEND-1C.
+        """
+        inner_closed = False
+
+        async def _slow_inner() -> AsyncGenerator[str, None]:
+            nonlocal inner_closed
+            try:
+                while True:
+                    await asyncio.sleep(10)
+                    yield "never"
+            finally:
+                inner_closed = True
+
+        stream = sse_stream(_slow_inner(), heartbeat_interval=0.05)
+        items = []
+        async for item in stream:
+            items.append(item)
+            if len(items) >= 3:
+                break
+
+        await stream.aclose()
+        assert inner_closed, "Inner generator was not closed — DB connections may leak"
+
+    @pytest.mark.asyncio
     async def test_cleanup_callback_on_exhaustion_async(self) -> None:
         mock = AsyncMock()
         gen = _make_generator("event")

@@ -3176,7 +3176,7 @@ async def _generate_word_entry_sse_pipeline(  # noqa: C901
                     "error": "Duplicate word entry found",
                     "stage": "duplicate_check",
                     "existing_entry": (
-                        dup_result.existing_entry.model_dump()
+                        dup_result.existing_entry.model_dump(mode="json")
                         if dup_result.existing_entry
                         else None
                     ),
@@ -3199,7 +3199,7 @@ async def _generate_word_entry_sse_pipeline(  # noqa: C901
             {"data": translation_lookup.model_dump()}, event="translations_found"
         )
     except Exception as exc:
-        logger.warning("Translation lookup failed (non-blocking): %s", exc)
+        logger.opt(exception=True).warning("Translation lookup failed (non-blocking): {}", exc)
         yield format_sse_event({"data": None}, event="translations_found")
 
     # Build NormalizedLemma and run stages 3+4 via sub-generator

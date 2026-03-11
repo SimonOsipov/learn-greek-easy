@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import unicodedata
 from dataclasses import dataclass
 
@@ -149,7 +148,7 @@ class TranslationLookupService:
         lemma: str,
         pos: str | None = None,
     ) -> dict[str, TranslationResult]:
-        """Look up translations in both English and Russian concurrently.
+        """Look up translations in both English and Russian sequentially.
 
         Args:
             lemma: Greek lemma (dictionary form).
@@ -158,8 +157,6 @@ class TranslationLookupService:
         Returns:
             Dict with keys "en" and "ru", each mapping to a TranslationResult.
         """
-        en_result, ru_result = await asyncio.gather(
-            self.lookup(lemma, "en", pos),
-            self.lookup(lemma, "ru", pos),
-        )
+        en_result = await self.lookup(lemma, "en", pos)
+        ru_result = await self.lookup(lemma, "ru", pos)
         return {"en": en_result, "ru": ru_result}

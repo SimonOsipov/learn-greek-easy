@@ -613,3 +613,65 @@ class TestClientReuse:
             mock_cls.return_value.__aexit__ = AsyncMock(return_value=None)
             await service.complete([{"role": "user", "content": "test"}])
             mock_cls.assert_called_once()
+
+
+# ============================================================================
+# TestFinishReasonCheck — finish_reason=length handling
+# ============================================================================
+
+
+def _make_truncated_response(
+    content: str = "truncated",
+    model: str = "google/gemini-2.5-flash-lite",
+) -> MagicMock:
+    """Build a mock httpx response where finish_reason is 'length' (truncated output)."""
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "choices": [{"message": {"content": content}, "finish_reason": "length"}],
+        "model": model,
+        "usage": {"prompt_tokens": 10, "completion_tokens": 2048, "total_tokens": 2058},
+    }
+    return mock_response
+
+
+class TestFinishReasonCheck:
+    """Tests for finish_reason=length detection in complete()."""
+
+    @pytest.mark.asyncio
+    async def test_finish_reason_length_raises_api_error(
+        self, mock_settings_configured: None
+    ) -> None:
+        """finish_reason='length' raises OpenRouterAPIError without retrying."""
+        service = OpenRouterService()
+        mock_client = AsyncMock()
+        mock_client.post.return_value = _make_truncated_response()
+
+        with patch("src.services.openrouter_service.httpx.AsyncClient") as mock_cls:
+            mock_cls.return_value.__aenter__.return_value = mock_client
+            with pytest.raises(OpenRouterAPIError) as exc_info:
+                await service.complete([{"role": "user", "content": "test"}])
+
+        assert exc_info.value.status_code == 200
+        assert "finish_reason=length" in exc_info.value.detail
+        mock_client.post.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_finish_reason_stop_succeeds(self, mock_settings_configured: None) -> None:
+        """finish_reason='stop' returns a valid OpenRouterResponse (normal flow)."""
+        service = OpenRouterService()
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "choices": [{"message": {"content": "full reply"}, "finish_reason": "stop"}],
+            "model": "google/gemini-2.5-flash-lite",
+            "usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
+        }
+        mock_client = AsyncMock()
+        mock_client.post.return_value = mock_response
+
+        with patch("src.services.openrouter_service.httpx.AsyncClient") as mock_cls:
+            mock_cls.return_value.__aenter__.return_value = mock_client
+            result = await service.complete([{"role": "user", "content": "test"}])
+
+        assert result.content == "full reply"
