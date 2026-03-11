@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useMutation } from '@tanstack/react-query';
-import { AlertCircle, ChevronDown, Info, Loader2 } from 'lucide-react';
+import { AlertCircle, Info, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { UnifiedVerificationTable } from '@/components/admin/UnifiedVerificationTable';
@@ -20,7 +20,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   Dialog,
   DialogContent,
@@ -46,8 +45,6 @@ import {
 } from '@/services/adminAPI';
 import type { SSEEvent } from '@/types/sse';
 import { isValidGreekInput } from '@/utils/greekValidation';
-
-import { DeclensionTable } from './DeclensionTable';
 
 export interface GenerateNounDialogProps {
   open: boolean;
@@ -386,332 +383,178 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
 
           {hasResult && displayPrimary ? (
             <>
-              <div
-                data-testid="generate-noun-content-area"
-                className={cn(
-                  displayVerification
-                    ? 'grid grid-cols-1 gap-6 md:grid-cols-[45%_55%]'
-                    : 'space-y-4'
-                )}
-              >
-                {/* LEFT PANEL - always shown */}
-                <div className="space-y-4">
-                  <div data-testid="generate-noun-result" className="space-y-4">
-                    <h3 className="font-medium">{t('generateNoun.normalizationResult')}</h3>
-                    {displayPrimary.corrected_from && displayPrimary.corrected_to && (
-                      <div
-                        data-testid="correction-note"
-                        className="flex items-start gap-2 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm dark:border-blue-800 dark:bg-blue-950"
-                      >
-                        <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
-                        <span>
-                          {t('generateNoun.accentCorrected', {
-                            from: displayPrimary.corrected_from,
-                            to: displayPrimary.corrected_to,
-                          })}
-                        </span>
+              <div data-testid="generate-noun-content-area" className="space-y-4">
+                <div data-testid="generate-noun-result" className="space-y-4">
+                  <h3 className="font-medium">{t('generateNoun.normalizationResult')}</h3>
+                  {displayPrimary.corrected_from && displayPrimary.corrected_to && (
+                    <div
+                      data-testid="correction-note"
+                      className="flex items-start gap-2 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm dark:border-blue-800 dark:bg-blue-950"
+                    >
+                      <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
+                      <span>
+                        {t('generateNoun.accentCorrected', {
+                          from: displayPrimary.corrected_from,
+                          to: displayPrimary.corrected_to,
+                        })}
+                      </span>
+                    </div>
+                  )}
+                  {displayPrimary && (
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <span className="font-medium">{t('generateNoun.lemmaLabel')}</span>
+                        <p data-testid="result-lemma" className="text-muted-foreground">
+                          {displayPrimary.lemma}
+                        </p>
                       </div>
-                    )}
-                    {displayPrimary && (
-                      <div className="grid grid-cols-2 gap-3 text-sm">
-                        <div>
-                          <span className="font-medium">{t('generateNoun.lemmaLabel')}</span>
-                          <p data-testid="result-lemma" className="text-muted-foreground">
-                            {displayPrimary.lemma}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="font-medium">{t('generateNoun.genderLabel')}</span>
-                          <p data-testid="result-gender" className="text-muted-foreground">
-                            {displayPrimary.gender
-                              ? `${displayPrimary.gender}${displayPrimary.article ? ` (${displayPrimary.article})` : ''}`
-                              : t('generateNoun.genderUnknown')}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="font-medium">{t('generateNoun.posLabel')}</span>
-                          <p data-testid="result-pos" className="text-muted-foreground">
-                            {displayPrimary.pos.charAt(0).toUpperCase() +
-                              displayPrimary.pos.slice(1).toLowerCase()}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="font-medium">{t('generateNoun.confidenceLabel')}</span>
-                          <p>
-                            <Badge
-                              data-testid="result-confidence-badge"
-                              className={CONFIDENCE_BADGE_CLASSES[displayPrimary.confidence_tier]}
-                            >
-                              {displayPrimary.confidence.toFixed(2)} —{' '}
-                              {t(`generateNoun.confidence.${displayPrimary.confidence_tier}`)}
-                            </Badge>
-                          </p>
-                        </div>
+                      <div>
+                        <span className="font-medium">{t('generateNoun.genderLabel')}</span>
+                        <p data-testid="result-gender" className="text-muted-foreground">
+                          {displayPrimary.gender
+                            ? `${displayPrimary.gender}${displayPrimary.article ? ` (${displayPrimary.article})` : ''}`
+                            : t('generateNoun.genderUnknown')}
+                        </p>
                       </div>
-                    )}
-                    {displayPrimary?.confidence_tier === 'low' && (
-                      <Alert data-testid="result-low-confidence-warning">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertDescription>
-                          {t('generateNoun.lowConfidenceWarning')}
-                        </AlertDescription>
-                      </Alert>
-                    )}
-                    {displaySuggestions.length > 0 && (
-                      <div data-testid="suggestions-section" className="space-y-2">
-                        <h4 className="text-sm font-medium">
-                          {t('generateNoun.suggestionsTitle')}
-                        </h4>
-                        <div className="space-y-1">
-                          {displaySuggestions.map((suggestion, index) => (
-                            <div
-                              key={`${suggestion.lemma}-${suggestion.pos}-${index}`}
-                              data-testid={`suggestion-row-${index}`}
-                              className="flex items-center justify-between rounded-md border p-2 text-sm"
-                            >
-                              <div className="flex items-center gap-3">
-                                <span className="font-bold">{suggestion.lemma}</span>
-                                <span className="text-muted-foreground">
-                                  {suggestion.pos.charAt(0).toUpperCase() +
-                                    suggestion.pos.slice(1).toLowerCase()}
-                                </span>
-                                <Badge
-                                  className={CONFIDENCE_BADGE_CLASSES[suggestion.confidence_tier]}
-                                >
-                                  {suggestion.confidence.toFixed(2)}{' '}
-                                  {t(`generateNoun.confidence.${suggestion.confidence_tier}`)}
-                                </Badge>
-                              </div>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                data-testid={`suggestion-use-${index}`}
-                                onClick={() => handleSwap(index)}
-                              >
-                                {t('generateNoun.useSuggestion')}
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
+                      <div>
+                        <span className="font-medium">{t('generateNoun.posLabel')}</span>
+                        <p data-testid="result-pos" className="text-muted-foreground">
+                          {displayPrimary.pos.charAt(0).toUpperCase() +
+                            displayPrimary.pos.slice(1).toLowerCase()}
+                        </p>
                       </div>
-                    )}
-                    {displayDuplicate && (
-                      <DuplicateCheckSection
-                        duplicateCheck={displayDuplicate}
-                        currentDeckId={deckId}
-                        onLinkToDeck={() => {
-                          const wordEntryId = displayDuplicate.word_entry_id;
-                          if (wordEntryId) {
-                            linkMutation.mutate({ wordEntryId });
-                          }
-                        }}
-                        isLinking={linkMutation.isPending}
-                      />
-                    )}
-                  </div>
-
-                  {displayDuplicate && (
-                    <div data-testid="duplicate-check-section">
-                      {displayDuplicate.is_duplicate ? (
-                        <div className="space-y-2">
-                          <div
-                            data-testid="duplicate-found-warning"
-                            className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm dark:border-amber-800 dark:bg-amber-950"
+                      <div>
+                        <span className="font-medium">{t('generateNoun.confidenceLabel')}</span>
+                        <p>
+                          <Badge
+                            data-testid="result-confidence-badge"
+                            className={CONFIDENCE_BADGE_CLASSES[displayPrimary.confidence_tier]}
                           >
-                            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-                            <div>
-                              <p className="font-medium">
-                                {t('generateNoun.duplicateFound', {
-                                  deckName: displayDuplicate.matched_decks[0]?.deck_name ?? '',
-                                })}
-                              </p>
-                              {displayDuplicate.existing_entry && (
-                                <p className="mt-1 text-muted-foreground">
-                                  {t('generateNoun.duplicateTranslation', {
-                                    translation: displayDuplicate.existing_entry.translation_en,
-                                  })}
-                                </p>
-                              )}
-                              <p className="mt-1 text-muted-foreground">
-                                {t('generateNoun.duplicateWarning')}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div
-                          data-testid="no-duplicate-banner"
-                          className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 p-3 text-sm dark:border-green-800 dark:bg-green-950"
-                        >
-                          <Info className="h-4 w-4 shrink-0 text-green-600 dark:text-green-400" />
-                          <span>{t('generateNoun.noDuplicates')}</span>
-                        </div>
-                      )}
+                            {displayPrimary.confidence.toFixed(2)} —{' '}
+                            {t(`generateNoun.confidence.${displayPrimary.confidence_tier}`)}
+                          </Badge>
+                        </p>
+                      </div>
                     </div>
                   )}
-
-                  {displayTranslationLookup &&
-                    ((displayTranslationLookup.en &&
-                      displayTranslationLookup.en.source !== 'none') ||
-                      (displayTranslationLookup.ru &&
-                        displayTranslationLookup.ru.source !== 'none')) && (
-                      <Collapsible data-testid="tdict-section" defaultOpen>
-                        <CollapsibleTrigger className="flex w-full items-center justify-between rounded-md border p-3 text-sm font-medium hover:bg-muted/50">
-                          <span>{t('generateNoun.tdict.title')}</span>
-                          <ChevronDown className="h-4 w-4 transition-transform [[data-state=open]_&]:rotate-180" />
-                        </CollapsibleTrigger>
-                        <CollapsibleContent className="mt-2 space-y-2 px-1">
-                          {displayTranslationLookup.en &&
-                            displayTranslationLookup.en.source !== 'none' && (
-                              <div className="flex items-center gap-2 text-sm">
-                                <span className="font-medium">EN:</span>
-                                <span>{displayTranslationLookup.en.combined_text}</span>
-                                <Badge variant="outline" className="text-xs">
-                                  {displayTranslationLookup.en.source}
-                                </Badge>
-                                <span className="text-xs text-muted-foreground">
-                                  ({displayTranslationLookup.en.sense_count})
-                                </span>
-                              </div>
-                            )}
-                          {displayTranslationLookup.ru &&
-                            displayTranslationLookup.ru.source !== 'none' && (
-                              <div className="flex items-center gap-2 text-sm">
-                                <span className="font-medium">RU:</span>
-                                <span>{displayTranslationLookup.ru.combined_text}</span>
-                                <Badge variant="outline" className="text-xs">
-                                  {displayTranslationLookup.ru.source}
-                                </Badge>
-                                <span className="text-xs text-muted-foreground">
-                                  ({displayTranslationLookup.ru.sense_count})
-                                </span>
-                              </div>
-                            )}
-                        </CollapsibleContent>
-                      </Collapsible>
-                    )}
-
-                  {generationLoading && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      {t('generateNoun.generatingWithAI')}
-                    </div>
-                  )}
-
-                  {stageError && (
-                    <Alert variant="destructive" data-testid="stage-error">
+                  {displayPrimary?.confidence_tier === 'low' && (
+                    <Alert data-testid="result-low-confidence-warning">
                       <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>{stageError}</AlertDescription>
+                      <AlertDescription>{t('generateNoun.lowConfidenceWarning')}</AlertDescription>
                     </Alert>
                   )}
-
-                  {displayGeneration && (
-                    <Collapsible data-testid="generation-section" defaultOpen>
-                      <CollapsibleTrigger
-                        data-testid="generation-section-trigger"
-                        className="flex w-full items-center justify-between rounded-md border p-3 text-sm font-medium hover:bg-muted/50"
-                      >
-                        <span>{t('generateNoun.generation.title')}</span>
-                        <ChevronDown className="h-4 w-4 transition-transform [[data-state=open]_&]:rotate-180" />
-                      </CollapsibleTrigger>
-                      <CollapsibleContent className="mt-2 space-y-3 px-1">
-                        <div className="grid grid-cols-2 gap-3 text-sm">
-                          <div>
-                            <span className="font-medium">
-                              {t('generateNoun.generation.translationEn')}
-                            </span>
-                            <p data-testid="gen-translation-en" className="text-muted-foreground">
-                              {displayGeneration.translation_en}
-                            </p>
-                          </div>
-                          <div>
-                            <span className="font-medium">
-                              {t('generateNoun.generation.translationRu')}
-                            </span>
-                            <p data-testid="gen-translation-ru" className="text-muted-foreground">
-                              {displayGeneration.translation_ru}
-                            </p>
-                          </div>
-                          <div>
-                            <span className="font-medium">
-                              {t('generateNoun.generation.translationEnPlural')}
-                            </span>
-                            <p
-                              data-testid="gen-translation-en-plural"
-                              className="text-muted-foreground"
-                            >
-                              {displayGeneration.translation_en_plural ?? '—'}
-                            </p>
-                          </div>
-                          <div>
-                            <span className="font-medium">
-                              {t('generateNoun.generation.translationRuPlural')}
-                            </span>
-                            <p
-                              data-testid="gen-translation-ru-plural"
-                              className="text-muted-foreground"
-                            >
-                              {displayGeneration.translation_ru_plural ?? '—'}
-                            </p>
-                          </div>
-                          <div>
-                            <span className="font-medium">
-                              {t('generateNoun.generation.pronunciation')}
-                            </span>
-                            <p data-testid="gen-pronunciation" className="text-muted-foreground">
-                              {displayGeneration.pronunciation}
-                            </p>
-                          </div>
-                          <div>
-                            <span className="font-medium">
-                              {t('generateNoun.generation.declensionGroup')}
-                            </span>
-                            <p>
-                              <Badge data-testid="gen-declension-group" variant="outline">
-                                {displayGeneration.grammar_data.declension_group}
+                  {displaySuggestions.length > 0 && (
+                    <div data-testid="suggestions-section" className="space-y-2">
+                      <h4 className="text-sm font-medium">{t('generateNoun.suggestionsTitle')}</h4>
+                      <div className="space-y-1">
+                        {displaySuggestions.map((suggestion, index) => (
+                          <div
+                            key={`${suggestion.lemma}-${suggestion.pos}-${index}`}
+                            data-testid={`suggestion-row-${index}`}
+                            className="flex items-center justify-between rounded-md border p-2 text-sm"
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className="font-bold">{suggestion.lemma}</span>
+                              <span className="text-muted-foreground">
+                                {suggestion.pos.charAt(0).toUpperCase() +
+                                  suggestion.pos.slice(1).toLowerCase()}
+                              </span>
+                              <Badge
+                                className={CONFIDENCE_BADGE_CLASSES[suggestion.confidence_tier]}
+                              >
+                                {suggestion.confidence.toFixed(2)}{' '}
+                                {t(`generateNoun.confidence.${suggestion.confidence_tier}`)}
                               </Badge>
-                            </p>
-                          </div>
-                        </div>
-                        <div>
-                          <h4 className="mb-1 text-sm font-medium">
-                            {t('generateNoun.generation.declensionTable')}
-                          </h4>
-                          <DeclensionTable cases={displayGeneration.grammar_data.cases} />
-                        </div>
-                        {displayGeneration.examples.length > 0 && (
-                          <div>
-                            <h4 className="mb-1 text-sm font-medium">
-                              {t('generateNoun.generation.examples')}
-                            </h4>
-                            <div className="space-y-2">
-                              {displayGeneration.examples.map((ex) => (
-                                <div
-                                  key={ex.id}
-                                  data-testid={`gen-example-${ex.id}`}
-                                  className="rounded-md border p-2 text-sm"
-                                >
-                                  <p className="font-medium">{ex.greek}</p>
-                                  <p className="text-muted-foreground">{ex.english}</p>
-                                  <p className="text-muted-foreground">{ex.russian}</p>
-                                </div>
-                              ))}
                             </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              data-testid={`suggestion-use-${index}`}
+                              onClick={() => handleSwap(index)}
+                            >
+                              {t('generateNoun.useSuggestion')}
+                            </Button>
                           </div>
-                        )}
-                      </CollapsibleContent>
-                    </Collapsible>
-                  )}
-
-                  {verificationLoading && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      {t('generateNoun.runningVerification')}
+                        ))}
+                      </div>
                     </div>
+                  )}
+                  {displayDuplicate && (
+                    <DuplicateCheckSection
+                      duplicateCheck={displayDuplicate}
+                      currentDeckId={deckId}
+                      onLinkToDeck={() => {
+                        const wordEntryId = displayDuplicate.word_entry_id;
+                        if (wordEntryId) {
+                          linkMutation.mutate({ wordEntryId });
+                        }
+                      }}
+                      isLinking={linkMutation.isPending}
+                    />
                   )}
                 </div>
 
-                {/* RIGHT PANEL - verification, only shown when verification present */}
+                {displayDuplicate && (
+                  <div data-testid="duplicate-check-section">
+                    {displayDuplicate.is_duplicate ? (
+                      <div className="space-y-2">
+                        <div
+                          data-testid="duplicate-found-warning"
+                          className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm dark:border-amber-800 dark:bg-amber-950"
+                        >
+                          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                          <div>
+                            <p className="font-medium">
+                              {t('generateNoun.duplicateFound', {
+                                deckName: displayDuplicate.matched_decks[0]?.deck_name ?? '',
+                              })}
+                            </p>
+                            {displayDuplicate.existing_entry && (
+                              <p className="mt-1 text-muted-foreground">
+                                {t('generateNoun.duplicateTranslation', {
+                                  translation: displayDuplicate.existing_entry.translation_en,
+                                })}
+                              </p>
+                            )}
+                            <p className="mt-1 text-muted-foreground">
+                              {t('generateNoun.duplicateWarning')}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        data-testid="no-duplicate-banner"
+                        className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 p-3 text-sm dark:border-green-800 dark:bg-green-950"
+                      >
+                        <Info className="h-4 w-4 shrink-0 text-green-600 dark:text-green-400" />
+                        <span>{t('generateNoun.noDuplicates')}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {generationLoading && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {t('generateNoun.generatingWithAI')}
+                  </div>
+                )}
+
+                {stageError && (
+                  <Alert variant="destructive" data-testid="stage-error">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{stageError}</AlertDescription>
+                  </Alert>
+                )}
+
+                {verificationLoading && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {t('generateNoun.runningVerification')}
+                  </div>
+                )}
+
                 {displayVerification && (
                   <div data-testid="verification-section" className="space-y-3">
                     <div className="flex items-center gap-2">
@@ -724,6 +567,25 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                       local={displayVerification.local}
                       crossAI={displayVerification.cross_ai}
                     />
+                  </div>
+                )}
+
+                {displayGeneration && displayGeneration.examples.length > 0 && (
+                  <div data-testid="examples-section" className="space-y-2">
+                    <h4 className="text-sm font-medium">{t('generateNoun.generation.examples')}</h4>
+                    <div className="space-y-2">
+                      {displayGeneration.examples.map((ex) => (
+                        <div
+                          key={ex.id}
+                          data-testid={`gen-example-${ex.id}`}
+                          className="rounded-md border p-2 text-sm"
+                        >
+                          <p className="font-medium">{ex.greek}</p>
+                          <p className="text-muted-foreground">{ex.english}</p>
+                          <p className="text-muted-foreground">{ex.russian}</p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>

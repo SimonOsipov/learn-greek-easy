@@ -798,24 +798,6 @@ describe('GenerateNounDialog', () => {
     expect(screen.queryByTestId('generate-noun-continue')).not.toBeInTheDocument();
   });
 
-  // 34. Displays generation data
-  it('displays generation data when present', async () => {
-    const user = userEvent.setup();
-    renderDialog();
-
-    await submitWord(user);
-    fireGenerationEvents();
-
-    await waitFor(() => {
-      expect(screen.getByTestId('generation-section')).toBeInTheDocument();
-    });
-    expect(screen.getByTestId('gen-translation-en')).toHaveTextContent('cat');
-    expect(screen.getByTestId('gen-translation-ru')).toHaveTextContent('кошка');
-    expect(screen.getByTestId('gen-pronunciation')).toHaveTextContent('/ˈɣa.ta/');
-    expect(screen.getByTestId('gen-declension-group')).toHaveTextContent('feminine_a');
-    expect(screen.getByTestId('declension-table')).toBeInTheDocument();
-  });
-
   // 35. Displays examples
   it('displays example sentences', async () => {
     const user = userEvent.setup();
@@ -825,82 +807,10 @@ describe('GenerateNounDialog', () => {
     fireGenerationEvents();
 
     await waitFor(() => {
-      expect(screen.getByTestId('generation-section')).toBeInTheDocument();
-    });
-    await waitFor(() => {
-      expect(screen.getByTestId('gen-example-1')).toBeInTheDocument();
+      expect(screen.getByTestId('examples-section')).toBeInTheDocument();
     });
     expect(screen.getByTestId('gen-example-1')).toHaveTextContent('Η γάτα κοιμάται.');
     expect(screen.getByTestId('gen-example-2')).toHaveTextContent('Οι γάτες παίζουν.');
-  });
-
-  // 36. EN plural rendered as separate field
-  it('displays EN plural as a separate field', async () => {
-    const user = userEvent.setup();
-    renderDialog();
-
-    await submitWord(user);
-    fireGenerationEvents();
-
-    await waitFor(() => {
-      expect(screen.getByTestId('generation-section')).toBeInTheDocument();
-    });
-    expect(screen.getByTestId('gen-translation-en-plural')).toHaveTextContent('cats');
-  });
-
-  // 37. RU plural rendered when present
-  it('displays RU plural when present', async () => {
-    const user = userEvent.setup();
-    renderDialog();
-
-    await submitWord(user);
-    fireGenerationEvents();
-
-    await waitFor(() => {
-      expect(screen.getByTestId('generation-section')).toBeInTheDocument();
-    });
-    expect(screen.getByTestId('gen-translation-ru-plural')).toHaveTextContent('кошки');
-  });
-
-  // 38. RU plural shows dash when null
-  it('shows dash for RU plural when null', async () => {
-    const user = userEvent.setup();
-    renderDialog();
-
-    await submitWord(user);
-    fireGenerationEvents({ generation: { ...mockGenerationData, translation_ru_plural: null } });
-
-    await waitFor(() => {
-      expect(screen.getByTestId('generation-section')).toBeInTheDocument();
-    });
-    expect(screen.getByTestId('gen-translation-ru-plural')).toHaveTextContent('—');
-  });
-
-  // 39. Generation section is collapsible
-  it('generation section is collapsible and starts expanded', async () => {
-    const user = userEvent.setup();
-    renderDialog();
-
-    await submitWord(user);
-    fireGenerationEvents();
-
-    await waitFor(() => {
-      expect(screen.getByTestId('generation-section')).toBeInTheDocument();
-    });
-
-    // Starts open (defaultOpen)
-    expect(screen.getByTestId('generation-section').getAttribute('data-state')).toBe('open');
-    expect(screen.getByTestId('gen-translation-en')).toBeInTheDocument();
-
-    // Click to close
-    await user.click(screen.getByTestId('generation-section-trigger'));
-    expect(screen.getByTestId('generation-section').getAttribute('data-state')).toBe('closed');
-    expect(screen.queryByTestId('gen-translation-en')).not.toBeInTheDocument();
-
-    // Click to open again
-    await user.click(screen.getByTestId('generation-section-trigger'));
-    expect(screen.getByTestId('generation-section').getAttribute('data-state')).toBe('open');
-    expect(screen.getByTestId('gen-translation-en')).toBeInTheDocument();
   });
 
   // 40. Wide layout when verification present
@@ -928,7 +838,7 @@ describe('GenerateNounDialog', () => {
     fireGenerationEvents();
 
     await waitFor(() => {
-      expect(screen.getByTestId('generation-section')).toBeInTheDocument();
+      expect(screen.getByTestId('generate-noun-result')).toBeInTheDocument();
     });
 
     const dialog = screen.getByTestId('generate-noun-dialog');
@@ -940,36 +850,8 @@ describe('GenerateNounDialog', () => {
     expect(contentArea.className).toContain('space-y-4');
   });
 
-  // 42. Displays TDICT section (renumbered)
-  it('displays TDICT section with dictionary badge', async () => {
-    const user = userEvent.setup();
-    renderDialog();
-
-    await submitWord(user);
-    fireGenerationEvents();
-
-    await waitFor(() => {
-      expect(screen.getByTestId('tdict-section')).toBeInTheDocument();
-    });
-    expect(screen.getByTestId('tdict-section')).toHaveTextContent('Dictionary Translations');
-  });
-
-  // 37. Hides TDICT when null
-  it('hides TDICT section when translation_lookup is null', async () => {
-    const user = userEvent.setup();
-    renderDialog();
-
-    await submitWord(user);
-    fireGenerationEvents({ translation_lookup: null });
-
-    await waitFor(() => {
-      expect(screen.getByTestId('generation-section')).toBeInTheDocument();
-    });
-    expect(screen.queryByTestId('tdict-section')).not.toBeInTheDocument();
-  });
-
-  // 38. Hides generation when null (pipeline_complete without generation)
-  it('hides generation section when generation event not fired', async () => {
+  // 42. Hides examples when generation event not fired
+  it('hides examples section when generation event not fired', async () => {
     const user = userEvent.setup();
     renderDialog();
 
@@ -979,11 +861,11 @@ describe('GenerateNounDialog', () => {
     await waitFor(() => {
       expect(screen.getByTestId('generate-noun-result')).toBeInTheDocument();
     });
-    expect(screen.queryByTestId('generation-section')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('examples-section')).not.toBeInTheDocument();
   });
 
-  // 40. Start Over clears generation
-  it('Start Over clears generation section', async () => {
+  // 43. Start Over clears examples section
+  it('Start Over clears examples section', async () => {
     const user = userEvent.setup();
     renderDialog();
 
@@ -991,12 +873,12 @@ describe('GenerateNounDialog', () => {
     fireGenerationEvents();
 
     await waitFor(() => {
-      expect(screen.getByTestId('generation-section')).toBeInTheDocument();
+      expect(screen.getByTestId('examples-section')).toBeInTheDocument();
     });
 
     await user.click(screen.getByTestId('generate-noun-start-over'));
 
-    expect(screen.queryByTestId('generation-section')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('examples-section')).not.toBeInTheDocument();
     expect(screen.getByTestId('generate-noun-input')).toBeInTheDocument();
   });
 
@@ -1032,5 +914,34 @@ describe('GenerateNounDialog', () => {
     expect(screen.queryByTestId('generate-noun-result')).not.toBeInTheDocument();
     expect(screen.getByTestId('generate-noun-input')).toBeInTheDocument();
     expect(screen.queryByTestId('suggestions-section')).not.toBeInTheDocument();
+  });
+
+  // 44. Examples and verification coexist after full pipeline
+  it('shows examples section after full pipeline completes', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    await submitWord(user);
+    fireFullPipelineEvents();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('verification-section')).toBeInTheDocument();
+    });
+    expect(screen.getByTestId('examples-section')).toBeInTheDocument();
+    expect(screen.getByTestId('gen-example-1')).toHaveTextContent('Η γάτα κοιμάται.');
+  });
+
+  // 45. Examples section hidden when generation has no examples
+  it('hides examples section when generation has no examples', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    await submitWord(user);
+    fireGenerationEvents({ generation: { ...mockGenerationData, examples: [] } });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('generate-noun-result')).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId('examples-section')).not.toBeInTheDocument();
   });
 });

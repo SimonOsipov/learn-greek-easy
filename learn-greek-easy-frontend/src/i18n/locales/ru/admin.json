@@ -1029,28 +1029,11 @@
     "linkSuccess": "Слово успешно связано с колодой",
     "existsInDecks": "Это слово есть в {{count}} колоде(ах)",
     "generation": {
-      "title": "Сгенерированные данные",
-      "translationEn": "Перевод (EN)",
-      "translationEnPlural": "Перевод мн.ч. (EN)",
-      "translationRu": "Перевод (RU)",
-      "translationRuPlural": "Перевод мн.ч. (RU)",
-      "pronunciation": "Произношение",
-      "declensionGroup": "Группа склонения",
-      "examples": "Примеры предложений",
-      "declensionTable": "Таблица склонения",
-      "caseNominative": "Именительный",
-      "caseGenitive": "Родительный",
-      "caseAccusative": "Винительный",
-      "caseVocative": "Звательный",
-      "singular": "Единственное",
-      "plural": "Множественное"
+      "examples": "Примеры предложений"
     },
     "swapConfirmTitle": "Сменить вариант?",
     "swapConfirmDescription": "Результаты генерации будут заменены для нового варианта. Нормализация и переводы будут сохранены.",
     "swapConfirmAction": "Сменить и перегенерировать",
-    "tdict": {
-      "title": "Словарные переводы"
-    },
     "generatingWithAI": "Генерация с помощью ИИ...",
     "runningVerification": "Запуск верификации...",
     "verification": {
