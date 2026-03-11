@@ -63,8 +63,7 @@ async def check_database_health(timeout: Optional[float] = None) -> ComponentHea
     try:
         start_time = asyncio.get_event_loop().time()
 
-        async with factory() as session:
-            await session.execute(text("SET LOCAL statement_timeout = '10000'"))
+        async with factory.begin() as session:
             result = await session.execute(text("SELECT 1"))
             result.scalar()
 
