@@ -377,7 +377,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent
-          className={cn('sm:max-w-[650px]', displayVerification && 'sm:max-w-[95vw]')}
+          className={cn('sm:max-w-[650px]', displayVerification && 'sm:max-w-[1200px]')}
           data-testid="generate-noun-dialog"
         >
           <DialogHeader>
@@ -386,8 +386,15 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
 
           {hasResult && displayPrimary ? (
             <>
-              <div data-testid="generate-noun-content-area" className="space-y-4">
-                {/* LEFT COLUMN - always shown */}
+              <div
+                data-testid="generate-noun-content-area"
+                className={cn(
+                  displayVerification
+                    ? 'grid grid-cols-1 gap-6 md:grid-cols-[45%_55%]'
+                    : 'space-y-4'
+                )}
+              >
+                {/* LEFT PANEL - always shown */}
                 <div className="space-y-4">
                   <div data-testid="generate-noun-result" className="space-y-4">
                     <h3 className="font-medium">{t('generateNoun.normalizationResult')}</h3>
@@ -704,7 +711,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                   )}
                 </div>
 
-                {/* Verification section - shown below when verification present */}
+                {/* RIGHT PANEL - verification, only shown when verification present */}
                 {displayVerification && (
                   <div data-testid="verification-section" className="space-y-3">
                     <div className="flex items-center gap-2">
@@ -716,7 +723,6 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                     <UnifiedVerificationTable
                       local={displayVerification.local}
                       crossAI={displayVerification.cross_ai}
-                      morphologySource={displayVerification.morphology_source}
                     />
                   </div>
                 )}

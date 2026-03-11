@@ -1,5 +1,4 @@
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/i18n';
 import { UnifiedVerificationTable } from '../UnifiedVerificationTable';
@@ -57,16 +56,11 @@ function makeCrossAI(
 
 function renderComponent(
   local: LocalVerificationResult | null,
-  crossAI: CrossAIVerificationResult | null,
-  morphologySource?: 'lexicon' | 'llm'
+  crossAI: CrossAIVerificationResult | null
 ) {
   return render(
     <I18nextProvider i18n={i18n}>
-      <UnifiedVerificationTable
-        local={local}
-        crossAI={crossAI}
-        morphologySource={morphologySource}
-      />
+      <UnifiedVerificationTable local={local} crossAI={crossAI} />
     </I18nextProvider>
   );
 }
@@ -77,34 +71,29 @@ describe('UnifiedVerificationTable', () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it('shows all-pass rows in collapsible', async () => {
-    const user = userEvent.setup();
+  it('shows all-pass rows immediately without toggle', () => {
     const local = makeLocalResult([
       makeLocalField('lemma', 'pass'),
       makeLocalField('translation_en', 'pass'),
     ]);
     renderComponent(local, null);
 
-    expect(screen.getByTestId('unified-passing-toggle')).toBeInTheDocument();
-    expect(screen.queryByTestId('unified-row-lemma')).not.toBeInTheDocument();
-
-    await user.click(screen.getByTestId('unified-passing-toggle'));
+    expect(screen.queryByTestId('unified-passing-toggle')).not.toBeInTheDocument();
     expect(screen.getByTestId('unified-row-lemma')).toBeInTheDocument();
     expect(screen.getByTestId('unified-row-translation_en')).toBeInTheDocument();
   });
 
-  it('shows fail rows in attention section (not collapsed)', () => {
+  it('shows fail rows and pass rows together', () => {
     const local = makeLocalResult([
       makeLocalField('lemma', 'fail', 'spell fail'),
       makeLocalField('translation_en', 'pass'),
     ]);
     renderComponent(local, null);
 
-    // Fail row visible immediately
+    // Both rows visible immediately
     expect(screen.getByTestId('unified-row-lemma')).toBeInTheDocument();
-    // Pass row hidden in collapsible
-    expect(screen.queryByTestId('unified-row-translation_en')).not.toBeInTheDocument();
-    expect(screen.getByTestId('unified-passing-toggle')).toBeInTheDocument();
+    expect(screen.getByTestId('unified-row-translation_en')).toBeInTheDocument();
+    expect(screen.queryByTestId('unified-passing-toggle')).not.toBeInTheDocument();
   });
 
   it('shows warn rows in attention section', () => {
@@ -144,20 +133,6 @@ describe('UnifiedVerificationTable', () => {
     expect(screen.getByText(/API timeout/)).toBeInTheDocument();
   });
 
-  it('shows lexicon scope note when morphologySource is lexicon', () => {
-    const local = makeLocalResult([makeLocalField('lemma', 'pass')]);
-    renderComponent(local, null, 'lexicon');
-
-    expect(screen.getByTestId('lexicon-scope-note')).toBeInTheDocument();
-  });
-
-  it('does not show lexicon scope note for llm source', () => {
-    const local = makeLocalResult([makeLocalField('lemma', 'pass')]);
-    renderComponent(local, null, 'llm');
-
-    expect(screen.queryByTestId('lexicon-scope-note')).not.toBeInTheDocument();
-  });
-
   it('shows agreement badge when crossAI has overall_agreement', () => {
     const crossAI = makeCrossAI([makeComparison('lemma', true)]);
     renderComponent(null, crossAI);
@@ -165,24 +140,20 @@ describe('UnifiedVerificationTable', () => {
     expect(screen.getByTestId('cross-ai-agreement')).toBeInTheDocument();
   });
 
-  it('joins rows from both local and crossAI by field_path', async () => {
-    const user = userEvent.setup();
+  it('joins rows from both local and crossAI by field_path', () => {
     const local = makeLocalResult([makeLocalField('lemma', 'pass')]);
     const crossAI = makeCrossAI([makeComparison('lemma', true)]);
     renderComponent(local, crossAI);
 
-    // lemma passes both — in collapsible
-    await user.click(screen.getByTestId('unified-passing-toggle'));
+    // lemma passes both — visible immediately
     expect(screen.getByTestId('unified-row-lemma')).toBeInTheDocument();
   });
 
-  it('renders skipped fields with dash (not in attention)', async () => {
-    const user = userEvent.setup();
+  it('renders skipped fields with dash (visible immediately)', () => {
     const local = makeLocalResult([makeLocalField('translation_en', 'skipped')]);
     renderComponent(local, null);
 
-    // skipped is not in attention group
-    await user.click(screen.getByTestId('unified-passing-toggle'));
+    // skipped fields are visible immediately
     expect(screen.getByTestId('unified-row-translation_en')).toBeInTheDocument();
   });
 

@@ -1061,7 +1061,6 @@
       "localVerification": "Локальная верификация",
       "crossAiVerification": "Кросс-AI верификация",
       "agreementScore": "Согласованность: {{percentage}}%",
-      "morphologySourceNote": "Область сравнения: только переводы и примеры (морфология из лексикона)",
       "crossAiUnavailable": "Кросс-AI верификация недоступна",
       "notAvailable": "Н/Д",
       "noComparisons": "Сравнения недоступны",
@@ -1082,11 +1081,7 @@
       "headers": {
         "local": "Локальная",
         "crossAi": "Кросс-AI"
-      },
-      "passingFieldsCount_one": "{{count}} поле пройдено",
-      "passingFieldsCount_few": "{{count}} поля пройдено",
-      "passingFieldsCount_many": "{{count}} полей пройдено",
-      "passingFieldsCount_other": "{{count}} полей пройдено"
+      }
     }
   },
   "wordEntry": {

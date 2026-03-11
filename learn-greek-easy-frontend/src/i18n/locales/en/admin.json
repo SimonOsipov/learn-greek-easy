@@ -1049,7 +1049,6 @@
       "localVerification": "Local Verification",
       "crossAiVerification": "Cross-AI Verification",
       "agreementScore": "Agreement: {{percentage}}%",
-      "morphologySourceNote": "Comparison scope: translations & examples only (morphology from lexicon)",
       "crossAiUnavailable": "Cross-AI verification unavailable",
       "notAvailable": "N/A",
       "noComparisons": "No comparisons available",
@@ -1070,8 +1069,7 @@
       "headers": {
         "local": "Local",
         "crossAi": "Cross-AI"
-      },
-      "passingFieldsCount": "{{count}} fields passed"
+      }
     }
   },
   "wordEntry": {
