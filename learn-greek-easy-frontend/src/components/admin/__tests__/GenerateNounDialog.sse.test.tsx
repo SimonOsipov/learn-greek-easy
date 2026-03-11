@@ -258,21 +258,6 @@ describe('GenerateNounDialog SSE integration', () => {
     });
   });
 
-  it('renders tdict-section when translations_found event fires', async () => {
-    const user = userEvent.setup();
-    renderDialog();
-
-    await submitWord(user);
-    fireNormalizationEvents();
-    act(() => {
-      capturedOnEvent?.({ type: 'translations_found', data: { data: mockTranslationLookup } });
-    });
-
-    await waitFor(() => {
-      expect(screen.getByTestId('tdict-section')).toBeInTheDocument();
-    });
-  });
-
   it('shows "Generating with AI..." spinner when generation_started event fires', async () => {
     const user = userEvent.setup();
     renderDialog();
@@ -289,7 +274,7 @@ describe('GenerateNounDialog SSE integration', () => {
     });
   });
 
-  it('renders generation-section and declension-table when generation_complete event fires', async () => {
+  it('renders examples-section when generation_complete event fires', async () => {
     const user = userEvent.setup();
     renderDialog();
 
@@ -297,10 +282,9 @@ describe('GenerateNounDialog SSE integration', () => {
     fireGenerationEvents();
 
     await waitFor(() => {
-      expect(screen.getByTestId('generation-section')).toBeInTheDocument();
+      expect(screen.getByTestId('examples-section')).toBeInTheDocument();
     });
-    expect(screen.getByTestId('declension-table')).toBeInTheDocument();
-    expect(screen.getByTestId('gen-translation-en')).toHaveTextContent('cat');
+    expect(screen.getByTestId('gen-example-1')).toHaveTextContent('Η γάτα κοιμάται.');
   });
 
   it('shows "Running verification..." when verification_started event fires', async () => {
@@ -359,7 +343,7 @@ describe('GenerateNounDialog SSE integration', () => {
     expect(screen.getByTestId('result-lemma')).toHaveTextContent('γάτα');
   });
 
-  it('keeps generation-section visible when verification_failed fires', async () => {
+  it('keeps examples-section visible when verification_failed fires', async () => {
     const user = userEvent.setup();
     renderDialog();
 
@@ -374,9 +358,9 @@ describe('GenerateNounDialog SSE integration', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId('generation-section')).toBeInTheDocument();
+      expect(screen.getByTestId('examples-section')).toBeInTheDocument();
     });
-    // generation-section stays visible
+    // examples-section stays visible
     expect(screen.queryByTestId('verification-tier-badge')).not.toBeInTheDocument();
   });
 
@@ -476,8 +460,8 @@ describe('GenerateNounDialog SSE integration', () => {
 
     await user.click(screen.getByTestId('suggestion-use-0'));
 
-    // Generation section was never populated, should remain absent
-    expect(screen.queryByTestId('generation-section')).not.toBeInTheDocument();
+    // Examples section was never populated, should remain absent
+    expect(screen.queryByTestId('examples-section')).not.toBeInTheDocument();
     // Normalization section stays
     expect(screen.getByTestId('result-lemma')).toBeInTheDocument();
   });
@@ -552,7 +536,7 @@ describe('GenerateNounDialog SSE integration', () => {
     await waitFor(() => {
       expect(screen.getByTestId('result-lemma')).toBeInTheDocument();
     });
-    expect(screen.queryByTestId('generation-section')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('examples-section')).not.toBeInTheDocument();
 
     // Step 2: duplicates
     act(() => {
@@ -565,7 +549,7 @@ describe('GenerateNounDialog SSE integration', () => {
     await waitFor(() => {
       expect(screen.getByTestId('no-duplicate-banner')).toBeInTheDocument();
     });
-    expect(screen.queryByTestId('generation-section')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('examples-section')).not.toBeInTheDocument();
 
     // Step 3: generation
     act(() => {
@@ -574,7 +558,7 @@ describe('GenerateNounDialog SSE integration', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId('generation-section')).toBeInTheDocument();
+      expect(screen.getByTestId('examples-section')).toBeInTheDocument();
     });
   });
 

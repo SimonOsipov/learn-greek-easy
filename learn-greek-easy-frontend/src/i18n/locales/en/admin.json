@@ -1017,28 +1017,11 @@
     "linkSuccess": "Word linked to deck successfully",
     "existsInDecks": "This word exists in {{count}} deck(s)",
     "generation": {
-      "title": "Generated Data",
-      "translationEn": "Translation (EN)",
-      "translationEnPlural": "Translation Plural (EN)",
-      "translationRu": "Translation (RU)",
-      "translationRuPlural": "Translation Plural (RU)",
-      "pronunciation": "Pronunciation",
-      "declensionGroup": "Declension Group",
-      "examples": "Example Sentences",
-      "declensionTable": "Declension Table",
-      "caseNominative": "Nominative",
-      "caseGenitive": "Genitive",
-      "caseAccusative": "Accusative",
-      "caseVocative": "Vocative",
-      "singular": "Singular",
-      "plural": "Plural"
+      "examples": "Example Sentences"
     },
     "swapConfirmTitle": "Switch suggestion?",
     "swapConfirmDescription": "Generation results will be replaced for the new suggestion. Normalization and translations will be preserved.",
     "swapConfirmAction": "Switch and regenerate",
-    "tdict": {
-      "title": "Dictionary Translations"
-    },
     "generatingWithAI": "Generating with AI...",
     "runningVerification": "Running verification...",
     "verification": {
@@ -1069,7 +1052,10 @@
       "headers": {
         "local": "Local",
         "crossAi": "Cross-AI"
-      }
+      },
+      "sourceDictionary": "Dictionary",
+      "sourcePivot": "Pivot",
+      "sourceLexicon": "Lexicon"
     }
   },
   "wordEntry": {
