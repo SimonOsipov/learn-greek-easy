@@ -6,6 +6,7 @@ import re
 from typing import Optional
 
 from src.core.logging import get_logger
+from src.schemas.admin import TranslationLookupStageResult, TranslationSourceInfo
 from src.schemas.nlp import (
     CheckResult,
     FieldVerificationResult,
@@ -75,7 +76,11 @@ class LocalVerificationService:
         self._spellcheck = spellcheck_service
         self._morphology = morphology_service
 
-    def verify(self, data: GeneratedNounData) -> LocalVerificationResult:
+    def verify(
+        self,
+        data: GeneratedNounData,
+        tdict_translations: TranslationLookupStageResult | None = None,
+    ) -> LocalVerificationResult:
         """Run local verification pipeline on generated noun data."""
         fields_by_path: dict[str, FieldVerificationResult] = {}
         stages_skipped: list[str] = []
@@ -83,7 +88,9 @@ class LocalVerificationService:
         self._run_spellcheck_stage(data, fields_by_path, stages_skipped)
         self._run_morphology_stage(data, fields_by_path, stages_skipped)
         self._run_schema_stage(data, fields_by_path)
-        self._add_skipped_fields(fields_by_path)
+        if tdict_translations is not None:
+            self._run_translation_stage(data, tdict_translations, fields_by_path)
+        self._add_skipped_fields(fields_by_path, tdict_translations)
 
         fields = list(fields_by_path.values())
         tier = self._compute_tier(fields)
@@ -447,17 +454,93 @@ class LocalVerificationService:
         )
         logger.debug("Schema pronunciation_format: %s", pronunciation_status)
 
-    def _add_skipped_fields(self, fields_by_path: dict[str, FieldVerificationResult]) -> None:
+    def _run_translation_stage(
+        self,
+        data: GeneratedNounData,
+        tdict: TranslationLookupStageResult,
+        fields_by_path: dict[str, FieldVerificationResult],
+    ) -> None:
+        """Verify translation fields against TDICT data using fuzzy substring matching."""
+        field_configs: list[tuple[str, TranslationSourceInfo | None, str | None]] = [
+            ("translation_en", tdict.en, data.translation_en),
+            ("translation_ru", tdict.ru, data.translation_ru),
+            ("translation_en_plural", tdict.en, data.translation_en_plural),
+            ("translation_ru_plural", tdict.ru, data.translation_ru_plural),
+        ]
+        plural_fields = {"translation_en_plural", "translation_ru_plural"}
+
+        for field_path, source_info, generated_value in field_configs:
+            gen_norm = (generated_value or "").strip().lower()
+
+            # Plural fields: if no generated value (None or empty), skip
+            if field_path in plural_fields and not gen_norm:
+                fields_by_path[field_path] = FieldVerificationResult(
+                    field_path=field_path, status="skipped", checks=[]
+                )
+                continue
+
+            # No TDICT data available
+            if source_info is None or source_info.source == "none":
+                fields_by_path[field_path] = FieldVerificationResult(
+                    field_path=field_path, status="skipped", checks=[]
+                )
+                continue
+
+            # Guard: empty generated value (singular field)
+            if not gen_norm:
+                check = CheckResult(
+                    check_name="translation_tdict",
+                    status="warn",
+                    message="Generated translation is empty",
+                )
+                fields_by_path[field_path] = FieldVerificationResult(
+                    field_path=field_path, status="warn", checks=[check]
+                )
+                continue
+
+            # Fuzzy substring match (case-insensitive, stripped)
+            tdict_norms = [t.lower().strip() for t in source_info.translations if t.strip()]
+            has_overlap = any(t in gen_norm or gen_norm in t for t in tdict_norms)
+
+            if has_overlap:
+                if source_info.source == "dictionary":
+                    status = "pass"
+                    message = "Dictionary match"
+                else:
+                    status = "warn"
+                    message = "Pivot match (indirect source)"
+            else:
+                status = "warn"
+                message = "No overlap with TDICT translations"
+
+            check = CheckResult(
+                check_name="translation_tdict",
+                status=status,
+                message=message,
+            )
+            fields_by_path[field_path] = FieldVerificationResult(
+                field_path=field_path, status=status, checks=[check]
+            )
+
+    def _add_skipped_fields(
+        self,
+        fields_by_path: dict[str, FieldVerificationResult],
+        tdict_translations: TranslationLookupStageResult | None = None,  # noqa: ARG002
+    ) -> None:
         for path in (
             "translation_en",
             "translation_ru",
             "translation_en_plural",
             "translation_ru_plural",
-            "examples",
         ):
-            fields_by_path[path] = FieldVerificationResult(
-                field_path=path, status="skipped", checks=[]
-            )
+            if path not in fields_by_path:
+                fields_by_path[path] = FieldVerificationResult(
+                    field_path=path, status="skipped", checks=[]
+                )
+        # examples always skipped — no reference data
+        fields_by_path["examples"] = FieldVerificationResult(
+            field_path="examples", status="skipped", checks=[]
+        )
 
     def _compute_tier(self, fields: list[FieldVerificationResult]) -> str:
         fail_count = sum(1 for f in fields if f.status == "fail")

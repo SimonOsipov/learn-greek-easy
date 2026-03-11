@@ -1,20 +1,8 @@
-import { useState } from 'react';
-
-import {
-  AlertCircle,
-  AlertTriangle,
-  Check,
-  ChevronDown,
-  ChevronRight,
-  Info,
-  MinusCircle,
-  XCircle,
-} from 'lucide-react';
+import { AlertCircle, AlertTriangle, Check, MinusCircle, XCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import type {
@@ -23,7 +11,6 @@ import type {
   FieldStatus,
   FieldVerificationResult,
   LocalVerificationResult,
-  MorphologySource,
 } from '@/services/adminAPI';
 
 const FIELD_STATUS_ICON: Record<FieldStatus, { icon: React.ElementType; className: string }> = {
@@ -42,7 +29,6 @@ interface UnifiedRow {
 interface UnifiedVerificationTableProps {
   local: LocalVerificationResult | null;
   crossAI: CrossAIVerificationResult | null;
-  morphologySource?: MorphologySource;
 }
 
 function buildRows(
@@ -74,11 +60,25 @@ function buildRows(
   }));
 }
 
-function isAttention(row: UnifiedRow): boolean {
-  return (
-    row.local?.status === 'fail' || row.local?.status === 'warn' || row.crossAI?.agrees === false
-  );
-}
+const CANONICAL_ORDER = [
+  'lemma',
+  'grammar_data.gender',
+  'grammar_data.declension_group',
+  'cases.singular.nominative',
+  'cases.singular.genitive',
+  'cases.singular.accusative',
+  'cases.singular.vocative',
+  'cases.plural.nominative',
+  'cases.plural.genitive',
+  'cases.plural.accusative',
+  'cases.plural.vocative',
+  'pronunciation',
+  'translation_en',
+  'translation_ru',
+  'translation_en_plural',
+  'translation_ru_plural',
+  'examples',
+];
 
 const FIELD_LABELS: Record<string, string> = {
   'cases.singular.nominative': 'Singular Nominative',
@@ -94,9 +94,9 @@ const FIELD_LABELS: Record<string, string> = {
   translation_ru: 'Translation (RU)',
   translation_en_plural: 'Translation Plural (EN)',
   translation_ru_plural: 'Translation Plural (RU)',
-  gender: 'Gender',
+  'grammar_data.gender': 'Gender',
   lemma: 'Lemma',
-  declension_group: 'Declension Group',
+  'grammar_data.declension_group': 'Declension Group',
 };
 
 function formatUDMessage(message: string): string {
@@ -113,28 +113,41 @@ function formatUDMessage(message: string): string {
     .replace(/\//g, ' ');
 }
 
-function getRowSeverity(row: UnifiedRow): 'red' | 'yellow' | 'green' {
+function getRowSeverity(row: UnifiedRow): 'red' | 'yellow' | 'green' | 'neutral' {
   if (row.local?.status === 'fail' || row.crossAI?.agrees === false) return 'red';
   if (row.local?.status === 'warn') return 'yellow';
+  if (row.local?.status === 'skipped' && row.crossAI == null) return 'neutral';
   return 'green';
 }
 
-const SEVERITY_COLORS = { red: 'bg-red-500', yellow: 'bg-yellow-500', green: 'bg-green-500' };
+const SEVERITY_COLORS = {
+  red: 'bg-red-500',
+  yellow: 'bg-yellow-500',
+  green: 'bg-green-500',
+  neutral: 'bg-muted-foreground',
+};
 
-function SeverityDot({ severity }: { severity: 'red' | 'yellow' | 'green' }) {
+function SeverityDot({ severity }: { severity: 'red' | 'yellow' | 'green' | 'neutral' }) {
   return <span className={cn('inline-block h-2 w-2 rounded-full', SEVERITY_COLORS[severity])} />;
 }
 
 function LocalCell({
   field,
   hasLocalData,
+  t,
 }: {
   field: FieldVerificationResult | null;
   hasLocalData: boolean;
+  t: (key: string) => string;
 }) {
   if (!hasLocalData) return <span className="text-muted-foreground">—</span>;
   if (!field) return <span className="text-muted-foreground">—</span>;
-  if (field.status === 'skipped') return <span className="text-muted-foreground">–</span>;
+  if (field.status === 'skipped')
+    return (
+      <span className="text-xs text-muted-foreground">
+        {t('generateNoun.verification.fieldStatus.skipped')}
+      </span>
+    );
 
   const { icon: Icon, className } = FIELD_STATUS_ICON[field.status];
   const firstMsg = field.checks.find((c) => c.message)?.message;
@@ -154,7 +167,13 @@ function LocalCell({
   );
 }
 
-function FieldCell({ path, severity }: { path: string; severity: 'red' | 'yellow' | 'green' }) {
+function FieldCell({
+  path,
+  severity,
+}: {
+  path: string;
+  severity: 'red' | 'yellow' | 'green' | 'neutral';
+}) {
   const label = FIELD_LABELS[path] ?? path;
   return (
     <Tooltip>
@@ -197,14 +216,7 @@ function RowsTable({
   t: (key: string, options?: Record<string, unknown>) => string;
 }) {
   return (
-    <table className="w-full table-fixed text-sm">
-      <colgroup>
-        <col className="w-[20%]" />
-        <col className="w-[8%]" />
-        <col className="w-[30%]" />
-        <col className="w-[30%]" />
-        <col className="w-[12%]" />
-      </colgroup>
+    <table className="w-full table-auto text-sm">
       <thead>
         <tr className="border-b text-xs font-medium">
           <th className="py-1 text-left font-medium">
@@ -237,12 +249,12 @@ function RowsTable({
                 <FieldCell path={row.field_path} severity={severity} />
               </td>
               <td className="py-1">
-                <LocalCell field={row.local} hasLocalData={hasLocalData} />
+                <LocalCell field={row.local} hasLocalData={hasLocalData} t={t} />
               </td>
-              <td className="py-1 pr-1">
+              <td className="max-w-[200px] py-1 pr-1">
                 <PrimaryValueCell comparison={row.crossAI} />
               </td>
-              <td className="py-1 pr-1">
+              <td className="max-w-[200px] py-1 pr-1">
                 <SecondaryValueCell comparison={row.crossAI} />
               </td>
               <td className="py-1">
@@ -256,40 +268,22 @@ function RowsTable({
   );
 }
 
-export function UnifiedVerificationTable({
-  local,
-  crossAI,
-  morphologySource,
-}: UnifiedVerificationTableProps) {
+export function UnifiedVerificationTable({ local, crossAI }: UnifiedVerificationTableProps) {
   const { t } = useTranslation('admin');
-  const [passingOpen, setPassingOpen] = useState(false);
 
   const hasLocalData = local !== null;
   const hasCrossAIData = crossAI !== null && !crossAI.error;
-  const allRows = buildRows(local, crossAI);
-  const attentionRows = allRows
-    .filter(isAttention)
-    .sort((a, b) => a.field_path.localeCompare(b.field_path));
-  const passingRows = allRows
-    .filter((r) => !isAttention(r))
-    .sort((a, b) => a.field_path.localeCompare(b.field_path));
+  const allRows = buildRows(local, crossAI).sort((a, b) => {
+    const ai = CANONICAL_ORDER.indexOf(a.field_path);
+    const bi = CANONICAL_ORDER.indexOf(b.field_path);
+    return (ai === -1 ? Infinity : ai) - (bi === -1 ? Infinity : bi);
+  });
 
   if (allRows.length === 0 && !crossAI?.error) return null;
 
   return (
     <TooltipProvider>
       <div data-testid="unified-verification-table" className="space-y-2 text-sm">
-        {/* Lexicon scope note */}
-        {morphologySource === 'lexicon' && (
-          <div
-            data-testid="lexicon-scope-note"
-            className="flex items-start gap-1.5 text-xs text-muted-foreground"
-          >
-            <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            <span>{t('generateNoun.verification.morphologySourceNote')}</span>
-          </div>
-        )}
-
         {/* Cross-AI error */}
         {crossAI?.error && (
           <Alert data-testid="cross-ai-error" variant="destructive" className="py-2">
@@ -311,30 +305,8 @@ export function UnifiedVerificationTable({
           </div>
         )}
 
-        {/* Attention rows */}
-        {attentionRows.length > 0 && (
-          <RowsTable rows={attentionRows} hasLocalData={hasLocalData} t={t} />
-        )}
-
-        {/* Passing rows (collapsed) */}
-        {passingRows.length > 0 && (
-          <Collapsible open={passingOpen} onOpenChange={setPassingOpen}>
-            <CollapsibleTrigger
-              data-testid="unified-passing-toggle"
-              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-            >
-              {passingOpen ? (
-                <ChevronDown className="h-3 w-3" />
-              ) : (
-                <ChevronRight className="h-3 w-3" />
-              )}
-              {t('generateNoun.verification.passingFieldsCount', { count: passingRows.length })}
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <RowsTable rows={passingRows} hasLocalData={hasLocalData} t={t} />
-            </CollapsibleContent>
-          </Collapsible>
-        )}
+        {/* All rows in canonical order */}
+        {allRows.length > 0 && <RowsTable rows={allRows} hasLocalData={hasLocalData} t={t} />}
       </div>
     </TooltipProvider>
   );

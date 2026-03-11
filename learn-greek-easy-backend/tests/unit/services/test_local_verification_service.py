@@ -746,6 +746,199 @@ class TestSkippedFields:
             assert field.checks == [], f"Expected empty checks for {path}"
 
 
+class TestTranslationStage:
+    """Tests for _run_translation_stage — TDICT-backed translation verification."""
+
+    def _make_tdict(
+        self,
+        en_source: str = "dictionary",
+        en_translations: list[str] | None = None,
+        ru_source: str = "dictionary",
+        ru_translations: list[str] | None = None,
+        en_info: bool = True,
+        ru_info: bool = True,
+    ):
+        """Build a TranslationLookupStageResult for testing."""
+        from src.schemas.admin import TranslationLookupStageResult, TranslationSourceInfo
+
+        en = (
+            TranslationSourceInfo(
+                translations=en_translations or ["house"],
+                combined_text=", ".join(en_translations or ["house"]),
+                source=en_source,  # type: ignore[arg-type]
+                sense_count=1,
+            )
+            if en_info
+            else None
+        )
+        ru = (
+            TranslationSourceInfo(
+                translations=ru_translations or ["дом"],
+                combined_text=", ".join(ru_translations or ["дом"]),
+                source=ru_source,  # type: ignore[arg-type]
+                sense_count=1,
+            )
+            if ru_info
+            else None
+        )
+        return TranslationLookupStageResult(en=en, ru=ru)
+
+    def _make_data_with_translations(
+        self,
+        translation_en: str = "house",
+        translation_ru: str = "дом",
+        translation_en_plural: str | None = "houses",
+        translation_ru_plural: str | None = "дома",
+    ) -> GeneratedNounData:
+        """Build noun data with controllable translation fields."""
+        singular = GeneratedNounCaseSet(
+            nominative="το σπίτι",
+            genitive="του σπιτιού",
+            accusative="το σπίτι",
+            vocative="σπίτι",
+        )
+        plural = GeneratedNounCaseSet(
+            nominative="τα σπίτια",
+            genitive="των σπιτιών",
+            accusative="τα σπίτια",
+            vocative="σπίτια",
+        )
+        return GeneratedNounData(
+            lemma="σπίτι",
+            part_of_speech="noun",
+            translation_en=translation_en,
+            translation_en_plural=translation_en_plural,
+            translation_ru=translation_ru,
+            translation_ru_plural=translation_ru_plural,
+            pronunciation="/spí·ti/",
+            grammar_data=GeneratedNounGrammar(
+                gender="neuter",
+                declension_group="neuter_i",
+                cases=GeneratedNounCases(singular=singular, plural=plural),
+            ),
+            examples=[
+                GeneratedExample(
+                    id=1, greek="Το σπίτι μου.", english="My house.", russian="Мой дом."
+                ),
+                GeneratedExample(
+                    id=2, greek="Πάμε σπίτι.", english="Let's go home.", russian="Пойдём домой."
+                ),
+            ],
+        )
+
+    def test_dictionary_match_pass(self) -> None:
+        """Dictionary source with substring match → translation_en status=pass."""
+        svc = LocalVerificationService(spellcheck_service=None, morphology_service=None)
+        tdict = self._make_tdict(en_source="dictionary", en_translations=["house"])
+        data = self._make_data_with_translations(translation_en="house, home")
+
+        result = svc.verify(data, tdict_translations=tdict)
+
+        field = _find_field(result, "translation_en")
+        assert field is not None
+        assert field.status == "pass"
+        check = _find_check(field, "translation_tdict")
+        assert check is not None
+        assert check.message == "Dictionary match"
+
+    def test_pivot_match_warn(self) -> None:
+        """Pivot source with substring match → translation_en status=warn."""
+        svc = LocalVerificationService(spellcheck_service=None, morphology_service=None)
+        tdict = self._make_tdict(en_source="pivot", en_translations=["house"])
+        data = self._make_data_with_translations(translation_en="house")
+
+        result = svc.verify(data, tdict_translations=tdict)
+
+        field = _find_field(result, "translation_en")
+        assert field is not None
+        assert field.status == "warn"
+        check = _find_check(field, "translation_tdict")
+        assert check is not None
+        assert check.message == "Pivot match (indirect source)"
+
+    def test_no_tdict_data_skipped(self) -> None:
+        """source='none' → translation fields status=skipped with empty checks."""
+        svc = LocalVerificationService(spellcheck_service=None, morphology_service=None)
+        tdict = self._make_tdict(
+            en_source="none",
+            en_translations=[],
+            ru_source="none",
+            ru_translations=[],
+        )
+        data = self._make_data_with_translations()
+
+        result = svc.verify(data, tdict_translations=tdict)
+
+        for path in ("translation_en", "translation_ru"):
+            field = _find_field(result, path)
+            assert field is not None, f"Missing field {path}"
+            assert field.status == "skipped", f"Expected skipped for {path}, got {field.status}"
+            assert field.checks == [], f"Expected empty checks for skipped field {path}"
+
+    def test_no_overlap_dictionary_warn(self) -> None:
+        """Dictionary source but no substring overlap → status=warn (not fail)."""
+        svc = LocalVerificationService(spellcheck_service=None, morphology_service=None)
+        tdict = self._make_tdict(en_source="dictionary", en_translations=["domicile"])
+        data = self._make_data_with_translations(translation_en="house")
+
+        result = svc.verify(data, tdict_translations=tdict)
+
+        field = _find_field(result, "translation_en")
+        assert field is not None
+        assert field.status == "warn"
+        check = _find_check(field, "translation_tdict")
+        assert check is not None
+        assert check.message == "No overlap with TDICT translations"
+
+    def test_none_plural_translation_skipped(self) -> None:
+        """Plural translation field with None value → status=skipped with empty checks."""
+        svc = LocalVerificationService(spellcheck_service=None, morphology_service=None)
+        tdict = self._make_tdict(en_source="dictionary", en_translations=["house"])
+        # No plural translations (None)
+        data = self._make_data_with_translations(
+            translation_en_plural=None,
+            translation_ru_plural=None,
+        )
+
+        result = svc.verify(data, tdict_translations=tdict)
+
+        for path in ("translation_en_plural", "translation_ru_plural"):
+            field = _find_field(result, path)
+            assert field is not None, f"Missing field {path}"
+            assert field.status == "skipped", f"Expected skipped for {path}, got {field.status}"
+            assert field.checks == [], f"Expected empty checks for skipped plural field {path}"
+
+    def test_no_tdict_translations_fallback_to_skipped(self) -> None:
+        """When tdict_translations is None (not passed), translation fields still skipped."""
+        svc = LocalVerificationService(spellcheck_service=None, morphology_service=None)
+        data = self._make_data_with_translations()
+
+        result = svc.verify(data)  # no tdict_translations — backward compat
+
+        for path in (
+            "translation_en",
+            "translation_ru",
+            "translation_en_plural",
+            "translation_ru_plural",
+        ):
+            field = _find_field(result, path)
+            assert field is not None, f"Missing field {path}"
+            assert field.status == "skipped"
+            assert field.checks == []
+
+    def test_examples_always_skipped(self) -> None:
+        """examples field is always skipped regardless of tdict data."""
+        svc = LocalVerificationService(spellcheck_service=None, morphology_service=None)
+        tdict = self._make_tdict(en_source="dictionary", en_translations=["house"])
+        data = self._make_data_with_translations()
+
+        result = svc.verify(data, tdict_translations=tdict)
+
+        field = _find_field(result, "examples")
+        assert field is not None
+        assert field.status == "skipped"
+
+
 class TestSingleton:
     """Tests for the get_local_verification_service() singleton factory."""
 

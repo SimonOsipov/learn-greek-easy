@@ -22,6 +22,7 @@ import pytest
 from fastapi import HTTPException
 
 from src.api.v1.admin import _run_verification_stage
+from src.schemas.admin import TranslationLookupStageResult, TranslationSourceInfo
 from src.schemas.nlp import (
     CrossAIVerificationResult,
     FieldComparisonResult,
@@ -343,6 +344,45 @@ class TestRunVerificationStage:
             )
 
         assert result.combined_tier == "auto_approve"
+
+    @pytest.mark.asyncio
+    async def test_translation_lookup_forwarded_to_verify(self):
+        """translation_lookup kwarg is forwarded to local_svc.verify()."""
+        mock_local_svc = MagicMock()
+        mock_local_svc.verify.return_value = _make_local_result()
+        mock_cross_svc = MagicMock()
+        mock_cross_svc.compare.return_value = _make_cross_result()
+        mock_lexicon_svc = AsyncMock()
+        mock_lexicon_svc.get_declensions.return_value = []
+
+        tdict = TranslationLookupStageResult(
+            en=TranslationSourceInfo(
+                translations=["house"],
+                combined_text="house",
+                source="dictionary",
+                sense_count=1,
+            ),
+            ru=None,
+        )
+
+        with (
+            patch("src.api.v1.admin.get_local_verification_service", return_value=mock_local_svc),
+            patch(
+                "src.api.v1.admin.get_cross_ai_verification_service", return_value=mock_cross_svc
+            ),
+        ):
+            await _run_verification_stage(
+                generated_data=_make_noun_data(),
+                normalized_lemma=_make_normalized_lemma(),
+                lexicon_svc=mock_lexicon_svc,
+                lemma="σπίτι",
+                secondary_data=_make_noun_data(),
+                translation_lookup=tdict,
+            )
+
+        mock_local_svc.verify.assert_called_once()
+        _, kwargs = mock_local_svc.verify.call_args
+        assert kwargs.get("tdict_translations") is tdict
 
 
 # ---------------------------------------------------------------------------

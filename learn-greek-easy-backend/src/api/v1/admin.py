@@ -2684,6 +2684,7 @@ async def _run_verification_stage(
     lexicon_svc: LexiconService | None,
     lemma: str,
     secondary_data: GeneratedNounData | None = None,
+    translation_lookup: TranslationLookupStageResult | None = None,
 ) -> VerificationSummary:
     """Run local + cross-AI verification and compute combined tier."""
     local_svc = get_local_verification_service()
@@ -2702,7 +2703,10 @@ async def _run_verification_stage(
     # Run local verification (sync service, wrapped in executor)
     loop = asyncio.get_running_loop()
     try:
-        local_result = await loop.run_in_executor(None, local_svc.verify, generated_data)
+        local_result = await loop.run_in_executor(
+            None,
+            lambda: local_svc.verify(generated_data, tdict_translations=translation_lookup),
+        )
     except Exception as exc:
         raise HTTPException(status_code=500, detail="Local verification pipeline failed") from exc
 
@@ -2905,6 +2909,7 @@ async def generate_word_entry(
             lexicon_svc=lexicon_svc,
             lemma=primary.morphology.lemma,
             secondary_data=secondary_data,
+            translation_lookup=translation_lookup,
         )
 
     last_stage = (
@@ -2972,6 +2977,7 @@ async def _sse_generation_and_verification(
             lexicon_svc=None,
             lemma=lemma,
             secondary_data=secondary_data,
+            translation_lookup=translation_lookup,
         )
         yield format_sse_event(verification_summary, event="verification_complete")
     except Exception as exc:
