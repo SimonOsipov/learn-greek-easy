@@ -82,6 +82,10 @@ class LocalVerificationService:
         tdict_translations: TranslationLookupStageResult | None = None,
     ) -> LocalVerificationResult:
         """Run local verification pipeline on generated noun data."""
+        logger.info(
+            "TDICT_DEBUG[verify]: tdict_translations=%s",
+            "PRESENT" if tdict_translations is not None else "NONE",
+        )
         fields_by_path: dict[str, FieldVerificationResult] = {}
         stages_skipped: list[str] = []
 
