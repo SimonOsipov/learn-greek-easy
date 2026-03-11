@@ -113,28 +113,41 @@ function formatUDMessage(message: string): string {
     .replace(/\//g, ' ');
 }
 
-function getRowSeverity(row: UnifiedRow): 'red' | 'yellow' | 'green' {
+function getRowSeverity(row: UnifiedRow): 'red' | 'yellow' | 'green' | 'neutral' {
   if (row.local?.status === 'fail' || row.crossAI?.agrees === false) return 'red';
   if (row.local?.status === 'warn') return 'yellow';
+  if (row.local?.status === 'skipped' && row.crossAI == null) return 'neutral';
   return 'green';
 }
 
-const SEVERITY_COLORS = { red: 'bg-red-500', yellow: 'bg-yellow-500', green: 'bg-green-500' };
+const SEVERITY_COLORS = {
+  red: 'bg-red-500',
+  yellow: 'bg-yellow-500',
+  green: 'bg-green-500',
+  neutral: 'bg-muted-foreground',
+};
 
-function SeverityDot({ severity }: { severity: 'red' | 'yellow' | 'green' }) {
+function SeverityDot({ severity }: { severity: 'red' | 'yellow' | 'green' | 'neutral' }) {
   return <span className={cn('inline-block h-2 w-2 rounded-full', SEVERITY_COLORS[severity])} />;
 }
 
 function LocalCell({
   field,
   hasLocalData,
+  t,
 }: {
   field: FieldVerificationResult | null;
   hasLocalData: boolean;
+  t: (key: string) => string;
 }) {
   if (!hasLocalData) return <span className="text-muted-foreground">—</span>;
   if (!field) return <span className="text-muted-foreground">—</span>;
-  if (field.status === 'skipped') return <span className="text-muted-foreground">–</span>;
+  if (field.status === 'skipped')
+    return (
+      <span className="text-xs text-muted-foreground">
+        {t('generateNoun.verification.fieldStatus.skipped')}
+      </span>
+    );
 
   const { icon: Icon, className } = FIELD_STATUS_ICON[field.status];
   const firstMsg = field.checks.find((c) => c.message)?.message;
@@ -154,7 +167,13 @@ function LocalCell({
   );
 }
 
-function FieldCell({ path, severity }: { path: string; severity: 'red' | 'yellow' | 'green' }) {
+function FieldCell({
+  path,
+  severity,
+}: {
+  path: string;
+  severity: 'red' | 'yellow' | 'green' | 'neutral';
+}) {
   const label = FIELD_LABELS[path] ?? path;
   return (
     <Tooltip>
@@ -230,7 +249,7 @@ function RowsTable({
                 <FieldCell path={row.field_path} severity={severity} />
               </td>
               <td className="py-1">
-                <LocalCell field={row.local} hasLocalData={hasLocalData} />
+                <LocalCell field={row.local} hasLocalData={hasLocalData} t={t} />
               </td>
               <td className="max-w-[200px] py-1 pr-1">
                 <PrimaryValueCell comparison={row.crossAI} />

@@ -470,8 +470,10 @@ class LocalVerificationService:
         plural_fields = {"translation_en_plural", "translation_ru_plural"}
 
         for field_path, source_info, generated_value in field_configs:
-            # Plural fields: if no generated value, skip
-            if field_path in plural_fields and generated_value is None:
+            gen_norm = (generated_value or "").strip().lower()
+
+            # Plural fields: if no generated value (None or empty), skip
+            if field_path in plural_fields and not gen_norm:
                 fields_by_path[field_path] = FieldVerificationResult(
                     field_path=field_path, status="skipped", checks=[]
                 )
@@ -484,12 +486,21 @@ class LocalVerificationService:
                 )
                 continue
 
+            # Guard: empty generated value (singular field)
+            if not gen_norm:
+                check = CheckResult(
+                    check_name="translation_tdict",
+                    status="warn",
+                    message="Generated translation is empty",
+                )
+                fields_by_path[field_path] = FieldVerificationResult(
+                    field_path=field_path, status="warn", checks=[check]
+                )
+                continue
+
             # Fuzzy substring match (case-insensitive, stripped)
-            gen_norm = (generated_value or "").lower().strip()
-            tdict_norms = [t.lower().strip() for t in source_info.translations]
-            has_overlap = any(
-                t in gen_norm or gen_norm in t for t in tdict_norms if t  # skip empty strings
-            )
+            tdict_norms = [t.lower().strip() for t in source_info.translations if t.strip()]
+            has_overlap = any(t in gen_norm or gen_norm in t for t in tdict_norms)
 
             if has_overlap:
                 if source_info.source == "dictionary":
