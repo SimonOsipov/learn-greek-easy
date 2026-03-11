@@ -53,11 +53,13 @@ function buildRows(
     crossAIMap.set(c.field_path, c);
   });
 
-  return Array.from(paths).map((path) => ({
-    field_path: path,
-    local: localMap.get(path) ?? null,
-    crossAI: crossAIMap.get(path) ?? null,
-  }));
+  return Array.from(paths)
+    .filter((path) => !FILTERED_PATHS.has(path))
+    .map((path) => ({
+      field_path: path,
+      local: localMap.get(path) ?? null,
+      crossAI: crossAIMap.get(path) ?? null,
+    }));
 }
 
 const CANONICAL_ORDER = [
@@ -77,8 +79,9 @@ const CANONICAL_ORDER = [
   'translation_ru',
   'translation_en_plural',
   'translation_ru_plural',
-  'examples',
 ];
+
+const FILTERED_PATHS = new Set(['examples']);
 
 const FIELD_LABELS: Record<string, string> = {
   'cases.singular.nominative': 'Singular Nominative',
@@ -152,6 +155,48 @@ function LocalCell({
   const { icon: Icon, className } = FIELD_STATUS_ICON[field.status];
   const firstMsg = field.checks.find((c) => c.message)?.message;
   const tooltipText = firstMsg ? formatUDMessage(firstMsg) : field.status;
+
+  // Extract reference info
+  const refCheck = field.checks.find((c) => c.reference_value != null);
+  const referenceValue = refCheck?.reference_value ?? null;
+  const referenceSource = refCheck?.reference_source ?? null;
+
+  // Source i18n key map
+  const SOURCE_I18N_KEY: Record<string, string> = {
+    dictionary: 'generateNoun.verification.sourceDictionary',
+    pivot: 'generateNoun.verification.sourcePivot',
+    lexicon: 'generateNoun.verification.sourceLexicon',
+  };
+
+  if (referenceValue != null) {
+    return (
+      <span className="inline-flex items-center gap-1">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className={cn('inline-flex items-center', className)}>
+              <Icon className="h-3 w-3 shrink-0" />
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>
+            <span className="text-xs">{tooltipText}</span>
+          </TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="max-w-[150px] truncate text-xs">{referenceValue}</span>
+          </TooltipTrigger>
+          <TooltipContent>
+            <span className="text-xs">{referenceValue}</span>
+          </TooltipContent>
+        </Tooltip>
+        {referenceSource && SOURCE_I18N_KEY[referenceSource] && (
+          <Badge variant="outline" className="text-xs">
+            {t(SOURCE_I18N_KEY[referenceSource])}
+          </Badge>
+        )}
+      </span>
+    );
+  }
 
   return (
     <Tooltip>

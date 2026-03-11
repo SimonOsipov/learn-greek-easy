@@ -12,13 +12,23 @@ import type {
 function makeLocalField(
   field_path: string,
   status: 'pass' | 'fail' | 'warn' | 'skipped',
-  message?: string
+  message?: string,
+  referenceValue?: string | null,
+  referenceSource?: string | null
 ): FieldVerificationResult {
   return {
     field_path,
     status,
     checks: message
-      ? [{ check_name: 'test', status: status === 'skipped' ? 'pass' : status, message }]
+      ? [
+          {
+            check_name: 'test',
+            status: status === 'skipped' ? 'pass' : status,
+            message,
+            reference_value: referenceValue ?? null,
+            reference_source: referenceSource ?? null,
+          },
+        ]
       : [],
   };
 }
@@ -209,5 +219,34 @@ describe('UnifiedVerificationTable', () => {
     expect(screen.queryByText('Warning')).not.toBeInTheDocument();
     expect(screen.queryByText('Pass')).not.toBeInTheDocument();
     expect(screen.queryByText('Fail')).not.toBeInTheDocument();
+  });
+
+  it('shows reference text and source badge in Local column when reference_value is present', () => {
+    const local = makeLocalResult([
+      makeLocalField('translation_en', 'pass', 'ok', 'house', 'dictionary'),
+    ]);
+    renderComponent(local, null);
+    expect(screen.getByText('house')).toBeInTheDocument();
+    expect(screen.getByText('Dictionary')).toBeInTheDocument();
+  });
+
+  it('shows only severity icon when no reference_value in checks', () => {
+    const local = makeLocalResult([makeLocalField('lemma', 'pass', 'ok')]);
+    renderComponent(local, null);
+    const row = screen.getByTestId('unified-row-lemma');
+    expect(row.querySelector('svg')).toBeTruthy();
+    // No truncated reference text span
+    const localTd = row.querySelectorAll('td')[1];
+    expect(localTd?.querySelector('.truncate')).toBeFalsy();
+  });
+
+  it('filters out examples row even when backend sends it', () => {
+    const local = makeLocalResult([
+      makeLocalField('lemma', 'pass'),
+      makeLocalField('examples', 'pass'),
+    ]);
+    renderComponent(local, null);
+    expect(screen.getByTestId('unified-row-lemma')).toBeInTheDocument();
+    expect(screen.queryByTestId('unified-row-examples')).not.toBeInTheDocument();
   });
 });

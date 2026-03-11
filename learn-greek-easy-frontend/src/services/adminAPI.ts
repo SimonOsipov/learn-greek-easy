@@ -672,6 +672,8 @@ export interface CheckResult {
   check_name: string;
   status: CheckStatus;
   message: string | null;
+  reference_value: string | null;
+  reference_source: string | null;
 }
 
 export interface FieldVerificationResult {
