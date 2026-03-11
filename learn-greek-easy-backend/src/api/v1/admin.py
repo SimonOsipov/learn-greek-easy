@@ -2701,10 +2701,6 @@ async def _run_verification_stage(
     morphology_source: Literal["lexicon", "llm"] = "lexicon" if lexicon_declensions else "llm"
 
     # Run local verification (sync service, wrapped in executor)
-    logger.info(
-        "TDICT_DEBUG[verify_stage]: received translation_lookup={}",
-        "PRESENT" if translation_lookup is not None else "NONE",
-    )
     loop = asyncio.get_running_loop()
     try:
         local_result = await loop.run_in_executor(
@@ -2973,10 +2969,6 @@ async def _sse_generation_and_verification(
         return
 
     yield format_sse_event({"message": "Running verification..."}, event="verification_started")
-    logger.info(
-        "TDICT_DEBUG[gen+ver]: translation_lookup is {} before _run_verification_stage",
-        "PRESENT" if translation_lookup is not None else "NONE",
-    )
     verification_summary: VerificationSummary | None = None
     try:
         verification_summary = await _run_verification_stage(
@@ -3180,7 +3172,7 @@ async def _generate_word_entry_sse_pipeline(  # noqa: C901
                     "error": "Duplicate word entry found",
                     "stage": "duplicate_check",
                     "existing_entry": (
-                        dup_result.existing_entry.model_dump()
+                        dup_result.existing_entry.model_dump(mode="json")
                         if dup_result.existing_entry
                         else None
                     ),
@@ -3199,11 +3191,6 @@ async def _generate_word_entry_sse_pipeline(  # noqa: C901
                 pos="NOUN",
             )
         translation_lookup = _build_translation_lookup_stage_result(tl_bilingual)
-        logger.info(
-            "TDICT_DEBUG[pipeline]: built translation_lookup en.source={} ru.source={}",
-            translation_lookup.en.source if translation_lookup.en else "N/A",
-            translation_lookup.ru.source if translation_lookup.ru else "N/A",
-        )
         yield format_sse_event(
             {"data": translation_lookup.model_dump()}, event="translations_found"
         )
@@ -3211,10 +3198,6 @@ async def _generate_word_entry_sse_pipeline(  # noqa: C901
         logger.opt(exception=True).warning("Translation lookup failed (non-blocking): {}", exc)
         yield format_sse_event({"data": None}, event="translations_found")
 
-    logger.info(
-        "TDICT_DEBUG[pipeline]: before gen+ver, translation_lookup is {}",
-        "PRESENT" if translation_lookup is not None else "NONE",
-    )
     # Build NormalizedLemma and run stages 3+4 via sub-generator
     normalized_lemma = NormalizedLemma(
         input_word=primary.input_form,
