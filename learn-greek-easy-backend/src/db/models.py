@@ -11,6 +11,7 @@ This module contains all SQLAlchemy models for the application:
 - Culture Exam (CultureDeck, CultureQuestion, CultureQuestionStats, CultureAnswerHistory)
 - Announcement Campaigns (AnnouncementCampaign)
 - Changelog (ChangelogEntry)
+- Listening Dialogs (ListeningDialog, DialogSpeaker, DialogLine)
 
 All models use:
 - UUID primary keys with server-side generation
@@ -25,7 +26,7 @@ from typing import List
 from uuid import UUID
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import JSON, Boolean, Date, DateTime
+from sqlalchemy import JSON, Boolean, CheckConstraint, Date, DateTime
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy import (
     Float,
@@ -256,6 +257,16 @@ class NewsCountry(str, enum.Enum):
     CYPRUS = "cyprus"
     GREECE = "greece"
     WORLD = "world"
+
+
+class DialogStatus(str, enum.Enum):
+    """Status of a listening dialog exercise."""
+
+    DRAFT = "draft"
+    TEXT_APPROVED = "text_approved"
+    AUDIO_READY = "audio_ready"
+    EXERCISES_READY = "exercises_ready"
+    PUBLISHED = "published"
 
 
 # ============================================================================
@@ -2713,6 +2724,123 @@ class GreekLexicon(Base):
             f"<GreekLexicon(id={self.id}, form={self.form!r}, "
             f"lemma={self.lemma!r}, pos={self.pos!r})>"
         )
+
+
+# ---------------------------------------------------------------------------
+# Listening Dialog Models
+# ---------------------------------------------------------------------------
+
+
+class ListeningDialog(Base, TimestampMixin):
+    """Top-level listening dialog entity with audio metadata."""
+
+    __tablename__ = "listening_dialogs"
+    __table_args__ = (
+        CheckConstraint(
+            "num_speakers >= 2 AND num_speakers <= 4", name="ck_listening_dialogs_num_speakers"
+        ),
+        Index("ix_listening_dialogs_status", "status"),
+        Index("ix_listening_dialogs_cefr_level", "cefr_level"),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.uuid_generate_v4())
+    scenario_el: Mapped[str] = mapped_column(Text, nullable=False)
+    scenario_en: Mapped[str] = mapped_column(Text, nullable=False)
+    scenario_ru: Mapped[str] = mapped_column(Text, nullable=False)
+    cefr_level: Mapped[DeckLevel] = mapped_column(nullable=False)
+    num_speakers: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    status: Mapped[DialogStatus] = mapped_column(
+        SAEnum(
+            DialogStatus,
+            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+            name="dialog_status",
+            create_type=False,
+        ),
+        nullable=False,
+        server_default=text("'draft'"),
+    )
+    created_by: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    audio_s3_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    audio_generated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    audio_file_size_bytes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    audio_duration_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    speakers: Mapped[List["DialogSpeaker"]] = relationship(
+        back_populates="dialog", lazy="raise", cascade="all, delete-orphan"
+    )
+    lines: Mapped[List["DialogLine"]] = relationship(
+        back_populates="dialog", lazy="raise", cascade="all, delete-orphan"
+    )
+
+    def __repr__(self) -> str:
+        return f"<ListeningDialog id={self.id} cefr_level={self.cefr_level} status={self.status}>"
+
+
+class DialogSpeaker(Base):
+    """A speaker slot within a listening dialog."""
+
+    __tablename__ = "dialog_speakers"
+    __table_args__ = (
+        UniqueConstraint("dialog_id", "speaker_index", name="uq_dialog_speaker_index"),
+        CheckConstraint(
+            "speaker_index >= 0 AND speaker_index < 4", name="ck_dialog_speakers_speaker_index"
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.uuid_generate_v4())
+    dialog_id: Mapped[UUID] = mapped_column(
+        ForeignKey("listening_dialogs.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    speaker_index: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    character_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    voice_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    voice_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    dialog: Mapped["ListeningDialog"] = relationship(back_populates="speakers", lazy="raise")
+    lines: Mapped[List["DialogLine"]] = relationship(
+        back_populates="speaker", lazy="raise", cascade="all, delete-orphan"
+    )
+
+    def __repr__(self) -> str:
+        return f"<DialogSpeaker id={self.id} dialog_id={self.dialog_id} index={self.speaker_index}>"
+
+
+class DialogLine(Base):
+    """A single line of dialogue in a listening dialog exercise."""
+
+    __tablename__ = "dialog_lines"
+    __table_args__ = (
+        UniqueConstraint("dialog_id", "line_index", name="uq_dialog_line_index"),
+        Index("ix_dialog_lines_dialog_id", "dialog_id"),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.uuid_generate_v4())
+    dialog_id: Mapped[UUID] = mapped_column(
+        ForeignKey("listening_dialogs.id", ondelete="CASCADE"), nullable=False
+    )
+    speaker_id: Mapped[UUID] = mapped_column(
+        ForeignKey("dialog_speakers.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    line_index: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    start_time_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    end_time_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    dialog: Mapped["ListeningDialog"] = relationship(back_populates="lines", lazy="raise")
+    speaker: Mapped["DialogSpeaker"] = relationship(back_populates="lines", lazy="raise")
+
+    def __repr__(self) -> str:
+        return f"<DialogLine id={self.id} dialog_id={self.dialog_id} index={self.line_index}>"
 
 
 class Translation(Base):
