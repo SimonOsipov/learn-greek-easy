@@ -14,6 +14,7 @@ import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from sqlalchemy.exc import OperationalError
 
 from src.schemas.health import ComponentStatus, HealthStatus, StripeHealth
 
@@ -91,15 +92,23 @@ class TestCheckDatabaseHealth:
 
     @pytest.mark.asyncio
     async def test_check_database_health_timeout(self, mock_session_factory):
-        """Test database health check with timeout."""
+        """Test database health check with timeout (OperationalError from statement_timeout)."""
         from src.services.health_service import check_database_health
 
         factory, session = mock_session_factory
 
-        async def slow_execute(*args, **kwargs):
-            await asyncio.sleep(10)
+        call_count = 0
 
-        session.execute = slow_execute
+        async def execute_with_timeout(*args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                # First call: SET LOCAL statement_timeout — succeeds
+                return MagicMock()
+            # Second call: SELECT 1 — raises OperationalError (statement timeout)
+            raise OperationalError("statement timeout", None, None)
+
+        session.execute = execute_with_timeout
 
         with patch("src.services.health_service.get_session_factory", return_value=factory):
             result = await check_database_health(timeout=0.01)

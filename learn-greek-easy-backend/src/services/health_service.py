@@ -8,6 +8,7 @@ from typing import Optional, Tuple
 
 import psutil
 from sqlalchemy import text
+from sqlalchemy.exc import OperationalError
 
 from src.config import settings
 from src.core.logging import get_logger
@@ -63,11 +64,8 @@ async def check_database_health(timeout: Optional[float] = None) -> ComponentHea
         start_time = asyncio.get_event_loop().time()
 
         async with factory() as session:
-            # Execute simple query with timeout
-            result = await asyncio.wait_for(
-                session.execute(text("SELECT 1")),
-                timeout=check_timeout,
-            )
+            await session.execute(text("SET LOCAL statement_timeout = '10000'"))
+            result = await session.execute(text("SELECT 1"))
             result.scalar()
 
         latency_ms = (asyncio.get_event_loop().time() - start_time) * 1000
@@ -78,7 +76,7 @@ async def check_database_health(timeout: Optional[float] = None) -> ComponentHea
             message="Connection successful",
         )
 
-    except asyncio.TimeoutError:
+    except OperationalError:
         return ComponentHealth(
             status=ComponentStatus.UNHEALTHY,
             latency_ms=None,
