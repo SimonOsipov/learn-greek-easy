@@ -90,10 +90,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Download coverage artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: backend-coverage-report
           path: coverage-data/
@@ -136,7 +136,7 @@ jobs:
       deploy: ${{ steps.check.outputs.deploy }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -178,7 +178,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Show deployment context
         run: |
@@ -355,7 +355,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Warm up Backend
         run: |
@@ -399,7 +399,7 @@ jobs:
           # API smoke tests are informational - don't fail the job
 
       - name: Upload Health Check Results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: always()
         with:
           name: health-check-results
@@ -438,15 +438,15 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
 
       - name: Download Health Check Results
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: health-check-results
           path: health-data/
@@ -549,7 +549,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup k6 with browser support
         uses: grafana/setup-k6-action@v1
@@ -630,7 +630,7 @@ jobs:
           echo "dashboard_p95=${DASHBOARD_P95}" >> $GITHUB_OUTPUT
 
       - name: Upload K6 Reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: always()
         with:
           name: k6-performance-reports
@@ -650,15 +650,15 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
 
       - name: Download K6 Reports
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: k6-performance-reports
           path: k6-data/
@@ -711,10 +711,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
           cache: 'npm'
@@ -750,7 +750,7 @@ jobs:
           fi
 
       - name: Upload Accessibility Report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: always()
         with:
           name: accessibility-report
@@ -793,15 +793,15 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
 
       - name: Download Accessibility Report
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: accessibility-report
           path: accessibility-data/
@@ -854,10 +854,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
 
@@ -970,7 +970,7 @@ jobs:
           fi
 
       - name: Upload Lighthouse Reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: lighthouse-reports
           path: learn-greek-easy-frontend/lighthouse-reports/
@@ -984,7 +984,7 @@ jobs:
           node scripts/parse-lighthouse-results.cjs
 
       - name: Upload Lighthouse Summary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: lighthouse-summary
           path: |
@@ -1040,7 +1040,7 @@ jobs:
 
     steps:
       - name: Download Lighthouse Summary
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: lighthouse-summary
           path: lighthouse-data/
@@ -1085,10 +1085,10 @@ jobs:
   #
   #   steps:
   #     - name: Checkout code
-  #       uses: actions/checkout@v4
+  #       uses: actions/checkout@v5
   #
   #     - name: Setup Node.js
-  #       uses: actions/setup-node@v4
+  #       uses: actions/setup-node@v5
   #       with:
   #         node-version: '20'
   #         cache: 'npm'
@@ -1118,7 +1118,7 @@ jobs:
   #         fi
   #
   #     - name: Upload Visual Test Results
-  #       uses: actions/upload-artifact@v4
+  #       uses: actions/upload-artifact@v5
   #       if: always()
   #       with:
   #         name: visual-test-results
@@ -1145,12 +1145,12 @@ jobs:
   #
   #   steps:
   #     - name: Checkout code
-  #       uses: actions/checkout@v4
+  #       uses: actions/checkout@v5
   #       with:
   #         fetch-depth: 0  # Required for Chromatic to detect git history
   #
   #     - name: Setup Node.js
-  #       uses: actions/setup-node@v4
+  #       uses: actions/setup-node@v5
   #       with:
   #         node-version: '20'
   #         cache: 'npm'
@@ -1161,7 +1161,7 @@ jobs:
   #       run: npm ci
   #
   #     - name: Download Visual Test Results
-  #       uses: actions/download-artifact@v4
+  #       uses: actions/download-artifact@v5
   #       with:
   #         name: visual-test-results
   #         path: learn-greek-easy-frontend/
@@ -1190,10 +1190,10 @@ jobs:
   #
   #   steps:
   #     - name: Checkout code
-  #       uses: actions/checkout@v4
+  #       uses: actions/checkout@v5
   #
   #     - name: Setup Node.js
-  #       uses: actions/setup-node@v4
+  #       uses: actions/setup-node@v5
   #       with:
   #         node-version: '20'
   #
