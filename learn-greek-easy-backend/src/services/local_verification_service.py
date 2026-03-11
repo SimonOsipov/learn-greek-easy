@@ -83,7 +83,7 @@ class LocalVerificationService:
     ) -> LocalVerificationResult:
         """Run local verification pipeline on generated noun data."""
         logger.info(
-            "TDICT_DEBUG[verify]: tdict_translations=%s",
+            "TDICT_DEBUG[verify]: tdict_translations={}",
             "PRESENT" if tdict_translations is not None else "NONE",
         )
         fields_by_path: dict[str, FieldVerificationResult] = {}

@@ -2702,7 +2702,7 @@ async def _run_verification_stage(
 
     # Run local verification (sync service, wrapped in executor)
     logger.info(
-        "TDICT_DEBUG[verify_stage]: received translation_lookup=%s",
+        "TDICT_DEBUG[verify_stage]: received translation_lookup={}",
         "PRESENT" if translation_lookup is not None else "NONE",
     )
     loop = asyncio.get_running_loop()
@@ -2974,7 +2974,7 @@ async def _sse_generation_and_verification(
 
     yield format_sse_event({"message": "Running verification..."}, event="verification_started")
     logger.info(
-        "TDICT_DEBUG[gen+ver]: translation_lookup is %s before _run_verification_stage",
+        "TDICT_DEBUG[gen+ver]: translation_lookup is {} before _run_verification_stage",
         "PRESENT" if translation_lookup is not None else "NONE",
     )
     verification_summary: VerificationSummary | None = None
@@ -3200,7 +3200,7 @@ async def _generate_word_entry_sse_pipeline(  # noqa: C901
             )
         translation_lookup = _build_translation_lookup_stage_result(tl_bilingual)
         logger.info(
-            "TDICT_DEBUG[pipeline]: built translation_lookup en.source=%s ru.source=%s",
+            "TDICT_DEBUG[pipeline]: built translation_lookup en.source={} ru.source={}",
             translation_lookup.en.source if translation_lookup.en else "N/A",
             translation_lookup.ru.source if translation_lookup.ru else "N/A",
         )
@@ -3208,11 +3208,11 @@ async def _generate_word_entry_sse_pipeline(  # noqa: C901
             {"data": translation_lookup.model_dump()}, event="translations_found"
         )
     except Exception as exc:
-        logger.warning("Translation lookup failed (non-blocking): %s", exc)
+        logger.opt(exception=True).warning("Translation lookup failed (non-blocking): {}", exc)
         yield format_sse_event({"data": None}, event="translations_found")
 
     logger.info(
-        "TDICT_DEBUG[pipeline]: before gen+ver, translation_lookup is %s",
+        "TDICT_DEBUG[pipeline]: before gen+ver, translation_lookup is {}",
         "PRESENT" if translation_lookup is not None else "NONE",
     )
     # Build NormalizedLemma and run stages 3+4 via sub-generator
