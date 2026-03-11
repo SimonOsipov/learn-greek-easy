@@ -54,6 +54,7 @@ class CrossAIVerificationService:
             messages=messages,
             model=self._SECONDARY_MODEL,
             response_format={"type": "json_object"},
+            reasoning={"effort": "none"},
         )
         return self._parse_response(response.content)
 

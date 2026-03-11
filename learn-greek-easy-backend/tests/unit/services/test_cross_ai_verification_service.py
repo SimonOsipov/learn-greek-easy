@@ -593,6 +593,19 @@ class TestPromptConstruction:
         user_content = messages[1]["content"]
         assert "unknown" not in user_content.lower()
 
+    @pytest.mark.asyncio
+    async def test_reasoning_disabled(
+        self,
+        service: CrossAIVerificationService,
+        mock_openrouter: AsyncMock,
+    ) -> None:
+        """verify() passes reasoning={'effort': 'none'} to disable Qwen3 thinking tokens."""
+        primary = _make_noun_data()
+        mock_openrouter.complete.return_value = _make_response(_noun_data_to_json(primary))
+        await service.verify(primary, _make_lemma())
+        call_kwargs = mock_openrouter.complete.call_args
+        assert call_kwargs.kwargs["reasoning"] == {"effort": "none"}
+
 
 # ---------------------------------------------------------------------------
 # Tests: error handling

@@ -195,6 +195,21 @@ class OpenRouterService:
                 usage = data.get("usage") or {}
                 choices = data.get("choices", [])
                 content = choices[0].get("message", {}).get("content", "") if choices else ""
+                finish_reason = choices[0].get("finish_reason", "") if choices else ""
+                if finish_reason == "length":
+                    logger.warning(
+                        "OpenRouter response truncated",
+                        extra={
+                            "model": effective_model,
+                            "finish_reason": finish_reason,
+                            "latency_ms": latency_ms,
+                            "attempt": attempt,
+                        },
+                    )
+                    raise OpenRouterAPIError(
+                        status_code=200,
+                        detail="Response truncated (finish_reason=length). Increase max_tokens or reduce prompt size.",
+                    )
 
                 input_tokens = usage.get("prompt_tokens", 0) or 0
                 output_tokens = usage.get("completion_tokens", 0) or 0
