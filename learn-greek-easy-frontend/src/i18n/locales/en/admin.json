@@ -1053,10 +1053,7 @@
       "headers": {
         "local": "Local",
         "crossAi": "Cross-AI"
-      },
-      "sourceDictionary": "Dictionary",
-      "sourcePivot": "Pivot",
-      "sourceLexicon": "Lexicon"
+      }
     }
   },
   "wordEntry": {

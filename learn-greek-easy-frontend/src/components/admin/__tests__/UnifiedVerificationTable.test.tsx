@@ -221,13 +221,12 @@ describe('UnifiedVerificationTable', () => {
     expect(screen.queryByText('Fail')).not.toBeInTheDocument();
   });
 
-  it('shows reference text and source badge in Local column when reference_value is present', () => {
+  it('shows reference text in Local column when reference_value is present', () => {
     const local = makeLocalResult([
       makeLocalField('translation_en', 'pass', 'ok', 'house', 'dictionary'),
     ]);
     renderComponent(local, null);
     expect(screen.getByText('house')).toBeInTheDocument();
-    expect(screen.getByText('Dictionary')).toBeInTheDocument();
   });
 
   it('shows only severity icon when no reference_value in checks', () => {

@@ -159,14 +159,6 @@ function LocalCell({
   // Extract reference info
   const refCheck = field.checks.find((c) => c.reference_value != null);
   const referenceValue = refCheck?.reference_value ?? null;
-  const referenceSource = refCheck?.reference_source ?? null;
-
-  // Source i18n key map
-  const SOURCE_I18N_KEY: Record<string, string> = {
-    dictionary: 'generateNoun.verification.sourceDictionary',
-    pivot: 'generateNoun.verification.sourcePivot',
-    lexicon: 'generateNoun.verification.sourceLexicon',
-  };
 
   if (referenceValue != null) {
     return (
@@ -183,17 +175,12 @@ function LocalCell({
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
-            <span className="block max-w-[150px] truncate text-xs">{referenceValue}</span>
+            <span className="block break-words text-xs">{referenceValue}</span>
           </TooltipTrigger>
           <TooltipContent>
             <span className="text-xs">{referenceValue}</span>
           </TooltipContent>
         </Tooltip>
-        {referenceSource && SOURCE_I18N_KEY[referenceSource] && (
-          <Badge variant="outline" className="text-xs">
-            {t(SOURCE_I18N_KEY[referenceSource])}
-          </Badge>
-        )}
       </span>
     );
   }
