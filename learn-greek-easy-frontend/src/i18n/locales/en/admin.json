@@ -1115,7 +1115,6 @@
     },
     "status": {
       "draft": "Draft",
-      "text_approved": "Text Approved",
       "audio_ready": "Audio Ready",
       "exercises_ready": "Exercises Ready",
       "published": "Published"
@@ -1127,7 +1126,17 @@
     },
     "create": {
       "button": "Create New Dialog",
-      "comingSoon": "Dialog creation coming soon"
+      "title": "Create Listening Dialog",
+      "description": "Paste a complete dialog as JSON.",
+      "placeholder": "{\n  \"scenario_el\": \"...\",\n  \"scenario_en\": \"...\",\n  \"scenario_ru\": \"...\",\n  \"cefr_level\": \"A2\",\n  \"speakers\": [{\"speaker_index\": 0, \"character_name\": \"...\", \"voice_id\": \"...\"}],\n  \"lines\": [{\"speaker_index\": 0, \"text\": \"...\"}]\n}",
+      "submit": "Create Dialog",
+      "creating": "Creating...",
+      "cancel": "Cancel",
+      "success": "Dialog created successfully",
+      "errors": {
+        "invalidJson": "Invalid JSON: {{message}}",
+        "createFailed": "Failed to create dialog: {{message}}"
+      }
     },
     "delete": {
       "title": "Delete Dialog",

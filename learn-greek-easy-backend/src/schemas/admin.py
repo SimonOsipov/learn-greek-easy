@@ -376,3 +376,47 @@ class ListeningDialogListResponse(BaseModel):
     total: int
     page: int
     page_size: int
+
+
+class DialogSpeakerCreate(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    speaker_index: int = Field(ge=0, lt=4)
+    character_name: str = Field(min_length=1, max_length=100)
+    voice_id: str = Field(min_length=1, max_length=255)
+
+
+class DialogLineCreate(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    speaker_index: int = Field(ge=0, lt=4)
+    text: str = Field(min_length=1, max_length=1000)
+
+
+class ListeningDialogCreateFromJSON(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    scenario_el: str = Field(min_length=1, max_length=500)
+    scenario_en: str = Field(min_length=1, max_length=500)
+    scenario_ru: str = Field(min_length=1, max_length=500)
+    cefr_level: DeckLevel
+    speakers: list[DialogSpeakerCreate] = Field(min_length=2, max_length=4)
+    lines: list[DialogLineCreate] = Field(min_length=1, max_length=50)
+
+    @model_validator(mode="after")
+    def validate_speaker_indices(self) -> "ListeningDialogCreateFromJSON":
+        indices = [s.speaker_index for s in self.speakers]
+        expected = list(range(len(self.speakers)))
+        if sorted(indices) != expected:
+            raise ValueError(f"speaker_index values must be sequential 0-based: got {indices}")
+        return self
+
+    @model_validator(mode="after")
+    def validate_line_speaker_refs(self) -> "ListeningDialogCreateFromJSON":
+        valid_indices = {s.speaker_index for s in self.speakers}
+        for i, line in enumerate(self.lines):
+            if line.speaker_index not in valid_indices:
+                raise ValueError(
+                    f"lines[{i}].speaker_index {line.speaker_index} does not reference a defined speaker"
+                )
+        return self

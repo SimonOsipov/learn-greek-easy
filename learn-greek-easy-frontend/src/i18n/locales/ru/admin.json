@@ -1127,7 +1127,6 @@
     },
     "status": {
       "draft": "Черновик",
-      "text_approved": "Текст одобрен",
       "audio_ready": "Аудио готово",
       "exercises_ready": "Упражнения готовы",
       "published": "Опубликован"
@@ -1138,8 +1137,18 @@
       "cta": "Создать первый диалог"
     },
     "create": {
-      "button": "Создать диалог",
-      "comingSoon": "Создание диалогов скоро будет доступно"
+      "button": "Создать новый диалог",
+      "title": "Создать диалог",
+      "description": "Вставьте полный диалог в формате JSON.",
+      "placeholder": "{\n  \"scenario_el\": \"...\",\n  \"scenario_en\": \"...\",\n  \"scenario_ru\": \"...\",\n  \"cefr_level\": \"A2\",\n  \"speakers\": [{\"speaker_index\": 0, \"character_name\": \"...\", \"voice_id\": \"...\"}],\n  \"lines\": [{\"speaker_index\": 0, \"text\": \"...\"}]\n}",
+      "submit": "Создать диалог",
+      "creating": "Создание...",
+      "cancel": "Отмена",
+      "success": "Диалог успешно создан",
+      "errors": {
+        "invalidJson": "Некорректный JSON: {{message}}",
+        "createFailed": "Не удалось создать диалог: {{message}}"
+      }
     },
     "delete": {
       "title": "Удалить диалог",

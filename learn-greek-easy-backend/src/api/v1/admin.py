@@ -25,6 +25,11 @@ from src.core.dependencies import SSEAuthResult, get_current_superuser, get_sse_
 from src.core.event_bus import audio_event_bus, news_audio_event_bus
 from src.core.exceptions import (
     ConflictException,
+    ElevenLabsAPIError,
+    ElevenLabsAuthenticationError,
+    ElevenLabsNotConfiguredError,
+    ElevenLabsNoVoicesError,
+    ElevenLabsRateLimitError,
     NotFoundException,
     NounGenerationError,
     OpenRouterError,
@@ -43,6 +48,8 @@ from src.db.models import (
     Deck,
     DeckLevel,
     DeckWordEntry,
+    DialogLine,
+    DialogSpeaker,
     DialogStatus,
     FeedbackCategory,
     FeedbackStatus,
@@ -66,6 +73,7 @@ from src.schemas.admin import (
     GenerateWordEntryAudioRequest,
     GenerateWordEntryRequest,
     GenerateWordEntryResponse,
+    ListeningDialogCreateFromJSON,
     ListeningDialogListItem,
     ListeningDialogListResponse,
     NormalizationStageResult,
@@ -3523,3 +3531,76 @@ async def delete_listening_dialog(
         raise HTTPException(status_code=404, detail="Listening dialog not found")
     await db.delete(dialog)
     await db.commit()
+
+
+@router.post("/listening-dialogs", response_model=ListeningDialogListItem, status_code=201)
+async def create_listening_dialog(
+    data: ListeningDialogCreateFromJSON,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> ListeningDialogListItem:
+    """Create a new listening dialog from JSON payload."""
+    if not settings.elevenlabs_configured:
+        raise HTTPException(
+            status_code=503, detail="ElevenLabs is not configured — cannot validate voice IDs"
+        )
+    from src.services.elevenlabs_service import get_elevenlabs_service
+
+    try:
+        voices = await get_elevenlabs_service().list_voices()
+        valid_voice_ids = {v["voice_id"] for v in voices}
+        invalid = [s.voice_id for s in data.speakers if s.voice_id not in valid_voice_ids]
+        if invalid:
+            raise HTTPException(status_code=400, detail=f"Invalid voice IDs: {', '.join(invalid)}")
+    except ElevenLabsNotConfiguredError as exc:
+        raise HTTPException(
+            status_code=503, detail="ElevenLabs is not configured — cannot validate voice IDs"
+        ) from exc
+    except (
+        ElevenLabsAuthenticationError,
+        ElevenLabsRateLimitError,
+        ElevenLabsNoVoicesError,
+        ElevenLabsAPIError,
+    ) as exc:
+        raise HTTPException(status_code=503, detail="Voice validation is unavailable") from exc
+
+    try:
+        dialog = ListeningDialog(
+            scenario_el=data.scenario_el,
+            scenario_en=data.scenario_en,
+            scenario_ru=data.scenario_ru,
+            cefr_level=data.cefr_level,
+            num_speakers=len(data.speakers),
+            created_by=current_user.id,
+        )
+        db.add(dialog)
+        await db.flush()
+
+        speaker_map: dict[int, UUID] = {}
+        for s in data.speakers:
+            speaker = DialogSpeaker(
+                dialog_id=dialog.id,
+                speaker_index=s.speaker_index,
+                character_name=s.character_name,
+                voice_id=s.voice_id,
+            )
+            db.add(speaker)
+            await db.flush()
+            speaker_map[s.speaker_index] = speaker.id
+
+        for idx, line in enumerate(data.lines):
+            db.add(
+                DialogLine(
+                    dialog_id=dialog.id,
+                    speaker_id=speaker_map[line.speaker_index],
+                    line_index=idx,
+                    text=line.text,
+                )
+            )
+
+        await db.commit()
+        await db.refresh(dialog)
+        return ListeningDialogListItem.model_validate(dialog)
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail="Dialog could not be created due to a conflict")

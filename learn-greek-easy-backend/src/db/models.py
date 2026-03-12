@@ -263,7 +263,6 @@ class DialogStatus(str, enum.Enum):
     """Status of a listening dialog exercise."""
 
     DRAFT = "draft"
-    TEXT_APPROVED = "text_approved"
     AUDIO_READY = "audio_ready"
     EXERCISES_READY = "exercises_ready"
     PUBLISHED = "published"
@@ -2818,8 +2817,7 @@ class DialogSpeaker(Base):
     )
     speaker_index: Mapped[int] = mapped_column(SmallInteger, nullable=False)
     character_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    voice_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    voice_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    voice_id: Mapped[str] = mapped_column(String(255), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

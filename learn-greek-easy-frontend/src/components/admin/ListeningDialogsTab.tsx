@@ -53,6 +53,8 @@ import {
 import type { DialogStatus, ListeningDialogListItem } from '@/services/adminAPI';
 import { useAdminDialogStore } from '@/stores/adminDialogStore';
 
+import { DialogCreateModal } from './DialogCreateModal';
+
 // ============================================================================
 // Helpers
 // ============================================================================
@@ -81,7 +83,6 @@ function getLocalizedScenario(dialog: ListeningDialogListItem, lang: string): st
 
 const STATUS_BADGE_CLASSES: Record<DialogStatus, string> = {
   draft: 'border-gray-500/30 bg-gray-500/10 text-gray-700 dark:text-gray-400',
-  text_approved: 'border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400',
   audio_ready: 'border-yellow-500/30 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400',
   exercises_ready: 'border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-400',
   published: 'border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-400',
@@ -219,6 +220,7 @@ export function ListeningDialogsTab() {
   } = useAdminDialogStore();
 
   const [dialogToDelete, setDialogToDelete] = useState<ListeningDialogListItem | null>(null);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
   const hasTrackedView = useRef(false);
 
   useEffect(() => {
@@ -253,7 +255,7 @@ export function ListeningDialogsTab() {
 
   const handleCreateClick = () => {
     trackAdminDialogCreateClicked();
-    toast({ title: t('listeningDialogs.create.comingSoon') });
+    setCreateModalOpen(true);
   };
 
   const handlePreviousPage = () => {
@@ -419,6 +421,8 @@ export function ListeningDialogsTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <DialogCreateModal open={createModalOpen} onOpenChange={setCreateModalOpen} />
     </Card>
   );
 }
