@@ -16,6 +16,8 @@
 
 import { test, expect, type Page } from '@playwright/test';
 
+import { navigateToAdminTab } from './helpers/admin-helpers';
+
 // Storage state paths
 const ADMIN_AUTH = 'playwright/.auth/admin.json';
 
@@ -49,7 +51,7 @@ async function seedCultureContent(page: Page): Promise<void> {
 async function navigateToAdminDecks(page: Page): Promise<void> {
   await page.goto('/admin');
   await expect(page.getByTestId('admin-page')).toBeVisible({ timeout: 15000 });
-  await page.getByTestId('admin-tab-decks').click();
+  await navigateToAdminTab(page, 'decks');
   await page.waitForTimeout(1000); // Wait for deck list to load
 }
 

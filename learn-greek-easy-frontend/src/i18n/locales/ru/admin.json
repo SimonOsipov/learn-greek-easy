@@ -286,7 +286,13 @@
     "wordEntries": "Словарные записи",
     "newsComingSoon": "Скоро",
     "newsComingSoonDescription": "Вкладка Новости обновляется. Скоро появятся новые функции.",
-    "listeningDialogs": "Диалоги на слух"
+    "listeningDialogs": "Аудирование",
+    "groups": {
+      "content": "Контент",
+      "exercises": "Упражнения",
+      "reviews": "Проверки",
+      "system": "Система"
+    }
   },
   "announcements": {
     "stats": {

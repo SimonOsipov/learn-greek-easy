@@ -9,6 +9,7 @@
  */
 
 import { test, expect, Page, APIRequestContext } from '@playwright/test';
+import { navigateToAdminTab } from './helpers/admin-helpers';
 import { verifyAuthSucceeded } from './helpers/auth-helpers';
 
 /**
@@ -40,8 +41,7 @@ async function navigateToAdminAnnouncementsTab(page: Page): Promise<void> {
   await expect(page.getByTestId('admin-page')).toBeVisible({ timeout: 15000 });
 
   // Click on Announcements tab
-  const announcementsTab = page.getByTestId('admin-tab-announcements');
-  await announcementsTab.click();
+  await navigateToAdminTab(page, 'announcements');
 
   // Wait for announcements tab content to load
   await expect(page.getByTestId('announcements-tab')).toBeVisible({ timeout: 10000 });

@@ -25,6 +25,8 @@
 
 import { test, expect, type Page } from '@playwright/test';
 
+import { navigateToAdminTab } from './helpers/admin-helpers';
+
 // Storage state path
 const ADMIN_AUTH = 'playwright/.auth/admin.json';
 
@@ -52,7 +54,7 @@ async function navigateToV2NounsDeck(page: Page): Promise<void> {
   await expect(page.getByTestId('admin-page')).toBeVisible({ timeout: 15000 });
 
   // Ensure Decks tab is active (it is the default, but click to be safe)
-  await page.getByTestId('admin-tab-decks').click();
+  await navigateToAdminTab(page, 'decks');
 
   // Wait for deck list to load
   await expect(page.getByTestId('all-decks-title')).toBeVisible({ timeout: 10000 });

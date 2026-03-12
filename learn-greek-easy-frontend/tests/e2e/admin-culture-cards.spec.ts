@@ -15,6 +15,8 @@
 
 import { test, expect } from '@playwright/test';
 
+import { navigateToAdminTab } from './helpers/admin-helpers';
+
 // Storage state paths
 const ADMIN_AUTH = 'playwright/.auth/admin.json';
 
@@ -98,7 +100,7 @@ test.describe('Admin Culture Cards - Create from Action Bar', () => {
     await expect(page.getByTestId('admin-page')).toBeVisible({ timeout: 15000 });
 
     // Ensure we're on the decks tab
-    await page.getByTestId('admin-tab-decks').click();
+    await navigateToAdminTab(page, 'decks');
 
     // Wait for deck list to load
     await page.waitForTimeout(2000);
@@ -192,7 +194,7 @@ test.describe('Admin Culture Cards - Create from Deck Detail', () => {
     await expect(page.getByTestId('admin-page')).toBeVisible({ timeout: 15000 });
 
     // Ensure we're on the decks tab
-    await page.getByTestId('admin-tab-decks').click();
+    await navigateToAdminTab(page, 'decks');
 
     // Wait for deck list to load
     await page.waitForTimeout(2000);
@@ -295,7 +297,7 @@ test.describe('Admin Culture Cards - Edit Card', () => {
     await expect(page.getByTestId('admin-page')).toBeVisible({ timeout: 15000 });
 
     // Ensure we're on the decks tab
-    await page.getByTestId('admin-tab-decks').click();
+    await navigateToAdminTab(page, 'decks');
 
     // Wait for deck list to load
     await page.waitForTimeout(2000);
@@ -393,7 +395,7 @@ test.describe('Admin Culture Cards - Validation', () => {
     await expect(page.getByTestId('admin-page')).toBeVisible({ timeout: 15000 });
 
     // Ensure we're on the decks tab
-    await page.getByTestId('admin-tab-decks').click();
+    await navigateToAdminTab(page, 'decks');
 
     // Wait for deck list to load
     await page.waitForTimeout(2000);
@@ -486,7 +488,7 @@ test.describe('Admin Culture Cards - Cancel Confirmation', () => {
     await expect(page.getByTestId('admin-page')).toBeVisible({ timeout: 15000 });
 
     // Ensure we're on the decks tab
-    await page.getByTestId('admin-tab-decks').click();
+    await navigateToAdminTab(page, 'decks');
 
     // Wait for deck list to load
     await page.waitForTimeout(2000);
@@ -575,7 +577,7 @@ test.describe('Admin Culture Cards - Delete Answer', () => {
     await expect(page.getByTestId('admin-page')).toBeVisible({ timeout: 15000 });
 
     // Ensure we're on the decks tab
-    await page.getByTestId('admin-tab-decks').click();
+    await navigateToAdminTab(page, 'decks');
 
     // Wait for deck list to load
     await page.waitForTimeout(2000);

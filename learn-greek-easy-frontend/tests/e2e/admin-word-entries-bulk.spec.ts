@@ -24,6 +24,7 @@ import * as fs from 'fs';
 
 import { test, expect } from '@playwright/test';
 
+import { navigateToAdminTab } from './helpers/admin-helpers';
 import { getSupabaseStorageKey } from './helpers/supabase-test-client';
 
 // Storage state paths
@@ -71,7 +72,7 @@ async function navigateToWordEntriesTab(page: import('@playwright/test').Page): 
   await expect(page.getByTestId('admin-page')).toBeVisible({ timeout: 15000 });
 
   // Click on Word Entries tab (it's a top-level tab, not a sub-tab)
-  await page.getByTestId('admin-tab-wordEntries').click();
+  await navigateToAdminTab(page, 'wordEntries');
 
   // Verify the tab content loads
   await expect(page.getByTestId('word-entries-tab')).toBeVisible({ timeout: 5000 });
@@ -233,7 +234,7 @@ test.describe('Admin Word Entries Bulk - Navigation', () => {
     await expect(page.getByTestId('admin-page')).toBeVisible({ timeout: 15000 });
 
     // Click on Word Entries tab
-    await page.getByTestId('admin-tab-wordEntries').click();
+    await navigateToAdminTab(page, 'wordEntries');
 
     // Verify the tab content loads
     await expect(page.getByTestId('word-entries-tab')).toBeVisible({ timeout: 5000 });

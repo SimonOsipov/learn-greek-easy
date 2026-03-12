@@ -9,6 +9,7 @@
  */
 
 import { test, expect, Page, APIRequestContext } from '@playwright/test';
+import { navigateToAdminTab } from './helpers/admin-helpers';
 import { verifyAuthSucceeded } from './helpers/auth-helpers';
 
 /**
@@ -51,8 +52,8 @@ async function navigateToAdminNewsTab(page: Page): Promise<void> {
   // Wait for admin page to load
   await expect(page.getByTestId('admin-page')).toBeVisible({ timeout: 15000 });
 
-  // Click on News tab (shadcn TabsTrigger uses data-testid, not role=button)
-  await page.getByTestId('admin-tab-news').click();
+  // Click on News tab
+  await navigateToAdminTab(page, 'news');
 
   // Wait for news tab content to load
   await expect(page.getByTestId('news-create-card')).toBeVisible({ timeout: 10000 });

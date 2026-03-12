@@ -11,6 +11,7 @@ import React, {
 
 import {
   AlertCircle,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Crown,
@@ -47,6 +48,12 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -58,7 +65,6 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import {
   trackAdminDeckCreateCancelled,
@@ -565,6 +571,16 @@ type AdminTabType =
   | 'cardErrors'
   | 'feedback'
   | 'listeningDialogs';
+
+const ADMIN_TAB_GROUPS: { key: string; tabs: AdminTabType[] }[] = [
+  { key: 'content', tabs: ['decks', 'wordEntries', 'news'] },
+  { key: 'exercises', tabs: ['listeningDialogs'] },
+  { key: 'reviews', tabs: ['cardErrors', 'feedback'] },
+  { key: 'system', tabs: ['changelog', 'announcements'] },
+];
+
+const getGroupForTab = (tab: AdminTabType): string | undefined =>
+  ADMIN_TAB_GROUPS.find((g) => g.tabs.includes(tab))?.key;
 
 /**
  * Admin Page
@@ -1136,30 +1152,46 @@ const AdminPage: React.FC = () => {
       </div>
 
       {/* Top-Level Tab Switcher */}
-      <Tabs
-        value={activeTab}
-        onValueChange={(val) => setActiveTab(val as AdminTabType)}
-        data-testid="admin-tab-switcher"
-      >
-        <TabsList className="w-full">
-          {(
-            [
-              'decks',
-              'news',
-              'announcements',
-              'changelog',
-              'wordEntries',
-              'cardErrors',
-              'feedback',
-              'listeningDialogs',
-            ] as AdminTabType[]
-          ).map((tab) => (
-            <TabsTrigger key={tab} value={tab} className="flex-1" data-testid={`admin-tab-${tab}`}>
-              {t(`tabs.${tab}`)}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+      <div className="flex flex-wrap gap-2" data-testid="admin-tab-switcher">
+        {ADMIN_TAB_GROUPS.map((group) => {
+          const activeGroup = getGroupForTab(activeTab);
+          const isActive = activeGroup === group.key;
+          const activeTabInGroup = isActive ? activeTab : undefined;
+          const label = activeTabInGroup
+            ? t(`tabs.${activeTabInGroup}`)
+            : t(`tabs.groups.${group.key}`);
+          return (
+            <DropdownMenu key={group.key}>
+              <DropdownMenuTrigger asChild>
+                <button
+                  data-testid={`admin-group-${group.key}`}
+                  className={cn(
+                    'inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                    isActive
+                      ? 'bg-primary text-primary-foreground shadow hover:bg-primary/90'
+                      : 'border border-input bg-background hover:bg-accent hover:text-accent-foreground'
+                  )}
+                >
+                  {label}
+                  <ChevronDown className="h-4 w-4 opacity-70" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                {group.tabs.map((tab) => (
+                  <DropdownMenuItem
+                    key={tab}
+                    data-testid={`admin-tab-${tab}`}
+                    onSelect={() => setActiveTab(tab)}
+                    className={cn(activeTab === tab && 'font-medium')}
+                  >
+                    {t(`tabs.${tab}`)}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          );
+        })}
+      </div>
 
       {/* Decks Tab Content */}
       {activeTab === 'decks' && (

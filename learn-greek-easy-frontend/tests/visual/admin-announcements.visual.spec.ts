@@ -16,6 +16,7 @@
  */
 
 import { test, expect } from '@chromatic-com/playwright';
+import { navigateToAdminTab } from '../e2e/helpers/admin-helpers';
 import {
   takeSnapshot,
   loginForVisualTest,
@@ -158,7 +159,7 @@ test.describe('Admin Announcements - Visual Tests', () => {
     await waitForPageReady(page, '[data-testid="admin-page"]');
 
     // Click Announcements tab
-    await page.getByTestId('admin-tab-announcements').click();
+    await navigateToAdminTab(page, 'announcements');
     await expect(page.getByTestId('announcements-tab')).toBeVisible();
     await page.waitForTimeout(500);
 
@@ -189,7 +190,7 @@ test.describe('Admin Announcements - Visual Tests', () => {
     await waitForPageReady(page, '[data-testid="admin-page"]');
 
     // Click Announcements tab
-    await page.getByTestId('admin-tab-announcements').click();
+    await navigateToAdminTab(page, 'announcements');
     await expect(page.getByTestId('announcements-tab')).toBeVisible();
     await page.waitForTimeout(500);
 
@@ -237,7 +238,7 @@ test.describe('Admin Announcements - Visual Tests', () => {
     await waitForPageReady(page, '[data-testid="admin-page"]');
 
     // Click Announcements tab
-    await page.getByTestId('admin-tab-announcements').click();
+    await navigateToAdminTab(page, 'announcements');
     await expect(page.getByTestId('announcements-tab')).toBeVisible();
     await page.waitForTimeout(500);
 
@@ -272,7 +273,7 @@ test.describe('Admin Announcements - Visual Tests', () => {
     await waitForPageReady(page, '[data-testid="admin-page"]');
 
     // Click Announcements tab
-    await page.getByTestId('admin-tab-announcements').click();
+    await navigateToAdminTab(page, 'announcements');
     await expect(page.getByTestId('announcements-tab')).toBeVisible();
     await page.waitForTimeout(300);
 
@@ -318,7 +319,7 @@ test.describe('Admin Announcements - Visual Tests', () => {
     await waitForPageReady(page, '[data-testid="admin-page"]');
 
     // Click Announcements tab
-    await page.getByTestId('admin-tab-announcements').click();
+    await navigateToAdminTab(page, 'announcements');
     await expect(page.getByTestId('announcements-tab')).toBeVisible();
     await page.waitForTimeout(300);
 
@@ -363,7 +364,7 @@ test.describe('Admin Announcements - Visual Tests', () => {
     await waitForPageReady(page, '[data-testid="admin-page"]');
 
     // Click Announcements tab
-    await page.getByTestId('admin-tab-announcements').click();
+    await navigateToAdminTab(page, 'announcements');
     await expect(page.getByTestId('announcements-tab')).toBeVisible();
     await page.waitForTimeout(300);
 
@@ -415,7 +416,7 @@ test.describe('Admin Announcements - Visual Tests', () => {
     await waitForPageReady(page, '[data-testid="admin-page"]');
 
     // Click Announcements tab
-    await page.getByTestId('admin-tab-announcements').click();
+    await navigateToAdminTab(page, 'announcements');
     await expect(page.getByTestId('announcements-tab')).toBeVisible();
     await page.waitForTimeout(500);
 

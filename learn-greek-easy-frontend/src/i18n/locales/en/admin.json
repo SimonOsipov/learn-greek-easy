@@ -274,7 +274,13 @@
     "changelog": "Changelog",
     "cardErrors": "Card Errors",
     "wordEntries": "Word Entries",
-    "listeningDialogs": "Listening Dialogs"
+    "listeningDialogs": "Listening",
+    "groups": {
+      "content": "Content",
+      "exercises": "Exercises",
+      "reviews": "Reviews",
+      "system": "System"
+    }
   },
   "announcements": {
     "stats": {

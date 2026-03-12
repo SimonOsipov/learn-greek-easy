@@ -17,6 +17,7 @@
 
 import { APIRequestContext, Page, test, expect } from '@playwright/test';
 
+import { navigateToAdminTab } from './helpers/admin-helpers';
 import { verifyAuthSucceeded } from './helpers/auth-helpers';
 
 /**
@@ -212,13 +213,7 @@ test.describe('MCNEWS - Admin Country Management', () => {
     await verifyAuthSucceeded(page, '/admin');
 
     // Navigate to News tab
-    const newsTab = page.getByTestId('admin-tab-news');
-    if (!(await newsTab.isVisible({ timeout: 5000 }))) {
-      // Try alternative selector
-      await page.getByRole('tab', { name: /News/i }).click();
-    } else {
-      await newsTab.click();
-    }
+    await navigateToAdminTab(page, 'news');
 
     // Fill in news JSON with Greece country
     const jsonInput = page.getByTestId('news-json-input');
@@ -263,12 +258,7 @@ test.describe('MCNEWS - Admin Country Management', () => {
     await verifyAuthSucceeded(page, '/admin');
 
     // Navigate to News tab
-    const newsTabEl = page.getByTestId('admin-tab-news');
-    if (await newsTabEl.isVisible({ timeout: 5000 })) {
-      await newsTabEl.click();
-    } else {
-      await page.getByRole('tab', { name: /News/i }).click();
-    }
+    await navigateToAdminTab(page, 'news');
 
     const jsonInput = page.getByTestId('news-json-input');
     await expect(jsonInput).toBeVisible({ timeout: 10000 });
@@ -327,12 +317,7 @@ test.describe('MCNEWS - Admin Country Management', () => {
     await page.goto('/admin');
     await verifyAuthSucceeded(page, '/admin');
 
-    const newsTabEl = page.getByTestId('admin-tab-news');
-    if (await newsTabEl.isVisible({ timeout: 5000 })) {
-      await newsTabEl.click();
-    } else {
-      await page.getByRole('tab', { name: /News/i }).click();
-    }
+    await navigateToAdminTab(page, 'news');
 
     const jsonInput = page.getByTestId('news-json-input');
     await expect(jsonInput).toBeVisible({ timeout: 10000 });
@@ -392,12 +377,7 @@ test.describe('MCNEWS - Admin Country Management', () => {
     await page.goto('/admin');
     await verifyAuthSucceeded(page, '/admin');
 
-    const newsTabEl = page.getByTestId('admin-tab-news');
-    if (await newsTabEl.isVisible({ timeout: 5000 })) {
-      await newsTabEl.click();
-    } else {
-      await page.getByRole('tab', { name: /News/i }).click();
-    }
+    await navigateToAdminTab(page, 'news');
 
     // Wait for table to load
     const newsTable = page.getByTestId('news-items-table');
@@ -428,12 +408,7 @@ test.describe('MCNEWS - Admin Country Management', () => {
     await page.goto('/admin');
     await verifyAuthSucceeded(page, '/admin');
 
-    const newsTabEl = page.getByTestId('admin-tab-news');
-    if (await newsTabEl.isVisible({ timeout: 5000 })) {
-      await newsTabEl.click();
-    } else {
-      await page.getByRole('tab', { name: /News/i }).click();
-    }
+    await navigateToAdminTab(page, 'news');
 
     // Wait for table to load
     const newsTable = page.getByTestId('news-items-table');

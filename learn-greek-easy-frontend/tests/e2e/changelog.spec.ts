@@ -23,6 +23,7 @@
  */
 
 import { test, expect, Page, APIRequestContext } from '@playwright/test';
+import { navigateToAdminTab } from './helpers/admin-helpers';
 import { verifyAuthSucceeded } from './helpers/auth-helpers';
 
 /**
@@ -77,8 +78,7 @@ async function navigateToAdminChangelogTab(page: Page): Promise<void> {
   await expect(page.getByTestId('admin-title')).toBeVisible({ timeout: 15000 });
 
   // Click on Changelog tab
-  const changelogTab = page.getByTestId('admin-tab-changelog');
-  await changelogTab.click();
+  await navigateToAdminTab(page, 'changelog');
 
   // Wait for changelog tab content to load
   await expect(page.getByTestId('changelog-tab')).toBeVisible({ timeout: 10000 });

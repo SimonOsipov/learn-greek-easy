@@ -19,6 +19,7 @@
  */
 
 import { test } from '@chromatic-com/playwright';
+import { navigateToAdminTab } from '../e2e/helpers/admin-helpers';
 import {
   loginForVisualTest,
   takeSnapshot,
@@ -318,11 +319,8 @@ test.describe('Admin News Table - Country Badges', () => {
     await page.goto('/admin');
     await waitForPageReady(page);
 
-    // Navigate to news tab if possible
-    const newsTab = page.getByTestId('admin-tab-news');
-    if (await newsTab.isVisible({ timeout: 5000 })) {
-      await newsTab.click();
-    }
+    // Navigate to news tab
+    await navigateToAdminTab(page, 'news');
 
     await page.setViewportSize({ width: VIEWPORTS.desktop.width, height: VIEWPORTS.desktop.height });
     await takeSnapshot(page, 'Admin News Table - Country Badges', testInfo);
@@ -350,10 +348,7 @@ test.describe('Admin News Table - Country Badges', () => {
     await page.goto('/admin');
     await waitForPageReady(page);
 
-    const newsTab = page.getByTestId('admin-tab-news');
-    if (await newsTab.isVisible({ timeout: 5000 })) {
-      await newsTab.click();
-    }
+    await navigateToAdminTab(page, 'news');
 
     await page.setViewportSize({ width: VIEWPORTS.desktop.width, height: VIEWPORTS.desktop.height });
     await takeSnapshot(page, 'Admin News Table - Country Filter', testInfo);

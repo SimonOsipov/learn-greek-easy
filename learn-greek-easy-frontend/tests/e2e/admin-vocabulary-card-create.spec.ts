@@ -20,6 +20,8 @@
 
 import { test, expect } from '@playwright/test';
 
+import { navigateToAdminTab } from './helpers/admin-helpers';
+
 // Storage state paths
 const ADMIN_AUTH = 'playwright/.auth/admin.json';
 
@@ -46,7 +48,7 @@ async function openVocabularyDeck(page: import('@playwright/test').Page): Promis
   await expect(page.getByTestId('admin-page')).toBeVisible({ timeout: 15000 });
 
   // Ensure we're on the decks tab
-  await page.getByTestId('admin-tab-decks').click();
+  await navigateToAdminTab(page, 'decks');
 
   // Wait for deck list to load
   await page.waitForTimeout(1000);
