@@ -1,15 +1,20 @@
+import { useState } from 'react';
+
 import {
   AlertCircle,
   AlertTriangle,
   Check,
   CheckCircle2,
   MinusCircle,
+  Pencil,
   XCircle,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import type {
@@ -41,12 +46,22 @@ export interface PillState {
   status: 'agreed' | 'resolved' | 'unresolved' | 'editable';
 }
 
+const EDITABLE_FIELDS = new Set([
+  'translation_en',
+  'translation_en_plural',
+  'translation_ru',
+  'translation_ru_plural',
+  'pronunciation',
+]);
+
 interface UnifiedVerificationTableProps {
   local: LocalVerificationResult | null;
   crossAI: CrossAIVerificationResult | null;
   selections?: Map<string, SelectionSource>;
   onSelect?: (fieldPath: string, source: SelectionSource) => void;
   interactive?: boolean;
+  resolvedValues?: Map<string, PillState>;
+  onResolvedValueChange?: (fieldPath: string, value: string) => void;
 }
 
 function buildRows(
@@ -173,6 +188,7 @@ function LocalCell({
   isSelected,
   isOtherSelected,
   onSelect,
+  onResolvedValueChange,
 }: {
   row: UnifiedRow;
   hasLocalData: boolean;
@@ -181,6 +197,7 @@ function LocalCell({
   isSelected: boolean;
   isOtherSelected: boolean;
   onSelect?: (fieldPath: string, source: SelectionSource) => void;
+  onResolvedValueChange?: (fieldPath: string, value: string) => void;
 }) {
   const field = row.local;
   const clickable = isCellClickable(row, 'local', interactive);
@@ -252,7 +269,13 @@ function LocalCell({
           isOtherSelected ? 'opacity-50' : ''
         )}
         aria-pressed={isSelected}
-        onClick={() => onSelect?.(row.field_path, 'local')}
+        onClick={() => {
+          onSelect?.(row.field_path, 'local');
+          const refCheck = row.local?.checks.find((c) => c.reference_value != null);
+          if (refCheck?.reference_value != null) {
+            onResolvedValueChange?.(row.field_path, refCheck.reference_value);
+          }
+        }}
       >
         {cellContent}
       </button>
@@ -291,12 +314,14 @@ function PrimaryValueCell({
   isSelected,
   isOtherSelected,
   onSelect,
+  onResolvedValueChange,
 }: {
   row: UnifiedRow;
   interactive: boolean;
   isSelected: boolean;
   isOtherSelected: boolean;
   onSelect?: (fieldPath: string, source: SelectionSource) => void;
+  onResolvedValueChange?: (fieldPath: string, value: string) => void;
 }) {
   const comparison = row.crossAI;
   if (!comparison) return <span className="text-muted-foreground">—</span>;
@@ -314,7 +339,10 @@ function PrimaryValueCell({
           isOtherSelected ? 'opacity-50' : ''
         )}
         aria-pressed={isSelected}
-        onClick={() => onSelect?.(row.field_path, 'primary')}
+        onClick={() => {
+          onSelect?.(row.field_path, 'primary');
+          onResolvedValueChange?.(row.field_path, comparison.primary_value);
+        }}
       >
         {content}
       </button>
@@ -330,12 +358,14 @@ function SecondaryValueCell({
   isSelected,
   isOtherSelected,
   onSelect,
+  onResolvedValueChange,
 }: {
   row: UnifiedRow;
   interactive: boolean;
   isSelected: boolean;
   isOtherSelected: boolean;
   onSelect?: (fieldPath: string, source: SelectionSource) => void;
+  onResolvedValueChange?: (fieldPath: string, value: string) => void;
 }) {
   const comparison = row.crossAI;
   if (!comparison) return <span className="text-muted-foreground">—</span>;
@@ -353,7 +383,10 @@ function SecondaryValueCell({
           isOtherSelected ? 'opacity-50' : ''
         )}
         aria-pressed={isSelected}
-        onClick={() => onSelect?.(row.field_path, 'secondary')}
+        onClick={() => {
+          onSelect?.(row.field_path, 'secondary');
+          onResolvedValueChange?.(row.field_path, comparison.secondary_value);
+        }}
       >
         {content}
       </button>
@@ -361,6 +394,109 @@ function SecondaryValueCell({
   }
 
   return content;
+}
+
+interface DecisionPillProps {
+  fieldPath: string;
+  pillState: PillState;
+  isEditable: boolean;
+  onEdit: (fieldPath: string, value: string) => void;
+}
+
+function DecisionPill({ fieldPath, pillState, isEditable, onEdit }: DecisionPillProps) {
+  const [open, setOpen] = useState(false);
+  const [editValue, setEditValue] = useState(pillState.value);
+
+  const showPopover =
+    isEditable && (pillState.status === 'editable' || pillState.status === 'unresolved');
+
+  let borderClass: string;
+  let IconComponent: React.ElementType;
+  let iconClass: string;
+
+  if (pillState.status === 'agreed') {
+    borderClass = 'border-green-500';
+    IconComponent = Check;
+    iconClass = 'h-3 w-3 text-green-500';
+  } else if (pillState.status === 'resolved') {
+    borderClass = 'border-blue-500';
+    IconComponent = Check;
+    iconClass = 'h-3 w-3 text-blue-500';
+  } else if (pillState.status === 'unresolved') {
+    borderClass = 'border-red-500';
+    IconComponent = showPopover ? Pencil : AlertTriangle;
+    iconClass = 'h-3 w-3 text-red-500';
+  } else {
+    // editable
+    borderClass = 'border-muted-foreground';
+    IconComponent = Pencil;
+    iconClass = 'h-3 w-3 text-muted-foreground';
+  }
+
+  const pillContent = (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span
+          className={cn(
+            'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs',
+            borderClass
+          )}
+        >
+          <IconComponent className={iconClass} />
+          <span className="max-w-[120px] truncate">{pillState.value}</span>
+        </span>
+      </TooltipTrigger>
+      <TooltipContent>
+        <span className="text-xs">{pillState.value}</span>
+      </TooltipContent>
+    </Tooltip>
+  );
+
+  if (showPopover) {
+    return (
+      <span data-testid={`decision-pill-${fieldPath}`}>
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <span
+              className={cn(
+                'inline-flex cursor-pointer items-center gap-1 rounded-full border px-2 py-0.5 text-xs',
+                borderClass
+              )}
+            >
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <IconComponent className={iconClass} />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <span className="text-xs">{pillState.value}</span>
+                </TooltipContent>
+              </Tooltip>
+              <span className="max-w-[120px] truncate">{pillState.value}</span>
+            </span>
+          </PopoverTrigger>
+          <PopoverContent className="w-56 p-2">
+            <Input
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  onEdit(fieldPath, editValue);
+                  setOpen(false);
+                } else if (e.key === 'Escape') {
+                  setEditValue(pillState.value);
+                  setOpen(false);
+                }
+              }}
+              className="h-7 text-xs"
+              autoFocus
+            />
+          </PopoverContent>
+        </Popover>
+      </span>
+    );
+  }
+
+  return <span data-testid={`decision-pill-${fieldPath}`}>{pillContent}</span>;
 }
 
 function DecisionCell({
@@ -404,6 +540,8 @@ function RowsTable({
   selections,
   onSelect,
   interactive,
+  resolvedValues,
+  onResolvedValueChange,
 }: {
   rows: UnifiedRow[];
   hasLocalData: boolean;
@@ -411,11 +549,20 @@ function RowsTable({
   selections?: Map<string, SelectionSource>;
   onSelect?: (fieldPath: string, source: SelectionSource) => void;
   interactive?: boolean;
+  resolvedValues?: Map<string, PillState>;
+  onResolvedValueChange?: (fieldPath: string, value: string) => void;
 }) {
   const isInteractive = interactive ?? false;
 
   return (
     <table className="w-full table-auto text-sm">
+      <colgroup>
+        <col style={{ width: '18%' }} />
+        <col style={{ width: '8%' }} />
+        <col style={{ width: '24%' }} />
+        <col style={{ width: '24%' }} />
+        <col style={{ width: '26%' }} />
+      </colgroup>
       <thead>
         <tr className="border-b text-xs font-medium">
           <th className="py-1 text-left font-medium">
@@ -459,6 +606,7 @@ function RowsTable({
                   isSelected={selectedSource === 'local'}
                   isOtherSelected={isAdminSelected && selectedSource !== 'local'}
                   onSelect={onSelect}
+                  onResolvedValueChange={onResolvedValueChange}
                 />
               </td>
               <td className="max-w-[200px] py-1 pr-1">
@@ -468,6 +616,7 @@ function RowsTable({
                   isSelected={selectedSource === 'primary'}
                   isOtherSelected={isAdminSelected && selectedSource !== 'primary'}
                   onSelect={onSelect}
+                  onResolvedValueChange={onResolvedValueChange}
                 />
               </td>
               <td className="max-w-[200px] py-1 pr-1">
@@ -477,15 +626,25 @@ function RowsTable({
                   isSelected={selectedSource === 'secondary'}
                   isOtherSelected={isAdminSelected && selectedSource !== 'secondary'}
                   onSelect={onSelect}
+                  onResolvedValueChange={onResolvedValueChange}
                 />
               </td>
               <td className="py-1">
-                <DecisionCell
-                  comparison={row.crossAI}
-                  isAdminSelected={isAdminSelected}
-                  selectedSource={selectedSource}
-                  t={t}
-                />
+                {resolvedValues?.has(row.field_path) ? (
+                  <DecisionPill
+                    fieldPath={row.field_path}
+                    pillState={resolvedValues.get(row.field_path)!}
+                    isEditable={EDITABLE_FIELDS.has(row.field_path)}
+                    onEdit={(fp, val) => onResolvedValueChange?.(fp, val)}
+                  />
+                ) : (
+                  <DecisionCell
+                    comparison={row.crossAI}
+                    isAdminSelected={isAdminSelected}
+                    selectedSource={selectedSource}
+                    t={t}
+                  />
+                )}
               </td>
             </tr>
           );
@@ -501,6 +660,8 @@ export function UnifiedVerificationTable({
   selections,
   onSelect,
   interactive,
+  resolvedValues,
+  onResolvedValueChange,
 }: UnifiedVerificationTableProps) {
   const { t } = useTranslation('admin');
 
@@ -547,6 +708,8 @@ export function UnifiedVerificationTable({
             selections={selections}
             onSelect={onSelect}
             interactive={interactive}
+            resolvedValues={resolvedValues}
+            onResolvedValueChange={onResolvedValueChange}
           />
         )}
       </div>
