@@ -111,12 +111,7 @@ from src.schemas.news_item import (
     NewsItemWithCardResponse,
     NewsItemWithQuestionCreate,
 )
-from src.schemas.nlp import (
-    CrossAIVerificationResult,
-    GeneratedNounData,
-    NormalizedLemma,
-    VerificationSummary,
-)
+from src.schemas.nlp import GeneratedNounData, NormalizedLemma, VerificationSummary
 from src.schemas.word_entry import WordEntryResponse
 from src.services.announcement_service import AnnouncementService
 from src.services.card_error_admin_service import CardErrorAdminService
@@ -2723,7 +2718,9 @@ async def _run_verification_stage(
     if secondary_data is not None:
         cross_result = cross_svc.compare(generated_data, secondary_data)
     else:
-        cross_result = CrossAIVerificationResult(error="Secondary generation failed or skipped")
+        cross_result = cross_svc.primary_only_result(
+            generated_data, error="Secondary generation failed or skipped"
+        )
 
     # Combined tier logic
     if cross_result.error is None and cross_result.overall_agreement is not None:

@@ -376,4 +376,55 @@ describe('initializeResolvedValues', () => {
     // gender disagrees: primary=feminine, secondary=neuter → seeds primary
     expect(map.get('gender')?.value).toBe('feminine');
   });
+
+  it('treats all fields as agreed when cross-AI error result has populated comparisons (primary_only_result)', () => {
+    // Simulates the primary_only_result() path: error is set but comparisons are populated,
+    // all agrees=true with secondary_value='—'
+    const primaryOnlyCrossAI: CrossAIVerificationResult = {
+      comparisons: [
+        {
+          field_path: 'cases.singular.nominative',
+          primary_value: 'η γάτα',
+          secondary_value: '—',
+          agrees: true,
+          weight: 2.0,
+        },
+        {
+          field_path: 'grammar_data.gender',
+          primary_value: 'feminine',
+          secondary_value: '—',
+          agrees: true,
+          weight: 3.0,
+        },
+        {
+          field_path: 'translation_en',
+          primary_value: 'cat',
+          secondary_value: '—',
+          agrees: true,
+          weight: 1.0,
+        },
+      ],
+      overall_agreement: null,
+      secondary_model: 'qwen/qwen3-30b-a3b',
+      secondary_generation: null,
+      error: 'Secondary generation failed or skipped',
+    };
+    const verification: VerificationSummary = {
+      local: null,
+      cross_ai: primaryOnlyCrossAI,
+      combined_tier: 'quick_review',
+      morphology_source: 'llm',
+    };
+
+    const map = initializeResolvedValues(mockGeneration, verification);
+
+    // All populated fields from comparisons should be 'agreed' (agrees=true)
+    expect(map.get('nominative_singular')?.status).toBe('agreed');
+    expect(map.get('gender')?.status).toBe('agreed');
+    expect(map.get('translation_en')?.status).toBe('agreed');
+    // Primary values from the comparisons are used
+    expect(map.get('nominative_singular')?.value).toBe('η γάτα');
+    expect(map.get('gender')?.value).toBe('feminine');
+    expect(map.get('translation_en')?.value).toBe('cat');
+  });
 });
