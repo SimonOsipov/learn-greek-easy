@@ -3,16 +3,21 @@
  *
  * Covers:
  * - toAsciiLemma: Greek → Latin transliteration, diacritic stripping
- * - resolveFieldValue: selectionMap lookup vs cross-AI fallback
- * - buildWordEntryPayload: flat grammar_data, example IDs, translation fields
+ * - buildWordEntryPayload: flat grammar_data, example IDs, translation fields, resolvedValues
+ * - initializeResolvedValues: pill state seeding from generation + verification
  */
 
 import { describe, it, expect } from 'vitest';
 
-import type { SelectionSource } from '@/components/admin/UnifiedVerificationTable';
-import type { CrossAIVerificationResult, LocalVerificationResult } from '@/services/adminAPI';
+import type { PillState } from '@/components/admin/UnifiedVerificationTable';
+import type { CrossAIVerificationResult, VerificationSummary } from '@/services/adminAPI';
 
-import { toAsciiLemma, resolveFieldValue, buildWordEntryPayload } from '../nounPayloadBuilder';
+import {
+  toAsciiLemma,
+  buildWordEntryPayload,
+  initializeResolvedValues,
+  EDITABLE_FIELDS,
+} from '../nounPayloadBuilder';
 
 // ============================================
 // toAsciiLemma
@@ -49,102 +54,6 @@ describe('toAsciiLemma', () => {
 
   it('returns empty string for empty input', () => {
     expect(toAsciiLemma('')).toBe('');
-  });
-});
-
-// ============================================
-// resolveFieldValue
-// ============================================
-
-const mockLocal: LocalVerificationResult = {
-  tier: 'auto_approve',
-  stages_skipped: [],
-  summary: 'All checks passed',
-  fields: [
-    {
-      field_path: 'grammar_data.gender',
-      status: 'pass',
-      checks: [
-        {
-          check_name: 'spellcheck',
-          status: 'pass',
-          message: null,
-          reference_value: 'masculine',
-          reference_source: null,
-        },
-      ],
-    },
-  ],
-};
-
-const mockCrossAI: CrossAIVerificationResult = {
-  comparisons: [
-    {
-      field_path: 'grammar_data.gender',
-      primary_value: 'masculine',
-      secondary_value: 'neuter',
-      agrees: false,
-      weight: 1,
-    },
-    {
-      field_path: 'cases.singular.nominative',
-      primary_value: 'ο άντρας',
-      secondary_value: 'άντρας',
-      agrees: true,
-      weight: 1,
-    },
-  ],
-  overall_agreement: 0.5,
-  secondary_model: 'test-model',
-  secondary_generation: null,
-  error: null,
-};
-
-const mockVerification = { local: mockLocal, cross_ai: mockCrossAI };
-
-describe('resolveFieldValue', () => {
-  it('returns null when selectionMap is empty and no cross-AI verification', () => {
-    expect(
-      resolveFieldValue('grammar_data.gender', new Map(), { local: null, cross_ai: null })
-    ).toBeNull();
-  });
-
-  it('falls back to cross-AI primary_value when field not in selectionMap', () => {
-    expect(resolveFieldValue('grammar_data.gender', new Map(), mockVerification)).toBe('masculine');
-  });
-
-  it('returns null when field not in selectionMap and not in cross-AI', () => {
-    expect(resolveFieldValue('unknown.field', new Map(), mockVerification)).toBeNull();
-  });
-
-  it('resolves local source from checks reference_value', () => {
-    const map = new Map<string, SelectionSource>([['grammar_data.gender', 'local']]);
-    expect(resolveFieldValue('grammar_data.gender', map, mockVerification)).toBe('masculine');
-  });
-
-  it('returns null for local source when field not in local.fields', () => {
-    const map = new Map<string, SelectionSource>([['unknown.field', 'local']]);
-    expect(resolveFieldValue('unknown.field', map, mockVerification)).toBeNull();
-  });
-
-  it('resolves primary source from cross-AI primary_value', () => {
-    const map = new Map<string, SelectionSource>([['grammar_data.gender', 'primary']]);
-    expect(resolveFieldValue('grammar_data.gender', map, mockVerification)).toBe('masculine');
-  });
-
-  it('resolves secondary source from cross-AI secondary_value', () => {
-    const map = new Map<string, SelectionSource>([['grammar_data.gender', 'secondary']]);
-    expect(resolveFieldValue('grammar_data.gender', map, mockVerification)).toBe('neuter');
-  });
-
-  it('returns null for primary/secondary when verification is null', () => {
-    const map = new Map<string, SelectionSource>([['grammar_data.gender', 'primary']]);
-    expect(resolveFieldValue('grammar_data.gender', map, null)).toBeNull();
-  });
-
-  it('returns null for primary/secondary when field not in cross-AI comparisons', () => {
-    const map = new Map<string, SelectionSource>([['unknown.field', 'primary']]);
-    expect(resolveFieldValue('unknown.field', map, mockVerification)).toBeNull();
   });
 });
 
@@ -189,46 +98,52 @@ const mockGeneration = {
   ],
 };
 
-const defaultEditableTranslations = {
-  en: 'cat',
-  en_plural: 'cats',
-  ru: 'кошка',
-  ru_plural: 'кошки',
-};
-
 const defaultEditableExamples = [
   { greek: 'Η γάτα κοιμάται.', english: 'The cat is sleeping.', russian: 'Кошка спит.' },
   { greek: 'Οι γάτες παίζουν.', english: 'The cats are playing.', russian: 'Кошки играют.' },
 ];
 
+function makeMap(entries: Record<string, string>): Map<string, PillState> {
+  const map = new Map<string, PillState>();
+  for (const [key, value] of Object.entries(entries)) {
+    map.set(key, { value, source: 'auto', status: 'agreed' });
+  }
+  return map;
+}
+
+function defaultResolvedValues(): Map<string, PillState> {
+  return makeMap({
+    translation_en: 'cat',
+    translation_en_plural: 'cats',
+    translation_ru: 'кошка',
+    translation_ru_plural: 'кошки',
+    pronunciation: '/ˈɣa.ta/',
+  });
+}
+
 describe('buildWordEntryPayload', () => {
   it('sets lemma and part_of_speech correctly', () => {
     const payload = buildWordEntryPayload({
       generation: mockGeneration,
-      editableTranslations: defaultEditableTranslations,
-      editablePronunciation: '/ˈɣa.ta/',
+      resolvedValues: defaultResolvedValues(),
       editableExamples: defaultEditableExamples,
-      selectionMap: new Map(),
-      verification: null,
     });
 
     expect(payload.lemma).toBe('γάτα');
     expect(payload.part_of_speech).toBe('noun');
   });
 
-  it('uses editableTranslations for translation fields', () => {
+  it('uses resolvedValues for translation fields', () => {
+    const map = makeMap({
+      translation_en: 'kitty',
+      translation_en_plural: 'kitties',
+      translation_ru: 'котёнок',
+      translation_ru_plural: 'котята',
+    });
     const payload = buildWordEntryPayload({
       generation: mockGeneration,
-      editableTranslations: {
-        en: 'kitty',
-        en_plural: 'kitties',
-        ru: 'котёнок',
-        ru_plural: 'котята',
-      },
-      editablePronunciation: '',
+      resolvedValues: map,
       editableExamples: [],
-      selectionMap: new Map(),
-      verification: null,
     });
 
     expect(payload.translation_en).toBe('kitty');
@@ -237,14 +152,17 @@ describe('buildWordEntryPayload', () => {
     expect(payload.translation_ru_plural).toBe('котята');
   });
 
-  it('sets translation_en_plural to null when empty string', () => {
+  it('sets translation_en_plural to null when resolved value is empty string', () => {
+    const map = makeMap({
+      translation_en: 'cat',
+      translation_en_plural: '',
+      translation_ru: '',
+      translation_ru_plural: '',
+    });
     const payload = buildWordEntryPayload({
       generation: mockGeneration,
-      editableTranslations: { en: 'cat', en_plural: '', ru: '', ru_plural: '' },
-      editablePronunciation: '',
+      resolvedValues: map,
       editableExamples: [],
-      selectionMap: new Map(),
-      verification: null,
     });
 
     expect(payload.translation_en_plural).toBeNull();
@@ -252,14 +170,24 @@ describe('buildWordEntryPayload', () => {
     expect(payload.translation_ru_plural).toBeNull();
   });
 
+  it('falls back to generation for translation fields not in resolvedValues', () => {
+    const payload = buildWordEntryPayload({
+      generation: mockGeneration,
+      resolvedValues: new Map(),
+      editableExamples: [],
+    });
+
+    expect(payload.translation_en).toBe('cat');
+    expect(payload.translation_en_plural).toBe('cats');
+    expect(payload.translation_ru).toBe('кошка');
+    expect(payload.translation_ru_plural).toBe('кошки');
+  });
+
   it('flattens nested cases to flat grammar_data keys', () => {
     const payload = buildWordEntryPayload({
       generation: mockGeneration,
-      editableTranslations: defaultEditableTranslations,
-      editablePronunciation: '',
+      resolvedValues: defaultResolvedValues(),
       editableExamples: [],
-      selectionMap: new Map(),
-      verification: null,
     });
 
     const gd = payload.grammar_data as Record<string, unknown>;
@@ -275,14 +203,26 @@ describe('buildWordEntryPayload', () => {
     expect(gd['declension_group']).toBe('feminine_a');
   });
 
+  it('overlays grammar fields from resolvedValues when present', () => {
+    const map = makeMap({ gender: 'neuter', nominative_singular: 'το σπίτι' });
+    const payload = buildWordEntryPayload({
+      generation: mockGeneration,
+      resolvedValues: map,
+      editableExamples: [],
+    });
+
+    const gd = payload.grammar_data as Record<string, unknown>;
+    expect(gd['gender']).toBe('neuter');
+    expect(gd['nominative_singular']).toBe('το σπίτι');
+    // Non-overridden fields still come from generation
+    expect(gd['genitive_singular']).toBe('της γάτας');
+  });
+
   it('generates example IDs as ex_{asciiLemma}{index} (0-based)', () => {
     const payload = buildWordEntryPayload({
       generation: mockGeneration,
-      editableTranslations: defaultEditableTranslations,
-      editablePronunciation: '',
+      resolvedValues: defaultResolvedValues(),
       editableExamples: defaultEditableExamples,
-      selectionMap: new Map(),
-      verification: null,
     });
 
     expect(payload.examples).toHaveLength(2);
@@ -290,99 +230,150 @@ describe('buildWordEntryPayload', () => {
     expect(payload.examples![1].id).toBe('ex_gata1');
   });
 
-  it('uses editablePronunciation when no verification selection', () => {
+  it('uses pronunciation from resolvedValues', () => {
+    const map = makeMap({ pronunciation: '/custom/' });
     const payload = buildWordEntryPayload({
       generation: mockGeneration,
-      editableTranslations: defaultEditableTranslations,
-      editablePronunciation: '/custom/',
+      resolvedValues: map,
       editableExamples: [],
-      selectionMap: new Map(),
-      verification: null,
     });
 
     expect(payload.pronunciation).toBe('/custom/');
   });
 
-  it('uses verification primary value for pronunciation when selected', () => {
-    const verif = {
-      local: null,
-      cross_ai: {
-        comparisons: [
-          {
-            field_path: 'pronunciation',
-            primary_value: '/verified/',
-            secondary_value: '/other/',
-            agrees: false,
-          },
-        ],
-      } as CrossAIVerificationResult,
-    };
-
-    const map = new Map<string, SelectionSource>([['pronunciation', 'primary']]);
+  it('falls back to generation pronunciation when not in resolvedValues', () => {
     const payload = buildWordEntryPayload({
       generation: mockGeneration,
-      editableTranslations: defaultEditableTranslations,
-      editablePronunciation: '/editable/',
+      resolvedValues: new Map(),
       editableExamples: [],
-      selectionMap: map,
-      verification: verif,
     });
 
-    expect(payload.pronunciation).toBe('/verified/');
+    expect(payload.pronunciation).toBe('/ˈɣa.ta/');
   });
 
-  it('sets pronunciation to null when both sources are empty', () => {
+  it('sets pronunciation to null when resolved value is empty string', () => {
+    const map = makeMap({ pronunciation: '' });
     const payload = buildWordEntryPayload({
       generation: { ...mockGeneration, pronunciation: '' },
-      editableTranslations: defaultEditableTranslations,
-      editablePronunciation: '',
+      resolvedValues: map,
       editableExamples: [],
-      selectionMap: new Map(),
-      verification: null,
     });
 
     expect(payload.pronunciation).toBeNull();
   });
 
-  it('resolves grammar_data field via selectionMap (secondary source)', () => {
-    const verif = {
-      local: null,
-      cross_ai: {
-        comparisons: [
-          {
-            field_path: 'grammar_data.gender',
-            primary_value: 'feminine',
-            secondary_value: 'neuter',
-            agrees: false,
-          },
-        ],
-      } as CrossAIVerificationResult,
-    };
-
-    const map = new Map<string, SelectionSource>([['grammar_data.gender', 'secondary']]);
-    const payload = buildWordEntryPayload({
-      generation: mockGeneration,
-      editableTranslations: defaultEditableTranslations,
-      editablePronunciation: '',
-      editableExamples: [],
-      selectionMap: map,
-      verification: verif,
-    });
-
-    const gd = payload.grammar_data as Record<string, unknown>;
-    expect(gd['gender']).toBe('neuter');
-  });
-
   it('handles empty editableExamples (returns empty array)', () => {
     const payload = buildWordEntryPayload({
       generation: mockGeneration,
-      editableTranslations: defaultEditableTranslations,
-      editablePronunciation: '',
+      resolvedValues: defaultResolvedValues(),
       editableExamples: [],
-      selectionMap: new Map(),
-      verification: null,
     });
 
     expect(payload.examples).toHaveLength(0);
+  });
+});
+
+// ============================================
+// initializeResolvedValues
+// ============================================
+
+const mockCrossAI: CrossAIVerificationResult = {
+  comparisons: [
+    {
+      field_path: 'nominative_singular',
+      primary_value: 'η γάτα',
+      secondary_value: 'γάτα',
+      agrees: true,
+      weight: 1,
+    },
+    {
+      field_path: 'gender',
+      primary_value: 'feminine',
+      secondary_value: 'neuter',
+      agrees: false,
+      weight: 1,
+    },
+  ],
+  overall_agreement: 0.5,
+  secondary_model: 'test-model',
+  secondary_generation: null,
+  error: null,
+};
+
+const mockVerification: VerificationSummary = {
+  local: null,
+  cross_ai: mockCrossAI,
+  combined_tier: 'quick_review',
+  morphology_source: 'llm',
+};
+
+describe('initializeResolvedValues', () => {
+  it('returns empty map when generation is null', () => {
+    const map = initializeResolvedValues(null, null);
+    expect(map.size).toBe(0);
+  });
+
+  it('seeds agreed pills when cross-AI agrees', () => {
+    const map = initializeResolvedValues(mockGeneration, mockVerification);
+    const pill = map.get('nominative_singular');
+    expect(pill).toEqual({ value: 'η γάτα', source: 'auto', status: 'agreed' });
+  });
+
+  it('seeds unresolved pills when cross-AI disagrees', () => {
+    const map = initializeResolvedValues(mockGeneration, mockVerification);
+    const pill = map.get('gender');
+    expect(pill).toEqual({ value: 'feminine', source: 'auto', status: 'unresolved' });
+  });
+
+  it('seeds editable pills for translation/pronunciation fields without cross-AI', () => {
+    const map = initializeResolvedValues(mockGeneration, null);
+    for (const field of EDITABLE_FIELDS) {
+      const pill = map.get(field);
+      expect(pill?.status).toBe('editable');
+      expect(pill?.source).toBe('auto');
+    }
+  });
+
+  it('seeds agreed pills for non-editable fields without cross-AI', () => {
+    const map = initializeResolvedValues(mockGeneration, null);
+    const pill = map.get('nominative_singular');
+    expect(pill).toEqual({ value: 'η γάτα', source: 'auto', status: 'agreed' });
+  });
+
+  it('handles null verification (falls back to editable/agreed based on field type)', () => {
+    const map = initializeResolvedValues(mockGeneration, null);
+    // translation field → editable
+    expect(map.get('translation_en')?.status).toBe('editable');
+    // grammar field → agreed
+    expect(map.get('gender')?.status).toBe('agreed');
+  });
+
+  it('seeds null plural translations as empty string', () => {
+    const gen = { ...mockGeneration, translation_en_plural: null, translation_ru_plural: null };
+    const map = initializeResolvedValues(gen, null);
+    expect(map.get('translation_en_plural')?.value).toBe('');
+    expect(map.get('translation_ru_plural')?.value).toBe('');
+  });
+
+  it('includes all grammar case keys', () => {
+    const map = initializeResolvedValues(mockGeneration, null);
+    for (const key of [
+      'nominative_singular',
+      'genitive_singular',
+      'accusative_singular',
+      'vocative_singular',
+      'nominative_plural',
+      'genitive_plural',
+      'accusative_plural',
+      'vocative_plural',
+    ]) {
+      expect(map.has(key)).toBe(true);
+    }
+  });
+
+  it('uses primary_value (not secondary) for cross-AI seeded pills', () => {
+    const map = initializeResolvedValues(mockGeneration, mockVerification);
+    // gender disagrees: primary=feminine, secondary=neuter → seeds primary
+    expect(map.get('gender')?.value).toBe('feminine');
   });
 });

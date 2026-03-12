@@ -1093,18 +1093,19 @@
       "errorToast": "Не удалось сохранить словарную запись"
     },
     "editable": {
-      "translationsTitle": "Переводы",
-      "translationEn": "Английский",
-      "translationEnPlural": "Английский (мн.ч.)",
-      "translationRu": "Русский",
-      "translationRuPlural": "Русский (мн.ч.)",
-      "pronunciationTitle": "Произношение",
-      "pronunciation": "Произношение",
       "examplesTitle": "Примеры",
       "exampleGreek": "Греческий",
       "exampleEnglish": "Английский",
-      "exampleRussian": "Русский",
-      "required": "Обязательное"
+      "exampleRussian": "Русский"
+    },
+    "pill": {
+      "editTooltip": "Нажмите для редактирования",
+      "resolvedBy": "Разрешено: {{source}}"
+    },
+    "examples": {
+      "editButton": "Редактировать",
+      "saveButton": "Сохранить",
+      "cancelButton": "Отмена"
     }
   },
   "wordEntry": {

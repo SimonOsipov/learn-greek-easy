@@ -1,17 +1,10 @@
-import type { SelectionSource } from '@/components/admin/UnifiedVerificationTable';
+import type { PillState } from '@/components/admin/UnifiedVerificationTable';
 import type {
+  FieldComparisonResult,
   GeneratedNounData,
-  CrossAIVerificationResult,
-  LocalVerificationResult,
+  VerificationSummary,
 } from '@/services/adminAPI';
-import type { WordEntryInput, WordEntryExampleSentence } from '@/services/wordEntryAPI';
-
-export interface EditableTranslations {
-  en: string;
-  en_plural: string;
-  ru: string;
-  ru_plural: string;
-}
+import type { WordEntryExampleSentence, WordEntryInput } from '@/services/wordEntryAPI';
 
 export interface EditableExample {
   greek: string;
@@ -61,94 +54,38 @@ export function toAsciiLemma(greekLemma: string): string {
     .join('');
 }
 
-/**
- * Resolves the value of a field by checking the selectionMap first, then falling back to cross-AI primary.
- * Returns null if no value can be determined.
- */
-export function resolveFieldValue(
-  fieldPath: string,
-  selectionMap: Map<string, SelectionSource>,
-  verification: {
-    local: LocalVerificationResult | null;
-    cross_ai: CrossAIVerificationResult | null;
-  } | null
-): string | null {
-  const source = selectionMap.get(fieldPath);
-  if (source) {
-    if (source === 'local' && verification?.local) {
-      const field = verification.local.fields.find((f) => f.field_path === fieldPath);
-      if (field) {
-        const check = field.checks.find((c) => c.reference_value != null);
-        return check?.reference_value ?? null;
-      }
-    }
-    if (source === 'primary' || source === 'secondary') {
-      const comparison = verification?.cross_ai?.comparisons.find(
-        (c) => c.field_path === fieldPath
-      );
-      if (comparison) {
-        return source === 'primary' ? comparison.primary_value : comparison.secondary_value;
-      }
-    }
-    return null;
-  }
-  // Default fallback: use primary_value from cross-AI if available
-  const comparison = verification?.cross_ai?.comparisons.find((c) => c.field_path === fieldPath);
-  return comparison?.primary_value ?? null;
-}
-
 export interface BuildPayloadParams {
   generation: GeneratedNounData;
-  editableTranslations: EditableTranslations;
-  editablePronunciation: string;
+  resolvedValues: Map<string, PillState>;
   editableExamples: EditableExample[];
-  selectionMap: Map<string, SelectionSource>;
-  verification: {
-    local: LocalVerificationResult | null;
-    cross_ai: CrossAIVerificationResult | null;
-  } | null;
 }
 
 /**
- * Builds a WordEntryInput payload from generated noun data and admin edits.
+ * Builds a WordEntryInput payload from generated noun data and resolved pill values.
  */
 export function buildWordEntryPayload(params: BuildPayloadParams): WordEntryInput {
-  const {
-    generation,
-    editableTranslations,
-    editablePronunciation,
-    editableExamples,
-    selectionMap,
-    verification,
-  } = params;
+  const { generation, resolvedValues, editableExamples } = params;
 
   const cases = generation.grammar_data.cases;
 
-  // Resolve grammar fields via verification/selection, falling back to generated data
-  const resolveCase = (fieldPath: string, fallback: string | null): string | null =>
-    resolveFieldValue(fieldPath, selectionMap, verification) ?? fallback;
+  const resolveField = (key: string, fallback: string | null): string | null =>
+    resolvedValues.get(key)?.value ?? fallback;
 
   const grammar_data: Record<string, unknown> = {
-    gender:
-      resolveFieldValue('grammar_data.gender', selectionMap, verification) ??
-      generation.grammar_data.gender,
-    declension_group:
-      resolveFieldValue('grammar_data.declension_group', selectionMap, verification) ??
-      generation.grammar_data.declension_group,
-    nominative_singular: resolveCase('cases.singular.nominative', cases.singular.nominative),
-    genitive_singular: resolveCase('cases.singular.genitive', cases.singular.genitive),
-    accusative_singular: resolveCase('cases.singular.accusative', cases.singular.accusative),
-    vocative_singular: resolveCase('cases.singular.vocative', cases.singular.vocative),
-    nominative_plural: resolveCase('cases.plural.nominative', cases.plural.nominative),
-    genitive_plural: resolveCase('cases.plural.genitive', cases.plural.genitive),
-    accusative_plural: resolveCase('cases.plural.accusative', cases.plural.accusative),
-    vocative_plural: resolveCase('cases.plural.vocative', cases.plural.vocative),
+    gender: resolveField('gender', generation.grammar_data.gender),
+    declension_group: resolveField('declension_group', generation.grammar_data.declension_group),
+    nominative_singular: resolveField('nominative_singular', cases.singular.nominative),
+    genitive_singular: resolveField('genitive_singular', cases.singular.genitive),
+    accusative_singular: resolveField('accusative_singular', cases.singular.accusative),
+    vocative_singular: resolveField('vocative_singular', cases.singular.vocative),
+    nominative_plural: resolveField('nominative_plural', cases.plural.nominative),
+    genitive_plural: resolveField('genitive_plural', cases.plural.genitive),
+    accusative_plural: resolveField('accusative_plural', cases.plural.accusative),
+    vocative_plural: resolveField('vocative_plural', cases.plural.vocative),
   };
 
-  // Pronunciation: use verification selection if present, else editablePronunciation
-  const resolvedPronunciation = resolveFieldValue('pronunciation', selectionMap, verification);
-  const pronunciation =
-    resolvedPronunciation !== null ? resolvedPronunciation || null : editablePronunciation || null;
+  const pronunciationValue = resolveField('pronunciation', generation.pronunciation);
+  const pronunciation = pronunciationValue || null;
 
   const asciiLemma = toAsciiLemma(generation.lemma);
   const examples: WordEntryExampleSentence[] = editableExamples.map((ex, i) => ({
@@ -158,15 +95,103 @@ export function buildWordEntryPayload(params: BuildPayloadParams): WordEntryInpu
     russian: ex.russian || undefined,
   }));
 
+  const translation_en = resolvedValues.get('translation_en')?.value ?? generation.translation_en;
+  const translation_en_plural =
+    (resolvedValues.get('translation_en_plural')?.value ??
+      generation.translation_en_plural ??
+      '') ||
+    null;
+  const translation_ru =
+    (resolvedValues.get('translation_ru')?.value ?? generation.translation_ru ?? '') || null;
+  const translation_ru_plural =
+    (resolvedValues.get('translation_ru_plural')?.value ??
+      generation.translation_ru_plural ??
+      '') ||
+    null;
+
   return {
     lemma: generation.lemma,
     part_of_speech: 'noun',
-    translation_en: editableTranslations.en,
-    translation_en_plural: editableTranslations.en_plural || null,
-    translation_ru: editableTranslations.ru || null,
-    translation_ru_plural: editableTranslations.ru_plural || null,
+    translation_en,
+    translation_en_plural,
+    translation_ru,
+    translation_ru_plural,
     pronunciation,
     grammar_data,
     examples,
   };
+}
+
+export const EDITABLE_FIELDS = new Set([
+  'translation_en',
+  'translation_en_plural',
+  'translation_ru',
+  'translation_ru_plural',
+  'pronunciation',
+]);
+
+export function initializeResolvedValues(
+  generation: GeneratedNounData | null,
+  verification: VerificationSummary | null
+): Map<string, PillState> {
+  const map = new Map<string, PillState>();
+  if (!generation) return map;
+
+  // Build generation values map (flat keys)
+  const genValues = new Map<string, string>();
+  genValues.set('translation_en', generation.translation_en);
+  genValues.set('translation_en_plural', generation.translation_en_plural ?? '');
+  genValues.set('translation_ru', generation.translation_ru);
+  genValues.set('translation_ru_plural', generation.translation_ru_plural ?? '');
+  genValues.set('pronunciation', generation.pronunciation);
+  genValues.set('gender', generation.grammar_data.gender);
+  genValues.set('declension_group', generation.grammar_data.declension_group);
+  const { cases } = generation.grammar_data;
+  for (const numKey of ['singular', 'plural'] as const) {
+    const caseGroup = cases[numKey];
+    if (caseGroup) {
+      for (const [caseName, value] of Object.entries(caseGroup)) {
+        if (value != null) {
+          genValues.set(`${caseName}_${numKey}`, value);
+        }
+      }
+    }
+  }
+
+  // Build cross-AI lookup (normalize nested field_path to flat key for lookup)
+  const toFlatKey = (path: string): string => {
+    if (path.startsWith('cases.')) {
+      const parts = path.split('.');
+      // 'cases.singular.nominative' -> 'nominative_singular'
+      return `${parts[2]}_${parts[1]}`;
+    }
+    if (path === 'grammar_data.gender') return 'gender';
+    if (path === 'grammar_data.declension_group') return 'declension_group';
+    return path;
+  };
+
+  const crossAIMap = new Map<string, FieldComparisonResult>();
+  if (verification?.cross_ai?.comparisons) {
+    for (const comp of verification.cross_ai.comparisons) {
+      crossAIMap.set(toFlatKey(comp.field_path), comp);
+    }
+  }
+
+  // Initialize pill states
+  for (const [field, genValue] of genValues) {
+    const comp = crossAIMap.get(field);
+    if (comp) {
+      if (comp.agrees) {
+        map.set(field, { value: comp.primary_value, source: 'auto', status: 'agreed' });
+      } else {
+        map.set(field, { value: comp.primary_value, source: 'auto', status: 'unresolved' });
+      }
+    } else if (EDITABLE_FIELDS.has(field)) {
+      map.set(field, { value: genValue, source: 'auto', status: 'editable' });
+    } else {
+      map.set(field, { value: genValue, source: 'auto', status: 'agreed' });
+    }
+  }
+
+  return map;
 }

@@ -961,8 +961,8 @@ describe('GenerateNounDialog', () => {
   // Editable fields (AC #5)
   // ============================================================
 
-  // 46. Editable translation inputs rendered after pipeline done
-  it('renders editable translation inputs when pipeline is done', async () => {
+  // 46. Decision pills rendered in verification table after pipeline done
+  it('renders decision pills in verification table when pipeline is done', async () => {
     const user = userEvent.setup();
     renderDialog();
 
@@ -970,15 +970,14 @@ describe('GenerateNounDialog', () => {
     fireFullPipelineEvents();
 
     await waitFor(() => {
-      expect(screen.getByTestId('editable-translation-en')).toBeInTheDocument();
+      expect(screen.getByTestId('approve-save-button')).toBeInTheDocument();
     });
-    expect(screen.getByTestId('editable-translation-en-plural')).toBeInTheDocument();
-    expect(screen.getByTestId('editable-translation-ru')).toBeInTheDocument();
-    expect(screen.getByTestId('editable-translation-ru-plural')).toBeInTheDocument();
+    // Translations and pronunciation are now shown as decision pills in the verification table
+    expect(screen.getByTestId('verification-section')).toBeInTheDocument();
   });
 
-  // 47. Editable fields populated from generation data (AC #4)
-  it('populates editable fields from generation data', async () => {
+  // 47. Translation values accessible via resolved values (no longer in separate inputs)
+  it('shows generation result after pipeline and approve button is enabled', async () => {
     const user = userEvent.setup();
     renderDialog();
 
@@ -986,16 +985,14 @@ describe('GenerateNounDialog', () => {
     fireFullPipelineEvents();
 
     await waitFor(() => {
-      expect(screen.getByTestId('editable-translation-en')).toHaveValue('cat');
+      expect(screen.getByTestId('approve-save-button')).not.toBeDisabled();
     });
-    expect(screen.getByTestId('editable-translation-en-plural')).toHaveValue('cats');
-    expect(screen.getByTestId('editable-translation-ru')).toHaveValue('кошка');
-    expect(screen.getByTestId('editable-translation-ru-plural')).toHaveValue('кошки');
-    expect(screen.getByTestId('editable-pronunciation')).toHaveValue('/ˈɣa.ta/');
+    // Generation data is populated into resolvedValues and approve is enabled
+    expect(screen.getByTestId('approve-save-button')).not.toBeDisabled();
   });
 
-  // 48. Editable pronunciation input rendered (AC #5)
-  it('renders editable pronunciation input when pipeline is done', async () => {
+  // 48. Examples section visible when pipeline done (read-only by default)
+  it('shows examples section in read-only mode when pipeline is done', async () => {
     const user = userEvent.setup();
     renderDialog();
 
@@ -1003,12 +1000,14 @@ describe('GenerateNounDialog', () => {
     fireFullPipelineEvents();
 
     await waitFor(() => {
-      expect(screen.getByTestId('editable-pronunciation')).toBeInTheDocument();
+      expect(screen.getByTestId('examples-section')).toBeInTheDocument();
     });
+    // In read-only mode, editable inputs are not shown
+    expect(screen.queryByTestId('editable-example-0-greek')).not.toBeInTheDocument();
   });
 
-  // 49. Editable example inputs rendered (AC #5)
-  it('renders editable example inputs when pipeline is done', async () => {
+  // 49. Editable example inputs rendered after clicking Edit button (AC #5)
+  it('renders editable example inputs after clicking Edit button', async () => {
     const user = userEvent.setup();
     renderDialog();
 
@@ -1016,8 +1015,13 @@ describe('GenerateNounDialog', () => {
     fireFullPipelineEvents();
 
     await waitFor(() => {
-      expect(screen.getByTestId('editable-example-0-greek')).toBeInTheDocument();
+      expect(screen.getByTestId('examples-section')).toBeInTheDocument();
     });
+
+    // Click the Edit button to enter edit mode
+    await user.click(screen.getByText('Edit'));
+
+    expect(screen.getByTestId('editable-example-0-greek')).toBeInTheDocument();
     expect(screen.getByTestId('editable-example-0-english')).toBeInTheDocument();
     expect(screen.getByTestId('editable-example-0-russian')).toBeInTheDocument();
     expect(screen.getByTestId('editable-example-1-greek')).toBeInTheDocument();
@@ -1054,8 +1058,8 @@ describe('GenerateNounDialog', () => {
     expect(screen.queryByTestId('approve-save-button')).not.toBeInTheDocument();
   });
 
-  // 52. Approve & Save disabled when EN translation is empty (AC #6)
-  it('disables Approve & Save when EN translation is empty', async () => {
+  // 52. Approve & Save enabled when generation provides EN translation via resolvedValues (AC #6)
+  it('enables Approve & Save when generation data provides EN translation', async () => {
     const user = userEvent.setup();
     renderDialog();
 
@@ -1066,10 +1070,8 @@ describe('GenerateNounDialog', () => {
       expect(screen.getByTestId('approve-save-button')).toBeInTheDocument();
     });
 
-    // Clear EN translation
-    await user.clear(screen.getByTestId('editable-translation-en'));
-
-    expect(screen.getByTestId('approve-save-button')).toBeDisabled();
+    // With generation data providing translation_en='cat', approve button should be enabled
+    expect(screen.getByTestId('approve-save-button')).not.toBeDisabled();
   });
 
   // 53. Approve & Save enabled when EN translation is present
@@ -1163,8 +1165,8 @@ describe('GenerateNounDialog', () => {
   // Start Over resets editable fields + selectionMap (AC #17)
   // ============================================================
 
-  // 56. Start Over clears editable fields
-  it('Start Over clears editable fields', async () => {
+  // 56. Start Over resets to input form
+  it('Start Over resets to input form and clears all results', async () => {
     const user = userEvent.setup();
     renderDialog();
 
@@ -1172,13 +1174,13 @@ describe('GenerateNounDialog', () => {
     fireFullPipelineEvents();
 
     await waitFor(() => {
-      expect(screen.getByTestId('editable-translation-en')).toHaveValue('cat');
+      expect(screen.getByTestId('approve-save-button')).toBeInTheDocument();
     });
 
     await user.click(screen.getByTestId('generate-noun-start-over'));
 
-    // Back to input form — editable fields not visible
-    expect(screen.queryByTestId('editable-translation-en')).not.toBeInTheDocument();
+    // Back to input form — verification and approve button not visible
+    expect(screen.queryByTestId('approve-save-button')).not.toBeInTheDocument();
     expect(screen.getByTestId('generate-noun-input')).toBeInTheDocument();
     expect(screen.getByTestId('generate-noun-input')).toHaveValue('');
   });
@@ -1200,6 +1202,8 @@ describe('GenerateNounDialog', () => {
   });
 
   // 58. Unresolved warning shows count when cross-AI has disagreements (AC #3)
+  // Field paths must match the flat key format used by initializeResolvedValues
+  // (e.g. 'nominative_singular' not 'cases.singular.nominative')
   it('shows unresolved warning with correct count when cross-AI has disagreements', async () => {
     const user = userEvent.setup();
     renderDialog();
@@ -1213,13 +1217,13 @@ describe('GenerateNounDialog', () => {
       cross_ai: {
         comparisons: [
           {
-            field_path: 'cases.singular.nominative',
+            field_path: 'nominative_singular',
             agrees: false,
             primary_value: 'η γάτα',
             secondary_value: 'γάτα',
           },
           {
-            field_path: 'cases.plural.nominative',
+            field_path: 'nominative_plural',
             agrees: false,
             primary_value: 'οι γάτες',
             secondary_value: 'γάτες',

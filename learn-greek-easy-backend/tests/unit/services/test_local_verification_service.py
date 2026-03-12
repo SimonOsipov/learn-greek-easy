@@ -1069,7 +1069,7 @@ class TestReferenceValues:
         assert field is not None
         check = _find_check(field, "spellcheck")
         assert check is not None
-        assert check.reference_value == "σπίτι"
+        assert check.reference_value == "το σπίτι"
         assert check.reference_source == "lexicon"
 
     def test_no_lexicon_data_reference_none(self) -> None:
@@ -1305,3 +1305,80 @@ class TestReferenceValues:
         assert check.status == "fail"
         assert "Expected" in check.message
         assert "lexicon" in check.message
+
+    def test_vocative_reference_value_bare(self) -> None:
+        """Vocative case reference_value has no article prefix (vocative has no article)."""
+        mock_spell = MagicMock()
+        mock_spell.check.return_value = _make_spellcheck_result(is_valid=True)
+        svc = LocalVerificationService(spellcheck_service=mock_spell, morphology_service=None)
+        entries = self._make_lexicon_entries()
+
+        result = svc.verify(_make_noun_data(), lexicon_declensions=entries)
+
+        # Singular vocative: lexicon entry is "σπίτι" (bare, no article)
+        field = _find_field(result, "cases.singular.vocative")
+        assert field is not None
+        check = _find_check(field, "spellcheck")
+        assert check is not None
+        # Vocative has no article in _ARTICLE_MAP → display_ref_value falls back to ref_value as-is
+        assert check.reference_value == "σπίτι"
+        assert check.reference_source == "lexicon"
+
+    def test_lemma_reference_with_article_masculine(self) -> None:
+        """Lemma spellcheck reference_value gets 'ο ' prefix for a masculine noun."""
+        from src.services.lexicon_service import LexiconEntry
+
+        mock_spell = MagicMock()
+        mock_spell.check.return_value = _make_spellcheck_result(is_valid=True)
+        svc = LocalVerificationService(spellcheck_service=mock_spell, morphology_service=None)
+        entries = [
+            LexiconEntry(
+                form="ο άντρας",
+                lemma="άντρας",
+                pos="NOUN",
+                gender="Masc",
+                ptosi="Nom",
+                number="Sing",
+            )
+        ]
+        noun = _make_noun_data(
+            lemma="άντρας",
+            gender="masculine",
+            declension_group="masculine_as",
+            nom_sg="ο άντρας",
+            gen_sg="του άντρα",
+            acc_sg="τον άντρα",
+            voc_sg="άντρα",
+            nom_pl="οι άντρες",
+            gen_pl="των αντρών",
+            acc_pl="τους άντρες",
+            voc_pl="άντρες",
+        )
+
+        result = svc.verify(noun, lexicon_declensions=entries)
+
+        field = _find_field(result, "lemma")
+        assert field is not None
+        check = _find_check(field, "spellcheck")
+        assert check is not None
+        # Masculine nominative singular article is "ο " → "ο άντρας"
+        assert check.reference_value == "ο άντρας"
+        assert check.reference_source == "lexicon"
+
+    def test_declension_reference_genitive_article(self) -> None:
+        """Genitive singular form reference_value gets the correct genitive article prefix."""
+        mock_spell = MagicMock()
+        mock_spell.check.return_value = _make_spellcheck_result(is_valid=True)
+        svc = LocalVerificationService(spellcheck_service=mock_spell, morphology_service=None)
+        entries = self._make_lexicon_entries()  # neuter noun σπίτι
+
+        result = svc.verify(_make_noun_data(), lexicon_declensions=entries)
+
+        # Genitive singular: lexicon entry is "του σπιτιού"; bare is "σπιτιού"
+        # article for neuter genitive singular is "του " → display = "του σπιτιού"
+        field = _find_field(result, "cases.singular.genitive")
+        assert field is not None
+        check = _find_check(field, "spellcheck")
+        assert check is not None
+        assert check.reference_value == "του σπιτιού"
+        assert check.reference_source == "lexicon"
