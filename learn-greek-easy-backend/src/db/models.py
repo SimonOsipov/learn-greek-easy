@@ -11,7 +11,7 @@ This module contains all SQLAlchemy models for the application:
 - Culture Exam (CultureDeck, CultureQuestion, CultureQuestionStats, CultureAnswerHistory)
 - Announcement Campaigns (AnnouncementCampaign)
 - Changelog (ChangelogEntry)
-- Listening Dialogs (ListeningDialog, DialogSpeaker, DialogLine)
+- Listening Dialogs (ListeningDialog, DialogSpeaker, DialogLine, DialogExercise, ExerciseItem)
 
 All models use:
 - UUID primary keys with server-side generation
@@ -267,6 +267,21 @@ class DialogStatus(str, enum.Enum):
     AUDIO_READY = "audio_ready"
     EXERCISES_READY = "exercises_ready"
     PUBLISHED = "published"
+
+
+class ExerciseType(str, enum.Enum):
+    """Type of exercise within a listening dialog."""
+
+    FILL_GAPS = "fill_gaps"
+    SELECT_HEARD = "select_heard"
+    TRUE_FALSE = "true_false"
+
+
+class ExerciseStatus(str, enum.Enum):
+    """Approval status of a dialog exercise."""
+
+    DRAFT = "draft"
+    APPROVED = "approved"
 
 
 # ============================================================================
@@ -2775,6 +2790,9 @@ class ListeningDialog(Base, TimestampMixin):
     lines: Mapped[List["DialogLine"]] = relationship(
         back_populates="dialog", lazy="raise", cascade="all, delete-orphan"
     )
+    exercises: Mapped[List["DialogExercise"]] = relationship(
+        back_populates="dialog", lazy="raise", cascade="all, delete-orphan"
+    )
 
     def __repr__(self) -> str:
         return f"<ListeningDialog id={self.id} cefr_level={self.cefr_level} status={self.status}>"
@@ -2841,6 +2859,69 @@ class DialogLine(Base):
 
     def __repr__(self) -> str:
         return f"<DialogLine id={self.id} dialog_id={self.dialog_id} index={self.line_index}>"
+
+
+class DialogExercise(Base, TimestampMixin):
+    """Exercise associated with a listening dialog."""
+
+    __tablename__ = "dialog_exercises"
+    __table_args__ = (
+        UniqueConstraint("dialog_id", "exercise_type", name="uq_dialog_exercise_type"),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.uuid_generate_v4())
+    dialog_id: Mapped[UUID] = mapped_column(
+        ForeignKey("listening_dialogs.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    exercise_type: Mapped[ExerciseType] = mapped_column(
+        SAEnum(
+            ExerciseType,
+            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+            name="exercisetype",
+            create_type=False,
+        ),
+        nullable=False,
+    )
+    status: Mapped[ExerciseStatus] = mapped_column(
+        SAEnum(
+            ExerciseStatus,
+            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+            name="exercisestatus",
+            create_type=False,
+        ),
+        nullable=False,
+        server_default=text("'draft'"),
+    )
+
+    dialog: Mapped["ListeningDialog"] = relationship(back_populates="exercises", lazy="raise")
+    items: Mapped[List["ExerciseItem"]] = relationship(
+        back_populates="exercise",
+        lazy="raise",
+        cascade="all, delete-orphan",
+        order_by="ExerciseItem.item_index",
+    )
+
+
+class ExerciseItem(Base):
+    """Individual item within a dialog exercise. Delete-and-recreate pattern."""
+
+    __tablename__ = "exercise_items"
+    __table_args__ = (
+        UniqueConstraint("exercise_id", "item_index", name="uq_exercise_item_index"),
+        CheckConstraint("item_index >= 0", name="ck_exercise_items_item_index"),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.uuid_generate_v4())
+    exercise_id: Mapped[UUID] = mapped_column(
+        ForeignKey("dialog_exercises.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    item_index: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    payload: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    exercise: Mapped["DialogExercise"] = relationship(back_populates="items", lazy="raise")
 
 
 class Translation(Base):
