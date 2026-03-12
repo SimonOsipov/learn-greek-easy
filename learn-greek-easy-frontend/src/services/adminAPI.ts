@@ -42,6 +42,31 @@ export type { CultureDeckAdminResponse, DeckAdminResponse } from '@/types/deck';
  */
 export type DeckLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
 
+export type DialogStatus =
+  | 'draft'
+  | 'text_approved'
+  | 'audio_ready'
+  | 'exercises_ready'
+  | 'published';
+
+export interface ListeningDialogListItem {
+  id: string;
+  scenario_el: string;
+  scenario_en: string;
+  scenario_ru: string;
+  cefr_level: DeckLevel;
+  num_speakers: number;
+  status: DialogStatus;
+  created_at: string;
+}
+
+export interface ListeningDialogListResponse {
+  items: ListeningDialogListItem[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
 /**
  * Multilingual name object for culture decks
  */
@@ -1569,5 +1594,24 @@ export const adminAPI = {
    */
   unlinkWordEntry: async (deckId: string, wordEntryId: string): Promise<void> => {
     return api.delete<void>(`/api/v1/admin/decks/${deckId}/word-entries/${wordEntryId}/link`);
+  },
+
+  getListeningDialogs: async (
+    page: number,
+    pageSize: number,
+    status?: DialogStatus,
+    cefrLevel?: DeckLevel
+  ): Promise<ListeningDialogListResponse> => {
+    const queryString = buildQueryString({
+      page,
+      page_size: pageSize,
+      status,
+      cefr_level: cefrLevel,
+    });
+    return api.get<ListeningDialogListResponse>(`/api/v1/admin/listening-dialogs${queryString}`);
+  },
+
+  deleteListeningDialog: async (id: string): Promise<void> => {
+    return api.delete<void>(`/api/v1/admin/listening-dialogs/${id}`);
   },
 };

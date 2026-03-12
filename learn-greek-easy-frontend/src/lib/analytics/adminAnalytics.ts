@@ -353,3 +353,21 @@ export function trackAdminWordEntryAutoAudioRegen(
     posthog.capture('admin_word_entry_auto_audio_regen', properties);
   }
 }
+
+export function trackAdminDialogListViewed(dialogCount: number): void {
+  if (typeof posthog?.capture === 'function') {
+    posthog.capture('admin_dialog_list_viewed', { dialog_count: dialogCount });
+  }
+}
+
+export function trackAdminDialogCreateClicked(): void {
+  if (typeof posthog?.capture === 'function') {
+    posthog.capture('admin_dialog_create_clicked');
+  }
+}
+
+export function trackAdminDialogDeleted(dialogId: string, dialogStatus: string): void {
+  if (typeof posthog?.capture === 'function') {
+    posthog.capture('admin_dialog_deleted', { dialog_id: dialogId, dialog_status: dialogStatus });
+  }
+}

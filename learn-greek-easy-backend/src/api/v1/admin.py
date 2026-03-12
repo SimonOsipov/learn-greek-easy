@@ -41,9 +41,12 @@ from src.db.models import (
     CultureDeck,
     CultureQuestion,
     Deck,
+    DeckLevel,
     DeckWordEntry,
+    DialogStatus,
     FeedbackCategory,
     FeedbackStatus,
+    ListeningDialog,
     NewsItem,
     PartOfSpeech,
     User,
@@ -63,6 +66,8 @@ from src.schemas.admin import (
     GenerateWordEntryAudioRequest,
     GenerateWordEntryRequest,
     GenerateWordEntryResponse,
+    ListeningDialogListItem,
+    ListeningDialogListResponse,
     NormalizationStageResult,
     PendingQuestionItem,
     PendingQuestionsResponse,
@@ -3391,4 +3396,65 @@ async def unlink_word_entry_from_deck(
     # Remove junction row
     await word_entry_repo.unlink_from_deck(word_entry_id, deck_id)
 
+    await db.commit()
+
+
+# ========================
+# Listening Dialogs Admin Endpoints
+# ========================
+
+
+@router.get(
+    "/listening-dialogs",
+    response_model=ListeningDialogListResponse,
+    summary="List listening dialogs (admin)",
+)
+async def list_listening_dialogs(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    status: DialogStatus | None = Query(default=None),
+    cefr_level: DeckLevel | None = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> ListeningDialogListResponse:
+    count_query = select(func.count(ListeningDialog.id))
+    if status is not None:
+        count_query = count_query.where(ListeningDialog.status == status)
+    if cefr_level is not None:
+        count_query = count_query.where(ListeningDialog.cefr_level == cefr_level)
+    total_result = await db.execute(count_query)
+    total = total_result.scalar_one()
+
+    data_query = (
+        select(ListeningDialog)
+        .order_by(ListeningDialog.created_at.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
+    if status is not None:
+        data_query = data_query.where(ListeningDialog.status == status)
+    if cefr_level is not None:
+        data_query = data_query.where(ListeningDialog.cefr_level == cefr_level)
+    result = await db.execute(data_query)
+    dialogs = result.scalars().all()
+
+    items = [ListeningDialogListItem.model_validate(d) for d in dialogs]
+    return ListeningDialogListResponse(items=items, total=total, page=page, page_size=page_size)
+
+
+@router.delete(
+    "/listening-dialogs/{dialog_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a listening dialog (admin)",
+)
+async def delete_listening_dialog(
+    dialog_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> None:
+    result = await db.execute(select(ListeningDialog).where(ListeningDialog.id == dialog_id))
+    dialog = result.scalar_one_or_none()
+    if dialog is None:
+        raise HTTPException(status_code=404, detail="Listening dialog not found")
+    await db.delete(dialog)
     await db.commit()
