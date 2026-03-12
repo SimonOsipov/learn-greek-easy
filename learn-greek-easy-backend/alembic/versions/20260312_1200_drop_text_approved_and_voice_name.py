@@ -31,6 +31,8 @@ def upgrade() -> None:
     # Remove text_approved from dialog_status enum
     # Update any rows using text_approved to draft
     op.execute("UPDATE listening_dialogs SET status = 'draft' WHERE status = 'text_approved'")
+    # Drop server default before enum swap (PostgreSQL can't auto-cast defaults)
+    op.execute("ALTER TABLE listening_dialogs ALTER COLUMN status DROP DEFAULT")
     # Rename old enum
     op.execute("ALTER TYPE dialog_status RENAME TO dialog_status_old")
     # Create new enum without text_approved
@@ -43,11 +45,14 @@ def upgrade() -> None:
     )
     # Drop old enum
     op.execute("DROP TYPE dialog_status_old")
+    # Re-add server default with new enum type
+    op.execute("ALTER TABLE listening_dialogs ALTER COLUMN status SET DEFAULT 'draft'")
 
 
 def downgrade() -> None:
     """Downgrade schema."""
     # Reverse enum (re-add text_approved)
+    op.execute("ALTER TABLE listening_dialogs ALTER COLUMN status DROP DEFAULT")
     op.execute("ALTER TYPE dialog_status RENAME TO dialog_status_old")
     op.execute(
         "CREATE TYPE dialog_status AS ENUM('draft', 'text_approved', 'audio_ready', 'exercises_ready', 'published')"
@@ -56,6 +61,7 @@ def downgrade() -> None:
         "ALTER TABLE listening_dialogs ALTER COLUMN status TYPE dialog_status USING status::text::dialog_status"
     )
     op.execute("DROP TYPE dialog_status_old")
+    op.execute("ALTER TABLE listening_dialogs ALTER COLUMN status SET DEFAULT 'draft'")
 
     # Make voice_id nullable again
     op.alter_column("dialog_speakers", "voice_id", nullable=True)
