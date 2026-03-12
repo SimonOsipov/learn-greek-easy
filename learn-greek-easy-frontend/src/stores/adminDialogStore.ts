@@ -21,9 +21,11 @@ interface AdminDialogState {
   totalPages: number;
   isLoading: boolean;
   isDeleting: boolean;
+  isCreating: boolean;
   error: string | null;
   fetchDialogs: () => Promise<void>;
   deleteDialog: (id: string) => Promise<void>;
+  createDialog: (jsonPayload: string) => Promise<void>;
   setPage: (page: number) => void;
   clearError: () => void;
 }
@@ -38,6 +40,7 @@ export const useAdminDialogStore = create<AdminDialogState>()(
       totalPages: 0,
       isLoading: false,
       isDeleting: false,
+      isCreating: false,
       error: null,
 
       fetchDialogs: async () => {
@@ -70,6 +73,19 @@ export const useAdminDialogStore = create<AdminDialogState>()(
             error: err instanceof Error ? err.message : 'Failed to delete dialog',
             isDeleting: false,
           });
+          throw err;
+        }
+      },
+
+      createDialog: async (jsonPayload: string) => {
+        set({ isCreating: true, error: null });
+        try {
+          const parsed = JSON.parse(jsonPayload);
+          await adminAPI.createListeningDialog(parsed);
+          set({ isCreating: false });
+          await get().fetchDialogs();
+        } catch (err) {
+          set({ isCreating: false });
           throw err;
         }
       },

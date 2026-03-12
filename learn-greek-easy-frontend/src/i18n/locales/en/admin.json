@@ -1114,7 +1114,6 @@
     },
     "status": {
       "draft": "Draft",
-      "text_approved": "Text Approved",
       "audio_ready": "Audio Ready",
       "exercises_ready": "Exercises Ready",
       "published": "Published"
@@ -1126,7 +1125,17 @@
     },
     "create": {
       "button": "Create New Dialog",
-      "comingSoon": "Dialog creation coming soon"
+      "title": "Create Listening Dialog",
+      "description": "Paste a complete dialog as JSON. See the placeholder for the expected format.",
+      "placeholder": "Paste dialog JSON here...",
+      "submit": "Create Dialog",
+      "creating": "Creating...",
+      "cancel": "Cancel",
+      "success": "Dialog created successfully",
+      "errors": {
+        "invalidJson": "Invalid JSON: {{message}}",
+        "createFailed": "Failed to create dialog: {{message}}"
+      }
     },
     "delete": {
       "title": "Delete Dialog",

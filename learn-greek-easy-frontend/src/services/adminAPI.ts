@@ -42,12 +42,7 @@ export type { CultureDeckAdminResponse, DeckAdminResponse } from '@/types/deck';
  */
 export type DeckLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
 
-export type DialogStatus =
-  | 'draft'
-  | 'text_approved'
-  | 'audio_ready'
-  | 'exercises_ready'
-  | 'published';
+export type DialogStatus = 'draft' | 'audio_ready' | 'exercises_ready' | 'published';
 
 export interface ListeningDialogListItem {
   id: string;
@@ -58,6 +53,22 @@ export interface ListeningDialogListItem {
   num_speakers: number;
   status: DialogStatus;
   created_at: string;
+}
+
+export interface ListeningDialogCreatePayload {
+  scenario_el: string;
+  scenario_en: string;
+  scenario_ru: string;
+  cefr_level: DeckLevel;
+  speakers: Array<{
+    speaker_index: number;
+    character_name: string;
+    voice_id: string;
+  }>;
+  lines: Array<{
+    speaker_index: number;
+    text: string;
+  }>;
 }
 
 export interface ListeningDialogListResponse {
@@ -1625,5 +1636,11 @@ export const adminAPI = {
 
   deleteListeningDialog: async (id: string): Promise<void> => {
     return api.delete<void>(`/api/v1/admin/listening-dialogs/${id}`);
+  },
+
+  createListeningDialog: async (
+    data: ListeningDialogCreatePayload
+  ): Promise<ListeningDialogListItem> => {
+    return api.post<ListeningDialogListItem>('/api/v1/admin/listening-dialogs', data);
   },
 };
