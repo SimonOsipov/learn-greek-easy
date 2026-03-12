@@ -329,10 +329,17 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
 
     try {
       if (deck.type === 'vocabulary') {
-        await adminAPI.deleteVocabularyCard(itemToDelete.id);
-        toast({
-          title: t('cardDelete.successCard'),
-        });
+        if (deck.card_system === 'V2') {
+          await adminAPI.deleteWordEntry(itemToDelete.id);
+          toast({
+            title: t('cardDelete.successWordEntry'),
+          });
+        } else {
+          await adminAPI.deleteVocabularyCard(itemToDelete.id);
+          toast({
+            title: t('cardDelete.successCard'),
+          });
+        }
       } else {
         await adminAPI.deleteCultureQuestion(itemToDelete.id);
         toast({
@@ -391,7 +398,7 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
     const count = selectedIds.size;
     try {
       const results = await Promise.allSettled(
-        Array.from(selectedIds).map((id) => adminAPI.deleteVocabularyCard(id))
+        Array.from(selectedIds).map((id) => adminAPI.deleteWordEntry(id))
       );
       const failed = results.filter((r) => r.status === 'rejected').length;
       setBulkDeleteDialogOpen(false);
@@ -1213,7 +1220,7 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
         open={deleteDialogOpen}
         onOpenChange={handleDeleteDialogClose}
         itemPreview={getItemPreview()}
-        itemType={isVocabulary ? 'card' : 'question'}
+        itemType={isV2Vocabulary ? 'wordEntry' : isVocabulary ? 'card' : 'question'}
         onConfirm={handleConfirmDelete}
         isDeleting={isDeleting}
       />
