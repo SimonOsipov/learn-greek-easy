@@ -19,7 +19,7 @@ interface CardDeleteDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   itemPreview: string;
-  itemType: 'card' | 'question';
+  itemType: 'card' | 'question' | 'wordEntry';
   onConfirm: () => void;
   isDeleting: boolean;
 }
@@ -45,7 +45,22 @@ export const CardDeleteDialog: React.FC<CardDeleteDialogProps> = ({
 }) => {
   const { t } = useTranslation('admin');
 
-  const titleKey = itemType === 'card' ? 'cardDelete.title' : 'cardDelete.titleQuestion';
+  const titleKey =
+    itemType === 'card'
+      ? 'cardDelete.title'
+      : itemType === 'question'
+        ? 'cardDelete.titleQuestion'
+        : 'cardDelete.titleWordEntry';
+
+  const dataLostKeys =
+    itemType === 'wordEntry'
+      ? [
+          'cardDelete.dataLostWordEntry1',
+          'cardDelete.dataLostWordEntry2',
+          'cardDelete.dataLostWordEntry3',
+          'cardDelete.dataLostWordEntry4',
+        ]
+      : ['cardDelete.dataLost1', 'cardDelete.dataLost2', 'cardDelete.dataLost3'];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -72,9 +87,9 @@ export const CardDeleteDialog: React.FC<CardDeleteDialogProps> = ({
 
                 {/* Data Loss List */}
                 <ul className="list-inside list-disc space-y-1 text-sm text-muted-foreground">
-                  <li>{t('cardDelete.dataLost1')}</li>
-                  <li>{t('cardDelete.dataLost2')}</li>
-                  <li>{t('cardDelete.dataLost3')}</li>
+                  {dataLostKeys.map((key) => (
+                    <li key={key}>{t(key)}</li>
+                  ))}
                 </ul>
 
                 {/* Final Warning */}

@@ -256,6 +256,12 @@
     "deleting": "Удаление...",
     "successCard": "Карточка безвозвратно удалена",
     "successQuestion": "Вопрос безвозвратно удалён",
+    "titleWordEntry": "Безвозвратно удалить словарную запись",
+    "successWordEntry": "Словарная запись безвозвратно удалена",
+    "dataLostWordEntry1": "Данные словарной записи и переводы",
+    "dataLostWordEntry2": "Карточки и прогресс обучения",
+    "dataLostWordEntry3": "Привязки к колодам",
+    "dataLostWordEntry4": "Аудиофайлы",
     "error": "Не удалось удалить элемент"
   },
   "actions": {

@@ -11,7 +11,7 @@
  * AC-7  Bulk delete Dialog opens when bulk delete button is clicked
  * AC-8  Bulk delete Dialog shows correct count in title/confirm button
  * AC-9  Cancel in Dialog closes it without deleting
- * AC-10 Confirm calls adminAPI.deleteVocabularyCard for each selected ID, then refreshes
+ * AC-10 Confirm calls adminAPI.deleteWordEntry for each selected ID, then refreshes
  * AC-11 Selection resets when deck changes (different deck opened)
  * AC-12 Selection resets after fetchItems completes (e.g., after sort/filter change)
  * AC-13 Bulk bar does NOT render for V1 vocabulary decks
@@ -44,6 +44,7 @@ vi.mock('@/services/adminAPI', () => ({
     listWordEntries: vi.fn(),
     listCultureQuestions: vi.fn(),
     deleteVocabularyCard: vi.fn(),
+    deleteWordEntry: vi.fn(),
     deleteCultureQuestion: vi.fn(),
   },
 }));
@@ -185,6 +186,7 @@ beforeEach(() => {
     questions: [],
   });
   (adminAPI.deleteVocabularyCard as Mock).mockResolvedValue(undefined);
+  (adminAPI.deleteWordEntry as Mock).mockResolvedValue(undefined);
 });
 
 // ============================================
@@ -587,7 +589,7 @@ describe('AC-9: Cancel in Dialog closes without deleting', () => {
     });
   });
 
-  it('clicking cancel does NOT call deleteVocabularyCard', async () => {
+  it('clicking cancel does NOT call deleteWordEntry', async () => {
     renderModal();
     await waitFor(() => screen.getByTestId('word-list-bulk-bar'));
 
@@ -601,7 +603,7 @@ describe('AC-9: Cancel in Dialog closes without deleting', () => {
     await waitFor(() => {
       expect(screen.queryByTestId('bulk-delete-dialog')).not.toBeInTheDocument();
     });
-    expect(adminAPI.deleteVocabularyCard).not.toHaveBeenCalled();
+    expect(adminAPI.deleteWordEntry).not.toHaveBeenCalled();
   });
 
   it('cards remain selected after canceling the dialog', async () => {
@@ -627,8 +629,8 @@ describe('AC-9: Cancel in Dialog closes without deleting', () => {
 // AC-10: Confirm calls deleteVocabularyCard for each selected ID then refreshes
 // ============================================
 
-describe('AC-10: Confirm calls deleteVocabularyCard for each selected ID then refreshes', () => {
-  it('calls deleteVocabularyCard once per selected card', async () => {
+describe('AC-10: Confirm calls deleteWordEntry for each selected ID then refreshes', () => {
+  it('calls deleteWordEntry once per selected card', async () => {
     renderModal();
     await waitFor(() => screen.getByTestId('word-list-bulk-bar'));
 
@@ -641,11 +643,11 @@ describe('AC-10: Confirm calls deleteVocabularyCard for each selected ID then re
     fireEvent.click(screen.getByTestId('bulk-delete-confirm'));
 
     await waitFor(() => {
-      expect(adminAPI.deleteVocabularyCard).toHaveBeenCalledTimes(2);
+      expect(adminAPI.deleteWordEntry).toHaveBeenCalledTimes(2);
     });
   });
 
-  it('calls deleteVocabularyCard with the correct IDs', async () => {
+  it('calls deleteWordEntry with the correct IDs', async () => {
     renderModal();
     await waitFor(() => screen.getByTestId('word-list-bulk-bar'));
 
@@ -657,9 +659,9 @@ describe('AC-10: Confirm calls deleteVocabularyCard for each selected ID then re
     fireEvent.click(screen.getByTestId('bulk-delete-confirm'));
 
     await waitFor(() => {
-      expect(adminAPI.deleteVocabularyCard).toHaveBeenCalledWith('e1');
+      expect(adminAPI.deleteWordEntry).toHaveBeenCalledWith('e1');
     });
-    expect(adminAPI.deleteVocabularyCard).not.toHaveBeenCalledWith('e2');
+    expect(adminAPI.deleteWordEntry).not.toHaveBeenCalledWith('e2');
   });
 
   it('calls listWordEntries again after successful bulk delete (refresh)', async () => {
@@ -708,7 +710,7 @@ describe('AC-10: Confirm calls deleteVocabularyCard for each selected ID then re
     fireEvent.click(screen.getByTestId('bulk-delete-confirm'));
 
     await waitFor(() => {
-      expect(adminAPI.deleteVocabularyCard).toHaveBeenCalledTimes(2);
+      expect(adminAPI.deleteWordEntry).toHaveBeenCalledTimes(2);
       expect(adminAPI.listWordEntries).toHaveBeenCalledTimes(2);
     });
   });

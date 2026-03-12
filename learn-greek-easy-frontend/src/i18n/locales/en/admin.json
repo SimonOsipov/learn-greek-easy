@@ -246,6 +246,12 @@
     "deleting": "Deleting...",
     "successCard": "Card deleted permanently",
     "successQuestion": "Question deleted permanently",
+    "titleWordEntry": "Permanently Delete Word Entry",
+    "successWordEntry": "Word entry deleted permanently",
+    "dataLostWordEntry1": "Word entry data and translations",
+    "dataLostWordEntry2": "Card records and learning progress",
+    "dataLostWordEntry3": "Deck associations",
+    "dataLostWordEntry4": "Audio files",
     "error": "Failed to delete item"
   },
   "actions": {
