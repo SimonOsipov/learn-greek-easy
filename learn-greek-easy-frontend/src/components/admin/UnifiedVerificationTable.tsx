@@ -35,6 +35,12 @@ interface UnifiedRow {
 
 export type SelectionSource = 'local' | 'primary' | 'secondary';
 
+export interface PillState {
+  value: string;
+  source: 'auto' | 'local' | 'primary' | 'secondary' | 'manual';
+  status: 'agreed' | 'resolved' | 'unresolved' | 'editable';
+}
+
 interface UnifiedVerificationTableProps {
   local: LocalVerificationResult | null;
   crossAI: CrossAIVerificationResult | null;
