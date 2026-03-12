@@ -1,12 +1,13 @@
 // src/components/admin/GenerateNounDialog.tsx
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useMutation } from '@tanstack/react-query';
 import { AlertCircle, Info, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { UnifiedVerificationTable } from '@/components/admin/UnifiedVerificationTable';
+import type { SelectionSource } from '@/components/admin/UnifiedVerificationTable';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   AlertDialog,
@@ -29,6 +30,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { toast } from '@/hooks/use-toast';
 import { useSSE } from '@/hooks/useSSE';
 import { cn } from '@/lib/utils';
 import {
@@ -43,8 +45,11 @@ import {
   type TranslationLookupStageResult,
   type VerificationSummary,
 } from '@/services/adminAPI';
+import { wordEntryAPI } from '@/services/wordEntryAPI';
 import type { SSEEvent } from '@/types/sse';
 import { isValidGreekInput } from '@/utils/greekValidation';
+import { buildWordEntryPayload } from '@/utils/nounPayloadBuilder';
+import type { EditableTranslations, EditableExample } from '@/utils/nounPayloadBuilder';
 
 export interface GenerateNounDialogProps {
   open: boolean;
@@ -151,12 +156,39 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
   const [streamBody, setStreamBody] = useState<unknown>(null);
   const [streamEnabled, setStreamEnabled] = useState(false);
   const [swapConfirmation, setSwapConfirmation] = useState<{ index: number } | null>(null);
+  const [editableTranslations, setEditableTranslations] = useState<EditableTranslations>({
+    en: '',
+    en_plural: '',
+    ru: '',
+    ru_plural: '',
+  });
+  const [editablePronunciation, setEditablePronunciation] = useState('');
+  const [editableExamples, setEditableExamples] = useState<EditableExample[]>([]);
+  const [selectionMap, setSelectionMap] = useState<Map<string, SelectionSource>>(new Map());
 
   useEffect(() => {
     return () => {
       if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (!displayGeneration) return;
+    setEditableTranslations({
+      en: displayGeneration.translation_en,
+      en_plural: displayGeneration.translation_en_plural ?? '',
+      ru: displayGeneration.translation_ru ?? '',
+      ru_plural: displayGeneration.translation_ru_plural ?? '',
+    });
+    setEditablePronunciation(displayGeneration.pronunciation ?? '');
+    setEditableExamples(
+      displayGeneration.examples.map((ex) => ({
+        greek: ex.greek,
+        english: ex.english,
+        russian: ex.russian,
+      }))
+    );
+  }, [displayGeneration]);
 
   const handleSSEEvent = useCallback((event: SSEEvent<unknown>) => {
     const data = event.data as Record<string, unknown>;
@@ -255,6 +287,36 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
   const warningKey =
     validation.reason === 'tooLong' ? 'generateNoun.tooLong' : 'generateNoun.invalidGreek';
 
+  const unresolvedCount = useMemo(() => {
+    const comparisons = displayVerification?.cross_ai?.comparisons ?? [];
+    return comparisons.filter((c) => !c.agrees && !selectionMap.has(c.field_path)).length;
+  }, [displayVerification, selectionMap]);
+
+  const approveMutation = useMutation({
+    mutationFn: async () => {
+      const payload = buildWordEntryPayload({
+        generation: displayGeneration!,
+        editableTranslations,
+        editablePronunciation,
+        editableExamples,
+        selectionMap,
+        verification: displayVerification,
+      });
+      return wordEntryAPI.bulkUpsert(deckId, [payload]);
+    },
+    onSuccess: () => {
+      toast({ title: t('generateNoun.approve.successToast') });
+      onWordLinked?.();
+      handleOpenChange(false);
+    },
+    onError: () => {
+      toast({
+        title: t('generateNoun.approve.errorToast'),
+        variant: 'destructive',
+      });
+    },
+  });
+
   const executeSwap = useCallback(
     (suggestionIndex: number) => {
       const chosen = displaySuggestions[suggestionIndex];
@@ -285,6 +347,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
       setGenerationLoading(false);
       setVerificationLoading(false);
       setStageError(null);
+      setSelectionMap(new Map());
       setPipelineStatus('streaming');
 
       // Start new SSE stream from generation stage
@@ -356,6 +419,10 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
     setStageError(null);
     setStreamEnabled(false);
     setStreamBody(null);
+    setEditableTranslations({ en: '', en_plural: '', ru: '', ru_plural: '' });
+    setEditablePronunciation('');
+    setEditableExamples([]);
+    setSelectionMap(new Map());
     closeStream();
   }, [closeStream]);
 
@@ -568,6 +635,40 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                     <UnifiedVerificationTable
                       local={displayVerification.local}
                       crossAI={displayVerification.cross_ai}
+                      selections={selectionMap}
+                      onSelect={(fieldPath, source) => {
+                        setSelectionMap((prev) => {
+                          const next = new Map(prev);
+                          next.set(fieldPath, source);
+                          return next;
+                        });
+                        // Sync pronunciation textbox with selected source
+                        if (fieldPath === 'pronunciation' && displayVerification) {
+                          if (source === 'local' && displayVerification.local) {
+                            const field = displayVerification.local.fields.find(
+                              (f) => f.field_path === 'pronunciation'
+                            );
+                            const ref = field?.checks.find(
+                              (c) => c.reference_value != null
+                            )?.reference_value;
+                            if (ref != null) setEditablePronunciation(ref);
+                          } else if (
+                            (source === 'primary' || source === 'secondary') &&
+                            displayVerification.cross_ai
+                          ) {
+                            const comp = displayVerification.cross_ai.comparisons.find(
+                              (c) => c.field_path === 'pronunciation'
+                            );
+                            if (comp)
+                              setEditablePronunciation(
+                                source === 'primary'
+                                  ? (comp.primary_value ?? '')
+                                  : (comp.secondary_value ?? '')
+                              );
+                          }
+                        }
+                      }}
+                      interactive
                     />
                   </div>
                 )}
@@ -590,9 +691,168 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                     </div>
                   </div>
                 )}
+
+                {displayGeneration && pipelineStatus === 'done' && (
+                  <div className="mt-4 space-y-4 border-t pt-4">
+                    {/* Translations */}
+                    <div>
+                      <h4 className="mb-2 text-sm font-medium">
+                        {t('generateNoun.editable.translationsTitle')}
+                      </h4>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label htmlFor="editable-translation-en" className="text-xs">
+                            {t('generateNoun.editable.translationEn')}{' '}
+                            <span className="text-destructive">*</span>
+                          </Label>
+                          <Input
+                            id="editable-translation-en"
+                            data-testid="editable-translation-en"
+                            value={editableTranslations.en}
+                            onChange={(e) =>
+                              setEditableTranslations((p) => ({ ...p, en: e.target.value }))
+                            }
+                            className="mt-1 h-8 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="editable-translation-en-plural" className="text-xs">
+                            {t('generateNoun.editable.translationEnPlural')}
+                          </Label>
+                          <Input
+                            id="editable-translation-en-plural"
+                            data-testid="editable-translation-en-plural"
+                            value={editableTranslations.en_plural}
+                            onChange={(e) =>
+                              setEditableTranslations((p) => ({ ...p, en_plural: e.target.value }))
+                            }
+                            className="mt-1 h-8 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="editable-translation-ru" className="text-xs">
+                            {t('generateNoun.editable.translationRu')}
+                          </Label>
+                          <Input
+                            id="editable-translation-ru"
+                            data-testid="editable-translation-ru"
+                            value={editableTranslations.ru}
+                            onChange={(e) =>
+                              setEditableTranslations((p) => ({ ...p, ru: e.target.value }))
+                            }
+                            className="mt-1 h-8 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="editable-translation-ru-plural" className="text-xs">
+                            {t('generateNoun.editable.translationRuPlural')}
+                          </Label>
+                          <Input
+                            id="editable-translation-ru-plural"
+                            data-testid="editable-translation-ru-plural"
+                            value={editableTranslations.ru_plural}
+                            onChange={(e) =>
+                              setEditableTranslations((p) => ({ ...p, ru_plural: e.target.value }))
+                            }
+                            className="mt-1 h-8 text-sm"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    {/* Pronunciation */}
+                    <div>
+                      <h4 className="mb-2 text-sm font-medium">
+                        {t('generateNoun.editable.pronunciationTitle')}
+                      </h4>
+                      <Input
+                        id="editable-pronunciation"
+                        data-testid="editable-pronunciation"
+                        value={editablePronunciation}
+                        onChange={(e) => setEditablePronunciation(e.target.value)}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    {/* Examples */}
+                    {editableExamples.length > 0 && (
+                      <div>
+                        <h4 className="mb-2 text-sm font-medium">
+                          {t('generateNoun.editable.examplesTitle')}
+                        </h4>
+                        <div className="space-y-2">
+                          {editableExamples.map((ex, i) => (
+                            <div key={i} className="space-y-1 rounded border p-2">
+                              <Input
+                                data-testid={`editable-example-${i}-greek`}
+                                placeholder={t('generateNoun.editable.exampleGreek')}
+                                value={ex.greek}
+                                onChange={(e) =>
+                                  setEditableExamples((prev) =>
+                                    prev.map((x, j) =>
+                                      j === i ? { ...x, greek: e.target.value } : x
+                                    )
+                                  )
+                                }
+                                className="h-7 text-xs"
+                              />
+                              <Input
+                                data-testid={`editable-example-${i}-english`}
+                                placeholder={t('generateNoun.editable.exampleEnglish')}
+                                value={ex.english}
+                                onChange={(e) =>
+                                  setEditableExamples((prev) =>
+                                    prev.map((x, j) =>
+                                      j === i ? { ...x, english: e.target.value } : x
+                                    )
+                                  )
+                                }
+                                className="h-7 text-xs"
+                              />
+                              <Input
+                                data-testid={`editable-example-${i}-russian`}
+                                placeholder={t('generateNoun.editable.exampleRussian')}
+                                value={ex.russian}
+                                onChange={(e) =>
+                                  setEditableExamples((prev) =>
+                                    prev.map((x, j) =>
+                                      j === i ? { ...x, russian: e.target.value } : x
+                                    )
+                                  )
+                                }
+                                className="h-7 text-xs"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <DialogFooter>
+                {pipelineStatus === 'done' && displayGeneration && displayVerification && (
+                  <>
+                    {unresolvedCount > 0 && (
+                      <p className="text-xs text-muted-foreground" data-testid="unresolved-warning">
+                        {t('generateNoun.approve.unresolvedWarning', { count: unresolvedCount })}
+                      </p>
+                    )}
+                    <Button
+                      data-testid="approve-save-button"
+                      onClick={() => approveMutation.mutate()}
+                      disabled={!editableTranslations.en.trim() || approveMutation.isPending}
+                    >
+                      {approveMutation.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          {t('generateNoun.approve.saving')}
+                        </>
+                      ) : (
+                        t('generateNoun.approve.button')
+                      )}
+                    </Button>
+                  </>
+                )}
                 <Button
                   variant="outline"
                   onClick={resetAllState}

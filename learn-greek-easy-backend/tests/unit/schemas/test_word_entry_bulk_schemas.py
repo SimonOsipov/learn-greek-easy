@@ -43,6 +43,7 @@ class TestWordEntryBulkCreate:
         assert entry.part_of_speech == PartOfSpeech.NOUN
         assert entry.translation_en == "house, home"
         assert entry.translation_ru is None
+        assert entry.translation_ru_plural is None
         assert entry.pronunciation is None
         assert entry.grammar_data is None
         assert entry.examples is None
@@ -221,6 +222,69 @@ class TestWordEntryBulkCreate:
                 translation_ru="а" * 501,
             )
         assert "string_too_long" in str(exc_info.value).lower()
+
+    def test_translation_ru_plural_whitespace_stripping(self):
+        """Test translation_ru_plural strips whitespace."""
+        entry = WordEntryBulkCreate(
+            lemma="σπίτι",
+            part_of_speech=PartOfSpeech.NOUN,
+            translation_en="house",
+            translation_ru_plural="  дома  ",
+        )
+        assert entry.translation_ru_plural == "дома"
+
+    def test_translation_ru_plural_empty_becomes_none(self):
+        """Test translation_ru_plural empty string becomes None."""
+        entry = WordEntryBulkCreate(
+            lemma="σπίτι",
+            part_of_speech=PartOfSpeech.NOUN,
+            translation_en="house",
+            translation_ru_plural="   ",
+        )
+        assert entry.translation_ru_plural is None
+
+    def test_translation_ru_plural_none_stays_none(self):
+        """Test translation_ru_plural None stays None."""
+        entry = WordEntryBulkCreate(
+            lemma="σπίτι",
+            part_of_speech=PartOfSpeech.NOUN,
+            translation_en="house",
+            translation_ru_plural=None,
+        )
+        assert entry.translation_ru_plural is None
+
+    def test_translation_ru_plural_max_length(self):
+        """Test translation_ru_plural max length of 500 characters."""
+        # Valid at boundary
+        entry = WordEntryBulkCreate(
+            lemma="test",
+            part_of_speech=PartOfSpeech.NOUN,
+            translation_en="test",
+            translation_ru_plural="а" * 500,
+        )
+        assert len(entry.translation_ru_plural) == 500
+
+        # Over boundary rejected
+        with pytest.raises(ValidationError) as exc_info:
+            WordEntryBulkCreate(
+                lemma="test",
+                part_of_speech=PartOfSpeech.NOUN,
+                translation_en="test",
+                translation_ru_plural="а" * 501,
+            )
+        assert "string_too_long" in str(exc_info.value).lower()
+
+    def test_translation_ru_plural_accepted_in_bulk_create(self):
+        """Test translation_ru_plural can be included alongside translation_ru."""
+        entry = WordEntryBulkCreate(
+            lemma="σπίτι",
+            part_of_speech=PartOfSpeech.NOUN,
+            translation_en="house",
+            translation_ru="дом",
+            translation_ru_plural="дома",
+        )
+        assert entry.translation_ru == "дом"
+        assert entry.translation_ru_plural == "дома"
 
     def test_pronunciation_max_length(self):
         """Test pronunciation max length of 200 characters."""
@@ -757,6 +821,7 @@ class TestBulkSchemaFieldDescriptions:
         assert fields["part_of_speech"].description is not None
         assert fields["translation_en"].description is not None
         assert fields["translation_ru"].description is not None
+        assert fields["translation_ru_plural"].description is not None
         assert fields["pronunciation"].description is not None
         assert fields["grammar_data"].description is not None
         assert fields["examples"].description is not None

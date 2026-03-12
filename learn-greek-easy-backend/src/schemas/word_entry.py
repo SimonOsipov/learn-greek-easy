@@ -504,6 +504,11 @@ class WordEntryBulkCreate(BaseModel):
         max_length=500,
         description="Russian translation(s)",
     )
+    translation_ru_plural: Optional[str] = Field(
+        default=None,
+        max_length=500,
+        description="Russian plural translation(s)",
+    )
     pronunciation: Optional[str] = Field(
         default=None,
         max_length=200,
@@ -544,6 +549,18 @@ class WordEntryBulkCreate(BaseModel):
     @classmethod
     def strip_translation_ru(cls, v: str | None) -> str | None:
         """Strip whitespace from Russian translation if provided."""
+        if v is None:
+            return None
+        if isinstance(v, str):
+            v = v.strip()
+            if not v:
+                return None
+        return v
+
+    @field_validator("translation_ru_plural", mode="before")
+    @classmethod
+    def strip_translation_ru_plural(cls, v: str | None) -> str | None:
+        """Strip whitespace from Russian plural translation if provided."""
         if v is None:
             return None
         if isinstance(v, str):

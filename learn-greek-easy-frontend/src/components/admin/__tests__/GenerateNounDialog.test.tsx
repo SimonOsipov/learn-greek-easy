@@ -19,6 +19,8 @@ import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { adminAPI } from '@/services/adminAPI';
+import { wordEntryAPI } from '@/services/wordEntryAPI';
+import { toast } from '@/hooks/use-toast';
 
 import { GenerateNounDialog, type GenerateNounDialogProps } from '../GenerateNounDialog';
 
@@ -32,6 +34,16 @@ vi.mock('@/services/adminAPI', () => ({
     generateWordEntry: vi.fn(),
     linkWordEntry: vi.fn().mockResolvedValue(undefined),
   },
+}));
+
+vi.mock('@/services/wordEntryAPI', () => ({
+  wordEntryAPI: {
+    bulkUpsert: vi.fn().mockResolvedValue([]),
+  },
+}));
+
+vi.mock('@/hooks/use-toast', () => ({
+  toast: vi.fn(),
 }));
 
 // Capture the onEvent callback so tests can fire SSE events
@@ -943,5 +955,312 @@ describe('GenerateNounDialog', () => {
       expect(screen.getByTestId('generate-noun-result')).toBeInTheDocument();
     });
     expect(screen.queryByTestId('examples-section')).not.toBeInTheDocument();
+  });
+
+  // ============================================================
+  // Editable fields (AC #5)
+  // ============================================================
+
+  // 46. Editable translation inputs rendered after pipeline done
+  it('renders editable translation inputs when pipeline is done', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    await submitWord(user);
+    fireFullPipelineEvents();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('editable-translation-en')).toBeInTheDocument();
+    });
+    expect(screen.getByTestId('editable-translation-en-plural')).toBeInTheDocument();
+    expect(screen.getByTestId('editable-translation-ru')).toBeInTheDocument();
+    expect(screen.getByTestId('editable-translation-ru-plural')).toBeInTheDocument();
+  });
+
+  // 47. Editable fields populated from generation data (AC #4)
+  it('populates editable fields from generation data', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    await submitWord(user);
+    fireFullPipelineEvents();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('editable-translation-en')).toHaveValue('cat');
+    });
+    expect(screen.getByTestId('editable-translation-en-plural')).toHaveValue('cats');
+    expect(screen.getByTestId('editable-translation-ru')).toHaveValue('кошка');
+    expect(screen.getByTestId('editable-translation-ru-plural')).toHaveValue('кошки');
+    expect(screen.getByTestId('editable-pronunciation')).toHaveValue('/ˈɣa.ta/');
+  });
+
+  // 48. Editable pronunciation input rendered (AC #5)
+  it('renders editable pronunciation input when pipeline is done', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    await submitWord(user);
+    fireFullPipelineEvents();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('editable-pronunciation')).toBeInTheDocument();
+    });
+  });
+
+  // 49. Editable example inputs rendered (AC #5)
+  it('renders editable example inputs when pipeline is done', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    await submitWord(user);
+    fireFullPipelineEvents();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('editable-example-0-greek')).toBeInTheDocument();
+    });
+    expect(screen.getByTestId('editable-example-0-english')).toBeInTheDocument();
+    expect(screen.getByTestId('editable-example-0-russian')).toBeInTheDocument();
+    expect(screen.getByTestId('editable-example-1-greek')).toBeInTheDocument();
+  });
+
+  // ============================================================
+  // Approve & Save button visibility (AC #8)
+  // ============================================================
+
+  // 50. Approve & Save button visible when pipeline done with generation + verification
+  it('shows Approve & Save button when pipeline done with generation and verification', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    await submitWord(user);
+    fireFullPipelineEvents();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('approve-save-button')).toBeInTheDocument();
+    });
+  });
+
+  // 51. Approve & Save button NOT visible when pipeline done but no verification
+  it('does not show Approve & Save button when verification is absent', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    await submitWord(user);
+    fireGenerationEvents();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('generate-noun-result')).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId('approve-save-button')).not.toBeInTheDocument();
+  });
+
+  // 52. Approve & Save disabled when EN translation is empty (AC #6)
+  it('disables Approve & Save when EN translation is empty', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    await submitWord(user);
+    fireFullPipelineEvents();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('approve-save-button')).toBeInTheDocument();
+    });
+
+    // Clear EN translation
+    await user.clear(screen.getByTestId('editable-translation-en'));
+
+    expect(screen.getByTestId('approve-save-button')).toBeDisabled();
+  });
+
+  // 53. Approve & Save enabled when EN translation is present
+  it('enables Approve & Save when EN translation is non-empty', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    await submitWord(user);
+    fireFullPipelineEvents();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('approve-save-button')).not.toBeDisabled();
+    });
+  });
+
+  // ============================================================
+  // Approve & Save success flow (AC #15)
+  // ============================================================
+
+  // 54. On success: bulkUpsert called, onWordLinked called, modal closes, toast shown
+  it('calls bulkUpsert, onWordLinked, closes modal, and shows success toast on approve', async () => {
+    const mockBulkUpsert = vi.mocked(wordEntryAPI.bulkUpsert);
+    mockBulkUpsert.mockResolvedValueOnce([]);
+    const mockToast = vi.mocked(toast);
+
+    const onWordLinked = vi.fn();
+    const onOpenChange = vi.fn();
+    const user = userEvent.setup();
+
+    const { props } = renderDialog({ onWordLinked, onOpenChange });
+
+    await submitWord(user);
+    fireFullPipelineEvents();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('approve-save-button')).not.toBeDisabled();
+    });
+
+    await user.click(screen.getByTestId('approve-save-button'));
+
+    await waitFor(() => {
+      expect(mockBulkUpsert).toHaveBeenCalledWith(
+        'deck-1',
+        expect.arrayContaining([expect.objectContaining({ lemma: 'γάτα', part_of_speech: 'noun' })])
+      );
+    });
+
+    expect(onWordLinked).toHaveBeenCalled();
+    expect(props.onOpenChange).toHaveBeenCalledWith(false);
+    expect(mockToast).toHaveBeenCalledWith(
+      expect.objectContaining({ title: expect.stringMatching(/saved|успешно/i) })
+    );
+  });
+
+  // ============================================================
+  // Approve & Save error flow (AC #16)
+  // ============================================================
+
+  // 55. On error: error toast shown, modal stays open
+  it('shows error toast and keeps modal open when bulkUpsert fails', async () => {
+    const mockBulkUpsert = vi.mocked(wordEntryAPI.bulkUpsert);
+    mockBulkUpsert.mockRejectedValueOnce(new Error('Network error'));
+    const mockToast = vi.mocked(toast);
+
+    const onWordLinked = vi.fn();
+    const onOpenChange = vi.fn();
+    const user = userEvent.setup();
+
+    renderDialog({ onWordLinked, onOpenChange });
+
+    await submitWord(user);
+    fireFullPipelineEvents();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('approve-save-button')).not.toBeDisabled();
+    });
+
+    await user.click(screen.getByTestId('approve-save-button'));
+
+    await waitFor(() => {
+      expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ variant: 'destructive' }));
+    });
+
+    // Modal remains open (onOpenChange NOT called with false)
+    expect(onOpenChange).not.toHaveBeenCalledWith(false);
+    // onWordLinked must NOT be called on error (AC #8)
+    expect(onWordLinked).not.toHaveBeenCalled();
+  });
+
+  // ============================================================
+  // Start Over resets editable fields + selectionMap (AC #17)
+  // ============================================================
+
+  // 56. Start Over clears editable fields
+  it('Start Over clears editable fields', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    await submitWord(user);
+    fireFullPipelineEvents();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('editable-translation-en')).toHaveValue('cat');
+    });
+
+    await user.click(screen.getByTestId('generate-noun-start-over'));
+
+    // Back to input form — editable fields not visible
+    expect(screen.queryByTestId('editable-translation-en')).not.toBeInTheDocument();
+    expect(screen.getByTestId('generate-noun-input')).toBeInTheDocument();
+    expect(screen.getByTestId('generate-noun-input')).toHaveValue('');
+  });
+
+  // 57. Unresolved warning NOT shown when all cross-AI comparisons agree (AC #10)
+  it('does not show unresolved warning when all fields agree', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    await submitWord(user);
+    fireFullPipelineEvents();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('approve-save-button')).toBeInTheDocument();
+    });
+
+    // mockVerificationData has cross_ai: null so no disagreements
+    expect(screen.queryByTestId('unresolved-warning')).not.toBeInTheDocument();
+  });
+
+  // 58. Unresolved warning shows count when cross-AI has disagreements (AC #3)
+  it('shows unresolved warning with correct count when cross-AI has disagreements', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    await submitWord(user);
+
+    const mockVerificationWithDisagreements = {
+      combined_tier: 'auto_approve' as const,
+      morphology_source: 'spacy' as const,
+      local: null,
+      cross_ai: {
+        comparisons: [
+          {
+            field_path: 'cases.singular.nominative',
+            agrees: false,
+            primary_value: 'η γάτα',
+            secondary_value: 'γάτα',
+          },
+          {
+            field_path: 'cases.plural.nominative',
+            agrees: false,
+            primary_value: 'οι γάτες',
+            secondary_value: 'γάτες',
+          },
+        ],
+      },
+    };
+
+    fireNormalizationEvents();
+    act(() => {
+      capturedOnEvent?.({ type: 'generation_started', data: {} });
+      capturedOnEvent?.({ type: 'generation_complete', data: mockGenerationData });
+      capturedOnEvent?.({ type: 'verification_complete', data: mockVerificationWithDisagreements });
+      capturedOnEvent?.({ type: 'pipeline_complete', data: {} });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('unresolved-warning')).toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId('unresolved-warning').textContent).toContain('2');
+  });
+
+  // 59. Loading spinner shown on Approve & Save button while saving (AC #10)
+  it('shows loading spinner on Approve & Save button while saving', async () => {
+    vi.mocked(wordEntryAPI.bulkUpsert).mockImplementation(() => new Promise(() => {}));
+
+    const user = userEvent.setup();
+    renderDialog();
+
+    await submitWord(user);
+    fireFullPipelineEvents();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('approve-save-button')).not.toBeDisabled();
+    });
+
+    await user.click(screen.getByTestId('approve-save-button'));
+
+    const approveButton = screen.getByTestId('approve-save-button');
+    expect(approveButton).toBeDisabled();
+    expect(approveButton.querySelector('svg')).toBeTruthy();
   });
 });

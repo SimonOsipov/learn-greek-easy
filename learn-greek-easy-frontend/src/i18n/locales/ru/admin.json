@@ -1065,7 +1065,34 @@
       "headers": {
         "local": "Локальная",
         "crossAi": "Кросс-AI"
+      },
+      "resolvedTooltip": "Решено администратором — используется значение {{source}}",
+      "sourceLabels": {
+        "local": "Локальный",
+        "primary": "Основной",
+        "secondary": "Вторичный"
       }
+    },
+    "approve": {
+      "button": "Подтвердить и сохранить",
+      "saving": "Сохранение...",
+      "unresolvedWarning": "{{count}} поле(й) с неразрешёнными расхождениями — будет использовано значение Основной",
+      "successToast": "Словарная запись успешно сохранена",
+      "errorToast": "Не удалось сохранить словарную запись"
+    },
+    "editable": {
+      "translationsTitle": "Переводы",
+      "translationEn": "Английский",
+      "translationEnPlural": "Английский (мн.ч.)",
+      "translationRu": "Русский",
+      "translationRuPlural": "Русский (мн.ч.)",
+      "pronunciationTitle": "Произношение",
+      "pronunciation": "Произношение",
+      "examplesTitle": "Примеры",
+      "exampleGreek": "Греческий",
+      "exampleEnglish": "Английский",
+      "exampleRussian": "Русский",
+      "required": "Обязательное"
     }
   },
   "wordEntry": {
