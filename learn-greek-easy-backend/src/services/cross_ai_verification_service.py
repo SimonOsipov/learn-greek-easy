@@ -1,6 +1,7 @@
 """Cross-AI verification service comparing two LLM generations of the same noun."""
 
 import json
+import re
 from collections.abc import Callable
 from typing import ClassVar
 
@@ -54,7 +55,6 @@ class CrossAIVerificationService:
             messages=messages,
             model=self._SECONDARY_MODEL,
             response_format={"type": "json_object"},
-            reasoning={"effort": "none"},
         )
         return self._parse_response(response.content)
 
@@ -76,6 +76,31 @@ class CrossAIVerificationService:
             secondary_generation=secondary,
         )
 
+    def primary_only_result(
+        self, primary: GeneratedNounData, *, error: str
+    ) -> CrossAIVerificationResult:
+        """Build a result with primary values only when secondary generation fails."""
+        comparisons: list[FieldComparisonResult] = []
+        for field_path, weight in self._FIELD_WEIGHTS.items():
+            primary_val = self._get_field_value(primary, field_path)
+            display_primary = str(primary_val) if primary_val is not None else "None"
+            comparisons.append(
+                FieldComparisonResult(
+                    field_path=field_path,
+                    primary_value=display_primary,
+                    secondary_value="—",
+                    agrees=True,
+                    weight=weight,
+                )
+            )
+        return CrossAIVerificationResult(
+            comparisons=comparisons,
+            overall_agreement=None,
+            secondary_model=self._SECONDARY_MODEL,
+            secondary_generation=None,
+            error=error,
+        )
+
     async def verify(
         self, primary: GeneratedNounData, normalized_lemma: NormalizedLemma
     ) -> CrossAIVerificationResult:
@@ -89,7 +114,7 @@ class CrossAIVerificationService:
                 exc,
                 extra={"lemma": normalized_lemma.lemma},
             )
-            return CrossAIVerificationResult(error=str(exc))
+            return self.primary_only_result(primary, error=str(exc))
 
     def _build_messages(self, normalized_lemma: NormalizedLemma) -> list[dict[str, str]]:
         user_content = _USER_PROMPT_TEMPLATE.format(
@@ -104,7 +129,8 @@ class CrossAIVerificationService:
         ]
 
     def _parse_response(self, content: str) -> GeneratedNounData:
-        raw = json.loads(content)
+        cleaned = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
+        raw = json.loads(cleaned)
         return GeneratedNounData.model_validate(raw)
 
     def _compare_fields(

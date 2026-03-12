@@ -594,17 +594,17 @@ class TestPromptConstruction:
         assert "unknown" not in user_content.lower()
 
     @pytest.mark.asyncio
-    async def test_reasoning_disabled(
+    async def test_reasoning_not_passed(
         self,
         service: CrossAIVerificationService,
         mock_openrouter: AsyncMock,
     ) -> None:
-        """verify() passes reasoning={'effort': 'none'} to disable Qwen3 thinking tokens."""
+        """verify() does not pass reasoning parameter to OpenRouter."""
         primary = _make_noun_data()
         mock_openrouter.complete.return_value = _make_response(_noun_data_to_json(primary))
         await service.verify(primary, _make_lemma())
         call_kwargs = mock_openrouter.complete.call_args
-        assert call_kwargs.kwargs["reasoning"] == {"effort": "none"}
+        assert "reasoning" not in call_kwargs.kwargs
 
 
 # ---------------------------------------------------------------------------
@@ -621,11 +621,11 @@ class TestErrorHandling:
         service: CrossAIVerificationService,
         mock_openrouter: AsyncMock,
     ) -> None:
-        """OpenRouterRateLimitError → result with error set, no exception raised."""
+        """OpenRouterRateLimitError → result with error set, primary comparisons populated."""
         mock_openrouter.complete.side_effect = OpenRouterRateLimitError(detail="rate limited")
         result = await service.verify(_make_noun_data(), _make_lemma())
         assert result.error is not None
-        assert result.comparisons == []
+        assert len(result.comparisons) == 16
         assert result.overall_agreement is None
         assert result.secondary_generation is None
 
@@ -635,11 +635,11 @@ class TestErrorHandling:
         service: CrossAIVerificationService,
         mock_openrouter: AsyncMock,
     ) -> None:
-        """OpenRouterTimeoutError → result with error set, no exception raised."""
+        """OpenRouterTimeoutError → result with error set, primary comparisons populated."""
         mock_openrouter.complete.side_effect = OpenRouterTimeoutError(detail="timed out")
         result = await service.verify(_make_noun_data(), _make_lemma())
         assert result.error is not None
-        assert result.comparisons == []
+        assert len(result.comparisons) == 16
         assert result.overall_agreement is None
 
     @pytest.mark.asyncio
@@ -648,13 +648,13 @@ class TestErrorHandling:
         service: CrossAIVerificationService,
         mock_openrouter: AsyncMock,
     ) -> None:
-        """OpenRouterAPIError → result with error set, no exception raised."""
+        """OpenRouterAPIError → result with error set, primary comparisons populated."""
         mock_openrouter.complete.side_effect = OpenRouterAPIError(
             status_code=500, detail="server error"
         )
         result = await service.verify(_make_noun_data(), _make_lemma())
         assert result.error is not None
-        assert result.comparisons == []
+        assert len(result.comparisons) == 16
 
     @pytest.mark.asyncio
     async def test_invalid_json(
@@ -662,11 +662,11 @@ class TestErrorHandling:
         service: CrossAIVerificationService,
         mock_openrouter: AsyncMock,
     ) -> None:
-        """Non-JSON response → result with error set, comparisons empty."""
+        """Non-JSON response → result with error set, primary comparisons populated."""
         mock_openrouter.complete.return_value = _make_response("not json at all")
         result = await service.verify(_make_noun_data(), _make_lemma())
         assert result.error is not None
-        assert result.comparisons == []
+        assert len(result.comparisons) == 16
         assert result.overall_agreement is None
 
     @pytest.mark.asyncio
@@ -675,11 +675,11 @@ class TestErrorHandling:
         service: CrossAIVerificationService,
         mock_openrouter: AsyncMock,
     ) -> None:
-        """Valid JSON but wrong schema → result with error set, comparisons empty."""
+        """Valid JSON but wrong schema → result with error set, primary comparisons populated."""
         mock_openrouter.complete.return_value = _make_response('{"wrong": "schema"}')
         result = await service.verify(_make_noun_data(), _make_lemma())
         assert result.error is not None
-        assert result.comparisons == []
+        assert len(result.comparisons) == 16
         assert result.overall_agreement is None
 
 
@@ -817,3 +817,71 @@ class TestSingleton:
             mod._cross_ai_verification_service = None
             svc2 = get_cross_ai_verification_service()
         assert svc1 is not svc2
+
+
+# ---------------------------------------------------------------------------
+# Tests: _parse_response think tag stripping
+# ---------------------------------------------------------------------------
+
+
+class TestParseResponseThinkTags:
+    """Tests for _parse_response() stripping <think>...</think> tags."""
+
+    def test_strips_think_tags(self, service: CrossAIVerificationService) -> None:
+        """<think>...</think> prefix before JSON is stripped before parsing."""
+        noun = _make_noun_data()
+        content = f"<think>Some thinking process here</think>{_noun_data_to_json(noun)}"
+        result = service._parse_response(content)
+        assert result.lemma == noun.lemma
+
+    def test_strips_multiline_think_tags(self, service: CrossAIVerificationService) -> None:
+        """Multiline think content is fully stripped."""
+        noun = _make_noun_data()
+        think_block = "<think>\nLine one\nLine two\nLine three\n</think>"
+        content = f"{think_block}{_noun_data_to_json(noun)}"
+        result = service._parse_response(content)
+        assert result.lemma == noun.lemma
+
+    def test_no_think_tags_unchanged(self, service: CrossAIVerificationService) -> None:
+        """Clean JSON without think tags parses as before."""
+        noun = _make_noun_data()
+        content = _noun_data_to_json(noun)
+        result = service._parse_response(content)
+        assert result.lemma == noun.lemma
+        assert result.translation_en == noun.translation_en
+
+
+# ---------------------------------------------------------------------------
+# Tests: primary_only_result
+# ---------------------------------------------------------------------------
+
+
+class TestPrimaryOnlyResult:
+    """Tests for primary_only_result() method."""
+
+    def test_populates_all_fields(self, service: CrossAIVerificationService) -> None:
+        """primary_only_result() returns 16 comparisons, all agrees=True, all secondary_value='—'."""
+        primary = _make_noun_data()
+        result = service.primary_only_result(primary, error="test error")
+        assert len(result.comparisons) == 16
+        assert all(c.agrees for c in result.comparisons)
+        assert all(c.secondary_value == "—" for c in result.comparisons)
+
+    def test_sets_error(self, service: CrossAIVerificationService) -> None:
+        """primary_only_result() sets error, overall_agreement=None, secondary_generation=None."""
+        primary = _make_noun_data()
+        result = service.primary_only_result(primary, error="something went wrong")
+        assert result.error == "something went wrong"
+        assert result.overall_agreement is None
+        assert result.secondary_generation is None
+
+    def test_primary_values_correct(self, service: CrossAIVerificationService) -> None:
+        """primary_only_result() uses correct primary values from input data."""
+        primary = _make_noun_data()
+        result = service.primary_only_result(primary, error="test error")
+        lemma_comp = next(c for c in result.comparisons if c.field_path == "lemma")
+        assert lemma_comp.primary_value == primary.lemma
+        gender_comp = next(c for c in result.comparisons if c.field_path == "grammar_data.gender")
+        assert gender_comp.primary_value == primary.grammar_data.gender
+        en_comp = next(c for c in result.comparisons if c.field_path == "translation_en")
+        assert en_comp.primary_value == primary.translation_en
