@@ -30,7 +30,7 @@ cd /Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-backend && /User
 | Context7 | Library docs - **always check before writing code** |
 | Playwright | Visual verification, E2E testing, bug research |
 | Railway | Deployment (no destructive actions - use dashboard for deletes) |
-| Sentry | Error tracking and logs for frontend and backend |
+| Sentry | Error tracking + **Logs** (use `search_events` with natural language to query backend/frontend logs — preferred over Railway for log investigation) |
 | Auth0 | Applications, APIs, actions, logs, forms (no user management) |
 
 ## Critical Rules
@@ -46,6 +46,8 @@ cd /Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-backend && /User
 3. **Never log**: Passwords, JWT tokens, API keys, emails, PII
 
 4. **Bug research**: Use Playwright MCP to observe actual behavior, don't guess
+
+5. **Log investigation**: Use **Sentry MCP** `search_events` tool to query production logs (not Railway MCP). Sentry Logs indexes all loguru output with severity, trace IDs, and structured attributes. Railway log filter cannot search inside loguru's serialized JSON output.
 
 ## Testing
 
