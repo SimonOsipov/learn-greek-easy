@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/i18n';
 import { UnifiedVerificationTable } from '../UnifiedVerificationTable';
-import type { SelectionSource } from '../UnifiedVerificationTable';
+import type { PillState, SelectionSource } from '../UnifiedVerificationTable';
 import type {
   CrossAIVerificationResult,
   FieldComparisonResult,
@@ -365,5 +365,100 @@ describe('interactive click-to-select', () => {
     const primaryCell = row.querySelectorAll('td')[2];
     await userEvent.click(primaryCell!);
     expect(onSelect).not.toHaveBeenCalled();
+  });
+});
+
+function renderWithPills(
+  crossAI: CrossAIVerificationResult,
+  resolvedValues: Map<string, PillState>,
+  onResolvedValueChange: ReturnType<typeof vi.fn>,
+  onSelect?: ReturnType<typeof vi.fn>
+) {
+  return render(
+    <I18nextProvider i18n={i18n}>
+      <UnifiedVerificationTable
+        local={null}
+        crossAI={crossAI}
+        resolvedValues={resolvedValues}
+        onResolvedValueChange={onResolvedValueChange}
+        onSelect={onSelect}
+        interactive={true}
+      />
+    </I18nextProvider>
+  );
+}
+
+describe('cell-click pill sync', () => {
+  it('clicking primary cell calls onResolvedValueChange with primary value', async () => {
+    const onResolvedValueChange = vi.fn();
+    const crossAI = makeCrossAI([makeComparison('translation_en', false, 'house', 'home')]);
+    const resolvedValues = new Map<string, PillState>([
+      ['translation_en', { value: 'house', status: 'unresolved', source: 'auto' }],
+    ]);
+    renderWithPills(crossAI, resolvedValues, onResolvedValueChange);
+
+    const row = screen.getByTestId('unified-row-translation_en');
+    const primaryTd = row.querySelectorAll('td')[2];
+    const clickable = primaryTd?.querySelector('.cursor-pointer');
+    await userEvent.click(clickable!);
+
+    expect(onResolvedValueChange).toHaveBeenCalledWith('translation_en', 'house');
+  });
+
+  it('clicking secondary cell calls onResolvedValueChange with secondary value', async () => {
+    const onResolvedValueChange = vi.fn();
+    const crossAI = makeCrossAI([makeComparison('translation_en', false, 'house', 'home')]);
+    const resolvedValues = new Map<string, PillState>([
+      ['translation_en', { value: 'house', status: 'unresolved', source: 'auto' }],
+    ]);
+    renderWithPills(crossAI, resolvedValues, onResolvedValueChange);
+
+    const row = screen.getByTestId('unified-row-translation_en');
+    const secondaryTd = row.querySelectorAll('td')[3];
+    const clickable = secondaryTd?.querySelector('.cursor-pointer');
+    await userEvent.click(clickable!);
+
+    expect(onResolvedValueChange).toHaveBeenCalledWith('translation_en', 'home');
+  });
+
+  it('clicking local cell calls onResolvedValueChange with reference value', async () => {
+    const onResolvedValueChange = vi.fn();
+    const local = makeLocalResult([
+      makeLocalField('translation_en', 'pass', 'ok', 'house', 'dictionary'),
+    ]);
+    const resolvedValues = new Map<string, PillState>([
+      ['translation_en', { value: 'house', status: 'agreed', source: 'local' }],
+    ]);
+
+    render(
+      <I18nextProvider i18n={i18n}>
+        <UnifiedVerificationTable
+          local={local}
+          crossAI={null}
+          resolvedValues={resolvedValues}
+          onResolvedValueChange={onResolvedValueChange}
+          interactive={true}
+        />
+      </I18nextProvider>
+    );
+
+    const row = screen.getByTestId('unified-row-translation_en');
+    const localTd = row.querySelectorAll('td')[1];
+    const clickable = localTd?.querySelector('.cursor-pointer');
+    await userEvent.click(clickable!);
+
+    expect(onResolvedValueChange).toHaveBeenCalledWith('translation_en', 'house');
+  });
+
+  it('table has colgroup with 5 col elements', () => {
+    const crossAI = makeCrossAI([makeComparison('translation_en', false, 'house', 'home')]);
+    const resolvedValues = new Map<string, PillState>([
+      ['translation_en', { value: 'house', status: 'unresolved', source: 'auto' }],
+    ]);
+    const { container } = renderWithPills(crossAI, resolvedValues, vi.fn());
+
+    const colgroup = container.querySelector('colgroup');
+    expect(colgroup).toBeTruthy();
+    expect(colgroup?.querySelectorAll('col')).toHaveLength(5);
   });
 });
