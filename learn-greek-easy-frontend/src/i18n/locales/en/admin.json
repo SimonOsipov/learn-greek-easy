@@ -1075,18 +1075,19 @@
       "errorToast": "Failed to save word entry"
     },
     "editable": {
-      "translationsTitle": "Translations",
-      "translationEn": "English",
-      "translationEnPlural": "English (plural)",
-      "translationRu": "Russian",
-      "translationRuPlural": "Russian (plural)",
-      "pronunciationTitle": "Pronunciation",
-      "pronunciation": "Pronunciation",
       "examplesTitle": "Examples",
       "exampleGreek": "Greek",
       "exampleEnglish": "English",
-      "exampleRussian": "Russian",
-      "required": "Required"
+      "exampleRussian": "Russian"
+    },
+    "pill": {
+      "editTooltip": "Click to edit value",
+      "resolvedBy": "Resolved: {{source}}"
+    },
+    "examples": {
+      "editButton": "Edit",
+      "saveButton": "Save",
+      "cancelButton": "Cancel"
     }
   },
   "wordEntry": {
