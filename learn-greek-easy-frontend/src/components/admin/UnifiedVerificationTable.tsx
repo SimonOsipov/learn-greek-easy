@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import {
   AlertCircle,
@@ -24,6 +24,7 @@ import type {
   FieldVerificationResult,
   LocalVerificationResult,
 } from '@/services/adminAPI';
+import { EDITABLE_FIELDS } from '@/utils/nounPayloadBuilder';
 
 const FIELD_STATUS_ICON: Record<FieldStatus, { icon: React.ElementType; className: string }> = {
   pass: { icon: Check, className: 'text-green-500' },
@@ -45,14 +46,6 @@ export interface PillState {
   source: 'auto' | 'local' | 'primary' | 'secondary' | 'manual';
   status: 'agreed' | 'resolved' | 'unresolved' | 'editable';
 }
-
-const EDITABLE_FIELDS = new Set([
-  'translation_en',
-  'translation_en_plural',
-  'translation_ru',
-  'translation_ru_plural',
-  'pronunciation',
-]);
 
 interface UnifiedVerificationTableProps {
   local: LocalVerificationResult | null;
@@ -180,6 +173,16 @@ function isCellClickable(
   return row.crossAI?.agrees === false;
 }
 
+function toFlatKey(path: string): string {
+  if (path.startsWith('cases.')) {
+    const parts = path.split('.');
+    return `${parts[2]}_${parts[1]}`;
+  }
+  if (path === 'grammar_data.gender') return 'gender';
+  if (path === 'grammar_data.declension_group') return 'declension_group';
+  return path;
+}
+
 function LocalCell({
   row,
   hasLocalData,
@@ -273,7 +276,7 @@ function LocalCell({
           onSelect?.(row.field_path, 'local');
           const refCheck = row.local?.checks.find((c) => c.reference_value != null);
           if (refCheck?.reference_value != null) {
-            onResolvedValueChange?.(row.field_path, refCheck.reference_value);
+            onResolvedValueChange?.(toFlatKey(row.field_path), refCheck.reference_value);
           }
         }}
       >
@@ -341,7 +344,7 @@ function PrimaryValueCell({
         aria-pressed={isSelected}
         onClick={() => {
           onSelect?.(row.field_path, 'primary');
-          onResolvedValueChange?.(row.field_path, comparison.primary_value);
+          onResolvedValueChange?.(toFlatKey(row.field_path), comparison.primary_value);
         }}
       >
         {content}
@@ -385,7 +388,7 @@ function SecondaryValueCell({
         aria-pressed={isSelected}
         onClick={() => {
           onSelect?.(row.field_path, 'secondary');
-          onResolvedValueChange?.(row.field_path, comparison.secondary_value);
+          onResolvedValueChange?.(toFlatKey(row.field_path), comparison.secondary_value);
         }}
       >
         {content}
@@ -406,6 +409,12 @@ interface DecisionPillProps {
 function DecisionPill({ fieldPath, pillState, isEditable, onEdit }: DecisionPillProps) {
   const [open, setOpen] = useState(false);
   const [editValue, setEditValue] = useState(pillState.value);
+
+  useEffect(() => {
+    if (!open) {
+      setEditValue(pillState.value);
+    }
+  }, [pillState.value, open]);
 
   const showPopover =
     isEditable && (pillState.status === 'editable' || pillState.status === 'unresolved');

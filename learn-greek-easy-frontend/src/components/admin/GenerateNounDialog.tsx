@@ -282,8 +282,11 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
 
   const approveMutation = useMutation({
     mutationFn: async () => {
+      if (!displayGeneration) {
+        throw new Error('Generation data not available');
+      }
       const payload = buildWordEntryPayload({
-        generation: displayGeneration!,
+        generation: displayGeneration,
         resolvedValues,
         editableExamples,
       });
@@ -749,7 +752,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                       data-testid="approve-save-button"
                       onClick={() => approveMutation.mutate()}
                       disabled={
-                        !resolvedValues.get('translation_en')?.value.trim() ||
+                        !resolvedValues.get('translation_en')?.value?.trim() ||
                         approveMutation.isPending
                       }
                     >

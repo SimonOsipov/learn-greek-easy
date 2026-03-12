@@ -158,11 +158,22 @@ export function initializeResolvedValues(
     }
   }
 
-  // Build cross-AI lookup
+  // Build cross-AI lookup (normalize nested field_path to flat key for lookup)
+  const toFlatKey = (path: string): string => {
+    if (path.startsWith('cases.')) {
+      const parts = path.split('.');
+      // 'cases.singular.nominative' -> 'nominative_singular'
+      return `${parts[2]}_${parts[1]}`;
+    }
+    if (path === 'grammar_data.gender') return 'gender';
+    if (path === 'grammar_data.declension_group') return 'declension_group';
+    return path;
+  };
+
   const crossAIMap = new Map<string, FieldComparisonResult>();
   if (verification?.cross_ai?.comparisons) {
     for (const comp of verification.cross_ai.comparisons) {
-      crossAIMap.set(comp.field_path, comp);
+      crossAIMap.set(toFlatKey(comp.field_path), comp);
     }
   }
 

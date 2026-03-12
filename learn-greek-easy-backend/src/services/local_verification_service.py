@@ -184,13 +184,17 @@ class LocalVerificationService:
 
                 if ref_value is not None:
                     bare_ref = _strip_article(ref_value)
-                    # Compute display reference value with article prefix
-                    article_dict = _ARTICLE_MAP.get(case)  # None for vocative
-                    if article_dict and data.grammar_data.gender in article_dict:
-                        article = article_dict[data.grammar_data.gender][number]
-                        display_ref_value = article + bare_ref
+                    # Use lexicon form as-is if it already has an article;
+                    # only synthesize an article when the lexicon form is bare.
+                    if bare_ref != ref_value:
+                        display_ref_value = ref_value  # lexicon form already has an article
                     else:
-                        display_ref_value = ref_value  # vocative or unknown — keep as-is
+                        article_dict = _ARTICLE_MAP.get(case)  # None for vocative
+                        if article_dict and data.grammar_data.gender in article_dict:
+                            article = article_dict[data.grammar_data.gender][number]
+                            display_ref_value = article + bare_ref
+                        else:
+                            display_ref_value = ref_value  # vocative or unknown — keep as-is
                     if bare == bare_ref:
                         status = "pass"
                         message = "Verified by lexicon"
@@ -227,12 +231,15 @@ class LocalVerificationService:
                 ref_value = lexicon_map.get((number, case)) if lexicon_map else None
                 if ref_value is not None:
                     bare_ref_exc = _strip_article(ref_value)
-                    article_dict_exc = _ARTICLE_MAP.get(case)
-                    if article_dict_exc and data.grammar_data.gender in article_dict_exc:
-                        article_exc = article_dict_exc[data.grammar_data.gender][number]
-                        display_ref_value_exc = article_exc + bare_ref_exc
+                    if bare_ref_exc != ref_value:
+                        display_ref_value_exc = ref_value  # lexicon form already has an article
                     else:
-                        display_ref_value_exc = ref_value
+                        article_dict_exc = _ARTICLE_MAP.get(case)
+                        if article_dict_exc and data.grammar_data.gender in article_dict_exc:
+                            article_exc = article_dict_exc[data.grammar_data.gender][number]
+                            display_ref_value_exc = article_exc + bare_ref_exc
+                        else:
+                            display_ref_value_exc = ref_value
                 else:
                     display_ref_value_exc = None
                 exc_check = CheckResult(
@@ -265,12 +272,16 @@ class LocalVerificationService:
 
         if ref_lemma is not None:
             bare_ref_lemma = _strip_article(ref_lemma)
-            # Compute display lemma reference value with nominative article prefix
-            nom_articles = _NOMINATIVE_ARTICLES.get(data.grammar_data.gender)
-            if nom_articles:
-                display_ref_lemma = nom_articles["singular"] + bare_ref_lemma
+            # Use lexicon lemma as-is if it already has an article;
+            # only synthesize an article when the lexicon lemma is bare.
+            if bare_ref_lemma != ref_lemma:
+                display_ref_lemma = ref_lemma  # lexicon lemma already has an article
             else:
-                display_ref_lemma = ref_lemma
+                nom_articles = _NOMINATIVE_ARTICLES.get(data.grammar_data.gender)
+                if nom_articles:
+                    display_ref_lemma = nom_articles["singular"] + bare_ref_lemma
+                else:
+                    display_ref_lemma = ref_lemma
             if bare_lemma == bare_ref_lemma:
                 status = "pass"
                 message = "Verified by lexicon"
