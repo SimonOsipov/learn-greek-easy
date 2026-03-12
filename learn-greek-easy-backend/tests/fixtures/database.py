@@ -478,8 +478,14 @@ async def _create_schema_with_coordination(engine: AsyncEngine, worker_id: str) 
             if not _SCHEMA_READY_FILE.exists():
                 # Create schema
                 async with engine.begin() as conn:
-                    # Drop existing tables to ensure clean state
-                    await conn.run_sync(Base.metadata.drop_all)
+                    # Drop existing tables with CASCADE to handle FK dependencies
+                    # Base.metadata.drop_all does not cascade, which fails when
+                    # tables have FK constraints added across migrations.
+                    table_names = ", ".join(
+                        f'"{t.name}"' for t in reversed(Base.metadata.sorted_tables)
+                    )
+                    if table_names:
+                        await conn.execute(text(f"DROP TABLE IF EXISTS {table_names} CASCADE"))
                     # Create all tables and enums
                     await conn.run_sync(Base.metadata.create_all)
 

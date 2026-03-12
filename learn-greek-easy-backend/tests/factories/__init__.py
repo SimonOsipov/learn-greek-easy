@@ -83,6 +83,9 @@ from tests.factories.culture import (
 # Feedback factories
 from tests.factories.feedback import FeedbackFactory, FeedbackVoteFactory
 
+# Listening Dialog factories
+from tests.factories.listening_dialog import ListeningDialogFactory
+
 # News factories
 from tests.factories.news import NewsItemFactory
 
@@ -133,6 +136,8 @@ __all__ = [
     # Feedback
     "FeedbackFactory",
     "FeedbackVoteFactory",
+    # Listening Dialogs
+    "ListeningDialogFactory",
     # News
     "NewsItemFactory",
     # Progress

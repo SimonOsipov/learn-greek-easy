@@ -14,7 +14,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from src.db.models import DeckLevel
+from src.db.models import DeckLevel, DialogStatus
 from src.schemas.nlp import DuplicateCheckResult, GeneratedNounData, VerificationSummary
 
 # ============================================================================
@@ -351,3 +351,28 @@ class GenerateWordEntryResponse(BaseModel):
 
 # Resolve forward references (GenerateWordEntryRequest references TranslationLookupStageResult)
 GenerateWordEntryRequest.model_rebuild()
+
+
+# ========================
+# Listening Dialog Admin Schemas
+# ========================
+
+
+class ListeningDialogListItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    scenario_el: str
+    scenario_en: str
+    scenario_ru: str
+    cefr_level: DeckLevel
+    num_speakers: int
+    status: DialogStatus
+    created_at: datetime
+
+
+class ListeningDialogListResponse(BaseModel):
+    items: list[ListeningDialogListItem]
+    total: int
+    page: int
+    page_size: int

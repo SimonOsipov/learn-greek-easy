@@ -267,7 +267,8 @@
     "feedback": "Feedback",
     "changelog": "Changelog",
     "cardErrors": "Card Errors",
-    "wordEntries": "Word Entries"
+    "wordEntries": "Word Entries",
+    "listeningDialogs": "Listening Dialogs"
   },
   "announcements": {
     "stats": {
@@ -1060,5 +1061,50 @@
     "unlinkSuccess": "Word removed from deck",
     "unlinkButton": "Remove from deck",
     "unlinkTitle": "Remove from deck?"
+  },
+  "listeningDialogs": {
+    "title": "Listening Dialogs",
+    "description": "Manage listening dialog content for exercises",
+    "columns": {
+      "scenario": "Scenario",
+      "cefrLevel": "CEFR Level",
+      "speakers": "Speakers",
+      "status": "Status",
+      "created": "Created",
+      "actions": "Actions"
+    },
+    "status": {
+      "draft": "Draft",
+      "text_approved": "Text Approved",
+      "audio_ready": "Audio Ready",
+      "exercises_ready": "Exercises Ready",
+      "published": "Published"
+    },
+    "empty": {
+      "title": "No dialogs yet",
+      "description": "Create your first listening dialog to get started.",
+      "cta": "Create your first dialog"
+    },
+    "create": {
+      "button": "Create New Dialog",
+      "comingSoon": "Dialog creation coming soon"
+    },
+    "delete": {
+      "title": "Delete Dialog",
+      "description": "Are you sure you want to delete this dialog?",
+      "warning": "This will permanently delete the dialog and all associated speakers, lines, exercises, and exercise items.",
+      "confirm": "Delete Dialog",
+      "cancel": "Cancel",
+      "deleting": "Deleting...",
+      "success": "Dialog deleted successfully",
+      "error": "Failed to delete dialog"
+    },
+    "view": {
+      "tooltip": "Detail view coming soon"
+    },
+    "errors": {
+      "fetchFailed": "Failed to load dialogs",
+      "retry": "Retry"
+    }
   }
 }
