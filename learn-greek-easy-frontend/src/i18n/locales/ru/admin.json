@@ -1065,7 +1065,8 @@
       "headers": {
         "local": "Локальная",
         "crossAi": "Кросс-AI"
-      }
+      },
+      "resolvedTooltip": "Решено администратором — используется значение {{source}}"
     }
   },
   "wordEntry": {

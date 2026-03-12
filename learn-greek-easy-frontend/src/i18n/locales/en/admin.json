@@ -1053,7 +1053,8 @@
       "headers": {
         "local": "Local",
         "crossAi": "Cross-AI"
-      }
+      },
+      "resolvedTooltip": "Resolved by admin — using {{source}} value"
     }
   },
   "wordEntry": {

@@ -1,7 +1,9 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/i18n';
 import { UnifiedVerificationTable } from '../UnifiedVerificationTable';
+import type { SelectionSource } from '../UnifiedVerificationTable';
 import type {
   CrossAIVerificationResult,
   FieldComparisonResult,
@@ -66,11 +68,20 @@ function makeCrossAI(
 
 function renderComponent(
   local: LocalVerificationResult | null,
-  crossAI: CrossAIVerificationResult | null
+  crossAI: CrossAIVerificationResult | null,
+  selections?: Map<string, SelectionSource>,
+  onSelect?: ReturnType<typeof vi.fn>,
+  interactive?: boolean
 ) {
   return render(
     <I18nextProvider i18n={i18n}>
-      <UnifiedVerificationTable local={local} crossAI={crossAI} />
+      <UnifiedVerificationTable
+        local={local}
+        crossAI={crossAI}
+        selections={selections}
+        onSelect={onSelect}
+        interactive={interactive}
+      />
     </I18nextProvider>
   );
 }
@@ -247,5 +258,112 @@ describe('UnifiedVerificationTable', () => {
     renderComponent(local, null);
     expect(screen.getByTestId('unified-row-lemma')).toBeInTheDocument();
     expect(screen.queryByTestId('unified-row-examples')).not.toBeInTheDocument();
+  });
+});
+
+describe('interactive click-to-select', () => {
+  it('clicking primary cell in disagreement row calls onSelect with primary', async () => {
+    const onSelect = vi.fn();
+    const crossAI = makeCrossAI([makeComparison('translation_en', false, 'house', 'home')]);
+    renderComponent(null, crossAI, undefined, onSelect, true);
+
+    const row = screen.getByTestId('unified-row-translation_en');
+    const primaryTd = row.querySelectorAll('td')[2];
+    const clickable = primaryTd?.querySelector('.cursor-pointer');
+    await userEvent.click(clickable!);
+    expect(onSelect).toHaveBeenCalledWith('translation_en', 'primary');
+  });
+
+  it('clicking secondary cell in disagreement row calls onSelect with secondary', async () => {
+    const onSelect = vi.fn();
+    const crossAI = makeCrossAI([makeComparison('translation_en', false, 'house', 'home')]);
+    renderComponent(null, crossAI, undefined, onSelect, true);
+
+    const row = screen.getByTestId('unified-row-translation_en');
+    const secondaryTd = row.querySelectorAll('td')[3];
+    const clickable = secondaryTd?.querySelector('.cursor-pointer');
+    await userEvent.click(clickable!);
+    expect(onSelect).toHaveBeenCalledWith('translation_en', 'secondary');
+  });
+
+  it('re-clicking on different source calls onSelect with new source', async () => {
+    const onSelect = vi.fn();
+    const crossAI = makeCrossAI([makeComparison('translation_en', false, 'house', 'home')]);
+    renderComponent(null, crossAI, undefined, onSelect, true);
+
+    const row = screen.getByTestId('unified-row-translation_en');
+    const primaryClickable = row.querySelectorAll('td')[2]?.querySelector('.cursor-pointer');
+    const secondaryClickable = row.querySelectorAll('td')[3]?.querySelector('.cursor-pointer');
+    await userEvent.click(primaryClickable!);
+    await userEvent.click(secondaryClickable!);
+    expect(onSelect).toHaveBeenNthCalledWith(1, 'translation_en', 'primary');
+    expect(onSelect).toHaveBeenNthCalledWith(2, 'translation_en', 'secondary');
+  });
+
+  it('clicking local cell calls onSelect with local when reference_value is present', async () => {
+    const onSelect = vi.fn();
+    const local = makeLocalResult([
+      makeLocalField('translation_en', 'pass', 'ok', 'house', 'dictionary'),
+    ]);
+    renderComponent(local, null, undefined, onSelect, true);
+
+    const row = screen.getByTestId('unified-row-translation_en');
+    const localTd = row.querySelectorAll('td')[1];
+    const clickable = localTd?.querySelector('.cursor-pointer');
+    await userEvent.click(clickable!);
+    expect(onSelect).toHaveBeenCalledWith('translation_en', 'local');
+  });
+
+  it('selected cell shows ring-2 ring-primary class', () => {
+    const selections = new Map<string, SelectionSource>([['translation_en', 'primary']]);
+    const crossAI = makeCrossAI([makeComparison('translation_en', false, 'house', 'home')]);
+    renderComponent(null, crossAI, selections, undefined, true);
+
+    const row = screen.getByTestId('unified-row-translation_en');
+    const primaryCell = row.querySelectorAll('td')[2];
+    expect(primaryCell?.querySelector('.ring-2')).toBeTruthy();
+  });
+
+  it('non-selected cells in same row show opacity-50', () => {
+    const selections = new Map<string, SelectionSource>([['translation_en', 'primary']]);
+    const crossAI = makeCrossAI([makeComparison('translation_en', false, 'house', 'home')]);
+    renderComponent(null, crossAI, selections, undefined, true);
+
+    const row = screen.getByTestId('unified-row-translation_en');
+    const secondaryCell = row.querySelectorAll('td')[3];
+    expect(secondaryCell?.querySelector('.opacity-50')).toBeTruthy();
+  });
+
+  it('decision column shows CheckCircle2 svg when admin has selected a source', () => {
+    const selections = new Map<string, SelectionSource>([['translation_en', 'primary']]);
+    const crossAI = makeCrossAI([makeComparison('translation_en', false, 'house', 'home')]);
+    renderComponent(null, crossAI, selections, undefined, true);
+
+    const row = screen.getByTestId('unified-row-translation_en');
+    const decisionCell = row.querySelectorAll('td')[4];
+    // CheckCircle2 renders an SVG
+    expect(decisionCell?.querySelector('svg')).toBeTruthy();
+  });
+
+  it('local cell not clickable when no reference_value in checks', async () => {
+    const onSelect = vi.fn();
+    const local = makeLocalResult([makeLocalField('lemma', 'pass', 'ok')]);
+    renderComponent(local, null, undefined, onSelect, true);
+
+    const row = screen.getByTestId('unified-row-lemma');
+    const localCell = row.querySelectorAll('td')[1];
+    await userEvent.click(localCell!);
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it('interactive=false: primary cell not clickable even on disagreement row', async () => {
+    const onSelect = vi.fn();
+    const crossAI = makeCrossAI([makeComparison('translation_en', false, 'house', 'home')]);
+    renderComponent(null, crossAI, undefined, onSelect, false);
+
+    const row = screen.getByTestId('unified-row-translation_en');
+    const primaryCell = row.querySelectorAll('td')[2];
+    await userEvent.click(primaryCell!);
+    expect(onSelect).not.toHaveBeenCalled();
   });
 });

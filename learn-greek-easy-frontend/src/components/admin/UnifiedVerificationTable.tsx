@@ -1,4 +1,11 @@
-import { AlertCircle, AlertTriangle, Check, MinusCircle, XCircle } from 'lucide-react';
+import {
+  AlertCircle,
+  AlertTriangle,
+  Check,
+  CheckCircle2,
+  MinusCircle,
+  XCircle,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -26,9 +33,14 @@ interface UnifiedRow {
   crossAI: FieldComparisonResult | null;
 }
 
+export type SelectionSource = 'local' | 'primary' | 'secondary';
+
 interface UnifiedVerificationTableProps {
   local: LocalVerificationResult | null;
   crossAI: CrossAIVerificationResult | null;
+  selections?: Map<string, SelectionSource>;
+  onSelect?: (fieldPath: string, source: SelectionSource) => void;
+  interactive?: boolean;
 }
 
 function buildRows(
@@ -134,69 +146,112 @@ function SeverityDot({ severity }: { severity: 'red' | 'yellow' | 'green' | 'neu
   return <span className={cn('inline-block h-2 w-2 rounded-full', SEVERITY_COLORS[severity])} />;
 }
 
+function isCellClickable(
+  row: UnifiedRow,
+  column: 'local' | 'primary' | 'secondary',
+  interactive: boolean
+): boolean {
+  if (!interactive) return false;
+  if (column === 'local') {
+    const hasRef = row.local?.checks.some((c) => c.reference_value != null) ?? false;
+    return hasRef;
+  }
+  return row.crossAI?.agrees === false;
+}
+
 function LocalCell({
-  field,
+  row,
   hasLocalData,
   t,
+  interactive,
+  isSelected,
+  isOtherSelected,
+  onSelect,
 }: {
-  field: FieldVerificationResult | null;
+  row: UnifiedRow;
   hasLocalData: boolean;
   t: (key: string) => string;
+  interactive: boolean;
+  isSelected: boolean;
+  isOtherSelected: boolean;
+  onSelect?: (fieldPath: string, source: SelectionSource) => void;
 }) {
-  if (!hasLocalData) return <span className="text-muted-foreground">—</span>;
-  if (!field) return <span className="text-muted-foreground">—</span>;
-  if (field.status === 'skipped')
+  const field = row.local;
+  const clickable = isCellClickable(row, 'local', interactive);
+
+  const cellContent = (() => {
+    if (!hasLocalData) return <span className="text-muted-foreground">—</span>;
+    if (!field) return <span className="text-muted-foreground">—</span>;
+    if (field.status === 'skipped')
+      return (
+        <span className="text-xs text-muted-foreground">
+          {t('generateNoun.verification.fieldStatus.skipped')}
+        </span>
+      );
+
+    const { icon: Icon, className } = FIELD_STATUS_ICON[field.status];
+    const firstMsg = field.checks.find((c) => c.message)?.message;
+    const tooltipText = firstMsg ? formatUDMessage(firstMsg) : field.status;
+
+    // Extract reference info
+    const refCheck = field.checks.find((c) => c.reference_value != null);
+    const referenceValue = refCheck?.reference_value ?? null;
+
+    if (referenceValue != null) {
+      return (
+        <span className="inline-flex min-w-0 items-center gap-1">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className={cn('inline-flex items-center', className)}>
+                <Icon className="h-3 w-3 shrink-0" />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>
+              <span className="text-xs">{tooltipText}</span>
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="block break-words text-xs">{referenceValue}</span>
+            </TooltipTrigger>
+            <TooltipContent>
+              <span className="text-xs">{referenceValue}</span>
+            </TooltipContent>
+          </Tooltip>
+        </span>
+      );
+    }
+
     return (
-      <span className="text-xs text-muted-foreground">
-        {t('generateNoun.verification.fieldStatus.skipped')}
-      </span>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className={cn('inline-flex items-center', className)}>
+            <Icon className="h-3 w-3 shrink-0" />
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>
+          <span className="text-xs">{tooltipText}</span>
+        </TooltipContent>
+      </Tooltip>
     );
+  })();
 
-  const { icon: Icon, className } = FIELD_STATUS_ICON[field.status];
-  const firstMsg = field.checks.find((c) => c.message)?.message;
-  const tooltipText = firstMsg ? formatUDMessage(firstMsg) : field.status;
-
-  // Extract reference info
-  const refCheck = field.checks.find((c) => c.reference_value != null);
-  const referenceValue = refCheck?.reference_value ?? null;
-
-  if (referenceValue != null) {
+  if (clickable) {
     return (
-      <span className="inline-flex min-w-0 items-center gap-1">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span className={cn('inline-flex items-center', className)}>
-              <Icon className="h-3 w-3 shrink-0" />
-            </span>
-          </TooltipTrigger>
-          <TooltipContent>
-            <span className="text-xs">{tooltipText}</span>
-          </TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span className="block break-words text-xs">{referenceValue}</span>
-          </TooltipTrigger>
-          <TooltipContent>
-            <span className="text-xs">{referenceValue}</span>
-          </TooltipContent>
-        </Tooltip>
-      </span>
+      <div
+        className={cn(
+          'cursor-pointer hover:bg-accent/50',
+          isSelected ? 'ring-2 ring-primary' : '',
+          isOtherSelected ? 'opacity-50' : ''
+        )}
+        onClick={() => onSelect?.(row.field_path, 'local')}
+      >
+        {cellContent}
+      </div>
     );
   }
 
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span className={cn('inline-flex items-center', className)}>
-          <Icon className="h-3 w-3 shrink-0" />
-        </span>
-      </TooltipTrigger>
-      <TooltipContent>
-        <span className="text-xs">{tooltipText}</span>
-      </TooltipContent>
-    </Tooltip>
-  );
+  return <>{cellContent}</>;
 }
 
 function FieldCell({
@@ -222,18 +277,108 @@ function FieldCell({
   );
 }
 
-function PrimaryValueCell({ comparison }: { comparison: FieldComparisonResult | null }) {
+function PrimaryValueCell({
+  row,
+  interactive,
+  isSelected,
+  isOtherSelected,
+  onSelect,
+}: {
+  row: UnifiedRow;
+  interactive: boolean;
+  isSelected: boolean;
+  isOtherSelected: boolean;
+  onSelect?: (fieldPath: string, source: SelectionSource) => void;
+}) {
+  const comparison = row.crossAI;
   if (!comparison) return <span className="text-muted-foreground">—</span>;
-  return <span className="truncate text-xs">{comparison.primary_value}</span>;
+
+  const clickable = isCellClickable(row, 'primary', interactive);
+  const content = <span className="truncate text-xs">{comparison.primary_value}</span>;
+
+  if (clickable) {
+    return (
+      <div
+        className={cn(
+          'cursor-pointer hover:bg-accent/50',
+          isSelected ? 'ring-2 ring-primary' : '',
+          isOtherSelected ? 'opacity-50' : ''
+        )}
+        onClick={() => onSelect?.(row.field_path, 'primary')}
+      >
+        {content}
+      </div>
+    );
+  }
+
+  return content;
 }
 
-function SecondaryValueCell({ comparison }: { comparison: FieldComparisonResult | null }) {
+function SecondaryValueCell({
+  row,
+  interactive,
+  isSelected,
+  isOtherSelected,
+  onSelect,
+}: {
+  row: UnifiedRow;
+  interactive: boolean;
+  isSelected: boolean;
+  isOtherSelected: boolean;
+  onSelect?: (fieldPath: string, source: SelectionSource) => void;
+}) {
+  const comparison = row.crossAI;
   if (!comparison) return <span className="text-muted-foreground">—</span>;
-  return <span className="truncate text-xs">{comparison.secondary_value}</span>;
+
+  const clickable = isCellClickable(row, 'secondary', interactive);
+  const content = <span className="truncate text-xs">{comparison.secondary_value}</span>;
+
+  if (clickable) {
+    return (
+      <div
+        className={cn(
+          'cursor-pointer hover:bg-accent/50',
+          isSelected ? 'ring-2 ring-primary' : '',
+          isOtherSelected ? 'opacity-50' : ''
+        )}
+        onClick={() => onSelect?.(row.field_path, 'secondary')}
+      >
+        {content}
+      </div>
+    );
+  }
+
+  return content;
 }
 
-function DecisionCell({ comparison }: { comparison: FieldComparisonResult | null }) {
+function DecisionCell({
+  comparison,
+  isAdminSelected,
+  selectedSource,
+  t,
+}: {
+  comparison: FieldComparisonResult | null;
+  isAdminSelected: boolean;
+  selectedSource?: SelectionSource;
+  t: (key: string, options?: Record<string, unknown>) => string;
+}) {
   if (!comparison) return <span className="text-muted-foreground">—</span>;
+  if (isAdminSelected) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span>
+            <CheckCircle2 className="h-4 w-4 text-blue-500" />
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>
+          <span className="text-xs">
+            {t('generateNoun.verification.resolvedTooltip', { source: selectedSource })}
+          </span>
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
   if (comparison.agrees) return <Check className="h-4 w-4 text-green-500" />;
   return <XCircle className="h-4 w-4 text-red-500" />;
 }
@@ -242,11 +387,19 @@ function RowsTable({
   rows,
   hasLocalData,
   t,
+  selections,
+  onSelect,
+  interactive,
 }: {
   rows: UnifiedRow[];
   hasLocalData: boolean;
   t: (key: string, options?: Record<string, unknown>) => string;
+  selections?: Map<string, SelectionSource>;
+  onSelect?: (fieldPath: string, source: SelectionSource) => void;
+  interactive?: boolean;
 }) {
+  const isInteractive = interactive ?? false;
+
   return (
     <table className="w-full table-auto text-sm">
       <thead>
@@ -271,6 +424,9 @@ function RowsTable({
       <tbody>
         {rows.map((row) => {
           const severity = getRowSeverity(row);
+          const selectedSource = selections?.get(row.field_path);
+          const isAdminSelected = selectedSource != null;
+
           return (
             <tr
               key={row.field_path}
@@ -281,16 +437,41 @@ function RowsTable({
                 <FieldCell path={row.field_path} severity={severity} />
               </td>
               <td className="py-1">
-                <LocalCell field={row.local} hasLocalData={hasLocalData} t={t} />
+                <LocalCell
+                  row={row}
+                  hasLocalData={hasLocalData}
+                  t={t}
+                  interactive={isInteractive}
+                  isSelected={selectedSource === 'local'}
+                  isOtherSelected={isAdminSelected && selectedSource !== 'local'}
+                  onSelect={onSelect}
+                />
               </td>
               <td className="max-w-[200px] py-1 pr-1">
-                <PrimaryValueCell comparison={row.crossAI} />
+                <PrimaryValueCell
+                  row={row}
+                  interactive={isInteractive}
+                  isSelected={selectedSource === 'primary'}
+                  isOtherSelected={isAdminSelected && selectedSource !== 'primary'}
+                  onSelect={onSelect}
+                />
               </td>
               <td className="max-w-[200px] py-1 pr-1">
-                <SecondaryValueCell comparison={row.crossAI} />
+                <SecondaryValueCell
+                  row={row}
+                  interactive={isInteractive}
+                  isSelected={selectedSource === 'secondary'}
+                  isOtherSelected={isAdminSelected && selectedSource !== 'secondary'}
+                  onSelect={onSelect}
+                />
               </td>
               <td className="py-1">
-                <DecisionCell comparison={row.crossAI} />
+                <DecisionCell
+                  comparison={row.crossAI}
+                  isAdminSelected={isAdminSelected}
+                  selectedSource={selectedSource}
+                  t={t}
+                />
               </td>
             </tr>
           );
@@ -300,7 +481,13 @@ function RowsTable({
   );
 }
 
-export function UnifiedVerificationTable({ local, crossAI }: UnifiedVerificationTableProps) {
+export function UnifiedVerificationTable({
+  local,
+  crossAI,
+  selections,
+  onSelect,
+  interactive,
+}: UnifiedVerificationTableProps) {
   const { t } = useTranslation('admin');
 
   const hasLocalData = local !== null;
@@ -338,7 +525,16 @@ export function UnifiedVerificationTable({ local, crossAI }: UnifiedVerification
         )}
 
         {/* All rows in canonical order */}
-        {allRows.length > 0 && <RowsTable rows={allRows} hasLocalData={hasLocalData} t={t} />}
+        {allRows.length > 0 && (
+          <RowsTable
+            rows={allRows}
+            hasLocalData={hasLocalData}
+            t={t}
+            selections={selections}
+            onSelect={onSelect}
+            interactive={interactive}
+          />
+        )}
       </div>
     </TooltipProvider>
   );
