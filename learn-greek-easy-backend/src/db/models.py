@@ -2895,7 +2895,10 @@ class DialogExercise(Base, TimestampMixin):
 
     dialog: Mapped["ListeningDialog"] = relationship(back_populates="exercises", lazy="raise")
     items: Mapped[List["ExerciseItem"]] = relationship(
-        back_populates="exercise", lazy="raise", cascade="all, delete-orphan"
+        back_populates="exercise",
+        lazy="raise",
+        cascade="all, delete-orphan",
+        order_by="ExerciseItem.item_index",
     )
 
 

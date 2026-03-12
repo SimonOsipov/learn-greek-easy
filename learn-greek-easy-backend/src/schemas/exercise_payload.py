@@ -65,6 +65,13 @@ class TrueFalsePayload(BaseModel):
     correct_answer: bool
     explanation: str
 
+    @field_validator("explanation")
+    @classmethod
+    def explanation_non_empty(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("explanation must not be empty or whitespace")
+        return v
+
 
 PAYLOAD_SCHEMA_MAP: dict[ExerciseType, type[BaseModel]] = {
     ExerciseType.FILL_GAPS: FillGapsPayload,
