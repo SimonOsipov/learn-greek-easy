@@ -2934,14 +2934,23 @@ class DialogExerciseAttempt(Base):
     """Record of a student's attempt at a dialog exercise."""
 
     __tablename__ = "dialog_exercise_attempts"
-    __table_args__ = (Index("ix_dialog_exercise_attempts_user_exercise", "user_id", "exercise_id"),)
+    __table_args__ = (
+        Index("ix_dialog_exercise_attempts_user_exercise", "user_id", "exercise_id"),
+        CheckConstraint("score >= 0", name="ck_dialog_exercise_attempts_score_non_negative"),
+        CheckConstraint("max_score > 0", name="ck_dialog_exercise_attempts_max_score_positive"),
+        CheckConstraint("score <= max_score", name="ck_dialog_exercise_attempts_score_lte_max"),
+        CheckConstraint(
+            "time_taken_seconds IS NULL OR time_taken_seconds >= 0",
+            name="ck_dialog_exercise_attempts_time_non_negative",
+        ),
+    )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.uuid_generate_v4())
     user_id: Mapped[UUID] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
     exercise_id: Mapped[UUID] = mapped_column(
-        ForeignKey("dialog_exercises.id", ondelete="CASCADE"), nullable=False
+        ForeignKey("dialog_exercises.id", ondelete="CASCADE"), nullable=False, index=True
     )
     score: Mapped[int] = mapped_column(SmallInteger, nullable=False)
     max_score: Mapped[int] = mapped_column(SmallInteger, nullable=False)
@@ -2962,6 +2971,10 @@ class DialogProgress(Base, TimestampMixin):
     __tablename__ = "dialog_progress"
     __table_args__ = (
         UniqueConstraint("user_id", "dialog_id", name="uq_dialog_progress_user_dialog"),
+        CheckConstraint(
+            "exercises_completed >= 0",
+            name="ck_dialog_progress_exercises_completed_non_negative",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.uuid_generate_v4())
@@ -2969,7 +2982,7 @@ class DialogProgress(Base, TimestampMixin):
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
     dialog_id: Mapped[UUID] = mapped_column(
-        ForeignKey("listening_dialogs.id", ondelete="CASCADE"), nullable=False
+        ForeignKey("listening_dialogs.id", ondelete="CASCADE"), nullable=False, index=True
     )
     exercises_completed: Mapped[int] = mapped_column(
         SmallInteger, nullable=False, default=0, server_default=text("0")
