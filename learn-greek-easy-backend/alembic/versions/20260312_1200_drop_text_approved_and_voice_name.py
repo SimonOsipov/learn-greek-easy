@@ -1,6 +1,6 @@
 """drop text_approved status and voice_name column
 
-Revision ID: a1b2c3d4e5f6
+Revision ID: f3c2a1e9d7b5
 Revises: 8b5463ae5571
 Create Date: 2026-03-12 12:00:00.000000+00:00
 
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "a1b2c3d4e5f6"
+revision: str = "f3c2a1e9d7b5"
 down_revision: Union[str, Sequence[str], None] = "8b5463ae5571"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
