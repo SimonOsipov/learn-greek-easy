@@ -1126,8 +1126,8 @@
     "create": {
       "button": "Create New Dialog",
       "title": "Create Listening Dialog",
-      "description": "Paste a complete dialog as JSON. See the placeholder for the expected format.",
-      "placeholder": "Paste dialog JSON here...",
+      "description": "Paste a complete dialog as JSON.",
+      "placeholder": "{\n  \"scenario_el\": \"...\",\n  \"scenario_en\": \"...\",\n  \"scenario_ru\": \"...\",\n  \"cefr_level\": \"A2\",\n  \"speakers\": [{\"speaker_index\": 0, \"character_name\": \"...\", \"voice_id\": \"...\"}],\n  \"lines\": [{\"speaker_index\": 0, \"text\": \"...\"}]\n}",
       "submit": "Create Dialog",
       "creating": "Creating...",
       "cancel": "Cancel",

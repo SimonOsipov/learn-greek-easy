@@ -24,8 +24,16 @@ def upgrade() -> None:
     # Drop voice_name column from dialog_speakers
     op.drop_column("dialog_speakers", "voice_name")
 
-    # Make voice_id NOT NULL (backfill any NULLs first)
-    op.execute("UPDATE dialog_speakers SET voice_id = 'UNASSIGNED' WHERE voice_id IS NULL")
+    # Make voice_id NOT NULL — fail fast if any rows have NULL (they must be fixed manually)
+    result = op.get_bind().execute(
+        sa.text("SELECT COUNT(*) FROM dialog_speakers WHERE voice_id IS NULL")
+    )
+    null_count = result.scalar()
+    if null_count:
+        raise RuntimeError(
+            f"Cannot make voice_id NOT NULL: {null_count} dialog_speakers row(s) have NULL voice_id. "
+            "Assign valid ElevenLabs voice IDs before running this migration."
+        )
     op.alter_column("dialog_speakers", "voice_id", nullable=False)
 
     # Remove text_approved from dialog_status enum

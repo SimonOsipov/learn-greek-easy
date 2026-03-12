@@ -379,17 +379,23 @@ class ListeningDialogListResponse(BaseModel):
 
 
 class DialogSpeakerCreate(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
     speaker_index: int = Field(ge=0, lt=4)
     character_name: str = Field(min_length=1, max_length=100)
     voice_id: str = Field(min_length=1, max_length=255)
 
 
 class DialogLineCreate(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
     speaker_index: int = Field(ge=0, lt=4)
     text: str = Field(min_length=1, max_length=1000)
 
 
 class ListeningDialogCreateFromJSON(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
     scenario_el: str = Field(min_length=1, max_length=500)
     scenario_en: str = Field(min_length=1, max_length=500)
     scenario_ru: str = Field(min_length=1, max_length=500)

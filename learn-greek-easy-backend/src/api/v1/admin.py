@@ -25,7 +25,11 @@ from src.core.dependencies import SSEAuthResult, get_current_superuser, get_sse_
 from src.core.event_bus import audio_event_bus, news_audio_event_bus
 from src.core.exceptions import (
     ConflictException,
+    ElevenLabsAPIError,
+    ElevenLabsAuthenticationError,
     ElevenLabsNotConfiguredError,
+    ElevenLabsNoVoicesError,
+    ElevenLabsRateLimitError,
     NotFoundException,
     NounGenerationError,
     OpenRouterError,
@@ -3551,10 +3555,17 @@ async def create_listening_dialog(
         invalid = [s.voice_id for s in data.speakers if s.voice_id not in valid_voice_ids]
         if invalid:
             raise HTTPException(status_code=400, detail=f"Invalid voice IDs: {', '.join(invalid)}")
-    except ElevenLabsNotConfiguredError:
+    except ElevenLabsNotConfiguredError as exc:
         raise HTTPException(
             status_code=503, detail="ElevenLabs is not configured — cannot validate voice IDs"
-        )
+        ) from exc
+    except (
+        ElevenLabsAuthenticationError,
+        ElevenLabsRateLimitError,
+        ElevenLabsNoVoicesError,
+        ElevenLabsAPIError,
+    ) as exc:
+        raise HTTPException(status_code=503, detail="Voice validation is unavailable") from exc
 
     try:
         dialog = ListeningDialog(
