@@ -175,7 +175,7 @@ function LocalCell({
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
-            <span className="block max-w-[150px] truncate text-xs">{referenceValue}</span>
+            <span className="block break-words text-xs">{referenceValue}</span>
           </TooltipTrigger>
           <TooltipContent>
             <span className="text-xs">{referenceValue}</span>

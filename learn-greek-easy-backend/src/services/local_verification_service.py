@@ -176,8 +176,33 @@ class LocalVerificationService:
 
         for number, case, form in forms:
             path = f"cases.{number}.{case}"
+            status: str
+            message: str | None
             try:
                 bare = _strip_article(form)
+                ref_value = lexicon_map.get((number, case)) if lexicon_map else None
+
+                if ref_value is not None:
+                    bare_ref = _strip_article(ref_value)
+                    if bare == bare_ref:
+                        status = "pass"
+                        message = "Verified by lexicon"
+                    else:
+                        status = "fail"
+                        message = f"Expected {bare_ref} (lexicon), got {bare}"
+                    check = CheckResult(
+                        check_name="spellcheck",
+                        status=status,
+                        message=message,
+                        reference_value=ref_value,
+                        reference_source="lexicon",
+                    )
+                    logger.debug("Spellcheck %s: %s (lexicon)", path, status)
+                    fields_by_path[path] = FieldVerificationResult(
+                        field_path=path, status=status, checks=[check]
+                    )
+                    continue
+
                 result = self._spellcheck.check(bare)
                 if result.is_valid:
                     status = "pass"
@@ -205,13 +230,12 @@ class LocalVerificationService:
                 )
                 continue
 
-            ref_value = lexicon_map.get((number, case)) if lexicon_map else None
             check = CheckResult(
                 check_name="spellcheck",
                 status=status,
                 message=message,
-                reference_value=ref_value,
-                reference_source="lexicon" if ref_value else None,
+                reference_value=None,
+                reference_source=None,
             )
             logger.debug("Spellcheck %s: %s", path, status)
             fields_by_path[path] = FieldVerificationResult(

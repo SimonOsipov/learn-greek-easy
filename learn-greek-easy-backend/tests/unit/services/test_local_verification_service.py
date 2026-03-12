@@ -1167,3 +1167,152 @@ class TestReferenceValues:
         assert check is not None
         assert check.reference_value == "neuter_i"
         assert check.reference_source == "lexicon"
+
+    def test_lexicon_match_overrides_hunspell(self) -> None:
+        """When lexicon entry matches AI form, status=pass and message='Verified by lexicon'."""
+        mock_spell = MagicMock()
+        mock_spell.check.return_value = _make_spellcheck_result(is_valid=True)
+        svc = LocalVerificationService(spellcheck_service=mock_spell, morphology_service=None)
+        entries = self._make_lexicon_entries()
+
+        result = svc.verify(_make_noun_data(), lexicon_declensions=entries)
+
+        field = _find_field(result, "cases.singular.nominative")
+        assert field is not None
+        assert field.status == "pass"
+        check = _find_check(field, "spellcheck")
+        assert check is not None
+        assert check.status == "pass"
+        assert check.message == "Verified by lexicon"
+        assert check.reference_value == "το σπίτι"
+        assert check.reference_source == "lexicon"
+        # Hunspell should NOT have been called for forms covered by lexicon
+        mock_spell.check.assert_not_called()
+
+    def test_lexicon_mismatch_is_fail(self) -> None:
+        """When lexicon entry differs from AI form, status=fail and message contains 'Expected' and 'lexicon'."""
+        from src.services.lexicon_service import LexiconEntry
+
+        mock_spell = MagicMock()
+        svc = LocalVerificationService(spellcheck_service=mock_spell, morphology_service=None)
+        # Provide one lexicon entry for nominative singular that differs from AI data
+        entries = [
+            LexiconEntry(
+                form="το σπίτιο",  # different from AI "το σπίτι"
+                lemma="σπίτιο",
+                pos="NOUN",
+                gender="Neut",
+                ptosi="Nom",
+                number="Sing",
+            )
+        ]
+
+        result = svc.verify(_make_noun_data(), lexicon_declensions=entries)
+
+        field = _find_field(result, "cases.singular.nominative")
+        assert field is not None
+        assert field.status == "fail"
+        check = _find_check(field, "spellcheck")
+        assert check is not None
+        assert check.status == "fail"
+        assert "Expected" in check.message
+        assert "lexicon" in check.message
+        assert check.reference_value == "το σπίτιο"
+        assert check.reference_source == "lexicon"
+
+    def test_lexicon_partial_coverage_hunspell_fallback(self) -> None:
+        """Forms covered by lexicon use lexicon comparison; uncovered forms use Hunspell."""
+        from src.services.lexicon_service import LexiconEntry
+
+        mock_spell = MagicMock()
+        mock_spell.check.return_value = _make_spellcheck_result(is_valid=True)
+        svc = LocalVerificationService(spellcheck_service=mock_spell, morphology_service=None)
+        # Only provide lexicon entry for nominative singular
+        entries = [
+            LexiconEntry(
+                form="το σπίτι",
+                lemma="σπίτι",
+                pos="NOUN",
+                gender="Neut",
+                ptosi="Nom",
+                number="Sing",
+            )
+        ]
+
+        result = svc.verify(_make_noun_data(), lexicon_declensions=entries)
+
+        # Nominative singular: lexicon path — message is "Verified by lexicon"
+        nom_sg_field = _find_field(result, "cases.singular.nominative")
+        assert nom_sg_field is not None
+        nom_sg_check = _find_check(nom_sg_field, "spellcheck")
+        assert nom_sg_check is not None
+        assert nom_sg_check.message == "Verified by lexicon"
+
+        # Genitive singular: no lexicon entry — Hunspell was called
+        gen_sg_field = _find_field(result, "cases.singular.genitive")
+        assert gen_sg_field is not None
+        gen_sg_check = _find_check(gen_sg_field, "spellcheck")
+        assert gen_sg_check is not None
+        assert gen_sg_check.reference_value is None
+        # Hunspell was called for the uncovered forms
+        assert mock_spell.check.called
+
+    def test_lexicon_match_strips_articles(self) -> None:
+        """Article stripping is applied to both AI form and lexicon reference before comparison."""
+        from src.services.lexicon_service import LexiconEntry
+
+        mock_spell = MagicMock()
+        svc = LocalVerificationService(spellcheck_service=mock_spell, morphology_service=None)
+        # Lexicon has article; AI also has article — both should strip to same bare form
+        entries = [
+            LexiconEntry(
+                form="το σπίτι",  # with article
+                lemma="σπίτι",
+                pos="NOUN",
+                gender="Neut",
+                ptosi="Nom",
+                number="Sing",
+            )
+        ]
+        noun = _make_noun_data(nom_sg="το σπίτι")  # AI form also has article
+
+        result = svc.verify(noun, lexicon_declensions=entries)
+
+        field = _find_field(result, "cases.singular.nominative")
+        assert field is not None
+        check = _find_check(field, "spellcheck")
+        assert check is not None
+        assert check.status == "pass"
+        assert check.message == "Verified by lexicon"
+        # Hunspell not called for this form
+        mock_spell.check.assert_not_called()
+
+    def test_lexicon_mismatch_vocative_is_fail_not_warn(self) -> None:
+        """Lexicon mismatch on vocative yields fail (not warn like Hunspell gives for vocatives)."""
+        from src.services.lexicon_service import LexiconEntry
+
+        mock_spell = MagicMock()
+        svc = LocalVerificationService(spellcheck_service=mock_spell, morphology_service=None)
+        # Lexicon vocative differs from AI vocative
+        entries = [
+            LexiconEntry(
+                form="σπιτάκι",  # different vocative
+                lemma="σπίτι",
+                pos="NOUN",
+                gender="Neut",
+                ptosi="Voc",
+                number="Sing",
+            )
+        ]
+        noun = _make_noun_data(voc_sg="σπίτι")  # AI vocative
+
+        result = svc.verify(noun, lexicon_declensions=entries)
+
+        field = _find_field(result, "cases.singular.vocative")
+        assert field is not None
+        assert field.status == "fail"  # fail, not warn
+        check = _find_check(field, "spellcheck")
+        assert check is not None
+        assert check.status == "fail"
+        assert "Expected" in check.message
+        assert "lexicon" in check.message
