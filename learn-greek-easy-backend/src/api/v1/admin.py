@@ -9,15 +9,17 @@ All endpoints require superuser authentication.
 """
 
 import asyncio
+import base64
 from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
 from typing import Any, Literal, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
-from sqlalchemy import case, delete, func, or_, select
+from sqlalchemy import case, delete, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 from starlette.responses import StreamingResponse
 
 from src.config import settings
@@ -3604,3 +3606,199 @@ async def create_listening_dialog(
     except IntegrityError:
         await db.rollback()
         raise HTTPException(status_code=409, detail="Dialog could not be created due to a conflict")
+
+
+async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, None]:  # noqa: C901
+    """SSE generator for dialog audio generation pipeline."""
+    try:
+        yield format_sse_event("", event="connected")
+
+        # Stage 1 — Load
+        factory = get_session_factory()
+        dialog_data: dict = {}
+        lines_data: list[dict] = []
+        speakers_data: dict = {}
+
+        async with factory.begin() as session:
+            result = await session.execute(
+                select(ListeningDialog)
+                .options(
+                    selectinload(ListeningDialog.speakers),
+                    selectinload(ListeningDialog.lines),
+                )
+                .where(ListeningDialog.id == dialog_id)
+            )
+            dialog = result.scalar_one_or_none()
+
+            if dialog is None:
+                yield format_sse_event(
+                    {"stage": "load", "error": "Dialog not found", "dialog_id": str(dialog_id)},
+                    event="dialog_audio:error",
+                )
+                return
+
+            if dialog.status != DialogStatus.DRAFT:
+                yield format_sse_event(
+                    {
+                        "stage": "load",
+                        "error": f"Dialog status is {dialog.status.value}, expected draft",
+                        "dialog_id": str(dialog_id),
+                    },
+                    event="dialog_audio:error",
+                )
+                return
+
+            # Extract all data before session closes (ORM objects become detached)
+            dialog_data = {"id": str(dialog.id)}
+            lines_data = [
+                {
+                    "id": str(line.id),
+                    "line_index": line.line_index,
+                    "text": line.text,
+                    "speaker_id": str(line.speaker_id),
+                }
+                for line in dialog.lines
+            ]
+            speakers_data = {str(speaker.id): speaker.voice_id for speaker in dialog.speakers}
+
+        yield format_sse_event({"dialog_id": dialog_data["id"]}, event="dialog_audio:start")
+
+        # Stage 2 — Build inputs
+        sorted_lines = sorted(lines_data, key=lambda ln: ln["line_index"])
+        inputs = [
+            {"text": line["text"], "voice_id": speakers_data[line["speaker_id"]]}
+            for line in sorted_lines
+        ]
+        speaker_ids = {line["speaker_id"] for line in lines_data}
+
+        yield format_sse_event(
+            {"line_count": len(inputs), "speaker_count": len(speaker_ids)},
+            event="dialog_audio:elevenlabs",
+        )
+
+        # Stage 3 — ElevenLabs call
+        from src.services.elevenlabs_service import get_elevenlabs_service
+
+        elevenlabs = get_elevenlabs_service()
+        try:
+            result_data = await elevenlabs.generate_dialog_audio(inputs)
+        except Exception as e:
+            yield format_sse_event(
+                {"stage": "elevenlabs", "error": str(e), "dialog_id": dialog_data["id"]},
+                event="dialog_audio:error",
+            )
+            return
+
+        # Stage 4 — Decode + Upload
+        audio_bytes = base64.b64decode(result_data["audio_base64"])
+        s3_key = f"dialog-audio/{dialog_id}.mp3"
+
+        s3 = get_s3_service()
+        upload_ok = s3.upload_object(s3_key, audio_bytes, "audio/mpeg")
+        if not upload_ok:
+            yield format_sse_event(
+                {"stage": "upload", "error": "S3 upload failed", "dialog_id": dialog_data["id"]},
+                event="dialog_audio:error",
+            )
+            return
+
+        yield format_sse_event(
+            {"s3_key": s3_key, "audio_size_bytes": len(audio_bytes)},
+            event="dialog_audio:upload",
+        )
+
+        # Stage 5 — Timing
+        try:
+            voice_segments = result_data.get("voice_segments")
+            if not voice_segments:
+                raise ValueError("voice_segments missing or empty in ElevenLabs response")
+
+            timing_map: dict[int, tuple[int, int]] = {}
+            for seg in voice_segments:
+                idx = seg["dialogue_input_index"]
+                start_ms = int(seg["start_time_seconds"] * 1000)
+                end_ms = int(seg["end_time_seconds"] * 1000)
+                timing_map[idx] = (start_ms, end_ms)
+
+            for i in range(len(sorted_lines)):
+                if i not in timing_map:
+                    raise ValueError(f"No timing segment for line index {i}")
+
+            duration_seconds = voice_segments[-1]["end_time_seconds"]
+        except Exception as e:
+            yield format_sse_event(
+                {"stage": "timing", "error": str(e), "dialog_id": dialog_data["id"]},
+                event="dialog_audio:error",
+            )
+            return
+
+        yield format_sse_event(
+            {"segments_count": len(voice_segments)},
+            event="dialog_audio:timing",
+        )
+
+        # Stage 6 — Persist
+        async with factory.begin() as session:
+            await session.execute(
+                update(ListeningDialog)
+                .where(ListeningDialog.id == dialog_id)
+                .values(
+                    audio_s3_key=s3_key,
+                    audio_generated_at=datetime.now(timezone.utc),
+                    audio_file_size_bytes=len(audio_bytes),
+                    audio_duration_seconds=duration_seconds,
+                    status=DialogStatus.AUDIO_READY,
+                )
+            )
+            for i, line in enumerate(sorted_lines):
+                start_ms, end_ms = timing_map[i]
+                await session.execute(
+                    update(DialogLine)
+                    .where(DialogLine.id == UUID(line["id"]))
+                    .values(start_time_ms=start_ms, end_time_ms=end_ms)
+                )
+
+        yield format_sse_event(
+            {
+                "dialog_id": dialog_data["id"],
+                "s3_key": s3_key,
+                "duration_seconds": duration_seconds,
+                "audio_size_bytes": len(audio_bytes),
+            },
+            event="dialog_audio:complete",
+        )
+
+    except Exception as e:
+        yield format_sse_event(
+            {"stage": "unknown", "error": str(e), "dialog_id": str(dialog_id)},
+            event="dialog_audio:error",
+        )
+
+
+@router.post(
+    "/listening-dialogs/{dialog_id}/generate-audio/stream",
+    summary="Generate dialog audio via ElevenLabs text-to-dialogue as SSE stream",
+    response_class=StreamingResponse,
+)
+async def generate_dialog_audio_stream(
+    dialog_id: UUID,
+    sse_auth: SSEAuthResult = Depends(get_sse_auth),
+) -> StreamingResponse:
+    """Stream dialog audio generation pipeline stages as SSE events."""
+    if not sse_auth.is_authenticated:
+        return _sse_single_error(
+            sse_auth.error_code or "auth_required",
+            sse_auth.error_message or "Authentication required",
+        )
+
+    assert sse_auth.user is not None
+
+    if not sse_auth.user.is_superuser:
+        return _sse_single_error("forbidden", "Admin access required")
+
+    if not settings.elevenlabs_configured:
+        return _sse_single_error("service_unavailable", "ElevenLabs is not configured")
+
+    return create_sse_response(
+        sse_stream(_dialog_audio_sse_pipeline(dialog_id), heartbeat_interval=15)
+    )
