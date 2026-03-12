@@ -146,8 +146,9 @@ export function buildWordEntryPayload(params: BuildPayloadParams): WordEntryInpu
   };
 
   // Pronunciation: use verification selection if present, else editablePronunciation
+  const resolvedPronunciation = resolveFieldValue('pronunciation', selectionMap, verification);
   const pronunciation =
-    resolveFieldValue('pronunciation', selectionMap, verification) || editablePronunciation || null;
+    resolvedPronunciation !== null ? resolvedPronunciation || null : editablePronunciation || null;
 
   const asciiLemma = toAsciiLemma(generation.lemma);
   const examples: WordEntryExampleSentence[] = editableExamples.map((ex, i) => ({

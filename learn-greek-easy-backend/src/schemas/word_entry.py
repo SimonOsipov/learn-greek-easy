@@ -560,6 +560,7 @@ class WordEntryBulkCreate(BaseModel):
     @field_validator("translation_ru_plural", mode="before")
     @classmethod
     def strip_translation_ru_plural(cls, v: str | None) -> str | None:
+        """Strip whitespace from Russian plural translation if provided."""
         if v is None:
             return None
         if isinstance(v, str):

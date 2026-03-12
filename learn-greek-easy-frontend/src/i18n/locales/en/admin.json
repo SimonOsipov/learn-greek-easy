@@ -1054,7 +1054,12 @@
         "local": "Local",
         "crossAi": "Cross-AI"
       },
-      "resolvedTooltip": "Resolved by admin — using {{source}} value"
+      "resolvedTooltip": "Resolved by admin — using {{source}} value",
+      "sourceLabels": {
+        "local": "Local",
+        "primary": "Primary",
+        "secondary": "Secondary"
+      }
     },
     "approve": {
       "button": "Approve & Save",

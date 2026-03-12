@@ -238,16 +238,18 @@ function LocalCell({
 
   if (clickable) {
     return (
-      <div
+      <button
+        type="button"
         className={cn(
           'cursor-pointer hover:bg-accent/50',
           isSelected ? 'ring-2 ring-primary' : '',
           isOtherSelected ? 'opacity-50' : ''
         )}
+        aria-pressed={isSelected}
         onClick={() => onSelect?.(row.field_path, 'local')}
       >
         {cellContent}
-      </div>
+      </button>
     );
   }
 
@@ -298,16 +300,18 @@ function PrimaryValueCell({
 
   if (clickable) {
     return (
-      <div
+      <button
+        type="button"
         className={cn(
           'cursor-pointer hover:bg-accent/50',
           isSelected ? 'ring-2 ring-primary' : '',
           isOtherSelected ? 'opacity-50' : ''
         )}
+        aria-pressed={isSelected}
         onClick={() => onSelect?.(row.field_path, 'primary')}
       >
         {content}
-      </div>
+      </button>
     );
   }
 
@@ -335,16 +339,18 @@ function SecondaryValueCell({
 
   if (clickable) {
     return (
-      <div
+      <button
+        type="button"
         className={cn(
           'cursor-pointer hover:bg-accent/50',
           isSelected ? 'ring-2 ring-primary' : '',
           isOtherSelected ? 'opacity-50' : ''
         )}
+        aria-pressed={isSelected}
         onClick={() => onSelect?.(row.field_path, 'secondary')}
       >
         {content}
-      </div>
+      </button>
     );
   }
 
@@ -373,7 +379,9 @@ function DecisionCell({
         </TooltipTrigger>
         <TooltipContent>
           <span className="text-xs">
-            {t('generateNoun.verification.resolvedTooltip', { source: selectedSource })}
+            {t('generateNoun.verification.resolvedTooltip', {
+              source: t(`generateNoun.verification.sourceLabels.${selectedSource}`),
+            })}
           </span>
         </TooltipContent>
       </Tooltip>

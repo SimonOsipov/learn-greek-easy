@@ -642,6 +642,31 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                           next.set(fieldPath, source);
                           return next;
                         });
+                        // Sync pronunciation textbox with selected source
+                        if (fieldPath === 'pronunciation' && displayVerification) {
+                          if (source === 'local' && displayVerification.local) {
+                            const field = displayVerification.local.fields.find(
+                              (f) => f.field_path === 'pronunciation'
+                            );
+                            const ref = field?.checks.find(
+                              (c) => c.reference_value != null
+                            )?.reference_value;
+                            if (ref != null) setEditablePronunciation(ref);
+                          } else if (
+                            (source === 'primary' || source === 'secondary') &&
+                            displayVerification.cross_ai
+                          ) {
+                            const comp = displayVerification.cross_ai.comparisons.find(
+                              (c) => c.field_path === 'pronunciation'
+                            );
+                            if (comp)
+                              setEditablePronunciation(
+                                source === 'primary'
+                                  ? (comp.primary_value ?? '')
+                                  : (comp.secondary_value ?? '')
+                              );
+                          }
+                        }
                       }}
                       interactive
                     />

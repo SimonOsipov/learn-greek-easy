@@ -337,6 +337,7 @@ class WordEntryRepository(BaseRepository[WordEntry]):
             "translation_en",
             "translation_en_plural",
             "translation_ru",
+            "translation_ru_plural",
             "pronunciation",
             "grammar_data",
             "examples",

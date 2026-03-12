@@ -58,13 +58,20 @@ describe('toAsciiLemma', () => {
 
 const mockLocal: LocalVerificationResult = {
   tier: 'auto_approve',
-  fail_count: 0,
-  warn_count: 0,
+  stages_skipped: [],
+  summary: 'All checks passed',
   fields: [
     {
       field_path: 'grammar_data.gender',
+      status: 'pass',
       checks: [
-        { check_type: 'spellcheck', status: 'pass', reference_value: 'masculine', detail: null },
+        {
+          check_name: 'spellcheck',
+          status: 'pass',
+          message: null,
+          reference_value: 'masculine',
+          reference_source: null,
+        },
       ],
     },
   ],
@@ -77,14 +84,20 @@ const mockCrossAI: CrossAIVerificationResult = {
       primary_value: 'masculine',
       secondary_value: 'neuter',
       agrees: false,
+      weight: 1,
     },
     {
       field_path: 'cases.singular.nominative',
       primary_value: 'ο άντρας',
       secondary_value: 'άντρας',
       agrees: true,
+      weight: 1,
     },
   ],
+  overall_agreement: 0.5,
+  secondary_model: 'test-model',
+  secondary_generation: null,
+  error: null,
 };
 
 const mockVerification = { local: mockLocal, cross_ai: mockCrossAI };
