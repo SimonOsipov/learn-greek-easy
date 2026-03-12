@@ -1596,6 +1596,18 @@ export const adminAPI = {
     return api.delete<void>(`/api/v1/admin/decks/${deckId}/word-entries/${wordEntryId}/link`);
   },
 
+  /**
+   * Delete a word entry permanently
+   *
+   * Removes the word entry, its card records, deck links, and S3 audio.
+   * Requires superuser authentication.
+   *
+   * @param wordEntryId - UUID of the word entry to delete
+   */
+  deleteWordEntry: async (wordEntryId: string): Promise<void> => {
+    return api.delete<void>(`/api/v1/admin/word-entries/${wordEntryId}`);
+  },
+
   getListeningDialogs: async (
     page: number,
     pageSize: number,

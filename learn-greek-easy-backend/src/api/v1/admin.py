@@ -3399,6 +3399,74 @@ async def unlink_word_entry_from_deck(
     await db.commit()
 
 
+@router.delete(
+    "/word-entries/{word_entry_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete word entry",
+    description="Permanently delete a word entry, its card records, deck links, and S3 audio. Requires superuser privileges.",
+    responses={
+        204: {"description": "Word entry deleted successfully"},
+        404: {"description": "Word entry not found"},
+    },
+)
+async def delete_word_entry(
+    word_entry_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> None:
+    """Delete a word entry permanently (admin only).
+
+    Deletes the word entry from DB and best-effort deletes S3 audio files.
+    CardRecords are cascade-deleted by ORM. DeckWordEntry rows are cascade-deleted by DB FK.
+
+    Args:
+        word_entry_id: UUID of the word entry to delete
+        db: Database session (injected)
+        current_user: Authenticated superuser (injected)
+
+    Raises:
+        404: If word entry not found
+    """
+    result = await db.execute(select(WordEntry).where(WordEntry.id == word_entry_id))
+    word_entry = result.scalar_one_or_none()
+    if word_entry is None:
+        raise NotFoundException(
+            resource="WordEntry", detail=f"Word entry '{word_entry_id}' not found"
+        )
+
+    # Collect S3 keys before deletion
+    s3_keys: list[str] = []
+    if word_entry.audio_key:
+        s3_keys.append(word_entry.audio_key)
+    for example in word_entry.examples or []:
+        audio_key = example.get("audio_key")
+        if audio_key:
+            s3_keys.append(audio_key)
+
+    logger.info(
+        "Deleting word entry",
+        extra={
+            "word_entry_id": str(word_entry_id),
+            "lemma": word_entry.lemma,
+            "s3_keys_count": len(s3_keys),
+        },
+    )
+
+    # Best-effort S3 cleanup (do NOT await — synchronous method)
+    s3 = get_s3_service()
+    for key in s3_keys:
+        try:
+            s3.delete_object(key)
+        except Exception:
+            logger.warning(
+                "Failed to delete S3 audio during word entry deletion",
+                extra={"s3_key": key, "word_entry_id": str(word_entry_id)},
+            )
+
+    await db.delete(word_entry)
+    await db.commit()
+
+
 # ========================
 # Listening Dialogs Admin Endpoints
 # ========================
