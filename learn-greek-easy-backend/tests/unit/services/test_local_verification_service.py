@@ -1259,21 +1259,10 @@ class TestReferenceValues:
 
     def test_lexicon_match_strips_articles(self) -> None:
         """Article stripping is applied to both AI form and lexicon reference before comparison."""
-        from src.services.lexicon_service import LexiconEntry
-
         mock_spell = MagicMock()
         svc = LocalVerificationService(spellcheck_service=mock_spell, morphology_service=None)
-        # Lexicon has article; AI also has article — both should strip to same bare form
-        entries = [
-            LexiconEntry(
-                form="το σπίτι",  # with article
-                lemma="σπίτι",
-                pos="NOUN",
-                gender="Neut",
-                ptosi="Nom",
-                number="Sing",
-            )
-        ]
+        # Full lexicon coverage; lexicon has articles; AI also has articles — both strip to same bare forms
+        entries = self._make_lexicon_entries()
         noun = _make_noun_data(nom_sg="το σπίτι")  # AI form also has article
 
         result = svc.verify(noun, lexicon_declensions=entries)

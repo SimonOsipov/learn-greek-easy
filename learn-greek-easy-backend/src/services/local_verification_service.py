@@ -243,8 +243,31 @@ class LocalVerificationService:
             )
 
         # lemma
+        ref_lemma = lexicon_declensions[0].lemma if lexicon_declensions else None
+        bare_lemma = _strip_article(data.lemma)
+
+        if ref_lemma is not None:
+            bare_ref_lemma = _strip_article(ref_lemma)
+            if bare_lemma == bare_ref_lemma:
+                status = "pass"
+                message = "Verified by lexicon"
+            else:
+                status = "fail"
+                message = f"Expected {bare_ref_lemma} (lexicon), got {bare_lemma}"
+            check = CheckResult(
+                check_name="spellcheck",
+                status=status,
+                message=message,
+                reference_value=ref_lemma,
+                reference_source="lexicon",
+            )
+            logger.debug("Spellcheck lemma: %s (lexicon)", status)
+            fields_by_path["lemma"] = FieldVerificationResult(
+                field_path="lemma", status=status, checks=[check]
+            )
+            return
+
         try:
-            bare_lemma = _strip_article(data.lemma)
             result = self._spellcheck.check(bare_lemma)
             if result.is_valid:
                 status = "pass"
@@ -254,26 +277,24 @@ class LocalVerificationService:
                 message = f"'{bare_lemma}' not in dictionary"
         except Exception as exc:  # noqa: BLE001
             logger.warning("Spellcheck failed for lemma: %s", exc)
-            ref_lemma = lexicon_declensions[0].lemma if lexicon_declensions else None
             exc_check = CheckResult(
                 check_name="spellcheck",
                 status="warn",
                 message=f"Spellcheck raised an exception: {exc}",
-                reference_value=ref_lemma,
-                reference_source="lexicon" if ref_lemma else None,
+                reference_value=None,
+                reference_source=None,
             )
             fields_by_path["lemma"] = FieldVerificationResult(
                 field_path="lemma", status="warn", checks=[exc_check]
             )
             return
 
-        ref_lemma = lexicon_declensions[0].lemma if lexicon_declensions else None
         check = CheckResult(
             check_name="spellcheck",
             status=status,
             message=message,
-            reference_value=ref_lemma,
-            reference_source="lexicon" if ref_lemma else None,
+            reference_value=None,
+            reference_source=None,
         )
         logger.debug("Spellcheck lemma: %s", status)
         fields_by_path["lemma"] = FieldVerificationResult(
