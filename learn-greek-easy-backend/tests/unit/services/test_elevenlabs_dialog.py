@@ -31,7 +31,7 @@ SAMPLE_RESPONSE = {
 def mock_settings_configured():
     """Settings with ElevenLabs configured (valid API key)."""
     with patch("src.services.elevenlabs_service.settings") as mock:
-        mock.elevenlabs_api_key = "test-api-key-12345"
+        mock.elevenlabs_api_key = "unit-test-placeholder"
         mock.elevenlabs_configured = True
         mock.elevenlabs_model_id = "eleven_multilingual_v2"
         mock.elevenlabs_dialog_model_id = "eleven_v3"

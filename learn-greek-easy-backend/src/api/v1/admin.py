@@ -3689,25 +3689,11 @@ async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, Non
             )
             return
 
-        # Stage 4 — Decode + Upload
+        # Stage 4 — Decode audio bytes
         audio_bytes = base64.b64decode(result_data["audio_base64"])
         s3_key = f"dialog-audio/{dialog_id}.mp3"
 
-        s3 = get_s3_service()
-        upload_ok = s3.upload_object(s3_key, audio_bytes, "audio/mpeg")
-        if not upload_ok:
-            yield format_sse_event(
-                {"stage": "upload", "error": "S3 upload failed", "dialog_id": dialog_data["id"]},
-                event="dialog_audio:error",
-            )
-            return
-
-        yield format_sse_event(
-            {"s3_key": s3_key, "audio_size_bytes": len(audio_bytes)},
-            event="dialog_audio:upload",
-        )
-
-        # Stage 5 — Timing
+        # Stage 5 — Timing (validate before uploading to avoid orphaned S3 objects)
         try:
             voice_segments = result_data.get("voice_segments")
             if not voice_segments:
@@ -3735,6 +3721,21 @@ async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, Non
         yield format_sse_event(
             {"segments_count": len(voice_segments)},
             event="dialog_audio:timing",
+        )
+
+        # Stage 4 (continued) — Upload after timing is validated
+        s3 = get_s3_service()
+        upload_ok = s3.upload_object(s3_key, audio_bytes, "audio/mpeg")
+        if not upload_ok:
+            yield format_sse_event(
+                {"stage": "upload", "error": "S3 upload failed", "dialog_id": dialog_data["id"]},
+                event="dialog_audio:error",
+            )
+            return
+
+        yield format_sse_event(
+            {"s3_key": s3_key, "audio_size_bytes": len(audio_bytes)},
+            event="dialog_audio:upload",
         )
 
         # Stage 6 — Persist
