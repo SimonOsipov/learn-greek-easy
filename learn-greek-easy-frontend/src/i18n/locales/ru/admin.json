@@ -1064,10 +1064,7 @@
       "headers": {
         "local": "Локальная",
         "crossAi": "Кросс-AI"
-      },
-      "sourceDictionary": "Словарь",
-      "sourcePivot": "Сводный",
-      "sourceLexicon": "Лексикон"
+      }
     }
   },
   "wordEntry": {

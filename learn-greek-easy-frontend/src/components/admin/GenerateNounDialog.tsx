@@ -383,15 +383,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
 
           {hasResult && displayPrimary ? (
             <>
-              <div
-                data-testid="generate-noun-content-area"
-                className={cn(
-                  displayVerification
-                    ? 'grid grid-cols-1 gap-6 md:grid-cols-[45%_55%]'
-                    : 'space-y-4'
-                )}
-              >
-                {/* LEFT PANEL - always shown */}
+              <div data-testid="generate-noun-content-area" className="space-y-4">
                 <div className="space-y-4">
                   <div data-testid="generate-noun-result" className="space-y-4">
                     <h3 className="font-medium">{t('generateNoun.normalizationResult')}</h3>
@@ -411,7 +403,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                     )}
                   </div>
                   {displayPrimary && (
-                    <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="grid grid-cols-4 gap-3 text-sm">
                       <div>
                         <span className="font-medium">{t('generateNoun.lemmaLabel')}</span>
                         <p data-testid="result-lemma" className="text-muted-foreground">
@@ -565,7 +557,6 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                   )}
                 </div>
 
-                {/* RIGHT PANEL - verification, only shown when verification present */}
                 {displayVerification && (
                   <div data-testid="verification-section" className="space-y-3">
                     <div className="flex items-center gap-2">
