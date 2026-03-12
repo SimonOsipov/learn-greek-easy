@@ -15,6 +15,11 @@ XP_STREAK_MULTIPLIER = 10  # x streak_days
 XP_CULTURE_CORRECT = 10  # Same as XP_CORRECT_ANSWER
 XP_CULTURE_WRONG = 2  # Encouragement for wrong answers (MANDATORY)
 
+# Dialog exercise XP
+XP_DIALOG_EXERCISE_COMPLETE = 10
+XP_DIALOG_WRONG_ANSWER = 2
+XP_DIALOG_ALL_COMPLETE = 25
+
 # Perfect recall threshold in seconds
 PERFECT_RECALL_THRESHOLD_SECONDS = 2
 

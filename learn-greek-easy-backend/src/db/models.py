@@ -11,7 +11,7 @@ This module contains all SQLAlchemy models for the application:
 - Culture Exam (CultureDeck, CultureQuestion, CultureQuestionStats, CultureAnswerHistory)
 - Announcement Campaigns (AnnouncementCampaign)
 - Changelog (ChangelogEntry)
-- Listening Dialogs (ListeningDialog, DialogSpeaker, DialogLine, DialogExercise, ExerciseItem)
+- Listening Dialogs (ListeningDialog, DialogSpeaker, DialogLine, DialogExercise, ExerciseItem, DialogExerciseAttempt, DialogProgress)
 
 All models use:
 - UUID primary keys with server-side generation
@@ -2793,6 +2793,9 @@ class ListeningDialog(Base, TimestampMixin):
     exercises: Mapped[List["DialogExercise"]] = relationship(
         back_populates="dialog", lazy="raise", cascade="all, delete-orphan"
     )
+    progress: Mapped[List["DialogProgress"]] = relationship(
+        back_populates="dialog", lazy="raise", cascade="all, delete-orphan"
+    )
 
     def __repr__(self) -> str:
         return f"<ListeningDialog id={self.id} cefr_level={self.cefr_level} status={self.status}>"
@@ -2900,6 +2903,9 @@ class DialogExercise(Base, TimestampMixin):
         cascade="all, delete-orphan",
         order_by="ExerciseItem.item_index",
     )
+    attempts: Mapped[List["DialogExerciseAttempt"]] = relationship(
+        back_populates="exercise", lazy="raise", cascade="all, delete-orphan"
+    )
 
 
 class ExerciseItem(Base):
@@ -2922,6 +2928,63 @@ class ExerciseItem(Base):
     )
 
     exercise: Mapped["DialogExercise"] = relationship(back_populates="items", lazy="raise")
+
+
+class DialogExerciseAttempt(Base):
+    """Record of a student's attempt at a dialog exercise."""
+
+    __tablename__ = "dialog_exercise_attempts"
+    __table_args__ = (Index("ix_dialog_exercise_attempts_user_exercise", "user_id", "exercise_id"),)
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.uuid_generate_v4())
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    exercise_id: Mapped[UUID] = mapped_column(
+        ForeignKey("dialog_exercises.id", ondelete="CASCADE"), nullable=False
+    )
+    score: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    max_score: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    time_taken_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    completed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    exercise: Mapped["DialogExercise"] = relationship(back_populates="attempts", lazy="raise")
+
+    def __repr__(self) -> str:
+        return f"<DialogExerciseAttempt id={self.id} user_id={self.user_id} exercise_id={self.exercise_id} score={self.score}/{self.max_score}>"
+
+
+class DialogProgress(Base, TimestampMixin):
+    """Per-user progress on a listening dialog."""
+
+    __tablename__ = "dialog_progress"
+    __table_args__ = (
+        UniqueConstraint("user_id", "dialog_id", name="uq_dialog_progress_user_dialog"),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.uuid_generate_v4())
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    dialog_id: Mapped[UUID] = mapped_column(
+        ForeignKey("listening_dialogs.id", ondelete="CASCADE"), nullable=False
+    )
+    exercises_completed: Mapped[int] = mapped_column(
+        SmallInteger, nullable=False, default=0, server_default=text("0")
+    )
+    all_completed: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    first_completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    dialog: Mapped["ListeningDialog"] = relationship(back_populates="progress", lazy="raise")
+
+    def __repr__(self) -> str:
+        return f"<DialogProgress id={self.id} user_id={self.user_id} dialog_id={self.dialog_id} completed={self.exercises_completed}/3>"
 
 
 class Translation(Base):
