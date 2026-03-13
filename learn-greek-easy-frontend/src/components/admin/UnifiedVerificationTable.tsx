@@ -4,7 +4,6 @@ import { AlertCircle, AlertTriangle, Check, MinusCircle, Pencil, XCircle } from 
 import { useTranslation } from 'react-i18next';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -549,10 +548,10 @@ function RowsTable({
               data-testid={`unified-row-${row.field_path}`}
               className="border-b last:border-0"
             >
-              <td className="py-1 pr-1">
+              <td className="py-1 pr-1 align-middle">
                 <FieldCell path={row.field_path} severity={severity} />
               </td>
-              <td className="py-1">
+              <td className="py-1 align-middle">
                 <LocalCell
                   row={row}
                   hasLocalData={hasLocalData}
@@ -564,7 +563,7 @@ function RowsTable({
                   onResolvedValueChange={onResolvedValueChange}
                 />
               </td>
-              <td className="py-1 pr-1">
+              <td className="py-1 pr-1 align-middle">
                 <PrimaryValueCell
                   row={row}
                   interactive={isInteractive}
@@ -574,7 +573,7 @@ function RowsTable({
                   onResolvedValueChange={onResolvedValueChange}
                 />
               </td>
-              <td className="py-1 pl-2 pr-1">
+              <td className="py-1 pl-2 pr-1 align-middle">
                 <SecondaryValueCell
                   row={row}
                   interactive={isInteractive}
@@ -584,7 +583,7 @@ function RowsTable({
                   onResolvedValueChange={onResolvedValueChange}
                 />
               </td>
-              <td className="py-1">
+              <td className="py-1 align-middle">
                 {resolvedValues?.has(row.field_path) ? (
                   <DecisionPill
                     fieldPath={row.field_path}
@@ -616,7 +615,6 @@ export function UnifiedVerificationTable({
   const { t } = useTranslation('admin');
 
   const hasLocalData = local !== null;
-  const hasCrossAIData = crossAI !== null && !crossAI.error;
   const allRows = buildRows(local, crossAI).sort((a, b) => {
     const ai = CANONICAL_ORDER.indexOf(a.field_path);
     const bi = CANONICAL_ORDER.indexOf(b.field_path);
@@ -636,17 +634,6 @@ export function UnifiedVerificationTable({
               {t('generateNoun.verification.crossAiUnavailable')}: {crossAI.error}
             </AlertDescription>
           </Alert>
-        )}
-
-        {/* Agreement badge */}
-        {hasCrossAIData && crossAI?.overall_agreement != null && (
-          <div data-testid="cross-ai-agreement">
-            <Badge variant="outline" className="text-xs">
-              {t('generateNoun.verification.agreementScore', {
-                percentage: Math.round(crossAI.overall_agreement * 100),
-              })}
-            </Badge>
-          </div>
         )}
 
         {/* All rows in canonical order */}

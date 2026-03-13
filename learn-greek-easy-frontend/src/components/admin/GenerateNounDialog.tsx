@@ -1,6 +1,6 @@
 // src/components/admin/GenerateNounDialog.tsx
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useMutation } from '@tanstack/react-query';
 import { AlertCircle, Info, Loader2 } from 'lucide-react';
@@ -276,10 +276,6 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
 
   const warningKey =
     validation.reason === 'tooLong' ? 'generateNoun.tooLong' : 'generateNoun.invalidGreek';
-
-  const unresolvedCount = useMemo(() => {
-    return [...resolvedValues.values()].filter((pill) => pill.status === 'unresolved').length;
-  }, [resolvedValues]);
 
   const approveMutation = useMutation({
     mutationFn: async () => {
@@ -629,6 +625,20 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                         {t('generateNoun.verification.combinedTier')}
                       </h3>
                       <VerificationTierBadge tier={displayVerification.combined_tier} />
+                      {displayVerification.cross_ai?.overall_agreement != null &&
+                        !displayVerification.cross_ai?.error && (
+                          <Badge
+                            variant="outline"
+                            className="text-xs"
+                            data-testid="cross-ai-agreement"
+                          >
+                            {t('generateNoun.verification.agreementScore', {
+                              percentage: Math.round(
+                                displayVerification.cross_ai.overall_agreement * 100
+                              ),
+                            })}
+                          </Badge>
+                        )}
                     </div>
                     <UnifiedVerificationTable
                       local={displayVerification.local}
@@ -756,11 +766,6 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
               <DialogFooter>
                 {pipelineStatus === 'done' && displayGeneration && displayVerification && (
                   <>
-                    {unresolvedCount > 0 && (
-                      <p className="text-xs text-muted-foreground" data-testid="unresolved-warning">
-                        {t('generateNoun.approve.unresolvedWarning', { count: unresolvedCount })}
-                      </p>
-                    )}
                     <Button
                       data-testid="approve-save-button"
                       onClick={() => approveMutation.mutate()}

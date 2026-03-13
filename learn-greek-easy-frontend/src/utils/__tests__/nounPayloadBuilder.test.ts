@@ -133,6 +133,29 @@ describe('buildWordEntryPayload', () => {
     expect(payload.part_of_speech).toBe('noun');
   });
 
+  it('uses resolved lemma when present in resolvedValues', () => {
+    const map = makeMap({ lemma: 'σκύλος' });
+    const payload = buildWordEntryPayload({
+      generation: mockGeneration,
+      resolvedValues: map,
+      editableExamples: [],
+    });
+
+    expect(payload.lemma).toBe('σκύλος');
+  });
+
+  it('uses resolved lemma ASCII form for example IDs', () => {
+    const map = makeMap({ lemma: 'σκύλος' });
+    const payload = buildWordEntryPayload({
+      generation: mockGeneration,
+      resolvedValues: map,
+      editableExamples: defaultEditableExamples,
+    });
+
+    expect(payload.examples![0].id).toBe('ex_skulos0');
+    expect(payload.examples![1].id).toBe('ex_skulos1');
+  });
+
   it('uses resolvedValues for translation fields', () => {
     const map = makeMap({
       translation_en: 'kitty',
@@ -314,6 +337,12 @@ describe('initializeResolvedValues', () => {
   it('returns empty map when generation is null', () => {
     const map = initializeResolvedValues(null, null);
     expect(map.size).toBe(0);
+  });
+
+  it('includes lemma in the resolved values map', () => {
+    const map = initializeResolvedValues(mockGeneration, null);
+    expect(map.has('lemma')).toBe(true);
+    expect(map.get('lemma')?.value).toBe('γάτα');
   });
 
   it('seeds agreed pills when cross-AI agrees', () => {

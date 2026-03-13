@@ -90,7 +90,7 @@ export function buildWordEntryPayload(params: BuildPayloadParams): WordEntryInpu
   const pronunciationValue = resolveField('pronunciation', generation.pronunciation);
   const pronunciation = pronunciationValue || null;
 
-  const asciiLemma = toAsciiLemma(generation.lemma);
+  const asciiLemma = toAsciiLemma(resolvedValues.get('lemma')?.value ?? generation.lemma);
   const examples: WordEntryExampleSentence[] = editableExamples.map((ex, i) => ({
     id: `ex_${asciiLemma}${i}`,
     greek: ex.greek,
@@ -113,7 +113,7 @@ export function buildWordEntryPayload(params: BuildPayloadParams): WordEntryInpu
     null;
 
   return {
-    lemma: generation.lemma,
+    lemma: resolvedValues.get('lemma')?.value ?? generation.lemma,
     part_of_speech: 'noun',
     translation_en,
     translation_en_plural,
@@ -142,6 +142,7 @@ export function initializeResolvedValues(
 
   // Build generation values map (nested path keys)
   const genValues = new Map<string, string>();
+  genValues.set('lemma', generation.lemma);
   genValues.set('translation_en', generation.translation_en);
   genValues.set('translation_en_plural', generation.translation_en_plural ?? '');
   genValues.set('translation_ru', generation.translation_ru);
