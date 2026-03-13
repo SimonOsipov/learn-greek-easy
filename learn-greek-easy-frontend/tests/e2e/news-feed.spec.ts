@@ -56,7 +56,7 @@ async function navigateToAdminNewsTab(page: Page): Promise<void> {
   await navigateToAdminTab(page, 'news');
 
   // Wait for news tab content to load
-  await expect(page.getByTestId('news-create-card')).toBeVisible({ timeout: 10000 });
+  await expect(page.getByTestId('news-items-table')).toBeVisible({ timeout: 10000 });
 }
 
 // =====================
@@ -91,6 +91,10 @@ test.describe('News Feed - Admin Tests', () => {
   test('NEWSFEED-02: Create news item shows validation for invalid JSON', async ({ page }) => {
     await navigateToAdminNewsTab(page);
 
+    // Open create modal
+    await page.getByTestId('news-create-button').click();
+    await expect(page.getByTestId('news-create-modal')).toBeVisible();
+
     // Enter invalid JSON
     const jsonInput = page.getByTestId('news-json-input');
     await jsonInput.fill('{ invalid json }');
@@ -99,15 +103,19 @@ test.describe('News Feed - Admin Tests', () => {
     const submitButton = page.getByTestId('news-submit-button');
     await submitButton.click();
 
-    // Should show error toast (Radix UI Toast uses data-state="open" for visible toasts)
-    const toast = page.locator('[data-state="open"]').filter({ hasText: /validation|error|invalid|json/i });
-    await expect(toast).toBeVisible({ timeout: 5000 });
+    // Should show error in modal alert
+    const modal = page.getByTestId('news-create-modal');
+    await expect(modal.locator('[role="alert"]')).toBeVisible({ timeout: 5000 });
   });
 
   test('NEWSFEED-03: Create news item shows error for missing required fields', async ({
     page,
   }) => {
     await navigateToAdminNewsTab(page);
+
+    // Open create modal
+    await page.getByTestId('news-create-button').click();
+    await expect(page.getByTestId('news-create-modal')).toBeVisible();
 
     // Enter JSON with missing fields
     const incompleteJson = JSON.stringify({
@@ -123,9 +131,9 @@ test.describe('News Feed - Admin Tests', () => {
     const submitButton = page.getByTestId('news-submit-button');
     await submitButton.click();
 
-    // Should show error toast about missing fields (Radix UI Toast uses data-state="open" for visible toasts)
-    const toast = page.locator('[data-state="open"]').filter({ hasText: /validation|error|invalid|required|missing/i });
-    await expect(toast).toBeVisible({ timeout: 5000 });
+    // Should show error in modal alert
+    const modal = page.getByTestId('news-create-modal');
+    await expect(modal.locator('[role="alert"]')).toBeVisible({ timeout: 5000 });
   });
 
   test('NEWSFEED-04: Edit news item modal opens and closes', async ({ page }) => {
