@@ -215,6 +215,10 @@ test.describe('MCNEWS - Admin Country Management', () => {
     // Navigate to News tab
     await navigateToAdminTab(page, 'news');
 
+    // Open create modal
+    await page.getByTestId('news-create-button').click();
+    await expect(page.getByTestId('news-create-modal')).toBeVisible({ timeout: 10000 });
+
     // Fill in news JSON with Greece country
     const jsonInput = page.getByTestId('news-json-input');
     await expect(jsonInput).toBeVisible({ timeout: 10000 });
@@ -259,6 +263,10 @@ test.describe('MCNEWS - Admin Country Management', () => {
 
     // Navigate to News tab
     await navigateToAdminTab(page, 'news');
+
+    // Open create modal
+    await page.getByTestId('news-create-button').click();
+    await expect(page.getByTestId('news-create-modal')).toBeVisible({ timeout: 10000 });
 
     const jsonInput = page.getByTestId('news-json-input');
     await expect(jsonInput).toBeVisible({ timeout: 10000 });
@@ -319,6 +327,10 @@ test.describe('MCNEWS - Admin Country Management', () => {
 
     await navigateToAdminTab(page, 'news');
 
+    // Open create modal
+    await page.getByTestId('news-create-button').click();
+    await expect(page.getByTestId('news-create-modal')).toBeVisible({ timeout: 10000 });
+
     const jsonInput = page.getByTestId('news-json-input');
     await expect(jsonInput).toBeVisible({ timeout: 10000 });
 
@@ -363,7 +375,8 @@ test.describe('MCNEWS - Admin Country Management', () => {
     // The green Q badge should NOT appear for Greece news (question was skipped)
     const newsTable = page.getByTestId('news-items-table');
     await expect(newsTable).toBeVisible({ timeout: 10000 });
-    const greeceRow = newsTable.locator('[data-testid^="news-item-row-"]')
+    const greeceRow = newsTable
+      .locator('[data-testid^="news-item-row-"]')
       .filter({ hasText: 'Greece News Skip E2E' })
       .first();
     if (await greeceRow.isVisible({ timeout: 5000 })) {

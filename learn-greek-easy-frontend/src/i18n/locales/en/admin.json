@@ -366,7 +366,8 @@
       "validationError": "Invalid JSON",
       "duplicateUrl": "This article URL has already been used",
       "imageDownloadFailed": "Failed to download image from the provided URL",
-      "questionSkipped": "Question skipped"
+      "questionSkipped": "Question skipped",
+      "button": "Create News Item"
     },
     "table": {
       "title": "News Items",
@@ -444,6 +445,10 @@
     },
     "question": {
       "previewTitle": "Question Preview"
+    },
+    "sections": {
+      "newsItems": "News Items",
+      "newsItemsDescription": "Manage existing news items"
     }
   },
   "feedback": {

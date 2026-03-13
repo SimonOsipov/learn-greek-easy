@@ -378,7 +378,8 @@
       "validationError": "Неверный JSON",
       "duplicateUrl": "Этот URL статьи уже использовался",
       "imageDownloadFailed": "Не удалось загрузить изображение по URL",
-      "questionSkipped": "Вопрос пропущен"
+      "questionSkipped": "Вопрос пропущен",
+      "button": "Создать новость"
     },
     "table": {
       "title": "Новости",
@@ -456,6 +457,10 @@
     },
     "question": {
       "previewTitle": "Предпросмотр вопроса"
+    },
+    "sections": {
+      "newsItems": "Новости",
+      "newsItemsDescription": "Управление существующими новостями"
     }
   },
   "feedback": {
