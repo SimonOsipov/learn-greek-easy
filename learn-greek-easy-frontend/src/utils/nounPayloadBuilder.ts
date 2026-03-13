@@ -72,16 +72,19 @@ export function buildWordEntryPayload(params: BuildPayloadParams): WordEntryInpu
     resolvedValues.get(key)?.value ?? fallback;
 
   const grammar_data: Record<string, unknown> = {
-    gender: resolveField('gender', generation.grammar_data.gender),
-    declension_group: resolveField('declension_group', generation.grammar_data.declension_group),
-    nominative_singular: resolveField('nominative_singular', cases.singular.nominative),
-    genitive_singular: resolveField('genitive_singular', cases.singular.genitive),
-    accusative_singular: resolveField('accusative_singular', cases.singular.accusative),
-    vocative_singular: resolveField('vocative_singular', cases.singular.vocative),
-    nominative_plural: resolveField('nominative_plural', cases.plural.nominative),
-    genitive_plural: resolveField('genitive_plural', cases.plural.genitive),
-    accusative_plural: resolveField('accusative_plural', cases.plural.accusative),
-    vocative_plural: resolveField('vocative_plural', cases.plural.vocative),
+    gender: resolveField('grammar_data.gender', generation.grammar_data.gender),
+    declension_group: resolveField(
+      'grammar_data.declension_group',
+      generation.grammar_data.declension_group
+    ),
+    nominative_singular: resolveField('cases.singular.nominative', cases.singular.nominative),
+    genitive_singular: resolveField('cases.singular.genitive', cases.singular.genitive),
+    accusative_singular: resolveField('cases.singular.accusative', cases.singular.accusative),
+    vocative_singular: resolveField('cases.singular.vocative', cases.singular.vocative),
+    nominative_plural: resolveField('cases.plural.nominative', cases.plural.nominative),
+    genitive_plural: resolveField('cases.plural.genitive', cases.plural.genitive),
+    accusative_plural: resolveField('cases.plural.accusative', cases.plural.accusative),
+    vocative_plural: resolveField('cases.plural.vocative', cases.plural.vocative),
   };
 
   const pronunciationValue = resolveField('pronunciation', generation.pronunciation);
@@ -137,43 +140,32 @@ export function initializeResolvedValues(
   const map = new Map<string, PillState>();
   if (!generation) return map;
 
-  // Build generation values map (flat keys)
+  // Build generation values map (nested path keys)
   const genValues = new Map<string, string>();
   genValues.set('translation_en', generation.translation_en);
   genValues.set('translation_en_plural', generation.translation_en_plural ?? '');
   genValues.set('translation_ru', generation.translation_ru);
   genValues.set('translation_ru_plural', generation.translation_ru_plural ?? '');
   genValues.set('pronunciation', generation.pronunciation);
-  genValues.set('gender', generation.grammar_data.gender);
-  genValues.set('declension_group', generation.grammar_data.declension_group);
+  genValues.set('grammar_data.gender', generation.grammar_data.gender);
+  genValues.set('grammar_data.declension_group', generation.grammar_data.declension_group);
   const { cases } = generation.grammar_data;
   for (const numKey of ['singular', 'plural'] as const) {
     const caseGroup = cases[numKey];
     if (caseGroup) {
       for (const [caseName, value] of Object.entries(caseGroup)) {
         if (value != null) {
-          genValues.set(`${caseName}_${numKey}`, value);
+          genValues.set(`cases.${numKey}.${caseName}`, value);
         }
       }
     }
   }
 
-  // Build cross-AI lookup (normalize nested field_path to flat key for lookup)
-  const toFlatKey = (path: string): string => {
-    if (path.startsWith('cases.')) {
-      const parts = path.split('.');
-      // 'cases.singular.nominative' -> 'nominative_singular'
-      return `${parts[2]}_${parts[1]}`;
-    }
-    if (path === 'grammar_data.gender') return 'gender';
-    if (path === 'grammar_data.declension_group') return 'declension_group';
-    return path;
-  };
-
+  // Build cross-AI lookup (field_path already uses nested paths)
   const crossAIMap = new Map<string, FieldComparisonResult>();
   if (verification?.cross_ai?.comparisons) {
     for (const comp of verification.cross_ai.comparisons) {
-      crossAIMap.set(toFlatKey(comp.field_path), comp);
+      crossAIMap.set(comp.field_path, comp);
     }
   }
 

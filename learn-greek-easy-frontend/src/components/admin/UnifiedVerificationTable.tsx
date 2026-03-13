@@ -173,16 +173,6 @@ function isCellClickable(
   return row.crossAI?.agrees === false;
 }
 
-function toFlatKey(path: string): string {
-  if (path.startsWith('cases.')) {
-    const parts = path.split('.');
-    return `${parts[2]}_${parts[1]}`;
-  }
-  if (path === 'grammar_data.gender') return 'gender';
-  if (path === 'grammar_data.declension_group') return 'declension_group';
-  return path;
-}
-
 function LocalCell({
   row,
   hasLocalData,
@@ -276,7 +266,7 @@ function LocalCell({
           onSelect?.(row.field_path, 'local');
           const refCheck = row.local?.checks.find((c) => c.reference_value != null);
           if (refCheck?.reference_value != null) {
-            onResolvedValueChange?.(toFlatKey(row.field_path), refCheck.reference_value);
+            onResolvedValueChange?.(row.field_path, refCheck.reference_value);
           }
         }}
       >
@@ -330,7 +320,7 @@ function PrimaryValueCell({
   if (!comparison) return <span className="text-muted-foreground">—</span>;
 
   const clickable = isCellClickable(row, 'primary', interactive);
-  const content = <span className="truncate text-xs">{comparison.primary_value}</span>;
+  const content = <span className="break-words text-xs">{comparison.primary_value}</span>;
 
   if (clickable) {
     return (
@@ -344,7 +334,7 @@ function PrimaryValueCell({
         aria-pressed={isSelected}
         onClick={() => {
           onSelect?.(row.field_path, 'primary');
-          onResolvedValueChange?.(toFlatKey(row.field_path), comparison.primary_value);
+          onResolvedValueChange?.(row.field_path, comparison.primary_value);
         }}
       >
         {content}
@@ -374,7 +364,7 @@ function SecondaryValueCell({
   if (!comparison) return <span className="text-muted-foreground">—</span>;
 
   const clickable = isCellClickable(row, 'secondary', interactive);
-  const content = <span className="truncate text-xs">{comparison.secondary_value}</span>;
+  const content = <span className="break-words text-xs">{comparison.secondary_value}</span>;
 
   if (clickable) {
     return (
@@ -388,7 +378,7 @@ function SecondaryValueCell({
         aria-pressed={isSelected}
         onClick={() => {
           onSelect?.(row.field_path, 'secondary');
-          onResolvedValueChange?.(toFlatKey(row.field_path), comparison.secondary_value);
+          onResolvedValueChange?.(row.field_path, comparison.secondary_value);
         }}
       >
         {content}
@@ -452,7 +442,7 @@ function DecisionPill({ fieldPath, pillState, isEditable, onEdit }: DecisionPill
           )}
         >
           <IconComponent className={iconClass} />
-          <span className="max-w-[120px] truncate">{pillState.value}</span>
+          <span className="max-w-[200px] truncate">{pillState.value}</span>
         </span>
       </TooltipTrigger>
       <TooltipContent>
@@ -480,7 +470,7 @@ function DecisionPill({ fieldPath, pillState, isEditable, onEdit }: DecisionPill
                   <span className="text-xs">{pillState.value}</span>
                 </TooltipContent>
               </Tooltip>
-              <span className="max-w-[120px] truncate">{pillState.value}</span>
+              <span className="max-w-[200px] truncate">{pillState.value}</span>
             </span>
           </PopoverTrigger>
           <PopoverContent className="w-56 p-2">
@@ -566,10 +556,10 @@ function RowsTable({
   return (
     <table className="w-full table-auto text-sm">
       <colgroup>
-        <col style={{ width: '18%' }} />
-        <col style={{ width: '8%' }} />
-        <col style={{ width: '24%' }} />
-        <col style={{ width: '24%' }} />
+        <col style={{ width: '15%' }} />
+        <col style={{ width: '15%' }} />
+        <col style={{ width: '22%' }} />
+        <col style={{ width: '22%' }} />
         <col style={{ width: '26%' }} />
       </colgroup>
       <thead>
@@ -618,7 +608,7 @@ function RowsTable({
                   onResolvedValueChange={onResolvedValueChange}
                 />
               </td>
-              <td className="max-w-[200px] py-1 pr-1">
+              <td className="py-1 pr-1">
                 <PrimaryValueCell
                   row={row}
                   interactive={isInteractive}
@@ -628,7 +618,7 @@ function RowsTable({
                   onResolvedValueChange={onResolvedValueChange}
                 />
               </td>
-              <td className="max-w-[200px] py-1 pr-1">
+              <td className="py-1 pl-2 pr-1">
                 <SecondaryValueCell
                   row={row}
                   interactive={isInteractive}

@@ -204,7 +204,10 @@ describe('buildWordEntryPayload', () => {
   });
 
   it('overlays grammar fields from resolvedValues when present', () => {
-    const map = makeMap({ gender: 'neuter', nominative_singular: 'το σπίτι' });
+    const map = makeMap({
+      'grammar_data.gender': 'neuter',
+      'cases.singular.nominative': 'το σπίτι',
+    });
     const payload = buildWordEntryPayload({
       generation: mockGeneration,
       resolvedValues: map,
@@ -280,14 +283,14 @@ describe('buildWordEntryPayload', () => {
 const mockCrossAI: CrossAIVerificationResult = {
   comparisons: [
     {
-      field_path: 'nominative_singular',
+      field_path: 'cases.singular.nominative',
       primary_value: 'η γάτα',
       secondary_value: 'γάτα',
       agrees: true,
       weight: 1,
     },
     {
-      field_path: 'gender',
+      field_path: 'grammar_data.gender',
       primary_value: 'feminine',
       secondary_value: 'neuter',
       agrees: false,
@@ -315,13 +318,13 @@ describe('initializeResolvedValues', () => {
 
   it('seeds agreed pills when cross-AI agrees', () => {
     const map = initializeResolvedValues(mockGeneration, mockVerification);
-    const pill = map.get('nominative_singular');
+    const pill = map.get('cases.singular.nominative');
     expect(pill).toEqual({ value: 'η γάτα', source: 'auto', status: 'agreed' });
   });
 
   it('seeds unresolved pills when cross-AI disagrees', () => {
     const map = initializeResolvedValues(mockGeneration, mockVerification);
-    const pill = map.get('gender');
+    const pill = map.get('grammar_data.gender');
     expect(pill).toEqual({ value: 'feminine', source: 'auto', status: 'unresolved' });
   });
 
@@ -336,7 +339,7 @@ describe('initializeResolvedValues', () => {
 
   it('seeds agreed pills for non-editable fields without cross-AI', () => {
     const map = initializeResolvedValues(mockGeneration, null);
-    const pill = map.get('nominative_singular');
+    const pill = map.get('cases.singular.nominative');
     expect(pill).toEqual({ value: 'η γάτα', source: 'auto', status: 'agreed' });
   });
 
@@ -345,7 +348,7 @@ describe('initializeResolvedValues', () => {
     // translation field → editable
     expect(map.get('translation_en')?.status).toBe('editable');
     // grammar field → agreed
-    expect(map.get('gender')?.status).toBe('agreed');
+    expect(map.get('grammar_data.gender')?.status).toBe('agreed');
   });
 
   it('seeds null plural translations as empty string', () => {
@@ -358,14 +361,14 @@ describe('initializeResolvedValues', () => {
   it('includes all grammar case keys', () => {
     const map = initializeResolvedValues(mockGeneration, null);
     for (const key of [
-      'nominative_singular',
-      'genitive_singular',
-      'accusative_singular',
-      'vocative_singular',
-      'nominative_plural',
-      'genitive_plural',
-      'accusative_plural',
-      'vocative_plural',
+      'cases.singular.nominative',
+      'cases.singular.genitive',
+      'cases.singular.accusative',
+      'cases.singular.vocative',
+      'cases.plural.nominative',
+      'cases.plural.genitive',
+      'cases.plural.accusative',
+      'cases.plural.vocative',
     ]) {
       expect(map.has(key)).toBe(true);
     }
@@ -374,7 +377,7 @@ describe('initializeResolvedValues', () => {
   it('uses primary_value (not secondary) for cross-AI seeded pills', () => {
     const map = initializeResolvedValues(mockGeneration, mockVerification);
     // gender disagrees: primary=feminine, secondary=neuter → seeds primary
-    expect(map.get('gender')?.value).toBe('feminine');
+    expect(map.get('grammar_data.gender')?.value).toBe('feminine');
   });
 
   it('treats all fields as agreed when cross-AI error result has populated comparisons (primary_only_result)', () => {
@@ -419,12 +422,12 @@ describe('initializeResolvedValues', () => {
     const map = initializeResolvedValues(mockGeneration, verification);
 
     // All populated fields from comparisons should be 'agreed' (agrees=true)
-    expect(map.get('nominative_singular')?.status).toBe('agreed');
-    expect(map.get('gender')?.status).toBe('agreed');
+    expect(map.get('cases.singular.nominative')?.status).toBe('agreed');
+    expect(map.get('grammar_data.gender')?.status).toBe('agreed');
     expect(map.get('translation_en')?.status).toBe('agreed');
     // Primary values from the comparisons are used
-    expect(map.get('nominative_singular')?.value).toBe('η γάτα');
-    expect(map.get('gender')?.value).toBe('feminine');
+    expect(map.get('cases.singular.nominative')?.value).toBe('η γάτα');
+    expect(map.get('grammar_data.gender')?.value).toBe('feminine');
     expect(map.get('translation_en')?.value).toBe('cat');
   });
 });
