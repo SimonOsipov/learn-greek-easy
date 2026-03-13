@@ -152,14 +152,17 @@ export function DialogDetailModal({ dialogId, open, onOpenChange }: DialogDetail
             void fetchDialogDetail(dialogId);
           }
           break;
-        case 'dialog_audio:error':
+        case 'dialog_audio:error': {
+          const errData = event.data as Record<string, unknown>;
+          const errMsg = (errData?.error ?? errData?.message ?? '') as string;
           setSseEnabled(false);
           setGenerationError(
             t('listeningDialogs.detail.generateAudio.error', {
-              message: (event.data as Record<string, unknown>)?.message ?? 'Unknown error',
+              message: errMsg || t('listeningDialogs.detail.errors.loadFailed'),
             })
           );
           break;
+        }
       }
     },
     [t, dialogId, fetchDialogDetail]
@@ -169,7 +172,9 @@ export function DialogDetailModal({ dialogId, open, onOpenChange }: DialogDetail
   const handleSSEError = useCallback(() => {
     setSseEnabled(false);
     setGenerationError(
-      t('listeningDialogs.detail.generateAudio.error', { message: 'Stream error' })
+      t('listeningDialogs.detail.generateAudio.error', {
+        message: t('listeningDialogs.detail.errors.loadFailed'),
+      })
     );
   }, [t]);
 
@@ -278,12 +283,20 @@ export function DialogDetailModal({ dialogId, open, onOpenChange }: DialogDetail
             {(selectedDialog.status === 'audio_ready' ||
               selectedDialog.status === 'exercises_ready') && (
               <div ref={containerRef} data-testid="dialog-audio-player">
-                <WaveformPlayer
-                  variant="admin"
-                  audioUrl={selectedDialog.audio_url ?? undefined}
-                  showSpeedControl={false}
-                  barCount={60}
-                />
+                {selectedDialog.audio_url ? (
+                  <WaveformPlayer
+                    variant="admin"
+                    audioUrl={selectedDialog.audio_url}
+                    showSpeedControl={false}
+                    barCount={60}
+                  />
+                ) : (
+                  <Alert variant="destructive">
+                    <AlertDescription>
+                      {t('listeningDialogs.detail.errors.audioUrlMissing')}
+                    </AlertDescription>
+                  </Alert>
+                )}
               </div>
             )}
 
@@ -372,8 +385,13 @@ export function DialogDetailModal({ dialogId, open, onOpenChange }: DialogDetail
                   <Button
                     variant="destructive"
                     onClick={async () => {
-                      await deleteDialog(selectedDialog.id);
-                      onOpenChange(false);
+                      try {
+                        await deleteDialog(selectedDialog.id);
+                        onOpenChange(false);
+                      } catch {
+                        setConfirmingDelete(false);
+                        setGenerationError(t('listeningDialogs.detail.errors.loadFailed'));
+                      }
                     }}
                   >
                     {tCommon('confirm')}

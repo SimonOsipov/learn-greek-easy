@@ -130,7 +130,15 @@ const DialogRow: React.FC<DialogRowProps> = ({ dialog, onDelete, onClick, t, lan
     <div
       className="flex cursor-pointer items-center justify-between rounded-lg border p-4 hover:bg-muted/50"
       data-testid={`dialog-row-${dialog.id}`}
+      role="button"
+      tabIndex={0}
       onClick={() => onClick?.(dialog)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick?.(dialog);
+        }
+      }}
     >
       {/* Left: Scenario + metadata */}
       <div className="min-w-0 flex-1">

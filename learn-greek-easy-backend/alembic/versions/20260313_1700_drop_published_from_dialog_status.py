@@ -16,7 +16,9 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Remap existing published rows to exercises_ready
+    # Remap existing published rows to exercises_ready.
+    # NOTE: This is a lossy data transform and cannot be perfectly reversed on downgrade.
+    # The downgrade() restores the schema but cannot reconstruct original 'published' values.
     op.execute("UPDATE listening_dialogs SET status = 'exercises_ready' WHERE status = 'published'")
     # Drop server default before enum swap
     op.execute("ALTER TABLE listening_dialogs ALTER COLUMN status DROP DEFAULT")
