@@ -334,13 +334,15 @@ test.describe('MCNEWS - Admin Country Management', () => {
     const jsonInput = page.getByTestId('news-json-input');
     await expect(jsonInput).toBeVisible({ timeout: 10000 });
 
-    const testUrl = `https://example-greece-skip-${Date.now()}.com/article`;
+    const uniqueId = Date.now();
+    const uniqueTitle = `Greece News Skip E2E ${uniqueId}`;
+    const testUrl = `https://example-greece-skip-${uniqueId}.com/article`;
 
     // Create Greece news WITH question data - question should be skipped by backend
     const newsJson = JSON.stringify({
       country: 'greece',
       title_el: 'Ελληνικά νέα skip E2E',
-      title_en: 'Greece News Skip E2E',
+      title_en: uniqueTitle,
       title_ru: 'Греческие новости skip E2E',
       description_el: 'Περιγραφή Ελλάδας',
       description_en: 'Greece description',
@@ -377,9 +379,8 @@ test.describe('MCNEWS - Admin Country Management', () => {
     await expect(newsTable).toBeVisible({ timeout: 10000 });
     const greeceRow = newsTable
       .locator('[data-testid^="news-item-row-"]')
-      .filter({ hasText: 'Greece News Skip E2E' })
-      .first();
-    await expect(greeceRow).toBeVisible({ timeout: 5000 });
+      .filter({ hasText: uniqueTitle });
+    await expect(greeceRow).toBeVisible({ timeout: 10000 });
     // The green Q badge should NOT be in this row (question was skipped)
     const greenQInRow = greeceRow.locator('.bg-green-500\\/10').filter({ hasText: 'Q' });
     await expect(greenQInRow).toHaveCount(0);
