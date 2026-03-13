@@ -337,6 +337,7 @@ test.describe('MCNEWS - Admin Country Management', () => {
     const uniqueId = Date.now();
     const uniqueTitle = `Greece News Skip E2E ${uniqueId}`;
     const testUrl = `https://example-greece-skip-${uniqueId}.com/article`;
+    const todayDate = new Date().toISOString().split('T')[0];
 
     // Create Greece news WITH question data - question should be skipped by backend
     const newsJson = JSON.stringify({
@@ -347,7 +348,7 @@ test.describe('MCNEWS - Admin Country Management', () => {
       description_el: 'Περιγραφή Ελλάδας',
       description_en: 'Greece description',
       description_ru: 'Описание Греции',
-      publication_date: '2026-01-15',
+      publication_date: todayDate,
       original_article_url: testUrl,
       source_image_url: 'https://picsum.photos/400/300',
       question: {
