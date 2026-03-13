@@ -91,8 +91,8 @@ describe('DecisionPill (via UnifiedVerificationTable)', () => {
       expect(borderSpan).toBeTruthy();
     });
 
-    it('renders unresolved non-editable (grammar_data.gender) with red border', () => {
-      // grammar_data.gender is NOT in EDITABLE_FIELDS — pill should be non-editable
+    it('renders unresolved (grammar_data.gender) with red border', () => {
+      // grammar_data.gender IS now editable — pill shows pencil and is clickable
       renderPill('grammar_data.gender', makePillState('masculine', 'unresolved'));
       const pill = screen.getByTestId('decision-pill-grammar_data.gender');
       const borderSpan = pill.querySelector('.border-red-500');
@@ -122,13 +122,13 @@ describe('DecisionPill (via UnifiedVerificationTable)', () => {
   });
 
   describe('pill text truncation', () => {
-    it('pill text span has max-w-[120px] truncate classes', () => {
+    it('pill text span has max-w-[200px] truncate classes', () => {
       renderPill('translation_en', makePillState('house', 'agreed'));
       const pill = screen.getByTestId('decision-pill-translation_en');
       const textSpan = pill.querySelector('.truncate');
       expect(textSpan).toBeTruthy();
-      // Also verify the max-w-[120px] class is present
-      expect(textSpan?.className).toContain('max-w-[120px]');
+      // Also verify the max-w-[200px] class is present
+      expect(textSpan?.className).toContain('max-w-[200px]');
     });
   });
 
@@ -173,7 +173,7 @@ describe('DecisionPill (via UnifiedVerificationTable)', () => {
       expect(onResolvedValueChange).not.toHaveBeenCalled();
     });
 
-    it('non-editable pill (grammar_data.gender, unresolved) does not render popover trigger', async () => {
+    it('all pills render popover trigger regardless of field type', async () => {
       const onResolvedValueChange = vi.fn();
       renderPill(
         'grammar_data.gender',
@@ -181,9 +181,25 @@ describe('DecisionPill (via UnifiedVerificationTable)', () => {
         onResolvedValueChange
       );
       const pill = screen.getByTestId('decision-pill-grammar_data.gender');
-      // Non-editable: no cursor-pointer span inside
+      // All pills are editable: cursor-pointer span should be present
       const trigger = pill.querySelector('span.cursor-pointer');
-      expect(trigger).toBeFalsy();
+      expect(trigger).toBeTruthy();
+    });
+
+    it('agreed pill opens popover on click', async () => {
+      renderPill('translation_en', makePillState('house', 'agreed'));
+      const pill = screen.getByTestId('decision-pill-translation_en');
+      const trigger = pill.querySelector('span.cursor-pointer');
+      await userEvent.click(trigger!);
+      expect(screen.getByRole('textbox')).toBeInTheDocument();
+    });
+
+    it('resolved pill opens popover on click', async () => {
+      renderPill('translation_en', makePillState('house', 'resolved'));
+      const pill = screen.getByTestId('decision-pill-translation_en');
+      const trigger = pill.querySelector('span.cursor-pointer');
+      await userEvent.click(trigger!);
+      expect(screen.getByRole('textbox')).toBeInTheDocument();
     });
   });
 });

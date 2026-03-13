@@ -1,14 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import {
-  AlertCircle,
-  AlertTriangle,
-  Check,
-  CheckCircle2,
-  MinusCircle,
-  Pencil,
-  XCircle,
-} from 'lucide-react';
+import { AlertCircle, AlertTriangle, Check, MinusCircle, Pencil, XCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -24,7 +16,6 @@ import type {
   FieldVerificationResult,
   LocalVerificationResult,
 } from '@/services/adminAPI';
-import { EDITABLE_FIELDS } from '@/utils/nounPayloadBuilder';
 
 const FIELD_STATUS_ICON: Record<FieldStatus, { icon: React.ElementType; className: string }> = {
   pass: { icon: Check, className: 'text-green-500' },
@@ -170,17 +161,7 @@ function isCellClickable(
     const hasRef = row.local?.checks.some((c) => c.reference_value != null) ?? false;
     return hasRef;
   }
-  return row.crossAI?.agrees === false;
-}
-
-function toFlatKey(path: string): string {
-  if (path.startsWith('cases.')) {
-    const parts = path.split('.');
-    return `${parts[2]}_${parts[1]}`;
-  }
-  if (path === 'grammar_data.gender') return 'gender';
-  if (path === 'grammar_data.declension_group') return 'declension_group';
-  return path;
+  return row.crossAI != null;
 }
 
 function LocalCell({
@@ -276,7 +257,7 @@ function LocalCell({
           onSelect?.(row.field_path, 'local');
           const refCheck = row.local?.checks.find((c) => c.reference_value != null);
           if (refCheck?.reference_value != null) {
-            onResolvedValueChange?.(toFlatKey(row.field_path), refCheck.reference_value);
+            onResolvedValueChange?.(row.field_path, refCheck.reference_value);
           }
         }}
       >
@@ -344,7 +325,7 @@ function PrimaryValueCell({
         aria-pressed={isSelected}
         onClick={() => {
           onSelect?.(row.field_path, 'primary');
-          onResolvedValueChange?.(toFlatKey(row.field_path), comparison.primary_value);
+          onResolvedValueChange?.(row.field_path, comparison.primary_value);
         }}
       >
         {content}
@@ -388,7 +369,7 @@ function SecondaryValueCell({
         aria-pressed={isSelected}
         onClick={() => {
           onSelect?.(row.field_path, 'secondary');
-          onResolvedValueChange?.(toFlatKey(row.field_path), comparison.secondary_value);
+          onResolvedValueChange?.(row.field_path, comparison.secondary_value);
         }}
       >
         {content}
@@ -416,8 +397,7 @@ function DecisionPill({ fieldPath, pillState, isEditable, onEdit }: DecisionPill
     }
   }, [pillState.value, open]);
 
-  const showPopover =
-    isEditable && (pillState.status === 'editable' || pillState.status === 'unresolved');
+  const showPopover = isEditable;
 
   let borderClass: string;
   let IconComponent: React.ElementType;
@@ -425,15 +405,15 @@ function DecisionPill({ fieldPath, pillState, isEditable, onEdit }: DecisionPill
 
   if (pillState.status === 'agreed') {
     borderClass = 'border-green-500';
-    IconComponent = Check;
+    IconComponent = Pencil;
     iconClass = 'h-3 w-3 text-green-500';
   } else if (pillState.status === 'resolved') {
     borderClass = 'border-blue-500';
-    IconComponent = Check;
+    IconComponent = Pencil;
     iconClass = 'h-3 w-3 text-blue-500';
   } else if (pillState.status === 'unresolved') {
     borderClass = 'border-red-500';
-    IconComponent = showPopover ? Pencil : AlertTriangle;
+    IconComponent = Pencil;
     iconClass = 'h-3 w-3 text-red-500';
   } else {
     // editable
@@ -452,7 +432,7 @@ function DecisionPill({ fieldPath, pillState, isEditable, onEdit }: DecisionPill
           )}
         >
           <IconComponent className={iconClass} />
-          <span className="max-w-[120px] truncate">{pillState.value}</span>
+          <span className="max-w-[200px] truncate">{pillState.value}</span>
         </span>
       </TooltipTrigger>
       <TooltipContent>
@@ -480,7 +460,7 @@ function DecisionPill({ fieldPath, pillState, isEditable, onEdit }: DecisionPill
                   <span className="text-xs">{pillState.value}</span>
                 </TooltipContent>
               </Tooltip>
-              <span className="max-w-[120px] truncate">{pillState.value}</span>
+              <span className="max-w-[200px] truncate">{pillState.value}</span>
             </span>
           </PopoverTrigger>
           <PopoverContent className="w-56 p-2">
@@ -508,40 +488,6 @@ function DecisionPill({ fieldPath, pillState, isEditable, onEdit }: DecisionPill
   return <span data-testid={`decision-pill-${fieldPath}`}>{pillContent}</span>;
 }
 
-function DecisionCell({
-  comparison,
-  isAdminSelected,
-  selectedSource,
-  t,
-}: {
-  comparison: FieldComparisonResult | null;
-  isAdminSelected: boolean;
-  selectedSource?: SelectionSource;
-  t: (key: string, options?: Record<string, unknown>) => string;
-}) {
-  if (!comparison) return <span className="text-muted-foreground">—</span>;
-  if (isAdminSelected) {
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span>
-            <CheckCircle2 className="h-4 w-4 text-blue-500" />
-          </span>
-        </TooltipTrigger>
-        <TooltipContent>
-          <span className="text-xs">
-            {t('generateNoun.verification.resolvedTooltip', {
-              source: t(`generateNoun.verification.sourceLabels.${selectedSource}`),
-            })}
-          </span>
-        </TooltipContent>
-      </Tooltip>
-    );
-  }
-  if (comparison.agrees) return <Check className="h-4 w-4 text-green-500" />;
-  return <XCircle className="h-4 w-4 text-red-500" />;
-}
-
 function RowsTable({
   rows,
   hasLocalData,
@@ -566,10 +512,10 @@ function RowsTable({
   return (
     <table className="w-full table-auto text-sm">
       <colgroup>
-        <col style={{ width: '18%' }} />
-        <col style={{ width: '8%' }} />
-        <col style={{ width: '24%' }} />
-        <col style={{ width: '24%' }} />
+        <col style={{ width: '15%' }} />
+        <col style={{ width: '15%' }} />
+        <col style={{ width: '22%' }} />
+        <col style={{ width: '22%' }} />
         <col style={{ width: '26%' }} />
       </colgroup>
       <thead>
@@ -618,7 +564,7 @@ function RowsTable({
                   onResolvedValueChange={onResolvedValueChange}
                 />
               </td>
-              <td className="max-w-[200px] py-1 pr-1">
+              <td className="py-1 pr-1">
                 <PrimaryValueCell
                   row={row}
                   interactive={isInteractive}
@@ -628,7 +574,7 @@ function RowsTable({
                   onResolvedValueChange={onResolvedValueChange}
                 />
               </td>
-              <td className="max-w-[200px] py-1 pr-1">
+              <td className="py-1 pl-2 pr-1">
                 <SecondaryValueCell
                   row={row}
                   interactive={isInteractive}
@@ -643,16 +589,11 @@ function RowsTable({
                   <DecisionPill
                     fieldPath={row.field_path}
                     pillState={resolvedValues.get(row.field_path)!}
-                    isEditable={EDITABLE_FIELDS.has(row.field_path)}
+                    isEditable={true}
                     onEdit={(fp, val) => onResolvedValueChange?.(fp, val)}
                   />
                 ) : (
-                  <DecisionCell
-                    comparison={row.crossAI}
-                    isAdminSelected={isAdminSelected}
-                    selectedSource={selectedSource}
-                    t={t}
-                  />
+                  <span>—</span>
                 )}
               </td>
             </tr>

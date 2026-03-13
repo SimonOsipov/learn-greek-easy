@@ -205,23 +205,23 @@ describe('UnifiedVerificationTable', () => {
     expect(screen.getByText('κατ')).toBeInTheDocument();
   });
 
-  it('decision column shows check icon when agrees is true', () => {
+  it('decision column shows dash fallback when no resolvedValues', () => {
     const local = makeLocalResult([makeLocalField('lemma', 'fail')]);
     const crossAI = makeCrossAI([makeComparison('lemma', true, 'house', 'house')]);
     renderComponent(local, crossAI);
     const row = screen.getByTestId('unified-row-lemma');
-    // DecisionCell renders Check icon (SVG) for agrees=true
-    const svg = row.querySelector('td:last-child svg');
-    expect(svg).toBeTruthy();
+    // Without resolvedValues, fallback renders em-dash
+    const decisionTd = row.querySelector('td:last-child');
+    expect(decisionTd?.textContent).toBe('—');
   });
 
-  it('decision column shows X icon when agrees is false', () => {
+  it('decision column shows dash fallback when agrees is false and no resolvedValues', () => {
     const crossAI = makeCrossAI([makeComparison('lemma', false, 'house', 'home')]);
     renderComponent(null, crossAI);
     const row = screen.getByTestId('unified-row-lemma');
-    // DecisionCell renders XCircle icon (SVG) for agrees=false
-    const svg = row.querySelector('td:last-child svg');
-    expect(svg).toBeTruthy();
+    // Without resolvedValues, fallback renders em-dash
+    const decisionTd = row.querySelector('td:last-child');
+    expect(decisionTd?.textContent).toBe('—');
   });
 
   it('Local column shows icon only (no text label)', () => {
@@ -334,17 +334,6 @@ describe('interactive click-to-select', () => {
     expect(secondaryCell?.querySelector('.opacity-50')).toBeTruthy();
   });
 
-  it('decision column shows CheckCircle2 svg when admin has selected a source', () => {
-    const selections = new Map<string, SelectionSource>([['translation_en', 'primary']]);
-    const crossAI = makeCrossAI([makeComparison('translation_en', false, 'house', 'home')]);
-    renderComponent(null, crossAI, selections, undefined, true);
-
-    const row = screen.getByTestId('unified-row-translation_en');
-    const decisionCell = row.querySelectorAll('td')[4];
-    // CheckCircle2 renders an SVG
-    expect(decisionCell?.querySelector('svg')).toBeTruthy();
-  });
-
   it('local cell not clickable when no reference_value in checks', async () => {
     const onSelect = vi.fn();
     const local = makeLocalResult([makeLocalField('lemma', 'pass', 'ok')]);
@@ -365,6 +354,19 @@ describe('interactive click-to-select', () => {
     const primaryCell = row.querySelectorAll('td')[2];
     await userEvent.click(primaryCell!);
     expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it('clicking primary cell on agreed row (agrees: true) calls onSelect', async () => {
+    const onSelect = vi.fn();
+    const crossAI = makeCrossAI([makeComparison('translation_en', true, 'house', 'house')]);
+    renderComponent(null, crossAI, undefined, onSelect, true);
+
+    const row = screen.getByTestId('unified-row-translation_en');
+    const primaryCell = row.querySelectorAll('td')[2];
+    const clickable = primaryCell?.querySelector('.cursor-pointer');
+    expect(clickable).toBeTruthy();
+    await userEvent.click(clickable!);
+    expect(onSelect).toHaveBeenCalledWith('translation_en', 'primary');
   });
 });
 

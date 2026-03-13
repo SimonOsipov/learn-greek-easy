@@ -1202,8 +1202,8 @@ describe('GenerateNounDialog', () => {
   });
 
   // 58. Unresolved warning shows count when cross-AI has disagreements (AC #3)
-  // Field paths must match the flat key format used by initializeResolvedValues
-  // (e.g. 'nominative_singular' not 'cases.singular.nominative')
+  // Field paths must match the nested path format used by initializeResolvedValues
+  // (e.g. 'cases.singular.nominative' not 'nominative_singular')
   it('shows unresolved warning with correct count when cross-AI has disagreements', async () => {
     const user = userEvent.setup();
     renderDialog();
@@ -1217,13 +1217,13 @@ describe('GenerateNounDialog', () => {
       cross_ai: {
         comparisons: [
           {
-            field_path: 'nominative_singular',
+            field_path: 'cases.singular.nominative',
             agrees: false,
             primary_value: 'η γάτα',
             secondary_value: 'γάτα',
           },
           {
-            field_path: 'nominative_plural',
+            field_path: 'cases.plural.nominative',
             agrees: false,
             primary_value: 'οι γάτες',
             secondary_value: 'γάτες',
