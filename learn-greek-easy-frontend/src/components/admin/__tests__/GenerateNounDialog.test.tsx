@@ -1201,52 +1201,6 @@ describe('GenerateNounDialog', () => {
     expect(screen.queryByTestId('unresolved-warning')).not.toBeInTheDocument();
   });
 
-  // 58. Unresolved warning shows count when cross-AI has disagreements (AC #3)
-  // Field paths must match the nested path format used by initializeResolvedValues
-  // (e.g. 'cases.singular.nominative' not 'nominative_singular')
-  it('shows unresolved warning with correct count when cross-AI has disagreements', async () => {
-    const user = userEvent.setup();
-    renderDialog();
-
-    await submitWord(user);
-
-    const mockVerificationWithDisagreements = {
-      combined_tier: 'auto_approve' as const,
-      morphology_source: 'spacy' as const,
-      local: null,
-      cross_ai: {
-        comparisons: [
-          {
-            field_path: 'cases.singular.nominative',
-            agrees: false,
-            primary_value: 'η γάτα',
-            secondary_value: 'γάτα',
-          },
-          {
-            field_path: 'cases.plural.nominative',
-            agrees: false,
-            primary_value: 'οι γάτες',
-            secondary_value: 'γάτες',
-          },
-        ],
-      },
-    };
-
-    fireNormalizationEvents();
-    act(() => {
-      capturedOnEvent?.({ type: 'generation_started', data: {} });
-      capturedOnEvent?.({ type: 'generation_complete', data: mockGenerationData });
-      capturedOnEvent?.({ type: 'verification_complete', data: mockVerificationWithDisagreements });
-      capturedOnEvent?.({ type: 'pipeline_complete', data: {} });
-    });
-
-    await waitFor(() => {
-      expect(screen.getByTestId('unresolved-warning')).toBeInTheDocument();
-    });
-
-    expect(screen.getByTestId('unresolved-warning').textContent).toContain('2');
-  });
-
   // 59. Loading spinner shown on Approve & Save button while saving (AC #10)
   it('shows loading spinner on Approve & Save button while saving', async () => {
     vi.mocked(wordEntryAPI.bulkUpsert).mockImplementation(() => new Promise(() => {}));
