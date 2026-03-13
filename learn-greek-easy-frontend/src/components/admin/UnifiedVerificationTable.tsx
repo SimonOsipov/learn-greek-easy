@@ -311,7 +311,7 @@ function PrimaryValueCell({
   if (!comparison) return <span className="text-muted-foreground">—</span>;
 
   const clickable = isCellClickable(row, 'primary', interactive);
-  const content = <span className="break-words text-xs">{comparison.primary_value}</span>;
+  const content = <span className="truncate text-xs">{comparison.primary_value}</span>;
 
   if (clickable) {
     return (
@@ -355,7 +355,7 @@ function SecondaryValueCell({
   if (!comparison) return <span className="text-muted-foreground">—</span>;
 
   const clickable = isCellClickable(row, 'secondary', interactive);
-  const content = <span className="break-words text-xs">{comparison.secondary_value}</span>;
+  const content = <span className="truncate text-xs">{comparison.secondary_value}</span>;
 
   if (clickable) {
     return (
