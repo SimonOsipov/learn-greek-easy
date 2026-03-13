@@ -22,7 +22,6 @@ import {
   AlertTriangle,
   ChevronLeft,
   ChevronRight,
-  Eye,
   MessageSquare,
   Plus,
   Trash2,
@@ -42,7 +41,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from '@/hooks/use-toast';
 import { useLanguage } from '@/hooks/useLanguage';
 import {
@@ -85,7 +83,6 @@ const STATUS_BADGE_CLASSES: Record<DialogStatus, string> = {
   draft: 'border-gray-500/30 bg-gray-500/10 text-gray-700 dark:text-gray-400',
   audio_ready: 'border-yellow-500/30 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400',
   exercises_ready: 'border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-400',
-  published: 'border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-400',
 };
 
 // ============================================================================
@@ -157,28 +154,6 @@ const DialogRow: React.FC<DialogRowProps> = ({ dialog, onDelete, t, lang }) => {
         >
           {t(`listeningDialogs.status.${dialog.status}`)}
         </Badge>
-
-        {/* View button (disabled, coming soon) */}
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled
-                  data-testid={`dialog-view-btn-${dialog.id}`}
-                >
-                  <Eye className="h-4 w-4" />
-                  <span className="sr-only">{t('listeningDialogs.view.tooltip')}</span>
-                </Button>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{t('listeningDialogs.view.tooltip')}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
 
         {/* Delete button */}
         <Button

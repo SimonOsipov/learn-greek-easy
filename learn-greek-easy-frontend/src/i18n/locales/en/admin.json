@@ -1115,8 +1115,7 @@
     "status": {
       "draft": "Draft",
       "audio_ready": "Audio Ready",
-      "exercises_ready": "Exercises Ready",
-      "published": "Published"
+      "exercises_ready": "Exercises Ready"
     },
     "empty": {
       "title": "No dialogs yet",
@@ -1147,8 +1146,41 @@
       "success": "Dialog deleted successfully",
       "error": "Failed to delete dialog"
     },
-    "view": {
-      "tooltip": "Detail view coming soon"
+    "detail": {
+      "title": "Dialog Details",
+      "transcript": "Transcript",
+      "audioPlayer": "Audio",
+      "metadata": {
+        "cefrLevel": "CEFR Level",
+        "speakers": "Speakers",
+        "status": "Status",
+        "created": "Created",
+        "audioDuration": "Duration",
+        "audioSize": "File size",
+        "audioGenerated": "Generated"
+      },
+      "generateAudio": {
+        "button": "Generate Audio",
+        "progress": {
+          "starting": "Starting audio generation...",
+          "callingElevenLabs": "Calling ElevenLabs...",
+          "settingTimestamps": "Validating line timestamps...",
+          "uploading": "Uploading audio..."
+        },
+        "error": "Audio generation failed: {{message}}",
+        "tryAgain": "Try Again"
+      },
+      "generateExercises": {
+        "button": "Generate Exercises",
+        "comingSoon": "Exercise generation coming soon"
+      },
+      "delete": "Delete Dialog",
+      "close": "Close",
+      "errors": {
+        "loadFailed": "Failed to load dialog details",
+        "retry": "Retry",
+        "audioUrlMissing": "Audio file not found. The file may have been deleted from storage."
+      }
     },
     "errors": {
       "fetchFailed": "Failed to load dialogs",

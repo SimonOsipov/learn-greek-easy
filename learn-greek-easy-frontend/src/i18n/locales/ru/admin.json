@@ -1127,8 +1127,7 @@
     "status": {
       "draft": "Черновик",
       "audio_ready": "Аудио готово",
-      "exercises_ready": "Упражнения готовы",
-      "published": "Опубликован"
+      "exercises_ready": "Упражнения готовы"
     },
     "empty": {
       "title": "Диалогов пока нет",
@@ -1159,8 +1158,41 @@
       "success": "Диалог успешно удалён",
       "error": "Не удалось удалить диалог"
     },
-    "view": {
-      "tooltip": "Подробный просмотр скоро будет доступен"
+    "detail": {
+      "title": "Детали диалога",
+      "transcript": "Транскрипт",
+      "audioPlayer": "Аудио",
+      "metadata": {
+        "cefrLevel": "Уровень CEFR",
+        "speakers": "Участники",
+        "status": "Статус",
+        "created": "Создан",
+        "audioDuration": "Длительность",
+        "audioSize": "Размер файла",
+        "audioGenerated": "Сгенерировано"
+      },
+      "generateAudio": {
+        "button": "Сгенерировать аудио",
+        "progress": {
+          "starting": "Начинаем генерацию аудио...",
+          "callingElevenLabs": "Вызов ElevenLabs...",
+          "settingTimestamps": "Проверка временных меток...",
+          "uploading": "Загрузка аудио..."
+        },
+        "error": "Ошибка генерации аудио: {{message}}",
+        "tryAgain": "Попробовать снова"
+      },
+      "generateExercises": {
+        "button": "Сгенерировать упражнения",
+        "comingSoon": "Генерация упражнений скоро будет доступна"
+      },
+      "delete": "Удалить диалог",
+      "close": "Закрыть",
+      "errors": {
+        "loadFailed": "Не удалось загрузить детали диалога",
+        "retry": "Повторить",
+        "audioUrlMissing": "Аудиофайл не найден. Возможно, он был удалён из хранилища."
+      }
     },
     "errors": {
       "fetchFailed": "Не удалось загрузить диалоги",
