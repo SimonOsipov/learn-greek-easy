@@ -122,13 +122,13 @@ describe('DecisionPill (via UnifiedVerificationTable)', () => {
   });
 
   describe('pill text truncation', () => {
-    it('pill text span has max-w-[120px] truncate classes', () => {
+    it('pill text span has max-w-[200px] truncate classes', () => {
       renderPill('translation_en', makePillState('house', 'agreed'));
       const pill = screen.getByTestId('decision-pill-translation_en');
       const textSpan = pill.querySelector('.truncate');
       expect(textSpan).toBeTruthy();
-      // Also verify the max-w-[120px] class is present
-      expect(textSpan?.className).toContain('max-w-[120px]');
+      // Also verify the max-w-[200px] class is present
+      expect(textSpan?.className).toContain('max-w-[200px]');
     });
   });
 
