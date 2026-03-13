@@ -1,14 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import {
-  AlertCircle,
-  AlertTriangle,
-  Check,
-  CheckCircle2,
-  MinusCircle,
-  Pencil,
-  XCircle,
-} from 'lucide-react';
+import { AlertCircle, AlertTriangle, Check, MinusCircle, Pencil, XCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -24,7 +16,6 @@ import type {
   FieldVerificationResult,
   LocalVerificationResult,
 } from '@/services/adminAPI';
-import { EDITABLE_FIELDS } from '@/utils/nounPayloadBuilder';
 
 const FIELD_STATUS_ICON: Record<FieldStatus, { icon: React.ElementType; className: string }> = {
   pass: { icon: Check, className: 'text-green-500' },
@@ -406,8 +397,7 @@ function DecisionPill({ fieldPath, pillState, isEditable, onEdit }: DecisionPill
     }
   }, [pillState.value, open]);
 
-  const showPopover =
-    isEditable && (pillState.status === 'editable' || pillState.status === 'unresolved');
+  const showPopover = isEditable;
 
   let borderClass: string;
   let IconComponent: React.ElementType;
@@ -415,15 +405,15 @@ function DecisionPill({ fieldPath, pillState, isEditable, onEdit }: DecisionPill
 
   if (pillState.status === 'agreed') {
     borderClass = 'border-green-500';
-    IconComponent = Check;
+    IconComponent = Pencil;
     iconClass = 'h-3 w-3 text-green-500';
   } else if (pillState.status === 'resolved') {
     borderClass = 'border-blue-500';
-    IconComponent = Check;
+    IconComponent = Pencil;
     iconClass = 'h-3 w-3 text-blue-500';
   } else if (pillState.status === 'unresolved') {
     borderClass = 'border-red-500';
-    IconComponent = showPopover ? Pencil : AlertTriangle;
+    IconComponent = Pencil;
     iconClass = 'h-3 w-3 text-red-500';
   } else {
     // editable
@@ -496,40 +486,6 @@ function DecisionPill({ fieldPath, pillState, isEditable, onEdit }: DecisionPill
   }
 
   return <span data-testid={`decision-pill-${fieldPath}`}>{pillContent}</span>;
-}
-
-function DecisionCell({
-  comparison,
-  isAdminSelected,
-  selectedSource,
-  t,
-}: {
-  comparison: FieldComparisonResult | null;
-  isAdminSelected: boolean;
-  selectedSource?: SelectionSource;
-  t: (key: string, options?: Record<string, unknown>) => string;
-}) {
-  if (!comparison) return <span className="text-muted-foreground">—</span>;
-  if (isAdminSelected) {
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span>
-            <CheckCircle2 className="h-4 w-4 text-blue-500" />
-          </span>
-        </TooltipTrigger>
-        <TooltipContent>
-          <span className="text-xs">
-            {t('generateNoun.verification.resolvedTooltip', {
-              source: t(`generateNoun.verification.sourceLabels.${selectedSource}`),
-            })}
-          </span>
-        </TooltipContent>
-      </Tooltip>
-    );
-  }
-  if (comparison.agrees) return <Check className="h-4 w-4 text-green-500" />;
-  return <XCircle className="h-4 w-4 text-red-500" />;
 }
 
 function RowsTable({
@@ -633,16 +589,11 @@ function RowsTable({
                   <DecisionPill
                     fieldPath={row.field_path}
                     pillState={resolvedValues.get(row.field_path)!}
-                    isEditable={EDITABLE_FIELDS.has(row.field_path)}
+                    isEditable={true}
                     onEdit={(fp, val) => onResolvedValueChange?.(fp, val)}
                   />
                 ) : (
-                  <DecisionCell
-                    comparison={row.crossAI}
-                    isAdminSelected={isAdminSelected}
-                    selectedSource={selectedSource}
-                    t={t}
-                  />
+                  <span>—</span>
                 )}
               </td>
             </tr>
