@@ -42,7 +42,7 @@ export type { CultureDeckAdminResponse, DeckAdminResponse } from '@/types/deck';
  */
 export type DeckLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
 
-export type DialogStatus = 'draft' | 'audio_ready' | 'exercises_ready' | 'published';
+export type DialogStatus = 'draft' | 'audio_ready' | 'exercises_ready';
 
 export interface ListeningDialogListItem {
   id: string;
@@ -76,6 +76,39 @@ export interface ListeningDialogListResponse {
   total: number;
   page: number;
   page_size: number;
+}
+
+export interface DialogSpeakerDetail {
+  id: string;
+  speaker_index: number;
+  character_name: string;
+  voice_id: string;
+}
+
+export interface DialogLineDetail {
+  id: string;
+  line_index: number;
+  speaker_id: string;
+  text: string;
+  start_time_ms: number | null;
+  end_time_ms: number | null;
+}
+
+export interface ListeningDialogDetail {
+  id: string;
+  scenario_el: string;
+  scenario_en: string;
+  scenario_ru: string;
+  cefr_level: DeckLevel;
+  num_speakers: number;
+  status: DialogStatus;
+  created_at: string;
+  audio_url: string | null;
+  audio_duration_seconds: number | null;
+  audio_generated_at: string | null;
+  audio_file_size_bytes: number | null;
+  speakers: DialogSpeakerDetail[];
+  lines: DialogLineDetail[];
 }
 
 /**
@@ -1643,4 +1676,12 @@ export const adminAPI = {
   ): Promise<ListeningDialogListItem> => {
     return api.post<ListeningDialogListItem>('/api/v1/admin/listening-dialogs', data);
   },
+
+  getListeningDialogDetail: async (id: string): Promise<ListeningDialogDetail> => {
+    return api.get<ListeningDialogDetail>(`/api/v1/admin/listening-dialogs/${id}`);
+  },
 };
+
+export function getDialogAudioStreamUrl(dialogId: string): string {
+  return `/api/v1/admin/listening-dialogs/${dialogId}/generate-audio/stream`;
+}

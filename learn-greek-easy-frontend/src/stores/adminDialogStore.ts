@@ -11,7 +11,11 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
 import { adminAPI } from '@/services/adminAPI';
-import type { DialogStatus, ListeningDialogListItem } from '@/services/adminAPI';
+import type {
+  DialogStatus,
+  ListeningDialogDetail,
+  ListeningDialogListItem,
+} from '@/services/adminAPI';
 
 interface AdminDialogState {
   dialogs: ListeningDialogListItem[];
@@ -28,6 +32,11 @@ interface AdminDialogState {
   createDialog: (jsonPayload: string) => Promise<void>;
   setPage: (page: number) => void;
   clearError: () => void;
+  selectedDialog: ListeningDialogDetail | null;
+  isLoadingDetail: boolean;
+  detailError: string | null;
+  fetchDialogDetail: (id: string) => Promise<void>;
+  clearSelectedDialog: () => void;
 }
 
 export const useAdminDialogStore = create<AdminDialogState>()(
@@ -42,6 +51,9 @@ export const useAdminDialogStore = create<AdminDialogState>()(
       isDeleting: false,
       isCreating: false,
       error: null,
+      selectedDialog: null,
+      isLoadingDetail: false,
+      detailError: null,
 
       fetchDialogs: async () => {
         set({ isLoading: true, error: null });
@@ -96,10 +108,26 @@ export const useAdminDialogStore = create<AdminDialogState>()(
       },
 
       clearError: () => set({ error: null }),
+
+      fetchDialogDetail: async (id: string) => {
+        set({ isLoadingDetail: true, detailError: null });
+        try {
+          const detail = await adminAPI.getListeningDialogDetail(id);
+          set({ selectedDialog: detail, isLoadingDetail: false });
+        } catch (error) {
+          set({
+            detailError: error instanceof Error ? error.message : 'Failed to load dialog details',
+            isLoadingDetail: false,
+          });
+        }
+      },
+      clearSelectedDialog: () => {
+        set({ selectedDialog: null, detailError: null });
+      },
     }),
     { name: 'adminDialogStore' }
   )
 );
 
 // Re-export type for use in components
-export type { DialogStatus, ListeningDialogListItem };
+export type { DialogStatus, ListeningDialogDetail, ListeningDialogListItem };

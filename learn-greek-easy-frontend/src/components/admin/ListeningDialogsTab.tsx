@@ -22,7 +22,6 @@ import {
   AlertTriangle,
   ChevronLeft,
   ChevronRight,
-  Eye,
   MessageSquare,
   Plus,
   Trash2,
@@ -42,7 +41,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from '@/hooks/use-toast';
 import { useLanguage } from '@/hooks/useLanguage';
 import {
@@ -54,6 +52,7 @@ import type { DialogStatus, ListeningDialogListItem } from '@/services/adminAPI'
 import { useAdminDialogStore } from '@/stores/adminDialogStore';
 
 import { DialogCreateModal } from './DialogCreateModal';
+import { DialogDetailModal } from './DialogDetailModal';
 
 // ============================================================================
 // Helpers
@@ -85,7 +84,6 @@ const STATUS_BADGE_CLASSES: Record<DialogStatus, string> = {
   draft: 'border-gray-500/30 bg-gray-500/10 text-gray-700 dark:text-gray-400',
   audio_ready: 'border-yellow-500/30 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400',
   exercises_ready: 'border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-400',
-  published: 'border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-400',
 };
 
 // ============================================================================
@@ -118,19 +116,29 @@ const DialogTableSkeleton: React.FC = () => (
 interface DialogRowProps {
   dialog: ListeningDialogListItem;
   onDelete: (dialog: ListeningDialogListItem) => void;
+  onClick?: (dialog: ListeningDialogListItem) => void;
   t: (key: string, options?: Record<string, unknown>) => string;
   lang: string;
 }
 
-const DialogRow: React.FC<DialogRowProps> = ({ dialog, onDelete, t, lang }) => {
+const DialogRow: React.FC<DialogRowProps> = ({ dialog, onDelete, onClick, t, lang }) => {
   const scenario = getLocalizedScenario(dialog, lang);
   const dateLocale = getDateLocale(lang);
   const formattedDate = format(new Date(dialog.created_at), 'dd MMM yyyy', { locale: dateLocale });
 
   return (
     <div
-      className="flex items-center justify-between rounded-lg border p-4 hover:bg-muted/50"
+      className="flex cursor-pointer items-center justify-between rounded-lg border p-4 hover:bg-muted/50"
       data-testid={`dialog-row-${dialog.id}`}
+      role="button"
+      tabIndex={0}
+      onClick={() => onClick?.(dialog)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick?.(dialog);
+        }
+      }}
     >
       {/* Left: Scenario + metadata */}
       <div className="min-w-0 flex-1">
@@ -158,33 +166,14 @@ const DialogRow: React.FC<DialogRowProps> = ({ dialog, onDelete, t, lang }) => {
           {t(`listeningDialogs.status.${dialog.status}`)}
         </Badge>
 
-        {/* View button (disabled, coming soon) */}
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled
-                  data-testid={`dialog-view-btn-${dialog.id}`}
-                >
-                  <Eye className="h-4 w-4" />
-                  <span className="sr-only">{t('listeningDialogs.view.tooltip')}</span>
-                </Button>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{t('listeningDialogs.view.tooltip')}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-
         {/* Delete button */}
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => onDelete(dialog)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(dialog);
+          }}
           className="text-destructive hover:bg-destructive/10 hover:text-destructive"
           data-testid={`dialog-delete-btn-${dialog.id}`}
         >
@@ -221,6 +210,8 @@ export function ListeningDialogsTab() {
 
   const [dialogToDelete, setDialogToDelete] = useState<ListeningDialogListItem | null>(null);
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [selectedDialogId, setSelectedDialogId] = useState<string | null>(null);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
   const hasTrackedView = useRef(false);
 
   useEffect(() => {
@@ -330,6 +321,10 @@ export function ListeningDialogsTab() {
                   key={dialog.id}
                   dialog={dialog}
                   onDelete={handleDeleteClick}
+                  onClick={(d) => {
+                    setSelectedDialogId(d.id);
+                    setDetailModalOpen(true);
+                  }}
                   t={t}
                   lang={currentLanguage}
                 />
@@ -423,6 +418,15 @@ export function ListeningDialogsTab() {
       </Dialog>
 
       <DialogCreateModal open={createModalOpen} onOpenChange={setCreateModalOpen} />
+
+      <DialogDetailModal
+        dialogId={selectedDialogId}
+        open={detailModalOpen}
+        onOpenChange={(open) => {
+          setDetailModalOpen(open);
+          if (!open) setSelectedDialogId(null);
+        }}
+      />
     </Card>
   );
 }

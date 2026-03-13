@@ -132,16 +132,16 @@ class TestListListeningDialogs:
         db_session: AsyncSession,
     ) -> None:
         await ListeningDialogFactory.create(session=db_session, status=DialogStatus.DRAFT)
-        await ListeningDialogFactory.create(session=db_session, status=DialogStatus.PUBLISHED)
+        await ListeningDialogFactory.create(session=db_session, status=DialogStatus.EXERCISES_READY)
 
         response = await client.get(
-            "/api/v1/admin/listening-dialogs?status=published",
+            "/api/v1/admin/listening-dialogs?status=exercises_ready",
             headers=superuser_auth_headers,
         )
         assert response.status_code == 200
         data = response.json()
         assert data["total"] == 1
-        assert data["items"][0]["status"] == "published"
+        assert data["items"][0]["status"] == "exercises_ready"
 
     @pytest.mark.asyncio
     async def test_filter_by_cefr_level(

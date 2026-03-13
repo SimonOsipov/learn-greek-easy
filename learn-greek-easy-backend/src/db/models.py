@@ -265,7 +265,6 @@ class DialogStatus(str, enum.Enum):
     DRAFT = "draft"
     AUDIO_READY = "audio_ready"
     EXERCISES_READY = "exercises_ready"
-    PUBLISHED = "published"
 
 
 class ExerciseType(str, enum.Enum):

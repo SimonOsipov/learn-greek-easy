@@ -70,12 +70,15 @@ from src.schemas.admin import (
     AdminDeckListResponse,
     AdminStatsResponse,
     ArticleCheckResponse,
+    DialogLineDetail,
+    DialogSpeakerDetail,
     GenerateCardsRequest,
     GenerateCardsResponse,
     GenerateWordEntryAudioRequest,
     GenerateWordEntryRequest,
     GenerateWordEntryResponse,
     ListeningDialogCreateFromJSON,
+    ListeningDialogDetail,
     ListeningDialogListItem,
     ListeningDialogListResponse,
     NormalizationStageResult,
@@ -3606,6 +3609,52 @@ async def create_listening_dialog(
     except IntegrityError:
         await db.rollback()
         raise HTTPException(status_code=409, detail="Dialog could not be created due to a conflict")
+
+
+@router.get(
+    "/listening-dialogs/{dialog_id}",
+    response_model=ListeningDialogDetail,
+    summary="Get listening dialog detail",
+)
+async def get_listening_dialog_detail(
+    dialog_id: UUID,
+    session: AsyncSession = Depends(get_db),
+    _user: User = Depends(get_current_superuser),
+) -> ListeningDialogDetail:
+    result = await session.execute(
+        select(ListeningDialog)
+        .options(
+            selectinload(ListeningDialog.speakers),
+            selectinload(ListeningDialog.lines),
+        )
+        .where(ListeningDialog.id == dialog_id)
+    )
+    dialog = result.scalar_one_or_none()
+    if dialog is None:
+        raise HTTPException(status_code=404, detail="Dialog not found")
+
+    s3 = get_s3_service()
+    audio_url = s3.generate_presigned_url(dialog.audio_s3_key) if dialog.audio_s3_key else None
+
+    speakers_sorted = sorted(dialog.speakers, key=lambda s: s.speaker_index)
+    lines_sorted = sorted(dialog.lines, key=lambda ln: ln.line_index)
+
+    return ListeningDialogDetail(
+        id=dialog.id,
+        scenario_el=dialog.scenario_el,
+        scenario_en=dialog.scenario_en,
+        scenario_ru=dialog.scenario_ru,
+        cefr_level=dialog.cefr_level,
+        num_speakers=dialog.num_speakers,
+        status=dialog.status,
+        created_at=dialog.created_at,
+        audio_url=audio_url,
+        audio_duration_seconds=dialog.audio_duration_seconds,
+        audio_generated_at=dialog.audio_generated_at,
+        audio_file_size_bytes=dialog.audio_file_size_bytes,
+        speakers=[DialogSpeakerDetail.model_validate(s) for s in speakers_sorted],
+        lines=[DialogLineDetail.model_validate(ln) for ln in lines_sorted],
+    )
 
 
 async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, None]:  # noqa: C901
