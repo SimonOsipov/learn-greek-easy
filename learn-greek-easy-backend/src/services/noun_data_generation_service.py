@@ -25,7 +25,7 @@ Rules:
 5. Include declension_group: masculine_os, masculine_as, masculine_is, feminine_a, feminine_i, feminine_os, neuter_o, neuter_i, neuter_ma, neuter_os.
 6. Include exactly 2 example sentences with Greek, English, and Russian translations. Use id values 1 and 2. Examples should use the noun naturally in context.
 7. Include English and Russian translations of the lemma. Include translation_en_plural for the English plural form. Include translation_ru_plural for the Russian plural form.
-8. Pronunciation must be in IPA format.
+8. Pronunciation: use simplified broad IPA with ONLY basic Latin letters (a, e, i, o, u, p, b, t, d, k, g, f, v, s, z, x, m, n, l, r) plus θ. Do NOT use ʎ (use li), ð (use d), ɣ (use gh), ʝ (use y), ŋ (use ng), ç (use c), or any other special IPA symbols. Mark stress with ˈ before the stressed syllable. Separate syllables with dots. Examples: ήλιος → /ˈi.li.os/, εβδομάδα → /ev.do.ˈma.da/.
 9. For indeclinable nouns (e.g., foreign loanwords like σουπερμάρκετ), all case forms are identical (the bare word), with no article change except the standard article for that gender/case.
 
 Example 1 (masculine, masculine_os):
