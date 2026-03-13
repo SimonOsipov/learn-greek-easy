@@ -1048,12 +1048,6 @@
       "crossAiUnavailable": "Cross-AI verification unavailable",
       "notAvailable": "N/A",
       "noComparisons": "No comparisons available",
-      "fieldStatus": {
-        "pass": "Pass",
-        "warn": "Warning",
-        "fail": "Fail",
-        "skipped": "Skipped"
-      },
       "comparisonHeaders": {
         "field": "Field",
         "primary": "Primary",

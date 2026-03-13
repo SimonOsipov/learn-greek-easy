@@ -1060,12 +1060,6 @@
       "crossAiUnavailable": "Кросс-AI верификация недоступна",
       "notAvailable": "Н/Д",
       "noComparisons": "Сравнения недоступны",
-      "fieldStatus": {
-        "pass": "Пройдено",
-        "warn": "Предупреждение",
-        "fail": "Ошибка",
-        "skipped": "Пропущено"
-      },
       "comparisonHeaders": {
         "field": "Поле",
         "primary": "Основной",

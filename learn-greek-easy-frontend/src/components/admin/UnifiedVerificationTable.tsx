@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { AlertCircle, AlertTriangle, Check, MinusCircle, Pencil, XCircle } from 'lucide-react';
+import { AlertCircle, Pencil } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -11,17 +11,9 @@ import { cn } from '@/lib/utils';
 import type {
   CrossAIVerificationResult,
   FieldComparisonResult,
-  FieldStatus,
   FieldVerificationResult,
   LocalVerificationResult,
 } from '@/services/adminAPI';
-
-const FIELD_STATUS_ICON: Record<FieldStatus, { icon: React.ElementType; className: string }> = {
-  pass: { icon: Check, className: 'text-green-500' },
-  warn: { icon: AlertTriangle, className: 'text-yellow-500' },
-  fail: { icon: XCircle, className: 'text-red-500' },
-  skipped: { icon: MinusCircle, className: 'text-muted-foreground' },
-};
 
 interface UnifiedRow {
   field_path: string;
@@ -118,20 +110,6 @@ const FIELD_LABELS: Record<string, string> = {
   'grammar_data.declension_group': 'Declension Group',
 };
 
-function formatUDMessage(message: string): string {
-  return message
-    .replace(/Case=Nom/g, 'nominative')
-    .replace(/Case=Gen/g, 'genitive')
-    .replace(/Case=Acc/g, 'accusative')
-    .replace(/Case=Voc/g, 'vocative')
-    .replace(/Number=Sing/g, 'singular')
-    .replace(/Number=Plur/g, 'plural')
-    .replace(/Gender=Masc/g, 'masculine')
-    .replace(/Gender=Fem/g, 'feminine')
-    .replace(/Gender=Neut/g, 'neuter')
-    .replace(/\//g, ' ');
-}
-
 function getRowSeverity(row: UnifiedRow): 'red' | 'yellow' | 'green' | 'neutral' {
   if (row.local?.status === 'fail' || row.crossAI?.agrees === false) return 'red';
   if (row.local?.status === 'warn') return 'yellow';
@@ -166,7 +144,6 @@ function isCellClickable(
 function LocalCell({
   row,
   hasLocalData,
-  t,
   interactive,
   isSelected,
   isOtherSelected,
@@ -175,7 +152,6 @@ function LocalCell({
 }: {
   row: UnifiedRow;
   hasLocalData: boolean;
-  t: (key: string) => string;
   interactive: boolean;
   isSelected: boolean;
   isOtherSelected: boolean;
@@ -185,58 +161,21 @@ function LocalCell({
   const field = row.local;
   const clickable = isCellClickable(row, 'local', interactive);
 
+  const refCheck = field?.checks.find((c) => c.reference_value != null);
+  const referenceValue = refCheck?.reference_value ?? null;
+
   const cellContent = (() => {
-    if (!hasLocalData) return <span className="text-muted-foreground">—</span>;
-    if (!field) return <span className="text-muted-foreground">—</span>;
-    if (field.status === 'skipped')
-      return (
-        <span className="text-xs text-muted-foreground">
-          {t('generateNoun.verification.fieldStatus.skipped')}
-        </span>
-      );
-
-    const { icon: Icon, className } = FIELD_STATUS_ICON[field.status];
-    const firstMsg = field.checks.find((c) => c.message)?.message;
-    const tooltipText = firstMsg ? formatUDMessage(firstMsg) : field.status;
-
-    // Extract reference info
-    const refCheck = field.checks.find((c) => c.reference_value != null);
-    const referenceValue = refCheck?.reference_value ?? null;
-
-    if (referenceValue != null) {
-      return (
-        <span className="inline-flex min-w-0 items-center gap-1">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className={cn('inline-flex items-center', className)}>
-                <Icon className="h-3 w-3 shrink-0" />
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>
-              <span className="text-xs">{tooltipText}</span>
-            </TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="block break-words text-xs">{referenceValue}</span>
-            </TooltipTrigger>
-            <TooltipContent>
-              <span className="text-xs">{referenceValue}</span>
-            </TooltipContent>
-          </Tooltip>
-        </span>
-      );
+    if (!hasLocalData || !field || referenceValue == null) {
+      return <span className="text-muted-foreground">—</span>;
     }
 
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          <span className={cn('inline-flex items-center', className)}>
-            <Icon className="h-3 w-3 shrink-0" />
-          </span>
+          <span className="block break-words text-xs">{referenceValue}</span>
         </TooltipTrigger>
         <TooltipContent>
-          <span className="text-xs">{tooltipText}</span>
+          <span className="text-xs">{referenceValue}</span>
         </TooltipContent>
       </Tooltip>
     );
@@ -254,9 +193,8 @@ function LocalCell({
         aria-pressed={isSelected}
         onClick={() => {
           onSelect?.(row.field_path, 'local');
-          const refCheck = row.local?.checks.find((c) => c.reference_value != null);
-          if (refCheck?.reference_value != null) {
-            onResolvedValueChange?.(row.field_path, refCheck.reference_value);
+          if (referenceValue != null) {
+            onResolvedValueChange?.(row.field_path, referenceValue);
           }
         }}
       >
@@ -268,21 +206,12 @@ function LocalCell({
   return <>{cellContent}</>;
 }
 
-function FieldCell({
-  path,
-  severity,
-}: {
-  path: string;
-  severity: 'red' | 'yellow' | 'green' | 'neutral';
-}) {
+function FieldCell({ path }: { path: string }) {
   const label = FIELD_LABELS[path] ?? path;
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span className="flex items-center gap-1.5 text-xs">
-          <SeverityDot severity={severity} />
-          <span className="truncate">{label}</span>
-        </span>
+        <span className="truncate text-xs">{label}</span>
       </TooltipTrigger>
       <TooltipContent>
         <span className="font-mono text-xs">{path}</span>
@@ -511,14 +440,16 @@ function RowsTable({
   return (
     <table className="w-full table-auto text-sm">
       <colgroup>
-        <col style={{ width: '15%' }} />
-        <col style={{ width: '15%' }} />
+        <col style={{ width: '4%' }} />
+        <col style={{ width: '14%' }} />
+        <col style={{ width: '14%' }} />
         <col style={{ width: '22%' }} />
         <col style={{ width: '22%' }} />
-        <col style={{ width: '26%' }} />
+        <col style={{ width: '24%' }} />
       </colgroup>
       <thead>
         <tr className="border-b text-xs font-medium">
+          <th className="py-1" />
           <th className="py-1 text-left font-medium">
             {t('generateNoun.verification.comparisonHeaders.field')}
           </th>
@@ -549,13 +480,15 @@ function RowsTable({
               className="border-b last:border-0"
             >
               <td className="py-1 pr-1 align-middle">
-                <FieldCell path={row.field_path} severity={severity} />
+                <SeverityDot severity={severity} />
+              </td>
+              <td className="py-1 pr-1 align-middle">
+                <FieldCell path={row.field_path} />
               </td>
               <td className="py-1 align-middle">
                 <LocalCell
                   row={row}
                   hasLocalData={hasLocalData}
-                  t={t}
                   interactive={isInteractive}
                   isSelected={selectedSource === 'local'}
                   isOtherSelected={isAdminSelected && selectedSource !== 'local'}

@@ -217,12 +217,12 @@ describe('UnifiedVerificationTable', () => {
     expect(decisionTd?.textContent).toBe('—');
   });
 
-  it('Local column shows icon only (no text label)', () => {
+  it('Local column shows dash when no reference value', () => {
     const local = makeLocalResult([makeLocalField('lemma', 'warn', 'weak match')]);
     renderComponent(local, null);
-    expect(screen.queryByText('Warning')).not.toBeInTheDocument();
-    expect(screen.queryByText('Pass')).not.toBeInTheDocument();
-    expect(screen.queryByText('Fail')).not.toBeInTheDocument();
+    const row = screen.getByTestId('unified-row-lemma');
+    const localTd = row.querySelectorAll('td')[2];
+    expect(localTd?.textContent).toBe('—');
   });
 
   it('shows reference text in Local column when reference_value is present', () => {
@@ -233,14 +233,13 @@ describe('UnifiedVerificationTable', () => {
     expect(screen.getByText('house')).toBeInTheDocument();
   });
 
-  it('shows only severity icon when no reference_value in checks', () => {
+  it('shows dash in Local column when no reference_value in checks', () => {
     const local = makeLocalResult([makeLocalField('lemma', 'pass', 'ok')]);
     renderComponent(local, null);
     const row = screen.getByTestId('unified-row-lemma');
-    expect(row.querySelector('svg')).toBeTruthy();
-    // No truncated reference text span
-    const localTd = row.querySelectorAll('td')[1];
-    expect(localTd?.querySelector('.truncate')).toBeFalsy();
+    // Local column (td[2]) shows dash, no reference text
+    const localTd = row.querySelectorAll('td')[2];
+    expect(localTd?.textContent).toBe('—');
   });
 
   it('filters out examples row even when backend sends it', () => {
@@ -261,7 +260,7 @@ describe('interactive click-to-select', () => {
     renderComponent(null, crossAI, undefined, onSelect, true);
 
     const row = screen.getByTestId('unified-row-translation_en');
-    const primaryTd = row.querySelectorAll('td')[2];
+    const primaryTd = row.querySelectorAll('td')[3];
     const clickable = primaryTd?.querySelector('.cursor-pointer');
     await userEvent.click(clickable!);
     expect(onSelect).toHaveBeenCalledWith('translation_en', 'primary');
@@ -273,7 +272,7 @@ describe('interactive click-to-select', () => {
     renderComponent(null, crossAI, undefined, onSelect, true);
 
     const row = screen.getByTestId('unified-row-translation_en');
-    const secondaryTd = row.querySelectorAll('td')[3];
+    const secondaryTd = row.querySelectorAll('td')[4];
     const clickable = secondaryTd?.querySelector('.cursor-pointer');
     await userEvent.click(clickable!);
     expect(onSelect).toHaveBeenCalledWith('translation_en', 'secondary');
@@ -285,8 +284,8 @@ describe('interactive click-to-select', () => {
     renderComponent(null, crossAI, undefined, onSelect, true);
 
     const row = screen.getByTestId('unified-row-translation_en');
-    const primaryClickable = row.querySelectorAll('td')[2]?.querySelector('.cursor-pointer');
-    const secondaryClickable = row.querySelectorAll('td')[3]?.querySelector('.cursor-pointer');
+    const primaryClickable = row.querySelectorAll('td')[3]?.querySelector('.cursor-pointer');
+    const secondaryClickable = row.querySelectorAll('td')[4]?.querySelector('.cursor-pointer');
     await userEvent.click(primaryClickable!);
     await userEvent.click(secondaryClickable!);
     expect(onSelect).toHaveBeenNthCalledWith(1, 'translation_en', 'primary');
@@ -301,7 +300,7 @@ describe('interactive click-to-select', () => {
     renderComponent(local, null, undefined, onSelect, true);
 
     const row = screen.getByTestId('unified-row-translation_en');
-    const localTd = row.querySelectorAll('td')[1];
+    const localTd = row.querySelectorAll('td')[2];
     const clickable = localTd?.querySelector('.cursor-pointer');
     await userEvent.click(clickable!);
     expect(onSelect).toHaveBeenCalledWith('translation_en', 'local');
@@ -313,7 +312,7 @@ describe('interactive click-to-select', () => {
     renderComponent(null, crossAI, selections, undefined, true);
 
     const row = screen.getByTestId('unified-row-translation_en');
-    const primaryCell = row.querySelectorAll('td')[2];
+    const primaryCell = row.querySelectorAll('td')[3];
     expect(primaryCell?.querySelector('.ring-2')).toBeTruthy();
   });
 
@@ -323,7 +322,7 @@ describe('interactive click-to-select', () => {
     renderComponent(null, crossAI, selections, undefined, true);
 
     const row = screen.getByTestId('unified-row-translation_en');
-    const secondaryCell = row.querySelectorAll('td')[3];
+    const secondaryCell = row.querySelectorAll('td')[4];
     expect(secondaryCell?.querySelector('.opacity-50')).toBeTruthy();
   });
 
@@ -333,7 +332,7 @@ describe('interactive click-to-select', () => {
     renderComponent(local, null, undefined, onSelect, true);
 
     const row = screen.getByTestId('unified-row-lemma');
-    const localCell = row.querySelectorAll('td')[1];
+    const localCell = row.querySelectorAll('td')[2];
     await userEvent.click(localCell!);
     expect(onSelect).not.toHaveBeenCalled();
   });
@@ -344,7 +343,7 @@ describe('interactive click-to-select', () => {
     renderComponent(null, crossAI, undefined, onSelect, false);
 
     const row = screen.getByTestId('unified-row-translation_en');
-    const primaryCell = row.querySelectorAll('td')[2];
+    const primaryCell = row.querySelectorAll('td')[3];
     await userEvent.click(primaryCell!);
     expect(onSelect).not.toHaveBeenCalled();
   });
@@ -355,7 +354,7 @@ describe('interactive click-to-select', () => {
     renderComponent(null, crossAI, undefined, onSelect, true);
 
     const row = screen.getByTestId('unified-row-translation_en');
-    const primaryCell = row.querySelectorAll('td')[2];
+    const primaryCell = row.querySelectorAll('td')[3];
     const clickable = primaryCell?.querySelector('.cursor-pointer');
     expect(clickable).toBeTruthy();
     await userEvent.click(clickable!);
@@ -393,7 +392,7 @@ describe('cell-click pill sync', () => {
     renderWithPills(crossAI, resolvedValues, onResolvedValueChange);
 
     const row = screen.getByTestId('unified-row-translation_en');
-    const primaryTd = row.querySelectorAll('td')[2];
+    const primaryTd = row.querySelectorAll('td')[3];
     const clickable = primaryTd?.querySelector('.cursor-pointer');
     await userEvent.click(clickable!);
 
@@ -409,7 +408,7 @@ describe('cell-click pill sync', () => {
     renderWithPills(crossAI, resolvedValues, onResolvedValueChange);
 
     const row = screen.getByTestId('unified-row-translation_en');
-    const secondaryTd = row.querySelectorAll('td')[3];
+    const secondaryTd = row.querySelectorAll('td')[4];
     const clickable = secondaryTd?.querySelector('.cursor-pointer');
     await userEvent.click(clickable!);
 
@@ -438,14 +437,14 @@ describe('cell-click pill sync', () => {
     );
 
     const row = screen.getByTestId('unified-row-translation_en');
-    const localTd = row.querySelectorAll('td')[1];
+    const localTd = row.querySelectorAll('td')[2];
     const clickable = localTd?.querySelector('.cursor-pointer');
     await userEvent.click(clickable!);
 
     expect(onResolvedValueChange).toHaveBeenCalledWith('translation_en', 'house');
   });
 
-  it('table has colgroup with 5 col elements', () => {
+  it('table has colgroup with 6 col elements', () => {
     const crossAI = makeCrossAI([makeComparison('translation_en', false, 'house', 'home')]);
     const resolvedValues = new Map<string, PillState>([
       ['translation_en', { value: 'house', status: 'unresolved', source: 'auto' }],
@@ -454,6 +453,19 @@ describe('cell-click pill sync', () => {
 
     const colgroup = container.querySelector('colgroup');
     expect(colgroup).toBeTruthy();
-    expect(colgroup?.querySelectorAll('col')).toHaveLength(5);
+    expect(colgroup?.querySelectorAll('col')).toHaveLength(6);
+  });
+
+  it('first column contains severity dot', () => {
+    const crossAI = makeCrossAI([makeComparison('translation_en', false, 'house', 'home')]);
+    const resolvedValues = new Map<string, PillState>([
+      ['translation_en', { value: 'house', status: 'unresolved', source: 'auto' }],
+    ]);
+    renderWithPills(crossAI, resolvedValues, vi.fn());
+
+    const row = screen.getByTestId('unified-row-translation_en');
+    const dotTd = row.querySelectorAll('td')[0];
+    // First td contains the severity dot (a span with rounded-full)
+    expect(dotTd?.querySelector('.rounded-full')).toBeTruthy();
   });
 });
