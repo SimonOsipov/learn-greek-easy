@@ -142,6 +142,7 @@ export const AnnouncementsTab: React.FC = () => {
         open={createModalOpen}
         onOpenChange={setCreateModalOpen}
         onSuccess={() => {
+          setPage(1);
           fetchAnnouncements();
         }}
       />

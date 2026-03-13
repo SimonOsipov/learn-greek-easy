@@ -85,7 +85,14 @@ export function validateNewsItemJson(jsonString: string): ValidationResult {
   // Try to parse JSON
   let parsed: Record<string, unknown>;
   try {
-    parsed = JSON.parse(jsonString);
+    const rawParsed: unknown = JSON.parse(jsonString);
+    if (typeof rawParsed !== 'object' || rawParsed === null || Array.isArray(rawParsed)) {
+      return {
+        valid: false,
+        error: { type: 'invalidJson', messageKey: 'news.validation.invalidJson' },
+      };
+    }
+    parsed = rawParsed as Record<string, unknown>;
   } catch {
     return {
       valid: false,

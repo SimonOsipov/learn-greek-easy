@@ -56,7 +56,7 @@ vi.mock('react-i18next', () => ({
         'changelog.create.description': 'Paste JSON to create a new changelog entry',
         'changelog.create.submit': 'Submit',
         'changelog.create.submitting': 'Submitting...',
-        'changelog.edit.cancel': 'Cancel',
+        'changelog.create.cancel': 'Cancel',
         'changelog.toast.created': 'Changelog entry created successfully',
         'changelog.toast.createError': 'Failed to create changelog entry',
         'changelog.validation.invalidJson': 'Invalid JSON format',

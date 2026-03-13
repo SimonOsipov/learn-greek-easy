@@ -379,11 +379,10 @@ test.describe('MCNEWS - Admin Country Management', () => {
       .locator('[data-testid^="news-item-row-"]')
       .filter({ hasText: 'Greece News Skip E2E' })
       .first();
-    if (await greeceRow.isVisible({ timeout: 5000 })) {
-      // The green Q badge should NOT be in this row (question was skipped)
-      const greenQInRow = greeceRow.locator('.bg-green-500\\/10').filter({ hasText: 'Q' });
-      await expect(greenQInRow).toHaveCount(0);
-    }
+    await expect(greeceRow).toBeVisible({ timeout: 5000 });
+    // The green Q badge should NOT be in this row (question was skipped)
+    const greenQInRow = greeceRow.locator('.bg-green-500\\/10').filter({ hasText: 'Q' });
+    await expect(greenQInRow).toHaveCount(0);
   });
 
   test('MCNEWS-E2E-09: Admin country filter shows correct items', async ({ page }) => {
