@@ -1,6 +1,6 @@
 """drop published from dialog_status
 
-Revision ID: a1b2c3d4e5f6
+Revision ID: 7e807dbfe015
 Revises: f3c2a1e9d7b5
 Create Date: 2026-03-13 17:00:00.000000
 
@@ -9,7 +9,7 @@ Create Date: 2026-03-13 17:00:00.000000
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision = "a1b2c3d4e5f6"
+revision = "7e807dbfe015"
 down_revision = "f3c2a1e9d7b5"
 branch_labels = None
 depends_on = None
