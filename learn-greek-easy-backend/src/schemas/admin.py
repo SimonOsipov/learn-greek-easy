@@ -420,3 +420,42 @@ class ListeningDialogCreateFromJSON(BaseModel):
                     f"lines[{i}].speaker_index {line.speaker_index} does not reference a defined speaker"
                 )
         return self
+
+
+class DialogSpeakerDetail(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    speaker_index: int
+    character_name: str
+    voice_id: str
+
+
+class DialogLineDetail(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    line_index: int
+    speaker_id: UUID
+    text: str
+    start_time_ms: int | None
+    end_time_ms: int | None
+
+
+class ListeningDialogDetail(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    scenario_el: str
+    scenario_en: str
+    scenario_ru: str
+    cefr_level: DeckLevel
+    num_speakers: int
+    status: DialogStatus
+    created_at: datetime
+    audio_url: str | None = None
+    audio_duration_seconds: float | None = None
+    audio_generated_at: datetime | None = None
+    audio_file_size_bytes: int | None = None
+    speakers: list[DialogSpeakerDetail]
+    lines: list[DialogLineDetail]
