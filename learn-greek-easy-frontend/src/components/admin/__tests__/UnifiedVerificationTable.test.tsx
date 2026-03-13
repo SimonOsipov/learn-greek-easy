@@ -355,6 +355,19 @@ describe('interactive click-to-select', () => {
     await userEvent.click(primaryCell!);
     expect(onSelect).not.toHaveBeenCalled();
   });
+
+  it('clicking primary cell on agreed row (agrees: true) calls onSelect', async () => {
+    const onSelect = vi.fn();
+    const crossAI = makeCrossAI([makeComparison('translation_en', true, 'house', 'house')]);
+    renderComponent(null, crossAI, undefined, onSelect, true);
+
+    const row = screen.getByTestId('unified-row-translation_en');
+    const primaryCell = row.querySelectorAll('td')[2];
+    const clickable = primaryCell?.querySelector('.cursor-pointer');
+    expect(clickable).toBeTruthy();
+    await userEvent.click(clickable!);
+    expect(onSelect).toHaveBeenCalledWith('translation_en', 'primary');
+  });
 });
 
 function renderWithPills(

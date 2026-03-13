@@ -161,7 +161,7 @@ function isCellClickable(
     const hasRef = row.local?.checks.some((c) => c.reference_value != null) ?? false;
     return hasRef;
   }
-  return row.crossAI?.agrees === false;
+  return row.crossAI != null;
 }
 
 function LocalCell({

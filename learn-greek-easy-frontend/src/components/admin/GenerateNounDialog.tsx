@@ -7,7 +7,7 @@ import { AlertCircle, Info, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { UnifiedVerificationTable } from '@/components/admin/UnifiedVerificationTable';
-import type { PillState } from '@/components/admin/UnifiedVerificationTable';
+import type { PillState, SelectionSource } from '@/components/admin/UnifiedVerificationTable';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   AlertDialog,
@@ -158,6 +158,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
   const [swapConfirmation, setSwapConfirmation] = useState<{ index: number } | null>(null);
   const [editableExamples, setEditableExamples] = useState<EditableExample[]>([]);
   const [resolvedValues, setResolvedValues] = useState<Map<string, PillState>>(new Map());
+  const [selections, setSelections] = useState<Map<string, SelectionSource>>(new Map());
   const [examplesEditing, setExamplesEditing] = useState(false);
 
   useEffect(() => {
@@ -336,6 +337,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
       setVerificationLoading(false);
       setStageError(null);
       setResolvedValues(new Map());
+      setSelections(new Map());
       setPipelineStatus('streaming');
 
       // Start new SSE stream from generation stage
@@ -392,6 +394,14 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
     setStreamEnabled(true);
   }, [greekWord, deckId]);
 
+  const handleSelect = useCallback((fieldPath: string, source: SelectionSource) => {
+    setSelections((prev) => {
+      const next = new Map(prev);
+      next.set(fieldPath, source);
+      return next;
+    });
+  }, []);
+
   const resetAllState = useCallback(() => {
     setGreekWord('');
     setApiError(null);
@@ -409,6 +419,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
     setStreamBody(null);
     setEditableExamples([]);
     setResolvedValues(new Map());
+    setSelections(new Map());
     setExamplesEditing(false);
     closeStream();
   }, [closeStream]);
@@ -624,6 +635,8 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                       crossAI={displayVerification.cross_ai}
                       interactive
                       resolvedValues={resolvedValues}
+                      selections={selections}
+                      onSelect={handleSelect}
                       onResolvedValueChange={(fieldPath, value) => {
                         setResolvedValues((prev) => {
                           const next = new Map(prev);
