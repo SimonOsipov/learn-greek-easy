@@ -1076,7 +1076,6 @@
     "approve": {
       "button": "Approve & Save",
       "saving": "Saving...",
-      "unresolvedWarning": "{{count}} field(s) have unresolved disagreements — Primary value will be used",
       "successToast": "Word entry saved successfully",
       "errorToast": "Failed to save word entry"
     },

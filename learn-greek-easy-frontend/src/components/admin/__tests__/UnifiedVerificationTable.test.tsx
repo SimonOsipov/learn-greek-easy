@@ -154,13 +154,6 @@ describe('UnifiedVerificationTable', () => {
     expect(screen.getByText(/API timeout/)).toBeInTheDocument();
   });
 
-  it('shows agreement badge when crossAI has overall_agreement', () => {
-    const crossAI = makeCrossAI([makeComparison('lemma', true)]);
-    renderComponent(null, crossAI);
-
-    expect(screen.getByTestId('cross-ai-agreement')).toBeInTheDocument();
-  });
-
   it('joins rows from both local and crossAI by field_path', () => {
     const local = makeLocalResult([makeLocalField('lemma', 'pass')]);
     const crossAI = makeCrossAI([makeComparison('lemma', true)]);
