@@ -40,7 +40,6 @@ import {
   ListeningDialogsTab,
   NewsTab,
   SummaryCard,
-  WordEntriesTab,
 } from '@/components/admin';
 import { CultureBadge, type CultureCategory } from '@/components/culture';
 import { DeckBadge } from '@/components/decks';
@@ -321,6 +320,7 @@ interface AllDecksListProps {
   onEditDeck: (deck: UnifiedDeckItem) => void;
   onDeleteDeck: (deck: UnifiedDeckItem) => void;
   onViewDeckDetail: (deck: UnifiedDeckItem) => void;
+  onCreateDeck?: () => void;
 }
 
 export interface AllDecksListHandle {
@@ -328,7 +328,7 @@ export interface AllDecksListHandle {
 }
 
 const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
-  ({ t, locale, onEditDeck, onDeleteDeck, onViewDeckDetail }, ref) => {
+  ({ t, locale, onEditDeck, onDeleteDeck, onViewDeckDetail, onCreateDeck }, ref) => {
     const [deckList, setDeckList] = useState<DeckListResponse | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -419,10 +419,20 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
     return (
       <Card>
         <CardHeader>
-          <CardTitle data-testid="all-decks-title">{t('sections.allDecks')}</CardTitle>
-          <CardDescription data-testid="all-decks-description">
-            {t('sections.allDecksDescription')}
-          </CardDescription>
+          <div className="flex items-start justify-between">
+            <div>
+              <CardTitle data-testid="all-decks-title">{t('sections.allDecks')}</CardTitle>
+              <CardDescription data-testid="all-decks-description">
+                {t('sections.allDecksDescription')}
+              </CardDescription>
+            </div>
+            {onCreateDeck && (
+              <Button onClick={onCreateDeck} data-testid="create-deck-button">
+                <Plus className="mr-2 h-4 w-4" />
+                {t('actions.createDeck')}
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {/* Search and Filter Controls */}
@@ -567,13 +577,12 @@ type AdminTabType =
   | 'news'
   | 'announcements'
   | 'changelog'
-  | 'wordEntries'
   | 'cardErrors'
   | 'feedback'
   | 'listeningDialogs';
 
 const ADMIN_TAB_GROUPS: { key: string; tabs: AdminTabType[] }[] = [
-  { key: 'content', tabs: ['decks', 'wordEntries', 'news'] },
+  { key: 'content', tabs: ['decks', 'news'] },
   { key: 'exercises', tabs: ['listeningDialogs'] },
   { key: 'reviews', tabs: ['cardErrors', 'feedback'] },
   { key: 'system', tabs: ['changelog', 'announcements'] },
@@ -1217,14 +1226,6 @@ const AdminPage: React.FC = () => {
             </div>
           </section>
 
-          {/* Action Bar */}
-          <div className="flex justify-end gap-2">
-            <Button onClick={handleOpenCreateModal} data-testid="create-deck-button">
-              <Plus className="mr-2 h-4 w-4" />
-              {t('actions.createDeck')}
-            </Button>
-          </div>
-
           {/* All Decks List with Search and Pagination */}
           <section aria-labelledby="all-decks-heading">
             <AllDecksList
@@ -1234,6 +1235,7 @@ const AdminPage: React.FC = () => {
               onEditDeck={handleEditDeck}
               onDeleteDeck={handleDeleteDeck}
               onViewDeckDetail={handleViewDeckDetail}
+              onCreateDeck={handleOpenCreateModal}
             />
           </section>
         </>
@@ -1260,16 +1262,6 @@ const AdminPage: React.FC = () => {
             {t('admin:tabs.changelog')}
           </h2>
           <ChangelogTab />
-        </section>
-      )}
-
-      {/* Word Entries Tab Content */}
-      {activeTab === 'wordEntries' && (
-        <section aria-labelledby="word-entries-heading">
-          <h2 id="word-entries-heading" className="sr-only">
-            {t('admin:tabs.wordEntries')}
-          </h2>
-          <WordEntriesTab />
         </section>
       )}
 
