@@ -117,7 +117,7 @@ def _make_cross_result(
             ),
         ],
         overall_agreement=agreement,
-        secondary_model="qwen/qwen3-30b-a3b",
+        secondary_model="qwen/qwen3-30b-a3b-instruct-2507",
     )
 
 

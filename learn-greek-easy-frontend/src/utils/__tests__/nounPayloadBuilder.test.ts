@@ -408,7 +408,7 @@ describe('initializeResolvedValues', () => {
         },
       ],
       overall_agreement: null,
-      secondary_model: 'qwen/qwen3-30b-a3b',
+      secondary_model: 'qwen/qwen3-30b-a3b-instruct-2507',
       secondary_generation: null,
       error: 'Secondary generation failed or skipped',
     };

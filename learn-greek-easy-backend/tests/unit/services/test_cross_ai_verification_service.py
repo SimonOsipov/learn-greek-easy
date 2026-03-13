@@ -146,7 +146,7 @@ class TestFullAgreement:
         assert result.overall_agreement == 1.0
         assert len(result.comparisons) == 16
         assert all(c.agrees for c in result.comparisons)
-        assert result.secondary_model == "qwen/qwen3-30b-a3b"
+        assert result.secondary_model == "qwen/qwen3-30b-a3b-instruct-2507"
         assert result.secondary_generation is not None
         assert result.error is None
 
@@ -516,7 +516,7 @@ class TestPromptConstruction:
         mock_openrouter.complete.return_value = _make_response(_noun_data_to_json(primary))
         await service.verify(primary, _make_lemma())
         call_kwargs = mock_openrouter.complete.call_args
-        assert call_kwargs.kwargs["model"] == "qwen/qwen3-30b-a3b"
+        assert call_kwargs.kwargs["model"] == "qwen/qwen3-30b-a3b-instruct-2507"
 
     @pytest.mark.asyncio
     async def test_response_format(
@@ -594,17 +594,17 @@ class TestPromptConstruction:
         assert "unknown" not in user_content.lower()
 
     @pytest.mark.asyncio
-    async def test_reasoning_not_passed(
+    async def test_reasoning_disabled(
         self,
         service: CrossAIVerificationService,
         mock_openrouter: AsyncMock,
     ) -> None:
-        """verify() does not pass reasoning parameter to OpenRouter."""
+        """verify() passes reasoning={'type': 'disabled'} to OpenRouter to suppress thinking tokens."""
         primary = _make_noun_data()
         mock_openrouter.complete.return_value = _make_response(_noun_data_to_json(primary))
         await service.verify(primary, _make_lemma())
         call_kwargs = mock_openrouter.complete.call_args
-        assert "reasoning" not in call_kwargs.kwargs
+        assert call_kwargs.kwargs["reasoning"] == {"type": "disabled"}
 
 
 # ---------------------------------------------------------------------------

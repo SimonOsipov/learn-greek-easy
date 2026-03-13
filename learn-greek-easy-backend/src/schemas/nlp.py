@@ -213,7 +213,8 @@ class CrossAIVerificationResult(BaseModel):
         None, description="Weighted fraction of fields that agree (0.0-1.0), None if failed"
     )
     secondary_model: str = Field(
-        default="qwen/qwen3-30b-a3b", description="Model used for secondary generation"
+        default="qwen/qwen3-30b-a3b-instruct-2507",
+        description="Model used for secondary generation",
     )
     secondary_generation: GeneratedNounData | None = Field(
         None, description="Full secondary generation output for admin reference"
