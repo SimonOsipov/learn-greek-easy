@@ -312,7 +312,12 @@
       "jsonMessageRequired": "Message is required.",
       "jsonMessageTooLong": "Message must be 500 characters or less.",
       "jsonInvalidUrl": "Link URL must be a valid URL.",
-      "jsonUrlTooLong": "Link URL must be 500 characters or less."
+      "jsonUrlTooLong": "Link URL must be 500 characters or less.",
+      "button": "Create Announcement",
+      "formTab": "Form",
+      "jsonTab": "JSON",
+      "unsavedTitle": "Discard changes?",
+      "unsavedDescription": "You have unsaved input. Closing will discard your changes."
     },
     "preview": {
       "title": "Preview Announcement",

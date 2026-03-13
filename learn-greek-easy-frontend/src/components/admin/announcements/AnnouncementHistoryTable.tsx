@@ -13,7 +13,7 @@
 
 import React from 'react';
 
-import { Eye, Megaphone, Trash2 } from 'lucide-react';
+import { Eye, Megaphone, Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
@@ -38,6 +38,7 @@ interface AnnouncementHistoryTableProps {
   onViewDetail: (id: string) => void;
   onDelete?: (id: string) => void;
   isDeleting?: boolean;
+  onCreateClick?: () => void;
 }
 
 /**
@@ -122,6 +123,7 @@ export const AnnouncementHistoryTable: React.FC<AnnouncementHistoryTableProps> =
   onViewDetail,
   onDelete,
   isDeleting,
+  onCreateClick,
 }) => {
   const { t, i18n } = useTranslation('admin');
 
@@ -140,8 +142,18 @@ export const AnnouncementHistoryTable: React.FC<AnnouncementHistoryTableProps> =
   return (
     <Card data-testid="announcement-history-table">
       <CardHeader>
-        <CardTitle>{t('announcements.history.title')}</CardTitle>
-        <CardDescription>{t('announcements.history.description')}</CardDescription>
+        <div className="flex items-start justify-between">
+          <div>
+            <CardTitle>{t('announcements.history.title')}</CardTitle>
+            <CardDescription>{t('announcements.history.description')}</CardDescription>
+          </div>
+          {onCreateClick && (
+            <Button onClick={onCreateClick} data-testid="announcement-create-button">
+              <Plus className="mr-2 h-4 w-4" />
+              {t('announcements.create.button')}
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         {/* Empty state */}

@@ -163,6 +163,11 @@ test.describe('Admin Announcements - Visual Tests', () => {
     await expect(page.getByTestId('announcements-tab')).toBeVisible();
     await page.waitForTimeout(500);
 
+    // Open create modal to capture empty form state
+    await page.getByTestId('announcement-create-button').click();
+    await expect(page.getByTestId('announcement-create-modal')).toBeVisible();
+    await page.waitForTimeout(300);
+
     // Capture empty form state
     await takeSnapshot(page, 'Announcement Create Form - Empty State', testInfo);
   });
@@ -277,6 +282,11 @@ test.describe('Admin Announcements - Visual Tests', () => {
     await expect(page.getByTestId('announcements-tab')).toBeVisible();
     await page.waitForTimeout(300);
 
+    // Open create modal
+    await page.getByTestId('announcement-create-button').click();
+    await expect(page.getByTestId('announcement-create-modal')).toBeVisible();
+    await page.waitForTimeout(300);
+
     // Fill the form
     await page.getByTestId('announcement-title-input').fill('Important Platform Update');
     await page
@@ -323,6 +333,11 @@ test.describe('Admin Announcements - Visual Tests', () => {
     await expect(page.getByTestId('announcements-tab')).toBeVisible();
     await page.waitForTimeout(300);
 
+    // Open create modal
+    await page.getByTestId('announcement-create-button').click();
+    await expect(page.getByTestId('announcement-create-modal')).toBeVisible();
+    await page.waitForTimeout(300);
+
     // Fill form with different content
     await page.getByTestId('announcement-title-input').fill('Scheduled Maintenance Notice');
     await page
@@ -366,6 +381,11 @@ test.describe('Admin Announcements - Visual Tests', () => {
     // Click Announcements tab
     await navigateToAdminTab(page, 'announcements');
     await expect(page.getByTestId('announcements-tab')).toBeVisible();
+    await page.waitForTimeout(300);
+
+    // Open create modal
+    await page.getByTestId('announcement-create-button').click();
+    await expect(page.getByTestId('announcement-create-modal')).toBeVisible();
     await page.waitForTimeout(300);
 
     // Fill form completely with various content showing character counters

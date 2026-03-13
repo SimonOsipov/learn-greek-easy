@@ -61,6 +61,10 @@ test.describe('Announcements - Admin Create Flow', () => {
 
     await navigateToAdminAnnouncementsTab(page);
 
+    // Open create modal
+    await page.getByTestId('announcement-create-button').click();
+    await expect(page.getByTestId('announcement-create-modal')).toBeVisible({ timeout: 5000 });
+
     // Generate unique title
     const uniqueTitle = `Test Announcement ${Date.now()}`;
     const message = 'This is a test announcement message for E2E testing purposes.';
@@ -101,6 +105,10 @@ test.describe('Announcements - Admin Create Flow', () => {
   test('ANNOUNCE-E2E-02: Admin can create announcement with link', async ({ page, request }) => {
     await seedAnnouncements(request);
     await navigateToAdminAnnouncementsTab(page);
+
+    // Open create modal
+    await page.getByTestId('announcement-create-button').click();
+    await expect(page.getByTestId('announcement-create-modal')).toBeVisible({ timeout: 5000 });
 
     const uniqueTitle = `Link Announcement ${Date.now()}`;
     const message = 'Check out this important link for more information.';
@@ -190,6 +198,10 @@ test.describe('Announcements - Form Validation', () => {
   test('ANNOUNCE-E2E-06: Form validation prevents invalid submissions', async ({ page }) => {
     await navigateToAdminAnnouncementsTab(page);
 
+    // Open create modal
+    await page.getByTestId('announcement-create-button').click();
+    await expect(page.getByTestId('announcement-create-modal')).toBeVisible({ timeout: 5000 });
+
     // Verify preview button is disabled when form is empty
     const previewButton = page.getByTestId('announcement-preview-button');
     await expect(previewButton).toBeDisabled();
@@ -233,6 +245,10 @@ test.describe('Announcements - Form Validation', () => {
 
   test('ANNOUNCE-E2E-07: Admin can cancel announcement in preview modal', async ({ page }) => {
     await navigateToAdminAnnouncementsTab(page);
+
+    // Open create modal
+    await page.getByTestId('announcement-create-button').click();
+    await expect(page.getByTestId('announcement-create-modal')).toBeVisible({ timeout: 5000 });
 
     const title = 'Announcement to Cancel';
     const message = 'This announcement will be cancelled in preview.';

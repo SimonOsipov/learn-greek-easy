@@ -1,7 +1,9 @@
 // src/components/admin/announcements/__tests__/AnnouncementsTab.test.tsx
 //
-// Tests for the mode-switching behavior introduced in TASK-160:
-// - Form/JSON tabs render correctly
+// Tests for the mode-switching behavior introduced in TASK-160 and
+// updated in TASK-xxx to use AnnouncementCreateModal:
+// - Create button opens modal
+// - Form/JSON tabs render correctly inside modal
 // - Mode switch without dirty data: no dialog, immediate switch
 // - Mode switch with dirty JSON: shows ConfirmDialog
 // - Mode switch with dirty form: shows ConfirmDialog
@@ -17,18 +19,24 @@ import { AnnouncementsTab } from '../AnnouncementsTab';
 
 // ---- Mocks ----
 
-// Mock i18n — cover keys used in AnnouncementsTab, AnnouncementCreateForm, AnnouncementJsonInput
-// and ConfirmDialog title/description
+// Mock i18n — cover keys used in AnnouncementsTab, AnnouncementCreateModal,
+// AnnouncementCreateForm, AnnouncementJsonInput and ConfirmDialog title/description
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) => {
       const map: Record<string, string> = {
         'announcements.create.title': 'Create Announcement',
         'announcements.create.description': 'Send a notification to all active users',
+        'announcements.create.button': 'Create Announcement',
+        'announcements.create.formTab': 'Form',
+        'announcements.create.jsonTab': 'JSON',
         'announcements.create.modeForm': 'Form',
         'announcements.create.modeJson': 'JSON',
         'announcements.create.switchModeConfirmTitle': 'Switch mode?',
         'announcements.create.switchModeConfirm': 'Your current input will be cleared. Continue?',
+        'announcements.create.unsavedTitle': 'Discard changes?',
+        'announcements.create.unsavedDescription':
+          'You have unsaved input. Closing will discard your changes.',
         'announcements.create.titleLabel': 'Title',
         'announcements.create.titlePlaceholder': 'Enter announcement title',
         'announcements.create.messageLabel': 'Message',
@@ -100,7 +108,7 @@ const mockFetchAnnouncements = vi.fn().mockResolvedValue(undefined);
 const mockFetchAnnouncementDetail = vi.fn().mockResolvedValue(undefined);
 const mockSetPage = vi.fn();
 const mockClearSelectedAnnouncement = vi.fn();
-const mockRefresh = vi.fn().mockResolvedValue(undefined);
+const mockDeleteAnnouncement = vi.fn().mockResolvedValue(undefined);
 
 vi.mock('@/stores/adminAnnouncementStore', () => ({
   useAdminAnnouncementStore: () => ({
@@ -111,11 +119,12 @@ vi.mock('@/stores/adminAnnouncementStore', () => ({
     totalPages: 1,
     isLoading: false,
     isLoadingDetail: false,
+    isDeleting: false,
     fetchAnnouncements: mockFetchAnnouncements,
     fetchAnnouncementDetail: mockFetchAnnouncementDetail,
+    deleteAnnouncement: mockDeleteAnnouncement,
     setPage: mockSetPage,
     clearSelectedAnnouncement: mockClearSelectedAnnouncement,
-    refresh: mockRefresh,
   }),
 }));
 
@@ -124,22 +133,48 @@ vi.mock('@/lib/errorReporting', () => ({
   reportAPIError: vi.fn(),
 }));
 
+/**
+ * Helper to open the create modal
+ */
+const openCreateModal = async () => {
+  await userEvent.click(screen.getByTestId('announcement-create-button'));
+  await waitFor(() => expect(screen.getByTestId('announcement-create-modal')).toBeInTheDocument());
+};
+
 describe('AnnouncementsTab — mode switching', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
+  // ---------- Create button ----------
+
+  it('renders the create announcement button', () => {
+    render(<AnnouncementsTab />);
+
+    expect(screen.getByTestId('announcement-create-button')).toBeInTheDocument();
+  });
+
+  it('opens create modal when create button is clicked', async () => {
+    render(<AnnouncementsTab />);
+
+    await openCreateModal();
+
+    expect(screen.getByTestId('announcement-create-modal')).toBeInTheDocument();
+  });
+
   // ---------- Tab rendering ----------
 
-  it('renders both Form and JSON tab triggers', () => {
+  it('renders both Form and JSON tab triggers inside modal', async () => {
     render(<AnnouncementsTab />);
+    await openCreateModal();
 
     expect(screen.getByTestId('create-mode-form-tab')).toBeInTheDocument();
     expect(screen.getByTestId('create-mode-json-tab')).toBeInTheDocument();
   });
 
-  it('shows Form mode content by default', () => {
+  it('shows Form mode content by default', async () => {
     render(<AnnouncementsTab />);
+    await openCreateModal();
 
     // Form mode shows the create form elements
     expect(screen.getByTestId('announcement-create-form')).toBeInTheDocument();
@@ -149,6 +184,7 @@ describe('AnnouncementsTab — mode switching', () => {
   it('shows JSON mode content after clicking JSON tab', async () => {
     const user = userEvent.setup();
     render(<AnnouncementsTab />);
+    await openCreateModal();
 
     await user.click(screen.getByTestId('create-mode-json-tab'));
 
@@ -161,6 +197,7 @@ describe('AnnouncementsTab — mode switching', () => {
   it('switches from Form to JSON immediately when form has no input', async () => {
     const user = userEvent.setup();
     render(<AnnouncementsTab />);
+    await openCreateModal();
 
     // Form mode is active, no data typed
     await user.click(screen.getByTestId('create-mode-json-tab'));
@@ -174,6 +211,7 @@ describe('AnnouncementsTab — mode switching', () => {
   it('switches from JSON to Form immediately when JSON textarea is empty', async () => {
     const user = userEvent.setup();
     render(<AnnouncementsTab />);
+    await openCreateModal();
 
     // Switch to JSON mode first
     await user.click(screen.getByTestId('create-mode-json-tab'));
@@ -191,6 +229,7 @@ describe('AnnouncementsTab — mode switching', () => {
   it('shows ConfirmDialog when switching away from JSON mode with dirty textarea', async () => {
     const user = userEvent.setup();
     render(<AnnouncementsTab />);
+    await openCreateModal();
 
     // Switch to JSON mode
     await user.click(screen.getByTestId('create-mode-json-tab'));
@@ -212,6 +251,7 @@ describe('AnnouncementsTab — mode switching', () => {
   it('stays on JSON mode when Cancel is clicked in ConfirmDialog', async () => {
     const user = userEvent.setup();
     render(<AnnouncementsTab />);
+    await openCreateModal();
 
     // Switch to JSON and dirty it
     await user.click(screen.getByTestId('create-mode-json-tab'));
@@ -239,6 +279,7 @@ describe('AnnouncementsTab — mode switching', () => {
   it('switches to Form mode and clears JSON textarea when Confirm is clicked', async () => {
     const user = userEvent.setup();
     render(<AnnouncementsTab />);
+    await openCreateModal();
 
     // Switch to JSON and dirty it
     await user.click(screen.getByTestId('create-mode-json-tab'));
@@ -268,6 +309,7 @@ describe('AnnouncementsTab — mode switching', () => {
   it('shows ConfirmDialog when switching away from Form mode with typed input', async () => {
     const user = userEvent.setup();
     render(<AnnouncementsTab />);
+    await openCreateModal();
 
     // Form is the default mode; fire an input event to mark it dirty
     // We use fireEvent.input directly on the wrapping div since the dirty ref
@@ -287,6 +329,7 @@ describe('AnnouncementsTab — mode switching', () => {
   it('switches from Form to JSON and shows empty textarea after confirm', async () => {
     const user = userEvent.setup();
     render(<AnnouncementsTab />);
+    await openCreateModal();
 
     const titleInput = screen.getByTestId('announcement-title-input');
     await user.type(titleInput, 'Hello');
@@ -312,6 +355,7 @@ describe('AnnouncementsTab — mode switching', () => {
   it('opens preview modal when valid JSON is submitted from JSON mode', async () => {
     const user = userEvent.setup();
     render(<AnnouncementsTab />);
+    await openCreateModal();
 
     // Switch to JSON
     await user.click(screen.getByTestId('create-mode-json-tab'));
@@ -331,5 +375,12 @@ describe('AnnouncementsTab — mode switching', () => {
     });
     expect(screen.getByTestId('preview-title')).toHaveTextContent('Hello');
     expect(screen.getByTestId('preview-message')).toHaveTextContent('World message here');
+  });
+
+  // ---------- announcements-tab testid ----------
+
+  it('renders announcements-tab on outer wrapper', () => {
+    render(<AnnouncementsTab />);
+    expect(screen.getByTestId('announcements-tab')).toBeInTheDocument();
   });
 });
