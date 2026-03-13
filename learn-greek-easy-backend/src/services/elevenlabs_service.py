@@ -15,7 +15,7 @@ Configuration:
 
 import random
 import time
-from typing import Optional
+from typing import Any, Optional, cast
 from uuid import UUID
 
 import httpx
@@ -319,6 +319,78 @@ class ElevenLabsService:
                 selected["name"],
                 is_retry=True,
             )
+
+    async def generate_dialog_audio(
+        self,
+        inputs: list[dict[str, str]],
+        language_code: str = "el",
+    ) -> dict[str, Any]:
+        """Generate multi-speaker dialog audio via ElevenLabs Text-to-Dialogue API.
+
+        Args:
+            inputs: List of dialog input dicts (each with speaker/text keys per ElevenLabs API).
+            language_code: Language code for synthesis (default: "el" for Greek).
+
+        Returns:
+            Parsed JSON response dict containing audio_base64, voice_segments, etc.
+
+        Raises:
+            ElevenLabsNotConfiguredError: If API key not set.
+            ElevenLabsAuthenticationError: If API key invalid (401).
+            ElevenLabsRateLimitError: If rate limit exceeded (429).
+            ElevenLabsAPIError: For other API errors or network failures.
+        """
+        self._check_configured()
+        try:
+            async with httpx.AsyncClient(timeout=settings.elevenlabs_timeout) as client:
+                response = await client.post(
+                    "https://api.elevenlabs.io/v1/text-to-dialogue/with-timestamps",
+                    params={"output_format": settings.elevenlabs_output_format},
+                    headers=self._get_headers(),
+                    json={
+                        "inputs": inputs,
+                        "model_id": settings.elevenlabs_dialog_model_id,
+                        "language_code": language_code,
+                    },
+                )
+
+                if response.status_code == 401:
+                    raise ElevenLabsAuthenticationError(
+                        f"Authentication failed (text_to_dialogue): {response.text[:200]}"
+                    )
+
+                if response.status_code == 429:
+                    raise ElevenLabsRateLimitError("Rate limit exceeded")
+
+                if response.status_code >= 400:
+                    raise ElevenLabsAPIError(
+                        status_code=response.status_code,
+                        detail=response.text[:200],
+                    )
+
+                data = cast(dict[str, Any], response.json())
+                logger.info(
+                    "Dialog audio generated via text-to-dialogue",
+                    extra={
+                        "input_count": len(inputs),
+                        "audio_base64_length": len(data.get("audio_base64", "")),
+                        "segments_count": len(data.get("voice_segments", [])),
+                    },
+                )
+                return data
+
+        except (
+            ElevenLabsAuthenticationError,
+            ElevenLabsRateLimitError,
+            ElevenLabsAPIError,
+        ):
+            raise
+        except httpx.RequestError as e:
+            logger.error(
+                "Network error during dialog audio generation",
+                extra={"error": str(e)},
+            )
+            raise ElevenLabsAPIError(status_code=0, detail=f"Network error: {e}")
 
 
 # Singleton instance for use across the application

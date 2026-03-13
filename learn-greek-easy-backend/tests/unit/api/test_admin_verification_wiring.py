@@ -165,6 +165,9 @@ class TestRunVerificationStage:
         mock_local_svc = MagicMock()
         mock_local_svc.verify.return_value = _make_local_result(tier="auto_approve")
         mock_cross_svc = MagicMock()
+        mock_cross_svc.primary_only_result.return_value = CrossAIVerificationResult(
+            error="Secondary generation failed or skipped"
+        )
         mock_lexicon_svc = AsyncMock()
         mock_lexicon_svc.get_declensions.return_value = []
 

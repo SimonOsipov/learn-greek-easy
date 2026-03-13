@@ -504,6 +504,10 @@ class Settings(BaseSettings):
         default="eleven_multilingual_v2",
         description="ElevenLabs model ID for audio generation (supports Greek)",
     )
+    elevenlabs_dialog_model_id: str = Field(
+        default="eleven_v3",
+        description="ElevenLabs model ID for dialog audio generation (text-to-dialogue endpoint)",
+    )
     elevenlabs_output_format: str = Field(
         default="mp3_44100_128",
         description="Audio output format (mp3_44100_128, mp3_44100_192, pcm_44100)",
