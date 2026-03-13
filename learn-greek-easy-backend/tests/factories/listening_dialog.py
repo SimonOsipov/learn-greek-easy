@@ -20,7 +20,6 @@ class ListeningDialogFactory(BaseFactory):
     status = DialogStatus.DRAFT
 
     class Params:
-        published = factory.Trait(status=DialogStatus.PUBLISHED)
         audio_ready = factory.Trait(status=DialogStatus.AUDIO_READY)
         exercises_ready = factory.Trait(status=DialogStatus.EXERCISES_READY)
         a1_level = factory.Trait(cefr_level=DeckLevel.A1)
