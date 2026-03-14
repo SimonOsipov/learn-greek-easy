@@ -18,6 +18,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { DialogDetailModal } from '../DialogDetailModal';
 import i18n from '@/i18n';
 import { useAdminDialogStore } from '@/stores/adminDialogStore';
+import type { ListeningDialogDetail } from '@/services/adminAPI';
 
 // ============================================
 // NOTE on the Radix Dialog + useEffect + Portal pattern
@@ -58,13 +59,13 @@ vi.mock('@/stores/adminDialogStore', () => ({
 // Test Data
 // ============================================
 
-const mockWordTimestamps = [
+const mockWordTimestamps: Array<{ word: string; start_ms: number; end_ms: number }> = [
   { word: 'Γεια', start_ms: 0, end_ms: 500 },
   { word: 'σου', start_ms: 500, end_ms: 1000 },
   { word: 'κόσμε', start_ms: 1000, end_ms: 1500 },
 ];
 
-const mockDialog = {
+const mockDialog: ListeningDialogDetail = {
   id: 'dlg-1',
   scenario_el: 'Σκηνή.',
   scenario_en: 'Scene.',
@@ -72,8 +73,11 @@ const mockDialog = {
   cefr_level: 'A1' as const,
   num_speakers: 1,
   status: 'audio_ready' as const,
+  created_at: '2026-01-01T00:00:00Z',
   audio_url: 'https://example.com/audio.mp3',
   audio_duration_seconds: 3,
+  audio_generated_at: null,
+  audio_file_size_bytes: null,
   speakers: [{ id: 'sp-1', speaker_index: 0, character_name: 'Nikos', voice_id: 'voice-1' }],
   lines: [
     {

@@ -432,6 +432,12 @@ class DialogSpeakerDetail(BaseModel):
     voice_id: str
 
 
+class WordTimestamp(BaseModel):
+    word: str
+    start_ms: int
+    end_ms: int
+
+
 class DialogLineDetail(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -441,7 +447,7 @@ class DialogLineDetail(BaseModel):
     text: str
     start_time_ms: int | None
     end_time_ms: int | None
-    word_timestamps: list[dict] | None = None
+    word_timestamps: list[WordTimestamp] | None = None
 
 
 class ListeningDialogDetail(BaseModel):

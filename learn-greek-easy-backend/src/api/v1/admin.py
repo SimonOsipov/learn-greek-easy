@@ -3711,14 +3711,21 @@ def _build_word_timestamps(  # noqa: C901
 
         result: dict[int, list[dict] | None] = {i: None for i in range(len(sorted_lines))}
 
-        for i, seg in enumerate(voice_segments):
+        for seg in voice_segments:
+            line_idx = seg.get("dialogue_input_index")
+            if line_idx is None:
+                logger.warning(
+                    "_build_word_timestamps: segment missing dialogue_input_index, skipping"
+                )
+                continue
+
             char_start = seg.get("character_start_index")
             char_end = seg.get("character_end_index")
 
             if char_start is None or char_end is None:
                 logger.warning(
-                    "_build_word_timestamps: segment {} missing character_start_index or character_end_index",
-                    i,
+                    "_build_word_timestamps: segment {} missing character indices, skipping",
+                    line_idx,
                 )
                 continue
 
@@ -3757,10 +3764,10 @@ def _build_word_timestamps(  # noqa: C901
                     }
                 )
 
-            result[i] = words
+            result[line_idx] = words
 
         return result
-    except Exception as exc:
+    except (IndexError, KeyError, TypeError) as exc:
         logger.warning("_build_word_timestamps: unexpected error, returning all None: {}", exc)
         return {i: None for i in range(len(sorted_lines))}
 
