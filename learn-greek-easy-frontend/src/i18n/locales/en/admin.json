@@ -1143,22 +1143,6 @@
         "audioSize": "File size",
         "audioGenerated": "Generated"
       },
-      "generateAudio": {
-        "button": "Generate Audio",
-        "progress": {
-          "starting": "Starting audio generation...",
-          "callingElevenLabs": "Calling ElevenLabs...",
-          "settingTimestamps": "Validating line timestamps...",
-          "uploading": "Uploading audio..."
-        },
-        "error": "Audio generation failed: {{message}}",
-        "tryAgain": "Try Again"
-      },
-      "generateExercises": {
-        "button": "Generate Exercises",
-        "comingSoon": "Exercise generation coming soon"
-      },
-      "delete": "Delete Dialog",
       "close": "Close",
       "errors": {
         "loadFailed": "Failed to load dialog details",

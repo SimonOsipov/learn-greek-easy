@@ -1155,22 +1155,6 @@
         "audioSize": "Размер файла",
         "audioGenerated": "Сгенерировано"
       },
-      "generateAudio": {
-        "button": "Сгенерировать аудио",
-        "progress": {
-          "starting": "Начинаем генерацию аудио...",
-          "callingElevenLabs": "Вызов ElevenLabs...",
-          "settingTimestamps": "Проверка временных меток...",
-          "uploading": "Загрузка аудио..."
-        },
-        "error": "Ошибка генерации аудио: {{message}}",
-        "tryAgain": "Попробовать снова"
-      },
-      "generateExercises": {
-        "button": "Сгенерировать упражнения",
-        "comingSoon": "Генерация упражнений скоро будет доступна"
-      },
-      "delete": "Удалить диалог",
       "close": "Закрыть",
       "errors": {
         "loadFailed": "Не удалось загрузить детали диалога",

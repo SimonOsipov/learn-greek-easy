@@ -1,8 +1,8 @@
 // src/components/admin/DialogDetailModal.tsx
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
-import { BookOpen, Loader2, MessageSquare, Trash2, Wand2 } from 'lucide-react';
+import { MessageSquare } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { WaveformPlayer } from '@/components/culture/WaveformPlayer';
@@ -10,12 +10,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useLanguage } from '@/hooks/useLanguage';
-import { useSSE } from '@/hooks/useSSE';
-import { getDialogAudioStreamUrl } from '@/services/adminAPI';
 import { useAdminDialogStore } from '@/stores/adminDialogStore';
-import type { SSEEvent } from '@/types/sse';
 
 // ============================================================================
 // Constants
@@ -57,24 +53,13 @@ interface DialogDetailModalProps {
 
 export function DialogDetailModal({ dialogId, open, onOpenChange }: DialogDetailModalProps) {
   const { t } = useTranslation('admin');
-  const tCommon = useTranslation('common').t;
   const { currentLanguage } = useLanguage();
 
-  const {
-    selectedDialog,
-    isLoadingDetail,
-    detailError,
-    fetchDialogDetail,
-    clearSelectedDialog,
-    deleteDialog,
-  } = useAdminDialogStore();
+  const { selectedDialog, isLoadingDetail, detailError, fetchDialogDetail, clearSelectedDialog } =
+    useAdminDialogStore();
 
   // Local state
-  const [sseEnabled, setSseEnabled] = useState(false);
-  const [generationProgress, setGenerationProgress] = useState<string | null>(null);
-  const [generationError, setGenerationError] = useState<string | null>(null);
   const [audioCurrentTimeMs, setAudioCurrentTimeMs] = useState(0);
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   // Ref for finding the audio element inside WaveformPlayer's container
   const containerRef = useRef<HTMLDivElement>(null);
@@ -90,11 +75,7 @@ export function DialogDetailModal({ dialogId, open, onOpenChange }: DialogDetail
   useEffect(() => {
     if (!open) {
       clearSelectedDialog();
-      setSseEnabled(false);
-      setGenerationProgress(null);
-      setGenerationError(null);
       setAudioCurrentTimeMs(0);
-      setConfirmingDelete(false);
     }
   }, [open, clearSelectedDialog]);
 
@@ -125,71 +106,6 @@ export function DialogDetailModal({ dialogId, open, onOpenChange }: DialogDetail
     };
   }, [selectedDialog]);
 
-  // SSE event handler
-  const handleSSEEvent = useCallback(
-    (event: SSEEvent<unknown>) => {
-      switch (event.type) {
-        case 'dialog_audio:start':
-          setGenerationProgress(t('listeningDialogs.detail.generateAudio.progress.starting'));
-          break;
-        case 'dialog_audio:elevenlabs':
-          setGenerationProgress(
-            t('listeningDialogs.detail.generateAudio.progress.callingElevenLabs')
-          );
-          break;
-        case 'dialog_audio:timing':
-          setGenerationProgress(
-            t('listeningDialogs.detail.generateAudio.progress.settingTimestamps')
-          );
-          break;
-        case 'dialog_audio:upload':
-          setGenerationProgress(t('listeningDialogs.detail.generateAudio.progress.uploading'));
-          break;
-        case 'dialog_audio:complete':
-          setSseEnabled(false);
-          setGenerationProgress(null);
-          if (dialogId) {
-            void fetchDialogDetail(dialogId);
-          }
-          break;
-        case 'dialog_audio:error': {
-          const errData = event.data as Record<string, unknown>;
-          const errMsg = (errData?.error ?? errData?.message ?? '') as string;
-          setSseEnabled(false);
-          setGenerationError(
-            t('listeningDialogs.detail.generateAudio.error', {
-              message: errMsg || t('listeningDialogs.detail.errors.loadFailed'),
-            })
-          );
-          break;
-        }
-      }
-    },
-    [t, dialogId, fetchDialogDetail]
-  );
-
-  // SSE error handler
-  const handleSSEError = useCallback(() => {
-    setSseEnabled(false);
-    setGenerationError(
-      t('listeningDialogs.detail.generateAudio.error', {
-        message: t('listeningDialogs.detail.errors.loadFailed'),
-      })
-    );
-  }, [t]);
-
-  // SSE hook
-  const sseUrl = dialogId ? getDialogAudioStreamUrl(dialogId) : '';
-  useSSE(sseUrl, {
-    method: 'POST',
-    body: {},
-    enabled: sseEnabled && !!dialogId,
-    maxRetries: 0,
-    reconnect: false,
-    onEvent: handleSSEEvent,
-    onError: handleSSEError,
-  });
-
   // Build speaker map for color lookup
   const speakerMap = new Map((selectedDialog?.speakers ?? []).map((s) => [s.id, s]));
 
@@ -203,12 +119,8 @@ export function DialogDetailModal({ dialogId, open, onOpenChange }: DialogDetail
         audioCurrentTimeMs < line.end_time_ms
     ) ?? null;
 
-  const handleOpenChange = (newOpen: boolean) => {
-    onOpenChange(newOpen);
-  };
-
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className="max-h-[85vh] overflow-y-auto sm:max-w-2xl"
         data-testid="dialog-detail-modal"
@@ -299,109 +211,6 @@ export function DialogDetailModal({ dialogId, open, onOpenChange }: DialogDetail
                 )}
               </div>
             )}
-
-            {/* Generate Audio (draft only) */}
-            {selectedDialog.status === 'draft' && (
-              <div className="space-y-2">
-                {!sseEnabled && !generationProgress && (
-                  <Button
-                    data-testid="dialog-generate-audio-btn"
-                    onClick={() => {
-                      setGenerationError(null);
-                      setSseEnabled(true);
-                    }}
-                    disabled={sseEnabled}
-                  >
-                    <Wand2 className="mr-2 h-4 w-4" />
-                    {t('listeningDialogs.detail.generateAudio.button')}
-                  </Button>
-                )}
-                {generationProgress && (
-                  <div
-                    data-testid="dialog-generation-progress"
-                    className="flex items-center gap-2 text-sm text-muted-foreground"
-                  >
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    {generationProgress}
-                  </div>
-                )}
-                {generationError && (
-                  <div data-testid="dialog-generation-error">
-                    <Alert variant="destructive">
-                      <AlertDescription>{generationError}</AlertDescription>
-                    </Alert>
-                    <Button
-                      variant="outline"
-                      className="mt-2"
-                      onClick={() => {
-                        setGenerationError(null);
-                        setSseEnabled(true);
-                      }}
-                    >
-                      {t('listeningDialogs.detail.generateAudio.tryAgain')}
-                    </Button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Generate Exercises stub (audio_ready only) */}
-            {selectedDialog.status === 'audio_ready' && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span>
-                      <Button
-                        data-testid="dialog-generate-exercises-btn"
-                        disabled
-                        variant="outline"
-                      >
-                        <BookOpen className="mr-2 h-4 w-4" />
-                        {t('listeningDialogs.detail.generateExercises.button')}
-                      </Button>
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {t('listeningDialogs.detail.generateExercises.comingSoon')}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
-
-            {/* Delete with inline confirmation */}
-            <div className="flex gap-2">
-              {!confirmingDelete ? (
-                <Button
-                  data-testid="dialog-detail-delete-btn"
-                  variant="destructive"
-                  disabled={sseEnabled}
-                  onClick={() => setConfirmingDelete(true)}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  {t('listeningDialogs.detail.delete')}
-                </Button>
-              ) : (
-                <>
-                  <Button
-                    variant="destructive"
-                    onClick={async () => {
-                      try {
-                        await deleteDialog(selectedDialog.id);
-                        onOpenChange(false);
-                      } catch {
-                        setConfirmingDelete(false);
-                        setGenerationError(t('listeningDialogs.detail.errors.loadFailed'));
-                      }
-                    }}
-                  >
-                    {tCommon('confirm')}
-                  </Button>
-                  <Button variant="outline" onClick={() => setConfirmingDelete(false)}>
-                    {tCommon('cancel')}
-                  </Button>
-                </>
-              )}
-            </div>
           </>
         )}
       </DialogContent>
