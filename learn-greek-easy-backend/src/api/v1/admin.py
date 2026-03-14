@@ -2553,7 +2553,7 @@ def _validate_declension_eligibility(word_entry: "WordEntry") -> None:
     gd = word_entry.grammar_data or {}
     gender = gd.get("gender")
     nom_sg = gd.get("nominative_singular")
-    if not gender or not nom_sg:
+    if gender not in ("masculine", "feminine", "neuter") or not nom_sg:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Declension cards require gender and nominative_singular in grammar_data",
