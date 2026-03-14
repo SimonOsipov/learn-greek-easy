@@ -274,7 +274,8 @@ const mockReverseLookupResults: ReverseLookupItem[] = [
     gender: 'feminine',
     article: 'η',
     translations: ['cat', 'kitty'],
-    actionable: true,
+    score: 3.0,
+    inferred_gender: false,
   },
   {
     lemma: 'γατί',
@@ -282,15 +283,8 @@ const mockReverseLookupResults: ReverseLookupItem[] = [
     gender: 'neuter',
     article: 'το',
     translations: ['kitten'],
-    actionable: true,
-  },
-  {
-    lemma: 'γατίσιος',
-    pos: 'ADJ',
-    gender: null,
-    article: null,
-    translations: ['feline'],
-    actionable: false,
+    score: 2.0,
+    inferred_gender: true,
   },
 ];
 
@@ -1297,7 +1291,7 @@ describe('Reverse Lookup Integration', () => {
     expect(screen.getByTestId('reverse-lookup-row-1')).toBeInTheDocument();
   });
 
-  it('non-noun row has disabled radio button', async () => {
+  it('shows best match badge on top-scoring result', async () => {
     const user = userEvent.setup();
     renderDialog();
     await user.type(screen.getByTestId('generate-noun-input'), 'cat');
@@ -1305,10 +1299,72 @@ describe('Reverse Lookup Integration', () => {
     await waitFor(() => {
       expect(screen.getByTestId('reverse-lookup-card')).toBeInTheDocument();
     });
-    // Row 2 is the ADJ (non-actionable)
-    const row2 = screen.getByTestId('reverse-lookup-row-2');
-    const radio = row2.querySelector('input[type="radio"]');
-    expect(radio).toBeDisabled();
+    // γάτα has score=3.0 (highest) → should show "Best match" badge
+    const row0 = screen.getByTestId('reverse-lookup-row-0');
+    expect(row0).toHaveTextContent('Best match');
+    // γατί has score=2.0 → should not show badge
+    const row1 = screen.getByTestId('reverse-lookup-row-1');
+    expect(row1).not.toHaveTextContent('Best match');
+  });
+
+  it('shows best match badge on multiple results with same top score', async () => {
+    vi.mocked(adminAPI.reverseLookup).mockResolvedValue({
+      query: 'cat',
+      language: 'en',
+      results: [
+        {
+          lemma: 'γάτα',
+          pos: 'NOUN',
+          gender: 'feminine',
+          article: 'η',
+          translations: ['cat', 'kitty'],
+          score: 3.0,
+          inferred_gender: false,
+        },
+        {
+          lemma: 'γατί',
+          pos: 'NOUN',
+          gender: 'neuter',
+          article: 'το',
+          translations: ['kitten'],
+          score: 3.0,
+          inferred_gender: false,
+        },
+      ],
+    });
+    const user = userEvent.setup();
+    renderDialog();
+    await user.type(screen.getByTestId('generate-noun-input'), 'cat');
+    await user.click(screen.getByTestId('generate-noun-submit'));
+    await waitFor(() => {
+      expect(screen.getByTestId('reverse-lookup-card')).toBeInTheDocument();
+    });
+    // Both have score=3.0 → both should show badge
+    expect(screen.getByTestId('reverse-lookup-row-0')).toHaveTextContent('Best match');
+    expect(screen.getByTestId('reverse-lookup-row-1')).toHaveTextContent('Best match');
+  });
+
+  it('shows inferred gender with reduced opacity', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+    await user.type(screen.getByTestId('generate-noun-input'), 'cat');
+    await user.click(screen.getByTestId('generate-noun-submit'));
+    await waitFor(() => {
+      expect(screen.getByTestId('reverse-lookup-card')).toBeInTheDocument();
+    });
+    // γατί has inferred_gender=true → gender badge should have opacity-70 class
+    const row1 = screen.getByTestId('reverse-lookup-row-1');
+    // Find the gender badge (secondary variant)
+    const genderBadges = row1.querySelectorAll('[class*="opacity-70"]');
+    expect(genderBadges.length).toBeGreaterThan(0);
+    // Badge should also have title attribute
+    const badgeWithTitle = Array.from(row1.querySelectorAll('[title]')).find(
+      (el) => el.getAttribute('title') !== null
+    );
+    expect(badgeWithTitle).toBeTruthy();
+    // γάτα has inferred_gender=false → no opacity-70 on gender badge
+    const row0 = screen.getByTestId('reverse-lookup-row-0');
+    expect(row0.querySelectorAll('[class*="opacity-70"]').length).toBe(0);
   });
 
   it('"Use selected" is disabled when no row is selected', async () => {
@@ -1385,7 +1441,7 @@ describe('Double-Click on Lookup Row', () => {
     });
   });
 
-  it('double-click on actionable row triggers pipeline', async () => {
+  it('double-click on row triggers pipeline', async () => {
     const user = userEvent.setup();
     renderDialog();
     await user.type(screen.getByTestId('generate-noun-input'), 'cat');
@@ -1397,19 +1453,6 @@ describe('Double-Click on Lookup Row', () => {
     await waitFor(() => {
       expect(screen.queryByTestId('reverse-lookup-card')).not.toBeInTheDocument();
     });
-  });
-
-  it('double-click on non-actionable row does not trigger pipeline', async () => {
-    const user = userEvent.setup();
-    renderDialog();
-    await user.type(screen.getByTestId('generate-noun-input'), 'cat');
-    await user.click(screen.getByTestId('generate-noun-submit'));
-    await waitFor(() => {
-      expect(screen.getByTestId('reverse-lookup-card')).toBeInTheDocument();
-    });
-    await user.dblClick(screen.getByTestId('reverse-lookup-row-2'));
-    // Card should still be visible
-    expect(screen.getByTestId('reverse-lookup-card')).toBeInTheDocument();
   });
 });
 

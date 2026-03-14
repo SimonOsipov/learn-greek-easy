@@ -463,7 +463,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
   const handleUseSelected = useCallback(() => {
     if (selectedLookupIndex === null || !reverseLookupResults) return;
     const selected = reverseLookupResults[selectedLookupIndex];
-    if (!selected || !selected.actionable) return;
+    if (!selected) return;
     triggerPipelineForLookupItem(selected);
   }, [selectedLookupIndex, reverseLookupResults, triggerPipelineForLookupItem]);
 
@@ -919,57 +919,65 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                         reverseLookupResults.length > 0 && (
                           <>
                             <div className="mb-3 space-y-1">
-                              {reverseLookupResults.map((item, index) => (
-                                <div
-                                  key={`${item.lemma}-${item.pos}`}
-                                  className={`flex items-start gap-3 rounded p-2 ${
-                                    item.actionable
-                                      ? 'cursor-pointer hover:bg-muted/50'
-                                      : 'cursor-not-allowed opacity-50'
-                                  } ${selectedLookupIndex === index ? 'bg-muted' : ''}`}
-                                  data-testid={`reverse-lookup-row-${index}`}
-                                  onClick={() => item.actionable && setSelectedLookupIndex(index)}
-                                  onDoubleClick={() => {
-                                    if (item.actionable) triggerPipelineForLookupItem(item);
-                                  }}
-                                >
-                                  <input
-                                    type="radio"
-                                    name="reverse-lookup"
-                                    checked={selectedLookupIndex === index}
-                                    disabled={!item.actionable}
-                                    onChange={() =>
-                                      item.actionable && setSelectedLookupIndex(index)
-                                    }
-                                    className="mt-0.5 shrink-0"
-                                  />
-                                  <div className="min-w-0 flex-1">
-                                    <div className="flex flex-wrap items-center gap-2">
-                                      <span className="font-medium text-foreground">
-                                        {item.article ? `${item.article} ` : ''}
-                                        {item.lemma}
-                                      </span>
-                                      <Badge variant="outline" className="text-xs">
-                                        {item.pos}
-                                      </Badge>
-                                      {item.gender && (
-                                        <Badge variant="secondary" className="text-xs">
-                                          {item.gender}
+                              {(() => {
+                                const maxScore = Math.max(
+                                  ...reverseLookupResults.map((r) => r.score)
+                                );
+                                return reverseLookupResults.map((item, index) => (
+                                  <div
+                                    key={`${item.lemma}-${item.pos}`}
+                                    className={`flex cursor-pointer items-start gap-3 rounded p-2 hover:bg-muted/50 ${selectedLookupIndex === index ? 'bg-muted' : ''}`}
+                                    data-testid={`reverse-lookup-row-${index}`}
+                                    onClick={() => setSelectedLookupIndex(index)}
+                                    onDoubleClick={() => {
+                                      triggerPipelineForLookupItem(item);
+                                    }}
+                                  >
+                                    <input
+                                      type="radio"
+                                      name="reverse-lookup"
+                                      checked={selectedLookupIndex === index}
+                                      onChange={() => setSelectedLookupIndex(index)}
+                                      className="mt-0.5 shrink-0"
+                                    />
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        <span className="font-medium text-foreground">
+                                          {item.article ? `${item.article} ` : ''}
+                                          {item.lemma}
+                                        </span>
+                                        <Badge variant="outline" className="text-xs">
+                                          {item.pos}
                                         </Badge>
-                                      )}
-                                    </div>
-                                    {item.actionable ? (
+                                        {item.gender && (
+                                          <Badge
+                                            variant="secondary"
+                                            className={`text-xs${item.inferred_gender ? 'opacity-70' : ''}`}
+                                            title={
+                                              item.inferred_gender
+                                                ? t('generateNoun.reverseLookup.inferredGender')
+                                                : undefined
+                                            }
+                                          >
+                                            {item.gender}
+                                          </Badge>
+                                        )}
+                                        {item.score === maxScore && (
+                                          <Badge
+                                            variant="outline"
+                                            className="border-green-200 bg-green-50 text-xs text-green-700"
+                                          >
+                                            {t('generateNoun.reverseLookup.bestMatch')}
+                                          </Badge>
+                                        )}
+                                      </div>
                                       <p className="mt-0.5 text-sm text-muted-foreground">
                                         {item.translations.join(', ')}
                                       </p>
-                                    ) : (
-                                      <p className="mt-0.5 text-xs italic text-muted-foreground">
-                                        {t('generateNoun.reverseLookup.notSupported')}
-                                      </p>
-                                    )}
+                                    </div>
                                   </div>
-                                </div>
-                              ))}
+                                ));
+                              })()}
                             </div>
 
                             <div className="flex gap-2">
