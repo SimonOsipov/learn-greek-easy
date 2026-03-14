@@ -2027,3 +2027,213 @@ class TestGenerateArticleCards:
 
         card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
         assert len(card_dicts) == 0
+
+
+# Complete noun grammar data for declension tests (ο άνθρωπος - human)
+NOUN_GRAMMAR_DATA_COMPLETE = {
+    "gender": "masculine",
+    "nominative_singular": "ο άνθρωπος",
+    "genitive_singular": "του ανθρώπου",
+    "accusative_singular": "τον άνθρωπο",
+    "vocative_singular": "άνθρωπε",
+    "nominative_plural": "οι άνθρωποι",
+    "genitive_plural": "των ανθρώπων",
+    "accusative_plural": "τους ανθρώπους",
+    "vocative_plural": "άνθρωποι",
+}
+
+
+@pytest.mark.unit
+class TestGenerateDeclensionCards:
+    """Tests for CardGeneratorService.generate_declension_cards."""
+
+    @pytest.mark.asyncio
+    async def test_complete_noun_produces_six_cards(self, service, mock_card_record_repo):
+        """Complete noun with all case forms produces 6 cards (3 cases x 2 numbers)."""
+        we = _make_word_entry(grammar_data=NOUN_GRAMMAR_DATA_COMPLETE)
+        deck_id = uuid4()
+
+        await service.generate_declension_cards([we], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        assert len(card_dicts) == 6
+
+    @pytest.mark.asyncio
+    async def test_noun_missing_plural_produces_singular_only_cards(
+        self, service, mock_card_record_repo
+    ):
+        """Noun with only singular forms produces 3 cards (gen/acc/voc singular only)."""
+        gd = {
+            "gender": "feminine",
+            "nominative_singular": "η γάτα",
+            "genitive_singular": "της γάτας",
+            "accusative_singular": "τη γάτα",
+            "vocative_singular": "γάτα",
+        }
+        we = _make_word_entry(grammar_data=gd)
+        deck_id = uuid4()
+
+        await service.generate_declension_cards([we], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        assert len(card_dicts) == 3
+
+    @pytest.mark.asyncio
+    async def test_noun_missing_vocative_produces_four_cards(self, service, mock_card_record_repo):
+        """Noun without vocative forms produces 4 cards (gen+acc x singular+plural)."""
+        gd = {
+            "gender": "feminine",
+            "nominative_singular": "η γάτα",
+            "genitive_singular": "της γάτας",
+            "accusative_singular": "τη γάτα",
+            "nominative_plural": "οι γάτες",
+            "genitive_plural": "των γατών",
+            "accusative_plural": "τις γάτες",
+        }
+        we = _make_word_entry(grammar_data=gd)
+        deck_id = uuid4()
+
+        await service.generate_declension_cards([we], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        assert len(card_dicts) == 4
+
+    @pytest.mark.asyncio
+    async def test_non_noun_produces_zero_cards(self, service, mock_card_record_repo):
+        """Non-noun entry produces 0 declension cards."""
+        we = _make_word_entry(
+            part_of_speech=PartOfSpeech.VERB,
+            grammar_data=NOUN_GRAMMAR_DATA_COMPLETE,
+        )
+        deck_id = uuid4()
+
+        await service.generate_declension_cards([we], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        assert len(card_dicts) == 0
+
+    @pytest.mark.asyncio
+    async def test_no_grammar_data_produces_zero_cards(self, service, mock_card_record_repo):
+        """Entry with grammar_data=None produces 0 declension cards."""
+        we = _make_word_entry(grammar_data=None)
+        deck_id = uuid4()
+
+        await service.generate_declension_cards([we], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        assert len(card_dicts) == 0
+
+    @pytest.mark.asyncio
+    async def test_no_gender_produces_zero_cards(self, service, mock_card_record_repo):
+        """Noun without gender field in grammar_data produces 0 declension cards."""
+        gd = {
+            "nominative_singular": "ο άνθρωπος",
+            "genitive_singular": "του ανθρώπου",
+        }
+        we = _make_word_entry(grammar_data=gd)
+        deck_id = uuid4()
+
+        await service.generate_declension_cards([we], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        assert len(card_dicts) == 0
+
+    @pytest.mark.asyncio
+    async def test_front_content_structure(self, service, mock_card_record_repo):
+        """Front content has all required fields with correct values."""
+        we = _make_word_entry(
+            grammar_data=NOUN_GRAMMAR_DATA_COMPLETE,
+            translation_en="human",
+            translation_ru="человек",
+            pronunciation="/ˈan.θro.pos/",
+        )
+        deck_id = uuid4()
+
+        await service.generate_declension_cards([we], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        # Find genitive singular card
+        gen_sg = next(
+            d for d in card_dicts if d["variant_key"] == "nominative_to_genitive_singular"
+        )
+        front = gen_sg["front_content"]
+        assert front["card_type"] == "declension"
+        assert front["main"] == "ο άνθρωπος"
+        assert front["sub"] == "/ˈan.θro.pos/"
+        assert front["badge"] == "Noun"
+        assert front["hint"] == "human"
+        assert front["hint_ru"] == "человек"
+        assert front["case"] == "genitive"
+        assert front["number"] == "singular"
+
+    @pytest.mark.asyncio
+    async def test_back_content_structure(self, service, mock_card_record_repo):
+        """Back content has answer and declension_table with gender and 4 rows."""
+        we = _make_word_entry(grammar_data=NOUN_GRAMMAR_DATA_COMPLETE)
+        deck_id = uuid4()
+
+        await service.generate_declension_cards([we], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        gen_sg = next(
+            d for d in card_dicts if d["variant_key"] == "nominative_to_genitive_singular"
+        )
+        back = gen_sg["back_content"]
+        assert back["card_type"] == "declension"
+        assert back["answer"] == "του ανθρώπου"
+        assert back["declension_table"]["gender"] == "Masculine"
+        assert len(back["declension_table"]["rows"]) == 4
+
+    @pytest.mark.asyncio
+    async def test_only_correct_cell_highlighted(self, service, mock_card_record_repo):
+        """Only the tested row+column has highlight=True; all others are False."""
+        we = _make_word_entry(grammar_data=NOUN_GRAMMAR_DATA_COMPLETE)
+        deck_id = uuid4()
+
+        await service.generate_declension_cards([we], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        # Test genitive singular card — genitive row (index 1), singular column
+        gen_sg = next(
+            d for d in card_dicts if d["variant_key"] == "nominative_to_genitive_singular"
+        )
+        rows = gen_sg["back_content"]["declension_table"]["rows"]
+        assert rows[1]["highlight_singular"] is True
+        assert rows[1]["highlight_plural"] is False
+        # All other rows unhighlighted
+        for i, row in enumerate(rows):
+            if i != 1:
+                assert row["highlight_singular"] is False
+                assert row["highlight_plural"] is False
+
+        # Test accusative plural card — accusative row (index 2), plural column
+        acc_pl = next(
+            d for d in card_dicts if d["variant_key"] == "nominative_to_accusative_plural"
+        )
+        rows = acc_pl["back_content"]["declension_table"]["rows"]
+        assert rows[2]["highlight_singular"] is False
+        assert rows[2]["highlight_plural"] is True
+        for i, row in enumerate(rows):
+            if i != 2:
+                assert row["highlight_singular"] is False
+                assert row["highlight_plural"] is False
+
+    @pytest.mark.asyncio
+    async def test_variant_key_naming(self, service, mock_card_record_repo):
+        """Variant keys follow the nominative_to_{case}_{number} pattern."""
+        we = _make_word_entry(grammar_data=NOUN_GRAMMAR_DATA_COMPLETE)
+        deck_id = uuid4()
+
+        await service.generate_declension_cards([we], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        variant_keys = {d["variant_key"] for d in card_dicts}
+        expected_keys = {
+            "nominative_to_genitive_singular",
+            "nominative_to_accusative_singular",
+            "nominative_to_vocative_singular",
+            "nominative_to_genitive_plural",
+            "nominative_to_accusative_plural",
+            "nominative_to_vocative_plural",
+        }
+        assert variant_keys == expected_keys

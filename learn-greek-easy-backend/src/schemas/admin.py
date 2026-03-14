@@ -245,9 +245,9 @@ class GenerateWordEntryAudioRequest(BaseModel):
 class GenerateCardsRequest(BaseModel):
     """Request schema for generating flashcards from a word entry."""
 
-    card_type: Literal["meaning", "plural_form", "article", "sentence_translation"] = Field(
-        ..., description="Type of flashcard to generate"
-    )
+    card_type: Literal[
+        "meaning", "plural_form", "article", "sentence_translation", "declension"
+    ] = Field(..., description="Type of flashcard to generate")
 
 
 class GenerateCardsResponse(BaseModel):

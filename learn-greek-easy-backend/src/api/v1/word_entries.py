@@ -386,8 +386,17 @@ async def bulk_upload_word_entries(
         entries, request.deck_id
     )
 
-    cards_created = meaning_created + plural_created + sentence_created + article_created
-    cards_updated = meaning_updated + plural_updated + sentence_updated + article_updated
+    # Generate declension cards for eligible noun entries
+    declension_created, declension_updated = await card_gen.generate_declension_cards(
+        entries, request.deck_id
+    )
+
+    cards_created = (
+        meaning_created + plural_created + sentence_created + article_created + declension_created
+    )
+    cards_updated = (
+        meaning_updated + plural_updated + sentence_updated + article_updated + declension_updated
+    )
 
     # Commit the transaction
     await db.commit()
