@@ -6,6 +6,14 @@ This package contains utility functions and helpers for:
 - Greek text processing (greek_text.py)
 """
 
+from src.utils.greek_articles import (
+    ACCUSATIVE_ARTICLES,
+    ARTICLE_MAP,
+    GENDER_MAP,
+    GENITIVE_ARTICLES,
+    NOMINATIVE_ARTICLES,
+    get_nominative_article,
+)
 from src.utils.greek_text import (
     extract_searchable_forms,
     generate_normalized_forms,
@@ -55,6 +63,13 @@ __all__ = [
     "create_success_response",
     "create_paginated_response",
     "create_error_response",
+    # Greek article utilities
+    "ACCUSATIVE_ARTICLES",
+    "ARTICLE_MAP",
+    "GENDER_MAP",
+    "GENITIVE_ARTICLES",
+    "NOMINATIVE_ARTICLES",
+    "get_nominative_article",
     # Greek text utilities
     "normalize_greek_accents",
     "extract_searchable_forms",

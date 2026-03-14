@@ -460,3 +460,27 @@ class ListeningDialogDetail(BaseModel):
     audio_file_size_bytes: int | None = None
     speakers: list[DialogSpeakerDetail]
     lines: list[DialogLineDetail]
+
+
+# ============================================================================
+# Reverse Lookup
+# ============================================================================
+
+
+class ReverseLookupItem(BaseModel):
+    """A single reverse lookup result."""
+
+    lemma: str
+    pos: str
+    gender: str | None = None
+    article: str | None = None
+    translations: list[str]
+    actionable: bool
+
+
+class ReverseLookupResponse(BaseModel):
+    """Response for reverse translation lookup."""
+
+    query: str
+    language: str
+    results: list[ReverseLookupItem]

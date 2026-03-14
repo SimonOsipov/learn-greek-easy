@@ -43,3 +43,13 @@ export function isValidGreekInput(text: string): GreekValidationResult {
 export function containsLatinCharacters(text: string): boolean {
   return LATIN_REGEX.test(text);
 }
+
+export function detectScript(input: string): 'greek' | 'latin' | 'cyrillic' {
+  if (/[\u0370-\u03FF\u1F00-\u1FFF]/.test(input)) return 'greek';
+  if (/[\u0400-\u04FF]/.test(input)) return 'cyrillic';
+  return 'latin';
+}
+
+export function scriptToLanguage(script: 'latin' | 'cyrillic'): 'en' | 'ru' {
+  return script === 'cyrillic' ? 'ru' : 'en';
+}

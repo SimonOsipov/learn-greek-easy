@@ -86,6 +86,8 @@ from src.schemas.admin import (
     PendingQuestionsResponse,
     QuestionApproveRequest,
     QuestionApproveResponse,
+    ReverseLookupItem,
+    ReverseLookupResponse,
     SuggestionItem,
     TranslationLookupStageResult,
     TranslationSourceInfo,
@@ -138,6 +140,7 @@ from src.services.lexicon_service import LexiconService
 from src.services.local_verification_service import get_local_verification_service
 from src.services.news_item_service import NewsItemService
 from src.services.noun_data_generation_service import get_noun_data_generation_service
+from src.services.reverse_lookup_service import ReverseLookupService
 from src.services.s3_service import get_s3_service
 from src.services.translation_service import TranslationLookupService
 from src.services.verification_tier import compute_combined_tier
@@ -3851,4 +3854,35 @@ async def generate_dialog_audio_stream(
 
     return create_sse_response(
         sse_stream(_dialog_audio_sse_pipeline(dialog_id), heartbeat_interval=15)
+    )
+
+
+@router.get(
+    "/reverse-lookup",
+    response_model=ReverseLookupResponse,
+    summary="Reverse lookup Greek lemmas by translation",
+)
+async def reverse_lookup(
+    q: str = Query(..., min_length=1, max_length=100),
+    lang: Literal["en", "ru"] = Query(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> ReverseLookupResponse:
+    """Look up Greek lemmas by their English or Russian translation."""
+    service = ReverseLookupService(db)
+    results = await service.search(q, lang)
+    return ReverseLookupResponse(
+        query=q,
+        language=lang,
+        results=[
+            ReverseLookupItem(
+                lemma=r.lemma,
+                pos=r.pos,
+                gender=r.gender,
+                article=r.article,
+                translations=r.translations,
+                actionable=r.actionable,
+            )
+            for r in results
+        ],
     )

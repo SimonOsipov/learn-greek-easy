@@ -18,7 +18,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { adminAPI } from '@/services/adminAPI';
+import { adminAPI, type ReverseLookupItem } from '@/services/adminAPI';
 import { wordEntryAPI } from '@/services/wordEntryAPI';
 import { toast } from '@/hooks/use-toast';
 
@@ -33,6 +33,7 @@ vi.mock('@/services/adminAPI', () => ({
   adminAPI: {
     generateWordEntry: vi.fn(),
     linkWordEntry: vi.fn().mockResolvedValue(undefined),
+    reverseLookup: vi.fn(),
   },
 }));
 
@@ -266,6 +267,33 @@ const submitWord = async (user: ReturnType<typeof userEvent.setup>, word = 'γά
   await user.click(screen.getByTestId('generate-noun-submit'));
 };
 
+const mockReverseLookupResults: ReverseLookupItem[] = [
+  {
+    lemma: 'γάτα',
+    pos: 'NOUN',
+    gender: 'feminine',
+    article: 'η',
+    translations: ['cat', 'kitty'],
+    actionable: true,
+  },
+  {
+    lemma: 'γατί',
+    pos: 'NOUN',
+    gender: 'neuter',
+    article: 'το',
+    translations: ['kitten'],
+    actionable: true,
+  },
+  {
+    lemma: 'γατίσιος',
+    pos: 'ADJ',
+    gender: null,
+    article: null,
+    translations: ['feline'],
+    actionable: false,
+  },
+];
+
 // ============================================
 // Tests
 // ============================================
@@ -312,19 +340,19 @@ describe('GenerateNounDialog', () => {
     expect(screen.queryByTestId('generate-noun-warning')).not.toBeInTheDocument();
   });
 
-  // 5. Latin input shows warning
-  it('shows warning and disables Create for Latin input', async () => {
+  // 5. Latin input enables Create (triggers reverse lookup instead of showing warning)
+  it('enables Create and shows no warning for Latin input', async () => {
     const user = userEvent.setup();
     renderDialog();
 
     await user.type(screen.getByTestId('generate-noun-input'), 'spiti');
 
-    expect(screen.getByTestId('generate-noun-warning')).toBeInTheDocument();
-    expect(screen.getByTestId('generate-noun-submit')).toBeDisabled();
+    expect(screen.queryByTestId('generate-noun-warning')).not.toBeInTheDocument();
+    expect(screen.getByTestId('generate-noun-submit')).not.toBeDisabled();
   });
 
-  // 6. Mixed input shows warning
-  it('shows warning and disables Create for mixed Greek/Latin input', async () => {
+  // 6. Mixed Greek/Latin input shows warning and disables submit
+  it('shows mixed-script warning and disables submit for mixed Greek/Latin input', async () => {
     const user = userEvent.setup();
     renderDialog();
 
@@ -1222,5 +1250,197 @@ describe('GenerateNounDialog', () => {
     const approveButton = screen.getByTestId('approve-save-button');
     expect(approveButton).toBeDisabled();
     expect(approveButton.querySelector('svg')).toBeTruthy();
+  });
+});
+
+describe('Reverse Lookup Integration', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    capturedOnEvent = undefined;
+    capturedOnError = undefined;
+    vi.mocked(adminAPI.reverseLookup).mockResolvedValue({
+      query: 'cat',
+      language: 'en',
+      results: mockReverseLookupResults,
+    });
+  });
+
+  it('triggers reverse lookup when Latin text is submitted', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+    await user.type(screen.getByTestId('generate-noun-input'), 'cat');
+    await user.click(screen.getByTestId('generate-noun-submit'));
+    await waitFor(() => {
+      expect(vi.mocked(adminAPI.reverseLookup)).toHaveBeenCalledWith('cat', 'en');
+    });
+  });
+
+  it('triggers reverse lookup with lang=ru for Cyrillic text', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+    await user.type(screen.getByTestId('generate-noun-input'), 'кошка');
+    await user.click(screen.getByTestId('generate-noun-submit'));
+    await waitFor(() => {
+      expect(vi.mocked(adminAPI.reverseLookup)).toHaveBeenCalledWith('кошка', 'ru');
+    });
+  });
+
+  it('shows reverse lookup card with results after lookup', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+    await user.type(screen.getByTestId('generate-noun-input'), 'cat');
+    await user.click(screen.getByTestId('generate-noun-submit'));
+    await waitFor(() => {
+      expect(screen.getByTestId('reverse-lookup-card')).toBeInTheDocument();
+    });
+    expect(screen.getByTestId('reverse-lookup-row-0')).toBeInTheDocument();
+    expect(screen.getByTestId('reverse-lookup-row-1')).toBeInTheDocument();
+  });
+
+  it('non-noun row has disabled radio button', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+    await user.type(screen.getByTestId('generate-noun-input'), 'cat');
+    await user.click(screen.getByTestId('generate-noun-submit'));
+    await waitFor(() => {
+      expect(screen.getByTestId('reverse-lookup-card')).toBeInTheDocument();
+    });
+    // Row 2 is the ADJ (non-actionable)
+    const row2 = screen.getByTestId('reverse-lookup-row-2');
+    const radio = row2.querySelector('input[type="radio"]');
+    expect(radio).toBeDisabled();
+  });
+
+  it('"Use selected" is disabled when no row is selected', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+    await user.type(screen.getByTestId('generate-noun-input'), 'cat');
+    await user.click(screen.getByTestId('generate-noun-submit'));
+    await waitFor(() => {
+      expect(screen.getByTestId('reverse-lookup-card')).toBeInTheDocument();
+    });
+    expect(screen.getByTestId('reverse-lookup-use')).toBeDisabled();
+  });
+
+  it('Cancel clears reverse lookup results', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+    await user.type(screen.getByTestId('generate-noun-input'), 'cat');
+    await user.click(screen.getByTestId('generate-noun-submit'));
+    await waitFor(() => {
+      expect(screen.getByTestId('reverse-lookup-card')).toBeInTheDocument();
+    });
+    await user.click(screen.getByTestId('reverse-lookup-cancel'));
+    expect(screen.queryByTestId('reverse-lookup-card')).not.toBeInTheDocument();
+  });
+
+  it('shows no-results message when lookup returns empty', async () => {
+    vi.mocked(adminAPI.reverseLookup).mockResolvedValue({
+      query: 'xyz',
+      language: 'en',
+      results: [],
+    });
+    const user = userEvent.setup();
+    renderDialog();
+    await user.type(screen.getByTestId('generate-noun-input'), 'xyz');
+    await user.click(screen.getByTestId('generate-noun-submit'));
+    await waitFor(() => {
+      expect(screen.getByTestId('reverse-lookup-card')).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId('reverse-lookup-row-0')).not.toBeInTheDocument();
+  });
+
+  it('does not trigger reverse lookup for valid Greek input', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
+    await user.click(screen.getByTestId('generate-noun-submit'));
+    await waitFor(() => {
+      expect(capturedOnEvent).toBeDefined();
+    });
+    expect(vi.mocked(adminAPI.reverseLookup)).not.toHaveBeenCalled();
+  });
+
+  it('does not trigger reverse lookup for tooLong input', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+    // Use Greek chars to hit the tooLong branch (Latin hits 'latin' branch before tooLong)
+    const longGreek = 'α'.repeat(51);
+    await user.type(screen.getByTestId('generate-noun-input'), longGreek);
+    await user.click(screen.getByTestId('generate-noun-submit'));
+    expect(vi.mocked(adminAPI.reverseLookup)).not.toHaveBeenCalled();
+    expect(screen.getByTestId('generate-noun-warning')).toBeInTheDocument();
+  });
+});
+
+describe('Double-Click on Lookup Row', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    capturedOnEvent = undefined;
+    capturedOnError = undefined;
+    vi.mocked(adminAPI.reverseLookup).mockResolvedValue({
+      query: 'cat',
+      language: 'en',
+      results: mockReverseLookupResults,
+    });
+  });
+
+  it('double-click on actionable row triggers pipeline', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+    await user.type(screen.getByTestId('generate-noun-input'), 'cat');
+    await user.click(screen.getByTestId('generate-noun-submit'));
+    await waitFor(() => {
+      expect(screen.getByTestId('reverse-lookup-card')).toBeInTheDocument();
+    });
+    await user.dblClick(screen.getByTestId('reverse-lookup-row-0'));
+    await waitFor(() => {
+      expect(screen.queryByTestId('reverse-lookup-card')).not.toBeInTheDocument();
+    });
+  });
+
+  it('double-click on non-actionable row does not trigger pipeline', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+    await user.type(screen.getByTestId('generate-noun-input'), 'cat');
+    await user.click(screen.getByTestId('generate-noun-submit'));
+    await waitFor(() => {
+      expect(screen.getByTestId('reverse-lookup-card')).toBeInTheDocument();
+    });
+    await user.dblClick(screen.getByTestId('reverse-lookup-row-2'));
+    // Card should still be visible
+    expect(screen.getByTestId('reverse-lookup-card')).toBeInTheDocument();
+  });
+});
+
+describe('Mixed-Script Warning', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    capturedOnEvent = undefined;
+    capturedOnError = undefined;
+  });
+
+  it('shows warning for Greek + Latin mixed input', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+    await user.type(screen.getByTestId('generate-noun-input'), 'σπίτι house');
+    expect(screen.getByTestId('generate-noun-warning')).toBeInTheDocument();
+    expect(screen.getByTestId('generate-noun-submit')).toBeDisabled();
+    expect(vi.mocked(adminAPI.reverseLookup)).not.toHaveBeenCalled();
+  });
+
+  it('shows warning for Greek + Cyrillic mixed input', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+    await user.type(screen.getByTestId('generate-noun-input'), 'σπίτι дом');
+    expect(screen.getByTestId('generate-noun-warning')).toBeInTheDocument();
+    expect(screen.getByTestId('generate-noun-submit')).toBeDisabled();
+  });
+
+  it('pure Greek input does not show mixed-script warning', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+    await user.type(screen.getByTestId('generate-noun-input'), 'γάτα');
+    expect(screen.queryByTestId('generate-noun-warning')).not.toBeInTheDocument();
   });
 });

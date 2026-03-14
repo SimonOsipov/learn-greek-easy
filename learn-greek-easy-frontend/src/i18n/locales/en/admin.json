@@ -1061,6 +1061,18 @@
     "pill": {
       "editTooltip": "Click to edit value",
       "resolvedBy": "Resolved: {{source}}"
+    },
+    "reverseLookup": {
+      "title": "Did you mean one of these Greek words?",
+      "loading": "Looking up...",
+      "noResults": "No Greek words found for \"{{query}}\"",
+      "useSelected": "Use selected",
+      "cancel": "Cancel",
+      "notSupported": "Not yet supported",
+      "columnLemma": "Lemma",
+      "columnPos": "Part of Speech",
+      "columnTranslation": "Translation",
+      "mixedScript": "Input contains characters from multiple scripts. Please enter only Greek or only a single-script translation."
     }
   },
   "wordEntry": {
