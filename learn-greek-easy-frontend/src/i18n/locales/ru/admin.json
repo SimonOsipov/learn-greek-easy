@@ -1071,11 +1071,6 @@
     "pill": {
       "editTooltip": "Нажмите для редактирования",
       "resolvedBy": "Разрешено: {{source}}"
-    },
-    "examples": {
-      "editButton": "Редактировать",
-      "saveButton": "Сохранить",
-      "cancelButton": "Отмена"
     }
   },
   "wordEntry": {

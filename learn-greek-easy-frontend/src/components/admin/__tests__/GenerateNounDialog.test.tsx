@@ -991,8 +991,8 @@ describe('GenerateNounDialog', () => {
     expect(screen.getByTestId('approve-save-button')).not.toBeDisabled();
   });
 
-  // 48. Examples section visible when pipeline done (read-only by default)
-  it('shows examples section in read-only mode when pipeline is done', async () => {
+  // 48. Examples section visible when pipeline done (inline editable by default)
+  it('shows examples section with example text when pipeline is done', async () => {
     const user = userEvent.setup();
     renderDialog();
 
@@ -1002,12 +1002,13 @@ describe('GenerateNounDialog', () => {
     await waitFor(() => {
       expect(screen.getByTestId('examples-section')).toBeInTheDocument();
     });
-    // In read-only mode, editable inputs are not shown
-    expect(screen.queryByTestId('editable-example-0-greek')).not.toBeInTheDocument();
+    // Examples are always visible as inline-editable spans
+    expect(screen.getByTestId('editable-example-0-greek')).toBeInTheDocument();
+    expect(screen.getByTestId('editable-example-0-greek')).toHaveTextContent('Η γάτα κοιμάται.');
   });
 
-  // 49. Editable example inputs rendered after clicking Edit button (AC #5)
-  it('renders editable example inputs after clicking Edit button', async () => {
+  // 49. Clicking example text activates inline input (AC #5)
+  it('activates inline input when example text is clicked', async () => {
     const user = userEvent.setup();
     renderDialog();
 
@@ -1018,13 +1019,14 @@ describe('GenerateNounDialog', () => {
       expect(screen.getByTestId('examples-section')).toBeInTheDocument();
     });
 
-    // Click the Edit button to enter edit mode
-    await user.click(screen.getByText('Edit'));
+    // Click on the greek example text to enter edit mode
+    await user.click(screen.getByTestId('editable-example-0-greek'));
 
-    expect(screen.getByTestId('editable-example-0-greek')).toBeInTheDocument();
-    expect(screen.getByTestId('editable-example-0-english')).toBeInTheDocument();
-    expect(screen.getByTestId('editable-example-0-russian')).toBeInTheDocument();
-    expect(screen.getByTestId('editable-example-1-greek')).toBeInTheDocument();
+    // After click, the span becomes an input element
+    await waitFor(() => {
+      const input = screen.getByTestId('editable-example-0-greek');
+      expect(input.tagName).toBe('INPUT');
+    });
   });
 
   // ============================================================

@@ -1059,11 +1059,6 @@
     "pill": {
       "editTooltip": "Click to edit value",
       "resolvedBy": "Resolved: {{source}}"
-    },
-    "examples": {
-      "editButton": "Edit",
-      "saveButton": "Save",
-      "cancelButton": "Cancel"
     }
   },
   "wordEntry": {

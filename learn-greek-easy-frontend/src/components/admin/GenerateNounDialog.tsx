@@ -6,6 +6,7 @@ import { useMutation } from '@tanstack/react-query';
 import { AlertCircle, Info, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { InlineEditableText } from '@/components/admin/InlineEditableText';
 import { UnifiedVerificationTable } from '@/components/admin/UnifiedVerificationTable';
 import type { PillState, SelectionSource } from '@/components/admin/UnifiedVerificationTable';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -159,7 +160,6 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
   const [editableExamples, setEditableExamples] = useState<EditableExample[]>([]);
   const [resolvedValues, setResolvedValues] = useState<Map<string, PillState>>(new Map());
   const [selections, setSelections] = useState<Map<string, SelectionSource>>(new Map());
-  const [examplesEditing, setExamplesEditing] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -416,7 +416,6 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
     setEditableExamples([]);
     setResolvedValues(new Map());
     setSelections(new Map());
-    setExamplesEditing(false);
     closeStream();
   }, [closeStream]);
 
@@ -665,100 +664,58 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
 
                 {editableExamples.length > 0 && (
                   <div data-testid="examples-section" className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-sm font-medium">
-                        {t('generateNoun.editable.examplesTitle')}
-                      </h4>
-                      {pipelineStatus === 'done' && !examplesEditing && (
-                        <Button variant="ghost" size="sm" onClick={() => setExamplesEditing(true)}>
-                          {t('generateNoun.examples.editButton')}
-                        </Button>
-                      )}
-                    </div>
-                    {examplesEditing ? (
-                      <div className="space-y-3">
-                        {editableExamples.map((ex, i) => (
-                          <div key={i} className="grid grid-cols-2 gap-2">
-                            <Input
-                              data-testid={`editable-example-${i}-greek`}
-                              value={ex.greek}
-                              onChange={(e) => {
-                                setEditableExamples((prev) =>
-                                  prev.map((item, idx) =>
-                                    idx === i ? { ...item, greek: e.target.value } : item
-                                  )
-                                );
-                              }}
-                              placeholder={t('generateNoun.editable.exampleGreek')}
-                              className="text-xs"
-                            />
-                            <Input
-                              data-testid={`editable-example-${i}-english`}
-                              value={ex.english}
-                              onChange={(e) => {
-                                setEditableExamples((prev) =>
-                                  prev.map((item, idx) =>
-                                    idx === i ? { ...item, english: e.target.value } : item
-                                  )
-                                );
-                              }}
-                              placeholder={t('generateNoun.editable.exampleEnglish')}
-                              className="text-xs"
-                            />
-                            <Input
-                              data-testid={`editable-example-${i}-russian`}
-                              value={ex.russian}
-                              onChange={(e) => {
-                                setEditableExamples((prev) =>
-                                  prev.map((item, idx) =>
-                                    idx === i ? { ...item, russian: e.target.value } : item
-                                  )
-                                );
-                              }}
-                              placeholder={t('generateNoun.editable.exampleRussian')}
-                              className="col-span-2 text-xs"
-                            />
-                          </div>
-                        ))}
-                        <div className="flex gap-2">
-                          <Button size="sm" onClick={() => setExamplesEditing(false)}>
-                            {t('generateNoun.examples.saveButton')}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              if (displayGeneration) {
-                                setEditableExamples(
-                                  displayGeneration.examples.map((ex) => ({
-                                    greek: ex.greek,
-                                    english: ex.english ?? '',
-                                    russian: ex.russian ?? '',
-                                  }))
-                                );
-                              }
-                              setExamplesEditing(false);
-                            }}
-                          >
-                            {t('generateNoun.examples.cancelButton')}
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {editableExamples.map((ex, i) => (
-                          <div
-                            key={i}
-                            data-testid={`gen-example-${displayGeneration?.examples[i]?.id ?? i}`}
+                    <h4 className="text-sm font-medium">
+                      {t('generateNoun.editable.examplesTitle')}
+                    </h4>
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                      {editableExamples.map((ex, i) => (
+                        <div
+                          key={i}
+                          data-testid={`gen-example-${displayGeneration?.examples[i]?.id ?? i}`}
+                          className="space-y-1.5 rounded-lg border bg-muted/30 p-3"
+                        >
+                          <InlineEditableText
+                            data-testid={`editable-example-${i}-greek`}
+                            value={ex.greek}
+                            onChange={(val) =>
+                              setEditableExamples((prev) =>
+                                prev.map((item, idx) =>
+                                  idx === i ? { ...item, greek: val } : item
+                                )
+                              )
+                            }
+                            placeholder={t('generateNoun.editable.exampleGreek')}
+                            className="text-xs font-medium"
+                          />
+                          <InlineEditableText
+                            data-testid={`editable-example-${i}-english`}
+                            value={ex.english}
+                            onChange={(val) =>
+                              setEditableExamples((prev) =>
+                                prev.map((item, idx) =>
+                                  idx === i ? { ...item, english: val } : item
+                                )
+                              )
+                            }
+                            placeholder={t('generateNoun.editable.exampleEnglish')}
                             className="text-xs text-muted-foreground"
-                          >
-                            <p className="font-medium text-foreground">{ex.greek}</p>
-                            {ex.english && <p>{ex.english}</p>}
-                            {ex.russian && <p>{ex.russian}</p>}
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                          />
+                          <InlineEditableText
+                            data-testid={`editable-example-${i}-russian`}
+                            value={ex.russian}
+                            onChange={(val) =>
+                              setEditableExamples((prev) =>
+                                prev.map((item, idx) =>
+                                  idx === i ? { ...item, russian: val } : item
+                                )
+                              )
+                            }
+                            placeholder={t('generateNoun.editable.exampleRussian')}
+                            className="text-xs text-muted-foreground"
+                          />
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
