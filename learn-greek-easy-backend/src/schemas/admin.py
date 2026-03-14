@@ -499,6 +499,8 @@ class ReverseLookupItem(BaseModel):
     translations: list[str]
     actionable: bool
     match_type: str
+    score: float
+    inferred_gender: bool = False
 
 
 class ReverseLookupResponse(BaseModel):

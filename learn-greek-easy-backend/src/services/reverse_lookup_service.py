@@ -6,7 +6,7 @@ import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from sqlalchemy import and_, case, func, literal, or_, select, text
+from sqlalchemy import Float, and_, case, func, literal, or_, select, text
 from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -38,6 +38,7 @@ class ReverseLookupResult:
     actionable: bool
     score: float
     match_type: str
+    inferred_gender: bool = False
 
 
 def _group_rows(
@@ -110,6 +111,7 @@ def _build_result(
         actionable=actionable,
         score=score,
         match_type=match_type,
+        inferred_gender=False,
     )
 
 
@@ -147,24 +149,38 @@ class ReverseLookupService:
         word_boundary_pattern = f"\\m{escaped}\\M"
         query_lower = query.lower()
 
+        full_match_cond = func.lower(Translation.translation) == query_lower
+        short_translation_cond = func.length(Translation.translation) <= 40
+        word_boundary_cond = Translation.translation.op("~*")(word_boundary_pattern)
+
+        fuzzy_base = func.word_similarity(query_lower, func.lower(Translation.translation))
+        length_penalty = literal(30.0) / func.greatest(
+            func.length(Translation.translation).cast(Float), literal(30.0)
+        )
+        penalized_fuzzy = fuzzy_base * length_penalty
+
         score_expr = case(
-            (Translation.translation.op("~*")(word_boundary_pattern), literal(2.0)),
-            else_=func.word_similarity(query_lower, func.lower(Translation.translation)),
+            (full_match_cond, literal(3.0)),
+            (and_(word_boundary_cond, short_translation_cond), literal(2.0)),
+            (word_boundary_cond, literal(1.0)),
+            else_=penalized_fuzzy,
         ).label("score")
 
         match_type_expr = case(
-            (Translation.translation.op("~*")(word_boundary_pattern), literal("exact")),
+            (full_match_cond, literal("full")),
+            (and_(word_boundary_cond, short_translation_cond), literal("substring")),
+            (word_boundary_cond, literal("incidental")),
             else_=literal("fuzzy"),
         ).label("match_type")
 
-        await self.db.execute(text("SET pg_trgm.similarity_threshold = 0.3"))
+        await self.db.execute(text("SET pg_trgm.similarity_threshold = 0.75"))
 
         stmt = (
             select(Translation, score_expr, match_type_expr)
             .where(
                 Translation.language == language,
                 or_(
-                    Translation.translation.op("~*")(word_boundary_pattern),
+                    word_boundary_cond,
                     and_(
                         Translation.translation.op("%")(query_lower),
                         func.word_similarity(query_lower, func.lower(Translation.translation))
@@ -182,8 +198,17 @@ class ReverseLookupService:
 
         groups, group_scores, group_match_types = _group_rows(rows)
 
+        # Filter: only NOUNs with score >= 2.0
+        filtered_keys = {k for k in groups if k[1] == "NOUN" and group_scores[k] >= 2.0}
+        groups = {k: v for k, v in groups.items() if k in filtered_keys}
+        group_scores = {k: v for k, v in group_scores.items() if k in filtered_keys}
+        group_match_types = {k: v for k, v in group_match_types.items() if k in filtered_keys}
+
+        if not groups:
+            return []
+
         # Batch gender lookup for NOUN lemmas from greek_lexicon
-        noun_lemmas = [lemma for (lemma, pos) in groups if pos == "NOUN"]
+        noun_lemmas = [lemma for (lemma, _pos) in groups]
         gender_map: dict[str, str] = {}
         if noun_lemmas:
             lexicon_stmt = (
@@ -214,5 +239,5 @@ class ReverseLookupService:
             for (lemma, pos), translations in groups.items()
         ]
 
-        results.sort(key=lambda r: (-r.score, 0 if r.pos == "NOUN" else 1, r.lemma))
+        results.sort(key=lambda r: (-r.score, sum(len(t) for t in r.translations), r.lemma))
         return results[:limit]

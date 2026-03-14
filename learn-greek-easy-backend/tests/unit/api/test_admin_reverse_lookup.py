@@ -19,8 +19,9 @@ class TestReverseLookupEndpoint:
                 article="το",
                 translations=["house", "home"],
                 actionable=True,
-                score=2.0,
-                match_type="exact",
+                score=3.0,
+                match_type="full",
+                inferred_gender=False,
             )
         ]
         with patch(
@@ -45,7 +46,9 @@ class TestReverseLookupEndpoint:
         assert result["article"] == "το"
         assert result["translations"] == ["house", "home"]
         assert result["actionable"] is True
-        assert result["match_type"] == "exact"
+        assert result["match_type"] == "full"
+        assert result["score"] == 3.0
+        assert result["inferred_gender"] is False
 
     async def test_russian_200(self, client: AsyncClient, superuser_auth_headers: dict) -> None:
         mock_results = [
@@ -56,8 +59,9 @@ class TestReverseLookupEndpoint:
                 article="το",
                 translations=["дом"],
                 actionable=True,
-                score=2.0,
-                match_type="exact",
+                score=3.0,
+                match_type="full",
+                inferred_gender=False,
             )
         ]
         with patch(
@@ -75,7 +79,7 @@ class TestReverseLookupEndpoint:
         assert data["language"] == "ru"
         assert len(data["results"]) == 1
 
-    async def test_fuzzy_match_type_in_response(
+    async def test_substring_match_type_in_response(
         self, client: AsyncClient, superuser_auth_headers: dict
     ) -> None:
         mock_results = [
@@ -86,8 +90,9 @@ class TestReverseLookupEndpoint:
                 article="το",
                 translations=["house"],
                 actionable=True,
-                score=0.8,
-                match_type="fuzzy",
+                score=2.0,
+                match_type="substring",
+                inferred_gender=False,
             )
         ]
         with patch(
@@ -97,12 +102,14 @@ class TestReverseLookupEndpoint:
         ):
             response = await client.get(
                 "/api/v1/admin/reverse-lookup",
-                params={"q": "hause", "lang": "en"},
+                params={"q": "house", "lang": "en"},
                 headers=superuser_auth_headers,
             )
         assert response.status_code == 200
         data = response.json()
-        assert data["results"][0]["match_type"] == "fuzzy"
+        assert data["results"][0]["match_type"] == "substring"
+        assert data["results"][0]["score"] == 2.0
+        assert data["results"][0]["inferred_gender"] is False
 
     async def test_empty_results_200(
         self, client: AsyncClient, superuser_auth_headers: dict

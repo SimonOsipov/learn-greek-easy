@@ -4003,6 +4003,8 @@ async def reverse_lookup(
                 translations=r.translations,
                 actionable=r.actionable,
                 match_type=r.match_type,
+                score=r.score,
+                inferred_gender=r.inferred_gender,
             )
             for r in results
         ],
