@@ -1090,7 +1090,8 @@
       "speakers": "Участники",
       "status": "Статус",
       "created": "Создан",
-      "actions": "Действия"
+      "actions": "Действия",
+      "edit": "Редактировать"
     },
     "status": {
       "draft": "Черновик",
@@ -1161,6 +1162,18 @@
         "retry": "Повторить",
         "audioUrlMissing": "Аудиофайл не найден. Возможно, он был удалён из хранилища."
       }
+    },
+    "search": {
+      "placeholder": "Поиск диалогов...",
+      "noResults": "Диалоги не найдены",
+      "filteredCount": "Показано {{filtered}} из {{total}} диалогов"
+    },
+    "filter": {
+      "allLevels": "Все уровни"
+    },
+    "stats": {
+      "total": "Всего диалогов",
+      "cefrLevel": "Уровень {{level}}"
     },
     "errors": {
       "fetchFailed": "Не удалось загрузить диалоги",

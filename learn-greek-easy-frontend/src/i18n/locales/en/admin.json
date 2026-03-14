@@ -1078,7 +1078,8 @@
       "speakers": "Speakers",
       "status": "Status",
       "created": "Created",
-      "actions": "Actions"
+      "actions": "Actions",
+      "edit": "Edit"
     },
     "status": {
       "draft": "Draft",
@@ -1149,6 +1150,18 @@
         "retry": "Retry",
         "audioUrlMissing": "Audio file not found. The file may have been deleted from storage."
       }
+    },
+    "search": {
+      "placeholder": "Search dialogs...",
+      "noResults": "No dialogs match your search",
+      "filteredCount": "Showing {{filtered}} of {{total}} dialogs"
+    },
+    "filter": {
+      "allLevels": "All Levels"
+    },
+    "stats": {
+      "total": "Total Dialogs",
+      "cefrLevel": "Level {{level}}"
     },
     "errors": {
       "fetchFailed": "Failed to load dialogs",

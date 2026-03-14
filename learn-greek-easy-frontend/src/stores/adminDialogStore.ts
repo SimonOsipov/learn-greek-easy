@@ -12,6 +12,7 @@ import { devtools } from 'zustand/middleware';
 
 import { adminAPI } from '@/services/adminAPI';
 import type {
+  DeckLevel,
   DialogStatus,
   ListeningDialogDetail,
   ListeningDialogListItem,
@@ -32,6 +33,8 @@ interface AdminDialogState {
   createDialog: (jsonPayload: string) => Promise<void>;
   setPage: (page: number) => void;
   clearError: () => void;
+  cefrFilter: DeckLevel | null;
+  setCefrFilter: (level: DeckLevel | null) => void;
   selectedDialog: ListeningDialogDetail | null;
   isLoadingDetail: boolean;
   detailError: string | null;
@@ -54,12 +57,18 @@ export const useAdminDialogStore = create<AdminDialogState>()(
       selectedDialog: null,
       isLoadingDetail: false,
       detailError: null,
+      cefrFilter: null,
 
       fetchDialogs: async () => {
         set({ isLoading: true, error: null });
         try {
-          const { page, pageSize } = get();
-          const response = await adminAPI.getListeningDialogs(page, pageSize);
+          const { page, pageSize, cefrFilter } = get();
+          const response = await adminAPI.getListeningDialogs(
+            page,
+            pageSize,
+            undefined,
+            cefrFilter ?? undefined
+          );
           set({
             dialogs: response.items,
             total: response.total,
@@ -109,6 +118,11 @@ export const useAdminDialogStore = create<AdminDialogState>()(
 
       clearError: () => set({ error: null }),
 
+      setCefrFilter: (level: DeckLevel | null) => {
+        set({ cefrFilter: level, page: 1 });
+        get().fetchDialogs();
+      },
+
       fetchDialogDetail: async (id: string) => {
         set({ isLoadingDetail: true, detailError: null });
         try {
@@ -130,4 +144,4 @@ export const useAdminDialogStore = create<AdminDialogState>()(
 );
 
 // Re-export type for use in components
-export type { DialogStatus, ListeningDialogDetail, ListeningDialogListItem };
+export type { DeckLevel, DialogStatus, ListeningDialogDetail, ListeningDialogListItem };
