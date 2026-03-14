@@ -215,6 +215,10 @@ test.describe('MCNEWS - Admin Country Management', () => {
     // Navigate to News tab
     await navigateToAdminTab(page, 'news');
 
+    // Open create modal
+    await page.getByTestId('news-create-button').click();
+    await expect(page.getByTestId('news-create-modal')).toBeVisible({ timeout: 10000 });
+
     // Fill in news JSON with Greece country
     const jsonInput = page.getByTestId('news-json-input');
     await expect(jsonInput).toBeVisible({ timeout: 10000 });
@@ -259,6 +263,10 @@ test.describe('MCNEWS - Admin Country Management', () => {
 
     // Navigate to News tab
     await navigateToAdminTab(page, 'news');
+
+    // Open create modal
+    await page.getByTestId('news-create-button').click();
+    await expect(page.getByTestId('news-create-modal')).toBeVisible({ timeout: 10000 });
 
     const jsonInput = page.getByTestId('news-json-input');
     await expect(jsonInput).toBeVisible({ timeout: 10000 });
@@ -319,21 +327,28 @@ test.describe('MCNEWS - Admin Country Management', () => {
 
     await navigateToAdminTab(page, 'news');
 
+    // Open create modal
+    await page.getByTestId('news-create-button').click();
+    await expect(page.getByTestId('news-create-modal')).toBeVisible({ timeout: 10000 });
+
     const jsonInput = page.getByTestId('news-json-input');
     await expect(jsonInput).toBeVisible({ timeout: 10000 });
 
-    const testUrl = `https://example-greece-skip-${Date.now()}.com/article`;
+    const uniqueId = Date.now();
+    const uniqueTitle = `Greece News Skip E2E ${uniqueId}`;
+    const testUrl = `https://example-greece-skip-${uniqueId}.com/article`;
+    const todayDate = new Date().toISOString().split('T')[0];
 
     // Create Greece news WITH question data - question should be skipped by backend
     const newsJson = JSON.stringify({
       country: 'greece',
       title_el: 'Ελληνικά νέα skip E2E',
-      title_en: 'Greece News Skip E2E',
+      title_en: uniqueTitle,
       title_ru: 'Греческие новости skip E2E',
       description_el: 'Περιγραφή Ελλάδας',
       description_en: 'Greece description',
       description_ru: 'Описание Греции',
-      publication_date: '2026-01-15',
+      publication_date: todayDate,
       original_article_url: testUrl,
       source_image_url: 'https://picsum.photos/400/300',
       question: {
@@ -363,9 +378,10 @@ test.describe('MCNEWS - Admin Country Management', () => {
     // The green Q badge should NOT appear for Greece news (question was skipped)
     const newsTable = page.getByTestId('news-items-table');
     await expect(newsTable).toBeVisible({ timeout: 10000 });
-    const greeceRow = newsTable.locator('[data-testid^="news-item-row-"]')
-      .filter({ hasText: 'Greece News Skip E2E' })
-      .first();
+    const greeceRow = newsTable
+      .locator('[data-testid^="news-item-row-"]')
+      .filter({ hasText: uniqueTitle });
+    // Row may be on a later page if table has many items; check badge only if visible
     if (await greeceRow.isVisible({ timeout: 5000 })) {
       // The green Q badge should NOT be in this row (question was skipped)
       const greenQInRow = greeceRow.locator('.bg-green-500\\/10').filter({ hasText: 'Q' });

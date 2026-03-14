@@ -260,7 +260,7 @@ export function ListeningDialogsTab() {
   return (
     <Card data-testid="dialog-list-table">
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex items-start justify-between">
           <div>
             <CardTitle>{t('listeningDialogs.title')}</CardTitle>
             <CardDescription>{t('listeningDialogs.description')}</CardDescription>

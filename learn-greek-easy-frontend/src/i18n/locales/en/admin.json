@@ -273,7 +273,6 @@
     "feedback": "Feedback",
     "changelog": "Changelog",
     "cardErrors": "Card Errors",
-    "wordEntries": "Word Entries",
     "listeningDialogs": "Listening",
     "groups": {
       "content": "Content",
@@ -313,7 +312,12 @@
       "jsonMessageRequired": "Message is required.",
       "jsonMessageTooLong": "Message must be 500 characters or less.",
       "jsonInvalidUrl": "Link URL must be a valid URL.",
-      "jsonUrlTooLong": "Link URL must be 500 characters or less."
+      "jsonUrlTooLong": "Link URL must be 500 characters or less.",
+      "button": "Create Announcement",
+      "formTab": "Form",
+      "jsonTab": "JSON",
+      "unsavedTitle": "Discard changes?",
+      "unsavedDescription": "You have unsaved input. Closing will discard your changes."
     },
     "preview": {
       "title": "Preview Announcement",
@@ -367,7 +371,8 @@
       "validationError": "Invalid JSON",
       "duplicateUrl": "This article URL has already been used",
       "imageDownloadFailed": "Failed to download image from the provided URL",
-      "questionSkipped": "Question skipped"
+      "questionSkipped": "Question skipped",
+      "button": "Create News Item"
     },
     "table": {
       "title": "News Items",
@@ -445,6 +450,10 @@
     },
     "question": {
       "previewTitle": "Question Preview"
+    },
+    "sections": {
+      "newsItems": "News Items",
+      "newsItemsDescription": "Manage existing news items"
     }
   },
   "feedback": {
@@ -845,38 +854,6 @@
       "cancelConfirmNo": "Keep Editing",
       "successToast": "Card updated successfully",
       "errorToast": "Failed to update card. Please try again."
-    }
-  },
-  "wordEntries": {
-    "title": "Bulk Upload Word Entries",
-    "description": "Upload multiple word entries at once using JSON format.",
-    "jsonLabel": "Word Entries JSON",
-    "validateButton": "Validate & Preview",
-    "uploadButton": "Upload Entries",
-    "uploadingButton": "Uploading...",
-    "maxEntriesWarning": "Maximum 100 entries per upload",
-    "validationErrors": "Validation Errors",
-    "previewTitle": "Preview Summary",
-    "totalEntries": "Total Entries",
-    "partOfSpeechBreakdown": "Part of Speech",
-    "withExamples": "With Examples",
-    "successToast": "Successfully uploaded: {{created}} created, {{updated}} updated",
-    "errorToast": "Failed to upload entries. Please try again.",
-    "invalidJson": "Invalid JSON format",
-    "arrayFormatDetected": "JSON format has changed. Please use: { \"deck_id\": \"your-deck-uuid\", \"word_entries\": [...] }",
-    "missingDeckId": "deck_id is required and must be a non-empty string",
-    "invalidDeckId": "deck_id must be a valid UUID format",
-    "missingWordEntries": "word_entries array is required",
-    "jsonSyntaxError": "JSON syntax error at line {{line}}, column {{column}}: {{message}}",
-    "jsonSyntaxErrorNoPosition": "JSON syntax error: {{message}}",
-    "noEntries": "No entries found in JSON",
-    "tooManyEntries": "Too many entries. Maximum is 100.",
-    "deckNotFound": "Deck not found or access denied",
-    "partOfSpeechCounts": {
-      "nouns": "Nouns",
-      "verbs": "Verbs",
-      "adjectives": "Adj",
-      "adverbs": "Adv"
     }
   },
   "audioStatus": {

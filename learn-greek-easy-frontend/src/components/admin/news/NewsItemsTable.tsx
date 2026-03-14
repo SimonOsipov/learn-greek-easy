@@ -16,7 +16,7 @@ import React, { useEffect, useState } from 'react';
 import { format } from 'date-fns';
 import { el } from 'date-fns/locale/el';
 import { ru } from 'date-fns/locale/ru';
-import { ChevronLeft, ChevronRight, Pencil, Search, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
@@ -86,6 +86,7 @@ interface NewsItemsTableProps {
   onDelete: (item: NewsItemResponse) => void;
   countryFilter?: string | null;
   onCountryFilterChange?: (country: string | null) => void;
+  onCreateClick?: () => void;
 }
 
 function getDateLocale(lang: string) {
@@ -335,6 +336,7 @@ export const NewsItemsTable: React.FC<NewsItemsTableProps> = ({
   onDelete,
   countryFilter,
   onCountryFilterChange,
+  onCreateClick,
 }) => {
   const { t } = useTranslation('admin');
   const { currentLanguage } = useLanguage();
@@ -364,8 +366,18 @@ export const NewsItemsTable: React.FC<NewsItemsTableProps> = ({
   return (
     <Card data-testid="news-items-table">
       <CardHeader>
-        <CardTitle>{t('news.table.title')}</CardTitle>
-        <CardDescription>{t('news.table.description')}</CardDescription>
+        <div className="flex items-start justify-between">
+          <div>
+            <CardTitle>{t('news.sections.newsItems')}</CardTitle>
+            <CardDescription>{t('news.sections.newsItemsDescription')}</CardDescription>
+          </div>
+          {onCreateClick && (
+            <Button onClick={onCreateClick} data-testid="news-create-button">
+              <Plus className="mr-2 h-4 w-4" />
+              {t('news.create.button')}
+            </Button>
+          )}
+        </div>
         <div className="flex gap-2 pt-2">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

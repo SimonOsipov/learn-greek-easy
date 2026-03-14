@@ -2,11 +2,12 @@
  * ChangelogTab Component Tests
  *
  * Tests for the admin changelog tab including:
- * - JSON creation card rendering
+ * - Create button rendering
+ * - Modal open/close lifecycle
  * - Submit button states (disabled when empty, disabled when saving)
  * - Loading spinner during save
- * - Validation error toasts
- * - Success toast and input clearing
+ * - Inline validation errors in modal
+ * - Success toast and modal closing
  * - Test IDs presence
  */
 
@@ -25,6 +26,14 @@ const setTextareaValue = (textarea: HTMLElement, value: string) => {
   fireEvent.change(textarea, { target: { value } });
 };
 
+/**
+ * Helper to open the create modal by clicking the create button.
+ */
+const openCreateModal = async (user: ReturnType<typeof userEvent.setup>) => {
+  await user.click(screen.getByTestId('changelog-create-button'));
+  await waitFor(() => expect(screen.getByTestId('changelog-create-modal')).toBeInTheDocument());
+};
+
 // Mock i18n
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -35,6 +44,7 @@ vi.mock('react-i18next', () => ({
         'admin:changelog.create.hint': 'Content supports **bold** and *italic* markdown',
         'admin:changelog.create.submit': 'Submit',
         'admin:changelog.create.submitting': 'Submitting...',
+        'admin:changelog.create.cancel': 'Cancel',
         'admin:changelog.create.validationError': 'Invalid JSON',
         'admin:changelog.validation.invalidJson': 'Invalid JSON format',
         'admin:changelog.validation.missingFields': `Missing required fields: ${params?.fields || ''}`,
@@ -42,6 +52,17 @@ vi.mock('react-i18next', () => ({
           'Invalid tag. Must be: new_feature, bug_fix, or announcement',
         'admin:changelog.toast.created': 'Changelog entry created successfully',
         'admin:changelog.toast.createError': 'Failed to create changelog entry',
+        'changelog.create.title': 'Create Changelog Entry',
+        'changelog.create.description': 'Paste JSON to create a new changelog entry',
+        'changelog.create.submit': 'Submit',
+        'changelog.create.submitting': 'Submitting...',
+        'changelog.create.cancel': 'Cancel',
+        'changelog.toast.created': 'Changelog entry created successfully',
+        'changelog.toast.createError': 'Failed to create changelog entry',
+        'changelog.validation.invalidJson': 'Invalid JSON format',
+        'changelog.validation.missingFields': `Missing required fields: ${params?.fields || ''}`,
+        'changelog.validation.invalidTag':
+          'Invalid tag. Must be: new_feature, bug_fix, or announcement',
       };
       return translations[key] || key;
     },
@@ -52,6 +73,11 @@ vi.mock('react-i18next', () => ({
 const mockToast = vi.fn();
 vi.mock('@/hooks/use-toast', () => ({
   toast: (args: unknown) => mockToast(args),
+}));
+
+// Mock apiErrorUtils
+vi.mock('@/lib/apiErrorUtils', () => ({
+  getApiErrorMessage: (err: unknown) => (err instanceof Error ? err.message : null),
 }));
 
 // Mock admin changelog store
@@ -90,7 +116,7 @@ vi.mock('@/stores/adminChangelogStore', () => ({
   selectAdminChangelogTotalPages: (state: { totalPages: number }) => state.totalPages,
 }));
 
-// Mock sub-components
+// Mock sub-components (but NOT ChangelogCreateModal — keep it real)
 vi.mock('../ChangelogTable', () => ({
   ChangelogTable: () => <div data-testid="changelog-table-mock">Changelog Table</div>,
 }));
@@ -116,42 +142,53 @@ describe('ChangelogTab', () => {
       expect(screen.getByTestId('changelog-tab')).toBeInTheDocument();
     });
 
-    it('should render changelog-create-card test ID', () => {
+    it('should render changelog-create-button test ID', () => {
       render(<ChangelogTab />);
-      expect(screen.getByTestId('changelog-create-card')).toBeInTheDocument();
+      expect(screen.getByTestId('changelog-create-button')).toBeInTheDocument();
     });
 
-    it('should render changelog-json-input test ID', () => {
+    it('should render changelog-json-input test ID after opening modal', async () => {
+      const user = userEvent.setup();
       render(<ChangelogTab />);
+      await openCreateModal(user);
       expect(screen.getByTestId('changelog-json-input')).toBeInTheDocument();
     });
 
-    it('should render changelog-submit-button test ID', () => {
+    it('should render changelog-submit-button test ID after opening modal', async () => {
+      const user = userEvent.setup();
       render(<ChangelogTab />);
+      await openCreateModal(user);
       expect(screen.getByTestId('changelog-submit-button')).toBeInTheDocument();
     });
   });
 
-  describe('JSON Creation Card', () => {
-    it('should render card header with title', () => {
+  describe('Create Button and Modal', () => {
+    it('should render create button with title', () => {
       render(<ChangelogTab />);
-      expect(screen.getByText('Create Changelog Entry')).toBeInTheDocument();
+      expect(screen.getByTestId('changelog-create-button')).toBeInTheDocument();
+      expect(screen.getByTestId('changelog-create-button')).toHaveTextContent(
+        'Create Changelog Entry'
+      );
     });
 
-    it('should render card description', () => {
+    it('should open modal when create button is clicked', async () => {
+      const user = userEvent.setup();
       render(<ChangelogTab />);
+      await openCreateModal(user);
+      expect(screen.getByTestId('changelog-create-modal')).toBeInTheDocument();
+    });
+
+    it('should render modal description', async () => {
+      const user = userEvent.setup();
+      render(<ChangelogTab />);
+      await openCreateModal(user);
       expect(screen.getByText('Paste JSON to create a new changelog entry')).toBeInTheDocument();
     });
 
-    it('should render hint text', () => {
+    it('should render textarea with placeholder JSON', async () => {
+      const user = userEvent.setup();
       render(<ChangelogTab />);
-      expect(
-        screen.getByText('Content supports **bold** and *italic* markdown')
-      ).toBeInTheDocument();
-    });
-
-    it('should render textarea with placeholder JSON', () => {
-      render(<ChangelogTab />);
+      await openCreateModal(user);
       const textarea = screen.getByTestId('changelog-json-input');
       expect(textarea).toBeInTheDocument();
       expect(textarea).toHaveAttribute('placeholder');
@@ -169,8 +206,10 @@ describe('ChangelogTab', () => {
   });
 
   describe('Submit Button States', () => {
-    it('should disable submit button when textarea is empty', () => {
+    it('should disable submit button when textarea is empty', async () => {
+      const user = userEvent.setup();
       render(<ChangelogTab />);
+      await openCreateModal(user);
       const submitButton = screen.getByTestId('changelog-submit-button');
       expect(submitButton).toBeDisabled();
     });
@@ -178,6 +217,7 @@ describe('ChangelogTab', () => {
     it('should disable submit button when textarea has only whitespace', async () => {
       const user = userEvent.setup();
       render(<ChangelogTab />);
+      await openCreateModal(user);
       const textarea = screen.getByTestId('changelog-json-input');
       const submitButton = screen.getByTestId('changelog-submit-button');
 
@@ -186,8 +226,10 @@ describe('ChangelogTab', () => {
       expect(submitButton).toBeDisabled();
     });
 
-    it('should enable submit button when textarea has content', () => {
+    it('should enable submit button when textarea has content', async () => {
+      const user = userEvent.setup();
       render(<ChangelogTab />);
+      await openCreateModal(user);
       const textarea = screen.getByTestId('changelog-json-input');
       const submitButton = screen.getByTestId('changelog-submit-button');
 
@@ -196,8 +238,10 @@ describe('ChangelogTab', () => {
       expect(submitButton).not.toBeDisabled();
     });
 
-    it('should show "Submit" text when not saving', () => {
+    it('should show "Submit" text when not saving', async () => {
+      const user = userEvent.setup();
       render(<ChangelogTab />);
+      await openCreateModal(user);
       const submitButton = screen.getByTestId('changelog-submit-button');
       expect(submitButton).toHaveTextContent('Submit');
     });
@@ -208,8 +252,10 @@ describe('ChangelogTab', () => {
       mockIsSaving = true;
     });
 
-    it('should disable submit button when isSaving is true', () => {
+    it('should disable submit button when isSaving is true', async () => {
+      const user = userEvent.setup();
       render(<ChangelogTab />);
+      await openCreateModal(user);
       const textarea = screen.getByTestId('changelog-json-input');
       setTextareaValue(textarea, '{"test": true}');
 
@@ -217,8 +263,10 @@ describe('ChangelogTab', () => {
       expect(submitButton).toBeDisabled();
     });
 
-    it('should show "Submitting..." text when saving', () => {
+    it('should show "Submitting..." text when saving', async () => {
+      const user = userEvent.setup();
       render(<ChangelogTab />);
+      await openCreateModal(user);
       const textarea = screen.getByTestId('changelog-json-input');
       setTextareaValue(textarea, '{"test": true}');
 
@@ -226,8 +274,10 @@ describe('ChangelogTab', () => {
       expect(submitButton).toHaveTextContent('Submitting...');
     });
 
-    it('should show loading spinner when saving', () => {
+    it('should show loading spinner when saving', async () => {
+      const user = userEvent.setup();
       render(<ChangelogTab />);
+      await openCreateModal(user);
       const textarea = screen.getByTestId('changelog-json-input');
       setTextareaValue(textarea, '{"test": true}');
 
@@ -238,9 +288,10 @@ describe('ChangelogTab', () => {
   });
 
   describe('JSON Validation', () => {
-    it('should show error toast for invalid JSON syntax', async () => {
+    it('should show inline error for invalid JSON syntax', async () => {
       const user = userEvent.setup();
       render(<ChangelogTab />);
+      await openCreateModal(user);
       const textarea = screen.getByTestId('changelog-json-input');
       const submitButton = screen.getByTestId('changelog-submit-button');
 
@@ -248,17 +299,14 @@ describe('ChangelogTab', () => {
       await user.click(submitButton);
 
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith({
-          title: 'Invalid JSON',
-          description: 'Invalid JSON format',
-          variant: 'destructive',
-        });
+        expect(screen.getByText('Invalid JSON format')).toBeInTheDocument();
       });
     });
 
-    it('should show error toast with missing field names', async () => {
+    it('should show inline error with missing field names', async () => {
       const user = userEvent.setup();
       render(<ChangelogTab />);
+      await openCreateModal(user);
       const textarea = screen.getByTestId('changelog-json-input');
       const submitButton = screen.getByTestId('changelog-submit-button');
 
@@ -267,20 +315,14 @@ describe('ChangelogTab', () => {
       await user.click(submitButton);
 
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith(
-          expect.objectContaining({
-            title: 'Invalid JSON',
-            variant: 'destructive',
-          })
-        );
-        const call = (mockToast as Mock).mock.calls[0][0];
-        expect(call.description).toContain('Missing required fields:');
+        expect(screen.getByText(/Missing required fields:/)).toBeInTheDocument();
       });
     });
 
-    it('should show error toast for invalid tag value', async () => {
+    it('should show inline error for invalid tag value', async () => {
       const user = userEvent.setup();
       render(<ChangelogTab />);
+      await openCreateModal(user);
       const textarea = screen.getByTestId('changelog-json-input');
       const submitButton = screen.getByTestId('changelog-submit-button');
 
@@ -295,17 +337,16 @@ describe('ChangelogTab', () => {
       await user.click(submitButton);
 
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith({
-          title: 'Invalid JSON',
-          description: 'Invalid tag. Must be: new_feature, bug_fix, or announcement',
-          variant: 'destructive',
-        });
+        expect(
+          screen.getByText('Invalid tag. Must be: new_feature, bug_fix, or announcement')
+        ).toBeInTheDocument();
       });
     });
 
     it('should NOT call createEntry when validation fails', async () => {
       const user = userEvent.setup();
       render(<ChangelogTab />);
+      await openCreateModal(user);
       const textarea = screen.getByTestId('changelog-json-input');
       const submitButton = screen.getByTestId('changelog-submit-button');
 
@@ -313,7 +354,7 @@ describe('ChangelogTab', () => {
       await user.click(submitButton);
 
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalled();
+        expect(screen.getByText('Invalid JSON format')).toBeInTheDocument();
       });
       expect(mockCreateEntry).not.toHaveBeenCalled();
     });
@@ -323,6 +364,7 @@ describe('ChangelogTab', () => {
     it('should call createEntry with validated data', async () => {
       const user = userEvent.setup();
       render(<ChangelogTab />);
+      await openCreateModal(user);
       const textarea = screen.getByTestId('changelog-json-input');
       const submitButton = screen.getByTestId('changelog-submit-button');
 
@@ -350,6 +392,7 @@ describe('ChangelogTab', () => {
     it('should show success toast on successful creation', async () => {
       const user = userEvent.setup();
       render(<ChangelogTab />);
+      await openCreateModal(user);
       const textarea = screen.getByTestId('changelog-json-input');
       const submitButton = screen.getByTestId('changelog-submit-button');
 
@@ -370,9 +413,10 @@ describe('ChangelogTab', () => {
       });
     });
 
-    it('should clear textarea on successful creation', async () => {
+    it('should close modal on successful creation', async () => {
       const user = userEvent.setup();
       render(<ChangelogTab />);
+      await openCreateModal(user);
       const textarea = screen.getByTestId('changelog-json-input');
       const submitButton = screen.getByTestId('changelog-submit-button');
 
@@ -387,14 +431,15 @@ describe('ChangelogTab', () => {
       await user.click(submitButton);
 
       await waitFor(() => {
-        expect(textarea).toHaveValue('');
+        expect(screen.queryByTestId('changelog-create-modal')).not.toBeInTheDocument();
       });
     });
 
-    it('should show error toast when createEntry fails', async () => {
+    it('should show inline error when createEntry fails', async () => {
       mockCreateEntry.mockRejectedValueOnce(new Error('Network error'));
       const user = userEvent.setup();
       render(<ChangelogTab />);
+      await openCreateModal(user);
       const textarea = screen.getByTestId('changelog-json-input');
       const submitButton = screen.getByTestId('changelog-submit-button');
 
@@ -409,10 +454,7 @@ describe('ChangelogTab', () => {
       await user.click(submitButton);
 
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith({
-          title: 'Failed to create changelog entry',
-          variant: 'destructive',
-        });
+        expect(screen.getByText('Network error')).toBeInTheDocument();
       });
     });
   });
@@ -421,6 +463,7 @@ describe('ChangelogTab', () => {
     it.each(['new_feature', 'bug_fix', 'announcement'])('should accept tag: %s', async (tag) => {
       const user = userEvent.setup();
       render(<ChangelogTab />);
+      await openCreateModal(user);
       const textarea = screen.getByTestId('changelog-json-input');
       const submitButton = screen.getByTestId('changelog-submit-button');
 

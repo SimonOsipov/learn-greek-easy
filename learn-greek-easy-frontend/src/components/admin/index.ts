@@ -7,7 +7,6 @@ export {
 } from './AdminCardErrorDetailModal';
 export { AdminCardErrorSection } from './AdminCardErrorSection';
 export { AdminFeedbackCard } from './AdminFeedbackCard';
-export { WordEntriesTab } from './WordEntriesTab';
 export { AdminFeedbackResponseDialog } from './AdminFeedbackResponseDialog';
 export { AdminFeedbackSection } from './AdminFeedbackSection';
 export { CardCreateModal, type CardCreateModalProps } from './CardCreateModal';
