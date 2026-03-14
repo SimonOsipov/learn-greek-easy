@@ -54,11 +54,25 @@ function isSentenceTranslationEligible(entry: WordEntryResponse): boolean {
   return examples.some((ex) => !!ex.id && !!ex.greek && !!ex.english);
 }
 
+function isDeclensionEligible(entry: WordEntryResponse): boolean {
+  if (entry.part_of_speech !== 'noun') return false;
+  const gd = entry.grammar_data;
+  if (!gd) return false;
+  const gender = typeof gd.gender === 'string' && gd.gender.length > 0;
+  if (!gender) return false;
+  const NON_NOM_CASES = ['genitive', 'accusative', 'vocative'];
+  const hasAny = ['singular', 'plural'].some((num) =>
+    NON_NOM_CASES.some((c) => getNestedString(gd, `${c}_${num}`) !== undefined)
+  );
+  return hasAny;
+}
+
 export function getCardTypeEligibility(entry: WordEntryResponse): CardTypeEligibilityMap {
   return {
     meaning: isMeaningEligible(entry),
     plural_form: isPluralFormEligible(entry),
     article: isArticleEligible(entry),
     sentence_translation: isSentenceTranslationEligible(entry),
+    declension: isDeclensionEligible(entry),
   };
 }

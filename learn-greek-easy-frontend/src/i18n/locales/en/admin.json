@@ -189,7 +189,8 @@
       "meaning": "Meaning (Greek/English)",
       "plural_form": "Plural Form",
       "article": "Article",
-      "sentence_translation": "Sentence Translation"
+      "sentence_translation": "Sentence Translation",
+      "declension": "Declension"
     },
     "eligibility": {
       "meaningMissing": "Requires English and Russian translations",
@@ -197,7 +198,9 @@
       "pluralFormMissing": "Requires grammar data with singular and plural nominative forms",
       "articleNotNoun": "Only available for nouns",
       "articleMissing": "Requires grammar data with gender and nominative singular form",
-      "sentenceMissing": "Requires at least one example with Greek and English text"
+      "sentenceMissing": "Requires at least one example with Greek and English text",
+      "declensionNotNoun": "Only available for nouns",
+      "declensionMissing": "Requires gender and non-nominative case forms in grammar data"
     }
   },
   "wordEntryContent": {

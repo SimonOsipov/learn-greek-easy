@@ -57,11 +57,13 @@ const CARD_TYPE_TO_GENERATOR: Partial<Record<CardRecordType, GenerateCardType>> 
   plural_form: 'plural_form',
   article: 'article',
   sentence_translation: 'sentence_translation',
+  declension: 'declension',
 };
 
 const GENERATOR_TYPE_DISPLAY_ORDER: GenerateCardType[] = [
   'meaning',
   'article',
+  'declension',
   'plural_form',
   'sentence_translation',
 ];
@@ -155,6 +157,11 @@ function getIneligibilityReason(
       return 'wordEntryDetail.eligibility.articleMissing';
     case 'sentence_translation':
       return 'wordEntryDetail.eligibility.sentenceMissing';
+    case 'declension':
+      if (wordEntry.part_of_speech !== 'noun') {
+        return 'wordEntryDetail.eligibility.declensionNotNoun';
+      }
+      return 'wordEntryDetail.eligibility.declensionMissing';
     default:
       return null;
   }

@@ -148,7 +148,12 @@ export interface CardRecordResponse {
   updated_at: string;
 }
 
-export type GenerateCardType = 'meaning' | 'plural_form' | 'article' | 'sentence_translation';
+export type GenerateCardType =
+  | 'meaning'
+  | 'plural_form'
+  | 'article'
+  | 'sentence_translation'
+  | 'declension';
 
 export interface GenerateCardsResponse {
   card_type: string;

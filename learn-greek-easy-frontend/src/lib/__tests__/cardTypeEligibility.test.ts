@@ -24,6 +24,7 @@ const createEntry = (overrides: Partial<WordEntryResponse> = {}): WordEntryRespo
     gender: 'neuter',
     nominative_singular: 'spiti',
     nominative_plural: 'spitia',
+    genitive_singular: 'spitiou',
   },
   examples: [
     {
@@ -345,6 +346,55 @@ describe('getCardTypeEligibility', () => {
   });
 
   // ============================================
+  // declension eligibility
+  // ============================================
+
+  describe('declension eligibility', () => {
+    it('returns true for noun with gender and non-nominative case forms', () => {
+      const entry = createEntry({
+        part_of_speech: 'noun',
+        grammar_data: {
+          gender: 'masculine',
+          nominative_singular: 'o anthropos',
+          genitive_singular: 'tou anthropou',
+        },
+      });
+      expect(getCardTypeEligibility(entry).declension).toBe(true);
+    });
+
+    it('returns false for non-noun', () => {
+      const entry = createEntry({ part_of_speech: 'verb' });
+      expect(getCardTypeEligibility(entry).declension).toBe(false);
+    });
+
+    it('returns false when grammar_data is null', () => {
+      const entry = createEntry({ grammar_data: null });
+      expect(getCardTypeEligibility(entry).declension).toBe(false);
+    });
+
+    it('returns false when gender is missing', () => {
+      const entry = createEntry({
+        grammar_data: {
+          nominative_singular: 'spiti',
+          genitive_singular: 'spitiou',
+        },
+      });
+      expect(getCardTypeEligibility(entry).declension).toBe(false);
+    });
+
+    it('returns false for noun with only nominative forms', () => {
+      const entry = createEntry({
+        grammar_data: {
+          gender: 'neuter',
+          nominative_singular: 'spiti',
+          nominative_plural: 'spitia',
+        },
+      });
+      expect(getCardTypeEligibility(entry).declension).toBe(false);
+    });
+  });
+
+  // ============================================
   // Return shape
   // ============================================
 
@@ -352,7 +402,13 @@ describe('getCardTypeEligibility', () => {
     it('returns an object with exactly the four GenerateCardType keys', () => {
       const result = getCardTypeEligibility(createEntry());
       const keys = Object.keys(result).sort();
-      expect(keys).toEqual(['article', 'meaning', 'plural_form', 'sentence_translation']);
+      expect(keys).toEqual([
+        'article',
+        'declension',
+        'meaning',
+        'plural_form',
+        'sentence_translation',
+      ]);
     });
 
     it('all values are plain booleans', () => {
@@ -376,6 +432,7 @@ describe('getCardTypeEligibility', () => {
         plural_form: false,
         article: false,
         sentence_translation: false,
+        declension: false,
       });
     });
 
@@ -386,6 +443,7 @@ describe('getCardTypeEligibility', () => {
         plural_form: true,
         article: true,
         sentence_translation: true,
+        declension: true,
       });
     });
   });

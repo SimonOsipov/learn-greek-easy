@@ -606,7 +606,7 @@ describe('WordEntryCards', () => {
       expect(screen.queryByTestId('regenerate-btn-conjugation')).not.toBeInTheDocument();
     });
 
-    it('does NOT render regenerate button for declension group', () => {
+    it('renders regenerate button for declension group', () => {
       (useWordEntryCards as Mock).mockReturnValue({
         cards: [
           createMockCard({ id: 'c1', card_type: 'declension', variant_key: 'declension_t1' }),
@@ -616,7 +616,7 @@ describe('WordEntryCards', () => {
         refetch: vi.fn(),
       });
       renderComponent();
-      expect(screen.queryByTestId('regenerate-btn-declension')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('regenerate-btn-declension')).toBeInTheDocument();
     });
 
     it('does NOT render regenerate button for cloze group', () => {
@@ -787,6 +787,7 @@ describe('WordEntryCards', () => {
             card_type: 'sentence_translation',
             variant_key: 'sentence_translation_t1',
           }),
+          createMockCard({ id: 'c5', card_type: 'declension', variant_key: 'declension_t1' }),
         ],
         isLoading: false,
         isError: false,
