@@ -19,27 +19,12 @@ from src.services.noun_data_generation_service import (  # noqa: WPS450 (private
     _derive_declension_group,
 )
 from src.services.spellcheck_service import SpellcheckService, get_spellcheck_service
+from src.utils.greek_articles import ARTICLE_MAP, GENDER_MAP, NOMINATIVE_ARTICLES
 from src.utils.greek_text import _strip_article  # noqa: WPS450 (private import by design)
 
 logger = get_logger(__name__)
 
 _PRONUNCIATION_RE = re.compile(r"^/.+/$")
-_NOMINATIVE_ARTICLES = {
-    "masculine": {"singular": "ο ", "plural": "οι "},
-    "feminine": {"singular": "η ", "plural": "οι "},
-    "neuter": {"singular": "το ", "plural": "τα "},
-}
-_GENITIVE_ARTICLES = {
-    "masculine": {"singular": "του ", "plural": "των "},
-    "feminine": {"singular": "της ", "plural": "των "},
-    "neuter": {"singular": "του ", "plural": "των "},
-}
-_ACCUSATIVE_ARTICLES = {
-    "masculine": {"singular": "τον ", "plural": "τους "},
-    "feminine": {"singular": "την ", "plural": "τις "},
-    "neuter": {"singular": "το ", "plural": "τα "},
-}
-_GENDER_MAP = {"Masc": "masculine", "Fem": "feminine", "Neut": "neuter"}
 _CASE_MAP = {"nominative": "Nom", "genitive": "Gen", "accusative": "Acc", "vocative": "Voc"}
 _NUMBER_MAP = {"singular": "Sing", "plural": "Plur"}
 _LEXICON_NUMBER_TO_FIELD = {"Sing": "singular", "Plur": "plural"}
@@ -48,12 +33,6 @@ _LEXICON_CASE_TO_FIELD = {
     "Gen": "genitive",
     "Acc": "accusative",
     "Voc": "vocative",
-}
-
-_ARTICLE_MAP = {
-    "nominative": _NOMINATIVE_ARTICLES,
-    "genitive": _GENITIVE_ARTICLES,
-    "accusative": _ACCUSATIVE_ARTICLES,
 }
 
 _local_verification_service: Optional["LocalVerificationService"] = None
@@ -189,7 +168,7 @@ class LocalVerificationService:
                     if bare_ref != ref_value:
                         display_ref_value = ref_value  # lexicon form already has an article
                     else:
-                        article_dict = _ARTICLE_MAP.get(case)  # None for vocative
+                        article_dict = ARTICLE_MAP.get(case)  # None for vocative
                         if article_dict and data.grammar_data.gender in article_dict:
                             article = article_dict[data.grammar_data.gender][number]
                             display_ref_value = article + bare_ref
@@ -234,7 +213,7 @@ class LocalVerificationService:
                     if bare_ref_exc != ref_value:
                         display_ref_value_exc = ref_value  # lexicon form already has an article
                     else:
-                        article_dict_exc = _ARTICLE_MAP.get(case)
+                        article_dict_exc = ARTICLE_MAP.get(case)
                         if article_dict_exc and data.grammar_data.gender in article_dict_exc:
                             article_exc = article_dict_exc[data.grammar_data.gender][number]
                             display_ref_value_exc = article_exc + bare_ref_exc
@@ -277,7 +256,7 @@ class LocalVerificationService:
             if bare_ref_lemma != ref_lemma:
                 display_ref_lemma = ref_lemma  # lexicon lemma already has an article
             else:
-                nom_articles = _NOMINATIVE_ARTICLES.get(data.grammar_data.gender)
+                nom_articles = NOMINATIVE_ARTICLES.get(data.grammar_data.gender)
                 if nom_articles:
                     display_ref_lemma = nom_articles["singular"] + bare_ref_lemma
                 else:
@@ -416,7 +395,7 @@ class LocalVerificationService:
 
             # Gender check
             expected_gender = data.grammar_data.gender
-            actual_gender = _GENDER_MAP.get(analysis.morph_features.get("Gender", ""), "")
+            actual_gender = GENDER_MAP.get(analysis.morph_features.get("Gender", ""), "")
             if actual_gender == expected_gender:
                 new_checks.append(
                     CheckResult(check_name="morphology_gender", status="pass", message=None)
@@ -495,7 +474,7 @@ class LocalVerificationService:
 
         # Article-gender check
         article_checks: list[CheckResult] = []
-        for case_name, article_dict in _ARTICLE_MAP.items():
+        for case_name, article_dict in ARTICLE_MAP.items():
             for number in ("singular", "plural"):
                 form = getattr(getattr(cases, number), case_name)
                 expected_article = article_dict[gender][number]
@@ -521,8 +500,8 @@ class LocalVerificationService:
 
         if lexicon_declensions:
             lex_gender = next((e.gender for e in lexicon_declensions if e.gender), None)
-            if lex_gender and lex_gender in _GENDER_MAP:
-                mapped_gender = _GENDER_MAP[lex_gender]
+            if lex_gender and lex_gender in GENDER_MAP:
+                mapped_gender = GENDER_MAP[lex_gender]
                 article_checks.append(
                     CheckResult(
                         check_name="gender_reference",
@@ -575,8 +554,8 @@ class LocalVerificationService:
 
         if lexicon_declensions:
             lex_gender = next((e.gender for e in lexicon_declensions if e.gender), None)
-            if lex_gender and lex_gender in _GENDER_MAP:
-                mapped_gender = _GENDER_MAP[lex_gender]
+            if lex_gender and lex_gender in GENDER_MAP:
+                mapped_gender = GENDER_MAP[lex_gender]
                 nom_sg_bare = cases.singular.nominative
                 derived_ref = _derive_declension_group(mapped_gender, nom_sg_bare)
                 if derived_ref:
