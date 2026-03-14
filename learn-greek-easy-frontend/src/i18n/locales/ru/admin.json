@@ -1073,6 +1073,17 @@
     "pill": {
       "editTooltip": "Нажмите для редактирования",
       "resolvedBy": "Разрешено: {{source}}"
+    },
+    "reverseLookup": {
+      "title": "Вы хотели найти одно из этих греческих слов?",
+      "loading": "Поиск...",
+      "noResults": "Греческие слова для «{{query}}» не найдены",
+      "useSelected": "Использовать",
+      "cancel": "Отмена",
+      "notSupported": "Пока не поддерживается",
+      "columnLemma": "Лемма",
+      "columnPos": "Часть речи",
+      "columnTranslation": "Перевод"
     }
   },
   "wordEntry": {

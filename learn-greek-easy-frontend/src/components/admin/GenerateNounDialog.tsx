@@ -42,13 +42,14 @@ import {
   type DuplicateCheckStageResult,
   type GeneratedNounData,
   type NormalizationStageResult,
+  type ReverseLookupItem,
   type SuggestionItem,
   type TranslationLookupStageResult,
   type VerificationSummary,
 } from '@/services/adminAPI';
 import { wordEntryAPI } from '@/services/wordEntryAPI';
 import type { SSEEvent } from '@/types/sse';
-import { isValidGreekInput } from '@/utils/greekValidation';
+import { detectScript, isValidGreekInput, scriptToLanguage } from '@/utils/greekValidation';
 import { buildWordEntryPayload, initializeResolvedValues } from '@/utils/nounPayloadBuilder';
 import type { EditableExample } from '@/utils/nounPayloadBuilder';
 
@@ -160,6 +161,12 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
   const [editableExamples, setEditableExamples] = useState<EditableExample[]>([]);
   const [resolvedValues, setResolvedValues] = useState<Map<string, PillState>>(new Map());
   const [selections, setSelections] = useState<Map<string, SelectionSource>>(new Map());
+  const [reverseLookupResults, setReverseLookupResults] = useState<ReverseLookupItem[] | null>(
+    null
+  );
+  const [reverseLookupLoading, setReverseLookupLoading] = useState(false);
+  const [selectedLookupIndex, setSelectedLookupIndex] = useState<number | null>(null);
+  const [reverseLookupQuery, setReverseLookupQuery] = useState('');
 
   useEffect(() => {
     return () => {
@@ -271,8 +278,14 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
 
   const trimmedWord = greekWord.trim();
   const validation = trimmedWord ? isValidGreekInput(trimmedWord) : { valid: false };
-  const showWarning = trimmedWord.length > 0 && !validation.valid && !!validation.reason;
-  const canSubmit = validation.valid && !isSubmitting && !hasResult;
+  const showWarning =
+    trimmedWord.length > 0 &&
+    !validation.valid &&
+    (validation.reason === 'tooLong' || validation.reason === 'numbersOnly');
+  const isNonGreekText =
+    !validation.valid && validation.reason === 'latin' && trimmedWord.length > 0;
+  const canSubmit =
+    (validation.valid || isNonGreekText) && !isSubmitting && !hasResult && !reverseLookupLoading;
 
   const warningKey =
     validation.reason === 'tooLong' ? 'generateNoun.tooLong' : 'generateNoun.invalidGreek';
@@ -390,6 +403,50 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
     setStreamEnabled(true);
   }, [greekWord, deckId]);
 
+  const triggerReverseLookup = useCallback(async () => {
+    const trimmed = greekWord.trim();
+    if (!trimmed) return;
+    const script = detectScript(trimmed);
+    if (script === 'greek') return;
+    const lang = scriptToLanguage(script);
+    setReverseLookupLoading(true);
+    setReverseLookupQuery(trimmed);
+    setReverseLookupResults(null);
+    setSelectedLookupIndex(null);
+    setApiError(null);
+    try {
+      const resp = await adminAPI.reverseLookup(trimmed, lang);
+      setReverseLookupResults(resp.results);
+    } catch {
+      setReverseLookupResults([]);
+    } finally {
+      setReverseLookupLoading(false);
+    }
+  }, [greekWord]);
+
+  const handleFormSubmit = useCallback(() => {
+    if (validation.valid) {
+      handleSubmit();
+    } else if (validation.reason === 'latin') {
+      void triggerReverseLookup();
+    }
+  }, [validation, handleSubmit, triggerReverseLookup]);
+
+  const handleUseSelected = useCallback(() => {
+    if (selectedLookupIndex === null || !reverseLookupResults) return;
+    const selected = reverseLookupResults[selectedLookupIndex];
+    if (!selected || !selected.actionable) return;
+    setGreekWord(selected.lemma);
+    setReverseLookupResults(null);
+    setReverseLookupQuery('');
+    setSelectedLookupIndex(null);
+    // Trigger pipeline after state settles
+    setTimeout(() => {
+      setStreamBody({ word: selected.lemma, deck_id: deckId });
+      setStreamEnabled(true);
+    }, 0);
+  }, [selectedLookupIndex, reverseLookupResults, deckId]);
+
   const handleSelect = useCallback((fieldPath: string, source: SelectionSource) => {
     setSelections((prev) => {
       const next = new Map(prev);
@@ -416,6 +473,10 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
     setEditableExamples([]);
     setResolvedValues(new Map());
     setSelections(new Map());
+    setReverseLookupResults(null);
+    setReverseLookupLoading(false);
+    setSelectedLookupIndex(null);
+    setReverseLookupQuery('');
     closeStream();
   }, [closeStream]);
 
@@ -778,10 +839,18 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                   <Input
                     data-testid="generate-noun-input"
                     value={greekWord}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || reverseLookupLoading}
                     onChange={(e) => {
                       setGreekWord(e.target.value);
                       setApiError(null);
+                      setReverseLookupResults(null);
+                      setSelectedLookupIndex(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && canSubmit) {
+                        e.preventDefault();
+                        handleFormSubmit();
+                      }
                     }}
                     placeholder={t('generateNoun.inputPlaceholder')}
                   />
@@ -789,6 +858,115 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                     <p data-testid="generate-noun-warning" className="text-sm text-destructive">
                       {t(warningKey)}
                     </p>
+                  )}
+
+                  {/* Reverse Lookup Results */}
+                  {(reverseLookupLoading || reverseLookupResults !== null) && (
+                    <div
+                      className="mt-4 rounded-lg border border-border bg-card p-4"
+                      data-testid="reverse-lookup-card"
+                    >
+                      <p className="mb-3 text-sm font-medium text-foreground">
+                        {t('generateNoun.reverseLookup.title')}
+                      </p>
+
+                      {reverseLookupLoading && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span>{t('generateNoun.reverseLookup.loading')}</span>
+                        </div>
+                      )}
+
+                      {!reverseLookupLoading &&
+                        reverseLookupResults !== null &&
+                        reverseLookupResults.length === 0 && (
+                          <p className="text-sm text-muted-foreground">
+                            {t('generateNoun.reverseLookup.noResults', {
+                              query: reverseLookupQuery,
+                            })}
+                          </p>
+                        )}
+
+                      {!reverseLookupLoading &&
+                        reverseLookupResults !== null &&
+                        reverseLookupResults.length > 0 && (
+                          <>
+                            <div className="mb-3 space-y-1">
+                              {reverseLookupResults.map((item, index) => (
+                                <div
+                                  key={`${item.lemma}-${item.pos}`}
+                                  className={`flex items-start gap-3 rounded p-2 ${
+                                    item.actionable
+                                      ? 'cursor-pointer hover:bg-muted/50'
+                                      : 'cursor-not-allowed opacity-50'
+                                  } ${selectedLookupIndex === index ? 'bg-muted' : ''}`}
+                                  data-testid={`reverse-lookup-row-${index}`}
+                                  onClick={() => item.actionable && setSelectedLookupIndex(index)}
+                                >
+                                  <input
+                                    type="radio"
+                                    name="reverse-lookup"
+                                    checked={selectedLookupIndex === index}
+                                    disabled={!item.actionable}
+                                    onChange={() =>
+                                      item.actionable && setSelectedLookupIndex(index)
+                                    }
+                                    className="mt-0.5 shrink-0"
+                                  />
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <span className="font-medium text-foreground">
+                                        {item.article ? `${item.article} ` : ''}
+                                        {item.lemma}
+                                      </span>
+                                      <Badge variant="outline" className="text-xs">
+                                        {item.pos}
+                                      </Badge>
+                                      {item.gender && (
+                                        <Badge variant="secondary" className="text-xs">
+                                          {item.gender}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    {item.actionable ? (
+                                      <p className="mt-0.5 text-sm text-muted-foreground">
+                                        {item.translations.join(', ')}
+                                      </p>
+                                    ) : (
+                                      <p className="mt-0.5 text-xs italic text-muted-foreground">
+                                        {t('generateNoun.reverseLookup.notSupported')}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                disabled={selectedLookupIndex === null}
+                                onClick={handleUseSelected}
+                                data-testid="reverse-lookup-use"
+                              >
+                                {t('generateNoun.reverseLookup.useSelected')}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setReverseLookupResults(null);
+                                  setReverseLookupQuery('');
+                                  setSelectedLookupIndex(null);
+                                }}
+                                data-testid="reverse-lookup-cancel"
+                              >
+                                {t('generateNoun.reverseLookup.cancel')}
+                              </Button>
+                            </div>
+                          </>
+                        )}
+                    </div>
                   )}
                 </div>
               </div>
@@ -802,7 +980,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                   {t('generateNoun.cancel')}
                 </Button>
                 <Button
-                  onClick={handleSubmit}
+                  onClick={handleFormSubmit}
                   disabled={!canSubmit}
                   data-testid="generate-noun-submit"
                 >

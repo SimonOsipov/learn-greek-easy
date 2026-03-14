@@ -3,6 +3,8 @@ import {
   isValidGreekInput,
   containsLatinCharacters,
   MAX_GREEK_INPUT_LENGTH,
+  detectScript,
+  scriptToLanguage,
 } from '../greekValidation';
 
 describe('greekValidation', () => {
@@ -107,6 +109,36 @@ describe('greekValidation', () => {
   describe('MAX_GREEK_INPUT_LENGTH', () => {
     it('equals 50', () => {
       expect(MAX_GREEK_INPUT_LENGTH).toBe(50);
+    });
+  });
+
+  describe('detectScript', () => {
+    it('returns latin for English text', () => {
+      expect(detectScript('house')).toBe('latin');
+    });
+    it('returns cyrillic for Russian text', () => {
+      expect(detectScript('дом')).toBe('cyrillic');
+    });
+    it('returns greek for Greek text', () => {
+      expect(detectScript('σπίτι')).toBe('greek');
+    });
+    it('returns latin for empty string', () => {
+      expect(detectScript('')).toBe('latin');
+    });
+    it('returns latin for accented latin', () => {
+      expect(detectScript('café')).toBe('latin');
+    });
+    it('returns greek when input contains Greek characters', () => {
+      expect(detectScript('Ελλάδα')).toBe('greek');
+    });
+  });
+
+  describe('scriptToLanguage', () => {
+    it('maps latin to en', () => {
+      expect(scriptToLanguage('latin')).toBe('en');
+    });
+    it('maps cyrillic to ru', () => {
+      expect(scriptToLanguage('cyrillic')).toBe('ru');
     });
   });
 });

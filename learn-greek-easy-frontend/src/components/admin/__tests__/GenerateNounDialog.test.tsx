@@ -312,26 +312,26 @@ describe('GenerateNounDialog', () => {
     expect(screen.queryByTestId('generate-noun-warning')).not.toBeInTheDocument();
   });
 
-  // 5. Latin input shows warning
-  it('shows warning and disables Create for Latin input', async () => {
+  // 5. Latin input enables Create (triggers reverse lookup instead of showing warning)
+  it('enables Create and shows no warning for Latin input', async () => {
     const user = userEvent.setup();
     renderDialog();
 
     await user.type(screen.getByTestId('generate-noun-input'), 'spiti');
 
-    expect(screen.getByTestId('generate-noun-warning')).toBeInTheDocument();
-    expect(screen.getByTestId('generate-noun-submit')).toBeDisabled();
+    expect(screen.queryByTestId('generate-noun-warning')).not.toBeInTheDocument();
+    expect(screen.getByTestId('generate-noun-submit')).not.toBeDisabled();
   });
 
-  // 6. Mixed input shows warning
-  it('shows warning and disables Create for mixed Greek/Latin input', async () => {
+  // 6. Mixed Greek/Latin input enables Create (triggers reverse lookup instead of showing warning)
+  it('enables Create and shows no warning for mixed Greek/Latin input', async () => {
     const user = userEvent.setup();
     renderDialog();
 
     await user.type(screen.getByTestId('generate-noun-input'), 'σπίτιtest');
 
-    expect(screen.getByTestId('generate-noun-warning')).toBeInTheDocument();
-    expect(screen.getByTestId('generate-noun-submit')).toBeDisabled();
+    expect(screen.queryByTestId('generate-noun-warning')).not.toBeInTheDocument();
+    expect(screen.getByTestId('generate-noun-submit')).not.toBeDisabled();
   });
 
   // 7. Empty input disables Create without warning

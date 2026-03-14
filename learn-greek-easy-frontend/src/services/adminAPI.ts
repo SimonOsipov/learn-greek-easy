@@ -850,6 +850,21 @@ export interface GenerateWordEntryResponse {
   persist: null;
 }
 
+export interface ReverseLookupItem {
+  lemma: string;
+  pos: string;
+  gender: string | null;
+  article: string | null;
+  translations: string[];
+  actionable: boolean;
+}
+
+export interface ReverseLookupResponse {
+  query: string;
+  language: string;
+  results: ReverseLookupItem[];
+}
+
 // ============================================
 // Admin API Methods
 // ============================================
@@ -1680,6 +1695,11 @@ export const adminAPI = {
 
   getListeningDialogDetail: async (id: string): Promise<ListeningDialogDetail> => {
     return api.get<ListeningDialogDetail>(`/api/v1/admin/listening-dialogs/${id}`);
+  },
+
+  reverseLookup: async (query: string, lang: 'en' | 'ru'): Promise<ReverseLookupResponse> => {
+    const queryString = buildQueryString({ q: query, lang });
+    return api.get<ReverseLookupResponse>(`/api/v1/admin/reverse-lookup${queryString}`);
   },
 };
 
