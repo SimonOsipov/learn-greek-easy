@@ -166,6 +166,10 @@ export function DialogDetailModal({ dialogId, open, onOpenChange }: DialogDetail
         audioCurrentTimeMs < line.end_time_ms
     ) ?? null;
 
+  const scenario = selectedDialog
+    ? splitScenario(getLocalizedScenario(selectedDialog, currentLanguage))
+    : null;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -174,15 +178,13 @@ export function DialogDetailModal({ dialogId, open, onOpenChange }: DialogDetail
       >
         <DialogHeader>
           <DialogTitle>
-            {selectedDialog
-              ? splitScenario(getLocalizedScenario(selectedDialog, currentLanguage)).title
-              : t('listeningDialogs.detail.title')}
+            {scenario ? scenario.title : t('listeningDialogs.detail.title')}
           </DialogTitle>
-          {selectedDialog && (
+          {scenario && (
             <>
-              {splitScenario(getLocalizedScenario(selectedDialog, currentLanguage)).description ? (
+              {scenario.description ? (
                 <DialogDescription className="text-muted-foreground">
-                  {splitScenario(getLocalizedScenario(selectedDialog, currentLanguage)).description}
+                  {scenario.description}
                 </DialogDescription>
               ) : (
                 <DialogDescription className="sr-only">
