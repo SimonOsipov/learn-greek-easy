@@ -1148,6 +1148,13 @@
         "loadFailed": "Failed to load dialog details",
         "retry": "Retry",
         "audioUrlMissing": "Audio file not found. The file may have been deleted from storage."
+      },
+      "tabs": {
+        "dialog": "Dialog",
+        "exercises": "Exercises"
+      },
+      "exercises": {
+        "empty": "No exercises generated yet"
       }
     },
     "search": {

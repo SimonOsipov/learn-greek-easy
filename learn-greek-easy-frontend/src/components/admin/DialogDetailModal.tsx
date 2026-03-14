@@ -2,16 +2,32 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-import { MessageSquare } from 'lucide-react';
+import { BookOpen, MessageSquare } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { WaveformPlayer } from '@/components/culture/WaveformPlayer';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useLanguage } from '@/hooks/useLanguage';
+import { cn } from '@/lib/utils';
 import { useAdminDialogStore } from '@/stores/adminDialogStore';
+
+import {
+  CEFR_BADGE_CLASSES,
+  CEFR_BADGE_FALLBACK,
+  STATUS_BADGE_CLASSES,
+  formatAudioDuration,
+} from './dialogBadges';
 
 // ============================================================================
 // Constants
@@ -35,6 +51,15 @@ function getLocalizedScenario(
     default:
       return dialog.scenario_en;
   }
+}
+
+function splitScenario(text: string): { title: string; description: string | null } {
+  const dotIndex = text.indexOf('. ');
+  if (dotIndex === -1) {
+    if (text.endsWith('.')) return { title: text.slice(0, -1), description: null };
+    return { title: text, description: null };
+  }
+  return { title: text.slice(0, dotIndex), description: text.slice(dotIndex + 2) };
 }
 
 // ============================================================================
@@ -128,9 +153,42 @@ export function DialogDetailModal({ dialogId, open, onOpenChange }: DialogDetail
         <DialogHeader>
           <DialogTitle>
             {selectedDialog
-              ? getLocalizedScenario(selectedDialog, currentLanguage)
+              ? splitScenario(getLocalizedScenario(selectedDialog, currentLanguage)).title
               : t('listeningDialogs.detail.title')}
           </DialogTitle>
+          {selectedDialog && (
+            <>
+              {splitScenario(getLocalizedScenario(selectedDialog, currentLanguage)).description ? (
+                <DialogDescription className="text-muted-foreground">
+                  {splitScenario(getLocalizedScenario(selectedDialog, currentLanguage)).description}
+                </DialogDescription>
+              ) : (
+                <DialogDescription className="sr-only">
+                  {t('listeningDialogs.detail.title')}
+                </DialogDescription>
+              )}
+              <div className="flex flex-wrap gap-2 pt-2">
+                <Badge
+                  variant="outline"
+                  className={CEFR_BADGE_CLASSES[selectedDialog.cefr_level] ?? CEFR_BADGE_FALLBACK}
+                >
+                  {selectedDialog.cefr_level}
+                </Badge>
+                <Badge variant="outline">
+                  {selectedDialog.num_speakers}{' '}
+                  {selectedDialog.num_speakers === 1 ? 'speaker' : 'speakers'}
+                </Badge>
+                {selectedDialog.audio_duration_seconds != null && (
+                  <Badge variant="outline">
+                    {formatAudioDuration(selectedDialog.audio_duration_seconds)}
+                  </Badge>
+                )}
+                <Badge variant="outline" className={STATUS_BADGE_CLASSES[selectedDialog.status]}>
+                  {t(`listeningDialogs.status.${selectedDialog.status}`)}
+                </Badge>
+              </div>
+            </>
+          )}
         </DialogHeader>
 
         {/* Loading state */}
@@ -161,57 +219,76 @@ export function DialogDetailModal({ dialogId, open, onOpenChange }: DialogDetail
 
         {/* Main content */}
         {selectedDialog && !isLoadingDetail && (
-          <>
-            {/* Transcript */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 font-semibold">
-                <MessageSquare className="h-4 w-4" />
-                {t('listeningDialogs.detail.transcript')}
-              </div>
-              {selectedDialog.lines.map((line) => {
-                const speaker = speakerMap.get(line.speaker_id);
-                const colorClass = SPEAKER_COLORS[speaker?.speaker_index ?? 0] ?? 'text-gray-600';
-                const isActive = activeLine?.id === line.id;
-                return (
-                  <div
-                    key={line.id}
-                    data-testid={`dialog-line-${line.line_index}`}
-                    className={
-                      isActive
-                        ? 'border-l-2 border-primary bg-primary/10 pl-3 transition-colors duration-200'
-                        : 'border-l-2 border-transparent pl-3'
-                    }
-                  >
-                    <span className={`text-xs font-medium ${colorClass}`}>
-                      {speaker?.character_name}
-                    </span>
-                    <p className="text-sm">{line.text}</p>
-                  </div>
-                );
-              })}
-            </div>
+          <Tabs defaultValue="dialog" data-testid="dialog-detail-tabs">
+            <TabsList className="w-full">
+              <TabsTrigger value="dialog" className="flex-1" data-testid="dialog-tab-dialog">
+                {t('listeningDialogs.detail.tabs.dialog')}
+              </TabsTrigger>
+              <TabsTrigger value="exercises" className="flex-1" data-testid="dialog-tab-exercises">
+                {t('listeningDialogs.detail.tabs.exercises')}
+              </TabsTrigger>
+            </TabsList>
 
-            {/* Audio Player */}
-            {(selectedDialog.status === 'audio_ready' ||
-              selectedDialog.status === 'exercises_ready') && (
-              <div ref={containerRef} data-testid="dialog-audio-player">
-                {selectedDialog.audio_url ? (
-                  <WaveformPlayer
-                    variant="admin"
-                    audioUrl={selectedDialog.audio_url}
-                    showSpeedControl={false}
-                    barCount={60}
-                  />
-                ) : (
-                  <Alert variant="destructive">
-                    <AlertDescription>
-                      {t('listeningDialogs.detail.errors.audioUrlMissing')}
-                    </AlertDescription>
-                  </Alert>
-                )}
+            <TabsContent value="dialog">
+              {/* Audio Player FIRST (moved above transcript) */}
+              {(selectedDialog.status === 'audio_ready' ||
+                selectedDialog.status === 'exercises_ready') && (
+                <div ref={containerRef} data-testid="dialog-audio-player">
+                  {selectedDialog.audio_url ? (
+                    <WaveformPlayer
+                      variant="admin"
+                      audioUrl={selectedDialog.audio_url}
+                      showSpeedControl={false}
+                      barCount={60}
+                    />
+                  ) : (
+                    <Alert variant="destructive">
+                      <AlertDescription>
+                        {t('listeningDialogs.detail.errors.audioUrlMissing')}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </div>
+              )}
+
+              {/* Transcript SECOND */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 font-semibold">
+                  <MessageSquare className="h-4 w-4" />
+                  {t('listeningDialogs.detail.transcript')}
+                </div>
+                {selectedDialog.lines.map((line) => {
+                  const speaker = speakerMap.get(line.speaker_id);
+                  const speakerIdx = speaker?.speaker_index ?? 0;
+                  const color =
+                    SPEAKER_COLORS[speakerIdx % SPEAKER_COLORS.length] ?? 'text-gray-600';
+                  const isActive = activeLine?.id === line.id;
+                  return (
+                    <div
+                      key={line.id}
+                      data-testid={`dialog-line-${line.line_index}`}
+                      className={cn(
+                        'rounded p-2 text-sm transition-colors',
+                        isActive && 'border-l-2 border-primary bg-primary/10'
+                      )}
+                    >
+                      <span className={cn('mr-2 text-xs font-medium', color)}>
+                        {speaker?.character_name}
+                      </span>
+                      {line.text}
+                    </div>
+                  );
+                })}
               </div>
-            )}
-          </>
+            </TabsContent>
+
+            <TabsContent value="exercises">
+              <div className="flex flex-col items-center gap-3 py-12 text-center text-muted-foreground">
+                <BookOpen className="h-10 w-10 opacity-40" />
+                <p>{t('listeningDialogs.detail.exercises.empty')}</p>
+              </div>
+            </TabsContent>
+          </Tabs>
         )}
       </DialogContent>
     </Dialog>
