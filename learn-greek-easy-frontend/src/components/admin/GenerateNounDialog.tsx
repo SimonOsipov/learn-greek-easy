@@ -229,7 +229,11 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
         break;
       case 'pipeline_stopped':
         setPipelineStatus('done');
-        setStageError((data['error'] as string) ?? 'Pipeline stopped');
+        // Suppress error message when the pipeline stopped because the word
+        // is already in a deck — DuplicateCheckSection shows the right message.
+        if ((data['stage'] as string) !== 'duplicate_check') {
+          setStageError((data['error'] as string) ?? 'Pipeline stopped');
+        }
         setStreamEnabled(false);
         setStreamBody(null);
         break;
@@ -632,45 +636,52 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                     />
                   )}
 
-                  {displayDuplicate && (
-                    <div data-testid="duplicate-check-section">
-                      {displayDuplicate.is_duplicate ? (
-                        <div className="space-y-2">
-                          <div
-                            data-testid="duplicate-found-warning"
-                            className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm dark:border-amber-800 dark:bg-amber-950"
-                          >
-                            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-                            <div>
-                              <p className="font-medium">
-                                {t('generateNoun.duplicateFound', {
-                                  deckName: displayDuplicate.matched_decks[0]?.deck_name ?? '',
-                                })}
-                              </p>
-                              {displayDuplicate.existing_entry && (
-                                <p className="mt-1 text-muted-foreground">
-                                  {t('generateNoun.duplicateTranslation', {
-                                    translation: displayDuplicate.existing_entry.translation_en,
-                                  })}
-                                </p>
-                              )}
-                              <p className="mt-1 text-muted-foreground">
-                                {t('generateNoun.duplicateWarning')}
-                              </p>
+                  {displayDuplicate &&
+                    (() => {
+                      const isAlreadyInCurrentDeck = displayDuplicate.matched_decks?.some(
+                        (d) => d.deck_id === deckId
+                      );
+                      if (isAlreadyInCurrentDeck) return null;
+                      return (
+                        <div data-testid="duplicate-check-section">
+                          {displayDuplicate.is_duplicate ? (
+                            <div className="space-y-2">
+                              <div
+                                data-testid="duplicate-found-warning"
+                                className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm dark:border-amber-800 dark:bg-amber-950"
+                              >
+                                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                                <div>
+                                  <p className="font-medium">
+                                    {t('generateNoun.duplicateFound', {
+                                      deckName: displayDuplicate.matched_decks[0]?.deck_name ?? '',
+                                    })}
+                                  </p>
+                                  {displayDuplicate.existing_entry && (
+                                    <p className="mt-1 text-muted-foreground">
+                                      {t('generateNoun.duplicateTranslation', {
+                                        translation: displayDuplicate.existing_entry.translation_en,
+                                      })}
+                                    </p>
+                                  )}
+                                  <p className="mt-1 text-muted-foreground">
+                                    {t('generateNoun.duplicateWarning')}
+                                  </p>
+                                </div>
+                              </div>
                             </div>
-                          </div>
+                          ) : (
+                            <div
+                              data-testid="no-duplicate-banner"
+                              className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 p-3 text-sm dark:border-green-800 dark:bg-green-950"
+                            >
+                              <Info className="h-4 w-4 shrink-0 text-green-600 dark:text-green-400" />
+                              <span>{t('generateNoun.noDuplicates')}</span>
+                            </div>
+                          )}
                         </div>
-                      ) : (
-                        <div
-                          data-testid="no-duplicate-banner"
-                          className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 p-3 text-sm dark:border-green-800 dark:bg-green-950"
-                        >
-                          <Info className="h-4 w-4 shrink-0 text-green-600 dark:text-green-400" />
-                          <span>{t('generateNoun.noDuplicates')}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                      );
+                    })()}
 
                   {generationLoading && (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
