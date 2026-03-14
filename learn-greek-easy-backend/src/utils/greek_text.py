@@ -365,7 +365,7 @@ def resolve_tts_text(lemma: str, part_of_speech: str, grammar_data: dict | None)
     lemma for verbs, adverbs, phrases, and any unrecognised part of speech.
 
     Resolution logic:
-    - Nouns: Use grammar_data.cases.singular.nominative if present (already
+    - Nouns: Use grammar_data.nominative_singular if present (already
       includes the article, e.g. "το νερό"), else fall back to the gender-inferred
       article from GENDER_TO_ARTICLE prepended to the lemma, else bare lemma.
     - Adjectives: Use "ο " + grammar_data.forms.masculine.singular.nominative

@@ -721,10 +721,8 @@ describe('WordEntryCards', () => {
           translation_ru: 'dom',
           grammar_data: {
             gender: 'neuter',
-            cases: {
-              singular: { nominative: 'spiti' },
-              plural: { nominative: 'spitia' },
-            },
+            nominative_singular: 'spiti',
+            nominative_plural: 'spitia',
           },
           examples: [{ id: 'ex1', greek: 'Sentence.', english: 'Translation.' }],
         })
