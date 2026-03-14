@@ -102,10 +102,10 @@ class TestInferGenderFromEnding:
     def test_masculine_as_accented(self) -> None:
         assert infer_gender_from_ending("μπαμπάς") == "Masc"
 
-    def test_feminine_i(self) -> None:
+    def test_feminine_eta(self) -> None:
         assert infer_gender_from_ending("γυναίκη") == "Fem"
 
-    def test_feminine_i_accented(self) -> None:
+    def test_feminine_eta_accented(self) -> None:
         assert infer_gender_from_ending("μητέρη") == "Fem"
 
     def test_feminine_a(self) -> None:
@@ -140,6 +140,6 @@ class TestInferGenderFromEnding:
         # Shortest possible word that matches -ο
         assert infer_gender_from_ending("νο") == "Neut"
 
-    def test_two_char_word_masculine_os_not_matched(self) -> None:
+    def test_single_char_not_matched_as_masculine(self) -> None:
         # Single char word (just "ς") returns None, not Masc
         assert infer_gender_from_ending("ς") is None
