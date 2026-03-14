@@ -18,7 +18,7 @@ def upgrade() -> None:
     with op.get_context().autocommit_block():
         op.execute(
             """
-            CREATE INDEX CONCURRENTLY idx_translations_trgm
+            CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_translations_trgm
             ON reference.translations USING gin (translation gin_trgm_ops)
             """
         )
