@@ -85,7 +85,7 @@ class CardGeneratorService:
             word_with_article = we.lemma
             if we.grammar_data and isinstance(we.grammar_data, dict):
                 # Try to get nominative form with article (for nouns)
-                nominative = we.grammar_data.get("cases", {}).get("singular", {}).get("nominative")
+                nominative = we.grammar_data.get("nominative_singular")
                 if nominative:
                     word_with_article = nominative
 
@@ -311,8 +311,8 @@ class CardGeneratorService:
                 continue
 
             if we.part_of_speech == PartOfSpeech.NOUN:
-                sg = _safe_get(gd, "cases", "singular", "nominative")
-                pl = _safe_get(gd, "cases", "plural", "nominative")
+                sg = gd.get("nominative_singular")
+                pl = gd.get("nominative_plural")
                 if not sg or not pl:
                     continue
 
@@ -436,7 +436,7 @@ class CardGeneratorService:
             if not gender:
                 continue
 
-            nom_sg = _safe_get(gd, "cases", "singular", "nominative")
+            nom_sg = gd.get("nominative_singular")
             if not nom_sg:
                 continue
 

@@ -423,8 +423,8 @@ class TestResolveTtsText:
     """Tests for TTS text resolution."""
 
     def test_noun_with_nominative_case_form(self) -> None:
-        """Noun with grammar_data.cases.singular.nominative returns that form directly."""
-        grammar_data = {"gender": "neuter", "cases": {"singular": {"nominative": "το νερό"}}}
+        """Noun with grammar_data.nominative_singular returns that form directly."""
+        grammar_data = {"gender": "neuter", "nominative_singular": "το νερό"}
         assert resolve_tts_text("νερό", "noun", grammar_data) == "το νερό"
 
     def test_noun_with_gender_no_nominative(self) -> None:
@@ -482,8 +482,8 @@ class TestResolveTtsText:
         assert resolve_tts_text("καλημέρα σας", "phrase", None) == "καλημέρα σας"
 
     def test_noun_nominative_takes_priority_over_gender(self) -> None:
-        """When both nominative and gender exist, nominative wins."""
-        grammar_data = {"gender": "neuter", "cases": {"singular": {"nominative": "το νερό"}}}
+        """When both nominative_singular and gender exist, nominative_singular wins."""
+        grammar_data = {"gender": "neuter", "nominative_singular": "το νερό"}
         assert resolve_tts_text("νερό", "noun", grammar_data) == "το νερό"
 
     def test_gender_to_article_constant(self) -> None:

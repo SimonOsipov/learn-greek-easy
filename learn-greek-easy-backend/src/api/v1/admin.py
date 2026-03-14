@@ -2489,12 +2489,12 @@ def _validate_meaning_eligibility(word_entry: "WordEntry") -> None:
 
 
 def _validate_plural_form_noun(gd: dict) -> None:
-    sg = (gd.get("cases") or {}).get("singular", {}).get("nominative")
-    pl = (gd.get("cases") or {}).get("plural", {}).get("nominative")
+    sg = gd.get("nominative_singular")
+    pl = gd.get("nominative_plural")
     if not sg or not pl:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Plural form cards for nouns require singular and plural nominative in grammar_data.cases",
+            detail="Plural form cards for nouns require nominative_singular and nominative_plural in grammar_data",
         )
 
 
@@ -2533,11 +2533,11 @@ def _validate_article_eligibility(word_entry: "WordEntry") -> None:
         )
     gd = word_entry.grammar_data or {}
     gender = gd.get("gender")
-    nom_sg = (gd.get("cases") or {}).get("singular", {}).get("nominative")
+    nom_sg = gd.get("nominative_singular")
     if not gender or not nom_sg:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Article cards require gender and singular nominative in grammar_data",
+            detail="Article cards require gender and nominative_singular in grammar_data",
         )
 
 
