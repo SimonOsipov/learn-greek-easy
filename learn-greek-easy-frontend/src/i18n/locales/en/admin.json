@@ -651,6 +651,8 @@
       "tagPlaceholder": "Filter by tag"
     },
     "table": {
+      "title": "Changelog Entries",
+      "description": "Manage app changelog entries",
       "empty": "No changelog entries found."
     },
     "create": {

@@ -17,6 +17,7 @@ import { useTranslation } from 'react-i18next';
 
 import { SummaryCard } from '@/components/admin/SummaryCard';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   useAdminChangelogStore,
   selectAdminChangelogItems,
@@ -117,26 +118,34 @@ export function ChangelogTab() {
           />
         </div>
 
-        {/* Create Button */}
-        <div className="flex justify-end">
-          <Button onClick={() => setIsCreateOpen(true)} data-testid="changelog-create-button">
-            <Plus className="mr-2 h-4 w-4" />
-            {t('admin:changelog.create.title')}
-          </Button>
-        </div>
-
-        {/* Table */}
-        <ChangelogTable
-          items={items}
-          isLoading={isLoading}
-          page={page}
-          pageSize={pageSize}
-          total={total}
-          totalPages={totalPages}
-          onPageChange={handlePageChange}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-        />
+        {/* Table Card */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-start justify-between">
+              <div>
+                <CardTitle>{t('admin:changelog.table.title')}</CardTitle>
+                <CardDescription>{t('admin:changelog.table.description')}</CardDescription>
+              </div>
+              <Button onClick={() => setIsCreateOpen(true)} data-testid="changelog-create-button">
+                <Plus className="mr-2 h-4 w-4" />
+                {t('admin:changelog.create.title')}
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <ChangelogTable
+              items={items}
+              isLoading={isLoading}
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+            />
+          </CardContent>
+        </Card>
       </div>
 
       {/* Edit Modal - JSON-based editing */}
