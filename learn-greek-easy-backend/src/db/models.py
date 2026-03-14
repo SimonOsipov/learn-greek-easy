@@ -2850,6 +2850,7 @@ class DialogLine(Base):
     text: Mapped[str] = mapped_column(Text, nullable=False)
     start_time_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     end_time_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    word_timestamps: Mapped[list | None] = mapped_column(JSONB, nullable=True, default=None)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

@@ -441,6 +441,7 @@ class DialogLineDetail(BaseModel):
     text: str
     start_time_ms: int | None
     end_time_ms: int | None
+    word_timestamps: list[dict] | None = None
 
 
 class ListeningDialogDetail(BaseModel):

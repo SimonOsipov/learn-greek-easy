@@ -3689,6 +3689,82 @@ async def get_listening_dialog_detail(
     )
 
 
+def _build_word_timestamps(  # noqa: C901
+    result_data: dict, sorted_lines: list[dict]
+) -> dict[int, list[dict] | None]:
+    """Extract word-level timing from ElevenLabs alignment data.
+
+    Returns a dict mapping line index → list of word timing dicts, or None if data is missing.
+    """
+    try:
+        alignment = result_data.get("alignment")
+        if not alignment:
+            logger.warning(
+                "_build_word_timestamps: alignment missing in result_data, returning all None"
+            )
+            return {i: None for i in range(len(sorted_lines))}
+
+        chars = alignment.get("characters", [])
+        starts = alignment.get("character_start_times_seconds", [])
+        ends = alignment.get("character_end_times_seconds", [])
+        voice_segments = result_data.get("voice_segments", [])
+
+        result: dict[int, list[dict] | None] = {i: None for i in range(len(sorted_lines))}
+
+        for i, seg in enumerate(voice_segments):
+            char_start = seg.get("character_start_index")
+            char_end = seg.get("character_end_index")
+
+            if char_start is None or char_end is None:
+                logger.warning(
+                    "_build_word_timestamps: segment {} missing character_start_index or character_end_index",
+                    i,
+                )
+                continue
+
+            seg_chars = chars[char_start:char_end]
+            seg_starts = starts[char_start:char_end]
+            seg_ends = ends[char_start:char_end]
+
+            words: list[dict] = []
+            word_chars: list[str] = []
+            word_start_idx: int | None = None
+
+            for j, ch in enumerate(seg_chars):
+                if ch == " ":
+                    if word_chars:
+                        words.append(
+                            {
+                                "word": "".join(word_chars),
+                                "start_ms": int(seg_starts[word_start_idx] * 1000),
+                                "end_ms": int(seg_ends[j - 1] * 1000),
+                            }
+                        )
+                        word_chars = []
+                        word_start_idx = None
+                else:
+                    if not word_chars:
+                        word_start_idx = j
+                    word_chars.append(ch)
+
+            if word_chars:
+                last_idx = len(seg_chars) - 1
+                words.append(
+                    {
+                        "word": "".join(word_chars),
+                        "start_ms": int(seg_starts[word_start_idx] * 1000),
+                        "end_ms": int(seg_ends[last_idx] * 1000),
+                    }
+                )
+
+            result[i] = words
+
+        return result
+    except Exception as exc:
+        logger.warning("_build_word_timestamps: unexpected error, returning all None: {}", exc)
+        return {i: None for i in range(len(sorted_lines))}
+
+
 async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, None]:  # noqa: C901
     """SSE generator for dialog audio generation pipeline."""
     try:
@@ -3775,6 +3851,9 @@ async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, Non
         s3_key = f"dialog-audio/{dialog_id}.mp3"
 
         # Stage 5 — Timing (validate before uploading to avoid orphaned S3 objects)
+        word_timestamps_map: dict[int, list[dict] | None] = {
+            i: None for i in range(len(sorted_lines))
+        }
         try:
             voice_segments = result_data.get("voice_segments")
             if not voice_segments:
@@ -3792,6 +3871,7 @@ async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, Non
                     raise ValueError(f"No timing segment for line index {i}")
 
             duration_seconds = voice_segments[-1]["end_time_seconds"]
+            word_timestamps_map = _build_word_timestamps(result_data, sorted_lines)
         except Exception as e:
             yield format_sse_event(
                 {"stage": "timing", "error": str(e), "dialog_id": dialog_data["id"]},
@@ -3837,7 +3917,11 @@ async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, Non
                 await session.execute(
                     update(DialogLine)
                     .where(DialogLine.id == UUID(line["id"]))
-                    .values(start_time_ms=start_ms, end_time_ms=end_ms)
+                    .values(
+                        start_time_ms=start_ms,
+                        end_time_ms=end_ms,
+                        word_timestamps=word_timestamps_map.get(i),
+                    )
                 )
 
         yield format_sse_event(
