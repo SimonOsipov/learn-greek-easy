@@ -1155,27 +1155,18 @@
         "audioSize": "Размер файла",
         "audioGenerated": "Сгенерировано"
       },
-      "generateAudio": {
-        "button": "Сгенерировать аудио",
-        "progress": {
-          "starting": "Начинаем генерацию аудио...",
-          "callingElevenLabs": "Вызов ElevenLabs...",
-          "settingTimestamps": "Проверка временных меток...",
-          "uploading": "Загрузка аудио..."
-        },
-        "error": "Ошибка генерации аудио: {{message}}",
-        "tryAgain": "Попробовать снова"
-      },
-      "generateExercises": {
-        "button": "Сгенерировать упражнения",
-        "comingSoon": "Генерация упражнений скоро будет доступна"
-      },
-      "delete": "Удалить диалог",
       "close": "Закрыть",
       "errors": {
         "loadFailed": "Не удалось загрузить детали диалога",
         "retry": "Повторить",
         "audioUrlMissing": "Аудиофайл не найден. Возможно, он был удалён из хранилища."
+      },
+      "tabs": {
+        "dialog": "Диалог",
+        "exercises": "Упражнения"
+      },
+      "exercises": {
+        "empty": "Упражнения ещё не сгенерированы"
       }
     },
     "search": {
