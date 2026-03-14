@@ -302,7 +302,7 @@ export function WordReferencePage() {
             <SpeakerButton
               audioUrl={wordEntry.audio_url}
               speed={audioSpeed}
-              className="hover:bg-transparent [&_svg]:size-6"
+              className="hover:bg-transparent [&_svg]:size-8"
               onPlay={() =>
                 trackWordAudioPlayed({
                   word_entry_id: wordEntry.id,
