@@ -77,14 +77,13 @@ export interface WordEntryResponse {
 }
 
 /**
- * Response from bulk upsert operation.
- * Contains counts and the resulting word entries.
+ * Response from admin create-and-link operation.
+ * Matches AdminWordEntryCreateResponse in src/schemas/word_entry.py.
  */
-export interface WordEntryBulkResponse {
-  deck_id: string;
-  created_count: number;
-  updated_count: number;
-  word_entries: WordEntryResponse[];
+export interface AdminWordEntryCreateResponse {
+  word_entry: WordEntryResponse;
+  cards_created: number;
+  is_new: boolean;
 }
 
 /**
@@ -167,23 +166,22 @@ export interface GenerateCardsResponse {
 
 export const wordEntryAPI = {
   /**
-   * Bulk upsert word entries to a deck.
+   * Create (or upsert) a single word entry and link it to a deck.
    *
-   * Creates new entries or updates existing ones based on lemma matching.
-   * Requires superuser privileges.
-   * Maximum 100 entries per request.
+   * Creates or updates the word entry, links it to the deck, and generates
+   * all card types automatically. Requires superuser privileges.
    *
    * @param deckId - UUID of the target deck
-   * @param wordEntries - Array of word entries to upsert (without deck_id)
-   * @returns Object with deck_id, created_count, updated_count, and word_entries array
+   * @param wordEntry - Word entry data to create or update
+   * @returns Object with word_entry, cards_created, and is_new flag
    */
-  bulkUpsert: async (
+  createAndLink: async (
     deckId: string,
-    wordEntries: WordEntryInput[]
-  ): Promise<WordEntryBulkResponse> => {
-    return api.post<WordEntryBulkResponse>('/api/v1/word-entries/bulk', {
+    wordEntry: WordEntryInput
+  ): Promise<AdminWordEntryCreateResponse> => {
+    return api.post<AdminWordEntryCreateResponse>('/api/v1/admin/word-entries', {
       deck_id: deckId,
-      word_entries: wordEntries,
+      word_entry: wordEntry,
     });
   },
 

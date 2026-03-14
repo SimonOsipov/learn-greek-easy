@@ -39,7 +39,7 @@ vi.mock('@/services/adminAPI', () => ({
 
 vi.mock('@/services/wordEntryAPI', () => ({
   wordEntryAPI: {
-    bulkUpsert: vi.fn().mockResolvedValue([]),
+    createAndLink: vi.fn().mockResolvedValue({ word_entry: {}, cards_created: 5, is_new: true }),
   },
 }));
 
@@ -1121,10 +1121,14 @@ describe('GenerateNounDialog', () => {
   // Approve & Save success flow (AC #15)
   // ============================================================
 
-  // 54. On success: bulkUpsert called, onWordLinked called, modal closes, toast shown
-  it('calls bulkUpsert, onWordLinked, closes modal, and shows success toast on approve', async () => {
-    const mockBulkUpsert = vi.mocked(wordEntryAPI.bulkUpsert);
-    mockBulkUpsert.mockResolvedValueOnce([]);
+  // 54. On success: createAndLink called, onWordLinked called, modal closes, toast shown
+  it('calls createAndLink, onWordLinked, closes modal, and shows success toast on approve', async () => {
+    const mockCreateAndLink = vi.mocked(wordEntryAPI.createAndLink);
+    mockCreateAndLink.mockResolvedValueOnce({
+      word_entry: {} as never,
+      cards_created: 5,
+      is_new: true,
+    });
     const mockToast = vi.mocked(toast);
 
     const onWordLinked = vi.fn();
@@ -1143,9 +1147,9 @@ describe('GenerateNounDialog', () => {
     await user.click(screen.getByTestId('approve-save-button'));
 
     await waitFor(() => {
-      expect(mockBulkUpsert).toHaveBeenCalledWith(
+      expect(mockCreateAndLink).toHaveBeenCalledWith(
         'deck-1',
-        expect.arrayContaining([expect.objectContaining({ lemma: 'γάτα', part_of_speech: 'noun' })])
+        expect.objectContaining({ lemma: 'γάτα', part_of_speech: 'noun' })
       );
     });
 
@@ -1161,9 +1165,9 @@ describe('GenerateNounDialog', () => {
   // ============================================================
 
   // 55. On error: error toast shown, modal stays open
-  it('shows error toast and keeps modal open when bulkUpsert fails', async () => {
-    const mockBulkUpsert = vi.mocked(wordEntryAPI.bulkUpsert);
-    mockBulkUpsert.mockRejectedValueOnce(new Error('Network error'));
+  it('shows error toast and keeps modal open when createAndLink fails', async () => {
+    const mockCreateAndLink = vi.mocked(wordEntryAPI.createAndLink);
+    mockCreateAndLink.mockRejectedValueOnce(new Error('Network error'));
     const mockToast = vi.mocked(toast);
 
     const onWordLinked = vi.fn();
@@ -1233,7 +1237,7 @@ describe('GenerateNounDialog', () => {
 
   // 59. Loading spinner shown on Approve & Save button while saving (AC #10)
   it('shows loading spinner on Approve & Save button while saving', async () => {
-    vi.mocked(wordEntryAPI.bulkUpsert).mockImplementation(() => new Promise(() => {}));
+    vi.mocked(wordEntryAPI.createAndLink).mockImplementation(() => new Promise(() => {}));
 
     const user = userEvent.setup();
     renderDialog();
