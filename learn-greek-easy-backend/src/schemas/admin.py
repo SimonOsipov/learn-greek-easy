@@ -368,6 +368,7 @@ class ListeningDialogListItem(BaseModel):
     cefr_level: DeckLevel
     num_speakers: int
     status: DialogStatus
+    audio_duration_seconds: float | None = None
     created_at: datetime
 
 

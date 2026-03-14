@@ -52,6 +52,7 @@ export interface ListeningDialogListItem {
   cefr_level: DeckLevel;
   num_speakers: number;
   status: DialogStatus;
+  audio_duration_seconds: number | null;
   created_at: string;
 }
 
