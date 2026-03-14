@@ -93,6 +93,7 @@ const CEFR_BADGE_CLASSES: Record<string, string> = {
   B2: 'border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-400',
 };
 const CEFR_BADGE_FALLBACK = 'border-gray-500/30 bg-gray-500/10 text-gray-700 dark:text-gray-400';
+const ALL_CEFR_LEVELS: DeckLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
 
 function getLocalizedScenario(dialog: ListeningDialogListItem, lang: string): string {
   switch (lang) {
@@ -329,13 +330,16 @@ export function ListeningDialogsTab() {
             icon={<MessageSquare className="h-5 w-5 text-muted-foreground" />}
             testId="dialog-total-card"
           />
-          {(['A1', 'A2', 'B1', 'B2'] as DeckLevel[]).map((level) => (
+          {ALL_CEFR_LEVELS.map((level) => (
             <SummaryCard
               key={level}
               title={t('listeningDialogs.stats.cefrLevel', { level })}
               value={cefrCounts[level] ?? 0}
               icon={
-                <Badge variant="outline" className={`h-5 ${CEFR_BADGE_CLASSES[level]}`}>
+                <Badge
+                  variant="outline"
+                  className={`h-5 ${CEFR_BADGE_CLASSES[level] ?? CEFR_BADGE_FALLBACK}`}
+                >
                   {level}
                 </Badge>
               }
@@ -377,7 +381,7 @@ export function ListeningDialogsTab() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t('listeningDialogs.filter.allLevels')}</SelectItem>
-                  {(['A1', 'A2', 'B1', 'B2'] as DeckLevel[]).map((level) => (
+                  {ALL_CEFR_LEVELS.map((level) => (
                     <SelectItem key={level} value={level}>
                       {level}
                     </SelectItem>
