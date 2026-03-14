@@ -53,6 +53,9 @@ import { detectScript, isValidGreekInput, scriptToLanguage } from '@/utils/greek
 import { buildWordEntryPayload, initializeResolvedValues } from '@/utils/nounPayloadBuilder';
 import type { EditableExample } from '@/utils/nounPayloadBuilder';
 
+const GREEK_CHAR_REGEX = /[\u0370-\u03FF\u1F00-\u1FFF]/;
+const NON_GREEK_ALPHA_REGEX = /[a-zA-Z\u0400-\u04FF]/;
+
 export interface GenerateNounDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -278,17 +281,24 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
 
   const trimmedWord = greekWord.trim();
   const validation = trimmedWord ? isValidGreekInput(trimmedWord) : { valid: false };
+  const isMixedScript =
+    trimmedWord.length > 0 &&
+    GREEK_CHAR_REGEX.test(trimmedWord) &&
+    NON_GREEK_ALPHA_REGEX.test(trimmedWord);
   const showWarning =
     trimmedWord.length > 0 &&
     !validation.valid &&
-    (validation.reason === 'tooLong' || validation.reason === 'numbersOnly');
+    (validation.reason === 'tooLong' || validation.reason === 'numbersOnly' || isMixedScript);
   const isNonGreekText =
-    !validation.valid && validation.reason === 'latin' && trimmedWord.length > 0;
+    !validation.valid && validation.reason === 'latin' && trimmedWord.length > 0 && !isMixedScript;
   const canSubmit =
     (validation.valid || isNonGreekText) && !isSubmitting && !hasResult && !reverseLookupLoading;
 
-  const warningKey =
-    validation.reason === 'tooLong' ? 'generateNoun.tooLong' : 'generateNoun.invalidGreek';
+  const warningKey = isMixedScript
+    ? 'generateNoun.reverseLookup.mixedScript'
+    : validation.reason === 'tooLong'
+      ? 'generateNoun.tooLong'
+      : 'generateNoun.invalidGreek';
 
   const approveMutation = useMutation({
     mutationFn: async () => {
@@ -432,20 +442,26 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
     }
   }, [validation, handleSubmit, triggerReverseLookup]);
 
+  const triggerPipelineForLookupItem = useCallback(
+    (item: ReverseLookupItem) => {
+      setGreekWord(item.lemma);
+      setReverseLookupResults(null);
+      setReverseLookupQuery('');
+      setSelectedLookupIndex(null);
+      setTimeout(() => {
+        setStreamBody({ word: item.lemma, deck_id: deckId });
+        setStreamEnabled(true);
+      }, 0);
+    },
+    [deckId]
+  );
+
   const handleUseSelected = useCallback(() => {
     if (selectedLookupIndex === null || !reverseLookupResults) return;
     const selected = reverseLookupResults[selectedLookupIndex];
     if (!selected || !selected.actionable) return;
-    setGreekWord(selected.lemma);
-    setReverseLookupResults(null);
-    setReverseLookupQuery('');
-    setSelectedLookupIndex(null);
-    // Trigger pipeline after state settles
-    setTimeout(() => {
-      setStreamBody({ word: selected.lemma, deck_id: deckId });
-      setStreamEnabled(true);
-    }, 0);
-  }, [selectedLookupIndex, reverseLookupResults, deckId]);
+    triggerPipelineForLookupItem(selected);
+  }, [selectedLookupIndex, reverseLookupResults, triggerPipelineForLookupItem]);
 
   const handleSelect = useCallback((fieldPath: string, source: SelectionSource) => {
     setSelections((prev) => {
@@ -902,6 +918,9 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                                   } ${selectedLookupIndex === index ? 'bg-muted' : ''}`}
                                   data-testid={`reverse-lookup-row-${index}`}
                                   onClick={() => item.actionable && setSelectedLookupIndex(index)}
+                                  onDoubleClick={() => {
+                                    if (item.actionable) triggerPipelineForLookupItem(item);
+                                  }}
                                 >
                                   <input
                                     type="radio"

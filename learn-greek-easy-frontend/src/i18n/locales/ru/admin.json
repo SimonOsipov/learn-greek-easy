@@ -1083,7 +1083,8 @@
       "notSupported": "Пока не поддерживается",
       "columnLemma": "Лемма",
       "columnPos": "Часть речи",
-      "columnTranslation": "Перевод"
+      "columnTranslation": "Перевод",
+      "mixedScript": "Ввод содержит и греческие, и негреческие символы. Введите только греческий текст или только перевод."
     }
   },
   "wordEntry": {

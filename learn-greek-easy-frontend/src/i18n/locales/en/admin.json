@@ -1071,7 +1071,8 @@
       "notSupported": "Not yet supported",
       "columnLemma": "Lemma",
       "columnPos": "Part of Speech",
-      "columnTranslation": "Translation"
+      "columnTranslation": "Translation",
+      "mixedScript": "Input contains both Greek and non-Greek characters. Please enter only Greek or only a translation."
     }
   },
   "wordEntry": {
