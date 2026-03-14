@@ -2,29 +2,23 @@
 
 This module provides HTTP endpoints for word entry operations including:
 - Get word entry by ID (authenticated users)
-- Bulk upload of word entries with upsert behavior (superuser only)
 """
 
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, Depends, status
+from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.config import settings
-from src.core.dependencies import get_current_superuser, get_current_user
-from src.core.exceptions import DeckNotFoundException, ForbiddenException, NotFoundException
+from src.core.dependencies import get_current_user
+from src.core.exceptions import ForbiddenException, NotFoundException
 from src.db.dependencies import get_db
 from src.db.models import Deck, DeckWordEntry, User
 from src.repositories.card_record import CardRecordRepository
-from src.repositories.deck import DeckRepository
 from src.repositories.word_entry import WordEntryRepository
 from src.schemas.card_record import CardRecordResponse
-from src.schemas.word_entry import WordEntryBulkRequest, WordEntryBulkResponse, WordEntryResponse
-from src.services.card_generator_service import CardGeneratorService
+from src.schemas.word_entry import WordEntryResponse
 from src.services.word_entry_response import word_entry_to_response
-from src.tasks import generate_word_entry_audio_task, is_background_tasks_enabled
-from src.utils.greek_text import resolve_tts_text
 
 router = APIRouter(
     # Note: prefix is set by parent router in v1/router.py
@@ -226,201 +220,3 @@ async def get_word_entry_cards(
     active_cards = [cr for cr in card_records if cr.is_active]
 
     return [CardRecordResponse.model_validate(cr) for cr in active_cards]
-
-
-@router.post(
-    "/bulk",
-    response_model=WordEntryBulkResponse,
-    status_code=status.HTTP_201_CREATED,
-    summary="Bulk upload word entries",
-    description="Upload multiple word entries to a deck with upsert behavior. "
-    "Entries matching by lemma + part_of_speech are updated; new entries are created. "
-    "Requires superuser privileges. Maximum 100 entries per request.",
-    responses={
-        201: {
-            "description": "Word entries created/updated successfully",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "deck_id": "550e8400-e29b-41d4-a716-446655440000",
-                        "created_count": 2,
-                        "updated_count": 1,
-                        "word_entries": [
-                            {
-                                "id": "660e8400-e29b-41d4-a716-446655440001",
-                                "deck_id": "550e8400-e29b-41d4-a716-446655440000",
-                                "lemma": "spiti",
-                                "part_of_speech": "noun",
-                                "translation_en": "house, home",
-                                "translation_ru": "dom",
-                                "pronunciation": "/spí·ti/",
-                                "grammar_data": {"gender": "neuter"},
-                                "examples": [],
-                                "audio_key": None,
-                                "is_active": True,
-                                "created_at": "2024-01-15T10:30:00Z",
-                                "updated_at": "2024-01-15T10:30:00Z",
-                            }
-                        ],
-                    }
-                }
-            },
-        },
-        404: {"description": "Deck not found"},
-        422: {
-            "description": "Validation error",
-            "content": {
-                "application/json": {
-                    "examples": {
-                        "empty_array": {
-                            "summary": "Empty word entries array",
-                            "value": {
-                                "detail": [
-                                    {
-                                        "type": "value_error",
-                                        "loc": ["body", "word_entries"],
-                                        "msg": "List should have at least 1 item after validation, not 0",
-                                    }
-                                ]
-                            },
-                        },
-                        "too_many_entries": {
-                            "summary": "More than 100 entries",
-                            "value": {
-                                "detail": [
-                                    {
-                                        "type": "value_error",
-                                        "loc": ["body", "word_entries"],
-                                        "msg": "List should have at most 100 items after validation, not 150",
-                                    }
-                                ]
-                            },
-                        },
-                        "duplicate_lemma_pos": {
-                            "summary": "Duplicate lemma + part_of_speech",
-                            "value": {
-                                "detail": [
-                                    {
-                                        "type": "value_error",
-                                        "loc": ["body"],
-                                        "msg": "Value error, Duplicate entry for lemma 'spiti' with part_of_speech 'noun'",
-                                    }
-                                ]
-                            },
-                        },
-                    }
-                }
-            },
-        },
-    },
-)
-async def bulk_upload_word_entries(
-    request: WordEntryBulkRequest,
-    background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_superuser),
-) -> WordEntryBulkResponse:
-    """Bulk upload word entries with upsert behavior.
-
-    Requires superuser privileges.
-
-    This endpoint performs an upsert operation:
-    - Entries matching by (deck_id, lemma, part_of_speech) are UPDATED
-    - New entries are CREATED
-
-    The operation is atomic - all entries are processed in a single transaction.
-    If any entry fails validation, the entire request is rejected.
-
-    Args:
-        request: Bulk upload request with deck_id and word_entries array
-        db: Database session (injected)
-        current_user: Authenticated superuser (injected)
-
-    Returns:
-        WordEntryBulkResponse with created_count, updated_count, and all entries
-
-    Raises:
-        401: If not authenticated
-        403: If authenticated but not superuser
-        404: If deck doesn't exist
-        422: If validation fails (empty array, >100 entries, duplicate lemma+pos, invalid data)
-    """
-    # Validate deck exists
-    deck_repo = DeckRepository(db)
-    deck = await deck_repo.get(request.deck_id)
-    if deck is None:
-        raise DeckNotFoundException(deck_id=str(request.deck_id))
-
-    # Prepare entries data for repository
-    entries_data = [entry.model_dump() for entry in request.word_entries]
-
-    # Perform bulk upsert using repository
-    word_entry_repo = WordEntryRepository(db)
-    entries, created_count, updated_count = await word_entry_repo.bulk_upsert(
-        owner_id=current_user.id,
-        entries_data=entries_data,
-    )
-
-    # Link all upserted entries to the target deck via junction table
-    for entry in entries:
-        await word_entry_repo.link_to_deck(entry.id, request.deck_id)
-
-    # Generate meaning cards for all upserted word entries
-    card_gen = CardGeneratorService(db)
-    meaning_created, meaning_updated = await card_gen.generate_meaning_cards(
-        entries, request.deck_id
-    )
-
-    # Generate plural form cards for eligible noun entries
-    plural_created, plural_updated = await card_gen.generate_plural_form_cards(
-        entries, request.deck_id
-    )
-
-    # Generate sentence translation cards for entries with examples
-    sentence_created, sentence_updated = await card_gen.generate_sentence_translation_cards(
-        entries, request.deck_id
-    )
-
-    # Generate article cards for eligible noun entries
-    article_created, article_updated = await card_gen.generate_article_cards(
-        entries, request.deck_id
-    )
-
-    # Generate declension cards for eligible noun entries
-    declension_created, declension_updated = await card_gen.generate_declension_cards(
-        entries, request.deck_id
-    )
-
-    cards_created = (
-        meaning_created + plural_created + sentence_created + article_created + declension_created
-    )
-    cards_updated = (
-        meaning_updated + plural_updated + sentence_updated + article_updated + declension_updated
-    )
-
-    # Commit the transaction
-    await db.commit()
-
-    if is_background_tasks_enabled():
-        for entry in entries:
-            background_tasks.add_task(
-                generate_word_entry_audio_task,
-                word_entry_id=entry.id,
-                lemma=resolve_tts_text(entry.lemma, entry.part_of_speech.value, entry.grammar_data),
-                examples=[
-                    {"id": ex.get("id"), "greek": ex.get("greek")} for ex in (entry.examples or [])
-                ],
-                db_url=settings.database_url,
-            )
-
-    return WordEntryBulkResponse(
-        deck_id=request.deck_id,
-        created_count=created_count,
-        updated_count=updated_count,
-        cards_created=cards_created,
-        cards_updated=cards_updated,
-        word_entries=[
-            word_entry_to_response(entry, s3_service=None, deck_id=request.deck_id)
-            for entry in entries
-        ],
-    )

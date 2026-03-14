@@ -3389,6 +3389,7 @@ async def link_word_entry_to_deck(
     await card_service.generate_plural_form_cards([word_entry], deck_id)
     await card_service.generate_sentence_translation_cards([word_entry], deck_id)
     await card_service.generate_article_cards([word_entry], deck_id)
+    await card_service.generate_declension_cards([word_entry], deck_id)
 
     await db.commit()
     await db.refresh(word_entry)
