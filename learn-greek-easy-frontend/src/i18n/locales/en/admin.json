@@ -978,7 +978,7 @@
   "generateNoun": {
     "title": "Generate Noun",
     "deckLabel": "Deck",
-    "inputPlaceholder": "Enter Greek noun (e.g. σπίτι)",
+    "inputPlaceholder": "Enter word in Greek, English or Russian",
     "invalidGreek": "Please enter a valid Greek word",
     "tooLong": "Word is too long (max 50 characters)",
     "createButton": "Create",
