@@ -6,7 +6,7 @@ import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from sqlalchemy import case, func, literal, or_, select
+from sqlalchemy import and_, case, func, literal, or_, select, text
 from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -157,13 +157,19 @@ class ReverseLookupService:
             else_=literal("fuzzy"),
         ).label("match_type")
 
+        await self.db.execute(text("SET pg_trgm.similarity_threshold = 0.3"))
+
         stmt = (
             select(Translation, score_expr, match_type_expr)
             .where(
                 Translation.language == language,
                 or_(
                     Translation.translation.op("~*")(word_boundary_pattern),
-                    func.word_similarity(query_lower, func.lower(Translation.translation)) > 0.6,
+                    and_(
+                        Translation.translation.op("%")(query_lower),
+                        func.word_similarity(query_lower, func.lower(Translation.translation))
+                        > 0.6,
+                    ),
                 ),
             )
             .order_by(_SOURCE_PRIORITY, Translation.sense_index)

@@ -38,20 +38,21 @@ def _make_session(
     translation_rows: list,
     lexicon_tuples: list[tuple[str, str]] | None = None,
 ) -> MagicMock:
-    """Create a mock AsyncSession with up to two execute() calls.
+    """Create a mock AsyncSession with up to three execute() calls.
 
-    First call: returns tuples (Translation, score, match_type) via .all()
-    Second call: returns tuples (lemma, gender) via .all()
+    First call: SET pg_trgm.similarity_threshold → no-op MagicMock()
+    Second call: returns tuples (Translation, score, match_type) via .all()
+    Third call: returns tuples (lemma, gender) via .all()
     """
     mock_session = MagicMock()
     call_count = 0
     lexicon_tuples = lexicon_tuples or []
 
-    # First execute result (translations — uses .all() returning tuples)
+    # Second execute result (translations — uses .all() returning tuples)
     mock_translation_result = MagicMock()
     mock_translation_result.all.return_value = translation_rows
 
-    # Second execute result (lexicon — uses .all() directly)
+    # Third execute result (lexicon — uses .all() directly)
     mock_lexicon_result = MagicMock()
     mock_lexicon_result.all.return_value = lexicon_tuples
 
@@ -59,6 +60,8 @@ def _make_session(
         nonlocal call_count
         call_count += 1
         if call_count == 1:
+            return MagicMock()  # SET statement — no-op
+        if call_count == 2:
             return mock_translation_result
         return mock_lexicon_result
 
