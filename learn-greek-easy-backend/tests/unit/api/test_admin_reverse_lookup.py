@@ -19,6 +19,8 @@ class TestReverseLookupEndpoint:
                 article="το",
                 translations=["house", "home"],
                 actionable=True,
+                score=2.0,
+                match_type="exact",
             )
         ]
         with patch(
@@ -43,6 +45,7 @@ class TestReverseLookupEndpoint:
         assert result["article"] == "το"
         assert result["translations"] == ["house", "home"]
         assert result["actionable"] is True
+        assert result["match_type"] == "exact"
 
     async def test_russian_200(self, client: AsyncClient, superuser_auth_headers: dict) -> None:
         mock_results = [
@@ -53,6 +56,8 @@ class TestReverseLookupEndpoint:
                 article="το",
                 translations=["дом"],
                 actionable=True,
+                score=2.0,
+                match_type="exact",
             )
         ]
         with patch(
@@ -69,6 +74,35 @@ class TestReverseLookupEndpoint:
         data = response.json()
         assert data["language"] == "ru"
         assert len(data["results"]) == 1
+
+    async def test_fuzzy_match_type_in_response(
+        self, client: AsyncClient, superuser_auth_headers: dict
+    ) -> None:
+        mock_results = [
+            ReverseLookupResult(
+                lemma="σπίτι",
+                pos="NOUN",
+                gender="neuter",
+                article="το",
+                translations=["house"],
+                actionable=True,
+                score=0.8,
+                match_type="fuzzy",
+            )
+        ]
+        with patch(
+            "src.api.v1.admin.ReverseLookupService.search",
+            new_callable=AsyncMock,
+            return_value=mock_results,
+        ):
+            response = await client.get(
+                "/api/v1/admin/reverse-lookup",
+                params={"q": "hause", "lang": "en"},
+                headers=superuser_auth_headers,
+            )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["results"][0]["match_type"] == "fuzzy"
 
     async def test_empty_results_200(
         self, client: AsyncClient, superuser_auth_headers: dict

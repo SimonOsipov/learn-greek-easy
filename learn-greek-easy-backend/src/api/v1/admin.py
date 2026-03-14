@@ -3911,6 +3911,7 @@ async def reverse_lookup(
                 article=r.article,
                 translations=r.translations,
                 actionable=r.actionable,
+                match_type=r.match_type,
             )
             for r in results
         ],
