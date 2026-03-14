@@ -334,7 +334,10 @@ export function WordReferencePage() {
         <p className="mt-4 text-[1.15em] font-bold text-foreground">{displayTranslation}</p>
 
         {wordEntry.audio_url && (
-          <div className="absolute bottom-3 left-3">
+          <div className="absolute bottom-3 right-3 flex items-center gap-1.5">
+            <span className="text-xs text-muted-foreground">
+              {t('deck:wordReference.voiceSpeed')}:
+            </span>
             <AudioSpeedToggle speed={audioSpeed} onSpeedChange={handleSpeedChange} />
           </div>
         )}

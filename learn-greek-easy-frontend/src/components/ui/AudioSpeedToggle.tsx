@@ -34,7 +34,7 @@ export function AudioSpeedToggle({ speed, onSpeedChange, className }: AudioSpeed
     <div
       role="radiogroup"
       aria-label="Playback speed"
-      className={cn('flex gap-1', className)}
+      className={cn('flex items-center gap-1', className)}
       onClick={(e) => e.stopPropagation()}
       onKeyDown={(e) => e.stopPropagation()}
       data-testid="audio-speed-toggle"
