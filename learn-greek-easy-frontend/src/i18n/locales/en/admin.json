@@ -1072,7 +1072,7 @@
       "columnLemma": "Lemma",
       "columnPos": "Part of Speech",
       "columnTranslation": "Translation",
-      "mixedScript": "Input contains both Greek and non-Greek characters. Please enter only Greek or only a translation."
+      "mixedScript": "Input contains characters from multiple scripts. Please enter only Greek or only a single-script translation."
     }
   },
   "wordEntry": {

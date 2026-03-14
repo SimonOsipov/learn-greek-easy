@@ -15,13 +15,15 @@ depends_on: str | tuple[str, ...] | None = None
 
 
 def upgrade() -> None:
-    op.execute(
-        """
-        CREATE INDEX idx_translations_reverse_lower
-        ON reference.translations (lower(translation), language)
-        """
-    )
+    with op.get_context().autocommit_block():
+        op.execute(
+            """
+            CREATE INDEX CONCURRENTLY idx_translations_reverse_lower
+            ON reference.translations (lower(translation), language)
+            """
+        )
 
 
 def downgrade() -> None:
-    op.execute("DROP INDEX IF EXISTS reference.idx_translations_reverse_lower")
+    with op.get_context().autocommit_block():
+        op.execute("DROP INDEX CONCURRENTLY IF EXISTS reference.idx_translations_reverse_lower")

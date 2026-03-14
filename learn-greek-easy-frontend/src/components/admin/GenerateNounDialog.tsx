@@ -53,9 +53,6 @@ import { detectScript, isValidGreekInput, scriptToLanguage } from '@/utils/greek
 import { buildWordEntryPayload, initializeResolvedValues } from '@/utils/nounPayloadBuilder';
 import type { EditableExample } from '@/utils/nounPayloadBuilder';
 
-const GREEK_CHAR_REGEX = /[\u0370-\u03FF\u1F00-\u1FFF]/;
-const NON_GREEK_ALPHA_REGEX = /[a-zA-Z\u0400-\u04FF]/;
-
 export interface GenerateNounDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -281,10 +278,11 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
 
   const trimmedWord = greekWord.trim();
   const validation = trimmedWord ? isValidGreekInput(trimmedWord) : { valid: false };
-  const isMixedScript =
-    trimmedWord.length > 0 &&
-    GREEK_CHAR_REGEX.test(trimmedWord) &&
-    NON_GREEK_ALPHA_REGEX.test(trimmedWord);
+  const hasGreek = trimmedWord.length > 0 && /[\u0370-\u03FF\u1F00-\u1FFF]/.test(trimmedWord);
+  const hasLatin = trimmedWord.length > 0 && /[a-zA-Z]/.test(trimmedWord);
+  const hasCyrillic = trimmedWord.length > 0 && /[\u0400-\u04FF]/.test(trimmedWord);
+  const scriptCount = (hasGreek ? 1 : 0) + (hasLatin ? 1 : 0) + (hasCyrillic ? 1 : 0);
+  const isMixedScript = scriptCount >= 2;
   const showWarning =
     trimmedWord.length > 0 &&
     !validation.valid &&
@@ -428,7 +426,8 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
       const resp = await adminAPI.reverseLookup(trimmed, lang);
       setReverseLookupResults(resp.results);
     } catch {
-      setReverseLookupResults([]);
+      setApiError(t('generateNoun.errorGeneric'));
+      setReverseLookupResults(null);
     } finally {
       setReverseLookupLoading(false);
     }
@@ -449,6 +448,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
       setReverseLookupQuery('');
       setSelectedLookupIndex(null);
       setTimeout(() => {
+        setPipelineStatus('streaming');
         setStreamBody({ word: item.lemma, deck_id: deckId });
         setStreamEnabled(true);
       }, 0);
