@@ -604,6 +604,41 @@ class WordEntryBulkRequest(BaseModel):
         return self
 
 
+class AdminWordEntryCreateRequest(BaseModel):
+    """Schema for admin single word entry create-and-link request.
+
+    Creates (or upserts) a word entry and links it to the specified deck,
+    then generates all card types automatically.
+    """
+
+    deck_id: UUID = Field(
+        ...,
+        description="UUID of the deck to add the word entry to",
+    )
+    word_entry: WordEntryBulkCreate = Field(
+        ...,
+        description="Word entry data to create or update",
+    )
+
+
+class AdminWordEntryCreateResponse(BaseModel):
+    """Schema for admin single word entry create-and-link response."""
+
+    word_entry: WordEntryResponse = Field(
+        ...,
+        description="The created or updated word entry",
+    )
+    cards_created: int = Field(
+        default=0,
+        ge=0,
+        description="Number of card records created during auto-generation",
+    )
+    is_new: bool = Field(
+        default=True,
+        description="True if the word entry was newly created, False if it was updated (upserted)",
+    )
+
+
 class WordEntryBulkResponse(BaseModel):
     """Schema for bulk word entry upload response.
 

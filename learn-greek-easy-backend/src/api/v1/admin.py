@@ -127,7 +127,11 @@ from src.schemas.news_item import (
     NewsItemWithQuestionCreate,
 )
 from src.schemas.nlp import GeneratedNounData, NormalizedLemma, VerificationSummary
-from src.schemas.word_entry import WordEntryResponse
+from src.schemas.word_entry import (
+    AdminWordEntryCreateRequest,
+    AdminWordEntryCreateResponse,
+    WordEntryResponse,
+)
 from src.services.announcement_service import AnnouncementService
 from src.services.card_error_admin_service import CardErrorAdminService
 from src.services.card_generator_service import CardGeneratorService
@@ -3302,6 +3306,81 @@ async def generate_word_entry_stream(
             _generate_word_entry_sse_pipeline(request, from_stage=from_stage),
             heartbeat_interval=15,
         )
+    )
+
+
+# ============================================================================
+# Word Entry Create-and-Link Endpoint
+# ============================================================================
+
+
+@router.post(
+    "/word-entries",
+    response_model=AdminWordEntryCreateResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create and link a word entry to a deck",
+    description=(
+        "Create (or upsert) a word entry and link it to the specified deck. "
+        "Generates all card types automatically."
+    ),
+    responses={
+        201: {"description": "Word entry created/updated and linked to deck"},
+        404: {"description": "Deck not found"},
+        409: {"description": "Deck is not an active V2 deck"},
+    },
+)
+async def create_and_link_word_entry(
+    body: AdminWordEntryCreateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> AdminWordEntryCreateResponse:
+    """Create or upsert a word entry, link it to a deck, and generate all cards."""
+    deck_repo = DeckRepository(db)
+    word_entry_repo = WordEntryRepository(db)
+
+    # Validate deck exists
+    deck = await deck_repo.get(body.deck_id)
+    if deck is None:
+        raise NotFoundException(resource="Deck", detail=f"Deck with id '{body.deck_id}' not found")
+
+    # Validate deck is active and V2
+    if not deck.is_active or deck.card_system != CardSystemVersion.V2:
+        raise ConflictException(
+            detail=f"Deck '{body.deck_id}' is not an active V2 deck. Word entries can only be linked to active V2 decks."
+        )
+
+    # Build entry data dict from the request schema
+    entry_data = body.word_entry.model_dump()
+
+    # Upsert the word entry (owner_id=None for admin/shared entries)
+    entries, created_count, _updated_count = await word_entry_repo.bulk_upsert(
+        owner_id=None,
+        entries_data=[entry_data],
+    )
+    word_entry = entries[0]
+    is_new = created_count > 0
+
+    # Link to deck (idempotent via on_conflict_do_nothing)
+    await word_entry_repo.link_to_deck(word_entry.id, body.deck_id)
+
+    # Generate all card types
+    card_service = CardGeneratorService(db)
+    results = await asyncio.gather(
+        card_service.generate_meaning_cards([word_entry], body.deck_id),
+        card_service.generate_plural_form_cards([word_entry], body.deck_id),
+        card_service.generate_sentence_translation_cards([word_entry], body.deck_id),
+        card_service.generate_article_cards([word_entry], body.deck_id),
+        card_service.generate_declension_cards([word_entry], body.deck_id),
+    )
+    cards_created = sum(r[0] for r in results)
+
+    await db.commit()
+    await db.refresh(word_entry)
+
+    return AdminWordEntryCreateResponse(
+        word_entry=word_entry_to_response(word_entry, deck_id=body.deck_id),
+        cards_created=cards_created,
+        is_new=is_new,
     )
 
 

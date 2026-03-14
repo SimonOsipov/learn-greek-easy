@@ -53,7 +53,7 @@ export type {
 // Word Entry API
 export { wordEntryAPI } from './wordEntryAPI';
 export type {
-  WordEntryBulkResponse,
+  AdminWordEntryCreateResponse,
   WordEntryExampleSentence,
   WordEntryInput,
   WordEntryResponse,

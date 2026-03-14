@@ -312,7 +312,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
         resolvedValues,
         editableExamples,
       });
-      return wordEntryAPI.bulkUpsert(deckId, [payload]);
+      return wordEntryAPI.createAndLink(deckId, payload);
     },
     onSuccess: () => {
       toast({ title: t('generateNoun.approve.successToast') });
