@@ -383,7 +383,7 @@ def resolve_tts_text(lemma: str, part_of_speech: str, grammar_data: dict | None)
         Text string to send to the TTS service.
 
     Examples:
-        >>> resolve_tts_text("νερό", "noun", {"cases": {"singular": {"nominative": "το νερό"}}})
+        >>> resolve_tts_text("νερό", "noun", {"nominative_singular": "το νερό"})
         'το νερό'
 
         >>> resolve_tts_text("τράπεζα", "noun", {"gender": "feminine"})
@@ -396,7 +396,7 @@ def resolve_tts_text(lemma: str, part_of_speech: str, grammar_data: dict | None)
         return lemma
 
     if part_of_speech == "noun":
-        nominative: str = grammar_data.get("cases", {}).get("singular", {}).get("nominative") or ""
+        nominative: str = grammar_data.get("nominative_singular") or ""
         if nominative:
             return nominative
         gender: str = grammar_data.get("gender") or ""

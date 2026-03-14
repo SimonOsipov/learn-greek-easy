@@ -278,18 +278,12 @@ class TestCardGeneratorService:
 # Sample grammar data for nouns (γάτα - cat)
 NOUN_GRAMMAR_DATA = {
     "gender": "feminine",
-    "cases": {
-        "singular": {
-            "nominative": "η γάτα",
-            "genitive": "της γάτας",
-            "accusative": "τη γάτα",
-        },
-        "plural": {
-            "nominative": "οι γάτες",
-            "genitive": "των γατών",
-            "accusative": "τις γάτες",
-        },
-    },
+    "nominative_singular": "η γάτα",
+    "genitive_singular": "της γάτας",
+    "accusative_singular": "τη γάτα",
+    "nominative_plural": "οι γάτες",
+    "genitive_plural": "των γατών",
+    "accusative_plural": "τις γάτες",
 }
 
 # Sample grammar data for adjectives (καλός - good)
@@ -1477,34 +1471,22 @@ class TestGenerateSentenceTranslationCards:
 
 MASCULINE_NOUN_GRAMMAR_DATA = {
     "gender": "masculine",
-    "cases": {
-        "singular": {
-            "nominative": "ο σκύλος",
-            "genitive": "του σκύλου",
-            "accusative": "τον σκύλο",
-        },
-        "plural": {
-            "nominative": "οι σκύλοι",
-            "genitive": "των σκύλων",
-            "accusative": "τους σκύλους",
-        },
-    },
+    "nominative_singular": "ο σκύλος",
+    "genitive_singular": "του σκύλου",
+    "accusative_singular": "τον σκύλο",
+    "nominative_plural": "οι σκύλοι",
+    "genitive_plural": "των σκύλων",
+    "accusative_plural": "τους σκύλους",
 }
 
 NEUTER_NOUN_GRAMMAR_DATA = {
     "gender": "neuter",
-    "cases": {
-        "singular": {
-            "nominative": "το σπίτι",
-            "genitive": "του σπιτιού",
-            "accusative": "το σπίτι",
-        },
-        "plural": {
-            "nominative": "τα σπίτια",
-            "genitive": "των σπιτιών",
-            "accusative": "τα σπίτια",
-        },
-    },
+    "nominative_singular": "το σπίτι",
+    "genitive_singular": "του σπιτιού",
+    "accusative_singular": "το σπίτι",
+    "nominative_plural": "τα σπίτια",
+    "genitive_plural": "των σπιτιών",
+    "accusative_plural": "τα σπίτια",
 }
 
 
@@ -1651,7 +1633,7 @@ class TestGenerateArticleCards:
                 part_of_speech=PartOfSpeech.VERB,
                 grammar_data={
                     "gender": "masculine",
-                    "cases": {"singular": {"nominative": "ο τρέχω"}},
+                    "nominative_singular": "ο τρέχω",
                 },
                 deck_id=deck_id,
             ),
@@ -1659,7 +1641,7 @@ class TestGenerateArticleCards:
                 part_of_speech=PartOfSpeech.ADJECTIVE,
                 grammar_data={
                     "gender": "masculine",
-                    "cases": {"singular": {"nominative": "ο καλός"}},
+                    "nominative_singular": "ο καλός",
                 },
                 deck_id=deck_id,
             ),
@@ -1667,13 +1649,13 @@ class TestGenerateArticleCards:
                 part_of_speech=PartOfSpeech.ADVERB,
                 grammar_data={
                     "gender": "masculine",
-                    "cases": {"singular": {"nominative": "ο γρήγορα"}},
+                    "nominative_singular": "ο γρήγορα",
                 },
                 deck_id=deck_id,
             ),
             _make_word_entry(
                 part_of_speech=PartOfSpeech.PHRASE,
-                grammar_data={"gender": "masculine", "cases": {"singular": {"nominative": "ο κ."}}},
+                grammar_data={"gender": "masculine", "nominative_singular": "ο κ."},
                 deck_id=deck_id,
             ),
         ]
@@ -1713,10 +1695,8 @@ class TestGenerateArticleCards:
         entry = _make_word_entry(
             part_of_speech=PartOfSpeech.NOUN,
             grammar_data={
-                "cases": {
-                    "singular": {"nominative": "η γάτα"},
-                    "plural": {"nominative": "οι γάτες"},
-                },
+                "nominative_singular": "η γάτα",
+                "nominative_plural": "οι γάτες",
             },
             deck_id=deck_id,
         )
@@ -1736,9 +1716,7 @@ class TestGenerateArticleCards:
             part_of_speech=PartOfSpeech.NOUN,
             grammar_data={
                 "gender": "",
-                "cases": {
-                    "singular": {"nominative": "η γάτα"},
-                },
+                "nominative_singular": "η γάτα",
             },
             deck_id=deck_id,
         )
@@ -1754,15 +1732,13 @@ class TestGenerateArticleCards:
     async def test_noun_without_nominative_singular_is_skipped(
         self, service, mock_card_record_repo
     ):
-        """Noun with gender but no cases.singular.nominative is skipped."""
+        """Noun with gender but no nominative_singular is skipped."""
         deck_id = uuid4()
         entry = _make_word_entry(
             part_of_speech=PartOfSpeech.NOUN,
             grammar_data={
                 "gender": "feminine",
-                "cases": {
-                    "plural": {"nominative": "οι γάτες"},
-                },
+                "nominative_plural": "οι γάτες",
             },
             deck_id=deck_id,
         )
@@ -1869,7 +1845,7 @@ class TestGenerateArticleCards:
             # Noun without gender - skipped
             _make_word_entry(
                 part_of_speech=PartOfSpeech.NOUN,
-                grammar_data={"cases": {"singular": {"nominative": "η γάτα"}}},
+                grammar_data={"nominative_singular": "η γάτα"},
                 deck_id=deck_id,
             ),
             # Adjective - skipped

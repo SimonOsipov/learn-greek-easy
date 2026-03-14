@@ -20,8 +20,8 @@ function isPluralFormEligible(entry: WordEntryResponse): boolean {
   if (!gd) return false;
 
   if (entry.part_of_speech === 'noun') {
-    const sg = getNestedString(gd, 'cases', 'singular', 'nominative');
-    const pl = getNestedString(gd, 'cases', 'plural', 'nominative');
+    const sg = getNestedString(gd, 'nominative_singular');
+    const pl = getNestedString(gd, 'nominative_plural');
     return !!sg && !!pl;
   }
 
@@ -44,7 +44,7 @@ function isArticleEligible(entry: WordEntryResponse): boolean {
   const gd = entry.grammar_data;
   if (!gd) return false;
   const gender = typeof gd.gender === 'string' && gd.gender.length > 0;
-  const nomSg = getNestedString(gd, 'cases', 'singular', 'nominative');
+  const nomSg = getNestedString(gd, 'nominative_singular');
   return gender && !!nomSg;
 }
 

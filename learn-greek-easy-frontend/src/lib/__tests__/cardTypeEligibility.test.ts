@@ -22,10 +22,8 @@ const createEntry = (overrides: Partial<WordEntryResponse> = {}): WordEntryRespo
   pronunciation: null,
   grammar_data: {
     gender: 'neuter',
-    cases: {
-      singular: { nominative: 'spiti' },
-      plural: { nominative: 'spitia' },
-    },
+    nominative_singular: 'spiti',
+    nominative_plural: 'spitia',
   },
   examples: [
     {
@@ -101,10 +99,7 @@ describe('getCardTypeEligibility', () => {
         createEntry({
           grammar_data: {
             gender: 'neuter',
-            cases: {
-              singular: {},
-              plural: { nominative: 'spitia' },
-            },
+            nominative_plural: 'spitia',
           },
         })
       );
@@ -116,10 +111,7 @@ describe('getCardTypeEligibility', () => {
         createEntry({
           grammar_data: {
             gender: 'neuter',
-            cases: {
-              singular: { nominative: 'spiti' },
-              plural: {},
-            },
+            nominative_singular: 'spiti',
           },
         })
       );
@@ -131,10 +123,8 @@ describe('getCardTypeEligibility', () => {
         createEntry({
           grammar_data: {
             gender: 'neuter',
-            cases: {
-              singular: { nominative: '' },
-              plural: { nominative: 'spitia' },
-            },
+            nominative_singular: '',
+            nominative_plural: 'spitia',
           },
         })
       );
@@ -201,10 +191,8 @@ describe('getCardTypeEligibility', () => {
         createEntry({
           part_of_speech: 'verb',
           grammar_data: {
-            cases: {
-              singular: { nominative: 'x' },
-              plural: { nominative: 'y' },
-            },
+            nominative_singular: 'x',
+            nominative_plural: 'y',
           },
         })
       );
@@ -241,10 +229,8 @@ describe('getCardTypeEligibility', () => {
       const result = getCardTypeEligibility(
         createEntry({
           grammar_data: {
-            cases: {
-              singular: { nominative: 'spiti' },
-              plural: { nominative: 'spitia' },
-            },
+            nominative_singular: 'spiti',
+            nominative_plural: 'spitia',
           },
         })
       );
@@ -256,10 +242,8 @@ describe('getCardTypeEligibility', () => {
         createEntry({
           grammar_data: {
             gender: '',
-            cases: {
-              singular: { nominative: 'spiti' },
-              plural: { nominative: 'spitia' },
-            },
+            nominative_singular: 'spiti',
+            nominative_plural: 'spitia',
           },
         })
       );
@@ -271,10 +255,7 @@ describe('getCardTypeEligibility', () => {
         createEntry({
           grammar_data: {
             gender: 'neuter',
-            cases: {
-              singular: {},
-              plural: { nominative: 'spitia' },
-            },
+            nominative_plural: 'spitia',
           },
         })
       );

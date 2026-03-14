@@ -72,10 +72,8 @@ async def noun_entry_full(db_session: AsyncSession, test_deck: Deck) -> WordEntr
         is_active=True,
         grammar_data={
             "gender": "neuter",
-            "cases": {
-                "singular": {"nominative": "σπίτι"},
-                "plural": {"nominative": "σπίτια"},
-            },
+            "nominative_singular": "σπίτι",
+            "nominative_plural": "σπίτια",
         },
         examples=[
             {
@@ -143,10 +141,8 @@ async def noun_entry_no_translations(db_session: AsyncSession, test_deck: Deck) 
         is_active=True,
         grammar_data={
             "gender": "neuter",
-            "cases": {
-                "singular": {"nominative": "βιβλίο"},
-                "plural": {"nominative": "βιβλία"},
-            },
+            "nominative_singular": "βιβλίο",
+            "nominative_plural": "βιβλία",
         },
     )
     db_session.add(entry)
@@ -170,10 +166,8 @@ async def noun_entry_no_plural(db_session: AsyncSession, test_deck: Deck) -> Wor
         is_active=True,
         grammar_data={
             "gender": "feminine",
-            "cases": {
-                "singular": {"nominative": "θάλασσα"},
-                "plural": {},  # missing nominative
-            },
+            "nominative_singular": "θάλασσα",
+            # nominative_plural missing — ineligible for plural_form
         },
     )
     db_session.add(entry)
@@ -196,10 +190,9 @@ async def noun_entry_no_gender(db_session: AsyncSession, test_deck: Deck) -> Wor
         translation_ru="дорога",
         is_active=True,
         grammar_data={
-            "cases": {
-                "singular": {"nominative": "δρόμος"},
-                "plural": {"nominative": "δρόμοι"},
-            }
+            "nominative_singular": "δρόμος",
+            "nominative_plural": "δρόμοι",
+            # gender missing — ineligible for article
         },
     )
     db_session.add(entry)
@@ -244,10 +237,8 @@ async def noun_entry_no_examples(db_session: AsyncSession, test_deck: Deck) -> W
         is_active=True,
         grammar_data={
             "gender": "neuter",
-            "cases": {
-                "singular": {"nominative": "παιδί"},
-                "plural": {"nominative": "παιδιά"},
-            },
+            "nominative_singular": "παιδί",
+            "nominative_plural": "παιδιά",
         },
         examples=[],
     )
@@ -272,10 +263,8 @@ async def noun_entry_incomplete_example(db_session: AsyncSession, test_deck: Dec
         is_active=True,
         grammar_data={
             "gender": "neuter",
-            "cases": {
-                "singular": {"nominative": "αγόρι"},
-                "plural": {"nominative": "αγόρια"},
-            },
+            "nominative_singular": "αγόρι",
+            "nominative_plural": "αγόρια",
         },
         examples=[
             {
@@ -1047,7 +1036,7 @@ class TestValidatePluralFormEligibility:
 
         from src.api.v1.admin import _validate_plural_form_eligibility
 
-        entry = self._make_noun(grammar_data={"cases": {"plural": {"nominative": "σπίτια"}}})
+        entry = self._make_noun(grammar_data={"nominative_plural": "σπίτια"})
         with pytest.raises(HTTPException) as exc_info:
             _validate_plural_form_eligibility(entry)
         assert exc_info.value.status_code == 400
@@ -1057,9 +1046,7 @@ class TestValidatePluralFormEligibility:
 
         from src.api.v1.admin import _validate_plural_form_eligibility
 
-        entry = self._make_noun(
-            grammar_data={"cases": {"singular": {"nominative": "σπίτι"}, "plural": {}}}
-        )
+        entry = self._make_noun(grammar_data={"nominative_singular": "σπίτι"})
         with pytest.raises(HTTPException) as exc_info:
             _validate_plural_form_eligibility(entry)
         assert exc_info.value.status_code == 400
@@ -1069,10 +1056,8 @@ class TestValidatePluralFormEligibility:
 
         entry = self._make_noun(
             grammar_data={
-                "cases": {
-                    "singular": {"nominative": "σπίτι"},
-                    "plural": {"nominative": "σπίτια"},
-                }
+                "nominative_singular": "σπίτι",
+                "nominative_plural": "σπίτια",
             }
         )
         _validate_plural_form_eligibility(entry)  # should not raise
@@ -1136,7 +1121,7 @@ class TestValidateArticleEligibility:
 
         from src.api.v1.admin import _validate_article_eligibility
 
-        entry = self._make_noun(grammar_data={"cases": {"singular": {"nominative": "δρόμος"}}})
+        entry = self._make_noun(grammar_data={"nominative_singular": "δρόμος"})
         with pytest.raises(HTTPException) as exc_info:
             _validate_article_eligibility(entry)
         assert exc_info.value.status_code == 400
@@ -1146,7 +1131,7 @@ class TestValidateArticleEligibility:
 
         from src.api.v1.admin import _validate_article_eligibility
 
-        entry = self._make_noun(grammar_data={"gender": "masculine", "cases": {}})
+        entry = self._make_noun(grammar_data={"gender": "masculine"})
         with pytest.raises(HTTPException) as exc_info:
             _validate_article_eligibility(entry)
         assert exc_info.value.status_code == 400
@@ -1157,7 +1142,7 @@ class TestValidateArticleEligibility:
         entry = self._make_noun(
             grammar_data={
                 "gender": "neuter",
-                "cases": {"singular": {"nominative": "σπίτι"}},
+                "nominative_singular": "σπίτι",
             }
         )
         _validate_article_eligibility(entry)  # should not raise
@@ -1271,10 +1256,8 @@ class TestValidateCardTypeEligibilityDispatch:
         entry.translation_ru = "дом"
         entry.grammar_data = {
             "gender": "neuter",
-            "cases": {
-                "singular": {"nominative": "σπίτι"},
-                "plural": {"nominative": "σπίτια"},
-            },
+            "nominative_singular": "σπίτι",
+            "nominative_plural": "σπίτια",
         }
         entry.examples = [{"id": "e1", "greek": "Γεια.", "english": "Hello."}]
         return entry
