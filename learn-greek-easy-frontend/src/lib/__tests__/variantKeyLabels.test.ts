@@ -27,6 +27,24 @@ describe('getVariantKeyLabel', () => {
   it('returns Conjugation for conjugation_ prefix', () => {
     expect(getVariantKeyLabel('conjugation_present')).toBe('Conjugation');
   });
+  it('returns Nom. → Gen. (Sg.) for nominative_to_genitive_singular', () => {
+    expect(getVariantKeyLabel('nominative_to_genitive_singular')).toBe('Nom. → Gen. (Sg.)');
+  });
+  it('returns Nom. → Acc. (Sg.) for nominative_to_accusative_singular', () => {
+    expect(getVariantKeyLabel('nominative_to_accusative_singular')).toBe('Nom. → Acc. (Sg.)');
+  });
+  it('returns Nom. → Voc. (Sg.) for nominative_to_vocative_singular', () => {
+    expect(getVariantKeyLabel('nominative_to_vocative_singular')).toBe('Nom. → Voc. (Sg.)');
+  });
+  it('returns Nom. → Gen. (Pl.) for nominative_to_genitive_plural', () => {
+    expect(getVariantKeyLabel('nominative_to_genitive_plural')).toBe('Nom. → Gen. (Pl.)');
+  });
+  it('returns Nom. → Acc. (Pl.) for nominative_to_accusative_plural', () => {
+    expect(getVariantKeyLabel('nominative_to_accusative_plural')).toBe('Nom. → Acc. (Pl.)');
+  });
+  it('returns Nom. → Voc. (Pl.) for nominative_to_vocative_plural', () => {
+    expect(getVariantKeyLabel('nominative_to_vocative_plural')).toBe('Nom. → Voc. (Pl.)');
+  });
   it('returns Declension for declension_ prefix', () => {
     expect(getVariantKeyLabel('declension_noun')).toBe('Declension');
   });

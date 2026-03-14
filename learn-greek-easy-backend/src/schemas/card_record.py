@@ -109,6 +109,10 @@ class DeclensionFront(FrontContentBase):
     card_type: Literal["declension"]
     case: str
     number: Literal["singular", "plural"]
+    hint_ru: Optional[str] = Field(
+        default=None,
+        description="Russian translation hint on card front",
+    )
 
 
 class ClozeFront(FrontContentBase):

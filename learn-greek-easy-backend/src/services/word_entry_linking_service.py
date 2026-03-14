@@ -36,4 +36,5 @@ class WordEntryLinkingService:
         await card_service.generate_plural_form_cards([word_entry], deck_id)
         await card_service.generate_sentence_translation_cards([word_entry], deck_id)
         await card_service.generate_article_cards([word_entry], deck_id)
+        await card_service.generate_declension_cards([word_entry], deck_id)
         await self.db.flush()

@@ -2544,6 +2544,32 @@ def _validate_article_eligibility(word_entry: "WordEntry") -> None:
         )
 
 
+def _validate_declension_eligibility(word_entry: "WordEntry") -> None:
+    if word_entry.part_of_speech != PartOfSpeech.NOUN:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Declension cards are only supported for nouns",
+        )
+    gd = word_entry.grammar_data or {}
+    gender = gd.get("gender")
+    nom_sg = gd.get("nominative_singular")
+    if gender not in ("masculine", "feminine", "neuter") or not nom_sg:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Declension cards require gender and nominative_singular in grammar_data",
+        )
+    has_non_nom = any(
+        gd.get(f"{c}_{num}")
+        for num in ("singular", "plural")
+        for c in ("genitive", "accusative", "vocative")
+    )
+    if not has_non_nom:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Declension cards require at least one non-nominative case form in grammar_data",
+        )
+
+
 def _validate_sentence_translation_eligibility(word_entry: "WordEntry") -> None:
     examples = word_entry.examples or []
     has_valid = any(ex.get("id") and ex.get("greek") and ex.get("english") for ex in examples)
@@ -2565,6 +2591,7 @@ def _validate_card_type_eligibility(word_entry: "WordEntry", card_type: str) -> 
         "plural_form": _validate_plural_form_eligibility,
         "article": _validate_article_eligibility,
         "sentence_translation": _validate_sentence_translation_eligibility,
+        "declension": _validate_declension_eligibility,
     }
     validators[card_type](word_entry)
 
@@ -2602,6 +2629,7 @@ async def generate_word_entry_cards(
         "plural_form": service.generate_plural_form_cards,
         "article": service.generate_article_cards,
         "sentence_translation": service.generate_sentence_translation_cards,
+        "declension": service.generate_declension_cards,
     }
     generate_fn = method_map[request.card_type]
     # Look up deck_id via junction table (WordEntry no longer has deck_id)
@@ -3361,6 +3389,7 @@ async def link_word_entry_to_deck(
     await card_service.generate_plural_form_cards([word_entry], deck_id)
     await card_service.generate_sentence_translation_cards([word_entry], deck_id)
     await card_service.generate_article_cards([word_entry], deck_id)
+    await card_service.generate_declension_cards([word_entry], deck_id)
 
     await db.commit()
     await db.refresh(word_entry)

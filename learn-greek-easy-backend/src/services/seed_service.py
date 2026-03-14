@@ -5424,8 +5424,15 @@ class SeedService:
         nouns_a_created, nouns_a_updated = await card_gen_nouns.generate_article_cards(
             v2_nouns_entries, v2_nouns_deck.id
         )
-        nouns_created = nouns_m_created + nouns_p_created + nouns_s_created + nouns_a_created
-        nouns_updated = nouns_m_updated + nouns_p_updated + nouns_s_updated + nouns_a_updated
+        nouns_d_created, nouns_d_updated = await card_gen_nouns.generate_declension_cards(
+            v2_nouns_entries, v2_nouns_deck.id
+        )
+        nouns_created = (
+            nouns_m_created + nouns_p_created + nouns_s_created + nouns_a_created + nouns_d_created
+        )
+        nouns_updated = (
+            nouns_m_updated + nouns_p_updated + nouns_s_updated + nouns_a_updated + nouns_d_updated
+        )
         # V2 Verbs vocabulary (10 A2 verbs: 6 Group A, 4 Group B)
         v2_verbs_vocabulary: list[dict[str, Any]] = [
             # ---- Group A verbs (6) - regular -ω conjugation ----
@@ -5736,8 +5743,15 @@ class SeedService:
         verbs_a_created, verbs_a_updated = await card_gen_verbs.generate_article_cards(
             v2_verbs_entries, v2_verbs_deck.id
         )
-        verbs_created = verbs_m_created + verbs_p_created + verbs_s_created + verbs_a_created
-        verbs_updated = verbs_m_updated + verbs_p_updated + verbs_s_updated + verbs_a_updated
+        verbs_d_created, verbs_d_updated = await card_gen_verbs.generate_declension_cards(
+            v2_verbs_entries, v2_verbs_deck.id
+        )
+        verbs_created = (
+            verbs_m_created + verbs_p_created + verbs_s_created + verbs_a_created + verbs_d_created
+        )
+        verbs_updated = (
+            verbs_m_updated + verbs_p_updated + verbs_s_updated + verbs_a_updated + verbs_d_updated
+        )
         # V2 Mixed vocabulary (10 A2 items: 4 adjectives, 4 adverbs, 2 phrases)
         v2_mixed_vocabulary: list[dict[str, Any]] = [
             # ---- Adjectives (4) ----
@@ -6087,8 +6101,15 @@ class SeedService:
         mixed_a_created, mixed_a_updated = await card_gen_mixed.generate_article_cards(
             v2_mixed_entries, v2_mixed_deck.id
         )
-        mixed_created = mixed_m_created + mixed_p_created + mixed_s_created + mixed_a_created
-        mixed_updated = mixed_m_updated + mixed_p_updated + mixed_s_updated + mixed_a_updated
+        mixed_d_created, mixed_d_updated = await card_gen_mixed.generate_declension_cards(
+            v2_mixed_entries, v2_mixed_deck.id
+        )
+        mixed_created = (
+            mixed_m_created + mixed_p_created + mixed_s_created + mixed_a_created + mixed_d_created
+        )
+        mixed_updated = (
+            mixed_m_updated + mixed_p_updated + mixed_s_updated + mixed_a_updated + mixed_d_updated
+        )
 
         await self.db.flush()
 
