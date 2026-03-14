@@ -1,6 +1,6 @@
 """add reverse lookup lower index on translations
 
-Revision ID: a1b2c3d4e5f6
+Revision ID: 82897ffb9b43
 Revises: 7e807dbfe015
 Create Date: 2026-03-14 10:00:00.000000
 """
@@ -8,7 +8,7 @@ Create Date: 2026-03-14 10:00:00.000000
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "a1b2c3d4e5f6"
+revision: str = "82897ffb9b43"
 down_revision: str | None = "7e807dbfe015"
 branch_labels: str | tuple[str, ...] | None = None
 depends_on: str | tuple[str, ...] | None = None
