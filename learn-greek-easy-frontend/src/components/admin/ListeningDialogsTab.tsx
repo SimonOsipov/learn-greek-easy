@@ -85,7 +85,7 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
-const ALL_CEFR_LEVELS: DeckLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+const ALL_CEFR_LEVELS: DeckLevel[] = ['A1', 'A2', 'B1', 'B2'];
 
 function getLocalizedScenario(dialog: ListeningDialogListItem, lang: string): string {
   switch (lang) {

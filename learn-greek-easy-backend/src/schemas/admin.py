@@ -9,7 +9,7 @@ This module contains schemas for:
 """
 
 from datetime import datetime
-from typing import Any, List, Literal, Optional
+from typing import Any, ClassVar, List, Literal, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -403,6 +403,21 @@ class ListeningDialogCreateFromJSON(BaseModel):
     cefr_level: DeckLevel
     speakers: list[DialogSpeakerCreate] = Field(min_length=2, max_length=4)
     lines: list[DialogLineCreate] = Field(min_length=1, max_length=50)
+
+    ALLOWED_CEFR_LEVELS: ClassVar[set[DeckLevel]] = {
+        DeckLevel.A1,
+        DeckLevel.A2,
+        DeckLevel.B1,
+        DeckLevel.B2,
+    }
+
+    @model_validator(mode="after")
+    def validate_cefr_level(self) -> "ListeningDialogCreateFromJSON":
+        if self.cefr_level not in self.ALLOWED_CEFR_LEVELS:
+            raise ValueError(
+                f"cefr_level must be one of {sorted(lv.value for lv in self.ALLOWED_CEFR_LEVELS)}, got {self.cefr_level.value}"
+            )
+        return self
 
     @model_validator(mode="after")
     def validate_speaker_indices(self) -> "ListeningDialogCreateFromJSON":
