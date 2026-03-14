@@ -302,7 +302,37 @@ export function DialogDetailModal({ dialogId, open, onOpenChange }: DialogDetail
                         <p className={cn('mb-1 text-xs font-medium', style.name)}>
                           {speaker?.character_name}
                         </p>
-                        <p className="text-sm">{line.text}</p>
+                        {line.word_timestamps &&
+                        line.word_timestamps.length > 0 &&
+                        audioCurrentTimeMs > 0 ? (
+                          <p className="text-sm">
+                            {line.word_timestamps.map((wt, idx) => {
+                              const state =
+                                wt.end_ms <= audioCurrentTimeMs
+                                  ? 'spoken'
+                                  : wt.start_ms <= audioCurrentTimeMs
+                                    ? 'speaking'
+                                    : 'pending';
+                              return (
+                                <span
+                                  key={idx}
+                                  className={cn(
+                                    'transition-all duration-150',
+                                    state === 'spoken' && 'text-foreground',
+                                    state === 'speaking' &&
+                                      'rounded bg-primary/20 px-0.5 font-medium',
+                                    state === 'pending' && 'text-muted-foreground'
+                                  )}
+                                >
+                                  {wt.word}
+                                  {idx < line.word_timestamps!.length - 1 ? ' ' : ''}
+                                </span>
+                              );
+                            })}
+                          </p>
+                        ) : (
+                          <p className="text-sm">{line.text}</p>
+                        )}
                       </div>
                     </div>
                   );

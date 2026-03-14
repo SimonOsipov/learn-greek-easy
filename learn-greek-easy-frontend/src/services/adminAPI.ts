@@ -93,6 +93,7 @@ export interface DialogLineDetail {
   text: string;
   start_time_ms: number | null;
   end_time_ms: number | null;
+  word_timestamps: Array<{ word: string; start_ms: number; end_ms: number }> | null;
 }
 
 export interface ListeningDialogDetail {
