@@ -952,7 +952,11 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                                         {item.gender && (
                                           <Badge
                                             variant="secondary"
-                                            className={`text-xs${item.inferred_gender ? 'opacity-70' : ''}`}
+                                            className={
+                                              item.inferred_gender
+                                                ? 'text-xs opacity-70'
+                                                : 'text-xs'
+                                            }
                                             title={
                                               item.inferred_gender
                                                 ? t('generateNoun.reverseLookup.inferredGender')
