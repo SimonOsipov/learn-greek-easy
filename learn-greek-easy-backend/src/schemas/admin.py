@@ -476,6 +476,7 @@ class ReverseLookupItem(BaseModel):
     article: str | None = None
     translations: list[str]
     actionable: bool
+    match_type: str
 
 
 class ReverseLookupResponse(BaseModel):
