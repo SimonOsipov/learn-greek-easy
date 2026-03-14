@@ -11,7 +11,7 @@ from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.models import GreekLexicon, Translation
-from src.utils.greek_articles import GENDER_MAP, get_nominative_article
+from src.utils.greek_articles import GENDER_MAP, get_nominative_article, infer_gender_from_ending
 
 _SOURCE_PRIORITY = case(
     (Translation.source == "kaikki", 0),
@@ -91,8 +91,13 @@ def _build_result(
     gender_map: dict[str, str],
 ) -> ReverseLookupResult:
     """Build a ReverseLookupResult from grouped data."""
+    inferred = False
     if pos == "NOUN":
         raw_gender = gender_map.get(lemma)
+        if raw_gender is None:
+            raw_gender = infer_gender_from_ending(lemma)
+            if raw_gender is not None:
+                inferred = True
         gender_str = GENDER_MAP.get(raw_gender) if raw_gender else None
         raw_article = get_nominative_article(raw_gender) if raw_gender else None
         article = raw_article.strip() if raw_article else None
@@ -111,7 +116,7 @@ def _build_result(
         actionable=actionable,
         score=score,
         match_type=match_type,
-        inferred_gender=False,
+        inferred_gender=inferred,
     )
 
 

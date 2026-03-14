@@ -118,15 +118,54 @@ class TestReverseLookupServiceSearch:
         assert results[0].article == "η"
 
     @pytest.mark.asyncio
-    async def test_noun_not_in_lexicon_has_none_gender(self) -> None:
+    async def test_noun_not_in_lexicon_uses_ending_fallback(self) -> None:
+        """σπίτι ends in -ι → infer Neut gender when not in lexicon."""
         t = _make_translation("σπίτι", "house", "NOUN")
         rows = [_make_row(t, score=3.0, match_type="full")]
-        db = _make_session(rows, [])  # no lexicon results
+        db = _make_session(rows, [])  # empty lexicon
         service = ReverseLookupService(db)
         results = await service.search("house", "en")
+        assert results[0].gender == "neuter"
+        assert results[0].article == "το"
+        assert results[0].actionable is True
+        assert results[0].inferred_gender is True
+
+    @pytest.mark.asyncio
+    async def test_lexicon_gender_takes_priority_over_ending(self) -> None:
+        """Lexicon gender wins over word-ending fallback."""
+        t = _make_translation("γάτα", "cat", "NOUN")
+        rows = [_make_row(t, score=3.0, match_type="full")]
+        # Lexicon says masculine (unusual but let's test priority)
+        lexicon_row = ("γάτα", "Masc")
+        db = _make_session(rows, [lexicon_row])
+        service = ReverseLookupService(db)
+        results = await service.search("cat", "en")
+        assert results[0].gender == "masculine"
+        assert results[0].inferred_gender is False
+
+    @pytest.mark.asyncio
+    async def test_no_gender_when_unrecognized_ending_and_no_lexicon(self) -> None:
+        """Lemma with unrecognized ending and no lexicon entry → gender=None."""
+        t = _make_translation("τεστ", "test", "NOUN")
+        rows = [_make_row(t, score=3.0, match_type="full")]
+        db = _make_session(rows, [])  # empty lexicon
+        service = ReverseLookupService(db)
+        results = await service.search("test", "en")
         assert results[0].gender is None
         assert results[0].article is None
-        assert results[0].actionable is True  # still actionable
+        assert results[0].inferred_gender is False
+
+    @pytest.mark.asyncio
+    async def test_inferred_gender_for_masculine_ending(self) -> None:
+        """λόγος ends in -ος → infer Masc gender when not in lexicon."""
+        t = _make_translation("λόγος", "word", "NOUN")
+        rows = [_make_row(t, score=3.0, match_type="full")]
+        db = _make_session(rows, [])  # empty lexicon
+        service = ReverseLookupService(db)
+        results = await service.search("word", "en")
+        assert results[0].gender == "masculine"
+        assert results[0].article == "ο"
+        assert results[0].inferred_gender is True
 
     @pytest.mark.asyncio
     async def test_translations_aggregated_and_deduped(self) -> None:
