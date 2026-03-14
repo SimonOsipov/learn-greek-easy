@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-import { BookOpen, MessageSquare } from 'lucide-react';
+import { BookOpen } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { WaveformPlayer } from '@/components/culture/WaveformPlayer';
@@ -33,7 +33,29 @@ import {
 // Constants
 // ============================================================================
 
-const SPEAKER_COLORS = ['text-blue-600', 'text-green-600', 'text-orange-600', 'text-purple-600'];
+const SPEAKER_BUBBLE_STYLES = [
+  {
+    bg: 'bg-blue-50 dark:bg-blue-950/30',
+    name: 'text-blue-600 dark:text-blue-400',
+    border: 'border-blue-200 dark:border-blue-800',
+  },
+  {
+    bg: 'bg-green-50 dark:bg-green-950/30',
+    name: 'text-green-600 dark:text-green-400',
+    border: 'border-green-200 dark:border-green-800',
+  },
+  {
+    bg: 'bg-orange-50 dark:bg-orange-950/30',
+    name: 'text-orange-600 dark:text-orange-400',
+    border: 'border-orange-200 dark:border-orange-800',
+  },
+  {
+    bg: 'bg-purple-50 dark:bg-purple-950/30',
+    name: 'text-purple-600 dark:text-purple-400',
+    border: 'border-purple-200 dark:border-purple-800',
+  },
+];
+const DEFAULT_BUBBLE_STYLE = SPEAKER_BUBBLE_STYLES[0];
 
 // ============================================================================
 // Helpers
@@ -251,31 +273,35 @@ export function DialogDetailModal({ dialogId, open, onOpenChange }: DialogDetail
                 </div>
               )}
 
-              {/* Transcript SECOND */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 font-semibold">
-                  <MessageSquare className="h-4 w-4" />
-                  {t('listeningDialogs.detail.transcript')}
-                </div>
+              {/* Transcript */}
+              <div className="space-y-3">
                 {selectedDialog.lines.map((line) => {
                   const speaker = speakerMap.get(line.speaker_id);
                   const speakerIdx = speaker?.speaker_index ?? 0;
-                  const color =
-                    SPEAKER_COLORS[speakerIdx % SPEAKER_COLORS.length] ?? 'text-gray-600';
+                  const style =
+                    SPEAKER_BUBBLE_STYLES[speakerIdx % SPEAKER_BUBBLE_STYLES.length] ??
+                    DEFAULT_BUBBLE_STYLE;
                   const isActive = activeLine?.id === line.id;
+                  const isRight = speakerIdx % 2 === 1;
                   return (
                     <div
                       key={line.id}
                       data-testid={`dialog-line-${line.line_index}`}
-                      className={cn(
-                        'rounded p-2 text-sm transition-colors',
-                        isActive && 'border-l-2 border-primary bg-primary/10'
-                      )}
+                      className={cn('flex', isRight && 'justify-end')}
                     >
-                      <span className={cn('mr-2 text-xs font-medium', color)}>
-                        {speaker?.character_name}
-                      </span>
-                      {line.text}
+                      <div
+                        className={cn(
+                          'max-w-[70%] rounded-lg border p-3 transition-shadow duration-200',
+                          style.bg,
+                          style.border,
+                          isActive && 'shadow-md'
+                        )}
+                      >
+                        <p className={cn('mb-1 text-xs font-medium', style.name)}>
+                          {speaker?.character_name}
+                        </p>
+                        <p className="text-sm">{line.text}</p>
+                      </div>
                     </div>
                   );
                 })}
