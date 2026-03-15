@@ -23,15 +23,15 @@ import type { ListeningDialogDetail } from '@/services/adminAPI';
 // ============================================
 // NOTE on the Radix Dialog + useEffect + Portal pattern
 // ============================================
-// DialogDetailModal's Effect 3 (timeupdate listener) depends on [selectedDialog].
+// DialogDetailModal's Effect 3 (rAF loop) depends on [selectedDialog].
 // When selectedDialog starts as null, the effect returns early.
 // When selectedDialog becomes non-null, the effect re-runs. By that time the
 // Radix Dialog portal IS mounted and containerRef.current is populated.
 //
 // In tests, we must replicate this lifecycle:
 //   1. Start with selectedDialog: null → render (portal mounts, ref attaches)
-//   2. Update mockStoreState.selectedDialog → rerender → Effect 3 re-runs → listener attaches
-//   3. Dispatch timeupdate → state updates → karaoke renders
+//   2. Update mockStoreState.selectedDialog → rerender → Effect 3 re-runs → loop registered
+//   3. Dispatch 'play' event → rAF loop starts → tick() sets audioCurrentTimeMs → karaoke renders
 
 // ============================================
 // Mocks
@@ -151,9 +151,17 @@ const renderModal = (props?: { dialogId?: string | null; open?: boolean }) => {
 // ============================================
 
 describe('DialogDetailModal - Karaoke Word Rendering', () => {
+  let rafCallback: FrameRequestCallback | null = null;
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockStoreState = baseStoreState();
+    rafCallback = null;
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
+      rafCallback = cb;
+      return 1;
+    });
+    vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => {});
   });
 
   it('renders plain text when word_timestamps is null', () => {
@@ -214,11 +222,16 @@ describe('DialogDetailModal - Karaoke Word Rendering', () => {
       rerender(<DialogDetailModal dialogId="dlg-1" open={true} onOpenChange={vi.fn()} />);
     });
 
-    // Phase 3: dispatch timeupdate to trigger karaoke state
+    // Phase 3: dispatch 'play' event to start the rAF loop, then tick at 750ms
     const audioEl = screen.getByTestId('waveform-audio-element') as HTMLAudioElement;
     await act(async () => {
       Object.defineProperty(audioEl, 'currentTime', { value: 0.75, configurable: true });
-      audioEl.dispatchEvent(new Event('timeupdate'));
+      audioEl.dispatchEvent(new Event('play'));
+    });
+
+    // Simulate a rAF tick — tick() reads audio.currentTime (0.75s = 750ms)
+    await act(async () => {
+      rafCallback?.(performance.now());
     });
 
     // The Radix Dialog renders via a portal to document.body.
@@ -252,17 +265,21 @@ describe('DialogDetailModal - Karaoke Word Rendering', () => {
     mockStoreState = baseStoreState();
     const { rerender } = renderModal();
 
-    // Phase 2: update selectedDialog → Effect 3 re-runs, attaches timeupdate listener
+    // Phase 2: update selectedDialog → Effect 3 re-runs, registers rAF loop on play
     await act(async () => {
       mockStoreState = { ...baseStoreState(), selectedDialog: mockDialog };
       rerender(<DialogDetailModal dialogId="dlg-1" open={true} onOpenChange={vi.fn()} />);
     });
 
-    // Phase 3: dispatch timeupdate
+    // Phase 3: dispatch 'play' to start loop, then simulate a rAF tick at 750ms
     const audioEl = screen.getByTestId('waveform-audio-element') as HTMLAudioElement;
     await act(async () => {
       Object.defineProperty(audioEl, 'currentTime', { value: 0.75, configurable: true });
-      audioEl.dispatchEvent(new Event('timeupdate'));
+      audioEl.dispatchEvent(new Event('play'));
+    });
+
+    await act(async () => {
+      rafCallback?.(performance.now());
     });
 
     // Find the karaoke <p>

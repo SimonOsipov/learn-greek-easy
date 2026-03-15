@@ -135,7 +135,7 @@ export function DialogDetailModal({ dialogId, open, onOpenChange }: DialogDetail
     }
   }, [open, clearSelectedDialog]);
 
-  // Effect 3: Attach timeupdate listener to audio element
+  // Effect 3 — sync audioCurrentTimeMs via requestAnimationFrame
   useEffect(() => {
     if (
       !selectedDialog ||
@@ -152,13 +152,44 @@ export function DialogDetailModal({ dialogId, open, onOpenChange }: DialogDetail
     );
     if (!audio) return;
 
-    const handleTimeUpdate = () => {
-      setAudioCurrentTimeMs(audio.currentTime * 1000);
+    let rafId: number | null = null;
+    let lastUpdateMs = 0;
+
+    const tick = () => {
+      const nowMs = audio.currentTime * 1000;
+      if (Math.abs(nowMs - lastUpdateMs) > 10) {
+        setAudioCurrentTimeMs(nowMs);
+        lastUpdateMs = nowMs;
+      }
+      rafId = requestAnimationFrame(tick);
     };
 
-    audio.addEventListener('timeupdate', handleTimeUpdate);
+    const startLoop = () => {
+      if (rafId === null) {
+        rafId = requestAnimationFrame(tick);
+      }
+    };
+
+    const stopLoop = () => {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+    };
+
+    audio.addEventListener('play', startLoop);
+    audio.addEventListener('pause', stopLoop);
+    audio.addEventListener('ended', stopLoop);
+
+    if (!audio.paused) {
+      startLoop();
+    }
+
     return () => {
-      audio.removeEventListener('timeupdate', handleTimeUpdate);
+      stopLoop();
+      audio.removeEventListener('play', startLoop);
+      audio.removeEventListener('pause', stopLoop);
+      audio.removeEventListener('ended', stopLoop);
     };
   }, [selectedDialog]);
 
@@ -326,7 +357,7 @@ export function DialogDetailModal({ dialogId, open, onOpenChange }: DialogDetail
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="dialog">
+            <TabsContent value="dialog" className="space-y-4">
               {/* Audio Player FIRST (moved above transcript) */}
               {(selectedDialog.status === 'audio_ready' ||
                 selectedDialog.status === 'exercises_ready') && (
