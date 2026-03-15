@@ -1,8 +1,8 @@
 // src/components/admin/DialogDetailModal.tsx
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { BookOpen } from 'lucide-react';
+import { BookOpen, Loader2, Wand2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { WaveformPlayer } from '@/components/culture/WaveformPlayer';
@@ -19,8 +19,11 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useLanguage } from '@/hooks/useLanguage';
+import { useSSE } from '@/hooks/useSSE';
 import { cn } from '@/lib/utils';
+import { getDialogAudioStreamUrl } from '@/services/adminAPI';
 import { useAdminDialogStore } from '@/stores/adminDialogStore';
+import type { SSEEvent } from '@/types/sse';
 
 import {
   CEFR_BADGE_CLASSES,
@@ -107,6 +110,9 @@ export function DialogDetailModal({ dialogId, open, onOpenChange }: DialogDetail
 
   // Local state
   const [audioCurrentTimeMs, setAudioCurrentTimeMs] = useState(0);
+  const [sseEnabled, setSseEnabled] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState<string | null>(null);
+  const [generationError, setGenerationError] = useState<string | null>(null);
 
   // Ref for finding the audio element inside WaveformPlayer's container
   const containerRef = useRef<HTMLDivElement>(null);
@@ -123,6 +129,9 @@ export function DialogDetailModal({ dialogId, open, onOpenChange }: DialogDetail
     if (!open) {
       clearSelectedDialog();
       setAudioCurrentTimeMs(0);
+      setSseEnabled(false);
+      setGenerationProgress(null);
+      setGenerationError(null);
     }
   }, [open, clearSelectedDialog]);
 
@@ -152,6 +161,70 @@ export function DialogDetailModal({ dialogId, open, onOpenChange }: DialogDetail
       audio.removeEventListener('timeupdate', handleTimeUpdate);
     };
   }, [selectedDialog]);
+
+  const handleSSEEvent = useCallback(
+    (event: SSEEvent<unknown>) => {
+      switch (event.type) {
+        case 'dialog_audio:start':
+          setGenerationProgress(t('listeningDialogs.detail.generateAudio.progress.starting'));
+          break;
+        case 'dialog_audio:elevenlabs':
+          setGenerationProgress(
+            t('listeningDialogs.detail.generateAudio.progress.callingElevenLabs')
+          );
+          break;
+        case 'dialog_audio:timing':
+          setGenerationProgress(
+            t('listeningDialogs.detail.generateAudio.progress.settingTimestamps')
+          );
+          break;
+        case 'dialog_audio:upload':
+          setGenerationProgress(t('listeningDialogs.detail.generateAudio.progress.uploading'));
+          break;
+        case 'dialog_audio:complete':
+          setSseEnabled(false);
+          setGenerationProgress(null);
+          if (dialogId) {
+            void fetchDialogDetail(dialogId);
+          }
+          break;
+        case 'dialog_audio:error': {
+          const errData = event.data as Record<string, unknown>;
+          const errMsg = (errData?.error ?? errData?.message ?? '') as string;
+          setSseEnabled(false);
+          setGenerationProgress(null);
+          setGenerationError(
+            t('listeningDialogs.detail.generateAudio.error', {
+              message: errMsg || t('listeningDialogs.detail.errors.loadFailed'),
+            })
+          );
+          break;
+        }
+      }
+    },
+    [t, dialogId, fetchDialogDetail]
+  );
+
+  const handleSSEError = useCallback(() => {
+    setSseEnabled(false);
+    setGenerationProgress(null);
+    setGenerationError(
+      t('listeningDialogs.detail.generateAudio.error', {
+        message: t('listeningDialogs.detail.errors.loadFailed'),
+      })
+    );
+  }, [t]);
+
+  const sseUrl = dialogId ? getDialogAudioStreamUrl(dialogId) : '';
+  useSSE(sseUrl, {
+    method: 'POST',
+    body: {},
+    enabled: sseEnabled && !!dialogId,
+    maxRetries: 0,
+    reconnect: false,
+    onEvent: handleSSEEvent,
+    onError: handleSSEError,
+  });
 
   // Build speaker map for color lookup
   const speakerMap = new Map((selectedDialog?.speakers ?? []).map((s) => [s.id, s]));
@@ -338,6 +411,50 @@ export function DialogDetailModal({ dialogId, open, onOpenChange }: DialogDetail
                   );
                 })}
               </div>
+
+              {/* Generate Audio (draft only) */}
+              {selectedDialog.status === 'draft' && (
+                <div className="space-y-2 pt-2">
+                  {!sseEnabled && !generationProgress && !generationError && (
+                    <Button
+                      data-testid="dialog-generate-audio-btn"
+                      onClick={() => {
+                        setGenerationError(null);
+                        setSseEnabled(true);
+                      }}
+                    >
+                      <Wand2 className="mr-2 h-4 w-4" />
+                      {t('listeningDialogs.detail.generateAudio.button')}
+                    </Button>
+                  )}
+                  {generationProgress && (
+                    <div
+                      data-testid="dialog-generation-progress"
+                      className="flex items-center gap-2 text-sm text-muted-foreground"
+                    >
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      {generationProgress}
+                    </div>
+                  )}
+                  {generationError && (
+                    <div data-testid="dialog-generation-error">
+                      <Alert variant="destructive">
+                        <AlertDescription>{generationError}</AlertDescription>
+                      </Alert>
+                      <Button
+                        variant="outline"
+                        className="mt-2"
+                        onClick={() => {
+                          setGenerationError(null);
+                          setSseEnabled(true);
+                        }}
+                      >
+                        {t('listeningDialogs.detail.generateAudio.tryAgain')}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="exercises">

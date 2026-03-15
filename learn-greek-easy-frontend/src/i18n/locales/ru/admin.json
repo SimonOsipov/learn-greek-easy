@@ -1171,6 +1171,17 @@
       },
       "exercises": {
         "empty": "Упражнения ещё не сгенерированы"
+      },
+      "generateAudio": {
+        "button": "Сгенерировать аудио",
+        "progress": {
+          "starting": "Начинаем генерацию аудио...",
+          "callingElevenLabs": "Вызов ElevenLabs...",
+          "settingTimestamps": "Проверка временных меток...",
+          "uploading": "Загрузка аудио..."
+        },
+        "error": "Ошибка генерации аудио: {{message}}",
+        "tryAgain": "Попробовать снова"
       }
     },
     "search": {

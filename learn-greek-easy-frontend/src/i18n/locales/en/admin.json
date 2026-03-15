@@ -1159,6 +1159,17 @@
       },
       "exercises": {
         "empty": "No exercises generated yet"
+      },
+      "generateAudio": {
+        "button": "Generate Audio",
+        "progress": {
+          "starting": "Starting audio generation...",
+          "callingElevenLabs": "Calling ElevenLabs...",
+          "settingTimestamps": "Validating line timestamps...",
+          "uploading": "Uploading audio..."
+        },
+        "error": "Audio generation failed: {{message}}",
+        "tryAgain": "Try Again"
       }
     },
     "search": {
