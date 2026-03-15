@@ -10,13 +10,14 @@ All endpoints require superuser authentication.
 
 import asyncio
 import base64
+import json
 from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
 from typing import Any, Literal, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
-from sqlalchemy import case, delete, func, or_, select, update
+from sqlalchemy import case, delete, func, or_, select, text, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -169,6 +170,9 @@ router = APIRouter(
         422: {"description": "Validation error"},
     },
 )
+
+WORD_AUDIO_S3_PREFIX = "word-audio"
+WORD_AUDIO_VOICE_ID = "n0vzWypeCK1NlWPVwhOc"
 
 
 @router.get(
@@ -2485,6 +2489,324 @@ async def _audio_queue_generator(
             terminal_parts.add(pk)
         if terminal_parts >= all_part_keys:
             break
+
+
+async def _word_audio_set_examples_generating(
+    session: Any,
+    word_entry_id: UUID,
+    examples_data: list[dict],
+) -> None:
+    """Set generating status on all examples in the JSONB array."""
+    gen_since = datetime.now(timezone.utc).isoformat()
+    for example in examples_data:
+        ex_patch = json.dumps({"audio_status": "generating", "audio_generating_since": gen_since})
+        await session.execute(
+            text(
+                """
+                UPDATE word_entries
+                SET examples = (
+                    SELECT coalesce(json_agg(
+                        CASE
+                            WHEN elem->>'id' = :example_id
+                            THEN (elem || CAST(:patch AS jsonb))
+                            ELSE elem
+                        END
+                        ORDER BY ordinality
+                    ), '[]'::json)
+                    FROM jsonb_array_elements(examples::jsonb)
+                        WITH ORDINALITY AS arr(elem, ordinality)
+                ), updated_at = NOW()
+                WHERE id = :word_entry_id AND examples IS NOT NULL
+            """
+            ),
+            {
+                "example_id": example["id"],
+                "patch": ex_patch,
+                "word_entry_id": str(word_entry_id),
+            },
+        )
+
+
+async def _word_audio_persist_ready(
+    factory: Any,
+    word_entry_id: UUID,
+    part_name: str,
+    example_id: str | None,
+    s3_key: str,
+) -> None:
+    """Persist a successfully processed audio part to the database."""
+    async with factory.begin() as session:
+        if part_name == "lemma":
+            await session.execute(
+                text(
+                    """
+                    UPDATE word_entries
+                    SET audio_key = :s3_key,
+                        audio_status = 'READY'::audiostatus,
+                        audio_generating_since = NULL,
+                        updated_at = NOW()
+                    WHERE id = :word_entry_id
+                """
+                ),
+                {"s3_key": s3_key, "word_entry_id": str(word_entry_id)},
+            )
+        else:
+            ex_patch = json.dumps({"audio_key": s3_key, "audio_status": "ready"})
+            await session.execute(
+                text(
+                    """
+                    UPDATE word_entries
+                    SET examples = (
+                        SELECT coalesce(json_agg(
+                            CASE
+                                WHEN elem->>'id' = :example_id
+                                THEN (elem - 'audio_generating_since') || CAST(:patch AS jsonb)
+                                ELSE elem
+                            END
+                            ORDER BY ordinality
+                        ), '[]'::json)
+                        FROM jsonb_array_elements(examples::jsonb)
+                            WITH ORDINALITY AS arr(elem, ordinality)
+                    ), updated_at = NOW()
+                    WHERE id = :word_entry_id AND examples IS NOT NULL
+                """
+                ),
+                {
+                    "example_id": example_id,
+                    "patch": ex_patch,
+                    "word_entry_id": str(word_entry_id),
+                },
+            )
+
+
+async def _word_audio_persist_failed(
+    factory: Any,
+    word_entry_id: UUID,
+    part_name: str,
+    example_id: str | None,
+) -> None:
+    """Persist a failed audio part status to the database (best-effort)."""
+    async with factory.begin() as session:
+        if part_name == "lemma":
+            await session.execute(
+                text(
+                    """
+                    UPDATE word_entries
+                    SET audio_status = 'FAILED'::audiostatus,
+                        audio_generating_since = NULL,
+                        updated_at = NOW()
+                    WHERE id = :word_entry_id
+                """
+                ),
+                {"word_entry_id": str(word_entry_id)},
+            )
+        else:
+            ex_patch = json.dumps({"audio_status": "failed"})
+            await session.execute(
+                text(
+                    """
+                    UPDATE word_entries
+                    SET examples = (
+                        SELECT coalesce(json_agg(
+                            CASE
+                                WHEN elem->>'id' = :example_id
+                                THEN (elem - 'audio_generating_since') || CAST(:patch AS jsonb)
+                                ELSE elem
+                            END
+                            ORDER BY ordinality
+                        ), '[]'::json)
+                        FROM jsonb_array_elements(examples::jsonb)
+                            WITH ORDINALITY AS arr(elem, ordinality)
+                    ), updated_at = NOW()
+                    WHERE id = :word_entry_id AND examples IS NOT NULL
+                """
+                ),
+                {
+                    "example_id": example_id,
+                    "patch": ex_patch,
+                    "word_entry_id": str(word_entry_id),
+                },
+            )
+
+
+async def _word_audio_sse_pipeline(
+    word_entry_id: UUID,
+) -> AsyncGenerator[str, None]:
+    """SSE pipeline for word entry audio generation.
+
+    Generates TTS audio for the word entry lemma and all examples,
+    uploading each to S3 and persisting the audio key to the database.
+    Emits SSE events for each stage of the pipeline per part.
+    """
+    from src.services.elevenlabs_service import get_elevenlabs_service
+
+    yield format_sse_event("", event="connected")
+
+    factory = get_session_factory()
+
+    # Stage 1: Load word entry and set GENERATING status (single session)
+    async with factory.begin() as session:
+        result = await session.execute(select(WordEntry).where(WordEntry.id == word_entry_id))
+        word_entry = result.scalar_one_or_none()
+        if word_entry is None:
+            yield format_sse_event(
+                {
+                    "stage": "load",
+                    "error": "Word entry not found",
+                    "word_entry_id": str(word_entry_id),
+                },
+                event="word_audio:error",
+            )
+            return
+
+        # Extract plain Python values before session closes
+        lemma = word_entry.lemma
+        part_of_speech_value = word_entry.part_of_speech.value if word_entry.part_of_speech else ""
+        grammar_data = word_entry.grammar_data
+        examples_data = [
+            {"id": ex["id"], "greek": ex["greek"]}
+            for ex in (word_entry.examples or [])
+            if ex.get("id") and ex.get("greek")
+        ]
+
+        # Build parts list: lemma first, then examples
+        parts = [{"part": "lemma", "example_id": None}] + [
+            {"part": "example", "example_id": ex["id"]} for ex in examples_data
+        ]
+
+        # Set GENERATING status on word entry
+        await session.execute(
+            update(WordEntry)
+            .where(WordEntry.id == word_entry_id)
+            .values(
+                audio_status=AudioStatus.GENERATING,
+                audio_generating_since=datetime.now(timezone.utc),
+            )
+        )
+
+        # Set generating status on examples in JSONB array
+        if examples_data:
+            await _word_audio_set_examples_generating(session, word_entry_id, examples_data)
+
+    yield format_sse_event(
+        {"word_entry_id": str(word_entry_id), "part_count": len(parts)},
+        event="word_audio:start",
+    )
+
+    # Stage 2: Per-part TTS + S3 upload + DB persist loop
+    elevenlabs = get_elevenlabs_service()
+    s3 = get_s3_service()
+    parts_completed = 0
+
+    for part_index, part_info in enumerate(parts):
+        part_name = part_info["part"]  # "lemma" or "example"
+        example_id = part_info["example_id"]  # None for lemma
+        current_stage = "tts"
+
+        try:
+            yield format_sse_event(
+                {
+                    "part": part_name,
+                    "example_id": example_id,
+                    "part_index": part_index,
+                    "total_parts": len(parts),
+                },
+                event="word_audio:tts",
+            )
+
+            # Resolve TTS text
+            if part_name == "lemma":
+                tts_text = resolve_tts_text(lemma, part_of_speech_value, grammar_data)
+            else:
+                tts_text = next(ex["greek"] for ex in examples_data if ex["id"] == example_id)
+
+            # Generate speech
+            audio_bytes = await elevenlabs.generate_speech(tts_text, voice_id=WORD_AUDIO_VOICE_ID)
+
+            # Compute S3 key
+            s3_key = (
+                f"{WORD_AUDIO_S3_PREFIX}/{word_entry_id}.mp3"
+                if part_name == "lemma"
+                else f"{WORD_AUDIO_S3_PREFIX}/{word_entry_id}/{example_id}.mp3"
+            )
+
+            current_stage = "upload"
+            yield format_sse_event(
+                {"part": part_name, "example_id": example_id, "s3_key": s3_key},
+                event="word_audio:upload",
+            )
+
+            upload_ok = s3.upload_object(s3_key, audio_bytes, "audio/mpeg")
+            if not upload_ok:
+                raise RuntimeError(f"S3 upload failed for {s3_key}")
+
+            current_stage = "persist"
+            yield format_sse_event(
+                {"part": part_name, "example_id": example_id},
+                event="word_audio:persist",
+            )
+
+            await _word_audio_persist_ready(factory, word_entry_id, part_name, example_id, s3_key)
+
+            parts_completed += 1
+            yield format_sse_event(
+                {
+                    "part": part_name,
+                    "example_id": example_id,
+                    "part_index": part_index,
+                    "total_parts": len(parts),
+                },
+                event="word_audio:part_complete",
+            )
+
+        except Exception as exc:
+            # Per-part error: set FAILED in DB, emit error event, continue to next part
+            try:
+                await _word_audio_persist_failed(factory, word_entry_id, part_name, example_id)
+            except Exception:
+                pass  # Best-effort DB update on error path
+
+            yield format_sse_event(
+                {
+                    "part": part_name,
+                    "example_id": example_id,
+                    "stage": current_stage,
+                    "error": str(exc),
+                    "word_entry_id": str(word_entry_id),
+                },
+                event="word_audio:error",
+            )
+            continue  # CRITICAL: continue to next part
+
+    yield format_sse_event(
+        {"word_entry_id": str(word_entry_id), "parts_completed": parts_completed},
+        event="word_audio:complete",
+    )
+
+
+@router.post(
+    "/word-entries/{word_entry_id}/generate-audio/stream",
+    summary="Generate word entry audio via ElevenLabs TTS as SSE stream",
+    response_class=StreamingResponse,
+)
+async def generate_word_entry_audio_stream(
+    word_entry_id: UUID,
+    sse_auth: SSEAuthResult = Depends(get_sse_auth),
+) -> StreamingResponse:
+    """Stream word entry audio generation pipeline stages as SSE events."""
+    if not sse_auth.is_authenticated:
+        return _sse_single_error(
+            sse_auth.error_code or "auth_required",
+            sse_auth.error_message or "Authentication required",
+        )
+    assert sse_auth.user is not None
+    if not sse_auth.user.is_superuser:
+        return _sse_single_error("forbidden", "Admin access required")
+    if not settings.elevenlabs_configured:
+        return _sse_single_error("service_unavailable", "ElevenLabs is not configured")
+    return create_sse_response(
+        sse_stream(_word_audio_sse_pipeline(word_entry_id), heartbeat_interval=15)
+    )
 
 
 def _validate_meaning_eligibility(word_entry: "WordEntry") -> None:
