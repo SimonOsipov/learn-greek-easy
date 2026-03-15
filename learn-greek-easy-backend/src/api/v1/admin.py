@@ -52,9 +52,13 @@ from src.db.models import (
     Deck,
     DeckLevel,
     DeckWordEntry,
+    DialogExercise,
     DialogLine,
     DialogSpeaker,
     DialogStatus,
+    ExerciseItem,
+    ExerciseStatus,
+    ExerciseType,
     FeedbackCategory,
     FeedbackStatus,
     ListeningDialog,
@@ -3849,7 +3853,7 @@ async def delete_listening_dialog(
 
 
 @router.post("/listening-dialogs", response_model=ListeningDialogListItem, status_code=201)
-async def create_listening_dialog(
+async def create_listening_dialog(  # noqa: C901
     data: ListeningDialogCreateFromJSON,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_superuser),
@@ -3912,6 +3916,29 @@ async def create_listening_dialog(
                     text=line.text,
                 )
             )
+
+        if data.exercises is not None:
+            type_map: list[tuple[ExerciseType, list[Any]]] = [
+                (ExerciseType.FILL_GAPS, data.exercises.fill_gaps),
+                (ExerciseType.SELECT_HEARD, data.exercises.select_heard),
+                (ExerciseType.TRUE_FALSE, data.exercises.true_false),
+            ]
+            for ex_type, items in type_map:
+                exercise = DialogExercise(
+                    dialog_id=dialog.id,
+                    exercise_type=ex_type,
+                    status=ExerciseStatus.DRAFT,
+                )
+                db.add(exercise)
+                await db.flush()
+                for idx, item in enumerate(items):
+                    db.add(
+                        ExerciseItem(
+                            exercise_id=exercise.id,
+                            item_index=idx,
+                            payload=item.model_dump(),
+                        )
+                    )
 
         await db.commit()
         await db.refresh(dialog)
@@ -4186,6 +4213,16 @@ async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, Non
 
         # Stage 6 — Persist
         async with factory.begin() as session:
+            exercise_item_count = await session.scalar(
+                select(func.count())
+                .select_from(ExerciseItem)
+                .join(DialogExercise, ExerciseItem.exercise_id == DialogExercise.id)
+                .where(DialogExercise.dialog_id == dialog_id)
+            )
+            has_exercises = bool(exercise_item_count)
+            target_status = (
+                DialogStatus.EXERCISES_READY if has_exercises else DialogStatus.AUDIO_READY
+            )
             await session.execute(
                 update(ListeningDialog)
                 .where(ListeningDialog.id == dialog_id)
@@ -4194,7 +4231,7 @@ async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, Non
                     audio_generated_at=datetime.now(timezone.utc),
                     audio_file_size_bytes=len(audio_bytes),
                     audio_duration_seconds=duration_seconds,
-                    status=DialogStatus.AUDIO_READY,
+                    status=target_status,
                 )
             )
             for i, line in enumerate(sorted_lines):
@@ -4215,6 +4252,7 @@ async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, Non
                 "s3_key": s3_key,
                 "duration_seconds": duration_seconds,
                 "audio_size_bytes": len(audio_bytes),
+                "has_exercises": has_exercises,
             },
             event="dialog_audio:complete",
         )

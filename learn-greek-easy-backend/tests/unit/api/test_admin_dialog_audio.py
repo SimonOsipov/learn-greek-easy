@@ -12,7 +12,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.dependencies import SSEAuthResult
 from src.core.exceptions import ElevenLabsAPIError
-from src.db.models import DeckLevel, DialogLine, DialogSpeaker, DialogStatus, ListeningDialog
+from src.db.models import (
+    DeckLevel,
+    DialogExercise,
+    DialogLine,
+    DialogSpeaker,
+    DialogStatus,
+    ExerciseItem,
+    ExerciseStatus,
+    ExerciseType,
+    ListeningDialog,
+)
 
 
 def _parse_sse_text(text: str) -> list[dict]:
@@ -256,6 +266,115 @@ class TestDialogAudioStreamPipeline:
             assert line.word_timestamps is not None
             assert isinstance(line.word_timestamps, list)
             assert len(line.word_timestamps) > 0
+
+        complete_event = next(e for e in events if e["event"] == "dialog_audio:complete")
+        assert complete_event["data"]["has_exercises"] is False
+
+    @pytest.mark.asyncio
+    async def test_generate_dialog_audio_with_exercises(self, db_session: AsyncSession) -> None:
+        """Pipeline sets exercises_ready status and has_exercises=True when exercises exist."""
+        from src.api.v1.admin import generate_dialog_audio_stream
+
+        # Create dialog
+        dialog = ListeningDialog(
+            scenario_el="Μια συνομιλία",
+            scenario_en="A conversation",
+            scenario_ru="Разговор",
+            cefr_level=DeckLevel.B1,
+            status=DialogStatus.DRAFT,
+            num_speakers=2,
+        )
+        db_session.add(dialog)
+        await db_session.flush()
+
+        # Create 2 speakers
+        speaker_a = DialogSpeaker(
+            dialog_id=dialog.id,
+            speaker_index=0,
+            character_name="Άρης",
+            voice_id="voice-abc",
+        )
+        speaker_b = DialogSpeaker(
+            dialog_id=dialog.id,
+            speaker_index=1,
+            character_name="Μαρία",
+            voice_id="voice-xyz",
+        )
+        db_session.add_all([speaker_a, speaker_b])
+        await db_session.flush()
+
+        # Create 3 lines alternating speakers
+        lines = [
+            DialogLine(
+                dialog_id=dialog.id, speaker_id=speaker_a.id, line_index=0, text="Γεια σας!"
+            ),
+            DialogLine(
+                dialog_id=dialog.id, speaker_id=speaker_b.id, line_index=1, text="Γεια σου!"
+            ),
+            DialogLine(
+                dialog_id=dialog.id, speaker_id=speaker_a.id, line_index=2, text="Πώς είστε;"
+            ),
+        ]
+        db_session.add_all(lines)
+        await db_session.flush()
+
+        # Create an exercise with at least one item for the dialog
+        exercise = DialogExercise(
+            dialog_id=dialog.id,
+            exercise_type=ExerciseType.FILL_GAPS,
+            status=ExerciseStatus.DRAFT,
+        )
+        db_session.add(exercise)
+        await db_session.flush()
+        db_session.add(
+            ExerciseItem(
+                exercise_id=exercise.id,
+                item_index=0,
+                payload={
+                    "line_index": 0,
+                    "correct_answer": "Γεια",
+                    "options": ["Γεια", "Αντίο"],
+                    "context_before": "",
+                    "context_after": "σας!",
+                },
+            )
+        )
+        await db_session.flush()
+
+        elevenlabs_response = _make_elevenlabs_response(num_lines=3)
+        mock_factory = _make_session_factory_mock(db_session)
+
+        mock_elevenlabs = MagicMock()
+        mock_elevenlabs.generate_dialog_audio = AsyncMock(return_value=elevenlabs_response)
+
+        mock_s3 = MagicMock()
+        mock_s3.upload_object = MagicMock(return_value=True)
+
+        sse_auth = _make_superuser_auth()
+
+        with (
+            patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
+            patch(
+                "src.services.elevenlabs_service.get_elevenlabs_service",
+                return_value=mock_elevenlabs,
+            ),
+            patch("src.api.v1.admin.get_s3_service", return_value=mock_s3),
+            patch("src.api.v1.admin.settings") as mock_settings,
+        ):
+            mock_settings.elevenlabs_configured = True
+            response = await generate_dialog_audio_stream(
+                dialog_id=dialog.id,
+                sse_auth=sse_auth,
+            )
+            events = await _collect_stream(response)
+
+        # Verify DB status is exercises_ready
+        await db_session.refresh(dialog)
+        assert dialog.status == DialogStatus.EXERCISES_READY
+
+        # Verify SSE complete event has has_exercises=True
+        complete_event = next(e for e in events if e["event"] == "dialog_audio:complete")
+        assert complete_event["data"]["has_exercises"] is True
 
     @pytest.mark.asyncio
     async def test_generate_dialog_audio_missing_alignment(
