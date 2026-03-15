@@ -231,6 +231,9 @@ class VerificationSummary(BaseModel):
     local: LocalVerificationResult | None = Field(
         None, description="Local verification pipeline result (spellcheck + morphology + schema)"
     )
+    wiktionary_local: LocalVerificationResult | None = Field(
+        None, description="Wiktionary-based local verification result (L2)"
+    )
     cross_ai: CrossAIVerificationResult | None = Field(
         None, description="Cross-AI verification result (secondary LLM comparison)"
     )

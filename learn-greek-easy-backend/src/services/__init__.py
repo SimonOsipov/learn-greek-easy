@@ -51,6 +51,8 @@ from src.services.translation_service import (
 from src.services.user_deletion_service import DeletionResult, UserDeletionService
 from src.services.user_progress_reset_service import UserProgressResetService
 from src.services.webhook_service import WebhookService
+from src.services.wiktionary_morphology_service import WiktionaryMorphologyService
+from src.services.wiktionary_verification_service import WiktionaryVerificationService
 from src.services.xp_service import XPService
 
 __all__ = [
@@ -88,6 +90,8 @@ __all__ = [
     "UserDeletionService",
     "UserProgressResetService",
     "WebhookService",
+    "WiktionaryMorphologyService",
+    "WiktionaryVerificationService",
     "XPService",
     "get_cross_ai_verification_service",
     "get_lemma_normalization_service",
