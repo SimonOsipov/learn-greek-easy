@@ -1052,11 +1052,20 @@
       },
       "headers": {
         "local": "Локальная",
+        "wiktionary": "Викисловарь",
         "crossAi": "Кросс-AI"
+      },
+      "wiktionary": {
+        "noData": "Нет данных Викисловаря"
+      },
+      "morphologySource": {
+        "wiktionary": "Викисловарь",
+        "both": "Лексикон + Викисловарь"
       },
       "resolvedTooltip": "Решено администратором — используется значение {{source}}",
       "sourceLabels": {
         "local": "Локальный",
+        "wiktionary": "Викисловарь",
         "primary": "Основной",
         "secondary": "Вторичный"
       }

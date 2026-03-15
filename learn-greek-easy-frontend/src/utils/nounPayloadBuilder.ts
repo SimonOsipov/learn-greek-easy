@@ -170,6 +170,20 @@ export function initializeResolvedValues(
     }
   }
 
+  // Build L1 reference value map
+  const l1RefMap = new Map<string, string>();
+  (verification?.local?.fields ?? []).forEach((f) => {
+    const check = f.checks.find((c) => c.reference_value != null);
+    if (check?.reference_value) l1RefMap.set(f.field_path, check.reference_value);
+  });
+
+  // Build L2 (wiktionary) reference value map
+  const l2RefMap = new Map<string, string>();
+  (verification?.wiktionary_local?.fields ?? []).forEach((f) => {
+    const check = f.checks.find((c) => c.reference_value != null);
+    if (check?.reference_value) l2RefMap.set(f.field_path, check.reference_value);
+  });
+
   // Initialize pill states
   for (const [field, genValue] of genValues) {
     const comp = crossAIMap.get(field);
@@ -179,10 +193,20 @@ export function initializeResolvedValues(
       } else {
         map.set(field, { value: comp.primary_value, source: 'auto', status: 'unresolved' });
       }
-    } else if (EDITABLE_FIELDS.has(field)) {
-      map.set(field, { value: genValue, source: 'auto', status: 'editable' });
     } else {
-      map.set(field, { value: genValue, source: 'auto', status: 'agreed' });
+      const l1Ref = l1RefMap.get(field);
+      const l2Ref = l2RefMap.get(field);
+      if (l1Ref != null && l2Ref != null) {
+        if (l1Ref === l2Ref) {
+          map.set(field, { value: genValue, source: 'auto', status: 'agreed' });
+        } else {
+          map.set(field, { value: genValue, source: 'auto', status: 'unresolved' });
+        }
+      } else if (EDITABLE_FIELDS.has(field)) {
+        map.set(field, { value: genValue, source: 'auto', status: 'editable' });
+      } else {
+        map.set(field, { value: genValue, source: 'auto', status: 'agreed' });
+      }
     }
   }
 

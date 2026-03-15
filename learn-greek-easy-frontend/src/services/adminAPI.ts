@@ -735,7 +735,7 @@ export interface DuplicateCheckResult {
 // ============================================
 
 export type CombinedTier = 'auto_approve' | 'quick_review' | 'manual_review';
-export type MorphologySource = 'lexicon' | 'llm';
+export type MorphologySource = 'lexicon' | 'wiktionary' | 'both' | 'llm';
 export type CheckStatus = 'pass' | 'fail' | 'warn';
 export type FieldStatus = 'pass' | 'fail' | 'warn' | 'skipped';
 
@@ -778,6 +778,7 @@ export interface CrossAIVerificationResult {
 
 export interface VerificationSummary {
   local: LocalVerificationResult | null;
+  wiktionary_local: LocalVerificationResult | null;
   cross_ai: CrossAIVerificationResult | null;
   combined_tier: CombinedTier;
   morphology_source: MorphologySource;

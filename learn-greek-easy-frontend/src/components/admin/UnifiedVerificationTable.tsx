@@ -18,19 +18,21 @@ import type {
 interface UnifiedRow {
   field_path: string;
   local: FieldVerificationResult | null;
+  local2: FieldVerificationResult | null;
   crossAI: FieldComparisonResult | null;
 }
 
-export type SelectionSource = 'local' | 'primary' | 'secondary';
+export type SelectionSource = 'local' | 'wiktionary' | 'primary' | 'secondary';
 
 export interface PillState {
   value: string;
-  source: 'auto' | 'local' | 'primary' | 'secondary' | 'manual';
+  source: 'auto' | 'local' | 'wiktionary' | 'primary' | 'secondary' | 'manual';
   status: 'agreed' | 'resolved' | 'unresolved' | 'editable';
 }
 
 interface UnifiedVerificationTableProps {
   local: LocalVerificationResult | null;
+  wiktionaryLocal: LocalVerificationResult | null;
   crossAI: CrossAIVerificationResult | null;
   selections?: Map<string, SelectionSource>;
   onSelect?: (fieldPath: string, source: SelectionSource) => void;
@@ -41,10 +43,14 @@ interface UnifiedVerificationTableProps {
 
 function buildRows(
   local: LocalVerificationResult | null,
+  wiktionaryLocal: LocalVerificationResult | null,
   crossAI: CrossAIVerificationResult | null
 ): UnifiedRow[] {
   const paths = new Set<string>();
   (local?.fields ?? []).forEach((f) => {
+    paths.add(f.field_path);
+  });
+  (wiktionaryLocal?.fields ?? []).forEach((f) => {
     paths.add(f.field_path);
   });
   (crossAI?.comparisons ?? []).forEach((c) => {
@@ -54,6 +60,11 @@ function buildRows(
   const localMap = new Map<string, FieldVerificationResult>();
   (local?.fields ?? []).forEach((f) => {
     localMap.set(f.field_path, f);
+  });
+
+  const local2Map = new Map<string, FieldVerificationResult>();
+  (wiktionaryLocal?.fields ?? []).forEach((f) => {
+    local2Map.set(f.field_path, f);
   });
 
   const crossAIMap = new Map<string, FieldComparisonResult>();
@@ -66,6 +77,7 @@ function buildRows(
     .map((path) => ({
       field_path: path,
       local: localMap.get(path) ?? null,
+      local2: local2Map.get(path) ?? null,
       crossAI: crossAIMap.get(path) ?? null,
     }));
 }
@@ -111,9 +123,15 @@ const FIELD_LABELS: Record<string, string> = {
 };
 
 function getRowSeverity(row: UnifiedRow): 'red' | 'yellow' | 'green' | 'neutral' {
-  if (row.local?.status === 'fail' || row.crossAI?.agrees === false) return 'red';
-  if (row.local?.status === 'warn') return 'yellow';
-  if (row.local?.status === 'skipped' && row.crossAI == null) return 'neutral';
+  if (
+    row.local?.status === 'fail' ||
+    row.local2?.status === 'fail' ||
+    row.crossAI?.agrees === false
+  )
+    return 'red';
+  if (row.local?.status === 'warn' || row.local2?.status === 'warn') return 'yellow';
+  if (row.local?.status === 'skipped' && row.local2 == null && row.crossAI == null)
+    return 'neutral';
   return 'green';
 }
 
@@ -130,13 +148,15 @@ function SeverityDot({ severity }: { severity: 'red' | 'yellow' | 'green' | 'neu
 
 function isCellClickable(
   row: UnifiedRow,
-  column: 'local' | 'primary' | 'secondary',
+  column: 'local' | 'wiktionary' | 'primary' | 'secondary',
   interactive: boolean
 ): boolean {
   if (!interactive) return false;
   if (column === 'local') {
-    const hasRef = row.local?.checks.some((c) => c.reference_value != null) ?? false;
-    return hasRef;
+    return row.local?.checks.some((c) => c.reference_value != null) ?? false;
+  }
+  if (column === 'wiktionary') {
+    return row.local2?.checks.some((c) => c.reference_value != null) ?? false;
   }
   return row.crossAI != null;
 }
@@ -149,6 +169,8 @@ function LocalCell({
   isOtherSelected,
   onSelect,
   onResolvedValueChange,
+  localField = 'local',
+  selectionSource = 'local',
 }: {
   row: UnifiedRow;
   hasLocalData: boolean;
@@ -157,9 +179,15 @@ function LocalCell({
   isOtherSelected: boolean;
   onSelect?: (fieldPath: string, source: SelectionSource) => void;
   onResolvedValueChange?: (fieldPath: string, value: string) => void;
+  localField?: 'local' | 'local2';
+  selectionSource?: SelectionSource;
 }) {
-  const field = row.local;
-  const clickable = isCellClickable(row, 'local', interactive);
+  const field = row[localField];
+  const clickable = isCellClickable(
+    row,
+    selectionSource === 'wiktionary' ? 'wiktionary' : 'local',
+    interactive
+  );
 
   const refCheck = field?.checks.find((c) => c.reference_value != null);
   const referenceValue = refCheck?.reference_value ?? null;
@@ -192,7 +220,7 @@ function LocalCell({
         )}
         aria-pressed={isSelected}
         onClick={() => {
-          onSelect?.(row.field_path, 'local');
+          onSelect?.(row.field_path, selectionSource);
           if (referenceValue != null) {
             onResolvedValueChange?.(row.field_path, referenceValue);
           }
@@ -419,6 +447,8 @@ function DecisionPill({ fieldPath, pillState, isEditable, onEdit }: DecisionPill
 function RowsTable({
   rows,
   hasLocalData,
+  hasLocal2Data,
+  wiktionarySkipped,
   t,
   selections,
   onSelect,
@@ -428,6 +458,8 @@ function RowsTable({
 }: {
   rows: UnifiedRow[];
   hasLocalData: boolean;
+  hasLocal2Data: boolean;
+  wiktionarySkipped: boolean;
   t: (key: string, options?: Record<string, unknown>) => string;
   selections?: Map<string, SelectionSource>;
   onSelect?: (fieldPath: string, source: SelectionSource) => void;
@@ -440,12 +472,13 @@ function RowsTable({
   return (
     <table className="w-full table-auto text-sm">
       <colgroup>
-        <col style={{ width: '4%' }} />
-        <col style={{ width: '14%' }} />
-        <col style={{ width: '14%' }} />
-        <col style={{ width: '22%' }} />
-        <col style={{ width: '22%' }} />
-        <col style={{ width: '24%' }} />
+        <col style={{ width: '3%' }} />
+        <col style={{ width: '12%' }} />
+        <col style={{ width: '11%' }} />
+        <col style={{ width: '11%' }} />
+        <col style={{ width: '17%' }} />
+        <col style={{ width: '17%' }} />
+        <col style={{ width: '29%' }} />
       </colgroup>
       <thead>
         <tr className="border-b text-xs font-medium">
@@ -455,6 +488,15 @@ function RowsTable({
           </th>
           <th className="py-1 text-left font-medium">
             {t('generateNoun.verification.headers.local')}
+          </th>
+          <th className="py-1 text-left font-medium">
+            {wiktionarySkipped ? (
+              <span className="text-xs text-muted-foreground">
+                {t('generateNoun.verification.wiktionary.noData')}
+              </span>
+            ) : (
+              t('generateNoun.verification.headers.wiktionary')
+            )}
           </th>
           <th className="py-1 text-left font-medium">
             {t('generateNoun.verification.comparisonHeaders.primary')}
@@ -494,6 +536,19 @@ function RowsTable({
                   isOtherSelected={isAdminSelected && selectedSource !== 'local'}
                   onSelect={onSelect}
                   onResolvedValueChange={onResolvedValueChange}
+                />
+              </td>
+              <td className="py-1 align-middle">
+                <LocalCell
+                  row={row}
+                  hasLocalData={hasLocal2Data}
+                  interactive={isInteractive}
+                  isSelected={selectedSource === 'wiktionary'}
+                  isOtherSelected={isAdminSelected && selectedSource !== 'wiktionary'}
+                  onSelect={onSelect}
+                  onResolvedValueChange={onResolvedValueChange}
+                  localField="local2"
+                  selectionSource="wiktionary"
                 />
               </td>
               <td className="py-1 pr-1 align-middle">
@@ -538,6 +593,7 @@ function RowsTable({
 
 export function UnifiedVerificationTable({
   local,
+  wiktionaryLocal,
   crossAI,
   selections,
   onSelect,
@@ -548,7 +604,9 @@ export function UnifiedVerificationTable({
   const { t } = useTranslation('admin');
 
   const hasLocalData = local !== null;
-  const allRows = buildRows(local, crossAI).sort((a, b) => {
+  const hasLocal2Data = (wiktionaryLocal?.fields.length ?? 0) > 0;
+  const wiktionarySkipped = wiktionaryLocal === null;
+  const allRows = buildRows(local, wiktionaryLocal, crossAI).sort((a, b) => {
     const ai = CANONICAL_ORDER.indexOf(a.field_path);
     const bi = CANONICAL_ORDER.indexOf(b.field_path);
     return (ai === -1 ? Infinity : ai) - (bi === -1 ? Infinity : bi);
@@ -574,6 +632,8 @@ export function UnifiedVerificationTable({
           <RowsTable
             rows={allRows}
             hasLocalData={hasLocalData}
+            hasLocal2Data={hasLocal2Data}
+            wiktionarySkipped={wiktionarySkipped}
             t={t}
             selections={selections}
             onSelect={onSelect}
