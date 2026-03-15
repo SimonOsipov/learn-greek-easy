@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useGenerateAudio } from '@/features/words/hooks/useGenerateAudio';
 import { toast } from '@/hooks/use-toast';
 import { useSSE } from '@/hooks/useSSE';
 import { cn } from '@/lib/utils';
@@ -167,6 +168,13 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
   const [reverseLookupLoading, setReverseLookupLoading] = useState(false);
   const [selectedLookupIndex, setSelectedLookupIndex] = useState<number | null>(null);
   const [reverseLookupQuery, setReverseLookupQuery] = useState('');
+  const [audioWordEntryId, setAudioWordEntryId] = useState<string | null>(null);
+
+  const {
+    triggerGeneration: triggerAudio,
+    cancel: cancelAudio,
+    progress: audioProgress,
+  } = useGenerateAudio({ wordEntryId: audioWordEntryId ?? '' });
 
   useEffect(() => {
     return () => {
@@ -314,10 +322,10 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
       });
       return wordEntryAPI.createAndLink(deckId, payload);
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({ title: t('generateNoun.approve.successToast') });
-      onWordLinked?.();
-      handleOpenChange(false);
+      setAudioWordEntryId(data.word_entry.id);
+      // Dialog stays open — audio generation starts via useEffect
     },
     onError: () => {
       toast({
@@ -497,8 +505,10 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
     setReverseLookupLoading(false);
     setSelectedLookupIndex(null);
     setReverseLookupQuery('');
+    setAudioWordEntryId(null);
+    cancelAudio();
     closeStream();
-  }, [closeStream]);
+  }, [closeStream, cancelAudio]);
 
   const handleOpenChange = (open: boolean) => {
     if (!open) {
@@ -510,6 +520,22 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
     }
     onOpenChange(open);
   };
+
+  useEffect(() => {
+    if (audioWordEntryId) {
+      triggerAudio();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [audioWordEntryId]);
+
+  useEffect(() => {
+    if (!audioWordEntryId) return;
+    if (audioProgress.status === 'complete' || audioProgress.status === 'error') {
+      onWordLinked?.();
+      handleOpenChange(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [audioProgress.status, audioWordEntryId]);
 
   return (
     <>
@@ -808,28 +834,47 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                 )}
               </div>
 
-              <DialogFooter>
-                {pipelineStatus === 'done' && displayGeneration && displayVerification && (
-                  <>
-                    <Button
-                      data-testid="approve-save-button"
-                      onClick={() => approveMutation.mutate()}
-                      disabled={
-                        !resolvedValues.get('translation_en')?.value?.trim() ||
-                        approveMutation.isPending
-                      }
-                    >
-                      {approveMutation.isPending ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          {t('generateNoun.approve.saving')}
-                        </>
-                      ) : (
-                        t('generateNoun.approve.button')
-                      )}
-                    </Button>
-                  </>
+              {audioWordEntryId &&
+                (audioProgress.status === 'generating' || audioProgress.status === 'idle') && (
+                  <div
+                    className="flex items-center gap-2 px-6 pb-2 text-sm text-muted-foreground"
+                    data-testid="audio-generation-progress"
+                  >
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>
+                      {t('generateNoun.audio.generating', {
+                        completed: audioProgress.partsCompleted,
+                        total: audioProgress.totalParts,
+                      })}
+                    </span>
+                  </div>
                 )}
+
+              <DialogFooter>
+                {pipelineStatus === 'done' &&
+                  displayGeneration &&
+                  displayVerification &&
+                  !audioWordEntryId && (
+                    <>
+                      <Button
+                        data-testid="approve-save-button"
+                        onClick={() => approveMutation.mutate()}
+                        disabled={
+                          !resolvedValues.get('translation_en')?.value?.trim() ||
+                          approveMutation.isPending
+                        }
+                      >
+                        {approveMutation.isPending ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            {t('generateNoun.approve.saving')}
+                          </>
+                        ) : (
+                          t('generateNoun.approve.button')
+                        )}
+                      </Button>
+                    </>
+                  )}
                 <Button
                   variant="outline"
                   onClick={resetAllState}

@@ -7,6 +7,6 @@ export type { UseWordEntryCardsOptions, UseWordEntryCardsResult } from './useWor
 export { useUpdateWordEntry } from './useUpdateWordEntry';
 export type { UseUpdateWordEntryOptions } from './useUpdateWordEntry';
 export { useGenerateAudio } from './useGenerateAudio';
-export type { GenerateAudioParams } from './useGenerateAudio';
+export type { UseGenerateAudioOptions, UseGenerateAudioResult } from './useGenerateAudio';
 export { useGenerateCards } from './useGenerateCards';
 export type { GenerateCardsParams } from './useGenerateCards';

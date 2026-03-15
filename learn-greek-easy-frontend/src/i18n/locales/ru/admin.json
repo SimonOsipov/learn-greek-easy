@@ -1067,6 +1067,9 @@
       "successToast": "Словарная запись успешно сохранена",
       "errorToast": "Не удалось сохранить словарную запись"
     },
+    "audio": {
+      "generating": "Генерация аудио... {{completed}}/{{total}} частей готово"
+    },
     "editable": {
       "examplesTitle": "Примеры",
       "exampleGreek": "Греческий",

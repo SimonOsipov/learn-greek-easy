@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 import { useMutation } from '@tanstack/react-query';
 import { AlertCircle } from 'lucide-react';
@@ -45,7 +45,19 @@ export function WordEntryContent({ wordEntryId, deckId, onUnlinked }: WordEntryC
   const [isEditing, setIsEditing] = useState(false);
   const [isGrammarEditing, setIsGrammarEditing] = useState(false);
   const [showUnlinkConfirm, setShowUnlinkConfirm] = useState(false);
+  const [autoGenerateAfterEdit, setAutoGenerateAfterEdit] = useState(false);
   const { t } = useTranslation('admin');
+
+  const { triggerGeneration, isGenerating } = useGenerateAudio({
+    wordEntryId,
+  });
+
+  useEffect(() => {
+    if (autoGenerateAfterEdit) {
+      triggerGeneration();
+      setAutoGenerateAfterEdit(false);
+    }
+  }, [autoGenerateAfterEdit, triggerGeneration]);
 
   const unlinkMutation = useMutation({
     mutationFn: () => {
@@ -66,8 +78,18 @@ export function WordEntryContent({ wordEntryId, deckId, onUnlinked }: WordEntryC
     },
   });
 
-  const generateAudioMutation = useGenerateAudio();
-  const { isPending, variables: pendingVariables } = generateAudioMutation;
+  const handleGenerateAllClick = useCallback(() => {
+    if (!wordEntry) return;
+    if (typeof posthog?.capture === 'function') {
+      posthog.capture('admin_audio_generation_triggered', {
+        word_entry_id: wordEntry.id,
+        deck_id: wordEntry.deck_id,
+        action: 'generate_all',
+        lemma: wordEntry.lemma,
+      });
+    }
+    triggerGeneration();
+  }, [wordEntry, triggerGeneration]);
 
   if (isLoading) return <LoadingSkeleton />;
   if (isError || !wordEntry) return <ErrorState onRetry={refetch} />;
@@ -78,43 +100,18 @@ export function WordEntryContent({ wordEntryId, deckId, onUnlinked }: WordEntryC
         wordEntry={wordEntry}
         onSaveSuccess={() => setIsEditing(false)}
         onCancel={() => setIsEditing(false)}
+        onAudioRegenNeeded={() => setAutoGenerateAfterEdit(true)}
       />
     );
   }
-
-  const resolveAction = (
-    audioStatus: string | undefined | null
-  ): 'generate' | 'retry' | 'regenerate' => {
-    if (audioStatus === 'failed') return 'retry';
-    if (audioStatus === 'ready') return 'regenerate';
-    return 'generate';
-  };
-
-  const handleGenerateClick = (part: 'lemma' | 'example', exampleId?: string) => {
-    if (typeof posthog?.capture === 'function') {
-      posthog.capture('admin_audio_generation_triggered', {
-        word_entry_id: wordEntry.id,
-        deck_id: wordEntry.deck_id,
-        part_type: part,
-        example_id: exampleId ?? null,
-        action:
-          part === 'lemma'
-            ? resolveAction(wordEntry.audio_status)
-            : resolveAction(wordEntry.examples?.find((e) => e.id === exampleId)?.audio_status),
-        lemma: wordEntry.lemma,
-      });
-    }
-    generateAudioMutation.mutate({ wordEntryId: wordEntry.id, part, exampleId });
-  };
 
   return (
     <>
       <ContentFields
         wordEntry={wordEntry}
         onEdit={() => setIsEditing(true)}
-        onGenerateClick={handleGenerateClick}
-        isPending={isPending}
-        pendingVariables={pendingVariables}
+        onGenerateClick={handleGenerateAllClick}
+        isGenerating={isGenerating}
         isGrammarEditing={isGrammarEditing}
         onGrammarEditingChange={setIsGrammarEditing}
         showUnlinkButton={Boolean(deckId)}
@@ -241,8 +238,7 @@ function ContentFields({
   wordEntry,
   onEdit,
   onGenerateClick,
-  isPending,
-  pendingVariables,
+  isGenerating,
   isGrammarEditing,
   onGrammarEditingChange,
   showUnlinkButton,
@@ -250,11 +246,8 @@ function ContentFields({
 }: {
   wordEntry: WordEntryResponse;
   onEdit: () => void;
-  onGenerateClick: (part: 'lemma' | 'example', exampleId?: string) => void;
-  isPending: boolean;
-  pendingVariables:
-    | { wordEntryId: string; part: 'lemma' | 'example'; exampleId?: string }
-    | undefined;
+  onGenerateClick: () => void;
+  isGenerating: boolean;
   isGrammarEditing: boolean;
   onGrammarEditingChange: (isEditing: boolean) => void;
   showUnlinkButton: boolean;
@@ -323,12 +316,8 @@ function ContentFields({
                   />
                   <AudioGenerateButton
                     status={wordEntry.audio_status}
-                    onClick={() => onGenerateClick('lemma')}
-                    isLoading={
-                      isPending &&
-                      pendingVariables?.part === 'lemma' &&
-                      !pendingVariables?.exampleId
-                    }
+                    onClick={onGenerateClick}
+                    isLoading={isGenerating}
                     data-testid="audio-generate-btn-lemma"
                   />
                 </div>
@@ -391,12 +380,7 @@ function ContentFields({
           </div>
         </CardHeader>
         <CardContent className="px-4 pb-4" id="section-ex">
-          <ExamplesSection
-            examples={wordEntry.examples}
-            onGenerateClick={onGenerateClick}
-            isPending={isPending}
-            pendingVariables={pendingVariables}
-          />
+          <ExamplesSection examples={wordEntry.examples} />
         </CardContent>
       </Card>
     </div>
@@ -407,19 +391,7 @@ function ContentFields({
 // ExamplesSection
 // ============================================
 
-function ExamplesSection({
-  examples,
-  onGenerateClick,
-  isPending,
-  pendingVariables,
-}: {
-  examples: WordEntryExampleSentence[] | null;
-  onGenerateClick: (part: 'lemma' | 'example', exampleId?: string) => void;
-  isPending: boolean;
-  pendingVariables:
-    | { wordEntryId: string; part: 'lemma' | 'example'; exampleId?: string }
-    | undefined;
-}) {
+function ExamplesSection({ examples }: { examples: WordEntryExampleSentence[] | null }) {
   const { t } = useTranslation('admin');
   const hasExamples = examples && examples.length > 0;
 
@@ -433,14 +405,7 @@ function ExamplesSection({
       {hasExamples && (
         <div className="space-y-3">
           {examples.map((example, index) => (
-            <ExampleCard
-              key={example.id || index}
-              example={example}
-              index={index}
-              onGenerateClick={onGenerateClick}
-              isPending={isPending}
-              pendingVariables={pendingVariables}
-            />
+            <ExampleCard key={example.id || index} example={example} index={index} />
           ))}
         </div>
       )}
@@ -460,21 +425,7 @@ function CompletionDot({ filled }: { filled: boolean }) {
   );
 }
 
-function ExampleCard({
-  example,
-  index,
-  onGenerateClick,
-  isPending,
-  pendingVariables,
-}: {
-  example: WordEntryExampleSentence;
-  index: number;
-  onGenerateClick: (part: 'lemma' | 'example', exampleId?: string) => void;
-  isPending: boolean;
-  pendingVariables:
-    | { wordEntryId: string; part: 'lemma' | 'example'; exampleId?: string }
-    | undefined;
-}) {
+function ExampleCard({ example, index }: { example: WordEntryExampleSentence; index: number }) {
   const { t } = useTranslation('admin');
 
   const hasEnglish = Boolean(example.english);
@@ -495,12 +446,6 @@ function ExampleCard({
             <AudioStatusBadge
               status={example.audio_status}
               data-testid={`audio-status-badge-example-${index}`}
-            />
-            <AudioGenerateButton
-              status={example.audio_status}
-              onClick={() => onGenerateClick('example', example.id)}
-              isLoading={isPending && pendingVariables?.exampleId === example.id}
-              data-testid={`audio-generate-btn-example-${index}`}
             />
           </div>
         )}
