@@ -31,7 +31,6 @@ vi.mock('@/services/wordEntryAPI', async (importOriginal) => {
     wordEntryAPI: {
       ...actual.wordEntryAPI,
       updateInline: vi.fn(),
-      generatePartAudio: vi.fn(),
     },
   };
 });
@@ -83,18 +82,27 @@ const createMockWordEntry = (overrides = {}) => ({
 // Test Helpers
 // ============================================
 
-function renderForm(overrides = {}) {
+function renderForm(
+  overrides = {},
+  { onAudioRegenNeeded }: { onAudioRegenNeeded?: ReturnType<typeof vi.fn> } = {}
+) {
   const wordEntry = createMockWordEntry(overrides);
   const onSaveSuccess = vi.fn();
   const onCancel = vi.fn();
+  const audioRegenCb = onAudioRegenNeeded ?? vi.fn();
 
   const result = render(
     <I18nextProvider i18n={i18n}>
-      <WordEntryEditForm wordEntry={wordEntry} onSaveSuccess={onSaveSuccess} onCancel={onCancel} />
+      <WordEntryEditForm
+        wordEntry={wordEntry}
+        onSaveSuccess={onSaveSuccess}
+        onCancel={onCancel}
+        onAudioRegenNeeded={audioRegenCb}
+      />
     </I18nextProvider>
   );
 
-  return { ...result, wordEntry, onSaveSuccess, onCancel };
+  return { ...result, wordEntry, onSaveSuccess, onCancel, onAudioRegenNeeded: audioRegenCb };
 }
 
 // ============================================
@@ -322,11 +330,10 @@ describe('WordEntryEditForm', () => {
   // ============================================
 
   describe('auto audio regeneration', () => {
-    it('calls generatePartAudio when example greek text is changed', async () => {
-      const { wordEntryAPI } = await import('@/services/wordEntryAPI');
-      (wordEntryAPI.generatePartAudio as Mock).mockResolvedValue(undefined);
+    it('calls onAudioRegenNeeded when example greek text is changed', async () => {
+      const onAudioRegenNeeded = vi.fn();
+      renderForm({}, { onAudioRegenNeeded });
 
-      renderForm();
       const greekInput = screen.getByTestId('word-entry-example-0-greek');
       fireEvent.change(greekInput, { target: { value: 'Το καινούριο μας σπίτι.' } });
 
@@ -337,14 +344,14 @@ describe('WordEntryEditForm', () => {
       fireEvent.click(screen.getByTestId('word-entry-save-btn'));
 
       await waitFor(() => {
-        expect(wordEntryAPI.generatePartAudio).toHaveBeenCalledWith('we-123', 'example', 'ex-1');
+        expect(onAudioRegenNeeded).toHaveBeenCalledOnce();
       });
     });
 
-    it('does not call generatePartAudio when example greek text is unchanged', async () => {
-      const { wordEntryAPI } = await import('@/services/wordEntryAPI');
+    it('does not call onAudioRegenNeeded when example greek text is unchanged', async () => {
+      const onAudioRegenNeeded = vi.fn();
+      renderForm({}, { onAudioRegenNeeded });
 
-      renderForm();
       // Change something else (not example greek)
       const input = screen.getByTestId('word-entry-field-translation-en');
       fireEvent.change(input, { target: { value: 'home' } });
@@ -359,7 +366,7 @@ describe('WordEntryEditForm', () => {
         expect(mockMutateAsync).toHaveBeenCalled();
       });
 
-      expect(wordEntryAPI.generatePartAudio).not.toHaveBeenCalled();
+      expect(onAudioRegenNeeded).not.toHaveBeenCalled();
     });
   });
 

@@ -29,9 +29,15 @@ vi.mock('@/features/words/hooks', async (importOriginal) => {
   return {
     ...actual,
     useGenerateAudio: vi.fn(() => ({
-      mutate: vi.fn(),
-      isPending: false,
-      variables: undefined,
+      triggerGeneration: vi.fn(),
+      progress: {
+        parts: new Map(),
+        totalParts: 0,
+        partsCompleted: 0,
+        status: 'idle' as const,
+        errorMessage: null,
+      },
+      isGenerating: false,
     })),
   };
 });
@@ -565,12 +571,18 @@ describe('WordEntryContent', () => {
       expect(screen.getByTestId('audio-generate-btn-example-0')).toHaveTextContent('Regenerate');
     });
 
-    it('clicking lemma generate button triggers mutation with correct params', () => {
-      const mockMutate = vi.fn();
+    it('clicking lemma generate button triggers generation', () => {
+      const mockTriggerGeneration = vi.fn();
       (useGenerateAudio as Mock).mockReturnValue({
-        mutate: mockMutate,
-        isPending: false,
-        variables: undefined,
+        triggerGeneration: mockTriggerGeneration,
+        progress: {
+          parts: new Map(),
+          totalParts: 0,
+          partsCompleted: 0,
+          status: 'idle' as const,
+          errorMessage: null,
+        },
+        isGenerating: false,
       });
       (useWordEntry as Mock).mockReturnValue({
         wordEntry: createMockWordEntry({ audio_status: 'missing' }),
@@ -580,12 +592,7 @@ describe('WordEntryContent', () => {
       });
       renderComponent();
       fireEvent.click(screen.getByTestId('audio-generate-btn-lemma'));
-      expect(mockMutate).toHaveBeenCalledOnce();
-      expect(mockMutate).toHaveBeenCalledWith({
-        wordEntryId: 'we-123',
-        part: 'lemma',
-        exampleId: undefined,
-      });
+      expect(mockTriggerGeneration).toHaveBeenCalledOnce();
     });
   });
 

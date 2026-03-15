@@ -59,13 +59,19 @@ interface WordEntryEditFormProps {
   wordEntry: WordEntryResponse;
   onSaveSuccess: (updated: WordEntryResponse) => void;
   onCancel: () => void;
+  onAudioRegenNeeded?: () => void;
 }
 
 // ============================================
 // Component
 // ============================================
 
-export function WordEntryEditForm({ wordEntry, onSaveSuccess, onCancel }: WordEntryEditFormProps) {
+export function WordEntryEditForm({
+  wordEntry,
+  onSaveSuccess,
+  onCancel,
+  onAudioRegenNeeded,
+}: WordEntryEditFormProps) {
   const { t } = useTranslation('admin');
   const [showDiscard, setShowDiscard] = useState(false);
 
@@ -144,8 +150,8 @@ export function WordEntryEditForm({ wordEntry, onSaveSuccess, onCancel }: WordEn
           fields_changed: fieldsChanged,
         });
 
-        // Trigger audio regen for changed example greek text
-        const audioParts: string[] = [];
+        // Trigger audio regen if example greek text changed
+        let exampleGreekChanged = false;
         if (dirtyFields.examples && data.examples) {
           const originalExamples = wordEntry.examples ?? [];
           const originalById = Object.fromEntries(
@@ -153,21 +159,18 @@ export function WordEntryEditForm({ wordEntry, onSaveSuccess, onCancel }: WordEn
           );
           for (const ex of data.examples) {
             if (ex.id && originalById[ex.id] !== undefined && originalById[ex.id] !== ex.greek) {
-              try {
-                await wordEntryAPI.generatePartAudio(wordEntry.id, 'example', ex.id);
-                audioParts.push(`example:${ex.id}`);
-              } catch {
-                // Audio regen failure is non-fatal - entry was already saved
-              }
+              exampleGreekChanged = true;
+              break;
             }
           }
         }
 
-        if (audioParts.length > 0) {
+        if (exampleGreekChanged) {
           trackAdminWordEntryAutoAudioRegen({
             word_entry_id: wordEntry.id,
-            parts: audioParts,
+            parts: ['examples'],
           });
+          onAudioRegenNeeded?.();
         }
 
         onSaveSuccess(updated);
@@ -175,7 +178,7 @@ export function WordEntryEditForm({ wordEntry, onSaveSuccess, onCancel }: WordEn
         // Error toast is shown by the mutation hook
       }
     },
-    [form, updateWordEntry, wordEntry, onSaveSuccess]
+    [form, updateWordEntry, wordEntry, onSaveSuccess, onAudioRegenNeeded]
   );
 
   const handleCancel = useCallback(() => {

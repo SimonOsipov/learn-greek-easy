@@ -242,27 +242,16 @@ export const wordEntryAPI = {
   },
 
   /**
-   * Generate audio for a specific part of a word entry (admin only).
+   * Returns the URL for the generate-audio SSE stream endpoint (admin only).
    *
-   * Triggers background audio generation for lemma or example sentence.
-   * Requires superuser privileges.
+   * The client connects to this URL via POST SSE to stream audio generation
+   * progress for all parts (lemma + examples) in a single request.
    *
    * @param wordEntryId - UUID of the word entry
-   * @param part - 'lemma' or 'example'
-   * @param exampleId - UUID of the example (required when part='example')
+   * @returns URL string for the SSE stream endpoint
    */
-  generatePartAudio: async (
-    wordEntryId: string,
-    part: 'lemma' | 'example',
-    exampleId?: string
-  ): Promise<void> => {
-    await api.post<{ message: string }>(
-      `/api/v1/admin/word-entries/${wordEntryId}/generate-audio`,
-      {
-        part,
-        example_id: exampleId ?? null,
-      }
-    );
+  generateAudioStreamUrl: (wordEntryId: string): string => {
+    return `/api/v1/admin/word-entries/${wordEntryId}/generate-audio/stream`;
   },
 
   generateCards: async (
