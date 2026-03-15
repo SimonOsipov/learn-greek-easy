@@ -70,6 +70,29 @@ export interface ListeningDialogCreatePayload {
     speaker_index: number;
     text: string;
   }>;
+  exercises?: {
+    fill_gaps: Array<{
+      line_index: number;
+      correct_answer: string;
+      options: string[];
+      context_before: string;
+      context_after: string;
+    }>;
+    select_heard: Array<{
+      question_el: string;
+      question_en: string;
+      question_ru: string;
+      correct_answer: string;
+      options: string[];
+    }>;
+    true_false: Array<{
+      statement_el: string;
+      statement_en: string;
+      statement_ru: string;
+      correct_answer: boolean;
+      explanation: string;
+    }>;
+  };
 }
 
 export interface ListeningDialogListResponse {
