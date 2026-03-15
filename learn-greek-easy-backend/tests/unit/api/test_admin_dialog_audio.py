@@ -18,6 +18,7 @@ from src.db.models import (
     DialogLine,
     DialogSpeaker,
     DialogStatus,
+    ExerciseItem,
     ExerciseStatus,
     ExerciseType,
     ListeningDialog,
@@ -317,13 +318,27 @@ class TestDialogAudioStreamPipeline:
         db_session.add_all(lines)
         await db_session.flush()
 
-        # Create an exercise for the dialog
+        # Create an exercise with at least one item for the dialog
         exercise = DialogExercise(
             dialog_id=dialog.id,
             exercise_type=ExerciseType.FILL_GAPS,
             status=ExerciseStatus.DRAFT,
         )
         db_session.add(exercise)
+        await db_session.flush()
+        db_session.add(
+            ExerciseItem(
+                exercise_id=exercise.id,
+                item_index=0,
+                payload={
+                    "line_index": 0,
+                    "correct_answer": "Γεια",
+                    "options": ["Γεια", "Αντίο"],
+                    "context_before": "",
+                    "context_after": "σας!",
+                },
+            )
+        )
         await db_session.flush()
 
         elevenlabs_response = _make_elevenlabs_response(num_lines=3)

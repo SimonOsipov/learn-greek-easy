@@ -4213,11 +4213,15 @@ async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, Non
 
         # Stage 6 — Persist
         async with factory.begin() as session:
-            exercise_count = await session.scalar(
-                select(func.count()).where(DialogExercise.dialog_id == dialog_id)
+            exercise_item_count = await session.scalar(
+                select(func.count())
+                .select_from(ExerciseItem)
+                .join(DialogExercise, ExerciseItem.exercise_id == DialogExercise.id)
+                .where(DialogExercise.dialog_id == dialog_id)
             )
+            has_exercises = bool(exercise_item_count)
             target_status = (
-                DialogStatus.EXERCISES_READY if exercise_count else DialogStatus.AUDIO_READY
+                DialogStatus.EXERCISES_READY if has_exercises else DialogStatus.AUDIO_READY
             )
             await session.execute(
                 update(ListeningDialog)
@@ -4248,7 +4252,7 @@ async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, Non
                 "s3_key": s3_key,
                 "duration_seconds": duration_seconds,
                 "audio_size_bytes": len(audio_bytes),
-                "has_exercises": bool(exercise_count),
+                "has_exercises": has_exercises,
             },
             event="dialog_audio:complete",
         )
