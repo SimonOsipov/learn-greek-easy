@@ -2,7 +2,7 @@
 
 import pytest
 
-from src.services.verification_tier import compute_combined_tier
+from src.services.verification_tier import compute_combined_tier, compute_combined_tier_v2
 
 
 @pytest.mark.unit
@@ -67,3 +67,47 @@ class TestComputeCombinedTier:
     def test_boundary_069_quick_review_is_manual(self) -> None:
         """0.69 with quick_review should become manual_review."""
         assert compute_combined_tier("quick_review", 0.69) == "manual_review"
+
+
+@pytest.mark.unit
+class TestComputeCombinedTierV2:
+    """Tests for compute_combined_tier_v2 (4-source decision matrix)."""
+
+    @pytest.mark.parametrize(
+        "local1_tier,local2_tier,cross_ai_agreement,expected",
+        [
+            # Both auto + high AI -> auto (AI doesn't override local agreement)
+            ("auto_approve", "auto_approve", 0.95, "auto_approve"),
+            # Both auto + low AI -> auto (local sources dominate)
+            ("auto_approve", "auto_approve", 0.50, "auto_approve"),
+            # L1 auto + L2 quick -> quick (L2 veto)
+            ("auto_approve", "quick_review", 0.95, "quick_review"),
+            # L1 quick + L2 auto -> quick (L1 veto)
+            ("quick_review", "auto_approve", 0.95, "quick_review"),
+            # Both non-auto -> manual
+            ("quick_review", "quick_review", 0.95, "manual_review"),
+            # Either manual -> manual
+            ("manual_review", "auto_approve", 0.95, "manual_review"),
+            # L2 None -> fall back to v1 logic (L1=auto + 0.95 -> auto)
+            ("auto_approve", None, 0.95, "auto_approve"),
+            # L2 None -> fall back to v1 logic (L1=auto + 0.50 -> manual_review, row 3 of v1)
+            ("auto_approve", None, 0.50, "manual_review"),
+            # L1 None -> manual regardless
+            (None, "auto_approve", 0.95, "manual_review"),
+        ],
+    )
+    def test_decision_matrix(
+        self,
+        local1_tier: str | None,
+        local2_tier: str | None,
+        cross_ai_agreement: float,
+        expected: str,
+    ) -> None:
+        """Test all matrix cells for compute_combined_tier_v2."""
+        result = compute_combined_tier_v2(local1_tier, local2_tier, cross_ai_agreement)
+        assert result == expected
+
+    def test_existing_compute_combined_tier_unchanged(self) -> None:
+        """Ensure original function is not modified."""
+        assert compute_combined_tier("auto_approve", 0.95) == "auto_approve"
+        assert compute_combined_tier(None, 0.95) == "manual_review"

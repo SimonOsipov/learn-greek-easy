@@ -240,7 +240,7 @@ class VerificationSummary(BaseModel):
     combined_tier: Literal["auto_approve", "quick_review", "manual_review"] = Field(
         ..., description="Final routing decision from combined tier matrix"
     )
-    morphology_source: Literal["lexicon", "llm"] = Field(
+    morphology_source: Literal["lexicon", "wiktionary", "both", "llm"] = Field(
         ...,
-        description='Source of morphology data: "lexicon" (Greek lexicon DB) or "llm" (LLM-generated)',
+        description='Source of morphology data: "lexicon", "wiktionary", "both", or "llm"',
     )

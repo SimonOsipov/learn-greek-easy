@@ -62,3 +62,27 @@ def compute_combined_tier(
     if cross_ai_agreement >= 0.70:
         return "quick_review"  # Row 4
     return "manual_review"  # Row 5
+
+
+def compute_combined_tier_v2(
+    local1_tier: VerificationTier | None,
+    local2_tier: VerificationTier | None,
+    cross_ai_agreement: float | None,
+) -> VerificationTier:
+    """Compute combined verification tier from two local sources plus cross-AI.
+
+    When L2 is None (no wiktionary data), falls back to the existing
+    compute_combined_tier(L1, AI) for backward compatibility.
+    """
+    if local2_tier is None:
+        return compute_combined_tier(local1_tier, cross_ai_agreement)
+    if local1_tier is None:
+        return "manual_review"
+    if local1_tier == "manual_review" or local2_tier == "manual_review":
+        return "manual_review"
+    if local1_tier == "auto_approve" and local2_tier == "auto_approve":
+        return "auto_approve"
+    # One auto + one non-auto, or both quick_review
+    if local1_tier == "auto_approve" or local2_tier == "auto_approve":
+        return "quick_review"
+    return "manual_review"

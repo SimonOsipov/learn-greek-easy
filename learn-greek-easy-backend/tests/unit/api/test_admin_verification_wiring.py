@@ -424,3 +424,192 @@ class TestParallelGeneration:
         assert len(completed) == 2
         assert results[0].lemma == "σπίτι"
         assert results[1].lemma == "σπίτι"
+
+
+# ---------------------------------------------------------------------------
+# Helpers: Wiktionary
+# ---------------------------------------------------------------------------
+
+
+def _make_wiktionary_entry(
+    gender: str = "neuter",
+    forms: dict | None = None,
+    pronunciation: str | None = "/spí.ti/",
+    glosses_en: str | None = "house",
+) -> MagicMock:
+    """Create a mock WiktionaryMorphology ORM object."""
+    entry = MagicMock()
+    entry.lemma = "σπίτι"
+    entry.gender = gender
+    entry.forms = forms or {
+        "nominative_singular": "το σπίτι",
+        "genitive_singular": "του σπιτιού",
+        "accusative_singular": "το σπίτι",
+        "vocative_singular": "σπίτι",
+        "nominative_plural": "τα σπίτια",
+        "genitive_plural": "των σπιτιών",
+        "accusative_plural": "τα σπίτια",
+        "vocative_plural": "σπίτια",
+    }
+    entry.pronunciation = pronunciation
+    entry.glosses_en = glosses_en
+    return entry
+
+
+# ---------------------------------------------------------------------------
+# Tests: Wiktionary pipeline integration
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+class TestWiktionaryPipelineIntegration:
+    """Tests for wiktionary L2 verification integration in _run_verification_stage."""
+
+    def _base_patches(
+        self,
+        mock_local_svc: MagicMock,
+        mock_cross_svc: MagicMock,
+        wikt_entry: MagicMock | None,
+        wikt_local_result: MagicMock | None = None,
+    ):
+        """Return context managers for standard patches."""
+        mock_wikt_morphology_svc = AsyncMock()
+        mock_wikt_morphology_svc.get_entry.return_value = wikt_entry
+
+        if wikt_local_result is None:
+            wikt_local_result = _make_local_result(tier="auto_approve")
+
+        return (
+            patch("src.api.v1.admin.get_local_verification_service", return_value=mock_local_svc),
+            patch(
+                "src.api.v1.admin.get_cross_ai_verification_service",
+                return_value=mock_cross_svc,
+            ),
+            patch(
+                "src.api.v1.admin.WiktionaryMorphologyService",
+                return_value=mock_wikt_morphology_svc,
+            ),
+            patch(
+                "src.api.v1.admin.WiktionaryVerificationService",
+                return_value=MagicMock(verify=MagicMock(return_value=wikt_local_result)),
+            ),
+            patch("src.api.v1.admin.get_session_factory"),
+            patch("src.api.v1.admin.capture_event"),
+        )
+
+    @pytest.mark.asyncio
+    async def test_wiktionary_local_populated_when_entry_found(self):
+        """result.wiktionary_local is set when WiktionaryMorphologyService returns an entry."""
+        mock_local_svc = MagicMock()
+        mock_local_svc.verify.return_value = _make_local_result(tier="auto_approve")
+        mock_cross_svc = MagicMock()
+        mock_cross_svc.compare.return_value = _make_cross_result()
+        mock_lexicon_svc = AsyncMock()
+        mock_lexicon_svc.get_declensions.return_value = [MagicMock()]
+
+        wikt_entry = _make_wiktionary_entry()
+        wikt_result = _make_local_result(tier="auto_approve")
+
+        patches = self._base_patches(mock_local_svc, mock_cross_svc, wikt_entry, wikt_result)
+        with patches[0], patches[1], patches[2], patches[3], patches[4], patches[5]:
+            result = await _run_verification_stage(
+                generated_data=_make_noun_data(),
+                normalized_lemma=_make_normalized_lemma(),
+                lexicon_svc=mock_lexicon_svc,
+                lemma="σπίτι",
+                secondary_data=_make_noun_data(),
+            )
+
+        assert result.wiktionary_local is not None
+
+    @pytest.mark.asyncio
+    async def test_morphology_source_both_when_lexicon_and_wiktionary(self):
+        """morphology_source='both' when lexicon has declensions and wiktionary entry found."""
+        mock_local_svc = MagicMock()
+        mock_local_svc.verify.return_value = _make_local_result()
+        mock_cross_svc = MagicMock()
+        mock_cross_svc.compare.return_value = _make_cross_result()
+        mock_lexicon_svc = AsyncMock()
+        mock_lexicon_svc.get_declensions.return_value = [MagicMock()]  # non-empty
+
+        wikt_entry = _make_wiktionary_entry()
+
+        patches = self._base_patches(mock_local_svc, mock_cross_svc, wikt_entry)
+        with patches[0], patches[1], patches[2], patches[3], patches[4], patches[5]:
+            result = await _run_verification_stage(
+                generated_data=_make_noun_data(),
+                normalized_lemma=_make_normalized_lemma(),
+                lexicon_svc=mock_lexicon_svc,
+                lemma="σπίτι",
+                secondary_data=_make_noun_data(),
+            )
+
+        assert result.morphology_source == "both"
+
+    @pytest.mark.asyncio
+    async def test_morphology_source_lexicon_only(self):
+        """morphology_source='lexicon' when only lexicon has data (no wiktionary entry)."""
+        mock_local_svc = MagicMock()
+        mock_local_svc.verify.return_value = _make_local_result()
+        mock_cross_svc = MagicMock()
+        mock_cross_svc.compare.return_value = _make_cross_result()
+        mock_lexicon_svc = AsyncMock()
+        mock_lexicon_svc.get_declensions.return_value = [MagicMock()]  # non-empty
+
+        patches = self._base_patches(mock_local_svc, mock_cross_svc, wikt_entry=None)
+        with patches[0], patches[1], patches[2], patches[3], patches[4], patches[5]:
+            result = await _run_verification_stage(
+                generated_data=_make_noun_data(),
+                normalized_lemma=_make_normalized_lemma(),
+                lexicon_svc=mock_lexicon_svc,
+                lemma="σπίτι",
+                secondary_data=_make_noun_data(),
+            )
+
+        assert result.morphology_source == "lexicon"
+
+    @pytest.mark.asyncio
+    async def test_morphology_source_wiktionary_only(self):
+        """morphology_source='wiktionary' when only wiktionary has data."""
+        mock_local_svc = MagicMock()
+        mock_local_svc.verify.return_value = _make_local_result()
+        mock_cross_svc = MagicMock()
+        mock_cross_svc.compare.return_value = _make_cross_result()
+        mock_lexicon_svc = AsyncMock()
+        mock_lexicon_svc.get_declensions.return_value = []  # empty
+
+        wikt_entry = _make_wiktionary_entry()
+
+        patches = self._base_patches(mock_local_svc, mock_cross_svc, wikt_entry)
+        with patches[0], patches[1], patches[2], patches[3], patches[4], patches[5]:
+            result = await _run_verification_stage(
+                generated_data=_make_noun_data(),
+                normalized_lemma=_make_normalized_lemma(),
+                lexicon_svc=mock_lexicon_svc,
+                lemma="σπίτι",
+                secondary_data=_make_noun_data(),
+            )
+
+        assert result.morphology_source == "wiktionary"
+
+    @pytest.mark.asyncio
+    async def test_morphology_source_llm_when_neither(self):
+        """morphology_source='llm' when neither lexicon nor wiktionary has data."""
+        mock_local_svc = MagicMock()
+        mock_local_svc.verify.return_value = _make_local_result()
+        mock_cross_svc = MagicMock()
+        mock_cross_svc.compare.return_value = _make_cross_result()
+        mock_lexicon_svc = AsyncMock()
+        mock_lexicon_svc.get_declensions.return_value = []  # empty
+
+        patches = self._base_patches(mock_local_svc, mock_cross_svc, wikt_entry=None)
+        with patches[0], patches[1], patches[2], patches[3], patches[4], patches[5]:
+            result = await _run_verification_stage(
+                generated_data=_make_noun_data(),
+                normalized_lemma=_make_normalized_lemma(),
+                lexicon_svc=mock_lexicon_svc,
+                lemma="σπίτι",
+                secondary_data=_make_noun_data(),
+            )
+
+        assert result.morphology_source == "llm"
