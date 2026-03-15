@@ -3056,3 +3056,59 @@ class Translation(Base):
             f"<Translation(id={self.id}, lemma={self.lemma!r}, "
             f"language={self.language!r}, source={self.source!r})>"
         )
+
+
+class WiktionaryMorphology(Base):
+    """Wiktionary noun morphological data (declension forms, gender, IPA, glosses).
+
+    Stored in the 'reference' PostgreSQL schema alongside greek_lexicon and translations.
+    Contains ~14,360 Greek nouns with declension forms extracted from Kaikki JSONL.
+    """
+
+    __tablename__ = "wiktionary_morphology"
+    __table_args__ = {"schema": "reference"}
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+        comment="Auto-incrementing primary key",
+    )
+    lemma: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        comment="Greek lemma (dictionary form)",
+    )
+    gender: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        comment="Grammatical gender (masculine, feminine, neuter)",
+    )
+    forms: Mapped[dict] = mapped_column(
+        JSONB,
+        nullable=False,
+        server_default=text("'{}'::jsonb"),
+        comment="Flat JSONB of declension forms: {nominative_singular: ..., genitive_singular: ..., ...}",
+    )
+    pronunciation: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="IPA pronunciation from first sounds entry",
+    )
+    glosses_en: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="English glosses (semicolon-separated, first gloss per sense)",
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+        comment="Row creation timestamp",
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<WiktionaryMorphology(id={self.id}, lemma={self.lemma!r}, "
+            f"gender={self.gender!r})>"
+        )

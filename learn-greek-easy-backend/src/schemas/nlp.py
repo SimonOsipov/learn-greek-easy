@@ -231,13 +231,16 @@ class VerificationSummary(BaseModel):
     local: LocalVerificationResult | None = Field(
         None, description="Local verification pipeline result (spellcheck + morphology + schema)"
     )
+    wiktionary_local: LocalVerificationResult | None = Field(
+        None, description="Wiktionary-based local verification result (L2)"
+    )
     cross_ai: CrossAIVerificationResult | None = Field(
         None, description="Cross-AI verification result (secondary LLM comparison)"
     )
     combined_tier: Literal["auto_approve", "quick_review", "manual_review"] = Field(
         ..., description="Final routing decision from combined tier matrix"
     )
-    morphology_source: Literal["lexicon", "llm"] = Field(
+    morphology_source: Literal["lexicon", "wiktionary", "both", "llm"] = Field(
         ...,
-        description='Source of morphology data: "lexicon" (Greek lexicon DB) or "llm" (LLM-generated)',
+        description='Source of morphology data: "lexicon", "wiktionary", "both", or "llm"',
     )

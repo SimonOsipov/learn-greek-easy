@@ -328,6 +328,7 @@ const mockCrossAI: CrossAIVerificationResult = {
 
 const mockVerification: VerificationSummary = {
   local: null,
+  wiktionary_local: null,
   cross_ai: mockCrossAI,
   combined_tier: 'quick_review',
   morphology_source: 'llm',
@@ -443,6 +444,7 @@ describe('initializeResolvedValues', () => {
     };
     const verification: VerificationSummary = {
       local: null,
+      wiktionary_local: null,
       cross_ai: primaryOnlyCrossAI,
       combined_tier: 'quick_review',
       morphology_source: 'llm',
@@ -458,5 +460,178 @@ describe('initializeResolvedValues', () => {
     expect(map.get('cases.singular.nominative')?.value).toBe('η γάτα');
     expect(map.get('grammar_data.gender')?.value).toBe('feminine');
     expect(map.get('translation_en')?.value).toBe('cat');
+  });
+
+  it('L1+L2 same reference_value → pill status is agreed', () => {
+    const local = {
+      fields: [
+        {
+          field_path: 'cases.singular.nominative',
+          status: 'pass' as const,
+          checks: [
+            {
+              check_name: 'spell',
+              status: 'pass' as const,
+              message: null,
+              reference_value: 'η γάτα',
+              reference_source: 'lexicon',
+            },
+          ],
+        },
+      ],
+      tier: 'auto_approve' as const,
+      stages_skipped: [],
+      summary: '',
+    };
+    const wiktionaryLocal = {
+      fields: [
+        {
+          field_path: 'cases.singular.nominative',
+          status: 'pass' as const,
+          checks: [
+            {
+              check_name: 'spell',
+              status: 'pass' as const,
+              message: null,
+              reference_value: 'η γάτα',
+              reference_source: 'wiktionary',
+            },
+          ],
+        },
+      ],
+      tier: 'auto_approve' as const,
+      stages_skipped: [],
+      summary: '',
+    };
+    const verification: VerificationSummary = {
+      local,
+      wiktionary_local: wiktionaryLocal,
+      cross_ai: null,
+      combined_tier: 'auto_approve',
+      morphology_source: 'both',
+    };
+    const map = initializeResolvedValues(mockGeneration, verification);
+    expect(map.get('cases.singular.nominative')?.status).toBe('agreed');
+  });
+
+  it('L1+L2 different reference_values → pill status is unresolved', () => {
+    const local = {
+      fields: [
+        {
+          field_path: 'cases.singular.nominative',
+          status: 'pass' as const,
+          checks: [
+            {
+              check_name: 'spell',
+              status: 'pass' as const,
+              message: null,
+              reference_value: 'η γάτα',
+              reference_source: 'lexicon',
+            },
+          ],
+        },
+      ],
+      tier: 'auto_approve' as const,
+      stages_skipped: [],
+      summary: '',
+    };
+    const wiktionaryLocal = {
+      fields: [
+        {
+          field_path: 'cases.singular.nominative',
+          status: 'warn' as const,
+          checks: [
+            {
+              check_name: 'spell',
+              status: 'warn' as const,
+              message: null,
+              reference_value: 'γάτα',
+              reference_source: 'wiktionary',
+            },
+          ],
+        },
+      ],
+      tier: 'quick_review' as const,
+      stages_skipped: [],
+      summary: '',
+    };
+    const verification: VerificationSummary = {
+      local,
+      wiktionary_local: wiktionaryLocal,
+      cross_ai: null,
+      combined_tier: 'quick_review',
+      morphology_source: 'both',
+    };
+    const map = initializeResolvedValues(mockGeneration, verification);
+    expect(map.get('cases.singular.nominative')?.status).toBe('unresolved');
+  });
+
+  it('cross-AI takes priority over L1+L2 agreement', () => {
+    const local = {
+      fields: [
+        {
+          field_path: 'cases.singular.nominative',
+          status: 'pass' as const,
+          checks: [
+            {
+              check_name: 'spell',
+              status: 'pass' as const,
+              message: null,
+              reference_value: 'η γάτα',
+              reference_source: 'lexicon',
+            },
+          ],
+        },
+      ],
+      tier: 'auto_approve' as const,
+      stages_skipped: [],
+      summary: '',
+    };
+    const wiktionaryLocal = {
+      fields: [
+        {
+          field_path: 'cases.singular.nominative',
+          status: 'pass' as const,
+          checks: [
+            {
+              check_name: 'spell',
+              status: 'pass' as const,
+              message: null,
+              reference_value: 'η γάτα',
+              reference_source: 'wiktionary',
+            },
+          ],
+        },
+      ],
+      tier: 'auto_approve' as const,
+      stages_skipped: [],
+      summary: '',
+    };
+    // cross-AI disagrees on this field
+    const crossAI: CrossAIVerificationResult = {
+      comparisons: [
+        {
+          field_path: 'cases.singular.nominative',
+          primary_value: 'η γάτα',
+          secondary_value: 'γάτα',
+          agrees: false,
+          weight: 1,
+        },
+      ],
+      overall_agreement: 0,
+      secondary_model: 'test-model',
+      secondary_generation: null,
+      error: null,
+    };
+    const verification: VerificationSummary = {
+      local,
+      wiktionary_local: wiktionaryLocal,
+      cross_ai: crossAI,
+      combined_tier: 'manual_review',
+      morphology_source: 'both',
+    };
+    const map = initializeResolvedValues(mockGeneration, verification);
+    // cross-AI disagreement takes priority: should be unresolved (not agreed from L1+L2)
+    expect(map.get('cases.singular.nominative')?.status).toBe('unresolved');
   });
 });

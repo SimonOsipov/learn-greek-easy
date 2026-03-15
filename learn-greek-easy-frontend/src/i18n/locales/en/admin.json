@@ -1040,11 +1040,20 @@
       },
       "headers": {
         "local": "Local",
+        "wiktionary": "Wiktionary",
         "crossAi": "Cross-AI"
+      },
+      "wiktionary": {
+        "noData": "No Wiktionary data"
+      },
+      "morphologySource": {
+        "wiktionary": "Wiktionary",
+        "both": "Lexicon + Wiktionary"
       },
       "resolvedTooltip": "Resolved by admin — using {{source}} value",
       "sourceLabels": {
         "local": "Local",
+        "wiktionary": "Wiktionary",
         "primary": "Primary",
         "secondary": "Secondary"
       }

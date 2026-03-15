@@ -71,12 +71,14 @@ function renderComponent(
   crossAI: CrossAIVerificationResult | null,
   selections?: Map<string, SelectionSource>,
   onSelect?: ReturnType<typeof vi.fn>,
-  interactive?: boolean
+  interactive?: boolean,
+  wiktionaryLocal?: LocalVerificationResult | null
 ) {
   return render(
     <I18nextProvider i18n={i18n}>
       <UnifiedVerificationTable
         local={local}
+        wiktionaryLocal={wiktionaryLocal ?? null}
         crossAI={crossAI}
         selections={selections}
         onSelect={onSelect}
@@ -260,7 +262,7 @@ describe('interactive click-to-select', () => {
     renderComponent(null, crossAI, undefined, onSelect, true);
 
     const row = screen.getByTestId('unified-row-translation_en');
-    const primaryTd = row.querySelectorAll('td')[3];
+    const primaryTd = row.querySelectorAll('td')[4];
     const clickable = primaryTd?.querySelector('.cursor-pointer');
     await userEvent.click(clickable!);
     expect(onSelect).toHaveBeenCalledWith('translation_en', 'primary');
@@ -272,7 +274,7 @@ describe('interactive click-to-select', () => {
     renderComponent(null, crossAI, undefined, onSelect, true);
 
     const row = screen.getByTestId('unified-row-translation_en');
-    const secondaryTd = row.querySelectorAll('td')[4];
+    const secondaryTd = row.querySelectorAll('td')[5];
     const clickable = secondaryTd?.querySelector('.cursor-pointer');
     await userEvent.click(clickable!);
     expect(onSelect).toHaveBeenCalledWith('translation_en', 'secondary');
@@ -284,8 +286,8 @@ describe('interactive click-to-select', () => {
     renderComponent(null, crossAI, undefined, onSelect, true);
 
     const row = screen.getByTestId('unified-row-translation_en');
-    const primaryClickable = row.querySelectorAll('td')[3]?.querySelector('.cursor-pointer');
-    const secondaryClickable = row.querySelectorAll('td')[4]?.querySelector('.cursor-pointer');
+    const primaryClickable = row.querySelectorAll('td')[4]?.querySelector('.cursor-pointer');
+    const secondaryClickable = row.querySelectorAll('td')[5]?.querySelector('.cursor-pointer');
     await userEvent.click(primaryClickable!);
     await userEvent.click(secondaryClickable!);
     expect(onSelect).toHaveBeenNthCalledWith(1, 'translation_en', 'primary');
@@ -312,7 +314,7 @@ describe('interactive click-to-select', () => {
     renderComponent(null, crossAI, selections, undefined, true);
 
     const row = screen.getByTestId('unified-row-translation_en');
-    const primaryCell = row.querySelectorAll('td')[3];
+    const primaryCell = row.querySelectorAll('td')[4];
     expect(primaryCell?.querySelector('.ring-2')).toBeTruthy();
   });
 
@@ -322,7 +324,7 @@ describe('interactive click-to-select', () => {
     renderComponent(null, crossAI, selections, undefined, true);
 
     const row = screen.getByTestId('unified-row-translation_en');
-    const secondaryCell = row.querySelectorAll('td')[4];
+    const secondaryCell = row.querySelectorAll('td')[5];
     expect(secondaryCell?.querySelector('.opacity-50')).toBeTruthy();
   });
 
@@ -343,7 +345,7 @@ describe('interactive click-to-select', () => {
     renderComponent(null, crossAI, undefined, onSelect, false);
 
     const row = screen.getByTestId('unified-row-translation_en');
-    const primaryCell = row.querySelectorAll('td')[3];
+    const primaryCell = row.querySelectorAll('td')[4];
     await userEvent.click(primaryCell!);
     expect(onSelect).not.toHaveBeenCalled();
   });
@@ -354,7 +356,7 @@ describe('interactive click-to-select', () => {
     renderComponent(null, crossAI, undefined, onSelect, true);
 
     const row = screen.getByTestId('unified-row-translation_en');
-    const primaryCell = row.querySelectorAll('td')[3];
+    const primaryCell = row.querySelectorAll('td')[4];
     const clickable = primaryCell?.querySelector('.cursor-pointer');
     expect(clickable).toBeTruthy();
     await userEvent.click(clickable!);
@@ -372,6 +374,7 @@ function renderWithPills(
     <I18nextProvider i18n={i18n}>
       <UnifiedVerificationTable
         local={null}
+        wiktionaryLocal={null}
         crossAI={crossAI}
         resolvedValues={resolvedValues}
         onResolvedValueChange={onResolvedValueChange}
@@ -392,7 +395,7 @@ describe('cell-click pill sync', () => {
     renderWithPills(crossAI, resolvedValues, onResolvedValueChange);
 
     const row = screen.getByTestId('unified-row-translation_en');
-    const primaryTd = row.querySelectorAll('td')[3];
+    const primaryTd = row.querySelectorAll('td')[4];
     const clickable = primaryTd?.querySelector('.cursor-pointer');
     await userEvent.click(clickable!);
 
@@ -408,7 +411,7 @@ describe('cell-click pill sync', () => {
     renderWithPills(crossAI, resolvedValues, onResolvedValueChange);
 
     const row = screen.getByTestId('unified-row-translation_en');
-    const secondaryTd = row.querySelectorAll('td')[4];
+    const secondaryTd = row.querySelectorAll('td')[5];
     const clickable = secondaryTd?.querySelector('.cursor-pointer');
     await userEvent.click(clickable!);
 
@@ -428,6 +431,7 @@ describe('cell-click pill sync', () => {
       <I18nextProvider i18n={i18n}>
         <UnifiedVerificationTable
           local={local}
+          wiktionaryLocal={null}
           crossAI={null}
           resolvedValues={resolvedValues}
           onResolvedValueChange={onResolvedValueChange}
@@ -444,7 +448,7 @@ describe('cell-click pill sync', () => {
     expect(onResolvedValueChange).toHaveBeenCalledWith('translation_en', 'house');
   });
 
-  it('table has colgroup with 6 col elements', () => {
+  it('table has colgroup with 7 col elements', () => {
     const crossAI = makeCrossAI([makeComparison('translation_en', false, 'house', 'home')]);
     const resolvedValues = new Map<string, PillState>([
       ['translation_en', { value: 'house', status: 'unresolved', source: 'auto' }],
@@ -453,7 +457,7 @@ describe('cell-click pill sync', () => {
 
     const colgroup = container.querySelector('colgroup');
     expect(colgroup).toBeTruthy();
-    expect(colgroup?.querySelectorAll('col')).toHaveLength(6);
+    expect(colgroup?.querySelectorAll('col')).toHaveLength(7);
   });
 
   it('first column contains severity dot', () => {
@@ -467,5 +471,54 @@ describe('cell-click pill sync', () => {
     const dotTd = row.querySelectorAll('td')[0];
     // First td contains the severity dot (a span with rounded-full)
     expect(dotTd?.querySelector('.rounded-full')).toBeTruthy();
+  });
+});
+
+describe('L2 Wiktionary column', () => {
+  it('shows red severity dot when local2 status is fail', () => {
+    const wiktionaryLocal = makeLocalResult([makeLocalField('lemma', 'fail', 'wikt check failed')]);
+    renderComponent(null, null, undefined, undefined, false, wiktionaryLocal);
+
+    const row = screen.getByTestId('unified-row-lemma');
+    expect(row.querySelector('.bg-red-500')).toBeTruthy();
+  });
+
+  it('shows "No Wiktionary data" in L2 header when wiktionaryLocal is null', () => {
+    const local = makeLocalResult([makeLocalField('lemma', 'pass')]);
+    renderComponent(local, null);
+
+    expect(screen.getByText('No Wiktionary data')).toBeInTheDocument();
+  });
+
+  it('shows Wiktionary header when wiktionaryLocal is provided', () => {
+    const wiktionaryLocal = makeLocalResult([
+      makeLocalField('lemma', 'pass', 'ok', 'σπίτι', 'wiktionary'),
+    ]);
+    renderComponent(null, null, undefined, undefined, false, wiktionaryLocal);
+
+    expect(screen.getByText('Wiktionary')).toBeInTheDocument();
+  });
+
+  it('clicking L2 Wiktionary cell calls onSelect with wiktionary source', async () => {
+    const onSelect = vi.fn();
+    const wiktionaryLocal = makeLocalResult([
+      makeLocalField('translation_en', 'pass', 'ok', 'house', 'wiktionary'),
+    ]);
+    renderComponent(null, null, undefined, onSelect, true, wiktionaryLocal);
+
+    const row = screen.getByTestId('unified-row-translation_en');
+    const wiktionaryTd = row.querySelectorAll('td')[3];
+    const clickable = wiktionaryTd?.querySelector('.cursor-pointer');
+    await userEvent.click(clickable!);
+    expect(onSelect).toHaveBeenCalledWith('translation_en', 'wiktionary');
+  });
+
+  it('L2 cell shows reference value when wiktionaryLocal has reference_value', () => {
+    const wiktionaryLocal = makeLocalResult([
+      makeLocalField('translation_en', 'pass', 'ok', 'house', 'wiktionary'),
+    ]);
+    renderComponent(null, null, undefined, undefined, false, wiktionaryLocal);
+
+    expect(screen.getByText('house')).toBeInTheDocument();
   });
 });

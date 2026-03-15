@@ -13,6 +13,7 @@ from src.utils.greek_text import (
     extract_searchable_forms,
     generate_normalized_forms,
     normalize_greek_accents,
+    normalize_ipa,
     resolve_tts_text,
 )
 
@@ -492,3 +493,60 @@ class TestResolveTtsText:
         assert GENDER_TO_ARTICLE["masculine"] == "ο "
         assert GENDER_TO_ARTICLE["feminine"] == "η "
         assert GENDER_TO_ARTICLE["neuter"] == "το "
+
+
+class TestNormalizeIpa:
+    """Tests for normalize_ipa() function."""
+
+    def test_removes_slash_delimiters(self) -> None:
+        """Slash delimiters are stripped."""
+        assert normalize_ipa("/spiti/") == "spiti"
+
+    def test_removes_bracket_delimiters(self) -> None:
+        """Square bracket delimiters are stripped."""
+        assert normalize_ipa("[spiti]") == "spiti"
+
+    def test_removes_stress_markers(self) -> None:
+        """Primary and secondary stress markers ˈˌ are removed."""
+        assert normalize_ipa("/ˈspiti/") == "spiti"
+        assert normalize_ipa("/ˌspiˈti/") == "spiti"
+
+    def test_removes_dots(self) -> None:
+        """Syllable boundary dots are removed."""
+        assert normalize_ipa("s.pi.ti") == "spiti"
+
+    def test_removes_leading_stress_markers(self) -> None:
+        """Stress markers at word start are removed."""
+        assert normalize_ipa("ˈˌabc") == "abc"
+
+    def test_same_content_different_stress_equal(self) -> None:
+        """Same phonemes with different stress markers normalize to equal strings."""
+        assert normalize_ipa("/ˈspiti/") == normalize_ipa("/spiˈti/")
+
+    def test_removes_tie_bar(self) -> None:
+        """Tie bar (U+0361) is removed."""
+        # U+0361 is a combining double inverted breve above
+        text_with_tie = "t\u0361s"
+        assert normalize_ipa(text_with_tie) == "ts"
+
+    def test_removes_nasalization(self) -> None:
+        """Nasalization tilde (U+0303) is removed."""
+        text_with_nasal = "a\u0303"
+        assert normalize_ipa(text_with_nasal) == "a"
+
+    def test_removes_length_mark(self) -> None:
+        """IPA length mark ː is removed."""
+        assert normalize_ipa("aː") == "a"
+
+    def test_collapses_whitespace(self) -> None:
+        """Multiple spaces are collapsed to single space."""
+        assert normalize_ipa("  a   b  ") == "a b"
+
+    def test_empty_string(self) -> None:
+        """Empty string returns empty string."""
+        assert normalize_ipa("") == ""
+
+    def test_combined_formatting(self) -> None:
+        """All formatting differences normalized together."""
+        # /ˈspiti/ vs [s.pi.ti] should normalize to same value
+        assert normalize_ipa("/ˈspiti/") == normalize_ipa("[s.pi.ti]")

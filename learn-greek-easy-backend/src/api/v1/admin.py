@@ -38,6 +38,7 @@ from src.core.exceptions import (
     OpenRouterError,
 )
 from src.core.logging import get_logger
+from src.core.posthog import capture_event
 from src.db.dependencies import get_db
 from src.db.models import (
     AudioStatus,
@@ -60,6 +61,7 @@ from src.db.models import (
     NewsItem,
     PartOfSpeech,
     User,
+    WiktionaryMorphology,
     WordEntry,
 )
 from src.db.session import get_session_factory
@@ -126,7 +128,12 @@ from src.schemas.news_item import (
     NewsItemWithCardResponse,
     NewsItemWithQuestionCreate,
 )
-from src.schemas.nlp import GeneratedNounData, NormalizedLemma, VerificationSummary
+from src.schemas.nlp import (
+    GeneratedNounData,
+    LocalVerificationResult,
+    NormalizedLemma,
+    VerificationSummary,
+)
 from src.schemas.word_entry import (
     AdminWordEntryCreateRequest,
     AdminWordEntryCreateResponse,
@@ -147,7 +154,9 @@ from src.services.noun_data_generation_service import get_noun_data_generation_s
 from src.services.reverse_lookup_service import ReverseLookupService
 from src.services.s3_service import get_s3_service
 from src.services.translation_service import TranslationLookupService
-from src.services.verification_tier import compute_combined_tier
+from src.services.verification_tier import compute_combined_tier_v2
+from src.services.wiktionary_morphology_service import WiktionaryMorphologyService
+from src.services.wiktionary_verification_service import WiktionaryVerificationService
 from src.services.word_entry_response import word_entry_to_response
 from src.tasks import (
     create_announcement_notifications_task,
@@ -2802,6 +2811,79 @@ async def _run_generation_stage(
         ) from exc
 
 
+def _get_morphology_source(
+    has_lexicon: bool, has_wiktionary: bool
+) -> Literal["lexicon", "wiktionary", "both", "llm"]:
+    """Determine morphology_source from available data sources."""
+    if has_lexicon and has_wiktionary:
+        return "both"
+    if has_lexicon:
+        return "lexicon"
+    if has_wiktionary:
+        return "wiktionary"
+    return "llm"
+
+
+async def _fetch_wiktionary_entry(
+    lemma: str, generated_gender: str | None
+) -> WiktionaryMorphology | None:
+    """Fetch wiktionary morphology entry with gender-filtered lookup and fallback."""
+    try:
+        factory = get_session_factory()
+        async with factory.begin() as _db:
+            wikt_svc = WiktionaryMorphologyService(_db)
+            entry = None
+            if generated_gender:
+                entry = await wikt_svc.get_entry(lemma, gender=generated_gender)
+            if entry is None:
+                entry = await wikt_svc.get_entry(lemma, gender=None)
+            return entry
+    except Exception as exc:
+        logger.warning(f"Wiktionary lookup failed for '{lemma}': {exc}")
+        return None
+
+
+def _capture_verification_analytics(
+    lemma: str,
+    local_result: LocalVerificationResult,
+    wiktionary_result: LocalVerificationResult | None,
+    has_wiktionary: bool,
+    cross_ai_agreement: float | None,
+    combined_tier: str,
+    morphology_source: str,
+) -> None:
+    """Fire PostHog analytics events for 4-source verification (fire-and-forget)."""
+    l2_tier = wiktionary_result.tier if wiktionary_result is not None else None
+    capture_event(
+        distinct_id="noun_generation_pipeline",
+        event="noun_verification_4source",
+        properties={
+            "lemma": lemma,
+            "l1_tier": local_result.tier,
+            "l2_tier": l2_tier,
+            "cross_ai_agreement": cross_ai_agreement,
+            "combined_tier": combined_tier,
+            "wiktionary_has_data": has_wiktionary,
+            "morphology_source": morphology_source,
+        },
+    )
+    event_suffix = "hit" if has_wiktionary else "miss"
+    capture_event(
+        distinct_id="noun_generation_pipeline",
+        event=f"noun_verification_wiktionary_{event_suffix}",
+        properties={"lemma": lemma},
+    )
+    if combined_tier != "auto_approve" and (
+        local_result.tier != "auto_approve"
+        or (wiktionary_result and wiktionary_result.tier != "auto_approve")
+    ):
+        capture_event(
+            distinct_id="noun_generation_pipeline",
+            event="noun_verification_local_veto",
+            properties={"lemma": lemma, "l1_tier": local_result.tier, "l2_tier": l2_tier},
+        )
+
+
 async def _run_verification_stage(
     generated_data: GeneratedNounData,
     normalized_lemma: NormalizedLemma,
@@ -2810,11 +2892,11 @@ async def _run_verification_stage(
     secondary_data: GeneratedNounData | None = None,
     translation_lookup: TranslationLookupStageResult | None = None,
 ) -> VerificationSummary:
-    """Run local + cross-AI verification and compute combined tier."""
+    """Run local + wiktionary + cross-AI verification and compute combined tier."""
     local_svc = get_local_verification_service()
     cross_svc = get_cross_ai_verification_service()
 
-    # morphology_source: check if lexicon has declension data
+    # Step 1: Lexicon declensions
     if lexicon_svc is not None:
         lexicon_declensions = await lexicon_svc.get_declensions(lemma, pos="NOUN")
     else:
@@ -2822,9 +2904,18 @@ async def _run_verification_stage(
         async with factory.begin() as _db:
             _lex_svc = LexiconService(_db)
             lexicon_declensions = await _lex_svc.get_declensions(lemma, pos="NOUN")
-    morphology_source: Literal["lexicon", "llm"] = "lexicon" if lexicon_declensions else "llm"
 
-    # Run local verification (sync service, wrapped in executor)
+    # Step 2: Wiktionary entry (gender-filtered with fallback)
+    # Use normalized_lemma.gender (from NLP pipeline) not generated_data.grammar_data.gender
+    # (which is under verification and may be wrong, causing a spurious miss).
+    wiktionary_entry = await _fetch_wiktionary_entry(lemma, normalized_lemma.gender)
+
+    # morphology_source determination
+    has_lexicon = bool(lexicon_declensions)
+    has_wiktionary = bool(wiktionary_entry)
+    morphology_source = _get_morphology_source(has_lexicon, has_wiktionary)
+
+    # Step 3: Run local (L1) verification (sync service, wrapped in executor)
     loop = asyncio.get_running_loop()
     try:
         local_result = await loop.run_in_executor(
@@ -2838,7 +2929,24 @@ async def _run_verification_stage(
     except Exception as exc:
         raise HTTPException(status_code=500, detail="Local verification pipeline failed") from exc
 
-    # Cross-AI: compare if secondary_data available, otherwise error result
+    # Step 4: Run Wiktionary (L2) verification (soft failure)
+    wiktionary_result = None
+    if wiktionary_entry is not None:
+        try:
+            wiktionary_result = await loop.run_in_executor(
+                None,
+                lambda: WiktionaryVerificationService().verify(
+                    generated_data,
+                    wiktionary_forms=dict(wiktionary_entry.forms),
+                    wiktionary_gender=wiktionary_entry.gender,
+                    wiktionary_pronunciation=wiktionary_entry.pronunciation,
+                    wiktionary_glosses=wiktionary_entry.glosses_en,
+                ),
+            )
+        except Exception as exc:
+            logger.warning(f"Wiktionary verification failed for '{lemma}': {exc}")
+
+    # Step 5: Cross-AI verification (unchanged)
     if secondary_data is not None:
         cross_result = cross_svc.compare(generated_data, secondary_data)
     else:
@@ -2846,14 +2954,29 @@ async def _run_verification_stage(
             generated_data, error="Secondary generation failed or skipped"
         )
 
-    # Combined tier logic
-    if cross_result.error is None and cross_result.overall_agreement is not None:
-        combined_tier = compute_combined_tier(local_result.tier, cross_result.overall_agreement)
-    else:
-        combined_tier = local_result.tier
+    # Step 6: Combined tier using v2 (considers L1 + L2)
+    l2_tier = wiktionary_result.tier if wiktionary_result is not None else None
+    cross_ai_agreement = (
+        cross_result.overall_agreement
+        if cross_result.error is None and cross_result.overall_agreement is not None
+        else None
+    )
+    combined_tier = compute_combined_tier_v2(local_result.tier, l2_tier, cross_ai_agreement)
+
+    # Step 7: PostHog analytics (fire-and-forget)
+    _capture_verification_analytics(
+        lemma,
+        local_result,
+        wiktionary_result,
+        has_wiktionary,
+        cross_ai_agreement,
+        combined_tier,
+        morphology_source,
+    )
 
     return VerificationSummary(
         local=local_result,
+        wiktionary_local=wiktionary_result,
         cross_ai=cross_result,
         morphology_source=morphology_source,
         combined_tier=combined_tier,

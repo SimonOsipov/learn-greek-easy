@@ -755,6 +755,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                     </div>
                     <UnifiedVerificationTable
                       local={displayVerification.local}
+                      wiktionaryLocal={displayVerification.wiktionary_local ?? null}
                       crossAI={displayVerification.cross_ai}
                       interactive
                       resolvedValues={resolvedValues}
