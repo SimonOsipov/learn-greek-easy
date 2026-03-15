@@ -39,7 +39,10 @@ vi.mock('@/services/adminAPI', () => ({
 
 vi.mock('@/services/wordEntryAPI', () => ({
   wordEntryAPI: {
-    createAndLink: vi.fn().mockResolvedValue({ word_entry: {}, cards_created: 5, is_new: true }),
+    createAndLink: vi
+      .fn()
+      .mockResolvedValue({ word_entry: { id: 'we-1' }, cards_created: 5, is_new: true }),
+    generateAudioStreamUrl: vi.fn((id: string) => `/api/v1/word-entries/${id}/audio/stream`),
   },
 }));
 
@@ -1115,11 +1118,11 @@ describe('GenerateNounDialog', () => {
   // Approve & Save success flow (AC #15)
   // ============================================================
 
-  // 54. On success: createAndLink called, onWordLinked called, modal closes, toast shown
-  it('calls createAndLink, onWordLinked, closes modal, and shows success toast on approve', async () => {
+  // 54. On success: createAndLink called, toast shown, audio generation starts (dialog stays open)
+  it('calls createAndLink and shows success toast on approve, then starts audio generation', async () => {
     const mockCreateAndLink = vi.mocked(wordEntryAPI.createAndLink);
     mockCreateAndLink.mockResolvedValueOnce({
-      word_entry: {} as never,
+      word_entry: { id: 'we-1' } as never,
       cards_created: 5,
       is_new: true,
     });
@@ -1129,7 +1132,7 @@ describe('GenerateNounDialog', () => {
     const onOpenChange = vi.fn();
     const user = userEvent.setup();
 
-    const { props } = renderDialog({ onWordLinked, onOpenChange });
+    renderDialog({ onWordLinked, onOpenChange });
 
     await submitWord(user);
     fireFullPipelineEvents();
@@ -1147,11 +1150,14 @@ describe('GenerateNounDialog', () => {
       );
     });
 
-    expect(onWordLinked).toHaveBeenCalled();
-    expect(props.onOpenChange).toHaveBeenCalledWith(false);
+    // Toast shown immediately after approve
     expect(mockToast).toHaveBeenCalledWith(
       expect.objectContaining({ title: expect.stringMatching(/saved|успешно/i) })
     );
+
+    // Dialog stays open during audio generation (onWordLinked/close deferred to audio completion)
+    expect(onWordLinked).not.toHaveBeenCalled();
+    expect(onOpenChange).not.toHaveBeenCalledWith(false);
   });
 
   // ============================================================

@@ -1055,6 +1055,9 @@
       "successToast": "Word entry saved successfully",
       "errorToast": "Failed to save word entry"
     },
+    "audio": {
+      "generating": "Generating audio... {{completed}}/{{total}} parts complete"
+    },
     "editable": {
       "examplesTitle": "Examples",
       "exampleGreek": "Greek",

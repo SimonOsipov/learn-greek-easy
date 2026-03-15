@@ -22,6 +22,7 @@ export interface UseGenerateAudioOptions {
 
 export interface UseGenerateAudioResult {
   triggerGeneration: () => void;
+  cancel: () => void;
   progress: WordAudioProgress;
   isGenerating: boolean;
 }
@@ -148,8 +149,14 @@ export function useGenerateAudio({ wordEntryId }: UseGenerateAudioOptions): UseG
     setStreamEnabled(true);
   }, []);
 
+  const cancelGeneration = useCallback(() => {
+    setStreamEnabled(false);
+    setProgress(INITIAL_PROGRESS);
+  }, []);
+
   return {
     triggerGeneration,
+    cancel: cancelGeneration,
     progress,
     isGenerating: progress.status === 'generating',
   };
