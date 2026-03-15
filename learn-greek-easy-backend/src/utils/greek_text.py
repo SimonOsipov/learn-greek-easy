@@ -358,6 +358,29 @@ GENDER_TO_ARTICLE: dict[str, str] = {
 }
 
 
+def normalize_ipa(text: str) -> str:
+    """Normalize an IPA pronunciation string for comparison.
+
+    Strips formatting differences while preserving phonetic content:
+    - Removes /[] delimiters
+    - Removes dots (syllable boundaries)
+    - Removes ˈˌ stress markers
+    - Normalizes Greek accented vowels (via normalize_greek_accents)
+    - Removes tie bar (U+0361), nasalization (U+0303), length mark (ː)
+    - Collapses whitespace
+    """
+    import re  # noqa: PLC0415
+
+    result = text
+    result = re.sub(r"[/\[\]]", "", result)
+    result = result.replace(".", "")
+    result = result.replace("ˈ", "").replace("ˌ", "")
+    result = normalize_greek_accents(result)
+    result = result.replace("\u0361", "").replace("\u0303", "").replace("ː", "")
+    result = " ".join(result.split())
+    return result.strip()
+
+
 def resolve_tts_text(lemma: str, part_of_speech: str, grammar_data: dict | None) -> str:
     """Resolve the text to send to ElevenLabs TTS for a word entry.
 
