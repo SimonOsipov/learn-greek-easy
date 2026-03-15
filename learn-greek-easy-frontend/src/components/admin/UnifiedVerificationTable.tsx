@@ -200,7 +200,7 @@ function LocalCell({
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          <span className="block break-words text-xs">{referenceValue}</span>
+          <span className="block max-w-[120px] truncate text-xs">{referenceValue}</span>
         </TooltipTrigger>
         <TooltipContent>
           <span className="text-xs">{referenceValue}</span>
@@ -267,7 +267,16 @@ function PrimaryValueCell({
   if (!comparison) return <span className="text-muted-foreground">—</span>;
 
   const clickable = isCellClickable(row, 'primary', interactive);
-  const content = <span className="truncate text-xs">{comparison.primary_value}</span>;
+  const content = (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="block max-w-[120px] truncate text-xs">{comparison.primary_value}</span>
+      </TooltipTrigger>
+      <TooltipContent>
+        <span className="text-xs">{comparison.primary_value}</span>
+      </TooltipContent>
+    </Tooltip>
+  );
 
   if (clickable) {
     return (
@@ -311,7 +320,16 @@ function SecondaryValueCell({
   if (!comparison) return <span className="text-muted-foreground">—</span>;
 
   const clickable = isCellClickable(row, 'secondary', interactive);
-  const content = <span className="truncate text-xs">{comparison.secondary_value}</span>;
+  const content = (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="block max-w-[120px] truncate text-xs">{comparison.secondary_value}</span>
+      </TooltipTrigger>
+      <TooltipContent>
+        <span className="text-xs">{comparison.secondary_value}</span>
+      </TooltipContent>
+    </Tooltip>
+  );
 
   if (clickable) {
     return (
