@@ -317,24 +317,45 @@ describe('GenerateNounDialog audio auto-trigger', () => {
 
   it('calls onWordLinked and closes dialog when audio completes', async () => {
     const user = userEvent.setup();
-    const { props } = renderDialog();
+    const { props, rerender } = renderDialog();
 
     await driveToDone(user);
 
     await user.click(screen.getByTestId('approve-save-button'));
 
-    // Simulate audio completing: update mockAudioProgress and re-render
-    // The useEffect watches audioProgress.status — since we can't update the mock
-    // mid-render, we verify that the effect wiring is correct by checking
-    // that onWordLinked is NOT called before audio completes (approve sets audioWordEntryId only)
+    // Wait for triggerGeneration to be called (approve succeeded, audio started)
     await waitFor(() => {
-      // After approve, onWordLinked should NOT have been called yet
-      // (it's now deferred to audio completion via useEffect)
       expect(mockTriggerAudio).toHaveBeenCalled();
     });
 
     // The dialog stays open during audio generation
     expect(props.onOpenChange).not.toHaveBeenCalledWith(false);
+
+    // Simulate audio completing: mutate mockAudioProgress so the factory returns 'complete'
+    // on the next render cycle, then force a re-render so the useEffect fires
+    mockAudioProgress = {
+      parts: new Map(),
+      totalParts: 3,
+      partsCompleted: 3,
+      status: 'complete',
+      errorMessage: null,
+    };
+
+    // Re-render the dialog with the same props so the useEffect fires with 'complete' status
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <GenerateNounDialog {...props} />
+      </QueryClientProvider>
+    );
+
+    await waitFor(() => {
+      expect(props.onWordLinked).toHaveBeenCalled();
+    });
+
+    expect(props.onOpenChange).toHaveBeenCalledWith(false);
   });
 
   it('does not show audio progress when audioWordEntryId is null (before approve)', async () => {

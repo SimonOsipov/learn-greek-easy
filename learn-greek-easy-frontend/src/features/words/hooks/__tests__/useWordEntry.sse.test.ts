@@ -39,33 +39,55 @@ describe('useWordEntry polling behavior', () => {
   });
 
   it('polls every 3s when word entry has generating audio_status', async () => {
-    const generatingEntry = {
-      audio_status: 'generating',
-      examples: [],
-    } as unknown as WordEntryResponse;
-    (wordEntryAPI.getById as ReturnType<typeof vi.fn>).mockResolvedValue(generatingEntry);
+    vi.useFakeTimers();
+    try {
+      const generatingEntry = {
+        audio_status: 'generating',
+        examples: [],
+      } as unknown as WordEntryResponse;
+      (wordEntryAPI.getById as ReturnType<typeof vi.fn>).mockResolvedValue(generatingEntry);
 
-    const { result } = renderHook(() => useWordEntry({ wordId: 'test-id' }), {
-      wrapper: createWrapper(queryClient),
-    });
+      renderHook(() => useWordEntry({ wordId: 'test-id' }), {
+        wrapper: createWrapper(queryClient),
+      });
 
-    await waitFor(() => expect(result.current.wordEntry).not.toBeNull());
-    expect(wordEntryAPI.getById).toHaveBeenCalled();
+      // Wait for the initial fetch (advance time to let the initial query run)
+      await vi.advanceTimersByTimeAsync(100);
+      expect(wordEntryAPI.getById).toHaveBeenCalledTimes(1);
+
+      // Advance past the 3s polling interval to trigger the first refetch
+      await vi.advanceTimersByTimeAsync(3000);
+      expect(wordEntryAPI.getById).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('does not poll when audio_status is ready', async () => {
-    const readyEntry = {
-      audio_status: 'ready',
-      examples: [],
-    } as unknown as WordEntryResponse;
-    (wordEntryAPI.getById as ReturnType<typeof vi.fn>).mockResolvedValue(readyEntry);
+    vi.useFakeTimers();
+    try {
+      const readyEntry = {
+        audio_status: 'ready',
+        examples: [],
+      } as unknown as WordEntryResponse;
+      (wordEntryAPI.getById as ReturnType<typeof vi.fn>).mockResolvedValue(readyEntry);
 
-    const { result } = renderHook(() => useWordEntry({ wordId: 'test-id' }), {
-      wrapper: createWrapper(queryClient),
-    });
+      renderHook(() => useWordEntry({ wordId: 'test-id' }), {
+        wrapper: createWrapper(queryClient),
+      });
 
-    await waitFor(() => expect(result.current.wordEntry).not.toBeNull());
-    expect(result.current.wordEntry?.audio_status).toBe('ready');
+      // Wait for the initial fetch
+      await vi.advanceTimersByTimeAsync(100);
+      expect(wordEntryAPI.getById).toHaveBeenCalledTimes(1);
+
+      // Advance past multiple polling intervals — no additional calls expected
+      await vi.advanceTimersByTimeAsync(9000);
+
+      // Still only 1 call (no polling when audio is ready)
+      expect(wordEntryAPI.getById).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('returns null wordEntry when wordId is empty and query is disabled', () => {

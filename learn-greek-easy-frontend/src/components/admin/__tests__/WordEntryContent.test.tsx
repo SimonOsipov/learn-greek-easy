@@ -30,6 +30,7 @@ vi.mock('@/features/words/hooks', async (importOriginal) => {
     ...actual,
     useGenerateAudio: vi.fn(() => ({
       triggerGeneration: vi.fn(),
+      cancel: vi.fn(),
       progress: {
         parts: new Map(),
         totalParts: 0,
@@ -540,7 +541,7 @@ describe('WordEntryContent', () => {
       expect(screen.getByTestId('audio-generate-btn-lemma')).toHaveTextContent('Regenerate');
     });
 
-    it('shows Generate button for example with missing audio status', () => {
+    it('shows audio status badge for example with missing audio status (no per-example generate button)', () => {
       (useWordEntry as Mock).mockReturnValue({
         wordEntry: createMockWordEntry({
           examples: [
@@ -561,20 +562,24 @@ describe('WordEntryContent', () => {
         refetch: vi.fn(),
       });
       renderComponent();
-      expect(screen.getByTestId('audio-generate-btn-example-0')).toBeInTheDocument();
-      expect(screen.getByTestId('audio-generate-btn-example-0')).toHaveTextContent('Generate');
+      // Per-example generate buttons are removed — only the status badge remains
+      expect(screen.getByTestId('audio-status-badge-example-0')).toBeInTheDocument();
+      expect(screen.queryByTestId('audio-generate-btn-example-0')).not.toBeInTheDocument();
     });
 
-    it('shows Regenerate button for example with ready audio status', () => {
+    it('shows audio status badge for example with ready audio status (no per-example generate button)', () => {
       // Default mock has example audio_status: 'ready'
       renderComponent();
-      expect(screen.getByTestId('audio-generate-btn-example-0')).toHaveTextContent('Regenerate');
+      // Per-example generate buttons are removed — only the status badge remains
+      expect(screen.getByTestId('audio-status-badge-example-0')).toBeInTheDocument();
+      expect(screen.queryByTestId('audio-generate-btn-example-0')).not.toBeInTheDocument();
     });
 
     it('clicking lemma generate button triggers generation', () => {
       const mockTriggerGeneration = vi.fn();
       (useGenerateAudio as Mock).mockReturnValue({
         triggerGeneration: mockTriggerGeneration,
+        cancel: vi.fn(),
         progress: {
           parts: new Map(),
           totalParts: 0,

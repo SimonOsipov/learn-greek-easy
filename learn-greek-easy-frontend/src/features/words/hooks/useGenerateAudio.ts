@@ -114,12 +114,18 @@ export function useGenerateAudio({ wordEntryId }: UseGenerateAudioOptions): UseG
           setProgress((prev) => {
             const parts = new Map(prev.parts);
             if (d.part) {
+              // Per-part error: mark this part as error, keep stream open for remaining parts
               parts.set(makePartKey(d.part, d.example_id), 'error');
+              return { ...prev, parts, errorMessage: d.error };
             }
+            // Pipeline-level error (no specific part): terminal error
             return { ...prev, parts, status: 'error', errorMessage: d.error };
           });
-          setStreamEnabled(false);
-          toast({ title: t('audioGenerate.error'), variant: 'destructive' });
+          if (!d.part) {
+            // Only close stream on pipeline-level errors
+            setStreamEnabled(false);
+            toast({ title: t('audioGenerate.error'), variant: 'destructive' });
+          }
           break;
         }
       }

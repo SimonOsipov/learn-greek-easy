@@ -42,7 +42,9 @@ vi.mock('@/services/wordEntryAPI', () => ({
     createAndLink: vi
       .fn()
       .mockResolvedValue({ word_entry: { id: 'we-1' }, cards_created: 5, is_new: true }),
-    generateAudioStreamUrl: vi.fn((id: string) => `/api/v1/word-entries/${id}/audio/stream`),
+    generateAudioStreamUrl: vi.fn(
+      (id: string) => `/api/v1/admin/word-entries/${id}/generate-audio/stream`
+    ),
   },
 }));
 

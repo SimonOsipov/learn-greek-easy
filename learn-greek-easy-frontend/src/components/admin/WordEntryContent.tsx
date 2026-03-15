@@ -380,11 +380,7 @@ function ContentFields({
           </div>
         </CardHeader>
         <CardContent className="px-4 pb-4" id="section-ex">
-          <ExamplesSection
-            examples={wordEntry.examples}
-            onGenerateClick={onGenerateClick}
-            isGenerating={isGenerating}
-          />
+          <ExamplesSection examples={wordEntry.examples} />
         </CardContent>
       </Card>
     </div>
@@ -395,15 +391,7 @@ function ContentFields({
 // ExamplesSection
 // ============================================
 
-function ExamplesSection({
-  examples,
-  onGenerateClick,
-  isGenerating,
-}: {
-  examples: WordEntryExampleSentence[] | null;
-  onGenerateClick: () => void;
-  isGenerating: boolean;
-}) {
+function ExamplesSection({ examples }: { examples: WordEntryExampleSentence[] | null }) {
   const { t } = useTranslation('admin');
   const hasExamples = examples && examples.length > 0;
 
@@ -417,13 +405,7 @@ function ExamplesSection({
       {hasExamples && (
         <div className="space-y-3">
           {examples.map((example, index) => (
-            <ExampleCard
-              key={example.id || index}
-              example={example}
-              index={index}
-              onGenerateClick={onGenerateClick}
-              isGenerating={isGenerating}
-            />
+            <ExampleCard key={example.id || index} example={example} index={index} />
           ))}
         </div>
       )}
@@ -443,17 +425,7 @@ function CompletionDot({ filled }: { filled: boolean }) {
   );
 }
 
-function ExampleCard({
-  example,
-  index,
-  onGenerateClick,
-  isGenerating,
-}: {
-  example: WordEntryExampleSentence;
-  index: number;
-  onGenerateClick: () => void;
-  isGenerating: boolean;
-}) {
+function ExampleCard({ example, index }: { example: WordEntryExampleSentence; index: number }) {
   const { t } = useTranslation('admin');
 
   const hasEnglish = Boolean(example.english);
@@ -474,12 +446,6 @@ function ExampleCard({
             <AudioStatusBadge
               status={example.audio_status}
               data-testid={`audio-status-badge-example-${index}`}
-            />
-            <AudioGenerateButton
-              status={example.audio_status}
-              onClick={onGenerateClick}
-              isLoading={isGenerating}
-              data-testid={`audio-generate-btn-example-${index}`}
             />
           </div>
         )}
