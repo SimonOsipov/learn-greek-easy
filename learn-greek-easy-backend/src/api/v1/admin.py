@@ -52,9 +52,13 @@ from src.db.models import (
     Deck,
     DeckLevel,
     DeckWordEntry,
+    DialogExercise,
     DialogLine,
     DialogSpeaker,
     DialogStatus,
+    ExerciseItem,
+    ExerciseStatus,
+    ExerciseType,
     FeedbackCategory,
     FeedbackStatus,
     ListeningDialog,
@@ -3849,7 +3853,7 @@ async def delete_listening_dialog(
 
 
 @router.post("/listening-dialogs", response_model=ListeningDialogListItem, status_code=201)
-async def create_listening_dialog(
+async def create_listening_dialog(  # noqa: C901
     data: ListeningDialogCreateFromJSON,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_superuser),
@@ -3912,6 +3916,29 @@ async def create_listening_dialog(
                     text=line.text,
                 )
             )
+
+        if data.exercises is not None:
+            type_map: list[tuple[ExerciseType, list[Any]]] = [
+                (ExerciseType.FILL_GAPS, data.exercises.fill_gaps),
+                (ExerciseType.SELECT_HEARD, data.exercises.select_heard),
+                (ExerciseType.TRUE_FALSE, data.exercises.true_false),
+            ]
+            for ex_type, items in type_map:
+                exercise = DialogExercise(
+                    dialog_id=dialog.id,
+                    exercise_type=ex_type,
+                    status=ExerciseStatus.DRAFT,
+                )
+                db.add(exercise)
+                await db.flush()
+                for idx, item in enumerate(items):
+                    db.add(
+                        ExerciseItem(
+                            exercise_id=exercise.id,
+                            item_index=idx,
+                            payload=item.model_dump(),
+                        )
+                    )
 
         await db.commit()
         await db.refresh(dialog)

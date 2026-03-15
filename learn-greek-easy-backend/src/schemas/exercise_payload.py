@@ -1,4 +1,4 @@
-from pydantic import BaseModel, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from src.db.models import ExerciseType
 
@@ -84,3 +84,11 @@ def validate_exercise_payload(exercise_type: ExerciseType, payload: dict) -> Bas
     """Validate a raw payload dict against the schema for the given exercise type."""
     schema_cls = PAYLOAD_SCHEMA_MAP[exercise_type]
     return schema_cls.model_validate(payload)
+
+
+class ExercisesPayload(BaseModel):
+    """Top-level exercises payload attached to a dialog creation request."""
+
+    fill_gaps: list[FillGapsPayload] = Field(min_length=1, max_length=6)
+    select_heard: list[SelectHeardPayload] = Field(min_length=1, max_length=6)
+    true_false: list[TrueFalsePayload] = Field(min_length=1, max_length=6)

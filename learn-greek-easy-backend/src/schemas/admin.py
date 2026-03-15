@@ -15,6 +15,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from src.db.models import DeckLevel, DialogStatus
+from src.schemas.exercise_payload import ExercisesPayload
 from src.schemas.nlp import DuplicateCheckResult, GeneratedNounData, VerificationSummary
 
 # ============================================================================
@@ -385,6 +386,7 @@ class ListeningDialogCreateFromJSON(BaseModel):
     cefr_level: DeckLevel
     speakers: list[DialogSpeakerCreate] = Field(min_length=2, max_length=4)
     lines: list[DialogLineCreate] = Field(min_length=1, max_length=50)
+    exercises: ExercisesPayload | None = None
 
     ALLOWED_CEFR_LEVELS: ClassVar[set[DeckLevel]] = {
         DeckLevel.A1,
@@ -416,6 +418,18 @@ class ListeningDialogCreateFromJSON(BaseModel):
             if line.speaker_index not in valid_indices:
                 raise ValueError(
                     f"lines[{i}].speaker_index {line.speaker_index} does not reference a defined speaker"
+                )
+        return self
+
+    @model_validator(mode="after")
+    def validate_exercise_line_indices(self) -> "ListeningDialogCreateFromJSON":
+        if self.exercises is None:
+            return self
+        line_count = len(self.lines)
+        for i, item in enumerate(self.exercises.fill_gaps):
+            if item.line_index >= line_count:
+                raise ValueError(
+                    f"exercises.fill_gaps[{i}].line_index {item.line_index} is out of range (dialog has {line_count} lines)"
                 )
         return self
 
