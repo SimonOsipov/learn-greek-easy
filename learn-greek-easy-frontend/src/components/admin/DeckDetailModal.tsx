@@ -1203,7 +1203,7 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
           )}
 
           {/* Close Button */}
-          <div className="flex justify-end border-t pt-4">
+          <div className="flex justify-end pt-4">
             <Button
               variant="outline"
               onClick={() => onOpenChange(false)}
