@@ -34,9 +34,14 @@ class WiktionaryMorphologyService:
         query = select(WiktionaryMorphology).where(WiktionaryMorphology.lemma == normalized)
         if gender is not None:
             query = query.where(WiktionaryMorphology.gender == gender)
-        query = query.limit(1)
         result = await self.db.execute(query)
-        return result.scalars().first()
+        if gender is not None:
+            # Gender-filtered: at most one row (unique on lemma+gender)
+            return result.scalar_one_or_none()
+        # No gender filter: multiple rows possible for homographs.
+        # Return only if exactly one match exists; otherwise caller should retry with gender.
+        entries = result.scalars().all()
+        return entries[0] if len(entries) == 1 else None
 
     async def get_declensions(self, lemma: str, gender: str | None = None) -> dict[str, str] | None:
         """Return the forms JSONB dict for the matching entry, or None.

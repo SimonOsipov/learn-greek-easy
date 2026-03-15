@@ -121,7 +121,7 @@ class WiktionaryVerificationService:
         for form_key, field_path in _FORM_KEY_TO_PATH.items():
             if form_key not in wiktionary_forms:
                 continue
-            wikt_form = unicodedata.normalize("NFC", wiktionary_forms[form_key])
+            wikt_form = unicodedata.normalize("NFC", _strip_article(wiktionary_forms[form_key]))
             number, case = _PATH_TO_GENERATED[field_path]
             generated_raw = _get_generated_form(data, number, case)
             if generated_raw is None:

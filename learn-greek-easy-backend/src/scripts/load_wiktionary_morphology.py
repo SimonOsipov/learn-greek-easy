@@ -124,7 +124,10 @@ def _process_noun_entry(
         filtered_ref[0] += 1
         return
 
-    lemma = entry.get("word", "")
+    lemma = str(entry.get("word", "")).strip()
+    if not lemma:
+        filtered_ref[0] += 1
+        return
     key = (lemma, gender)
     forms = _extract_forms(entry)
     ipa = _extract_ipa(entry)

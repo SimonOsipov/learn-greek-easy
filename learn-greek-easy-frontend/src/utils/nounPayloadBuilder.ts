@@ -198,7 +198,12 @@ export function initializeResolvedValues(
       const l2Ref = l2RefMap.get(field);
       if (l1Ref != null && l2Ref != null) {
         if (l1Ref === l2Ref) {
-          map.set(field, { value: genValue, source: 'auto', status: 'agreed' });
+          // L1 and L2 agree on reference; only auto-approve if generated value also matches
+          map.set(field, {
+            value: genValue,
+            source: 'auto',
+            status: genValue === l1Ref ? 'agreed' : 'unresolved',
+          });
         } else {
           map.set(field, { value: genValue, source: 'auto', status: 'unresolved' });
         }

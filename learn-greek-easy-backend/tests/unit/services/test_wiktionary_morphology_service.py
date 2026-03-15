@@ -9,13 +9,21 @@ import pytest
 from src.services.wiktionary_morphology_service import WiktionaryMorphologyService
 
 
-def _make_db(row=None):
-    """Build an AsyncSession mock that returns the given row from scalars().first()."""
-    scalars_mock = MagicMock()
-    scalars_mock.first.return_value = row
+def _make_db(row=None, *, gender_filtered: bool = False):
+    """Build an AsyncSession mock.
 
+    When gender_filtered=True (gender is provided), mocks scalar_one_or_none().
+    When gender_filtered=False (no gender), mocks scalars().all() returning [row] or [].
+    """
     result_mock = MagicMock()
-    result_mock.scalars.return_value = scalars_mock
+    if gender_filtered:
+        # Gender path: scalar_one_or_none()
+        result_mock.scalar_one_or_none.return_value = row
+    else:
+        # No-gender path: scalars().all() returning a list
+        scalars_mock = MagicMock()
+        scalars_mock.all.return_value = [row] if row is not None else []
+        result_mock.scalars.return_value = scalars_mock
 
     db = AsyncMock()
     db.execute = AsyncMock(return_value=result_mock)
@@ -57,7 +65,7 @@ class TestGetEntry:
     @pytest.mark.asyncio
     async def test_gender_filter_added_when_provided(self) -> None:
         entry = _make_entry(gender="feminine")
-        db = _make_db(row=entry)
+        db = _make_db(row=entry, gender_filtered=True)
         service = WiktionaryMorphologyService(db)
 
         result = await service.get_entry("τράπεζα", gender="feminine")
@@ -71,7 +79,7 @@ class TestGetEntry:
         db = _make_db(row=entry)
         service = WiktionaryMorphologyService(db)
 
-        # Should work without gender filter
+        # Should work without gender filter (returns row when exactly 1 match)
         result = await service.get_entry("σπίτι", gender=None)
 
         assert result is entry
@@ -124,7 +132,7 @@ class TestGetDeclensions:
     async def test_gender_filter_passed_through(self) -> None:
         forms = {"nominative_singular": "τράπεζα"}
         entry = _make_entry(lemma="τράπεζα", gender="feminine", forms=forms)
-        db = _make_db(row=entry)
+        db = _make_db(row=entry, gender_filtered=True)
         service = WiktionaryMorphologyService(db)
 
         result = await service.get_declensions("τράπεζα", gender="feminine")

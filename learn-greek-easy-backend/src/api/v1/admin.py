@@ -2906,8 +2906,9 @@ async def _run_verification_stage(
             lexicon_declensions = await _lex_svc.get_declensions(lemma, pos="NOUN")
 
     # Step 2: Wiktionary entry (gender-filtered with fallback)
-    generated_gender = generated_data.grammar_data.gender if generated_data.grammar_data else None
-    wiktionary_entry = await _fetch_wiktionary_entry(lemma, generated_gender)
+    # Use normalized_lemma.gender (from NLP pipeline) not generated_data.grammar_data.gender
+    # (which is under verification and may be wrong, causing a spurious miss).
+    wiktionary_entry = await _fetch_wiktionary_entry(lemma, normalized_lemma.gender)
 
     # morphology_source determination
     has_lexicon = bool(lexicon_declensions)
