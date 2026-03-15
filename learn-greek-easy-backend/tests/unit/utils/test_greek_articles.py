@@ -7,6 +7,7 @@ from src.utils.greek_articles import (
     GENITIVE_ARTICLES,
     NOMINATIVE_ARTICLES,
     get_nominative_article,
+    infer_gender_from_ending,
 )
 
 
@@ -68,3 +69,77 @@ class TestArticleMap:
 
     def test_accusative_points_to_accusative_articles(self) -> None:
         assert ARTICLE_MAP["accusative"] is ACCUSATIVE_ARTICLES
+
+
+class TestInferGenderFromEnding:
+    def test_neuter_o(self) -> None:
+        assert infer_gender_from_ending("βιβλίο") == "Neut"
+
+    def test_neuter_o_accented(self) -> None:
+        assert infer_gender_from_ending("δρόμο") == "Neut"
+
+    def test_neuter_i(self) -> None:
+        assert infer_gender_from_ending("παιδί") == "Neut"
+
+    def test_neuter_i_accented(self) -> None:
+        assert infer_gender_from_ending("ταξί") == "Neut"
+
+    def test_masculine_os(self) -> None:
+        assert infer_gender_from_ending("λόγος") == "Masc"
+
+    def test_masculine_os_accented(self) -> None:
+        assert infer_gender_from_ending("καιρός") == "Masc"
+
+    def test_masculine_is(self) -> None:
+        assert infer_gender_from_ending("μαθητής") == "Masc"
+
+    def test_masculine_is_accented(self) -> None:
+        assert infer_gender_from_ending("αθλητής") == "Masc"
+
+    def test_masculine_as(self) -> None:
+        assert infer_gender_from_ending("άντρας") == "Masc"
+
+    def test_masculine_as_accented(self) -> None:
+        assert infer_gender_from_ending("μπαμπάς") == "Masc"
+
+    def test_feminine_eta(self) -> None:
+        assert infer_gender_from_ending("γυναίκη") == "Fem"
+
+    def test_feminine_eta_accented(self) -> None:
+        assert infer_gender_from_ending("μητέρη") == "Fem"
+
+    def test_feminine_a(self) -> None:
+        assert infer_gender_from_ending("γάτα") == "Fem"
+
+    def test_feminine_a_accented(self) -> None:
+        assert infer_gender_from_ending("μαμά") == "Fem"
+
+    def test_priority_os_before_o(self) -> None:
+        # -ος must match as Masc, not -ο as Neut
+        assert infer_gender_from_ending("λόγος") == "Masc"
+
+    def test_priority_is_before_i(self) -> None:
+        # -ης must match as Masc, not -η as Fem
+        assert infer_gender_from_ending("μαθητής") == "Masc"
+
+    def test_priority_as_before_a(self) -> None:
+        # -ας must match as Masc, not -α as Fem
+        assert infer_gender_from_ending("άντρας") == "Masc"
+
+    def test_empty_string_returns_none(self) -> None:
+        assert infer_gender_from_ending("") is None
+
+    def test_single_char_returns_none(self) -> None:
+        assert infer_gender_from_ending("α") is None
+
+    def test_unrecognized_ending_returns_none(self) -> None:
+        # "τεστ" ends in consonant τ — no match
+        assert infer_gender_from_ending("τεστ") is None
+
+    def test_two_char_word_neuter_o(self) -> None:
+        # Shortest possible word that matches -ο
+        assert infer_gender_from_ending("νο") == "Neut"
+
+    def test_single_char_not_matched_as_masculine(self) -> None:
+        # Single char word (just "ς") returns None, not Masc
+        assert infer_gender_from_ending("ς") is None

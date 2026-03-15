@@ -857,7 +857,8 @@ export interface ReverseLookupItem {
   gender: string | null;
   article: string | null;
   translations: string[];
-  actionable: boolean;
+  score: number;
+  inferred_gender: boolean;
 }
 
 export interface ReverseLookupResponse {
