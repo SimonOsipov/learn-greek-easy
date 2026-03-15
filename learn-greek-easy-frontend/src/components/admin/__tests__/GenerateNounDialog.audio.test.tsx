@@ -346,4 +346,59 @@ describe('GenerateNounDialog audio auto-trigger', () => {
     // Before approve: no audio progress spinner
     expect(screen.queryByTestId('audio-generation-progress')).not.toBeInTheDocument();
   });
+
+  it('calls cancelAudio when Start Over is clicked during audio generation phase', async () => {
+    // Set up generating status so audioWordEntryId drives into audio phase
+    mockAudioProgress = {
+      parts: new Map(),
+      totalParts: 3,
+      partsCompleted: 1,
+      status: 'generating',
+      errorMessage: null,
+    };
+
+    const user = userEvent.setup();
+    renderDialog();
+
+    await driveToDone(user);
+
+    // Approve — this sets audioWordEntryId internally
+    await user.click(screen.getByTestId('approve-save-button'));
+
+    // Wait for audio progress to appear (confirms audioWordEntryId is set)
+    await waitFor(() => {
+      expect(screen.getByTestId('audio-generation-progress')).toBeInTheDocument();
+    });
+
+    // Click Start Over — calls resetAllState which calls cancelAudio
+    await user.click(screen.getByTestId('generate-noun-start-over'));
+
+    expect(mockCancelAudio).toHaveBeenCalled();
+  });
+
+  it('calls onWordLinked and closes dialog when audio status transitions to error', async () => {
+    // Set up error status so the useEffect fires immediately after audioWordEntryId is set
+    mockAudioProgress = {
+      parts: new Map(),
+      totalParts: 0,
+      partsCompleted: 0,
+      status: 'error',
+      errorMessage: 'Audio generation failed',
+    };
+
+    const user = userEvent.setup();
+    const { props } = renderDialog();
+
+    await driveToDone(user);
+
+    // Approve — sets audioWordEntryId, which triggers the useEffect watching audioProgress.status
+    await user.click(screen.getByTestId('approve-save-button'));
+
+    // With status='error' and audioWordEntryId set, the useEffect should call onWordLinked and close
+    await waitFor(() => {
+      expect(props.onWordLinked).toHaveBeenCalled();
+    });
+
+    expect(props.onOpenChange).toHaveBeenCalledWith(false);
+  });
 });
