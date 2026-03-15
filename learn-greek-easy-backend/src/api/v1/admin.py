@@ -3838,6 +3838,11 @@ async def list_listening_dialogs(
     "/listening-dialogs/{dialog_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete a listening dialog (admin)",
+    description="Permanently delete a listening dialog and its S3 audio. Requires superuser privileges.",
+    responses={
+        204: {"description": "Listening dialog deleted successfully"},
+        404: {"description": "Listening dialog not found"},
+    },
 )
 async def delete_listening_dialog(
     dialog_id: UUID,
@@ -3848,6 +3853,25 @@ async def delete_listening_dialog(
     dialog = result.scalar_one_or_none()
     if dialog is None:
         raise HTTPException(status_code=404, detail="Listening dialog not found")
+
+    # Best-effort S3 cleanup
+    if dialog.audio_s3_key:
+        logger.info(
+            "Deleting dialog audio from S3",
+            extra={
+                "dialog_id": str(dialog_id),
+                "s3_key": dialog.audio_s3_key,
+            },
+        )
+        s3 = get_s3_service()
+        try:
+            s3.delete_object(dialog.audio_s3_key)
+        except Exception:
+            logger.warning(
+                "Failed to delete S3 audio during dialog deletion",
+                extra={"s3_key": dialog.audio_s3_key, "dialog_id": str(dialog_id)},
+            )
+
     await db.delete(dialog)
     await db.commit()
 
