@@ -177,9 +177,16 @@ export function DialogDetailModal({ dialogId, open, onOpenChange }: DialogDetail
       }
     };
 
+    const syncCurrentTime = () => {
+      const nowMs = audio.currentTime * 1000;
+      setAudioCurrentTimeMs(nowMs);
+      lastUpdateMs = nowMs;
+    };
+
     audio.addEventListener('play', startLoop);
     audio.addEventListener('pause', stopLoop);
     audio.addEventListener('ended', stopLoop);
+    audio.addEventListener('seeked', syncCurrentTime);
 
     if (!audio.paused) {
       startLoop();
@@ -190,6 +197,7 @@ export function DialogDetailModal({ dialogId, open, onOpenChange }: DialogDetail
       audio.removeEventListener('play', startLoop);
       audio.removeEventListener('pause', stopLoop);
       audio.removeEventListener('ended', stopLoop);
+      audio.removeEventListener('seeked', syncCurrentTime);
     };
   }, [selectedDialog]);
 

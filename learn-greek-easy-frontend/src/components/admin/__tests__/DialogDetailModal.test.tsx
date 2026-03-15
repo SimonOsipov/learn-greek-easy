@@ -294,4 +294,38 @@ describe('DialogDetailModal - Karaoke Word Rendering', () => {
     // The parent <p> textContent should be 'Γεια σου κόσμε'
     expect(karaokeP.textContent).toBe('Γεια σου κόσμε');
   });
+
+  it('cancels RAF on pause event', async () => {
+    mockStoreState = baseStoreState();
+    const { rerender } = renderModal();
+    await act(async () => {
+      mockStoreState = { ...baseStoreState(), selectedDialog: mockDialog };
+      rerender(<DialogDetailModal dialogId="dlg-1" open={true} onOpenChange={vi.fn()} />);
+    });
+
+    const audioEl = screen.getByTestId('waveform-audio-element') as HTMLAudioElement;
+    await act(async () => {
+      audioEl.dispatchEvent(new Event('play'));
+      audioEl.dispatchEvent(new Event('pause'));
+    });
+
+    expect(window.cancelAnimationFrame).toHaveBeenCalled();
+  });
+
+  it('cancels RAF on ended event', async () => {
+    mockStoreState = baseStoreState();
+    const { rerender } = renderModal();
+    await act(async () => {
+      mockStoreState = { ...baseStoreState(), selectedDialog: mockDialog };
+      rerender(<DialogDetailModal dialogId="dlg-1" open={true} onOpenChange={vi.fn()} />);
+    });
+
+    const audioEl = screen.getByTestId('waveform-audio-element') as HTMLAudioElement;
+    await act(async () => {
+      audioEl.dispatchEvent(new Event('play'));
+      audioEl.dispatchEvent(new Event('ended'));
+    });
+
+    expect(window.cancelAnimationFrame).toHaveBeenCalled();
+  });
 });
