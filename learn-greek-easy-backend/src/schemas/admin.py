@@ -224,24 +224,6 @@ class WordEntryInlineUpdate(BaseModel):
         return self
 
 
-class GenerateWordEntryAudioRequest(BaseModel):
-    """Request schema for generating audio for a specific part of a word entry."""
-
-    part: Literal["lemma", "example"] = Field(
-        ..., description="Which part to generate audio for: 'lemma' or 'example'"
-    )
-    example_id: Optional[str] = Field(
-        default=None,
-        description="UUID of the example sentence. Required when part='example'.",
-    )
-
-    @model_validator(mode="after")
-    def validate_example_id(self) -> "GenerateWordEntryAudioRequest":
-        if self.part == "example" and not self.example_id:
-            raise ValueError("example_id is required when part is 'example'")
-        return self
-
-
 class GenerateCardsRequest(BaseModel):
     """Request schema for generating flashcards from a word entry."""
 

@@ -25,7 +25,7 @@ from starlette.responses import StreamingResponse
 
 from src.config import settings
 from src.core.dependencies import SSEAuthResult, get_current_superuser, get_sse_auth
-from src.core.event_bus import audio_event_bus, news_audio_event_bus
+from src.core.event_bus import news_audio_event_bus
 from src.core.exceptions import (
     ConflictException,
     ElevenLabsAPIError,
@@ -75,7 +75,6 @@ from src.schemas.admin import (
     DialogSpeakerDetail,
     GenerateCardsRequest,
     GenerateCardsResponse,
-    GenerateWordEntryAudioRequest,
     GenerateWordEntryRequest,
     GenerateWordEntryResponse,
     ListeningDialogCreateFromJSON,
@@ -154,7 +153,6 @@ from src.tasks import (
     create_announcement_notifications_task,
     generate_a2_audio_for_news_item_task,
     generate_audio_for_news_item_task,
-    generate_word_entry_part_audio_task,
     is_background_tasks_enabled,
 )
 from src.utils.greek_text import resolve_tts_text
@@ -1367,6 +1365,15 @@ async def _fetch_news_item_for_sse(news_item_id: UUID) -> NewsItem | None:
         return result.scalar_one_or_none()
 
 
+def _sse_single_error(code: str, message: str) -> StreamingResponse:
+    """Return an SSE response containing a single error event."""
+
+    async def _gen() -> AsyncGenerator[str, None]:
+        yield format_sse_error(code, message)
+
+    return create_sse_response(_gen())
+
+
 _NEWS_AUDIO_TERMINAL_EVENTS = {"audio_completed", "audio_failed"}
 _NEWS_AUDIO_SAFETY_TIMEOUT = 300.0  # 5 minutes
 
@@ -2236,259 +2243,6 @@ async def update_word_entry_inline(
         },
     )
     return word_entry_to_response(word_entry)
-
-
-@router.post(
-    "/word-entries/{word_entry_id}/generate-audio",
-    status_code=status.HTTP_202_ACCEPTED,
-    summary="Generate audio for a word entry part",
-)
-async def generate_word_entry_audio(
-    word_entry_id: UUID,
-    request: GenerateWordEntryAudioRequest,
-    background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_superuser),
-) -> dict:
-    if not is_background_tasks_enabled() or not settings.elevenlabs_configured:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Audio generation is not available",
-        )
-
-    result = await db.execute(select(WordEntry).where(WordEntry.id == word_entry_id))
-    word_entry = result.scalar_one_or_none()
-    if word_entry is None:
-        raise NotFoundException(
-            resource="Word entry",
-            detail=f"Word entry with ID '{word_entry_id}' not found",
-        )
-
-    if request.part == "lemma":
-        text = resolve_tts_text(
-            word_entry.lemma, word_entry.part_of_speech.value, word_entry.grammar_data
-        )
-        word_entry.audio_status = AudioStatus.GENERATING
-        word_entry.audio_generating_since = datetime.now(timezone.utc)
-    else:
-        examples = word_entry.examples or []
-        example_dict = None
-        example_index = None
-        for idx, ex in enumerate(examples):
-            if ex.get("id") == request.example_id:
-                example_dict = ex
-                example_index = idx
-                break
-        if example_dict is None or example_index is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Example with ID '{request.example_id}' not found",
-            )
-        text = example_dict.get("greek", "")
-        updated_examples = list(examples)
-        updated_examples[example_index] = {
-            **example_dict,
-            "audio_status": "generating",
-            "audio_generating_since": datetime.now(timezone.utc).isoformat(),
-        }
-        word_entry.examples = updated_examples
-
-    await db.commit()
-
-    background_tasks.add_task(
-        generate_word_entry_part_audio_task,
-        word_entry_id=word_entry_id,
-        part=request.part,
-        example_id=request.example_id,
-        text=text,
-        db_url=settings.database_url,
-    )
-
-    logger.info(
-        "Word entry audio generation scheduled",
-        extra={
-            "word_entry_id": str(word_entry_id),
-            "part": request.part,
-            "example_id": request.example_id,
-            "triggered_by": str(current_user.id),
-        },
-    )
-    return {"message": "Audio generation started"}
-
-
-# ============================================================
-# Audio SSE helpers
-# ============================================================
-
-_TERMINAL_AUDIO_STATUSES = {"ready", "failed", "missing"}
-
-
-def _build_audio_status_event(
-    word_entry_id: UUID,
-    part: str,
-    example_id: str | None,
-    audio_status: str,
-    audio_key: str | None,
-) -> dict:
-    """Build a single audio status event payload."""
-    s3 = get_s3_service()
-    audio_url = (
-        s3.generate_presigned_url(audio_key) if audio_status == "ready" and audio_key else None
-    )
-    return {
-        "word_entry_id": str(word_entry_id),
-        "part": part,
-        "example_id": example_id,
-        "status": audio_status,
-        "audio_url": audio_url,
-    }
-
-
-def _collect_initial_audio_events(word_entry: Any) -> list[dict]:
-    """Collect current audio status for lemma and all examples."""
-    events: list[dict] = []
-
-    # Lemma
-    lemma_status = (
-        word_entry.audio_status.value
-        if hasattr(word_entry.audio_status, "value")
-        else str(word_entry.audio_status)
-    )
-    events.append(
-        _build_audio_status_event(
-            word_entry_id=word_entry.id,
-            part="lemma",
-            example_id=None,
-            audio_status=lemma_status,
-            audio_key=word_entry.audio_key,
-        )
-    )
-
-    # Examples
-    for ex in word_entry.examples or []:
-        ex_id = ex.get("id")
-        if not ex_id:
-            continue
-        ex_status = ex.get("audio_status") or "missing"
-        events.append(
-            _build_audio_status_event(
-                word_entry_id=word_entry.id,
-                part="example",
-                example_id=str(ex_id),
-                audio_status=ex_status,
-                audio_key=ex.get("audio_key"),
-            )
-        )
-
-    return events
-
-
-# ============================================================
-# Audio SSE endpoint
-# ============================================================
-
-
-def _sse_single_error(code: str, message: str) -> StreamingResponse:
-    """Return an SSE response containing a single error event."""
-
-    async def _gen() -> AsyncGenerator[str, None]:
-        yield format_sse_error(code, message)
-
-    return create_sse_response(_gen())
-
-
-async def _fetch_word_entry_for_sse(word_entry_id: UUID) -> WordEntry | None:
-    """Load a WordEntry using a short-lived session (DB-free generator pattern)."""
-    factory = get_session_factory()
-    async with factory.begin() as db:
-        stmt = select(WordEntry).where(WordEntry.id == word_entry_id)
-        result = await db.execute(stmt)
-        return result.scalar_one_or_none()
-
-
-async def _word_audio_event_generator(
-    word_entry_id: UUID,
-    initial_events: list[dict],
-    all_terminal: bool,
-) -> AsyncGenerator[str, None]:
-    """Yield initial status events, then subscribe to the bus until all parts are terminal."""
-    bus_key = f"word_audio:{word_entry_id}"
-
-    if not all_terminal:
-        # Subscribe BEFORE yielding initial events so no ready/failed update
-        # published in the gap between the DB snapshot and subscribe is missed.
-        queue = await audio_event_bus.subscribe(bus_key)
-
-    for ev in initial_events:
-        yield format_sse_event(ev, event="audio_status_changed")
-
-    if all_terminal:
-        return
-
-    terminal_parts: set[tuple[str, str | None]] = {
-        (ev["part"], ev.get("example_id"))
-        for ev in initial_events
-        if ev["status"] in _TERMINAL_AUDIO_STATUSES
-    }
-    all_part_keys: set[tuple[str, str | None]] = {
-        (ev["part"], ev.get("example_id")) for ev in initial_events
-    }
-
-    try:
-        async for chunk in sse_stream(
-            _audio_queue_generator(queue, all_part_keys, terminal_parts),
-        ):
-            yield chunk
-    finally:
-        await audio_event_bus.unsubscribe(bus_key, queue)
-
-
-@router.get(
-    "/word-entries/{word_entry_id}/audio/stream",
-    summary="Stream word entry audio generation status via SSE",
-    responses={200: {"content": {"text/event-stream": {}}}},
-)
-async def stream_word_entry_audio(
-    word_entry_id: UUID,
-    sse_auth: SSEAuthResult = Depends(get_sse_auth),
-) -> StreamingResponse:
-    """SSE stream for real-time audio generation status updates. Admin only."""
-    if not sse_auth.is_authenticated:
-        return _sse_single_error(
-            sse_auth.error_code or "auth_required",
-            sse_auth.error_message or "Authentication required",
-        )
-
-    assert sse_auth.user is not None
-    if not sse_auth.user.is_superuser:
-        return _sse_single_error("forbidden", "Superuser privileges required")
-
-    word_entry = await asyncio.shield(_fetch_word_entry_for_sse(word_entry_id))
-    if word_entry is None:
-        return _sse_single_error("not_found", f"Word entry {word_entry_id} not found")
-
-    initial_events = _collect_initial_audio_events(word_entry)
-    all_terminal = all(ev["status"] in _TERMINAL_AUDIO_STATUSES for ev in initial_events)
-
-    return create_sse_response(
-        _word_audio_event_generator(word_entry_id, initial_events, all_terminal)
-    )
-
-
-async def _audio_queue_generator(
-    queue: asyncio.Queue,
-    all_part_keys: set[tuple[str, str | None]],
-    terminal_parts: set[tuple[str, str | None]],
-) -> AsyncGenerator[str, None]:
-    """Inner generator that reads from the audio event bus queue until all parts are terminal."""
-    while True:
-        payload: dict = await queue.get()
-        pk = (payload.get("part", ""), payload.get("example_id"))
-        yield format_sse_event(payload, event="audio_status_changed")
-        if payload.get("status") in _TERMINAL_AUDIO_STATUSES:
-            terminal_parts.add(pk)
-        if terminal_parts >= all_part_keys:
-            break
 
 
 async def _word_audio_set_examples_generating(
