@@ -247,7 +247,9 @@
     "errorTitle": "Failed to load words",
     "errorDescription": "There was an error loading the word entries. Please try again.",
     "masteryDotsLegend": "Correct answers toward mastery — 4 needed to master a card.",
-    "masteryDotsInfo": "Mastery dots info"
+    "masteryDotsInfo": "Mastery dots info",
+    "loadMore": "Load More",
+    "loadingMore": "Loading..."
   },
   "wordReference": {
     "backToDeck": "Back to Deck",

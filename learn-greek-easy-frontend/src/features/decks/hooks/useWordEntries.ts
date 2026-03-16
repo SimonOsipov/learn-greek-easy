@@ -1,15 +1,25 @@
 // src/features/decks/hooks/useWordEntries.ts
 
 /**
- * React Query hook for fetching word entries by deck ID.
+ * React Query hook for fetching word entries by deck ID with infinite pagination.
  *
- * Uses the GET /api/v1/decks/{deck_id}/word-entries endpoint.
- * Caches results with staleTime of 5 minutes.
+ * Uses the GET /api/v1/decks/{deck_id}/word-entries endpoint with page/page_size params.
+ * Supports "Load More" pattern via useInfiniteQuery.
  */
 
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 
-import { wordEntryAPI, type WordEntryResponse } from '@/services/wordEntryAPI';
+import {
+  wordEntryAPI,
+  type WordEntryResponse,
+  type WordEntryListResponse,
+} from '@/services/wordEntryAPI';
+
+// ============================================
+// Constants
+// ============================================
+
+const PAGE_SIZE = 40;
 
 // ============================================
 // Types
@@ -23,14 +33,22 @@ export interface UseWordEntriesOptions {
 }
 
 export interface UseWordEntriesResult {
-  /** Word entries for the deck */
+  /** Flattened word entries across all loaded pages */
   wordEntries: WordEntryResponse[];
-  /** Loading state */
+  /** Total count from the server */
+  total: number;
+  /** Loading state (true only on initial fetch) */
   isLoading: boolean;
   /** Error state */
   error: Error | null;
   /** Refetch function */
   refetch: () => void;
+  /** Whether there are more pages to load */
+  hasNextPage: boolean;
+  /** Fetch the next page */
+  fetchNextPage: () => void;
+  /** Whether a next-page fetch is in progress */
+  isFetchingNextPage: boolean;
 }
 
 // ============================================
@@ -38,32 +56,42 @@ export interface UseWordEntriesResult {
 // ============================================
 
 /**
- * React Query hook for fetching word entries by deck ID.
+ * React Query hook for fetching word entries by deck ID with infinite pagination.
  *
- * Uses the GET /api/v1/decks/{deck_id}/word-entries endpoint.
- * Caches results with staleTime of 5 minutes.
+ * Uses useInfiniteQuery to support "Load More" pagination.
+ * Pages are flattened into a single wordEntries array.
  *
  * @example
  * ```tsx
- * const { wordEntries, isLoading, error } = useWordEntries({ deckId: '123' });
+ * const { wordEntries, total, hasNextPage, fetchNextPage } = useWordEntries({ deckId: '123' });
  * ```
  */
 export function useWordEntries({
   deckId,
   enabled = true,
 }: UseWordEntriesOptions): UseWordEntriesResult {
-  const query = useQuery({
+  const query = useInfiniteQuery<WordEntryListResponse, Error>({
     queryKey: ['wordEntries', deckId],
-    queryFn: () => wordEntryAPI.getByDeck(deckId),
+    queryFn: ({ pageParam }) => wordEntryAPI.getByDeck(deckId, pageParam as number, PAGE_SIZE),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) =>
+      lastPage.page * lastPage.page_size < lastPage.total ? lastPage.page + 1 : undefined,
     enabled: enabled && !!deckId,
     staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 30 * 60 * 1000, // 30 minutes (formerly cacheTime)
+    gcTime: 30 * 60 * 1000, // 30 minutes
   });
 
+  const wordEntries = query.data?.pages.flatMap((p) => p.word_entries) ?? [];
+  const total = query.data?.pages[0]?.total ?? 0;
+
   return {
-    wordEntries: query.data?.word_entries ?? [],
+    wordEntries,
+    total,
     isLoading: query.isLoading,
     error: query.error,
     refetch: query.refetch,
+    hasNextPage: query.hasNextPage,
+    fetchNextPage: query.fetchNextPage,
+    isFetchingNextPage: query.isFetchingNextPage,
   };
 }

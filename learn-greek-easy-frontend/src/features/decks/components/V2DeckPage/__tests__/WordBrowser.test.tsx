@@ -133,6 +133,8 @@ describe('WordBrowser Component', () => {
       vi.mocked(wordEntryAPI.getByDeck).mockResolvedValue({
         deck_id: 'deck-1',
         total: 3,
+        page: 1,
+        page_size: 40,
         word_entries: mockWordEntries,
       });
 
@@ -150,6 +152,8 @@ describe('WordBrowser Component', () => {
       vi.mocked(wordEntryAPI.getByDeck).mockResolvedValue({
         deck_id: 'deck-1',
         total: 0,
+        page: 1,
+        page_size: 40,
         word_entries: [],
       });
 
@@ -167,6 +171,8 @@ describe('WordBrowser Component', () => {
       vi.mocked(wordEntryAPI.getByDeck).mockResolvedValue({
         deck_id: 'deck-1',
         total: 3,
+        page: 1,
+        page_size: 40,
         word_entries: mockWordEntries,
       });
 
@@ -194,6 +200,8 @@ describe('WordBrowser Component', () => {
       vi.mocked(wordEntryAPI.getByDeck).mockResolvedValue({
         deck_id: 'deck-1',
         total: 3,
+        page: 1,
+        page_size: 40,
         word_entries: mockWordEntries,
       });
 
@@ -220,6 +228,8 @@ describe('WordBrowser Component', () => {
       vi.mocked(wordEntryAPI.getByDeck).mockResolvedValue({
         deck_id: 'deck-1',
         total: 3,
+        page: 1,
+        page_size: 40,
         word_entries: mockWordEntries,
       });
 
@@ -261,6 +271,8 @@ describe('WordBrowser Component', () => {
       vi.mocked(wordEntryAPI.getByDeck).mockResolvedValue({
         deck_id: 'deck-1',
         total: 3,
+        page: 1,
+        page_size: 40,
         word_entries: mockWordEntries,
       });
 
@@ -279,6 +291,8 @@ describe('WordBrowser Component', () => {
       vi.mocked(wordEntryAPI.getByDeck).mockResolvedValue({
         deck_id: 'deck-1',
         total: 3,
+        page: 1,
+        page_size: 40,
         word_entries: mockWordEntries,
       });
 
@@ -293,6 +307,8 @@ describe('WordBrowser Component', () => {
       vi.mocked(wordEntryAPI.getByDeck).mockResolvedValue({
         deck_id: 'deck-1',
         total: 3,
+        page: 1,
+        page_size: 40,
         word_entries: mockWordEntries,
       });
 
@@ -313,6 +329,8 @@ describe('WordBrowser Component', () => {
       vi.mocked(wordEntryAPI.getByDeck).mockResolvedValue({
         deck_id: 'deck-1',
         total: 3,
+        page: 1,
+        page_size: 40,
         word_entries: mockWordEntries,
       });
 
@@ -333,6 +351,8 @@ describe('WordBrowser Component', () => {
       vi.mocked(wordEntryAPI.getByDeck).mockResolvedValue({
         deck_id: 'deck-1',
         total: 3,
+        page: 1,
+        page_size: 40,
         word_entries: mockWordEntries,
       });
 
@@ -354,6 +374,8 @@ describe('WordBrowser Component', () => {
       vi.mocked(wordEntryAPI.getByDeck).mockResolvedValue({
         deck_id: 'deck-1',
         total: 3,
+        page: 1,
+        page_size: 40,
         word_entries: mockWordEntries,
       });
 
@@ -385,6 +407,8 @@ describe('WordBrowser Component', () => {
       vi.mocked(wordEntryAPI.getByDeck).mockResolvedValue({
         deck_id: 'deck-1',
         total: 3,
+        page: 1,
+        page_size: 40,
         word_entries: mockWordEntries,
       });
 
@@ -401,6 +425,8 @@ describe('WordBrowser Component', () => {
       vi.mocked(wordEntryAPI.getByDeck).mockResolvedValue({
         deck_id: 'deck-1',
         total: 0,
+        page: 1,
+        page_size: 40,
         word_entries: [],
       });
 
@@ -417,6 +443,8 @@ describe('WordBrowser Component', () => {
       vi.mocked(wordEntryAPI.getByDeck).mockResolvedValue({
         deck_id: 'deck-1',
         total: 3,
+        page: 1,
+        page_size: 40,
         word_entries: mockWordEntries,
       });
 
@@ -455,6 +483,8 @@ describe('WordBrowser Component', () => {
       vi.mocked(wordEntryAPI.getByDeck).mockResolvedValue({
         deck_id: 'deck-1',
         total: 3,
+        page: 1,
+        page_size: 40,
         word_entries: mockWordEntries,
       });
 
@@ -492,6 +522,8 @@ describe('WordBrowser Component', () => {
       vi.mocked(wordEntryAPI.getByDeck).mockResolvedValue({
         deck_id: 'deck-1',
         total: 3,
+        page: 1,
+        page_size: 40,
         word_entries: mockWordEntries,
       });
 
@@ -506,6 +538,8 @@ describe('WordBrowser Component', () => {
       vi.mocked(wordEntryAPI.getByDeck).mockResolvedValue({
         deck_id: 'deck-1',
         total: 3,
+        page: 1,
+        page_size: 40,
         word_entries: mockWordEntries,
       });
 
@@ -536,6 +570,8 @@ describe('WordBrowser Component', () => {
       vi.mocked(wordEntryAPI.getByDeck).mockResolvedValue({
         deck_id: 'deck-1',
         total: 3,
+        page: 1,
+        page_size: 40,
         word_entries: mockWordEntries,
       });
 
@@ -550,6 +586,8 @@ describe('WordBrowser Component', () => {
       vi.mocked(wordEntryAPI.getByDeck).mockResolvedValue({
         deck_id: 'deck-1',
         total: 3,
+        page: 1,
+        page_size: 40,
         word_entries: mockWordEntries,
       });
 
@@ -584,6 +622,8 @@ describe('WordBrowser Component', () => {
       vi.mocked(wordEntryAPI.getByDeck).mockResolvedValue({
         deck_id: 'deck-1',
         total: 0,
+        page: 1,
+        page_size: 40,
         word_entries: [],
       });
 
@@ -592,6 +632,102 @@ describe('WordBrowser Component', () => {
       await waitFor(() => {
         expect(screen.getByTestId('word-browser')).toBeInTheDocument();
       });
+    });
+  });
+
+  describe('Load More', () => {
+    it('should show Load More button when total exceeds loaded entries', async () => {
+      vi.mocked(wordEntryAPI.getByDeck).mockResolvedValue({
+        deck_id: 'deck-1',
+        total: 5,
+        page: 1,
+        page_size: 3,
+        word_entries: mockWordEntries,
+      });
+
+      render(<WordBrowser deckId="deck-1" />, { wrapper: createWrapper() });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('load-more-button')).toBeInTheDocument();
+      });
+
+      expect(screen.getByRole('button', { name: /Load More/i })).toBeInTheDocument();
+    });
+
+    it('should hide Load More button when all entries are loaded', async () => {
+      vi.mocked(wordEntryAPI.getByDeck).mockResolvedValue({
+        deck_id: 'deck-1',
+        total: 3,
+        page: 1,
+        page_size: 40,
+        word_entries: mockWordEntries,
+      });
+
+      render(<WordBrowser deckId="deck-1" />, { wrapper: createWrapper() });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('word-grid')).toBeInTheDocument();
+      });
+
+      expect(screen.queryByTestId('load-more-button')).not.toBeInTheDocument();
+    });
+
+    it('should fetch next page when Load More is clicked', async () => {
+      const page2Entry = {
+        id: '4',
+        deck_id: 'deck-1',
+        lemma: 'page2word',
+        part_of_speech: 'NOUN',
+        translation_en: 'page 2 entry',
+        translation_en_plural: null,
+        translation_ru: null,
+        translation_ru_plural: null,
+        pronunciation: null,
+        grammar_data: null,
+        examples: null,
+        audio_key: null,
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+      };
+
+      vi.mocked(wordEntryAPI.getByDeck)
+        .mockResolvedValueOnce({
+          deck_id: 'deck-1',
+          total: 4,
+          page: 1,
+          page_size: 3,
+          word_entries: mockWordEntries,
+        })
+        .mockResolvedValueOnce({
+          deck_id: 'deck-1',
+          total: 4,
+          page: 2,
+          page_size: 3,
+          word_entries: [page2Entry],
+        });
+
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+
+      render(<WordBrowser deckId="deck-1" />, { wrapper: createWrapper() });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('load-more-button')).toBeInTheDocument();
+      });
+
+      // Initially shows 3 word cards
+      expect(screen.getAllByTestId('word-card')).toHaveLength(3);
+
+      // Click Load More
+      await user.click(screen.getByTestId('load-more-button'));
+
+      // After loading, should show all 4 entries
+      await waitFor(() => {
+        expect(screen.getAllByTestId('word-card')).toHaveLength(4);
+      });
+
+      // Load More button should be gone since all entries are loaded
+      expect(screen.queryByTestId('load-more-button')).not.toBeInTheDocument();
     });
   });
 });

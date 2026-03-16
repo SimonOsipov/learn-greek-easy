@@ -7,10 +7,10 @@
  * - Successful fetch
  * - Error handling
  * - Query enablement
- * - Caching behavior
+ * - Pagination (hasNextPage, fetchNextPage, isFetchingNextPage)
  */
 
-import { renderHook, waitFor } from '@testing-library/react';
+import { renderHook, waitFor, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React from 'react';
@@ -116,6 +116,8 @@ describe('useWordEntries Hook', () => {
       vi.mocked(wordEntryAPI.getByDeck).mockResolvedValue({
         deck_id: 'deck-1',
         total: 2,
+        page: 1,
+        page_size: 40,
         word_entries: mockWordEntries,
       });
 
@@ -128,14 +130,17 @@ describe('useWordEntries Hook', () => {
       });
 
       expect(result.current.wordEntries).toEqual(mockWordEntries);
+      expect(result.current.total).toBe(2);
       expect(result.current.error).toBeNull();
-      expect(wordEntryAPI.getByDeck).toHaveBeenCalledWith('deck-1');
+      expect(wordEntryAPI.getByDeck).toHaveBeenCalledWith('deck-1', 1, 40);
     });
 
     it('should return empty array when no word entries exist', async () => {
       vi.mocked(wordEntryAPI.getByDeck).mockResolvedValue({
         deck_id: 'deck-1',
         total: 0,
+        page: 1,
+        page_size: 40,
         word_entries: [],
       });
 
@@ -148,6 +153,7 @@ describe('useWordEntries Hook', () => {
       });
 
       expect(result.current.wordEntries).toEqual([]);
+      expect(result.current.total).toBe(0);
     });
   });
 
@@ -192,6 +198,8 @@ describe('useWordEntries Hook', () => {
       vi.mocked(wordEntryAPI.getByDeck).mockResolvedValue({
         deck_id: 'deck-1',
         total: 0,
+        page: 1,
+        page_size: 40,
         word_entries: [],
       });
 
@@ -200,7 +208,7 @@ describe('useWordEntries Hook', () => {
       });
 
       await waitFor(() => {
-        expect(wordEntryAPI.getByDeck).toHaveBeenCalledWith('deck-1');
+        expect(wordEntryAPI.getByDeck).toHaveBeenCalledWith('deck-1', 1, 40);
       });
     });
   });
@@ -210,6 +218,8 @@ describe('useWordEntries Hook', () => {
       vi.mocked(wordEntryAPI.getByDeck).mockResolvedValue({
         deck_id: 'deck-1',
         total: 0,
+        page: 1,
+        page_size: 40,
         word_entries: [],
       });
 
@@ -219,21 +229,143 @@ describe('useWordEntries Hook', () => {
       });
 
       await waitFor(() => {
-        expect(wordEntryAPI.getByDeck).toHaveBeenCalledWith('deck-1');
+        expect(wordEntryAPI.getByDeck).toHaveBeenCalledWith('deck-1', 1, 40);
       });
 
       // Rerender with different deckId
       vi.mocked(wordEntryAPI.getByDeck).mockResolvedValue({
         deck_id: 'deck-2',
         total: 0,
+        page: 1,
+        page_size: 40,
         word_entries: [],
       });
 
       rerender({ deckId: 'deck-2' });
 
       await waitFor(() => {
-        expect(wordEntryAPI.getByDeck).toHaveBeenCalledWith('deck-2');
+        expect(wordEntryAPI.getByDeck).toHaveBeenCalledWith('deck-2', 1, 40);
       });
+    });
+  });
+
+  describe('Pagination', () => {
+    it('should return hasNextPage false when all entries are on first page', async () => {
+      vi.mocked(wordEntryAPI.getByDeck).mockResolvedValue({
+        deck_id: 'deck-1',
+        total: 2,
+        page: 1,
+        page_size: 40,
+        word_entries: mockWordEntries,
+      });
+
+      const { result } = renderHook(() => useWordEntries({ deckId: 'deck-1' }), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      expect(result.current.hasNextPage).toBe(false);
+    });
+
+    it('should compute hasNextPage correctly when more pages exist', async () => {
+      const page1Entries = Array.from({ length: 40 }, (_, i) => ({
+        ...mockWordEntries[0],
+        id: `entry-${i}`,
+      }));
+
+      vi.mocked(wordEntryAPI.getByDeck).mockResolvedValue({
+        deck_id: 'deck-1',
+        total: 50,
+        page: 1,
+        page_size: 40,
+        word_entries: page1Entries,
+      });
+
+      const { result } = renderHook(() => useWordEntries({ deckId: 'deck-1' }), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      expect(result.current.hasNextPage).toBe(true);
+      expect(result.current.wordEntries).toHaveLength(40);
+      expect(result.current.total).toBe(50);
+    });
+
+    it('should flatten entries from multiple pages', async () => {
+      const page1Entries = Array.from({ length: 40 }, (_, i) => ({
+        ...mockWordEntries[0],
+        id: `entry-p1-${i}`,
+      }));
+      const page2Entries = Array.from({ length: 10 }, (_, i) => ({
+        ...mockWordEntries[0],
+        id: `entry-p2-${i}`,
+      }));
+
+      vi.mocked(wordEntryAPI.getByDeck)
+        .mockResolvedValueOnce({
+          deck_id: 'deck-1',
+          total: 50,
+          page: 1,
+          page_size: 40,
+          word_entries: page1Entries,
+        })
+        .mockResolvedValueOnce({
+          deck_id: 'deck-1',
+          total: 50,
+          page: 2,
+          page_size: 40,
+          word_entries: page2Entries,
+        });
+
+      const { result } = renderHook(() => useWordEntries({ deckId: 'deck-1' }), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      expect(result.current.wordEntries).toHaveLength(40);
+      expect(result.current.hasNextPage).toBe(true);
+
+      // Fetch next page
+      await act(async () => {
+        result.current.fetchNextPage();
+      });
+
+      await waitFor(() => {
+        expect(result.current.wordEntries).toHaveLength(50);
+      });
+
+      expect(result.current.hasNextPage).toBe(false);
+      expect(wordEntryAPI.getByDeck).toHaveBeenCalledWith('deck-1', 2, 40);
+    });
+
+    it('should expose fetchNextPage and isFetchingNextPage', async () => {
+      vi.mocked(wordEntryAPI.getByDeck).mockResolvedValue({
+        deck_id: 'deck-1',
+        total: 2,
+        page: 1,
+        page_size: 40,
+        word_entries: mockWordEntries,
+      });
+
+      const { result } = renderHook(() => useWordEntries({ deckId: 'deck-1' }), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      expect(typeof result.current.fetchNextPage).toBe('function');
+      expect(result.current.isFetchingNextPage).toBe(false);
     });
   });
 });

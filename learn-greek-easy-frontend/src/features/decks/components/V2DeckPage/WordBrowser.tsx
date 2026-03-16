@@ -7,7 +7,7 @@
 
 import React, { useMemo, useState } from 'react';
 
-import { Search, X } from 'lucide-react';
+import { Loader2, Search, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '@/components/feedback/EmptyState';
@@ -141,7 +141,8 @@ export const WordBrowser: React.FC<WordBrowserProps> = ({ deckId, className }) =
   const { t } = useTranslation('deck');
 
   // Data fetching
-  const { wordEntries, isLoading, error } = useWordEntries({ deckId });
+  const { wordEntries, total, isLoading, error, hasNextPage, fetchNextPage, isFetchingNextPage } =
+    useWordEntries({ deckId });
 
   // Local state
   const [searchInput, setSearchInput] = useState('');
@@ -232,7 +233,7 @@ export const WordBrowser: React.FC<WordBrowserProps> = ({ deckId, className }) =
         <p className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
           {t('wordBrowser.showing', {
             count: filteredEntries.length,
-            total: wordEntries.length,
+            total,
           })}
           <MasteryDotsLegend
             namespace="deck"
@@ -260,7 +261,28 @@ export const WordBrowser: React.FC<WordBrowserProps> = ({ deckId, className }) =
           }
         />
       ) : (
-        <WordGrid entries={filteredEntries} />
+        <>
+          <WordGrid entries={filteredEntries} />
+          {hasNextPage && (
+            <div className="mt-6 flex justify-center">
+              <Button
+                variant="outline"
+                onClick={() => fetchNextPage()}
+                disabled={isFetchingNextPage}
+                data-testid="load-more-button"
+              >
+                {isFetchingNextPage ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {t('wordBrowser.loadingMore')}
+                  </>
+                ) : (
+                  t('wordBrowser.loadMore')
+                )}
+              </Button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

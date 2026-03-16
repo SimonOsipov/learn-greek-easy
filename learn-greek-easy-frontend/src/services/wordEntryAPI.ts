@@ -93,6 +93,8 @@ export interface AdminWordEntryCreateResponse {
 export interface WordEntryListResponse {
   deck_id: string;
   total: number;
+  page: number;
+  page_size: number;
   word_entries: WordEntryResponse[];
 }
 
@@ -194,8 +196,14 @@ export const wordEntryAPI = {
    * @param deckId - UUID of the deck
    * @returns Object with deck_id, total count, and word_entries array
    */
-  getByDeck: async (deckId: string): Promise<WordEntryListResponse> => {
-    return api.get<WordEntryListResponse>(`/api/v1/decks/${deckId}/word-entries`);
+  getByDeck: async (
+    deckId: string,
+    page: number = 1,
+    pageSize: number = 40
+  ): Promise<WordEntryListResponse> => {
+    return api.get<WordEntryListResponse>(
+      `/api/v1/decks/${deckId}/word-entries?page=${page}&page_size=${pageSize}`
+    );
   },
 
   /**
