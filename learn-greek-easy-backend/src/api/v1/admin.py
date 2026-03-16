@@ -4141,7 +4141,7 @@ async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, Non
                 yield format_sse_event(
                     {
                         "stage": "load",
-                        "error": f"Dialog status is {dialog.status.value}, expected one of: draft, audio_ready, exercises_ready",
+                        "error": f"Dialog status is {dialog.status.value}, expected one of: {', '.join(s.value for s in _ALLOWED_AUDIO_GEN_STATUSES)}",
                         "dialog_id": str(dialog_id),
                     },
                     event="dialog_audio:error",
@@ -4149,7 +4149,7 @@ async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, Non
                 return
 
             # Extract all data before session closes (ORM objects become detached)
-            dialog_data = {"id": str(dialog.id)}
+            dialog_data = {"id": str(dialog.id), "status": dialog.status}
             lines_data = [
                 {
                     "id": str(line.id),
@@ -4252,7 +4252,9 @@ async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, Non
             )
             has_exercises = bool(exercise_item_count)
             target_status = (
-                DialogStatus.EXERCISES_READY if has_exercises else DialogStatus.AUDIO_READY
+                DialogStatus.EXERCISES_READY
+                if has_exercises or dialog_data["status"] == DialogStatus.EXERCISES_READY
+                else DialogStatus.AUDIO_READY
             )
             await session.execute(
                 update(ListeningDialog)

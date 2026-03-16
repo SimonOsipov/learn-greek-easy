@@ -128,6 +128,16 @@ export function DialogDetailModal({ dialogId, open, onOpenChange }: DialogDetail
   // Ref for finding the audio element inside WaveformPlayer's container
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const startAudioRegeneration = useCallback(() => {
+    const audioEl = containerRef.current?.querySelector<HTMLAudioElement>(
+      '[data-testid="waveform-audio-element"]'
+    );
+    audioEl?.pause();
+    setAudioCurrentTimeMs(0);
+    setGenerationError(null);
+    setSseEnabled(true);
+  }, []);
+
   // Effect 1: Fetch detail when modal opens
   useEffect(() => {
     if (open && dialogId) {
@@ -210,7 +220,7 @@ export function DialogDetailModal({ dialogId, open, onOpenChange }: DialogDetail
       audio.removeEventListener('ended', stopLoop);
       audio.removeEventListener('seeked', syncCurrentTime);
     };
-  }, [selectedDialog]);
+  }, [selectedDialog, sseEnabled]);
 
   const handleSSEEvent = useCallback(
     (event: SSEEvent<unknown>) => {
@@ -535,10 +545,7 @@ export function DialogDetailModal({ dialogId, open, onOpenChange }: DialogDetail
                           </AlertDialogCancel>
                           <AlertDialogAction
                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            onClick={() => {
-                              setGenerationError(null);
-                              setSseEnabled(true);
-                            }}
+                            onClick={startAudioRegeneration}
                           >
                             {t('listeningDialogs.detail.regenerateAudio.confirmButton')}
                           </AlertDialogAction>
@@ -560,14 +567,7 @@ export function DialogDetailModal({ dialogId, open, onOpenChange }: DialogDetail
                       <Alert variant="destructive">
                         <AlertDescription>{generationError}</AlertDescription>
                       </Alert>
-                      <Button
-                        variant="outline"
-                        className="mt-2"
-                        onClick={() => {
-                          setGenerationError(null);
-                          setSseEnabled(true);
-                        }}
-                      >
+                      <Button variant="outline" className="mt-2" onClick={startAudioRegeneration}>
                         {t('listeningDialogs.detail.generateAudio.tryAgain')}
                       </Button>
                     </div>
