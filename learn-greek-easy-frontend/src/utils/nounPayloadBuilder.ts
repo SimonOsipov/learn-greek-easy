@@ -115,6 +115,8 @@ export function buildWordEntryPayload(params: BuildPayloadParams): WordEntryInpu
   return {
     lemma: resolvedValues.get('lemma')?.value ?? generation.lemma,
     part_of_speech: 'noun',
+    gender:
+      resolvedValues.get('grammar_data.gender')?.value ?? generation.grammar_data.gender ?? null,
     translation_en,
     translation_en_plural,
     translation_ru,

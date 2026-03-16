@@ -628,6 +628,11 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                                 {suggestion.pos.charAt(0).toUpperCase() +
                                   suggestion.pos.slice(1).toLowerCase()}
                               </span>
+                              {suggestion.gender && (
+                                <span className="text-xs text-muted-foreground">
+                                  {suggestion.gender}
+                                </span>
+                              )}
                               <Badge
                                 className={CONFIDENCE_BADGE_CLASSES[suggestion.confidence_tier]}
                               >
