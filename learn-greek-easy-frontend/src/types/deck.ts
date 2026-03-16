@@ -62,6 +62,7 @@ export interface Deck {
   estimatedTime: number; // Minutes to complete
   isPremium: boolean;
   thumbnail?: string;
+  coverImageUrl?: string;
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;
@@ -111,6 +112,7 @@ export interface DeckAdminResponse {
   owner_id: string | null;
   created_at: string;
   updated_at: string;
+  cover_image_url?: string | null;
 }
 
 /**

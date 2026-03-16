@@ -192,6 +192,7 @@ export const Dashboard: React.FC = () => {
         },
         lastStudied: deck.progress?.lastStudied,
         isCulture: deck.category === 'culture',
+        coverImageUrl: deck.coverImageUrl,
       })),
     [activeDecks, i18n.language]
   );

@@ -91,6 +91,7 @@ const transformDeckResponse = (deck: DeckResponse, progressData?: DeckProgressSu
     isPremium: deck.is_premium ?? false,
     tags: deck.tags || [],
     thumbnail: `/images/decks/${deck.level.toLowerCase()}.jpg`,
+    coverImageUrl: deck.cover_image_url ?? undefined,
     createdBy: 'Learn Greek Easy', // Default author
     createdAt: new Date(deck.created_at),
     updatedAt: new Date(deck.updated_at),
@@ -164,6 +165,7 @@ const transformCultureDeckResponse = (deck: CultureDeckResponse): Deck => {
     isPremium: deck.is_premium ?? false,
     tags: [deck.category], // Use culture category as tag (history, geography, etc.)
     thumbnail: `/images/culture/${deck.category}.jpg`,
+    coverImageUrl: undefined,
     createdBy: 'Learn Greek Easy',
     createdAt: new Date(),
     updatedAt: new Date(),

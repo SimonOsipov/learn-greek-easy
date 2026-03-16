@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { getDeckBackgroundStyle } from '@/lib/deckBackground';
 import type { Deck } from '@/types/dashboard';
 
 interface DeckCardProps {
@@ -36,7 +37,10 @@ export const DeckCard = React.memo<DeckCardProps>(({ deck, onContinue }) => {
   };
 
   return (
-    <Card className="group transition-all hover:border-primary">
+    <Card
+      className="group transition-all hover:border-primary"
+      style={getDeckBackgroundStyle(deck.coverImageUrl)}
+    >
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="space-y-1">

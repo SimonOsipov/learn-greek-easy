@@ -319,6 +319,63 @@ export const api = {
 };
 
 /**
+ * Make an authenticated POST request with a FormData body (for file uploads).
+ * Does not set Content-Type — browser sets multipart/form-data with boundary automatically.
+ */
+export async function postFormData<T>(path: string, formData: FormData): Promise<T> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const accessToken = session?.access_token ?? null;
+
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+  };
+  if (accessToken) {
+    headers['Authorization'] = `Bearer ${accessToken}`;
+  }
+
+  const timeoutController = new AbortController();
+  const timeoutId = setTimeout(() => timeoutController.abort(), 30000);
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      method: 'POST',
+      headers,
+      body: formData,
+      signal: timeoutController.signal,
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+
+  checkVersionAndRefreshIfNeeded(response);
+
+  if (!response.ok) {
+    let errorMessage = `Request failed with status ${response.status}`;
+    try {
+      const errorBody = await response.json();
+      if (errorBody?.error?.message) errorMessage = errorBody.error.message;
+      else if (errorBody?.detail) errorMessage = errorBody.detail;
+    } catch {
+      // ignore parse errors
+    }
+    throw new APIRequestError({
+      status: response.status,
+      statusText: response.statusText,
+      message: errorMessage,
+    });
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
+  return response.json() as Promise<T>;
+}
+
+/**
  * Build query string from params object
  */
 export function buildQueryString(params: Record<string, unknown>): string {

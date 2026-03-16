@@ -37,7 +37,15 @@
     "sectionAccess": "Управление доступом",
     "stats": "Статистика",
     "wordCount": "Слова",
-    "createdAt": "Создана"
+    "createdAt": "Создана",
+    "backgroundImage": "Фоновое изображение",
+    "backgroundImageDescription": "Загрузите обложку для колоды (JPEG, PNG или WebP, макс. 3 МБ)",
+    "uploadImage": "Загрузить изображение",
+    "replaceImage": "Заменить изображение",
+    "imageFormatError": "Недопустимый формат. Используйте JPEG, PNG или WebP",
+    "imageSizeError": "Изображение слишком большое. Максимальный размер 3 МБ",
+    "imageUploading": "Загрузка...",
+    "imageUploadError": "Ошибка загрузки. Попробуйте снова."
   },
   "deckCreate": {
     "title": "Создать колоду",

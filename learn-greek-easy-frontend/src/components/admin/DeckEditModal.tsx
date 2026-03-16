@@ -25,6 +25,7 @@ interface DeckEditModalProps {
   deck: UnifiedDeckItem | null;
   onSave: (data: DeckEditFormData) => void | Promise<void>;
   isLoading?: boolean;
+  onUploadCoverImage?: (file: File) => Promise<void>;
 }
 
 /**
@@ -40,6 +41,7 @@ export const DeckEditModal: React.FC<DeckEditModalProps> = ({
   deck,
   onSave,
   isLoading = false,
+  onUploadCoverImage,
 }) => {
   const { t } = useTranslation('admin');
 
@@ -86,6 +88,7 @@ export const DeckEditModal: React.FC<DeckEditModalProps> = ({
             isLoading={isLoading}
             itemCount={deck.item_count}
             createdAt={deck.created_at}
+            onUploadCoverImage={onUploadCoverImage}
           />
         ) : (
           <CultureDeckEditForm
