@@ -42,6 +42,7 @@ anthropic = "^0.76.0"
 tenacity = "^9.1.2"
 beautifulsoup4 = "^4.12.0"
 lxml = "^5.0.0"
+mutagen = "^1.47"
 stripe = "^14.0.0"
 phunspell = "^0.1.6"
 spacy = {version = "^3.8.11", python = ">=3.13,<3.15"}
