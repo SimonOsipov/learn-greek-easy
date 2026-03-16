@@ -4227,6 +4227,30 @@ async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, Non
             event="dialog_audio:timing",
         )
 
+        # Stage 4.5 — Parse actual MP3 duration from audio bytes
+        from io import BytesIO
+
+        from mutagen.mp3 import MP3
+
+        segment_duration = duration_seconds
+        try:
+            mp3_info: Any = MP3(fileobj=BytesIO(audio_bytes))
+            parsed_duration: float = mp3_info.info.length
+            if abs(parsed_duration - segment_duration) > 1.0:
+                logger.warning(
+                    "MP3 duration mismatch for dialog {}: parsed={:.2f}s, segments={:.2f}s",
+                    dialog_id,
+                    parsed_duration,
+                    segment_duration,
+                )
+            duration_seconds = parsed_duration
+        except Exception as exc:
+            logger.warning(
+                "Failed to parse MP3 duration for dialog {}, falling back to voice_segments: {}",
+                dialog_id,
+                exc,
+            )
+
         # Stage 4 (continued) — Upload after timing is validated
         s3 = get_s3_service()
         upload_ok = s3.upload_object(s3_key, audio_bytes, "audio/mpeg")
