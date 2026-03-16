@@ -18,17 +18,6 @@ interface V2DeckHeaderProps {
 }
 
 /**
- * Helper: Format date (e.g., "Jan 15, 2025")
- */
-const formatDate = (date: Date): string => {
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  }).format(new Date(date));
-};
-
-/**
  * V2ProgressBar Sub-component
  *
  * Simple progress bar showing all cards as "new" (gray) for V2 decks.
@@ -102,8 +91,6 @@ export const V2DeckHeader: React.FC<V2DeckHeaderProps> = ({ deck }) => {
         {/* Category and metadata */}
         <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
           <span>{t(`card.categories.${deck.category}`)}</span>
-          <span>-</span>
-          <span>{t('detail.updated', { date: formatDate(deck.updatedAt) })}</span>
         </div>
       </CardHeader>
 
