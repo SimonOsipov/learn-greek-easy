@@ -2,11 +2,22 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { BookOpen, Loader2, Wand2 } from 'lucide-react';
+import { BookOpen, Loader2, RefreshCw, Wand2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { WaveformPlayer } from '@/components/culture/WaveformPlayer';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -368,24 +379,26 @@ export function DialogDetailModal({ dialogId, open, onOpenChange }: DialogDetail
             <TabsContent value="dialog" className="space-y-4">
               {/* Audio Player FIRST (moved above transcript) */}
               {(selectedDialog.status === 'audio_ready' ||
-                selectedDialog.status === 'exercises_ready') && (
-                <div ref={containerRef} data-testid="dialog-audio-player">
-                  {selectedDialog.audio_url ? (
-                    <WaveformPlayer
-                      variant="admin"
-                      audioUrl={selectedDialog.audio_url}
-                      showSpeedControl={false}
-                      barCount={60}
-                    />
-                  ) : (
-                    <Alert variant="destructive">
-                      <AlertDescription>
-                        {t('listeningDialogs.detail.errors.audioUrlMissing')}
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                </div>
-              )}
+                selectedDialog.status === 'exercises_ready') &&
+                !sseEnabled &&
+                !generationProgress && (
+                  <div ref={containerRef} data-testid="dialog-audio-player">
+                    {selectedDialog.audio_url ? (
+                      <WaveformPlayer
+                        variant="admin"
+                        audioUrl={selectedDialog.audio_url}
+                        showSpeedControl={false}
+                        barCount={60}
+                      />
+                    ) : (
+                      <Alert variant="destructive">
+                        <AlertDescription>
+                          {t('listeningDialogs.detail.errors.audioUrlMissing')}
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                  </div>
+                )}
 
               {/* Transcript */}
               <div className="space-y-3">
@@ -465,6 +478,73 @@ export function DialogDetailModal({ dialogId, open, onOpenChange }: DialogDetail
                       <Wand2 className="mr-2 h-4 w-4" />
                       {t('listeningDialogs.detail.generateAudio.button')}
                     </Button>
+                  )}
+                  {generationProgress && (
+                    <div
+                      data-testid="dialog-generation-progress"
+                      className="flex items-center gap-2 text-sm text-muted-foreground"
+                    >
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      {generationProgress}
+                    </div>
+                  )}
+                  {generationError && (
+                    <div data-testid="dialog-generation-error">
+                      <Alert variant="destructive">
+                        <AlertDescription>{generationError}</AlertDescription>
+                      </Alert>
+                      <Button
+                        variant="outline"
+                        className="mt-2"
+                        onClick={() => {
+                          setGenerationError(null);
+                          setSseEnabled(true);
+                        }}
+                      >
+                        {t('listeningDialogs.detail.generateAudio.tryAgain')}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Regenerate Audio (audio_ready / exercises_ready) */}
+              {(selectedDialog.status === 'audio_ready' ||
+                selectedDialog.status === 'exercises_ready') && (
+                <div className="space-y-2 pt-2">
+                  {!sseEnabled && !generationProgress && !generationError && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="outline" data-testid="dialog-regenerate-audio-btn">
+                          <RefreshCw className="mr-2 h-4 w-4" />
+                          {t('listeningDialogs.detail.regenerateAudio.button')}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>
+                            {t('listeningDialogs.detail.regenerateAudio.confirmTitle')}
+                          </AlertDialogTitle>
+                          <AlertDialogDescription>
+                            {t('listeningDialogs.detail.regenerateAudio.confirmDescription')}
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>
+                            {t('listeningDialogs.detail.regenerateAudio.cancelButton')}
+                          </AlertDialogCancel>
+                          <AlertDialogAction
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            onClick={() => {
+                              setGenerationError(null);
+                              setSseEnabled(true);
+                            }}
+                          >
+                            {t('listeningDialogs.detail.regenerateAudio.confirmButton')}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   )}
                   {generationProgress && (
                     <div
