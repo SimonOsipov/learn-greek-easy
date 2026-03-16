@@ -62,6 +62,7 @@ export interface Deck {
   estimatedTime: number; // Minutes to complete
   isPremium: boolean;
   thumbnail?: string;
+  coverImageUrl?: string;
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;

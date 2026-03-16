@@ -85,6 +85,7 @@ export interface Deck {
   level?: string;
   lastStudied?: Date;
   isCulture?: boolean;
+  coverImageUrl?: string;
 }
 
 // Dashboard user types (simplified for dashboard display)

@@ -7,6 +7,7 @@ import { CultureBadge, getCategoryColor, type CultureCategory } from '@/componen
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { CEFR_COLORS } from '@/lib/cefrColors';
+import { getDeckBackgroundStyle } from '@/lib/deckBackground';
 import { getLocalizedDeckName } from '@/lib/deckLocale';
 import { formatRelativeDate } from '@/lib/helpers';
 import { calculateCompletionPercentage } from '@/lib/progressUtils';
@@ -112,6 +113,7 @@ export const DeckCard: React.FC<DeckCardProps> = ({
     <Card
       data-testid="deck-card"
       className={cardClassName}
+      style={getDeckBackgroundStyle(deck.coverImageUrl)}
       onClick={isClickable ? onClick : undefined}
       role={isClickable ? 'button' : 'article'}
       tabIndex={isClickable ? 0 : undefined}

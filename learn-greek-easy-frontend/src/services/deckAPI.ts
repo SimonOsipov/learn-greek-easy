@@ -41,6 +41,8 @@ export interface DeckResponse {
   updated_at: string;
   /** Card system version: V1 (flashcards) or V2 (word browser) */
   card_system?: 'V1' | 'V2';
+  /** Presigned S3 URL for deck cover image */
+  cover_image_url?: string | null;
 }
 
 /**

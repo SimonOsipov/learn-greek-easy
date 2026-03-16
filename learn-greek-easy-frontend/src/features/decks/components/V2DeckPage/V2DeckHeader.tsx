@@ -7,6 +7,7 @@ import { DeckBadge } from '@/components/decks/DeckBadge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { getDeckBackgroundStyle } from '@/lib/deckBackground';
 import { getLocalizedDeckName, getLocalizedDeckDescription } from '@/lib/deckLocale';
 import type { Deck } from '@/types/deck';
 
@@ -70,7 +71,7 @@ export const V2DeckHeader: React.FC<V2DeckHeaderProps> = ({ deck }) => {
   const wordCount = deck.cardCount;
 
   return (
-    <Card>
+    <Card style={getDeckBackgroundStyle(deck.coverImageUrl)}>
       <CardHeader>
         {/* Title Row */}
         <div className="flex flex-wrap items-start justify-between gap-4">
