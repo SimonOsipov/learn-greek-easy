@@ -81,6 +81,7 @@ class UnifiedDeckItem(BaseModel):
     description_el: Optional[str] = Field(None, description="Greek description")
     description_en: Optional[str] = Field(None, description="English description")
     description_ru: Optional[str] = Field(None, description="Russian description")
+    cover_image_url: Optional[str] = Field(None, description="Presigned URL for deck cover image")
 
 
 class AdminDeckListResponse(BaseModel):

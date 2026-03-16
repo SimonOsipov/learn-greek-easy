@@ -46,6 +46,10 @@ CONTENT_TYPE_TO_EXT = {
     "image/webp": "webp",
 }
 
+# Deck cover image upload constraints
+ALLOWED_DECK_IMAGE_CONTENT_TYPES = frozenset(["image/jpeg", "image/png", "image/webp"])
+MAX_DECK_IMAGE_SIZE_BYTES = 3 * 1024 * 1024  # 3MB
+
 
 class S3Service:
     """Service for S3 operations related to culture question images."""

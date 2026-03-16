@@ -15,7 +15,7 @@ from src.core.dependencies import get_current_user, get_locale_from_header
 from src.core.exceptions import DeckNotFoundException, ForbiddenException
 from src.core.localization import get_localized_deck_content
 from src.db.dependencies import get_db
-from src.db.models import CardSystemVersion, DeckLevel, PartOfSpeech, User
+from src.db.models import CardSystemVersion, Deck, DeckLevel, PartOfSpeech, User
 from src.repositories.deck import DeckRepository
 from src.repositories.word_entry import WordEntryRepository
 from src.schemas.deck import (
@@ -27,6 +27,7 @@ from src.schemas.deck import (
     DeckUpdate,
     DeckWordEntriesResponse,
 )
+from src.services.s3_service import S3Service, get_s3_service
 from src.services.word_entry_response import word_entry_to_response
 from src.tasks.background import invalidate_cache_task
 
@@ -38,6 +39,12 @@ router = APIRouter(
         422: {"description": "Validation error"},
     },
 )
+
+
+def _deck_cover_url(deck: Deck, s3: S3Service) -> str | None:
+    if not deck.cover_image_s3_key:
+        return None
+    return s3.generate_presigned_url(deck.cover_image_s3_key)
 
 
 @router.get(
@@ -120,6 +127,7 @@ async def list_decks(
     card_counts = await repo.get_batch_card_counts(deck_ids)
 
     # Build localized response with card counts
+    s3 = get_s3_service()
     deck_responses = []
     for deck in decks:
         name, description = get_localized_deck_content(deck, locale)
@@ -139,6 +147,7 @@ async def list_decks(
                 card_count=card_counts.get(deck.id, 0),
                 created_at=deck.created_at,
                 updated_at=deck.updated_at,
+                cover_image_url=_deck_cover_url(deck, s3),
             )
         )
 
@@ -286,6 +295,7 @@ async def create_deck(
         card_count=0,  # New deck has no cards
         created_at=deck.created_at,
         updated_at=deck.updated_at,
+        cover_image_url=None,
     )
 
 
@@ -374,6 +384,7 @@ async def search_decks(
     card_counts = await repo.get_batch_card_counts(deck_ids)
 
     # Build localized response with card counts
+    s3 = get_s3_service()
     deck_responses = []
     for deck in decks:
         name, description = get_localized_deck_content(deck, locale)
@@ -393,6 +404,7 @@ async def search_decks(
                 card_count=card_counts.get(deck.id, 0),
                 created_at=deck.created_at,
                 updated_at=deck.updated_at,
+                cover_image_url=_deck_cover_url(deck, s3),
             )
         )
 
@@ -489,6 +501,7 @@ async def list_my_decks(
     card_counts = await repo.get_batch_card_counts(deck_ids)
 
     # Build localized response with card counts
+    s3 = get_s3_service()
     deck_responses = []
     for deck in decks:
         name, description = get_localized_deck_content(deck, locale)
@@ -508,6 +521,7 @@ async def list_my_decks(
                 card_count=card_counts.get(deck.id, 0),
                 created_at=deck.created_at,
                 updated_at=deck.updated_at,
+                cover_image_url=_deck_cover_url(deck, s3),
             )
         )
 
@@ -598,6 +612,8 @@ async def get_deck(
     # Get localized content
     name, description = get_localized_deck_content(deck, locale)
 
+    s3 = get_s3_service()
+
     # Build response with localized content and card_count
     return DeckDetailResponse(
         id=deck.id,
@@ -614,6 +630,7 @@ async def get_deck(
         created_at=deck.created_at,
         updated_at=deck.updated_at,
         card_count=card_count,
+        cover_image_url=_deck_cover_url(deck, s3),
     )
 
 
@@ -874,6 +891,7 @@ async def update_deck(
 
     # Return response with localized fields (default to English for updated deck)
     card_count = await repo.count_cards(deck_id)
+    s3 = get_s3_service()
     return DeckResponse(
         id=updated_deck.id,
         name=updated_deck.name_en,
@@ -889,6 +907,7 @@ async def update_deck(
         card_count=card_count,
         created_at=updated_deck.created_at,
         updated_at=updated_deck.updated_at,
+        cover_image_url=_deck_cover_url(updated_deck, s3),
     )
 
 

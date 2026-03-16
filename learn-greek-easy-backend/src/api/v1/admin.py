@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from typing import Any, Literal, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, UploadFile, status
 from sqlalchemy import case, delete, func, or_, select, text, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,6 +28,7 @@ from src.core.dependencies import SSEAuthResult, get_current_superuser, get_sse_
 from src.core.event_bus import news_audio_event_bus
 from src.core.exceptions import (
     ConflictException,
+    DeckNotFoundException,
     ElevenLabsAPIError,
     ElevenLabsAuthenticationError,
     ElevenLabsNotConfiguredError,
@@ -120,6 +121,7 @@ from src.schemas.changelog import (
     ChangelogEntryCreate,
     ChangelogEntryUpdate,
 )
+from src.schemas.deck import DeckAdminResponse
 from src.schemas.feedback import (
     AdminFeedbackListResponse,
     AdminFeedbackResponse,
@@ -156,7 +158,12 @@ from src.services.local_verification_service import get_local_verification_servi
 from src.services.news_item_service import NewsItemService
 from src.services.noun_data_generation_service import get_noun_data_generation_service
 from src.services.reverse_lookup_service import ReverseLookupService
-from src.services.s3_service import get_s3_service
+from src.services.s3_service import (
+    ALLOWED_DECK_IMAGE_CONTENT_TYPES,
+    MAX_DECK_IMAGE_SIZE_BYTES,
+    S3Service,
+    get_s3_service,
+)
 from src.services.translation_service import TranslationLookupService
 from src.services.verification_tier import compute_combined_tier_v2
 from src.services.wiktionary_morphology_service import WiktionaryMorphologyService
@@ -384,6 +391,7 @@ async def list_decks(
                 Deck.created_at,
                 Deck.owner_id,
                 Deck.card_system,
+                Deck.cover_image_s3_key,
                 User.full_name.label("owner_name"),
                 case(
                     (
@@ -421,6 +429,7 @@ async def list_decks(
         vocab_result = await db.execute(vocab_query.order_by(Deck.created_at.desc()))
         vocab_rows = vocab_result.all()
 
+        s3 = get_s3_service()
         for row in vocab_rows:
             unified_decks.append(
                 UnifiedDeckItem(
@@ -443,6 +452,11 @@ async def list_decks(
                     description_el=row.description_el,
                     description_en=row.description_en,
                     description_ru=row.description_ru,
+                    cover_image_url=(
+                        s3.generate_presigned_url(row.cover_image_s3_key)
+                        if row.cover_image_s3_key
+                        else None
+                    ),
                 )
             )
 
@@ -517,6 +531,7 @@ async def list_decks(
                     description_el=row.description_el,
                     description_en=row.description_en,
                     description_ru=row.description_ru,
+                    cover_image_url=None,
                 )
             )
 
@@ -535,6 +550,57 @@ async def list_decks(
         total=total,
         page=page,
         page_size=page_size,
+    )
+
+
+@router.post(
+    "/decks/{deck_id}/cover-image",
+    response_model=DeckAdminResponse,
+    summary="Upload deck cover image",
+)
+async def upload_deck_cover_image(
+    deck_id: UUID,
+    file: UploadFile,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> DeckAdminResponse:
+    """Upload or replace the cover image for a vocabulary deck."""
+    if file.content_type not in ALLOWED_DECK_IMAGE_CONTENT_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid content type. Allowed: image/jpeg, image/png, image/webp",
+        )
+    data = await file.read()
+    if len(data) > MAX_DECK_IMAGE_SIZE_BYTES:
+        raise HTTPException(
+            status_code=400,
+            detail="File too large. Maximum size: 3MB",
+        )
+    deck_repo = DeckRepository(db)
+    deck = await deck_repo.get(deck_id)
+    if deck is None:
+        raise DeckNotFoundException(str(deck_id))
+
+    s3 = get_s3_service()
+    ext = S3Service.get_extension_for_content_type(file.content_type) or "jpg"
+    s3_key = f"deck-images/{deck_id}.{ext}"
+
+    # Delete old key if extension changed
+    if deck.cover_image_s3_key and deck.cover_image_s3_key != s3_key:
+        s3.delete_object(deck.cover_image_s3_key)
+
+    uploaded = s3.upload_object(s3_key, data, file.content_type)
+    if not uploaded:
+        raise HTTPException(status_code=500, detail="Failed to upload cover image")
+
+    deck.cover_image_s3_key = s3_key
+    await db.commit()
+    await db.refresh(deck)
+
+    cover_url = s3.generate_presigned_url(s3_key)
+    card_count = await deck_repo.count_cards(deck_id)
+    return DeckAdminResponse.model_validate(deck, from_attributes=True).model_copy(
+        update={"cover_image_url": cover_url, "card_count": card_count}
     )
 
 

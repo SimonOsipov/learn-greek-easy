@@ -103,6 +103,7 @@ class DeckResponse(BaseModel):
     card_count: int = Field(0, ge=0, description="Number of cards in the deck")
     created_at: datetime
     updated_at: datetime
+    cover_image_url: str | None = None
 
 
 class DeckDetailResponse(DeckResponse):
@@ -218,6 +219,7 @@ class DeckAdminResponse(BaseModel):
     owner_id: UUID | None = None
     created_at: datetime
     updated_at: datetime
+    cover_image_url: str | None = None
 
 
 class DeckAdminListResponse(BaseModel):
