@@ -522,6 +522,11 @@ class WordEntryBulkCreate(BaseModel):
         default=None,
         description="Usage examples with translations",
     )
+    gender: Optional[str] = Field(
+        default=None,
+        max_length=20,
+        description="Grammatical gender for nouns (masculine/feminine/neuter)",
+    )
 
     @field_validator("lemma", mode="before")
     @classmethod

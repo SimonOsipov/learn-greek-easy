@@ -509,7 +509,7 @@ class TestGenerateWordEntry:
             )
 
         mock_svc.normalize_smart.assert_called_once_with(
-            "γάτα", expected_pos="NOUN", lexicon_entry=ANY
+            "γάτα", expected_pos="NOUN", lexicon_entry=ANY, lexicon_entries=ANY
         )
 
     # -------------------------------------------------------------------------
@@ -983,10 +983,14 @@ class TestGenerateWordEntry:
 
         assert resp.status_code == 200
         call_kwargs = mock_svc.normalize_smart.call_args
-        lexicon_arg = call_kwargs.kwargs.get("lexicon_entry") or call_kwargs[1].get("lexicon_entry")
-        assert lexicon_arg is not None
-        assert lexicon_arg.lemma == "σπίτι"
-        assert lexicon_arg.gender == "Neut"
+        # Bare word — lookup_all_genders() is used, so lexicon_entries is populated
+        lexicon_entries_arg = call_kwargs.kwargs.get("lexicon_entries") or call_kwargs[1].get(
+            "lexicon_entries"
+        )
+        assert lexicon_entries_arg is not None
+        assert len(lexicon_entries_arg) >= 1
+        assert lexicon_entries_arg[0].lemma == "σπίτι"
+        assert lexicon_entries_arg[0].gender == "Neut"
 
     # -------------------------------------------------------------------------
     # Duplicate check (NGEN-08-03)
@@ -1045,6 +1049,7 @@ class TestGenerateWordEntry:
             part_of_speech=PartOfSpeech.NOUN,
             translation_en="cat",
             is_active=True,
+            gender="masculine",  # must match primary_gender from _mock_smart_result()
         )
         db_session.add(existing)
         await db_session.flush()

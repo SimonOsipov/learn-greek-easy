@@ -151,7 +151,7 @@ from src.services.cross_ai_verification_service import get_cross_ai_verification
 from src.services.duplicate_detection_service import DuplicateDetectionService
 from src.services.feedback_admin_service import FeedbackAdminService
 from src.services.lemma_normalization_service import detect_article, get_lemma_normalization_service
-from src.services.lexicon_service import LexiconService
+from src.services.lexicon_service import LexiconEntry, LexiconService
 from src.services.local_verification_service import get_local_verification_service
 from src.services.news_item_service import NewsItemService
 from src.services.noun_data_generation_service import get_noun_data_generation_service
@@ -2768,6 +2768,8 @@ def _confidence_tier(confidence: float) -> Literal["high", "medium", "low"]:
 
 _SPACY_GENDER_MAP = {"Masc": "masculine", "Fem": "feminine", "Neut": "neuter"}
 _GENDER_TO_ARTICLE = {"masculine": "ο", "feminine": "η", "neuter": "το"}
+_APP_GENDER_TO_LEXICON: dict[str, str] = {v: k for k, v in _SPACY_GENDER_MAP.items()}
+_ARTICLE_GENDER_OVERRIDE: dict[str, str] = {"ο": "masculine", "η": "feminine", "το": "neuter"}
 
 
 def _extract_gender_article(
@@ -2901,13 +2903,20 @@ async def _run_verification_stage(
     cross_svc = get_cross_ai_verification_service()
 
     # Step 1: Lexicon declensions
+    lex_gender = (
+        _APP_GENDER_TO_LEXICON.get(normalized_lemma.gender) if normalized_lemma.gender else None
+    )
     if lexicon_svc is not None:
-        lexicon_declensions = await lexicon_svc.get_declensions(lemma, pos="NOUN")
+        lexicon_declensions = await lexicon_svc.get_declensions(
+            lemma, pos="NOUN", gender=lex_gender
+        )
     else:
         factory = get_session_factory()
         async with factory.begin() as _db:
             _lex_svc = LexiconService(_db)
-            lexicon_declensions = await _lex_svc.get_declensions(lemma, pos="NOUN")
+            lexicon_declensions = await _lex_svc.get_declensions(
+                lemma, pos="NOUN", gender=lex_gender
+            )
 
     # Step 2: Wiktionary entry (gender-filtered with fallback)
     # Use normalized_lemma.gender (from NLP pipeline) not generated_data.grammar_data.gender
@@ -3046,7 +3055,7 @@ def _build_translation_lookup_stage_result(
     status_code=status.HTTP_200_OK,
     summary="Run noun generation pipeline (progressive stages)",
 )
-async def generate_word_entry(
+async def generate_word_entry(  # noqa: C901
     request: GenerateWordEntryRequest,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_superuser),
@@ -3074,15 +3083,32 @@ async def generate_word_entry(
         )
 
     # Stage 0.5: Lexicon lookup (async DB query)
-    _, bare_word = detect_article(request.word)
+    detected_art, bare_word = detect_article(request.word)
     lexicon_svc = LexiconService(db)
-    lexicon_entry = await lexicon_svc.lookup(bare_word, pos="NOUN")
+
+    lexicon_entry: LexiconEntry | None = None
+    lexicon_entries: list[LexiconEntry] | None = None
+
+    if detected_art is None:
+        # Bare word — fetch all gender variants for suggestions
+        lexicon_entries = await lexicon_svc.lookup_all_genders(bare_word, pos="NOUN")
+    else:
+        # Article specified — map to lexicon-level gender code and do targeted lookup
+        art_gender = _ARTICLE_GENDER_OVERRIDE.get(detected_art)
+        lex_gender_rest = _APP_GENDER_TO_LEXICON.get(art_gender) if art_gender else None
+        if lex_gender_rest:
+            lexicon_entry = await lexicon_svc.lookup(bare_word, pos="NOUN", gender=lex_gender_rest)
+        else:
+            lexicon_entry = await lexicon_svc.lookup(bare_word, pos="NOUN")
 
     # Stage 1: Normalization (synchronous -- CPU-bound NLP)
     svc = get_lemma_normalization_service()
     try:
         smart_result = svc.normalize_smart(
-            request.word, expected_pos="NOUN", lexicon_entry=lexicon_entry
+            request.word,
+            expected_pos="NOUN",
+            lexicon_entry=lexicon_entry,
+            lexicon_entries=lexicon_entries,
         )
     except ValueError as exc:
         raise HTTPException(
@@ -3095,11 +3121,9 @@ async def generate_word_entry(
 
     # Article-based gender override: when user provided a nominative singular article,
     # use it as ground-truth gender (overrides spaCy's morphological analysis)
-    _ARTICLE_GENDER_OVERRIDE = {"ο": "masculine", "η": "feminine", "το": "neuter"}
-    detected_art = smart_result.detected_article
-    if detected_art in _ARTICLE_GENDER_OVERRIDE:
-        primary_gender = _ARTICLE_GENDER_OVERRIDE[detected_art]
-        primary_article = detected_art
+    if smart_result.detected_article in _ARTICLE_GENDER_OVERRIDE:
+        primary_gender = _ARTICLE_GENDER_OVERRIDE[smart_result.detected_article]
+        primary_article = smart_result.detected_article
 
     suggestions = [
         SuggestionItem(
@@ -3119,6 +3143,7 @@ async def generate_word_entry(
     dup_result = await dup_svc.check(
         lemma=primary.morphology.lemma,
         part_of_speech=PartOfSpeech.NOUN,
+        gender=primary_gender,
     )
     if dup_result.is_duplicate:
         raise HTTPException(
@@ -3252,7 +3277,6 @@ def _build_normalization_sse_event(
     primary = smart_result.primary
     primary_gender, primary_article = _extract_gender_article(primary.morphology.morph_features)
 
-    _ARTICLE_GENDER_OVERRIDE = {"ο": "masculine", "η": "feminine", "το": "neuter"}
     if smart_result.detected_article in _ARTICLE_GENDER_OVERRIDE:
         primary_gender = _ARTICLE_GENDER_OVERRIDE[smart_result.detected_article]
         primary_article = smart_result.detected_article
@@ -3355,18 +3379,34 @@ async def _generate_word_entry_sse_pipeline(  # noqa: C901
         return
 
     # Validate deck (active + V2) and lexicon lookup — share one session
-    _, bare_word = detect_article(request.word)
+    detected_art_sse, bare_word = detect_article(request.word)
     factory = get_session_factory()
+    lexicon_entry_sse: LexiconEntry | None = None
+    lexicon_entries_sse: list[LexiconEntry] | None = None
     async with factory.begin() as _db:
         result = await _db.execute(select(Deck).where(Deck.id == request.deck_id))
         deck = result.scalar_one_or_none()
-        lexicon_entry = None
         if deck is not None and deck.is_active and deck.card_system == CardSystemVersion.V2:
             lexicon_svc_inner = LexiconService(_db)
             try:
-                lexicon_entry = await lexicon_svc_inner.lookup(bare_word, pos="NOUN")
+                if detected_art_sse is None:
+                    lexicon_entries_sse = await lexicon_svc_inner.lookup_all_genders(
+                        bare_word, pos="NOUN"
+                    )
+                else:
+                    art_gender_sse = _ARTICLE_GENDER_OVERRIDE.get(detected_art_sse)
+                    lex_gender_sse = (
+                        _APP_GENDER_TO_LEXICON.get(art_gender_sse) if art_gender_sse else None
+                    )
+                    if lex_gender_sse:
+                        lexicon_entry_sse = await lexicon_svc_inner.lookup(
+                            bare_word, pos="NOUN", gender=lex_gender_sse
+                        )
+                    else:
+                        lexicon_entry_sse = await lexicon_svc_inner.lookup(bare_word, pos="NOUN")
             except Exception:
-                lexicon_entry = None
+                lexicon_entry_sse = None
+                lexicon_entries_sse = None
 
     if deck is None or not deck.is_active:
         yield format_sse_event(
@@ -3389,7 +3429,10 @@ async def _generate_word_entry_sse_pipeline(  # noqa: C901
     svc = get_lemma_normalization_service()
     try:
         smart_result = svc.normalize_smart(
-            request.word, expected_pos="NOUN", lexicon_entry=lexicon_entry
+            request.word,
+            expected_pos="NOUN",
+            lexicon_entry=lexicon_entry_sse,
+            lexicon_entries=lexicon_entries_sse,
         )
     except ValueError as exc:
         yield format_sse_event(
@@ -3411,6 +3454,7 @@ async def _generate_word_entry_sse_pipeline(  # noqa: C901
             dup_result = await dup_svc.check(
                 lemma=primary.morphology.lemma,
                 part_of_speech=PartOfSpeech.NOUN,
+                gender=primary_gender,
             )
     except Exception as exc:
         dup_exc = exc
@@ -3637,15 +3681,19 @@ async def link_word_entry_to_deck(
         )
 
     # Check if deck already has a word entry with same lemma+POS (via junction)
+    link_dup_filters = [
+        DeckWordEntry.deck_id == deck_id,
+        WordEntry.lemma == word_entry.lemma,
+        WordEntry.part_of_speech == word_entry.part_of_speech,
+        WordEntry.id != word_entry_id,
+    ]
+    if word_entry.gender is not None:
+        link_dup_filters.append(WordEntry.gender == word_entry.gender)
+
     duplicate_check = await db.execute(
         select(WordEntry.id)
         .join(DeckWordEntry, DeckWordEntry.word_entry_id == WordEntry.id)
-        .where(
-            DeckWordEntry.deck_id == deck_id,
-            WordEntry.lemma == word_entry.lemma,
-            WordEntry.part_of_speech == word_entry.part_of_speech,
-            WordEntry.id != word_entry_id,
-        )
+        .where(*link_dup_filters)
         .limit(1)
     )
     if duplicate_check.scalar_one_or_none() is not None:
