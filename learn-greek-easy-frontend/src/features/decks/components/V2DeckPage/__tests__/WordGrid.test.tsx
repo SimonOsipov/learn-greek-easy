@@ -17,7 +17,7 @@ import { describe, it, expect } from 'vitest';
 
 import type { WordEntryResponse } from '@/services/wordEntryAPI';
 
-import { WordGrid, WordGridSkeleton, isWideLemma } from '../WordGrid';
+import { WordGrid, WordGridSkeleton, isWideCard } from '../WordGrid';
 
 /**
  * Helper to render WordGrid within a router context
@@ -195,20 +195,69 @@ describe('WordGrid Component', () => {
   });
 });
 
-describe('isWideLemma', () => {
-  it('should return false for short lemmas', () => {
-    expect(isWideLemma('σπίτι')).toBe(false); // 5 chars
-    expect(isWideLemma('γείτονας')).toBe(false); // 8 chars
+describe('isWideCard', () => {
+  const makeEntry = (overrides: Partial<WordEntryResponse>): WordEntryResponse => ({
+    ...mockWordEntries[0],
+    ...overrides,
   });
 
-  it('should return false at the boundary (12 chars)', () => {
-    expect(isWideLemma('αρραβωνιαστι')).toBe(false); // exactly 12
+  describe('lemma threshold (>12)', () => {
+    it('should return false for short lemmas', () => {
+      expect(isWideCard(makeEntry({ lemma: 'σπίτι' }))).toBe(false); // 5 chars
+      expect(isWideCard(makeEntry({ lemma: 'γείτονας' }))).toBe(false); // 8 chars
+    });
+
+    it('should return false at the boundary (12 chars)', () => {
+      expect(isWideCard(makeEntry({ lemma: 'αρραβωνιαστι' }))).toBe(false);
+    });
+
+    it('should return true above the boundary (>12 chars)', () => {
+      expect(isWideCard(makeEntry({ lemma: 'αρραβωνιαστικ' }))).toBe(true); // 13
+      expect(isWideCard(makeEntry({ lemma: 'αρραβωνιαστικιά' }))).toBe(true); // 15
+    });
   });
 
-  it('should return true above the boundary (>12 chars)', () => {
-    expect(isWideLemma('αρραβωνιαστικ')).toBe(true); // 13
-    expect(isWideLemma('αρραβωνιαστικιά')).toBe(true); // 15
-    expect(isWideLemma('αρραβωνιαστικός')).toBe(true); // 15
+  describe('translation threshold (>20)', () => {
+    it('should return false for short translations', () => {
+      expect(isWideCard(makeEntry({ translation_en: 'aunt' }))).toBe(false);
+      expect(isWideCard(makeEntry({ translation_en: 'sister-in-law' }))).toBe(false); // 13
+    });
+
+    it('should return false at the boundary (20 chars)', () => {
+      expect(isWideCard(makeEntry({ translation_en: '12345678901234567890' }))).toBe(false);
+    });
+
+    it('should return true for long EN translation', () => {
+      expect(isWideCard(makeEntry({ translation_en: 'baptism, baptizing, christening' }))).toBe(
+        true
+      ); // 31
+      expect(isWideCard(makeEntry({ translation_en: 'friend, boyfriend, acquaintance' }))).toBe(
+        true
+      ); // 31
+    });
+
+    it('should return true for long RU translation', () => {
+      expect(
+        isWideCard(
+          makeEntry({
+            translation_en: 'short',
+            translation_ru: 'очень длинный русский перевод слова',
+          })
+        )
+      ).toBe(true);
+    });
+
+    it('should return false when RU translation is null', () => {
+      expect(isWideCard(makeEntry({ translation_en: 'short', translation_ru: null }))).toBe(false);
+    });
+  });
+
+  it('should return true when both lemma and translation are long', () => {
+    expect(
+      isWideCard(
+        makeEntry({ lemma: 'αρραβωνιαστικιά', translation_en: 'baptism, baptizing, christening' })
+      )
+    ).toBe(true);
   });
 });
 
@@ -219,6 +268,13 @@ describe('WordGrid - Wide Cards', () => {
     lemma: 'αρραβωνιαστικιά', // 15 chars
   };
 
+  const longTranslationEntry: WordEntryResponse = {
+    ...mockWordEntries[0],
+    id: 'long-2',
+    lemma: 'βάφτιση',
+    translation_en: 'baptism, baptizing, christening', // 31 chars
+  };
+
   it('should apply gridColumn span 2 for long lemma cards', () => {
     renderWithRouter([longLemmaEntry]);
     const grid = screen.getByTestId('word-grid');
@@ -226,21 +282,34 @@ describe('WordGrid - Wide Cards', () => {
     expect(wrapper.style.gridColumn).toBe('span 2');
   });
 
-  it('should not apply gridColumn for short lemma cards', () => {
+  it('should apply gridColumn span 2 for long translation cards', () => {
+    renderWithRouter([longTranslationEntry]);
+    const grid = screen.getByTestId('word-grid');
+    const wrapper = grid.firstElementChild as HTMLElement;
+    expect(wrapper.style.gridColumn).toBe('span 2');
+  });
+
+  it('should not apply gridColumn for short cards', () => {
     renderWithRouter([mockWordEntries[0]]);
     const grid = screen.getByTestId('word-grid');
     const wrapper = grid.firstElementChild as HTMLElement;
     expect(wrapper.style.gridColumn).toBe('');
   });
 
-  it('should apply span only to long lemma cards in mixed entries', () => {
-    renderWithRouter([mockWordEntries[0], longLemmaEntry, mockWordEntries[1]]);
+  it('should apply span only to wide cards in mixed entries', () => {
+    renderWithRouter([
+      mockWordEntries[0],
+      longLemmaEntry,
+      mockWordEntries[1],
+      longTranslationEntry,
+    ]);
     const grid = screen.getByTestId('word-grid');
     const wrappers = Array.from(grid.children) as HTMLElement[];
 
     expect(wrappers[0].style.gridColumn).toBe(''); // 'test' - short
-    expect(wrappers[1].style.gridColumn).toBe('span 2'); // 'αρραβωνιαστικιά' - long
+    expect(wrappers[1].style.gridColumn).toBe('span 2'); // long lemma
     expect(wrappers[2].style.gridColumn).toBe(''); // 'another' - short
+    expect(wrappers[3].style.gridColumn).toBe('span 2'); // long translation
   });
 });
 

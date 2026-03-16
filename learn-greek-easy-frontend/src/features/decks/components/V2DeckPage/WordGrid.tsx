@@ -18,10 +18,14 @@ import { WordCard } from '../WordCard';
 // ============================================
 
 const WIDE_LEMMA_THRESHOLD = 12;
+const WIDE_TRANSLATION_THRESHOLD = 20;
 
-/** Returns true when a lemma is too long for a single grid column. */
-export function isWideLemma(lemma: string): boolean {
-  return lemma.length > WIDE_LEMMA_THRESHOLD;
+/** Returns true when a word entry needs a wide (2-column) card. */
+export function isWideCard(entry: WordEntryResponse): boolean {
+  if (entry.lemma.length > WIDE_LEMMA_THRESHOLD) return true;
+  if (entry.translation_en.length > WIDE_TRANSLATION_THRESHOLD) return true;
+  if (entry.translation_ru && entry.translation_ru.length > WIDE_TRANSLATION_THRESHOLD) return true;
+  return false;
 }
 
 // ============================================
@@ -35,7 +39,7 @@ export interface WordGridProps {
 /**
  * Responsive grid of word cards.
  * Uses CSS Grid with auto-fill and minmax for responsive layout.
- * Cards with long lemmas (>12 chars) span 2 columns.
+ * Cards with long lemmas (>12 chars) or translations (>20 chars) span 2 columns.
  *
  * Grid columns:
  * - Mobile: 2 columns (150px min)
@@ -59,7 +63,7 @@ export function WordGrid({ entries }: WordGridProps) {
       data-testid="word-grid"
     >
       {entries.map((entry) => (
-        <div key={entry.id} style={isWideLemma(entry.lemma) ? { gridColumn: 'span 2' } : undefined}>
+        <div key={entry.id} style={isWideCard(entry) ? { gridColumn: 'span 2' } : undefined}>
           <WordCard wordEntry={entry} onClick={() => handleWordCardClick(entry.id)} />
         </div>
       ))}
