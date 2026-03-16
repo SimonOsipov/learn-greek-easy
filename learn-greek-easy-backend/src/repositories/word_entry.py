@@ -309,7 +309,7 @@ class WordEntryRepository(BaseRepository[WordEntry]):
             for row in existing_rows
         }
 
-        # Build audio_key lookup: {(lemma, pos): {example_id: audio_key}}
+        # Build audio_key lookup: {(lemma, pos, gender): {example_id: audio_key}}
         existing_audio_keys = self._build_audio_key_lookup(existing_rows)
 
         # Prepare values with owner_id added to each entry

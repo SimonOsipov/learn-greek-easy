@@ -652,6 +652,31 @@ class TestWordEntryRepositoryGenderDisambiguation:
         assert result_fem.translation_en == "wife"
 
     @pytest.mark.asyncio
+    async def test_get_by_owner_lemma_pos_gender_none_matches_null_gender(
+        self, db_session: AsyncSession, sample_user: User
+    ):
+        """get_by_owner_lemma_pos_gender with gender=None filters by NULL gender (not 'any gender')."""
+        repo = WordEntryRepository(db_session)
+
+        # Entry with a non-NULL gender
+        masc_entry = WordEntry(
+            owner_id=sample_user.id,
+            lemma="σύζυγος",
+            part_of_speech=PartOfSpeech.NOUN,
+            gender="masculine",
+            translation_en="husband",
+            is_active=True,
+        )
+        db_session.add(masc_entry)
+        await db_session.flush()
+
+        # gender=None → WHERE gender IS NULL — should NOT find the masculine row
+        result = await repo.get_by_owner_lemma_pos_gender(
+            sample_user.id, "σύζυγος", PartOfSpeech.NOUN, gender=None
+        )
+        assert result is None
+
+    @pytest.mark.asyncio
     async def test_audio_key_merge_with_gender_differentiation(self, db_session: AsyncSession):
         """Audio keys are correctly preserved per (lemma, pos, gender) — not cross-contaminated."""
         repo = WordEntryRepository(db_session)

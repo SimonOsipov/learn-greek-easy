@@ -217,6 +217,7 @@ class TestWordEntryModel:
         constraint_names = [uc.name for uc in unique_constraints]
         assert "uq_word_entry_owner_lemma_pos_gender" in constraint_names
         assert "uq_word_entry_deck_lemma_pos" not in constraint_names
+        assert "uq_word_entry_owner_lemma_pos" not in constraint_names  # old constraint removed
 
     def test_unique_constraint_columns(self):
         """Unique constraint should cover (owner_id, lemma, part_of_speech, gender) (CGND-01-01)."""
