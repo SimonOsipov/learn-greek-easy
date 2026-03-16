@@ -134,6 +134,7 @@ export interface ListeningDialogDetail {
   audio_file_size_bytes: number | null;
   speakers: DialogSpeakerDetail[];
   lines: DialogLineDetail[];
+  degenerate_line_count: number;
 }
 
 /**

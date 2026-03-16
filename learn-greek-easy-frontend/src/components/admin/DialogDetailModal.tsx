@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { BookOpen, Loader2, RefreshCw, Wand2 } from 'lucide-react';
+import { AlertTriangle, BookOpen, Loader2, RefreshCw, Wand2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { WaveformPlayer } from '@/components/culture/WaveformPlayer';
@@ -376,213 +376,240 @@ export function DialogDetailModal({ dialogId, open, onOpenChange }: DialogDetail
 
         {/* Main content */}
         {selectedDialog && !isLoadingDetail && (
-          <Tabs defaultValue="dialog" data-testid="dialog-detail-tabs">
-            <TabsList className="w-full">
-              <TabsTrigger value="dialog" className="flex-1" data-testid="dialog-tab-dialog">
-                {t('listeningDialogs.detail.tabs.dialog')}
-              </TabsTrigger>
-              <TabsTrigger value="exercises" className="flex-1" data-testid="dialog-tab-exercises">
-                {t('listeningDialogs.detail.tabs.exercises')}
-              </TabsTrigger>
-            </TabsList>
+          <div className="space-y-4">
+            {selectedDialog.degenerate_line_count > 0 && (
+              <Alert
+                className="border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200 [&>svg]:text-amber-600"
+                data-testid="dialog-degenerate-warning"
+              >
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  {t('listeningDialogs.detail.degenerateWarning', {
+                    count: selectedDialog.degenerate_line_count,
+                  })}
+                </AlertDescription>
+              </Alert>
+            )}
+            <Tabs defaultValue="dialog" data-testid="dialog-detail-tabs">
+              <TabsList className="w-full">
+                <TabsTrigger value="dialog" className="flex-1" data-testid="dialog-tab-dialog">
+                  {t('listeningDialogs.detail.tabs.dialog')}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="exercises"
+                  className="flex-1"
+                  data-testid="dialog-tab-exercises"
+                >
+                  {t('listeningDialogs.detail.tabs.exercises')}
+                </TabsTrigger>
+              </TabsList>
 
-            <TabsContent value="dialog" className="space-y-4">
-              {/* Audio Player FIRST (moved above transcript) */}
-              {(selectedDialog.status === 'audio_ready' ||
-                selectedDialog.status === 'exercises_ready') &&
-                !sseEnabled &&
-                !generationProgress && (
-                  <div ref={containerRef} data-testid="dialog-audio-player">
-                    {selectedDialog.audio_url ? (
-                      <WaveformPlayer
-                        variant="admin"
-                        audioUrl={selectedDialog.audio_url}
-                        showSpeedControl={false}
-                        barCount={60}
-                      />
-                    ) : (
-                      <Alert variant="destructive">
-                        <AlertDescription>
-                          {t('listeningDialogs.detail.errors.audioUrlMissing')}
-                        </AlertDescription>
-                      </Alert>
-                    )}
-                  </div>
-                )}
+              <TabsContent value="dialog" className="space-y-4">
+                {/* Audio Player FIRST (moved above transcript) */}
+                {(selectedDialog.status === 'audio_ready' ||
+                  selectedDialog.status === 'exercises_ready') &&
+                  !sseEnabled &&
+                  !generationProgress && (
+                    <div ref={containerRef} data-testid="dialog-audio-player">
+                      {selectedDialog.audio_url ? (
+                        <WaveformPlayer
+                          variant="admin"
+                          audioUrl={selectedDialog.audio_url}
+                          showSpeedControl={false}
+                          barCount={60}
+                        />
+                      ) : (
+                        <Alert variant="destructive">
+                          <AlertDescription>
+                            {t('listeningDialogs.detail.errors.audioUrlMissing')}
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                    </div>
+                  )}
 
-              {/* Transcript */}
-              <div className="space-y-3">
-                {selectedDialog.lines.map((line) => {
-                  const speaker = speakerMap.get(line.speaker_id);
-                  const speakerIdx = speaker?.speaker_index ?? 0;
-                  const style =
-                    SPEAKER_BUBBLE_STYLES[speakerIdx % SPEAKER_BUBBLE_STYLES.length] ??
-                    DEFAULT_BUBBLE_STYLE;
-                  const isActive = activeLine?.id === line.id;
-                  const isRight = speakerIdx % 2 === 1;
-                  return (
-                    <div
-                      key={line.id}
-                      data-testid={`dialog-line-${line.line_index}`}
-                      className={cn('flex', isRight && 'justify-end')}
-                    >
+                {/* Transcript */}
+                <div className="space-y-3">
+                  {selectedDialog.lines.map((line) => {
+                    const speaker = speakerMap.get(line.speaker_id);
+                    const speakerIdx = speaker?.speaker_index ?? 0;
+                    const style =
+                      SPEAKER_BUBBLE_STYLES[speakerIdx % SPEAKER_BUBBLE_STYLES.length] ??
+                      DEFAULT_BUBBLE_STYLE;
+                    const isActive = activeLine?.id === line.id;
+                    const isRight = speakerIdx % 2 === 1;
+                    return (
                       <div
-                        className={cn(
-                          'max-w-[70%] rounded-lg border p-3 transition-shadow duration-200',
-                          style.bg,
-                          style.border,
-                          isActive && 'shadow-md'
-                        )}
+                        key={line.id}
+                        data-testid={`dialog-line-${line.line_index}`}
+                        className={cn('flex', isRight && 'justify-end')}
                       >
-                        <p className={cn('mb-1 text-xs font-medium', style.name)}>
-                          {speaker?.character_name}
-                        </p>
-                        {line.word_timestamps &&
-                        line.word_timestamps.length > 0 &&
-                        audioCurrentTimeMs > 0 ? (
-                          <p className="text-sm">
-                            {line.word_timestamps.map((wt, idx) => {
-                              const state =
-                                wt.end_ms <= audioCurrentTimeMs
-                                  ? 'spoken'
-                                  : wt.start_ms <= audioCurrentTimeMs
-                                    ? 'speaking'
-                                    : 'pending';
-                              return (
-                                <span
-                                  key={idx}
-                                  className={cn(
-                                    'transition-all duration-150',
-                                    state === 'spoken' && 'text-foreground',
-                                    state === 'speaking' &&
-                                      'rounded bg-primary/20 px-0.5 font-medium',
-                                    state === 'pending' && 'text-muted-foreground'
-                                  )}
-                                >
-                                  {wt.word}
-                                  {idx < line.word_timestamps!.length - 1 ? ' ' : ''}
-                                </span>
-                              );
-                            })}
+                        <div
+                          className={cn(
+                            'max-w-[70%] rounded-lg border p-3 transition-shadow duration-200',
+                            style.bg,
+                            style.border,
+                            isActive && 'shadow-md'
+                          )}
+                        >
+                          <p className={cn('mb-1 text-xs font-medium', style.name)}>
+                            {speaker?.character_name}
+                            {line.start_time_ms !== null &&
+                              line.start_time_ms === line.end_time_ms && (
+                                <AlertTriangle
+                                  className="ml-1 inline h-3 w-3 text-amber-500"
+                                  data-testid={`dialog-line-${line.line_index}-degenerate`}
+                                  title={t('listeningDialogs.detail.degenerateLine')}
+                                />
+                              )}
                           </p>
-                        ) : (
-                          <p className="text-sm">{line.text}</p>
-                        )}
+                          {line.word_timestamps &&
+                          line.word_timestamps.length > 0 &&
+                          audioCurrentTimeMs > 0 ? (
+                            <p className="text-sm">
+                              {line.word_timestamps.map((wt, idx) => {
+                                const state =
+                                  wt.end_ms <= audioCurrentTimeMs
+                                    ? 'spoken'
+                                    : wt.start_ms <= audioCurrentTimeMs
+                                      ? 'speaking'
+                                      : 'pending';
+                                return (
+                                  <span
+                                    key={idx}
+                                    className={cn(
+                                      'transition-all duration-150',
+                                      state === 'spoken' && 'text-foreground',
+                                      state === 'speaking' &&
+                                        'rounded bg-primary/20 px-0.5 font-medium',
+                                      state === 'pending' && 'text-muted-foreground'
+                                    )}
+                                  >
+                                    {wt.word}
+                                    {idx < line.word_timestamps!.length - 1 ? ' ' : ''}
+                                  </span>
+                                );
+                              })}
+                            </p>
+                          ) : (
+                            <p className="text-sm">{line.text}</p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
 
-              {/* Generate Audio (draft only) */}
-              {selectedDialog.status === 'draft' && (
-                <div className="space-y-2 pt-2">
-                  {!sseEnabled && !generationProgress && !generationError && (
-                    <Button
-                      data-testid="dialog-generate-audio-btn"
-                      onClick={() => {
-                        setGenerationError(null);
-                        setSseEnabled(true);
-                      }}
-                    >
-                      <Wand2 className="mr-2 h-4 w-4" />
-                      {t('listeningDialogs.detail.generateAudio.button')}
-                    </Button>
-                  )}
-                  {generationProgress && (
-                    <div
-                      data-testid="dialog-generation-progress"
-                      className="flex items-center gap-2 text-sm text-muted-foreground"
-                    >
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      {generationProgress}
-                    </div>
-                  )}
-                  {generationError && (
-                    <div data-testid="dialog-generation-error">
-                      <Alert variant="destructive">
-                        <AlertDescription>{generationError}</AlertDescription>
-                      </Alert>
+                {/* Generate Audio (draft only) */}
+                {selectedDialog.status === 'draft' && (
+                  <div className="space-y-2 pt-2">
+                    {!sseEnabled && !generationProgress && !generationError && (
                       <Button
-                        variant="outline"
-                        className="mt-2"
+                        data-testid="dialog-generate-audio-btn"
                         onClick={() => {
                           setGenerationError(null);
                           setSseEnabled(true);
                         }}
                       >
-                        {t('listeningDialogs.detail.generateAudio.tryAgain')}
+                        <Wand2 className="mr-2 h-4 w-4" />
+                        {t('listeningDialogs.detail.generateAudio.button')}
                       </Button>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Regenerate Audio (audio_ready / exercises_ready) */}
-              {(selectedDialog.status === 'audio_ready' ||
-                selectedDialog.status === 'exercises_ready') && (
-                <div className="space-y-2 pt-2">
-                  {!sseEnabled && !generationProgress && !generationError && (
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="outline" data-testid="dialog-regenerate-audio-btn">
-                          <RefreshCw className="mr-2 h-4 w-4" />
-                          {t('listeningDialogs.detail.regenerateAudio.button')}
+                    )}
+                    {generationProgress && (
+                      <div
+                        data-testid="dialog-generation-progress"
+                        className="flex items-center gap-2 text-sm text-muted-foreground"
+                      >
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        {generationProgress}
+                      </div>
+                    )}
+                    {generationError && (
+                      <div data-testid="dialog-generation-error">
+                        <Alert variant="destructive">
+                          <AlertDescription>{generationError}</AlertDescription>
+                        </Alert>
+                        <Button
+                          variant="outline"
+                          className="mt-2"
+                          onClick={() => {
+                            setGenerationError(null);
+                            setSseEnabled(true);
+                          }}
+                        >
+                          {t('listeningDialogs.detail.generateAudio.tryAgain')}
                         </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>
-                            {t('listeningDialogs.detail.regenerateAudio.confirmTitle')}
-                          </AlertDialogTitle>
-                          <AlertDialogDescription>
-                            {t('listeningDialogs.detail.regenerateAudio.confirmDescription')}
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>
-                            {t('listeningDialogs.detail.regenerateAudio.cancelButton')}
-                          </AlertDialogCancel>
-                          <AlertDialogAction
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            onClick={startAudioRegeneration}
-                          >
-                            {t('listeningDialogs.detail.regenerateAudio.confirmButton')}
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  )}
-                  {generationProgress && (
-                    <div
-                      data-testid="dialog-generation-progress"
-                      className="flex items-center gap-2 text-sm text-muted-foreground"
-                    >
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      {generationProgress}
-                    </div>
-                  )}
-                  {generationError && (
-                    <div data-testid="dialog-generation-error">
-                      <Alert variant="destructive">
-                        <AlertDescription>{generationError}</AlertDescription>
-                      </Alert>
-                      <Button variant="outline" className="mt-2" onClick={startAudioRegeneration}>
-                        {t('listeningDialogs.detail.generateAudio.tryAgain')}
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </TabsContent>
+                      </div>
+                    )}
+                  </div>
+                )}
 
-            <TabsContent value="exercises">
-              <div className="flex flex-col items-center gap-3 py-12 text-center text-muted-foreground">
-                <BookOpen className="h-10 w-10 opacity-40" />
-                <p>{t('listeningDialogs.detail.exercises.empty')}</p>
-              </div>
-            </TabsContent>
-          </Tabs>
+                {/* Regenerate Audio (audio_ready / exercises_ready) */}
+                {(selectedDialog.status === 'audio_ready' ||
+                  selectedDialog.status === 'exercises_ready') && (
+                  <div className="space-y-2 pt-2">
+                    {!sseEnabled && !generationProgress && !generationError && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="outline" data-testid="dialog-regenerate-audio-btn">
+                            <RefreshCw className="mr-2 h-4 w-4" />
+                            {t('listeningDialogs.detail.regenerateAudio.button')}
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>
+                              {t('listeningDialogs.detail.regenerateAudio.confirmTitle')}
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                              {t('listeningDialogs.detail.regenerateAudio.confirmDescription')}
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>
+                              {t('listeningDialogs.detail.regenerateAudio.cancelButton')}
+                            </AlertDialogCancel>
+                            <AlertDialogAction
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              onClick={startAudioRegeneration}
+                            >
+                              {t('listeningDialogs.detail.regenerateAudio.confirmButton')}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+                    {generationProgress && (
+                      <div
+                        data-testid="dialog-generation-progress"
+                        className="flex items-center gap-2 text-sm text-muted-foreground"
+                      >
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        {generationProgress}
+                      </div>
+                    )}
+                    {generationError && (
+                      <div data-testid="dialog-generation-error">
+                        <Alert variant="destructive">
+                          <AlertDescription>{generationError}</AlertDescription>
+                        </Alert>
+                        <Button variant="outline" className="mt-2" onClick={startAudioRegeneration}>
+                          {t('listeningDialogs.detail.generateAudio.tryAgain')}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="exercises">
+                <div className="flex flex-col items-center gap-3 py-12 text-center text-muted-foreground">
+                  <BookOpen className="h-10 w-10 opacity-40" />
+                  <p>{t('listeningDialogs.detail.exercises.empty')}</p>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
         )}
       </DialogContent>
     </Dialog>

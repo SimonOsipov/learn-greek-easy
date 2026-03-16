@@ -90,6 +90,7 @@ const mockDialog: ListeningDialogDetail = {
       word_timestamps: mockWordTimestamps,
     },
   ],
+  degenerate_line_count: 0,
 };
 
 // ============================================
@@ -327,5 +328,74 @@ describe('DialogDetailModal - Karaoke Word Rendering', () => {
     });
 
     expect(window.cancelAnimationFrame).toHaveBeenCalled();
+  });
+});
+
+describe('DialogDetailModal - Degenerate Timing', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockStoreState = baseStoreState();
+  });
+
+  it('shows warning banner when degenerate_line_count > 0', () => {
+    mockStoreState = {
+      ...baseStoreState(),
+      selectedDialog: { ...mockDialog, degenerate_line_count: 2 },
+      isLoadingDetail: false,
+    };
+    renderModal();
+    expect(screen.getByTestId('dialog-degenerate-warning')).toBeInTheDocument();
+  });
+
+  it('does not show warning banner when degenerate_line_count === 0', () => {
+    mockStoreState = {
+      ...baseStoreState(),
+      selectedDialog: { ...mockDialog, degenerate_line_count: 0 },
+      isLoadingDetail: false,
+    };
+    renderModal();
+    expect(screen.queryByTestId('dialog-degenerate-warning')).not.toBeInTheDocument();
+  });
+
+  it('shows per-line degenerate icon for zero-width lines', () => {
+    mockStoreState = {
+      ...baseStoreState(),
+      selectedDialog: {
+        ...mockDialog,
+        degenerate_line_count: 1,
+        lines: [
+          {
+            ...mockDialog.lines[0],
+            start_time_ms: 500,
+            end_time_ms: 500,
+          },
+        ],
+      },
+      isLoadingDetail: false,
+    };
+    renderModal();
+    const icon = screen.getByTestId('dialog-line-0-degenerate');
+    expect(icon).toBeInTheDocument();
+    expect(icon).toHaveAttribute('title');
+  });
+
+  it('does not show per-line icon for normal lines', () => {
+    mockStoreState = {
+      ...baseStoreState(),
+      selectedDialog: {
+        ...mockDialog,
+        degenerate_line_count: 0,
+        lines: [
+          {
+            ...mockDialog.lines[0],
+            start_time_ms: 0,
+            end_time_ms: 3000,
+          },
+        ],
+      },
+      isLoadingDetail: false,
+    };
+    renderModal();
+    expect(screen.queryByTestId('dialog-line-0-degenerate')).not.toBeInTheDocument();
   });
 });
