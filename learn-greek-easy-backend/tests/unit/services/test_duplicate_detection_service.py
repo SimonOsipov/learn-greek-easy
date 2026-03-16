@@ -199,3 +199,55 @@ class TestDuplicateDetectionServiceExcludeDeckId:
         assert isinstance(result, DuplicateCheckResult)
         assert result.is_duplicate is False
         mock_session.execute.assert_awaited_once()
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+class TestDuplicateDetectionServiceGender:
+    """Tests for the gender keyword parameter."""
+
+    async def test_gender_none_no_extra_execute(self):
+        """gender=None (default) does not change query count — backward compatible."""
+        mock_session = _make_mock_session(entry=None)
+        service = DuplicateDetectionService(mock_session)
+
+        result = await service.check("σύζυγος", PartOfSpeech.NOUN, gender=None)
+
+        assert result.is_duplicate is False
+        mock_session.execute.assert_awaited_once()
+
+    async def test_gender_provided_entry_found_is_duplicate(self):
+        """gender="masculine" provided, matching entry found → is_duplicate=True."""
+        mock_entry = _make_mock_entry(lemma="σύζυγος", translation_en="spouse")
+        deck_id = uuid.uuid4()
+        mock_session = _make_mock_session(entry=mock_entry, deck_rows=[(deck_id, "Test Deck")])
+        service = DuplicateDetectionService(mock_session)
+
+        result = await service.check("σύζυγος", PartOfSpeech.NOUN, gender="masculine")
+
+        assert result.is_duplicate is True
+        assert result.existing_entry is not None
+        assert result.existing_entry.lemma == "σύζυγος"
+
+    async def test_gender_provided_no_entry_found_not_duplicate(self):
+        """gender="feminine" provided, no matching entry → is_duplicate=False."""
+        mock_session = _make_mock_session(entry=None)
+        service = DuplicateDetectionService(mock_session)
+
+        result = await service.check("σύζυγος", PartOfSpeech.NOUN, gender="feminine")
+
+        assert result.is_duplicate is False
+        mock_session.execute.assert_awaited_once()
+
+    async def test_gender_and_exclude_deck_id_combined(self):
+        """gender + exclude_deck_id together: no entry found → is_duplicate=False."""
+        mock_session = _make_mock_session(entry=None)
+        service = DuplicateDetectionService(mock_session)
+        some_uuid = uuid.uuid4()
+
+        result = await service.check(
+            "σύζυγος", PartOfSpeech.NOUN, gender="masculine", exclude_deck_id=some_uuid
+        )
+
+        assert result.is_duplicate is False
+        mock_session.execute.assert_awaited_once()

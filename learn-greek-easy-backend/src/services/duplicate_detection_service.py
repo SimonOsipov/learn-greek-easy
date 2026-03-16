@@ -29,6 +29,7 @@ class DuplicateDetectionService:
         lemma: str,
         part_of_speech: PartOfSpeech,
         *,
+        gender: str | None = None,
         exclude_deck_id: UUID | None = None,
     ) -> DuplicateCheckResult:
         """Check if a lemma+POS combination exists in any deck.
@@ -36,6 +37,9 @@ class DuplicateDetectionService:
         Args:
             lemma: Normalized lemma to search for.
             part_of_speech: Part of speech (same lemma with different POS is NOT a duplicate).
+            gender: Optional grammatical gender (e.g., "masculine", "feminine", "neuter").
+                When provided, only matches entries with the same gender. When None,
+                matches any entry regardless of gender (backward compatible).
             exclude_deck_id: Optional deck ID to exclude from search (e.g., the target deck).
 
         Returns:
@@ -53,6 +57,11 @@ class DuplicateDetectionService:
             .order_by(WordEntry.created_at.asc())
             .limit(1)
         )
+        # When gender is specified, restrict to same-gender entries.
+        # This allows common-gender nouns (e.g., σύζυγος) to exist as
+        # separate masculine and feminine word entries.
+        if gender is not None:
+            entry_query = entry_query.where(WordEntry.gender == gender)
         entry_result = await self.db.execute(entry_query)
         entry = entry_result.scalar_one_or_none()
 
