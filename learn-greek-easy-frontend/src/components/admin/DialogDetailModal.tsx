@@ -486,7 +486,7 @@ export function DialogDetailModal({ dialogId, open, onOpenChange }: DialogDetail
                                     )}
                                   >
                                     {wt.word}
-                                    {idx < line.word_timestamps!.length - 1 ? ' ' : ''}
+                                    {idx < line.word_timestamps.length - 1 ? ' ' : ''}
                                   </span>
                                 );
                               })}
