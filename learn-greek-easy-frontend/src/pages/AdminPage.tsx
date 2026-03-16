@@ -832,6 +832,17 @@ const AdminPage: React.FC = () => {
   };
 
   /**
+   * Handle uploading a cover image for the selected deck
+   */
+  const handleUploadCoverImage = async (file: File) => {
+    if (!selectedDeck) return;
+    const updated = await adminAPI.uploadDeckCoverImage(selectedDeck.id, file);
+    setSelectedDeck((prev) =>
+      prev ? { ...prev, cover_image_url: updated.cover_image_url } : null
+    );
+  };
+
+  /**
    * Handle modal close (track cancel if not saving)
    */
   const handleModalClose = (open: boolean) => {
@@ -1299,6 +1310,7 @@ const AdminPage: React.FC = () => {
         deck={selectedDeck}
         onSave={handleSaveDeck}
         isLoading={isSaving}
+        onUploadCoverImage={handleUploadCoverImage}
       />
 
       {/* Deck Create Modal */}

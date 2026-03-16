@@ -28,7 +28,7 @@ import type {
   AdminFeedbackUpdateRequest,
 } from '@/types/feedback';
 
-import { api, buildQueryString } from './api';
+import { api, buildQueryString, postFormData } from './api';
 
 // Re-export admin response types for convenience
 export type { CultureDeckAdminResponse, DeckAdminResponse } from '@/types/deck';
@@ -180,6 +180,7 @@ export interface UnifiedDeckItem {
   name_ru?: string;
   description_en?: string;
   description_ru?: string;
+  cover_image_url?: string | null;
 }
 
 /**
@@ -1005,6 +1006,19 @@ export const adminAPI = {
    */
   deleteCultureDeck: async (deckId: string): Promise<void> => {
     return api.delete<void>(`/api/v1/culture/decks/${deckId}`);
+  },
+
+  /**
+   * Upload a cover image for a vocabulary deck
+   *
+   * Sends the image as multipart/form-data. Returns the updated DeckAdminResponse
+   * with cover_image_url populated.
+   * Requires superuser authentication.
+   */
+  uploadDeckCoverImage: async (deckId: string, file: File): Promise<DeckAdminResponse> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return postFormData<DeckAdminResponse>(`/api/v1/admin/decks/${deckId}/cover-image`, formData);
   },
 
   // ============================================

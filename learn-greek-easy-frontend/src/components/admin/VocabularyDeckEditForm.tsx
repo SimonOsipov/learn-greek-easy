@@ -1,6 +1,6 @@
 // src/components/admin/VocabularyDeckEditForm.tsx
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -51,6 +51,9 @@ const LANGUAGE_LABELS: Record<DeckLanguage, string> = {
  */
 const CEFR_LEVELS: DeckLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
 
+const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const MAX_IMAGE_SIZE_BYTES = 3 * 1024 * 1024;
+
 /**
  * Validation schema for vocabulary deck edit form with bilingual support
  */
@@ -84,6 +87,7 @@ interface BilingualDeckItem extends UnifiedDeckItem {
   description_el?: string;
   description_en?: string;
   description_ru?: string;
+  cover_image_url?: string | null;
 }
 
 interface VocabularyDeckEditFormProps {
@@ -93,6 +97,7 @@ interface VocabularyDeckEditFormProps {
   isLoading?: boolean;
   itemCount?: number;
   createdAt?: string;
+  onUploadCoverImage?: (file: File) => Promise<void>;
 }
 
 /**
@@ -112,10 +117,63 @@ export const VocabularyDeckEditForm: React.FC<VocabularyDeckEditFormProps> = ({
   isLoading = false,
   itemCount,
   createdAt,
+  onUploadCoverImage,
 }) => {
   const { t } = useTranslation('admin');
   const [showDeactivationWarning, setShowDeactivationWarning] = useState(false);
   const [activeTab, setActiveTab] = useState<DeckLanguage>('en');
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    return () => {
+      if (imagePreview && imagePreview.startsWith('blob:')) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [imagePreview]);
+
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Reset input so same file can be selected again
+    e.target.value = '';
+
+    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+      setImageError(t('deckEdit.imageFormatError'));
+      return;
+    }
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      setImageError(t('deckEdit.imageSizeError'));
+      return;
+    }
+
+    // Revoke previous blob URL if any
+    if (imagePreview && imagePreview.startsWith('blob:')) {
+      URL.revokeObjectURL(imagePreview);
+    }
+
+    const previewUrl = URL.createObjectURL(file);
+    setImagePreview(previewUrl);
+    setImageError(null);
+    setIsUploading(true);
+
+    try {
+      await onUploadCoverImage?.(file);
+    } catch {
+      // Revert preview on error
+      URL.revokeObjectURL(previewUrl);
+      setImagePreview(deck.cover_image_url ?? null);
+      setImageError(t('deckEdit.imageFormatError'));
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const currentImageUrl = imagePreview ?? deck.cover_image_url ?? null;
 
   // Get the deck name as string for deactivation dialog
   const deckName = deck.name_en || (typeof deck.name === 'string' ? deck.name : deck.name.en) || '';
@@ -320,6 +378,54 @@ export const VocabularyDeckEditForm: React.FC<VocabularyDeckEditFormProps> = ({
                 </FormItem>
               )}
             />
+          </CardContent>
+        </Card>
+
+        {/* Background Image */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">{t('deckEdit.backgroundImage')}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              {t('deckEdit.backgroundImageDescription')}
+            </p>
+            {currentImageUrl && (
+              <img
+                src={currentImageUrl}
+                alt=""
+                className="h-24 w-auto rounded-md object-cover"
+                data-testid="deck-edit-cover-preview"
+              />
+            )}
+            {isUploading ? (
+              <p className="text-sm text-muted-foreground" data-testid="deck-edit-image-uploading">
+                {t('deckEdit.imageUploading')}
+              </p>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                data-testid="deck-edit-upload-image"
+              >
+                {currentImageUrl ? t('deckEdit.replaceImage') : t('deckEdit.uploadImage')}
+              </Button>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={handleImageChange}
+              className="hidden"
+              data-testid="deck-edit-cover-input"
+            />
+            {imageError && (
+              <p className="text-sm text-destructive" data-testid="deck-edit-image-error">
+                {imageError}
+              </p>
+            )}
           </CardContent>
         </Card>
 
