@@ -23,7 +23,21 @@ from src.db.models import (
     ExerciseStatus,
     ExerciseType,
     ListeningDialog,
+    Situation,
 )
+
+
+async def _create_situation(db_session: AsyncSession) -> Situation:
+    """Create and flush a minimal Situation for tests that build ListeningDialog directly."""
+    situation = Situation(
+        scenario_el="Ελληνικό σενάριο",
+        scenario_en="English scenario",
+        scenario_ru="Русский сценарий",
+        cefr_level=DeckLevel.B1,
+    )
+    db_session.add(situation)
+    await db_session.flush()
+    return situation
 
 
 def _parse_sse_text(text: str) -> list[dict]:
@@ -173,12 +187,14 @@ class TestDialogAudioStreamPipeline:
         from src.api.v1.admin import generate_dialog_audio_stream
 
         # Create dialog
+        situation = await _create_situation(db_session)
         dialog = ListeningDialog(
             scenario_el="Μια συνομιλία",
             scenario_en="A conversation",
             scenario_ru="Разговор",
             cefr_level=DeckLevel.B1,
             status=DialogStatus.DRAFT,
+            situation_id=situation.id,
             num_speakers=2,
         )
         db_session.add(dialog)
@@ -281,12 +297,14 @@ class TestDialogAudioStreamPipeline:
         from src.api.v1.admin import generate_dialog_audio_stream
 
         # Create dialog
+        situation = await _create_situation(db_session)
         dialog = ListeningDialog(
             scenario_el="Μια συνομιλία",
             scenario_en="A conversation",
             scenario_ru="Разговор",
             cefr_level=DeckLevel.B1,
             status=DialogStatus.DRAFT,
+            situation_id=situation.id,
             num_speakers=2,
         )
         db_session.add(dialog)
@@ -394,12 +412,14 @@ class TestDialogAudioStreamPipeline:
         from src.api.v1.admin import generate_dialog_audio_stream
 
         # Create dialog
+        situation = await _create_situation(db_session)
         dialog = ListeningDialog(
             scenario_el="Μια συνομιλία",
             scenario_en="A conversation",
             scenario_ru="Разговор",
             cefr_level=DeckLevel.B1,
             status=DialogStatus.DRAFT,
+            situation_id=situation.id,
             num_speakers=2,
         )
         db_session.add(dialog)
@@ -498,12 +518,14 @@ class TestDialogAudioStreamPipeline:
         """Guard rejects dialog status not in _ALLOWED_AUDIO_GEN_STATUSES."""
         from src.api.v1.admin import generate_dialog_audio_stream
 
+        situation = await _create_situation(db_session)
         dialog = ListeningDialog(
             scenario_el="Μια συνομιλία",
             scenario_en="A conversation",
             scenario_ru="Разговор",
             cefr_level=DeckLevel.B1,
             status=DialogStatus.AUDIO_READY,
+            situation_id=situation.id,
             num_speakers=2,
         )
         db_session.add(dialog)
@@ -538,12 +560,14 @@ class TestDialogAudioStreamPipeline:
         old_s3_key = "dialog-audio/old-key.mp3"
         old_generated_at = datetime(2025, 1, 1, tzinfo=timezone.utc)
 
+        situation = await _create_situation(db_session)
         dialog = ListeningDialog(
             scenario_el="Μια συνομιλία",
             scenario_en="A conversation",
             scenario_ru="Разговор",
             cefr_level=DeckLevel.B1,
             status=DialogStatus.AUDIO_READY,
+            situation_id=situation.id,
             num_speakers=2,
             audio_s3_key=old_s3_key,
             audio_duration_seconds=5.0,
@@ -642,12 +666,14 @@ class TestDialogAudioStreamPipeline:
         old_s3_key = "dialog-audio/old-key.mp3"
         old_generated_at = datetime(2025, 1, 1, tzinfo=timezone.utc)
 
+        situation = await _create_situation(db_session)
         dialog = ListeningDialog(
             scenario_el="Μια συνομιλία",
             scenario_en="A conversation",
             scenario_ru="Разговор",
             cefr_level=DeckLevel.B1,
             status=DialogStatus.EXERCISES_READY,
+            situation_id=situation.id,
             num_speakers=2,
             audio_s3_key=old_s3_key,
             audio_duration_seconds=5.0,
@@ -741,12 +767,14 @@ class TestDialogAudioStreamPipeline:
         """ElevenLabsAPIError from generate_dialog_audio → error event with stage=elevenlabs, dialog stays DRAFT."""
         from src.api.v1.admin import generate_dialog_audio_stream
 
+        situation = await _create_situation(db_session)
         dialog = ListeningDialog(
             scenario_el="Μια συνομιλία",
             scenario_en="A conversation",
             scenario_ru="Разговор",
             cefr_level=DeckLevel.B1,
             status=DialogStatus.DRAFT,
+            situation_id=situation.id,
             num_speakers=2,
         )
         db_session.add(dialog)
@@ -796,12 +824,14 @@ class TestDialogAudioStreamPipeline:
         """S3 upload failure → error event with stage=upload, dialog stays DRAFT."""
         from src.api.v1.admin import generate_dialog_audio_stream
 
+        situation = await _create_situation(db_session)
         dialog = ListeningDialog(
             scenario_el="Μια συνομιλία",
             scenario_en="A conversation",
             scenario_ru="Разговор",
             cefr_level=DeckLevel.B1,
             status=DialogStatus.DRAFT,
+            situation_id=situation.id,
             num_speakers=2,
         )
         db_session.add(dialog)
@@ -852,12 +882,14 @@ class TestDialogAudioStreamPipeline:
         """ElevenLabs response without voice_segments → error with stage=timing."""
         from src.api.v1.admin import generate_dialog_audio_stream
 
+        situation = await _create_situation(db_session)
         dialog = ListeningDialog(
             scenario_el="Μια συνομιλία",
             scenario_en="A conversation",
             scenario_ru="Разговор",
             cefr_level=DeckLevel.B1,
             status=DialogStatus.DRAFT,
+            situation_id=situation.id,
             num_speakers=2,
         )
         db_session.add(dialog)
@@ -905,12 +937,14 @@ class TestDialogAudioStreamPipeline:
 
     async def _setup_dialog_3lines(self, db_session: AsyncSession):
         """Create a dialog with 2 speakers and 3 lines for mutagen tests."""
+        situation = await _create_situation(db_session)
         dialog = ListeningDialog(
             scenario_el="Μια συνομιλία",
             scenario_en="A conversation",
             scenario_ru="Разговор",
             cefr_level=DeckLevel.B1,
             status=DialogStatus.DRAFT,
+            situation_id=situation.id,
             num_speakers=2,
         )
         db_session.add(dialog)

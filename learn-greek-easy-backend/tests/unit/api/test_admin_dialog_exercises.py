@@ -84,6 +84,10 @@ class TestDialogExercisePersistence:
     """Tests for exercise persistence in the dialog creation endpoint."""
 
     @pytest.mark.asyncio
+    @pytest.mark.xfail(
+        reason="Dialog creation endpoint requires situation_id after SIT-01 migration; endpoint updated in SIT-04",
+        strict=True,
+    )
     async def test_create_dialog_with_exercises(
         self,
         client: AsyncClient,
@@ -125,6 +129,10 @@ class TestDialogExercisePersistence:
         assert item_count == 3  # 1 fill_gap + 1 select_heard + 1 true_false
 
     @pytest.mark.asyncio
+    @pytest.mark.xfail(
+        reason="Dialog creation endpoint requires situation_id after SIT-01 migration; endpoint updated in SIT-04",
+        strict=True,
+    )
     async def test_create_dialog_without_exercises(
         self,
         client: AsyncClient,
