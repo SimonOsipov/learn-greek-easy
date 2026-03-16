@@ -4101,6 +4101,13 @@ def _build_word_timestamps(  # noqa: C901
         return {i: None for i in range(len(sorted_lines))}
 
 
+_ALLOWED_AUDIO_GEN_STATUSES = {
+    DialogStatus.DRAFT,
+    DialogStatus.AUDIO_READY,
+    DialogStatus.EXERCISES_READY,
+}
+
+
 async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, None]:  # noqa: C901
     """SSE generator for dialog audio generation pipeline."""
     try:
@@ -4130,11 +4137,11 @@ async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, Non
                 )
                 return
 
-            if dialog.status != DialogStatus.DRAFT:
+            if dialog.status not in _ALLOWED_AUDIO_GEN_STATUSES:
                 yield format_sse_event(
                     {
                         "stage": "load",
-                        "error": f"Dialog status is {dialog.status.value}, expected draft",
+                        "error": f"Dialog status is {dialog.status.value}, expected one of: draft, audio_ready, exercises_ready",
                         "dialog_id": str(dialog_id),
                     },
                     event="dialog_audio:error",
