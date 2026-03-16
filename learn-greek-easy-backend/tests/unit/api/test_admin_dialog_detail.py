@@ -148,3 +148,85 @@ class TestGetDialogDetail:
             headers=auth_headers,
         )
         assert response.status_code == 403
+
+    @pytest.mark.asyncio
+    async def test_degenerate_line_count_mixed(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+    ) -> None:
+        """degenerate_line_count equals number of lines where start_time_ms == end_time_ms."""
+        dialog = await ListeningDialogFactory.create(
+            session=db_session, status=DialogStatus.AUDIO_READY
+        )
+        speaker = DialogSpeaker(
+            dialog_id=dialog.id,
+            speaker_index=0,
+            character_name="Άρης",
+            voice_id="voice-abc",
+        )
+        db_session.add(speaker)
+        await db_session.flush()
+
+        line_degenerate = DialogLine(
+            dialog_id=dialog.id,
+            speaker_id=speaker.id,
+            line_index=0,
+            text="Γεια σας!",
+            start_time_ms=1000,
+            end_time_ms=1000,
+        )
+        line_normal = DialogLine(
+            dialog_id=dialog.id,
+            speaker_id=speaker.id,
+            line_index=1,
+            text="Γεια σου!",
+            start_time_ms=2000,
+            end_time_ms=3000,
+        )
+        db_session.add_all([line_degenerate, line_normal])
+        await db_session.flush()
+
+        response = await client.get(
+            self.ENDPOINT.format(dialog_id=dialog.id),
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 200
+        assert response.json()["degenerate_line_count"] == 1
+
+    @pytest.mark.asyncio
+    async def test_degenerate_line_count_null_timestamps(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+    ) -> None:
+        """degenerate_line_count=0 for draft dialog with null timestamps."""
+        dialog = await ListeningDialogFactory.create(session=db_session)
+        speaker = DialogSpeaker(
+            dialog_id=dialog.id,
+            speaker_index=0,
+            character_name="Άρης",
+            voice_id="voice-abc",
+        )
+        db_session.add(speaker)
+        await db_session.flush()
+
+        line = DialogLine(
+            dialog_id=dialog.id,
+            speaker_id=speaker.id,
+            line_index=0,
+            text="Γεια σας!",
+        )
+        db_session.add(line)
+        await db_session.flush()
+
+        response = await client.get(
+            self.ENDPOINT.format(dialog_id=dialog.id),
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 200
+        assert response.json()["degenerate_line_count"] == 0

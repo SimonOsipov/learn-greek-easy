@@ -1186,7 +1186,9 @@
         "confirmDescription": "This will replace the current audio. The dialog will be temporarily unavailable during generation.",
         "confirmButton": "Regenerate",
         "cancelButton": "Cancel"
-      }
+      },
+      "degenerateWarning": "{{count}} line(s) have zero-width timing. Karaoke highlighting will not work for these lines. Consider regenerating audio.",
+      "degenerateLine": "This line has zero-width timing — karaoke highlighting will not work."
     },
     "search": {
       "placeholder": "Search dialogs...",

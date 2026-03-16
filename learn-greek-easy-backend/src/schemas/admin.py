@@ -478,6 +478,7 @@ class ListeningDialogDetail(BaseModel):
     audio_file_size_bytes: int | None = None
     speakers: list[DialogSpeakerDetail]
     lines: list[DialogLineDetail]
+    degenerate_line_count: int = 0
 
 
 # ============================================================================
