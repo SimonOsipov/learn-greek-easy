@@ -167,7 +167,7 @@ export const VocabularyDeckEditForm: React.FC<VocabularyDeckEditFormProps> = ({
       // Revert preview on error
       URL.revokeObjectURL(previewUrl);
       setImagePreview(deck.cover_image_url ?? null);
-      setImageError(t('deckEdit.imageFormatError'));
+      setImageError(t('deckEdit.imageUploadError'));
     } finally {
       setIsUploading(false);
     }
@@ -416,7 +416,7 @@ export const VocabularyDeckEditForm: React.FC<VocabularyDeckEditFormProps> = ({
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/jpeg,image/png,image/webp"
+              accept={ACCEPTED_IMAGE_TYPES.join(',')}
               onChange={handleImageChange}
               className="hidden"
               data-testid="deck-edit-cover-input"

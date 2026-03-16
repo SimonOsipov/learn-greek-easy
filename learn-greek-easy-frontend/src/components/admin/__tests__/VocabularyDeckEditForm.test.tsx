@@ -394,7 +394,9 @@ describe('VocabularyDeckEditForm', () => {
       renderWithI18n(
         <VocabularyDeckEditForm deck={deck} onSave={mockOnSave} onCancel={mockOnCancel} />
       );
-      expect(screen.getByTestId('deck-edit-upload-image')).toHaveTextContent('Upload Image');
+      expect(screen.getByTestId('deck-edit-upload-image')).toHaveTextContent(
+        i18n.t('admin:deckEdit.uploadImage')
+      );
     });
 
     it('should show "Replace Image" label when deck has an existing cover image', () => {
@@ -402,7 +404,9 @@ describe('VocabularyDeckEditForm', () => {
       renderWithI18n(
         <VocabularyDeckEditForm deck={deck} onSave={mockOnSave} onCancel={mockOnCancel} />
       );
-      expect(screen.getByTestId('deck-edit-upload-image')).toHaveTextContent('Replace Image');
+      expect(screen.getByTestId('deck-edit-upload-image')).toHaveTextContent(
+        i18n.t('admin:deckEdit.replaceImage')
+      );
     });
 
     it('should display thumbnail for existing cover_image_url', () => {
@@ -429,7 +433,11 @@ describe('VocabularyDeckEditForm', () => {
         <VocabularyDeckEditForm deck={deck} onSave={mockOnSave} onCancel={mockOnCancel} />
       );
       const input = screen.getByTestId('deck-edit-cover-input');
-      expect(input).toHaveAttribute('accept', 'image/jpeg,image/png,image/webp');
+      expect(input).toHaveAttribute('accept');
+      const acceptValue = input.getAttribute('accept') ?? '';
+      expect(acceptValue).toContain('image/jpeg');
+      expect(acceptValue).toContain('image/png');
+      expect(acceptValue).toContain('image/webp');
     });
 
     it('should reject files with unsupported format and show error', async () => {

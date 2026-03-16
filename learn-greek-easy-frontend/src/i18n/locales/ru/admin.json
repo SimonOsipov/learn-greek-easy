@@ -44,7 +44,8 @@
     "replaceImage": "Заменить изображение",
     "imageFormatError": "Недопустимый формат. Используйте JPEG, PNG или WebP",
     "imageSizeError": "Изображение слишком большое. Максимальный размер 3 МБ",
-    "imageUploading": "Загрузка..."
+    "imageUploading": "Загрузка...",
+    "imageUploadError": "Ошибка загрузки. Попробуйте снова."
   },
   "deckCreate": {
     "title": "Создать колоду",

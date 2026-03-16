@@ -585,13 +585,15 @@ async def upload_deck_cover_image(
     ext = S3Service.get_extension_for_content_type(file.content_type) or "jpg"
     s3_key = f"deck-images/{deck_id}.{ext}"
 
-    # Delete old key if extension changed
-    if deck.cover_image_s3_key and deck.cover_image_s3_key != s3_key:
-        s3.delete_object(deck.cover_image_s3_key)
+    old_key = deck.cover_image_s3_key if deck.cover_image_s3_key != s3_key else None
 
     uploaded = s3.upload_object(s3_key, data, file.content_type)
     if not uploaded:
         raise HTTPException(status_code=500, detail="Failed to upload cover image")
+
+    # Delete old key only after successful upload (avoid data loss if upload fails)
+    if old_key:
+        s3.delete_object(old_key)
 
     deck.cover_image_s3_key = s3_key
     await db.commit()

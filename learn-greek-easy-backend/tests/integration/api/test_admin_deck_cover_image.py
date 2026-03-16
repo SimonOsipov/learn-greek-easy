@@ -287,7 +287,6 @@ class TestUploadDeckCoverImage:
     ) -> None:
         """Test that cover_image_url is null when deck has no image."""
         deck = await DeckFactory.create(session=db_session)
-        mock_s3.generate_presigned_url.return_value = None
 
         response = await client.get(
             f"/api/v1/decks/{deck.id}",

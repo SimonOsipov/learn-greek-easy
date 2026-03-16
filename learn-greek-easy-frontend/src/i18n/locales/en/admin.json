@@ -44,7 +44,8 @@
     "replaceImage": "Replace Image",
     "imageFormatError": "Invalid format. Please use JPEG, PNG, or WebP",
     "imageSizeError": "Image is too large. Maximum size is 3MB",
-    "imageUploading": "Uploading..."
+    "imageUploading": "Uploading...",
+    "imageUploadError": "Upload failed. Please try again."
   },
   "deckCreate": {
     "title": "Create Deck",
