@@ -1179,6 +1179,13 @@
         },
         "error": "Audio generation failed: {{message}}",
         "tryAgain": "Try Again"
+      },
+      "regenerateAudio": {
+        "button": "Regenerate Audio",
+        "confirmTitle": "Regenerate Audio?",
+        "confirmDescription": "This will replace the current audio. The dialog will be temporarily unavailable during generation.",
+        "confirmButton": "Regenerate",
+        "cancelButton": "Cancel"
       }
     },
     "search": {

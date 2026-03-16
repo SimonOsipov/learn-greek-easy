@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import json
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -481,7 +482,7 @@ class TestDialogAudioStreamPipeline:
 
     @pytest.mark.asyncio
     async def test_generate_dialog_audio_wrong_status(self, db_session: AsyncSession) -> None:
-        """Dialog with status=audio_ready returns error with stage=load."""
+        """Guard rejects dialog status not in _ALLOWED_AUDIO_GEN_STATUSES."""
         from src.api.v1.admin import generate_dialog_audio_stream
 
         dialog = ListeningDialog(
@@ -501,6 +502,7 @@ class TestDialogAudioStreamPipeline:
         with (
             patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
             patch("src.api.v1.admin.settings") as mock_settings,
+            patch("src.api.v1.admin._ALLOWED_AUDIO_GEN_STATUSES", {DialogStatus.DRAFT}),
         ):
             mock_settings.elevenlabs_configured = True
             response = await generate_dialog_audio_stream(
@@ -512,6 +514,206 @@ class TestDialogAudioStreamPipeline:
         error_events = [e for e in events if e.get("event") == "dialog_audio:error"]
         assert len(error_events) >= 1
         assert error_events[0]["data"]["stage"] == "load"
+
+    @pytest.mark.asyncio
+    async def test_generate_dialog_audio_regeneration_audio_ready(
+        self, db_session: AsyncSession
+    ) -> None:
+        """Re-generation works for audio_ready dialog — old audio fields are overwritten."""
+        from src.api.v1.admin import generate_dialog_audio_stream
+
+        old_s3_key = "dialog-audio/old-key.mp3"
+        old_generated_at = datetime(2025, 1, 1, tzinfo=timezone.utc)
+
+        dialog = ListeningDialog(
+            scenario_el="Μια συνομιλία",
+            scenario_en="A conversation",
+            scenario_ru="Разговор",
+            cefr_level=DeckLevel.B1,
+            status=DialogStatus.AUDIO_READY,
+            num_speakers=2,
+            audio_s3_key=old_s3_key,
+            audio_duration_seconds=5.0,
+            audio_generated_at=old_generated_at,
+            audio_file_size_bytes=1000,
+        )
+        db_session.add(dialog)
+        await db_session.flush()
+
+        speaker1 = DialogSpeaker(
+            dialog_id=dialog.id,
+            speaker_index=0,
+            character_name="Speaker 1",
+            voice_id="voice-abc",
+        )
+        speaker2 = DialogSpeaker(
+            dialog_id=dialog.id,
+            speaker_index=1,
+            character_name="Speaker 2",
+            voice_id="voice-xyz",
+        )
+        db_session.add_all([speaker1, speaker2])
+        await db_session.flush()
+
+        lines = [
+            DialogLine(
+                dialog_id=dialog.id,
+                speaker_id=speaker1.id,
+                line_index=i,
+                text=f"Γεια {i}",
+            )
+            for i in range(3)
+        ]
+        db_session.add_all(lines)
+        await db_session.flush()
+
+        elevenlabs_response = _make_elevenlabs_response(num_lines=3)
+        mock_factory = _make_session_factory_mock(db_session)
+
+        mock_elevenlabs = MagicMock()
+        mock_elevenlabs.generate_dialog_audio = AsyncMock(return_value=elevenlabs_response)
+
+        mock_s3 = MagicMock()
+        mock_s3.upload_object = MagicMock(return_value=True)
+
+        sse_auth = _make_superuser_auth()
+
+        with (
+            patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
+            patch(
+                "src.services.elevenlabs_service.get_elevenlabs_service",
+                return_value=mock_elevenlabs,
+            ),
+            patch("src.api.v1.admin.get_s3_service", return_value=mock_s3),
+            patch("src.api.v1.admin.settings") as mock_settings,
+        ):
+            mock_settings.elevenlabs_configured = True
+            mock_settings.aws_s3_bucket = "test-bucket"
+            mock_settings.aws_s3_prefix = "dialog-audio"
+            response = await generate_dialog_audio_stream(
+                dialog_id=dialog.id,
+                sse_auth=sse_auth,
+            )
+            events = await _collect_stream(response)
+
+        error_events = [e for e in events if e.get("event") == "dialog_audio:error"]
+        assert error_events == [], f"Unexpected errors: {error_events}"
+
+        complete_events = [e for e in events if e.get("event") == "dialog_audio:complete"]
+        assert len(complete_events) == 1
+
+        await db_session.refresh(dialog)
+        assert dialog.audio_s3_key != old_s3_key
+        assert dialog.audio_generated_at is not None
+        assert dialog.audio_generated_at > old_generated_at
+        assert dialog.audio_duration_seconds is not None
+        assert dialog.audio_duration_seconds > 0
+        assert dialog.status == DialogStatus.AUDIO_READY
+
+        for line in lines:
+            await db_session.refresh(line)
+            assert line.start_time_ms is not None
+            assert line.end_time_ms is not None
+
+    @pytest.mark.asyncio
+    async def test_generate_dialog_audio_regeneration_exercises_ready(
+        self, db_session: AsyncSession
+    ) -> None:
+        """Re-generation works for exercises_ready dialog — status is not downgraded after regeneration."""
+        from src.api.v1.admin import generate_dialog_audio_stream
+
+        old_s3_key = "dialog-audio/old-key.mp3"
+        old_generated_at = datetime(2025, 1, 1, tzinfo=timezone.utc)
+
+        dialog = ListeningDialog(
+            scenario_el="Μια συνομιλία",
+            scenario_en="A conversation",
+            scenario_ru="Разговор",
+            cefr_level=DeckLevel.B1,
+            status=DialogStatus.EXERCISES_READY,
+            num_speakers=2,
+            audio_s3_key=old_s3_key,
+            audio_duration_seconds=5.0,
+            audio_generated_at=old_generated_at,
+            audio_file_size_bytes=1000,
+        )
+        db_session.add(dialog)
+        await db_session.flush()
+
+        speaker1 = DialogSpeaker(
+            dialog_id=dialog.id,
+            speaker_index=0,
+            character_name="Speaker 1",
+            voice_id="voice-abc",
+        )
+        speaker2 = DialogSpeaker(
+            dialog_id=dialog.id,
+            speaker_index=1,
+            character_name="Speaker 2",
+            voice_id="voice-xyz",
+        )
+        db_session.add_all([speaker1, speaker2])
+        await db_session.flush()
+
+        lines = [
+            DialogLine(
+                dialog_id=dialog.id,
+                speaker_id=speaker1.id,
+                line_index=i,
+                text=f"Γεια {i}",
+            )
+            for i in range(3)
+        ]
+        db_session.add_all(lines)
+        await db_session.flush()
+
+        elevenlabs_response = _make_elevenlabs_response(num_lines=3)
+        mock_factory = _make_session_factory_mock(db_session)
+
+        mock_elevenlabs = MagicMock()
+        mock_elevenlabs.generate_dialog_audio = AsyncMock(return_value=elevenlabs_response)
+
+        mock_s3 = MagicMock()
+        mock_s3.upload_object = MagicMock(return_value=True)
+
+        sse_auth = _make_superuser_auth()
+
+        with (
+            patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
+            patch(
+                "src.services.elevenlabs_service.get_elevenlabs_service",
+                return_value=mock_elevenlabs,
+            ),
+            patch("src.api.v1.admin.get_s3_service", return_value=mock_s3),
+            patch("src.api.v1.admin.settings") as mock_settings,
+        ):
+            mock_settings.elevenlabs_configured = True
+            mock_settings.aws_s3_bucket = "test-bucket"
+            mock_settings.aws_s3_prefix = "dialog-audio"
+            response = await generate_dialog_audio_stream(
+                dialog_id=dialog.id,
+                sse_auth=sse_auth,
+            )
+            events = await _collect_stream(response)
+
+        error_events = [e for e in events if e.get("event") == "dialog_audio:error"]
+        assert error_events == [], f"Unexpected errors: {error_events}"
+
+        complete_events = [e for e in events if e.get("event") == "dialog_audio:complete"]
+        assert len(complete_events) == 1
+
+        await db_session.refresh(dialog)
+        assert dialog.audio_s3_key != old_s3_key
+        assert dialog.audio_generated_at is not None
+        assert dialog.audio_generated_at > old_generated_at
+        assert dialog.audio_duration_seconds is not None
+        assert dialog.audio_duration_seconds > 0
+        assert dialog.status == DialogStatus.EXERCISES_READY
+
+        for line in lines:
+            await db_session.refresh(line)
+            assert line.start_time_ms is not None
+            assert line.end_time_ms is not None
 
     @pytest.mark.asyncio
     async def test_generate_dialog_audio_elevenlabs_error(self, db_session: AsyncSession) -> None:
