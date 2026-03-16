@@ -4000,6 +4000,12 @@ async def get_listening_dialog_detail(
     speakers_sorted = sorted(dialog.speakers, key=lambda s: s.speaker_index)
     lines_sorted = sorted(dialog.lines, key=lambda ln: ln.line_index)
 
+    degenerate_line_count = sum(
+        1
+        for ln in dialog.lines
+        if ln.start_time_ms is not None and ln.start_time_ms == ln.end_time_ms
+    )
+
     return ListeningDialogDetail(
         id=dialog.id,
         scenario_el=dialog.scenario_el,
@@ -4015,6 +4021,7 @@ async def get_listening_dialog_detail(
         audio_file_size_bytes=dialog.audio_file_size_bytes,
         speakers=[DialogSpeakerDetail.model_validate(s) for s in speakers_sorted],
         lines=[DialogLineDetail.model_validate(ln) for ln in lines_sorted],
+        degenerate_line_count=degenerate_line_count,
     )
 
 
@@ -4209,6 +4216,16 @@ async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, Non
                 end_ms = int(seg["end_time_seconds"] * 1000)
                 timing_map[idx] = (start_ms, end_ms)
 
+            degenerate_line_count = sum(
+                1 for start_ms, end_ms in timing_map.values() if start_ms == end_ms
+            )
+            if degenerate_line_count > 0:
+                logger.warning(
+                    "Dialog {} has {} degenerate line(s) (start_ms == end_ms)",
+                    dialog_id,
+                    degenerate_line_count,
+                )
+
             for i in range(len(sorted_lines)):
                 if i not in timing_map:
                     raise ValueError(f"No timing segment for line index {i}")
@@ -4310,6 +4327,7 @@ async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, Non
                 "duration_seconds": duration_seconds,
                 "audio_size_bytes": len(audio_bytes),
                 "has_exercises": has_exercises,
+                "degenerate_line_count": degenerate_line_count,
             },
             event="dialog_audio:complete",
         )

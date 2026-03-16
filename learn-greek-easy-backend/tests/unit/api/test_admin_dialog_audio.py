@@ -1116,6 +1116,89 @@ class TestDialogAudioStreamPipeline:
         await db_session.refresh(dialog)
         assert dialog.audio_duration_seconds == pytest.approx(4.55)
 
+    @pytest.mark.asyncio
+    async def test_degenerate_segments_detected(
+        self, db_session: AsyncSession, caplog_loguru
+    ) -> None:
+        """degenerate_line_count=1 in complete event and warning logged when one segment is zero-width."""
+        from src.api.v1.admin import generate_dialog_audio_stream
+
+        dialog = await self._setup_dialog_3lines(db_session)
+
+        elevenlabs_response = _make_elevenlabs_response(num_lines=3)
+        elevenlabs_response["voice_segments"][0]["end_time_seconds"] = elevenlabs_response[
+            "voice_segments"
+        ][0]["start_time_seconds"]
+
+        mock_factory = _make_session_factory_mock(db_session)
+        mock_elevenlabs = MagicMock()
+        mock_elevenlabs.generate_dialog_audio = AsyncMock(return_value=elevenlabs_response)
+        mock_s3 = MagicMock()
+        mock_s3.upload_object = MagicMock(return_value=True)
+        mock_mp3_instance = MagicMock()
+        mock_mp3_instance.info.length = 4.5
+
+        sse_auth = _make_superuser_auth()
+
+        with (
+            patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
+            patch(
+                "src.services.elevenlabs_service.get_elevenlabs_service",
+                return_value=mock_elevenlabs,
+            ),
+            patch("src.api.v1.admin.get_s3_service", return_value=mock_s3),
+            patch("src.api.v1.admin.settings") as mock_settings,
+            patch("mutagen.mp3.MP3", return_value=mock_mp3_instance),
+        ):
+            mock_settings.elevenlabs_configured = True
+            response = await generate_dialog_audio_stream(
+                dialog_id=dialog.id,
+                sse_auth=sse_auth,
+            )
+            events = await _collect_stream(response)
+
+        complete_event = next(e for e in events if e["event"] == "dialog_audio:complete")
+        assert complete_event["data"]["degenerate_line_count"] == 1
+        assert "degenerate" in caplog_loguru.text
+
+    @pytest.mark.asyncio
+    async def test_normal_segments_degenerate_count_zero(self, db_session: AsyncSession) -> None:
+        """degenerate_line_count=0 in complete event when all segments are non-degenerate."""
+        from src.api.v1.admin import generate_dialog_audio_stream
+
+        dialog = await self._setup_dialog_3lines(db_session)
+
+        elevenlabs_response = _make_elevenlabs_response(num_lines=3)
+        mock_factory = _make_session_factory_mock(db_session)
+        mock_elevenlabs = MagicMock()
+        mock_elevenlabs.generate_dialog_audio = AsyncMock(return_value=elevenlabs_response)
+        mock_s3 = MagicMock()
+        mock_s3.upload_object = MagicMock(return_value=True)
+        mock_mp3_instance = MagicMock()
+        mock_mp3_instance.info.length = 4.5
+
+        sse_auth = _make_superuser_auth()
+
+        with (
+            patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
+            patch(
+                "src.services.elevenlabs_service.get_elevenlabs_service",
+                return_value=mock_elevenlabs,
+            ),
+            patch("src.api.v1.admin.get_s3_service", return_value=mock_s3),
+            patch("src.api.v1.admin.settings") as mock_settings,
+            patch("mutagen.mp3.MP3", return_value=mock_mp3_instance),
+        ):
+            mock_settings.elevenlabs_configured = True
+            response = await generate_dialog_audio_stream(
+                dialog_id=dialog.id,
+                sse_auth=sse_auth,
+            )
+            events = await _collect_stream(response)
+
+        complete_event = next(e for e in events if e["event"] == "dialog_audio:complete")
+        assert complete_event["data"]["degenerate_line_count"] == 0
+
 
 class TestBuildWordTimestamps:
     """Unit tests for _build_word_timestamps pure function."""
