@@ -661,3 +661,170 @@ class TestGetLemmaNormalizationService:
 
             service = get_lemma_normalization_service()
             assert isinstance(service, LemmaNormalizationService)
+
+
+# ============================================================================
+# TestDeduplicateAndRankGenderAware
+# ============================================================================
+
+
+class TestDeduplicateAndRankGenderAware:
+    """Tests for gender-aware grouping key in _deduplicate_and_rank."""
+
+    def _make_candidate(self, lemma, pos, gender_raw, strategy="direct", confidence=1.0):
+        """Build a NormalizationCandidate with given gender morph feature."""
+        from src.schemas.nlp import MorphologyResult
+        from src.services.lemma_normalization_service import NormalizationCandidate
+
+        morph_features: dict[str, str] = {}
+        if gender_raw:
+            morph_features["Gender"] = gender_raw
+
+        return NormalizationCandidate(
+            input_form=lemma,
+            strategy=strategy,
+            morphology=MorphologyResult(
+                input_word=lemma,
+                lemma=lemma,
+                pos=pos,
+                morph_features=morph_features,
+                is_known=True,
+                analysis_successful=True,
+            ),
+            confidence=confidence,
+            corrected_from=None,
+        )
+
+    def test_different_genders_produce_two_groups(self, normalization_service):
+        """Two same-lemma NOUN candidates with different genders → 2 separate groups."""
+        masc = self._make_candidate("σύζυγος", "NOUN", "Masc")
+        fem = self._make_candidate("σύζυγος", "NOUN", "Fem")
+
+        primary, suggestions = normalization_service._deduplicate_and_rank([masc, fem])
+
+        # Both survive dedup → one is primary, one is suggestion
+        assert primary.morphology.lemma == "σύζυγος"
+        assert len(suggestions) == 1
+        assert suggestions[0].morphology.lemma == "σύζυγος"
+        # They have different genders
+        primary_gender = primary.morphology.morph_features.get("Gender")
+        suggestion_gender = suggestions[0].morphology.morph_features.get("Gender")
+        assert primary_gender != suggestion_gender
+
+    def test_same_gender_collapses_to_one_group(self, normalization_service):
+        """Two same-lemma NOUN candidates with same gender → collapsed to 1 group."""
+        c1 = self._make_candidate("σύζυγος", "NOUN", "Masc", strategy="direct", confidence=0.8)
+        c2 = self._make_candidate("σύζυγος", "NOUN", "Masc", strategy="lexicon", confidence=1.0)
+
+        primary, suggestions = normalization_service._deduplicate_and_rank([c1, c2])
+
+        # Only one group → no suggestions
+        assert primary.morphology.lemma == "σύζυγος"
+        assert len(suggestions) == 0
+        # Best of the group wins (lexicon, confidence 1.0)
+        assert primary.strategy == "lexicon"
+
+    def test_no_gender_candidates_collapse_as_before(self, normalization_service):
+        """Two same-lemma VERB candidates with no gender → still collapse to 1 group."""
+        c1 = self._make_candidate("τρέχω", "VERB", None, strategy="direct", confidence=0.6)
+        c2 = self._make_candidate("τρέχω", "VERB", None, strategy="spellcheck", confidence=0.5)
+
+        primary, suggestions = normalization_service._deduplicate_and_rank([c1, c2])
+
+        assert primary.morphology.lemma == "τρέχω"
+        assert len(suggestions) == 0
+        assert primary.strategy == "direct"
+
+
+# ============================================================================
+# TestNormalizeSmartLexiconEntries
+# ============================================================================
+
+
+class TestNormalizeSmartLexiconEntries:
+    """Tests for normalize_smart() with lexicon_entries (plural) parameter."""
+
+    def _make_lexicon_entry(self, lemma, pos, gender):
+        from src.services.lexicon_service import LexiconEntry
+
+        return LexiconEntry(
+            form=lemma, lemma=lemma, pos=pos, gender=gender, ptosi="Nom", number="Sing"
+        )
+
+    def test_lexicon_entries_two_genders_primary_and_suggestion(
+        self, normalization_service, mock_morphology_service, mock_spellcheck_service
+    ):
+        """lexicon_entries=[masc, fem] → primary + one suggestion with different genders."""
+        masc_entry = self._make_lexicon_entry("σύζυγος", "NOUN", "Masc")
+        fem_entry = self._make_lexicon_entry("σύζυγος", "NOUN", "Fem")
+
+        mock_spellcheck_service.correct.return_value = "σύζυγος"
+        mock_morphology_service.analyze_in_context.return_value = _make_morphology_result(
+            input_word="σύζυγος", lemma="σύζυγος", pos="NOUN", morph_features={"Gender": "Masc"}
+        )
+        mock_spellcheck_service.check.return_value = _make_spellcheck_result(is_valid=True)
+
+        result = normalization_service.normalize_smart(
+            "σύζυγος", lexicon_entries=[masc_entry, fem_entry]
+        )
+
+        # Both lexicon candidates survive dedup (different genders)
+        assert result.primary is not None
+        assert len(result.suggestions) >= 1
+        primary_gender = result.primary.morphology.morph_features.get("Gender")
+        suggestion_gender = result.suggestions[0].morphology.morph_features.get("Gender")
+        assert primary_gender != suggestion_gender
+
+    def test_lexicon_entry_singular_backward_compat(
+        self, normalization_service, mock_morphology_service, mock_spellcheck_service
+    ):
+        """lexicon_entry=neuter_entry (singular) → single lexicon candidate, no change in behavior."""
+        neuter_entry = self._make_lexicon_entry("σπίτι", "NOUN", "Neut")
+
+        mock_spellcheck_service.correct.return_value = "σπίτι"
+        mock_morphology_service.analyze_in_context.return_value = _make_morphology_result(
+            input_word="σπίτι", lemma="σπίτι", pos="NOUN", morph_features={"Gender": "Neut"}
+        )
+        mock_spellcheck_service.check.return_value = _make_spellcheck_result(is_valid=True)
+
+        result = normalization_service.normalize_smart("σπίτι", lexicon_entry=neuter_entry)
+
+        assert result.primary is not None
+        assert result.primary.morphology.lemma == "σπίτι"
+        assert result.primary.morphology.morph_features.get("Gender") == "Neut"
+
+    def test_article_prefix_with_lexicon_entry_masc_only(
+        self, normalization_service, mock_morphology_service, mock_spellcheck_service
+    ):
+        """'ο σύζυγος' with lexicon_entry=masc → detected_article set, no article-prefix retries → only masculine."""
+        masc_entry = self._make_lexicon_entry("σύζυγος", "NOUN", "Masc")
+
+        mock_spellcheck_service.correct.return_value = "σύζυγος"
+        mock_morphology_service.analyze_in_context.return_value = _make_morphology_result(
+            input_word="σύζυγος", lemma="σύζυγος", pos="NOUN", morph_features={"Gender": "Masc"}
+        )
+        mock_spellcheck_service.check.return_value = _make_spellcheck_result(is_valid=True)
+
+        result = normalization_service.normalize_smart("ο σύζυγος", lexicon_entry=masc_entry)
+
+        # Article was detected — no article-prefix retries
+        assert result.detected_article == "ο"
+        # All candidates have masculine gender (lexicon + direct)
+        all_candidates = [result.primary] + result.suggestions
+        genders = {c.morphology.morph_features.get("Gender") for c in all_candidates}
+        assert "Fem" not in genders
+
+    def test_lexicon_entries_none_and_lexicon_entry_none_still_works(
+        self, normalization_service, mock_morphology_service, mock_spellcheck_service
+    ):
+        """No lexicon params → pipeline runs normally without any lexicon candidates."""
+        mock_spellcheck_service.correct.return_value = "σπίτι"
+        mock_morphology_service.analyze_in_context.return_value = _make_morphology_result(
+            input_word="σπίτι", lemma="σπίτι", pos="NOUN", morph_features={"Gender": "Neut"}
+        )
+        mock_spellcheck_service.check.return_value = _make_spellcheck_result(is_valid=True)
+
+        result = normalization_service.normalize_smart("σπίτι")
+
+        assert result.primary is not None
+        assert result.primary.morphology.lemma == "σπίτι"
