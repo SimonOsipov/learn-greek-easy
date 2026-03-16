@@ -4,6 +4,7 @@ import factory
 
 from src.db.models import DeckLevel, DialogStatus, ListeningDialog
 from tests.factories.base import BaseFactory
+from tests.factories.situation import SituationFactory
 
 
 class ListeningDialogFactory(BaseFactory):
@@ -24,6 +25,13 @@ class ListeningDialogFactory(BaseFactory):
         exercises_ready = factory.Trait(status=DialogStatus.EXERCISES_READY)
         a1_level = factory.Trait(cefr_level=DeckLevel.A1)
         b2_level = factory.Trait(cefr_level=DeckLevel.B2)
+
+    @classmethod
+    async def create(cls, session=None, **kwargs):
+        if "situation_id" not in kwargs:
+            situation = await SituationFactory.create(session=session)
+            kwargs["situation_id"] = situation.id
+        return await super().create(session=session, **kwargs)
 
 
 __all__ = ["ListeningDialogFactory"]

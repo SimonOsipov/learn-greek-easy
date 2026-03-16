@@ -105,6 +105,9 @@ from tests.factories.progress import (
 # Custom Faker providers
 from tests.factories.providers import GreekProvider
 
+# Situation factories
+from tests.factories.situation import SituationFactory
+
 # XP & Achievements factories
 from tests.factories.xp_achievements import (
     XP_PER_LEVEL,
@@ -138,6 +141,8 @@ __all__ = [
     "FeedbackVoteFactory",
     # Listening Dialogs
     "ListeningDialogFactory",
+    # Situations
+    "SituationFactory",
     # News
     "NewsItemFactory",
     # Progress

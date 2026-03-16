@@ -11,6 +11,7 @@ This module contains all SQLAlchemy models for the application:
 - Culture Exam (CultureDeck, CultureQuestion, CultureQuestionStats, CultureAnswerHistory)
 - Announcement Campaigns (AnnouncementCampaign)
 - Changelog (ChangelogEntry)
+- Situations (Situation)
 - Listening Dialogs (ListeningDialog, DialogSpeaker, DialogLine, DialogExercise, ExerciseItem, DialogExerciseAttempt, DialogProgress)
 
 All models use:
@@ -265,6 +266,14 @@ class DialogStatus(str, enum.Enum):
     DRAFT = "draft"
     AUDIO_READY = "audio_ready"
     EXERCISES_READY = "exercises_ready"
+
+
+class SituationStatus(str, enum.Enum):
+    """Status of a listening situation (auto-computed from children in later stories)."""
+
+    DRAFT = "draft"
+    PARTIAL_READY = "partial_ready"
+    READY = "ready"
 
 
 class ExerciseType(str, enum.Enum):
@@ -2744,6 +2753,45 @@ class GreekLexicon(Base):
 # ---------------------------------------------------------------------------
 
 
+class Situation(Base, TimestampMixin):
+    """Parent entity for listening content.
+
+    Groups one or more dialogs under a shared scenario context.
+    Future: description (SIT-02), picture (SIT-03).
+    Status is auto-computed from children state in later stories;
+    SIT-01 just creates the enum with default 'draft'.
+    """
+
+    __tablename__ = "situations"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.uuid_generate_v4())
+    scenario_el: Mapped[str] = mapped_column(Text, nullable=False)
+    scenario_en: Mapped[str] = mapped_column(Text, nullable=False)
+    scenario_ru: Mapped[str] = mapped_column(Text, nullable=False)
+    cefr_level: Mapped[DeckLevel] = mapped_column(nullable=False)
+    status: Mapped[SituationStatus] = mapped_column(
+        SAEnum(
+            SituationStatus,
+            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+            name="situationstatus",
+            create_type=False,
+        ),
+        nullable=False,
+        server_default=text("'draft'"),
+    )
+    created_by: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+
+    # One-to-one with ListeningDialog (uselist=False).
+    dialog: Mapped["ListeningDialog | None"] = relationship(
+        back_populates="situation", lazy="raise", uselist=False
+    )
+
+    def __repr__(self) -> str:
+        return f"<Situation id={self.id} cefr_level={self.cefr_level} status={self.status}>"
+
+
 class ListeningDialog(Base, TimestampMixin):
     """Top-level listening dialog entity with audio metadata."""
 
@@ -2775,6 +2823,9 @@ class ListeningDialog(Base, TimestampMixin):
     created_by: Mapped[UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
     )
+    situation_id: Mapped[UUID] = mapped_column(
+        ForeignKey("situations.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     audio_s3_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
     audio_generated_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
@@ -2794,6 +2845,7 @@ class ListeningDialog(Base, TimestampMixin):
     progress: Mapped[List["DialogProgress"]] = relationship(
         back_populates="dialog", lazy="raise", cascade="all, delete-orphan"
     )
+    situation: Mapped["Situation"] = relationship(back_populates="dialog", lazy="raise")
 
     def __repr__(self) -> str:
         return f"<ListeningDialog id={self.id} cefr_level={self.cefr_level} status={self.status}>"
