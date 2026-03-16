@@ -211,26 +211,27 @@ class TestWordEntryModel:
     # =========================================================================
 
     def test_unique_constraint_exists(self):
-        """Should have unique constraint named uq_word_entry_owner_lemma_pos (NGEN-10)."""
+        """Should have unique constraint named uq_word_entry_owner_lemma_pos_gender (CGND-01-01)."""
         constraints = WordEntry.__table__.constraints
         unique_constraints = [c for c in constraints if isinstance(c, UniqueConstraint)]
         constraint_names = [uc.name for uc in unique_constraints]
-        assert "uq_word_entry_owner_lemma_pos" in constraint_names
+        assert "uq_word_entry_owner_lemma_pos_gender" in constraint_names
         assert "uq_word_entry_deck_lemma_pos" not in constraint_names
+        assert "uq_word_entry_owner_lemma_pos" not in constraint_names  # old constraint removed
 
     def test_unique_constraint_columns(self):
-        """Unique constraint should cover (owner_id, lemma, part_of_speech) (NGEN-10)."""
+        """Unique constraint should cover (owner_id, lemma, part_of_speech, gender) (CGND-01-01)."""
         constraints = WordEntry.__table__.constraints
         unique_constraints = [c for c in constraints if isinstance(c, UniqueConstraint)]
 
         found = False
         for uc in unique_constraints:
-            if uc.name == "uq_word_entry_owner_lemma_pos":
+            if uc.name == "uq_word_entry_owner_lemma_pos_gender":
                 col_names = {c.name for c in uc.columns}
-                assert col_names == {"owner_id", "lemma", "part_of_speech"}
+                assert col_names == {"owner_id", "lemma", "part_of_speech", "gender"}
                 found = True
                 break
-        assert found, "Unique constraint uq_word_entry_owner_lemma_pos not found"
+        assert found, "Unique constraint uq_word_entry_owner_lemma_pos_gender not found"
 
     # =========================================================================
     # Index Tests

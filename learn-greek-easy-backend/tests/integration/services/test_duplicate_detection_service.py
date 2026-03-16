@@ -36,6 +36,7 @@ async def _create_word_entry(
     translation_en: str = "test translation",
     is_active: bool = True,
     owner_id=None,
+    gender: str | None = None,
 ) -> WordEntry:
     """Create and persist a WordEntry (without deck association)."""
     entry = WordEntry(
@@ -44,6 +45,7 @@ async def _create_word_entry(
         translation_en=translation_en,
         is_active=is_active,
         owner_id=owner_id,
+        gender=gender,
     )
     db_session.add(entry)
     await db_session.flush()
@@ -213,3 +215,71 @@ class TestDuplicateDetectionOldestWins:
         assert result.is_duplicate is True
         assert result.existing_entry is not None
         assert result.existing_entry.id == entry_b.id
+
+
+@pytest.mark.asyncio
+class TestDuplicateDetectionGenderAware:
+    """Tests for the gender parameter (common-gender noun support)."""
+
+    async def test_gender_match_returns_duplicate(self, db_session: AsyncSession):
+        """Creates masculine entry, checks with gender="masculine" → is_duplicate=True."""
+        deck = await DeckFactory.create(session=db_session)
+        entry = await _create_word_entry(
+            db_session, "σύζυγος", PartOfSpeech.NOUN, gender="masculine"
+        )
+        await _associate_entry_with_deck(db_session, entry, deck.id)
+
+        service = DuplicateDetectionService(db_session)
+        result = await service.check("σύζυγος", PartOfSpeech.NOUN, gender="masculine")
+
+        assert result.is_duplicate is True
+        assert result.existing_entry is not None
+        assert result.existing_entry.lemma == "σύζυγος"
+
+    async def test_gender_mismatch_returns_not_duplicate(self, db_session: AsyncSession):
+        """Creates masculine entry, checks with gender="feminine" → is_duplicate=False."""
+        deck = await DeckFactory.create(session=db_session)
+        entry = await _create_word_entry(
+            db_session, "σύζυγος", PartOfSpeech.NOUN, gender="masculine"
+        )
+        await _associate_entry_with_deck(db_session, entry, deck.id)
+
+        service = DuplicateDetectionService(db_session)
+        result = await service.check("σύζυγος", PartOfSpeech.NOUN, gender="feminine")
+
+        assert result.is_duplicate is False
+
+    async def test_gender_none_backward_compat(self, db_session: AsyncSession):
+        """Creates masculine entry, checks WITHOUT gender → is_duplicate=True (any gender)."""
+        deck = await DeckFactory.create(session=db_session)
+        entry = await _create_word_entry(
+            db_session, "σύζυγος", PartOfSpeech.NOUN, gender="masculine"
+        )
+        await _associate_entry_with_deck(db_session, entry, deck.id)
+
+        service = DuplicateDetectionService(db_session)
+        result = await service.check("σύζυγος", PartOfSpeech.NOUN)
+
+        assert result.is_duplicate is True
+
+    async def test_non_noun_no_gender_backward_compat(self, db_session: AsyncSession):
+        """Creates verb entry (no gender), checks without gender → is_duplicate=True."""
+        deck = await DeckFactory.create(session=db_session)
+        entry = await _create_word_entry(db_session, "τρέχω", PartOfSpeech.VERB, gender=None)
+        await _associate_entry_with_deck(db_session, entry, deck.id)
+
+        service = DuplicateDetectionService(db_session)
+        result = await service.check("τρέχω", PartOfSpeech.VERB)
+
+        assert result.is_duplicate is True
+
+    async def test_neuter_single_gender(self, db_session: AsyncSession):
+        """Creates neuter entry, checks with gender="neuter" → is_duplicate=True."""
+        deck = await DeckFactory.create(session=db_session)
+        entry = await _create_word_entry(db_session, "σπίτι", PartOfSpeech.NOUN, gender="neuter")
+        await _associate_entry_with_deck(db_session, entry, deck.id)
+
+        service = DuplicateDetectionService(db_session)
+        result = await service.check("σπίτι", PartOfSpeech.NOUN, gender="neuter")
+
+        assert result.is_duplicate is True

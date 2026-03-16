@@ -47,6 +47,7 @@ export interface WordEntryInput {
   translation_ru?: string | null;
   translation_ru_plural?: string | null;
   pronunciation?: string | null;
+  gender?: string | null;
   grammar_data?: Record<string, unknown> | null;
   examples?: WordEntryExampleSentence[] | null;
 }

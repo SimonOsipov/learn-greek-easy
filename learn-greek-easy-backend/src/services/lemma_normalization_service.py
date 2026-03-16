@@ -164,6 +164,7 @@ class LemmaNormalizationService:
         expected_pos: str | None = None,
         *,
         lexicon_entry: LexiconEntry | None = None,
+        lexicon_entries: list[LexiconEntry] | None = None,
     ) -> SmartNormalizationResult:
         """Smart normalization with article detection, spellcheck correction, and multi-candidate ranking."""
         t_start = time.perf_counter()
@@ -178,27 +179,37 @@ class LemmaNormalizationService:
         corrected = self._spellcheck.correct(bare_word)
         spellcheck_ms = (time.perf_counter() - t_spell) * 1000
 
-        # Step 3.5: Lexicon candidate (if available)
-        lexicon_candidate: NormalizationCandidate | None = None
-        if lexicon_entry is not None:
+        # Step 3.5: Lexicon candidates (single or multiple)
+        lexicon_candidates: list[NormalizationCandidate] = []
+
+        # Resolve effective entries: lexicon_entries takes precedence over lexicon_entry
+        effective_entries: list[LexiconEntry] = []
+        if lexicon_entries is not None:
+            effective_entries = lexicon_entries
+        elif lexicon_entry is not None:
+            effective_entries = [lexicon_entry]
+
+        for entry in effective_entries:
             morph_features: dict[str, str] = {}
-            if lexicon_entry.gender:
-                morph_features["Gender"] = lexicon_entry.gender
+            if entry.gender:
+                morph_features["Gender"] = entry.gender
                 morph_features["Number"] = "Sing"
                 morph_features["Case"] = "Nom"
-            lexicon_candidate = NormalizationCandidate(
-                input_form=lexicon_entry.lemma,
-                strategy="lexicon",
-                morphology=MorphologyResult(
-                    input_word=lexicon_entry.lemma,
-                    lemma=lexicon_entry.lemma,
-                    pos=lexicon_entry.pos.upper(),
-                    morph_features=morph_features,
-                    is_known=True,
-                    analysis_successful=True,
-                ),
-                confidence=1.0,
-                corrected_from=None,
+            lexicon_candidates.append(
+                NormalizationCandidate(
+                    input_form=entry.lemma,
+                    strategy="lexicon",
+                    morphology=MorphologyResult(
+                        input_word=entry.lemma,
+                        lemma=entry.lemma,
+                        pos=entry.pos.upper(),
+                        morph_features=morph_features,
+                        is_known=True,
+                        analysis_successful=True,
+                    ),
+                    confidence=1.0,
+                    corrected_from=None,
+                )
             )
 
         # Step 4: Build candidate inputs (input_form, strategy, corrected_from, corrected_to)
@@ -254,9 +265,11 @@ class LemmaNormalizationService:
                     )
         candidates_ms = (time.perf_counter() - t_candidates) * 1000
 
-        # Prepend lexicon candidate so it participates in ranking
-        if lexicon_candidate is not None:
-            candidates.insert(0, lexicon_candidate)
+        # Prepend lexicon candidates so they participate in ranking
+        if lexicon_candidates:
+            # Prepend in reverse so first entry ends up at index 0
+            for lc in reversed(lexicon_candidates):
+                candidates.insert(0, lc)
 
         if not candidates:
             raise ValueError(f"No candidates could be analyzed for word: {word!r}")
@@ -312,10 +325,12 @@ class LemmaNormalizationService:
         candidates: list[NormalizationCandidate],
         expected_pos: str | None = None,
     ) -> tuple[NormalizationCandidate, list[NormalizationCandidate]]:
-        """Group candidates by (lemma, pos), pick best per group, rank for primary + suggestions."""
-        groups: dict[tuple[str, str], list[NormalizationCandidate]] = {}
+        """Group candidates by (lemma, pos, gender), pick best per group, rank for primary + suggestions."""
+        groups: dict[tuple[str, str, str | None], list[NormalizationCandidate]] = {}
         for c in candidates:
-            key = (c.morphology.lemma.lower(), c.morphology.pos)
+            gender_raw = c.morphology.morph_features.get("Gender")
+            gender = _SPACY_GENDER_MAP.get(gender_raw) if gender_raw else None
+            key = (c.morphology.lemma.lower(), c.morphology.pos, gender)
             groups.setdefault(key, []).append(c)
 
         best_per_group: list[NormalizationCandidate] = []

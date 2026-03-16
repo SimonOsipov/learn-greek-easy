@@ -800,7 +800,8 @@ class WordEntry(Base, TimestampMixin):
             "owner_id",
             "lemma",
             "part_of_speech",
-            name="uq_word_entry_owner_lemma_pos",
+            "gender",
+            name="uq_word_entry_owner_lemma_pos_gender",
             postgresql_nulls_not_distinct=True,
         ),
         Index("ix_word_entries_owner_id", "owner_id"),
@@ -844,6 +845,12 @@ class WordEntry(Base, TimestampMixin):
     part_of_speech: Mapped[PartOfSpeech] = mapped_column(
         nullable=False,
         comment="Part of speech classification",
+    )
+    gender: Mapped[str | None] = mapped_column(
+        String(20),
+        nullable=True,
+        default=None,
+        comment="Grammatical gender: masculine, feminine, neuter (NULL for non-nouns / legacy)",
     )
 
     # Translations

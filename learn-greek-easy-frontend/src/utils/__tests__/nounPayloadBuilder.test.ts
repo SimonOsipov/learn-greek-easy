@@ -297,6 +297,41 @@ describe('buildWordEntryPayload', () => {
 
     expect(payload.examples).toHaveLength(0);
   });
+
+  it('includes gender from grammar_data at top level', () => {
+    const payload = buildWordEntryPayload({
+      generation: mockGeneration,
+      resolvedValues: defaultResolvedValues(),
+      editableExamples: [],
+    });
+    expect(payload.gender).toBe('feminine');
+  });
+
+  it('uses resolved gender from resolvedValues over generation', () => {
+    const map = makeMap({ 'grammar_data.gender': 'masculine' });
+    const payload = buildWordEntryPayload({
+      generation: mockGeneration,
+      resolvedValues: map,
+      editableExamples: [],
+    });
+    expect(payload.gender).toBe('masculine');
+  });
+
+  it('returns gender: null when grammar_data.gender is null and no resolved value', () => {
+    const gen = {
+      ...mockGeneration,
+      grammar_data: {
+        ...mockGeneration.grammar_data,
+        gender: null as unknown as 'feminine',
+      },
+    };
+    const payload = buildWordEntryPayload({
+      generation: gen,
+      resolvedValues: new Map(),
+      editableExamples: [],
+    });
+    expect(payload.gender).toBeNull();
+  });
 });
 
 // ============================================
