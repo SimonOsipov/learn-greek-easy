@@ -144,9 +144,7 @@ class TestRedistributeWordTimestamps:
         timing_map = _make_timing_map((0, 0), (2000, 5000))
         sorted_lines = _make_sorted_lines("hello world", "b" * 5)
         word_map = _make_word_timestamps_map(None, None)
-        result_t, result_w = _redistribute_degenerate_timing(
-            timing_map, sorted_lines, 5000, word_map
-        )
+        _, result_w = _redistribute_degenerate_timing(timing_map, sorted_lines, 5000, word_map)
         assert result_w[0] is None
 
 
