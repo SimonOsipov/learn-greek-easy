@@ -4025,6 +4025,81 @@ async def get_listening_dialog_detail(
     )
 
 
+def _redistribute_degenerate_timing(
+    timing_map: dict[int, tuple[int, int]],
+    sorted_lines: list[dict],
+    duration_ms: int,
+    word_timestamps_map: dict[int, list[dict] | None],
+) -> tuple[dict[int, tuple[int, int]], dict[int, list[dict] | None]]:
+    """Redistribute timing for degenerate lines proportionally by character count."""
+    degenerate_indices = {i for i, (s, e) in timing_map.items() if s == e}
+    if not degenerate_indices:
+        return timing_map, word_timestamps_map
+
+    char_counts = {i: len(sorted_lines[i]["text"]) for i in degenerate_indices}
+    total_chars = sum(char_counts.values())
+    if total_chars == 0:
+        return timing_map, word_timestamps_map
+
+    total_non_degenerate_time = sum(
+        end - start for i, (start, end) in timing_map.items() if i not in degenerate_indices
+    )
+    unclaimed_ms = max(0, duration_ms - total_non_degenerate_time)
+
+    # Proportional shares per degenerate line
+    shares = {i: unclaimed_ms * (char_counts[i] / total_chars) for i in degenerate_indices}
+
+    # Find ordered non-degenerate start times for clamping
+    sorted_non_degen_starts = sorted(
+        timing_map[i][0] for i in timing_map if i not in degenerate_indices
+    )
+
+    # Cursor walk: fill degenerate lines into gaps chronologically
+    new_timing_map = dict(timing_map)
+    cursor = 0
+    ordered_indices = sorted(timing_map.keys())
+    for i in ordered_indices:
+        if i not in degenerate_indices:
+            cursor = timing_map[i][1]
+        else:
+            start = cursor
+            end = cursor + round(shares[i])
+            # Clamp: find next non-degenerate start after cursor
+            next_non_degen_start = next(
+                (s for s in sorted_non_degen_starts if s > cursor), duration_ms
+            )
+            end = min(end, next_non_degen_start)
+            # Clamp to duration_ms
+            end = min(end, duration_ms)
+            new_timing_map[i] = (start, end)
+            cursor = end
+
+    # Redistribute word timestamps for redistributed lines
+    new_word_timestamps_map = dict(word_timestamps_map)
+    for i in degenerate_indices:
+        words = word_timestamps_map.get(i)
+        if words is None:
+            continue
+        line_start, line_end = new_timing_map[i]
+        line_duration = line_end - line_start
+        total_word_chars = sum(len(w["word"]) for w in words)
+        if total_word_chars == 0:
+            continue
+        word_cursor = line_start
+        new_words = []
+        for w_idx, w in enumerate(words):
+            w_start = word_cursor
+            if w_idx == len(words) - 1:
+                w_end = line_end
+            else:
+                w_end = word_cursor + round(line_duration * len(w["word"]) / total_word_chars)
+            new_words.append({**w, "start_ms": w_start, "end_ms": w_end})
+            word_cursor = w_end
+        new_word_timestamps_map[i] = new_words
+
+    return new_timing_map, new_word_timestamps_map
+
+
 def _build_word_timestamps(  # noqa: C901
     result_data: dict, sorted_lines: list[dict]
 ) -> dict[int, list[dict] | None]:
@@ -4240,7 +4315,7 @@ async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, Non
             return
 
         yield format_sse_event(
-            {"segments_count": len(voice_segments)},
+            {"segments_count": len(voice_segments), "redistributed": degenerate_line_count > 0},
             event="dialog_audio:timing",
         )
 
@@ -4266,6 +4341,21 @@ async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, Non
                 "Failed to parse MP3 duration for dialog {}, falling back to voice_segments: {}",
                 dialog_id,
                 exc,
+            )
+
+        # Stage 5 — Redistribute degenerate timing
+        if degenerate_line_count > 0:
+            duration_ms = int(duration_seconds * 1000)
+            timing_map, word_timestamps_map = _redistribute_degenerate_timing(
+                timing_map,
+                sorted_lines,
+                duration_ms,
+                word_timestamps_map,
+            )
+            logger.info(
+                "Redistributed timing for {} degenerate line(s) in dialog {}",
+                degenerate_line_count,
+                dialog_id,
             )
 
         # Stage 4 (continued) — Upload after timing is validated
