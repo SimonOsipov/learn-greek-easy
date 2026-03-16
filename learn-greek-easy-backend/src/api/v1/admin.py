@@ -4234,8 +4234,8 @@ async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, Non
 
         segment_duration = duration_seconds
         try:
-            mp3_info = MP3(fileobj=BytesIO(audio_bytes))
-            parsed_duration = mp3_info.info.length
+            mp3_info: Any = MP3(fileobj=BytesIO(audio_bytes))
+            parsed_duration: float = mp3_info.info.length
             if abs(parsed_duration - segment_duration) > 1.0:
                 logger.warning(
                     "MP3 duration mismatch for dialog {}: parsed={:.2f}s, segments={:.2f}s",

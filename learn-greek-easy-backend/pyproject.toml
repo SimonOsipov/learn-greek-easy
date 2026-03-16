@@ -131,6 +131,14 @@ module = "alembic.*"
 ignore_errors = true
 
 [[tool.mypy.overrides]]
+module = "mutagen.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "src.api.v1.admin"
+disallow_untyped_calls = false
+
+[[tool.mypy.overrides]]
 module = ["google.oauth2.*", "google.auth.*"]
 disallow_untyped_calls = false
 
