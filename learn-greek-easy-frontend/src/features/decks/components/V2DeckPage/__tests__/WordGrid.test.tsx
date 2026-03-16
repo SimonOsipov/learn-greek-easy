@@ -17,7 +17,7 @@ import { describe, it, expect } from 'vitest';
 
 import type { WordEntryResponse } from '@/services/wordEntryAPI';
 
-import { WordGrid, WordGridSkeleton } from '../WordGrid';
+import { WordGrid, WordGridSkeleton, isWideLemma } from '../WordGrid';
 
 /**
  * Helper to render WordGrid within a router context
@@ -192,6 +192,55 @@ describe('WordGrid Component', () => {
       const card = screen.getByTestId('word-card');
       expect(card).toHaveAttribute('aria-label', 'test - test translation');
     });
+  });
+});
+
+describe('isWideLemma', () => {
+  it('should return false for short lemmas', () => {
+    expect(isWideLemma('σπίτι')).toBe(false); // 5 chars
+    expect(isWideLemma('γείτονας')).toBe(false); // 8 chars
+  });
+
+  it('should return false at the boundary (12 chars)', () => {
+    expect(isWideLemma('αρραβωνιαστι')).toBe(false); // exactly 12
+  });
+
+  it('should return true above the boundary (>12 chars)', () => {
+    expect(isWideLemma('αρραβωνιαστικ')).toBe(true); // 13
+    expect(isWideLemma('αρραβωνιαστικιά')).toBe(true); // 15
+    expect(isWideLemma('αρραβωνιαστικός')).toBe(true); // 15
+  });
+});
+
+describe('WordGrid - Wide Cards', () => {
+  const longLemmaEntry: WordEntryResponse = {
+    ...mockWordEntries[0],
+    id: 'long-1',
+    lemma: 'αρραβωνιαστικιά', // 15 chars
+  };
+
+  it('should apply gridColumn span 2 for long lemma cards', () => {
+    renderWithRouter([longLemmaEntry]);
+    const grid = screen.getByTestId('word-grid');
+    const wrapper = grid.firstElementChild as HTMLElement;
+    expect(wrapper.style.gridColumn).toBe('span 2');
+  });
+
+  it('should not apply gridColumn for short lemma cards', () => {
+    renderWithRouter([mockWordEntries[0]]);
+    const grid = screen.getByTestId('word-grid');
+    const wrapper = grid.firstElementChild as HTMLElement;
+    expect(wrapper.style.gridColumn).toBe('');
+  });
+
+  it('should apply span only to long lemma cards in mixed entries', () => {
+    renderWithRouter([mockWordEntries[0], longLemmaEntry, mockWordEntries[1]]);
+    const grid = screen.getByTestId('word-grid');
+    const wrappers = Array.from(grid.children) as HTMLElement[];
+
+    expect(wrappers[0].style.gridColumn).toBe(''); // 'test' - short
+    expect(wrappers[1].style.gridColumn).toBe('span 2'); // 'αρραβωνιαστικιά' - long
+    expect(wrappers[2].style.gridColumn).toBe(''); // 'another' - short
   });
 });
 

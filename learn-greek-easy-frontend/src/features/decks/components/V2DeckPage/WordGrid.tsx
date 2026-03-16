@@ -14,6 +14,17 @@ import type { WordEntryResponse } from '@/services/wordEntryAPI';
 import { WordCard } from '../WordCard';
 
 // ============================================
+// Utilities
+// ============================================
+
+const WIDE_LEMMA_THRESHOLD = 12;
+
+/** Returns true when a lemma is too long for a single grid column. */
+export function isWideLemma(lemma: string): boolean {
+  return lemma.length > WIDE_LEMMA_THRESHOLD;
+}
+
+// ============================================
 // WordGrid Component
 // ============================================
 
@@ -24,6 +35,7 @@ export interface WordGridProps {
 /**
  * Responsive grid of word cards.
  * Uses CSS Grid with auto-fill and minmax for responsive layout.
+ * Cards with long lemmas (>12 chars) span 2 columns.
  *
  * Grid columns:
  * - Mobile: 2 columns (150px min)
@@ -47,7 +59,9 @@ export function WordGrid({ entries }: WordGridProps) {
       data-testid="word-grid"
     >
       {entries.map((entry) => (
-        <WordCard key={entry.id} wordEntry={entry} onClick={() => handleWordCardClick(entry.id)} />
+        <div key={entry.id} style={isWideLemma(entry.lemma) ? { gridColumn: 'span 2' } : undefined}>
+          <WordCard wordEntry={entry} onClick={() => handleWordCardClick(entry.id)} />
+        </div>
       ))}
     </div>
   );
