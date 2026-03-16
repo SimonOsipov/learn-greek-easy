@@ -632,6 +632,13 @@ class Deck(Base, TimestampMixin):
         comment="Owner user ID (NULL for system decks, UUID for user-created decks)",
     )
 
+    # Cover image
+    cover_image_s3_key: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+        comment="S3 object key for deck cover image",
+    )
+
     # Relationships
     owner: Mapped["User | None"] = relationship(
         lazy="selectin",
