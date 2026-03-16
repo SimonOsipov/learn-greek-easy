@@ -23,21 +23,13 @@ from src.db.models import (
     ExerciseStatus,
     ExerciseType,
     ListeningDialog,
-    Situation,
 )
+from tests.factories import SituationFactory
 
 
-async def _create_situation(db_session: AsyncSession) -> Situation:
-    """Create and flush a minimal Situation for tests that build ListeningDialog directly."""
-    situation = Situation(
-        scenario_el="Ελληνικό σενάριο",
-        scenario_en="English scenario",
-        scenario_ru="Русский сценарий",
-        cefr_level=DeckLevel.B1,
-    )
-    db_session.add(situation)
-    await db_session.flush()
-    return situation
+async def _create_situation(db_session: AsyncSession) -> object:
+    """Create a Situation using SituationFactory for tests that build ListeningDialog directly."""
+    return await SituationFactory.create(session=db_session)
 
 
 def _parse_sse_text(text: str) -> list[dict]:

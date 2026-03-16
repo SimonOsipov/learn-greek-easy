@@ -28,7 +28,7 @@ class ListeningDialogFactory(BaseFactory):
 
     @classmethod
     async def create(cls, session=None, **kwargs):
-        if "situation_id" not in kwargs:
+        if kwargs.get("situation_id") is None:
             situation = await SituationFactory.create(session=session)
             kwargs["situation_id"] = situation.id
         return await super().create(session=session, **kwargs)
