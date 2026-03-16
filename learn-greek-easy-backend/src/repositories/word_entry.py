@@ -184,11 +184,12 @@ class WordEntryRepository(BaseRepository[WordEntry]):
         result = await self.db.execute(query)
         return result.scalar_one()
 
-    async def get_by_owner_lemma_pos(
+    async def get_by_owner_lemma_pos_gender(
         self,
         owner_id: UUID | None,
         lemma: str,
         part_of_speech: str,
+        gender: str | None = None,
     ) -> WordEntry | None:
         """Get a word entry by its unique constraint fields.
 
@@ -196,6 +197,7 @@ class WordEntryRepository(BaseRepository[WordEntry]):
             owner_id: Owner UUID (None for admin/system entries)
             lemma: Dictionary form of the word
             part_of_speech: Part of speech value
+            gender: Grammatical gender (None for non-noun POS types)
 
         Returns:
             WordEntry if found, None otherwise
@@ -204,6 +206,7 @@ class WordEntryRepository(BaseRepository[WordEntry]):
             WordEntry.owner_id == owner_id,
             WordEntry.lemma == lemma,
             WordEntry.part_of_speech == part_of_speech,
+            WordEntry.gender == gender,
         )
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
@@ -211,9 +214,9 @@ class WordEntryRepository(BaseRepository[WordEntry]):
     @staticmethod
     def _build_audio_key_lookup(
         existing_rows: Sequence,
-    ) -> dict[tuple[str, str], dict[str, str]]:
-        """Build a lookup of existing audio keys keyed by (lemma, pos) -> {example_id: audio_key}."""
-        lookup: dict[tuple[str, str], dict[str, str]] = {}
+    ) -> dict[tuple[str, str, str | None], dict[str, str]]:
+        """Build a lookup of existing audio keys keyed by (lemma, pos, gender) -> {example_id: audio_key}."""
+        lookup: dict[tuple[str, str, str | None], dict[str, str]] = {}
         for row in existing_rows:
             pos_val = (
                 row.part_of_speech.value
@@ -228,14 +231,14 @@ class WordEntryRepository(BaseRepository[WordEntry]):
                 if ex.get("id") and ex.get("audio_key")
             }
             if audio_map:
-                lookup[(row.lemma, pos_val)] = audio_map
+                lookup[(row.lemma, pos_val, row.gender)] = audio_map
         return lookup
 
     @staticmethod
     def _merge_audio_keys(
         entry_with_deck: dict,
-        key: tuple[str, str],
-        existing_audio_keys: dict[tuple[str, str], dict[str, str]],
+        key: tuple[str, str, str | None],
+        existing_audio_keys: dict[tuple[str, str, str | None], dict[str, str]],
     ) -> None:
         """Merge existing audio_key values into incoming examples (in-place)."""
         if key not in existing_audio_keys or not entry_with_deck.get("examples"):
@@ -287,7 +290,7 @@ class WordEntryRepository(BaseRepository[WordEntry]):
 
         # Get existing entries to determine created vs updated count
         existing_query = select(
-            WordEntry.lemma, WordEntry.part_of_speech, WordEntry.examples
+            WordEntry.lemma, WordEntry.part_of_speech, WordEntry.gender, WordEntry.examples
         ).where(
             WordEntry.owner_id == owner_id,
         )
@@ -301,6 +304,7 @@ class WordEntryRepository(BaseRepository[WordEntry]):
                     if hasattr(row.part_of_speech, "value")
                     else row.part_of_speech
                 ),
+                row.gender,
             )
             for row in existing_rows
         }
@@ -320,7 +324,7 @@ class WordEntryRepository(BaseRepository[WordEntry]):
             if hasattr(pos_value, "value"):
                 pos_value = pos_value.value
 
-            key = (entry["lemma"], pos_value)
+            key = (entry["lemma"], pos_value, entry.get("gender"))
             if key in existing_keys:
                 updated_count += 1
             else:
@@ -345,9 +349,9 @@ class WordEntryRepository(BaseRepository[WordEntry]):
 
         insert_stmt = insert(WordEntry).values(values)
 
-        # ON CONFLICT (owner_id, lemma, part_of_speech) DO UPDATE
+        # ON CONFLICT (owner_id, lemma, part_of_speech, gender) DO UPDATE
         upsert_stmt = insert_stmt.on_conflict_do_update(
-            constraint="uq_word_entry_owner_lemma_pos",
+            constraint="uq_word_entry_owner_lemma_pos_gender",
             set_={col: getattr(insert_stmt.excluded, col) for col in update_columns}
             | {"updated_at": func.now()},
         )

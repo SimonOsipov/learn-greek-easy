@@ -177,7 +177,7 @@ class TestWordEntryRepositoryBasic:
         """Test getting entry by lemma and part of speech."""
         repo = WordEntryRepository(db_session)
 
-        entry = await repo.get_by_owner_lemma_pos(sample_user.id, "house", PartOfSpeech.NOUN)
+        entry = await repo.get_by_owner_lemma_pos_gender(sample_user.id, "house", PartOfSpeech.NOUN)
         assert entry is not None
         assert entry.lemma == "house"
         assert entry.translation_en == "house"
@@ -192,7 +192,9 @@ class TestWordEntryRepositoryBasic:
         """Test getting non-existent entry returns None."""
         repo = WordEntryRepository(db_session)
 
-        entry = await repo.get_by_owner_lemma_pos(sample_user.id, "nonexistent", PartOfSpeech.NOUN)
+        entry = await repo.get_by_owner_lemma_pos_gender(
+            sample_user.id, "nonexistent", PartOfSpeech.NOUN
+        )
         assert entry is None
 
 
@@ -542,6 +544,155 @@ class TestBulkUpsertAudioKeyMerge:
         assert len(entries[0].examples) == 1
         assert entries[0].examples[0]["id"] == "ex1"
         assert entries[0].examples[0]["audio_key"] == "audio/ex1.mp3"
+
+
+class TestWordEntryRepositoryGenderDisambiguation:
+    """Test gender-aware repository operations."""
+
+    @pytest.mark.asyncio
+    async def test_bulk_upsert_same_lemma_different_gender_creates_two_rows(
+        self, db_session: AsyncSession, sample_user: User
+    ):
+        """Two entries with same (lemma, NOUN) but different gender create 2 rows."""
+        repo = WordEntryRepository(db_session)
+
+        entries_data = [
+            {
+                "lemma": "σύζυγος",
+                "part_of_speech": PartOfSpeech.NOUN,
+                "gender": "masculine",
+                "translation_en": "husband",
+            },
+            {
+                "lemma": "σύζυγος",
+                "part_of_speech": PartOfSpeech.NOUN,
+                "gender": "feminine",
+                "translation_en": "wife",
+            },
+        ]
+
+        entries, created, updated = await repo.bulk_upsert(sample_user.id, entries_data)
+        await db_session.commit()
+
+        assert created == 2
+        assert updated == 0
+        assert len(entries) == 2
+
+    @pytest.mark.asyncio
+    async def test_bulk_upsert_matching_lemma_pos_gender_updates(
+        self, db_session: AsyncSession, sample_user: User
+    ):
+        """Upsert with matching (lemma, NOUN, gender) updates the existing entry."""
+        repo = WordEntryRepository(db_session)
+
+        initial_data = [
+            {
+                "lemma": "σύζυγος",
+                "part_of_speech": PartOfSpeech.NOUN,
+                "gender": "masculine",
+                "translation_en": "husband",
+            }
+        ]
+        _, created, _ = await repo.bulk_upsert(sample_user.id, initial_data)
+        await db_session.commit()
+        assert created == 1
+
+        update_data = [
+            {
+                "lemma": "σύζυγος",
+                "part_of_speech": PartOfSpeech.NOUN,
+                "gender": "masculine",
+                "translation_en": "husband, spouse",
+            }
+        ]
+        entries, created, updated = await repo.bulk_upsert(sample_user.id, update_data)
+        await db_session.commit()
+
+        assert created == 0
+        assert updated == 1
+        assert len(entries) == 1
+        assert entries[0].translation_en == "husband, spouse"
+
+    @pytest.mark.asyncio
+    async def test_get_by_owner_lemma_pos_gender_filters_correctly(
+        self, db_session: AsyncSession, sample_user: User
+    ):
+        """get_by_owner_lemma_pos_gender with gender returns only the matching entry."""
+        repo = WordEntryRepository(db_session)
+
+        masc_entry = WordEntry(
+            owner_id=sample_user.id,
+            lemma="σύζυγος",
+            part_of_speech=PartOfSpeech.NOUN,
+            gender="masculine",
+            translation_en="husband",
+            is_active=True,
+        )
+        fem_entry = WordEntry(
+            owner_id=sample_user.id,
+            lemma="σύζυγος",
+            part_of_speech=PartOfSpeech.NOUN,
+            gender="feminine",
+            translation_en="wife",
+            is_active=True,
+        )
+        db_session.add_all([masc_entry, fem_entry])
+        await db_session.flush()
+
+        result_masc = await repo.get_by_owner_lemma_pos_gender(
+            sample_user.id, "σύζυγος", PartOfSpeech.NOUN, gender="masculine"
+        )
+        result_fem = await repo.get_by_owner_lemma_pos_gender(
+            sample_user.id, "σύζυγος", PartOfSpeech.NOUN, gender="feminine"
+        )
+
+        assert result_masc is not None
+        assert result_masc.translation_en == "husband"
+        assert result_fem is not None
+        assert result_fem.translation_en == "wife"
+
+    @pytest.mark.asyncio
+    async def test_audio_key_merge_with_gender_differentiation(self, db_session: AsyncSession):
+        """Audio keys are correctly preserved per (lemma, pos, gender) — not cross-contaminated."""
+        repo = WordEntryRepository(db_session)
+
+        masc_entry = WordEntry(
+            owner_id=None,
+            lemma="σύζυγος",
+            part_of_speech=PartOfSpeech.NOUN,
+            gender="masculine",
+            translation_en="husband",
+            examples=[{"id": "ex-masc", "greek": "ο σύζυγος", "audio_key": "audio/masc.mp3"}],
+        )
+        db_session.add(masc_entry)
+        await db_session.commit()
+
+        entries_data = [
+            {
+                "lemma": "σύζυγος",
+                "part_of_speech": PartOfSpeech.NOUN,
+                "gender": "masculine",
+                "translation_en": "husband",
+                "examples": [{"id": "ex-masc", "greek": "ο σύζυγος"}],
+            },
+            {
+                "lemma": "σύζυγος",
+                "part_of_speech": PartOfSpeech.NOUN,
+                "gender": "feminine",
+                "translation_en": "wife",
+                "examples": [{"id": "ex-masc", "greek": "η σύζυγος"}],
+            },
+        ]
+
+        entries, _, _ = await repo.bulk_upsert(None, entries_data)
+        await db_session.commit()
+
+        assert len(entries) == 2
+        masc_result = next(e for e in entries if e.gender == "masculine")
+        fem_result = next(e for e in entries if e.gender == "feminine")
+
+        assert masc_result.examples[0]["audio_key"] == "audio/masc.mp3"
+        assert fem_result.examples[0].get("audio_key") is None
 
 
 class TestWordEntryRepositoryJunction:
