@@ -35,6 +35,11 @@ Situation Description Factories:
     - DescriptionExerciseFactory: Exercises linked to descriptions
     - DescriptionExerciseItemFactory: Individual exercise items
 
+Situation Picture Factories:
+    - SituationPictureFactory: Pictures associated with situations
+    - PictureExerciseFactory: Exercises linked to pictures
+    - PictureExerciseItemFactory: Individual exercise items for pictures
+
 Custom Providers:
     - GreekProvider: Faker provider for Greek vocabulary
 
@@ -120,6 +125,13 @@ from tests.factories.situation_description import (
     SituationDescriptionFactory,
 )
 
+# Situation Picture factories
+from tests.factories.situation_picture import (
+    PictureExerciseFactory,
+    PictureExerciseItemFactory,
+    SituationPictureFactory,
+)
+
 # XP & Achievements factories
 from tests.factories.xp_achievements import (
     XP_PER_LEVEL,
@@ -159,6 +171,10 @@ __all__ = [
     "SituationDescriptionFactory",
     "DescriptionExerciseFactory",
     "DescriptionExerciseItemFactory",
+    # Situation Pictures
+    "PictureExerciseFactory",
+    "PictureExerciseItemFactory",
+    "SituationPictureFactory",
     # News
     "NewsItemFactory",
     # Progress
