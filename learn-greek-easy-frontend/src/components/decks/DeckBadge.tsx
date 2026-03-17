@@ -44,24 +44,24 @@ const CATEGORY_CONFIG: Record<
 > = {
   vocabulary: {
     labelKey: 'card.categories.vocabulary',
-    dot: 'bg-cyan-500',
-    bg: 'bg-cyan-500/10',
-    border: 'border-cyan-500/20',
-    text: 'text-cyan-700 dark:text-cyan-300',
+    dot: 'bg-white',
+    bg: 'bg-cyan-600',
+    border: 'border-cyan-700',
+    text: 'text-white',
   },
   grammar: {
     labelKey: 'card.categories.grammar',
-    dot: 'bg-orange-500',
-    bg: 'bg-orange-500/10',
-    border: 'border-orange-500/20',
-    text: 'text-orange-700 dark:text-orange-300',
+    dot: 'bg-white',
+    bg: 'bg-orange-500',
+    border: 'border-orange-600',
+    text: 'text-white',
   },
   phrases: {
     labelKey: 'card.categories.phrases',
-    dot: 'bg-teal-500',
-    bg: 'bg-teal-500/10',
-    border: 'border-teal-500/20',
-    text: 'text-teal-700 dark:text-teal-300',
+    dot: 'bg-white',
+    bg: 'bg-teal-600',
+    border: 'border-teal-700',
+    text: 'text-white',
   },
 };
 
