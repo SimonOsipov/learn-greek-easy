@@ -22,6 +22,8 @@ from src.db.models import (  # noqa: F401
     BillingCycle,
     Card,
     CardRecord,
+    CardRecordReview,
+    CardRecordStatistics,
     CardStatistics,
     CardStatus,
     CardType,
