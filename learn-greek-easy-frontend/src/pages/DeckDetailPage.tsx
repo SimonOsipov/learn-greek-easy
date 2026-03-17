@@ -213,141 +213,148 @@ const DeckHeaderSection: React.FC<DeckHeaderSectionProps> = ({
   };
 
   return (
-    <Card>
-      <CardHeader>
-        {/* Title and Badges Row */}
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="min-w-0 flex-1">
-            {/* Localized Title */}
-            <h1 className="mb-1 text-2xl font-semibold text-foreground md:text-3xl">
-              {localizedName}
-            </h1>
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          {/* Title and Badges Row */}
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              {/* Localized Title */}
+              <h1 className="mb-1 text-2xl font-semibold text-foreground md:text-3xl">
+                {localizedName}
+              </h1>
+            </div>
+
+            {/* Level Badge, Premium Icon, and Actions */}
+            <div className="flex flex-shrink-0 items-center gap-2">
+              {isPremiumLocked && (
+                <Crown className="h-5 w-5 text-amber-500" aria-label="Premium content" />
+              )}
+              <DeckBadge type="level" level={deck.level} />
+
+              {/* Progress actions dropdown (only show if deck has progress) */}
+              {deck.progress && deck.progress.status !== 'not-started' && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={handleResetProgress}
+                      disabled={isResetting}
+                      className="text-red-600"
+                    >
+                      <RotateCcw className="mr-2 h-4 w-4" />
+                      {isResetting ? t('detail.resetting') : t('detail.resetProgress')}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
           </div>
 
-          {/* Level Badge, Premium Icon, and Actions */}
-          <div className="flex flex-shrink-0 items-center gap-2">
-            {isPremiumLocked && (
-              <Crown className="h-5 w-5 text-amber-500" aria-label="Premium content" />
-            )}
-            <DeckBadge type="level" level={deck.level} />
-
-            {/* Progress actions dropdown (only show if deck has progress) */}
-            {deck.progress && deck.progress.status !== 'not-started' && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem
-                    onClick={handleResetProgress}
-                    disabled={isResetting}
-                    className="text-red-600"
-                  >
-                    <RotateCcw className="mr-2 h-4 w-4" />
-                    {isResetting ? t('detail.resetting') : t('detail.resetProgress')}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-          </div>
-        </div>
-
-        {/* Premium Badge */}
-        {deck.isPremium && (
-          <div className="mt-3">
-            <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-sm font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
-              {t('detail.premium')}
-            </span>
-          </div>
-        )}
-
-        {/* Category and Author Info */}
-        <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-          <span className="capitalize">{deck.category}</span>
-          <span>•</span>
-          <span>{t('detail.createdBy', { author: deck.createdBy })}</span>
-          <span>•</span>
-          <span>{t('detail.updated', { date: formatDate(deck.updatedAt) })}</span>
-        </div>
-      </CardHeader>
-
-      <CardContent>
-        {/* Description */}
-        <p className="leading-relaxed text-foreground">
-          {localizedDescription || deck.description}
-        </p>
-
-        {/* Progress Bar (if in progress or completed) */}
-        {deck.progress && deck.progress.status !== 'not-started' && (
-          <div className="mt-6">
-            <div className="mb-2 flex items-center justify-between">
-              <span className="text-sm font-medium text-foreground">
-                {t('detail.yourProgress')}
-              </span>
-              <span className="text-sm text-muted-foreground">
-                {Math.round(
-                  ((deck.progress.cardsLearning + deck.progress.cardsMastered) /
-                    deck.progress.cardsTotal) *
-                    100
-                )}
-                % {t('detail.complete')}
+          {/* Premium Badge */}
+          {deck.isPremium && (
+            <div className="mt-3">
+              <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-sm font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                {t('detail.premium')}
               </span>
             </div>
-            <DeckProgressBar progress={deck.progress} showLegend={true} size="large" />
-          </div>
-        )}
-
-        {/* Action Button */}
-        <div className="mt-6">
-          {isPremiumLocked ? (
-            <Button
-              data-testid="start-review-button"
-              size="lg"
-              onClick={onUpgrade}
-              className="w-full bg-gradient-to-br from-amber-500 to-orange-600 text-white hover:from-amber-600 hover:to-orange-700"
-            >
-              <Lock className="mr-2 h-5 w-5" />
-              {t('detail.upgradeToPremium')}
-            </Button>
-          ) : deckStatus === 'not-started' ? (
-            <Button
-              data-testid="start-review-button"
-              variant="hero"
-              size="lg"
-              onClick={onStartLearning}
-              className="w-full"
-            >
-              <BookOpen className="mr-2 h-5 w-5" />
-              {t('detail.startReview')}
-            </Button>
-          ) : deckStatus === 'completed' ? (
-            <Button
-              data-testid="start-review-button"
-              variant="hero"
-              size="lg"
-              onClick={onContinue}
-              className="w-full"
-            >
-              <CheckCircle className="mr-2 h-5 w-5" />
-              {t('detail.reviewDeck')}
-            </Button>
-          ) : (
-            <Button
-              data-testid="start-review-button"
-              variant="hero"
-              size="lg"
-              onClick={onContinue}
-              className="w-full"
-            >
-              <TrendingUp className="mr-2 h-5 w-5" />
-              {t('detail.continueReview')}
-            </Button>
           )}
-        </div>
-      </CardContent>
-    </Card>
+
+          {/* Category and Author Info */}
+          <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+            <span className="capitalize">{deck.category}</span>
+            <span>•</span>
+            <span>{t('detail.createdBy', { author: deck.createdBy })}</span>
+            <span>•</span>
+            <span>{t('detail.updated', { date: formatDate(deck.updatedAt) })}</span>
+          </div>
+        </CardHeader>
+
+        <CardContent>
+          {/* Description */}
+          <p className="leading-relaxed text-foreground">
+            {localizedDescription || deck.description}
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Progress & Action — below the header card */}
+      <Card>
+        <CardContent className="pt-6">
+          {/* Progress Bar (if in progress or completed) */}
+          {deck.progress && deck.progress.status !== 'not-started' && (
+            <div>
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-sm font-medium text-foreground">
+                  {t('detail.yourProgress')}
+                </span>
+                <span className="text-sm text-muted-foreground">
+                  {Math.round(
+                    ((deck.progress.cardsLearning + deck.progress.cardsMastered) /
+                      deck.progress.cardsTotal) *
+                      100
+                  )}
+                  % {t('detail.complete')}
+                </span>
+              </div>
+              <DeckProgressBar progress={deck.progress} showLegend={true} size="large" />
+            </div>
+          )}
+
+          {/* Action Button */}
+          <div className={deck.progress && deck.progress.status !== 'not-started' ? 'mt-6' : ''}>
+            {isPremiumLocked ? (
+              <Button
+                data-testid="start-review-button"
+                size="lg"
+                onClick={onUpgrade}
+                className="w-full bg-gradient-to-br from-amber-500 to-orange-600 text-white hover:from-amber-600 hover:to-orange-700"
+              >
+                <Lock className="mr-2 h-5 w-5" />
+                {t('detail.upgradeToPremium')}
+              </Button>
+            ) : deckStatus === 'not-started' ? (
+              <Button
+                data-testid="start-review-button"
+                variant="hero"
+                size="lg"
+                onClick={onStartLearning}
+                className="w-full"
+              >
+                <BookOpen className="mr-2 h-5 w-5" />
+                {t('detail.startReview')}
+              </Button>
+            ) : deckStatus === 'completed' ? (
+              <Button
+                data-testid="start-review-button"
+                variant="hero"
+                size="lg"
+                onClick={onContinue}
+                className="w-full"
+              >
+                <CheckCircle className="mr-2 h-5 w-5" />
+                {t('detail.reviewDeck')}
+              </Button>
+            ) : (
+              <Button
+                data-testid="start-review-button"
+                variant="hero"
+                size="lg"
+                onClick={onContinue}
+                className="w-full"
+              >
+                <TrendingUp className="mr-2 h-5 w-5" />
+                {t('detail.continueReview')}
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

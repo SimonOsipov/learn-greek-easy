@@ -71,70 +71,81 @@ export const V2DeckHeader: React.FC<V2DeckHeaderProps> = ({ deck }) => {
   const wordCount = deck.cardCount;
 
   return (
-    <Card style={getDeckBackgroundStyle(deck.coverImageUrl)}>
-      <CardHeader>
-        {/* Title Row */}
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="min-w-0 flex-1">
-            {/* Localized Title */}
-            <h1 className="mb-1 text-2xl font-semibold text-foreground md:text-3xl">
-              {localizedName}
-            </h1>
+    <div className="space-y-4">
+      <Card style={getDeckBackgroundStyle(deck.coverImageUrl)}>
+        <CardHeader>
+          {/* Title Row */}
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              {/* Localized Title */}
+              <h1 className="mb-1 text-2xl font-semibold text-foreground md:text-3xl">
+                {localizedName}
+              </h1>
+            </div>
+
+            {/* Badges */}
+            <div className="flex flex-shrink-0 items-center gap-2">
+              {deck.category !== 'culture' && (
+                <DeckBadge type="category" category={deck.category} />
+              )}
+              <DeckBadge type="level" level={deck.level} />
+            </div>
           </div>
 
-          {/* Badges */}
-          <div className="flex flex-shrink-0 items-center gap-2">
-            {deck.category !== 'culture' && <DeckBadge type="category" category={deck.category} />}
-            <DeckBadge type="level" level={deck.level} />
+          {/* Category and metadata */}
+          <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+            <span>{t(`card.categories.${deck.category}`)}</span>
           </div>
-        </div>
+        </CardHeader>
 
-        {/* Category and metadata */}
-        <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-          <span>{t(`card.categories.${deck.category}`)}</span>
-        </div>
-      </CardHeader>
+        <CardContent>
+          {/* Description */}
+          <p className="leading-relaxed text-foreground">
+            {localizedDescription || deck.description}
+          </p>
+        </CardContent>
+      </Card>
 
-      <CardContent>
-        {/* Description */}
-        <p className="leading-relaxed text-foreground">
-          {localizedDescription || deck.description}
-        </p>
-
-        {/* Progress Bar - All New for V2 */}
-        <div className="mt-6">
-          <div className="mb-2 flex items-center justify-between">
-            <span className="text-sm font-medium text-foreground">{t('detail.yourProgress')}</span>
-            <span className="text-sm text-muted-foreground">0% {t('detail.complete')}</span>
+      {/* Progress & Action — below the cover image */}
+      <Card>
+        <CardContent className="pt-6">
+          {/* Progress Bar - All New for V2 */}
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-sm font-medium text-foreground">
+                {t('detail.yourProgress')}
+              </span>
+              <span className="text-sm text-muted-foreground">0% {t('detail.complete')}</span>
+            </div>
+            <V2ProgressBar total={wordCount} />
           </div>
-          <V2ProgressBar total={wordCount} />
-        </div>
 
-        {/* Disabled Study Button with Tooltip */}
-        <div className="mt-6">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span tabIndex={0} className="inline-block w-full">
-                  <Button
-                    data-testid="start-review-button"
-                    variant="hero"
-                    size="lg"
-                    disabled
-                    className="w-full cursor-not-allowed opacity-50"
-                  >
-                    <BookOpen className="mr-2 h-5 w-5" />
-                    {t('detail.startReview')}
-                  </Button>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{t('v2.comingSoon')}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-      </CardContent>
-    </Card>
+          {/* Disabled Study Button with Tooltip */}
+          <div className="mt-6">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span tabIndex={0} className="inline-block w-full">
+                    <Button
+                      data-testid="start-review-button"
+                      variant="hero"
+                      size="lg"
+                      disabled
+                      className="w-full cursor-not-allowed opacity-50"
+                    >
+                      <BookOpen className="mr-2 h-5 w-5" />
+                      {t('detail.startReview')}
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t('v2.comingSoon')}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 };

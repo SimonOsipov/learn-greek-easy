@@ -170,10 +170,15 @@ export function CultureDeckDetailPage() {
             {deck.description && (
               <p className="leading-relaxed text-foreground">{deck.description}</p>
             )}
+          </CardContent>
+        </Card>
 
+        {/* Progress & Action — below the cover image */}
+        <Card>
+          <CardContent className="pt-6">
             {/* Progress Bar (if has progress) */}
             {progress && progress.status !== 'not-started' && (
-              <div className="mt-6">
+              <div>
                 <div className="mb-2 flex items-center justify-between">
                   <span className="text-sm font-medium text-foreground">
                     {t('deck:detail.yourProgress')}
@@ -191,7 +196,7 @@ export function CultureDeckDetailPage() {
             )}
 
             {/* Action Button */}
-            <div className="mt-6">
+            <div className={progress && progress.status !== 'not-started' ? 'mt-6' : ''}>
               {progress && progress.status !== 'not-started' ? (
                 <Button
                   data-testid="start-practice-button"
