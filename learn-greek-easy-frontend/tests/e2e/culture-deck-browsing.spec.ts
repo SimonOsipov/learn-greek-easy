@@ -58,17 +58,16 @@ test.describe('Culture Deck Browsing', () => {
     await expect(page.getByTestId('deck-detail')).toBeVisible();
   });
 
-  test('should show deck cards with progress bar on decks page', async ({ page }) => {
+  test('should show deck cards with badges on decks page', async ({ page }) => {
     // User is already authenticated via storageState (learner user)
     await page.goto('/decks');
 
     // Wait for decks to load (with retry for rate limiting)
     await expect(page.locator('[data-testid="deck-card"]').first()).toBeVisible({ timeout: 30000 });
 
-    // The progress bar is rendered inside deck cards (DeckProgressBar component)
-    // It has data-testid="deck-progress"
-    // Note: We check on all decks (not just culture filtered) to verify progress bar exists
-    const progressBar = page.locator('[data-testid="deck-progress"]');
-    await expect(progressBar.first()).toBeVisible({ timeout: 10000 });
+    // Deck cards render a badge row (data-testid="deck-card-badges") at the bottom.
+    // The progress bar was removed in PR #401; badges now appear in the bottom-left corner.
+    const badgeRow = page.locator('[data-testid="deck-card-badges"]');
+    await expect(badgeRow.first()).toBeVisible({ timeout: 10000 });
   });
 });
