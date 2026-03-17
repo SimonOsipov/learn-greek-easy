@@ -85,12 +85,14 @@ def upgrade() -> None:
             sa.DateTime(timezone=True),
             server_default=sa.text("now()"),
             nullable=False,
+            comment="Timestamp when record was created",
         ),
         sa.Column(
             "updated_at",
             sa.DateTime(timezone=True),
             server_default=sa.text("now()"),
             nullable=False,
+            comment="Timestamp when record was last updated",
         ),
         sa.ForeignKeyConstraint(
             ["situation_id"],
@@ -104,12 +106,6 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("situation_id", name="uq_situation_descriptions_situation_id"),
-    )
-    op.create_index(
-        op.f("ix_situation_descriptions_situation_id"),
-        "situation_descriptions",
-        ["situation_id"],
-        unique=False,
     )
     op.create_index(
         op.f("ix_situation_descriptions_created_by"),
@@ -169,12 +165,14 @@ def upgrade() -> None:
             sa.DateTime(timezone=True),
             server_default=sa.text("now()"),
             nullable=False,
+            comment="Timestamp when record was created",
         ),
         sa.Column(
             "updated_at",
             sa.DateTime(timezone=True),
             server_default=sa.text("now()"),
             nullable=False,
+            comment="Timestamp when record was last updated",
         ),
         sa.ForeignKeyConstraint(
             ["description_id"],
@@ -186,7 +184,7 @@ def upgrade() -> None:
             "description_id",
             "exercise_type",
             "audio_level",
-            name="uq_description_exercise_type_level",
+            name="uq_desc_exercise_type_level",
         ),
     )
     op.create_index(
@@ -227,7 +225,7 @@ def upgrade() -> None:
         sa.UniqueConstraint(
             "description_exercise_id",
             "item_index",
-            name="uq_description_exercise_item_index",
+            name="uq_desc_exercise_item_index",
         ),
         sa.CheckConstraint(
             "item_index >= 0",
@@ -259,10 +257,6 @@ def downgrade() -> None:
 
     op.drop_index(
         op.f("ix_situation_descriptions_created_by"),
-        table_name="situation_descriptions",
-    )
-    op.drop_index(
-        op.f("ix_situation_descriptions_situation_id"),
         table_name="situation_descriptions",
     )
     op.drop_table("situation_descriptions")

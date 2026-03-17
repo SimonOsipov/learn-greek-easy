@@ -2873,7 +2873,7 @@ class SituationDescription(Base, TimestampMixin):
         server_default=text("'draft'"),
     )
     created_by: Mapped[UUID | None] = mapped_column(
-        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
     )
 
     # Relationships
