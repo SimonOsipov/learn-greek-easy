@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID
 
 from sqlalchemy import select
@@ -263,7 +263,7 @@ class V2SM2Service:
             card_record_id=card_record.id,
             quality=quality,
             time_taken=time_taken,
-            reviewed_at=datetime.utcnow(),
+            reviewed_at=datetime.now(timezone.utc),
         )
         self.db.add(review)
         await self.db.flush()
@@ -275,7 +275,7 @@ class V2SM2Service:
                 created_at = stats.created_at
                 if created_at.tzinfo is not None:
                     created_at = created_at.replace(tzinfo=None)
-                days_to_master = (datetime.utcnow() - created_at).days
+                days_to_master = (datetime.now(timezone.utc).replace(tzinfo=None) - created_at).days
             capture_event(
                 distinct_id=str(user_id),
                 event="card_mastered_v2",

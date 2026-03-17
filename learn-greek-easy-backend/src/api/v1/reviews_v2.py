@@ -168,13 +168,15 @@ async def submit_v2_review(
         )
 
     # Step 10: Signal dashboard SSE
-    loop = asyncio.get_event_loop()
-    if loop.is_running():
+    try:
+        loop = asyncio.get_running_loop()
         loop.create_task(
             dashboard_event_bus.signal(
                 f"dashboard:{current_user.id}",
                 {"reason": "review_completed"},
             )
         )
+    except RuntimeError:
+        pass
 
     return result

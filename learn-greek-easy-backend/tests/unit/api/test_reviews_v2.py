@@ -122,7 +122,6 @@ class TestSubmitV2Review:
             mock_service_cls.return_value.process_review = AsyncMock(
                 return_value=_make_v2_review_result()
             )
-            mock_goal.return_value = None
             mock_settings.feature_background_tasks = False
 
             response = await client.post(
