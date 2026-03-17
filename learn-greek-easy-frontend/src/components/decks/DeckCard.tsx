@@ -69,7 +69,7 @@ export const DeckCard: React.FC<DeckCardProps> = ({
   // Locked state is indicated by Lock icon and non-clickable behavior
   const cardClassName = `
     relative overflow-hidden group
-    flex flex-col min-h-[155px]
+    flex flex-col min-h-[170px]
     ${isClickable ? 'cursor-pointer transition-all duration-200 hover:shadow-lg' : ''}
     ${isPremium && !isLocked ? 'border-amber-400 hover:border-amber-500' : ''}
     ${variant === 'list' ? 'flex flex-row items-center' : ''}
