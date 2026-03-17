@@ -307,14 +307,14 @@ describe('DeckCard', () => {
   });
 
   describe('Badge Positioning', () => {
-    it('should render badges in bottom-right container', () => {
+    it('should render badges in bottom-left container', () => {
       const deck = createMockDeck({ isPremium: false, category: 'vocabulary' });
 
       renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
 
       const badgeContainer = screen.getByTestId('deck-card-badges');
       expect(badgeContainer).toBeInTheDocument();
-      expect(badgeContainer.className).toContain('justify-end');
+      expect(badgeContainer.className).not.toContain('justify-end');
     });
 
     it('should display premium and category badges side-by-side in badge container', () => {

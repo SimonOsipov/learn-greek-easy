@@ -158,9 +158,9 @@ export const DeckCard: React.FC<DeckCardProps> = ({
         </div>
       </CardHeader>
 
-      {/* Badge Row - bottom-right corner */}
+      {/* Badge Row - bottom-left corner */}
       <div
-        className={`relative z-20 flex flex-wrap items-center justify-end gap-2 px-6 pb-4 ${isLocked ? 'blur-sm' : ''}`}
+        className={`relative z-20 flex flex-wrap items-center gap-2 px-6 pb-4 ${isLocked ? 'blur-sm' : ''}`}
         data-testid="deck-card-badges"
       >
         {isCultureDeck && <CultureBadge category={cultureCategory} showLabel={true} />}
