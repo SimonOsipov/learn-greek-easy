@@ -1021,6 +1021,25 @@ export const adminAPI = {
     return postFormData<DeckAdminResponse>(`/api/v1/admin/decks/${deckId}/cover-image`, formData);
   },
 
+  /**
+   * Upload a cover image for a culture deck
+   *
+   * Sends the image as multipart/form-data. Returns the updated CultureDeckAdminResponse
+   * with cover_image_url populated.
+   * Requires superuser authentication.
+   */
+  uploadCultureDeckCoverImage: async (
+    deckId: string,
+    file: File
+  ): Promise<CultureDeckAdminResponse> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return postFormData<CultureDeckAdminResponse>(
+      `/api/v1/culture/decks/${deckId}/cover-image`,
+      formData
+    );
+  },
+
   // ============================================
   // Feedback Management
   // ============================================

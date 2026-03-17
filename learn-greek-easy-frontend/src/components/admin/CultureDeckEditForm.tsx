@@ -1,6 +1,6 @@
 // src/components/admin/CultureDeckEditForm.tsx
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DialogFooter } from '@/components/ui/dialog';
 import {
   Form,
@@ -45,6 +46,9 @@ const LANGUAGE_LABELS: Record<DeckLanguage, string> = {
   ru: 'Russian',
 };
 
+const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const MAX_IMAGE_SIZE_BYTES = 3 * 1024 * 1024;
+
 /**
  * Culture deck categories
  */
@@ -75,11 +79,22 @@ const cultureDeckSchema = z.object({
 
 export type CultureDeckFormData = z.infer<typeof cultureDeckSchema>;
 
+interface BilingualCultureDeckItem extends UnifiedDeckItem {
+  name_el?: string;
+  name_en?: string;
+  name_ru?: string;
+  description_el?: string;
+  description_en?: string;
+  description_ru?: string;
+  cover_image_url?: string | null;
+}
+
 interface CultureDeckEditFormProps {
-  deck: UnifiedDeckItem;
+  deck: BilingualCultureDeckItem;
   onSave: (data: CultureDeckFormData) => void;
   onCancel: () => void;
   isLoading?: boolean;
+  onUploadCoverImage?: (file: File) => Promise<void>;
 }
 
 /**
@@ -97,10 +112,63 @@ export const CultureDeckEditForm: React.FC<CultureDeckEditFormProps> = ({
   onSave,
   onCancel,
   isLoading = false,
+  onUploadCoverImage,
 }) => {
   const { t } = useTranslation('admin');
   const [showDeactivationWarning, setShowDeactivationWarning] = useState(false);
   const [activeTab, setActiveTab] = useState<DeckLanguage>('en');
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    return () => {
+      if (imagePreview && imagePreview.startsWith('blob:')) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [imagePreview]);
+
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Reset input so same file can be selected again
+    e.target.value = '';
+
+    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+      setImageError(t('deckEdit.imageFormatError'));
+      return;
+    }
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      setImageError(t('deckEdit.imageSizeError'));
+      return;
+    }
+
+    // Revoke previous blob URL if any
+    if (imagePreview && imagePreview.startsWith('blob:')) {
+      URL.revokeObjectURL(imagePreview);
+    }
+
+    const previewUrl = URL.createObjectURL(file);
+    setImagePreview(previewUrl);
+    setImageError(null);
+    setIsUploading(true);
+
+    try {
+      await onUploadCoverImage?.(file);
+    } catch {
+      // Revert preview on error
+      URL.revokeObjectURL(previewUrl);
+      setImagePreview(deck.cover_image_url ?? null);
+      setImageError(t('deckEdit.imageUploadError'));
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const currentImageUrl = imagePreview ?? deck.cover_image_url ?? null;
 
   // Get the deck name for display in deactivation dialog (prefer English)
   const deckNameDisplay =
@@ -306,6 +374,54 @@ export const CultureDeckEditForm: React.FC<CultureDeckEditFormProps> = ({
             </FormItem>
           )}
         />
+
+        {/* Background Image */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">{t('deckEdit.backgroundImage')}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              {t('deckEdit.backgroundImageDescription')}
+            </p>
+            {currentImageUrl && (
+              <img
+                src={currentImageUrl}
+                alt=""
+                className="h-24 w-auto rounded-md object-cover"
+                data-testid="deck-edit-cover-preview"
+              />
+            )}
+            {isUploading ? (
+              <p className="text-sm text-muted-foreground" data-testid="deck-edit-image-uploading">
+                {t('deckEdit.imageUploading')}
+              </p>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                data-testid="deck-edit-upload-image"
+              >
+                {currentImageUrl ? t('deckEdit.replaceImage') : t('deckEdit.uploadImage')}
+              </Button>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept={ACCEPTED_IMAGE_TYPES.join(',')}
+              onChange={handleImageChange}
+              className="hidden"
+              data-testid="deck-edit-cover-input"
+            />
+            {imageError && (
+              <p className="text-sm text-destructive" data-testid="deck-edit-image-error">
+                {imageError}
+              </p>
+            )}
+          </CardContent>
+        </Card>
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={onCancel} data-testid="deck-edit-cancel">

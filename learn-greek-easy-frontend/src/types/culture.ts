@@ -41,6 +41,7 @@ export interface CultureDeckResponse {
   category: CultureCategory;
   question_count: number;
   progress: CultureDeckProgress | null;
+  cover_image_url?: string | null;
 }
 
 export interface CultureDeckProgress {

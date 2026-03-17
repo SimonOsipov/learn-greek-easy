@@ -96,6 +96,7 @@ export const DeckEditModal: React.FC<DeckEditModalProps> = ({
             onSave={handleSave}
             onCancel={handleCancel}
             isLoading={isLoading}
+            onUploadCoverImage={onUploadCoverImage}
           />
         )}
       </DialogContent>

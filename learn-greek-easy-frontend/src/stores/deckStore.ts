@@ -165,7 +165,7 @@ const transformCultureDeckResponse = (deck: CultureDeckResponse): Deck => {
     isPremium: deck.is_premium ?? false,
     tags: [deck.category], // Use culture category as tag (history, geography, etc.)
     thumbnail: `/images/culture/${deck.category}.jpg`,
-    coverImageUrl: undefined,
+    coverImageUrl: deck.cover_image_url ?? undefined,
     createdBy: 'Learn Greek Easy',
     createdAt: new Date(),
     updatedAt: new Date(),

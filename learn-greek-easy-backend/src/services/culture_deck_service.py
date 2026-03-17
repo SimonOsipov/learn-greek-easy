@@ -35,6 +35,7 @@ from src.schemas.culture import (
     CultureDeckResponse,
     CultureDeckUpdate,
 )
+from src.services.s3_service import get_s3_service
 
 if TYPE_CHECKING:
     from src.db.models import CultureDeck
@@ -151,6 +152,11 @@ class CultureDeckService:
         if user_id:
             progress = await self._get_deck_progress(user_id, deck.id)
 
+        cover_image_url = None
+        if deck.cover_image_s3_key:
+            s3 = get_s3_service()
+            cover_image_url = s3.generate_presigned_url(deck.cover_image_s3_key)
+
         return CultureDeckResponse(
             id=deck.id,
             name=self._get_localized_text(deck.name_en, deck.name_el, deck.name_ru, locale),
@@ -165,6 +171,7 @@ class CultureDeckService:
             question_count=question_count,
             is_premium=deck.is_premium,
             progress=progress,
+            cover_image_url=cover_image_url,
         )
 
     def _build_localized_detail_response(
@@ -423,6 +430,7 @@ class CultureDeckService:
             order_index=deck.order_index,
             created_at=deck.created_at,
             updated_at=deck.updated_at,
+            cover_image_url=None,
         )
 
     async def update_deck(
@@ -477,6 +485,11 @@ class CultureDeckService:
             },
         )
 
+        cover_image_url = None
+        if updated_deck.cover_image_s3_key:
+            s3 = get_s3_service()
+            cover_image_url = s3.generate_presigned_url(updated_deck.cover_image_s3_key)
+
         return CultureDeckAdminResponse(
             id=updated_deck.id,
             name_en=updated_deck.name_en,
@@ -492,6 +505,7 @@ class CultureDeckService:
             order_index=updated_deck.order_index,
             created_at=updated_deck.created_at,
             updated_at=updated_deck.updated_at,
+            cover_image_url=cover_image_url,
         )
 
     async def soft_delete_deck(self, deck_id: UUID) -> None:

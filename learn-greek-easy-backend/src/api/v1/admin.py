@@ -489,6 +489,7 @@ async def list_decks(
             CultureDeck.description_el,
             CultureDeck.description_en,
             CultureDeck.description_ru,
+            CultureDeck.cover_image_s3_key,
         ).outerjoin(
             culture_question_count_subquery,
             CultureDeck.id == culture_question_count_subquery.c.deck_id,
@@ -510,7 +511,13 @@ async def list_decks(
         culture_result = await db.execute(culture_query.order_by(CultureDeck.created_at.desc()))
         culture_rows = culture_result.all()
 
+        culture_s3 = get_s3_service()
         for row in culture_rows:
+            culture_cover_url = (
+                culture_s3.generate_presigned_url(row.cover_image_s3_key)
+                if row.cover_image_s3_key
+                else None
+            )
             unified_decks.append(
                 UnifiedDeckItem(
                     id=row.id,
@@ -531,7 +538,7 @@ async def list_decks(
                     description_el=row.description_el,
                     description_en=row.description_en,
                     description_ru=row.description_ru,
-                    cover_image_url=None,
+                    cover_image_url=culture_cover_url,
                 )
             )
 

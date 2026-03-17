@@ -1862,6 +1862,13 @@ class CultureDeck(Base, TimestampMixin):
         comment="Display order within category",
     )
 
+    # Cover image
+    cover_image_s3_key: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+        comment="S3 key for deck cover image",
+    )
+
     # Relationships
     questions: Mapped[List["CultureQuestion"]] = relationship(
         back_populates="deck",
