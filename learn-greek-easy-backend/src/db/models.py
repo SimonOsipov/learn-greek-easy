@@ -11,7 +11,7 @@ This module contains all SQLAlchemy models for the application:
 - Culture Exam (CultureDeck, CultureQuestion, CultureQuestionStats, CultureAnswerHistory)
 - Announcement Campaigns (AnnouncementCampaign)
 - Changelog (ChangelogEntry)
-- Situations (Situation, SituationDescription, DescriptionExercise, DescriptionExerciseItem)
+- Situations (Situation, SituationDescription, DescriptionExercise, DescriptionExerciseItem, SituationPicture, PictureExercise, PictureExerciseItem)
 - Listening Dialogs (ListeningDialog, DialogSpeaker, DialogLine, DialogExercise, ExerciseItem, DialogExerciseAttempt, DialogProgress)
 
 All models use:
@@ -288,6 +288,13 @@ class DescriptionSourceType(str, enum.Enum):
 
     ORIGINAL = "original"
     NEWS = "news"
+
+
+class PictureStatus(str, enum.Enum):
+    """Status of a situation picture."""
+
+    DRAFT = "draft"
+    GENERATED = "generated"
 
 
 class ExerciseType(str, enum.Enum):
@@ -2785,7 +2792,7 @@ class Situation(Base, TimestampMixin):
     """Parent entity for listening content.
 
     Groups one or more dialogs under a shared scenario context.
-    Future: description (SIT-02), picture (SIT-03).
+    Owns a description and picture as children.
     Status is auto-computed from children state in later stories;
     SIT-01 just creates the enum with default 'draft'.
     """
@@ -2817,6 +2824,13 @@ class Situation(Base, TimestampMixin):
     )
     # One-to-one with SituationDescription (uselist=False).
     description: Mapped["SituationDescription | None"] = relationship(
+        back_populates="situation",
+        lazy="raise",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
+    # One-to-one with SituationPicture (uselist=False).
+    picture: Mapped["SituationPicture | None"] = relationship(
         back_populates="situation",
         lazy="raise",
         uselist=False,
@@ -2972,6 +2986,111 @@ class DescriptionExerciseItem(Base):
 
     def __repr__(self) -> str:
         return f"<DescriptionExerciseItem id={self.id} index={self.item_index}>"
+
+
+class SituationPicture(Base, TimestampMixin):
+    """Picture associated with a situation — image prompt + generated image."""
+
+    __tablename__ = "situation_pictures"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.uuid_generate_v4())
+    situation_id: Mapped[UUID] = mapped_column(
+        ForeignKey("situations.id", ondelete="CASCADE"), unique=True, nullable=False
+    )
+    image_prompt: Mapped[str] = mapped_column(Text, nullable=False)
+    image_s3_key: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[PictureStatus] = mapped_column(
+        SAEnum(
+            PictureStatus,
+            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+            name="picturestatus",
+        ),
+        nullable=False,
+        server_default=text("'draft'"),
+    )
+    created_by: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+
+    # Relationships
+    situation: Mapped["Situation"] = relationship(back_populates="picture", lazy="raise")
+    exercises: Mapped[List["PictureExercise"]] = relationship(
+        back_populates="picture", lazy="raise", cascade="all, delete-orphan"
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<SituationPicture id={self.id} situation_id={self.situation_id} status={self.status}>"
+        )
+
+
+class PictureExercise(Base, TimestampMixin):
+    """Exercise associated with a situation picture."""
+
+    __tablename__ = "picture_exercises"
+    __table_args__ = (UniqueConstraint("picture_id", "exercise_type", name="uq_pic_exercise_type"),)
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.uuid_generate_v4())
+    picture_id: Mapped[UUID] = mapped_column(
+        ForeignKey("situation_pictures.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    exercise_type: Mapped[ExerciseType] = mapped_column(
+        SAEnum(
+            ExerciseType,
+            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+            name="exercisetype",
+            create_type=False,
+        ),
+        nullable=False,
+    )
+    status: Mapped[ExerciseStatus] = mapped_column(
+        SAEnum(
+            ExerciseStatus,
+            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+            name="exercisestatus",
+            create_type=False,
+        ),
+        nullable=False,
+        server_default=text("'draft'"),
+    )
+
+    # Relationships
+    picture: Mapped["SituationPicture"] = relationship(back_populates="exercises", lazy="raise")
+    items: Mapped[List["PictureExerciseItem"]] = relationship(
+        back_populates="exercise",
+        lazy="raise",
+        cascade="all, delete-orphan",
+        order_by="PictureExerciseItem.item_index",
+    )
+
+    def __repr__(self) -> str:
+        return f"<PictureExercise id={self.id} type={self.exercise_type}>"
+
+
+class PictureExerciseItem(Base):
+    """Individual item within a picture exercise. NO TimestampMixin — only created_at."""
+
+    __tablename__ = "picture_exercise_items"
+    __table_args__ = (
+        UniqueConstraint("picture_exercise_id", "item_index", name="uq_pic_exercise_item_index"),
+        CheckConstraint("item_index >= 0", name="ck_pic_exercise_item_index_non_negative"),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.uuid_generate_v4())
+    picture_exercise_id: Mapped[UUID] = mapped_column(
+        ForeignKey("picture_exercises.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    item_index: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    payload: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    # Relationships
+    exercise: Mapped["PictureExercise"] = relationship(back_populates="items", lazy="raise")
+
+    def __repr__(self) -> str:
+        return f"<PictureExerciseItem id={self.id} index={self.item_index}>"
 
 
 class ListeningDialog(Base, TimestampMixin):
