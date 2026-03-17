@@ -37,6 +37,7 @@ from src.api.v1.notifications import router as notification_router
 from src.api.v1.progress import router as progress_router
 from src.api.v1.reviews import router as review_router
 from src.api.v1.study import router as study_router
+from src.api.v1.study_v2 import router as study_v2_router
 from src.api.v1.users import router as users_router
 from src.api.v1.webhooks import router as webhooks_router
 from src.api.v1.word_entries import router as word_entries_router
@@ -93,6 +94,15 @@ v1_router.include_router(
     study_router,
     prefix="/study",
     tags=["Study"],
+)
+
+# =============================================================================
+# Study V2 Routes
+# =============================================================================
+v1_router.include_router(
+    study_v2_router,
+    prefix="/study",
+    tags=["Study V2"],
 )
 
 # =============================================================================
