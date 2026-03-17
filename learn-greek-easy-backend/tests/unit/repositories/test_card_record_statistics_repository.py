@@ -282,47 +282,6 @@ class TestCountByStatus:
         assert counts["due"] == 1
 
 
-class TestBulkCreateStatistics:
-    @pytest.mark.asyncio
-    async def test_bulk_create_statistics(
-        self,
-        db_session: AsyncSession,
-        test_user: User,
-        card_record: CardRecord,
-        second_card_record: CardRecord,
-    ) -> None:
-        repo = CardRecordStatisticsRepository(db_session)
-        created = await repo.bulk_create_statistics(
-            test_user.id, [card_record.id, second_card_record.id]
-        )
-
-        assert len(created) == 2
-        for stats in created:
-            assert stats.easiness_factor == 2.5
-            assert stats.interval == 0
-            assert stats.repetitions == 0
-            assert stats.status == CardStatus.NEW
-            assert stats.next_review_date == date.today()
-
-    @pytest.mark.asyncio
-    async def test_bulk_create_statistics_skips_existing(
-        self,
-        db_session: AsyncSession,
-        test_user: User,
-        card_record: CardRecord,
-        second_card_record: CardRecord,
-    ) -> None:
-        repo = CardRecordStatisticsRepository(db_session)
-        await repo.get_or_create(test_user.id, card_record.id)
-
-        created = await repo.bulk_create_statistics(
-            test_user.id, [card_record.id, second_card_record.id]
-        )
-
-        assert len(created) == 1
-        assert created[0].card_record_id == second_card_record.id
-
-
 class TestDeleteAllByUserId:
     @pytest.mark.asyncio
     async def test_delete_all_by_user_id(
@@ -333,7 +292,8 @@ class TestDeleteAllByUserId:
         second_card_record: CardRecord,
     ) -> None:
         repo = CardRecordStatisticsRepository(db_session)
-        await repo.bulk_create_statistics(test_user.id, [card_record.id, second_card_record.id])
+        await repo.get_or_create(test_user.id, card_record.id)
+        await repo.get_or_create(test_user.id, second_card_record.id)
 
         deleted = await repo.delete_all_by_user_id(test_user.id)
 
