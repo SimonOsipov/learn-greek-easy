@@ -3,7 +3,7 @@
 This module contains all SQLAlchemy models for the application:
 - User management (User, UserSettings)
 - Content (Deck, Card)
-- Progress tracking (UserDeckProgress, CardStatistics, Review)
+- Progress tracking (UserDeckProgress, CardStatistics, Review, CardRecordStatistics, CardRecordReview)
 - Feedback (Feedback, FeedbackVote)
 - Card Error Reports (CardErrorReport)
 - XP and Achievements (UserXP, XPTransaction, Achievement, UserAchievement)
@@ -492,6 +492,16 @@ class User(Base, TimestampMixin):
         cascade="all, delete-orphan",
     )
     mock_exam_sessions: Mapped[List["MockExamSession"]] = relationship(
+        lazy="raise",
+        cascade="all, delete-orphan",
+    )
+    card_record_statistics: Mapped[List["CardRecordStatistics"]] = relationship(
+        back_populates="user",
+        lazy="raise",
+        cascade="all, delete-orphan",
+    )
+    card_record_reviews: Mapped[List["CardRecordReview"]] = relationship(
+        back_populates="user",
         lazy="raise",
         cascade="all, delete-orphan",
     )
@@ -1275,6 +1285,141 @@ class Review(Base, TimestampMixin):
         return (
             f"<Review(id={self.id}, user_id={self.user_id}, "
             f"card_id={self.card_id}, quality={self.quality})>"
+        )
+
+
+class CardRecordStatistics(Base, TimestampMixin):
+    """SM-2 spaced repetition data for user-card_record pair (V2 card system)."""
+
+    __tablename__ = "card_record_statistics"
+    __table_args__ = (
+        UniqueConstraint("user_id", "card_record_id", name="uq_user_card_record"),
+        Index("ix_crs_user_next_review", "user_id", "next_review_date"),
+    )
+
+    # Primary key
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True,
+        server_default=func.uuid_generate_v4(),
+    )
+
+    # Foreign keys
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    card_record_id: Mapped[UUID] = mapped_column(
+        ForeignKey("card_records.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    # SM-2 Algorithm fields
+    easiness_factor: Mapped[float] = mapped_column(
+        Float,
+        default=2.5,
+        nullable=False,
+    )
+    interval: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+        nullable=False,
+    )
+    repetitions: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+        nullable=False,
+    )
+
+    # Scheduling
+    next_review_date: Mapped[date] = mapped_column(
+        Date,
+        nullable=False,
+        server_default=func.current_date(),
+    )
+
+    # Status
+    status: Mapped[CardStatus] = mapped_column(
+        nullable=False,
+        default=CardStatus.NEW,
+    )
+
+    # Relationships
+    user: Mapped["User"] = relationship(
+        back_populates="card_record_statistics",
+        lazy="raise",
+    )
+    card_record: Mapped["CardRecord"] = relationship(
+        lazy="raise",
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<CardRecordStatistics(user_id={self.user_id}, "
+            f"card_record_id={self.card_record_id}, "
+            f"status={self.status}, next_review={self.next_review_date})>"
+        )
+
+
+class CardRecordReview(Base, TimestampMixin):
+    """Individual review session record for V2 card system analytics."""
+
+    __tablename__ = "card_record_reviews"
+    __table_args__ = (
+        CheckConstraint(
+            "quality >= 0 AND quality <= 5",
+            name="ck_crr_quality_range",
+        ),
+        Index("ix_crr_user_reviewed_at", "user_id", "reviewed_at"),
+    )
+
+    # Primary key
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True,
+        server_default=func.uuid_generate_v4(),
+    )
+
+    # Foreign keys
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    card_record_id: Mapped[UUID] = mapped_column(
+        ForeignKey("card_records.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    # Review data
+    quality: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+    )
+    time_taken: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+    )
+
+    # Timestamp
+    reviewed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+    # Relationships
+    user: Mapped["User"] = relationship(
+        back_populates="card_record_reviews",
+        lazy="raise",
+    )
+    card_record: Mapped["CardRecord"] = relationship(
+        lazy="raise",
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<CardRecordReview(id={self.id}, user_id={self.user_id}, "
+            f"card_record_id={self.card_record_id}, quality={self.quality})>"
         )
 
 
