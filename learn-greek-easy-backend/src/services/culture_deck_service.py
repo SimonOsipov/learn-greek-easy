@@ -192,6 +192,11 @@ class CultureDeckService:
         Returns:
             CultureDeckDetailResponse with single-language content
         """
+        cover_image_url = None
+        if deck.cover_image_s3_key:
+            s3 = get_s3_service()
+            cover_image_url = s3.generate_presigned_url(deck.cover_image_s3_key)
+
         return CultureDeckDetailResponse(
             id=deck.id,
             name=self._get_localized_text(deck.name_en, deck.name_el, deck.name_ru, locale),
@@ -209,6 +214,7 @@ class CultureDeckService:
             is_active=deck.is_active,
             created_at=deck.created_at,
             updated_at=deck.updated_at,
+            cover_image_url=cover_image_url,
         )
 
     # =========================================================================
