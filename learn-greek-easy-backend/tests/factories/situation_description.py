@@ -85,7 +85,7 @@ class DescriptionExerciseItemFactory(BaseFactory):
 
 
 __all__ = [
-    "SituationDescriptionFactory",
     "DescriptionExerciseFactory",
     "DescriptionExerciseItemFactory",
+    "SituationDescriptionFactory",
 ]

@@ -229,7 +229,7 @@ def upgrade() -> None:
         ),
         sa.CheckConstraint(
             "item_index >= 0",
-            name="ck_description_exercise_items_item_index",
+            name="ck_desc_exercise_item_index_non_negative",
         ),
     )
     op.create_index(
