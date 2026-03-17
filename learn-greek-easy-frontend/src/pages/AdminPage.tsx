@@ -836,10 +836,17 @@ const AdminPage: React.FC = () => {
    */
   const handleUploadCoverImage = async (file: File) => {
     if (!selectedDeck) return;
-    const updated = await adminAPI.uploadDeckCoverImage(selectedDeck.id, file);
-    setSelectedDeck((prev) =>
-      prev ? { ...prev, cover_image_url: updated.cover_image_url } : null
-    );
+    if (selectedDeck.type === 'culture') {
+      const updated = await adminAPI.uploadCultureDeckCoverImage(selectedDeck.id, file);
+      setSelectedDeck((prev) =>
+        prev ? { ...prev, cover_image_url: updated.cover_image_url } : null
+      );
+    } else {
+      const updated = await adminAPI.uploadDeckCoverImage(selectedDeck.id, file);
+      setSelectedDeck((prev) =>
+        prev ? { ...prev, cover_image_url: updated.cover_image_url } : null
+      );
+    }
   };
 
   /**

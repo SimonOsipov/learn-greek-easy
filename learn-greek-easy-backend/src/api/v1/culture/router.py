@@ -27,7 +27,16 @@ import logging
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Response, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    HTTPException,
+    Query,
+    Response,
+    UploadFile,
+    status,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.v1.culture.mock_exam import router as mock_exam_router
@@ -36,6 +45,7 @@ from src.core.dependencies import get_current_superuser, get_current_user, get_l
 from src.core.exceptions import CultureQuestionNotFoundException, ValidationException
 from src.db.dependencies import get_db
 from src.db.models import User
+from src.repositories.culture_deck import CultureDeckRepository
 from src.schemas.culture import (
     CultureAnswerRequest,
     CultureAnswerResponseFast,
@@ -56,6 +66,12 @@ from src.schemas.culture import (
     CultureReadinessResponse,
 )
 from src.services import CultureDeckService, CultureQuestionService
+from src.services.s3_service import (
+    ALLOWED_DECK_IMAGE_CONTENT_TYPES,
+    MAX_DECK_IMAGE_SIZE_BYTES,
+    S3Service,
+    get_s3_service,
+)
 from src.tasks import (
     generate_audio_for_culture_question_task,
     is_background_tasks_enabled,
@@ -871,6 +887,73 @@ async def delete_culture_deck(
     await db.commit()
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/decks/{deck_id}/cover-image",
+    response_model=CultureDeckAdminResponse,
+    summary="Upload culture deck cover image",
+)
+async def upload_culture_deck_cover_image(
+    deck_id: UUID,
+    file: UploadFile,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> CultureDeckAdminResponse:
+    """Upload or replace the cover image for a culture deck."""
+    if file.content_type not in ALLOWED_DECK_IMAGE_CONTENT_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid content type. Allowed: image/jpeg, image/png, image/webp",
+        )
+    data = await file.read()
+    if len(data) > MAX_DECK_IMAGE_SIZE_BYTES:
+        raise HTTPException(
+            status_code=400,
+            detail="File too large. Maximum size: 3MB",
+        )
+    deck_repo = CultureDeckRepository(db)
+    deck = await deck_repo.get(deck_id)
+    if deck is None:
+        raise HTTPException(status_code=404, detail="Culture deck not found")
+
+    s3 = get_s3_service()
+    ext = S3Service.get_extension_for_content_type(file.content_type) or "jpg"
+    s3_key = f"culture-deck-images/{deck_id}.{ext}"
+
+    old_key = deck.cover_image_s3_key if deck.cover_image_s3_key != s3_key else None
+
+    uploaded = s3.upload_object(s3_key, data, file.content_type)
+    if not uploaded:
+        raise HTTPException(status_code=500, detail="Failed to upload cover image")
+
+    # Delete old key only after successful upload
+    if old_key:
+        s3.delete_object(old_key)
+
+    deck.cover_image_s3_key = s3_key
+    await db.commit()
+    await db.refresh(deck)
+
+    cover_url = s3.generate_presigned_url(s3_key)
+    question_count = await deck_repo.count_questions(deck_id)
+    return CultureDeckAdminResponse(
+        id=deck.id,
+        name_en=deck.name_en,
+        name_el=deck.name_el,
+        name_ru=deck.name_ru,
+        description_en=deck.description_en,
+        description_el=deck.description_el,
+        description_ru=deck.description_ru,
+        category=deck.category,
+        question_count=question_count,
+        is_premium=deck.is_premium,
+        is_active=deck.is_active,
+        order_index=deck.order_index,
+        created_at=deck.created_at,
+        updated_at=deck.updated_at,
+        cover_image_url=cover_url,
+    )
 
 
 @router.post(

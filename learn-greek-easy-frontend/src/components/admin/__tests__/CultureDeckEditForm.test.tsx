@@ -13,7 +13,7 @@
 import React from 'react';
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { I18nextProvider } from 'react-i18next';
 
@@ -27,6 +27,7 @@ interface BilingualMockDeck extends UnifiedDeckItem {
   name_ru?: string;
   description_en?: string;
   description_ru?: string;
+  cover_image_url?: string | null;
 }
 
 // Mock deck for testing with bilingual support
@@ -357,6 +358,112 @@ describe('CultureDeckEditForm', () => {
       expect(savedData).toHaveProperty('category');
       expect(savedData).not.toHaveProperty('level');
       expect(savedData.category).toBe('geography');
+    });
+  });
+
+  describe('Cover Image Upload', () => {
+    it('should render image upload button', () => {
+      const deck = createMockDeck();
+
+      renderWithI18n(
+        <CultureDeckEditForm deck={deck} onSave={mockOnSave} onCancel={mockOnCancel} />
+      );
+
+      expect(screen.getByTestId('deck-edit-upload-image')).toBeInTheDocument();
+    });
+
+    it('should render hidden file input', () => {
+      const deck = createMockDeck();
+
+      renderWithI18n(
+        <CultureDeckEditForm deck={deck} onSave={mockOnSave} onCancel={mockOnCancel} />
+      );
+
+      expect(screen.getByTestId('deck-edit-cover-input')).toBeInTheDocument();
+    });
+
+    it('should show error for invalid file type', async () => {
+      const deck = createMockDeck();
+      const mockUpload = vi.fn().mockResolvedValue(undefined);
+
+      renderWithI18n(
+        <CultureDeckEditForm
+          deck={deck}
+          onSave={mockOnSave}
+          onCancel={mockOnCancel}
+          onUploadCoverImage={mockUpload}
+        />
+      );
+
+      const fileInput = screen.getByTestId('deck-edit-cover-input') as HTMLInputElement;
+      const invalidFile = new File(['content'], 'image.gif', { type: 'image/gif' });
+      // Use fireEvent.change with Object.defineProperty to bypass accept attribute
+      Object.defineProperty(fileInput, 'files', { value: [invalidFile], configurable: true });
+      fireEvent.change(fileInput);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('deck-edit-image-error')).toBeInTheDocument();
+      });
+      expect(mockUpload).not.toHaveBeenCalled();
+    });
+
+    it('should show error for oversized file', async () => {
+      const deck = createMockDeck();
+      const mockUpload = vi.fn().mockResolvedValue(undefined);
+
+      renderWithI18n(
+        <CultureDeckEditForm
+          deck={deck}
+          onSave={mockOnSave}
+          onCancel={mockOnCancel}
+          onUploadCoverImage={mockUpload}
+        />
+      );
+
+      const fileInput = screen.getByTestId('deck-edit-cover-input') as HTMLInputElement;
+      const largeFile = new File([new ArrayBuffer(3 * 1024 * 1024 + 1)], 'large.jpg', {
+        type: 'image/jpeg',
+      });
+      Object.defineProperty(fileInput, 'files', { value: [largeFile], configurable: true });
+      fireEvent.change(fileInput);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('deck-edit-image-error')).toBeInTheDocument();
+      });
+      expect(mockUpload).not.toHaveBeenCalled();
+    });
+
+    it('should call onUploadCoverImage with valid JPEG file', async () => {
+      const deck = createMockDeck();
+      const mockUpload = vi.fn().mockResolvedValue(undefined);
+
+      renderWithI18n(
+        <CultureDeckEditForm
+          deck={deck}
+          onSave={mockOnSave}
+          onCancel={mockOnCancel}
+          onUploadCoverImage={mockUpload}
+        />
+      );
+
+      const fileInput = screen.getByTestId('deck-edit-cover-input') as HTMLInputElement;
+      const validFile = new File(['fake-jpeg'], 'cover.jpg', { type: 'image/jpeg' });
+      Object.defineProperty(fileInput, 'files', { value: [validFile], configurable: true });
+      fireEvent.change(fileInput);
+
+      await waitFor(() => {
+        expect(mockUpload).toHaveBeenCalledWith(validFile);
+      });
+    });
+
+    it('should show existing cover image preview when deck has cover_image_url', () => {
+      const deck = createMockDeck({ cover_image_url: 'https://example.com/cover.jpg' });
+
+      renderWithI18n(
+        <CultureDeckEditForm deck={deck} onSave={mockOnSave} onCancel={mockOnCancel} />
+      );
+
+      expect(screen.getByTestId('deck-edit-cover-preview')).toBeInTheDocument();
     });
   });
 });

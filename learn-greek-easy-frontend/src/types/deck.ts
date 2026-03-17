@@ -135,4 +135,5 @@ export interface CultureDeckAdminResponse {
   order_index: number;
   created_at: string;
   updated_at: string;
+  cover_image_url?: string | null;
 }

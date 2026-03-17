@@ -120,6 +120,7 @@ class CultureDeckResponse(BaseModel):
     progress: Optional[CultureDeckProgress] = Field(
         None, description="User progress (null for unauthenticated)"
     )
+    cover_image_url: Optional[str] = Field(None, description="Cover image presigned URL")
 
 
 class CultureDeckDetailResponse(CultureDeckResponse):
@@ -634,6 +635,7 @@ class CultureDeckAdminResponse(BaseModel):
     order_index: int = Field(..., ge=0, description="Display order within category")
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
+    cover_image_url: Optional[str] = Field(None, description="Cover image presigned URL")
 
 
 class CultureDeckAdminListResponse(BaseModel):
