@@ -11,7 +11,7 @@ This module contains all SQLAlchemy models for the application:
 - Culture Exam (CultureDeck, CultureQuestion, CultureQuestionStats, CultureAnswerHistory)
 - Announcement Campaigns (AnnouncementCampaign)
 - Changelog (ChangelogEntry)
-- Situations (Situation)
+- Situations (Situation, SituationDescription, DescriptionExercise, DescriptionExerciseItem)
 - Listening Dialogs (ListeningDialog, DialogSpeaker, DialogLine, DialogExercise, ExerciseItem, DialogExerciseAttempt, DialogProgress)
 
 All models use:
@@ -274,6 +274,20 @@ class SituationStatus(str, enum.Enum):
     DRAFT = "draft"
     PARTIAL_READY = "partial_ready"
     READY = "ready"
+
+
+class DescriptionStatus(str, enum.Enum):
+    """Status of a situation description."""
+
+    DRAFT = "draft"
+    AUDIO_READY = "audio_ready"
+
+
+class DescriptionSourceType(str, enum.Enum):
+    """Source type discriminator for situation descriptions."""
+
+    ORIGINAL = "original"
+    NEWS = "news"
 
 
 class ExerciseType(str, enum.Enum):
@@ -2801,9 +2815,163 @@ class Situation(Base, TimestampMixin):
     dialog: Mapped["ListeningDialog | None"] = relationship(
         back_populates="situation", lazy="raise", uselist=False
     )
+    # One-to-one with SituationDescription (uselist=False).
+    description: Mapped["SituationDescription | None"] = relationship(
+        back_populates="situation",
+        lazy="raise",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
 
     def __repr__(self) -> str:
         return f"<Situation id={self.id} cefr_level={self.cefr_level} status={self.status}>"
+
+
+class SituationDescription(Base, TimestampMixin):
+    """Narrative description of a situation — single-narrator text."""
+
+    __tablename__ = "situation_descriptions"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.uuid_generate_v4())
+    situation_id: Mapped[UUID] = mapped_column(
+        ForeignKey("situations.id", ondelete="CASCADE"), unique=True, nullable=False
+    )
+    text_el: Mapped[str] = mapped_column(Text, nullable=False)
+    source_type: Mapped[DescriptionSourceType] = mapped_column(
+        SAEnum(
+            DescriptionSourceType,
+            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+            name="descriptionsourcetype",
+        ),
+        nullable=False,
+        server_default=text("'original'"),
+    )
+    full_article_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    audio_s3_key: Mapped[str | None] = mapped_column(Text, nullable=True)
+    audio_a2_s3_key: Mapped[str | None] = mapped_column(Text, nullable=True)
+    audio_duration_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
+    audio_a2_duration_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
+    source_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    country: Mapped[NewsCountry | None] = mapped_column(
+        SAEnum(
+            NewsCountry,
+            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+            name="newscountry",
+            create_type=False,
+        ),
+        nullable=True,
+    )
+    news_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    original_language: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[DescriptionStatus] = mapped_column(
+        SAEnum(
+            DescriptionStatus,
+            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+            name="descriptionstatus",
+        ),
+        nullable=False,
+        server_default=text("'draft'"),
+    )
+    created_by: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+
+    # Relationships
+    situation: Mapped["Situation"] = relationship(back_populates="description", lazy="raise")
+    exercises: Mapped[List["DescriptionExercise"]] = relationship(
+        back_populates="description", lazy="raise", cascade="all, delete-orphan"
+    )
+
+    def __repr__(self) -> str:
+        return f"<SituationDescription id={self.id} situation_id={self.situation_id} status={self.status}>"
+
+
+class DescriptionExercise(Base, TimestampMixin):
+    """Exercise associated with a situation description."""
+
+    __tablename__ = "description_exercises"
+    __table_args__ = (
+        UniqueConstraint(
+            "description_id", "exercise_type", "audio_level", name="uq_desc_exercise_type_level"
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.uuid_generate_v4())
+    description_id: Mapped[UUID] = mapped_column(
+        ForeignKey("situation_descriptions.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    exercise_type: Mapped[ExerciseType] = mapped_column(
+        SAEnum(
+            ExerciseType,
+            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+            name="exercisetype",
+            create_type=False,
+        ),
+        nullable=False,
+    )
+    audio_level: Mapped[DeckLevel] = mapped_column(
+        SAEnum(
+            DeckLevel,
+            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+            name="decklevel",
+            create_type=False,
+        ),
+        nullable=False,
+    )
+    status: Mapped[ExerciseStatus] = mapped_column(
+        SAEnum(
+            ExerciseStatus,
+            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+            name="exercisestatus",
+            create_type=False,
+        ),
+        nullable=False,
+        server_default=text("'draft'"),
+    )
+
+    # Relationships
+    description: Mapped["SituationDescription"] = relationship(
+        back_populates="exercises", lazy="raise"
+    )
+    items: Mapped[List["DescriptionExerciseItem"]] = relationship(
+        back_populates="exercise",
+        lazy="raise",
+        cascade="all, delete-orphan",
+        order_by="DescriptionExerciseItem.item_index",
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<DescriptionExercise id={self.id} type={self.exercise_type} level={self.audio_level}>"
+        )
+
+
+class DescriptionExerciseItem(Base):
+    """Individual item within a description exercise. NO TimestampMixin — only created_at."""
+
+    __tablename__ = "description_exercise_items"
+    __table_args__ = (
+        UniqueConstraint(
+            "description_exercise_id", "item_index", name="uq_desc_exercise_item_index"
+        ),
+        CheckConstraint("item_index >= 0", name="ck_desc_exercise_item_index_non_negative"),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.uuid_generate_v4())
+    description_exercise_id: Mapped[UUID] = mapped_column(
+        ForeignKey("description_exercises.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    item_index: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    payload: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    # Relationships
+    exercise: Mapped["DescriptionExercise"] = relationship(back_populates="items", lazy="raise")
+
+    def __repr__(self) -> str:
+        return f"<DescriptionExerciseItem id={self.id} index={self.item_index}>"
 
 
 class ListeningDialog(Base, TimestampMixin):
