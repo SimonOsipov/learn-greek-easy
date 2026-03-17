@@ -49,6 +49,7 @@ export interface CultureDeckResponse {
   category: string; // "history", "geography", "politics", "culture", "traditions"
   question_count: number;
   is_premium?: boolean;
+  cover_image_url?: string | null;
   progress?: CultureDeckProgress;
 }
 

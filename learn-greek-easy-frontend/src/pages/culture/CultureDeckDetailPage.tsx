@@ -20,6 +20,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { getDeckBackgroundStyle } from '@/lib/deckBackground';
 import { getLocalizedDeckName } from '@/lib/deckLocale';
 import { cultureDeckAPI } from '@/services/cultureDeckAPI';
 import type { CultureDeckDetailResponse } from '@/services/cultureDeckAPI';
@@ -146,7 +147,7 @@ export function CultureDeckDetailPage() {
       {/* Main Content */}
       <div className="space-y-6">
         {/* Deck Header Section */}
-        <Card>
+        <Card style={getDeckBackgroundStyle(deck.cover_image_url ?? undefined)}>
           <CardHeader>
             {/* Title and Badges Row */}
             <div className="flex flex-wrap items-start justify-between gap-4">
