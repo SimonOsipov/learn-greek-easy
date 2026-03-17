@@ -119,8 +119,8 @@ describe('DeckCard', () => {
 
       // Check the wrapper has dot+opacity styling
       const wrapper = premiumText.parentElement!;
-      expect(wrapper.className).toContain('bg-purple-500/10');
-      expect(wrapper.className).toContain('border-purple-500/20');
+      expect(wrapper.className).toContain('bg-purple-500/20');
+      expect(wrapper.className).toContain('border-purple-500/30');
 
       // Check the dot is present
       const dot = wrapper.querySelector('.rounded-full');
@@ -150,26 +150,26 @@ describe('DeckCard', () => {
       expect(crownIcon).not.toBeInTheDocument();
     });
 
-    it('should apply blur styling to content when deck is locked', () => {
+    it('should apply blur styling to badges when deck is locked', () => {
       const deck = createMockDeck({ isPremium: true });
 
       renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
 
-      const content = screen.getByTestId('deck-card-content');
+      const badges = screen.getByTestId('deck-card-badges');
 
-      // Content should have blur-sm class applied
-      expect(content.className).toContain('blur-sm');
+      // Badges should have blur-sm class applied
+      expect(badges.className).toContain('blur-sm');
     });
 
-    it('should not apply blur styling to content when deck is not premium', () => {
+    it('should not apply blur styling to badges when deck is not premium', () => {
       const deck = createMockDeck({ isPremium: false });
 
       renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
 
-      const content = screen.getByTestId('deck-card-content');
+      const badges = screen.getByTestId('deck-card-badges');
 
-      // Content should NOT have blur class
-      expect(content.className).not.toContain('blur');
+      // Badges should NOT have blur class
+      expect(badges.className).not.toContain('blur');
     });
 
     it('should render overlay when deck is locked', () => {
@@ -306,41 +306,32 @@ describe('DeckCard', () => {
     });
   });
 
-  describe('Premium Badge Positioning', () => {
-    it('should reserve space for badge row even when not premium', () => {
-      const deck = createMockDeck({ isPremium: false });
+  describe('Badge Positioning', () => {
+    it('should render badges in bottom-right container', () => {
+      const deck = createMockDeck({ isPremium: false, category: 'vocabulary' });
 
       renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
 
-      // Find the badge container div (has mt-2 flex min-h-6 classes)
-      const header = screen.getByTestId('deck-card-header');
-      const badgeContainer = header.querySelector('.mt-2.flex.min-h-6');
-
+      const badgeContainer = screen.getByTestId('deck-card-badges');
       expect(badgeContainer).toBeInTheDocument();
+      expect(badgeContainer.className).toContain('justify-end');
     });
 
-    it('should display premium and category badges side-by-side in a flex container', () => {
+    it('should display premium and category badges side-by-side in badge container', () => {
       const deck = createMockDeck({ isPremium: true, category: 'vocabulary' });
 
       renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
 
-      // Find the badge container with flex layout
-      const header = screen.getByTestId('deck-card-header');
-      const badgeContainer = header.querySelector('.mt-2.flex.min-h-6');
+      const badgeContainer = screen.getByTestId('deck-card-badges');
 
-      expect(badgeContainer).toBeInTheDocument();
-      expect(badgeContainer?.className).toContain('flex');
-      expect(badgeContainer?.className).toContain('gap-2');
-
-      // Both badges should be inside the same container
-      const premiumBadge = within(badgeContainer as HTMLElement).queryByText(/premium/i);
-      const categoryBadge = within(badgeContainer as HTMLElement).queryByText(/vocabulary/i);
+      const premiumBadge = within(badgeContainer).queryByText(/premium/i);
+      const categoryBadge = within(badgeContainer).queryByText(/vocabulary/i);
 
       expect(premiumBadge).toBeInTheDocument();
       expect(categoryBadge).toBeInTheDocument();
     });
 
-    it('should display premium and culture badges side-by-side when isCultureDeck is true', () => {
+    it('should display culture badge in badge container when isCultureDeck is true', () => {
       const deck = createMockDeck({ isPremium: true, category: 'culture' });
 
       renderWithI18n(
@@ -352,30 +343,13 @@ describe('DeckCard', () => {
         />
       );
 
-      // Find the badge container with flex layout
-      const header = screen.getByTestId('deck-card-header');
-      const badgeContainer = header.querySelector('.mt-2.flex.min-h-6');
+      const badgeContainer = screen.getByTestId('deck-card-badges');
 
-      expect(badgeContainer).toBeInTheDocument();
-
-      // Both badges should be inside the same container
-      const premiumBadge = within(badgeContainer as HTMLElement).queryByText(/premium/i);
-      // The culture badge renders with the testid
-      const cultureBadge = within(badgeContainer as HTMLElement).queryByTestId('culture-badge');
+      const premiumBadge = within(badgeContainer).queryByText(/premium/i);
+      const cultureBadge = within(badgeContainer).queryByTestId('culture-badge');
 
       expect(premiumBadge).toBeInTheDocument();
       expect(cultureBadge).toBeInTheDocument();
-    });
-
-    it('should support flex-wrap for graceful wrapping on small screens', () => {
-      const deck = createMockDeck({ isPremium: true, category: 'vocabulary' });
-
-      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
-
-      const header = screen.getByTestId('deck-card-header');
-      const badgeContainer = header.querySelector('.mt-2.flex.min-h-6');
-
-      expect(badgeContainer?.className).toContain('flex-wrap');
     });
   });
 
@@ -423,43 +397,6 @@ describe('DeckCard', () => {
       renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
       const stripe = screen.getByTestId('deck-card-accent-stripe');
       expect(stripe).toHaveAttribute('aria-hidden', 'true');
-    });
-  });
-
-  describe('Temporal Metadata', () => {
-    it('should show "Not started" when no progress', () => {
-      const deck = createMockDeck({ progress: undefined });
-      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
-      expect(screen.getByTestId('deck-card-metadata')).toHaveTextContent(/not started/i);
-    });
-
-    it('should show "Due today" when dueToday > 0', () => {
-      renderWithI18n(<DeckCard deck={createMockDeck()} onClick={mockOnClick} />);
-      expect(screen.getByTestId('deck-card-metadata')).toHaveTextContent(/due today/i);
-    });
-
-    it('should show "Up to date" when dueToday === 0', () => {
-      const deck = createMockDeck({
-        progress: { ...createMockDeck().progress!, dueToday: 0 },
-      });
-      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
-      expect(screen.getByTestId('deck-card-metadata')).toHaveTextContent(/up to date/i);
-    });
-
-    it('should show "Completed" for completed decks', () => {
-      const deck = createMockDeck({
-        progress: { ...createMockDeck().progress!, status: 'completed' },
-      });
-      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
-      expect(screen.getByTestId('deck-card-metadata')).toHaveTextContent(/completed/i);
-    });
-
-    it('should show "Not started" when status is not-started with progress object', () => {
-      const deck = createMockDeck({
-        progress: { ...createMockDeck().progress!, status: 'not-started', dueToday: 0 },
-      });
-      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
-      expect(screen.getByTestId('deck-card-metadata')).toHaveTextContent(/not started/i);
     });
   });
 

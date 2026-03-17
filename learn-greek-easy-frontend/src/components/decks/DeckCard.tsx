@@ -5,21 +5,18 @@ import { useTranslation } from 'react-i18next';
 
 import { CultureBadge, getCategoryColor, type CultureCategory } from '@/components/culture';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardHeader } from '@/components/ui/card';
 import { CEFR_COLORS } from '@/lib/cefrColors';
 import { getDeckBackgroundStyle } from '@/lib/deckBackground';
 import { getLocalizedDeckName } from '@/lib/deckLocale';
-import { formatRelativeDate } from '@/lib/helpers';
 import { calculateCompletionPercentage } from '@/lib/progressUtils';
 import type { Deck } from '@/types/deck';
 
 import { DeckBadge } from './DeckBadge';
-import { DeckProgressBar } from './DeckProgressBar';
 
 export interface DeckCardProps {
   deck: Deck;
   onClick?: () => void;
-  showProgress?: boolean;
   variant?: 'grid' | 'list';
   isCultureDeck?: boolean;
   cultureCategory?: CultureCategory;
@@ -34,7 +31,6 @@ export interface DeckCardProps {
 export const DeckCard: React.FC<DeckCardProps> = ({
   deck,
   onClick,
-  showProgress = true,
   variant = 'grid',
   isCultureDeck = false,
   cultureCategory,
@@ -43,11 +39,11 @@ export const DeckCard: React.FC<DeckCardProps> = ({
   onDeleteClick,
 }) => {
   const { t, i18n } = useTranslation('deck');
-  const { level, category, cardCount, isPremium, progress } = deck;
+  const { level, category, isPremium } = deck;
   const localizedName = getLocalizedDeckName(deck, i18n.language);
 
   // Calculate completion percentage
-  const completionPercent = progress ? calculateCompletionPercentage(progress) : 0;
+  const completionPercent = deck.progress ? calculateCompletionPercentage(deck.progress) : 0;
 
   // Determine if card should be locked (premium and user is free tier)
   // This will be checked against auth store in future integration
@@ -84,29 +80,6 @@ export const DeckCard: React.FC<DeckCardProps> = ({
       return getCategoryColor(cultureCategory).dot;
     }
     return CEFR_COLORS[level].bgColorLight;
-  };
-
-  const getMetadataText = (): string => {
-    if (!progress || progress.status === 'not-started') {
-      return t('card.metadata.notStarted');
-    }
-    const { status, dueToday, cardsMastered, lastStudied } = progress;
-    if (status === 'completed') {
-      if (cardsMastered > 0) {
-        return `${t('card.metadata.completed')} · ${t('card.metadata.mastered', { count: cardsMastered })}`;
-      }
-      return t('card.metadata.completed');
-    }
-    const parts: string[] = [];
-    if (dueToday > 0) {
-      parts.push(t('card.metadata.dueToday', { count: dueToday }));
-    } else {
-      parts.push(t('card.metadata.upToDate'));
-    }
-    if (lastStudied) {
-      parts.push(t('card.metadata.last', { time: formatRelativeDate(lastStudied) }));
-    }
-    return parts.join(' · ');
   };
 
   return (
@@ -165,11 +138,10 @@ export const DeckCard: React.FC<DeckCardProps> = ({
         </div>
       )}
 
-      <CardHeader data-testid="deck-card-header" className="relative z-20 flex-shrink-0 pb-3">
-        {/* Title and Level Badge Row */}
+      <CardHeader data-testid="deck-card-header" className="relative z-20 flex-1 pb-3">
+        {/* Title and Premium Icon */}
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
-            {/* Localized Title */}
             <h3
               data-testid="deck-card-title"
               className="truncate text-lg font-semibold text-foreground"
@@ -178,65 +150,40 @@ export const DeckCard: React.FC<DeckCardProps> = ({
             </h3>
           </div>
 
-          {/* Premium Icon (level badge moved to badge row) */}
           {isLocked && (
             <div className="flex-shrink-0">
               <Crown className="h-4 w-4 text-amber-500" aria-label="Premium content" />
             </div>
           )}
         </div>
-
-        {/* Badge Row - Category + Level + Premium displayed together */}
-        <div className="mt-2 flex min-h-6 flex-wrap items-center gap-2">
-          {isCultureDeck && <CultureBadge category={cultureCategory} showLabel={true} />}
-
-          {!isCultureDeck && category !== 'culture' && (
-            <DeckBadge type="category" category={category} />
-          )}
-
-          {/* Level badge - moved from title row to be next to category */}
-          {!isCultureDeck && <DeckBadge type="level" level={level} />}
-
-          {isPremium && (
-            <span className="inline-flex items-center gap-1.5 rounded-md border border-purple-500/20 bg-purple-500/10 px-2 py-1 text-xs font-medium">
-              <span
-                className="h-2 w-2 flex-shrink-0 rounded-full bg-purple-500"
-                aria-hidden="true"
-              />
-              <span className="text-purple-700 dark:text-purple-300">{t('card.premium')}</span>
-            </span>
-          )}
-        </div>
       </CardHeader>
 
-      <CardContent
-        data-testid="deck-card-content"
-        className={`flex flex-1 flex-col justify-between pt-0 ${isLocked ? 'blur-sm' : ''}`}
+      {/* Badge Row - bottom-right corner */}
+      <div
+        className={`relative z-20 flex flex-wrap items-center justify-end gap-2 px-6 pb-4 ${isLocked ? 'blur-sm' : ''}`}
+        data-testid="deck-card-badges"
       >
-        <div>
-          {/* Progress Bar - Always shown if showProgress is true */}
-          {showProgress && (
-            <div className="mb-4">
-              <DeckProgressBar
-                progress={
-                  progress || {
-                    cardsTotal: cardCount,
-                    cardsMastered: 0,
-                    cardsLearning: 0,
-                    cardsNew: cardCount,
-                  }
-                }
-                showLegend={false}
-                size="large"
-              />
-              {/* Temporal metadata */}
-              <p className="mt-1 text-xs text-muted-foreground" data-testid="deck-card-metadata">
-                {getMetadataText()}
-              </p>
-            </div>
-          )}
-        </div>
-      </CardContent>
+        {isCultureDeck && <CultureBadge category={cultureCategory} showLabel={true} />}
+
+        {!isCultureDeck && category !== 'culture' && (
+          <DeckBadge
+            type="category"
+            category={category}
+            className="bg-opacity-90 backdrop-blur-sm"
+          />
+        )}
+
+        {!isCultureDeck && (
+          <DeckBadge type="level" level={level} className="bg-opacity-90 backdrop-blur-sm" />
+        )}
+
+        {isPremium && (
+          <span className="inline-flex items-center gap-1.5 rounded-md border border-purple-500/30 bg-purple-500/20 px-2 py-1 text-xs font-medium backdrop-blur-sm">
+            <span className="h-2 w-2 flex-shrink-0 rounded-full bg-purple-500" aria-hidden="true" />
+            <span className="text-purple-700 dark:text-purple-300">{t('card.premium')}</span>
+          </span>
+        )}
+      </div>
 
       {/* Locked state overlay - indicates premium content */}
       {isLocked && (

@@ -86,7 +86,6 @@ export const DecksGrid: React.FC<DecksGridProps> = ({
             <DeckCard
               deck={deck}
               onClick={() => handleDeckClick(deck.id)}
-              showProgress={true}
               variant="grid"
               isCultureDeck={isCultureDeck}
               cultureCategory={cultureCategory}
