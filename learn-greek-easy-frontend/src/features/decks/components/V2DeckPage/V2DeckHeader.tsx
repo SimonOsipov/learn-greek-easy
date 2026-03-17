@@ -4,6 +4,7 @@ import { BookOpen } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { DeckBadge } from '@/components/decks/DeckBadge';
+import { DeckProgressBar } from '@/components/decks/DeckProgressBar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -17,40 +18,6 @@ import type { Deck } from '@/types/deck';
 interface V2DeckHeaderProps {
   deck: Deck;
 }
-
-/**
- * V2ProgressBar Sub-component
- *
- * Simple progress bar showing all cards as "new" (gray) for V2 decks.
- * V2 decks with word entries don't have SRS progress yet.
- */
-interface V2ProgressBarProps {
-  total: number;
-}
-
-const V2ProgressBar: React.FC<V2ProgressBarProps> = ({ total }) => {
-  const { t } = useTranslation('deck');
-
-  return (
-    <div>
-      <div
-        className="h-3 w-full rounded-full bg-muted"
-        role="progressbar"
-        aria-valuenow={0}
-        aria-valuemin={0}
-        aria-valuemax={100}
-      />
-      <div className="mt-2 flex gap-4 text-xs text-muted-foreground">
-        <div className="flex items-center gap-1">
-          <div className="h-3 w-3 rounded-full bg-muted" />
-          <span>
-            {total} {t('v2.toPractice')}
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 /**
  * V2DeckHeader Component
@@ -117,7 +84,23 @@ export const V2DeckHeader: React.FC<V2DeckHeaderProps> = ({ deck }) => {
               </span>
               <span className="text-sm text-muted-foreground">0% {t('detail.complete')}</span>
             </div>
-            <V2ProgressBar total={wordCount} />
+            <DeckProgressBar
+              progress={{
+                deckId: deck.id,
+                status: 'not-started',
+                cardsTotal: wordCount,
+                cardsNew: wordCount,
+                cardsLearning: 0,
+                cardsReview: 0,
+                cardsMastered: 0,
+                dueToday: 0,
+                streak: 0,
+                totalTimeSpent: 0,
+                accuracy: 0,
+              }}
+              showLegend={true}
+              size="large"
+            />
           </div>
 
           {/* Disabled Study Button with Tooltip */}

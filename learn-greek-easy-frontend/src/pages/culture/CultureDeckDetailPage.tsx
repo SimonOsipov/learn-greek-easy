@@ -147,7 +147,10 @@ export function CultureDeckDetailPage() {
       {/* Main Content */}
       <div className="space-y-6">
         {/* Deck Header Section */}
-        <Card style={getDeckBackgroundStyle(deck.cover_image_url ?? undefined)}>
+        <Card
+          className="min-h-[160px]"
+          style={getDeckBackgroundStyle(deck.cover_image_url ?? undefined)}
+        >
           <CardHeader>
             {/* Title and Badges Row */}
             <div className="flex flex-wrap items-start justify-between gap-4">
