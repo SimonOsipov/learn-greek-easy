@@ -36,6 +36,7 @@ from src.api.v1.news import router as news_router
 from src.api.v1.notifications import router as notification_router
 from src.api.v1.progress import router as progress_router
 from src.api.v1.reviews import router as review_router
+from src.api.v1.reviews_v2 import router as reviews_v2_router
 from src.api.v1.study import router as study_router
 from src.api.v1.study_v2 import router as study_v2_router
 from src.api.v1.users import router as users_router
@@ -85,6 +86,15 @@ v1_router.include_router(
     review_router,
     prefix="/reviews",
     tags=["Reviews"],
+)
+
+# =============================================================================
+# Reviews V2 Routes
+# =============================================================================
+v1_router.include_router(
+    reviews_v2_router,
+    prefix="/reviews",
+    tags=["Reviews V2"],
 )
 
 # =============================================================================
