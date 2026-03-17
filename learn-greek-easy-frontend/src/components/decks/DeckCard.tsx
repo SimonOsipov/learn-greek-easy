@@ -160,28 +160,23 @@ export const DeckCard: React.FC<DeckCardProps> = ({
 
       {/* Badge Row - bottom-left corner */}
       <div
-        className={`relative z-20 px-6 pb-4 ${isLocked ? 'blur-sm' : ''}`}
+        className={`relative z-20 flex flex-wrap items-center gap-2 px-6 pb-4 ${isLocked ? 'blur-sm' : ''}`}
         data-testid="deck-card-badges"
       >
-        <div className="inline-flex flex-wrap items-center gap-2 rounded-lg border border-border/40 bg-background/90 px-2 py-1.5 backdrop-blur-sm">
-          {isCultureDeck && <CultureBadge category={cultureCategory} showLabel={true} />}
+        {isCultureDeck && <CultureBadge category={cultureCategory} showLabel={true} />}
 
-          {!isCultureDeck && category !== 'culture' && (
-            <DeckBadge type="category" category={category} />
-          )}
+        {!isCultureDeck && category !== 'culture' && (
+          <DeckBadge type="category" category={category} />
+        )}
 
-          {!isCultureDeck && <DeckBadge type="level" level={level} />}
+        {!isCultureDeck && <DeckBadge type="level" level={level} />}
 
-          {isPremium && (
-            <span className="inline-flex items-center gap-1.5 rounded-md border border-purple-500/30 bg-purple-500/20 px-2 py-1 text-xs font-medium">
-              <span
-                className="h-2 w-2 flex-shrink-0 rounded-full bg-purple-500"
-                aria-hidden="true"
-              />
-              <span className="text-purple-700 dark:text-purple-300">{t('card.premium')}</span>
-            </span>
-          )}
-        </div>
+        {isPremium && (
+          <span className="inline-flex items-center gap-1.5 rounded-md border border-purple-500/30 bg-purple-500/20 px-2 py-1 text-xs font-medium">
+            <span className="h-2 w-2 flex-shrink-0 rounded-full bg-purple-500" aria-hidden="true" />
+            <span className="text-purple-700 dark:text-purple-300">{t('card.premium')}</span>
+          </span>
+        )}
       </div>
 
       {/* Locked state overlay - indicates premium content */}
