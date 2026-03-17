@@ -7,7 +7,7 @@ from sqlalchemy import delete, func, not_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.db.models import CardRecord, CardRecordStatistics, CardStatus
+from src.db.models import CardRecord, CardRecordStatistics, CardStatus, CardType, Deck
 from src.repositories.base import BaseRepository
 
 
@@ -62,14 +62,18 @@ class CardRecordStatisticsRepository(BaseRepository[CardRecordStatistics]):
         user_id: UUID,
         deck_id: UUID | None = None,
         *,
+        card_type: CardType | None = None,
         limit: int = 20,
+        exclude_premium_decks: bool = False,
     ) -> list[CardRecordStatistics]:
         """Get card records due for review today or earlier.
 
         Args:
             user_id: User UUID.
             deck_id: Optional deck filter.
+            card_type: Optional card type filter.
             limit: Max cards to return.
+            exclude_premium_decks: If True, exclude cards from premium decks.
 
         Returns:
             List of CardRecordStatistics with card_record eagerly loaded.
@@ -77,35 +81,44 @@ class CardRecordStatisticsRepository(BaseRepository[CardRecordStatistics]):
         query = (
             select(CardRecordStatistics)
             .join(CardRecord, CardRecordStatistics.card_record_id == CardRecord.id)
+            .join(Deck, CardRecord.deck_id == Deck.id)
             .where(CardRecordStatistics.user_id == user_id)
             .where(CardRecordStatistics.next_review_date <= date.today())
             .where(CardRecord.is_active == True)  # noqa: E712
+            .where(Deck.is_active == True)  # noqa: E712
             .options(selectinload(CardRecordStatistics.card_record))
             .order_by(CardRecordStatistics.next_review_date)
             .limit(limit)
         )
-
         if deck_id is not None:
             query = query.where(CardRecord.deck_id == deck_id)
-
+        if card_type is not None:
+            query = query.where(CardRecord.card_type == card_type)
+        if exclude_premium_decks:
+            query = query.where(Deck.is_premium == False)  # noqa: E712
         result = await self.db.execute(query)
         return list(result.scalars().all())
 
-    async def get_new_cards_for_deck(
+    async def get_new_cards(
         self,
         user_id: UUID,
-        deck_id: UUID,
+        deck_id: UUID | None = None,
         limit: int = 10,
+        *,
+        card_type: CardType | None = None,
+        exclude_premium_decks: bool = False,
     ) -> list[CardRecord]:
         """Get card records not yet studied by this user.
 
-        Finds active CardRecords in the deck that have no statistics entry
-        for this user, ordered by creation time.
+        Finds active CardRecords that have no statistics entry for this user,
+        ordered by creation time.
 
         Args:
             user_id: User UUID.
-            deck_id: Deck UUID.
+            deck_id: Optional deck filter.
             limit: Max cards to return.
+            card_type: Optional card type filter.
+            exclude_premium_decks: If True, exclude cards from premium decks.
 
         Returns:
             List of unstudied CardRecord objects.
@@ -115,16 +128,67 @@ class CardRecordStatisticsRepository(BaseRepository[CardRecordStatistics]):
             .where(CardRecordStatistics.user_id == user_id)
             .scalar_subquery()
         )
-
         query = (
             select(CardRecord)
-            .where(CardRecord.deck_id == deck_id)
+            .join(Deck, CardRecord.deck_id == Deck.id)
             .where(CardRecord.is_active == True)  # noqa: E712
+            .where(Deck.is_active == True)  # noqa: E712
             .where(not_(CardRecord.id.in_(studied_subq)))
             .order_by(CardRecord.created_at)
             .limit(limit)
         )
+        if deck_id is not None:
+            query = query.where(CardRecord.deck_id == deck_id)
+        if card_type is not None:
+            query = query.where(CardRecord.card_type == card_type)
+        if exclude_premium_decks:
+            query = query.where(Deck.is_premium == False)  # noqa: E712
+        result = await self.db.execute(query)
+        return list(result.scalars().all())
 
+    async def get_early_practice_cards(
+        self,
+        user_id: UUID,
+        deck_id: UUID | None = None,
+        *,
+        card_type: CardType | None = None,
+        limit: int = 10,
+        exclude_premium_decks: bool = False,
+    ) -> list[CardRecordStatistics]:
+        """Get card records not yet due but eligible for early practice.
+
+        Returns LEARNING and REVIEW cards whose next review date is in the
+        future, ordered by soonest due first.
+
+        Args:
+            user_id: User UUID.
+            deck_id: Optional deck filter.
+            card_type: Optional card type filter.
+            limit: Max cards to return.
+            exclude_premium_decks: If True, exclude cards from premium decks.
+
+        Returns:
+            List of CardRecordStatistics with card_record eagerly loaded.
+        """
+        query = (
+            select(CardRecordStatistics)
+            .join(CardRecord, CardRecordStatistics.card_record_id == CardRecord.id)
+            .join(Deck, CardRecord.deck_id == Deck.id)
+            .where(CardRecordStatistics.user_id == user_id)
+            .where(CardRecordStatistics.next_review_date > date.today())
+            .where(CardRecordStatistics.status.in_([CardStatus.LEARNING, CardStatus.REVIEW]))
+            .where(CardRecord.is_active == True)  # noqa: E712
+            .where(Deck.is_active == True)  # noqa: E712
+            .options(selectinload(CardRecordStatistics.card_record))
+            .order_by(CardRecordStatistics.next_review_date)
+            .limit(limit)
+        )
+        if deck_id is not None:
+            query = query.where(CardRecord.deck_id == deck_id)
+        if card_type is not None:
+            query = query.where(CardRecord.card_type == card_type)
+        if exclude_premium_decks:
+            query = query.where(Deck.is_premium == False)  # noqa: E712
         result = await self.db.execute(query)
         return list(result.scalars().all())
 
@@ -213,50 +277,6 @@ class CardRecordStatisticsRepository(BaseRepository[CardRecordStatistics]):
         counts["due"] = due_result.scalar_one()
 
         return counts
-
-    async def bulk_create_statistics(
-        self,
-        user_id: UUID,
-        card_record_ids: list[UUID],
-    ) -> list[CardRecordStatistics]:
-        """Create statistics for multiple card records, skipping existing ones.
-
-        Args:
-            user_id: User UUID.
-            card_record_ids: CardRecord UUIDs to initialize.
-
-        Returns:
-            List of newly created CardRecordStatistics (flushed, not committed).
-        """
-        if not card_record_ids:
-            return []
-
-        existing_result = await self.db.execute(
-            select(CardRecordStatistics.card_record_id)
-            .where(CardRecordStatistics.user_id == user_id)
-            .where(CardRecordStatistics.card_record_id.in_(card_record_ids))
-        )
-        existing_ids = {row[0] for row in existing_result.all()}
-
-        new_stats = []
-        for card_record_id in card_record_ids:
-            if card_record_id not in existing_ids:
-                stats = CardRecordStatistics(
-                    user_id=user_id,
-                    card_record_id=card_record_id,
-                    easiness_factor=2.5,
-                    interval=0,
-                    repetitions=0,
-                    next_review_date=date.today(),
-                    status=CardStatus.NEW,
-                )
-                self.db.add(stats)
-                new_stats.append(stats)
-
-        if new_stats:
-            await self.db.flush()
-
-        return new_stats
 
     async def delete_all_by_user_id(self, user_id: UUID) -> int:
         """Delete all card record statistics for a user.
