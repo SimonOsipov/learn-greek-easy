@@ -1370,6 +1370,10 @@ class CardRecordReview(Base, TimestampMixin):
             "quality >= 0 AND quality <= 5",
             name="ck_crr_quality_range",
         ),
+        CheckConstraint(
+            "time_taken >= 0",
+            name="ck_crr_time_taken_non_negative",
+        ),
         Index("ix_crr_user_reviewed_at", "user_id", "reviewed_at"),
     )
 

@@ -141,6 +141,10 @@ def upgrade() -> None:
             "quality >= 0 AND quality <= 5",
             name="ck_crr_quality_range",
         ),
+        sa.CheckConstraint(
+            "time_taken >= 0",
+            name="ck_crr_time_taken_non_negative",
+        ),
     )
     op.create_index(
         "ix_crr_user_reviewed_at",

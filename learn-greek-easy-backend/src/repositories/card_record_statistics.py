@@ -177,14 +177,14 @@ class CardRecordStatisticsRepository(BaseRepository[CardRecordStatistics]):
         """
         query = (
             select(CardRecordStatistics.status, func.count().label("count"))
+            .join(CardRecord, CardRecordStatistics.card_record_id == CardRecord.id)
             .where(CardRecordStatistics.user_id == user_id)
+            .where(CardRecord.is_active.is_(True))
             .group_by(CardRecordStatistics.status)
         )
 
         if deck_id is not None:
-            query = query.join(
-                CardRecord, CardRecordStatistics.card_record_id == CardRecord.id
-            ).where(CardRecord.deck_id == deck_id)
+            query = query.where(CardRecord.deck_id == deck_id)
 
         result = await self.db.execute(query)
         rows = result.all()
@@ -201,13 +201,13 @@ class CardRecordStatisticsRepository(BaseRepository[CardRecordStatistics]):
         due_query = (
             select(func.count())
             .select_from(CardRecordStatistics)
+            .join(CardRecord, CardRecordStatistics.card_record_id == CardRecord.id)
             .where(CardRecordStatistics.user_id == user_id)
             .where(CardRecordStatistics.next_review_date <= date.today())
+            .where(CardRecord.is_active.is_(True))
         )
         if deck_id is not None:
-            due_query = due_query.join(
-                CardRecord, CardRecordStatistics.card_record_id == CardRecord.id
-            ).where(CardRecord.deck_id == deck_id)
+            due_query = due_query.where(CardRecord.deck_id == deck_id)
 
         due_result = await self.db.execute(due_query)
         counts["due"] = due_result.scalar_one()
