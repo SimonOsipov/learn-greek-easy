@@ -30,6 +30,11 @@ Culture Factories:
     - CultureQuestionStatsFactory: SM-2 stats for culture questions
     - CultureAnswerHistoryFactory: Answer history for analytics
 
+Situation Description Factories:
+    - SituationDescriptionFactory: Narrative descriptions of situations
+    - DescriptionExerciseFactory: Exercises linked to descriptions
+    - DescriptionExerciseItemFactory: Individual exercise items
+
 Custom Providers:
     - GreekProvider: Faker provider for Greek vocabulary
 
@@ -108,6 +113,13 @@ from tests.factories.providers import GreekProvider
 # Situation factories
 from tests.factories.situation import SituationFactory
 
+# Situation Description factories
+from tests.factories.situation_description import (
+    DescriptionExerciseFactory,
+    DescriptionExerciseItemFactory,
+    SituationDescriptionFactory,
+)
+
 # XP & Achievements factories
 from tests.factories.xp_achievements import (
     XP_PER_LEVEL,
@@ -143,6 +155,10 @@ __all__ = [
     "ListeningDialogFactory",
     # Situations
     "SituationFactory",
+    # Situation Descriptions
+    "SituationDescriptionFactory",
+    "DescriptionExerciseFactory",
+    "DescriptionExerciseItemFactory",
     # News
     "NewsItemFactory",
     # Progress
