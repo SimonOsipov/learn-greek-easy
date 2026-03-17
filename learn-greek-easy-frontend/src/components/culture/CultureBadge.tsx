@@ -32,53 +32,53 @@ interface CategoryColorConfig {
 const CATEGORY_COLORS: Record<CultureCategory, CategoryColorConfig> = {
   politics: {
     dot: 'bg-indigo-500',
-    text: 'text-indigo-700 dark:text-indigo-300',
-    bg: 'bg-indigo-500/10',
-    border: 'border-indigo-500/20',
+    text: 'text-white',
+    bg: 'bg-indigo-600',
+    border: 'border-indigo-700',
   },
   history: {
     dot: 'bg-amber-500',
-    text: 'text-amber-700 dark:text-amber-300',
-    bg: 'bg-amber-500/10',
-    border: 'border-amber-500/20',
+    text: 'text-white',
+    bg: 'bg-amber-600',
+    border: 'border-amber-700',
   },
   traditions: {
     dot: 'bg-purple-500',
-    text: 'text-purple-700 dark:text-purple-300',
-    bg: 'bg-purple-500/10',
-    border: 'border-purple-500/20',
+    text: 'text-white',
+    bg: 'bg-purple-600',
+    border: 'border-purple-700',
   },
   practical: {
     dot: 'bg-rose-500',
-    text: 'text-rose-700 dark:text-rose-300',
-    bg: 'bg-rose-500/10',
-    border: 'border-rose-500/20',
+    text: 'text-white',
+    bg: 'bg-rose-600',
+    border: 'border-rose-700',
   },
   culture: {
     dot: 'bg-emerald-500',
-    text: 'text-emerald-700 dark:text-emerald-300',
-    bg: 'bg-emerald-500/10',
-    border: 'border-emerald-500/20',
+    text: 'text-white',
+    bg: 'bg-emerald-600',
+    border: 'border-emerald-700',
   },
   geography: {
     dot: 'bg-teal-500',
-    text: 'text-teal-700 dark:text-teal-300',
-    bg: 'bg-teal-500/10',
-    border: 'border-teal-500/20',
+    text: 'text-white',
+    bg: 'bg-teal-600',
+    border: 'border-teal-700',
   },
   news: {
     dot: 'bg-sky-500',
-    text: 'text-sky-700 dark:text-sky-300',
-    bg: 'bg-sky-500/10',
-    border: 'border-sky-500/20',
+    text: 'text-white',
+    bg: 'bg-sky-600',
+    border: 'border-sky-700',
   },
 };
 
 const DEFAULT_COLOR: CategoryColorConfig = {
   dot: 'bg-slate-400',
-  text: 'text-slate-600 dark:text-slate-300',
-  bg: 'bg-slate-500/10',
-  border: 'border-slate-500/20',
+  text: 'text-white',
+  bg: 'bg-slate-500',
+  border: 'border-slate-600',
 };
 
 export function getCategoryColor(category?: CultureCategory): CategoryColorConfig {

@@ -47,8 +47,8 @@ describe('CultureBadge', () => {
       render(<CultureBadge />);
 
       const badge = screen.getByTestId('culture-badge');
-      expect(badge).toHaveClass('bg-slate-500/10');
-      expect(badge).toHaveClass('border-slate-500/20');
+      expect(badge).toHaveClass('bg-slate-500');
+      expect(badge).toHaveClass('border-slate-600');
 
       const dot = badge.querySelector('[aria-hidden="true"]');
       expect(dot).toHaveClass('bg-slate-400');
@@ -105,43 +105,43 @@ describe('CultureBadge', () => {
       {
         category: 'politics',
         expectedDotColor: 'bg-indigo-500',
-        expectedBgColor: 'bg-indigo-500/10',
-        expectedBorderColor: 'border-indigo-500/20',
+        expectedBgColor: 'bg-indigo-600',
+        expectedBorderColor: 'border-indigo-700',
         expectedText: 'Politics',
       },
       {
         category: 'history',
         expectedDotColor: 'bg-amber-500',
-        expectedBgColor: 'bg-amber-500/10',
-        expectedBorderColor: 'border-amber-500/20',
+        expectedBgColor: 'bg-amber-600',
+        expectedBorderColor: 'border-amber-700',
         expectedText: 'History',
       },
       {
         category: 'traditions',
         expectedDotColor: 'bg-purple-500',
-        expectedBgColor: 'bg-purple-500/10',
-        expectedBorderColor: 'border-purple-500/20',
+        expectedBgColor: 'bg-purple-600',
+        expectedBorderColor: 'border-purple-700',
         expectedText: 'Traditions',
       },
       {
         category: 'practical',
         expectedDotColor: 'bg-rose-500',
-        expectedBgColor: 'bg-rose-500/10',
-        expectedBorderColor: 'border-rose-500/20',
+        expectedBgColor: 'bg-rose-600',
+        expectedBorderColor: 'border-rose-700',
         expectedText: 'Practical',
       },
       {
         category: 'culture',
         expectedDotColor: 'bg-emerald-500',
-        expectedBgColor: 'bg-emerald-500/10',
-        expectedBorderColor: 'border-emerald-500/20',
+        expectedBgColor: 'bg-emerald-600',
+        expectedBorderColor: 'border-emerald-700',
         expectedText: 'Culture',
       },
       {
         category: 'geography',
         expectedDotColor: 'bg-teal-500',
-        expectedBgColor: 'bg-teal-500/10',
-        expectedBorderColor: 'border-teal-500/20',
+        expectedBgColor: 'bg-teal-600',
+        expectedBorderColor: 'border-teal-700',
         expectedText: 'Geography',
       },
     ];
@@ -167,63 +167,63 @@ describe('CultureBadge', () => {
       const colors = getCategoryColor();
 
       expect(colors.dot).toBe('bg-slate-400');
-      expect(colors.text).toContain('text-slate-600');
-      expect(colors.bg).toBe('bg-slate-500/10');
-      expect(colors.border).toBe('border-slate-500/20');
+      expect(colors.text).toBe('text-white');
+      expect(colors.bg).toBe('bg-slate-500');
+      expect(colors.border).toBe('border-slate-600');
     });
 
     it('should return correct color for politics', () => {
       const colors = getCategoryColor('politics');
 
       expect(colors.dot).toBe('bg-indigo-500');
-      expect(colors.text).toContain('text-indigo-700');
-      expect(colors.bg).toBe('bg-indigo-500/10');
-      expect(colors.border).toBe('border-indigo-500/20');
+      expect(colors.text).toBe('text-white');
+      expect(colors.bg).toBe('bg-indigo-600');
+      expect(colors.border).toBe('border-indigo-700');
     });
 
     it('should return correct color for history', () => {
       const colors = getCategoryColor('history');
 
       expect(colors.dot).toBe('bg-amber-500');
-      expect(colors.text).toContain('text-amber-700');
-      expect(colors.bg).toBe('bg-amber-500/10');
-      expect(colors.border).toBe('border-amber-500/20');
+      expect(colors.text).toBe('text-white');
+      expect(colors.bg).toBe('bg-amber-600');
+      expect(colors.border).toBe('border-amber-700');
     });
 
     it('should return correct color for traditions', () => {
       const colors = getCategoryColor('traditions');
 
       expect(colors.dot).toBe('bg-purple-500');
-      expect(colors.text).toContain('text-purple-700');
-      expect(colors.bg).toBe('bg-purple-500/10');
-      expect(colors.border).toBe('border-purple-500/20');
+      expect(colors.text).toBe('text-white');
+      expect(colors.bg).toBe('bg-purple-600');
+      expect(colors.border).toBe('border-purple-700');
     });
 
     it('should return correct color for practical', () => {
       const colors = getCategoryColor('practical');
 
       expect(colors.dot).toBe('bg-rose-500');
-      expect(colors.text).toContain('text-rose-700');
-      expect(colors.bg).toBe('bg-rose-500/10');
-      expect(colors.border).toBe('border-rose-500/20');
+      expect(colors.text).toBe('text-white');
+      expect(colors.bg).toBe('bg-rose-600');
+      expect(colors.border).toBe('border-rose-700');
     });
 
     it('should return correct color for culture', () => {
       const colors = getCategoryColor('culture');
 
       expect(colors.dot).toBe('bg-emerald-500');
-      expect(colors.text).toContain('text-emerald-700');
-      expect(colors.bg).toBe('bg-emerald-500/10');
-      expect(colors.border).toBe('border-emerald-500/20');
+      expect(colors.text).toBe('text-white');
+      expect(colors.bg).toBe('bg-emerald-600');
+      expect(colors.border).toBe('border-emerald-700');
     });
 
     it('should return correct color for geography', () => {
       const colors = getCategoryColor('geography');
 
       expect(colors.dot).toBe('bg-teal-500');
-      expect(colors.text).toContain('text-teal-700');
-      expect(colors.bg).toBe('bg-teal-500/10');
-      expect(colors.border).toBe('border-teal-500/20');
+      expect(colors.text).toBe('text-white');
+      expect(colors.bg).toBe('bg-teal-600');
+      expect(colors.border).toBe('border-teal-700');
     });
   });
 });
