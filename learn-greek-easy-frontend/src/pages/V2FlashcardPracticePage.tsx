@@ -408,7 +408,7 @@ export function V2FlashcardPracticePage() {
     <div className="flex min-h-screen flex-col bg-background">
       {/* Top bar */}
       <div className="flex items-center justify-between px-4 py-3">
-        <Button variant="ghost" size="sm" onClick={backToDeck}>
+        <Button variant="ghost" size="sm" onClick={backToDeck} data-testid="practice-close-button">
           <ChevronLeft className="mr-1 h-4 w-4" />
           {t('v2Practice.exitSession')}
         </Button>
