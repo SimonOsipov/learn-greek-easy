@@ -163,6 +163,13 @@ const WordPracticePage = lazyWithRetry(() =>
   }))
 );
 
+// V2 flashcard practice page (full-screen SM-2 v2 experience)
+const V2FlashcardPracticePage = lazyWithRetry(() =>
+  import('@/pages/V2FlashcardPracticePage').then((m) => ({
+    default: m.V2FlashcardPracticePage,
+  }))
+);
+
 const CheckoutSuccessPage = lazyWithRetry(() =>
   import('@/pages/CheckoutSuccessPage').then((m) => ({ default: m.CheckoutSuccessPage }))
 );
@@ -262,6 +269,8 @@ function AppContent() {
                 </Route>
                 {/* Review page outside AppLayout for full-screen experience */}
                 <Route path="/decks/:deckId/review" element={<FlashcardReviewPage />} />
+                {/* V2 practice page outside AppLayout for full-screen experience */}
+                <Route path="/decks/:deckId/practice" element={<V2FlashcardPracticePage />} />
                 {/* Session summary page outside AppLayout for full-screen experience */}
                 <Route path="/decks/:deckId/summary" element={<SessionSummaryPage />} />
                 {/* Culture deck detail page inside AppLayout */}
