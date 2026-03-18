@@ -3,6 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from src.constants import MAX_ANSWER_TIME_SECONDS
 from src.db.models import CardStatus
 
 
@@ -112,3 +113,32 @@ class V2StudyQueue(BaseModel):
         default_factory=list,
         description="Cards to study (due cards first, then new, then early practice)",
     )
+
+
+class V2ReviewRequest(BaseModel):
+    """Request payload for submitting a single V2 card review."""
+
+    card_record_id: UUID
+    quality: int = Field(..., ge=0, le=5, description="Quality rating (0-5)")
+    time_taken: int = Field(
+        ...,
+        ge=0,
+        le=MAX_ANSWER_TIME_SECONDS,
+        description=f"Time taken in seconds (max {MAX_ANSWER_TIME_SECONDS}s)",
+    )
+
+
+class V2ReviewResult(BaseModel):
+    """Result of processing a single V2 card review."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    card_record_id: UUID
+    quality: int = Field(..., ge=0, le=5)
+    previous_status: CardStatus
+    new_status: CardStatus
+    easiness_factor: float = Field(..., ge=1.3)
+    interval: int = Field(..., ge=0)
+    repetitions: int = Field(..., ge=0)
+    next_review_date: date
+    message: str | None = None

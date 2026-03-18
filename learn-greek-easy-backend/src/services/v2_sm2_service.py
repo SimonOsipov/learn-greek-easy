@@ -1,12 +1,24 @@
+from __future__ import annotations
+
+from datetime import datetime, timezone
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.logging import get_logger
-from src.db.models import CardRecord, CardRecordStatistics, CardStatus, CardType, WordEntry
+from src.core.posthog import capture_event
+from src.core.sm2 import calculate_next_review_date, calculate_sm2
+from src.db.models import (
+    CardRecord,
+    CardRecordReview,
+    CardRecordStatistics,
+    CardStatus,
+    CardType,
+    WordEntry,
+)
 from src.repositories.card_record_statistics import CardRecordStatisticsRepository
-from src.schemas.v2_sm2 import V2StudyQueue, V2StudyQueueCard
+from src.schemas.v2_sm2 import V2ReviewResult, V2StudyQueue, V2StudyQueueCard
 from src.services.s3_service import get_s3_service
 
 logger = get_logger(__name__)
@@ -200,4 +212,126 @@ class V2SM2Service:
             if example_index is not None and we.examples and example_index < len(we.examples):
                 ex = we.examples[example_index]
                 return str(ex["audio_key"]) if ex.get("audio_key") else None
+        return None
+
+    async def process_review(
+        self,
+        user_id: UUID,
+        card_record: CardRecord,
+        quality: int,
+        time_taken: int,
+        user_email: str | None = None,
+    ) -> V2ReviewResult:
+        """Process a single V2 card review using the SM2 algorithm."""
+        logger.debug(
+            "Processing V2 review",
+            extra={"card_record_id": str(card_record.id), "user_id": str(user_id)},
+        )
+
+        # Step 1: Get or create statistics
+        stats = await self.stats_repo.get_or_create(user_id, card_record.id)
+
+        # Step 2: Track previous state
+        previous_status = stats.status
+        is_first_review = stats.status == CardStatus.NEW
+        was_mastered = stats.status == CardStatus.MASTERED
+
+        # Step 3: Calculate SM2
+        sm2_result = calculate_sm2(
+            current_ef=stats.easiness_factor,
+            current_interval=stats.interval,
+            current_repetitions=stats.repetitions,
+            quality=quality,
+        )
+
+        # Step 4: Calculate next review date
+        next_review_date = calculate_next_review_date(sm2_result.new_interval)
+
+        # Step 5: Update SM2 data
+        await self.stats_repo.update_sm2_data(
+            stats_id=stats.id,
+            easiness_factor=sm2_result.new_easiness_factor,
+            interval=sm2_result.new_interval,
+            repetitions=sm2_result.new_repetitions,
+            next_review_date=next_review_date,
+            status=sm2_result.new_status,
+        )
+
+        # Step 6: Create review record
+        review = CardRecordReview(
+            user_id=user_id,
+            card_record_id=card_record.id,
+            quality=quality,
+            time_taken=time_taken,
+            reviewed_at=datetime.now(timezone.utc),
+        )
+        self.db.add(review)
+        await self.db.flush()
+
+        # Step 7: Fire PostHog event if newly mastered
+        if sm2_result.new_status == CardStatus.MASTERED and previous_status != CardStatus.MASTERED:
+            days_to_master = 0
+            if stats.created_at:
+                created_at = stats.created_at
+                if created_at.tzinfo is not None:
+                    created_at = created_at.replace(tzinfo=None)
+                days_to_master = (datetime.now(timezone.utc).replace(tzinfo=None) - created_at).days
+            capture_event(
+                distinct_id=str(user_id),
+                event="card_mastered_v2",
+                properties={
+                    "deck_id": str(card_record.deck_id),
+                    "card_record_id": str(card_record.id),
+                    "card_type": card_record.card_type.value,
+                    "reviews_to_master": sm2_result.new_repetitions,
+                    "days_to_master": days_to_master,
+                },
+                user_email=user_email,
+            )
+
+        # Step 8: Generate message
+        message = self._get_review_message(
+            quality=quality,
+            is_first_review=is_first_review,
+            was_mastered=was_mastered,
+            is_now_mastered=sm2_result.new_status == CardStatus.MASTERED,
+        )
+
+        logger.info(
+            "V2 review processed",
+            extra={
+                "card_record_id": str(card_record.id),
+                "new_status": sm2_result.new_status.value,
+            },
+        )
+
+        # Step 9: Return result
+        return V2ReviewResult(
+            card_record_id=card_record.id,
+            quality=quality,
+            previous_status=previous_status,
+            new_status=sm2_result.new_status,
+            easiness_factor=sm2_result.new_easiness_factor,
+            interval=sm2_result.new_interval,
+            repetitions=sm2_result.new_repetitions,
+            next_review_date=next_review_date,
+            message=message,
+        )
+
+    def _get_review_message(
+        self,
+        quality: int,
+        is_first_review: bool,
+        was_mastered: bool,
+        is_now_mastered: bool,
+    ) -> str | None:
+        """Generate a motivational message based on review outcome."""
+        if is_now_mastered and not was_mastered:
+            return "Congratulations! Card mastered!"
+        if was_mastered and not is_now_mastered:
+            return "Card needs more practice."
+        if quality == 5:
+            return "Perfect!"
+        if is_first_review and quality >= 3:
+            return "Good start!"
         return None
