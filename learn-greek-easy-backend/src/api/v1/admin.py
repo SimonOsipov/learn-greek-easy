@@ -39,7 +39,6 @@ from src.core.exceptions import (
     OpenRouterError,
 )
 from src.core.logging import get_logger
-from src.core.posthog import capture_event
 from src.db.dependencies import get_db
 from src.db.models import (
     AudioStatus,
@@ -134,12 +133,7 @@ from src.schemas.news_item import (
     NewsItemWithCardResponse,
     NewsItemWithQuestionCreate,
 )
-from src.schemas.nlp import (
-    GeneratedNounData,
-    LocalVerificationResult,
-    NormalizedLemma,
-    VerificationSummary,
-)
+from src.schemas.nlp import GeneratedNounData, NormalizedLemma, VerificationSummary
 from src.schemas.word_entry import (
     AdminWordEntryCreateRequest,
     AdminWordEntryCreateResponse,
@@ -2924,47 +2918,6 @@ async def _fetch_wiktionary_entry(
         return None
 
 
-def _capture_verification_analytics(
-    lemma: str,
-    local_result: LocalVerificationResult,
-    wiktionary_result: LocalVerificationResult | None,
-    has_wiktionary: bool,
-    cross_ai_agreement: float | None,
-    combined_tier: str,
-    morphology_source: str,
-) -> None:
-    """Fire PostHog analytics events for 4-source verification (fire-and-forget)."""
-    l2_tier = wiktionary_result.tier if wiktionary_result is not None else None
-    capture_event(
-        distinct_id="noun_generation_pipeline",
-        event="noun_verification_4source",
-        properties={
-            "lemma": lemma,
-            "l1_tier": local_result.tier,
-            "l2_tier": l2_tier,
-            "cross_ai_agreement": cross_ai_agreement,
-            "combined_tier": combined_tier,
-            "wiktionary_has_data": has_wiktionary,
-            "morphology_source": morphology_source,
-        },
-    )
-    event_suffix = "hit" if has_wiktionary else "miss"
-    capture_event(
-        distinct_id="noun_generation_pipeline",
-        event=f"noun_verification_wiktionary_{event_suffix}",
-        properties={"lemma": lemma},
-    )
-    if combined_tier != "auto_approve" and (
-        local_result.tier != "auto_approve"
-        or (wiktionary_result and wiktionary_result.tier != "auto_approve")
-    ):
-        capture_event(
-            distinct_id="noun_generation_pipeline",
-            event="noun_verification_local_veto",
-            properties={"lemma": lemma, "l1_tier": local_result.tier, "l2_tier": l2_tier},
-        )
-
-
 async def _run_verification_stage(
     generated_data: GeneratedNounData,
     normalized_lemma: NormalizedLemma,
@@ -3050,17 +3003,6 @@ async def _run_verification_stage(
         else None
     )
     combined_tier = compute_combined_tier_v2(local_result.tier, l2_tier, cross_ai_agreement)
-
-    # Step 7: PostHog analytics (fire-and-forget)
-    _capture_verification_analytics(
-        lemma,
-        local_result,
-        wiktionary_result,
-        has_wiktionary,
-        cross_ai_agreement,
-        combined_tier,
-        morphology_source,
-    )
 
     return VerificationSummary(
         local=local_result,

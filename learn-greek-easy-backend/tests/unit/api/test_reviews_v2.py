@@ -67,42 +67,6 @@ class TestSubmitV2Review:
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_streak_milestone_fires_posthog_event(self, client, auth_headers):
-        mock_card_record = MagicMock()
-        mock_card_record.deck = MagicMock()
-
-        with (
-            patch("src.api.v1.reviews_v2.CardRecordRepository") as mock_repo_cls,
-            patch("src.api.v1.reviews_v2.CardRecordReviewRepository") as mock_review_repo_cls,
-            patch("src.api.v1.reviews_v2.V2SM2Service") as mock_service_cls,
-            patch("src.api.v1.reviews_v2.check_premium_deck_access"),
-            patch("src.api.v1.reviews_v2.capture_event") as mock_capture,
-            patch("src.api.v1.reviews_v2.settings") as mock_settings,
-        ):
-
-            mock_repo_cls.return_value.get = AsyncMock(return_value=mock_card_record)
-            mock_review_repo_cls.return_value.get_streak = AsyncMock(side_effect=[2, 3])
-            mock_review_repo_cls.return_value.count_reviews_today = AsyncMock(return_value=0)
-            mock_service_cls.return_value.process_review = AsyncMock(
-                return_value=_make_v2_review_result()
-            )
-            mock_settings.feature_background_tasks = False
-
-            response = await client.post(
-                "/api/v1/reviews/v2",
-                json=_valid_review_body(),
-                headers=auth_headers,
-            )
-
-        assert response.status_code == 200
-        # streak went from 2 -> 3, which crosses milestone 3
-        milestone_call = next(
-            (c for c in mock_capture.call_args_list if c.kwargs.get("event") == "streak_achieved"),
-            None,
-        )
-        assert milestone_call is not None
-
-    @pytest.mark.asyncio
     async def test_daily_goal_notification_created(self, client, auth_headers):
         mock_card_record = MagicMock()
         mock_card_record.deck = MagicMock()

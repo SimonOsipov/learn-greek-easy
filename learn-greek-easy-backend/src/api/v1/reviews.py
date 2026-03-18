@@ -18,7 +18,6 @@ from src.core.dependencies import get_current_user
 from src.core.event_bus import dashboard_event_bus
 from src.core.exceptions import CardNotFoundException, DeckNotFoundException
 from src.core.logging import get_logger
-from src.core.posthog import capture_event
 from src.core.redis import get_redis
 from src.core.subscription import check_premium_deck_access
 from src.db.dependencies import get_db
@@ -37,41 +36,6 @@ from src.services.sm2_service import SM2Service
 from src.tasks.background import check_achievements_task, invalidate_cache_task, log_analytics_task
 
 logger = get_logger(__name__)
-
-# Streak milestones to track
-STREAK_MILESTONES = [3, 7, 14, 30, 60, 90, 180, 365]
-
-
-def _check_streak_milestone(
-    user_id: UUID,
-    user_email: str,
-    new_streak: int,
-    previous_streak: int,
-) -> None:
-    """Check if user crossed a streak milestone and track if so.
-
-    This function fires a streak_achieved event when the user crosses
-    one of the predefined milestones (3, 7, 14, 30, 60, 90, 180, 365 days).
-    Only the highest milestone crossed in a single review is tracked.
-
-    Args:
-        user_id: UUID of the user
-        user_email: User's email for PostHog tracking
-        new_streak: Current streak after review
-        previous_streak: Streak before the review
-    """
-    for milestone in STREAK_MILESTONES:
-        if new_streak >= milestone and previous_streak < milestone:
-            capture_event(
-                distinct_id=str(user_id),
-                event="streak_achieved",
-                properties={
-                    "streak_days": new_streak,
-                    "milestone": milestone,
-                },
-                user_email=user_email,
-            )
-            break  # Only track highest milestone crossed
 
 
 async def _check_daily_goal_notification(
@@ -337,9 +301,7 @@ async def submit_review(
     # Enforce premium deck access
     check_premium_deck_access(current_user, card.deck)
 
-    # Get streak BEFORE processing review (for milestone tracking)
     review_repo = ReviewRepository(db)
-    previous_streak = await review_repo.get_streak(current_user.id)
 
     # Get reviews count BEFORE processing (for daily goal detection)
     reviews_before = await review_repo.count_reviews_today(current_user.id)
@@ -353,18 +315,6 @@ async def submit_review(
         time_taken=review.time_taken,
         user_email=current_user.email,
     )
-
-    # Get streak AFTER processing review
-    new_streak = await review_repo.get_streak(current_user.id)
-
-    # Check for streak milestone achievement
-    if new_streak > previous_streak:
-        _check_streak_milestone(
-            user_id=current_user.id,
-            user_email=current_user.email,
-            new_streak=new_streak,
-            previous_streak=previous_streak,
-        )
 
     # Check for daily goal completion notification
     await _check_daily_goal_notification(
