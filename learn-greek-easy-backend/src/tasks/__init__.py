@@ -38,6 +38,7 @@ Example usage for scheduler (in scheduler_main.py):
 
 from src.tasks.background import (
     ANALYTICS_EVENTS,
+    award_flashcard_xp_task,
     check_achievements_task,
     check_culture_achievements_task,
     create_announcement_notifications_task,
@@ -56,6 +57,7 @@ from src.tasks.scheduler import get_scheduler, setup_scheduler, shutdown_schedul
 __all__ = [
     # Background tasks (API-side, fire-and-forget)
     "ANALYTICS_EVENTS",
+    "award_flashcard_xp_task",
     "check_achievements_task",
     "check_culture_achievements_task",
     "create_announcement_notifications_task",

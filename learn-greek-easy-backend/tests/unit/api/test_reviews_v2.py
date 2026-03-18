@@ -258,6 +258,45 @@ class TestSubmitV2Review:
         assert response.status_code == 403
 
     @pytest.mark.asyncio
+    async def test_flashcard_xp_task_scheduled(self, client, auth_headers):
+        """XP background task is scheduled with correct args when background tasks enabled."""
+        mock_card_record = MagicMock()
+        mock_card_record.deck = MagicMock()
+        review_body = _valid_review_body()
+
+        with (
+            patch("src.api.v1.reviews_v2.CardRecordRepository") as mock_repo_cls,
+            patch("src.api.v1.reviews_v2.CardRecordReviewRepository") as mock_review_repo_cls,
+            patch("src.api.v1.reviews_v2.V2SM2Service") as mock_service_cls,
+            patch("src.api.v1.reviews_v2.check_premium_deck_access"),
+            patch("src.api.v1.reviews_v2._check_daily_goal_notification"),
+            patch("src.api.v1.reviews_v2.check_achievements_task"),
+            patch("src.api.v1.reviews_v2.log_analytics_task"),
+            patch("src.api.v1.reviews_v2.award_flashcard_xp_task") as mock_xp_task,
+            patch("src.api.v1.reviews_v2.settings") as mock_settings,
+            patch("starlette.background.BackgroundTasks.add_task") as mock_add_task,
+        ):
+            mock_repo_cls.return_value.get = AsyncMock(return_value=mock_card_record)
+            mock_review_repo_cls.return_value.get_streak = AsyncMock(return_value=1)
+            mock_review_repo_cls.return_value.count_reviews_today = AsyncMock(return_value=0)
+            mock_service_cls.return_value.process_review = AsyncMock(
+                return_value=_make_v2_review_result()
+            )
+            mock_settings.feature_background_tasks = True
+            mock_settings.database_url = "postgresql://test"
+
+            response = await client.post(
+                "/api/v1/reviews/v2",
+                json=review_body,
+                headers=auth_headers,
+            )
+
+        assert response.status_code == 200
+        # Verify the XP task was actually registered via BackgroundTasks.add_task
+        scheduled_funcs = [call.args[0] for call in mock_add_task.call_args_list]
+        assert mock_xp_task in scheduled_funcs
+
+    @pytest.mark.asyncio
     async def test_successful_review_returns_v2_result(self, client, auth_headers):
         mock_card_record = MagicMock()
         mock_card_record.deck = MagicMock()

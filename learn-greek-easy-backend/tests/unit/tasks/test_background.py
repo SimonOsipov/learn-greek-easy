@@ -67,6 +67,7 @@ class TestModuleImports:
             # Background tasks (API-side)
             "ANALYTICS_EVENTS",
             "check_achievements_task",
+            "award_flashcard_xp_task",
             "check_culture_achievements_task",
             "create_announcement_notifications_task",
             "generate_a2_audio_for_news_item_task",

@@ -20,6 +20,8 @@ from src.services.xp_constants import (
     XP_CORRECT_ANSWER,
     XP_DAILY_GOAL,
     XP_FIRST_REVIEW,
+    XP_FLASHCARD_CORRECT,
+    XP_FLASHCARD_WRONG,
     XP_PERFECT_ANSWER,
     XP_SESSION_COMPLETE,
     XP_STREAK_MULTIPLIER,
@@ -517,3 +519,91 @@ class TestGetOrCreateUserXP:
         assert result.total_xp == 0
         assert result.current_level == 1
         mock_db_session.add.assert_called()
+
+
+@pytest.mark.unit
+class TestAwardFlashcardReviewXP:
+    """Tests for XPService.award_flashcard_review_xp method."""
+
+    @pytest.mark.asyncio
+    async def test_correct_review_awards_5_xp(self, mock_db_session, mock_user_xp):
+        """Correct review (quality >= 3) awards 5 XP with reason flashcard_review."""
+        service = XPService(mock_db_session)
+
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = mock_user_xp
+        mock_db_session.execute.return_value = mock_result
+
+        user_id = uuid4()
+        card_record_id = uuid4()
+        amount = await service.award_flashcard_review_xp(
+            user_id=user_id,
+            quality=4,
+            card_record_id=card_record_id,
+        )
+
+        assert amount == XP_FLASHCARD_CORRECT
+        assert amount == 5
+
+        # Verify transaction created with correct reason and source_id
+        add_calls = mock_db_session.add.call_args_list
+        xp_transactions = [
+            call[0][0] for call in add_calls if isinstance(call[0][0], XPTransaction)
+        ]
+        assert len(xp_transactions) == 1
+        assert xp_transactions[0].reason == "flashcard_review"
+        assert xp_transactions[0].source_id == card_record_id
+
+    @pytest.mark.asyncio
+    async def test_wrong_review_awards_2_xp(self, mock_db_session, mock_user_xp):
+        """Wrong review (quality < 3) awards 2 XP with reason flashcard_attempt."""
+        service = XPService(mock_db_session)
+
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = mock_user_xp
+        mock_db_session.execute.return_value = mock_result
+
+        user_id = uuid4()
+        card_record_id = uuid4()
+        amount = await service.award_flashcard_review_xp(
+            user_id=user_id,
+            quality=2,
+            card_record_id=card_record_id,
+        )
+
+        assert amount == XP_FLASHCARD_WRONG
+        assert amount == 2
+
+        # Verify transaction created with correct reason and source_id
+        add_calls = mock_db_session.add.call_args_list
+        xp_transactions = [
+            call[0][0] for call in add_calls if isinstance(call[0][0], XPTransaction)
+        ]
+        assert len(xp_transactions) == 1
+        assert xp_transactions[0].reason == "flashcard_attempt"
+        assert xp_transactions[0].source_id == card_record_id
+
+    @pytest.mark.asyncio
+    async def test_quality_3_is_correct_threshold(self, mock_db_session, mock_user_xp):
+        """Quality=3 is the boundary for correct — should award 5 XP."""
+        service = XPService(mock_db_session)
+
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = mock_user_xp
+        mock_db_session.execute.return_value = mock_result
+
+        user_id = uuid4()
+        card_record_id = uuid4()
+        amount = await service.award_flashcard_review_xp(
+            user_id=user_id,
+            quality=3,
+            card_record_id=card_record_id,
+        )
+
+        assert amount == XP_FLASHCARD_CORRECT
+        assert amount == 5
+
+    def test_constants_match_spec(self):
+        """XP flashcard constants match the specification."""
+        assert XP_FLASHCARD_CORRECT == 5
+        assert XP_FLASHCARD_WRONG == 2
