@@ -262,6 +262,7 @@ class TestSubmitV2Review:
         """XP background task is scheduled with correct args when background tasks enabled."""
         mock_card_record = MagicMock()
         mock_card_record.deck = MagicMock()
+        review_body = _valid_review_body()
 
         with (
             patch("src.api.v1.reviews_v2.CardRecordRepository") as mock_repo_cls,
@@ -273,6 +274,7 @@ class TestSubmitV2Review:
             patch("src.api.v1.reviews_v2.log_analytics_task"),
             patch("src.api.v1.reviews_v2.award_flashcard_xp_task") as mock_xp_task,
             patch("src.api.v1.reviews_v2.settings") as mock_settings,
+            patch("starlette.background.BackgroundTasks.add_task") as mock_add_task,
         ):
             mock_repo_cls.return_value.get = AsyncMock(return_value=mock_card_record)
             mock_review_repo_cls.return_value.get_streak = AsyncMock(return_value=1)
@@ -285,14 +287,14 @@ class TestSubmitV2Review:
 
             response = await client.post(
                 "/api/v1/reviews/v2",
-                json=_valid_review_body(),
+                json=review_body,
                 headers=auth_headers,
             )
 
         assert response.status_code == 200
-        # The XP task should have been registered (it's called via BackgroundTasks.add_task)
-        # We verify indirectly that the route completes without error when the task is patched
-        assert mock_xp_task is not None  # Task was imported and available
+        # Verify the XP task was actually registered via BackgroundTasks.add_task
+        scheduled_funcs = [call.args[0] for call in mock_add_task.call_args_list]
+        assert mock_xp_task in scheduled_funcs
 
     @pytest.mark.asyncio
     async def test_successful_review_returns_v2_result(self, client, auth_headers):
