@@ -65,24 +65,6 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { toast } from '@/hooks/use-toast';
-import {
-  trackAdminDeckCreateCancelled,
-  trackAdminDeckCreated,
-  trackAdminDeckCreateFailed,
-  trackAdminDeckCreateOpened,
-  trackAdminDeckDeactivated,
-  trackAdminDeckDeleteCancelled,
-  trackAdminDeckDeleted,
-  trackAdminDeckDeleteFailed,
-  trackAdminDeckDeleteOpened,
-  trackAdminDeckEditCancelled,
-  trackAdminDeckEditFailed,
-  trackAdminDeckEditOpened,
-  trackAdminDeckEditSaved,
-  trackAdminDeckPremiumDisabled,
-  trackAdminDeckPremiumEnabled,
-  trackAdminDeckReactivated,
-} from '@/lib/analytics/adminAnalytics';
 import { getLocalizedDeckName } from '@/lib/deckLocale';
 import { cn } from '@/lib/utils';
 import { adminAPI } from '@/services/adminAPI';
@@ -620,7 +602,6 @@ const AdminPage: React.FC = () => {
   // Deck create modal state
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
-  const [createDeckType, setCreateDeckType] = useState<DeckType>('vocabulary');
 
   // Deck delete modal state
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -662,25 +643,11 @@ const AdminPage: React.FC = () => {
   };
 
   /**
-   * Get display name for a deck (handles multilingual names)
-   */
-  const getDeckDisplayName = (deck: UnifiedDeckItem): string => {
-    return getLocalizedDeckName(deck, locale);
-  };
-
-  /**
    * Handle opening the edit modal for a deck
    */
   const handleEditDeck = (deck: UnifiedDeckItem) => {
     setSelectedDeck(deck);
     setEditModalOpen(true);
-
-    // Track analytics event
-    trackAdminDeckEditOpened({
-      deck_id: deck.id,
-      deck_type: deck.type,
-      deck_name: getDeckDisplayName(deck),
-    });
   };
 
   /**
@@ -692,34 +659,6 @@ const AdminPage: React.FC = () => {
     setIsSaving(true);
 
     try {
-      // Track activation/deactivation changes
-      const wasActive = selectedDeck.is_active;
-      const isNowActive = data.is_active;
-
-      // Extract name_en from trilingual form data for comparison and tracking
-      const formNameEn = 'name_en' in data ? (data.name_en as string) : '';
-      const originalDeckName = getDeckDisplayName(selectedDeck);
-
-      // Determine which fields changed
-      const fieldsChanged: string[] = [];
-
-      if (formNameEn !== originalDeckName) {
-        fieldsChanged.push('name');
-      }
-      // Note: description comparison is simplified since we're using trilingual format
-      if (data.is_active !== wasActive) {
-        fieldsChanged.push('is_active');
-      }
-      if ('level' in data && data.level !== selectedDeck.level) {
-        fieldsChanged.push('level');
-      }
-      if ('category' in data && data.category !== selectedDeck.category) {
-        fieldsChanged.push('category');
-      }
-      if (data.is_premium !== selectedDeck.is_premium) {
-        fieldsChanged.push('is_premium');
-      }
-
       // Call appropriate API based on deck type
       // Forms produce trilingual data (name_el, name_en, name_ru, etc.)
       // API expects single name/description fields (uses name_en as primary)
@@ -769,63 +708,10 @@ const AdminPage: React.FC = () => {
         await adminAPI.updateCultureDeck(selectedDeck.id, payload);
       }
 
-      // Track success analytics
-      trackAdminDeckEditSaved({
-        deck_id: selectedDeck.id,
-        deck_type: selectedDeck.type,
-        deck_name: formNameEn,
-        fields_changed: fieldsChanged,
-      });
-
-      // Track activation/deactivation status changes
-      if (wasActive && !isNowActive) {
-        trackAdminDeckDeactivated({
-          deck_id: selectedDeck.id,
-          deck_type: selectedDeck.type,
-          deck_name: formNameEn,
-        });
-      } else if (!wasActive && isNowActive) {
-        trackAdminDeckReactivated({
-          deck_id: selectedDeck.id,
-          deck_type: selectedDeck.type,
-          deck_name: formNameEn,
-        });
-      }
-
-      // Track premium status changes
-      const wasPremium = selectedDeck.is_premium ?? false;
-      const isNowPremium = data.is_premium ?? false;
-
-      if (!wasPremium && isNowPremium) {
-        trackAdminDeckPremiumEnabled({
-          deck_id: selectedDeck.id,
-          deck_type: selectedDeck.type,
-          deck_name: formNameEn,
-        });
-      } else if (wasPremium && !isNowPremium) {
-        trackAdminDeckPremiumDisabled({
-          deck_id: selectedDeck.id,
-          deck_type: selectedDeck.type,
-          deck_name: formNameEn,
-        });
-      }
-
       // Close modal and refresh deck list
       setEditModalOpen(false);
       setSelectedDeck(null);
       allDecksListRef.current?.refresh();
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : t('errors.saveFailed');
-
-      // Track failure analytics
-      trackAdminDeckEditFailed({
-        deck_id: selectedDeck.id,
-        deck_type: selectedDeck.type,
-        error_message: errorMessage,
-      });
-
-      // Re-throw to let the form handle the error display
-      throw err;
     } finally {
       setIsSaving(false);
     }
@@ -853,13 +739,6 @@ const AdminPage: React.FC = () => {
    * Handle modal close (track cancel if not saving)
    */
   const handleModalClose = (open: boolean) => {
-    if (!open && selectedDeck && !isSaving) {
-      // Modal was closed without saving
-      trackAdminDeckEditCancelled({
-        deck_id: selectedDeck.id,
-        deck_type: selectedDeck.type,
-      });
-    }
     setEditModalOpen(open);
     if (!open) {
       setSelectedDeck(null);
@@ -871,7 +750,6 @@ const AdminPage: React.FC = () => {
    */
   const handleOpenCreateModal = () => {
     setCreateModalOpen(true);
-    trackAdminDeckCreateOpened({ deck_type: 'vocabulary' });
   };
 
   /**
@@ -879,12 +757,8 @@ const AdminPage: React.FC = () => {
    */
   const handleCreateDeck = async (type: DeckType, data: DeckCreateFormData) => {
     setIsCreating(true);
-    setCreateDeckType(type);
 
     try {
-      let deckId: string;
-      let deckName: string;
-
       if (type === 'vocabulary') {
         // VocabularyDeckCreateForm produces trilingual data: name_el, name_en, name_ru, etc.
         // API expects single name field (use name_en as primary)
@@ -906,9 +780,7 @@ const AdminPage: React.FC = () => {
           is_premium: vocabularyData.is_premium,
           is_system_deck: true,
         };
-        const result = await adminAPI.createVocabularyDeck(payload);
-        deckId = result.id;
-        deckName = result.name;
+        await adminAPI.createVocabularyDeck(payload);
       } else {
         // CultureDeckCreateForm produces trilingual data: name_el, name_en, name_ru, etc.
         // API expects same flat format
@@ -930,17 +802,8 @@ const AdminPage: React.FC = () => {
           category: cultureData.category,
           is_premium: cultureData.is_premium,
         };
-        const result = await adminAPI.createCultureDeck(payload);
-        deckId = result.id;
-        deckName = result.name;
+        await adminAPI.createCultureDeck(payload);
       }
-
-      // Track success
-      trackAdminDeckCreated({
-        deck_id: deckId,
-        deck_type: type,
-        deck_name: deckName,
-      });
 
       // Show success toast
       toast({
@@ -953,12 +816,6 @@ const AdminPage: React.FC = () => {
       fetchStats(); // Refresh stats to update counts
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : t('errors.createFailed');
-
-      // Track failure
-      trackAdminDeckCreateFailed({
-        deck_type: type,
-        error_message: errorMessage,
-      });
 
       // Show error toast
       toast({
@@ -975,11 +832,6 @@ const AdminPage: React.FC = () => {
    * Handle create modal close (track cancel if not creating)
    */
   const handleCreateModalClose = (open: boolean) => {
-    if (!open && !isCreating) {
-      trackAdminDeckCreateCancelled({
-        deck_type: createDeckType,
-      });
-    }
     setCreateModalOpen(open);
   };
 
@@ -989,13 +841,6 @@ const AdminPage: React.FC = () => {
   const handleDeleteDeck = (deck: UnifiedDeckItem) => {
     setDeckToDelete(deck);
     setDeleteModalOpen(true);
-
-    // Track analytics event
-    trackAdminDeckDeleteOpened({
-      deck_id: deck.id,
-      deck_type: deck.type,
-      deck_name: getDeckDisplayName(deck),
-    });
   };
 
   /**
@@ -1014,13 +859,6 @@ const AdminPage: React.FC = () => {
         await adminAPI.deleteCultureDeck(deckToDelete.id);
       }
 
-      // Track success analytics
-      trackAdminDeckDeleted({
-        deck_id: deckToDelete.id,
-        deck_type: deckToDelete.type,
-        deck_name: getDeckDisplayName(deckToDelete),
-      });
-
       // Show success toast
       toast({
         title: t('toast.deckDeleted'),
@@ -1033,13 +871,6 @@ const AdminPage: React.FC = () => {
       fetchStats(); // Refresh stats to update counts
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : t('deckDelete.error');
-
-      // Track failure analytics
-      trackAdminDeckDeleteFailed({
-        deck_id: deckToDelete.id,
-        deck_type: deckToDelete.type,
-        error_message: errorMessage,
-      });
 
       // Show error toast
       toast({
@@ -1056,13 +887,6 @@ const AdminPage: React.FC = () => {
    * Handle delete modal close (track cancel if not deleting)
    */
   const handleDeleteModalClose = (open: boolean) => {
-    if (!open && deckToDelete && !isDeleting) {
-      // Modal was closed without deleting
-      trackAdminDeckDeleteCancelled({
-        deck_id: deckToDelete.id,
-        deck_type: deckToDelete.type,
-      });
-    }
     setDeleteModalOpen(open);
     if (!open) {
       setDeckToDelete(null);

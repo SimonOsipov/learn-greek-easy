@@ -15,7 +15,6 @@ import {
   trackMockExamQuestionAnswered,
   trackMockExamCompleted,
   trackMockExamAbandoned,
-  trackMockExamTimerWarning,
   trackMockExamResultsViewed,
   trackMockExamIncorrectReviewExpanded,
   trackMockExamRetryClicked,
@@ -311,55 +310,6 @@ describe('mockExamAnalytics', () => {
           session_id: 'session-789',
           questions_answered: 15,
           timer_remaining_seconds: 300,
-        });
-      }).not.toThrow();
-
-      (posthog as Record<string, unknown>).capture = originalCapture;
-    });
-  });
-
-  // ==========================================================================
-  // Timer Warning Events
-  // ==========================================================================
-
-  describe('trackMockExamTimerWarning', () => {
-    it('should call posthog.capture with 5 minute warning', () => {
-      trackMockExamTimerWarning({
-        session_id: 'session-123',
-        warning_level: 'warning_5min',
-        questions_answered: 15,
-      });
-
-      expect(posthog.capture).toHaveBeenCalledWith('mock_exam_timer_warning', {
-        session_id: 'session-123',
-        warning_level: 'warning_5min',
-        questions_answered: 15,
-      });
-    });
-
-    it('should call posthog.capture with 1 minute warning', () => {
-      trackMockExamTimerWarning({
-        session_id: 'session-456',
-        warning_level: 'warning_1min',
-        questions_answered: 18,
-      });
-
-      expect(posthog.capture).toHaveBeenCalledWith('mock_exam_timer_warning', {
-        session_id: 'session-456',
-        warning_level: 'warning_1min',
-        questions_answered: 18,
-      });
-    });
-
-    it('should not throw if posthog.capture is undefined', () => {
-      const originalCapture = posthog.capture;
-      (posthog as Record<string, unknown>).capture = undefined;
-
-      expect(() => {
-        trackMockExamTimerWarning({
-          session_id: 'session-789',
-          warning_level: 'warning_5min',
-          questions_answered: 10,
         });
       }).not.toThrow();
 

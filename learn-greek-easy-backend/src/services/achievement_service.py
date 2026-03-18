@@ -420,10 +420,6 @@ class AchievementService:
         language_unlocks = await self._check_culture_language_achievements(user_id, stats)
         newly_unlocked.extend(language_unlocks)
 
-        # Track PostHog events for each unlock
-        for achievement in newly_unlocked:
-            await self._track_culture_achievement_unlock(user_id, achievement)
-
         if newly_unlocked:
             logger.info(
                 "Culture achievements unlocked",
@@ -775,34 +771,3 @@ class AchievementService:
             )
 
         return None
-
-    async def _track_culture_achievement_unlock(
-        self, user_id: UUID, achievement: UnlockedAchievement
-    ) -> None:
-        """Track PostHog event for culture achievement unlock.
-
-        Event: culture_achievement_unlocked
-        Properties:
-            - achievement_id: str
-            - xp_reward: int
-        """
-        try:
-            from src.core.posthog import capture_event
-
-            capture_event(
-                distinct_id=str(user_id),
-                event="culture_achievement_unlocked",
-                properties={
-                    "achievement_id": achievement["id"],
-                    "xp_reward": achievement["xp_reward"],
-                },
-            )
-        except Exception as e:
-            logger.warning(
-                "Failed to track culture achievement PostHog event",
-                extra={
-                    "user_id": str(user_id),
-                    "achievement_id": achievement["id"],
-                    "error": str(e),
-                },
-            )

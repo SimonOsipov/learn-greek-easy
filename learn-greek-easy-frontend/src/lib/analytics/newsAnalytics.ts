@@ -160,25 +160,6 @@ export function trackNewsAudioPlayPaused(properties: NewsAudioPlayPausedProperti
   }
 }
 
-/**
- * Properties for tracking news audio errors
- */
-export interface NewsAudioErrorProperties {
-  news_item_id: string;
-  error_type: 'load_failed' | 'playback_error';
-  page: 'dashboard' | 'news';
-  level: 'a2' | 'b2';
-}
-
-/**
- * Track news audio load or playback failure
- */
-export function trackNewsAudioError(properties: NewsAudioErrorProperties): void {
-  if (typeof posthog?.capture === 'function') {
-    posthog.capture('news_audio_error', properties);
-  }
-}
-
 // News Level Toggle Analytics
 
 export interface NewsLevelToggledProperties {

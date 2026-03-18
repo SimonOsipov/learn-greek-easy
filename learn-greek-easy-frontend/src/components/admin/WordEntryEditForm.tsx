@@ -19,11 +19,6 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useUpdateWordEntry } from '@/features/words/hooks/useUpdateWordEntry';
-import {
-  trackAdminWordEntryAutoAudioRegen,
-  trackAdminWordEntryEditCancelled,
-  trackAdminWordEntryEditSaved,
-} from '@/lib/analytics/adminAnalytics';
 import { wordEntryAPI, type WordEntryResponse } from '@/services/wordEntryAPI';
 
 import { AlertDialog } from '../dialogs/AlertDialog';
@@ -135,19 +130,10 @@ export function WordEntryEditForm({
         }));
       }
 
-      // Track fields changed
-      const fieldsChanged = Object.keys(dirtyFields);
-
       try {
         const updated = await updateWordEntry.mutateAsync({
           wordEntryId: wordEntry.id,
           payload,
-        });
-
-        trackAdminWordEntryEditSaved({
-          word_entry_id: wordEntry.id,
-          lemma: wordEntry.lemma,
-          fields_changed: fieldsChanged,
         });
 
         // Trigger audio regen if example greek text changed
@@ -166,10 +152,6 @@ export function WordEntryEditForm({
         }
 
         if (exampleGreekChanged) {
-          trackAdminWordEntryAutoAudioRegen({
-            word_entry_id: wordEntry.id,
-            parts: ['examples'],
-          });
           onAudioRegenNeeded?.();
         }
 
@@ -185,24 +167,14 @@ export function WordEntryEditForm({
     if (isDirty) {
       setShowDiscard(true);
     } else {
-      trackAdminWordEntryEditCancelled({
-        word_entry_id: wordEntry.id,
-        lemma: wordEntry.lemma,
-        had_unsaved_changes: false,
-      });
       onCancel();
     }
-  }, [isDirty, wordEntry, onCancel]);
+  }, [isDirty, onCancel]);
 
   const handleDiscard = useCallback(() => {
     setShowDiscard(false);
-    trackAdminWordEntryEditCancelled({
-      word_entry_id: wordEntry.id,
-      lemma: wordEntry.lemma,
-      had_unsaved_changes: true,
-    });
     onCancel();
-  }, [wordEntry, onCancel]);
+  }, [onCancel]);
 
   const examples = getValues('examples') ?? [];
 

@@ -49,12 +49,6 @@ export interface MockExamAbandonedProperties {
   timer_remaining_seconds: number;
 }
 
-export interface MockExamTimerWarningProperties {
-  session_id: string;
-  warning_level: 'warning_5min' | 'warning_1min';
-  questions_answered: number;
-}
-
 export interface MockExamResultsViewedProperties {
   session_id: string;
   score: number;
@@ -124,15 +118,6 @@ export function trackMockExamCompleted(properties: MockExamCompletedProperties):
 export function trackMockExamAbandoned(properties: MockExamAbandonedProperties): void {
   if (typeof posthog?.capture === 'function') {
     posthog.capture('mock_exam_abandoned', properties);
-  }
-}
-
-/**
- * Track when the timer warning is displayed (5 minutes or 1 minute remaining).
- */
-export function trackMockExamTimerWarning(properties: MockExamTimerWarningProperties): void {
-  if (typeof posthog?.capture === 'function') {
-    posthog.capture('mock_exam_timer_warning', properties);
   }
 }
 

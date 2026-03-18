@@ -1,8 +1,5 @@
-import { useEffect, useRef } from 'react';
-
 import { useTranslation } from 'react-i18next';
 
-import { trackGrammarCardViewed } from '@/lib/analytics';
 import { cn } from '@/lib/utils';
 import { useReviewStore } from '@/stores/reviewStore';
 import type { CardReview } from '@/types/review';
@@ -23,15 +20,8 @@ interface CardContentProps {
 
 export function CardContent({ card, isFlipped }: CardContentProps) {
   const { t, i18n } = useTranslation('review');
-  const { flipCard, activeSession } = useReviewStore();
+  const { flipCard } = useReviewStore();
   const partOfSpeech = card.part_of_speech;
-
-  // Track ref to avoid duplicate tracking for the same card flip
-  const hasTrackedRef = useRef<string | null>(null);
-
-  // Get session context for analytics
-  const sessionId = activeSession?.sessionId;
-  const deckId = activeSession?.deckId;
 
   // Get grammar data from API (snake_case fields)
   const nounData = card.noun_data;
@@ -71,49 +61,19 @@ export function CardContent({ card, isFlipped }: CardContentProps) {
 
   const grammarSectionTitle = getGrammarSectionTitle();
 
-  // Determine if this card has grammar data
-  const hasGrammarData = !!(nounData || verbData || adjectiveData || adverbData);
-
-  // Track grammar_card_viewed when card is flipped and has grammar data
-  useEffect(() => {
-    if (isFlipped && partOfSpeech && sessionId && deckId && hasTrackedRef.current !== card.id) {
-      trackGrammarCardViewed({
-        card_id: card.id,
-        part_of_speech: partOfSpeech,
-        deck_id: deckId,
-        session_id: sessionId,
-        has_grammar_data: hasGrammarData,
-      });
-      hasTrackedRef.current = card.id;
-    }
-  }, [isFlipped, card.id, partOfSpeech, sessionId, deckId, hasGrammarData]);
-
-  // Reset tracking ref when card changes
-  useEffect(() => {
-    hasTrackedRef.current = null;
-  }, [card.id]);
-
   const renderGrammarTable = () => {
     switch (partOfSpeech) {
       case 'noun':
         return nounData ? <NounDeclensionTable nounData={nounData} isFlipped={isFlipped} /> : null;
       case 'verb':
         return verbData ? (
-          <TenseTabs
-            key={card.id}
-            verbData={verbData}
-            cardId={card.id}
-            sessionId={sessionId}
-            isFlipped={isFlipped}
-          />
+          <TenseTabs key={card.id} verbData={verbData} isFlipped={isFlipped} />
         ) : null;
       case 'adjective':
         return adjectiveData ? (
           <AdjectiveDeclensionTables
             key={card.id}
             adjectiveData={adjectiveData}
-            cardId={card.id}
-            sessionId={sessionId}
             isFlipped={isFlipped}
           />
         ) : null;

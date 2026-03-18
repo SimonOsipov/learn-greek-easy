@@ -12,7 +12,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { trackGrammarGenderChanged } from '@/lib/analytics';
 import { cn } from '@/lib/utils';
 import type { AdjectiveData } from '@/types/grammar';
 
@@ -21,10 +20,6 @@ type Gender = (typeof GENDERS)[number];
 
 export interface GenderTabsProps {
   adjectiveData: AdjectiveData;
-  /** Optional card ID for analytics tracking */
-  cardId?: string;
-  /** Optional session ID for analytics tracking */
-  sessionId?: string;
   /** Whether the card is flipped (controls blur state) */
   isFlipped?: boolean;
 }
@@ -159,12 +154,7 @@ function GenderTable({ gender, data, na, t, isFlipped = true }: GenderTableProps
   );
 }
 
-export function GenderTabs({
-  adjectiveData,
-  cardId,
-  sessionId,
-  isFlipped = true,
-}: GenderTabsProps) {
+export function GenderTabs({ adjectiveData, isFlipped = true }: GenderTabsProps) {
   const { t } = useTranslation('review');
   const [selectedGender, setSelectedGender] = useState<Gender>('masculine');
 
@@ -172,18 +162,6 @@ export function GenderTabs({
 
   const handleGenderChange = (newGender: string) => {
     const gender = newGender as Gender;
-
-    // Track analytics if context is provided
-    if (cardId && sessionId) {
-      trackGrammarGenderChanged({
-        card_id: cardId,
-        part_of_speech: 'adjective',
-        from_gender: selectedGender,
-        to_gender: gender,
-        session_id: sessionId,
-      });
-    }
-
     setSelectedGender(gender);
   };
 

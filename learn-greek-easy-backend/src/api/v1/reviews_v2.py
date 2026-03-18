@@ -10,7 +10,6 @@ from src.config import settings
 from src.core.dependencies import get_current_user
 from src.core.event_bus import dashboard_event_bus
 from src.core.logging import get_logger
-from src.core.posthog import capture_event
 from src.core.redis import get_redis
 from src.core.subscription import check_premium_deck_access
 from src.db.dependencies import get_db
@@ -26,29 +25,6 @@ from src.tasks.background import (
 )
 
 logger = get_logger(__name__)
-
-STREAK_MILESTONES = [3, 7, 14, 30, 60, 90, 180, 365]
-
-
-def _check_streak_milestone(
-    user_id: UUID,
-    user_email: str,
-    new_streak: int,
-    previous_streak: int,
-) -> None:
-    """Check if user crossed a streak milestone and track if so."""
-    for milestone in STREAK_MILESTONES:
-        if new_streak >= milestone and previous_streak < milestone:
-            capture_event(
-                distinct_id=str(user_id),
-                event="streak_achieved",
-                properties={
-                    "streak_days": new_streak,
-                    "milestone": milestone,
-                },
-                user_email=user_email,
-            )
-            break
 
 
 async def _check_daily_goal_notification(
@@ -125,14 +101,11 @@ async def submit_v2_review(
     # Step 2: Check premium access
     check_premium_deck_access(current_user, card_record.deck)
 
-    # Step 3: Track streak before review
+    # Step 3: Count reviews before
     v2_review_repo = CardRecordReviewRepository(db)
-    previous_streak = await v2_review_repo.get_streak(current_user.id)
-
-    # Step 4: Count reviews before
     reviews_before = await v2_review_repo.count_reviews_today(current_user.id)
 
-    # Step 5: Process review
+    # Step 4: Process review
     service = V2SM2Service(db)
     result = await service.process_review(
         user_id=current_user.id,
@@ -142,17 +115,10 @@ async def submit_v2_review(
         user_email=current_user.email,
     )
 
-    # Step 6: Check streak after
-    new_streak = await v2_review_repo.get_streak(current_user.id)
-
-    # Step 7: Fire streak milestone event if streak increased
-    if new_streak > previous_streak:
-        _check_streak_milestone(current_user.id, current_user.email, new_streak, previous_streak)
-
-    # Step 8: Check daily goal notification
+    # Step 6: Check daily goal notification
     await _check_daily_goal_notification(db, current_user.id, reviews_before)
 
-    # Step 9: Schedule background tasks
+    # Step 7: Schedule background tasks
     if settings.feature_background_tasks:
         background_tasks.add_task(
             check_achievements_task,
@@ -178,7 +144,7 @@ async def submit_v2_review(
             db_url=settings.database_url,
         )
 
-    # Step 10: Signal dashboard SSE
+    # Step 8: Signal dashboard SSE
     try:
         loop = asyncio.get_running_loop()
         loop.create_task(

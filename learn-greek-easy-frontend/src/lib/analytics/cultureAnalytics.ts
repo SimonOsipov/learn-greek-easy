@@ -55,27 +55,6 @@ export interface CultureLanguageChangedProperties {
   to_lang: 'el' | 'en' | 'ru';
 }
 
-export interface DeckFilterChangedProperties {
-  filter_type: 'culture' | 'vocabulary' | 'all';
-}
-
-export interface CultureQuestionGridViewedProperties {
-  deck_id: string;
-  question_count: number;
-}
-
-export interface CultureQuestionGridSearchedProperties {
-  deck_id: string;
-  query_length: number;
-  result_count: number;
-}
-
-export interface CultureQuestionGridFilteredProperties {
-  deck_id: string;
-  filter_type: string;
-  result_count: number;
-}
-
 export interface CultureQuestionDetailViewedProperties {
   question_id: string;
   deck_id: string;
@@ -151,48 +130,6 @@ export function trackCultureLanguageChanged(
       from_lang: fromLang,
       to_lang: toLang,
     });
-  }
-}
-
-/**
- * Track when user changes the deck type filter.
- */
-export function trackDeckFilterChanged(properties: DeckFilterChangedProperties): void {
-  if (typeof posthog?.capture === 'function') {
-    posthog.capture('deck_filter_changed', properties);
-  }
-}
-
-/**
- * Track when user views the question grid on a culture deck detail page.
- */
-export function trackCultureQuestionGridViewed(
-  properties: CultureQuestionGridViewedProperties
-): void {
-  if (typeof posthog?.capture === 'function') {
-    posthog.capture('culture_question_grid_viewed', properties);
-  }
-}
-
-/**
- * Track when user searches within the question grid.
- */
-export function trackCultureQuestionGridSearched(
-  properties: CultureQuestionGridSearchedProperties
-): void {
-  if (typeof posthog?.capture === 'function') {
-    posthog.capture('culture_question_grid_searched', properties);
-  }
-}
-
-/**
- * Track when user filters the question grid by status.
- */
-export function trackCultureQuestionGridFiltered(
-  properties: CultureQuestionGridFilteredProperties
-): void {
-  if (typeof posthog?.capture === 'function') {
-    posthog.capture('culture_question_grid_filtered', properties);
   }
 }
 

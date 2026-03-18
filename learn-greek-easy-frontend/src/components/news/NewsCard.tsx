@@ -17,7 +17,6 @@ import { useTranslation } from 'react-i18next';
 import { WaveformPlayer } from '@/components/culture/WaveformPlayer';
 import {
   trackNewsArticleClicked,
-  trackNewsAudioError,
   trackNewsAudioPlayCompleted,
   trackNewsAudioPlayPaused,
   trackNewsAudioPlayStarted,
@@ -110,13 +109,6 @@ export const NewsCard: React.FC<NewsCardProps> = ({
 
   const handleError = useCallback(() => {
     clearActivePlayer(stopFnRef.current);
-    trackNewsAudioError({
-      news_item_id: article.id,
-      error_type: 'load_failed',
-      page: pageName,
-      level: level ?? 'b2',
-    });
-
     setShowError(true);
     if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
     errorTimeoutRef.current = setTimeout(() => {

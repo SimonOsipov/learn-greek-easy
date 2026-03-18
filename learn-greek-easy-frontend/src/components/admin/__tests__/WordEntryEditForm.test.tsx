@@ -35,13 +35,6 @@ vi.mock('@/services/wordEntryAPI', async (importOriginal) => {
   };
 });
 
-vi.mock('@/lib/analytics/adminAnalytics', () => ({
-  trackAdminWordEntryEditStarted: vi.fn(),
-  trackAdminWordEntryEditSaved: vi.fn(),
-  trackAdminWordEntryEditCancelled: vi.fn(),
-  trackAdminWordEntryAutoAudioRegen: vi.fn(),
-}));
-
 // ============================================
 // Factory Functions
 // ============================================

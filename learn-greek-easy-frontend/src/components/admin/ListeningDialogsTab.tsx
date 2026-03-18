@@ -11,10 +11,9 @@
  * - Edit and Delete actions per row
  * - Delete confirmation dialog
  * - Create button
- * - PostHog analytics
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import {
   AlertCircle,
@@ -52,11 +51,6 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
 import { useLanguage } from '@/hooks/useLanguage';
-import {
-  trackAdminDialogCreateClicked,
-  trackAdminDialogDeleted,
-  trackAdminDialogListViewed,
-} from '@/lib/analytics/adminAnalytics';
 import type { DeckLevel, ListeningDialogListItem } from '@/stores/adminDialogStore';
 import { useAdminDialogStore } from '@/stores/adminDialogStore';
 
@@ -240,7 +234,6 @@ export function ListeningDialogsTab() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [selectedDialogId, setSelectedDialogId] = useState<string | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
-  const hasTrackedView = useRef(false);
 
   const [searchInput, setSearchInput] = useState('');
   const debouncedSearch = useDebounce(searchInput, 300);
@@ -248,13 +241,6 @@ export function ListeningDialogsTab() {
   useEffect(() => {
     fetchDialogs();
   }, [fetchDialogs]);
-
-  useEffect(() => {
-    if (!isLoading && !hasTrackedView.current) {
-      hasTrackedView.current = true;
-      trackAdminDialogListViewed(total);
-    }
-  }, [isLoading, total]);
 
   const filteredDialogs = debouncedSearch
     ? dialogs.filter((d) => {
@@ -281,7 +267,6 @@ export function ListeningDialogsTab() {
     if (!dialogToDelete) return;
     try {
       await deleteDialog(dialogToDelete.id);
-      trackAdminDialogDeleted(dialogToDelete.id, dialogToDelete.status);
       toast({ title: t('listeningDialogs.delete.success') });
       setDialogToDelete(null);
     } catch {
@@ -293,7 +278,6 @@ export function ListeningDialogsTab() {
   };
 
   const handleCreateClick = () => {
-    trackAdminDialogCreateClicked();
     setCreateModalOpen(true);
   };
 

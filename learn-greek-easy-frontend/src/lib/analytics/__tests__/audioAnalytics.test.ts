@@ -9,11 +9,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import posthog from 'posthog-js';
 
-import {
-  trackExampleAudioPlayed,
-  trackWordAudioFailed,
-  trackWordAudioPlayed,
-} from '../audioAnalytics';
+import { trackExampleAudioPlayed, trackWordAudioPlayed } from '../audioAnalytics';
 
 // Mock posthog-js
 vi.mock('posthog-js', () => ({
@@ -224,76 +220,6 @@ describe('audioAnalytics', () => {
   });
 
   // ==========================================================================
-  // trackWordAudioFailed
-  // ==========================================================================
-
-  describe('trackWordAudioFailed', () => {
-    it('should call posthog.capture with correct event name and properties', () => {
-      trackWordAudioFailed({
-        word_entry_id: 'we-123',
-        error: 'Network error',
-        audio_type: 'word',
-        context: 'review',
-      });
-
-      expect(posthog.capture).toHaveBeenCalledWith('word_audio_failed', {
-        word_entry_id: 'we-123',
-        error: 'Network error',
-        audio_type: 'word',
-        context: 'review',
-      });
-    });
-
-    it('should track example audio_type and reference context', () => {
-      trackWordAudioFailed({
-        word_entry_id: 'we-abc',
-        error: 'Failed to play audio',
-        audio_type: 'example',
-        context: 'reference',
-      });
-
-      expect(posthog.capture).toHaveBeenCalledWith('word_audio_failed', {
-        word_entry_id: 'we-abc',
-        error: 'Failed to play audio',
-        audio_type: 'example',
-        context: 'reference',
-      });
-    });
-
-    it('should not throw if posthog.capture is undefined', () => {
-      const originalCapture = posthog.capture;
-      (posthog as Record<string, unknown>).capture = undefined;
-
-      expect(() => {
-        trackWordAudioFailed({
-          word_entry_id: 'we-test',
-          error: 'error',
-          audio_type: 'word',
-          context: 'review',
-        });
-      }).not.toThrow();
-
-      (posthog as Record<string, unknown>).capture = originalCapture;
-    });
-
-    it('should not throw if posthog.capture is null', () => {
-      const originalCapture = posthog.capture;
-      (posthog as Record<string, unknown>).capture = null;
-
-      expect(() => {
-        trackWordAudioFailed({
-          word_entry_id: 'we-test',
-          error: 'error',
-          audio_type: 'example',
-          context: 'reference',
-        });
-      }).not.toThrow();
-
-      (posthog as Record<string, unknown>).capture = originalCapture;
-    });
-  });
-
-  // ==========================================================================
   // PostHog Null Safety Tests
   // ==========================================================================
 
@@ -323,15 +249,6 @@ describe('audioAnalytics', () => {
         });
       }).not.toThrow();
 
-      expect(() => {
-        trackWordAudioFailed({
-          word_entry_id: 'we-3',
-          error: 'err',
-          audio_type: 'word',
-          context: 'review',
-        });
-      }).not.toThrow();
-
       (posthog as Record<string, unknown>).capture = originalCapture;
     });
 
@@ -354,12 +271,6 @@ describe('audioAnalytics', () => {
           context: 'reference',
           deck_id: 'deck-2',
           playback_speed: 1,
-        });
-        trackWordAudioFailed({
-          word_entry_id: 'we-3',
-          error: 'err',
-          audio_type: 'example',
-          context: 'reference',
         });
       }).not.toThrow();
 

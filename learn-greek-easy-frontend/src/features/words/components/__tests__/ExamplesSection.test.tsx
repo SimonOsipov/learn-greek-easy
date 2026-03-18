@@ -46,7 +46,6 @@ vi.mock('@/components/ui/SpeakerButton', () => ({
 // Mock analytics module
 vi.mock('@/lib/analytics', () => ({
   trackExampleAudioPlayed: vi.fn(),
-  trackWordAudioFailed: vi.fn(),
 }));
 
 // Mock example data
@@ -297,24 +296,6 @@ describe('ExamplesSection — Audio SpeakerButton integration (reference)', () =
       context: 'reference',
       deck_id: 'deck-xyz',
       playback_speed: 1,
-    });
-  });
-
-  it('6. trackWordAudioFailed called with audio_type: example on error', async () => {
-    const { trackWordAudioFailed } = await import('@/lib/analytics');
-    const user = userEvent.setup();
-
-    render(
-      <ExamplesSection examples={[examplesWithAudio[0]]} wordEntryId="we-abc" deckId="deck-xyz" />
-    );
-
-    await user.click(screen.getByTestId('speaker-error-trigger'));
-
-    expect(trackWordAudioFailed).toHaveBeenCalledWith({
-      word_entry_id: 'we-abc',
-      error: 'play error',
-      audio_type: 'example',
-      context: 'reference',
     });
   });
 });

@@ -19,10 +19,6 @@ import {
 } from '@/components/vocabulary';
 import { useToast } from '@/hooks/use-toast';
 import {
-  trackMyDecksAccessDenied,
-  trackMyDecksEditDeckClicked,
-  trackMyDecksDeleteDeckClicked,
-  trackMyDecksDeckDeleted,
   trackUserDeckDeleteStarted,
   trackUserDeckDeleteCancelled,
 } from '@/lib/analytics/myDecksAnalytics';
@@ -96,10 +92,6 @@ export const MyDeckDetailPage: React.FC = () => {
       // Handle 403 Forbidden specifically - show access denied dialog
       if (err instanceof APIRequestError && err.status === 403) {
         setShowAccessDenied(true);
-        trackMyDecksAccessDenied({
-          attempted_deck_id: deckId,
-          redirect_destination: '/my-decks',
-        });
         return;
       }
 
@@ -147,10 +139,6 @@ export const MyDeckDetailPage: React.FC = () => {
   // Edit deck handlers
   const handleEditClick = () => {
     if (!deck) return;
-    trackMyDecksEditDeckClicked({
-      deck_id: deck.id,
-      deck_name: deck.name,
-    });
     setIsEditModalOpen(true);
   };
 
@@ -166,10 +154,6 @@ export const MyDeckDetailPage: React.FC = () => {
   // Delete deck handlers
   const handleDeleteClick = () => {
     if (!deck) return;
-    trackMyDecksDeleteDeckClicked({
-      deck_id: deck.id,
-      deck_name: deck.name,
-    });
     trackUserDeckDeleteStarted({
       deck_id: deck.id,
       deck_name: deck.name,
@@ -184,10 +168,6 @@ export const MyDeckDetailPage: React.FC = () => {
     setIsDeleting(true);
     try {
       await deckAPI.deleteMyDeck(deck.id);
-      trackMyDecksDeckDeleted({
-        deck_id: deck.id,
-        deck_name: deck.name,
-      });
       toast({
         title: t('myDecks.deleteSuccess'),
       });
