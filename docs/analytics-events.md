@@ -1,70 +1,111 @@
-# Analytics Events Documentation
+# Analytics Events Convention
 
-This document describes the PostHog analytics events implemented in the Learn Greek Easy application.
+This document defines the standard for PostHog analytics events in Learn Greek Easy.
 
-## News Analytics Events
+## When to Create Events
 
-Events related to news feed interaction and news-sourced culture questions.
+**DO create events for:**
+- User-facing actions that indicate engagement (session start/complete, content viewed, feature used)
+- Conversion-critical flows (checkout, subscription changes, trial lifecycle)
+- Feature adoption signals (first use, repeated use)
+- User content creation/modification (deck created, card edited)
+- Premium gating (blocked access attempts)
 
-| Event | Properties | Trigger |
-|-------|------------|---------|
-| `news_article_clicked` | `item_id`, `article_domain` | User clicks on news card to read article |
-| `news_questions_button_clicked` | `news_item_id`, `deck_id` | User clicks Questions button on dashboard news card |
-| `news_source_link_clicked` | `card_id`, `article_domain` | User clicks source article link during question review |
+**DO NOT create events for:**
+- Admin panel actions — admin behavior is not product analytics
+- Error tracking — use Sentry, not PostHog
+- Granular UI interactions (button hover, modal open/close, filter applied) — unless directly tied to a product question
+- Cancelled/abandoned actions that have no analytical value on their own
+- Duplicate events for the same user intent (one event per meaningful moment)
 
-### Event Properties
+**Rule of thumb:** Before adding an event, answer: "What product decision will this data inform?" If you can't answer, don't create the event.
 
-#### news_article_clicked
+## Naming Convention
 
-Fired when a user clicks on a news item to read the full article.
+Pattern: `{domain}_{entity}_{action}`
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `item_id` | string | UUID of the news item |
-| `article_domain` | string | Hostname of the article URL (e.g., "ekathimerini.com") |
+```
+culture_session_started
+news_article_clicked
+user_deck_create_completed
+checkout_session_created
+premium_gate_blocked
+```
 
-#### news_questions_button_clicked
+### Rules
 
-Fired when a user clicks the "Questions" button on a news card in the dashboard.
+1. **snake_case** — always lowercase with underscores
+2. **Domain first** — group by feature area (`culture_`, `news_`, `user_deck_`, `checkout_`)
+3. **Entity in the middle** — what is being acted on (`session`, `article`, `deck`, `card`)
+4. **Action last** — past tense verb (`started`, `completed`, `clicked`, `viewed`)
+5. **No `my_`, `admin_`, or `page_` prefixes** — the domain is sufficient context
+6. **Be specific** — `user_deck_create_completed` not `deck_action`
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `news_item_id` | string | UUID of the news item |
-| `deck_id` | string | UUID of the associated culture deck containing the question |
+## How to Create Events
 
-#### news_source_link_clicked
+### Frontend — `track()` wrapper
 
-Fired when a user clicks the source article link shown in the question feedback screen after answering a question.
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `card_id` | string | UUID of the culture question card |
-| `article_domain` | string | Hostname of the source article URL (e.g., "ekathimerini.com"), or "unknown" if URL parsing fails |
-
-## Implementation Notes
-
-### Graceful Degradation
-
-All analytics functions are designed to fail silently if PostHog is not available or not properly initialized. This ensures that analytics issues never break the user experience.
+All frontend events go through a single `track()` function:
 
 ```typescript
-// Example pattern used in all tracking functions
-if (typeof posthog?.capture === 'function') {
-  posthog.capture('event_name', properties);
+// lib/analytics/track.ts
+import posthog from 'posthog-js';
+
+export function track(event: string, properties?: Record<string, unknown>): void {
+  if (typeof posthog?.capture === 'function') {
+    posthog.capture(event, properties);
+  }
 }
 ```
 
-### Domain Extraction
+Usage in components, stores, or utility functions:
 
-For events that track `article_domain`, the domain is extracted from the full URL using `new URL(url).hostname`. If URL parsing fails, the fallback value "unknown" is used.
+```typescript
+import { track } from '@/lib/analytics/track';
+
+track('culture_session_started', { deck_id, question_count });
+track('news_article_clicked', { item_id, article_domain });
+```
+
+**No per-domain analytics files.** No wrapper functions per event. Just `track(eventName, properties)`.
+
+### Super Properties
+
+Global context set once via `posthog.register()`:
+
+- `theme` — current theme (`light`, `dark`, `system`)
+- `interface_language` — current language (`el`, `en`, `ru`)
+- `environment` — `development`, `staging`, `production`
+- `app_version` — current app version
+
+These are automatically attached to every event. Do not pass them as event properties.
+
+### Backend — `capture_event()`
+
+All backend events go through `capture_event()` in `src/core/posthog.py`:
+
+```python
+from src.core.posthog import capture_event
+
+capture_event(
+    user_id=str(user.id),
+    event="checkout_completed",
+    properties={"plan_id": plan_id, "billing_cycle": cycle},
+)
+```
+
+This wrapper handles test user filtering and default property injection.
+
+## Property Guidelines
+
+1. **Use IDs, not names** — `deck_id` not `deck_name` (names change, IDs don't)
+2. **Include only actionable properties** — if you won't filter/group by it, don't send it
+3. **Use consistent types** — UUIDs as strings, timestamps as ISO 8601, enums as lowercase strings
+4. **No PII** — never send emails, passwords, or personal data as properties
 
 ## File Locations
 
-- Analytics functions: `learn-greek-easy-frontend/src/lib/analytics/newsAnalytics.ts`
-- Exports: `learn-greek-easy-frontend/src/lib/analytics/index.ts`
-- Tests: `learn-greek-easy-frontend/src/lib/analytics/__tests__/newsAnalytics.test.ts`
-
-## Related Components
-
-- **NewsSection.tsx** - Triggers `news_questions_button_clicked` when Questions button is clicked
-- **MCQComponent.tsx** - Triggers `news_source_link_clicked` when source article link is clicked
+| Layer | File | Purpose |
+|-------|------|---------|
+| Frontend | `src/lib/analytics/track.ts` | Single `track()` function |
+| Backend | `src/core/posthog.py` | `capture_event()` wrapper |

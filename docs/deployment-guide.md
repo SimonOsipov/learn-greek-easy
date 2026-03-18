@@ -15,26 +15,30 @@ This project uses GitHub Actions for sequential deployments to ensure Backend is
 
 ## How Deployments Work
 
-### Sequential Deploy Process
+### Production Deploy Sequence
 
-1. **Backend deploys first** - Uses `railway up --ci` which waits for health check
-2. **Backend warm-up** - Sends warmup requests to trigger DNS refresh and initialize pools
-3. **Frontend deploys third** - Only starts after Backend is warmed up
-4. **Post-deploy verification** - Health checks confirm both services are responding
+1. **Pre-deploy validation** — verifies branch is `main`
+2. **Backend deploys** — uses `railway up --ci` which waits for health check
+3. **Frontend deploys** — starts after Backend is healthy
+4. **DNS propagation wait** — 60-second pause for Railway internal DNS to update (frontend discovers new backend IP)
+5. **Backend warm-up** — sends requests to trigger DNS refresh in Caddy and initialize pools
+6. **Post-deploy health check** — confirms both services are responding
+7. **Deployment summary** — generates GitHub Step Summary with results
+
+> **Why warmup comes AFTER frontend:** Frontend's Caddy proxy needs to resolve the new backend container IP. The 60-second DNS wait + warmup requests ensure Caddy's cache is refreshed before real user traffic arrives.
+
+The production workflow also supports **manual dispatch** via `workflow_dispatch` with an optional `skip_health_check` input.
 
 ### Backend Warm-up Step
 
-After the backend deploys, a warm-up step runs before the frontend deployment begins. This step serves several important purposes:
+After frontend deploys and DNS propagates, the warm-up step runs. This serves several purposes:
 
 **Why warm-up is needed:**
 
-1. **Caddy DNS refresh** - After deployment, Caddy's DNS cache may still point to the old container IP for ~1 second. The first request can fail with a 502 error. Warm-up requests absorb this "sacrificial" failure and trigger DNS refresh.
-
-2. **Connection pool initialization** - Database and Redis connection pools are lazily initialized. Warm-up requests ensure connections are established before real user traffic arrives.
-
-3. **Lazy module loading** - Some Python modules and dependencies are loaded on first use. Warm-up triggers this initialization.
-
-4. **Cache warming** - Initial requests populate any application-level caches.
+1. **Caddy DNS refresh** — after deployment, Caddy's DNS cache may still point to the old container IP. Warm-up requests absorb "sacrificial" failures and trigger DNS refresh.
+2. **Connection pool initialization** — database and Redis connection pools are lazily initialized.
+3. **Lazy module loading** — some Python modules and dependencies load on first use.
+4. **Cache warming** — initial requests populate application-level caches.
 
 **The warm-up script (`scripts/backend-warmup.sh`):**
 
@@ -52,9 +56,9 @@ After the backend deploys, a warm-up step runs before the frontend deployment be
 ```
 
 The script performs three phases:
-1. **Wait for ready** - Polls `/api/v1/health/ready` until backend responds (max 20 attempts)
-2. **Send warmup requests** - Makes multiple requests to `/api/v1/health`, `/api/v1/health/live`, `/api/v1/health/ready`, and `/api/v1/status`
-3. **Final verification** - Confirms backend is still healthy after warmup
+1. **Wait for ready** — polls `/api/v1/health/ready` until backend responds (max 20 attempts)
+2. **Send warmup requests** — makes multiple requests to `/api/v1/health`, `/api/v1/health/live`, `/api/v1/health/ready`, and `/api/v1/status`
+3. **Final verification** — confirms backend is still healthy after warmup
 
 ### Why Sequential?
 
@@ -69,7 +73,6 @@ The `--ci` flag makes `railway up` wait for the deployment to complete AND pass 
 - Guaranteed Backend is healthy before Frontend starts
 - Failed Backend deploy prevents Frontend deploy (fail-fast)
 - Clear logs showing deployment progress
-- No need for manual sleep/wait between deployments
 
 ## Manual Deployment
 
@@ -197,7 +200,6 @@ If both Railway auto-deploy and GitHub Actions try to deploy:
 |---------|------------|-----|
 | Backend | DISABLED | DISABLED |
 | Frontend | DISABLED | DISABLED |
-| Redis | Manual | Manual |
 
 ### How to Disable Auto-Deploy
 
@@ -215,6 +217,7 @@ If both Railway auto-deploy and GitHub Actions try to deploy:
 | `.github/workflows/deploy-production.yml` | Production deployment on push to main |
 | `.github/workflows/preview.yml` | PR preview deployment |
 | `.github/workflows/preview-cleanup.yml` | Cleanup on PR close |
+| `.github/workflows/preview-cleanup-scheduled.yml` | Daily cron (2 AM UTC) to clean orphaned `pr-*` environments |
 | `.github/workflows/test.yml` | CI tests (reusable) |
 
 ## Scripts
@@ -234,6 +237,6 @@ All health endpoints are accessed via the frontend proxy (backend is private).
 | `/api/v1/health` | Comprehensive health check | `<frontend-url>/api/v1/health` |
 | `/api/v1/health/ready` | Readiness check (includes DB connectivity) | `<frontend-url>/api/v1/health/ready` |
 | `/api/v1/health/live` | Kubernetes-style liveness probe | `<frontend-url>/api/v1/health/live` |
-| `/docs` | API documentation (Swagger UI) | `<frontend-url>/docs` |
+| `/api/v1/status` | Application status | `<frontend-url>/api/v1/status` |
 
-> **Note**: Root-level `/health`, `/health/ready`, `/health/live` endpoints are also available via proxy for backward compatibility.
+> **Note**: Root-level `/health`, `/health/ready`, `/health/live` endpoints are also available via proxy for backward compatibility. `/docs` (Swagger UI) is only available when `debug=True` (not in production).

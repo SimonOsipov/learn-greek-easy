@@ -1,63 +1,58 @@
 # PR Labels for CI/CD Control
 
-Use labels on Pull Requests to control which CI/CD tests run.
+Use labels on Pull Requests to control which CI/CD tests run. Adding or removing a label re-triggers the workflow.
 
 ## Available Labels
 
 | Label | Effect |
 |-------|--------|
-| `skip-visual` | Skip visual tests (Playwright + Chromatic) |
 | `skip-k6` | Skip k6 performance tests |
+
+> **Note:** `skip-visual` label exists but has no effect — visual regression tests are currently disabled (being reorganized).
 
 ## Default Behavior
 
 | PR State | Tests Run |
 |----------|-----------|
 | Draft PR | Quick checks only (lint, typecheck, format) |
-| Ready PR | Full suite: CI tests, deploy, health, a11y, Lighthouse, visual, k6 |
+| Ready PR | Full suite: CI tests, deploy, health, a11y, Lighthouse, k6 |
 
 ## CI Workflow Behavior
 
 ### Quick Checks (~2-3 min)
-- Frontend lint/typecheck
+- Frontend lint/typecheck + Prettier formatting
 - Backend lint/typecheck (black, isort, flake8, mypy)
 - Alembic migration check
 
 ### Full Tests (~15-25 min)
 - Quick checks
 - Unit tests
-- E2E tests (3 browsers)
-- Backend tests
+- E2E tests (3 browsers x 3 shards = 9 parallel jobs)
+- Backend tests + coverage comment on PR
 - API tests
-- Deployment
+- Deployment (Railway preview)
 - Health/A11y/Lighthouse tests
-- Visual regression (Playwright + Chromatic)
-- K6 performance tests
+- K6 performance tests (non-blocking)
 
 ## When to Use Each Label
 
 | Scenario | Label |
 |----------|-------|
-| Backend-only changes (no UI) | `skip-visual` |
-| Config/documentation changes | `skip-visual` |
 | Quick iteration, skip load tests | `skip-k6` |
-| Infrastructure/CI changes | `skip-visual`, `skip-k6` |
+| Infrastructure/CI changes | `skip-k6` |
 | Most feature PRs | (no label) - run everything |
 
 ## Adding Labels via CLI
 
 ```bash
 # When creating PR
-gh pr create --title "..." --body "..." --label "skip-visual"
+gh pr create --title "..." --body "..." --label "skip-k6"
 
 # Add to existing PR
-gh pr edit 123 --add-label "skip-visual"
+gh pr edit 123 --add-label "skip-k6"
 
 # Remove label
-gh pr edit 123 --remove-label "skip-visual"
-
-# Skip multiple test types
-gh pr edit 123 --add-label "skip-visual" --add-label "skip-k6"
+gh pr edit 123 --remove-label "skip-k6"
 ```
 
 ## Performance Testing

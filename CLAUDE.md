@@ -129,6 +129,7 @@ Update this file when features are merged, phases change, or key decisions are m
 - [CI/CD Labels](docs/ci-cd-labels.md) - PR labels for test control
 - [Railway Backend Privacy](docs/railway-backend-privacy.md) - Production setup
 - [PR Preview Deployments](docs/pr-preview-deployments.md) - Preview environments
-- [Logging](learn-greek-easy-backend/docs/logging.md) - Logging architecture and best practices
+- [Logging](docs/logging.md) - Logging architecture and best practices
 - [PreCompact Hook Setup](docs/precompact-hook-setup.md) - Session continuity configuration
 - [Supabase Database](docs/supabase-database.md) - Database credentials, connectivity, and migration guide
+- [Analytics Events](docs/analytics-events.md) - PostHog event naming, when to create, and implementation patterns

@@ -1,6 +1,6 @@
 # PreCompact Hook Setup
 
-This document explains how to set up the PreCompact hook for session continuity. The hook saves session state before context compaction, allowing Claude to restore context in long-running sessions (especially Ralph loops).
+This document explains how to set up the PreCompact hook for session continuity. The hook saves session state before context compaction, allowing Claude to restore context in long-running sessions (especially Ralph loops on the VPS).
 
 ## Overview
 
@@ -36,7 +36,7 @@ trigger: "pre-compact"
 
 # Session state (populated by Claude during work)
 current_task: null
-stage: null  # architecture|explore|qa-plan|execution|qa-verify
+stage: null  # architecture|explore|execution|qa-verify
 completed_tasks: []
 
 progress: |
@@ -63,13 +63,10 @@ chmod +x .claude/hooks/pre-compact.sh
 
 ### 4. Update `.claude/settings.json`
 
-If file exists, merge with existing content. If not, create it:
+If file exists, merge with existing content. If not, create it. The `enabledPlugins` section varies by machine — on the VPS where Ralph runs, it includes the Ralph plugin. On local dev, it may be empty.
 
 ```json
 {
-  "enabledPlugins": {
-    "ralph-wiggum@claude-plugins-official": true
-  },
   "hooks": {
     "PreCompact": [
       {
@@ -172,8 +169,8 @@ pr_number: 156
 | File | Purpose | Git Synced |
 |------|---------|------------|
 | `.claude/hooks/pre-compact.sh` | Hook script | No |
-| `.claude/settings.json` | Hook configuration + plugins | No |
+| `.claude/settings.json` | Hook configuration | No |
 | `.claude/handoff.yaml` | Generated state file | No |
 | `docs/precompact-hook-setup.md` | This documentation | Yes |
 | `CLAUDE.md` | Instructions for Claude | Yes |
-| `RALPH_PROMPT.md` | Ralph loop instructions | Yes |
+| `RALPH_PROMPT.md` | Ralph loop instructions (used on VPS) | Yes |

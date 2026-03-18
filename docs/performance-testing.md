@@ -142,8 +142,10 @@ k6 run k6/scenarios/dashboard.js
 |----------|----------|-------------|
 | `K6_ENV` | No | Environment: `local` (default) or `preview` |
 | `K6_SCENARIO` | No | Scenario: `smoke` (default), `default`, or `load` |
-| `K6_API_BASE_URL` | Preview only | Backend API URL |
+| `K6_API_BASE_URL` | Preview only | API URL (set to frontend URL — backend is private, accessed via proxy) |
 | `K6_FRONTEND_BASE_URL` | Preview only | Frontend URL |
+| `K6_BROWSER_HEADLESS` | CI only | Set to `true` in CI |
+| `K6_BROWSER_ARGS` | CI only | Set to `no-sandbox,disable-dev-shm-usage,disable-gpu` in CI |
 
 ### Test Users
 
@@ -164,7 +166,7 @@ All test users are created by the E2E seeding system. Password for all: `TestPas
 | Scenario | Executor | VUs | Duration | Use Case |
 |----------|----------|-----|----------|----------|
 | `smoke` | constant-vus | 1 | 10s | Quick validation, CI default |
-| `default` | constant-vus | 10 | 30s | Standard load testing |
+| `default` | constant-vus | 10 (local) / 5 (preview) | 30s | Standard load testing |
 | `load` | constant-vus | 50 (local) / 20 (preview) | 5m / 3m | Stress testing |
 
 ## Metrics Deep Dive
@@ -211,11 +213,14 @@ auth_navigate_time......: avg=1234ms min=987ms med=1150ms max=2345ms p(90)=1800m
 
 ### Triggering Performance Tests
 
-Performance tests run in the preview workflow when the `perf-test` label is present:
+Performance tests **run by default** on ready PRs and are skipped with the `skip-k6` label:
 
 ```bash
-# Add label to PR
-gh pr edit 123 --add-label "perf-test"
+# Skip k6 tests on a PR
+gh pr edit 123 --add-label "skip-k6"
+
+# Re-enable (remove label)
+gh pr edit 123 --remove-label "skip-k6"
 ```
 
 ### Workflow Details
@@ -225,22 +230,24 @@ The `k6-performance` job in `.github/workflows/preview.yml`:
 1. **Prerequisites**: Requires deploy, health-check, and seed-database to pass
 2. **Setup**: Installs k6 using `grafana/setup-k6-action@v1`
 3. **Execution**: Runs auth and dashboard scenarios
-4. **Reporting**: Extracts p95 metrics and adds to PR comment
+4. **Reporting**: JSON reports parsed by `parse-k6-results.cjs` to generate detailed PR comment
 5. **Artifacts**: Uploads HTML and JSON reports (30-day retention)
+6. **PR Comment**: A dedicated sticky comment (`k6-comment` job) posts per-metric breakdown with threshold status
+
+> **API proxy pattern**: In preview environments, the backend is private. Both `K6_API_BASE_URL` and `K6_FRONTEND_BASE_URL` are set to the frontend URL — k6 accesses the API through the frontend proxy.
 
 ### Non-Blocking Design
 
 Performance tests use `continue-on-error: true` to prevent blocking PR merges. Threshold failures are reported but don't fail the overall workflow.
 
-### PR Comment Format
+### PR Comment
 
-Results are included in the PR summary comment:
+Results are posted as a dedicated sticky PR comment by the `k6-comment` job, which:
+1. Downloads k6 JSON report artifacts
+2. Parses them with `learn-greek-easy-frontend/scripts/parse-k6-results.cjs`
+3. Posts a detailed markdown table with per-metric p95 values, threshold status, and artifact links
 
-```
-| Test | Status | Details |
-|------|--------|---------|
-| K6 Performance | :white_check_mark: | Auth p95: 3245ms, Dashboard p95: 8123ms |
-```
+A summary line is also included in the main PR comment.
 
 ### Viewing Reports from GitHub Actions
 
@@ -428,8 +435,7 @@ Selectors must match `data-testid` attributes in the frontend.
 
 1. **Test users only**: Never use real user credentials in performance tests
 2. **No secrets in config**: Use environment variables for sensitive data
-3. **CI secrets**: Store `K6_CLOUD_TOKEN` as a GitHub secret
-4. **Network isolation**: Preview environments should be isolated
+3. **Network isolation**: Preview environments should be isolated
 
 ## Related Documentation
 
