@@ -30,18 +30,6 @@ vi.mock('@/services/adminAPI', () => ({
   },
 }));
 
-// Mock analytics to prevent errors
-vi.mock('@/lib/analytics/adminAnalytics', () => ({
-  trackAdminDeckEditOpened: vi.fn(),
-  trackAdminDeckEditSaved: vi.fn(),
-  trackAdminDeckEditFailed: vi.fn(),
-  trackAdminDeckEditCancelled: vi.fn(),
-  trackAdminDeckDeactivated: vi.fn(),
-  trackAdminDeckReactivated: vi.fn(),
-  trackAdminDeckPremiumEnabled: vi.fn(),
-  trackAdminDeckPremiumDisabled: vi.fn(),
-}));
-
 // Create mock decks for testing
 const createMockVocabularyDeck = (overrides: Partial<UnifiedDeckItem> = {}): UnifiedDeckItem => ({
   id: 'vocab-deck-1',

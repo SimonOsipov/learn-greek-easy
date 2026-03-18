@@ -31,26 +31,6 @@ export {
   trackCultureQuestionDetailViewed,
 } from './cultureAnalytics';
 export {
-  // Type interfaces
-  type AdminDeckEditOpenedProperties,
-  type AdminDeckEditSavedProperties,
-  type AdminDeckEditCancelledProperties,
-  type AdminDeckEditFailedProperties,
-  type AdminDeckDeactivatedProperties,
-  type AdminDeckReactivatedProperties,
-  type AdminDeckPremiumEnabledProperties,
-  type AdminDeckPremiumDisabledProperties,
-  // Tracking functions
-  trackAdminDeckEditOpened,
-  trackAdminDeckEditSaved,
-  trackAdminDeckEditCancelled,
-  trackAdminDeckEditFailed,
-  trackAdminDeckDeactivated,
-  trackAdminDeckReactivated,
-  trackAdminDeckPremiumEnabled,
-  trackAdminDeckPremiumDisabled,
-} from './adminAnalytics';
-export {
   type PremiumDeckLockedViewedProperties,
   type PremiumDeckLockedClickedProperties,
   trackPremiumDeckLockedViewed,

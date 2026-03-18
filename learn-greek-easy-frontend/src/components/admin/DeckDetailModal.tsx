@@ -50,10 +50,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { toast } from '@/hooks/use-toast';
-import {
-  trackAdminWordEntryDetailOpened,
-  trackAdminWordEntryDetailTabSwitched,
-} from '@/lib/analytics/adminAnalytics';
 import { computeCompletionPercentage } from '@/lib/completeness';
 import { isTranslationComplete } from '@/lib/cultureCompleteness';
 import { getLocalizedDeckName } from '@/lib/deckLocale';
@@ -421,12 +417,6 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
     clickedRowIdRef.current = card.id;
     setSelectedWordEntry(card);
     setActiveTab('entry');
-    trackAdminWordEntryDetailOpened({
-      word_entry_id: card.id,
-      deck_id: deck!.id,
-      lemma: card.front_text,
-      part_of_speech: card.part_of_speech,
-    });
   };
 
   const handleBack = useCallback(() => {
@@ -622,10 +612,6 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
                   value={activeTab}
                   onValueChange={(value) => {
                     setActiveTab(value);
-                    trackAdminWordEntryDetailTabSwitched({
-                      word_entry_id: selectedWordEntry.id,
-                      tab: value,
-                    });
                   }}
                   data-testid="word-entry-detail-tabs"
                 >

@@ -46,11 +46,6 @@ vi.mock('@/hooks/use-toast', () => ({
   toast: vi.fn(),
 }));
 
-vi.mock('@/lib/analytics/adminAnalytics', () => ({
-  trackAdminWordEntryDetailOpened: vi.fn(),
-  trackAdminWordEntryDetailTabSwitched: vi.fn(),
-}));
-
 vi.mock('../CardDeleteDialog', () => ({
   CardDeleteDialog: () => null,
 }));

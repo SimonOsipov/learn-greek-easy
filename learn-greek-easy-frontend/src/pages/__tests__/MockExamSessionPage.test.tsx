@@ -71,15 +71,6 @@ vi.mock('@/lib/analytics', () => ({
   trackCultureLanguageChanged: vi.fn(),
   trackDeckFilterChanged: vi.fn(),
   generateCultureSessionId: vi.fn(),
-  // Admin analytics
-  trackAdminDeckEditOpened: vi.fn(),
-  trackAdminDeckEditSaved: vi.fn(),
-  trackAdminDeckEditCancelled: vi.fn(),
-  trackAdminDeckEditFailed: vi.fn(),
-  trackAdminDeckDeactivated: vi.fn(),
-  trackAdminDeckReactivated: vi.fn(),
-  trackAdminDeckPremiumEnabled: vi.fn(),
-  trackAdminDeckPremiumDisabled: vi.fn(),
   // Deck analytics
   trackPremiumDeckLockedViewed: vi.fn(),
   trackPremiumDeckLockedClicked: vi.fn(),

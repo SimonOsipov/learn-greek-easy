@@ -32,11 +32,6 @@ vi.mock('@/hooks/use-toast', () => ({
   toast: vi.fn(),
 }));
 
-vi.mock('@/lib/analytics/adminAnalytics', () => ({
-  trackAdminWordEntryDetailOpened: vi.fn(),
-  trackAdminWordEntryDetailTabSwitched: vi.fn(),
-}));
-
 // Mock child modal components to prevent them from rendering complex dependencies
 vi.mock('../CardDeleteDialog', () => ({
   CardDeleteDialog: () => null,
@@ -220,20 +215,6 @@ describe('DeckDetailModal word entry detail navigation', () => {
       await user.click(screen.getByTestId('word-entry-row-entry-1'));
       expect(screen.getByTestId('word-entry-detail-view')).toBeInTheDocument();
     });
-
-    it('fires PostHog event on word entry click', async () => {
-      const { trackAdminWordEntryDetailOpened } = await import('@/lib/analytics/adminAnalytics');
-      const user = userEvent.setup();
-      renderModal();
-      await waitFor(() => screen.getByTestId('word-entry-row-entry-1'));
-      await user.click(screen.getByTestId('word-entry-row-entry-1'));
-      expect(trackAdminWordEntryDetailOpened).toHaveBeenCalledWith({
-        word_entry_id: 'entry-1',
-        deck_id: 'deck-v2',
-        lemma: 'σπίτι',
-        part_of_speech: 'noun',
-      });
-    });
   });
 
   // ============================================
@@ -341,21 +322,6 @@ describe('DeckDetailModal word entry detail navigation', () => {
       await user.click(screen.getByTestId('word-entry-row-entry-1'));
       expect(screen.getByTestId('word-entry-tab-entry')).toBeInTheDocument();
       expect(screen.getByTestId('word-entry-tab-cards')).toBeInTheDocument();
-    });
-
-    it('fires PostHog event on tab switch', async () => {
-      const { trackAdminWordEntryDetailTabSwitched } = await import(
-        '@/lib/analytics/adminAnalytics'
-      );
-      const user = userEvent.setup();
-      renderModal();
-      await waitFor(() => screen.getByTestId('word-entry-row-entry-1'));
-      await user.click(screen.getByTestId('word-entry-row-entry-1'));
-      await user.click(screen.getByTestId('word-entry-tab-cards'));
-      expect(trackAdminWordEntryDetailTabSwitched).toHaveBeenCalledWith({
-        word_entry_id: 'entry-1',
-        tab: 'cards',
-      });
     });
   });
 

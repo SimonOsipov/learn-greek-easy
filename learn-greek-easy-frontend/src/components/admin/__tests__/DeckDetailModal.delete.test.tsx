@@ -38,11 +38,6 @@ vi.mock('@/hooks/use-toast', () => ({
   toast: vi.fn(),
 }));
 
-vi.mock('@/lib/analytics/adminAnalytics', () => ({
-  trackAdminWordEntryDetailOpened: vi.fn(),
-  trackAdminWordEntryDetailTabSwitched: vi.fn(),
-}));
-
 // DO NOT mock CardDeleteDialog — let it render for real to verify dialog text
 vi.mock('../CardEditModal', () => ({ CardEditModal: () => null }));
 vi.mock('../CardCreateModal', () => ({ CardCreateModal: () => null }));
