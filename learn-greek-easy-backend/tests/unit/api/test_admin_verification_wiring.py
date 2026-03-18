@@ -494,7 +494,6 @@ class TestWiktionaryPipelineIntegration:
                 return_value=MagicMock(verify=MagicMock(return_value=wikt_local_result)),
             ),
             patch("src.api.v1.admin.get_session_factory"),
-            patch("src.api.v1.admin.capture_event"),
         )
 
     @pytest.mark.asyncio
@@ -511,7 +510,7 @@ class TestWiktionaryPipelineIntegration:
         wikt_result = _make_local_result(tier="auto_approve")
 
         patches = self._base_patches(mock_local_svc, mock_cross_svc, wikt_entry, wikt_result)
-        with patches[0], patches[1], patches[2], patches[3], patches[4], patches[5]:
+        with patches[0], patches[1], patches[2], patches[3], patches[4]:
             result = await _run_verification_stage(
                 generated_data=_make_noun_data(),
                 normalized_lemma=_make_normalized_lemma(),
@@ -535,7 +534,7 @@ class TestWiktionaryPipelineIntegration:
         wikt_entry = _make_wiktionary_entry()
 
         patches = self._base_patches(mock_local_svc, mock_cross_svc, wikt_entry)
-        with patches[0], patches[1], patches[2], patches[3], patches[4], patches[5]:
+        with patches[0], patches[1], patches[2], patches[3], patches[4]:
             result = await _run_verification_stage(
                 generated_data=_make_noun_data(),
                 normalized_lemma=_make_normalized_lemma(),
@@ -557,7 +556,7 @@ class TestWiktionaryPipelineIntegration:
         mock_lexicon_svc.get_declensions.return_value = [MagicMock()]  # non-empty
 
         patches = self._base_patches(mock_local_svc, mock_cross_svc, wikt_entry=None)
-        with patches[0], patches[1], patches[2], patches[3], patches[4], patches[5]:
+        with patches[0], patches[1], patches[2], patches[3], patches[4]:
             result = await _run_verification_stage(
                 generated_data=_make_noun_data(),
                 normalized_lemma=_make_normalized_lemma(),
@@ -581,7 +580,7 @@ class TestWiktionaryPipelineIntegration:
         wikt_entry = _make_wiktionary_entry()
 
         patches = self._base_patches(mock_local_svc, mock_cross_svc, wikt_entry)
-        with patches[0], patches[1], patches[2], patches[3], patches[4], patches[5]:
+        with patches[0], patches[1], patches[2], patches[3], patches[4]:
             result = await _run_verification_stage(
                 generated_data=_make_noun_data(),
                 normalized_lemma=_make_normalized_lemma(),
@@ -603,7 +602,7 @@ class TestWiktionaryPipelineIntegration:
         mock_lexicon_svc.get_declensions.return_value = []  # empty
 
         patches = self._base_patches(mock_local_svc, mock_cross_svc, wikt_entry=None)
-        with patches[0], patches[1], patches[2], patches[3], patches[4], patches[5]:
+        with patches[0], patches[1], patches[2], patches[3], patches[4]:
             result = await _run_verification_stage(
                 generated_data=_make_noun_data(),
                 normalized_lemma=_make_normalized_lemma(),
