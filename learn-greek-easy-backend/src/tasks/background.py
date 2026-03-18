@@ -78,6 +78,87 @@ def is_background_tasks_enabled() -> bool:
     return settings.feature_background_tasks
 
 
+async def award_flashcard_xp_task(
+    user_id: UUID,
+    card_record_id: UUID,
+    quality: int,
+    db_url: str,
+) -> None:
+    """Award XP for a V2 flashcard review in the background.
+
+    This task runs asynchronously after the review response is sent.
+    It creates its own database connection to avoid issues with
+    connection sharing across async contexts.
+
+    Args:
+        user_id: UUID of the user
+        card_record_id: Card record ID (used as XP transaction source_id)
+        quality: SM2 quality rating (0-5)
+        db_url: Database connection URL
+    """
+    if not is_background_tasks_enabled():
+        logger.debug("Background tasks disabled, skipping award_flashcard_xp_task")
+        return
+
+    logger.info(
+        "Starting flashcard XP award",
+        extra={
+            "user_id": str(user_id),
+            "card_record_id": str(card_record_id),
+            "quality": quality,
+            "task": "award_flashcard_xp",
+        },
+    )
+
+    engine = None
+    try:
+        engine = create_async_engine(
+            db_url,
+            pool_pre_ping=True,
+            connect_args={"ssl": "require"} if settings.is_production else {},
+        )
+        async_session_factory = async_sessionmaker(
+            engine, class_=AsyncSession, expire_on_commit=False
+        )
+
+        session = async_session_factory()
+        try:
+            from src.services.xp_service import XPService
+
+            xp_service = XPService(session)
+            amount = await xp_service.award_flashcard_review_xp(
+                user_id=user_id,
+                quality=quality,
+                card_record_id=card_record_id,
+            )
+            await session.commit()
+            logger.info(
+                "Flashcard XP awarded",
+                extra={
+                    "user_id": str(user_id),
+                    "card_record_id": str(card_record_id),
+                    "amount": amount,
+                    "quality": quality,
+                },
+            )
+        finally:
+            await session.close()
+
+    except Exception as e:
+        logger.error(
+            "Flashcard XP award failed",
+            extra={
+                "user_id": str(user_id),
+                "card_record_id": str(card_record_id),
+                "error": str(e),
+            },
+            exc_info=True,
+        )
+    finally:
+        if engine is not None:
+            await engine.dispose()
+
+
 async def check_achievements_task(user_id: UUID, db_url: str) -> None:
     """Check if user has earned new achievements after a review.
 
