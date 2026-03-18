@@ -20,6 +20,10 @@ XP_DIALOG_EXERCISE_COMPLETE = 10
 XP_DIALOG_WRONG_ANSWER = 2
 XP_DIALOG_ALL_COMPLETE = 25
 
+# Flashcard review XP
+XP_FLASHCARD_CORRECT = 5  # Correct review (quality >= 3)
+XP_FLASHCARD_WRONG = 2  # Wrong review encouragement (quality 0-2)
+
 # Perfect recall threshold in seconds
 PERFECT_RECALL_THRESHOLD_SECONDS = 2
 

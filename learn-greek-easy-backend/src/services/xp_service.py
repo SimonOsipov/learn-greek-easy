@@ -14,6 +14,8 @@ from src.services.xp_constants import (
     XP_CULTURE_WRONG,
     XP_DAILY_GOAL,
     XP_FIRST_REVIEW,
+    XP_FLASHCARD_CORRECT,
+    XP_FLASHCARD_WRONG,
     XP_PERFECT_ANSWER,
     XP_SESSION_COMPLETE,
     XP_STREAK_MULTIPLIER,
@@ -336,3 +338,29 @@ class XPService:
             # Award encouragement XP for wrong answers (MANDATORY per architecture)
             await self.award_xp(user_id, XP_CULTURE_WRONG, "culture_attempt", source_id)
             return XP_CULTURE_WRONG
+
+    async def award_flashcard_review_xp(
+        self,
+        user_id: UUID,
+        quality: int,
+        card_record_id: UUID,
+    ) -> int:
+        """Award XP for a V2 flashcard review.
+
+        Args:
+            user_id: The user's UUID
+            quality: SM2 quality rating (0-5)
+            card_record_id: Card record ID used as source_id
+
+        Returns:
+            XP amount awarded
+        """
+        if quality >= 3:
+            amount = XP_FLASHCARD_CORRECT
+            reason = "flashcard_review"
+        else:
+            amount = XP_FLASHCARD_WRONG
+            reason = "flashcard_attempt"
+
+        await self.award_xp(user_id, amount, reason, source_id=card_record_id)
+        return amount

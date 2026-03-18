@@ -19,7 +19,11 @@ from src.repositories.card_record import CardRecordRepository
 from src.repositories.card_record_review import CardRecordReviewRepository
 from src.schemas.v2_sm2 import V2ReviewRequest, V2ReviewResult
 from src.services.v2_sm2_service import V2SM2Service
-from src.tasks.background import check_achievements_task, log_analytics_task
+from src.tasks.background import (
+    award_flashcard_xp_task,
+    check_achievements_task,
+    log_analytics_task,
+)
 
 logger = get_logger(__name__)
 
@@ -165,6 +169,13 @@ async def submit_v2_review(
                 "time_taken": review.time_taken,
                 "new_status": result.new_status.value,
             },
+        )
+        background_tasks.add_task(
+            award_flashcard_xp_task,
+            user_id=current_user.id,
+            card_record_id=card_record.id,
+            quality=review.quality,
+            db_url=settings.database_url,
         )
 
     # Step 10: Signal dashboard SSE
