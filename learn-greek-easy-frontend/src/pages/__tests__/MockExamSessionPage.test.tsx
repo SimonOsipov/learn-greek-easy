@@ -111,11 +111,6 @@ vi.mock('@/lib/analytics', () => ({
   trackChangelogPageViewed: vi.fn(),
   trackChangelogPagePaginated: vi.fn(),
   trackChangelogEntryViewed: vi.fn(),
-  // Grammar analytics
-  trackGrammarCardViewed: vi.fn(),
-  trackGrammarTenseChanged: vi.fn(),
-  trackGrammarVoiceToggled: vi.fn(),
-  trackGrammarGenderChanged: vi.fn(),
   // User card analytics
   trackUserCardCreateStarted: vi.fn(),
   trackUserCardCreateCompleted: vi.fn(),

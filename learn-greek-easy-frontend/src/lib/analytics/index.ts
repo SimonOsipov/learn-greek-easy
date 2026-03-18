@@ -119,18 +119,6 @@ export {
 } from './changelogAnalytics';
 export {
   // Type interfaces
-  type GrammarCardViewedProperties,
-  type GrammarTenseChangedProperties,
-  type GrammarVoiceToggledProperties,
-  type GrammarGenderChangedProperties,
-  // Tracking functions
-  trackGrammarCardViewed,
-  trackGrammarTenseChanged,
-  trackGrammarVoiceToggled,
-  trackGrammarGenderChanged,
-} from './grammarAnalytics';
-export {
-  // Type interfaces
   type UserCardCreateStartedProperties,
   type UserCardCreateCompletedProperties,
   type UserCardCreateCancelledProperties,

@@ -8,18 +8,12 @@ import { GenderTabs } from './GenderTabs';
 
 export interface AdjectiveDeclensionTablesProps {
   adjectiveData: AdjectiveData;
-  /** Optional card ID for analytics tracking */
-  cardId?: string;
-  /** Optional session ID for analytics tracking */
-  sessionId?: string;
   /** Whether the card is flipped (controls blur state) */
   isFlipped?: boolean;
 }
 
 export function AdjectiveDeclensionTables({
   adjectiveData,
-  cardId,
-  sessionId,
   isFlipped = true,
 }: AdjectiveDeclensionTablesProps) {
   const { t } = useTranslation('review');
@@ -29,12 +23,7 @@ export function AdjectiveDeclensionTables({
   return (
     <div className="space-y-4">
       {/* Gender declension tabs */}
-      <GenderTabs
-        adjectiveData={adjectiveData}
-        cardId={cardId}
-        sessionId={sessionId}
-        isFlipped={isFlipped}
-      />
+      <GenderTabs adjectiveData={adjectiveData} isFlipped={isFlipped} />
 
       {/* Comparison section */}
       <Card className="overflow-hidden">
