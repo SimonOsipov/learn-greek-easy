@@ -1,4 +1,4 @@
-// src/features/words/components/PracticeCard.tsx
+// src/components/shared/PracticeCard.tsx
 
 /**
  * Flashcard-style practice card component.
