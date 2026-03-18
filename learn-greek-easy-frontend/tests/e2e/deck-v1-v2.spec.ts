@@ -186,21 +186,21 @@ test.describe('V1/V2 Deck Pages', () => {
       expect(cardCount).toBeGreaterThanOrEqual(1);
     });
 
-    test('E2E-DUAL-05: V2 deck Study Now button is disabled', async ({ page }) => {
+    test('E2E-DUAL-05: V2 deck Study Now button is enabled and navigates to practice', async ({ page }) => {
       await page.goto(`/decks/${v2DeckId}`);
 
       // Wait for page to load
       const deckDetail = page.locator('[data-testid="v2-deck-detail"]');
       await expect(deckDetail).toBeVisible({ timeout: 10000 });
 
-      // Find the study button - it should be disabled for V2 decks
-      const studyButton = page
-        .locator('[data-testid="start-review-button"]')
-        .or(page.getByRole('button', { name: /review|start|study/i }).first());
+      // Find the study button - it should be enabled for V2 decks
+      const studyButton = page.locator('[data-testid="start-review-button"]');
       await expect(studyButton).toBeVisible();
+      await expect(studyButton).toBeEnabled();
 
-      // Verify it's disabled
-      await expect(studyButton).toBeDisabled();
+      // Click and verify navigation to practice route
+      await studyButton.click();
+      await expect(page).toHaveURL(new RegExp(`/decks/${v2DeckId}/practice`), { timeout: 10000 });
     });
 
     test('E2E-DUAL-06: V2 deck word search filters correctly', async ({ page }) => {

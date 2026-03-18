@@ -1,16 +1,29 @@
 // src/features/decks/components/V2DeckPage/V2DeckHeader.tsx
 
+import { useState } from 'react';
+
 import { BookOpen } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 
 import { DeckBadge } from '@/components/decks/DeckBadge';
 import { DeckProgressBar } from '@/components/decks/DeckProgressBar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { getDeckBackgroundStyle } from '@/lib/deckBackground';
 import { getLocalizedDeckName, getLocalizedDeckDescription } from '@/lib/deckLocale';
 import type { Deck } from '@/types/deck';
+
+/**
+ * Card type filter options for practice session.
+ */
+const CARD_TYPE_FILTERS = [
+  { value: 'all', labelKey: 'v2Practice.filterAll' },
+  { value: 'meaning', labelKey: 'v2Practice.filterTranslation' },
+  { value: 'sentence_translation', labelKey: 'v2Practice.filterSentence' },
+  { value: 'plural_form', labelKey: 'v2Practice.filterPluralForm' },
+  { value: 'article', labelKey: 'v2Practice.filterArticle' },
+] as const;
 
 /**
  * Props for V2DeckHeader component.
@@ -27,15 +40,28 @@ interface V2DeckHeaderProps {
  * - Category and level badges
  * - Description
  * - Progress bar (all cards shown as "new")
- * - Disabled "Study Now" button with "Coming soon" tooltip
+ * - Card type filter pills
+ * - Enabled "Study Now" button navigating to /decks/:id/practice
  */
 export const V2DeckHeader: React.FC<V2DeckHeaderProps> = ({ deck }) => {
   const { t, i18n } = useTranslation('deck');
+  const navigate = useNavigate();
+  const [selectedCardType, setSelectedCardType] = useState<string>('all');
+
   const localizedName = getLocalizedDeckName(deck, i18n.language);
   const localizedDescription = getLocalizedDeckDescription(deck, i18n.language);
 
   // Use cardCount as the word count (for V2 decks, this represents word entries)
   const wordCount = deck.cardCount;
+
+  const handleStartReview = () => {
+    const basePath = `/decks/${deck.id}/practice`;
+    if (selectedCardType === 'all') {
+      navigate(basePath);
+    } else {
+      navigate(`${basePath}?cardType=${selectedCardType}`);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -103,29 +129,33 @@ export const V2DeckHeader: React.FC<V2DeckHeaderProps> = ({ deck }) => {
             />
           </div>
 
-          {/* Disabled Study Button with Tooltip */}
+          {/* Card Type Filter Pills */}
+          <div className="mt-4 flex flex-wrap gap-2">
+            {CARD_TYPE_FILTERS.map(({ value, labelKey }) => (
+              <Button
+                key={value}
+                variant={selectedCardType === value ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedCardType(value)}
+                aria-pressed={selectedCardType === value}
+              >
+                {t(labelKey)}
+              </Button>
+            ))}
+          </div>
+
+          {/* Study Button */}
           <div className="mt-6">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span tabIndex={0} className="inline-block w-full">
-                    <Button
-                      data-testid="start-review-button"
-                      variant="hero"
-                      size="lg"
-                      disabled
-                      className="w-full cursor-not-allowed opacity-50"
-                    >
-                      <BookOpen className="mr-2 h-5 w-5" />
-                      {t('detail.startReview')}
-                    </Button>
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{t('v2.comingSoon')}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <Button
+              data-testid="start-review-button"
+              variant="hero"
+              size="lg"
+              className="w-full"
+              onClick={handleStartReview}
+            >
+              <BookOpen className="mr-2 h-5 w-5" />
+              {t('detail.startReview')}
+            </Button>
           </div>
         </CardContent>
       </Card>

@@ -18,8 +18,8 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { trackWordAudioPlayed, trackExampleAudioPlayed } from '@/lib/analytics';
 import type { CardRecordResponse } from '@/services/wordEntryAPI';
 
-import { PracticeCard } from '../PracticeCard';
-import type { PracticeCardProps } from '../PracticeCard';
+import { PracticeCard } from '@/components/shared/PracticeCard';
+import type { PracticeCardProps } from '@/components/shared/PracticeCard';
 
 vi.mock('@/components/ui/SpeakerButton', () => ({
   SpeakerButton: ({

@@ -193,12 +193,31 @@ class V2SM2Service:
         s3 = get_s3_service()
         for card in cards:
             we = we_map.get(card.word_entry_id)
-            if not we or not we.audio_key:
+            if not we:
                 continue
-            card.audio_url = s3.generate_presigned_url(we.audio_key)
-            card.example_audio_url = self._get_example_audio_key(card, we)
-            if card.example_audio_url:
-                card.example_audio_url = s3.generate_presigned_url(card.example_audio_url)
+            card.translation_ru = we.translation_ru
+            card.translation_ru_plural = we.translation_ru_plural
+            card.sentence_ru = self._get_sentence_ru(card, we)
+            if we.audio_key:
+                card.audio_url = s3.generate_presigned_url(we.audio_key)
+                card.example_audio_url = self._get_example_audio_key(card, we)
+                if card.example_audio_url:
+                    card.example_audio_url = s3.generate_presigned_url(card.example_audio_url)
+
+    def _get_sentence_ru(self, card: V2StudyQueueCard, we: WordEntry) -> str | None:
+        """Return Russian sentence text for target_to_el sentence_translation cards."""
+        if card.card_type != CardType.SENTENCE_TRANSLATION:
+            return None
+        direction = card.front_content.get("direction")
+        if direction != "target_to_el":
+            return None
+        example_id = card.front_content.get("example_id")
+        if not example_id or not we.examples:
+            return None
+        for ex in we.examples:
+            if ex.get("id") == example_id:
+                return ex.get("russian")
+        return None
 
     def _get_example_audio_key(self, card: V2StudyQueueCard, we: WordEntry) -> str | None:
         if card.card_type == CardType.SENTENCE_TRANSLATION:

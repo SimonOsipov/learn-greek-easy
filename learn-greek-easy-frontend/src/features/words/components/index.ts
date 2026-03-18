@@ -9,5 +9,5 @@ export type { NounDeclensionTableProps, AdjectiveDeclensionTableProps } from './
 export { ExamplesSection } from './ExamplesSection';
 export type { ExamplesSectionProps } from './ExamplesSection';
 
-export { PracticeCard } from './PracticeCard';
-export type { PracticeCardProps } from './PracticeCard';
+export { PracticeCard } from '@/components/shared/PracticeCard';
+export type { PracticeCardProps } from '@/components/shared/PracticeCard';
