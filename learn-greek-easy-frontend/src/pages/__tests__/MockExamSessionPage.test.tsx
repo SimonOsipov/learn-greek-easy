@@ -69,7 +69,6 @@ vi.mock('@/lib/analytics', () => ({
   trackCultureSessionCompleted: vi.fn(),
   trackCultureSessionAbandoned: vi.fn(),
   trackCultureLanguageChanged: vi.fn(),
-  trackDeckFilterChanged: vi.fn(),
   generateCultureSessionId: vi.fn(),
   // Deck analytics
   trackPremiumDeckLockedViewed: vi.fn(),
@@ -78,14 +77,12 @@ vi.mock('@/lib/analytics', () => ({
   registerTheme: vi.fn(),
   trackThemeChange: vi.fn(),
   trackThemePreferenceLoaded: vi.fn(),
-  trackThemeMigration: vi.fn(),
   // Mock exam analytics
   trackMockExamPageViewed: vi.fn(),
   trackMockExamStarted: vi.fn(),
   trackMockExamQuestionAnswered: vi.fn(),
   trackMockExamCompleted: vi.fn(),
   trackMockExamAbandoned: vi.fn(),
-  trackMockExamTimerWarning: vi.fn(),
   trackMockExamResultsViewed: vi.fn(),
   trackMockExamIncorrectReviewExpanded: vi.fn(),
   trackMockExamRetryClicked: vi.fn(),

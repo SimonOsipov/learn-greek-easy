@@ -21,11 +21,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { SpeakerButton } from '@/components/ui/SpeakerButton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { AudioSpeed } from '@/hooks';
-import {
-  trackWordAudioPlayed,
-  trackExampleAudioPlayed,
-  trackWordAudioFailed,
-} from '@/lib/analytics';
+import { trackWordAudioPlayed, trackExampleAudioPlayed } from '@/lib/analytics';
 import { cn } from '@/lib/utils';
 import type { CardRecordResponse } from '@/services/wordEntryAPI';
 import type { PartOfSpeech } from '@/types/grammar';
@@ -403,15 +399,6 @@ export function PracticeCard({
     }
   };
 
-  const handleAudioError = (error: string) => {
-    trackWordAudioFailed({
-      word_entry_id: wordEntryId ?? '',
-      error,
-      audio_type: isSentenceCard ? 'example' : 'word',
-      context: 'review',
-    });
-  };
-
   // Detect article cards
   const isArticleCard = card.card_type === 'article';
   const articleBack = back as unknown as ArticleBackContent;
@@ -613,7 +600,6 @@ export function PracticeCard({
             audioUrl={audioUrl}
             size="sm"
             onPlay={handleAudioPlay}
-            onError={handleAudioError}
             controlledState={audioControlledState}
           />
         </div>

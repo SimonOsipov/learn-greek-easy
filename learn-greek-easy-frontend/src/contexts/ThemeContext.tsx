@@ -8,12 +8,7 @@ import React, {
   useRef,
 } from 'react';
 
-import {
-  registerTheme,
-  trackThemeChange,
-  trackThemePreferenceLoaded,
-  trackThemeMigration,
-} from '@/lib/analytics';
+import { registerTheme, trackThemeChange, trackThemePreferenceLoaded } from '@/lib/analytics';
 import { reportAPIError } from '@/lib/errorReporting';
 import log from '@/lib/logger';
 import { api } from '@/services/api';
@@ -158,7 +153,6 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       api
         .patch('/api/v1/auth/me', { theme: currentTheme })
         .then(() => {
-          trackThemeMigration(currentTheme);
           localStorage.removeItem(GUEST_THEME_KEY);
         })
         .catch((error) => {

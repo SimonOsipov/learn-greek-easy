@@ -19,7 +19,6 @@ vi.mock('@/lib/analytics/newsAnalytics', () => ({
   trackNewsAudioPlayStarted: vi.fn(),
   trackNewsAudioPlayPaused: vi.fn(),
   trackNewsAudioPlayCompleted: vi.fn(),
-  trackNewsAudioError: vi.fn(),
 }));
 
 vi.mock('@/lib/newsAudioCoordinator', () => ({

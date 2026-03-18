@@ -8,7 +8,7 @@
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { trackWordAudioFailed, trackWordAudioPlayed } from '@/lib/analytics';
+import { trackWordAudioPlayed } from '@/lib/analytics';
 import { render, screen } from '@/lib/test-utils';
 import type { CardReview } from '@/types/review';
 
@@ -51,7 +51,6 @@ vi.mock('@/lib/analytics', async (importOriginal) => {
   return {
     ...actual,
     trackWordAudioPlayed: vi.fn(),
-    trackWordAudioFailed: vi.fn(),
   };
 });
 
@@ -130,20 +129,6 @@ describe('CardHeader — SpeakerButton audio integration', () => {
       context: 'review',
       deck_id: 'deck-456',
       playback_speed: 1,
-    });
-  });
-
-  it('5. trackWordAudioFailed called with correct properties on error', async () => {
-    const user = userEvent.setup();
-    render(<CardHeader card={makeCard()} onFlip={onFlip} isCardFlipped={false} />);
-
-    await user.click(screen.getByTestId('speaker-error-trigger'));
-
-    expect(trackWordAudioFailed).toHaveBeenCalledWith({
-      word_entry_id: 'we-123',
-      error: 'play error',
-      audio_type: 'word',
-      context: 'review',
     });
   });
 });

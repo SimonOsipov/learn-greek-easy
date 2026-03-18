@@ -46,7 +46,6 @@ import {
   trackMockExamStarted,
   trackMockExamQuestionAnswered,
   trackMockExamAbandoned,
-  trackMockExamTimerWarning,
 } from '@/lib/analytics';
 import log from '@/lib/logger';
 import { useMockExamSessionStore } from '@/stores/mockExamSessionStore';
@@ -141,14 +140,6 @@ export const MockExamSessionPage: React.FC = () => {
             defaultValue: 'Make sure to submit your remaining answers.',
           }),
         });
-        // Track timer warning
-        if (session) {
-          trackMockExamTimerWarning({
-            session_id: session.backendSession.id,
-            warning_level: 'warning_5min',
-            questions_answered: session.stats.questionsAnswered,
-          });
-        }
       }
       if (level === 'warning_1min' && !hasShown1MinWarning) {
         setHasShown1MinWarning(true);
@@ -159,14 +150,6 @@ export const MockExamSessionPage: React.FC = () => {
           }),
           variant: 'destructive',
         });
-        // Track timer warning
-        if (session) {
-          trackMockExamTimerWarning({
-            session_id: session.backendSession.id,
-            warning_level: 'warning_1min',
-            questions_answered: session.stats.questionsAnswered,
-          });
-        }
       }
     },
     onExpired: () => {

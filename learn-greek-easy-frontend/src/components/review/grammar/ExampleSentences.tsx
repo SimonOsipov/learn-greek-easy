@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { AudioSpeedToggle } from '@/components/ui/AudioSpeedToggle';
 import { Card, CardContent } from '@/components/ui/card';
 import { SpeakerButton } from '@/components/ui/SpeakerButton';
-import { trackExampleAudioPlayed, trackWordAudioFailed } from '@/lib/analytics';
+import { trackExampleAudioPlayed } from '@/lib/analytics';
 import { cn } from '@/lib/utils';
 import type { Example } from '@/types/grammar';
 
@@ -89,14 +89,6 @@ export function ExampleSentences({
                         context: 'review',
                         deck_id: deckId ?? '',
                         playback_speed: 1,
-                      })
-                    }
-                    onError={(error) =>
-                      trackWordAudioFailed({
-                        word_entry_id: wordEntryId ?? '',
-                        error,
-                        audio_type: 'example',
-                        context: 'review',
                       })
                     }
                   />

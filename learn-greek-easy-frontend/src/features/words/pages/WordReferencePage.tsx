@@ -27,7 +27,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SpeakerButton } from '@/components/ui/SpeakerButton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { trackWordAudioFailed, trackWordAudioPlayed } from '@/lib/analytics';
+import { trackWordAudioPlayed } from '@/lib/analytics';
 import { getLocalizedTranslation } from '@/lib/localeUtils';
 import type { AdjectiveData, AdverbData, NounDataAny, NounGender, VerbData } from '@/types/grammar';
 import { getPersistedAudioSpeed, setPersistedAudioSpeed } from '@/utils/audioSpeed';
@@ -311,14 +311,6 @@ export function WordReferencePage() {
                   context: 'reference',
                   deck_id: deckId ?? '',
                   playback_speed: 1,
-                })
-              }
-              onError={(error) =>
-                trackWordAudioFailed({
-                  word_entry_id: wordEntry.id,
-                  error,
-                  audio_type: 'word',
-                  context: 'reference',
                 })
               }
             />

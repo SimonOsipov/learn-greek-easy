@@ -45,7 +45,6 @@ vi.mock('@/components/ui/SpeakerButton', () => ({
 // Mock analytics module
 vi.mock('@/lib/analytics', () => ({
   trackWordAudioPlayed: vi.fn(),
-  trackWordAudioFailed: vi.fn(),
 }));
 
 // Mock react-router-dom
@@ -716,29 +715,6 @@ describe('WordReferencePage — Audio SpeakerButton integration', () => {
       context: 'reference',
       deck_id: 'test-deck-id',
       playback_speed: 1,
-    });
-  });
-
-  it('4. trackWordAudioFailed called with audio_type: word on error', async () => {
-    const { trackWordAudioFailed } = await import('@/lib/analytics');
-    const user = userEvent.setup();
-
-    mockUseWordEntry.mockReturnValue({
-      wordEntry: makeWordEntryWithAudio(),
-      isLoading: false,
-      isError: false,
-      error: null,
-    });
-
-    renderPage();
-
-    await user.click(screen.getByTestId('speaker-error-trigger'));
-
-    expect(trackWordAudioFailed).toHaveBeenCalledWith({
-      word_entry_id: 'word-1',
-      error: 'play error',
-      audio_type: 'word',
-      context: 'reference',
     });
   });
 });

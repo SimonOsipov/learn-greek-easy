@@ -49,14 +49,3 @@ export function trackThemePreferenceLoaded(
     });
   }
 }
-
-/**
- * Track when guest theme is migrated to account.
- */
-export function trackThemeMigration(theme: Theme): void {
-  if (typeof posthog?.capture === 'function') {
-    posthog.capture('theme_migration_completed', {
-      theme,
-    });
-  }
-}

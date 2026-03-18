@@ -7,7 +7,6 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { trackDeckFilterChanged } from '@/lib/analytics';
 import { CEFR_LEVEL_OPTIONS } from '@/lib/cefrColors';
 import { debounce } from '@/lib/utils';
 import type { DeckFilters as DeckFiltersType, DeckLevel, DeckStatus } from '@/types/deck';
@@ -53,7 +52,6 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
   const handleTypeChange = useCallback(
     (newType: DeckType) => {
       if (newType === deckType) return;
-      trackDeckFilterChanged({ filter_type: newType });
       onDeckTypeChange(newType);
     },
     [deckType, onDeckTypeChange]

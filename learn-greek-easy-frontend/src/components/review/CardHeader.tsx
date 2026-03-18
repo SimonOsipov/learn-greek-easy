@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { SpeakerButton } from '@/components/ui/SpeakerButton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { trackWordAudioFailed, trackWordAudioPlayed } from '@/lib/analytics';
+import { trackWordAudioPlayed } from '@/lib/analytics';
 import type { NounGender } from '@/types/grammar';
 import type { CardReview } from '@/types/review';
 
@@ -87,14 +87,6 @@ export function CardHeader({ card, onFlip, isCardFlipped }: CardHeaderProps) {
                 context: 'review',
                 deck_id: card.srData.deckId,
                 playback_speed: 1,
-              })
-            }
-            onError={(error) =>
-              trackWordAudioFailed({
-                word_entry_id: card.word_entry_id ?? '',
-                error,
-                audio_type: 'word',
-                context: 'review',
               })
             }
           />

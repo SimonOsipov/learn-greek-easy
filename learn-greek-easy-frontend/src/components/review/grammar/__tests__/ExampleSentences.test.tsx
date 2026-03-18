@@ -13,7 +13,7 @@ import userEvent from '@testing-library/user-event';
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { trackExampleAudioPlayed, trackWordAudioFailed } from '@/lib/analytics';
+import { trackExampleAudioPlayed } from '@/lib/analytics';
 import type { Example } from '@/types/grammar';
 
 // Mock AudioSpeedToggle
@@ -50,7 +50,6 @@ vi.mock('@/components/ui/SpeakerButton', () => ({
 // Mock analytics for audio tests
 vi.mock('@/lib/analytics', () => ({
   trackExampleAudioPlayed: vi.fn(),
-  trackWordAudioFailed: vi.fn(),
 }));
 
 // Mock i18n with configurable language
@@ -516,26 +515,6 @@ describe('ExampleSentences — Audio SpeakerButton integration', () => {
     );
     expect(screen.getByTestId('tense-badge')).toBeInTheDocument();
     expect(screen.getByTestId('speaker-button')).toBeInTheDocument();
-  });
-
-  it('trackWordAudioFailed called with audio_type: example on error', async () => {
-    const user = userEvent.setup();
-    render(
-      <ExampleSentences
-        examples={mockExampleWithAudio}
-        isFlipped={true}
-        wordEntryId="we-123"
-        deckId="deck-456"
-      />
-    );
-    await user.click(screen.getByTestId('speaker-error-trigger'));
-
-    expect(trackWordAudioFailed).toHaveBeenCalledWith({
-      word_entry_id: 'we-123',
-      error: 'play error',
-      audio_type: 'example',
-      context: 'review',
-    });
   });
 });
 

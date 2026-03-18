@@ -30,13 +30,6 @@ export interface ExampleAudioPlayedProperties {
   playback_speed: number;
 }
 
-export interface WordAudioFailedProperties {
-  word_entry_id: string;
-  error: string;
-  audio_type: 'word' | 'example';
-  context: 'review' | 'reference';
-}
-
 // ============================================================================
 // Tracking Functions
 // ============================================================================
@@ -56,14 +49,5 @@ export function trackWordAudioPlayed(properties: WordAudioPlayedProperties): voi
 export function trackExampleAudioPlayed(properties: ExampleAudioPlayedProperties): void {
   if (typeof posthog?.capture === 'function') {
     posthog.capture('example_audio_played', properties);
-  }
-}
-
-/**
- * Track when word or example audio fails to play.
- */
-export function trackWordAudioFailed(properties: WordAudioFailedProperties): void {
-  if (typeof posthog?.capture === 'function') {
-    posthog.capture('word_audio_failed', properties);
   }
 }

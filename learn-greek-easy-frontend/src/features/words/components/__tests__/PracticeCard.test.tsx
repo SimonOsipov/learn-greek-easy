@@ -15,11 +15,7 @@ import i18n from 'i18next';
 import { afterEach, describe, it, expect, vi } from 'vitest';
 
 import { TooltipProvider } from '@/components/ui/tooltip';
-import {
-  trackWordAudioPlayed,
-  trackExampleAudioPlayed,
-  trackWordAudioFailed,
-} from '@/lib/analytics';
+import { trackWordAudioPlayed, trackExampleAudioPlayed } from '@/lib/analytics';
 import type { CardRecordResponse } from '@/services/wordEntryAPI';
 
 import { PracticeCard } from '../PracticeCard';
@@ -71,7 +67,6 @@ vi.mock('@/components/ui/AudioSpeedToggle', () => ({
 vi.mock('@/lib/analytics', () => ({
   trackWordAudioPlayed: vi.fn(),
   trackExampleAudioPlayed: vi.fn(),
-  trackWordAudioFailed: vi.fn(),
 }));
 
 // ============================================
@@ -1006,23 +1001,6 @@ describe('PracticeCard', () => {
       expect(trackWordAudioPlayed).toHaveBeenCalledWith(
         expect.objectContaining({
           lemma: 'γεια σας', // back.answer, NOT 'hello' (front.main)
-        })
-      );
-    });
-
-    it('fires word_audio_failed analytics on error', () => {
-      renderCard({
-        card: mockCard,
-        audioState: makeAudioState(audioUrl),
-        wordEntryId: 'word-001',
-        deckId: 'deck-001',
-      });
-      fireEvent.click(screen.getByTestId('speaker-error-trigger'));
-      expect(trackWordAudioFailed).toHaveBeenCalledWith(
-        expect.objectContaining({
-          word_entry_id: 'word-001',
-          audio_type: 'word',
-          context: 'review',
         })
       );
     });
