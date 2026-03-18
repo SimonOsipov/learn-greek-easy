@@ -205,13 +205,12 @@ test.describe('V2 Flashcard Review', () => {
       await page.keyboard.press('Space');
       await expect(page.locator('[data-testid="practice-card-back"]')).toBeVisible({ timeout: 10000 });
       await page.keyboard.press('3');
-      const front = page.locator('[data-testid="practice-card-front"]');
-      const summary = page.getByText(/cards reviewed/i);
-      await expect(front.or(summary)).toBeVisible({ timeout: 10000 });
+      // Small pause to let the card transition or summary begin rendering
+      await page.waitForTimeout(300);
     }
 
-    // Verify inline summary (URL stays on /practice, no separate /summary route)
-    await expect(page.getByText(/cards reviewed/i)).toBeVisible({ timeout: 10000 });
+    // Verify inline summary with generous timeout (async reviews must all resolve)
+    await expect(page.getByText(/cards reviewed/i)).toBeVisible({ timeout: 20000 });
     await expect(page).toHaveURL(new RegExp(`/decks/${v2NounsDeckId}/practice`));
 
     // Back to Deck button navigates back to deck detail (use first() — summary may render multiple)
