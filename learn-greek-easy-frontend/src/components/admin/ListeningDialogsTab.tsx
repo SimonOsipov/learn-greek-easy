@@ -11,7 +11,6 @@
  * - Edit and Delete actions per row
  * - Delete confirmation dialog
  * - Create button
- * - PostHog analytics
  */
 
 import { useEffect, useMemo, useState } from 'react';
