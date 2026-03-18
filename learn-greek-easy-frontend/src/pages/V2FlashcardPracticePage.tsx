@@ -410,7 +410,7 @@ export function V2FlashcardPracticePage() {
       <div className="flex items-center justify-between px-4 py-3">
         <Button variant="ghost" size="sm" onClick={backToDeck}>
           <ChevronLeft className="mr-1 h-4 w-4" />
-          Exit
+          {t('v2Practice.exitSession')}
         </Button>
         <div className="flex items-center gap-2">
           <LanguageSwitcher variant="icon" />
