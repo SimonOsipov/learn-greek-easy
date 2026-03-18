@@ -214,8 +214,8 @@ test.describe('V2 Flashcard Review', () => {
     await expect(page.getByText(/cards reviewed/i)).toBeVisible({ timeout: 10000 });
     await expect(page).toHaveURL(new RegExp(`/decks/${v2NounsDeckId}/practice`));
 
-    // Back to Deck button navigates back to deck detail
-    await page.getByRole('button', { name: /back to deck/i }).click();
+    // Back to Deck button navigates back to deck detail (use first() — summary may render multiple)
+    await page.getByRole('button', { name: /back to deck/i }).first().click();
     await expect(page).toHaveURL(new RegExp(`/decks/${v2NounsDeckId}$`));
   });
 });
