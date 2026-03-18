@@ -15,12 +15,6 @@ import { Card } from '@/components/ui/card';
 import { UserVocabularyCardCreateModal } from '@/components/vocabulary';
 import { useToast } from '@/hooks/use-toast';
 import {
-  trackMyDecksPageViewed,
-  trackMyDecksCreateDeckClicked,
-  trackMyDecksCreateCardClicked,
-  trackMyDecksEditDeckClicked,
-  trackMyDecksDeleteDeckClicked,
-  trackMyDecksDeckDeleted,
   trackUserDeckDeleteStarted,
   trackUserDeckDeleteCancelled,
 } from '@/lib/analytics/myDecksAnalytics';
@@ -74,7 +68,6 @@ export const MyDecksPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [createSource, setCreateSource] = useState<CreateSource>('my_decks_button');
-  const hasTrackedPageView = useRef(false);
 
   // Edit deck state
   const [editingDeck, setEditingDeck] = useState<Deck | null>(null);
@@ -110,26 +103,12 @@ export const MyDecksPage: React.FC = () => {
     fetchMyDecks();
   }, [fetchMyDecks]);
 
-  // Track page view after decks loaded successfully
-  useEffect(() => {
-    if (!isLoading && !error && !hasTrackedPageView.current) {
-      trackMyDecksPageViewed({
-        user_deck_count: decks.length,
-        has_decks: decks.length > 0,
-      });
-      hasTrackedPageView.current = true;
-    }
-  }, [isLoading, error, decks.length]);
-
   const handleRetry = () => {
     setError(null);
     fetchMyDecks();
   };
 
   const handleCreateDeckClick = (source: CreateSource = 'my_decks_button') => {
-    trackMyDecksCreateDeckClicked({
-      button_state: 'enabled',
-    });
     setCreateSource(source);
     setIsCreateModalOpen(true);
   };
@@ -143,11 +122,6 @@ export const MyDecksPage: React.FC = () => {
   };
 
   const handleCreateCardClick = () => {
-    trackMyDecksCreateCardClicked({
-      button_state: 'enabled',
-      has_decks: decks.length > 0,
-    });
-
     if (decks.length === 0) {
       // No decks: show toast prompting to create a deck first
       toast({
@@ -207,10 +181,6 @@ export const MyDecksPage: React.FC = () => {
 
   // Edit deck handlers
   const handleEditDeckClick = (deck: Deck) => {
-    trackMyDecksEditDeckClicked({
-      deck_id: deck.id,
-      deck_name: deck.title,
-    });
     setEditingDeck(deck);
   };
 
@@ -225,10 +195,6 @@ export const MyDecksPage: React.FC = () => {
 
   // Delete deck handlers
   const handleDeleteDeckClick = (deck: Deck) => {
-    trackMyDecksDeleteDeckClicked({
-      deck_id: deck.id,
-      deck_name: deck.title,
-    });
     trackUserDeckDeleteStarted({
       deck_id: deck.id,
       deck_name: deck.title,
@@ -243,10 +209,6 @@ export const MyDecksPage: React.FC = () => {
     setIsDeleting(true);
     try {
       await deckAPI.deleteMyDeck(deletingDeck.id);
-      trackMyDecksDeckDeleted({
-        deck_id: deletingDeck.id,
-        deck_name: deletingDeck.title,
-      });
       toast({
         title: t('myDecks.deleteSuccess'),
       });
