@@ -80,6 +80,18 @@ class V2StudyQueueCard(BaseModel):
         default=None,
         description="Presigned URL for example sentence audio",
     )
+    translation_ru: str | None = Field(
+        default=None,
+        description="Russian translation of the word",
+    )
+    translation_ru_plural: str | None = Field(
+        default=None,
+        description="Russian plural translation of the word",
+    )
+    sentence_ru: str | None = Field(
+        default=None,
+        description="Russian translation of the example sentence (sentence_translation target_to_el only)",
+    )
 
 
 class V2StudyQueue(BaseModel):
