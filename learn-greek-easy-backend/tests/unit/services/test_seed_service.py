@@ -15,7 +15,14 @@ from uuid import uuid4
 
 import pytest
 
-from src.db.models import DeckLevel, FeedbackCategory, NotificationType, VoteType
+from src.db.models import (
+    CardRecordStatistics,
+    CardStatus,
+    DeckLevel,
+    FeedbackCategory,
+    NotificationType,
+    VoteType,
+)
 from src.services.seed_service import SeedService
 
 # ============================================================================
@@ -343,6 +350,249 @@ class TestSeedServiceReviews:
 
 
 # ============================================================================
+# V2 Statistics Seeding Tests
+# ============================================================================
+
+
+class TestSeedServiceV2Statistics:
+    """Tests for V2 card record statistics seeding."""
+
+    @pytest.mark.asyncio
+    async def test_v2_stats_blocked_in_production(
+        self, seed_service, mock_db, mock_settings_cannot_seed
+    ):
+        with pytest.raises(RuntimeError) as exc_info:
+            await seed_service.seed_v2_card_record_statistics(
+                user_id=uuid4(), deck_id=uuid4(), progress_percent=60
+            )
+
+        assert "Database seeding not allowed" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_v2_stats_creates_for_all_eligible_cards(
+        self, seed_service, mock_db, mock_settings_can_seed
+    ):
+        card_ids = [uuid4() for _ in range(10)]
+        mock_result = MagicMock()
+        mock_result.fetchall.return_value = [(cid,) for cid in card_ids]
+        mock_db.execute.return_value = mock_result
+
+        result = await seed_service.seed_v2_card_record_statistics(
+            user_id=uuid4(), deck_id=uuid4(), progress_percent=60
+        )
+
+        assert result["success"] is True
+        # 10 cards: mastered=6, learning=2, new=2 (bottom 20% skipped)
+        assert result["stats_created"] == 8
+
+    @pytest.mark.asyncio
+    async def test_v2_stats_progress_distribution(
+        self, seed_service, mock_db, mock_settings_can_seed
+    ):
+        card_ids = [uuid4() for _ in range(10)]
+        mock_result = MagicMock()
+        mock_result.fetchall.return_value = [(cid,) for cid in card_ids]
+        mock_db.execute.return_value = mock_result
+
+        result = await seed_service.seed_v2_card_record_statistics(
+            user_id=uuid4(), deck_id=uuid4(), progress_percent=60
+        )
+
+        assert result["mastered"] == 6
+        assert result["learning_due_today"] == 2
+        assert result["learning_due_tomorrow"] == 0
+        assert result["new"] == 2
+
+    @pytest.mark.asyncio
+    async def test_v2_stats_mastered_have_correct_sm2_values(
+        self, seed_service, mock_db, mock_settings_can_seed
+    ):
+        card_ids = [uuid4() for _ in range(5)]
+        mock_result = MagicMock()
+        mock_result.fetchall.return_value = [(cid,) for cid in card_ids]
+        mock_db.execute.return_value = mock_result
+
+        await seed_service.seed_v2_card_record_statistics(
+            user_id=uuid4(), deck_id=uuid4(), progress_percent=100
+        )
+
+        added_stats = [
+            call.args[0]
+            for call in mock_db.add.call_args_list
+            if isinstance(call.args[0], CardRecordStatistics)
+        ]
+        mastered = [s for s in added_stats if s.status == CardStatus.MASTERED]
+        assert len(mastered) == 5
+        for stat in mastered:
+            assert stat.easiness_factor == 2.5
+            assert stat.interval == 30
+            assert stat.repetitions == 5
+
+    @pytest.mark.asyncio
+    async def test_v2_stats_learning_due_today_have_correct_values(
+        self, seed_service, mock_db, mock_settings_can_seed
+    ):
+        from datetime import date
+
+        card_ids = [uuid4() for _ in range(10)]
+        mock_result = MagicMock()
+        mock_result.fetchall.return_value = [(cid,) for cid in card_ids]
+        mock_db.execute.return_value = mock_result
+
+        await seed_service.seed_v2_card_record_statistics(
+            user_id=uuid4(), deck_id=uuid4(), progress_percent=60
+        )
+
+        added_stats = [
+            call.args[0]
+            for call in mock_db.add.call_args_list
+            if isinstance(call.args[0], CardRecordStatistics)
+        ]
+        learning_today = [
+            s
+            for s in added_stats
+            if s.status == CardStatus.LEARNING and s.next_review_date == date.today()
+        ]
+        assert len(learning_today) == 2
+        for stat in learning_today:
+            assert stat.interval == 1
+            assert stat.repetitions == 1
+
+    @pytest.mark.asyncio
+    async def test_v2_stats_handles_empty_deck(self, seed_service, mock_db, mock_settings_can_seed):
+        mock_result = MagicMock()
+        mock_result.fetchall.return_value = []
+        mock_db.execute.return_value = mock_result
+
+        result = await seed_service.seed_v2_card_record_statistics(
+            user_id=uuid4(), deck_id=uuid4(), progress_percent=60
+        )
+
+        assert result["success"] is True
+        assert result["stats_created"] == 0
+
+    @pytest.mark.asyncio
+    async def test_v2_stats_small_deck_all_learning_due_today(
+        self, seed_service, mock_db, mock_settings_can_seed
+    ):
+        card_ids = [uuid4() for _ in range(3)]
+        mock_result = MagicMock()
+        mock_result.fetchall.return_value = [(cid,) for cid in card_ids]
+        mock_db.execute.return_value = mock_result
+
+        result = await seed_service.seed_v2_card_record_statistics(
+            user_id=uuid4(), deck_id=uuid4(), progress_percent=0
+        )
+
+        # 3 cards, 0% progress: mastered=0, new=0, learning_total=3, all due today
+        assert result["stats_created"] == 3
+        assert result["learning_due_today"] == 3
+        assert result["learning_due_tomorrow"] == 0
+
+
+# ============================================================================
+# V2 Reviews Seeding Tests
+# ============================================================================
+
+
+class TestSeedServiceV2Reviews:
+    """Tests for V2 card record review history seeding."""
+
+    def _make_stat(self, status: CardStatus) -> MagicMock:
+        stat = MagicMock(spec=CardRecordStatistics)
+        stat.status = status
+        stat.card_record_id = uuid4()
+        return stat
+
+    @pytest.mark.asyncio
+    async def test_v2_reviews_blocked_in_production(
+        self, seed_service, mock_db, mock_settings_cannot_seed
+    ):
+        with pytest.raises(RuntimeError) as exc_info:
+            await seed_service.seed_v2_card_record_reviews(user_id=uuid4(), deck_id=uuid4())
+
+        assert "Database seeding not allowed" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_v2_reviews_creates_five_per_mastered_card(
+        self, seed_service, mock_db, mock_settings_can_seed
+    ):
+        stat = self._make_stat(CardStatus.MASTERED)
+        mock_result = MagicMock()
+        mock_scalars = MagicMock()
+        mock_scalars.all.return_value = [stat]
+        mock_result.scalars.return_value = mock_scalars
+        mock_db.execute.return_value = mock_result
+
+        result = await seed_service.seed_v2_card_record_reviews(user_id=uuid4(), deck_id=uuid4())
+
+        assert result["success"] is True
+        assert result["reviews_created"] == 5
+
+    @pytest.mark.asyncio
+    async def test_v2_reviews_creates_one_per_learning_card(
+        self, seed_service, mock_db, mock_settings_can_seed
+    ):
+        stat = self._make_stat(CardStatus.LEARNING)
+        mock_result = MagicMock()
+        mock_scalars = MagicMock()
+        mock_scalars.all.return_value = [stat]
+        mock_result.scalars.return_value = mock_scalars
+        mock_db.execute.return_value = mock_result
+
+        result = await seed_service.seed_v2_card_record_reviews(user_id=uuid4(), deck_id=uuid4())
+
+        assert result["success"] is True
+        assert result["reviews_created"] == 1
+
+    @pytest.mark.asyncio
+    async def test_v2_reviews_ratings_improve_over_time(
+        self, seed_service, mock_db, mock_settings_can_seed
+    ):
+        from src.db.models import CardRecordReview
+
+        stat = self._make_stat(CardStatus.MASTERED)
+        mock_result = MagicMock()
+        mock_scalars = MagicMock()
+        mock_scalars.all.return_value = [stat]
+        mock_result.scalars.return_value = mock_scalars
+        mock_db.execute.return_value = mock_result
+
+        await seed_service.seed_v2_card_record_reviews(user_id=uuid4(), deck_id=uuid4())
+
+        added_reviews = [
+            call.args[0]
+            for call in mock_db.add.call_args_list
+            if isinstance(call.args[0], CardRecordReview)
+        ]
+        qualities = [r.quality for r in added_reviews]
+        assert qualities == [3, 3, 4, 4, 5]
+
+    @pytest.mark.asyncio
+    async def test_v2_reviews_time_taken_decreases(
+        self, seed_service, mock_db, mock_settings_can_seed
+    ):
+        from src.db.models import CardRecordReview
+
+        stat = self._make_stat(CardStatus.MASTERED)
+        mock_result = MagicMock()
+        mock_scalars = MagicMock()
+        mock_scalars.all.return_value = [stat]
+        mock_result.scalars.return_value = mock_scalars
+        mock_db.execute.return_value = mock_result
+
+        await seed_service.seed_v2_card_record_reviews(user_id=uuid4(), deck_id=uuid4())
+
+        added_reviews = [
+            call.args[0]
+            for call in mock_db.add.call_args_list
+            if isinstance(call.args[0], CardRecordReview)
+        ]
+        times = [r.time_taken for r in added_reviews]
+        assert times == [20, 17, 14, 8, 5]
+
+
+# ============================================================================
 # Full Seed Orchestration Tests
 # ============================================================================
 
@@ -419,6 +669,30 @@ class TestSeedServiceOrchestration:
         # Check that reviews were created
         assert result["reviews"]["success"] is True
         assert result["reviews"]["reviews_created"] > 0
+
+    @pytest.mark.asyncio
+    async def test_seed_all_calls_v2_seed_methods(self, mock_db_with_ids, mock_settings_can_seed):
+        """Verify seed_all calls V2 statistics and reviews methods and includes results."""
+        seed_service = SeedService(mock_db_with_ids)
+
+        with (
+            patch.object(
+                seed_service,
+                "seed_v2_card_record_statistics",
+                new=AsyncMock(return_value={"success": True, "stats_created": 8}),
+            ) as mock_stats,
+            patch.object(
+                seed_service,
+                "seed_v2_card_record_reviews",
+                new=AsyncMock(return_value={"success": True, "reviews_created": 42}),
+            ) as mock_reviews,
+        ):
+            result = await seed_service.seed_all()
+
+        mock_stats.assert_called_once()
+        mock_reviews.assert_called_once()
+        assert result["v2_statistics"]["stats_created"] == 8
+        assert result["v2_reviews"]["reviews_created"] == 42
 
 
 # ============================================================================
