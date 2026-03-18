@@ -2256,9 +2256,11 @@ class SeedService:
             return {"success": True, "stats_created": 0}
 
         total = len(card_record_ids)
-        mastered_count = int(total * progress_percent / 100)
-        new_count = int(total * 0.20)
-        learning_total = total - mastered_count - new_count
+        bounded_progress = max(0, min(progress_percent, 100))
+        mastered_count = min(total, int(total * bounded_progress / 100))
+        remaining = total - mastered_count
+        new_count = min(int(total * 0.20), remaining)
+        learning_total = remaining - new_count
         learning_due_today = min(5, learning_total)
         learning_due_tomorrow = learning_total - learning_due_today
 

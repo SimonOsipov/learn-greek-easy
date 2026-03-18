@@ -198,6 +198,14 @@ async function setupV2PracticeMocks(
       body: JSON.stringify(makeReviewResult(body.card_record_id, body.quality)),
     });
   });
+
+  await page.route('**/api/v1/xp/stats*', (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ total_xp: 0, current_level: 1, xp_to_next_level: 100, level_progress_percent: 0 }),
+    });
+  });
 }
 
 /**
@@ -384,6 +392,8 @@ test.describe('V2 Practice - Deck Header Filter Pills', () => {
     await expect(page.locator('[data-testid="start-review-button"]')).toBeVisible({
       timeout: 10000,
     });
+    // Wait for filter pills to render before snapshotting
+    await expect(page.getByRole('button', { name: 'All', exact: true })).toBeVisible({ timeout: 5000 });
     await page.waitForTimeout(500);
 
     await takeSnapshot(page, 'V2 Practice - Filter Pills - Mobile Light', testInfo);
