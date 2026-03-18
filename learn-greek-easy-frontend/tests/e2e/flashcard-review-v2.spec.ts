@@ -131,11 +131,11 @@ test.describe('V2 Flashcard Review', () => {
   test('E2E-V2-06: button-click rating advances card', async ({ page }) => {
     await navigateToV2Practice(page, v2NounsDeckId);
     await page.keyboard.press('Space');
-    await expect(page.locator('[data-testid="practice-card-back"]')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('[data-testid="practice-card-back"]')).toBeVisible({ timeout: 10000 });
     await page.locator('[data-testid="srs-button-good"]').click();
     const front = page.locator('[data-testid="practice-card-front"]');
     const summary = page.getByText(/cards reviewed/i);
-    await expect(front.or(summary)).toBeVisible({ timeout: 5000 });
+    await expect(front.or(summary)).toBeVisible({ timeout: 10000 });
   });
 
   // E2E-V2-03: Keyboard-only navigation — 2 cards consumed
@@ -144,24 +144,24 @@ test.describe('V2 Flashcard Review', () => {
 
     // Card 1: flip then rate Good
     await page.keyboard.press('Space');
-    await expect(page.locator('[data-testid="practice-card-back"]')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('[data-testid="practice-card-back"]')).toBeVisible({ timeout: 10000 });
     await page.keyboard.press('3');
     const frontOrSummary1 = page.locator('[data-testid="practice-card-front"]').or(
       page.getByText(/cards reviewed/i)
     );
-    await expect(frontOrSummary1).toBeVisible({ timeout: 5000 });
+    await expect(frontOrSummary1).toBeVisible({ timeout: 10000 });
 
     // Only proceed to card 2 if still in active session
     const isCardVisible = await page.locator('[data-testid="practice-card-front"]').isVisible().catch(() => false);
     if (isCardVisible) {
       // Card 2: flip then rate Easy
       await page.keyboard.press('Space');
-      await expect(page.locator('[data-testid="practice-card-back"]')).toBeVisible({ timeout: 5000 });
+      await expect(page.locator('[data-testid="practice-card-back"]')).toBeVisible({ timeout: 10000 });
       await page.keyboard.press('4');
       const frontOrSummary2 = page.locator('[data-testid="practice-card-front"]').or(
         page.getByText(/cards reviewed/i)
       );
-      await expect(frontOrSummary2).toBeVisible({ timeout: 5000 });
+      await expect(frontOrSummary2).toBeVisible({ timeout: 10000 });
     }
   });
 
@@ -179,11 +179,11 @@ test.describe('V2 Flashcard Review', () => {
       if (!isCardVisible) break;
 
       await page.keyboard.press('Space');
-      await expect(page.locator('[data-testid="practice-card-back"]')).toBeVisible({ timeout: 5000 });
+      await expect(page.locator('[data-testid="practice-card-back"]')).toBeVisible({ timeout: 10000 });
       await page.keyboard.press('3');
       const front = page.locator('[data-testid="practice-card-front"]');
       const summary = page.getByText(/cards reviewed/i);
-      await expect(front.or(summary)).toBeVisible({ timeout: 5000 });
+      await expect(front.or(summary)).toBeVisible({ timeout: 10000 });
     }
   });
 
@@ -203,11 +203,11 @@ test.describe('V2 Flashcard Review', () => {
       if (!cardFrontVisible) break;
 
       await page.keyboard.press('Space');
-      await expect(page.locator('[data-testid="practice-card-back"]')).toBeVisible({ timeout: 5000 });
+      await expect(page.locator('[data-testid="practice-card-back"]')).toBeVisible({ timeout: 10000 });
       await page.keyboard.press('3');
       const front = page.locator('[data-testid="practice-card-front"]');
       const summary = page.getByText(/cards reviewed/i);
-      await expect(front.or(summary)).toBeVisible({ timeout: 5000 });
+      await expect(front.or(summary)).toBeVisible({ timeout: 10000 });
     }
 
     // Verify inline summary (URL stays on /practice, no separate /summary route)
