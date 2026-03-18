@@ -196,9 +196,11 @@ test.describe('V1/V2 Deck Pages', () => {
       // Find the study button - it should be enabled for V2 decks
       const studyButton = page.locator('[data-testid="start-review-button"]');
       await expect(studyButton).toBeVisible();
-
-      // Verify it's enabled
       await expect(studyButton).toBeEnabled();
+
+      // Click and verify navigation to practice route
+      await studyButton.click();
+      await expect(page).toHaveURL(new RegExp(`/decks/${v2DeckId}/practice`), { timeout: 10000 });
     });
 
     test('E2E-DUAL-06: V2 deck word search filters correctly', async ({ page }) => {

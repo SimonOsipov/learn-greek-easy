@@ -347,7 +347,7 @@ export function V2FlashcardPracticePage() {
             </div>
             <div className="rounded-lg border bg-card p-4 text-center">
               <div className="text-2xl font-bold">{accuracy}%</div>
-              <div className="text-sm text-muted-foreground">Accuracy</div>
+              <div className="text-sm text-muted-foreground">{t('v2Practice.accuracy')}</div>
             </div>
           </div>
 

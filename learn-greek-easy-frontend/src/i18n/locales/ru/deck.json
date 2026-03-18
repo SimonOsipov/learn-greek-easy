@@ -251,7 +251,8 @@
     "filterSentence": "Предложение",
     "filterPluralForm": "Множественное число",
     "filterArticle": "Артикль",
-    "reviewSubmitError": "Не удалось отправить оценку. Попробуйте ещё раз."
+    "reviewSubmitError": "Не удалось отправить оценку. Попробуйте ещё раз.",
+    "accuracy": "Точность"
   },
   "wordBrowser": {
     "searchPlaceholder": "Поиск слов...",

@@ -251,7 +251,8 @@
     "filterSentence": "Sentence",
     "filterPluralForm": "Plural Form",
     "filterArticle": "Article",
-    "reviewSubmitError": "Failed to submit review. Please try again."
+    "reviewSubmitError": "Failed to submit review. Please try again.",
+    "accuracy": "Accuracy"
   },
   "wordBrowser": {
     "searchPlaceholder": "Search words...",
