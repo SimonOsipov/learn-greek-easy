@@ -114,11 +114,11 @@ test.describe('V2 Flashcard Review', () => {
     await expect(page.locator('[data-testid="v2-deck-detail"]')).toBeVisible({ timeout: 10000 });
 
     for (const label of ['All', 'Translation', 'Sentence', 'Plural Form', 'Article']) {
-      await expect(page.getByRole('button', { name: label })).toBeVisible();
+      await expect(page.getByRole('button', { name: label, exact: true })).toBeVisible();
     }
 
-    await page.getByRole('button', { name: 'Translation' }).click();
-    await expect(page.getByRole('button', { name: 'Translation' })).toHaveAttribute(
+    await page.getByRole('button', { name: 'Translation', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Translation', exact: true })).toHaveAttribute(
       'aria-pressed',
       'true'
     );
