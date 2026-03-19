@@ -547,7 +547,10 @@ export const NewsItemEditModal: React.FC<NewsItemEditModalProps> = ({
                       {a2Stage}
                     </>
                   ) : (
-                    t('news.audio.regenerateA2')
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      {t('news.audio.regenerateA2')}
+                    </>
                   )}
                 </Button>
               </div>
