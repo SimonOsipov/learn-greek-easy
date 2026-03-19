@@ -1977,8 +1977,10 @@ class SeedService:
         bounded_progress = max(0, min(progress_percent, 100))
         mastered_count = min(total, int(total * bounded_progress / 100))
         remaining = total - mastered_count
-        new_count = min(int(total * 0.20), remaining)
-        learning_total = remaining - new_count
+        review_count = min(int(total * 0.15), remaining)
+        remaining_after_review = remaining - review_count
+        new_count = min(int(total * 0.10), remaining_after_review)
+        learning_total = remaining_after_review - new_count
         learning_due_today = min(5, learning_total)
         learning_due_tomorrow = learning_total - learning_due_today
 
@@ -1998,7 +2000,19 @@ class SeedService:
                 )
                 self.db.add(stat)
                 stats_created += 1
-            elif i < mastered_count + learning_due_today:
+            elif i < mastered_count + review_count:
+                stat = CardRecordStatistics(
+                    user_id=user_id,
+                    card_record_id=cr_id,
+                    status=CardStatus.REVIEW,
+                    easiness_factor=2.5,
+                    interval=5,
+                    repetitions=3,
+                    next_review_date=today + timedelta(days=3),
+                )
+                self.db.add(stat)
+                stats_created += 1
+            elif i < mastered_count + review_count + learning_due_today:
                 stat = CardRecordStatistics(
                     user_id=user_id,
                     card_record_id=cr_id,
@@ -2010,7 +2024,7 @@ class SeedService:
                 )
                 self.db.add(stat)
                 stats_created += 1
-            elif i < mastered_count + learning_total:
+            elif i < mastered_count + review_count + learning_total:
                 stat = CardRecordStatistics(
                     user_id=user_id,
                     card_record_id=cr_id,
@@ -2029,6 +2043,7 @@ class SeedService:
             "success": True,
             "stats_created": stats_created,
             "mastered": mastered_count,
+            "review": review_count,
             "learning_due_today": learning_due_today,
             "learning_due_tomorrow": learning_due_tomorrow,
             "new": new_count,
@@ -2065,6 +2080,18 @@ class SeedService:
                         quality=rating,
                         time_taken=time_taken,
                         reviewed_at=now - timedelta(days=days),
+                    )
+                    self.db.add(review)
+                    reviews_created += 1
+            elif stat.status == CardStatus.REVIEW:
+                # 3 consecutive days (today, yesterday, day before) for streak verification
+                for days_offset in [0, 1, 2]:
+                    review = CardRecordReview(
+                        user_id=user_id,
+                        card_record_id=stat.card_record_id,
+                        quality=4,
+                        time_taken=10,
+                        reviewed_at=now - timedelta(days=days_offset),
                     )
                     self.db.add(review)
                     reviews_created += 1
@@ -4451,8 +4478,11 @@ class SeedService:
         v2_reviews_result: dict[str, Any] = {"success": True, "reviews_created": 0}
 
         v2_nouns_deck_id = None
+        v2_verbs_deck_id = None
         if v2_decks_result.get("v2_decks"):
             v2_nouns_deck_id = UUID(v2_decks_result["v2_decks"][0]["id"])
+            if len(v2_decks_result["v2_decks"]) > 1:
+                v2_verbs_deck_id = UUID(v2_decks_result["v2_decks"][1]["id"])
 
         if learner_id and v2_nouns_deck_id:
             v2_stats_result = await self.seed_v2_card_record_statistics(
@@ -4463,6 +4493,20 @@ class SeedService:
             v2_reviews_result = await self.seed_v2_card_record_reviews(
                 user_id=learner_id,
                 deck_id=v2_nouns_deck_id,
+            )
+
+        # Seed V2 stats+reviews for second deck (Verbs) with different progress
+        v2_verbs_stats_result: dict[str, Any] = {"success": True, "stats_created": 0}
+        v2_verbs_reviews_result: dict[str, Any] = {"success": True, "reviews_created": 0}
+        if learner_id and v2_verbs_deck_id:
+            v2_verbs_stats_result = await self.seed_v2_card_record_statistics(
+                user_id=learner_id,
+                deck_id=v2_verbs_deck_id,
+                progress_percent=30,
+            )
+            v2_verbs_reviews_result = await self.seed_v2_card_record_reviews(
+                user_id=learner_id,
+                deck_id=v2_verbs_deck_id,
             )
 
         # Step 6: Create notifications for learner user
@@ -4648,6 +4692,8 @@ class SeedService:
             "reviews": reviews_result,
             "v2_statistics": v2_stats_result,
             "v2_reviews": v2_reviews_result,
+            "v2_verbs_statistics": v2_verbs_stats_result,
+            "v2_verbs_reviews": v2_verbs_reviews_result,
             "notifications": notifications_result,
             "feedback": feedback_result,
             "achievements": achievements_result,

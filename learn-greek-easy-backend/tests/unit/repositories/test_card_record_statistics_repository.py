@@ -279,6 +279,37 @@ class TestCountByStatus:
         assert counts["mastered"] == 0
         assert counts["due"] == 1
 
+    @pytest.mark.asyncio
+    async def test_count_by_status_filters_by_deck(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        card_record: CardRecord,
+        v2_deck: Deck,
+    ) -> None:
+        stats = CardRecordStatistics(
+            user_id=test_user.id,
+            card_record_id=card_record.id,
+            easiness_factor=2.5,
+            interval=5,
+            repetitions=3,
+            next_review_date=date.today() + timedelta(days=5),
+            status=CardStatus.MASTERED,
+        )
+        db_session.add(stats)
+        await db_session.flush()
+
+        repo = CardRecordStatisticsRepository(db_session)
+        # Filter by the specific deck — should return mastered count
+        result = await repo.count_by_status(test_user.id, v2_deck.id)
+        assert result.get("mastered", 0) >= 1
+        # Filter by a random unknown deck_id — should return zeros
+        from uuid import uuid4
+
+        result_empty = await repo.count_by_status(test_user.id, uuid4())
+        assert result_empty["mastered"] == 0
+        assert result_empty["new"] == 0
+
 
 class TestDeleteAllByUserId:
     @pytest.mark.asyncio
