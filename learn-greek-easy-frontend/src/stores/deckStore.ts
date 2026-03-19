@@ -263,7 +263,9 @@ export const useDeckStore = create<DeckState>()(
           const [deckResponse, cultureResponse, progressResponse] = await Promise.all([
             deckAPI.getList(params),
             cultureDeckAPI.getList().catch(() => ({ decks: [], total: 0 })), // Graceful fallback if culture API fails
-            progressAPI.getDeckProgressList({ page: 1, page_size: 50 }),
+            progressAPI
+              .getDeckProgressList({ page: 1, page_size: 50 })
+              .catch(() => ({ decks: [] })), // Graceful fallback if progress API is unavailable
           ]);
 
           // Create progress lookup map
