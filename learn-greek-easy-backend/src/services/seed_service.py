@@ -162,12 +162,8 @@ class SeedService:
         # Webhook events (no FK dependencies)
         "webhook_events",
         # Existing tables
-        "reviews",
-        "card_statistics",
-        "user_deck_progress",
         "feedback_votes",
         "feedback",
-        "cards",
         "deck_word_entries",
         "word_entries",
         "users",

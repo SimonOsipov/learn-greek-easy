@@ -18,7 +18,8 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from tests.factories.content import CardFactory, DeckFactory
+from src.db.models import DeckWordEntry, PartOfSpeech, Visibility, WordEntry
+from tests.factories.content import DeckFactory
 from tests.factories.culture import CultureDeckFactory, CultureQuestionFactory
 
 # =============================================================================
@@ -63,10 +64,20 @@ class TestAdminStats:
         db_session: AsyncSession,
     ):
         """Test successful stats retrieval for superuser."""
-        # Create test data
+        # Create test data: deck with 5 word entries (V2 item_count source)
         deck = await DeckFactory.create(session=db_session, is_active=True)
-        for _ in range(5):
-            await CardFactory.create(session=db_session, deck_id=deck.id)
+        for i in range(5):
+            entry = WordEntry(
+                lemma=f"λέξη{i}",
+                part_of_speech=PartOfSpeech.NOUN,
+                translation_en=f"word{i}",
+                visibility=Visibility.SHARED,
+                is_active=True,
+            )
+            db_session.add(entry)
+            await db_session.flush()
+            db_session.add(DeckWordEntry(deck_id=deck.id, word_entry_id=entry.id))
+            await db_session.flush()
 
         response = await client.get(
             "/api/v1/admin/stats",
@@ -97,10 +108,30 @@ class TestAdminStats:
         active_deck = await DeckFactory.create(session=db_session, is_active=True)
         inactive_deck = await DeckFactory.create(session=db_session, is_active=False)
 
-        for _ in range(3):
-            await CardFactory.create(session=db_session, deck_id=active_deck.id)
-        for _ in range(5):
-            await CardFactory.create(session=db_session, deck_id=inactive_deck.id)
+        for i in range(3):
+            entry = WordEntry(
+                lemma=f"ενεργή{i}",
+                part_of_speech=PartOfSpeech.NOUN,
+                translation_en=f"active{i}",
+                visibility=Visibility.SHARED,
+                is_active=True,
+            )
+            db_session.add(entry)
+            await db_session.flush()
+            db_session.add(DeckWordEntry(deck_id=active_deck.id, word_entry_id=entry.id))
+            await db_session.flush()
+        for i in range(5):
+            entry = WordEntry(
+                lemma=f"ανενεργή{i}",
+                part_of_speech=PartOfSpeech.NOUN,
+                translation_en=f"inactive{i}",
+                visibility=Visibility.SHARED,
+                is_active=True,
+            )
+            db_session.add(entry)
+            await db_session.flush()
+            db_session.add(DeckWordEntry(deck_id=inactive_deck.id, word_entry_id=entry.id))
+            await db_session.flush()
 
         response = await client.get(
             "/api/v1/admin/stats",
@@ -151,8 +182,18 @@ class TestAdminStats:
             a1=True,
             is_active=True,
         )
-        for _ in range(2):
-            await CardFactory.create(session=db_session, deck_id=deck.id)
+        for i in range(2):
+            entry = WordEntry(
+                lemma=f"δομή{i}",
+                part_of_speech=PartOfSpeech.NOUN,
+                translation_en=f"structure{i}",
+                visibility=Visibility.SHARED,
+                is_active=True,
+            )
+            db_session.add(entry)
+            await db_session.flush()
+            db_session.add(DeckWordEntry(deck_id=deck.id, word_entry_id=entry.id))
+            await db_session.flush()
 
         response = await client.get(
             "/api/v1/admin/stats",
@@ -180,10 +221,20 @@ class TestAdminStats:
         db_session: AsyncSession,
     ):
         """Test that culture decks are included in stats."""
-        # Create vocabulary deck with cards
+        # Create vocabulary deck with 3 word entries
         vocab_deck = await DeckFactory.create(session=db_session, is_active=True)
-        for _ in range(3):
-            await CardFactory.create(session=db_session, deck_id=vocab_deck.id)
+        for i in range(3):
+            entry = WordEntry(
+                lemma=f"λεξιλόγιο{i}",
+                part_of_speech=PartOfSpeech.NOUN,
+                translation_en=f"vocab{i}",
+                visibility=Visibility.SHARED,
+                is_active=True,
+            )
+            db_session.add(entry)
+            await db_session.flush()
+            db_session.add(DeckWordEntry(deck_id=vocab_deck.id, word_entry_id=entry.id))
+            await db_session.flush()
 
         # Create culture deck with approved questions
         culture_deck = await CultureDeckFactory.create(session=db_session, is_active=True)
@@ -1180,14 +1231,24 @@ class TestAdminDecks:
         db_session: AsyncSession,
     ):
         """Test that item_count reflects actual card/question count."""
-        # Create vocabulary deck with cards
+        # Create vocabulary deck with 7 word entries (item_count counts DeckWordEntry rows)
         vocab_deck = await DeckFactory.create(
             session=db_session,
             name_en="Deck With Cards",
             is_active=True,
         )
-        for _ in range(7):
-            await CardFactory.create(session=db_session, deck_id=vocab_deck.id)
+        for i in range(7):
+            entry = WordEntry(
+                lemma=f"κάρτα{i}",
+                part_of_speech=PartOfSpeech.NOUN,
+                translation_en=f"card{i}",
+                visibility=Visibility.SHARED,
+                is_active=True,
+            )
+            db_session.add(entry)
+            await db_session.flush()
+            db_session.add(DeckWordEntry(deck_id=vocab_deck.id, word_entry_id=entry.id))
+            await db_session.flush()
 
         # Create culture deck with questions
         culture_deck = await CultureDeckFactory.create(

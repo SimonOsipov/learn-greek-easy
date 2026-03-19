@@ -23,7 +23,7 @@ from __future__ import annotations
 import factory
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import CardRecord, Deck, DeckLevel
+from src.db.models import CardRecord, CardType, Deck, DeckLevel
 from tests.factories.base import BaseFactory, fake
 
 
@@ -182,92 +182,39 @@ class DeckFactory(BaseFactory):
 
 
 class CardFactory(BaseFactory):
-    """Factory for Card model (V1 - deprecated, use CardRecordFactory for V2).
+    """Factory for CardRecord model (V2 card system).
 
-    NOTE: Card model was replaced by CardRecord in V2. This factory is a stub
-    to prevent collection errors. Tests using CardFactory will fail at runtime.
-    See TASK-164 for full test cleanup.
+    Creates card records linked to a word entry and deck.
+
+    Required (must be set explicitly):
+        word_entry_id: UUID of parent word entry
+        deck_id: UUID of parent deck
     """
 
     class Meta:
         model = CardRecord
 
     # Required: Must be provided
+    word_entry_id = None  # Must be set explicitly
     deck_id = None  # Must be set explicitly
 
-    # Greek vocabulary from Faker provider
-    front_text = factory.LazyAttribute(lambda _: fake.greek_word("A1"))
-    back_text_en = factory.LazyAttribute(lambda _: fake.greek_translation("A1"))
-    back_text_ru = None  # Optional Russian translation
-    pronunciation = factory.LazyAttribute(lambda _: fake.greek_pronunciation("A1"))
-    example_sentence = factory.LazyAttribute(lambda _: fake.greek_example_sentence("A1"))
-    examples = factory.LazyAttribute(
-        lambda obj: (
-            [{"greek": obj.example_sentence, "english": "", "russian": ""}]
-            if obj.example_sentence
-            else None
-        )
+    # Card type and content
+    card_type = CardType.MEANING_EL_TO_EN
+    variant_key = factory.Sequence(lambda n: f"default_{n}")
+    tier = None
+    is_active = True
+
+    front_content = factory.LazyFunction(
+        lambda: {
+            "card_type": "meaning_el_to_en",
+            "prompt": "What does this word mean?",
+            "main": "λόγος",
+            "badge": "A1",
+        }
     )
-    part_of_speech = None  # Optional part of speech
-    level = None  # Optional CEFR level override
-    # Grammar data fields (all optional)
-    noun_data = None
-    verb_data = None
-    adjective_data = None
-    adverb_data = None
-    # Search fields
-    searchable_forms = None
-    searchable_forms_normalized = None
-    # Embedding
-    embedding = None
-
-    class Params:
-        """Factory traits for common variations."""
-
-        # Minimal card (no optional fields)
-        minimal = factory.Trait(
-            pronunciation=None,
-            example_sentence=None,
-            examples=None,
-            back_text_ru=None,
-            part_of_speech=None,
-            level=None,
-        )
-
-    @classmethod
-    async def create_vocabulary_card(
-        cls,
-        deck_id,
-        level: str = "A1",
-        session: AsyncSession | None = None,
-        **kwargs,
-    ) -> CardRecord:
-        """Create a card with level-appropriate vocabulary.
-
-        Args:
-            deck_id: ID of parent deck
-            level: CEFR level for vocabulary selection
-            session: Database session
-            **kwargs: Field overrides
-
-        Returns:
-            Card with Greek vocabulary
-        """
-        vocab = fake.greek_vocabulary_card(level)
-        example_sentence = vocab.get("example_sentence")
-        examples = (
-            [{"greek": example_sentence, "english": "", "russian": ""}]
-            if example_sentence
-            else None
-        )
-
-        return await cls.create(
-            session=session,
-            deck_id=deck_id,
-            front_text=vocab["front_text"],
-            back_text_en=vocab["back_text"],
-            pronunciation=vocab.get("pronunciation"),
-            example_sentence=example_sentence,
-            examples=examples,
-            **kwargs,
-        )
+    back_content = factory.LazyFunction(
+        lambda: {
+            "card_type": "meaning_el_to_en",
+            "answer": "word, speech",
+        }
+    )
