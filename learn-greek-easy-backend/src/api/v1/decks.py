@@ -16,6 +16,7 @@ from src.core.exceptions import DeckNotFoundException, ForbiddenException
 from src.core.localization import get_localized_deck_content
 from src.db.dependencies import get_db
 from src.db.models import Deck, DeckLevel, PartOfSpeech, User
+from src.repositories.card_record_statistics import CardRecordStatisticsRepository
 from src.repositories.deck import DeckRepository
 from src.repositories.word_entry import WordEntryRepository
 from src.schemas.deck import (
@@ -26,6 +27,8 @@ from src.schemas.deck import (
     DeckSearchResponse,
     DeckUpdate,
     DeckWordEntriesResponse,
+    WordMasteryItem,
+    WordMasteryResponse,
 )
 from src.services.s3_service import S3Service, get_s3_service
 from src.services.word_entry_response import word_entry_to_response
@@ -765,6 +768,37 @@ async def list_deck_word_entries(
         page_size=page_size,
         word_entries=[word_entry_to_response(entry) for entry in word_entries],
     )
+
+
+@router.get(
+    "/{deck_id}/word-mastery",
+    response_model=WordMasteryResponse,
+    summary="Get per-word mastery summary",
+)
+async def get_word_mastery(
+    deck_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> WordMasteryResponse:
+    deck = await DeckRepository(db).get(deck_id)
+    if deck is None or not deck.is_active:
+        raise DeckNotFoundException(deck_id=str(deck_id))
+    if deck.owner_id is not None and deck.owner_id != current_user.id:
+        raise ForbiddenException(detail="You do not have permission to access this deck")
+
+    rows = await CardRecordStatisticsRepository(db).get_word_mastery_by_deck(
+        user_id=current_user.id,
+        deck_id=deck_id,
+    )
+    items = [
+        WordMasteryItem(
+            word_entry_id=word_entry_id,
+            mastered_count=mastered_count,
+            total_count=total_count,
+        )
+        for word_entry_id, mastered_count, total_count in rows
+    ]
+    return WordMasteryResponse(deck_id=deck_id, items=items)
 
 
 @router.patch(

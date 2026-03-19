@@ -564,3 +564,48 @@ class TestCountDistinctDecks:
         repo = CardRecordStatisticsRepository(db_session)
         result = await repo.count_distinct_decks(test_user.id)
         assert result == 0
+
+
+class TestGetWordMasteryByDeck:
+    @pytest.mark.asyncio
+    async def test_returns_mastery_per_word_entry(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        card_record: CardRecord,
+        v2_deck: Deck,
+    ) -> None:
+        await db_session.flush()
+        stats = CardRecordStatistics(
+            user_id=test_user.id,
+            card_record_id=card_record.id,
+            easiness_factor=2.5,
+            interval=5,
+            repetitions=3,
+            next_review_date=date.today(),
+            status=CardStatus.MASTERED,
+        )
+        db_session.add(stats)
+        await db_session.flush()
+        repo = CardRecordStatisticsRepository(db_session)
+        result = await repo.get_word_mastery_by_deck(test_user.id, v2_deck.id)
+        assert len(result) >= 1
+        word_entry_id, mastered_count, total_count = result[0]
+        assert mastered_count >= 1
+        assert total_count >= 1
+
+    @pytest.mark.asyncio
+    async def test_returns_zero_mastered_for_no_stats(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        card_record: CardRecord,
+        v2_deck: Deck,
+    ) -> None:
+        await db_session.flush()
+        repo = CardRecordStatisticsRepository(db_session)
+        result = await repo.get_word_mastery_by_deck(test_user.id, v2_deck.id)
+        assert len(result) >= 1  # card_record exists in deck
+        word_entry_id, mastered_count, total_count = result[0]
+        assert mastered_count == 0
+        assert total_count >= 1  # total_count = active card records per word entry
