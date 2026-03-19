@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import { getDeckBackgroundStyle } from '@/lib/deckBackground';
 import type { Deck } from '@/types/dashboard';
 
@@ -45,7 +44,7 @@ export const DeckCard = React.memo<DeckCardProps>(({ deck, onContinue }) => {
         <div className="flex items-start justify-between">
           <div className="space-y-1">
             <CardTitle className="text-lg">{deck.title}</CardTitle>
-            <CardDescription className="text-muted-foreground">{deck.description}</CardDescription>
+            <CardDescription className="text-foreground">{deck.description}</CardDescription>
           </div>
           <Badge
             className={`${statusVariants[deck.status ?? 'not-started']} flex-shrink-0 whitespace-nowrap`}
@@ -55,43 +54,10 @@ export const DeckCard = React.memo<DeckCardProps>(({ deck, onContinue }) => {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Progress Section */}
-        <div>
-          <div className="mb-2 flex justify-between text-sm">
-            <span className="text-muted-foreground">
-              {t(deck.isCulture ? 'card.progressCulture' : 'card.progress', {
-                current: deck.progress.current,
-                total: deck.progress.total,
-              })}
-            </span>
-            <span className="font-medium">{deck.progress.percentage}%</span>
-          </div>
-          <Progress
-            value={deck.progress.percentage}
-            className="h-2"
-            aria-label={`${deck.title} progress: ${deck.progress.percentage}% complete`}
-          />
-        </div>
-
-        {/* Stats Row */}
-        <div className="flex min-w-0 flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-          <span className="flex items-center gap-1 whitespace-nowrap">
-            <span className="text-base">📚</span> {t('card.stats.due', { count: deck.stats.due })}
-          </span>
-          <span className="flex items-center gap-1 whitespace-nowrap">
-            <span className="text-base">✅</span>{' '}
-            {t('card.stats.mastered', { count: deck.stats.mastered })}
-          </span>
-          <span className="flex items-center gap-1 whitespace-nowrap">
-            <span className="text-base">📝</span>{' '}
-            {t('card.stats.learning', { count: deck.stats.learning })}
-          </span>
-        </div>
-
         {/* Action Button */}
         <Button
           variant="outline"
-          className="w-full transition-colors group-hover:bg-primary group-hover:text-white"
+          className="px-6 transition-colors group-hover:bg-primary group-hover:text-white"
           onClick={onContinue}
         >
           {(deck.status ?? 'not-started') === 'not-started'
