@@ -159,6 +159,31 @@ async def award_flashcard_xp_task(
             await engine.dispose()
 
 
+async def _run_achievement_checks(session: Any, user_id: UUID) -> int:
+    """Run achievement checks for a user and commit any unlocks. Returns unlock count."""
+    from src.services.achievement_definitions import AchievementMetric
+    from src.services.achievement_service import AchievementService
+
+    service = AchievementService(session)
+    stats = await service._get_user_stats(user_id)
+
+    any_unlocked = []
+    for metric, stat_key in [
+        (AchievementMetric.CARDS_LEARNED, "cards_learned"),
+        (AchievementMetric.CARDS_MASTERED, "cards_mastered"),
+        (AchievementMetric.TOTAL_REVIEWS, "total_reviews"),
+    ]:
+        value = int(stats.get(stat_key, 0))
+        if value > 0:
+            unlocked = await service.check_and_unlock_achievements(user_id, metric, value)
+            any_unlocked.extend(unlocked)
+
+    if any_unlocked:
+        await session.commit()
+
+    return len(any_unlocked)
+
+
 async def check_achievements_task(user_id: UUID, db_url: str) -> None:
     """Check if user has earned new achievements after a review.
 
@@ -195,11 +220,10 @@ async def check_achievements_task(user_id: UUID, db_url: str) -> None:
 
         session = async_session_factory()
         try:
+            unlocked_count = await _run_achievement_checks(session, user_id)
             logger.info(
                 "Achievement check complete",
-                extra={
-                    "user_id": str(user_id),
-                },
+                extra={"user_id": str(user_id), "unlocked_count": unlocked_count},
             )
         finally:
             await session.close()

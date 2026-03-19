@@ -240,6 +240,7 @@ class TestProgressCalculation:
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = []
         mock_result.scalar.return_value = 0
+        mock_result.scalar_one.return_value = 0
         mock_db_session.execute.return_value = mock_result
 
         user_id = uuid4()
@@ -752,3 +753,66 @@ class TestCultureAchievements:
 
                 # Should return empty list when already unlocked
                 assert len(unlocked) == 0
+
+
+# ============================================================================
+# _get_user_stats V2 Tests
+# ============================================================================
+
+
+@pytest.mark.unit
+class TestGetUserStatsV2:
+    """Tests for _get_user_stats() querying V2 tables."""
+
+    @pytest.mark.asyncio
+    async def test_get_user_stats_returns_correct_keys(self, mock_db_session):
+        """Should return dict with expected keys."""
+        service = AchievementService(mock_db_session)
+
+        mock_result = MagicMock()
+        mock_result.scalar_one.return_value = 0
+        mock_db_session.execute.return_value = mock_result
+
+        user_id = uuid4()
+        stats = await service._get_user_stats(user_id)
+
+        assert "cards_learned" in stats
+        assert "cards_mastered" in stats
+        assert "total_reviews" in stats
+        assert "current_streak" in stats
+        assert "longest_streak" in stats
+
+    @pytest.mark.asyncio
+    async def test_get_user_stats_returns_counts_from_db(self, mock_db_session):
+        """Should return correct counts from V2 table queries."""
+        service = AchievementService(mock_db_session)
+
+        # Set up three sequential return values for the three execute calls
+        results = [MagicMock(), MagicMock(), MagicMock()]
+        results[0].scalar_one.return_value = 10  # cards_learned
+        results[1].scalar_one.return_value = 3  # cards_mastered
+        results[2].scalar_one.return_value = 42  # total_reviews
+        mock_db_session.execute.side_effect = results
+
+        user_id = uuid4()
+        stats = await service._get_user_stats(user_id)
+
+        assert stats["cards_learned"] == 10
+        assert stats["cards_mastered"] == 3
+        assert stats["total_reviews"] == 42
+        assert stats["current_streak"] == 0
+        assert stats["longest_streak"] == 0
+
+    @pytest.mark.asyncio
+    async def test_get_user_stats_queries_db_three_times(self, mock_db_session):
+        """Should execute exactly 3 DB queries (cards_learned, cards_mastered, total_reviews)."""
+        service = AchievementService(mock_db_session)
+
+        mock_result = MagicMock()
+        mock_result.scalar_one.return_value = 0
+        mock_db_session.execute.return_value = mock_result
+
+        user_id = uuid4()
+        await service._get_user_stats(user_id)
+
+        assert mock_db_session.execute.call_count == 3

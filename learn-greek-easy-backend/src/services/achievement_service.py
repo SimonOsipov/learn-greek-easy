@@ -18,6 +18,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.logging import get_logger
 from src.db.models import (
     Achievement,
+    CardRecordReview,
+    CardRecordStatistics,
     CardStatus,
     CultureAnswerHistory,
     CultureDeck,
@@ -269,7 +271,7 @@ class AchievementService:
             self.db.add(achievement)
             await self.db.flush()
 
-    async def _get_user_stats(self, user_id: UUID) -> dict:
+    async def _get_user_stats(self, user_id: UUID) -> dict[str, int | float]:
         """Get user statistics for progress calculation.
 
         Args:
@@ -278,11 +280,30 @@ class AchievementService:
         Returns:
             Dictionary of user stats
         """
+        cards_learned_result, cards_mastered_result, total_reviews_result = await asyncio.gather(
+            self.db.execute(
+                select(func.count(CardRecordStatistics.id)).where(
+                    CardRecordStatistics.user_id == user_id,
+                    CardRecordStatistics.status != CardStatus.NEW,
+                )
+            ),
+            self.db.execute(
+                select(func.count(CardRecordStatistics.id)).where(
+                    CardRecordStatistics.user_id == user_id,
+                    CardRecordStatistics.status == CardStatus.MASTERED,
+                )
+            ),
+            self.db.execute(
+                select(func.count(CardRecordReview.id)).where(
+                    CardRecordReview.user_id == user_id,
+                )
+            ),
+        )
         return {
-            "cards_learned": 0,
-            "cards_mastered": 0,
-            "total_reviews": 0,
-            "current_streak": 0,  # Will be calculated by caller if needed
+            "cards_learned": cards_learned_result.scalar_one(),
+            "cards_mastered": cards_mastered_result.scalar_one(),
+            "total_reviews": total_reviews_result.scalar_one(),
+            "current_streak": 0,
             "longest_streak": 0,
         }
 
