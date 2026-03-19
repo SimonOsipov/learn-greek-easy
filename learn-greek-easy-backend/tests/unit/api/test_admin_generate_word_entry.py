@@ -21,7 +21,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import CardSystemVersion, Deck, DeckLevel
+from src.db.models import Deck, DeckLevel
 from src.schemas.nlp import (
     GeneratedExample,
     GeneratedNounCases,
@@ -166,28 +166,6 @@ async def v2_deck(db_session: AsyncSession) -> Deck:
         description_ru="Тест",
         level=DeckLevel.A1,
         is_active=True,
-        card_system=CardSystemVersion.V2,
-    )
-    db_session.add(deck)
-    await db_session.commit()
-    await db_session.refresh(deck)
-    return deck
-
-
-@pytest.fixture
-async def v1_deck(db_session: AsyncSession) -> Deck:
-    """Active V1 vocabulary deck — should be rejected with 400."""
-    deck = Deck(
-        id=uuid4(),
-        name_en="V1 Test Deck",
-        name_el="Τεστ V1",
-        name_ru="Тест V1",
-        description_en="Test",
-        description_el="Τεστ",
-        description_ru="Тест",
-        level=DeckLevel.A1,
-        is_active=True,
-        card_system=CardSystemVersion.V1,
     )
     db_session.add(deck)
     await db_session.commit()
@@ -197,7 +175,7 @@ async def v1_deck(db_session: AsyncSession) -> Deck:
 
 @pytest.fixture
 async def inactive_v2_deck(db_session: AsyncSession) -> Deck:
-    """Inactive V2 deck — should be rejected with 404."""
+    """Inactive deck — should be rejected with 404."""
     deck = Deck(
         id=uuid4(),
         name_en="Inactive V2 Deck",
@@ -208,7 +186,6 @@ async def inactive_v2_deck(db_session: AsyncSession) -> Deck:
         description_ru="Тест",
         level=DeckLevel.A1,
         is_active=False,
-        card_system=CardSystemVersion.V2,
     )
     db_session.add(deck)
     await db_session.commit()
@@ -546,22 +523,6 @@ class TestGenerateWordEntry:
         )
 
         assert response.status_code == 404
-
-    @pytest.mark.asyncio
-    async def test_400_v1_deck(
-        self,
-        client: AsyncClient,
-        superuser_auth_headers: dict,
-        v1_deck: Deck,
-    ):
-        """V1 deck returns 400."""
-        response = await client.post(
-            ENDPOINT,
-            json={"word": "γάτα", "deck_id": str(v1_deck.id)},
-            headers=superuser_auth_headers,
-        )
-
-        assert response.status_code == 400
 
     # -------------------------------------------------------------------------
     # Auth errors

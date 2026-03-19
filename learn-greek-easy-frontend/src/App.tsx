@@ -77,10 +77,6 @@ const DeckDetailPage = lazyWithRetry(() =>
 const MyDecksPage = lazyWithRetry(() =>
   import('@/pages/MyDecksPage').then((m) => ({ default: m.MyDecksPage }))
 );
-const MyDeckDetailPage = lazyWithRetry(() =>
-  import('@/pages/MyDeckDetailPage').then((m) => ({ default: m.MyDeckDetailPage }))
-);
-
 // User pages
 const Profile = lazyWithRetry(() =>
   import('@/pages/Profile').then((m) => ({ default: m.Profile }))
@@ -90,14 +86,6 @@ const FeedbackPage = lazyWithRetry(() =>
 );
 const ChangelogPage = lazyWithRetry(() =>
   import('@/pages/ChangelogPage').then((m) => ({ default: m.ChangelogPage }))
-);
-
-// Review/practice pages (full-screen experience)
-const FlashcardReviewPage = lazyWithRetry(() =>
-  import('@/pages/FlashcardReviewPage').then((m) => ({ default: m.FlashcardReviewPage }))
-);
-const SessionSummaryPage = lazyWithRetry(() =>
-  import('@/pages/SessionSummaryPage').then((m) => ({ default: m.SessionSummaryPage }))
 );
 
 // Culture deck pages
@@ -246,7 +234,6 @@ function AppContent() {
                 />
                 <Route path="/my-decks" element={<AppLayout />}>
                   <Route index element={<MyDecksPage />} />
-                  <Route path=":id" element={<MyDeckDetailPage />} />
                 </Route>
                 <Route path="/statistics" element={<AppLayout />}>
                   <Route index element={<Statistics />} />
@@ -267,12 +254,8 @@ function AppContent() {
                 <Route path="/activity-feed-test" element={<AppLayout />}>
                   <Route index element={<ActivityFeedTest />} />
                 </Route>
-                {/* Review page outside AppLayout for full-screen experience */}
-                <Route path="/decks/:deckId/review" element={<FlashcardReviewPage />} />
                 {/* V2 practice page outside AppLayout for full-screen experience */}
                 <Route path="/decks/:deckId/practice" element={<V2FlashcardPracticePage />} />
-                {/* Session summary page outside AppLayout for full-screen experience */}
-                <Route path="/decks/:deckId/summary" element={<SessionSummaryPage />} />
                 {/* Culture deck detail page inside AppLayout */}
                 <Route path="/culture/decks/:id" element={<AppLayout />}>
                   <Route index element={<CultureDeckDetailPage />} />

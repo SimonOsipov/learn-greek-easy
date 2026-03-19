@@ -7,13 +7,6 @@ export type DeckStatus = 'not-started' | 'in-progress' | 'completed';
 export type CardDifficulty = 'new' | 'learning' | 'review' | 'mastered';
 
 /**
- * Card presentation system version.
- * - V1: Traditional flashcard system with spaced repetition
- * - V2: Word browser system with word entries
- */
-export type CardSystemVersion = 'V1' | 'V2';
-
-/**
  * Individual flashcard within a deck
  */
 export interface Card {
@@ -68,8 +61,6 @@ export interface Deck {
   updatedAt: Date;
   // User-specific data (injected from progress tracking)
   progress?: DeckProgress;
-  /** Card presentation system version (V1=flashcards, V2=word browser) */
-  cardSystem: CardSystemVersion;
   // Multilingual fields for client-side locale resolution
   nameEn?: string;
   nameRu?: string;

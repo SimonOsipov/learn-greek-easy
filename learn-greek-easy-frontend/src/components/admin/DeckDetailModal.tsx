@@ -67,7 +67,6 @@ import { CardCreateModal } from './CardCreateModal';
 import { CardDeleteDialog } from './CardDeleteDialog';
 import { CardEditModal } from './CardEditModal';
 import { GenerateNounDialog } from './GenerateNounDialog';
-import { V1CardEditInDialog, VocabularyCardCreateModal } from './vocabulary';
 import { WordEntryCards } from './WordEntryCards';
 import { WordEntryContent } from './WordEntryContent';
 
@@ -161,19 +160,14 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
   // Create modal state (culture questions)
   const [createModalOpen, setCreateModalOpen] = useState(false);
 
-  // Vocabulary card modal state
-  const [vocabularyCreateModalOpen, setVocabularyCreateModalOpen] = useState(false);
   const [generateNounDialogOpen, setGenerateNounDialogOpen] = useState(false);
 
-  // Word entry detail view state (V2)
+  // Word entry detail view state
   const [selectedWordEntry, setSelectedWordEntry] = useState<AdminVocabularyCard | null>(null);
   const [activeTab, setActiveTab] = useState('entry');
-  // V1 card edit in-dialog state
-  const [selectedV1Card, setSelectedV1Card] = useState<AdminVocabularyCard | null>(null);
   const scrollPositionRef = useRef<number>(0);
   const dialogContentRef = useRef<HTMLDivElement>(null);
   const backButtonRef = useRef<HTMLButtonElement>(null);
-  const v1BackButtonRef = useRef<HTMLButtonElement>(null);
   const clickedRowIdRef = useRef<string | null>(null);
 
   // Search, filter, and sort state (V2 word list)
@@ -208,15 +202,12 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
 
     try {
       if (deck.type === 'vocabulary') {
-        const response =
-          deck.card_system === 'V2'
-            ? await adminAPI.listWordEntries(deck.id, page, pageSize, {
-                search: debouncedSearch || undefined,
-                partOfSpeech: posFilter !== 'all' ? (posFilter as PartOfSpeech) : undefined,
-                sortBy,
-                sortOrder,
-              })
-            : await adminAPI.listVocabularyCards(deck.id, page, pageSize);
+        const response = await adminAPI.listWordEntries(deck.id, page, pageSize, {
+          search: debouncedSearch || undefined,
+          partOfSpeech: posFilter !== 'all' ? (posFilter as PartOfSpeech) : undefined,
+          sortBy,
+          sortOrder,
+        });
         setCards(response.cards);
         setSelectedIds(new Set());
         setTotal(response.total);
@@ -265,7 +256,6 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
   useEffect(() => {
     setPage(1);
     setSelectedWordEntry(null);
-    setSelectedV1Card(null);
     setSearchQuery('');
     setDebouncedSearch('');
     setPosFilter('all');
@@ -325,17 +315,10 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
 
     try {
       if (deck.type === 'vocabulary') {
-        if (deck.card_system === 'V2') {
-          await adminAPI.deleteWordEntry(itemToDelete.id);
-          toast({
-            title: t('cardDelete.successWordEntry'),
-          });
-        } else {
-          await adminAPI.deleteVocabularyCard(itemToDelete.id);
-          toast({
-            title: t('cardDelete.successCard'),
-          });
-        }
+        await adminAPI.deleteWordEntry(itemToDelete.id);
+        toast({
+          title: t('cardDelete.successWordEntry'),
+        });
       } else {
         await adminAPI.deleteCultureQuestion(itemToDelete.id);
         toast({
@@ -442,35 +425,6 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
     }
   }, [selectedWordEntry]);
 
-  const handleV1CardClick = (card: AdminVocabularyCard) => {
-    if (dialogContentRef.current) {
-      scrollPositionRef.current = dialogContentRef.current.scrollTop;
-    }
-    clickedRowIdRef.current = card.id;
-    setSelectedV1Card(card);
-  };
-
-  const handleV1Back = useCallback(() => {
-    setSelectedV1Card(null);
-    requestAnimationFrame(() => {
-      if (dialogContentRef.current) {
-        dialogContentRef.current.scrollTop = scrollPositionRef.current;
-      }
-      if (clickedRowIdRef.current) {
-        const row = document.querySelector(`[data-testid="card-item-${clickedRowIdRef.current}"]`);
-        if (row instanceof HTMLElement) row.focus();
-        clickedRowIdRef.current = null;
-      }
-    });
-  }, []);
-
-  // Focus management for V1 card edit view
-  useEffect(() => {
-    if (selectedV1Card && v1BackButtonRef.current) {
-      v1BackButtonRef.current.focus();
-    }
-  }, [selectedV1Card]);
-
   // Client-side filtered view of current page questions
   const filteredQuestions = useMemo(() => {
     return questions.filter((q) => {
@@ -511,7 +465,7 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
 
   const deckName = getDeckDisplayName(deck, locale);
   const isVocabulary = deck.type === 'vocabulary';
-  const isV2Vocabulary = isVocabulary && deck.card_system === 'V2';
+  const isV2Vocabulary = isVocabulary;
   const itemCountKey = isVocabulary ? 'deckDetail.cardsCount' : 'deckDetail.questionsCount';
   const noItemsKey = isVocabulary ? 'deckDetail.noCards' : 'deckDetail.noQuestions';
 
@@ -536,9 +490,6 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
             if (selectedWordEntry) {
               e.preventDefault();
               handleBack();
-            } else if (selectedV1Card) {
-              e.preventDefault();
-              handleV1Back();
             }
           }}
         >
@@ -556,6 +507,7 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
                   <ChevronLeft className="mr-1 h-4 w-4" />
                   {t('wordEntryDetail.back')}
                 </Button>
+
                 <div data-testid="word-entry-detail-header">
                   <div className="flex items-center gap-2">
                     <DialogTitle data-testid="deck-detail-title">
@@ -648,36 +600,6 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
                 </Tabs>
               </div>
             </>
-          ) : selectedV1Card ? (
-            <>
-              <DialogHeader>
-                <Button
-                  ref={v1BackButtonRef}
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleV1Back}
-                  className="mb-2 w-fit"
-                  data-testid="v1-card-edit-back"
-                >
-                  <ChevronLeft className="mr-1 h-4 w-4" />
-                  {t('v1CardEdit.back')}
-                </Button>
-                <DialogTitle data-testid="deck-detail-title">
-                  {selectedV1Card.front_text}
-                </DialogTitle>
-                <DialogDescription>{selectedV1Card.back_text_en}</DialogDescription>
-              </DialogHeader>
-              <V1CardEditInDialog
-                card={selectedV1Card}
-                deckId={deck.id}
-                deckLevel={deck.level ?? undefined}
-                onBack={handleV1Back}
-                onSaved={() => {
-                  handleV1Back();
-                  fetchItems();
-                }}
-              />
-            </>
           ) : (
             <>
               <DialogHeader>
@@ -698,10 +620,8 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
                   <Button
                     size="sm"
                     onClick={() => {
-                      if (isV2Vocabulary) {
+                      if (isVocabulary) {
                         setGenerateNounDialogOpen(true);
-                      } else if (isVocabulary) {
-                        setVocabularyCreateModalOpen(true);
                       } else {
                         setCreateModalOpen(true);
                       }
@@ -998,12 +918,10 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
                           'flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50',
                           isVocabulary && 'cursor-pointer'
                         )}
-                        data-testid={
-                          isV2Vocabulary ? `word-entry-row-${card.id}` : `card-item-${card.id}`
-                        }
+                        data-testid={`word-entry-row-${card.id}`}
                         onClick={(e: React.MouseEvent) => {
                           if ((e.target as HTMLElement).closest('button')) return;
-                          isV2Vocabulary ? handleWordEntryClick(card) : handleV1CardClick(card);
+                          handleWordEntryClick(card);
                         }}
                         role="button"
                         tabIndex={0}
@@ -1011,18 +929,16 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
                           if ((e.target as HTMLElement).closest('button')) return;
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
-                            isV2Vocabulary ? handleWordEntryClick(card) : handleV1CardClick(card);
+                            handleWordEntryClick(card);
                           }
                         }}
                       >
-                        {isV2Vocabulary && (
-                          <Checkbox
-                            checked={selectedIds.has(card.id)}
-                            onCheckedChange={() => handleSelectCard(card.id)}
-                            className="mr-2 shrink-0"
-                            data-testid={`word-entry-select-${card.id}`}
-                          />
-                        )}
+                        <Checkbox
+                          checked={selectedIds.has(card.id)}
+                          onCheckedChange={() => handleSelectCard(card.id)}
+                          className="mr-2 shrink-0"
+                          data-testid={`word-entry-select-${card.id}`}
+                        />
                         <div className="min-w-0 flex-1 pr-2">
                           <div className="flex items-center gap-2">
                             <p className="truncate font-medium">{card.front_text}</p>
@@ -1068,15 +984,15 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
                           <p className="truncate text-sm text-muted-foreground">
                             {card.back_text_en}
                           </p>
-                          {/* Per-field enrichment chips — V2 only */}
-                          {isV2Vocabulary && <EnrichmentChips card={card} />}
+                          {/* Per-field enrichment chips */}
+                          <EnrichmentChips card={card} />
                         </div>
                         <div className="flex shrink-0 items-center gap-1">
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => {
-                              isV2Vocabulary ? handleWordEntryClick(card) : handleV1CardClick(card);
+                              handleWordEntryClick(card);
                             }}
                             data-testid={`vocabulary-card-edit-${card.id}`}
                           >
@@ -1206,7 +1122,7 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
         open={deleteDialogOpen}
         onOpenChange={handleDeleteDialogClose}
         itemPreview={getItemPreview()}
-        itemType={isV2Vocabulary ? 'wordEntry' : isVocabulary ? 'card' : 'question'}
+        itemType={isVocabulary ? 'wordEntry' : 'question'}
         onConfirm={handleConfirmDelete}
         isDeleting={isDeleting}
       />
@@ -1274,21 +1190,7 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
         />
       )}
 
-      {/* Vocabulary Card Create Modal */}
       {isVocabulary && deck && (
-        <VocabularyCardCreateModal
-          open={vocabularyCreateModalOpen}
-          onOpenChange={setVocabularyCreateModalOpen}
-          deckId={deck.id}
-          deckLevel={deck.level ?? undefined}
-          onSuccess={() => {
-            fetchItems();
-            onItemDeleted?.(); // Refresh parent deck counts
-          }}
-        />
-      )}
-
-      {isV2Vocabulary && deck && (
         <GenerateNounDialog
           open={generateNounDialogOpen}
           onOpenChange={setGenerateNounDialogOpen}

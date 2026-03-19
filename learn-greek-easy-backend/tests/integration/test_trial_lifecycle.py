@@ -22,14 +22,7 @@ from src.core.dependencies import get_current_user, get_or_create_user
 from src.core.exceptions import PremiumRequiredException
 from src.core.subscription import check_premium_deck_access, get_effective_access_level
 from src.core.supabase_auth import SupabaseUserClaims
-from src.db.models import (
-    CardSystemVersion,
-    Deck,
-    DeckLevel,
-    SubscriptionStatus,
-    SubscriptionTier,
-    User,
-)
+from src.db.models import Deck, DeckLevel, SubscriptionStatus, SubscriptionTier, User
 from src.main import app
 from tests.factories.auth import UserFactory
 from tests.fixtures.auth import _get_override_function, _test_user_registry
@@ -58,7 +51,6 @@ async def _create_premium_deck(db_session: AsyncSession) -> Deck:
         level=DeckLevel.A1,
         is_active=True,
         is_premium=True,
-        card_system=CardSystemVersion.V1,
     )
     db_session.add(deck)
     await db_session.flush()

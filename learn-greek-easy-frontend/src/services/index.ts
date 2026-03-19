@@ -39,17 +39,6 @@ export type {
   UpdateDeckInput,
 } from './deckAPI';
 
-// Card API
-export { cardAPI } from './cardAPI';
-export type {
-  CardCreatePayload,
-  CardListResponse,
-  CardResponse,
-  CardSearchResponse,
-  ListCardsParams,
-  SearchCardsParams,
-} from './cardAPI';
-
 // Word Entry API
 export { wordEntryAPI } from './wordEntryAPI';
 export type {
@@ -61,28 +50,9 @@ export type {
 
 // Study API
 export { studyAPI } from './studyAPI';
-export type {
-  CardInitializationRequest,
-  CardInitializationResult,
-  CardStatus,
-  StudyQueue,
-  StudyQueueCard,
-  StudyQueueParams,
-  StudyStatsByStatus,
-  StudyStatsResponse,
-} from './studyAPI';
 
 // Review API
 export { reviewAPI } from './reviewAPI';
-export type {
-  BulkReviewSubmit,
-  ReviewHistoryEntry,
-  ReviewHistoryListResponse,
-  ReviewHistoryParams,
-  ReviewSubmit,
-  SM2BulkReviewResult,
-  SM2ReviewResult,
-} from './reviewAPI';
 
 // Progress API
 export { progressAPI } from './progressAPI';

@@ -20,10 +20,8 @@ import i18n from '@/i18n';
 vi.mock('@/services/adminAPI', () => ({
   GENERATE_WORD_ENTRY_STREAM_URL: '/api/v1/admin/word-entries/generate/stream',
   adminAPI: {
-    listVocabularyCards: vi.fn(),
     listWordEntries: vi.fn(),
     listCultureQuestions: vi.fn(),
-    deleteVocabularyCard: vi.fn(),
     deleteCultureQuestion: vi.fn(),
   },
 }));
@@ -45,10 +43,7 @@ vi.mock('../CardCreateModal', () => ({
   CardCreateModal: () => null,
 }));
 
-vi.mock('../vocabulary', () => ({
-  VocabularyCardCreateModal: () => null,
-  V1CardEditInDialog: () => null,
-}));
+vi.mock('../vocabulary', () => ({}));
 
 vi.mock('../WordEntryContent', () => ({
   WordEntryContent: () => null,
@@ -77,12 +72,6 @@ const createV2Deck = (overrides?: Partial<UnifiedDeckItem>): UnifiedDeckItem => 
   owner_id: null,
   owner_name: null,
   ...overrides,
-});
-
-const createV1Deck = (): UnifiedDeckItem => ({
-  ...createV2Deck(),
-  id: 'deck-v1',
-  card_system: 'V1',
 });
 
 const createWordEntry = (
@@ -123,7 +112,6 @@ const createWordEntry = (
 
 beforeEach(() => {
   vi.clearAllMocks();
-  // V2 decks now call listWordEntries (PR #297 fix)
   (adminAPI.listWordEntries as Mock).mockResolvedValue({
     total: 2,
     page: 1,
@@ -137,14 +125,6 @@ beforeEach(() => {
         part_of_speech: null,
       }),
     ],
-  });
-  // V1 decks still call listVocabularyCards
-  (adminAPI.listVocabularyCards as Mock).mockResolvedValue({
-    total: 1,
-    page: 1,
-    page_size: 20,
-    deck_id: 'deck-v1',
-    cards: [createWordEntry('card-1')],
   });
   (adminAPI.listCultureQuestions as Mock).mockResolvedValue({
     total: 0,
@@ -218,43 +198,7 @@ describe('DeckDetailModal word entry detail navigation', () => {
   });
 
   // ============================================
-  // Group 2: V1 Row Non-Navigation
-  // ============================================
-
-  describe('V1 vocabulary card rows do not navigate', () => {
-    it('V1 rows use card-item testid, not word-entry-row', async () => {
-      (adminAPI.listVocabularyCards as Mock).mockResolvedValue({
-        total: 1,
-        page: 1,
-        page_size: 20,
-        deck_id: 'deck-v1',
-        cards: [createWordEntry('card-1')],
-      });
-      renderModal({ deck: createV1Deck() });
-      await waitFor(() => {
-        expect(screen.getByTestId('card-item-card-1')).toBeInTheDocument();
-        expect(screen.queryByTestId('word-entry-row-card-1')).not.toBeInTheDocument();
-      });
-    });
-
-    it('clicking V1 card row does not show detail view', async () => {
-      (adminAPI.listVocabularyCards as Mock).mockResolvedValue({
-        total: 1,
-        page: 1,
-        page_size: 20,
-        deck_id: 'deck-v1',
-        cards: [createWordEntry('card-1')],
-      });
-      const user = userEvent.setup();
-      renderModal({ deck: createV1Deck() });
-      await waitFor(() => screen.getByTestId('card-item-card-1'));
-      await user.click(screen.getByTestId('card-item-card-1'));
-      expect(screen.queryByTestId('word-entry-detail-view')).not.toBeInTheDocument();
-    });
-  });
-
-  // ============================================
-  // Group 3: Detail View Rendering
+  // Group 2: Detail View Rendering
   // ============================================
 
   describe('detail view rendering', () => {
@@ -303,7 +247,7 @@ describe('DeckDetailModal word entry detail navigation', () => {
   });
 
   // ============================================
-  // Group 4: Tab Behavior
+  // Group 3: Tab Behavior
   // ============================================
 
   describe('tab behavior', () => {
@@ -326,7 +270,7 @@ describe('DeckDetailModal word entry detail navigation', () => {
   });
 
   // ============================================
-  // Group 5: Back Navigation
+  // Group 4: Back Navigation
   // ============================================
 
   describe('back navigation', () => {
@@ -355,7 +299,7 @@ describe('DeckDetailModal word entry detail navigation', () => {
   });
 
   // ============================================
-  // Group 6: State Reset
+  // Group 5: State Reset
   // ============================================
 
   describe('state reset', () => {
@@ -367,7 +311,7 @@ describe('DeckDetailModal word entry detail navigation', () => {
       expect(screen.getByTestId('word-entry-detail-view')).toBeInTheDocument();
 
       const newDeck = createV2Deck({ id: 'deck-v2-other', name: 'Other Deck' });
-      (adminAPI.listVocabularyCards as Mock).mockResolvedValue({
+      (adminAPI.listWordEntries as Mock).mockResolvedValue({
         total: 0,
         page: 1,
         page_size: 20,
@@ -391,7 +335,7 @@ describe('DeckDetailModal word entry detail navigation', () => {
   });
 
   // ============================================
-  // Group 7: Close Button
+  // Group 6: Close Button
   // ============================================
 
   describe('close button', () => {

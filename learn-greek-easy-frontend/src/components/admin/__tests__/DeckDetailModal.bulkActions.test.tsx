@@ -40,10 +40,8 @@ import i18n from '@/i18n';
 vi.mock('@/services/adminAPI', () => ({
   GENERATE_WORD_ENTRY_STREAM_URL: '/api/v1/admin/word-entries/generate/stream',
   adminAPI: {
-    listVocabularyCards: vi.fn(),
     listWordEntries: vi.fn(),
     listCultureQuestions: vi.fn(),
-    deleteVocabularyCard: vi.fn(),
     deleteWordEntry: vi.fn(),
     deleteCultureQuestion: vi.fn(),
   },
@@ -56,10 +54,7 @@ vi.mock('@/hooks/use-toast', () => ({
 vi.mock('../CardDeleteDialog', () => ({ CardDeleteDialog: () => null }));
 vi.mock('../CardEditModal', () => ({ CardEditModal: () => null }));
 vi.mock('../CardCreateModal', () => ({ CardCreateModal: () => null }));
-vi.mock('../vocabulary', () => ({
-  VocabularyCardCreateModal: () => null,
-  V1CardEditInDialog: () => null,
-}));
+vi.mock('../vocabulary', () => ({}));
 vi.mock('../WordEntryContent', () => ({ WordEntryContent: () => null }));
 vi.mock('../WordEntryCards', () => ({ WordEntryCards: () => null }));
 
@@ -82,12 +77,6 @@ const createV2Deck = (overrides?: Partial<UnifiedDeckItem>): UnifiedDeckItem => 
   owner_id: null,
   owner_name: null,
   ...overrides,
-});
-
-const createV1Deck = (): UnifiedDeckItem => ({
-  ...createV2Deck(),
-  id: 'deck-v1',
-  card_system: 'V1',
 });
 
 const createWordEntry = (
@@ -170,9 +159,6 @@ beforeEach(() => {
       createWordEntry('e2', { front_text: 'γάτα', back_text_en: 'cat' }),
     ])
   );
-  (adminAPI.listVocabularyCards as Mock).mockResolvedValue(
-    makeWordEntriesResponse([createWordEntry('c1')])
-  );
   (adminAPI.listCultureQuestions as Mock).mockResolvedValue({
     total: 0,
     page: 1,
@@ -180,7 +166,6 @@ beforeEach(() => {
     deck_id: 'deck-culture',
     questions: [],
   });
-  (adminAPI.deleteVocabularyCard as Mock).mockResolvedValue(undefined);
   (adminAPI.deleteWordEntry as Mock).mockResolvedValue(undefined);
 });
 
@@ -813,40 +798,6 @@ describe('AC-12: Selection resets after fetchItems completes (sort/filter change
         expect(bulkBar).toHaveTextContent(/select all/i);
       }
     });
-  });
-});
-
-// ============================================
-// AC-13: Bulk bar does NOT render for V1 vocabulary decks
-// ============================================
-
-describe('AC-13: Bulk bar does NOT render for V1 vocabulary decks', () => {
-  it('does not render word-list-bulk-bar for V1 deck', async () => {
-    renderModal({ deck: createV1Deck() });
-    await waitFor(() => expect(adminAPI.listVocabularyCards).toHaveBeenCalled());
-    // Wait for loading to finish
-    await waitFor(() =>
-      expect(screen.queryByTestId('deck-detail-loading')).not.toBeInTheDocument()
-    );
-    expect(screen.queryByTestId('word-list-bulk-bar')).not.toBeInTheDocument();
-  });
-
-  it('does not render per-row checkboxes for V1 cards', async () => {
-    renderModal({ deck: createV1Deck() });
-    await waitFor(() => expect(adminAPI.listVocabularyCards).toHaveBeenCalled());
-    await waitFor(() =>
-      expect(screen.queryByTestId('deck-detail-loading')).not.toBeInTheDocument()
-    );
-    expect(screen.queryByTestId('word-entry-select-c1')).not.toBeInTheDocument();
-  });
-
-  it('does not render the bulk delete dialog wrapper for V1 deck', async () => {
-    renderModal({ deck: createV1Deck() });
-    await waitFor(() => expect(adminAPI.listVocabularyCards).toHaveBeenCalled());
-    await waitFor(() =>
-      expect(screen.queryByTestId('deck-detail-loading')).not.toBeInTheDocument()
-    );
-    expect(screen.queryByTestId('bulk-delete-dialog')).not.toBeInTheDocument();
   });
 });
 

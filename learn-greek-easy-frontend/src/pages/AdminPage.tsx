@@ -175,12 +175,7 @@ const UnifiedDeckListItem: React.FC<UnifiedDeckListItemProps> = ({
   onViewDetail,
 }) => {
   const displayName = getLocalizedDeckName(deck, locale);
-  const itemCountKey =
-    deck.type === 'culture'
-      ? 'deck.questionCount'
-      : deck.card_system === 'V2'
-        ? 'deck.wordCount'
-        : 'deck.cardCount';
+  const itemCountKey = deck.type === 'culture' ? 'deck.questionCount' : 'deck.wordCount';
 
   const handleRowClick = (e: React.MouseEvent) => {
     // Don't trigger view detail if clicking on action buttons

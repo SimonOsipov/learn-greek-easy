@@ -26,7 +26,7 @@ import pytest_asyncio
 from httpx import AsyncClient, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import Card, Deck, User
+from src.db.models import Deck, User
 from tests.base import AuthenticatedTestCase
 from tests.factories.base import BaseFactory
 from tests.helpers.time import freeze_time
@@ -54,14 +54,14 @@ class StudyEnvironment(NamedTuple):
     Attributes:
         user: User model instance
         deck: Deck model instance with cards
-        cards: List of Card model instances
+        cards: List of card model instances
         headers: Authorization headers for HTTP requests
         initialized: Whether study session has been initialized
     """
 
     user: User
     deck: Deck
-    cards: list[Card]
+    cards: list
     headers: dict[str, str]
     initialized: bool = False
 
@@ -569,7 +569,7 @@ async def populated_study_environment(
     db_session: AsyncSession,
     test_user: User,
     auth_headers: dict[str, str],
-    deck_with_cards: tuple[Deck, list[Card]],
+    deck_with_cards: tuple[Deck, list],
 ) -> StudyEnvironment:
     """User with deck, cards, and initialized study session.
 
