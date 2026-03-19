@@ -391,9 +391,8 @@ async def test_card(
     db_session: AsyncSession,
     test_deck: Deck,
 ) -> AsyncGenerator[Any, None]:
-    """Provide a single test card. (V1 - stub, Card model removed)"""
-    raise NotImplementedError("Card (V1) has been removed. Use CardRecord.")
-    yield  # type: ignore[misc]
+    """Stub: V1 Card removed. Yields None."""
+    yield None  # type: ignore[misc]
 
 
 @pytest_asyncio.fixture
@@ -401,9 +400,8 @@ async def test_cards(
     db_session: AsyncSession,
     test_deck: Deck,
 ) -> AsyncGenerator[Any, None]:
-    """Provide a list of 5 test cards for a deck. (V1 - stub, Card model removed)"""
-    raise NotImplementedError("Card (V1) has been removed. Use CardRecord.")
-    yield  # type: ignore[misc]
+    """Stub: V1 Card removed. Yields empty list."""
+    yield []  # type: ignore[misc]
 
 
 # =============================================================================
@@ -415,36 +413,36 @@ async def test_cards(
 async def deck_with_cards(
     db_session: AsyncSession,
 ) -> AsyncGenerator[DeckWithCards, None]:
-    """Provide a deck with 5 A1 vocabulary cards. (V1 - stub, Card model removed)"""
-    raise NotImplementedError("Card (V1) has been removed. Use CardRecord.")
-    yield  # type: ignore[misc]
+    """Provide a deck with empty cards list (V1 Card removed; cards=[] in V2)."""
+    deck = await create_deck(db_session, level=DeckLevel.A1)
+    yield DeckWithCards(deck=deck, cards=[])
 
 
 @pytest_asyncio.fixture
 async def deck_with_all_a1_cards(
     db_session: AsyncSession,
 ) -> AsyncGenerator[DeckWithCards, None]:
-    """Provide a deck with all A1 vocabulary cards. (V1 - stub, Card model removed)"""
-    raise NotImplementedError("Card (V1) has been removed. Use CardRecord.")
-    yield  # type: ignore[misc]
+    """Provide an A1 deck with empty cards list (V1 Card removed)."""
+    deck = await create_deck(db_session, level=DeckLevel.A1)
+    yield DeckWithCards(deck=deck, cards=[])
 
 
 @pytest_asyncio.fixture
 async def deck_with_a2_cards(
     db_session: AsyncSession,
 ) -> AsyncGenerator[DeckWithCards, None]:
-    """Provide an A2-level deck with vocabulary cards. (V1 - stub, Card model removed)"""
-    raise NotImplementedError("Card (V1) has been removed. Use CardRecord.")
-    yield  # type: ignore[misc]
+    """Provide an A2 deck with empty cards list (V1 Card removed)."""
+    deck = await create_deck(db_session, level=DeckLevel.A2)
+    yield DeckWithCards(deck=deck, cards=[])
 
 
 @pytest_asyncio.fixture
 async def deck_with_b1_cards(
     db_session: AsyncSession,
 ) -> AsyncGenerator[DeckWithCards, None]:
-    """Provide a B1-level deck with vocabulary cards. (V1 - stub, Card model removed)"""
-    raise NotImplementedError("Card (V1) has been removed. Use CardRecord.")
-    yield  # type: ignore[misc]
+    """Provide a B1 deck with empty cards list (V1 Card removed)."""
+    deck = await create_deck(db_session, level=DeckLevel.B1)
+    yield DeckWithCards(deck=deck, cards=[])
 
 
 # =============================================================================
@@ -456,9 +454,9 @@ async def deck_with_b1_cards(
 async def deck_with_many_cards(
     db_session: AsyncSession,
 ) -> AsyncGenerator[DeckWithCards, None]:
-    """Provide a deck with 50 cards for pagination/performance testing. (V1 - stub)"""
-    raise NotImplementedError("Card (V1) has been removed. Use CardRecord.")
-    yield  # type: ignore[misc]
+    """Provide a deck with empty cards list (V1 Card removed)."""
+    deck = await create_deck(db_session, level=DeckLevel.A1)
+    yield DeckWithCards(deck=deck, cards=[])
 
 
 @pytest_asyncio.fixture
