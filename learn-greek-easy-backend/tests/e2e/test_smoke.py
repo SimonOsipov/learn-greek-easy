@@ -62,6 +62,7 @@ class TestE2EInfrastructure(E2ETestCase):
 
     @pytest.mark.asyncio
     @pytest.mark.e2e
+    @pytest.mark.skip(reason="SM2V2-06: V1 study initialization removed. Unskip in SM2V2-07.")
     async def test_populated_study_environment_fixture(
         self,
         populated_study_environment: StudyEnvironment,
@@ -128,6 +129,7 @@ class TestMinimalWorkflow(E2ETestCase):
 
     @pytest.mark.asyncio
     @pytest.mark.e2e
+    @pytest.mark.skip(reason="SM2V2-06: V1 study/initialize endpoint removed. Unskip in SM2V2-07.")
     async def test_minimal_workflow_register_browse_study(
         self,
         client: AsyncClient,
@@ -161,6 +163,7 @@ class TestMinimalWorkflow(E2ETestCase):
 
     @pytest.mark.asyncio
     @pytest.mark.e2e
+    @pytest.mark.skip(reason="SM2V2-06: V1 study queue endpoint removed. Unskip in SM2V2-07.")
     async def test_workflow_with_populated_environment(
         self,
         client: AsyncClient,

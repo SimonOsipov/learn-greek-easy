@@ -136,9 +136,10 @@ test.describe('Card Error Reporting - Word Entry', () => {
     expect(response.ok()).toBe(true);
 
     const data = await response.json();
-    const decks = data.decks as Array<{ id: string; name: string }>;
+    const decks = data.decks as Array<{ id: string; name: string; card_count: number }>;
 
-    const deck = decks[0];
+    // Use a deck that has word entries (V2 decks seeded by E2E setup have word entries)
+    const deck = decks.find((d) => d.name.includes('E2E V2 Nouns')) ?? decks[0];
 
     if (!deck) {
       throw new Error(

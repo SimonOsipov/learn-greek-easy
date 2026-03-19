@@ -82,7 +82,9 @@ test.describe('Card Audio Playback', () => {
     });
     expect(decksResp.ok()).toBe(true);
     const decksData = await decksResp.json();
-    const deck = (decksData.decks as Array<{ id: string; name: string }>)[0];
+    const deckList = decksData.decks as Array<{ id: string; name: string }>;
+    // Use E2E V2 deck which has word entries
+    const deck = deckList.find((d) => d.name.includes('E2E V2 Nouns')) ?? deckList[0];
     if (!deck) throw new Error('[CAUDIO] No deck found. Run E2E seed first.');
     v2DeckId = deck.id;
 
