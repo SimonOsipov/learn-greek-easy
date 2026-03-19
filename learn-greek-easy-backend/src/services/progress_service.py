@@ -103,9 +103,11 @@ class ProgressService:
 
         # Overview
         vocab_studied = sum(v for k, v in vocab_status.items() if k not in ("new", "due"))
+        culture_studied = sum(v for k, v in culture_status.items() if k not in ("new", "due"))
         vocab_mastered = vocab_status.get("mastered", 0)
         total_mastered = vocab_mastered + culture_mastered_int
-        mastery_pct = (total_mastered / vocab_studied * 100) if vocab_studied > 0 else 0.0
+        total_studied = vocab_studied + culture_studied
+        mastery_pct = (total_mastered / total_studied * 100) if total_studied > 0 else 0.0
         accuracy_pct = (
             (accuracy_stats["correct"] / accuracy_stats["total"] * 100)
             if accuracy_stats["total"] > 0
@@ -113,7 +115,7 @@ class ProgressService:
         )
 
         overview = OverviewStats(
-            total_cards_studied=vocab_studied,
+            total_cards_studied=total_studied,
             total_cards_mastered=total_mastered,
             total_decks_started=distinct_decks_int,
             overall_mastery_percentage=round(mastery_pct, 1),
@@ -274,25 +276,18 @@ class ProgressService:
         if not all_dates:
             return 0
         today = date.today()
+        # Grace period: start from today or yesterday (whichever has activity)
+        start = today if all_dates[0] == today else today - timedelta(days=1)
+        if all_dates[0] > start:
+            return 0
         streak = 0
-        expected = today
+        expected = start
         for d in all_dates:
-            if d == expected or d == expected - timedelta(days=1):
+            if d == expected:
                 streak += 1
                 expected = d - timedelta(days=1)
-            elif d < expected - timedelta(days=1):
+            elif d < expected:
                 break
-        # Grace period: if today not studied, start from yesterday
-        if all_dates[0] == today - timedelta(days=1):
-            # Recount from yesterday
-            streak = 0
-            expected = today - timedelta(days=1)
-            for d in all_dates:
-                if d == expected:
-                    streak += 1
-                    expected = d - timedelta(days=1)
-                elif d < expected:
-                    break
         return streak
 
     async def _get_aggregated_longest_streak(self, user_id: UUID) -> int:
@@ -499,8 +494,15 @@ class ProgressService:
         user_id: UUID,
         deck_id: UUID,
     ) -> DeckProgressDetailResponse:
-        deck, vocab_status, review_stats, avg_ef, avg_interval, total_cards = await asyncio.gather(
-            self.deck_repo.get(deck_id),
+        from src.core.exceptions import DeckNotFoundException, ForbiddenException
+
+        deck = await self.deck_repo.get(deck_id)
+        if deck is None or not deck.is_active:
+            raise DeckNotFoundException()
+        if deck.owner_id is not None and deck.owner_id != user_id:
+            raise ForbiddenException()
+
+        vocab_status, review_stats, avg_ef, avg_interval, total_cards = await asyncio.gather(
             self.card_stats_repo.count_by_status(user_id, deck_id),
             self.card_review_repo.get_deck_review_stats(user_id, deck_id),
             self.card_stats_repo.get_average_easiness_factor(user_id, deck_id),
