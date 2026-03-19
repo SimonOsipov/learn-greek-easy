@@ -260,15 +260,23 @@ export const progressAPI = {
   /**
    * Get paginated list of deck progress
    */
-  getDeckProgressList: async (
-    params: DeckProgressListParams = {}
-  ): Promise<DeckProgressListResponse> => {
-    const queryString = buildQueryString({
-      page: params.page || 1,
-      page_size: params.page_size || 20,
-    });
-    return api.get<DeckProgressListResponse>(`/api/v1/progress/decks${queryString}`);
-  },
+  getDeckProgressList: (() => {
+    let inflight: Promise<DeckProgressListResponse> | null = null;
+
+    return async (params: DeckProgressListParams = {}): Promise<DeckProgressListResponse> => {
+      if (inflight) return inflight;
+      const queryString = buildQueryString({
+        page: params.page || 1,
+        page_size: params.page_size || 20,
+      });
+      inflight = api
+        .get<DeckProgressListResponse>(`/api/v1/progress/decks${queryString}`)
+        .finally(() => {
+          inflight = null;
+        });
+      return inflight;
+    };
+  })(),
 
   /**
    * Get detailed progress for a specific deck
