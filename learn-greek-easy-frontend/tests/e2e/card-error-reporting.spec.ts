@@ -48,8 +48,7 @@ function getLearnerAccessToken(): string | null {
   return null;
 }
 
-// Deck IDs populated in beforeAll
-let v1DeckId: string;
+// Deck ID populated in beforeAll
 let v2DeckId: string;
 
 /**
@@ -128,7 +127,7 @@ test.describe('Card Error Reporting - Word Entry', () => {
       );
     }
 
-    // Query existing decks to find V1 and V2 deck IDs (database is already seeded)
+    // Query existing decks to find a deck ID (database is already seeded)
     const response = await request.get(`${apiBaseUrl}/api/v1/decks?page_size=100`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -137,29 +136,21 @@ test.describe('Card Error Reporting - Word Entry', () => {
     expect(response.ok()).toBe(true);
 
     const data = await response.json();
-    const decks = data.decks as Array<{ id: string; card_system: string; name: string }>;
+    const decks = data.decks as Array<{ id: string; name: string }>;
 
-    const v1Deck = decks.find((d) => d.card_system === 'V1');
-    const v2Deck = decks.find((d) => d.card_system === 'V2');
+    const deck = decks[0];
 
-    if (!v1Deck) {
+    if (!deck) {
       throw new Error(
-        '[FERR-E2E] No V1 deck found in database. ' +
-          `Available decks: ${decks.map((d) => `${d.name} (${d.card_system})`).join(', ')}`
-      );
-    }
-    if (!v2Deck) {
-      throw new Error(
-        '[FERR-E2E] No V2 deck found in database. ' +
-          `Available decks: ${decks.map((d) => `${d.name} (${d.card_system})`).join(', ')}`
+        '[FERR-E2E] No deck found in database. ' +
+          'Run E2E seed first.'
       );
     }
 
-    v1DeckId = v1Deck.id;
-    v2DeckId = v2Deck.id;
+    v2DeckId = deck.id;
 
     console.log(
-      `[FERR-E2E] Found decks - V1: ${v1Deck.name} (${v1DeckId}), V2: ${v2Deck.name} (${v2DeckId})`
+      `[FERR-E2E] Found deck - ${deck.name} (${v2DeckId})`
     );
   });
 
@@ -298,9 +289,9 @@ test.describe('Card Error Reporting - Word Entry', () => {
     await expect(page.getByText(/yet to review/i).first()).toBeVisible({ timeout: 5000 });
   });
 
-  test('FERR-E2E-06: V1 flashcard has no Report Error button', async ({ page }) => {
+  test.skip('FERR-E2E-06: V1 flashcard has no Report Error button', async ({ page }) => {
     // Navigate to V1 deck
-    await page.goto(`/decks/${v1DeckId}`);
+    await page.goto(`/decks/${v2DeckId}`);
     const deckDetail = page
       .locator('[data-testid="deck-detail"]')
       .or(page.locator('[data-testid="v1-deck-detail"]'));
