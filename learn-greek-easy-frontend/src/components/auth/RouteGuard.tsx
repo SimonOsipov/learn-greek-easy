@@ -45,6 +45,7 @@ export const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
   const setAuthInitialized = useAppStore((state) => state.setAuthInitialized);
   const [isInitializing, setIsInitializing] = useState(true);
   const hasInitializedRef = useRef(false);
+  const initialSessionHandledRef = useRef(false);
 
   useEffect(() => {
     const abortController = new AbortController();
@@ -71,9 +72,17 @@ export const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
     } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'INITIAL_SESSION') {
         // Initial session check on mount
+        initialSessionHandledRef.current = true;
         handleAuthEvent();
-      } else if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
-        // Session changed or user data updated - re-sync auth store
+      } else if (event === 'SIGNED_IN') {
+        // Skip the redundant SIGNED_IN that Supabase fires right after
+        // INITIAL_SESSION for already-authenticated users. Only react to
+        // SIGNED_IN when the user was not yet authenticated (actual login).
+        const { isAuthenticated } = useAuthStore.getState();
+        if (!initialSessionHandledRef.current || !isAuthenticated) {
+          handleAuthEvent();
+        }
+      } else if (event === 'USER_UPDATED') {
         handleAuthEvent();
       } else if (event === 'SIGNED_OUT') {
         // User signed out - clear auth state
