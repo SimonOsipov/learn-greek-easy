@@ -35,10 +35,4 @@ export {
   type VocabularyDeckCreateFormData,
 } from './VocabularyDeckCreateForm';
 export { VocabularyDeckEditForm, type VocabularyDeckFormData } from './VocabularyDeckEditForm';
-export {
-  VocabularyCardForm,
-  VOCABULARY_CARD_FORM_ID,
-  type VocabularyCardFormProps,
-  type VocabularyCardFormData,
-} from './VocabularyCardForm';
 export * from './vocabulary';

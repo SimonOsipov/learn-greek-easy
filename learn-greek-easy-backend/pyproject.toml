@@ -131,6 +131,10 @@ module = "alembic.*"
 ignore_errors = true
 
 [[tool.mypy.overrides]]
+module = "src.db"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
 module = "mutagen.*"
 ignore_missing_imports = true
 

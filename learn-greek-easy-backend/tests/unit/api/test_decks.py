@@ -11,7 +11,7 @@ from uuid import uuid4
 import pytest
 from httpx import AsyncClient
 
-from src.db.models import CardSystemVersion, Deck, DeckLevel
+from src.db.models import Deck, DeckLevel
 
 
 class TestListDecksUnit:
@@ -42,7 +42,6 @@ class TestListDecksUnit:
         mock_deck.level = DeckLevel.A1
         mock_deck.is_active = True
         mock_deck.is_premium = False
-        mock_deck.card_system = CardSystemVersion.V1
         mock_deck.created_at = MagicMock()
         mock_deck.updated_at = MagicMock()
 
@@ -172,7 +171,6 @@ class TestGetDeckUnit:
         mock_deck.level = DeckLevel.A1
         mock_deck.is_active = True
         mock_deck.is_premium = False
-        mock_deck.card_system = CardSystemVersion.V1
         mock_deck.owner_id = None  # System deck (accessible to all)
         mock_deck.created_at = MagicMock()
         mock_deck.updated_at = MagicMock()
@@ -214,7 +212,6 @@ class TestGetDeckUnit:
         mock_deck.id = deck_id
         mock_deck.is_active = False
         mock_deck.is_premium = False
-        mock_deck.card_system = CardSystemVersion.V1
 
         with patch("src.api.v1.decks.DeckRepository") as mock_repo_class:
             mock_repo = AsyncMock()
@@ -391,7 +388,6 @@ class TestUpdateDeckUnit:
         mock_deck.name_el = "Τράπουλα Άλλου Χρήστη"
         mock_deck.name_ru = "Колода другого пользователя"
         mock_deck.is_premium = False
-        mock_deck.card_system = CardSystemVersion.V1
         mock_deck.owner_id = other_user_id  # Owned by another user
 
         with patch("src.api.v1.decks.DeckRepository") as mock_repo_class:
@@ -422,7 +418,6 @@ class TestUpdateDeckUnit:
         mock_deck.name_el = "Σύστημα Τράπουλα"
         mock_deck.name_ru = "Системная колода"
         mock_deck.is_premium = False
-        mock_deck.card_system = CardSystemVersion.V1
         mock_deck.owner_id = None  # System deck - owner_id is None
 
         with patch("src.api.v1.decks.DeckRepository") as mock_repo_class:
@@ -500,7 +495,6 @@ class TestDeleteDeckUnit:
         mock_deck.name_el = "Σύστημα Τράπουλα"
         mock_deck.name_ru = "Системная колода"
         mock_deck.is_premium = False
-        mock_deck.card_system = CardSystemVersion.V1
         mock_deck.owner_id = None  # System deck - owner_id is None
 
         with patch("src.api.v1.decks.DeckRepository") as mock_repo_class:
@@ -530,7 +524,6 @@ class TestDeleteDeckUnit:
         mock_deck.name_el = "Τράπουλα Άλλου Χρήστη"
         mock_deck.name_ru = "Колода другого пользователя"
         mock_deck.is_premium = False
-        mock_deck.card_system = CardSystemVersion.V1
         mock_deck.owner_id = other_user_id  # Owned by another user
 
         with patch("src.api.v1.decks.DeckRepository") as mock_repo_class:
@@ -593,7 +586,6 @@ class TestDeckIsPremiumUnit:
         mock_deck.level = DeckLevel.A1
         mock_deck.is_active = True
         mock_deck.is_premium = True
-        mock_deck.card_system = CardSystemVersion.V1
         mock_deck.created_at = MagicMock()
         mock_deck.updated_at = MagicMock()
 
@@ -629,7 +621,6 @@ class TestDeckIsPremiumUnit:
         mock_deck.level = DeckLevel.A1
         mock_deck.is_active = True
         mock_deck.is_premium = False
-        mock_deck.card_system = CardSystemVersion.V1
         mock_deck.created_at = MagicMock()
         mock_deck.updated_at = MagicMock()
 
@@ -664,7 +655,6 @@ class TestDeckIsPremiumUnit:
         mock_deck.level = DeckLevel.B1
         mock_deck.is_active = True
         mock_deck.is_premium = True
-        mock_deck.card_system = CardSystemVersion.V1
         mock_deck.owner_id = None  # System deck (accessible to all)
         mock_deck.created_at = MagicMock()
         mock_deck.updated_at = MagicMock()
@@ -698,7 +688,6 @@ class TestDeckIsPremiumUnit:
         mock_deck.level = DeckLevel.B2
         mock_deck.is_active = True
         mock_deck.is_premium = True
-        mock_deck.card_system = CardSystemVersion.V1
         mock_deck.created_at = MagicMock()
         mock_deck.updated_at = MagicMock()
 
@@ -752,7 +741,6 @@ class TestListMyDecksUnit:
         mock_deck.level = DeckLevel.A1
         mock_deck.is_active = True
         mock_deck.is_premium = False
-        mock_deck.card_system = CardSystemVersion.V1
         mock_deck.created_at = MagicMock()
         mock_deck.updated_at = MagicMock()
 
@@ -863,7 +851,6 @@ class TestGetDeckAuthorizationUnit:
         mock_deck.level = DeckLevel.A1
         mock_deck.is_active = True
         mock_deck.is_premium = False
-        mock_deck.card_system = CardSystemVersion.V1
         mock_deck.owner_id = None  # System deck
         mock_deck.created_at = MagicMock()
         mock_deck.updated_at = MagicMock()
@@ -897,7 +884,6 @@ class TestGetDeckAuthorizationUnit:
         mock_deck.level = DeckLevel.A1
         mock_deck.is_active = True
         mock_deck.is_premium = False
-        mock_deck.card_system = CardSystemVersion.V1
         mock_deck.owner_id = other_user_id  # Owned by another user
         mock_deck.created_at = MagicMock()
         mock_deck.updated_at = MagicMock()

@@ -3,16 +3,12 @@
 from src.db.base import Base, SoftDeleteMixin, TimestampMixin
 from src.db.dependencies import get_db, get_db_transactional
 from src.db.models import (
-    Card,
-    CardStatistics,
     CardStatus,
     Deck,
     DeckLevel,
     PartOfSpeech,
-    Review,
     ReviewRating,
     User,
-    UserDeckProgress,
     UserSettings,
     WordEntry,
 )
@@ -41,10 +37,5 @@ __all__ = [
     "UserSettings",
     # Models - Content
     "Deck",
-    "Card",
     "WordEntry",
-    # Models - Progress
-    "UserDeckProgress",
-    "CardStatistics",
-    "Review",
 ]

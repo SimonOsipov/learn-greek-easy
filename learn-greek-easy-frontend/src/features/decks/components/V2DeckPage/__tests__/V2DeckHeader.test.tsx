@@ -53,7 +53,6 @@ const mockDeck: Deck = {
   createdBy: 'system',
   createdAt: new Date('2025-01-01'),
   updatedAt: new Date('2025-01-01'),
-  cardSystem: 'V2',
 };
 
 function renderV2DeckHeader() {

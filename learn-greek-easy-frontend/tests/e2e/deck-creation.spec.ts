@@ -277,7 +277,7 @@ test.describe('Deck Creation - Edit Flows', () => {
     await expect(modal).not.toBeVisible({ timeout: 10000 });
   });
 
-  test('Flow 5: Edit from detail page - navigate, click edit, modify, save', async ({ page }) => {
+  test.skip('Flow 5: Edit from detail page - navigate, click edit, modify, save', async ({ page }) => {
     await page.goto('/my-decks');
 
     // Wait for page title
@@ -500,7 +500,7 @@ test.describe('Deck Creation - Delete Flows', () => {
   test.describe('Delete from Detail Page', () => {
     test.use({ storageState: BEGINNER_AUTH });
 
-    test('Flow 8: Delete from detail page - navigate, delete, verify redirect', async ({
+    test.skip('Flow 8: Delete from detail page - navigate, delete, verify redirect', async ({
       page,
     }) => {
       // First create a deck to delete

@@ -17,7 +17,7 @@ from typing import Any, Literal, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, UploadFile, status
-from sqlalchemy import case, delete, func, or_, select, text, update
+from sqlalchemy import delete, func, or_, select, text, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -42,11 +42,9 @@ from src.core.logging import get_logger
 from src.db.dependencies import get_db
 from src.db.models import (
     AudioStatus,
-    Card,
     CardErrorCardType,
     CardErrorStatus,
     CardRecord,
-    CardSystemVersion,
     CultureDeck,
     CultureQuestion,
     Deck,
@@ -241,26 +239,15 @@ async def get_admin_stats(
     )
     total_vocabulary_decks = deck_count_result.scalar() or 0
 
-    # Count cards in active vocabulary decks (V1 + V2)
-    v1_card_count_result = await db.execute(
-        select(func.count(Card.id))
-        .join(Deck, Card.deck_id == Deck.id)
-        .where(Deck.is_active.is_(True))
-        .where(Deck.card_system == CardSystemVersion.V1)
-    )
-    v1_count = v1_card_count_result.scalar() or 0
-
+    # Count active word entries in active vocabulary decks
     v2_word_count_result = await db.execute(
         select(func.count(WordEntry.id))
         .join(DeckWordEntry, DeckWordEntry.word_entry_id == WordEntry.id)
         .join(Deck, DeckWordEntry.deck_id == Deck.id)
         .where(Deck.is_active.is_(True))
-        .where(Deck.card_system == CardSystemVersion.V2)
         .where(WordEntry.is_active.is_(True))
     )
-    v2_count = v2_word_count_result.scalar() or 0
-
-    total_vocabulary_cards = v1_count + v2_count
+    total_vocabulary_cards = v2_word_count_result.scalar() or 0
 
     # Count active culture decks
     culture_deck_result = await db.execute(
@@ -359,14 +346,7 @@ async def list_decks(
     # Vocabulary Decks Query
     # ========================================
     if type is None or type == "vocabulary":
-        # Count V1 cards per vocabulary deck
-        v1_card_count_subquery = (
-            select(Card.deck_id, func.count(Card.id).label("card_count"))
-            .group_by(Card.deck_id)
-            .subquery()
-        )
-
-        # Count V2 active word entries per vocabulary deck
+        # Count active word entries per vocabulary deck
         v2_word_count_subquery = (
             select(DeckWordEntry.deck_id, func.count(WordEntry.id).label("word_count"))
             .join(WordEntry, WordEntry.id == DeckWordEntry.word_entry_id)
@@ -384,16 +364,9 @@ async def list_decks(
                 Deck.is_premium,
                 Deck.created_at,
                 Deck.owner_id,
-                Deck.card_system,
                 Deck.cover_image_s3_key,
                 User.full_name.label("owner_name"),
-                case(
-                    (
-                        Deck.card_system == CardSystemVersion.V2,
-                        func.coalesce(v2_word_count_subquery.c.word_count, 0),
-                    ),
-                    else_=func.coalesce(v1_card_count_subquery.c.card_count, 0),
-                ).label("item_count"),
+                func.coalesce(v2_word_count_subquery.c.word_count, 0).label("item_count"),
                 # Trilingual fields for edit forms
                 Deck.name_el,
                 Deck.name_en,
@@ -402,7 +375,6 @@ async def list_decks(
                 Deck.description_en,
                 Deck.description_ru,
             )
-            .outerjoin(v1_card_count_subquery, Deck.id == v1_card_count_subquery.c.deck_id)
             .outerjoin(v2_word_count_subquery, Deck.id == v2_word_count_subquery.c.deck_id)
             .outerjoin(User, Deck.owner_id == User.id)
         )
@@ -438,7 +410,6 @@ async def list_decks(
                     created_at=row.created_at,
                     owner_id=row.owner_id,
                     owner_name=row.owner_name,
-                    card_system=row.card_system.value,
                     # Trilingual fields for edit forms
                     name_el=row.name_el,
                     name_en=row.name_en,
@@ -3092,13 +3063,6 @@ async def generate_word_entry(  # noqa: C901
             detail=f"Active deck with ID '{request.deck_id}' not found",
         )
 
-    # Validate deck is V2
-    if deck.card_system != CardSystemVersion.V2:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Word generation is only supported for V2 vocabulary decks",
-        )
-
     # Stage 0.5: Lexicon lookup (async DB query)
     detected_art, bare_word = detect_article(request.word)
     lexicon_svc = LexiconService(db)
@@ -3368,16 +3332,6 @@ async def _generate_word_entry_sse_pipeline(  # noqa: C901
             )
             return
 
-        if deck.card_system != CardSystemVersion.V2:
-            yield format_sse_event(
-                {
-                    "error": "Word generation is only supported for V2 vocabulary decks",
-                    "stage": "validation",
-                },
-                event="pipeline_failed",
-            )
-            return
-
         # Build NormalizedLemma from pre-resolved fields in the request
         normalized_lemma = NormalizedLemma(
             input_word=request.word,
@@ -3403,7 +3357,7 @@ async def _generate_word_entry_sse_pipeline(  # noqa: C901
     async with factory.begin() as _db:
         result = await _db.execute(select(Deck).where(Deck.id == request.deck_id))
         deck = result.scalar_one_or_none()
-        if deck is not None and deck.is_active and deck.card_system == CardSystemVersion.V2:
+        if deck is not None and deck.is_active:
             lexicon_svc_inner = LexiconService(_db)
             try:
                 if detected_art_sse is None:
@@ -3428,16 +3382,6 @@ async def _generate_word_entry_sse_pipeline(  # noqa: C901
     if deck is None or not deck.is_active:
         yield format_sse_event(
             {"error": f"Active deck with ID '{request.deck_id}' not found", "stage": "validation"},
-            event="pipeline_failed",
-        )
-        return
-
-    if deck.card_system != CardSystemVersion.V2:
-        yield format_sse_event(
-            {
-                "error": "Word generation is only supported for V2 vocabulary decks",
-                "stage": "validation",
-            },
             event="pipeline_failed",
         )
         return
@@ -3607,10 +3551,10 @@ async def create_and_link_word_entry(
     if deck is None:
         raise NotFoundException(resource="Deck", detail=f"Deck with id '{body.deck_id}' not found")
 
-    # Validate deck is active and V2
-    if not deck.is_active or deck.card_system != CardSystemVersion.V2:
+    # Validate deck is active
+    if not deck.is_active:
         raise ConflictException(
-            detail=f"Deck '{body.deck_id}' is not an active V2 deck. Word entries can only be linked to active V2 decks."
+            detail=f"Deck '{body.deck_id}' is not active. Word entries can only be linked to active decks."
         )
 
     # Build entry data dict from the request schema
@@ -3683,10 +3627,10 @@ async def link_word_entry_to_deck(
     if deck is None:
         raise NotFoundException(resource="Deck", detail=f"Deck with id '{deck_id}' not found")
 
-    # Validate deck is active and V2 (word entries are only for V2 decks)
-    if not deck.is_active or deck.card_system != CardSystemVersion.V2:
+    # Validate deck is active
+    if not deck.is_active:
         raise ConflictException(
-            detail=f"Deck '{deck_id}' is not an active V2 deck. Word entries can only be linked to active V2 decks."
+            detail=f"Deck '{deck_id}' is not active. Word entries can only be linked to active decks."
         )
 
     # Validate word entry exists and is active

@@ -38,10 +38,8 @@ from src.services.noun_data_generation_service import (
     get_noun_data_generation_service,
 )
 from src.services.openrouter_service import OpenRouterService, get_openrouter_service
-from src.services.progress_service import ProgressService
 from src.services.s3_service import S3Service, get_s3_service
 from src.services.seed_service import SeedService
-from src.services.sm2_service import SM2Service
 from src.services.spellcheck_service import SpellcheckService, get_spellcheck_service
 from src.services.translation_service import (
     TranslationEntry,
@@ -79,11 +77,9 @@ __all__ = [
     "NotificationService",
     "NounDataGenerationService",
     "OpenRouterService",
-    "ProgressService",
     "S3Service",
     "SeedService",
     "SpellcheckService",
-    "SM2Service",
     "TranslationEntry",
     "TranslationLookupService",
     "TranslationResult",

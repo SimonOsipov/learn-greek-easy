@@ -1,28 +1,22 @@
 // src/pages/MyDecksPage.tsx
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
-import { AlertCircle, BookOpen, Plus, Square } from 'lucide-react';
+import { AlertCircle, BookOpen, Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
-import { DecksGrid, DeckSelectorModal, UserDeckEditModal } from '@/components/decks';
+import { DecksGrid, UserDeckEditModal } from '@/components/decks';
 import type { CreateSource } from '@/components/decks/UserDeckEditModal';
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
 import { CardSkeleton } from '@/components/feedback';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { UserVocabularyCardCreateModal } from '@/components/vocabulary';
 import { useToast } from '@/hooks/use-toast';
 import {
   trackUserDeckDeleteStarted,
   trackUserDeckDeleteCancelled,
 } from '@/lib/analytics/myDecksAnalytics';
-import {
-  trackUserCardCreateStarted,
-  trackUserCardCreateCompleted,
-  trackUserCardCreateCancelled,
-} from '@/lib/analytics/userCardAnalytics';
 import { reportAPIError } from '@/lib/errorReporting';
 import { deckAPI, type DeckLevel, type DeckResponse } from '@/services/deckAPI';
 import type { Deck, DeckProgress } from '@/types/deck';
@@ -51,7 +45,6 @@ const transformDeckResponse = (deck: DeckResponse): Deck => {
     createdAt: new Date(deck.created_at),
     updatedAt: new Date(deck.updated_at),
     progress,
-    cardSystem: (deck.card_system ?? 'V1') as 'V1' | 'V2',
     nameEn: deck.name_en,
     nameRu: deck.name_ru,
     descriptionEn: deck.description_en,
@@ -75,12 +68,6 @@ export const MyDecksPage: React.FC = () => {
   // Delete deck state
   const [deletingDeck, setDeletingDeck] = useState<Deck | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  // Card creation state
-  const [isDeckSelectorOpen, setIsDeckSelectorOpen] = useState(false);
-  const [selectedDeckForCard, setSelectedDeckForCard] = useState<Deck | null>(null);
-  const [isCreateCardModalOpen, setIsCreateCardModalOpen] = useState(false);
-  const createCardSuccessRef = useRef(false);
 
   const fetchMyDecks = useCallback(async () => {
     setIsLoading(true);
@@ -121,62 +108,9 @@ export const MyDecksPage: React.FC = () => {
     fetchMyDecks();
   };
 
-  const handleCreateCardClick = () => {
-    if (decks.length === 0) {
-      // No decks: show toast prompting to create a deck first
-      toast({
-        title: t('myDecks.noDecksForCard.title'),
-        description: t('myDecks.noDecksForCard.message'),
-      });
-      return;
-    }
-
-    // Open deck selector modal
-    setIsDeckSelectorOpen(true);
-  };
-
-  const handleDeckSelectedForCard = (deck: Deck) => {
-    setIsDeckSelectorOpen(false);
-    setSelectedDeckForCard(deck);
-    createCardSuccessRef.current = false;
-    trackUserCardCreateStarted({
-      deck_id: deck.id,
-      source: 'my_decks_list_button',
-    });
-    setIsCreateCardModalOpen(true);
-  };
-
-  const handleCardCreated = () => {
-    createCardSuccessRef.current = true;
-    if (selectedDeckForCard) {
-      trackUserCardCreateCompleted({
-        deck_id: selectedDeckForCard.id,
-        card_id: '', // Not available at page level
-        has_grammar: false, // Not available at page level
-        has_examples: false, // Not available at page level
-        example_count: 0, // Not available at page level
-      });
-    }
-    setIsCreateCardModalOpen(false);
-    setSelectedDeckForCard(null);
-    fetchMyDecks(); // Refresh deck list (card count may have changed)
-  };
-
-  const handleCreateCardModalOpenChange = (open: boolean) => {
-    if (!open && !createCardSuccessRef.current && selectedDeckForCard) {
-      trackUserCardCreateCancelled({
-        deck_id: selectedDeckForCard.id,
-        source: 'my_decks_list_button',
-      });
-    }
-    if (!open) {
-      setIsCreateCardModalOpen(false);
-      setSelectedDeckForCard(null);
-    }
-  };
-
   const handleDeckClick = (deckId: string) => {
-    navigate(`/my-decks/${deckId}`);
+    // Navigate to V2 deck detail page (MyDeckDetailPage removed in SM2V2-06)
+    navigate(`/decks/${deckId}`);
   };
 
   // Edit deck handlers
@@ -255,16 +189,6 @@ export const MyDecksPage: React.FC = () => {
           <Button variant="hero" size="lg" onClick={() => handleCreateDeckClick('my_decks_button')}>
             <Plus className="mr-2 h-4 w-4" />
             {t('myDecks.createDeck')}
-          </Button>
-
-          <Button
-            variant="outline"
-            size="lg"
-            onClick={handleCreateCardClick}
-            data-testid="my-decks-create-card-button"
-          >
-            <Square className="mr-2 h-4 w-4" />
-            {t('myDecks.createCard')}
           </Button>
         </div>
       </Card>
@@ -363,26 +287,6 @@ export const MyDecksPage: React.FC = () => {
         variant="destructive"
         loading={isDeleting}
       />
-
-      {/* Deck Selector Modal */}
-      <DeckSelectorModal
-        open={isDeckSelectorOpen}
-        onOpenChange={setIsDeckSelectorOpen}
-        decks={decks}
-        isLoading={isLoading}
-        onSelect={handleDeckSelectedForCard}
-      />
-
-      {/* Create Card Modal */}
-      {selectedDeckForCard && (
-        <UserVocabularyCardCreateModal
-          open={isCreateCardModalOpen}
-          onOpenChange={handleCreateCardModalOpenChange}
-          deckId={selectedDeckForCard.id}
-          deckLevel={selectedDeckForCard.level}
-          onSuccess={handleCardCreated}
-        />
-      )}
     </div>
   );
 };

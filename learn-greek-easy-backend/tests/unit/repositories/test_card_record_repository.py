@@ -20,7 +20,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.models import (
     CardRecord,
-    CardSystemVersion,
     CardType,
     Deck,
     DeckLevel,
@@ -46,7 +45,6 @@ async def v2_deck(db_session: AsyncSession) -> Deck:
         description_el="test",
         description_ru="test",
         level=DeckLevel.A1,
-        card_system=CardSystemVersion.V2,
         is_active=True,
     )
     db_session.add(deck)
@@ -66,7 +64,6 @@ async def second_deck(db_session: AsyncSession) -> Deck:
         description_el="second",
         description_ru="second",
         level=DeckLevel.A2,
-        card_system=CardSystemVersion.V2,
         is_active=True,
     )
     db_session.add(deck)

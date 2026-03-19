@@ -2,8 +2,7 @@
  * Tests for DeckDetailModal single-item and bulk delete routing (WEDEL-02)
  *
  * Verifies that:
- * - V2 single delete calls adminAPI.deleteWordEntry (NOT deleteVocabularyCard)
- * - V1 single delete calls adminAPI.deleteVocabularyCard (NOT deleteWordEntry)
+ * - V2 single delete calls adminAPI.deleteWordEntry
  * - V2 bulk delete calls adminAPI.deleteWordEntry for each selected ID
  * - CardDeleteDialog title reflects itemType="wordEntry" for V2 decks
  */
@@ -25,10 +24,8 @@ import i18n from '@/i18n';
 vi.mock('@/services/adminAPI', () => ({
   GENERATE_WORD_ENTRY_STREAM_URL: '/api/v1/admin/word-entries/generate/stream',
   adminAPI: {
-    listVocabularyCards: vi.fn(),
     listWordEntries: vi.fn(),
     listCultureQuestions: vi.fn(),
-    deleteVocabularyCard: vi.fn(),
     deleteWordEntry: vi.fn(),
     deleteCultureQuestion: vi.fn(),
   },
@@ -41,10 +38,7 @@ vi.mock('@/hooks/use-toast', () => ({
 // DO NOT mock CardDeleteDialog — let it render for real to verify dialog text
 vi.mock('../CardEditModal', () => ({ CardEditModal: () => null }));
 vi.mock('../CardCreateModal', () => ({ CardCreateModal: () => null }));
-vi.mock('../vocabulary', () => ({
-  VocabularyCardCreateModal: () => null,
-  V1CardEditInDialog: () => null,
-}));
+vi.mock('../vocabulary', () => ({}));
 vi.mock('../WordEntryContent', () => ({ WordEntryContent: () => null }));
 vi.mock('../WordEntryCards', () => ({ WordEntryCards: () => null }));
 
@@ -67,12 +61,6 @@ const createV2Deck = (overrides?: Partial<UnifiedDeckItem>): UnifiedDeckItem => 
   owner_id: null,
   owner_name: null,
   ...overrides,
-});
-
-const createV1Deck = (): UnifiedDeckItem => ({
-  ...createV2Deck(),
-  id: 'deck-v1',
-  card_system: 'V1',
 });
 
 const createWordEntry = (
@@ -154,9 +142,6 @@ beforeEach(() => {
       createWordEntry('e2', { front_text: 'γάτα', back_text_en: 'cat' }),
     ])
   );
-  (adminAPI.listVocabularyCards as Mock).mockResolvedValue(
-    makeWordEntriesResponse([createWordEntry('c1')])
-  );
   (adminAPI.listCultureQuestions as Mock).mockResolvedValue({
     total: 0,
     page: 1,
@@ -164,7 +149,6 @@ beforeEach(() => {
     deck_id: 'deck-culture',
     questions: [],
   });
-  (adminAPI.deleteVocabularyCard as Mock).mockResolvedValue(undefined);
   (adminAPI.deleteWordEntry as Mock).mockResolvedValue(undefined);
 });
 
@@ -198,46 +182,10 @@ describe('V2 single delete routing', () => {
       expect(adminAPI.deleteWordEntry).toHaveBeenCalledWith('e1');
     });
   });
-
-  it('does NOT call adminAPI.deleteVocabularyCard for V2 single delete', async () => {
-    renderModal();
-    await waitFor(() => screen.getByTestId('delete-card-e1'));
-
-    fireEvent.click(screen.getByTestId('delete-card-e1'));
-    await waitFor(() => screen.getByTestId('card-delete-dialog'));
-
-    fireEvent.click(screen.getByTestId('card-delete-confirm'));
-
-    await waitFor(() => {
-      expect(adminAPI.deleteWordEntry).toHaveBeenCalledWith('e1');
-    });
-    expect(adminAPI.deleteVocabularyCard).not.toHaveBeenCalled();
-  });
 });
 
 // ============================================
-// Group 2: V1 single delete routing
-// ============================================
-
-describe('V1 single delete routing', () => {
-  it('confirming delete on V1 deck calls adminAPI.deleteVocabularyCard NOT deleteWordEntry', async () => {
-    renderModal({ deck: createV1Deck() });
-    await waitFor(() => screen.getByTestId('delete-card-c1'));
-
-    fireEvent.click(screen.getByTestId('delete-card-c1'));
-    await waitFor(() => screen.getByTestId('card-delete-dialog'));
-
-    fireEvent.click(screen.getByTestId('card-delete-confirm'));
-
-    await waitFor(() => {
-      expect(adminAPI.deleteVocabularyCard).toHaveBeenCalledWith('c1');
-    });
-    expect(adminAPI.deleteWordEntry).not.toHaveBeenCalled();
-  });
-});
-
-// ============================================
-// Group 3: V2 bulk delete routing
+// Group 2: V2 bulk delete routing
 // ============================================
 
 describe('V2 bulk delete routing', () => {
@@ -256,6 +204,5 @@ describe('V2 bulk delete routing', () => {
     await waitFor(() => {
       expect(adminAPI.deleteWordEntry).toHaveBeenCalledTimes(2);
     });
-    expect(adminAPI.deleteVocabularyCard).not.toHaveBeenCalled();
   });
 });

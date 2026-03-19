@@ -45,10 +45,8 @@ import i18n from '@/i18n';
 vi.mock('@/services/adminAPI', () => ({
   GENERATE_WORD_ENTRY_STREAM_URL: '/api/v1/admin/word-entries/generate/stream',
   adminAPI: {
-    listVocabularyCards: vi.fn(),
     listWordEntries: vi.fn(),
     listCultureQuestions: vi.fn(),
-    deleteVocabularyCard: vi.fn(),
     deleteCultureQuestion: vi.fn(),
   },
 }));
@@ -60,10 +58,7 @@ vi.mock('@/hooks/use-toast', () => ({
 vi.mock('../CardDeleteDialog', () => ({ CardDeleteDialog: () => null }));
 vi.mock('../CardEditModal', () => ({ CardEditModal: () => null }));
 vi.mock('../CardCreateModal', () => ({ CardCreateModal: () => null }));
-vi.mock('../vocabulary', () => ({
-  VocabularyCardCreateModal: () => null,
-  V1CardEditInDialog: () => null,
-}));
+vi.mock('../vocabulary', () => ({}));
 vi.mock('../WordEntryContent', () => ({ WordEntryContent: () => null }));
 vi.mock('../WordEntryCards', () => ({ WordEntryCards: () => null }));
 
@@ -86,12 +81,6 @@ const createV2Deck = (overrides?: Partial<UnifiedDeckItem>): UnifiedDeckItem => 
   owner_id: null,
   owner_name: null,
   ...overrides,
-});
-
-const createV1Deck = (): UnifiedDeckItem => ({
-  ...createV2Deck(),
-  id: 'deck-v1',
-  card_system: 'V1',
 });
 
 const createCultureDeck = (): UnifiedDeckItem => ({
@@ -206,9 +195,6 @@ beforeEach(() => {
       30
     )
   );
-  (adminAPI.listVocabularyCards as Mock).mockResolvedValue(
-    makeWordEntriesResponse([createWordEntry('c1')])
-  );
   (adminAPI.listCultureQuestions as Mock).mockResolvedValue({
     total: 0,
     page: 1,
@@ -250,12 +236,6 @@ describe('AC-1: Search input appears at top of word list dialog (V2 only)', () =
     await waitFor(() => {
       expect(screen.getByTestId('word-list-sort-trigger')).toBeInTheDocument();
     });
-  });
-
-  it('does NOT render the toolbar for V1 vocabulary decks', async () => {
-    renderModal({ deck: createV1Deck() });
-    await waitFor(() => expect(adminAPI.listVocabularyCards).toHaveBeenCalled());
-    expect(screen.queryByTestId('word-list-toolbar')).not.toBeInTheDocument();
   });
 
   it('does NOT render the toolbar for culture decks', async () => {
@@ -778,12 +758,6 @@ describe('listWordEntries API param contract', () => {
     await waitFor(() => expect(adminAPI.listWordEntries).toHaveBeenCalled());
     const firstCall = (adminAPI.listWordEntries as Mock).mock.calls[0];
     expect(firstCall[3].partOfSpeech).toBeUndefined();
-  });
-
-  it('uses listVocabularyCards (not listWordEntries) for V1 decks', async () => {
-    renderModal({ deck: createV1Deck() });
-    await waitFor(() => expect(adminAPI.listVocabularyCards).toHaveBeenCalled());
-    expect(adminAPI.listWordEntries).not.toHaveBeenCalled();
   });
 
   it('resets page to 1 when sort changes', async () => {

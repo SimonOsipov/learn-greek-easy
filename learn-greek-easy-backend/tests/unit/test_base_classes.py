@@ -87,30 +87,6 @@ class TestBaseTestCaseDeckCardCreation(BaseTestCase):
         assert deck.name_en == "Greek B2 Vocabulary"
         assert deck.level == DeckLevel.B2
 
-    async def test_create_test_card(self, db_session: AsyncSession):
-        """Test creating a test card."""
-        deck = await self.create_test_deck(db_session)
-        card = await self.create_test_card(db_session, deck)
-
-        assert card is not None
-        assert card.id is not None
-        assert card.deck_id == deck.id
-        assert card.front_text == "Hello"
-        assert card.back_text_en == "Yeia"
-
-    async def test_create_deck_with_cards(self, db_session: AsyncSession):
-        """Test creating a deck with multiple cards."""
-        deck, cards = await self.create_deck_with_cards(
-            db_session,
-            name="Test Deck with Cards",
-            card_count=5,
-        )
-
-        assert deck is not None
-        assert len(cards) == 5
-        for i, card in enumerate(cards):
-            assert card.deck_id == deck.id
-
 
 class TestBaseTestCaseDatabaseHelpers(BaseTestCase):
     """Tests for BaseTestCase database helper methods."""

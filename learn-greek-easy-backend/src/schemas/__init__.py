@@ -18,7 +18,6 @@ from src.schemas.card import (
     CardStudyResponse,
     CardStudyResultResponse,
     CardUpdate,
-    CardWithStatisticsResponse,
 )
 
 # Card Error Report schemas
@@ -95,13 +94,7 @@ from src.schemas.culture import (
 )
 
 # Deck schemas
-from src.schemas.deck import (
-    DeckCreate,
-    DeckListResponse,
-    DeckResponse,
-    DeckUpdate,
-    DeckWithProgressResponse,
-)
+from src.schemas.deck import DeckCreate, DeckListResponse, DeckResponse, DeckUpdate
 
 # Feedback schemas
 from src.schemas.feedback import (
@@ -141,7 +134,6 @@ from src.schemas.notification import (
 from src.schemas.progress import (  # Existing; Dashboard schemas; Deck Progress schemas; Learning Trends schemas; Achievements schemas
     Achievement,
     AchievementsResponse,
-    CardStatisticsResponse,
     DailyStats,
     DashboardStatsResponse,
     DeckProgressDetailResponse,
@@ -159,7 +151,6 @@ from src.schemas.progress import (  # Existing; Dashboard schemas; Deck Progress
     StudySessionStatsResponse,
     TodayStats,
     TrendsSummary,
-    UserDeckProgressResponse,
 )
 
 # Review schemas
@@ -231,7 +222,6 @@ __all__ = [
     "DeckCreate",
     "DeckUpdate",
     "DeckResponse",
-    "DeckWithProgressResponse",
     "DeckListResponse",
     # Card
     "CardCreate",
@@ -239,7 +229,6 @@ __all__ = [
     "CardResponse",
     "CardStudyResponse",
     "CardStudyResultResponse",
-    "CardWithStatisticsResponse",
     # Changelog
     "ChangelogAdminListResponse",
     "ChangelogEntryAdminResponse",
@@ -248,8 +237,6 @@ __all__ = [
     "ChangelogItemResponse",
     "ChangelogListResponse",
     # Progress
-    "UserDeckProgressResponse",
-    "CardStatisticsResponse",
     "ProgressSummaryResponse",
     "StudySessionStatsResponse",
     # Dashboard

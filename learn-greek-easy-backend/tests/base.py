@@ -34,7 +34,7 @@ from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.db.models import Card, Deck, DeckLevel, User, UserSettings
+from src.db.models import Deck, DeckLevel, User, UserSettings
 
 
 class BaseTestCase:
@@ -172,67 +172,6 @@ class BaseTestCase:
         await db_session.refresh(deck)
 
         return deck
-
-    async def create_test_card(
-        self,
-        db_session: AsyncSession,
-        deck: Deck,
-        front_text: str = "Hello",
-        back_text_en: str = "Yeia",
-    ) -> Card:
-        """Create a test card in the database.
-
-        Args:
-            db_session: Database session
-            deck: Parent deck
-            front_text: Front of card (Greek)
-            back_text_en: Back of card (English translation)
-
-        Returns:
-            Card: Created card
-        """
-        card = Card(
-            deck_id=deck.id,
-            front_text=front_text,
-            back_text_en=back_text_en,
-        )
-        db_session.add(card)
-        await db_session.commit()
-        await db_session.refresh(card)
-
-        return card
-
-    async def create_deck_with_cards(
-        self,
-        db_session: AsyncSession,
-        name: str = "Test Deck",
-        level: DeckLevel = DeckLevel.A1,
-        card_count: int = 5,
-    ) -> tuple[Deck, list[Card]]:
-        """Create a deck with multiple cards.
-
-        Args:
-            db_session: Database session
-            name: Deck name
-            level: CEFR level
-            card_count: Number of cards to create
-
-        Returns:
-            tuple: (Deck, list of Cards)
-        """
-        deck = await self.create_test_deck(db_session, name=name, level=level)
-
-        cards = []
-        for i in range(card_count):
-            card = await self.create_test_card(
-                db_session,
-                deck,
-                front_text=f"Greek word {i}",
-                back_text_en=f"English word {i}",
-            )
-            cards.append(card)
-
-        return deck, cards
 
     # =========================================================================
     # Database Helper Methods

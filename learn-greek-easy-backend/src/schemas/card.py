@@ -240,12 +240,6 @@ class CardStudyResultResponse(CardResponse):
     pass
 
 
-class CardWithStatisticsResponse(CardResponse):
-    """Schema for card with user statistics."""
-
-    statistics: Optional["CardStatisticsResponse"] = None
-
-
 class CardListResponse(BaseModel):
     """Schema for paginated card list by deck."""
 
@@ -265,10 +259,3 @@ class CardSearchResponse(BaseModel):
     query: str
     deck_id: UUID | None
     cards: list[CardResponse]
-
-
-# Import at the end to avoid circular dependencies
-from src.schemas.progress import CardStatisticsResponse  # noqa: E402
-
-# Update forward references
-CardWithStatisticsResponse.model_rebuild()

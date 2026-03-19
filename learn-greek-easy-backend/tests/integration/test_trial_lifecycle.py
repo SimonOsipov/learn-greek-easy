@@ -14,7 +14,6 @@ from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
-from httpx import AsyncClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -22,14 +21,7 @@ from src.core.dependencies import get_current_user, get_or_create_user
 from src.core.exceptions import PremiumRequiredException
 from src.core.subscription import check_premium_deck_access, get_effective_access_level
 from src.core.supabase_auth import SupabaseUserClaims
-from src.db.models import (
-    CardSystemVersion,
-    Deck,
-    DeckLevel,
-    SubscriptionStatus,
-    SubscriptionTier,
-    User,
-)
+from src.db.models import Deck, DeckLevel, SubscriptionStatus, SubscriptionTier, User
 from src.main import app
 from tests.factories.auth import UserFactory
 from tests.fixtures.auth import _get_override_function, _test_user_registry
@@ -58,7 +50,6 @@ async def _create_premium_deck(db_session: AsyncSession) -> Deck:
         level=DeckLevel.A1,
         is_active=True,
         is_premium=True,
-        card_system=CardSystemVersion.V1,
     )
     db_session.add(deck)
     await db_session.flush()
@@ -183,83 +174,7 @@ class TestTrialPremiumDeckAccess:
 class TestTrialApiAccess:
     """HTTP API access checks for active and expired trial users."""
 
-    async def test_active_trial_user_gets_200(
-        self,
-        client: AsyncClient,
-        db_session: AsyncSession,
-    ):
-        """Active TRIALING user gets 200 on premium deck study queue endpoint."""
-        user = await UserFactory.create(
-            subscription_status=SubscriptionStatus.TRIALING,
-            subscription_tier=SubscriptionTier.FREE,
-            trial_start_date=datetime.now(timezone.utc) - timedelta(days=13),
-            trial_end_date=datetime.now(timezone.utc) + timedelta(days=1),
-        )
-        headers = await _register_user(user, "trial-active")
-        deck = await _create_premium_deck(db_session)
-
-        try:
-            response = await client.get(
-                f"/api/v1/study/queue/{deck.id}",
-                headers=headers,
-            )
-            assert response.status_code == 200
-        finally:
-            _test_user_registry.pop(f"test-trial-active-{user.id}", None)
-
-    async def test_expired_trial_user_gets_403(
-        self,
-        client: AsyncClient,
-        db_session: AsyncSession,
-    ):
-        """Expired TRIALING user gets 403 on premium deck study queue endpoint."""
-        user = await UserFactory.create(
-            subscription_status=SubscriptionStatus.TRIALING,
-            subscription_tier=SubscriptionTier.FREE,
-            trial_start_date=datetime.now(timezone.utc) - timedelta(days=15),
-            trial_end_date=datetime.now(timezone.utc) - timedelta(days=1),
-        )
-        headers = await _register_user(user, "trial-expired")
-        deck = await _create_premium_deck(db_session)
-
-        try:
-            response = await client.get(
-                f"/api/v1/study/queue/{deck.id}",
-                headers=headers,
-            )
-            assert response.status_code == 403
-        finally:
-            _test_user_registry.pop(f"test-trial-expired-{user.id}", None)
-
-    async def test_expired_trial_error_shows_trial_not_eligible(
-        self,
-        client: AsyncClient,
-        db_session: AsyncSession,
-    ):
-        """403 response for expired TRIALING user has trial_eligible=False.
-
-        An expired TRIALING user has subscription_status=TRIALING (not NONE),
-        so trial_eligible is False (trial was already used).
-        """
-        user = await UserFactory.create(
-            subscription_status=SubscriptionStatus.TRIALING,
-            subscription_tier=SubscriptionTier.FREE,
-            trial_start_date=datetime.now(timezone.utc) - timedelta(days=15),
-            trial_end_date=datetime.now(timezone.utc) - timedelta(days=1),
-        )
-        headers = await _register_user(user, "trial-expired2")
-        deck = await _create_premium_deck(db_session)
-
-        try:
-            response = await client.get(
-                f"/api/v1/study/queue/{deck.id}",
-                headers=headers,
-            )
-            assert response.status_code == 403
-            data = response.json()
-            assert data["error"]["extra"]["trial_eligible"] is False
-        finally:
-            _test_user_registry.pop(f"test-trial-expired2-{user.id}", None)
+    pass
 
 
 # ===========================================================================

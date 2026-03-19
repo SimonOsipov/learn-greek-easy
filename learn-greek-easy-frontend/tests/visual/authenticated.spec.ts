@@ -100,6 +100,7 @@ test.describe('Authenticated Pages Visual Tests', () => {
   });
 
   test('Statistics Page', async ({ page }, testInfo) => {
+    test.skip(true, 'SM2V2-06: skipped — ProgressService deleted. Unskip in SM2V2-07.');
     await page.goto('/statistics');
     await waitForPageReady(page);
 

@@ -18,9 +18,7 @@ import { deckAPI } from '@/services/deckAPI';
 import type { DeckDetailResponse, DeckLevel, DeckResponse } from '@/services/deckAPI';
 import { progressAPI } from '@/services/progressAPI';
 import type { DeckProgressSummary } from '@/services/progressAPI';
-import { studyAPI } from '@/services/studyAPI';
-import { useAuthStore } from '@/stores/authStore';
-import type { CardSystemVersion, Deck, DeckFilters, DeckProgress } from '@/types/deck';
+import type { Deck, DeckFilters, DeckProgress } from '@/types/deck';
 
 /**
  * Extended filter state including deck type
@@ -96,7 +94,6 @@ const transformDeckResponse = (deck: DeckResponse, progressData?: DeckProgressSu
     createdAt: new Date(deck.created_at),
     updatedAt: new Date(deck.updated_at),
     progress,
-    cardSystem: (deck.card_system ?? 'V1') as CardSystemVersion,
     nameEn: deck.name_en,
     nameRu: deck.name_ru,
     descriptionEn: deck.description_en,
@@ -170,7 +167,6 @@ const transformCultureDeckResponse = (deck: CultureDeckResponse): Deck => {
     createdAt: new Date(),
     updatedAt: new Date(),
     progress,
-    cardSystem: 'V1' as CardSystemVersion, // Culture decks always use V1
     nameEn: deck.name_en,
     nameRu: deck.name_ru,
     descriptionEn: deck.description_en,
@@ -214,9 +210,6 @@ interface DeckState {
 
   /** Reset all filters to default state */
   clearFilters: () => void;
-
-  /** Initialize deck for learning (create initial progress) */
-  startLearning: (deckId: string) => Promise<void>;
 
   /** Clear current error message */
   clearError: () => void;
@@ -270,7 +263,9 @@ export const useDeckStore = create<DeckState>()(
           const [deckResponse, cultureResponse, progressResponse] = await Promise.all([
             deckAPI.getList(params),
             cultureDeckAPI.getList().catch(() => ({ decks: [], total: 0 })), // Graceful fallback if culture API fails
-            progressAPI.getDeckProgressList({ page: 1, page_size: 50 }),
+            progressAPI
+              .getDeckProgressList({ page: 1, page_size: 50 })
+              .catch(() => ({ decks: [] })), // Graceful fallback if progress API is unavailable
           ]);
 
           // Create progress lookup map
@@ -450,59 +445,6 @@ export const useDeckStore = create<DeckState>()(
         fetchDecks().catch((error) => {
           reportAPIError(error, { operation: 'fetchDecksAfterClearFilters', endpoint: '/decks' });
         });
-      },
-
-      /**
-       * Start learning a deck
-       * Initializes cards for study in the backend
-       */
-      startLearning: async (deckId: string) => {
-        set({ isLoading: true, error: null });
-
-        try {
-          // Get deck to check premium status
-          const { selectedDeck, decks } = get();
-          const deck =
-            selectedDeck?.id === deckId ? selectedDeck : decks.find((d) => d.id === deckId);
-
-          if (!deck) {
-            throw new Error('Deck not found');
-          }
-
-          // Check premium access
-          const { user } = useAuthStore.getState();
-          const isPremiumLocked = deck.isPremium && user?.role === 'free';
-
-          if (isPremiumLocked) {
-            throw new Error(
-              'This is a premium deck. Please upgrade your account to access premium content.'
-            );
-          }
-
-          // Initialize all cards in the deck for study in the backend
-          // This creates card_statistics entries for the user
-          await studyAPI.initializeDeck(deckId);
-
-          set({ isLoading: false, error: null });
-
-          // Re-fetch decks to update progress
-          await get().fetchDecks();
-
-          // Re-fetch selected deck if needed
-          if (selectedDeck?.id === deckId) {
-            await get().selectDeck(deckId);
-          }
-        } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : 'Failed to start learning. Please try again.';
-
-          set({
-            isLoading: false,
-            error: errorMessage,
-          });
-
-          throw error;
-        }
       },
 
       /**

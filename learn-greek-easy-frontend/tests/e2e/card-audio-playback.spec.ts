@@ -76,17 +76,17 @@ test.describe('Card Audio Playback', () => {
       );
     }
 
-    // Find V2 deck
+    // Find a deck to use for audio tests
     const decksResp = await request.get(`${apiBaseUrl}/api/v1/decks?page_size=100`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     expect(decksResp.ok()).toBe(true);
     const decksData = await decksResp.json();
-    const v2Deck = (decksData.decks as Array<{ id: string; card_system: string }>).find(
-      (d) => d.card_system === 'V2'
-    );
-    if (!v2Deck) throw new Error('[CAUDIO] No V2 deck found. Run E2E seed first.');
-    v2DeckId = v2Deck.id;
+    const deckList = decksData.decks as Array<{ id: string; name: string }>;
+    // Use E2E V2 deck which has word entries
+    const deck = deckList.find((d) => d.name.includes('E2E V2 Nouns')) ?? deckList[0];
+    if (!deck) throw new Error('[CAUDIO] No deck found. Run E2E seed first.');
+    v2DeckId = deck.id;
 
     // Get word entries for the V2 deck
     const wordsResp = await request.get(
@@ -101,7 +101,7 @@ test.describe('Card Audio Playback', () => {
     testWordEntryLemma = wordEntries[0].lemma;
 
     console.log(
-      `[CAUDIO] Using V2 deck ${v2DeckId}, word entry ${testWordEntryId} (${testWordEntryLemma})`
+      `[CAUDIO] Using deck ${v2DeckId}, word entry ${testWordEntryId} (${testWordEntryLemma})`
     );
   });
 

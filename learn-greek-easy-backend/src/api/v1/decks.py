@@ -15,7 +15,7 @@ from src.core.dependencies import get_current_user, get_locale_from_header
 from src.core.exceptions import DeckNotFoundException, ForbiddenException
 from src.core.localization import get_localized_deck_content
 from src.db.dependencies import get_db
-from src.db.models import CardSystemVersion, Deck, DeckLevel, PartOfSpeech, User
+from src.db.models import Deck, DeckLevel, PartOfSpeech, User
 from src.repositories.deck import DeckRepository
 from src.repositories.word_entry import WordEntryRepository
 from src.schemas.deck import (
@@ -143,7 +143,6 @@ async def list_decks(
                 level=deck.level,
                 is_active=deck.is_active,
                 is_premium=deck.is_premium,
-                card_system=deck.card_system,
                 card_count=card_counts.get(deck.id, 0),
                 created_at=deck.created_at,
                 updated_at=deck.updated_at,
@@ -267,10 +266,6 @@ async def create_deck(
             create_data["is_active"] = True
             create_data["is_premium"] = False
 
-    # Set card_system to V1 since this endpoint pairs with POST /api/v1/cards (V1 Card table)
-    # V2 decks are created via the admin API with word entries
-    create_data["card_system"] = CardSystemVersion.V1
-
     # Create the deck using BaseRepository.create()
     # Note: BaseRepository.create() uses flush, not commit
     deck = await repo.create(create_data)
@@ -291,7 +286,6 @@ async def create_deck(
         level=deck.level,
         is_active=deck.is_active,
         is_premium=deck.is_premium,
-        card_system=deck.card_system,
         card_count=0,  # New deck has no cards
         created_at=deck.created_at,
         updated_at=deck.updated_at,
@@ -400,7 +394,6 @@ async def search_decks(
                 level=deck.level,
                 is_active=deck.is_active,
                 is_premium=deck.is_premium,
-                card_system=deck.card_system,
                 card_count=card_counts.get(deck.id, 0),
                 created_at=deck.created_at,
                 updated_at=deck.updated_at,
@@ -517,7 +510,6 @@ async def list_my_decks(
                 level=deck.level,
                 is_active=deck.is_active,
                 is_premium=deck.is_premium,
-                card_system=deck.card_system,
                 card_count=card_counts.get(deck.id, 0),
                 created_at=deck.created_at,
                 updated_at=deck.updated_at,
@@ -626,7 +618,6 @@ async def get_deck(
         level=deck.level,
         is_active=deck.is_active,
         is_premium=deck.is_premium,
-        card_system=deck.card_system,
         created_at=deck.created_at,
         updated_at=deck.updated_at,
         card_count=card_count,
@@ -903,7 +894,6 @@ async def update_deck(
         level=updated_deck.level,
         is_active=updated_deck.is_active,
         is_premium=updated_deck.is_premium,
-        card_system=updated_deck.card_system,
         card_count=card_count,
         created_at=updated_deck.created_at,
         updated_at=updated_deck.updated_at,

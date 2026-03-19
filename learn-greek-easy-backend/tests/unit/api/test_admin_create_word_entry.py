@@ -17,7 +17,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import CardSystemVersion, Deck, DeckLevel, PartOfSpeech, WordEntry
+from src.db.models import Deck, DeckLevel, PartOfSpeech, WordEntry
 
 URL = "/api/v1/admin/word-entries"
 
@@ -74,25 +74,6 @@ async def v2_deck(db_session: AsyncSession) -> Deck:
         description_en="Test deck for create word entry tests",
         level=DeckLevel.A1,
         is_active=True,
-        card_system=CardSystemVersion.V2,
-    )
-    db_session.add(deck)
-    await db_session.flush()
-    return deck
-
-
-@pytest.fixture
-async def v1_deck(db_session: AsyncSession) -> Deck:
-    """Create an active V1 deck."""
-    deck = Deck(
-        id=uuid4(),
-        name_en="V1 Deck",
-        name_el="V1 Deck",
-        name_ru="V1 Deck",
-        description_en="V1 deck",
-        level=DeckLevel.A1,
-        is_active=True,
-        card_system=CardSystemVersion.V1,
     )
     db_session.add(deck)
     await db_session.flush()
@@ -101,7 +82,7 @@ async def v1_deck(db_session: AsyncSession) -> Deck:
 
 @pytest.fixture
 async def inactive_v2_deck(db_session: AsyncSession) -> Deck:
-    """Create an inactive V2 deck."""
+    """Create an inactive deck."""
     deck = Deck(
         id=uuid4(),
         name_en="Inactive V2 Deck",
@@ -110,7 +91,6 @@ async def inactive_v2_deck(db_session: AsyncSession) -> Deck:
         description_en="Inactive deck",
         level=DeckLevel.A1,
         is_active=False,
-        card_system=CardSystemVersion.V2,
     )
     db_session.add(deck)
     await db_session.flush()
@@ -202,21 +182,6 @@ class TestCreateAndLinkWordEntry:
         response = await client.post(
             URL,
             json=_valid_body(inactive_v2_deck.id),
-            headers=superuser_auth_headers,
-        )
-        assert response.status_code == 409
-
-    @pytest.mark.asyncio
-    async def test_create_word_entry_not_v2_deck(
-        self,
-        client: AsyncClient,
-        superuser_auth_headers: dict,
-        v1_deck: Deck,
-    ) -> None:
-        """Returns 409 when deck is V1."""
-        response = await client.post(
-            URL,
-            json=_valid_body(v1_deck.id),
             headers=superuser_auth_headers,
         )
         assert response.status_code == 409

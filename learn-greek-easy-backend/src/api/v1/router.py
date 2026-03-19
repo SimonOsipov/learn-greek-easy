@@ -26,7 +26,6 @@ from src.api.v1.admin import router as admin_router
 from src.api.v1.auth import router as auth_router
 from src.api.v1.billing import router as billing_router
 from src.api.v1.card_errors import router as card_errors_router
-from src.api.v1.cards import router as card_router
 from src.api.v1.changelog import router as changelog_router
 from src.api.v1.culture import router as culture_router
 from src.api.v1.decks import router as deck_router
@@ -34,10 +33,7 @@ from src.api.v1.feedback import router as feedback_router
 from src.api.v1.health import router as health_router
 from src.api.v1.news import router as news_router
 from src.api.v1.notifications import router as notification_router
-from src.api.v1.progress import router as progress_router
-from src.api.v1.reviews import router as review_router
 from src.api.v1.reviews_v2 import router as reviews_v2_router
-from src.api.v1.study import router as study_router
 from src.api.v1.study_v2 import router as study_v2_router
 from src.api.v1.users import router as users_router
 from src.api.v1.webhooks import router as webhooks_router
@@ -71,24 +67,6 @@ v1_router.include_router(
 )
 
 # =============================================================================
-# Card Routes
-# =============================================================================
-v1_router.include_router(
-    card_router,
-    prefix="/cards",
-    tags=["Cards"],
-)
-
-# =============================================================================
-# Review Routes
-# =============================================================================
-v1_router.include_router(
-    review_router,
-    prefix="/reviews",
-    tags=["Reviews"],
-)
-
-# =============================================================================
 # Reviews V2 Routes
 # =============================================================================
 v1_router.include_router(
@@ -98,30 +76,12 @@ v1_router.include_router(
 )
 
 # =============================================================================
-# Study V2 Routes (must be registered before Study V1 to avoid /queue/{deck_id} shadowing /queue/v2)
+# Study V2 Routes
 # =============================================================================
 v1_router.include_router(
     study_v2_router,
     prefix="/study",
     tags=["Study V2"],
-)
-
-# =============================================================================
-# Study Routes
-# =============================================================================
-v1_router.include_router(
-    study_router,
-    prefix="/study",
-    tags=["Study"],
-)
-
-# =============================================================================
-# Progress Routes
-# =============================================================================
-v1_router.include_router(
-    progress_router,
-    prefix="/progress",
-    tags=["Progress"],
 )
 
 # =============================================================================

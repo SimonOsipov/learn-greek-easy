@@ -19,7 +19,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import CardSystemVersion, Deck, DeckLevel, DeckWordEntry, PartOfSpeech, WordEntry
+from src.db.models import Deck, DeckLevel, DeckWordEntry, PartOfSpeech, WordEntry
 
 LINK_URL = "/api/v1/admin/decks/{deck_id}/word-entries/{word_entry_id}/link"
 
@@ -44,7 +44,6 @@ async def test_deck(db_session: AsyncSession) -> Deck:
         description_en="Test deck for link/unlink tests",
         level=DeckLevel.A1,
         is_active=True,
-        card_system=CardSystemVersion.V2,
     )
     db_session.add(deck)
     await db_session.flush()

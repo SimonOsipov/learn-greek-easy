@@ -4,7 +4,6 @@
  * Comprehensive tests for the CardCreateModal component, covering:
  * - Modal open/close states
  * - Conditional UI (deck dropdown visible when no deckId, hidden when deckId provided)
- * - Card type dropdown (culture or vocabulary)
  * - Success flow (Create Another, Done buttons)
  * - Cancel flow (confirmation dialog when dirty)
  * - API call formatting
@@ -29,7 +28,6 @@ vi.mock('@/services/adminAPI', () => ({
   GENERATE_WORD_ENTRY_STREAM_URL: '/api/v1/admin/word-entries/generate/stream',
   adminAPI: {
     getCultureDecks: vi.fn(),
-    listDecks: vi.fn(),
     createCultureQuestion: vi.fn(),
   },
 }));
@@ -115,26 +113,6 @@ describe('CardCreateModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (adminAPI.getCultureDecks as Mock).mockResolvedValue(createMockDecks());
-    (adminAPI.listDecks as Mock).mockResolvedValue({
-      decks: [
-        {
-          id: 'vocab-deck-1',
-          name: 'Basic Vocabulary',
-          type: 'vocabulary',
-          level: 'A1',
-          category: null,
-          item_count: 10,
-          is_active: true,
-          is_premium: false,
-          created_at: '2024-01-01',
-          owner_id: null,
-          owner_name: null,
-        },
-      ],
-      total: 1,
-      page: 1,
-      page_size: 20,
-    });
     (adminAPI.createCultureQuestion as Mock).mockResolvedValue({ id: 'new-question-id' });
   });
 
@@ -184,14 +162,6 @@ describe('CardCreateModal', () => {
         });
       });
 
-      it('should show card type dropdown', async () => {
-        renderModal({ deckId: undefined });
-
-        await waitFor(() => {
-          expect(screen.getByTestId('card-type-select')).toBeInTheDocument();
-        });
-      });
-
       it('should fetch decks when modal opens', async () => {
         renderModal({ deckId: undefined });
 
@@ -218,12 +188,6 @@ describe('CardCreateModal', () => {
         expect(screen.queryByTestId('deck-select')).not.toBeInTheDocument();
       });
 
-      it('should NOT show card type dropdown', () => {
-        renderModal({ deckId: 'deck-1' });
-
-        expect(screen.queryByTestId('card-type-select')).not.toBeInTheDocument();
-      });
-
       it('should NOT fetch decks', async () => {
         renderModal({ deckId: 'deck-1' });
 
@@ -238,23 +202,6 @@ describe('CardCreateModal', () => {
         expect(screen.getByTestId('create-btn')).not.toBeDisabled();
       });
     });
-  });
-
-  // ============================================
-  // Card Type Dropdown Tests
-  // ============================================
-
-  describe('Card Type Dropdown', () => {
-    it('should have culture selected by default', async () => {
-      renderModal({ deckId: undefined });
-
-      await waitFor(() => {
-        expect(screen.getByTestId('card-type-select')).toHaveTextContent('Culture');
-      });
-    });
-
-    // Note: Vocabulary option is now enabled. Radix Select interactions
-    // don't work reliably in happy-dom. Selection behavior is covered by E2E tests.
   });
 
   // ============================================

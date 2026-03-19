@@ -14,7 +14,7 @@ from src.core.dependencies import get_current_user
 from src.core.exceptions import DeckNotFoundException
 from src.core.subscription import check_premium_deck_access, get_effective_access_level
 from src.db.dependencies import get_db
-from src.db.models import CardSystemVersion, CardType, SubscriptionTier, User
+from src.db.models import CardType, SubscriptionTier, User
 from src.repositories.deck import DeckRepository
 from src.schemas.v2_sm2 import V2StudyQueue
 from src.services.v2_sm2_service import V2SM2Service
@@ -93,11 +93,6 @@ async def get_v2_study_queue(
         deck = await DeckRepository(db).get(deck_id)
         if not deck or not deck.is_active:
             raise DeckNotFoundException(deck_id=str(deck_id))
-        if deck.card_system != CardSystemVersion.V2:
-            raise HTTPException(
-                status_code=400,
-                detail="Deck does not use V2 card system",
-            )
         check_premium_deck_access(current_user, deck)
         exclude_premium = False
     else:

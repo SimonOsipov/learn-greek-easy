@@ -21,12 +21,14 @@ Usage:
     review = await ReviewFactory.create(user_id=user.id, card_id=card.id)
 """
 
+from __future__ import annotations
+
 from datetime import date, datetime, timedelta
 
 import factory
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import CardStatistics, CardStatus, Review, ReviewRating, UserDeckProgress
+from src.db.models import CardRecordReview, CardRecordStatistics, CardStatus, Deck, ReviewRating
 from tests.factories.base import BaseFactory, utc_now
 
 # =============================================================================
@@ -65,7 +67,7 @@ class UserDeckProgressFactory(BaseFactory):
     """
 
     class Meta:
-        model = UserDeckProgress
+        model = Deck  # V1 UserDeckProgress removed; stub to prevent collection error (TASK-164)
 
     # Required: Must be provided
     user_id = None  # Must be set explicitly
@@ -137,7 +139,7 @@ class CardStatisticsFactory(BaseFactory):
     """
 
     class Meta:
-        model = CardStatistics
+        model = CardRecordStatistics
 
     # Required: Must be provided
     user_id = None  # Must be set explicitly
@@ -235,7 +237,7 @@ class ReviewFactory(BaseFactory):
     """
 
     class Meta:
-        model = Review
+        model = CardRecordReview
 
     # Required: Must be provided
     user_id = None  # Must be set explicitly
@@ -287,7 +289,7 @@ class ReviewFactory(BaseFactory):
         ratings: list[int],
         session: AsyncSession | None = None,
         start_date: datetime | None = None,
-    ) -> list[Review]:
+    ) -> list[CardRecordReview]:
         """Create a series of reviews for a card.
 
         Args:

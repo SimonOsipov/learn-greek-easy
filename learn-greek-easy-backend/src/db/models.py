@@ -2,8 +2,8 @@
 
 This module contains all SQLAlchemy models for the application:
 - User management (User, UserSettings)
-- Content (Deck, Card)
-- Progress tracking (UserDeckProgress, CardStatistics, Review, CardRecordStatistics, CardRecordReview)
+- Content (Deck)
+- Progress tracking (CardRecordStatistics, CardRecordReview)
 - Feedback (Feedback, FeedbackVote)
 - Card Error Reports (CardErrorReport)
 - XP and Achievements (UserXP, XPTransaction, Achievement, UserAchievement)
@@ -41,7 +41,7 @@ from sqlalchemy import (
     func,
     text,
 )
-from sqlalchemy.dialects.postgresql import ARRAY, JSONB
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.db.base import Base, TimestampMixin
@@ -180,18 +180,6 @@ class CardErrorStatus(str, enum.Enum):
     REVIEWED = "REVIEWED"  # Admin has reviewed, no action taken
     FIXED = "FIXED"  # Error was confirmed and fixed
     DISMISSED = "DISMISSED"  # Report was invalid/spam
-
-
-class CardSystemVersion(str, enum.Enum):
-    """Card system version for decks.
-
-    Determines which card data source a deck uses:
-    - V1: Legacy cards table (original system)
-    - V2: New word_entries system (WENTRY feature)
-    """
-
-    V1 = "V1"
-    V2 = "V2"
 
 
 class CardType(str, enum.Enum):
@@ -449,21 +437,6 @@ class User(Base, TimestampMixin):
         cascade="all, delete-orphan",
         uselist=False,  # One-to-one relationship
     )
-    deck_progress: Mapped[List["UserDeckProgress"]] = relationship(
-        back_populates="user",
-        lazy="raise",
-        cascade="all, delete-orphan",
-    )
-    card_statistics: Mapped[List["CardStatistics"]] = relationship(
-        back_populates="user",
-        lazy="raise",
-        cascade="all, delete-orphan",
-    )
-    reviews: Mapped[List["Review"]] = relationship(
-        back_populates="user",
-        lazy="raise",
-        cascade="all, delete-orphan",
-    )
     feedback_items: Mapped[List["Feedback"]] = relationship(
         back_populates="user",
         lazy="raise",
@@ -646,15 +619,6 @@ class Deck(Base, TimestampMixin):
         comment="Premium decks require a subscription to access",
     )
 
-    # Card system version
-    card_system: Mapped[CardSystemVersion] = mapped_column(
-        nullable=False,
-        default=CardSystemVersion.V2,
-        server_default=text("'V2'"),
-        index=True,
-        comment="Card system version: V1 (classic Card model) or V2 (WordEntry-based)",
-    )
-
     # Owner (for user-created decks)
     owner_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"),
@@ -675,16 +639,6 @@ class Deck(Base, TimestampMixin):
         lazy="selectin",
         foreign_keys=[owner_id],
     )
-    cards: Mapped[List["Card"]] = relationship(
-        back_populates="deck",
-        lazy="selectin",
-        cascade="all, delete-orphan",
-    )
-    user_progress: Mapped[List["UserDeckProgress"]] = relationship(
-        back_populates="deck",
-        lazy="selectin",
-        cascade="all, delete-orphan",
-    )
     word_entries: Mapped[List["WordEntry"]] = relationship(
         secondary="deck_word_entries",
         lazy="selectin",
@@ -693,135 +647,6 @@ class Deck(Base, TimestampMixin):
 
     def __repr__(self) -> str:
         return f"<Deck(id={self.id}, name_en={self.name_en}, level={self.level})>"
-
-
-class Card(Base, TimestampMixin):
-    """Individual flashcard with Greek/English content."""
-
-    __tablename__ = "cards"
-
-    # Primary key
-    id: Mapped[UUID] = mapped_column(
-        primary_key=True,
-        server_default=func.uuid_generate_v4(),
-    )
-
-    # Foreign key
-    deck_id: Mapped[UUID] = mapped_column(
-        ForeignKey("decks.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-
-    # Card content
-    front_text: Mapped[str] = mapped_column(
-        Text,
-        nullable=False,
-    )  # Greek text
-    back_text_en: Mapped[str] = mapped_column(
-        Text,
-        nullable=False,
-    )  # English translation
-    back_text_ru: Mapped[str | None] = mapped_column(
-        Text,
-        nullable=True,
-        comment="Russian translation",
-    )  # Russian translation
-    example_sentence: Mapped[str | None] = mapped_column(Text, nullable=True)
-    pronunciation: Mapped[str | None] = mapped_column(String(255), nullable=True)
-
-    # Structured examples (replaces example_sentence)
-    examples: Mapped[list[dict] | None] = mapped_column(
-        JSON,
-        nullable=True,
-        comment="Structured examples: [{greek, english, russian, tense?}, ...]",
-    )
-
-    # Classification fields
-    part_of_speech: Mapped[PartOfSpeech | None] = mapped_column(
-        nullable=True,
-        index=True,
-        comment="Part of speech: noun, verb, adjective, adverb",
-    )
-    level: Mapped[DeckLevel | None] = mapped_column(
-        nullable=True,
-        index=True,
-        comment="CEFR level override (A1-C2), defaults to deck level if not set",
-    )
-
-    # Grammar data fields (JSONB)
-    noun_data: Mapped[dict | None] = mapped_column(
-        JSON,
-        nullable=True,
-        comment="Noun grammar: gender + 8 case forms",
-    )
-    verb_data: Mapped[dict | None] = mapped_column(
-        JSON,
-        nullable=True,
-        comment="Verb grammar: voice + 30 conjugations + 2 imperative",
-    )
-    adjective_data: Mapped[dict | None] = mapped_column(
-        JSON,
-        nullable=True,
-        comment="Adjective grammar: 24 declensions + 2 comparison forms",
-    )
-    adverb_data: Mapped[dict | None] = mapped_column(
-        JSON,
-        nullable=True,
-        comment="Adverb grammar: comparative + superlative",
-    )
-
-    # Search fields
-    searchable_forms: Mapped[list[str] | None] = mapped_column(
-        ARRAY(String),
-        nullable=True,
-        comment="All inflected forms for exact matching",
-    )
-    searchable_forms_normalized: Mapped[list[str] | None] = mapped_column(
-        ARRAY(String),
-        nullable=True,
-        comment="Accent-stripped forms for fuzzy matching",
-    )
-
-    # Embedding for semantic search
-    embedding: Mapped[list[float] | None] = mapped_column(
-        Vector(1024),
-        nullable=True,
-        comment="VoyageAI embedding for semantic similarity search",
-    )
-
-    # GIN indexes for array search fields
-    __table_args__ = (
-        Index(
-            "ix_cards_searchable_forms",
-            "searchable_forms",
-            postgresql_using="gin",
-        ),
-        Index(
-            "ix_cards_searchable_forms_normalized",
-            "searchable_forms_normalized",
-            postgresql_using="gin",
-        ),
-    )
-
-    # Relationships
-    deck: Mapped["Deck"] = relationship(
-        back_populates="cards",
-        lazy="selectin",
-    )
-    statistics: Mapped[List["CardStatistics"]] = relationship(
-        back_populates="card",
-        lazy="selectin",
-        cascade="all, delete-orphan",
-    )
-    reviews: Mapped[List["Review"]] = relationship(
-        back_populates="card",
-        lazy="selectin",
-        cascade="all, delete-orphan",
-    )
-
-    def __repr__(self) -> str:
-        return f"<Card(id={self.id}, front={self.front_text[:20]})>"
 
 
 class WordEntry(Base, TimestampMixin):
@@ -1098,194 +923,6 @@ class CardRecord(Base, TimestampMixin):
 # ============================================================================
 # Progress Tracking Models
 # ============================================================================
-
-
-class UserDeckProgress(Base, TimestampMixin):
-    """Tracks user progress for a specific deck."""
-
-    __tablename__ = "user_deck_progress"
-    __table_args__ = (UniqueConstraint("user_id", "deck_id", name="uq_user_deck"),)
-
-    # Primary key
-    id: Mapped[UUID] = mapped_column(
-        primary_key=True,
-        server_default=func.uuid_generate_v4(),
-    )
-
-    # Foreign keys
-    user_id: Mapped[UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-    deck_id: Mapped[UUID] = mapped_column(
-        ForeignKey("decks.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-
-    # Progress metrics
-    cards_studied: Mapped[int] = mapped_column(
-        Integer,
-        default=0,
-        nullable=False,
-    )
-    cards_mastered: Mapped[int] = mapped_column(
-        Integer,
-        default=0,
-        nullable=False,
-    )
-    last_studied_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True,
-    )
-
-    # Relationships
-    user: Mapped["User"] = relationship(
-        back_populates="deck_progress",
-        lazy="selectin",
-    )
-    deck: Mapped["Deck"] = relationship(
-        back_populates="user_progress",
-        lazy="selectin",
-    )
-
-    def __repr__(self) -> str:
-        return (
-            f"<UserDeckProgress(user_id={self.user_id}, deck_id={self.deck_id}, "
-            f"studied={self.cards_studied}, mastered={self.cards_mastered})>"
-        )
-
-
-class CardStatistics(Base, TimestampMixin):
-    """SM-2 spaced repetition algorithm data for user-card pair."""
-
-    __tablename__ = "card_statistics"
-    __table_args__ = (UniqueConstraint("user_id", "card_id", name="uq_user_card"),)
-
-    # Primary key
-    id: Mapped[UUID] = mapped_column(
-        primary_key=True,
-        server_default=func.uuid_generate_v4(),
-    )
-
-    # Foreign keys
-    user_id: Mapped[UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-    card_id: Mapped[UUID] = mapped_column(
-        ForeignKey("cards.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-
-    # SM-2 Algorithm fields
-    easiness_factor: Mapped[float] = mapped_column(
-        Float,
-        default=2.5,
-        nullable=False,
-    )  # SM-2 EF (1.3 to 2.5+)
-    interval: Mapped[int] = mapped_column(
-        Integer,
-        default=0,
-        nullable=False,
-    )  # Days until next review
-    repetitions: Mapped[int] = mapped_column(
-        Integer,
-        default=0,
-        nullable=False,
-    )  # Successful reviews count
-
-    # Scheduling
-    next_review_date: Mapped[date] = mapped_column(
-        Date,
-        nullable=False,
-        index=True,  # Critical for "get due cards" queries
-        server_default=func.current_date(),
-    )
-
-    # Status
-    status: Mapped[CardStatus] = mapped_column(
-        nullable=False,
-        default=CardStatus.NEW,
-        index=True,
-    )
-
-    # Relationships
-    user: Mapped["User"] = relationship(
-        back_populates="card_statistics",
-        lazy="selectin",
-    )
-    card: Mapped["Card"] = relationship(
-        back_populates="statistics",
-        lazy="selectin",
-    )
-
-    def __repr__(self) -> str:
-        return (
-            f"<CardStatistics(user_id={self.user_id}, card_id={self.card_id}, "
-            f"status={self.status}, next_review={self.next_review_date})>"
-        )
-
-
-class Review(Base, TimestampMixin):
-    """Individual review session record for analytics."""
-
-    __tablename__ = "reviews"
-
-    # Primary key
-    id: Mapped[UUID] = mapped_column(
-        primary_key=True,
-        server_default=func.uuid_generate_v4(),
-    )
-
-    # Foreign keys
-    user_id: Mapped[UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-    card_id: Mapped[UUID] = mapped_column(
-        ForeignKey("cards.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-
-    # Review data
-    quality: Mapped[int] = mapped_column(
-        Integer,
-        nullable=False,
-    )  # 0-5 (SM-2 quality rating)
-    time_taken: Mapped[int] = mapped_column(
-        Integer,
-        nullable=False,
-    )  # Seconds spent on review
-
-    # Timestamp
-    reviewed_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        index=True,  # For analytics queries
-        server_default=func.now(),
-    )
-
-    # Relationships
-    user: Mapped["User"] = relationship(
-        back_populates="reviews",
-        lazy="selectin",
-    )
-    card: Mapped["Card"] = relationship(
-        back_populates="reviews",
-        lazy="selectin",
-    )
-
-    def __repr__(self) -> str:
-        return (
-            f"<Review(id={self.id}, user_id={self.user_id}, "
-            f"card_id={self.card_id}, quality={self.quality})>"
-        )
 
 
 class CardRecordStatistics(Base, TimestampMixin):

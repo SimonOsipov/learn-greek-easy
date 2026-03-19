@@ -12,7 +12,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.db.models import CardSystemVersion, DeckLevel
+from src.db.models import DeckLevel
 
 # ============================================================================
 # Deck Schemas
@@ -96,10 +96,6 @@ class DeckResponse(BaseModel):
     level: DeckLevel
     is_active: bool
     is_premium: bool
-    card_system: CardSystemVersion = Field(
-        default=CardSystemVersion.V2,
-        description="Card UI system version: v1 (flip) or v2 (expandable)",
-    )
     card_count: int = Field(0, ge=0, description="Number of cards in the deck")
     created_at: datetime
     updated_at: datetime
@@ -110,12 +106,6 @@ class DeckDetailResponse(DeckResponse):
     """Schema for single deck response with card count."""
 
     card_count: int = Field(..., ge=0, description="Number of cards in the deck")
-
-
-class DeckWithProgressResponse(DeckResponse):
-    """Schema for deck with user progress."""
-
-    progress: Optional["UserDeckProgressResponse"] = None
 
 
 class DeckListResponse(BaseModel):
@@ -163,10 +153,6 @@ class DeckAdminCreate(BaseModel):
     level: DeckLevel
     is_active: bool = True
     is_premium: bool = False
-    card_system: CardSystemVersion | None = Field(
-        default=None,
-        description="Card UI system version. If None, uses DB default (v2)",
-    )
 
 
 class DeckAdminUpdate(BaseModel):
@@ -189,7 +175,6 @@ class DeckAdminUpdate(BaseModel):
     level: DeckLevel | None = None
     is_active: bool | None = None
     is_premium: bool | None = None
-    card_system: CardSystemVersion | None = None
 
 
 class DeckAdminResponse(BaseModel):
@@ -211,10 +196,6 @@ class DeckAdminResponse(BaseModel):
     level: DeckLevel
     is_active: bool
     is_premium: bool
-    card_system: CardSystemVersion = Field(
-        default=CardSystemVersion.V2,
-        description="Card UI system version: v1 (flip) or v2 (expandable)",
-    )
     card_count: int = Field(0, ge=0, description="Number of cards in the deck")
     owner_id: UUID | None = None
     created_at: datetime
@@ -254,9 +235,7 @@ class DeckWordEntriesResponse(BaseModel):
 
 
 # Import at the end to avoid circular dependencies
-from src.schemas.progress import UserDeckProgressResponse  # noqa: E402
 from src.schemas.word_entry import WordEntryResponse  # noqa: E402
 
 # Update forward references
-DeckWithProgressResponse.model_rebuild()
 DeckWordEntriesResponse.model_rebuild()
