@@ -238,7 +238,7 @@ const NewsItemRow: React.FC<NewsItemRowProps> = ({ item, onEdit, onDelete, t, la
             {isElComplete ? (
               <Badge
                 variant="outline"
-                className="border-green-500/30 bg-green-500/10 px-1.5 py-0 text-[10px] text-green-700 dark:text-green-400"
+                className="border-purple-500/30 bg-purple-500/10 px-1.5 py-0 text-[10px] text-purple-700 dark:text-purple-400"
                 data-testid={`b2-text-badge-${item.id}`}
               >
                 B2 Text
@@ -282,7 +282,7 @@ const NewsItemRow: React.FC<NewsItemRowProps> = ({ item, onEdit, onDelete, t, la
               {item.audio_url && (
                 <Badge
                   variant="outline"
-                  className="border-green-500/30 bg-green-500/10 px-1.5 py-0 text-[10px] text-green-700 dark:text-green-400"
+                  className="border-purple-500/30 bg-purple-500/10 px-1.5 py-0 text-[10px] text-purple-700 dark:text-purple-400"
                 >
                   B2
                 </Badge>

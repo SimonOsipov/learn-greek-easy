@@ -616,7 +616,7 @@ describe('NewsItemsTable — B2 Text badge', () => {
     const badge = screen.getByTestId('b2-text-badge-item-b2');
     expect(badge).toBeInTheDocument();
     expect(badge.textContent).toBe('B2 Text');
-    expect(badge.className).toContain('bg-green-500');
+    expect(badge.className).toContain('bg-purple-500');
   });
 
   it('shows muted B2 Text badge when Greek text is missing', () => {
@@ -627,7 +627,7 @@ describe('NewsItemsTable — B2 Text badge', () => {
     expect(badge).toBeInTheDocument();
     expect(badge.textContent).toBe('B2 Text');
     expect(badge.className).toContain('opacity-50');
-    expect(badge.className).not.toContain('bg-green-500');
+    expect(badge.className).not.toContain('bg-purple-500');
   });
 });
 
