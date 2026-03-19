@@ -40,7 +40,7 @@ export interface NewsCardProps {
 }
 
 const heightClasses: Record<NewsCardHeight, string> = {
-  default: 'h-48',
+  default: 'h-[211px]',
   tall: 'h-[300px]',
 };
 
@@ -183,7 +183,14 @@ export const NewsCard: React.FC<NewsCardProps> = ({
         />
 
         {/* Semi-transparent Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-black/30" />
+        <div
+          className={cn(
+            'absolute inset-0 bg-gradient-to-t',
+            variant === 'compact'
+              ? 'from-black/90 via-black/60 to-black/30'
+              : 'from-black/80 via-black/50 to-black/30'
+          )}
+        />
 
         {/* Country Flag Pill */}
         {article.country && COUNTRY_CONFIG[article.country as NewsCountry] && (
@@ -195,7 +202,10 @@ export const NewsCard: React.FC<NewsCardProps> = ({
 
         {/* Content */}
         <div
-          className={cn('relative z-10 flex h-full flex-col justify-end p-4', hasAudio && 'pb-16')}
+          className={cn(
+            'relative z-10 flex h-full flex-col justify-end p-4',
+            hasAudio && (variant === 'compact' ? 'pb-20' : 'pb-16')
+          )}
         >
           <h3
             className={cn(
