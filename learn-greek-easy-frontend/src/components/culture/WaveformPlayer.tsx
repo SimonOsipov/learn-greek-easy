@@ -84,7 +84,7 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [speed, setSpeed] = useState<Speed>(getPersistedAudioSpeed);
-  const [audioDuration, setAudioDuration] = useState<number>(0);
+  const [audioDuration, setAudioDuration] = useState<number>(duration);
   const [audioError, setAudioError] = useState<boolean>(false);
 
   const speedRef = useRef(speed);
@@ -283,7 +283,7 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
         <audio
           ref={audioRef}
           src={audioUrl}
-          preload="metadata"
+          preload="none"
           style={{ display: 'none' }}
           data-testid="waveform-audio-element"
         />

@@ -56,6 +56,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({
 
   const useA2 = level === 'a2' && article.has_a2_content;
   const audioUrl = useA2 ? article.audio_a2_url : article.audio_url;
+  const audioDuration = useA2 ? article.audio_a2_duration_seconds : article.audio_duration_seconds;
   const hasAudio = !!audioUrl;
 
   const [resetKey, setResetKey] = useState(0);
@@ -242,6 +243,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({
               key={`${resetKey}-${level}`}
               variant="news-mini"
               audioUrl={audioUrl ?? undefined}
+              duration={audioDuration ?? undefined}
               barCount={20}
               disableScrub
               disabled={!audioUrl}
