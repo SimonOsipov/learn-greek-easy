@@ -335,3 +335,232 @@ class TestUniqueConstraint:
             await db_session.flush()
 
         await db_session.rollback()
+
+
+class TestCountCardsByStatusPerDay:
+    @pytest.mark.asyncio
+    async def test_groups_by_date_and_status(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        card_record: CardRecord,
+    ) -> None:
+        await db_session.flush()
+        stats = CardRecordStatistics(
+            user_id=test_user.id,
+            card_record_id=card_record.id,
+            easiness_factor=2.5,
+            interval=1,
+            repetitions=1,
+            next_review_date=date.today(),
+            status=CardStatus.MASTERED,
+        )
+        db_session.add(stats)
+        await db_session.flush()
+        repo = CardRecordStatisticsRepository(db_session)
+        result = await repo.count_cards_by_status_per_day(test_user.id, date.today(), date.today())
+        assert len(result) >= 1
+        mastered = next((r for r in result if r["status"] == "mastered"), None)
+        assert mastered is not None
+        assert mastered["count"] >= 1
+
+    @pytest.mark.asyncio
+    async def test_returns_empty_for_no_stats(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+    ) -> None:
+        repo = CardRecordStatisticsRepository(db_session)
+        result = await repo.count_cards_by_status_per_day(test_user.id, date.today(), date.today())
+        assert result == []
+
+
+class TestCountCardsMasteredInRange:
+    @pytest.mark.asyncio
+    async def test_counts_mastered_in_range(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        card_record: CardRecord,
+    ) -> None:
+        await db_session.flush()
+        stats = CardRecordStatistics(
+            user_id=test_user.id,
+            card_record_id=card_record.id,
+            easiness_factor=2.5,
+            interval=5,
+            repetitions=3,
+            next_review_date=date.today(),
+            status=CardStatus.MASTERED,
+        )
+        db_session.add(stats)
+        await db_session.flush()
+        repo = CardRecordStatisticsRepository(db_session)
+        result = await repo.count_cards_mastered_in_range(test_user.id, date.today(), date.today())
+        assert result >= 1
+
+    @pytest.mark.asyncio
+    async def test_returns_zero_for_no_mastered(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        card_record: CardRecord,
+    ) -> None:
+        await db_session.flush()
+        stats = CardRecordStatistics(
+            user_id=test_user.id,
+            card_record_id=card_record.id,
+            easiness_factor=2.5,
+            interval=0,
+            repetitions=0,
+            next_review_date=date.today(),
+            status=CardStatus.NEW,
+        )
+        db_session.add(stats)
+        await db_session.flush()
+        repo = CardRecordStatisticsRepository(db_session)
+        result = await repo.count_cards_mastered_in_range(test_user.id, date.today(), date.today())
+        assert result == 0
+
+
+class TestGetBatchStatsByDeck:
+    @pytest.mark.asyncio
+    async def test_returns_counts_per_deck(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        card_record: CardRecord,
+        v2_deck: Deck,
+    ) -> None:
+        await db_session.flush()
+        stats = CardRecordStatistics(
+            user_id=test_user.id,
+            card_record_id=card_record.id,
+            easiness_factor=2.5,
+            interval=1,
+            repetitions=1,
+            next_review_date=date.today(),
+            status=CardStatus.LEARNING,
+        )
+        db_session.add(stats)
+        await db_session.flush()
+        repo = CardRecordStatisticsRepository(db_session)
+        result = await repo.get_batch_stats_by_deck(test_user.id, [v2_deck.id])
+        assert v2_deck.id in result
+        assert result[v2_deck.id]["learning"] >= 1
+
+    @pytest.mark.asyncio
+    async def test_returns_empty_for_empty_list(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+    ) -> None:
+        repo = CardRecordStatisticsRepository(db_session)
+        result = await repo.get_batch_stats_by_deck(test_user.id, [])
+        assert result == {}
+
+
+class TestGetAverageEasinessFactor:
+    @pytest.mark.asyncio
+    async def test_returns_average(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        card_record: CardRecord,
+    ) -> None:
+        await db_session.flush()
+        stats = CardRecordStatistics(
+            user_id=test_user.id,
+            card_record_id=card_record.id,
+            easiness_factor=3.0,
+            interval=0,
+            repetitions=0,
+            next_review_date=date.today(),
+            status=CardStatus.NEW,
+        )
+        db_session.add(stats)
+        await db_session.flush()
+        repo = CardRecordStatisticsRepository(db_session)
+        result = await repo.get_average_easiness_factor(test_user.id)
+        assert result == 3.0
+
+    @pytest.mark.asyncio
+    async def test_returns_default_for_no_stats(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+    ) -> None:
+        repo = CardRecordStatisticsRepository(db_session)
+        result = await repo.get_average_easiness_factor(test_user.id)
+        assert result == 2.5
+
+
+class TestGetAverageInterval:
+    @pytest.mark.asyncio
+    async def test_returns_average(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        card_record: CardRecord,
+    ) -> None:
+        await db_session.flush()
+        stats = CardRecordStatistics(
+            user_id=test_user.id,
+            card_record_id=card_record.id,
+            easiness_factor=2.5,
+            interval=6,
+            repetitions=3,
+            next_review_date=date.today(),
+            status=CardStatus.REVIEW,
+        )
+        db_session.add(stats)
+        await db_session.flush()
+        repo = CardRecordStatisticsRepository(db_session)
+        result = await repo.get_average_interval(test_user.id)
+        assert result == 6.0
+
+    @pytest.mark.asyncio
+    async def test_returns_default_for_no_stats(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+    ) -> None:
+        repo = CardRecordStatisticsRepository(db_session)
+        result = await repo.get_average_interval(test_user.id)
+        assert result == 0.0
+
+
+class TestCountDistinctDecks:
+    @pytest.mark.asyncio
+    async def test_counts_distinct_decks(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        card_record: CardRecord,
+        v2_deck: Deck,
+    ) -> None:
+        await db_session.flush()
+        stats = CardRecordStatistics(
+            user_id=test_user.id,
+            card_record_id=card_record.id,
+            easiness_factor=2.5,
+            interval=0,
+            repetitions=0,
+            next_review_date=date.today(),
+            status=CardStatus.NEW,
+        )
+        db_session.add(stats)
+        await db_session.flush()
+        repo = CardRecordStatisticsRepository(db_session)
+        result = await repo.count_distinct_decks(test_user.id)
+        assert result >= 1
+
+    @pytest.mark.asyncio
+    async def test_returns_zero_for_no_stats(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+    ) -> None:
+        repo = CardRecordStatisticsRepository(db_session)
+        result = await repo.count_distinct_decks(test_user.id)
+        assert result == 0

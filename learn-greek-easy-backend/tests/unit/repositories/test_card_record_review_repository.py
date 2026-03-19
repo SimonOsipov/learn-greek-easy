@@ -1,6 +1,6 @@
 """Unit tests for CardRecordReviewRepository."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 import pytest_asyncio
@@ -260,3 +260,332 @@ class TestCheckConstraint:
 
         assert review_0.quality == 0
         assert review_5.quality == 5
+
+
+class TestGetDailyStats:
+    @pytest.mark.asyncio
+    async def test_returns_daily_aggregates(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        card_record: CardRecord,
+    ) -> None:
+        now = datetime.now(tz=timezone.utc)
+        yesterday = now - timedelta(days=1)
+        await db_session.flush()
+        db_session.add(
+            _make_review(test_user.id, card_record.id, quality=4, time_taken=10, reviewed_at=now)
+        )
+        db_session.add(
+            _make_review(
+                test_user.id, card_record.id, quality=2, time_taken=20, reviewed_at=yesterday
+            )
+        )
+        await db_session.flush()
+        repo = CardRecordReviewRepository(db_session)
+        start = (now - timedelta(days=2)).date()
+        end = now.date()
+        result = await repo.get_daily_stats(test_user.id, start, end)
+        assert len(result) == 2
+        today_stats = next(r for r in result if r["date"] == now.date())
+        assert today_stats["reviews_count"] == 1
+        assert today_stats["total_time"] == 10
+
+    @pytest.mark.asyncio
+    async def test_returns_empty_for_no_reviews(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+    ) -> None:
+        repo = CardRecordReviewRepository(db_session)
+        result = await repo.get_daily_stats(test_user.id, date.today(), date.today())
+        assert result == []
+
+
+class TestGetStudyTimeToday:
+    @pytest.mark.asyncio
+    async def test_sums_todays_time(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        card_record: CardRecord,
+    ) -> None:
+        await db_session.flush()
+        now = datetime.now(tz=timezone.utc)
+        db_session.add(
+            _make_review(test_user.id, card_record.id, quality=3, time_taken=15, reviewed_at=now)
+        )
+        db_session.add(
+            _make_review(test_user.id, card_record.id, quality=3, time_taken=25, reviewed_at=now)
+        )
+        await db_session.flush()
+        repo = CardRecordReviewRepository(db_session)
+        result = await repo.get_study_time_today(test_user.id)
+        assert result == 40
+
+    @pytest.mark.asyncio
+    async def test_returns_zero_for_no_reviews(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+    ) -> None:
+        repo = CardRecordReviewRepository(db_session)
+        result = await repo.get_study_time_today(test_user.id)
+        assert result == 0
+
+
+class TestGetTotalReviews:
+    @pytest.mark.asyncio
+    async def test_counts_all_reviews(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        card_record: CardRecord,
+    ) -> None:
+        await db_session.flush()
+        now = datetime.now(tz=timezone.utc)
+        for i in range(3):
+            db_session.add(
+                _make_review(
+                    test_user.id,
+                    card_record.id,
+                    quality=3,
+                    time_taken=5,
+                    reviewed_at=now - timedelta(days=i),
+                )
+            )
+        await db_session.flush()
+        repo = CardRecordReviewRepository(db_session)
+        result = await repo.get_total_reviews(test_user.id)
+        assert result == 3
+
+    @pytest.mark.asyncio
+    async def test_returns_zero_for_no_reviews(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+    ) -> None:
+        repo = CardRecordReviewRepository(db_session)
+        result = await repo.get_total_reviews(test_user.id)
+        assert result == 0
+
+
+class TestGetTotalStudyTime:
+    @pytest.mark.asyncio
+    async def test_sums_all_time(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        card_record: CardRecord,
+    ) -> None:
+        await db_session.flush()
+        now = datetime.now(tz=timezone.utc)
+        db_session.add(
+            _make_review(
+                test_user.id,
+                card_record.id,
+                quality=3,
+                time_taken=100,
+                reviewed_at=now - timedelta(days=5),
+            )
+        )
+        db_session.add(
+            _make_review(test_user.id, card_record.id, quality=3, time_taken=200, reviewed_at=now)
+        )
+        await db_session.flush()
+        repo = CardRecordReviewRepository(db_session)
+        result = await repo.get_total_study_time(test_user.id)
+        assert result == 300
+
+    @pytest.mark.asyncio
+    async def test_returns_zero_for_no_reviews(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+    ) -> None:
+        repo = CardRecordReviewRepository(db_session)
+        result = await repo.get_total_study_time(test_user.id)
+        assert result == 0
+
+
+class TestGetAccuracyStats:
+    @pytest.mark.asyncio
+    async def test_counts_correct_and_total(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        card_record: CardRecord,
+    ) -> None:
+        await db_session.flush()
+        now = datetime.now(tz=timezone.utc)
+        db_session.add(
+            _make_review(test_user.id, card_record.id, quality=5, time_taken=5, reviewed_at=now)
+        )
+        db_session.add(
+            _make_review(test_user.id, card_record.id, quality=3, time_taken=5, reviewed_at=now)
+        )
+        db_session.add(
+            _make_review(test_user.id, card_record.id, quality=1, time_taken=5, reviewed_at=now)
+        )
+        await db_session.flush()
+        repo = CardRecordReviewRepository(db_session)
+        result = await repo.get_accuracy_stats(test_user.id, days=30)
+        assert result["total"] == 3
+        assert result["correct"] == 2  # quality >= 3
+
+    @pytest.mark.asyncio
+    async def test_returns_zeros_for_no_reviews(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+    ) -> None:
+        repo = CardRecordReviewRepository(db_session)
+        result = await repo.get_accuracy_stats(test_user.id, days=30)
+        assert result == {"correct": 0, "total": 0}
+
+
+class TestGetDailyAccuracyStats:
+    @pytest.mark.asyncio
+    async def test_groups_by_day(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        card_record: CardRecord,
+    ) -> None:
+        await db_session.flush()
+        now = datetime.now(tz=timezone.utc)
+        db_session.add(
+            _make_review(test_user.id, card_record.id, quality=5, time_taken=5, reviewed_at=now)
+        )
+        db_session.add(
+            _make_review(test_user.id, card_record.id, quality=1, time_taken=5, reviewed_at=now)
+        )
+        await db_session.flush()
+        repo = CardRecordReviewRepository(db_session)
+        result = await repo.get_daily_accuracy_stats(test_user.id, date.today(), date.today())
+        assert len(result) == 1
+        assert result[0]["total"] == 2
+        assert result[0]["correct"] == 1
+
+    @pytest.mark.asyncio
+    async def test_returns_empty_for_no_reviews(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+    ) -> None:
+        repo = CardRecordReviewRepository(db_session)
+        result = await repo.get_daily_accuracy_stats(test_user.id, date.today(), date.today())
+        assert result == []
+
+
+class TestGetAverageQuality:
+    @pytest.mark.asyncio
+    async def test_returns_average(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        card_record: CardRecord,
+    ) -> None:
+        await db_session.flush()
+        now = datetime.now(tz=timezone.utc)
+        db_session.add(
+            _make_review(test_user.id, card_record.id, quality=5, time_taken=5, reviewed_at=now)
+        )
+        db_session.add(
+            _make_review(test_user.id, card_record.id, quality=3, time_taken=5, reviewed_at=now)
+        )
+        await db_session.flush()
+        repo = CardRecordReviewRepository(db_session)
+        result = await repo.get_average_quality(test_user.id)
+        assert result == 4.0
+
+    @pytest.mark.asyncio
+    async def test_returns_zero_for_no_reviews(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+    ) -> None:
+        repo = CardRecordReviewRepository(db_session)
+        result = await repo.get_average_quality(test_user.id)
+        assert result == 0.0
+
+
+class TestGetUniqueDates:
+    @pytest.mark.asyncio
+    async def test_returns_distinct_dates_within_days(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        card_record: CardRecord,
+    ) -> None:
+        await db_session.flush()
+        now = datetime.now(tz=timezone.utc)
+        # Two reviews on same day, one on yesterday
+        db_session.add(
+            _make_review(test_user.id, card_record.id, quality=3, time_taken=5, reviewed_at=now)
+        )
+        db_session.add(
+            _make_review(test_user.id, card_record.id, quality=3, time_taken=5, reviewed_at=now)
+        )
+        db_session.add(
+            _make_review(
+                test_user.id,
+                card_record.id,
+                quality=3,
+                time_taken=5,
+                reviewed_at=now - timedelta(days=1),
+            )
+        )
+        await db_session.flush()
+        repo = CardRecordReviewRepository(db_session)
+        result = await repo.get_unique_dates(test_user.id, days=30)
+        assert len(result) == 2  # today + yesterday
+
+    @pytest.mark.asyncio
+    async def test_returns_empty_for_no_reviews(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+    ) -> None:
+        repo = CardRecordReviewRepository(db_session)
+        result = await repo.get_unique_dates(test_user.id, days=30)
+        assert result == []
+
+
+class TestGetAllUniqueDates:
+    @pytest.mark.asyncio
+    async def test_returns_all_dates_ascending(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        card_record: CardRecord,
+    ) -> None:
+        await db_session.flush()
+        now = datetime.now(tz=timezone.utc)
+        db_session.add(
+            _make_review(test_user.id, card_record.id, quality=3, time_taken=5, reviewed_at=now)
+        )
+        db_session.add(
+            _make_review(
+                test_user.id,
+                card_record.id,
+                quality=3,
+                time_taken=5,
+                reviewed_at=now - timedelta(days=30),
+            )
+        )
+        await db_session.flush()
+        repo = CardRecordReviewRepository(db_session)
+        result = await repo.get_all_unique_dates(test_user.id)
+        assert len(result) == 2
+        assert result[0] < result[1]  # ascending order
+
+    @pytest.mark.asyncio
+    async def test_returns_empty_for_no_reviews(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+    ) -> None:
+        repo = CardRecordReviewRepository(db_session)
+        result = await repo.get_all_unique_dates(test_user.id)
+        assert result == []

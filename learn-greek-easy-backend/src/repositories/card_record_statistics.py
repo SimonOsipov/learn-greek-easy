@@ -3,7 +3,7 @@
 from datetime import date
 from uuid import UUID
 
-from sqlalchemy import delete, func, not_, select
+from sqlalchemy import Date, cast, delete, func, not_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -291,3 +291,183 @@ class CardRecordStatisticsRepository(BaseRepository[CardRecordStatistics]):
             delete(CardRecordStatistics).where(CardRecordStatistics.user_id == user_id)
         )
         return int(result.rowcount) if result.rowcount else 0  # type: ignore[attr-defined]
+
+    async def count_cards_by_status_per_day(
+        self,
+        user_id: UUID,
+        start_date: date,
+        end_date: date,
+    ) -> list[dict]:
+        """Count card statistics grouped by day and status within a date range.
+
+        Args:
+            user_id: User UUID.
+            start_date: Start of date range (inclusive).
+            end_date: End of date range (inclusive).
+
+        Returns:
+            List of dicts with date, status, count.
+        """
+        query = (
+            select(
+                cast(CardRecordStatistics.updated_at, Date).label("day"),
+                CardRecordStatistics.status,
+                func.count().label("count"),
+            )
+            .where(
+                CardRecordStatistics.user_id == user_id,
+                cast(CardRecordStatistics.updated_at, Date) >= start_date,
+                cast(CardRecordStatistics.updated_at, Date) <= end_date,
+            )
+            .group_by(
+                cast(CardRecordStatistics.updated_at, Date),
+                CardRecordStatistics.status,
+            )
+            .order_by(cast(CardRecordStatistics.updated_at, Date))
+        )
+        result = await self.db.execute(query)
+        rows = result.all()
+        return [
+            {
+                "date": row.day,
+                "status": row.status.value if hasattr(row.status, "value") else row.status,
+                "count": row.count,
+            }
+            for row in rows
+        ]
+
+    async def count_cards_mastered_in_range(
+        self,
+        user_id: UUID,
+        start_date: date,
+        end_date: date,
+    ) -> int:
+        """Count cards that reached MASTERED status within a date range.
+
+        Args:
+            user_id: User UUID.
+            start_date: Start of date range (inclusive).
+            end_date: End of date range (inclusive).
+
+        Returns:
+            Number of mastered cards updated in range.
+        """
+        query = (
+            select(func.count())
+            .select_from(CardRecordStatistics)
+            .where(
+                CardRecordStatistics.user_id == user_id,
+                CardRecordStatistics.status == CardStatus.MASTERED,
+                cast(CardRecordStatistics.updated_at, Date) >= start_date,
+                cast(CardRecordStatistics.updated_at, Date) <= end_date,
+            )
+        )
+        result = await self.db.execute(query)
+        return result.scalar_one()
+
+    async def get_batch_stats_by_deck(
+        self,
+        user_id: UUID,
+        deck_ids: list[UUID],
+    ) -> dict[UUID, dict[str, int]]:
+        """Get card status counts per deck for a list of deck IDs.
+
+        Args:
+            user_id: User UUID.
+            deck_ids: List of deck UUIDs to query.
+
+        Returns:
+            Dict mapping deck_id to status count dict.
+        """
+        if not deck_ids:
+            return {}
+        query = (
+            select(
+                CardRecord.deck_id,
+                CardRecordStatistics.status,
+                func.count().label("status_count"),
+            )
+            .join(CardRecord, CardRecordStatistics.card_record_id == CardRecord.id)
+            .where(
+                CardRecordStatistics.user_id == user_id,
+                CardRecord.deck_id.in_(deck_ids),
+            )
+            .group_by(CardRecord.deck_id, CardRecordStatistics.status)
+        )
+        result = await self.db.execute(query)
+        rows = result.all()
+        # Initialize all decks with zero counts
+        output: dict[UUID, dict[str, int]] = {
+            deck_id: {"new": 0, "learning": 0, "review": 0, "mastered": 0} for deck_id in deck_ids
+        }
+        for row in rows:
+            status_val = row.status.value if hasattr(row.status, "value") else row.status
+            if status_val in output[row.deck_id]:
+                output[row.deck_id][status_val] = row.status_count
+        return output
+
+    async def get_average_easiness_factor(
+        self,
+        user_id: UUID,
+        deck_id: UUID | None = None,
+    ) -> float:
+        """Get average easiness factor for a user, optionally scoped to a deck.
+
+        Args:
+            user_id: User UUID.
+            deck_id: Optional deck filter.
+
+        Returns:
+            Average easiness factor (2.5 if no records).
+        """
+        conditions = [CardRecordStatistics.user_id == user_id]
+        query = select(func.avg(CardRecordStatistics.easiness_factor))
+        if deck_id is not None:
+            query = query.join(CardRecord, CardRecordStatistics.card_record_id == CardRecord.id)
+            conditions.append(CardRecord.deck_id == deck_id)
+        query = query.where(*conditions)
+        result = await self.db.execute(query)
+        val = result.scalar_one()
+        return float(val) if val is not None else 2.5
+
+    async def get_average_interval(
+        self,
+        user_id: UUID,
+        deck_id: UUID | None = None,
+    ) -> float:
+        """Get average review interval in days for a user, optionally scoped to a deck.
+
+        Args:
+            user_id: User UUID.
+            deck_id: Optional deck filter.
+
+        Returns:
+            Average interval in days (0.0 if no records).
+        """
+        conditions = [CardRecordStatistics.user_id == user_id]
+        query = select(func.avg(CardRecordStatistics.interval))
+        if deck_id is not None:
+            query = query.join(CardRecord, CardRecordStatistics.card_record_id == CardRecord.id)
+            conditions.append(CardRecord.deck_id == deck_id)
+        query = query.where(*conditions)
+        result = await self.db.execute(query)
+        val = result.scalar_one()
+        return float(val) if val is not None else 0.0
+
+    async def count_distinct_decks(self, user_id: UUID) -> int:
+        """Count the number of distinct decks a user has card statistics in.
+
+        Args:
+            user_id: User UUID.
+
+        Returns:
+            Number of distinct decks.
+        """
+        query = (
+            select(func.count(func.distinct(CardRecord.deck_id)))
+            .select_from(CardRecordStatistics)
+            .join(CardRecord, CardRecordStatistics.card_record_id == CardRecord.id)
+            .where(CardRecordStatistics.user_id == user_id)
+        )
+        result = await self.db.execute(query)
+        return result.scalar_one()
