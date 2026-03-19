@@ -7,8 +7,10 @@
 
 import { useNavigate, useParams } from 'react-router-dom';
 
+import type { CardStatus } from '@/components/shared/cardStatusColors';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import type { WordMasteryItem } from '@/services/progressAPI';
 import type { WordEntryResponse } from '@/services/wordEntryAPI';
 
 import { WordCard } from '../WordCard';
@@ -34,6 +36,7 @@ export function isWideCard(entry: WordEntryResponse): boolean {
 
 export interface WordGridProps {
   entries: WordEntryResponse[];
+  masteryMap?: Map<string, WordMasteryItem>;
 }
 
 /**
@@ -46,7 +49,7 @@ export interface WordGridProps {
  * - Tablet: 3-4 columns
  * - Desktop: 4-6 columns
  */
-export function WordGrid({ entries }: WordGridProps) {
+export function WordGrid({ entries, masteryMap }: WordGridProps) {
   const navigate = useNavigate();
   const { id: deckId } = useParams<{ id: string }>();
 
@@ -62,11 +65,27 @@ export function WordGrid({ entries }: WordGridProps) {
       }}
       data-testid="word-grid"
     >
-      {entries.map((entry) => (
-        <div key={entry.id} style={isWideCard(entry) ? { gridColumn: 'span 2' } : undefined}>
-          <WordCard wordEntry={entry} onClick={() => handleWordCardClick(entry.id)} />
-        </div>
-      ))}
+      {entries.map((entry) => {
+        const m = masteryMap?.get(entry.id);
+        const masteryStatus: CardStatus = m
+          ? m.mastered_count === m.total_count && m.total_count > 0
+            ? 'mastered'
+            : m.mastered_count > 0
+              ? 'learning'
+              : 'new'
+          : 'new';
+        const masteryFilled = m ? Math.min(m.mastered_count, 4) : 0;
+        return (
+          <div key={entry.id} style={isWideCard(entry) ? { gridColumn: 'span 2' } : undefined}>
+            <WordCard
+              wordEntry={entry}
+              onClick={() => handleWordCardClick(entry.id)}
+              masteryStatus={masteryStatus}
+              masteryFilled={masteryFilled}
+            />
+          </div>
+        );
+      })}
     </div>
   );
 }

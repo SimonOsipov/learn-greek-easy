@@ -230,6 +230,15 @@ export interface AchievementsResponse {
 }
 
 /**
+ * Word mastery item for a single word entry
+ */
+export interface WordMasteryItem {
+  word_entry_id: string;
+  mastered_count: number;
+  total_count: number;
+}
+
+/**
  * Parameters for deck progress list
  */
 export interface DeckProgressListParams {
@@ -301,5 +310,16 @@ export const progressAPI = {
    */
   getAchievements: async (): Promise<AchievementsResponse> => {
     return api.get<AchievementsResponse>('/api/v1/progress/achievements');
+  },
+
+  /**
+   * Get word mastery data for a specific deck
+   */
+  getWordMastery: async (
+    deckId: string
+  ): Promise<{ deck_id: string; items: WordMasteryItem[] }> => {
+    return api.get<{ deck_id: string; items: WordMasteryItem[] }>(
+      `/api/v1/decks/${deckId}/word-mastery`
+    );
   },
 };
