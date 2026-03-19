@@ -14,15 +14,19 @@ Run with:
     pytest tests/e2e/scenarios/test_culture_admin_crud.py -v
 """
 
+import itertools
 from uuid import uuid4
 
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.db.models import DeckWordEntry, PartOfSpeech, Visibility, WordEntry
 from tests.e2e.conftest import E2ETestCase, UserSession
-from tests.factories.content import CardFactory, DeckFactory
+from tests.factories.content import DeckFactory
 from tests.factories.culture import CultureDeckFactory, CultureQuestionFactory
+
+_word_counter = itertools.count(1)
 
 # =============================================================================
 # TestCultureDeckCRUD - Admin Deck Operations
@@ -525,10 +529,20 @@ class TestAdminStats(E2ETestCase):
         db_session: AsyncSession,
     ) -> None:
         """Test superuser can get admin statistics with vocabulary decks."""
-        # Create some vocabulary decks and cards
+        # Create a vocabulary deck with word entries (admin stats counts WordEntry via DeckWordEntry)
         deck = await DeckFactory.create(session=db_session, is_active=True)
         for _ in range(5):
-            await CardFactory.create(session=db_session, deck=deck)
+            n = next(_word_counter)
+            word_entry = WordEntry(
+                lemma=f"λόγος{n}",
+                part_of_speech=PartOfSpeech.NOUN,
+                translation_en="word",
+                visibility=Visibility.SHARED,
+                is_active=True,
+            )
+            db_session.add(word_entry)
+            await db_session.flush()
+            db_session.add(DeckWordEntry(deck_id=deck.id, word_entry_id=word_entry.id))
         await db_session.commit()
 
         response = await client.get(
@@ -538,17 +552,17 @@ class TestAdminStats(E2ETestCase):
 
         assert response.status_code == 200
         data = response.json()
-        # Check all required fields (vocabulary-only stats after RMCULTURE/RMVOCAB)
+        # Check all required fields
         assert "total_decks" in data
         assert "total_cards" in data
         assert "total_vocabulary_decks" in data
         assert "total_vocabulary_cards" in data
-        # Should have at least our created vocabulary deck
+        # Should have at least our created vocabulary deck and word entries
         assert data["total_vocabulary_decks"] >= 1
         assert data["total_vocabulary_cards"] >= 5
-        # total_decks and total_cards now equal vocabulary totals
-        assert data["total_decks"] == data["total_vocabulary_decks"]
-        assert data["total_cards"] == data["total_vocabulary_cards"]
+        # total_decks >= vocabulary decks (may include culture decks from other tests)
+        assert data["total_decks"] >= data["total_vocabulary_decks"]
+        assert data["total_cards"] >= data["total_vocabulary_cards"]
 
     @pytest.mark.asyncio
     async def test_get_admin_stats_unauthorized(

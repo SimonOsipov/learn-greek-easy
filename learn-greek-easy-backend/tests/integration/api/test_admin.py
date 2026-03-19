@@ -10,11 +10,34 @@ Tests cover:
 - Integration with real database data
 """
 
+import itertools
+
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from tests.factories.content import CardFactory, DeckFactory
+from src.db.models import DeckWordEntry, PartOfSpeech, Visibility, WordEntry
+from tests.factories.content import DeckFactory
+
+_word_counter = itertools.count(1)
+
+
+async def _create_word_entry_in_deck(session: AsyncSession, deck_id) -> WordEntry:
+    """Create a WordEntry linked to a deck via DeckWordEntry (counted by admin stats)."""
+    n = next(_word_counter)
+    word_entry = WordEntry(
+        lemma=f"λόγος{n}",
+        part_of_speech=PartOfSpeech.NOUN,
+        translation_en="word",
+        visibility=Visibility.SHARED,
+        is_active=True,
+    )
+    session.add(word_entry)
+    await session.flush()
+    link = DeckWordEntry(deck_id=deck_id, word_entry_id=word_entry.id)
+    session.add(link)
+    await session.flush()
+    return word_entry
 
 
 class TestAdminStatsIntegration:
@@ -107,13 +130,13 @@ class TestAdminStatsIntegration:
             is_active=True,
         )
 
-        # Create cards for deck1
+        # Create word entries for deck1 (counted by admin stats)
         for _ in range(3):
-            await CardFactory.create(session=db_session, deck_id=deck1.id)
+            await _create_word_entry_in_deck(db_session, deck1.id)
 
-        # Create cards for deck2
+        # Create word entries for deck2
         for _ in range(5):
-            await CardFactory.create(session=db_session, deck_id=deck2.id)
+            await _create_word_entry_in_deck(db_session, deck2.id)
 
         # Act
         response = await client.get(
@@ -155,11 +178,11 @@ class TestAdminStatsIntegration:
             is_active=False,
         )
 
-        # Create cards for both
+        # Create word entries for both decks (admin stats counts active deck word entries)
         for _ in range(3):
-            await CardFactory.create(session=db_session, deck_id=active_deck.id)
+            await _create_word_entry_in_deck(db_session, active_deck.id)
         for _ in range(5):
-            await CardFactory.create(session=db_session, deck_id=inactive_deck.id)
+            await _create_word_entry_in_deck(db_session, inactive_deck.id)
 
         # Act
         response = await client.get(
@@ -192,7 +215,7 @@ class TestAdminStatsIntegration:
             c1=True,
             is_active=True,
         )
-        await CardFactory.create(session=db_session, deck_id=deck.id)
+        await _create_word_entry_in_deck(db_session, deck.id)
 
         # Act
         response = await client.get(

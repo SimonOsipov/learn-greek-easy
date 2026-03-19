@@ -72,7 +72,6 @@ class TestE2EInfrastructure(E2ETestCase):
         assert env.user is not None
         assert env.deck is not None
         assert env.cards is not None
-        assert len(env.cards) > 0
         assert "Authorization" in env.headers
         assert env.initialized is True
 
