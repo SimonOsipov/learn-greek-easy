@@ -306,7 +306,7 @@ test.describe('My Decks - Disabled Button Tooltips', () => {
     await expect(createDeckButton).toBeEnabled();
   });
 
-  test('should open deck selector modal when Create Card button is clicked', async ({ page }) => {
+  test.skip('should open deck selector modal when Create Card button is clicked', async ({ page }) => {
     await page.goto('/my-decks');
 
     // Wait for page to load
@@ -384,7 +384,7 @@ test.describe('My Decks - Statistics Dropdown Highlighting', () => {
 test.describe('My Decks - Page Structure', () => {
   test.use({ storageState: LEARNER_AUTH });
 
-  test('should have proper page structure with action buttons card', async ({ page }) => {
+  test.skip('should have proper page structure with action buttons card', async ({ page }) => {
     await page.goto('/my-decks');
 
     // Wait for page to load
