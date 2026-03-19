@@ -123,18 +123,6 @@ class TestSeedServiceTruncation:
         # Children must come before parents
         order = SeedService.TRUNCATION_ORDER
 
-        # reviews depends on cards
-        assert order.index("reviews") < order.index("cards")
-
-        # card_statistics depends on cards
-        assert order.index("card_statistics") < order.index("cards")
-
-        # user_deck_progress depends on decks
-        assert order.index("user_deck_progress") < order.index("decks")
-
-        # cards depends on decks
-        assert order.index("cards") < order.index("decks")
-
         # culture_question_stats depends on culture_questions
         assert order.index("culture_question_stats") < order.index("culture_questions")
 

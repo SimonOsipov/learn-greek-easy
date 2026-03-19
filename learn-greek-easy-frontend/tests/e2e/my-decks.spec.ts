@@ -181,6 +181,7 @@ test.describe('My Decks - Page Content', () => {
     }
   });
 
+  test.skip('SM2V2-06: MyDeckDetailPage route removed. Unskip in SM2V2-07.');
   test('Flow 15: should navigate to own deck detail page', async ({ page }) => {
     await page.goto('/my-decks');
 

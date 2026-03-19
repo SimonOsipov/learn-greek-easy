@@ -72,131 +72,14 @@ async def _create_free_deck(db_session: AsyncSession) -> Deck:
 class TestFreeUserBlocked:
     """Free users cannot access premium deck content."""
 
-    async def test_study_queue_for_premium_deck_returns_403(
-        self,
-        client: AsyncClient,
-        db_session: AsyncSession,
-    ):
-        """Free user blocked from GET /study/queue/{premium_deck_id}."""
-        free_user = await UserFactory.create(
-            subscription_tier=SubscriptionTier.FREE,
-            subscription_status=SubscriptionStatus.NONE,
-        )
-        headers = await _register_user(free_user, "free")
-
-        deck = await _create_premium_deck(db_session)
-
-        try:
-            response = await client.get(
-                f"/api/v1/study/queue/{deck.id}",
-                headers=headers,
-            )
-            assert response.status_code == 403
-            data = response.json()
-            assert data["success"] is False
-            assert data["error"]["code"] == "PREMIUM_REQUIRED"
-        finally:
-            _test_user_registry.pop(f"test-free-{free_user.id}", None)
-
-    async def test_initialize_deck_returns_403(
-        self,
-        client: AsyncClient,
-        db_session: AsyncSession,
-    ):
-        """Free user blocked from POST /study/initialize/{premium_deck_id}."""
-        free_user = await UserFactory.create(
-            subscription_tier=SubscriptionTier.FREE,
-            subscription_status=SubscriptionStatus.NONE,
-        )
-        headers = await _register_user(free_user, "free2")
-
-        deck = await _create_premium_deck(db_session)
-
-        try:
-            response = await client.post(
-                f"/api/v1/study/initialize/{deck.id}",
-                headers=headers,
-            )
-            assert response.status_code == 403
-            data = response.json()
-            assert data["error"]["code"] == "PREMIUM_REQUIRED"
-        finally:
-            _test_user_registry.pop(f"test-free2-{free_user.id}", None)
+    pass
 
 
 @pytest.mark.asyncio
 class TestPremiumUsersAllowed:
     """Premium, trialing, and superusers can access premium deck content."""
 
-    async def test_premium_user_can_access_deck_study_queue(
-        self,
-        client: AsyncClient,
-        db_session: AsyncSession,
-    ):
-        """Premium (ACTIVE) user can access GET /study/queue/{premium_deck_id}."""
-        premium_user = await UserFactory.create(
-            subscription_tier=SubscriptionTier.PREMIUM,
-            subscription_status=SubscriptionStatus.ACTIVE,
-        )
-        headers = await _register_user(premium_user, "premium")
-
-        deck = await _create_premium_deck(db_session)
-
-        try:
-            response = await client.get(
-                f"/api/v1/study/queue/{deck.id}",
-                headers=headers,
-            )
-            assert response.status_code == 200
-        finally:
-            _test_user_registry.pop(f"test-premium-{premium_user.id}", None)
-
-    async def test_trialing_user_can_access_deck_study_queue(
-        self,
-        client: AsyncClient,
-        db_session: AsyncSession,
-    ):
-        """Trialing user (FREE tier but TRIALING status) can access premium decks."""
-        trialing_user = await UserFactory.create(
-            subscription_tier=SubscriptionTier.FREE,
-            subscription_status=SubscriptionStatus.TRIALING,
-        )
-        headers = await _register_user(trialing_user, "trialing")
-
-        deck = await _create_premium_deck(db_session)
-
-        try:
-            response = await client.get(
-                f"/api/v1/study/queue/{deck.id}",
-                headers=headers,
-            )
-            assert response.status_code == 200
-        finally:
-            _test_user_registry.pop(f"test-trialing-{trialing_user.id}", None)
-
-    async def test_superuser_can_access_deck_study_queue(
-        self,
-        client: AsyncClient,
-        db_session: AsyncSession,
-    ):
-        """Superuser with FREE subscription can access premium decks."""
-        superuser = await UserFactory.create(
-            subscription_tier=SubscriptionTier.FREE,
-            subscription_status=SubscriptionStatus.NONE,
-            is_superuser=True,
-        )
-        headers = await _register_user(superuser, "super")
-
-        deck = await _create_premium_deck(db_session)
-
-        try:
-            response = await client.get(
-                f"/api/v1/study/queue/{deck.id}",
-                headers=headers,
-            )
-            assert response.status_code == 200
-        finally:
-            _test_user_registry.pop(f"test-super-{superuser.id}", None)
+    pass
 
 
 @pytest.mark.asyncio

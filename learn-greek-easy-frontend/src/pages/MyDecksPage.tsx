@@ -109,7 +109,8 @@ export const MyDecksPage: React.FC = () => {
   };
 
   const handleDeckClick = (deckId: string) => {
-    navigate(`/my-decks/${deckId}`);
+    // Navigate to V2 deck detail page (MyDeckDetailPage removed in SM2V2-06)
+    navigate(`/decks/${deckId}`);
   };
 
   // Edit deck handlers
