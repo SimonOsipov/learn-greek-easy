@@ -118,27 +118,18 @@ from tests.fixtures.database import (
 )
 
 # Deck fixtures
-from tests.fixtures.deck import (  # Type definitions; Vocabulary data; Factory functions; Core deck fixtures; Card fixtures; Composite fixtures; Large dataset fixtures
+from tests.fixtures.deck import (  # Type definitions; Vocabulary data; Factory functions; Core deck fixtures; Composite fixtures; Large dataset fixtures
     GREEK_VOCABULARY_A1,
     GREEK_VOCABULARY_A2,
     GREEK_VOCABULARY_B1,
     DeckWithCards,
     MultiLevelDecks,
-    create_card,
-    create_card_data,
     create_deck,
     create_deck_data,
-    create_deck_with_vocabulary,
-    deck_with_a2_cards,
-    deck_with_all_a1_cards,
-    deck_with_b1_cards,
-    deck_with_cards,
     deck_with_many_cards,
     empty_deck,
     inactive_deck,
     multi_level_decks,
-    test_card,
-    test_cards,
     test_deck,
     test_deck_a1,
     test_deck_a2,
@@ -234,10 +225,7 @@ __all__ = [
     "GREEK_VOCABULARY_B1",
     # Deck factory functions
     "create_deck_data",
-    "create_card_data",
     "create_deck",
-    "create_card",
-    "create_deck_with_vocabulary",
     # Core deck fixtures
     "test_deck",
     "test_deck_a1",
@@ -245,14 +233,7 @@ __all__ = [
     "test_deck_b1",
     "inactive_deck",
     "empty_deck",
-    # Card fixtures
-    "test_card",
-    "test_cards",
     # Composite deck fixtures
-    "deck_with_cards",
-    "deck_with_all_a1_cards",
-    "deck_with_a2_cards",
-    "deck_with_b1_cards",
     "multi_level_decks",
     "two_decks",
     "deck_with_many_cards",

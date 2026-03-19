@@ -43,9 +43,8 @@ class TestResetAllProgress:
         user_id = uuid4()
 
         # Mock all repository delete methods
-        service.review_repo.delete_all_by_user_id = AsyncMock(return_value=10)
-        service.card_stats_repo.delete_all_by_user_id = AsyncMock(return_value=5)
-        service.deck_progress_repo.delete_all_by_user_id = AsyncMock(return_value=2)
+        service.card_record_review_repo.delete_all_by_user_id = AsyncMock(return_value=10)
+        service.card_record_stats_repo.delete_all_by_user_id = AsyncMock(return_value=5)
         service.culture_history_repo.delete_all_by_user_id = AsyncMock(return_value=15)
         service.culture_stats_repo.delete_all_by_user_id = AsyncMock(return_value=3)
         service.mock_exam_repo.delete_all_by_user_id = AsyncMock(return_value=(2, 8))
@@ -65,9 +64,8 @@ class TestResetAllProgress:
             result = await service.reset_all_progress(user_id)
 
         # Verify all repository methods were called with correct user_id
-        service.review_repo.delete_all_by_user_id.assert_awaited_once_with(user_id)
-        service.card_stats_repo.delete_all_by_user_id.assert_awaited_once_with(user_id)
-        service.deck_progress_repo.delete_all_by_user_id.assert_awaited_once_with(user_id)
+        service.card_record_review_repo.delete_all_by_user_id.assert_awaited_once_with(user_id)
+        service.card_record_stats_repo.delete_all_by_user_id.assert_awaited_once_with(user_id)
         service.culture_history_repo.delete_all_by_user_id.assert_awaited_once_with(user_id)
         service.culture_stats_repo.delete_all_by_user_id.assert_awaited_once_with(user_id)
         service.mock_exam_repo.delete_all_by_user_id.assert_awaited_once_with(user_id)
@@ -84,9 +82,8 @@ class TestResetAllProgress:
         user_id = uuid4()
 
         # Mock specific deletion counts
-        service.review_repo.delete_all_by_user_id = AsyncMock(return_value=10)
-        service.card_stats_repo.delete_all_by_user_id = AsyncMock(return_value=5)
-        service.deck_progress_repo.delete_all_by_user_id = AsyncMock(return_value=2)
+        service.card_record_review_repo.delete_all_by_user_id = AsyncMock(return_value=10)
+        service.card_record_stats_repo.delete_all_by_user_id = AsyncMock(return_value=5)
         service.culture_history_repo.delete_all_by_user_id = AsyncMock(return_value=15)
         service.culture_stats_repo.delete_all_by_user_id = AsyncMock(return_value=3)
         service.mock_exam_repo.delete_all_by_user_id = AsyncMock(return_value=(2, 8))
@@ -109,9 +106,8 @@ class TestResetAllProgress:
             result = await service.reset_all_progress(user_id)
 
         # Verify counts
-        assert result.reviews_deleted == 10
-        assert result.card_statistics_deleted == 5
-        assert result.user_deck_progress_deleted == 2
+        assert result.card_record_reviews_deleted == 10
+        assert result.card_record_statistics_deleted == 5
         assert result.culture_answer_history_deleted == 15
         assert result.culture_question_stats_deleted == 3
         assert result.mock_exam_sessions_deleted == 2
@@ -127,9 +123,8 @@ class TestResetAllProgress:
         user_id = uuid4()
 
         # Mock all repository methods to return 0
-        service.review_repo.delete_all_by_user_id = AsyncMock(return_value=0)
-        service.card_stats_repo.delete_all_by_user_id = AsyncMock(return_value=0)
-        service.deck_progress_repo.delete_all_by_user_id = AsyncMock(return_value=0)
+        service.card_record_review_repo.delete_all_by_user_id = AsyncMock(return_value=0)
+        service.card_record_stats_repo.delete_all_by_user_id = AsyncMock(return_value=0)
         service.culture_history_repo.delete_all_by_user_id = AsyncMock(return_value=0)
         service.culture_stats_repo.delete_all_by_user_id = AsyncMock(return_value=0)
         service.mock_exam_repo.delete_all_by_user_id = AsyncMock(return_value=(0, 0))
@@ -155,9 +150,8 @@ class TestResetAllProgress:
         user_id = uuid4()
 
         # Mock all methods to return 0 (no data to delete)
-        service.review_repo.delete_all_by_user_id = AsyncMock(return_value=0)
-        service.card_stats_repo.delete_all_by_user_id = AsyncMock(return_value=0)
-        service.deck_progress_repo.delete_all_by_user_id = AsyncMock(return_value=0)
+        service.card_record_review_repo.delete_all_by_user_id = AsyncMock(return_value=0)
+        service.card_record_stats_repo.delete_all_by_user_id = AsyncMock(return_value=0)
         service.culture_history_repo.delete_all_by_user_id = AsyncMock(return_value=0)
         service.culture_stats_repo.delete_all_by_user_id = AsyncMock(return_value=0)
         service.mock_exam_repo.delete_all_by_user_id = AsyncMock(return_value=(0, 0))
@@ -175,9 +169,8 @@ class TestResetAllProgress:
             result = await service.reset_all_progress(user_id)
 
         # Verify all counts are zero
-        assert result.reviews_deleted == 0
-        assert result.card_statistics_deleted == 0
-        assert result.user_deck_progress_deleted == 0
+        assert result.card_record_reviews_deleted == 0
+        assert result.card_record_statistics_deleted == 0
         assert result.culture_answer_history_deleted == 0
         assert result.culture_question_stats_deleted == 0
         assert result.mock_exam_sessions_deleted == 0
@@ -193,9 +186,8 @@ class TestResetAllProgress:
         user_id = uuid4()
 
         # Mock successful deletions
-        service.review_repo.delete_all_by_user_id = AsyncMock(return_value=5)
-        service.card_stats_repo.delete_all_by_user_id = AsyncMock(return_value=3)
-        service.deck_progress_repo.delete_all_by_user_id = AsyncMock(return_value=1)
+        service.card_record_review_repo.delete_all_by_user_id = AsyncMock(return_value=5)
+        service.card_record_stats_repo.delete_all_by_user_id = AsyncMock(return_value=3)
         service.culture_history_repo.delete_all_by_user_id = AsyncMock(return_value=0)
         service.culture_stats_repo.delete_all_by_user_id = AsyncMock(return_value=0)
         service.mock_exam_repo.delete_all_by_user_id = AsyncMock(return_value=(0, 0))
@@ -215,8 +207,8 @@ class TestResetAllProgress:
             result = await service.reset_all_progress(user_id)
 
             # Verify deletion still succeeded
-            assert result.reviews_deleted == 5
-            assert result.card_statistics_deleted == 3
+            assert result.card_record_reviews_deleted == 5
+            assert result.card_record_statistics_deleted == 3
 
     @pytest.mark.asyncio
     async def test_reset_total_deleted_property(self, service, mock_db_session):
@@ -224,9 +216,8 @@ class TestResetAllProgress:
         user_id = uuid4()
 
         # Mock specific counts that sum to a known total
-        service.review_repo.delete_all_by_user_id = AsyncMock(return_value=10)
-        service.card_stats_repo.delete_all_by_user_id = AsyncMock(return_value=5)
-        service.deck_progress_repo.delete_all_by_user_id = AsyncMock(return_value=2)
+        service.card_record_review_repo.delete_all_by_user_id = AsyncMock(return_value=10)
+        service.card_record_stats_repo.delete_all_by_user_id = AsyncMock(return_value=5)
         service.culture_history_repo.delete_all_by_user_id = AsyncMock(return_value=8)
         service.culture_stats_repo.delete_all_by_user_id = AsyncMock(return_value=4)
         service.mock_exam_repo.delete_all_by_user_id = AsyncMock(return_value=(3, 12))
@@ -247,6 +238,6 @@ class TestResetAllProgress:
 
             result = await service.reset_all_progress(user_id)
 
-        # Total: 10 + 5 + 2 + 8 + 4 + 3 + 12 + 6 + 7 + 3 = 60
-        expected_total = 10 + 5 + 2 + 8 + 4 + 3 + 12 + 6 + 7 + 3
+        # Total: 10 + 5 + 8 + 4 + 3 + 12 + 6 + 7 + 3 = 58
+        expected_total = 10 + 5 + 8 + 4 + 3 + 12 + 6 + 7 + 3
         assert result.total_deleted == expected_total

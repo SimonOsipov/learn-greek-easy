@@ -22,6 +22,8 @@ Usage:
         assert len(cards) == 5
 """
 
+from __future__ import annotations
+
 from collections.abc import AsyncGenerator
 from typing import Any, NamedTuple
 from uuid import UUID
@@ -29,7 +31,7 @@ from uuid import UUID
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import Card, CardSystemVersion, Deck, DeckLevel
+from src.db.models import Deck, DeckLevel
 
 # =============================================================================
 # Type Definitions
@@ -40,7 +42,7 @@ class DeckWithCards(NamedTuple):
     """Container for a deck with its cards."""
 
     deck: Deck
-    cards: list[Card]
+    cards: list[Any]
 
 
 class MultiLevelDecks(NamedTuple):
@@ -236,37 +238,8 @@ def create_deck_data(
         "description_el": description,  # Same as English for test fixtures
         "description_ru": description,  # Same as English for test fixtures
         "level": level,
-        "card_system": CardSystemVersion.V1,  # Fixtures create Card records (V1 table)
         "is_active": is_active,
         "owner_id": owner_id,
-    }
-
-
-def create_card_data(
-    deck_id: Any,
-    front_text: str = "Yeia",
-    back_text_en: str = "Hello",
-    pronunciation: str | None = "YAH",
-    example_sentence: str | None = None,
-) -> dict[str, Any]:
-    """Create card data dictionary.
-
-    Args:
-        deck_id: UUID of parent deck
-        front_text: Greek text (front of card)
-        back_text_en: English translation (back of card)
-        pronunciation: Phonetic pronunciation guide
-        example_sentence: Example usage in Greek
-
-    Returns:
-        dict: Card data ready for Card model creation
-    """
-    return {
-        "deck_id": deck_id,
-        "front_text": front_text,
-        "back_text_en": back_text_en,
-        "pronunciation": pronunciation,
-        "example_sentence": example_sentence,
     }
 
 
@@ -303,87 +276,6 @@ async def create_deck(
     await db_session.commit()
     await db_session.refresh(deck)
     return deck
-
-
-async def create_card(
-    db_session: AsyncSession,
-    deck: Deck,
-    front_text: str = "Yeia",
-    back_text_en: str = "Hello",
-    pronunciation: str | None = "YAH",
-    example_sentence: str | None = None,
-) -> Card:
-    """Create a card in the database.
-
-    Args:
-        db_session: Database session
-        deck: Parent deck
-        front_text: Greek text
-        back_text_en: English translation
-        pronunciation: Phonetic guide
-        example_sentence: Example usage
-
-    Returns:
-        Card: Created card
-    """
-    card_data = create_card_data(
-        deck_id=deck.id,
-        front_text=front_text,
-        back_text_en=back_text_en,
-        pronunciation=pronunciation,
-        example_sentence=example_sentence,
-    )
-    card = Card(**card_data)
-    db_session.add(card)
-    await db_session.commit()
-    await db_session.refresh(card)
-    return card
-
-
-async def create_deck_with_vocabulary(
-    db_session: AsyncSession,
-    level: DeckLevel = DeckLevel.A1,
-    card_count: int | None = None,
-) -> DeckWithCards:
-    """Create a deck with vocabulary cards from the predefined data.
-
-    Args:
-        db_session: Database session
-        level: CEFR level (determines vocabulary set)
-        card_count: Number of cards (None = all available)
-
-    Returns:
-        DeckWithCards: Deck with its cards
-    """
-    # Select vocabulary based on level
-    vocabulary_map = {
-        DeckLevel.A1: GREEK_VOCABULARY_A1,
-        DeckLevel.A2: GREEK_VOCABULARY_A2,
-        DeckLevel.B1: GREEK_VOCABULARY_B1,
-    }
-    vocabulary = vocabulary_map.get(level, GREEK_VOCABULARY_A1)
-
-    # Limit card count if specified
-    if card_count is not None:
-        vocabulary = vocabulary[:card_count]
-
-    # Create deck
-    deck = await create_deck(db_session, level=level)
-
-    # Create cards
-    cards = []
-    for i, vocab in enumerate(vocabulary):
-        card = await create_card(
-            db_session,
-            deck,
-            front_text=vocab["front_text"],
-            back_text_en=vocab["back_text_en"],
-            pronunciation=vocab.get("pronunciation"),
-            example_sentence=vocab.get("example_sentence"),
-        )
-        cards.append(card)
-
-    return DeckWithCards(deck=deck, cards=cards)
 
 
 # =============================================================================
@@ -490,7 +382,7 @@ async def empty_deck(db_session: AsyncSession) -> AsyncGenerator[Deck, None]:
 
 
 # =============================================================================
-# Card Fixtures
+# Card Fixtures (V1 - stubs, Card model removed in V2)
 # =============================================================================
 
 
@@ -498,61 +390,24 @@ async def empty_deck(db_session: AsyncSession) -> AsyncGenerator[Deck, None]:
 async def test_card(
     db_session: AsyncSession,
     test_deck: Deck,
-) -> AsyncGenerator[Card, None]:
-    """Provide a single test card.
-
-    Creates a basic Greek greeting card.
-
-    Args:
-        db_session: Database session
-        test_deck: Parent deck fixture
-
-    Yields:
-        Card: Single test card
-    """
-    card = await create_card(
-        db_session,
-        test_deck,
-        front_text="Yeia sou",
-        back_text_en="Hello (informal)",
-        pronunciation="YAH-soo",
-        example_sentence="Yeia sou, ti kaneis?",
-    )
-    yield card
+) -> AsyncGenerator[Any, None]:
+    """Provide a single test card. (V1 - stub, Card model removed)"""
+    raise NotImplementedError("Card (V1) has been removed. Use CardRecord.")
+    yield  # type: ignore[misc]
 
 
 @pytest_asyncio.fixture
 async def test_cards(
     db_session: AsyncSession,
     test_deck: Deck,
-) -> AsyncGenerator[list[Card], None]:
-    """Provide a list of 5 test cards for a deck.
-
-    Creates cards from A1 vocabulary (first 5 words).
-
-    Args:
-        db_session: Database session
-        test_deck: Parent deck fixture
-
-    Yields:
-        list[Card]: List of 5 cards
-    """
-    cards = []
-    for i, vocab in enumerate(GREEK_VOCABULARY_A1[:5]):
-        card = await create_card(
-            db_session,
-            test_deck,
-            front_text=vocab["front_text"],
-            back_text_en=vocab["back_text_en"],
-            pronunciation=vocab.get("pronunciation"),
-            example_sentence=vocab.get("example_sentence"),
-        )
-        cards.append(card)
-    yield cards
+) -> AsyncGenerator[Any, None]:
+    """Provide a list of 5 test cards for a deck. (V1 - stub, Card model removed)"""
+    raise NotImplementedError("Card (V1) has been removed. Use CardRecord.")
+    yield  # type: ignore[misc]
 
 
 # =============================================================================
-# Composite Fixtures (Deck + Cards)
+# Composite Fixtures (Deck + Cards) (V1 - stubs, Card model removed in V2)
 # =============================================================================
 
 
@@ -560,68 +415,50 @@ async def test_cards(
 async def deck_with_cards(
     db_session: AsyncSession,
 ) -> AsyncGenerator[DeckWithCards, None]:
-    """Provide a deck with 5 A1 vocabulary cards.
-
-    This is the primary fixture for testing deck/card interactions.
-
-    Yields:
-        DeckWithCards: Named tuple with deck and cards
-    """
-    result = await create_deck_with_vocabulary(
-        db_session,
-        level=DeckLevel.A1,
-        card_count=5,
-    )
-    yield result
+    """Provide a deck with 5 A1 vocabulary cards. (V1 - stub, Card model removed)"""
+    raise NotImplementedError("Card (V1) has been removed. Use CardRecord.")
+    yield  # type: ignore[misc]
 
 
 @pytest_asyncio.fixture
 async def deck_with_all_a1_cards(
     db_session: AsyncSession,
 ) -> AsyncGenerator[DeckWithCards, None]:
-    """Provide a deck with all A1 vocabulary cards (10 cards).
-
-    Yields:
-        DeckWithCards: Deck with all A1 vocabulary
-    """
-    result = await create_deck_with_vocabulary(
-        db_session,
-        level=DeckLevel.A1,
-        card_count=None,  # All cards
-    )
-    yield result
+    """Provide a deck with all A1 vocabulary cards. (V1 - stub, Card model removed)"""
+    raise NotImplementedError("Card (V1) has been removed. Use CardRecord.")
+    yield  # type: ignore[misc]
 
 
 @pytest_asyncio.fixture
 async def deck_with_a2_cards(
     db_session: AsyncSession,
 ) -> AsyncGenerator[DeckWithCards, None]:
-    """Provide an A2-level deck with vocabulary cards.
-
-    Yields:
-        DeckWithCards: A2 deck with cards
-    """
-    result = await create_deck_with_vocabulary(
-        db_session,
-        level=DeckLevel.A2,
-    )
-    yield result
+    """Provide an A2-level deck with vocabulary cards. (V1 - stub, Card model removed)"""
+    raise NotImplementedError("Card (V1) has been removed. Use CardRecord.")
+    yield  # type: ignore[misc]
 
 
 @pytest_asyncio.fixture
 async def deck_with_b1_cards(
     db_session: AsyncSession,
 ) -> AsyncGenerator[DeckWithCards, None]:
-    """Provide a B1-level deck with vocabulary cards.
+    """Provide a B1-level deck with vocabulary cards. (V1 - stub, Card model removed)"""
+    raise NotImplementedError("Card (V1) has been removed. Use CardRecord.")
+    yield  # type: ignore[misc]
 
-    Yields:
-        DeckWithCards: B1 deck with cards
-    """
-    result = await create_deck_with_vocabulary(
-        db_session,
-        level=DeckLevel.B1,
-    )
-    yield result
+
+# =============================================================================
+# Large Dataset Fixtures (V1 - stubs, Card model removed in V2)
+# =============================================================================
+
+
+@pytest_asyncio.fixture
+async def deck_with_many_cards(
+    db_session: AsyncSession,
+) -> AsyncGenerator[DeckWithCards, None]:
+    """Provide a deck with 50 cards for pagination/performance testing. (V1 - stub)"""
+    raise NotImplementedError("Card (V1) has been removed. Use CardRecord.")
+    yield  # type: ignore[misc]
 
 
 @pytest_asyncio.fixture
@@ -662,39 +499,6 @@ async def two_decks(
         level=DeckLevel.A2,
     )
     yield deck1, deck2
-
-
-# =============================================================================
-# Large Dataset Fixtures (for performance testing)
-# =============================================================================
-
-
-@pytest_asyncio.fixture
-async def deck_with_many_cards(
-    db_session: AsyncSession,
-) -> AsyncGenerator[DeckWithCards, None]:
-    """Provide a deck with 50 cards for pagination/performance testing.
-
-    Yields:
-        DeckWithCards: Deck with 50 generated cards
-    """
-    deck = await create_deck(
-        db_session,
-        name="Large Test Deck",
-        description="Deck with many cards for testing",
-    )
-
-    cards = []
-    for i in range(50):
-        card = await create_card(
-            db_session,
-            deck,
-            front_text=f"Greek word {i}",
-            back_text_en=f"English translation {i}",
-        )
-        cards.append(card)
-
-    yield DeckWithCards(deck=deck, cards=cards)
 
 
 # =============================================================================

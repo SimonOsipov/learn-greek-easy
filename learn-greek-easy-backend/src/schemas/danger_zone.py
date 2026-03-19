@@ -13,9 +13,8 @@ class ResetProgressResult:
     Contains counts of deleted records for audit trail and user feedback.
     """
 
-    user_deck_progress_deleted: int
-    card_statistics_deleted: int
-    reviews_deleted: int
+    card_record_statistics_deleted: int
+    card_record_reviews_deleted: int
     user_xp_reset: bool
     xp_transactions_deleted: int
     user_achievements_deleted: int
@@ -29,9 +28,8 @@ class ResetProgressResult:
     def total_deleted(self) -> int:
         """Calculate total number of records deleted."""
         return (
-            self.user_deck_progress_deleted
-            + self.card_statistics_deleted
-            + self.reviews_deleted
+            self.card_record_statistics_deleted
+            + self.card_record_reviews_deleted
             + self.xp_transactions_deleted
             + self.user_achievements_deleted
             + self.culture_question_stats_deleted

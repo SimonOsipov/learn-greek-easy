@@ -18,13 +18,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.logging import get_logger
 from src.db.models import (
     Achievement,
-    CardStatistics,
     CardStatus,
     CultureAnswerHistory,
     CultureDeck,
     CultureQuestion,
     CultureQuestionStats,
-    Review,
     UserAchievement,
 )
 from src.services.achievement_definitions import (
@@ -280,32 +278,10 @@ class AchievementService:
         Returns:
             Dictionary of user stats
         """
-        # Cards learned (any status beyond NEW)
-        result = await self.db.execute(
-            select(func.count()).where(
-                CardStatistics.user_id == user_id,
-                CardStatistics.status != CardStatus.NEW,
-            )
-        )
-        cards_learned = result.scalar() or 0
-
-        # Cards mastered
-        result = await self.db.execute(
-            select(func.count()).where(
-                CardStatistics.user_id == user_id,
-                CardStatistics.status == CardStatus.MASTERED,
-            )
-        )
-        cards_mastered = result.scalar() or 0
-
-        # Total reviews
-        result = await self.db.execute(select(func.count()).where(Review.user_id == user_id))
-        total_reviews = result.scalar() or 0
-
         return {
-            "cards_learned": cards_learned,
-            "cards_mastered": cards_mastered,
-            "total_reviews": total_reviews,
+            "cards_learned": 0,
+            "cards_mastered": 0,
+            "total_reviews": 0,
             "current_streak": 0,  # Will be calculated by caller if needed
             "longest_streak": 0,
         }

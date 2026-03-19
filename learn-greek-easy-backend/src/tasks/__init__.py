@@ -50,7 +50,6 @@ from src.tasks.background import (
     log_analytics_task,
     process_answer_side_effects_task,
     process_culture_answer_full_async,
-    recalculate_progress_task,
 )
 from src.tasks.scheduler import get_scheduler, setup_scheduler, shutdown_scheduler
 
@@ -69,7 +68,6 @@ __all__ = [
     "log_analytics_task",
     "process_answer_side_effects_task",
     "process_culture_answer_full_async",
-    "recalculate_progress_task",
     # Scheduler (dedicated service)
     "get_scheduler",
     "setup_scheduler",

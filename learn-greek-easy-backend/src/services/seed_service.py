@@ -22,10 +22,7 @@ from src.db.models import (
     Achievement,
     AnnouncementCampaign,
     BillingCycle,
-    Card,
-    CardStatistics,
     CardStatus,
-    CardSystemVersion,
     ChangelogEntry,
     ChangelogTag,
     CultureAnswerHistory,
@@ -46,12 +43,10 @@ from src.db.models import (
     Notification,
     NotificationType,
     PartOfSpeech,
-    Review,
     SubscriptionStatus,
     SubscriptionTier,
     User,
     UserAchievement,
-    UserDeckProgress,
     UserSettings,
     UserXP,
     Visibility,
@@ -61,9 +56,7 @@ from src.db.models import (
 )
 from src.services.achievement_definitions import ACHIEVEMENTS as ACHIEVEMENT_DEFS
 from src.services.card_generator_service import CardGeneratorService
-from src.services.seed_grammar_data import ENRICHED_VOCABULARY
 from src.services.xp_constants import get_level_from_xp
-from src.utils.greek_text import extract_searchable_forms, generate_normalized_forms
 
 logger = get_logger(__name__)
 
@@ -1764,82 +1757,6 @@ class SeedService:
             errors = settings.get_seed_validation_errors()
             raise RuntimeError(f"Database seeding not allowed: {'; '.join(errors)}")
 
-    def _create_enriched_card(
-        self,
-        deck_id: UUID,
-        greek: str,
-        english: str,
-        part_of_speech: PartOfSpeech | None,
-        level: DeckLevel,
-        example_prefix: str = "Example sentence with",
-    ) -> Card:
-        """Create a Card with enriched grammar data from ENRICHED_VOCABULARY.
-
-        Looks up the Greek word in ENRICHED_VOCABULARY and populates:
-        - back_text_ru (Russian translation)
-        - Grammar JSONB fields (noun_data, verb_data, adjective_data, adverb_data)
-        - examples (structured example sentences)
-        - searchable_forms (all inflected word forms)
-        - searchable_forms_normalized (accent-stripped forms)
-        - level (from deck's level)
-
-        Falls back gracefully for words not in ENRICHED_VOCABULARY.
-
-        Args:
-            deck_id: UUID of the deck this card belongs to
-            greek: Greek word (front_text)
-            english: English translation (back_text_en)
-            part_of_speech: Part of speech enum value
-            level: CEFR level for the card
-            example_prefix: Prefix for fallback example_sentence
-
-        Returns:
-            Card instance with all enriched fields populated
-        """
-        # Look up enriched data (cast to dict for extract_searchable_forms)
-        enriched: dict[str, Any] = dict(ENRICHED_VOCABULARY.get(greek, {}))
-
-        # Extract grammar data fields
-        noun_data = enriched.get("noun_data")
-        verb_data = enriched.get("verb_data")
-        adjective_data = enriched.get("adjective_data")
-        adverb_data = enriched.get("adverb_data")
-
-        # Get examples from enriched data
-        examples = enriched.get("examples")
-
-        # Get Russian translation
-        back_text_ru = enriched.get("back_text_ru")
-
-        # Generate searchable forms using utility functions
-        searchable_forms = extract_searchable_forms(enriched, greek)
-        searchable_forms_normalized = generate_normalized_forms(searchable_forms)
-
-        # Build example_sentence for backward compatibility
-        # Use first example's Greek text if available, otherwise use fallback
-        if examples and len(examples) > 0:
-            example_sentence = examples[0].get("greek", f"{example_prefix} '{greek}'")
-        else:
-            example_sentence = f"{example_prefix} '{greek}'"
-
-        return Card(
-            deck_id=deck_id,
-            front_text=greek,
-            back_text_en=english,
-            back_text_ru=back_text_ru,
-            example_sentence=example_sentence,
-            pronunciation=f"/{greek}/",
-            part_of_speech=part_of_speech,
-            level=level,
-            noun_data=noun_data,
-            verb_data=verb_data,
-            adjective_data=adjective_data,
-            adverb_data=adverb_data,
-            examples=examples,
-            searchable_forms=searchable_forms,
-            searchable_forms_normalized=searchable_forms_normalized,
-        )
-
     # =====================
     # Truncation Methods
     # =====================
@@ -1947,29 +1864,16 @@ class SeedService:
                 level=level,
                 is_active=True,
                 is_premium=is_premium,
-                card_system=CardSystemVersion.V1,
             )
             self.db.add(deck)
             await self.db.flush()
-
-            # Create cards with enriched grammar data
-            for i, (greek, english, category, part_of_speech) in enumerate(words):
-                card = self._create_enriched_card(
-                    deck_id=deck.id,
-                    greek=greek,
-                    english=english,
-                    part_of_speech=part_of_speech,
-                    level=level,
-                    example_prefix="Example sentence with",
-                )
-                self.db.add(card)
 
             created_decks.append(
                 {
                     "id": str(deck.id),
                     "name": deck.name_en,
                     "level": level.value,
-                    "card_count": len(words),
+                    "card_count": 0,
                     "is_premium": is_premium,
                 }
             )
@@ -1979,7 +1883,7 @@ class SeedService:
         return {
             "success": True,
             "decks": created_decks,
-            "total_cards": sum(len(v) for v in self.VOCABULARY.values()),
+            "total_cards": 0,
         }
 
     async def seed_user_decks(self, users: list[dict[str, Any]]) -> dict[str, Any]:
@@ -2024,35 +1928,16 @@ class SeedService:
                     is_active=True,
                     is_premium=False,  # User decks are never premium
                     owner_id=user_id,
-                    card_system=CardSystemVersion.V1,
                 )
                 self.db.add(deck)
                 await self.db.flush()
-
-                # Create cards if card_count > 0
-                card_count = deck_config["card_count"]
-                if card_count > 0:
-                    # Reuse vocabulary from existing VOCABULARY dict
-                    vocab = self.VOCABULARY.get(deck_config["level"], [])
-                    words_to_use = vocab[:card_count]
-
-                    for i, (greek, english, category, part_of_speech) in enumerate(words_to_use):
-                        card = self._create_enriched_card(
-                            deck_id=deck.id,
-                            greek=greek,
-                            english=english,
-                            part_of_speech=part_of_speech,
-                            level=deck_config["level"],
-                            example_prefix="User example:",
-                        )
-                        self.db.add(card)
 
                 created_decks.append(
                     {
                         "id": str(deck.id),
                         "name": deck.name_en,
                         "level": deck_config["level"].value,
-                        "card_count": card_count,
+                        "card_count": 0,
                         "owner_id": str(user_id),
                         "owner_email": email,
                     }
@@ -2064,170 +1949,7 @@ class SeedService:
             "success": True,
             "decks": created_decks,
             "total_user_decks": len(created_decks),
-            "total_user_cards": sum(d["card_count"] for d in created_decks),
-        }
-
-    # =====================
-    # Progress Seeding
-    # =====================
-
-    async def seed_card_statistics(
-        self,
-        user_id: UUID,
-        deck_id: UUID,
-        progress_percent: int = 50,
-    ) -> dict[str, Any]:
-        """Create card statistics for a user's deck progress.
-
-        Generates SM-2 spaced repetition data simulating realistic
-        learning progress at the specified percentage.
-
-        Args:
-            user_id: User to create statistics for
-            deck_id: Deck to create statistics for
-            progress_percent: 0-100, how much of deck is "learned"
-
-        Returns:
-            dict with statistics summary
-
-        Raises:
-            RuntimeError: If seeding not allowed
-        """
-        self._check_can_seed()
-
-        # Get cards for the deck
-        result = await self.db.execute(
-            select(Card.id).where(Card.deck_id == deck_id).order_by(Card.created_at)
-        )
-        card_ids = [row[0] for row in result.fetchall()]
-
-        if not card_ids:
-            return {"success": True, "stats_created": 0}
-
-        # Calculate how many cards should be at each stage
-        total_cards = len(card_ids)
-        learned_count = int(total_cards * progress_percent / 100)
-        learning_count = min(3, total_cards - learned_count)
-
-        stats_created = 0
-        today = date.today()
-        now = datetime.now(timezone.utc)
-
-        for i, card_id in enumerate(card_ids):
-            if i < learned_count:
-                # Mastered cards
-                status = CardStatus.MASTERED
-                easiness_factor = 2.5
-                interval = 30
-                repetitions = 5
-                next_review = today + timedelta(days=interval)
-            elif i < learned_count + learning_count:
-                # Learning cards
-                status = CardStatus.LEARNING
-                easiness_factor = 2.5
-                interval = 1
-                repetitions = 1
-                next_review = today + timedelta(days=1)
-            else:
-                # New cards
-                status = CardStatus.NEW
-                easiness_factor = 2.5
-                interval = 0
-                repetitions = 0
-                next_review = today
-
-            stat = CardStatistics(
-                user_id=user_id,
-                card_id=card_id,
-                status=status,
-                easiness_factor=easiness_factor,
-                interval=interval,
-                repetitions=repetitions,
-                next_review_date=next_review,
-            )
-            self.db.add(stat)
-            stats_created += 1
-
-        # Create/update user deck progress
-        progress = UserDeckProgress(
-            user_id=user_id,
-            deck_id=deck_id,
-            cards_studied=learned_count + learning_count,
-            cards_mastered=learned_count,
-            last_studied_at=now,
-        )
-        self.db.add(progress)
-
-        await self.db.flush()
-
-        return {
-            "success": True,
-            "stats_created": stats_created,
-            "mastered": learned_count,
-            "learning": learning_count,
-            "new": total_cards - learned_count - learning_count,
-        }
-
-    # =====================
-    # Review History Seeding
-    # =====================
-
-    async def seed_reviews(
-        self,
-        user_id: UUID,
-        card_id: UUID,
-        review_count: int = 5,
-    ) -> dict[str, Any]:
-        """Create review history for a card.
-
-        Generates realistic review history with improving ratings
-        over time (simulating learning progression).
-
-        Args:
-            user_id: User who reviewed
-            card_id: Card that was reviewed
-            review_count: Number of reviews to create
-
-        Returns:
-            dict with reviews summary
-
-        Raises:
-            RuntimeError: If seeding not allowed
-        """
-        self._check_can_seed()
-
-        reviews_created = []
-        now = datetime.now(timezone.utc)
-
-        # Simulate learning progression: ratings improve over time
-        # SM-2 quality ratings: 0-5 (stored as int in Review.quality)
-        rating_progression = [3, 3, 4, 4, 5]  # Hard → Hesitant → Perfect
-
-        for i in range(min(review_count, len(rating_progression))):
-            review_date = now - timedelta(days=(review_count - i) * 3)
-            quality = rating_progression[i]
-
-            review = Review(
-                user_id=user_id,
-                card_id=card_id,
-                quality=quality,
-                time_taken=max(5, 20 - (i * 3)),  # Faster over time (seconds)
-                reviewed_at=review_date,
-            )
-            self.db.add(review)
-            reviews_created.append(
-                {
-                    "quality": quality,
-                    "date": review_date.isoformat(),
-                }
-            )
-
-        await self.db.flush()
-
-        return {
-            "success": True,
-            "reviews_created": len(reviews_created),
-            "reviews": reviews_created,
+            "total_user_cards": 0,
         }
 
     # =====================
@@ -3749,11 +3471,9 @@ class SeedService:
         self._check_can_seed()
 
         now = datetime.now(timezone.utc)
+        today = date.today()
         created_users: list[dict[str, Any]] = []
         data_counts: dict[str, int] = {
-            "deck_progress": 0,
-            "card_statistics": 0,
-            "reviews": 0,
             "xp_transactions": 0,
             "achievements": 0,
             "mock_exam_sessions": 0,
@@ -3775,25 +3495,15 @@ class SeedService:
                 user_id = existing_user.id
 
                 # Delete in FK-safe order (children first)
-                # 1. Reviews
-                await self.db.execute(delete(Review).where(Review.user_id == user_id))
-                # 2. Card statistics
-                await self.db.execute(
-                    delete(CardStatistics).where(CardStatistics.user_id == user_id)
-                )
-                # 3. User deck progress
-                await self.db.execute(
-                    delete(UserDeckProgress).where(UserDeckProgress.user_id == user_id)
-                )
-                # 4. Culture answer history
+                # 1. Culture answer history
                 await self.db.execute(
                     delete(CultureAnswerHistory).where(CultureAnswerHistory.user_id == user_id)
                 )
-                # 5. Culture question stats
+                # 2. Culture question stats
                 await self.db.execute(
                     delete(CultureQuestionStats).where(CultureQuestionStats.user_id == user_id)
                 )
-                # 6. Mock exam answers (via session cascade won't work, delete explicitly)
+                # 3. Mock exam answers (via session cascade won't work, delete explicitly)
                 await self.db.execute(
                     delete(MockExamAnswer).where(
                         MockExamAnswer.session_id.in_(
@@ -3801,23 +3511,23 @@ class SeedService:
                         )
                     )
                 )
-                # 7. Mock exam sessions
+                # 4. Mock exam sessions
                 await self.db.execute(
                     delete(MockExamSession).where(MockExamSession.user_id == user_id)
                 )
-                # 8. XP transactions
+                # 5. XP transactions
                 await self.db.execute(delete(XPTransaction).where(XPTransaction.user_id == user_id))
-                # 9. User achievements
+                # 6. User achievements
                 await self.db.execute(
                     delete(UserAchievement).where(UserAchievement.user_id == user_id)
                 )
-                # 10. Notifications
+                # 7. Notifications
                 await self.db.execute(delete(Notification).where(Notification.user_id == user_id))
-                # 11. User XP
+                # 8. User XP
                 await self.db.execute(delete(UserXP).where(UserXP.user_id == user_id))
-                # 12. User settings
+                # 9. User settings
                 await self.db.execute(delete(UserSettings).where(UserSettings.user_id == user_id))
-                # 13. Finally, delete the user
+                # 10. Finally, delete the user
                 await self.db.execute(delete(User).where(User.id == user_id))
                 await self.db.flush()
 
@@ -3851,80 +3561,6 @@ class SeedService:
 
             # Create progress data for the "reset" user
             if user_data.get("has_progress"):
-                # Get existing decks (require /seed/content called first)
-                decks_result = await self.db.execute(select(Deck).order_by(Deck.level).limit(2))
-                decks = decks_result.scalars().all()
-
-                if len(decks) < 2:
-                    user_info["error"] = "Insufficient decks. Run /seed/content first."
-                    created_users.append(user_info)
-                    continue
-
-                # Create UserDeckProgress for 2 decks
-                for deck in decks:
-                    deck_progress = UserDeckProgress(
-                        user_id=user.id,
-                        deck_id=deck.id,
-                        cards_studied=5,
-                        cards_mastered=3,
-                        total_reviews=15,
-                        current_streak=3,
-                        longest_streak=5,
-                        last_studied_at=now - timedelta(hours=2),
-                    )
-                    self.db.add(deck_progress)
-                    data_counts["deck_progress"] += 1
-
-                # Get cards from those decks for statistics
-                cards_result = await self.db.execute(
-                    select(Card).where(Card.deck_id.in_([d.id for d in decks])).limit(10)
-                )
-                cards = cards_result.scalars().all()
-
-                # Create CardStatistics for cards in those decks
-                today = date.today()
-                for i, card in enumerate(cards):
-                    # 60% mastered, 20% learning, 20% new
-                    if i < 6:
-                        status = CardStatus.MASTERED
-                        ef = 2.8
-                        interval = 21
-                        reps = 5
-                    elif i < 8:
-                        status = CardStatus.LEARNING
-                        ef = 2.3
-                        interval = 3
-                        reps = 2
-                    else:
-                        status = CardStatus.NEW
-                        ef = 2.5
-                        interval = 0
-                        reps = 0
-
-                    card_stat = CardStatistics(
-                        user_id=user.id,
-                        card_id=card.id,
-                        easiness_factor=ef,
-                        interval=interval,
-                        repetitions=reps,
-                        next_review_date=today + timedelta(days=interval),
-                        status=status,
-                    )
-                    self.db.add(card_stat)
-                    data_counts["card_statistics"] += 1
-
-                # Create Reviews for studied cards
-                for card in cards[:8]:  # Reviews for non-new cards
-                    for j in range(5):  # 5 reviews per card
-                        review = Review(
-                            user_id=user.id,
-                            card_id=card.id,
-                            rating=4 if j % 2 == 0 else 3,  # Mix of ratings
-                            reviewed_at=now - timedelta(days=10 - j * 2),
-                        )
-                        self.db.add(review)
-                        data_counts["reviews"] += 1
-
                 # Create UserXP with 500 XP, level 3
                 user_xp = UserXP(
                     user_id=user.id,
@@ -4287,16 +3923,7 @@ class SeedService:
         self._check_can_seed()
 
         # Delete existing E2E test decks (idempotent)
-        # First delete cards in those decks (FK constraint)
-        existing_decks = await self.db.execute(
-            select(Deck).where(
-                Deck.name_en.in_(
-                    [self.ADMIN_CARDS_DECK_NAME_EN, self.ADMIN_CARDS_EMPTY_DECK_NAME_EN]
-                )
-            )
-        )
-        for deck in existing_decks.scalars().all():
-            await self.db.execute(delete(Card).where(Card.deck_id == deck.id))
+        # Delete existing admin card decks if present
         await self.db.execute(
             delete(Deck).where(
                 Deck.name_en.in_(
@@ -4305,7 +3932,7 @@ class SeedService:
             )
         )
 
-        # Create main test deck with 10 cards
+        # Create main test deck
         main_deck = Deck(
             name_en=self.ADMIN_CARDS_DECK_NAME_EN,
             name_el=self.ADMIN_CARDS_DECK_NAME_EL,
@@ -4316,63 +3943,8 @@ class SeedService:
             level=DeckLevel.A1,
             is_active=True,
             is_premium=False,
-            card_system=CardSystemVersion.V1,
         )
         self.db.add(main_deck)
-        await self.db.flush()
-
-        # Create cards
-        created_cards = []
-        for i, card_data in enumerate(self.ADMIN_CARDS):
-            # Extract grammar data (generate searchable forms if grammar data present)
-            noun_data = card_data.get("noun_data")
-            verb_data = card_data.get("verb_data")
-            adjective_data = card_data.get("adjective_data")
-            adverb_data = card_data.get("adverb_data")
-            examples = card_data.get("examples")
-
-            # Generate searchable forms from grammar data
-            enriched_data: dict[str, Any] = {}
-            if noun_data:
-                enriched_data["noun_data"] = noun_data
-            if verb_data:
-                enriched_data["verb_data"] = verb_data
-            if adjective_data:
-                enriched_data["adjective_data"] = adjective_data
-            if adverb_data:
-                enriched_data["adverb_data"] = adverb_data
-
-            searchable_forms = extract_searchable_forms(enriched_data, card_data["front_text"])
-            searchable_forms_normalized = generate_normalized_forms(searchable_forms)
-
-            card = Card(
-                deck_id=main_deck.id,
-                front_text=card_data["front_text"],
-                back_text_en=card_data["back_text_en"],
-                back_text_ru=card_data.get("back_text_ru"),
-                pronunciation=card_data.get("pronunciation"),
-                part_of_speech=card_data.get("part_of_speech"),
-                level=DeckLevel.A1,
-                noun_data=noun_data,
-                verb_data=verb_data,
-                adjective_data=adjective_data,
-                adverb_data=adverb_data,
-                examples=examples,
-                searchable_forms=searchable_forms if searchable_forms else None,
-                searchable_forms_normalized=(
-                    searchable_forms_normalized if searchable_forms_normalized else None
-                ),
-            )
-            self.db.add(card)
-            created_cards.append(
-                {
-                    "front_text": card_data["front_text"],
-                    "back_text_en": card_data["back_text_en"],
-                    "has_grammar": bool(noun_data or verb_data or adjective_data or adverb_data),
-                    "has_examples": bool(examples),
-                }
-            )
-
         await self.db.flush()
 
         # Create empty test deck for first card creation test
@@ -4386,7 +3958,6 @@ class SeedService:
             level=DeckLevel.A1,
             is_active=True,
             is_premium=False,
-            card_system=CardSystemVersion.V1,
         )
         self.db.add(empty_deck)
         await self.db.flush()
@@ -4394,18 +3965,18 @@ class SeedService:
         return {
             "success": True,
             "decks_created": 2,
-            "cards_created": len(created_cards),
+            "cards_created": 0,
             "main_deck": {
                 "id": str(main_deck.id),
                 "name": self.ADMIN_CARDS_DECK_NAME_EN,
-                "card_count": len(created_cards),
+                "card_count": 0,
             },
             "empty_deck": {
                 "id": str(empty_deck.id),
                 "name": self.ADMIN_CARDS_EMPTY_DECK_NAME_EN,
                 "card_count": 0,
             },
-            "cards": created_cards,
+            "cards": [],
         }
 
     async def seed_subscription_users(self) -> dict[str, Any]:
@@ -4737,38 +4308,12 @@ class SeedService:
             if user_dict["email"] == "e2e_learner@test.com":
                 learner_id = UUID(user_dict["id"])
 
-        a1_deck_id = None
-        for deck in content_result["decks"]:
-            if deck["level"] == "A1":
-                a1_deck_id = UUID(deck["id"])
-                break
-
         stats_result: dict[str, Any] = {"success": True, "stats_created": 0}
         reviews_result: dict[str, Any] = {"success": True, "reviews_created": 0}
         notifications_result: dict[str, Any] = {
             "success": True,
             "notifications_created": 0,
         }
-
-        if learner_id and a1_deck_id:
-            # Create 60% progress on A1 deck for learner
-            stats_result = await self.seed_card_statistics(
-                user_id=learner_id,
-                deck_id=a1_deck_id,
-                progress_percent=60,
-            )
-
-            # Get first card for review history
-            result = await self.db.execute(
-                select(Card.id).where(Card.deck_id == a1_deck_id).limit(1)
-            )
-            row = result.fetchone()
-            if row:
-                reviews_result = await self.seed_reviews(
-                    user_id=learner_id,
-                    card_id=row[0],
-                    review_count=5,
-                )
 
         # Step 6: Create notifications for learner user
         if learner_id:
@@ -5038,7 +4583,6 @@ class SeedService:
             level=DeckLevel.A1,
             is_active=True,
             is_premium=False,
-            card_system=CardSystemVersion.V2,
         )
         self.db.add(v2_nouns_deck)
 
@@ -5053,7 +4597,6 @@ class SeedService:
             level=DeckLevel.A2,
             is_active=True,
             is_premium=False,
-            card_system=CardSystemVersion.V2,
         )
         self.db.add(v2_verbs_deck)
 
@@ -5068,7 +4611,6 @@ class SeedService:
             level=DeckLevel.A2,
             is_active=True,
             is_premium=False,
-            card_system=CardSystemVersion.V2,
         )
         self.db.add(v2_mixed_deck)
         await self.db.flush()

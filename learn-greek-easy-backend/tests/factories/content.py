@@ -18,10 +18,12 @@ Usage:
     deck, cards = await DeckFactory.create_with_cards(card_count=10)
 """
 
+from __future__ import annotations
+
 import factory
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import Card, CardSystemVersion, Deck, DeckLevel
+from src.db.models import CardRecord, Deck, DeckLevel
 from tests.factories.base import BaseFactory, fake
 
 
@@ -71,7 +73,6 @@ class DeckFactory(BaseFactory):
     level = DeckLevel.A1
     is_active = True
     is_premium = False
-    card_system = CardSystemVersion.V1  # Factory pairs with CardFactory (V1 Card records)
 
     class Params:
         """Factory traits for common variations."""
@@ -153,7 +154,7 @@ class DeckFactory(BaseFactory):
         session: AsyncSession | None = None,
         card_count: int = 5,
         **kwargs,
-    ) -> tuple[Deck, list[Card]]:
+    ) -> tuple[Deck, list[CardRecord]]:
         """Create a deck with multiple cards.
 
         Args:
@@ -181,16 +182,15 @@ class DeckFactory(BaseFactory):
 
 
 class CardFactory(BaseFactory):
-    """Factory for Card model.
+    """Factory for Card model (V1 - deprecated, use CardRecordFactory for V2).
 
-    Creates flashcards with Greek vocabulary content.
-
-    Example:
-        card = await CardFactory.create(deck_id=deck.id)
+    NOTE: Card model was replaced by CardRecord in V2. This factory is a stub
+    to prevent collection errors. Tests using CardFactory will fail at runtime.
+    See TASK-164 for full test cleanup.
     """
 
     class Meta:
-        model = Card
+        model = CardRecord
 
     # Required: Must be provided
     deck_id = None  # Must be set explicitly
@@ -241,7 +241,7 @@ class CardFactory(BaseFactory):
         level: str = "A1",
         session: AsyncSession | None = None,
         **kwargs,
-    ) -> Card:
+    ) -> CardRecord:
         """Create a card with level-appropriate vocabulary.
 
         Args:

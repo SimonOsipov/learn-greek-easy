@@ -25,7 +25,6 @@ class TestModuleImports:
             log_analytics_task,
             process_answer_side_effects_task,
             process_culture_answer_full_async,
-            recalculate_progress_task,
         )
 
         assert callable(check_achievements_task)
@@ -34,7 +33,6 @@ class TestModuleImports:
         assert callable(log_analytics_task)
         assert callable(process_answer_side_effects_task)
         assert callable(process_culture_answer_full_async)
-        assert callable(recalculate_progress_task)
         assert isinstance(ANALYTICS_EVENTS, dict)
 
     def test_import_from_background_module(self):
@@ -47,7 +45,6 @@ class TestModuleImports:
             log_analytics_task,
             process_answer_side_effects_task,
             process_culture_answer_full_async,
-            recalculate_progress_task,
         )
 
         assert callable(check_achievements_task)
@@ -56,7 +53,6 @@ class TestModuleImports:
         assert callable(log_analytics_task)
         assert callable(process_answer_side_effects_task)
         assert callable(process_culture_answer_full_async)
-        assert callable(recalculate_progress_task)
         assert isinstance(ANALYTICS_EVENTS, dict)
 
     def test_all_exports_defined(self):
@@ -78,7 +74,6 @@ class TestModuleImports:
             "log_analytics_task",
             "process_answer_side_effects_task",
             "process_culture_answer_full_async",
-            "recalculate_progress_task",
             # Scheduler (dedicated service)
             "get_scheduler",
             "setup_scheduler",
@@ -127,12 +122,6 @@ class TestPlaceholderFunctions:
 
         assert asyncio.iscoroutinefunction(log_analytics_task)
 
-    def test_recalculate_progress_task_is_async(self):
-        """Test that recalculate_progress_task is an async function."""
-        from src.tasks.background import recalculate_progress_task
-
-        assert asyncio.iscoroutinefunction(recalculate_progress_task)
-
     def test_check_achievements_task_signature(self):
         """Test that check_achievements_task has correct signature."""
         from src.tasks.background import check_achievements_task
@@ -156,14 +145,6 @@ class TestPlaceholderFunctions:
         sig = inspect.signature(log_analytics_task)
         params = list(sig.parameters.keys())
         assert params == ["event_type", "user_id", "data"]
-
-    def test_recalculate_progress_task_signature(self):
-        """Test that recalculate_progress_task has correct signature."""
-        from src.tasks.background import recalculate_progress_task
-
-        sig = inspect.signature(recalculate_progress_task)
-        params = list(sig.parameters.keys())
-        assert params == ["user_id", "deck_id", "db_url"]
 
 
 class TestPlaceholderExecution:
@@ -205,18 +186,6 @@ class TestPlaceholderExecution:
 
         # Should not raise any exception
         await log_analytics_task("review_completed", user_id, data)
-
-    @pytest.mark.asyncio
-    async def test_recalculate_progress_task_executes(self):
-        """Test that recalculate_progress_task can be called."""
-        from src.tasks.background import recalculate_progress_task
-
-        user_id = uuid4()
-        deck_id = uuid4()
-        db_url = "postgresql+asyncpg://test:test@localhost/test"
-
-        # Should not raise any exception
-        await recalculate_progress_task(user_id, deck_id, db_url)
 
 
 class TestConfigSettings:
@@ -276,17 +245,6 @@ class TestLoggingBehavior:
                 assert "disabled" in mock_logger.debug.call_args[0][0].lower()
 
     @pytest.mark.asyncio
-    async def test_recalculate_progress_logs_when_disabled(self):
-        """Test that recalculate_progress_task logs when disabled."""
-        from src.tasks.background import recalculate_progress_task
-
-        with patch.object(settings, "feature_background_tasks", False):
-            with patch("src.tasks.background.logger") as mock_logger:
-                await recalculate_progress_task(uuid4(), uuid4(), "test_url")
-                mock_logger.debug.assert_called_once()
-                assert "disabled" in mock_logger.debug.call_args[0][0].lower()
-
-    @pytest.mark.asyncio
     async def test_check_achievements_logs_when_enabled(self):
         """Test that check_achievements_task logs execution when enabled."""
         from src.tasks.background import check_achievements_task
@@ -308,24 +266,14 @@ class TestLoggingBehavior:
                     mock_session_factory.return_value.__aexit__ = AsyncMock()
                     mock_sessionmaker.return_value = mock_session_factory
 
-                    with patch(
-                        "src.services.progress_service.ProgressService"
-                    ) as mock_service_class:
-                        mock_service = AsyncMock()
-                        mock_service.get_achievements.return_value = MagicMock(
-                            achievements=[],
-                            total_points=0,
+                    with patch("src.tasks.background.logger") as mock_logger:
+                        await check_achievements_task(
+                            user_id, "postgresql+asyncpg://test:test@localhost/test"
                         )
-                        mock_service_class.return_value = mock_service
-
-                        with patch("src.tasks.background.logger") as mock_logger:
-                            await check_achievements_task(
-                                user_id, "postgresql+asyncpg://test:test@localhost/test"
-                            )
-                            # Should log info on start
-                            mock_logger.info.assert_called()
-                            # Verify engine was disposed
-                            mock_engine.dispose.assert_called_once()
+                        # Should log info on start
+                        mock_logger.info.assert_called()
+                        # Verify engine was disposed
+                        mock_engine.dispose.assert_called_once()
 
 
 class TestCheckAchievementsTaskImplementation:
@@ -346,33 +294,15 @@ class TestCheckAchievementsTaskImplementation:
                 with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
                     mock_session = AsyncMock()
                     mock_session_factory = MagicMock()
-                    mock_session_factory.return_value.__aenter__ = AsyncMock(
-                        return_value=mock_session
-                    )
-                    mock_session_factory.return_value.__aexit__ = AsyncMock()
+                    mock_session_factory.return_value = mock_session
                     mock_sessionmaker.return_value = mock_session_factory
 
-                    with patch(
-                        "src.services.progress_service.ProgressService"
-                    ) as mock_service_class:
-                        mock_service = AsyncMock()
-                        mock_service.get_achievements.return_value = MagicMock(
-                            achievements=[
-                                MagicMock(unlocked=True),
-                                MagicMock(unlocked=False),
-                            ],
-                            total_points=100,
-                        )
-                        mock_service_class.return_value = mock_service
+                    await check_achievements_task(
+                        user_id, "postgresql+asyncpg://test:test@localhost/test"
+                    )
 
-                        await check_achievements_task(
-                            user_id, "postgresql+asyncpg://test:test@localhost/test"
-                        )
-
-                        # Verify service was called with correct user_id
-                        mock_service.get_achievements.assert_called_once_with(user_id)
-                        # Verify engine was disposed
-                        mock_engine.dispose.assert_called_once()
+                    # Verify engine was disposed
+                    mock_engine.dispose.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_check_achievements_handles_database_error(self):
@@ -397,8 +327,8 @@ class TestCheckAchievementsTaskImplementation:
                     assert "Achievement check failed" in error_call[0][0]
 
     @pytest.mark.asyncio
-    async def test_check_achievements_handles_service_error(self):
-        """Test that service errors are handled gracefully."""
+    async def test_check_achievements_handles_session_error(self):
+        """Test that session errors are handled gracefully."""
         from src.tasks.background import check_achievements_task
 
         user_id = uuid4()
@@ -409,28 +339,18 @@ class TestCheckAchievementsTaskImplementation:
                 mock_engine_creator.return_value = mock_engine
 
                 with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    mock_session = AsyncMock()
-                    mock_session_factory = MagicMock(return_value=mock_session)
-                    mock_sessionmaker.return_value = mock_session_factory
+                    mock_sessionmaker.side_effect = Exception("Session creation failed")
 
                     with patch("src.tasks.background.logger") as mock_logger:
-                        # Patch at the source module since it's imported locally
-                        with patch(
-                            "src.services.progress_service.ProgressService"
-                        ) as mock_service_class:
-                            mock_service_class.return_value.get_achievements = AsyncMock(
-                                side_effect=Exception("Service error")
-                            )
+                        # Should not raise
+                        await check_achievements_task(
+                            user_id, "postgresql+asyncpg://test:test@localhost/test"
+                        )
 
-                            # Should not raise
-                            await check_achievements_task(
-                                user_id, "postgresql+asyncpg://test:test@localhost/test"
-                            )
-
-                            # Should log the error
-                            mock_logger.error.assert_called()
-                            # Engine should still be disposed
-                            mock_engine.dispose.assert_called_once()
+                        # Should log the error
+                        mock_logger.error.assert_called()
+                        # Engine should still be disposed
+                        mock_engine.dispose.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_check_achievements_disposes_engine_on_success(self):
@@ -447,28 +367,15 @@ class TestCheckAchievementsTaskImplementation:
                 with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
                     mock_session = AsyncMock()
                     mock_session_factory = MagicMock()
-                    mock_session_factory.return_value.__aenter__ = AsyncMock(
-                        return_value=mock_session
-                    )
-                    mock_session_factory.return_value.__aexit__ = AsyncMock()
+                    mock_session_factory.return_value = mock_session
                     mock_sessionmaker.return_value = mock_session_factory
 
-                    with patch(
-                        "src.services.progress_service.ProgressService"
-                    ) as mock_service_class:
-                        mock_service = AsyncMock()
-                        mock_service.get_achievements.return_value = MagicMock(
-                            achievements=[],
-                            total_points=0,
-                        )
-                        mock_service_class.return_value = mock_service
+                    await check_achievements_task(
+                        user_id, "postgresql+asyncpg://test:test@localhost/test"
+                    )
 
-                        await check_achievements_task(
-                            user_id, "postgresql+asyncpg://test:test@localhost/test"
-                        )
-
-                        # Verify engine.dispose() was called
-                        mock_engine.dispose.assert_awaited_once()
+                    # Verify engine.dispose() was called
+                    mock_engine.dispose.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_check_achievements_disposes_engine_on_error(self):
@@ -509,30 +416,17 @@ class TestCheckAchievementsTaskImplementation:
                 with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
                     mock_session = AsyncMock()
                     mock_session_factory = MagicMock()
-                    mock_session_factory.return_value.__aenter__ = AsyncMock(
-                        return_value=mock_session
-                    )
-                    mock_session_factory.return_value.__aexit__ = AsyncMock()
+                    mock_session_factory.return_value = mock_session
                     mock_sessionmaker.return_value = mock_session_factory
 
-                    with patch(
-                        "src.services.progress_service.ProgressService"
-                    ) as mock_service_class:
-                        mock_service = AsyncMock()
-                        mock_service.get_achievements.return_value = MagicMock(
-                            achievements=[],
-                            total_points=0,
-                        )
-                        mock_service_class.return_value = mock_service
+                    await check_achievements_task(user_id, db_url)
 
-                        await check_achievements_task(user_id, db_url)
-
-                        # Verify create_async_engine was called with pool_pre_ping and connect_args
-                        mock_engine_creator.assert_called_once_with(
-                            db_url,
-                            pool_pre_ping=True,
-                            connect_args={},
-                        )
+                    # Verify create_async_engine was called with pool_pre_ping and connect_args
+                    mock_engine_creator.assert_called_once_with(
+                        db_url,
+                        pool_pre_ping=True,
+                        connect_args={},
+                    )
 
     @pytest.mark.asyncio
     async def test_check_achievements_logs_start_and_completion(self):
@@ -549,43 +443,24 @@ class TestCheckAchievementsTaskImplementation:
                 with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
                     mock_session = AsyncMock()
                     mock_session_factory = MagicMock()
-                    mock_session_factory.return_value.__aenter__ = AsyncMock(
-                        return_value=mock_session
-                    )
-                    mock_session_factory.return_value.__aexit__ = AsyncMock()
+                    mock_session_factory.return_value = mock_session
                     mock_sessionmaker.return_value = mock_session_factory
 
-                    with patch(
-                        "src.services.progress_service.ProgressService"
-                    ) as mock_service_class:
-                        mock_service = AsyncMock()
-                        mock_service.get_achievements.return_value = MagicMock(
-                            achievements=[
-                                MagicMock(unlocked=True),
-                                MagicMock(unlocked=True),
-                                MagicMock(unlocked=False),
-                            ],
-                            total_points=150,
+                    with patch("src.tasks.background.logger") as mock_logger:
+                        await check_achievements_task(
+                            user_id, "postgresql+asyncpg://test:test@localhost/test"
                         )
-                        mock_service_class.return_value = mock_service
 
-                        with patch("src.tasks.background.logger") as mock_logger:
-                            await check_achievements_task(
-                                user_id, "postgresql+asyncpg://test:test@localhost/test"
-                            )
+                        # Should have at least 2 info logs (start and completion)
+                        assert mock_logger.info.call_count >= 2
 
-                            # Should have at least 2 info logs (start and completion)
-                            assert mock_logger.info.call_count >= 2
+                        # Check start log
+                        start_call = mock_logger.info.call_args_list[0]
+                        assert "Starting achievement check" in start_call[0][0]
 
-                            # Check start log
-                            start_call = mock_logger.info.call_args_list[0]
-                            assert "Starting achievement check" in start_call[0][0]
-
-                            # Check completion log
-                            completion_call = mock_logger.info.call_args_list[1]
-                            assert "Achievement check complete" in completion_call[0][0]
-                            assert completion_call[1]["extra"]["total_unlocked"] == 2
-                            assert completion_call[1]["extra"]["total_points"] == 150
+                        # Check completion log
+                        completion_call = mock_logger.info.call_args_list[1]
+                        assert "Achievement check complete" in completion_call[0][0]
 
 
 class TestInvalidateCacheTaskImplementation:
@@ -1085,469 +960,6 @@ class TestAnalyticsEventsConstant:
             ), f"Event type '{event_type}' should be lowercase"
 
 
-class TestRecalculateProgressTaskImplementation:
-    """Test the full implementation of recalculate_progress_task."""
-
-    @pytest.mark.asyncio
-    async def test_recalculate_progress_with_changes(self):
-        """Test that progress is updated when values differ."""
-        from src.tasks.background import recalculate_progress_task
-
-        user_id = uuid4()
-        deck_id = uuid4()
-
-        with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine = AsyncMock()
-                mock_engine_creator.return_value = mock_engine
-
-                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    mock_session = AsyncMock()
-                    mock_session_factory = MagicMock(return_value=mock_session)
-                    mock_sessionmaker.return_value = mock_session_factory
-
-                    with patch("src.repositories.CardStatisticsRepository") as mock_stats_class:
-                        mock_stats_repo = AsyncMock()
-                        # Mock status counts
-                        mock_stats_repo.count_by_status.return_value = {
-                            "learning": 5,
-                            "review": 10,
-                            "mastered": 3,
-                        }
-                        mock_stats_class.return_value = mock_stats_repo
-
-                        with patch(
-                            "src.repositories.UserDeckProgressRepository"
-                        ) as mock_progress_class:
-                            mock_progress_repo = AsyncMock()
-                            # Mock progress record with different values
-                            mock_progress = MagicMock()
-                            mock_progress.cards_studied = 10  # Old value
-                            mock_progress.cards_mastered = 1  # Old value
-                            mock_progress_repo.get_or_create.return_value = mock_progress
-                            mock_progress_class.return_value = mock_progress_repo
-
-                            await recalculate_progress_task(
-                                user_id, deck_id, "postgresql+asyncpg://test:test@localhost/test"
-                            )
-
-                            # Should update to new values (5 + 10 + 3 = 18)
-                            assert mock_progress.cards_studied == 18
-                            assert mock_progress.cards_mastered == 3
-
-                            # Verify session.commit was called
-                            mock_session.commit.assert_awaited_once()
-
-                            # Verify engine was disposed
-                            mock_engine.dispose.assert_awaited_once()
-
-    @pytest.mark.asyncio
-    async def test_recalculate_progress_no_changes(self):
-        """Test that progress is not updated when values match."""
-        from src.tasks.background import recalculate_progress_task
-
-        user_id = uuid4()
-        deck_id = uuid4()
-
-        with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine = AsyncMock()
-                mock_engine_creator.return_value = mock_engine
-
-                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    mock_session = AsyncMock()
-                    mock_session_factory = MagicMock(return_value=mock_session)
-                    mock_sessionmaker.return_value = mock_session_factory
-
-                    with patch("src.repositories.CardStatisticsRepository") as mock_stats_class:
-                        mock_stats_repo = AsyncMock()
-                        # Mock status counts
-                        mock_stats_repo.count_by_status.return_value = {
-                            "mastered": 5,
-                        }
-                        mock_stats_class.return_value = mock_stats_repo
-
-                        with patch(
-                            "src.repositories.UserDeckProgressRepository"
-                        ) as mock_progress_class:
-                            mock_progress_repo = AsyncMock()
-                            # Progress already matches (0 + 0 + 5 = 5)
-                            mock_progress = MagicMock()
-                            mock_progress.cards_studied = 5
-                            mock_progress.cards_mastered = 5
-                            mock_progress_repo.get_or_create.return_value = mock_progress
-                            mock_progress_class.return_value = mock_progress_repo
-
-                            await recalculate_progress_task(
-                                user_id, deck_id, "postgresql+asyncpg://test:test@localhost/test"
-                            )
-
-                            # Should not change
-                            assert mock_progress.cards_studied == 5
-                            assert mock_progress.cards_mastered == 5
-
-                            # Verify session.commit was NOT called (no changes)
-                            mock_session.commit.assert_not_awaited()
-
-                            # Verify engine was disposed
-                            mock_engine.dispose.assert_awaited_once()
-
-    @pytest.mark.asyncio
-    async def test_recalculate_progress_handles_database_error(self):
-        """Test that database errors are handled gracefully."""
-        from src.tasks.background import recalculate_progress_task
-
-        user_id = uuid4()
-        deck_id = uuid4()
-
-        with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine_creator.side_effect = Exception("Connection failed")
-
-                with patch("src.tasks.background.logger") as mock_logger:
-                    # Should not raise - errors are caught and logged
-                    await recalculate_progress_task(
-                        user_id, deck_id, "postgresql+asyncpg://test:test@localhost/test"
-                    )
-
-                    # Should log the error
-                    mock_logger.error.assert_called()
-                    error_call = mock_logger.error.call_args
-                    assert "Progress recalculation failed" in error_call[0][0]
-
-    @pytest.mark.asyncio
-    async def test_recalculate_progress_disposes_engine_on_success(self):
-        """Test that engine is properly disposed after successful execution."""
-        from src.tasks.background import recalculate_progress_task
-
-        user_id = uuid4()
-        deck_id = uuid4()
-
-        with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine = AsyncMock()
-                mock_engine_creator.return_value = mock_engine
-
-                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    mock_session = AsyncMock()
-                    mock_session_factory = MagicMock(return_value=mock_session)
-                    mock_sessionmaker.return_value = mock_session_factory
-
-                    with patch("src.repositories.CardStatisticsRepository") as mock_stats_class:
-                        mock_stats_repo = AsyncMock()
-                        mock_stats_repo.count_by_status.return_value = {}
-                        mock_stats_class.return_value = mock_stats_repo
-
-                        with patch(
-                            "src.repositories.UserDeckProgressRepository"
-                        ) as mock_progress_class:
-                            mock_progress_repo = AsyncMock()
-                            mock_progress = MagicMock()
-                            mock_progress.cards_studied = 0
-                            mock_progress.cards_mastered = 0
-                            mock_progress_repo.get_or_create.return_value = mock_progress
-                            mock_progress_class.return_value = mock_progress_repo
-
-                            await recalculate_progress_task(
-                                user_id, deck_id, "postgresql+asyncpg://test:test@localhost/test"
-                            )
-
-                            # Verify engine.dispose() was called
-                            mock_engine.dispose.assert_awaited_once()
-
-    @pytest.mark.asyncio
-    async def test_recalculate_progress_disposes_engine_on_error(self):
-        """Test that engine is disposed even when an error occurs."""
-        from src.tasks.background import recalculate_progress_task
-
-        user_id = uuid4()
-        deck_id = uuid4()
-
-        with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine = AsyncMock()
-                mock_engine_creator.return_value = mock_engine
-
-                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    # Make session factory raise an error
-                    mock_sessionmaker.side_effect = Exception("Session creation failed")
-
-                    await recalculate_progress_task(
-                        user_id, deck_id, "postgresql+asyncpg://test:test@localhost/test"
-                    )
-
-                    # Engine should still be disposed even after error
-                    mock_engine.dispose.assert_awaited_once()
-
-    @pytest.mark.asyncio
-    async def test_recalculate_progress_creates_engine_with_pool_pre_ping(self):
-        """Test that engine is created with pool_pre_ping=True."""
-        from src.tasks.background import recalculate_progress_task
-
-        user_id = uuid4()
-        deck_id = uuid4()
-        db_url = "postgresql+asyncpg://test:test@localhost/test"
-
-        with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine = AsyncMock()
-                mock_engine_creator.return_value = mock_engine
-
-                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    mock_session = AsyncMock()
-                    mock_session_factory = MagicMock(return_value=mock_session)
-                    mock_sessionmaker.return_value = mock_session_factory
-
-                    with patch("src.repositories.CardStatisticsRepository") as mock_stats_class:
-                        mock_stats_repo = AsyncMock()
-                        mock_stats_repo.count_by_status.return_value = {}
-                        mock_stats_class.return_value = mock_stats_repo
-
-                        with patch(
-                            "src.repositories.UserDeckProgressRepository"
-                        ) as mock_progress_class:
-                            mock_progress_repo = AsyncMock()
-                            mock_progress = MagicMock()
-                            mock_progress.cards_studied = 0
-                            mock_progress.cards_mastered = 0
-                            mock_progress_repo.get_or_create.return_value = mock_progress
-                            mock_progress_class.return_value = mock_progress_repo
-
-                            await recalculate_progress_task(user_id, deck_id, db_url)
-
-                            # Verify create_async_engine was called with pool_pre_ping and connect_args
-                            mock_engine_creator.assert_called_once_with(
-                                db_url,
-                                pool_pre_ping=True,
-                                connect_args={},
-                            )
-
-    @pytest.mark.asyncio
-    async def test_recalculate_progress_logs_old_vs_new_values(self):
-        """Test that old and new values are logged when changes are made."""
-        from src.tasks.background import recalculate_progress_task
-
-        user_id = uuid4()
-        deck_id = uuid4()
-
-        with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine = AsyncMock()
-                mock_engine_creator.return_value = mock_engine
-
-                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    mock_session = AsyncMock()
-                    mock_session_factory = MagicMock(return_value=mock_session)
-                    mock_sessionmaker.return_value = mock_session_factory
-
-                    with patch("src.repositories.CardStatisticsRepository") as mock_stats_class:
-                        mock_stats_repo = AsyncMock()
-                        mock_stats_repo.count_by_status.return_value = {
-                            "learning": 5,
-                            "review": 10,
-                            "mastered": 3,
-                        }
-                        mock_stats_class.return_value = mock_stats_repo
-
-                        with patch(
-                            "src.repositories.UserDeckProgressRepository"
-                        ) as mock_progress_class:
-                            mock_progress_repo = AsyncMock()
-                            mock_progress = MagicMock()
-                            mock_progress.cards_studied = 10  # Old value
-                            mock_progress.cards_mastered = 1  # Old value
-                            mock_progress_repo.get_or_create.return_value = mock_progress
-                            mock_progress_class.return_value = mock_progress_repo
-
-                            with patch("src.tasks.background.logger") as mock_logger:
-                                await recalculate_progress_task(
-                                    user_id,
-                                    deck_id,
-                                    "postgresql+asyncpg://test:test@localhost/test",
-                                )
-
-                                # Find the "Progress recalculated with changes" log call
-                                change_log_call = None
-                                for call in mock_logger.info.call_args_list:
-                                    if "Progress recalculated with changes" in call[0][0]:
-                                        change_log_call = call
-                                        break
-
-                                assert change_log_call is not None
-                                extra = change_log_call[1]["extra"]
-                                assert extra["old_studied"] == 10
-                                assert extra["new_studied"] == 18
-                                assert extra["old_mastered"] == 1
-                                assert extra["new_mastered"] == 3
-
-    @pytest.mark.asyncio
-    async def test_recalculate_progress_skipped_when_disabled(self):
-        """Test that progress recalculation is skipped when background tasks are disabled."""
-        from src.tasks.background import recalculate_progress_task
-
-        user_id = uuid4()
-        deck_id = uuid4()
-
-        with patch.object(settings, "feature_background_tasks", False):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                await recalculate_progress_task(
-                    user_id, deck_id, "postgresql+asyncpg://test:test@localhost/test"
-                )
-
-                # Engine should not be created when disabled
-                mock_engine_creator.assert_not_called()
-
-    @pytest.mark.asyncio
-    async def test_recalculate_progress_logs_start_and_completion(self):
-        """Test that progress recalculation logs start and completion."""
-        from src.tasks.background import recalculate_progress_task
-
-        user_id = uuid4()
-        deck_id = uuid4()
-
-        with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine = AsyncMock()
-                mock_engine_creator.return_value = mock_engine
-
-                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    mock_session = AsyncMock()
-                    mock_session_factory = MagicMock(return_value=mock_session)
-                    mock_sessionmaker.return_value = mock_session_factory
-
-                    with patch("src.repositories.CardStatisticsRepository") as mock_stats_class:
-                        mock_stats_repo = AsyncMock()
-                        mock_stats_repo.count_by_status.return_value = {}
-                        mock_stats_class.return_value = mock_stats_repo
-
-                        with patch(
-                            "src.repositories.UserDeckProgressRepository"
-                        ) as mock_progress_class:
-                            mock_progress_repo = AsyncMock()
-                            mock_progress = MagicMock()
-                            mock_progress.cards_studied = 0
-                            mock_progress.cards_mastered = 0
-                            mock_progress_repo.get_or_create.return_value = mock_progress
-                            mock_progress_class.return_value = mock_progress_repo
-
-                            with patch("src.tasks.background.logger") as mock_logger:
-                                await recalculate_progress_task(
-                                    user_id,
-                                    deck_id,
-                                    "postgresql+asyncpg://test:test@localhost/test",
-                                )
-
-                                # Should have at least 3 info logs (start, no changes, completion)
-                                assert mock_logger.info.call_count >= 3
-
-                                # Check start log
-                                start_call = mock_logger.info.call_args_list[0]
-                                assert "Starting progress recalculation" in start_call[0][0]
-                                assert start_call[1]["extra"]["task"] == "recalculate_progress"
-
-                                # Check completion log
-                                completion_call = mock_logger.info.call_args_list[-1]
-                                assert "Progress recalculation complete" in completion_call[0][0]
-                                assert "duration_ms" in completion_call[1]["extra"]
-
-    @pytest.mark.asyncio
-    async def test_recalculate_progress_handles_missing_status_counts(self):
-        """Test that missing status counts default to zero."""
-        from src.tasks.background import recalculate_progress_task
-
-        user_id = uuid4()
-        deck_id = uuid4()
-
-        with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine = AsyncMock()
-                mock_engine_creator.return_value = mock_engine
-
-                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    mock_session = AsyncMock()
-                    mock_session_factory = MagicMock(return_value=mock_session)
-                    mock_sessionmaker.return_value = mock_session_factory
-
-                    with patch("src.repositories.CardStatisticsRepository") as mock_stats_class:
-                        mock_stats_repo = AsyncMock()
-                        # Empty status counts (no cards have statistics yet)
-                        mock_stats_repo.count_by_status.return_value = {}
-                        mock_stats_class.return_value = mock_stats_repo
-
-                        with patch(
-                            "src.repositories.UserDeckProgressRepository"
-                        ) as mock_progress_class:
-                            mock_progress_repo = AsyncMock()
-                            mock_progress = MagicMock()
-                            mock_progress.cards_studied = 5  # Has old values
-                            mock_progress.cards_mastered = 2
-                            mock_progress_repo.get_or_create.return_value = mock_progress
-                            mock_progress_class.return_value = mock_progress_repo
-
-                            await recalculate_progress_task(
-                                user_id,
-                                deck_id,
-                                "postgresql+asyncpg://test:test@localhost/test",
-                            )
-
-                            # Should reset to zeros when no status counts exist
-                            assert mock_progress.cards_studied == 0
-                            assert mock_progress.cards_mastered == 0
-
-    @pytest.mark.asyncio
-    async def test_recalculate_progress_creates_progress_record_if_missing(self):
-        """Test that progress record is created if it doesn't exist."""
-        from src.tasks.background import recalculate_progress_task
-
-        user_id = uuid4()
-        deck_id = uuid4()
-
-        with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine = AsyncMock()
-                mock_engine_creator.return_value = mock_engine
-
-                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    mock_session = AsyncMock()
-                    mock_session_factory = MagicMock(return_value=mock_session)
-                    mock_sessionmaker.return_value = mock_session_factory
-
-                    with patch("src.repositories.CardStatisticsRepository") as mock_stats_class:
-                        mock_stats_repo = AsyncMock()
-                        mock_stats_repo.count_by_status.return_value = {
-                            "learning": 2,
-                            "review": 3,
-                            "mastered": 1,
-                        }
-                        mock_stats_class.return_value = mock_stats_repo
-
-                        with patch(
-                            "src.repositories.UserDeckProgressRepository"
-                        ) as mock_progress_class:
-                            mock_progress_repo = AsyncMock()
-                            # Simulate get_or_create returning a new record
-                            mock_progress = MagicMock()
-                            mock_progress.cards_studied = 0  # New record starts at 0
-                            mock_progress.cards_mastered = 0
-                            mock_progress_repo.get_or_create.return_value = mock_progress
-                            mock_progress_class.return_value = mock_progress_repo
-
-                            await recalculate_progress_task(
-                                user_id,
-                                deck_id,
-                                "postgresql+asyncpg://test:test@localhost/test",
-                            )
-
-                            # Verify get_or_create was called with correct params
-                            mock_progress_repo.get_or_create.assert_awaited_once_with(
-                                user_id, deck_id
-                            )
-
-                            # Should update to calculated values (2 + 3 + 1 = 6)
-                            assert mock_progress.cards_studied == 6
-                            assert mock_progress.cards_mastered == 1
-
-
 class TestProcessCultureAnswerFullAsync:
     """Test the process_culture_answer_full_async task (early response pattern)."""
 
@@ -1794,22 +1206,12 @@ class TestSessionCleanupOrder:
                     mock_session_factory = MagicMock(return_value=mock_session)
                     mock_sessionmaker.return_value = mock_session_factory
 
-                    with patch(
-                        "src.services.progress_service.ProgressService"
-                    ) as mock_service_class:
-                        mock_service = AsyncMock()
-                        mock_service.get_achievements.return_value = MagicMock(
-                            achievements=[],
-                            total_points=0,
-                        )
-                        mock_service_class.return_value = mock_service
+                    await check_achievements_task(
+                        user_id, "postgresql+asyncpg://test:test@localhost/test"
+                    )
 
-                        await check_achievements_task(
-                            user_id, "postgresql+asyncpg://test:test@localhost/test"
-                        )
-
-                        # Verify session.close is called before engine.dispose
-                        assert call_order == ["session.close", "engine.dispose"]
+                    # Verify session.close is called before engine.dispose
+                    assert call_order == ["session.close", "engine.dispose"]
 
     @pytest.mark.asyncio
     async def test_check_achievements_closes_session_before_engine_on_error(self):
@@ -1839,69 +1241,23 @@ class TestSessionCleanupOrder:
                     mock_session_factory = MagicMock(return_value=mock_session)
                     mock_sessionmaker.return_value = mock_session_factory
 
-                    with patch(
-                        "src.services.progress_service.ProgressService"
-                    ) as mock_service_class:
-                        mock_service = AsyncMock()
-                        mock_service.get_achievements.side_effect = Exception("Service error")
-                        mock_service_class.return_value = mock_service
+                    # Patch logger to raise inside the session block to simulate an error
+                    with patch("src.tasks.background.logger") as mock_logger:
+                        call_counter = {"n": 0}
+
+                        def info_side_effect(msg, **kwargs):
+                            call_counter["n"] += 1
+                            if call_counter["n"] >= 2:
+                                raise Exception("Simulated error inside session block")
+
+                        mock_logger.info.side_effect = info_side_effect
 
                         await check_achievements_task(
                             user_id, "postgresql+asyncpg://test:test@localhost/test"
                         )
 
-                        # Session close should still happen before engine dispose
-                        assert call_order == ["session.close", "engine.dispose"]
-
-    @pytest.mark.asyncio
-    async def test_recalculate_progress_closes_session_before_engine_dispose(self):
-        """Test that recalculate_progress_task closes session before engine dispose."""
-        from src.tasks.background import recalculate_progress_task
-
-        user_id = uuid4()
-        deck_id = uuid4()
-        call_order = []
-
-        with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine = AsyncMock()
-
-                async def mock_dispose():
-                    call_order.append("engine.dispose")
-
-                mock_engine.dispose = mock_dispose
-                mock_engine_creator.return_value = mock_engine
-
-                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    mock_session = AsyncMock()
-
-                    async def mock_close():
-                        call_order.append("session.close")
-
-                    mock_session.close = mock_close
-                    mock_session_factory = MagicMock(return_value=mock_session)
-                    mock_sessionmaker.return_value = mock_session_factory
-
-                    with patch("src.repositories.CardStatisticsRepository") as mock_stats_class:
-                        mock_stats_repo = AsyncMock()
-                        mock_stats_repo.count_by_status.return_value = {}
-                        mock_stats_class.return_value = mock_stats_repo
-
-                        with patch(
-                            "src.repositories.UserDeckProgressRepository"
-                        ) as mock_progress_class:
-                            mock_progress_repo = AsyncMock()
-                            mock_progress = MagicMock()
-                            mock_progress.cards_studied = 0
-                            mock_progress.cards_mastered = 0
-                            mock_progress_repo.get_or_create.return_value = mock_progress
-                            mock_progress_class.return_value = mock_progress_repo
-
-                            await recalculate_progress_task(
-                                user_id, deck_id, "postgresql+asyncpg://test:test@localhost/test"
-                            )
-
-                            assert call_order == ["session.close", "engine.dispose"]
+                    # Session close should still happen before engine dispose
+                    assert call_order == ["session.close", "engine.dispose"]
 
     @pytest.mark.asyncio
     async def test_process_answer_side_effects_closes_session_before_engine_dispose(self):

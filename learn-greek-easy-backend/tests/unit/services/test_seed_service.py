@@ -102,28 +102,6 @@ class TestSeedServiceGuards:
         assert "Database seeding not allowed" in str(exc_info.value)
 
     @pytest.mark.asyncio
-    async def test_seed_card_statistics_blocked_in_production(
-        self, seed_service, mock_settings_cannot_seed
-    ):
-        """seed_card_statistics should raise RuntimeError in production."""
-        with pytest.raises(RuntimeError) as exc_info:
-            await seed_service.seed_card_statistics(
-                user_id=uuid4(), deck_id=uuid4(), progress_percent=50
-            )
-
-        assert "Database seeding not allowed" in str(exc_info.value)
-
-    @pytest.mark.asyncio
-    async def test_seed_reviews_blocked_in_production(
-        self, seed_service, mock_settings_cannot_seed
-    ):
-        """seed_reviews should raise RuntimeError in production."""
-        with pytest.raises(RuntimeError) as exc_info:
-            await seed_service.seed_reviews(user_id=uuid4(), card_id=uuid4(), review_count=5)
-
-        assert "Database seeding not allowed" in str(exc_info.value)
-
-    @pytest.mark.asyncio
     async def test_seed_all_blocked_in_production(self, seed_service, mock_settings_cannot_seed):
         """seed_all should raise RuntimeError in production."""
         with pytest.raises(RuntimeError) as exc_info:
@@ -215,14 +193,14 @@ class TestSeedServiceContent:
         assert "C2" in levels
 
     @pytest.mark.asyncio
-    async def test_each_deck_has_ten_cards(self, seed_service, mock_db, mock_settings_can_seed):
-        """Verify 10 cards per deck."""
+    async def test_deck_card_counts_are_zero(self, seed_service, mock_db, mock_settings_can_seed):
+        """Verify card_count is 0 (cards are seeded separately via V2 word entries)."""
         result = await seed_service.seed_decks_and_cards()
 
         for deck in result["decks"]:
-            assert deck["card_count"] == 10
+            assert deck["card_count"] == 0
 
-        assert result["total_cards"] == 60  # 6 decks * 10 cards
+        assert result["total_cards"] == 0
 
     @pytest.mark.asyncio
     async def test_vocabulary_has_greek_text(self, seed_service):
@@ -240,106 +218,6 @@ class TestSeedServiceContent:
         for level in DeckLevel:
             assert level in SeedService.VOCABULARY
             assert len(SeedService.VOCABULARY[level]) == 10
-
-
-# ============================================================================
-# Statistics Seeding Tests
-# ============================================================================
-
-
-class TestSeedServiceStatistics:
-    """Tests for card statistics seeding."""
-
-    @pytest.mark.asyncio
-    async def test_creates_statistics_for_all_cards(
-        self, seed_service, mock_db, mock_settings_can_seed
-    ):
-        """Verify statistics are created for each card in deck."""
-        # Mock card query result
-        card_ids = [uuid4() for _ in range(10)]
-        mock_result = MagicMock()
-        mock_result.fetchall.return_value = [(cid,) for cid in card_ids]
-        mock_db.execute.return_value = mock_result
-
-        result = await seed_service.seed_card_statistics(
-            user_id=uuid4(), deck_id=uuid4(), progress_percent=50
-        )
-
-        assert result["success"] is True
-        assert result["stats_created"] == 10
-
-    @pytest.mark.asyncio
-    async def test_progress_distribution(self, seed_service, mock_db, mock_settings_can_seed):
-        """Verify card status distribution matches progress_percent."""
-        card_ids = [uuid4() for _ in range(10)]
-        mock_result = MagicMock()
-        mock_result.fetchall.return_value = [(cid,) for cid in card_ids]
-        mock_db.execute.return_value = mock_result
-
-        result = await seed_service.seed_card_statistics(
-            user_id=uuid4(), deck_id=uuid4(), progress_percent=60
-        )
-
-        # 60% of 10 = 6 mastered
-        assert result["mastered"] == 6
-        # Up to 3 learning cards
-        assert result["learning"] == 3
-        # Remainder are new
-        assert result["new"] == 1
-
-    @pytest.mark.asyncio
-    async def test_handles_empty_deck(self, seed_service, mock_db, mock_settings_can_seed):
-        """Verify handling of deck with no cards."""
-        mock_result = MagicMock()
-        mock_result.fetchall.return_value = []
-        mock_db.execute.return_value = mock_result
-
-        result = await seed_service.seed_card_statistics(
-            user_id=uuid4(), deck_id=uuid4(), progress_percent=50
-        )
-
-        assert result["success"] is True
-        assert result["stats_created"] == 0
-
-
-# ============================================================================
-# Review Seeding Tests
-# ============================================================================
-
-
-class TestSeedServiceReviews:
-    """Tests for review history seeding."""
-
-    @pytest.mark.asyncio
-    async def test_creates_requested_reviews(self, seed_service, mock_db, mock_settings_can_seed):
-        """Verify correct number of reviews are created."""
-        result = await seed_service.seed_reviews(user_id=uuid4(), card_id=uuid4(), review_count=5)
-
-        assert result["success"] is True
-        assert result["reviews_created"] == 5
-        assert len(result["reviews"]) == 5
-
-    @pytest.mark.asyncio
-    async def test_ratings_improve_over_time(self, seed_service, mock_db, mock_settings_can_seed):
-        """Verify review ratings show learning progression."""
-        result = await seed_service.seed_reviews(user_id=uuid4(), card_id=uuid4(), review_count=5)
-
-        ratings = [r["quality"] for r in result["reviews"]]
-
-        # First ratings should be lower (harder)
-        # Last rating should be higher (easier/perfect)
-        assert ratings[0] <= ratings[-1]
-        assert ratings[-1] == 5  # Perfect rating
-
-    @pytest.mark.asyncio
-    async def test_limits_to_available_ratings(self, seed_service, mock_db, mock_settings_can_seed):
-        """Verify review count is limited to rating progression length."""
-        result = await seed_service.seed_reviews(
-            user_id=uuid4(), card_id=uuid4(), review_count=100  # Request more than available
-        )
-
-        # Should be limited to 5 (length of rating_progression)
-        assert result["reviews_created"] == 5
 
 
 # ============================================================================
@@ -404,21 +282,17 @@ class TestSeedServiceOrchestration:
         mock_db_with_ids.commit.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_seed_all_creates_learner_progress(
+    async def test_seed_all_includes_statistics_and_reviews_keys(
         self, mock_db_with_ids, mock_settings_can_seed
     ):
-        """Verify seed_all creates progress for e2e_learner user."""
+        """Verify seed_all result includes statistics and reviews keys."""
         seed_service = SeedService(mock_db_with_ids)
 
         result = await seed_service.seed_all()
 
-        # Check that statistics were created
+        # Check that statistics and reviews keys are present in result
         assert result["statistics"]["success"] is True
-        assert result["statistics"]["stats_created"] > 0
-
-        # Check that reviews were created
         assert result["reviews"]["success"] is True
-        assert result["reviews"]["reviews_created"] > 0
 
 
 # ============================================================================
@@ -1077,8 +951,7 @@ class TestSeedServiceUserDecks:
 
         assert result["success"] is True
         assert result["total_user_decks"] == 4
-        # 5 + 3 + 0 + 2 = 10 cards total
-        assert result["total_user_cards"] == 10
+        assert result["total_user_cards"] == 0
 
     @pytest.mark.asyncio
     async def test_decks_have_correct_owner_ids(self, mock_db_with_ids, mock_settings_can_seed):
@@ -1122,23 +995,18 @@ class TestSeedServiceUserDecks:
         assert len(result["decks"]) == 0
 
     @pytest.mark.asyncio
-    async def test_creates_cards_for_non_empty_decks(
-        self, mock_db_with_ids, mock_settings_can_seed
-    ):
-        """Verify cards are created only for decks with card_count > 0."""
+    async def test_creates_decks_for_learner(self, mock_db_with_ids, mock_settings_can_seed):
+        """Verify 3 decks are created for the learner user."""
         seed_service = SeedService(mock_db_with_ids)
 
-        # Track added objects
+        # Track added deck objects
         added_decks = []
-        added_cards = []
         original_add = mock_db_with_ids.add.side_effect
 
         def track_objects(obj):
             original_add(obj)
             if hasattr(obj, "owner_id") and hasattr(obj, "name_en") and hasattr(obj, "level"):
                 added_decks.append(obj)
-            elif hasattr(obj, "deck_id") and hasattr(obj, "front_text"):
-                added_cards.append(obj)
 
         mock_db_with_ids.add = MagicMock(side_effect=track_objects)
 
@@ -1151,16 +1019,9 @@ class TestSeedServiceUserDecks:
         # Verify 3 decks created for learner
         assert len(added_decks) == 3
 
-        # Verify card counts: 5 + 3 + 0 = 8 cards
-        assert len(added_cards) == 8
-
-        # Find the Practice Deck (which has 0 cards)
+        # Verify Practice Deck is present
         practice_deck = next((d for d in added_decks if d.name_en == "Practice Deck"), None)
         assert practice_deck is not None
-
-        # Verify no cards were created for Practice Deck
-        practice_deck_cards = [c for c in added_cards if c.deck_id == practice_deck.id]
-        assert len(practice_deck_cards) == 0
 
     @pytest.mark.asyncio
     async def test_user_decks_are_not_premium(self, mock_db_with_ids, mock_settings_can_seed):
@@ -1216,22 +1077,20 @@ class TestSeedServiceUserDecks:
             assert deck.is_active is True
 
     @pytest.mark.asyncio
-    async def test_cards_use_vocabulary_from_deck_level(
-        self, mock_db_with_ids, mock_settings_can_seed
-    ):
-        """Verify cards use vocabulary from the correct level."""
+    async def test_decks_have_correct_levels(self, mock_db_with_ids, mock_settings_can_seed):
+        """Verify decks are created with the levels specified in USER_DECKS config."""
         seed_service = SeedService(mock_db_with_ids)
 
-        # Track added cards
-        added_cards = []
+        # Track added deck objects
+        added_decks = []
         original_add = mock_db_with_ids.add.side_effect
 
-        def track_cards(obj):
+        def track_decks(obj):
             original_add(obj)
-            if hasattr(obj, "front_text") and hasattr(obj, "back_text_en"):
-                added_cards.append(obj)
+            if hasattr(obj, "owner_id") and hasattr(obj, "name_en") and hasattr(obj, "level"):
+                added_decks.append(obj)
 
-        mock_db_with_ids.add = MagicMock(side_effect=track_cards)
+        mock_db_with_ids.add = MagicMock(side_effect=track_decks)
 
         mock_users = [
             {"id": str(uuid4()), "email": "e2e_learner@test.com"},
@@ -1239,22 +1098,14 @@ class TestSeedServiceUserDecks:
 
         await seed_service.seed_user_decks(mock_users)
 
-        # My Greek Basics uses A1 vocabulary (5 cards)
-        a1_vocab = SeedService.VOCABULARY[DeckLevel.A1][:5]
-        a1_front_texts = [v[0] for v in a1_vocab]
+        # Check that each added deck's level matches the USER_DECKS config
+        learner_configs = SeedService.USER_DECKS["e2e_learner@test.com"]
+        config_by_name = {cfg["name_en"]: cfg["level"] for cfg in learner_configs}
 
-        # Travel Phrases uses A2 vocabulary (3 cards)
-        a2_vocab = SeedService.VOCABULARY[DeckLevel.A2][:3]
-        a2_front_texts = [v[0] for v in a2_vocab]
-
-        # Verify all expected vocabulary items are in added cards
-        card_front_texts = [c.front_text for c in added_cards]
-
-        for text in a1_front_texts:
-            assert text in card_front_texts, f"A1 word '{text}' not found in cards"
-
-        for text in a2_front_texts:
-            assert text in card_front_texts, f"A2 word '{text}' not found in cards"
+        for deck in added_decks:
+            expected_level = config_by_name.get(deck.name_en)
+            assert expected_level is not None, f"Unexpected deck name: {deck.name_en}"
+            assert deck.level == expected_level
 
 
 # ============================================================================

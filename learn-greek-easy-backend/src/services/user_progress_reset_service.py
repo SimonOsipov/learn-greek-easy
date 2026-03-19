@@ -15,13 +15,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.cache import get_cache
 from src.db.models import UserAchievement, UserXP, XPTransaction
 from src.repositories import (
-    CardStatisticsRepository,
+    CardRecordReviewRepository,
+    CardRecordStatisticsRepository,
     CultureAnswerHistoryRepository,
     CultureQuestionStatsRepository,
     MockExamRepository,
     NotificationRepository,
-    ReviewRepository,
-    UserDeckProgressRepository,
 )
 from src.schemas.danger_zone import ResetProgressResult
 
@@ -54,9 +53,8 @@ class UserProgressResetService:
         self.db = db
 
         # Initialize repositories
-        self.deck_progress_repo = UserDeckProgressRepository(db)
-        self.card_stats_repo = CardStatisticsRepository(db)
-        self.review_repo = ReviewRepository(db)
+        self.card_record_stats_repo = CardRecordStatisticsRepository(db)
+        self.card_record_review_repo = CardRecordReviewRepository(db)
         self.culture_stats_repo = CultureQuestionStatsRepository(db)
         self.culture_history_repo = CultureAnswerHistoryRepository(db)
         self.mock_exam_repo = MockExamRepository(db)
@@ -88,34 +86,38 @@ class UserProgressResetService:
         """
         logger.info(f"Starting progress reset for user {user_id}")
 
-        # 1. Delete reviews
-        reviews_deleted = await self.review_repo.delete_all_by_user_id(user_id)
-        logger.debug(f"Deleted {reviews_deleted} reviews for user {user_id}")
+        # 1. Delete card record reviews
+        card_record_reviews_deleted = await self.card_record_review_repo.delete_all_by_user_id(
+            user_id
+        )
+        logger.debug(
+            f"Deleted {card_record_reviews_deleted} card record reviews for user {user_id}"
+        )
 
-        # 2. Delete card statistics
-        card_stats_deleted = await self.card_stats_repo.delete_all_by_user_id(user_id)
-        logger.debug(f"Deleted {card_stats_deleted} card statistics for user {user_id}")
+        # 2. Delete card record statistics
+        card_record_statistics_deleted = await self.card_record_stats_repo.delete_all_by_user_id(
+            user_id
+        )
+        logger.debug(
+            f"Deleted {card_record_statistics_deleted} card record statistics for user {user_id}"
+        )
 
-        # 3. Delete user deck progress
-        deck_progress_deleted = await self.deck_progress_repo.delete_all_by_user_id(user_id)
-        logger.debug(f"Deleted {deck_progress_deleted} deck progress records for user {user_id}")
-
-        # 4. Delete culture answer history
+        # 3. Delete culture answer history
         culture_history_deleted = await self.culture_history_repo.delete_all_by_user_id(user_id)
         logger.debug(f"Deleted {culture_history_deleted} culture answer history for user {user_id}")
 
-        # 5. Delete culture question stats
+        # 4. Delete culture question stats
         culture_stats_deleted = await self.culture_stats_repo.delete_all_by_user_id(user_id)
         logger.debug(f"Deleted {culture_stats_deleted} culture question stats for user {user_id}")
 
-        # 6. Delete mock exam sessions (cascades to answers)
+        # 5. Delete mock exam sessions (cascades to answers)
         sessions_deleted, answers_deleted = await self.mock_exam_repo.delete_all_by_user_id(user_id)
         logger.debug(
             f"Deleted {sessions_deleted} mock exam sessions and "
             f"{answers_deleted} answers for user {user_id}"
         )
 
-        # 7. Delete XP transactions (direct SQLAlchemy - no dedicated repo)
+        # 6. Delete XP transactions (direct SQLAlchemy - no dedicated repo)
         xp_transactions_result = await self.db.execute(
             delete(XPTransaction).where(XPTransaction.user_id == user_id)
         )
@@ -127,7 +129,7 @@ class UserProgressResetService:
         )
         logger.debug(f"Deleted {xp_transactions_deleted} XP transactions for user {user_id}")
 
-        # 8. Delete user achievements (direct SQLAlchemy - no dedicated repo)
+        # 7. Delete user achievements (direct SQLAlchemy - no dedicated repo)
         achievements_result = await self.db.execute(
             delete(UserAchievement).where(UserAchievement.user_id == user_id)
         )
@@ -139,11 +141,11 @@ class UserProgressResetService:
         )
         logger.debug(f"Deleted {achievements_deleted} achievements for user {user_id}")
 
-        # 9. Delete notifications
+        # 8. Delete notifications
         notifications_deleted = await self.notification_repo.delete_all_by_user(user_id)
         logger.debug(f"Deleted {notifications_deleted} notifications for user {user_id}")
 
-        # 10. Reset UserXP to 0 (UPDATE, not delete - preserve the record)
+        # 9. Reset UserXP to 0 (UPDATE, not delete - preserve the record)
         xp_reset_result = await self.db.execute(
             update(UserXP)
             .where(UserXP.user_id == user_id)
@@ -156,9 +158,8 @@ class UserProgressResetService:
         logger.debug(f"XP reset for user {user_id}: {xp_was_reset}")
 
         result = ResetProgressResult(
-            user_deck_progress_deleted=deck_progress_deleted,
-            card_statistics_deleted=card_stats_deleted,
-            reviews_deleted=reviews_deleted,
+            card_record_statistics_deleted=card_record_statistics_deleted,
+            card_record_reviews_deleted=card_record_reviews_deleted,
             user_xp_reset=xp_was_reset,
             xp_transactions_deleted=xp_transactions_deleted,
             user_achievements_deleted=achievements_deleted,
