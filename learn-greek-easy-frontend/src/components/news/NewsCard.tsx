@@ -36,6 +36,7 @@ export interface NewsCardProps {
   height?: NewsCardHeight;
   page?: 'dashboard' | 'news';
   level?: NewsLevel;
+  variant?: 'compact' | 'full';
 }
 
 const heightClasses: Record<NewsCardHeight, string> = {
@@ -49,6 +50,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({
   height = 'default',
   page,
   level = 'b2',
+  variant = 'full',
 }) => {
   const { t } = useTranslation('common');
 
@@ -195,8 +197,17 @@ export const NewsCard: React.FC<NewsCardProps> = ({
         <div
           className={cn('relative z-10 flex h-full flex-col justify-end p-4', hasAudio && 'pb-16')}
         >
-          <h3 className="mb-1 line-clamp-2 text-lg font-semibold text-white">{title}</h3>
-          <p className="line-clamp-2 text-sm text-gray-200">{description}</p>
+          <h3
+            className={cn(
+              'line-clamp-2 font-semibold text-white',
+              variant === 'compact' ? 'text-sm' : 'mb-1 text-lg'
+            )}
+          >
+            {title}
+          </h3>
+          {variant !== 'compact' && (
+            <p className="line-clamp-2 text-sm text-gray-200">{description}</p>
+          )}
           <ExternalLink className="absolute right-3 top-3 h-4 w-4 text-white/70 group-hover:text-white" />
         </div>
       </a>

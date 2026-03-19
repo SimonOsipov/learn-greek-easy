@@ -137,6 +137,7 @@ export const NewsSection: React.FC = () => {
               newsLang={newsLang}
               page="dashboard"
               level={newsLevel}
+              variant="compact"
             />
           ))}
         </div>

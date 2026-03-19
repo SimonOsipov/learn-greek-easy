@@ -257,3 +257,14 @@ describe('NewsCard Country Pill', () => {
     expect(pill).toBeInTheDocument();
   });
 });
+
+describe('NewsCard Compact Variant', () => {
+  it('hides description when variant is compact', () => {
+    const article = createMockArticle({
+      description_el: 'Should be hidden',
+    });
+    render(<NewsCard article={article} newsLang="el" variant="compact" />);
+    expect(screen.getByText('Ελληνικός τίτλος')).toBeInTheDocument();
+    expect(screen.queryByText('Should be hidden')).not.toBeInTheDocument();
+  });
+});
