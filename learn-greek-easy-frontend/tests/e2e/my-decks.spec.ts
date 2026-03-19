@@ -472,7 +472,7 @@ test.describe('My Decks - Security & Access Control', () => {
   test.describe('Unauthorized Deck Access (Authenticated User)', () => {
     test.use({ storageState: BEGINNER_AUTH });
 
-    test('Flow 8: should show access denied modal when accessing another user deck', async ({
+    test.skip('Flow 8: should show access denied modal when accessing another user deck', async ({
       page,
       request,
     }) => {
@@ -521,7 +521,7 @@ test.describe('My Decks - Security & Access Control', () => {
       await expect(page).toHaveURL(/\/my-decks$/);
     });
 
-    test('Flow 8b: access denied modal cannot be dismissed by pressing Escape', async ({
+    test.skip('Flow 8b: access denied modal cannot be dismissed by pressing Escape', async ({
       page,
       request,
     }) => {

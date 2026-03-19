@@ -83,16 +83,15 @@ test.describe('V2 Flashcard Review', () => {
     expect(response.ok()).toBe(true);
 
     const data = await response.json();
-    const decks = data.decks as Array<{ id: string; card_system: string; name: string }>;
+    const decks = data.decks as Array<{ id: string; name: string }>;
 
-    const v2Deck = decks.find(
-      (d) => d.card_system === 'V2' && d.name.includes('V2 Nouns')
-    );
+    // card_system removed in SM2V2-06 — find V2 deck by name
+    const v2Deck = decks.find((d) => d.name.includes('V2 Nouns'));
 
     if (!v2Deck) {
       throw new Error(
         '[V2-REVIEW] No V2 Nouns deck found in database. ' +
-          `Available decks: ${decks.map((d) => `${d.name} (${d.card_system})`).join(', ')}`
+          `Available decks: ${decks.map((d) => d.name).join(', ')}`
       );
     }
 
