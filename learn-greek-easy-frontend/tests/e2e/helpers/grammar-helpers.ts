@@ -177,7 +177,7 @@ export async function loginForE2ETest(page: Page): Promise<void> {
  * @param page - Playwright page object
  */
 export async function navigateToReview(page: Page): Promise<void> {
-  await page.goto(`/decks/${mockDeck.id}/review`);
+  await page.goto(`/decks/${mockDeck.id}/practice`);
   await page.waitForLoadState('domcontentloaded');
 
   // Wait for flashcard to appear

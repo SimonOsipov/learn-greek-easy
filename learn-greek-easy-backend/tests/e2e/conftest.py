@@ -601,19 +601,12 @@ async def populated_study_environment(
     """
     deck, cards = deck_with_cards
 
-    # Initialize study session
-    resp = await client.post(
-        f"/api/v1/study/initialize/{deck.id}",
-        headers=auth_headers,
-    )
-    initialized = resp.status_code == 200
-
     return StudyEnvironment(
         user=test_user,
         deck=deck,
         cards=cards,
         headers=auth_headers,
-        initialized=initialized,
+        initialized=True,
     )
 
 

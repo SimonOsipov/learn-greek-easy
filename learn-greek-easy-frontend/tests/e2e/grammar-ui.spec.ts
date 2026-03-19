@@ -39,7 +39,7 @@ import {
 // CARD CONTENT BLUR/REVEAL TESTS
 // ============================================================================
 
-test.describe.skip('Card Content Blur/Reveal', () => {
+test.describe('Card Content Blur/Reveal', () => {
   test('card content is blurred before flip', async ({ page }) => {
     await setupReviewMock(page, mockNounCard);
     // E2E tests use storageState from playwright config - no manual login needed
@@ -91,7 +91,7 @@ test.describe.skip('Card Content Blur/Reveal', () => {
 // VERB TENSE TAB NAVIGATION TESTS
 // ============================================================================
 
-test.describe.skip('Verb Tense Tab Navigation', () => {
+test.describe('Verb Tense Tab Navigation', () => {
   test('displays Present tense by default', async ({ page }) => {
     await setupReviewMock(page, mockVerbCardComplete);
     // E2E tests use storageState from playwright config - no manual login needed
@@ -177,7 +177,7 @@ test.describe.skip('Verb Tense Tab Navigation', () => {
 // VERB VOICE TOGGLE TESTS
 // ============================================================================
 
-test.describe.skip('Verb Voice Toggle', () => {
+test.describe('Verb Voice Toggle', () => {
   test('voice toggle is visible but disabled (hasPassive = false)', async ({ page }) => {
     await setupReviewMock(page, mockVerbCardComplete);
     // E2E tests use storageState from playwright config - no manual login needed
@@ -220,7 +220,7 @@ test.describe.skip('Verb Voice Toggle', () => {
 // ADJECTIVE GENDER TAB NAVIGATION TESTS
 // ============================================================================
 
-test.describe.skip('Adjective Gender Tab Navigation', () => {
+test.describe('Adjective Gender Tab Navigation', () => {
   test('displays Masculine tab by default', async ({ page }) => {
     await setupReviewMock(page, mockAdjectiveCard);
     // E2E tests use storageState from playwright config - no manual login needed
@@ -280,7 +280,7 @@ test.describe.skip('Adjective Gender Tab Navigation', () => {
 // EXAMPLE TRANSLATION REVEAL TESTS
 // ============================================================================
 
-test.describe.skip('Example Translation Reveal', () => {
+test.describe('Example Translation Reveal', () => {
   test('example translations are blurred before card flip', async ({ page }) => {
     await setupReviewMock(page, mockNounCard);
     // E2E tests use storageState from playwright config - no manual login needed
@@ -315,7 +315,7 @@ test.describe.skip('Example Translation Reveal', () => {
 // ADVERB CARD DISPLAY TESTS
 // ============================================================================
 
-test.describe.skip('Adverb Card Display', () => {
+test.describe('Adverb Card Display', () => {
   test('displays adverb forms table with positive/comparative/superlative', async ({ page }) => {
     await setupReviewMock(page, mockAdverbCard);
     // E2E tests use storageState from playwright config - no manual login needed
@@ -338,7 +338,7 @@ test.describe.skip('Adverb Card Display', () => {
 // EMPTY GRAMMAR STATE TESTS
 // ============================================================================
 
-test.describe.skip('Empty Grammar State', () => {
+test.describe('Empty Grammar State', () => {
   test('card without grammar data shows translation only', async ({ page }) => {
     await setupReviewMock(page, mockCardNoGrammar);
     // E2E tests use storageState from playwright config - no manual login needed
@@ -366,7 +366,7 @@ test.describe.skip('Empty Grammar State', () => {
 // MOBILE VIEWPORT TESTS
 // ============================================================================
 
-test.describe.skip('Mobile Viewport', () => {
+test.describe('Mobile Viewport', () => {
   test('tense tabs are horizontally scrollable', async ({ page }) => {
     await setMobileViewport(page);
     await setupReviewMock(page, mockVerbCardComplete);
@@ -431,7 +431,7 @@ test.describe.skip('Mobile Viewport', () => {
 // LANGUAGE SELECTOR TESTS
 // ============================================================================
 
-test.describe.skip('Language Selector', () => {
+test.describe('Language Selector', () => {
   test('language switcher is visible in vocabulary review', async ({ page }) => {
     await setupReviewMock(page, mockNounCard);
     await navigateToReview(page);
