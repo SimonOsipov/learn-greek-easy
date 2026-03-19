@@ -2,7 +2,6 @@
 
 from src.repositories.announcement import AnnouncementCampaignRepository
 from src.repositories.base import BaseRepository
-from src.repositories.card import CardRepository
 from src.repositories.card_error import CardErrorReportRepository
 from src.repositories.card_record import CardRecordRepository
 from src.repositories.card_record_review import CardRecordReviewRepository
@@ -17,8 +16,6 @@ from src.repositories.feedback import FeedbackRepository
 from src.repositories.mock_exam import MockExamRepository
 from src.repositories.news_item import NewsItemRepository
 from src.repositories.notification import NotificationRepository
-from src.repositories.progress import CardStatisticsRepository, UserDeckProgressRepository
-from src.repositories.review import ReviewRepository
 from src.repositories.session import SessionRepository
 from src.repositories.user import UserRepository, UserSettingsRepository
 from src.repositories.webhook_event import WebhookEventRepository
@@ -34,18 +31,11 @@ __all__ = [
     # User
     "UserRepository",
     "UserSettingsRepository",
-    # Content
     "DeckRepository",
-    "CardRepository",
     "CardRecordRepository",
-    # Progress
-    "UserDeckProgressRepository",
-    "CardStatisticsRepository",
     # V2 Progress
     "CardRecordStatisticsRepository",
     "CardRecordReviewRepository",
-    # Review
-    "ReviewRepository",
     # Session (Redis)
     "SessionRepository",
     # Feedback
