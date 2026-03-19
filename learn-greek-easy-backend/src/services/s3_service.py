@@ -20,6 +20,7 @@ AWS S3 Configuration:
 
 """
 
+import time
 from typing import TYPE_CHECKING, Optional
 
 import boto3
@@ -50,6 +51,10 @@ CONTENT_TYPE_TO_EXT = {
 ALLOWED_DECK_IMAGE_CONTENT_TYPES = frozenset(["image/jpeg", "image/png", "image/webp"])
 MAX_DECK_IMAGE_SIZE_BYTES = 3 * 1024 * 1024  # 3MB
 
+# Presigned URL cache: reuse the same URL for a key within a TTL window
+# so browsers can cache the content behind a stable URL.
+_PRESIGNED_URL_CACHE_BUFFER = 600  # 10 minutes before expiry, generate a new URL
+
 
 class S3Service:
     """Service for S3 operations related to culture question images."""
@@ -58,6 +63,7 @@ class S3Service:
         """Initialize S3 service with AWS credentials from settings."""
         self._client: Optional["S3Client"] = None
         self._initialized = False
+        self._url_cache: dict[str, tuple[str, float]] = {}  # key -> (url, valid_until)
 
     def _get_client(self) -> Optional["S3Client"]:
         """Get or create S3 client lazily.
@@ -154,6 +160,13 @@ class S3Service:
         if not image_key:
             return None
 
+        # Check cache: return existing URL if still valid
+        cached = self._url_cache.get(image_key)
+        if cached is not None:
+            cached_url, valid_until = cached
+            if time.monotonic() < valid_until:
+                return cached_url
+
         client = self._get_client()
         if not client:
             return None
@@ -171,6 +184,11 @@ class S3Service:
                 },
                 ExpiresIn=expiry,
             )
+
+            # Cache the URL: valid until expiry minus buffer
+            cache_ttl = max(expiry - _PRESIGNED_URL_CACHE_BUFFER, 60)
+            self._url_cache[image_key] = (url, time.monotonic() + cache_ttl)
+
             logger.debug(
                 "Generated pre-signed URL",
                 extra={
@@ -320,6 +338,7 @@ class S3Service:
                 Bucket=bucket_name,
                 Key=s3_key,
             )
+            self._url_cache.pop(s3_key, None)
             logger.info(
                 "Deleted S3 object",
                 extra={"s3_key": s3_key},
@@ -369,6 +388,7 @@ class S3Service:
                 Body=data,
                 ContentType=content_type,
             )
+            self._url_cache.pop(s3_key, None)
             logger.info(
                 "Uploaded object to S3",
                 extra={
