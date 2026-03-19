@@ -6,7 +6,7 @@ from uuid import UUID
 from sqlalchemy import case, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import CardRecordReview
+from src.db.models import CardRecord, CardRecordReview
 from src.repositories.base import BaseRepository
 
 
@@ -304,3 +304,75 @@ class CardRecordReviewRepository(BaseRepository[CardRecordReview]):
         )
         result = await self.db.execute(query)
         return [row.review_date for row in result.all()]
+
+    async def get_last_review_date(self, user_id: UUID) -> date | None:
+        """Get the date of the most recent review for a user.
+
+        Args:
+            user_id: User UUID.
+
+        Returns:
+            Date of the last review, or None if no reviews exist.
+        """
+        query = select(func.max(CardRecordReview.reviewed_at)).where(
+            CardRecordReview.user_id == user_id,
+        )
+        result = await self.db.execute(query)
+        val = result.scalar_one()
+        return val.date() if val is not None else None
+
+    async def get_last_review_by_deck(self, user_id: UUID) -> dict[UUID, datetime]:
+        """Get the most recent review timestamp per deck for a user.
+
+        Args:
+            user_id: User UUID.
+
+        Returns:
+            Dict mapping deck_id to the most recent review datetime.
+        """
+        query = (
+            select(
+                CardRecord.deck_id,
+                func.max(CardRecordReview.reviewed_at).label("last_reviewed_at"),
+            )
+            .join(CardRecord, CardRecordReview.card_record_id == CardRecord.id)
+            .where(CardRecordReview.user_id == user_id)
+            .group_by(CardRecord.deck_id)
+        )
+        result = await self.db.execute(query)
+        return {row.deck_id: row.last_reviewed_at for row in result.all()}
+
+    async def get_deck_review_stats(self, user_id: UUID, deck_id: UUID) -> dict:
+        """Get aggregated review statistics for a single deck.
+
+        Args:
+            user_id: User UUID.
+            deck_id: Deck UUID.
+
+        Returns:
+            Dict with total_reviews, total_study_time_seconds, average_quality,
+            first_reviewed_at, and last_reviewed_at.
+        """
+        query = (
+            select(
+                func.count().label("total_reviews"),
+                func.coalesce(func.sum(CardRecordReview.time_taken), 0).label("total_study_time"),
+                func.avg(CardRecordReview.quality).label("avg_quality"),
+                func.min(CardRecordReview.reviewed_at).label("first_reviewed_at"),
+                func.max(CardRecordReview.reviewed_at).label("last_reviewed_at"),
+            )
+            .join(CardRecord, CardRecordReview.card_record_id == CardRecord.id)
+            .where(
+                CardRecordReview.user_id == user_id,
+                CardRecord.deck_id == deck_id,
+            )
+        )
+        result = await self.db.execute(query)
+        row = result.one()
+        return {
+            "total_reviews": int(row.total_reviews),
+            "total_study_time_seconds": int(row.total_study_time),
+            "average_quality": float(row.avg_quality) if row.avg_quality is not None else 0.0,
+            "first_reviewed_at": row.first_reviewed_at,
+            "last_reviewed_at": row.last_reviewed_at,
+        }

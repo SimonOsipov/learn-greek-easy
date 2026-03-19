@@ -251,6 +251,21 @@ class DeckRepository(BaseRepository[Deck]):
         result = await self.db.execute(query)
         return result.scalar() or 0
 
+    async def get_by_ids(self, deck_ids: list[UUID]) -> list[Deck]:
+        """Get multiple decks by their IDs.
+
+        Args:
+            deck_ids: List of deck UUIDs to fetch.
+
+        Returns:
+            List of active Deck objects matching the provided IDs.
+        """
+        if not deck_ids:
+            return []
+        query = select(Deck).where(Deck.id.in_(deck_ids), Deck.is_active.is_(True))
+        result = await self.db.execute(query)
+        return list(result.scalars().all())
+
     async def get_batch_card_counts(self, deck_ids: list[UUID]) -> dict[UUID, int]:
         """Get word entry counts for multiple decks efficiently.
 

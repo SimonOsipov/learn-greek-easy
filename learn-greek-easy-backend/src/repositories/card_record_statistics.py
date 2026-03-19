@@ -471,3 +471,53 @@ class CardRecordStatisticsRepository(BaseRepository[CardRecordStatistics]):
         )
         result = await self.db.execute(query)
         return result.scalar_one()
+
+    async def get_deck_progress_summaries(self, user_id: UUID) -> list[dict]:
+        """Get per-deck progress summary aggregates for a user.
+
+        Returns cards_studied, cards_mastered, cards_due, and average easiness factor
+        for each deck the user has statistics in.
+
+        Args:
+            user_id: User UUID.
+
+        Returns:
+            List of dicts with deck_id, cards_studied, cards_mastered, cards_due, avg_ef.
+        """
+        query = (
+            select(
+                CardRecord.deck_id,
+                func.count(CardRecordStatistics.id)
+                .filter(CardRecordStatistics.status != CardStatus.NEW)
+                .label("cards_studied"),
+                func.count(CardRecordStatistics.id)
+                .filter(CardRecordStatistics.status == CardStatus.MASTERED)
+                .label("cards_mastered"),
+                func.count(CardRecordStatistics.id)
+                .filter(
+                    CardRecordStatistics.next_review_date <= date.today(),
+                    CardRecordStatistics.status != CardStatus.NEW,
+                    CardRecordStatistics.status != CardStatus.MASTERED,
+                )
+                .label("cards_due"),
+                func.avg(CardRecordStatistics.easiness_factor).label("avg_ef"),
+            )
+            .join(CardRecord, CardRecordStatistics.card_record_id == CardRecord.id)
+            .where(
+                CardRecordStatistics.user_id == user_id,
+                CardRecord.is_active.is_(True),
+            )
+            .group_by(CardRecord.deck_id)
+        )
+        result = await self.db.execute(query)
+        rows = result.all()
+        return [
+            {
+                "deck_id": row.deck_id,
+                "cards_studied": int(row.cards_studied),
+                "cards_mastered": int(row.cards_mastered),
+                "cards_due": int(row.cards_due),
+                "avg_ef": float(row.avg_ef) if row.avg_ef is not None else 2.5,
+            }
+            for row in rows
+        ]
