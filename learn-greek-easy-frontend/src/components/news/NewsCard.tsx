@@ -36,10 +36,11 @@ export interface NewsCardProps {
   height?: NewsCardHeight;
   page?: 'dashboard' | 'news';
   level?: NewsLevel;
+  variant?: 'compact' | 'full';
 }
 
 const heightClasses: Record<NewsCardHeight, string> = {
-  default: 'h-48',
+  default: 'h-[211px]',
   tall: 'h-[300px]',
 };
 
@@ -49,6 +50,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({
   height = 'default',
   page,
   level = 'b2',
+  variant = 'full',
 }) => {
   const { t } = useTranslation('common');
 
@@ -181,7 +183,14 @@ export const NewsCard: React.FC<NewsCardProps> = ({
         />
 
         {/* Semi-transparent Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-black/30" />
+        <div
+          className={cn(
+            'absolute inset-0 bg-gradient-to-t',
+            variant === 'compact'
+              ? 'from-black/90 via-black/60 to-black/30'
+              : 'from-black/80 via-black/50 to-black/30'
+          )}
+        />
 
         {/* Country Flag Pill */}
         {article.country && COUNTRY_CONFIG[article.country as NewsCountry] && (
@@ -193,10 +202,22 @@ export const NewsCard: React.FC<NewsCardProps> = ({
 
         {/* Content */}
         <div
-          className={cn('relative z-10 flex h-full flex-col justify-end p-4', hasAudio && 'pb-16')}
+          className={cn(
+            'relative z-10 flex h-full flex-col justify-end p-4',
+            hasAudio && (variant === 'compact' ? 'pb-20' : 'pb-16')
+          )}
         >
-          <h3 className="mb-1 line-clamp-2 text-lg font-semibold text-white">{title}</h3>
-          <p className="line-clamp-2 text-sm text-gray-200">{description}</p>
+          <h3
+            className={cn(
+              'line-clamp-2 font-semibold text-white',
+              variant === 'compact' ? 'text-sm' : 'mb-1 text-lg'
+            )}
+          >
+            {title}
+          </h3>
+          {variant !== 'compact' && (
+            <p className="line-clamp-2 text-sm text-gray-200">{description}</p>
+          )}
           <ExternalLink className="absolute right-3 top-3 h-4 w-4 text-white/70 group-hover:text-white" />
         </div>
       </a>

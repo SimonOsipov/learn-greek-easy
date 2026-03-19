@@ -75,6 +75,8 @@ The full seed executes 19 steps in order:
 | 3 | V1 content | 6 decks (A1-C2), 60 cards (10 per deck) |
 | 3b | User decks | User-owned decks for learner + admin (My Decks) |
 | 3c | V2 decks | V2 card system decks with word entries |
+| 3d | V2 statistics | CardRecordStatistics for learner on V2 Nouns deck (60% progress) |
+| 3e | V2 reviews | CardRecordReview history for mastered + learning cards |
 | 4-5 | Progress | Card statistics + review history for learner (A1 deck, 60%) |
 | 6 | Notifications | Notifications for learner user |
 | 7 | Feedback | Feedback items and votes |

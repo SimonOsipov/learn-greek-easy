@@ -221,6 +221,7 @@ class TestSeedServiceContent:
 
 
 # ============================================================================
+
 # Full Seed Orchestration Tests
 # ============================================================================
 
@@ -293,6 +294,30 @@ class TestSeedServiceOrchestration:
         # Check that statistics and reviews keys are present in result
         assert result["statistics"]["success"] is True
         assert result["reviews"]["success"] is True
+
+    @pytest.mark.asyncio
+    async def test_seed_all_calls_v2_seed_methods(self, mock_db_with_ids, mock_settings_can_seed):
+        """Verify seed_all calls V2 statistics and reviews methods and includes results."""
+        seed_service = SeedService(mock_db_with_ids)
+
+        with (
+            patch.object(
+                seed_service,
+                "seed_v2_card_record_statistics",
+                new=AsyncMock(return_value={"success": True, "stats_created": 8}),
+            ) as mock_stats,
+            patch.object(
+                seed_service,
+                "seed_v2_card_record_reviews",
+                new=AsyncMock(return_value={"success": True, "reviews_created": 42}),
+            ) as mock_reviews,
+        ):
+            result = await seed_service.seed_all()
+
+        mock_stats.assert_called_once()
+        mock_reviews.assert_called_once()
+        assert result["v2_statistics"]["stats_created"] == 8
+        assert result["v2_reviews"]["reviews_created"] == 42
 
 
 # ============================================================================

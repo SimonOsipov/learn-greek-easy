@@ -17,7 +17,7 @@ export interface NewsCardSkeletonProps {
 }
 
 const heightClasses: Record<NewsCardHeight, string> = {
-  default: 'h-48',
+  default: 'h-[211px]',
   tall: 'h-[300px]',
 };
 

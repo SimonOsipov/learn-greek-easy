@@ -603,39 +603,69 @@ describe('NewsItemsTable — Country badge', () => {
   });
 });
 
-describe('NewsItemsTable — A2 badge', () => {
+describe('NewsItemsTable — B2 Text badge', () => {
   beforeEach(() => {
     mockCurrentLanguage.value = 'en';
     vi.clearAllMocks();
   });
 
-  it('shows purple A2 badge when has_a2_content is true', () => {
-    const item = makeNewsItem({ id: 'item-a2', has_a2_content: true });
+  it('shows green B2 Text badge when Greek text is complete', () => {
+    const item = makeNewsItem({ id: 'item-b2', title_el: 'Τίτλος', description_el: 'Περιγραφή' });
     render(<NewsItemsTable {...defaultTableProps} newsItems={[item]} />);
 
-    const badge = screen.getByTestId('a2-badge-item-a2');
+    const badge = screen.getByTestId('b2-text-badge-item-b2');
     expect(badge).toBeInTheDocument();
+    expect(badge.textContent).toBe('B2 Text');
     expect(badge.className).toContain('bg-purple-500');
   });
 
-  it('shows muted A2 badge when has_a2_content is false', () => {
+  it('shows muted B2 Text badge when Greek text is missing', () => {
+    const item = makeNewsItem({ id: 'item-no-b2', title_el: '', description_el: '' });
+    render(<NewsItemsTable {...defaultTableProps} newsItems={[item]} />);
+
+    const badge = screen.getByTestId('b2-text-badge-item-no-b2');
+    expect(badge).toBeInTheDocument();
+    expect(badge.textContent).toBe('B2 Text');
+    expect(badge.className).toContain('opacity-50');
+    expect(badge.className).not.toContain('bg-purple-500');
+  });
+});
+
+describe('NewsItemsTable — A2 Text badge', () => {
+  beforeEach(() => {
+    mockCurrentLanguage.value = 'en';
+    vi.clearAllMocks();
+  });
+
+  it('shows purple A2 Text badge when has_a2_content is true', () => {
+    const item = makeNewsItem({ id: 'item-a2', has_a2_content: true });
+    render(<NewsItemsTable {...defaultTableProps} newsItems={[item]} />);
+
+    const badge = screen.getByTestId('a2-text-badge-item-a2');
+    expect(badge).toBeInTheDocument();
+    expect(badge.textContent).toBe('A2 Text');
+    expect(badge.className).toContain('bg-purple-500');
+  });
+
+  it('shows muted A2 Text badge when has_a2_content is false', () => {
     const item = makeNewsItem({ id: 'item-no-a2', has_a2_content: false });
     render(<NewsItemsTable {...defaultTableProps} newsItems={[item]} />);
 
-    const badge = screen.getByTestId('a2-badge-item-no-a2');
+    const badge = screen.getByTestId('a2-text-badge-item-no-a2');
     expect(badge).toBeInTheDocument();
+    expect(badge.textContent).toBe('A2 Text');
     expect(badge.className).toContain('opacity-50');
     expect(badge.className).not.toContain('bg-purple-500');
   });
 
-  it('A2 badge is present for every row', () => {
+  it('A2 Text badge is present for every row', () => {
     const items = [
       makeNewsItem({ id: 'item-1', has_a2_content: true }),
       makeNewsItem({ id: 'item-2', has_a2_content: false }),
     ];
     render(<NewsItemsTable {...defaultTableProps} newsItems={items} total={2} />);
 
-    expect(screen.getByTestId('a2-badge-item-1')).toBeInTheDocument();
-    expect(screen.getByTestId('a2-badge-item-2')).toBeInTheDocument();
+    expect(screen.getByTestId('a2-text-badge-item-1')).toBeInTheDocument();
+    expect(screen.getByTestId('a2-text-badge-item-2')).toBeInTheDocument();
   });
 });

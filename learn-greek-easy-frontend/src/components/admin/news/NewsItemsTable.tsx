@@ -235,21 +235,38 @@ const NewsItemRow: React.FC<NewsItemRowProps> = ({ item, onEdit, onDelete, t, la
                 </Badge>
               );
             })}
-            {item.has_a2_content ? (
+            {isElComplete ? (
               <Badge
                 variant="outline"
                 className="border-purple-500/30 bg-purple-500/10 px-1.5 py-0 text-[10px] text-purple-700 dark:text-purple-400"
-                data-testid={`a2-badge-${item.id}`}
+                data-testid={`b2-text-badge-${item.id}`}
               >
-                A2
+                B2 Text
               </Badge>
             ) : (
               <Badge
                 variant="secondary"
                 className="px-1.5 py-0 text-[10px] opacity-50"
-                data-testid={`a2-badge-${item.id}`}
+                data-testid={`b2-text-badge-${item.id}`}
               >
-                A2
+                B2 Text
+              </Badge>
+            )}
+            {item.has_a2_content ? (
+              <Badge
+                variant="outline"
+                className="border-purple-500/30 bg-purple-500/10 px-1.5 py-0 text-[10px] text-purple-700 dark:text-purple-400"
+                data-testid={`a2-text-badge-${item.id}`}
+              >
+                A2 Text
+              </Badge>
+            ) : (
+              <Badge
+                variant="secondary"
+                className="px-1.5 py-0 text-[10px] opacity-50"
+                data-testid={`a2-text-badge-${item.id}`}
+              >
+                A2 Text
               </Badge>
             )}
           </div>
@@ -265,7 +282,7 @@ const NewsItemRow: React.FC<NewsItemRowProps> = ({ item, onEdit, onDelete, t, la
               {item.audio_url && (
                 <Badge
                   variant="outline"
-                  className="border-green-500/30 bg-green-500/10 px-1.5 py-0 text-[10px] text-green-700 dark:text-green-400"
+                  className="border-purple-500/30 bg-purple-500/10 px-1.5 py-0 text-[10px] text-purple-700 dark:text-purple-400"
                 >
                   B2
                 </Badge>
