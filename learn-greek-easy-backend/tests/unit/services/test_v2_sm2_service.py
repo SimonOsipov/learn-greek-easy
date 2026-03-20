@@ -124,6 +124,33 @@ class TestV2SM2ServiceGetStudyQueue:
         assert call_kwargs.args[1] is None  # deck_id=None
 
     @pytest.mark.asyncio
+    async def test_no_filters_returns_all_cards(self, mock_db_session):
+        due = [
+            _create_mock_card_record_stats(deck_id=uuid4()),
+            _create_mock_card_record_stats(deck_id=uuid4()),
+        ]
+
+        service = V2SM2Service(mock_db_session)
+        service.stats_repo.get_due_cards = AsyncMock(return_value=due)
+        service.stats_repo.get_new_cards = AsyncMock(return_value=[])
+        service.stats_repo.get_early_practice_cards = AsyncMock(return_value=[])
+        mock_db_session.execute = AsyncMock(
+            return_value=MagicMock(
+                scalars=MagicMock(return_value=MagicMock(all=MagicMock(return_value=[])))
+            )
+        )
+
+        with patch("src.services.v2_sm2_service.get_s3_service"):
+            result = await service.get_study_queue(
+                user_id=uuid4(), deck_id=None, card_type=None, word_entry_id=None
+            )
+
+        assert result.total_due == 2
+        call_kwargs = service.stats_repo.get_due_cards.call_args
+        assert call_kwargs.args[1] is None  # deck_id=None
+        assert call_kwargs.kwargs.get("card_type") is None
+
+    @pytest.mark.asyncio
     async def test_combined_mode_deck_and_card_type(self, mock_db_session):
         deck_id = uuid4()
         service = V2SM2Service(mock_db_session)

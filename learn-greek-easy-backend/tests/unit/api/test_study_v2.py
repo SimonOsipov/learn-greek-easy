@@ -23,12 +23,17 @@ def _make_mock_queue() -> MagicMock:
 @pytest.mark.api
 class TestStudyV2Route:
     @pytest.mark.asyncio
-    async def test_400_when_neither_deck_id_nor_card_type(self, client, auth_headers):
-        response = await client.get("/api/v1/study/queue/v2", headers=auth_headers)
-        assert response.status_code == 400
-        body = response.json()
-        message = body.get("detail") or body.get("error", {}).get("message", "")
-        assert "At least one of" in message
+    async def test_200_with_no_filters(self, client, auth_headers):
+        mock_queue = _make_mock_queue()
+        with patch("src.api.v1.study_v2.V2SM2Service") as MockService:
+            mock_instance = MockService.return_value
+            mock_instance.get_study_queue = AsyncMock(return_value=mock_queue)
+            response = await client.get("/api/v1/study/queue/v2", headers=auth_headers)
+        assert response.status_code == 200
+        kwargs = mock_instance.get_study_queue.await_args.kwargs
+        assert kwargs["deck_id"] is None
+        assert kwargs["card_type"] is None
+        assert kwargs["word_entry_id"] is None
 
     @pytest.mark.asyncio
     async def test_403_for_premium_deck_free_user(self, client, auth_headers):

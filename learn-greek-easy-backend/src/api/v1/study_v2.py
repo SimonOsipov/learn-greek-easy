@@ -7,7 +7,7 @@ allowing users to retrieve study queues using the V2 SM2 card system
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.dependencies import get_current_user
@@ -49,16 +49,17 @@ async def get_v2_study_queue(
 ) -> V2StudyQueue:
     """Get V2 study queue with cards from the V2 SM2 card system.
 
-    Supports both deck-scoped and cross-deck modes via the optional deck_id parameter.
-    At least one of deck_id, card_type, or word_entry_id must be provided.
+    Supports deck-scoped, cross-deck filtered, and unfiltered (all-due) modes via
+    the optional deck_id, card_type, and word_entry_id parameters. All filters are
+    optional; omitting all returns all due cards across every deck.
 
     In deck-scoped mode (deck_id provided):
     - Validates deck exists, is active, and uses V2 card system
     - Checks premium access for the deck
 
     In cross-deck mode (no deck_id):
-    - Requires card_type or word_entry_id to be provided
     - Free-tier users have premium decks excluded automatically
+    - card_type and word_entry_id further narrow results when provided
 
     Args:
         deck_id: Optional UUID to scope queue to a specific deck
@@ -76,21 +77,15 @@ async def get_v2_study_queue(
         V2StudyQueue with counts and list of cards to study
 
     Raises:
-        HTTPException 400: If none of deck_id, card_type, or word_entry_id is provided
         HTTPException 400: If deck_id is provided and deck uses V1 card system
         DeckNotFoundException 404: If deck_id is provided but deck not found or inactive
         HTTPException 403: If deck is premium and user is on free tier
 
     Example:
+        GET /api/v1/study/queue/v2
         GET /api/v1/study/queue/v2?card_type=vocabulary&limit=10
         GET /api/v1/study/queue/v2?deck_id=660e8400-e29b-41d4-a716-446655440001&limit=10
     """
-    if deck_id is None and card_type is None and word_entry_id is None:
-        raise HTTPException(
-            status_code=400,
-            detail="At least one of deck_id, card_type, or word_entry_id must be provided",
-        )
-
     if deck_id is not None:
         deck = await DeckRepository(db).get(deck_id)
         if not deck or not deck.is_active:
