@@ -485,10 +485,10 @@ class CardRecordStatisticsRepository(BaseRepository[CardRecordStatistics]):
         self,
         user_id: UUID,
         deck_id: UUID,
-    ) -> list[tuple[UUID, int, int]]:
+    ) -> list[tuple[UUID, int, int, int]]:
         """Get per-word mastery summary for a deck.
 
-        Returns list of (word_entry_id, mastered_count, total_count) tuples.
+        Returns list of (word_entry_id, mastered_count, studied_count, total_count) tuples.
         Uses LEFT JOIN so words with no stats still appear with mastered_count=0.
         """
         query = (
@@ -497,6 +497,7 @@ class CardRecordStatisticsRepository(BaseRepository[CardRecordStatistics]):
                 func.count(CardRecordStatistics.id)
                 .filter(CardRecordStatistics.status == CardStatus.MASTERED)
                 .label("mastered_count"),
+                func.count(CardRecordStatistics.id).label("studied_count"),
                 func.count(CardRecord.id).label("total_count"),
             )
             .outerjoin(
@@ -511,7 +512,10 @@ class CardRecordStatisticsRepository(BaseRepository[CardRecordStatistics]):
             .group_by(CardRecord.word_entry_id)
         )
         result = await self.db.execute(query)
-        return [(row.word_entry_id, row.mastered_count, row.total_count) for row in result.all()]
+        return [
+            (row.word_entry_id, row.mastered_count, row.studied_count, row.total_count)
+            for row in result.all()
+        ]
 
     async def get_deck_progress_summaries(self, user_id: UUID) -> list[dict]:
         """Get per-deck progress summary aggregates for a user.

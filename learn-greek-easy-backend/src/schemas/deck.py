@@ -242,6 +242,7 @@ class DeckWordEntriesResponse(BaseModel):
 class WordMasteryItem(BaseModel):
     word_entry_id: UUID
     mastered_count: int = Field(..., ge=0)
+    studied_count: int = Field(..., ge=0)
     total_count: int = Field(..., ge=0)
 
 

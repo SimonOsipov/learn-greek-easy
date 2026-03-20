@@ -235,6 +235,7 @@ export interface AchievementsResponse {
 export interface WordMasteryItem {
   word_entry_id: string;
   mastered_count: number;
+  studied_count: number;
   total_count: number;
 }
 

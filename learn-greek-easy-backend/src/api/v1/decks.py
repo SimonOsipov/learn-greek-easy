@@ -794,9 +794,10 @@ async def get_word_mastery(
         WordMasteryItem(
             word_entry_id=word_entry_id,
             mastered_count=mastered_count,
+            studied_count=studied_count,
             total_count=total_count,
         )
-        for word_entry_id, mastered_count, total_count in rows
+        for word_entry_id, mastered_count, studied_count, total_count in rows
     ]
     return WordMasteryResponse(deck_id=deck_id, items=items)
 

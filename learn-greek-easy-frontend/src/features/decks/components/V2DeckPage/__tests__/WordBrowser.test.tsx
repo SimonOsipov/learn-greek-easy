@@ -420,6 +420,7 @@ describe('WordBrowser Component', () => {
           {
             word_entry_id: mockWordEntries[0].id,
             mastered_count: 2,
+            studied_count: 2,
             total_count: 2,
           },
         ],
@@ -432,6 +433,36 @@ describe('WordBrowser Component', () => {
       });
 
       expect(screen.getByRole('button', { name: /New \(2\)/i })).toBeInTheDocument();
+    });
+
+    it('shows reviewing filter count when word is studied but not mastered', async () => {
+      vi.mocked(wordEntryAPI.getByDeck).mockResolvedValue({
+        deck_id: 'deck-1',
+        total: 3,
+        page: 1,
+        page_size: 40,
+        word_entries: mockWordEntries,
+      });
+      vi.mocked(progressAPI.getWordMastery).mockResolvedValue({
+        deck_id: 'deck-1',
+        items: [
+          {
+            word_entry_id: mockWordEntries[0].id,
+            mastered_count: 0,
+            studied_count: 1,
+            total_count: 2,
+          },
+        ],
+      });
+
+      render(<WordBrowser deckId="deck-1" />, { wrapper: createWrapper() });
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Reviewing \(1\)/i })).toBeInTheDocument();
+      });
+
+      expect(screen.getByRole('button', { name: /New \(2\)/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Learned \(0\)/i })).toBeInTheDocument();
     });
   });
 

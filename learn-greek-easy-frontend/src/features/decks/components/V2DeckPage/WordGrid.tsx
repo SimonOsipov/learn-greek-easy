@@ -70,11 +70,11 @@ export function WordGrid({ entries, masteryMap }: WordGridProps) {
         const masteryStatus: CardStatus = m
           ? m.mastered_count === m.total_count && m.total_count > 0
             ? 'mastered'
-            : m.mastered_count > 0
+            : m.studied_count > 0
               ? 'learning'
               : 'new'
           : 'new';
-        const masteryFilled = m ? Math.min(m.mastered_count, 4) : 0;
+        const masteryFilled = m ? Math.min(m.studied_count, 4) : 0;
         return (
           <div key={entry.id} style={isWideCard(entry) ? { gridColumn: 'span 2' } : undefined}>
             <WordCard
