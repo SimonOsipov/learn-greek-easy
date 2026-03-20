@@ -8,20 +8,24 @@
  * Rendered outside AppLayout for an immersive full-screen experience.
  */
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useCallback } from 'react';
 
-import { CheckCircle2, ChevronLeft, AlertCircle } from 'lucide-react';
+import { CheckCircle2, AlertCircle } from 'lucide-react';
 import posthog from 'posthog-js';
 import { useTranslation } from 'react-i18next';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 
 import { LanguageSwitcher } from '@/components/i18n';
+import { PracticeHeader, ProgressIndicator, SessionSummary } from '@/components/practice';
 import { PracticeCard } from '@/components/shared/PracticeCard';
 import { ThemeSwitcher } from '@/components/theme';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAudioPlayer } from '@/hooks/useAudioPlayer';
+import { usePracticeKeyboard } from '@/hooks/usePracticeKeyboard';
+import { usePracticeSession } from '@/hooks/usePracticeSession';
+import { formatDuration } from '@/lib/timeFormatUtils';
 import type { CardRecordType } from '@/services/wordEntryAPI';
 import {
   useV2PracticeStore,
@@ -29,16 +33,6 @@ import {
   resolveV2CardAudioUrl,
 } from '@/stores/v2PracticeStore';
 import { useXPStore } from '@/stores/xpStore';
-
-// ============================================
-// Helpers
-// ============================================
-
-function formatDuration(totalSeconds: number): string {
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes}:${String(seconds).padStart(2, '0')}`;
-}
 
 // ============================================
 // Main Component
@@ -59,17 +53,57 @@ export function V2FlashcardPracticePage() {
     isLoading,
     error,
     sessionId,
-    sessionStats,
     sessionSummary,
     startSession,
     rateCard,
     flipCard,
   } = useV2PracticeStore();
 
-  // Track session start time for PostHog
-  const sessionStartTimeRef = useRef<number | null>(null);
-  const hasTrackedStartRef = useRef(false);
-  const hasTrackedCompleteRef = useRef(false);
+  const { resetTracking } = usePracticeSession({
+    startEvent: 'study_session_started_v2',
+    completeEvent: 'study_session_completed_v2',
+    abandonEvent: 'study_session_abandoned_v2',
+    isSessionActive: queue.length > 0 && !sessionSummary,
+    isSessionComplete: Boolean(sessionSummary),
+    getStartProps: useCallback(() => {
+      if (queue.length === 0) return null;
+      return {
+        deck_id: deckId ?? null,
+        card_type: cardType ?? null,
+        card_count: queue.length,
+      };
+    }, [queue, deckId, cardType]),
+    getCompleteProps: useCallback(
+      (_durationSec: number) => {
+        if (!sessionSummary) return null;
+        return {
+          deck_id: deckId ?? null,
+          cards_reviewed: sessionSummary.cardsReviewed,
+          total_time_seconds: sessionSummary.totalTimeSeconds,
+          avg_time_per_card: sessionSummary.avgTimePerCard,
+          again: sessionSummary.ratingBreakdown.again,
+          hard: sessionSummary.ratingBreakdown.hard,
+          good: sessionSummary.ratingBreakdown.good,
+          easy: sessionSummary.ratingBreakdown.easy,
+        };
+      },
+      [sessionSummary, deckId]
+    ),
+    getAbandonProps: useCallback(
+      (durationSec: number) => {
+        if (queue.length === 0 || sessionSummary) return null;
+        return {
+          deck_id: deckId ?? null,
+          cards_reviewed: currentIndex,
+          duration_sec: durationSec,
+        };
+      },
+      [queue, sessionSummary, deckId, currentIndex]
+    ),
+    onCompleteTracked: useCallback(() => {
+      useXPStore.getState().loadXPStats(true);
+    }, []),
+  });
 
   // Start session on mount
   useEffect(() => {
@@ -79,74 +113,6 @@ export function V2FlashcardPracticePage() {
       });
     }
   }, [deckId, cardType, wordId, startSession]);
-
-  // Track session started when queue loads (non-empty)
-  useEffect(() => {
-    if (!isLoading && queue.length > 0 && sessionId && !hasTrackedStartRef.current) {
-      hasTrackedStartRef.current = true;
-      sessionStartTimeRef.current = Date.now();
-      try {
-        posthog.capture('study_session_started_v2', {
-          deck_id: deckId,
-          session_id: sessionId,
-          cards_due: queue.length,
-          card_type_filter: cardType ?? null,
-        });
-      } catch {
-        // Silent failure
-      }
-    }
-  }, [isLoading, queue.length, sessionId, deckId, cardType]);
-
-  // Track session completed + XP refresh when summary appears
-  useEffect(() => {
-    if (sessionSummary && !hasTrackedCompleteRef.current) {
-      hasTrackedCompleteRef.current = true;
-      const durationSec = sessionStartTimeRef.current
-        ? Math.round((Date.now() - sessionStartTimeRef.current) / 1000)
-        : sessionSummary.totalTimeSeconds;
-      try {
-        posthog.capture('study_session_completed_v2', {
-          deck_id: deckId,
-          session_id: sessionSummary.sessionId,
-          cards_reviewed: sessionSummary.cardsReviewed,
-          duration_sec: durationSec,
-          cards_mastered: sessionSummary.cardsMastered,
-          cards_failed: sessionSummary.ratingBreakdown.again,
-        });
-      } catch {
-        // Silent failure
-      }
-      // Refresh XP
-      useXPStore
-        .getState()
-        .loadXPStats(true)
-        .catch(() => {});
-    }
-  }, [sessionSummary, deckId]);
-
-  // Track session abandoned on beforeunload
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      if (sessionStats.cardsReviewed > 0 && !sessionSummary && sessionId) {
-        const durationSec = sessionStartTimeRef.current
-          ? Math.round((Date.now() - sessionStartTimeRef.current) / 1000)
-          : 0;
-        try {
-          posthog.capture('study_session_abandoned_v2', {
-            deck_id: deckId,
-            session_id: sessionId,
-            cards_reviewed: sessionStats.cardsReviewed,
-            duration_sec: durationSec,
-          });
-        } catch {
-          // Silent failure
-        }
-      }
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [sessionStats.cardsReviewed, sessionSummary, sessionId, deckId]);
 
   // Audio: resolve URL from current queue card
   const currentQueueCard = queue[currentIndex] ?? null;
@@ -196,33 +162,35 @@ export function V2FlashcardPracticePage() {
   );
 
   // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (
-        e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLTextAreaElement ||
-        e.target instanceof HTMLSelectElement
-      ) {
-        return;
-      }
-      if (e.key === ' ' || e.code === 'Space') {
-        e.preventDefault();
+  usePracticeKeyboard({
+    keymap: {
+      Space: () => {
         if (!isFlipped) flipCard();
-        return;
-      }
-      if ((e.key === 'a' || e.key === 'A') && audioUrl) {
-        e.preventDefault();
-        audioToggle();
-        return;
-      }
-      if (isFlipped && ['1', '2', '3', '4'].includes(e.key)) {
-        e.preventDefault();
-        handleRate(parseInt(e.key, 10));
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isFlipped, flipCard, audioUrl, audioToggle, handleRate]);
+      },
+      ' ': () => {
+        if (!isFlipped) flipCard();
+      },
+      a: () => {
+        if (audioUrl) audioToggle();
+      },
+      A: () => {
+        if (audioUrl) audioToggle();
+      },
+      '1': () => {
+        if (isFlipped) handleRate(1);
+      },
+      '2': () => {
+        if (isFlipped) handleRate(2);
+      },
+      '3': () => {
+        if (isFlipped) handleRate(3);
+      },
+      '4': () => {
+        if (isFlipped) handleRate(4);
+      },
+    },
+    deps: [isFlipped, flipCard, audioUrl, audioToggle, handleRate],
+  });
 
   const backToDeck = () =>
     navigate(wordId && deckId ? `/decks/${deckId}/words/${wordId}` : `/decks/${deckId}`);
@@ -232,7 +200,7 @@ export function V2FlashcardPracticePage() {
   // ============================================
   if (isLoading) {
     return (
-      <div className="flex min-h-screen flex-col bg-background">
+      <div className="flex min-h-screen flex-col bg-[var(--practice-bg)]">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="w-24" />
           <div className="flex items-center gap-2">
@@ -252,17 +220,18 @@ export function V2FlashcardPracticePage() {
   // ============================================
   if (error) {
     return (
-      <div className="flex min-h-screen flex-col bg-background">
-        <div className="flex items-center justify-between px-4 py-3">
-          <Button variant="ghost" size="sm" onClick={backToDeck}>
-            <ChevronLeft className="mr-1 h-4 w-4" />
-            {t('v2Practice.backToDeck')}
-          </Button>
-          <div className="flex items-center gap-2">
-            <LanguageSwitcher variant="icon" />
-            <ThemeSwitcher />
-          </div>
-        </div>
+      <div className="flex min-h-screen flex-col bg-[var(--practice-bg)]">
+        <PracticeHeader
+          onExit={() => backToDeck()}
+          exitLabel="Exit"
+          exitTestId="practice-close-button"
+          rightSlot={
+            <>
+              <LanguageSwitcher variant="icon" />
+              <ThemeSwitcher />
+            </>
+          }
+        />
         <div className="mx-auto w-full max-w-lg px-4">
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
@@ -290,17 +259,18 @@ export function V2FlashcardPracticePage() {
   // ============================================
   if (!isLoading && !error && queue.length === 0 && !sessionSummary) {
     return (
-      <div className="flex min-h-screen flex-col bg-background">
-        <div className="flex items-center justify-between px-4 py-3">
-          <Button variant="ghost" size="sm" onClick={backToDeck}>
-            <ChevronLeft className="mr-1 h-4 w-4" />
-            {t('v2Practice.backToDeck')}
-          </Button>
-          <div className="flex items-center gap-2">
-            <LanguageSwitcher variant="icon" />
-            <ThemeSwitcher />
-          </div>
-        </div>
+      <div className="flex min-h-screen flex-col bg-[var(--practice-bg)]">
+        <PracticeHeader
+          onExit={() => backToDeck()}
+          exitLabel="Exit"
+          exitTestId="practice-close-button"
+          rightSlot={
+            <>
+              <LanguageSwitcher variant="icon" />
+              <ThemeSwitcher />
+            </>
+          }
+        />
         <div className="mx-auto w-full max-w-lg px-4 py-12 text-center">
           <CheckCircle2 className="mx-auto mb-4 h-16 w-16 text-green-500" />
           <h2 className="mb-2 text-2xl font-bold">{t('v2Practice.allCaughtUp')}</h2>
@@ -315,82 +285,78 @@ export function V2FlashcardPracticePage() {
   // Render: Summary (session complete)
   // ============================================
   if (sessionSummary) {
-    const { cardsReviewed, totalTimeSeconds, ratingBreakdown } = sessionSummary;
-    const accuracy =
-      cardsReviewed > 0
-        ? Math.round(((ratingBreakdown.good + ratingBreakdown.easy) / cardsReviewed) * 100)
-        : 0;
-
     return (
-      <div className="flex min-h-screen flex-col bg-background">
-        <div className="flex items-center justify-between px-4 py-3">
-          <Button variant="ghost" size="sm" onClick={backToDeck}>
-            <ChevronLeft className="mr-1 h-4 w-4" />
-            {t('v2Practice.backToDeck')}
-          </Button>
-          <div className="flex items-center gap-2">
-            <LanguageSwitcher variant="icon" />
-            <ThemeSwitcher />
-          </div>
-        </div>
-        <div className="mx-auto w-full max-w-lg px-4 py-8">
-          <h2 className="mb-6 text-center text-2xl font-bold">{t('v2Practice.sessionComplete')}</h2>
-
-          {/* Stats grid */}
-          <div className="mb-6 grid grid-cols-3 gap-4">
-            <div className="rounded-lg border bg-card p-4 text-center">
-              <div className="text-2xl font-bold">{cardsReviewed}</div>
-              <div className="text-sm text-muted-foreground">{t('v2Practice.cardsReviewed')}</div>
-            </div>
-            <div className="rounded-lg border bg-card p-4 text-center">
-              <div className="text-2xl font-bold">{formatDuration(totalTimeSeconds)}</div>
-              <div className="text-sm text-muted-foreground">{t('v2Practice.timeSpent')}</div>
-            </div>
-            <div className="rounded-lg border bg-card p-4 text-center">
-              <div className="text-2xl font-bold">{accuracy}%</div>
-              <div className="text-sm text-muted-foreground">{t('v2Practice.accuracy')}</div>
-            </div>
-          </div>
-
-          {/* Rating breakdown */}
-          <div className="mb-6 rounded-lg border bg-card p-4">
-            <h3 className="mb-3 font-semibold">{t('v2Practice.ratingBreakdown')}</h3>
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Again</span>
-                <span className="font-medium">{ratingBreakdown.again}</span>
+      <div className="flex min-h-screen flex-col bg-[var(--practice-bg)]">
+        <PracticeHeader
+          onExit={() => backToDeck()}
+          exitLabel="Exit"
+          exitTestId="practice-close-button"
+          rightSlot={
+            <>
+              <LanguageSwitcher variant="icon" />
+              <ThemeSwitcher />
+            </>
+          }
+        />
+        <div className="flex flex-1 items-center justify-center">
+          <SessionSummary
+            title={t('v2Practice.sessionComplete', 'Session Complete')}
+            stats={[
+              {
+                label: t('v2Practice.cardsReviewed', 'Cards Reviewed'),
+                value: String(sessionSummary.cardsReviewed),
+              },
+              {
+                label: t('v2Practice.totalTime', 'Total Time'),
+                value: formatDuration(sessionSummary.totalTimeSeconds),
+              },
+              {
+                label: t('v2Practice.avgPerCard', 'Avg/Card'),
+                value: formatDuration(Math.round(sessionSummary.avgTimePerCard)),
+              },
+            ]}
+            details={
+              <div className="mb-4 rounded-lg border p-4">
+                <p className="mb-2 text-sm font-medium">
+                  {t('v2Practice.ratingBreakdown', 'Rating Breakdown')}
+                </p>
+                <div className="grid grid-cols-4 gap-2 text-center text-sm">
+                  <div>
+                    <div className="font-bold">{sessionSummary.ratingBreakdown.again}</div>
+                    <div className="text-muted-foreground">{t('v2Practice.again', 'Again')}</div>
+                  </div>
+                  <div>
+                    <div className="font-bold">{sessionSummary.ratingBreakdown.hard}</div>
+                    <div className="text-muted-foreground">{t('v2Practice.hard', 'Hard')}</div>
+                  </div>
+                  <div>
+                    <div className="font-bold">{sessionSummary.ratingBreakdown.good}</div>
+                    <div className="text-muted-foreground">{t('v2Practice.good', 'Good')}</div>
+                  </div>
+                  <div>
+                    <div className="font-bold">{sessionSummary.ratingBreakdown.easy}</div>
+                    <div className="text-muted-foreground">{t('v2Practice.easy', 'Easy')}</div>
+                  </div>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Hard</span>
-                <span className="font-medium">{ratingBreakdown.hard}</span>
+            }
+            actions={
+              <div className="flex w-full gap-3">
+                <Button variant="outline" className="flex-1" onClick={() => backToDeck()}>
+                  {t('v2Practice.backToDeck', 'Back to Deck')}
+                </Button>
+                <Button
+                  className="flex-1"
+                  onClick={() => {
+                    resetTracking();
+                    if (deckId) startSession(deckId, cardType, wordId).catch(() => {});
+                  }}
+                >
+                  {t('v2Practice.studyMore', 'Study More')}
+                </Button>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Good</span>
-                <span className="font-medium">{ratingBreakdown.good}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Easy</span>
-                <span className="font-medium">{ratingBreakdown.easy}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Action buttons */}
-          <div className="flex gap-3">
-            <Button
-              className="flex-1"
-              onClick={() => {
-                hasTrackedStartRef.current = false;
-                hasTrackedCompleteRef.current = false;
-                if (deckId) startSession(deckId, cardType, wordId).catch(() => {});
-              }}
-            >
-              {t('v2Practice.studyMore')}
-            </Button>
-            <Button variant="secondary" className="flex-1" onClick={backToDeck}>
-              {t('v2Practice.backToDeck')}
-            </Button>
-          </div>
+            }
+          />
         </div>
       </div>
     );
@@ -406,28 +372,28 @@ export function V2FlashcardPracticePage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="flex min-h-screen flex-col bg-[var(--practice-bg)]">
       {/* Top bar */}
-      <div className="flex items-center justify-between px-4 py-3">
-        <Button variant="ghost" size="sm" onClick={backToDeck} data-testid="practice-close-button">
-          <ChevronLeft className="mr-1 h-4 w-4" />
-          {t('v2Practice.exitSession')}
-        </Button>
-        <div className="flex items-center gap-2">
-          <LanguageSwitcher variant="icon" />
-          <ThemeSwitcher />
-        </div>
-      </div>
+      <PracticeHeader
+        onExit={() => backToDeck()}
+        exitLabel="Exit"
+        exitTestId="practice-close-button"
+        rightSlot={
+          <>
+            <LanguageSwitcher variant="icon" />
+            <ThemeSwitcher />
+          </>
+        }
+      />
 
       {/* Content area */}
       <div className="mx-auto w-full max-w-lg px-4">
         {/* Progress counter */}
-        <p className="mb-4 text-center text-sm text-muted-foreground">
-          {t('v2Practice.progress', {
-            current: Math.min(currentIndex + 1, queue.length),
-            total: queue.length,
-          })}
-        </p>
+        <ProgressIndicator
+          current={Math.min(currentIndex + 1, queue.length)}
+          total={queue.length}
+          label={t('v2Practice.cardLabel', 'Card')}
+        />
 
         {/* Practice card */}
         <PracticeCard
