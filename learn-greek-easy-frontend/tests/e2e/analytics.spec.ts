@@ -54,7 +54,6 @@ test.describe('Analytics Dashboard', () => {
   });
 
   test('E2E-05.2: Widgets display metrics', async ({ page }) => {
-    test.skip(true, 'SM2V2-06: skipped — ProgressService deleted. Unskip in SM2V2-07.');
     // Verify dashboard loaded
     await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible();
 

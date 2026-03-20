@@ -37,6 +37,10 @@ export interface WordCardProps {
   onClick?: () => void;
   /** Optional: Show loading state */
   loading?: boolean;
+  /** Mastery status for the indicator dot */
+  masteryStatus?: CardStatus;
+  /** Number of mastery dots filled (0-4) */
+  masteryFilled?: number;
 }
 
 interface MasteryIndicatorProps {
@@ -111,7 +115,13 @@ WordCardSkeleton.displayName = 'WordCardSkeleton';
  *
  * Supports click navigation and keyboard accessibility.
  */
-export const WordCard: React.FC<WordCardProps> = ({ wordEntry, onClick, loading = false }) => {
+export const WordCard: React.FC<WordCardProps> = ({
+  wordEntry,
+  onClick,
+  loading = false,
+  masteryStatus = 'new',
+  masteryFilled = 0,
+}) => {
   const { i18n } = useTranslation();
   const { lemma, pronunciation, translation_en, translation_ru } = wordEntry;
   const displayTranslation = getLocalizedTranslation(translation_en, translation_ru, i18n.language);
@@ -144,10 +154,9 @@ export const WordCard: React.FC<WordCardProps> = ({ wordEntry, onClick, loading 
       aria-label={`${lemma} - ${displayTranslation}`}
     >
       <CardContent className="p-4">
-        {/* Top-right mastery indicator (placeholder) */}
+        {/* Top-right mastery indicator */}
         <div className="absolute right-3 top-3">
-          {/* TODO: pass status from word entry data when mastery tracking is wired up */}
-          <MasteryIndicator level={0} />
+          <MasteryIndicator level={0} status={masteryStatus} />
         </div>
 
         {/* Main content - centered */}
@@ -172,9 +181,9 @@ export const WordCard: React.FC<WordCardProps> = ({ wordEntry, onClick, loading 
             {displayTranslation}
           </p>
 
-          {/* Bottom mastery dots (4 dots, all gray for V2) */}
+          {/* Bottom mastery dots */}
           <div className="pt-2">
-            <MasteryDots filled={0} />
+            <MasteryDots filled={masteryFilled} />
           </div>
         </div>
       </CardContent>

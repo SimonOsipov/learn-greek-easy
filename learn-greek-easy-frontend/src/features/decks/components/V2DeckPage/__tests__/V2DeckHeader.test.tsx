@@ -9,13 +9,15 @@
 
 import React from 'react';
 
-import { render, screen } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { I18nextProvider } from 'react-i18next';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import i18n from '@/i18n';
+import { progressAPI } from '@/services/progressAPI';
 import type { Deck } from '@/types/deck';
 
 import { V2DeckHeader } from '../V2DeckHeader';
@@ -33,6 +35,12 @@ vi.mock('react-router-dom', async () => {
     useNavigate: () => mockNavigate,
   };
 });
+
+vi.mock('@/services/progressAPI', () => ({
+  progressAPI: {
+    getDeckProgressDetail: vi.fn(),
+  },
+}));
 
 // ============================================
 // Fixtures
@@ -56,12 +64,17 @@ const mockDeck: Deck = {
 };
 
 function renderV2DeckHeader() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   return render(
-    <MemoryRouter>
-      <I18nextProvider i18n={i18n}>
-        <V2DeckHeader deck={mockDeck} />
-      </I18nextProvider>
-    </MemoryRouter>
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>
+        <I18nextProvider i18n={i18n}>
+          <V2DeckHeader deck={mockDeck} />
+        </I18nextProvider>
+      </MemoryRouter>
+    </QueryClientProvider>
   );
 }
 
@@ -143,5 +156,25 @@ describe('V2DeckHeader', () => {
     await user.click(screen.getByTestId('start-review-button'));
 
     expect(mockNavigate).toHaveBeenCalledWith('/decks/deck-abc/practice?cardType=meaning');
+  });
+
+  it('renders completion percentage from API data', async () => {
+    (progressAPI.getDeckProgressDetail as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      progress: {
+        total_cards: 10,
+        cards_mastered: 5,
+        cards_new: 5,
+        cards_learning: 0,
+        cards_review: 0,
+        cards_due: 2,
+        cards_studied: 5,
+        mastery_percentage: 50,
+        completion_percentage: 50,
+      },
+    });
+    renderV2DeckHeader();
+    await waitFor(() => {
+      expect(screen.getByText(/50%/)).toBeInTheDocument();
+    });
   });
 });

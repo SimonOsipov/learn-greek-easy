@@ -7,6 +7,7 @@
 
 import React, { useMemo, useState } from 'react';
 
+import { useQuery } from '@tanstack/react-query';
 import { Loader2, Search, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -15,6 +16,7 @@ import { MasteryDotsLegend } from '@/components/shared/MasteryDotsLegend';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { debounce } from '@/lib/utils';
+import { progressAPI, type WordMasteryItem } from '@/services/progressAPI';
 import type { WordEntryResponse } from '@/services/wordEntryAPI';
 
 import { WordGrid, WordGridSkeleton } from './WordGrid';
@@ -64,17 +66,26 @@ function searchWordEntries(entries: WordEntryResponse[], query: string): WordEnt
 }
 
 /**
- * Calculate filter counts.
- * For V2: Learned=0, Reviewing=0, New=total (all words are new).
+ * Calculate filter counts based on mastery data.
  */
-function calculateFilterCounts(entries: WordEntryResponse[]): FilterCounts {
-  // V2 implementation: All words are "new" since there's no user progress yet
-  return {
-    all: entries.length,
-    learned: 0,
-    reviewing: 0,
-    new: entries.length,
-  };
+function calculateFilterCounts(
+  entries: WordEntryResponse[],
+  masteryMap: Map<string, WordMasteryItem>
+): FilterCounts {
+  let learned = 0;
+  let reviewing = 0;
+  let newCount = 0;
+  for (const entry of entries) {
+    const m = masteryMap.get(entry.id);
+    if (m && m.mastered_count === m.total_count && m.total_count > 0) {
+      learned++;
+    } else if (m && m.mastered_count > 0 && m.mastered_count < m.total_count) {
+      reviewing++;
+    } else {
+      newCount++;
+    }
+  }
+  return { all: entries.length, learned, reviewing, new: newCount };
 }
 
 // ============================================
@@ -144,6 +155,16 @@ export const WordBrowser: React.FC<WordBrowserProps> = ({ deckId, className }) =
   const { wordEntries, total, isLoading, error, hasNextPage, fetchNextPage, isFetchingNextPage } =
     useWordEntries({ deckId });
 
+  const { data: masteryResponse } = useQuery({
+    queryKey: ['wordMastery', deckId],
+    queryFn: () => progressAPI.getWordMastery(deckId),
+  });
+
+  const masteryMap = useMemo(
+    () => new Map((masteryResponse?.items ?? []).map((m) => [m.word_entry_id, m])),
+    [masteryResponse]
+  );
+
   // Local state
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState(''); // Debounced value
@@ -173,16 +194,32 @@ export const WordBrowser: React.FC<WordBrowserProps> = ({ deckId, className }) =
     // Apply search filter
     result = searchWordEntries(result, searchQuery);
 
-    // Apply status filter (V2: only 'all' and 'new' have entries)
-    if (activeFilter === 'learned' || activeFilter === 'reviewing') {
-      result = []; // No entries in these categories for V2
+    // Apply status filter
+    if (activeFilter === 'learned') {
+      result = result.filter((e) => {
+        const m = masteryMap.get(e.id);
+        return m && m.mastered_count === m.total_count && m.total_count > 0;
+      });
+    } else if (activeFilter === 'reviewing') {
+      result = result.filter((e) => {
+        const m = masteryMap.get(e.id);
+        return m && m.mastered_count > 0 && m.mastered_count < m.total_count;
+      });
+    } else if (activeFilter === 'new') {
+      result = result.filter((e) => {
+        const m = masteryMap.get(e.id);
+        return !m || m.mastered_count === 0;
+      });
     }
 
     return result;
-  }, [wordEntries, searchQuery, activeFilter]);
+  }, [wordEntries, searchQuery, activeFilter, masteryMap]);
 
   // Calculate counts (always from full list, not filtered)
-  const filterCounts = useMemo(() => calculateFilterCounts(wordEntries), [wordEntries]);
+  const filterCounts = useMemo(
+    () => calculateFilterCounts(wordEntries, masteryMap),
+    [wordEntries, masteryMap]
+  );
 
   // Error state
   if (error) {
@@ -262,7 +299,7 @@ export const WordBrowser: React.FC<WordBrowserProps> = ({ deckId, className }) =
         />
       ) : (
         <>
-          <WordGrid entries={filteredEntries} />
+          <WordGrid entries={filteredEntries} masteryMap={masteryMap} />
           {hasNextPage && (
             <div className="mt-6 flex justify-center">
               <Button

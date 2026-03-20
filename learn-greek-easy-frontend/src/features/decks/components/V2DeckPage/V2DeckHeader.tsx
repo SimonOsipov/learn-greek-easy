@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 
+import { useQuery } from '@tanstack/react-query';
 import { BookOpen } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -12,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { getDeckBackgroundStyle } from '@/lib/deckBackground';
 import { getLocalizedDeckName, getLocalizedDeckDescription } from '@/lib/deckLocale';
+import { progressAPI } from '@/services/progressAPI';
 import type { Deck } from '@/types/deck';
 
 /**
@@ -53,6 +55,17 @@ export const V2DeckHeader: React.FC<V2DeckHeaderProps> = ({ deck }) => {
 
   // Use cardCount as the word count (for V2 decks, this represents word entries)
   const wordCount = deck.cardCount;
+
+  const { data: progressData } = useQuery({
+    queryKey: ['deckProgress', deck.id],
+    queryFn: () => progressAPI.getDeckProgressDetail(deck.id),
+  });
+
+  const completionPct = progressData
+    ? progressData.progress.total_cards > 0
+      ? Math.round((progressData.progress.cards_mastered / progressData.progress.total_cards) * 100)
+      : 0
+    : 0;
 
   const handleStartReview = () => {
     const basePath = `/decks/${deck.id}/practice`;
@@ -108,18 +121,25 @@ export const V2DeckHeader: React.FC<V2DeckHeaderProps> = ({ deck }) => {
               <span className="text-sm font-medium text-foreground">
                 {t('detail.yourProgress')}
               </span>
-              <span className="text-sm text-muted-foreground">0% {t('detail.complete')}</span>
+              <span className="text-sm text-muted-foreground">
+                {completionPct}% {t('detail.complete')}
+              </span>
             </div>
             <DeckProgressBar
               progress={{
                 deckId: deck.id,
-                status: 'not-started',
-                cardsTotal: wordCount,
-                cardsNew: wordCount,
-                cardsLearning: 0,
-                cardsReview: 0,
-                cardsMastered: 0,
-                dueToday: 0,
+                status:
+                  completionPct === 100
+                    ? 'completed'
+                    : completionPct > 0
+                      ? 'in-progress'
+                      : 'not-started',
+                cardsTotal: progressData?.progress.total_cards ?? wordCount,
+                cardsNew: progressData?.progress.cards_new ?? wordCount,
+                cardsLearning: progressData?.progress.cards_learning ?? 0,
+                cardsReview: progressData?.progress.cards_review ?? 0,
+                cardsMastered: progressData?.progress.cards_mastered ?? 0,
+                dueToday: progressData?.progress.cards_due ?? 0,
                 streak: 0,
                 totalTimeSpent: 0,
                 accuracy: 0,

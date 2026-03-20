@@ -234,6 +234,22 @@ class DeckWordEntriesResponse(BaseModel):
     )
 
 
+# ============================================================================
+# Word Mastery Schemas
+# ============================================================================
+
+
+class WordMasteryItem(BaseModel):
+    word_entry_id: UUID
+    mastered_count: int = Field(..., ge=0)
+    total_count: int = Field(..., ge=0)
+
+
+class WordMasteryResponse(BaseModel):
+    deck_id: UUID
+    items: list[WordMasteryItem]
+
+
 # Import at the end to avoid circular dependencies
 from src.schemas.word_entry import WordEntryResponse  # noqa: E402
 

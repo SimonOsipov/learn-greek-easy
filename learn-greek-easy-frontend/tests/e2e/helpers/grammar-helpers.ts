@@ -8,9 +8,7 @@ import { Page, expect } from '@playwright/test';
 import {
   MockCard,
   mockDeck,
-  createStudyQueueResponse,
   createDeckResponse,
-  createDeckListResponse,
   createUserStatsResponse,
 } from '../fixtures/grammar-mock-data';
 
@@ -28,7 +26,7 @@ function generateValidMockToken(userId: string): string {
  * Set up API mocks for review session with a specific card
  *
  * The review page calls these APIs:
- * - GET /api/v1/study/queue/{deckId} - Get cards for study (via studyAPI.getDeckQueue)
+ * - GET /api/v1/study/queue/v2 - Get V2 cards for study (via studyAPI.getV2Queue)
  * - GET /api/v1/decks/{deckId} - Get deck details (via deckAPI.getById)
  *
  * @param page - Playwright page object
@@ -38,38 +36,46 @@ export async function setupReviewMock(page: Page, card: MockCard): Promise<void>
   const deckResponse = createDeckResponse();
   const userStatsResponse = createUserStatsResponse();
 
-  // Mock study queue endpoint - the ACTUAL API used by reviewStore
-  // API: GET /api/v1/study/queue/{deckId}
-  await page.route('**/api/v1/study/queue/**', (route) => {
-    // Create response matching StudyQueue interface from studyAPI.ts
+  // Mock V2 study queue endpoint - the ACTUAL API used by v2PracticeStore
+  // API: GET /api/v1/study/queue/v2?deck_id=xxx
+  await page.route('**/api/v1/study/queue/v2*', (route) => {
+    // Create response matching V2StudyQueue interface from studyAPI.ts
+    const cardType = 'meaning_el_to_en';
     const studyQueueResponse = {
-      deck_id: mockDeck.id,
-      deck_name: mockDeck.name,
       total_due: 1,
       total_new: 1,
       total_early_practice: 0,
       total_in_queue: 1,
       cards: [
         {
-          card_id: card.id,
-          front_text: card.front,
-          back_text: card.back,
-          back_text_ru: card.back_text_ru || null,
-          example_sentence: null,
-          pronunciation: null,
-          part_of_speech: card.part_of_speech || null,
-          level: card.level || null,
-          examples: card.examples || null,
-          noun_data: card.noun_data || null,
-          verb_data: card.verb_data || null,
-          adjective_data: card.adjective_data || null,
-          adverb_data: card.adverb_data || null,
+          card_record_id: card.id,
+          word_entry_id: `we-${card.id}`,
+          deck_id: mockDeck.id,
+          deck_name: mockDeck.name,
+          card_type: cardType,
+          variant_key: 'meaning',
+          front_content: {
+            card_type: cardType,
+            prompt: 'What does that mean?',
+            main: card.front,
+            badge: card.part_of_speech || null,
+          },
+          back_content: {
+            card_type: cardType,
+            answer: card.back,
+            answer_sub: card.translation || null,
+          },
           status: 'new',
           is_new: true,
           is_early_practice: false,
           due_date: null,
-          easiness_factor: 2.5,
-          interval: 0,
+          easiness_factor: null,
+          interval: null,
+          audio_url: null,
+          example_audio_url: null,
+          translation_ru: card.back_text_ru || null,
+          translation_ru_plural: null,
+          sentence_ru: null,
         },
       ],
     };
@@ -100,16 +106,23 @@ export async function setupReviewMock(page: Page, card: MockCard): Promise<void>
     });
   });
 
-  // Mock reviews endpoint (for rating cards)
-  await page.route('**/api/v1/reviews/**', (route) => {
+  // Mock V2 reviews endpoint (for rating cards)
+  // API: POST /api/v1/reviews/v2
+  await page.route('**/api/v1/reviews/v2*', (route) => {
     if (route.request().method() === 'POST') {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          success: true,
-          next_review: null,
-          xp_earned: 10,
+          card_record_id: card.id,
+          quality: 4,
+          previous_status: 'new',
+          new_status: 'learning',
+          easiness_factor: 2.5,
+          interval: 1,
+          repetitions: 1,
+          next_review_date: new Date().toISOString().split('T')[0],
+          message: null,
         }),
       });
     } else {
@@ -177,11 +190,12 @@ export async function loginForE2ETest(page: Page): Promise<void> {
  * @param page - Playwright page object
  */
 export async function navigateToReview(page: Page): Promise<void> {
-  await page.goto(`/decks/${mockDeck.id}/review`);
+  await page.goto(`/decks/${mockDeck.id}/practice`);
   await page.waitForLoadState('domcontentloaded');
 
-  // Wait for flashcard to appear
-  const flashcard = page.locator('[data-testid="flashcard"]');
+  // Wait for the V2 practice card to appear (V2FlashcardPracticePage uses PracticeCard
+  // which renders data-testid="practice-card", not "flashcard")
+  const flashcard = page.locator('[data-testid="practice-card"]');
   await expect(flashcard).toBeVisible({ timeout: 15000 });
 
   // Allow animations to settle
@@ -211,7 +225,7 @@ export async function flipCard(page: Page): Promise<void> {
  */
 export async function clickToFlip(page: Page): Promise<void> {
   // Find and click the card content area (before flip it's clickable)
-  const cardContent = page.locator('[data-testid="flashcard"]');
+  const cardContent = page.locator('[data-testid="practice-card"]');
   await cardContent.click();
 
   // Wait for flip animation

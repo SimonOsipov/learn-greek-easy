@@ -62,7 +62,6 @@ class TestE2EInfrastructure(E2ETestCase):
 
     @pytest.mark.asyncio
     @pytest.mark.e2e
-    @pytest.mark.skip(reason="SM2V2-06: V1 study initialization removed. Unskip in SM2V2-07.")
     async def test_populated_study_environment_fixture(
         self,
         populated_study_environment: StudyEnvironment,
@@ -129,14 +128,13 @@ class TestMinimalWorkflow(E2ETestCase):
 
     @pytest.mark.asyncio
     @pytest.mark.e2e
-    @pytest.mark.skip(reason="SM2V2-06: V1 study/initialize endpoint removed. Unskip in SM2V2-07.")
     async def test_minimal_workflow_register_browse_study(
         self,
         client: AsyncClient,
         db_session: AsyncSession,
         test_deck_a1,
     ) -> None:
-        """Minimal E2E workflow: register -> browse -> setup study.
+        """Minimal E2E workflow: register -> browse -> study queue (V2).
 
         This test verifies the core E2E infrastructure by executing
         a minimal but complete workflow through the API.
@@ -149,21 +147,20 @@ class TestMinimalWorkflow(E2ETestCase):
         decks = await self.browse_available_decks(client, session.headers)
         assert len(decks) >= 1
 
-        # Step 3: Setup study session
-        queue = await self.setup_study_session(
-            client,
-            session.headers,
-            test_deck_a1.id,
+        # Step 3: Get V2 study queue (no initialization needed)
+        response = await client.get(
+            f"/api/v1/study/queue/v2?deck_id={test_deck_a1.id}",
+            headers=session.headers,
         )
-
-        # Verify queue data structure
-        assert queue is not None
-        # Queue should have cards or indicate empty/total
-        assert "cards" in queue or "total_due" in queue or "new_cards" in queue
+        assert response.status_code == 200
+        queue = response.json()
+        assert "total_due" in queue
+        assert "total_new" in queue
+        assert "total_in_queue" in queue
+        assert "cards" in queue
 
     @pytest.mark.asyncio
     @pytest.mark.e2e
-    @pytest.mark.skip(reason="SM2V2-06: V1 study queue endpoint removed. Unskip in SM2V2-07.")
     async def test_workflow_with_populated_environment(
         self,
         client: AsyncClient,
@@ -175,9 +172,14 @@ class TestMinimalWorkflow(E2ETestCase):
         # Environment should be fully initialized
         assert env.initialized
 
-        # Should be able to get study queue
+        # Should be able to get V2 study queue
         queue = await client.get(
-            f"/api/v1/study/queue/{env.deck.id}",
+            f"/api/v1/study/queue/v2?deck_id={env.deck.id}",
             headers=env.headers,
         )
         assert queue.status_code == 200
+        data = queue.json()
+        assert "total_due" in data
+        assert "total_new" in data
+        assert "total_in_queue" in data
+        assert "cards" in data

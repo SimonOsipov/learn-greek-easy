@@ -33,6 +33,7 @@ from src.api.v1.feedback import router as feedback_router
 from src.api.v1.health import router as health_router
 from src.api.v1.news import router as news_router
 from src.api.v1.notifications import router as notification_router
+from src.api.v1.progress import router as progress_router
 from src.api.v1.reviews_v2 import router as reviews_v2_router
 from src.api.v1.study_v2 import router as study_v2_router
 from src.api.v1.users import router as users_router
@@ -136,6 +137,15 @@ v1_router.include_router(
     news_router,
     prefix="/news",
     tags=["News"],
+)
+
+# =============================================================================
+# Progress Routes
+# =============================================================================
+v1_router.include_router(
+    progress_router,
+    prefix="/progress",
+    tags=["Progress"],
 )
 
 # =============================================================================

@@ -1,9 +1,10 @@
 /**
  * E2E Tests: Grammar UI in Flashcard Review
  *
- * SM2V2-06: ALL TESTS SKIPPED — navigateToReview() goes to /decks/:id/review
- * which was the V1 FlashcardReviewPage route, deleted in SM2V2-06.
- * Unskip and update to use /decks/:id/practice in SM2V2-07.
+ * SM2V2-07: STILL SKIPPED — V2 PracticeCard does not render V1 grammar UI
+ * components (blur mechanic, verb tense tabs, voice toggle, adjective gender
+ * tabs). These tests must be rewritten for the V2 practice page. Mock helpers
+ * updated to use V2 API schema (card_record_id, V2StudyQueueCard fields).
  *
  * Tests the grammar UI components displayed during flashcard review sessions:
  * - Card content blur/reveal mechanic
@@ -77,7 +78,7 @@ test.describe.skip('Card Content Blur/Reveal', () => {
     await flipCard(page);
 
     // Content should no longer be blurred (main content area)
-    const blurredContent = page.locator('[data-testid="flashcard"]').locator('.blur-md');
+    const blurredContent = page.locator('[data-testid="practice-card"]').locator('.blur-md');
     // After flip, the card content is NOT blurred - only example translations may still be blurred
     // Check that the main translation is visible and not blurred
 

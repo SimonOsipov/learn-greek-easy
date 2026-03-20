@@ -23,12 +23,20 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { WordBrowser } from '../WordBrowser';
 import i18n from '@/i18n';
+import { progressAPI } from '@/services/progressAPI';
 import { wordEntryAPI } from '@/services/wordEntryAPI';
 
 // Mock the wordEntryAPI
 vi.mock('@/services/wordEntryAPI', () => ({
   wordEntryAPI: {
     getByDeck: vi.fn(),
+  },
+}));
+
+// Mock the progressAPI
+vi.mock('@/services/progressAPI', () => ({
+  progressAPI: {
+    getWordMastery: vi.fn(),
   },
 }));
 
@@ -122,6 +130,11 @@ describe('WordBrowser Component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers({ shouldAdvanceTime: true });
+    // Default: no mastery data
+    vi.mocked(progressAPI.getWordMastery).mockResolvedValue({
+      deck_id: 'deck-1',
+      items: [],
+    });
   });
 
   afterEach(() => {
@@ -391,6 +404,34 @@ describe('WordBrowser Component', () => {
       await user.click(newButton);
 
       expect(newButton).toHaveAttribute('aria-pressed', 'true');
+    });
+
+    it('shows learned filter count when word is mastered', async () => {
+      vi.mocked(wordEntryAPI.getByDeck).mockResolvedValue({
+        deck_id: 'deck-1',
+        total: 3,
+        page: 1,
+        page_size: 40,
+        word_entries: mockWordEntries,
+      });
+      vi.mocked(progressAPI.getWordMastery).mockResolvedValue({
+        deck_id: 'deck-1',
+        items: [
+          {
+            word_entry_id: mockWordEntries[0].id,
+            mastered_count: 2,
+            total_count: 2,
+          },
+        ],
+      });
+
+      render(<WordBrowser deckId="deck-1" />, { wrapper: createWrapper() });
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Learned \(1\)/i })).toBeInTheDocument();
+      });
+
+      expect(screen.getByRole('button', { name: /New \(2\)/i })).toBeInTheDocument();
     });
   });
 

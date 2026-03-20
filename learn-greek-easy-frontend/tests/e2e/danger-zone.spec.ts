@@ -13,7 +13,6 @@ import { test, expect } from '@playwright/test';
 import { verifyAuthSucceeded } from './helpers/auth-helpers';
 
 test.describe('Danger Zone - Reset Progress', () => {
-  test.skip('SM2V2-06: skipped — ProgressService deleted. Unskip in SM2V2-07.');
   test.beforeEach(async ({ page }) => {
     // Navigate to profile page
     await page.goto('/profile');

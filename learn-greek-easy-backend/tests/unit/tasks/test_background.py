@@ -446,21 +446,167 @@ class TestCheckAchievementsTaskImplementation:
                     mock_session_factory.return_value = mock_session
                     mock_sessionmaker.return_value = mock_session_factory
 
-                    with patch("src.tasks.background.logger") as mock_logger:
+                    with patch(
+                        "src.services.achievement_service.AchievementService"
+                    ) as mock_service_class:
+                        mock_service = AsyncMock()
+                        mock_service._get_user_stats.return_value = {
+                            "cards_learned": 0,
+                            "cards_mastered": 0,
+                            "total_reviews": 0,
+                            "current_streak": 0,
+                            "longest_streak": 0,
+                        }
+                        mock_service.check_and_unlock_achievements.return_value = []
+                        mock_service_class.return_value = mock_service
+
+                        with patch("src.tasks.background.logger") as mock_logger:
+                            await check_achievements_task(
+                                user_id, "postgresql+asyncpg://test:test@localhost/test"
+                            )
+
+                            # Should have at least 2 info logs (start and completion)
+                            assert mock_logger.info.call_count >= 2
+
+                            # Check start log
+                            start_call = mock_logger.info.call_args_list[0]
+                            assert "Starting achievement check" in start_call[0][0]
+
+                            # Check completion log
+                            completion_call = mock_logger.info.call_args_list[1]
+                            assert "Achievement check complete" in completion_call[0][0]
+
+
+class TestCheckAchievementsTaskAchievementService:
+    """Test that check_achievements_task calls AchievementService correctly."""
+
+    @pytest.mark.asyncio
+    async def test_calls_get_user_stats_and_check_achievements(self):
+        """Should call _get_user_stats and check_and_unlock_achievements."""
+        from src.tasks.background import check_achievements_task
+
+        user_id = uuid4()
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
+                mock_engine = AsyncMock()
+                mock_engine_creator.return_value = mock_engine
+
+                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
+                    mock_session = AsyncMock()
+                    mock_session_factory = MagicMock()
+                    mock_session_factory.return_value = mock_session
+                    mock_sessionmaker.return_value = mock_session_factory
+
+                    with patch(
+                        "src.services.achievement_service.AchievementService"
+                    ) as mock_service_class:
+                        mock_service = AsyncMock()
+                        mock_service._get_user_stats.return_value = {
+                            "cards_learned": 5,
+                            "cards_mastered": 2,
+                            "total_reviews": 20,
+                            "current_streak": 0,
+                            "longest_streak": 0,
+                        }
+                        mock_service.check_and_unlock_achievements.return_value = []
+                        mock_service_class.return_value = mock_service
+
                         await check_achievements_task(
                             user_id, "postgresql+asyncpg://test:test@localhost/test"
                         )
 
-                        # Should have at least 2 info logs (start and completion)
-                        assert mock_logger.info.call_count >= 2
+                        # _get_user_stats should be called once
+                        mock_service._get_user_stats.assert_called_once_with(user_id)
 
-                        # Check start log
-                        start_call = mock_logger.info.call_args_list[0]
-                        assert "Starting achievement check" in start_call[0][0]
+                        # check_and_unlock_achievements should be called for each non-zero metric
+                        assert mock_service.check_and_unlock_achievements.call_count == 3
 
-                        # Check completion log
-                        completion_call = mock_logger.info.call_args_list[1]
-                        assert "Achievement check complete" in completion_call[0][0]
+    @pytest.mark.asyncio
+    async def test_skips_check_for_zero_metric_values(self):
+        """Should not call check_and_unlock_achievements when all metric values are 0."""
+        from src.tasks.background import check_achievements_task
+
+        user_id = uuid4()
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
+                mock_engine = AsyncMock()
+                mock_engine_creator.return_value = mock_engine
+
+                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
+                    mock_session = AsyncMock()
+                    mock_session_factory = MagicMock()
+                    mock_session_factory.return_value = mock_session
+                    mock_sessionmaker.return_value = mock_session_factory
+
+                    with patch(
+                        "src.services.achievement_service.AchievementService"
+                    ) as mock_service_class:
+                        mock_service = AsyncMock()
+                        mock_service._get_user_stats.return_value = {
+                            "cards_learned": 0,
+                            "cards_mastered": 0,
+                            "total_reviews": 0,
+                            "current_streak": 0,
+                            "longest_streak": 0,
+                        }
+                        mock_service.check_and_unlock_achievements.return_value = []
+                        mock_service_class.return_value = mock_service
+
+                        await check_achievements_task(
+                            user_id, "postgresql+asyncpg://test:test@localhost/test"
+                        )
+
+                        # Should not call check_and_unlock_achievements when values are 0
+                        mock_service.check_and_unlock_achievements.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_commits_when_achievements_unlocked(self):
+        """Should commit session when achievements are unlocked."""
+        from src.tasks.background import check_achievements_task
+
+        user_id = uuid4()
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
+                mock_engine = AsyncMock()
+                mock_engine_creator.return_value = mock_engine
+
+                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
+                    mock_session = AsyncMock()
+                    mock_session_factory = MagicMock()
+                    mock_session_factory.return_value = mock_session
+                    mock_sessionmaker.return_value = mock_session_factory
+
+                    with patch(
+                        "src.services.achievement_service.AchievementService"
+                    ) as mock_service_class:
+                        mock_service = AsyncMock()
+                        mock_service._get_user_stats.return_value = {
+                            "cards_learned": 1,
+                            "cards_mastered": 0,
+                            "total_reviews": 0,
+                            "current_streak": 0,
+                            "longest_streak": 0,
+                        }
+                        # Return a newly unlocked achievement
+                        mock_service.check_and_unlock_achievements.return_value = [
+                            {
+                                "id": "learning_first_word",
+                                "name": "First Word",
+                                "icon": "star",
+                                "xp_reward": 50,
+                            }
+                        ]
+                        mock_service_class.return_value = mock_service
+
+                        await check_achievements_task(
+                            user_id, "postgresql+asyncpg://test:test@localhost/test"
+                        )
+
+                        # Session should be committed when achievements are unlocked
+                        mock_session.commit.assert_called_once()
 
 
 class TestInvalidateCacheTaskImplementation:
