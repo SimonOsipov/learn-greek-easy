@@ -23,6 +23,7 @@ class TestModuleImports:
             invalidate_cache_task,
             is_background_tasks_enabled,
             log_analytics_task,
+            persist_culture_answer_task,
             process_answer_side_effects_task,
             process_culture_answer_full_async,
         )
@@ -31,6 +32,7 @@ class TestModuleImports:
         assert callable(invalidate_cache_task)
         assert callable(is_background_tasks_enabled)
         assert callable(log_analytics_task)
+        assert callable(persist_culture_answer_task)
         assert callable(process_answer_side_effects_task)
         assert callable(process_culture_answer_full_async)
         assert isinstance(ANALYTICS_EVENTS, dict)
@@ -43,6 +45,7 @@ class TestModuleImports:
             invalidate_cache_task,
             is_background_tasks_enabled,
             log_analytics_task,
+            persist_culture_answer_task,
             process_answer_side_effects_task,
             process_culture_answer_full_async,
         )
@@ -51,6 +54,7 @@ class TestModuleImports:
         assert callable(invalidate_cache_task)
         assert callable(is_background_tasks_enabled)
         assert callable(log_analytics_task)
+        assert callable(persist_culture_answer_task)
         assert callable(process_answer_side_effects_task)
         assert callable(process_culture_answer_full_async)
         assert isinstance(ANALYTICS_EVENTS, dict)
@@ -72,6 +76,7 @@ class TestModuleImports:
             "invalidate_cache_task",
             "is_background_tasks_enabled",
             "log_analytics_task",
+            "persist_culture_answer_task",
             "process_answer_side_effects_task",
             "process_culture_answer_full_async",
             # Scheduler (dedicated service)

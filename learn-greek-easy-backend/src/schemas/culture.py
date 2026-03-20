@@ -513,20 +513,20 @@ class CultureAnswerResponseWithSM2(BaseModel):
 
 
 class CultureAnswerResponseFast(BaseModel):
-    """Fast response - returns immediately before SM-2 processing.
+    """Fast response with exact base XP (excludes first-review-of-day bonus).
 
-    This schema is used for the early response pattern where we return
-    to the client immediately with basic information while deferring
-    SM-2 calculations, XP awards, and achievement checks to background tasks.
-
-    The xp_earned is an optimistic estimate based on constants, not actual
-    DB state. The sm2_result field is intentionally omitted as it requires
-    DB queries that are deferred to background processing.
+    This schema is used for the early response pattern where SM-2 computation
+    runs synchronously in the hot path and only persistence is deferred to a
+    background task. The xp_earned reflects the exact base XP amount — the
+    first-review-of-day bonus (+20) is excluded because it requires a DB check
+    handled in the background.
     """
 
     is_correct: bool = Field(..., description="Whether the answer was correct")
     correct_option: int = Field(..., ge=1, le=4, description="The correct answer (1-4)")
-    xp_earned: int = Field(..., ge=0, description="XP awarded (calculated, not persisted yet)")
+    xp_earned: int = Field(
+        ..., ge=0, description="Exact base XP awarded (excludes first-review-of-day bonus)"
+    )
     message: Optional[str] = Field(None, description="Feedback message for UI")
     deck_category: str = Field(..., description="Deck category for achievement tracking")
     # Note: sm2_result intentionally omitted - not available in fast path

@@ -48,6 +48,7 @@ from src.tasks.background import (
     invalidate_cache_task,
     is_background_tasks_enabled,
     log_analytics_task,
+    persist_culture_answer_task,
     process_answer_side_effects_task,
     process_culture_answer_full_async,
 )
@@ -66,6 +67,7 @@ __all__ = [
     "invalidate_cache_task",
     "is_background_tasks_enabled",
     "log_analytics_task",
+    "persist_culture_answer_task",
     "process_answer_side_effects_task",
     "process_culture_answer_full_async",
     # Scheduler (dedicated service)

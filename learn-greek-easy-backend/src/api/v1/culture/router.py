@@ -23,7 +23,6 @@ Admin Endpoints (superuser only):
 - DELETE /culture/questions/{question_id} - Delete a question
 """
 
-import logging
 from typing import Optional
 from uuid import UUID
 
@@ -43,6 +42,7 @@ from src.api.v1.culture.mock_exam import router as mock_exam_router
 from src.config import settings
 from src.core.dependencies import get_current_superuser, get_current_user, get_locale_from_header
 from src.core.exceptions import CultureQuestionNotFoundException, ValidationException
+from src.core.logging import get_logger
 from src.db.dependencies import get_db
 from src.db.models import User
 from src.repositories.culture_deck import CultureDeckRepository
@@ -75,10 +75,10 @@ from src.services.s3_service import (
 from src.tasks import (
     generate_audio_for_culture_question_task,
     is_background_tasks_enabled,
-    process_culture_answer_full_async,
+    persist_culture_answer_task,
 )
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 router = APIRouter(
     # Note: prefix is set by parent router in v1/router.py
@@ -571,8 +571,8 @@ async def submit_answer(
 
     try:
         if is_background_tasks_enabled():
-            # Production: Fast path + background processing
-            response, context = await service.process_answer_fast(
+            # Production: Compute SM-2 + exact XP synchronously, persist in background
+            response, context = await service.compute_answer(
                 user_id=current_user.id,
                 question_id=question_id,
                 selected_option=request.selected_option,
@@ -580,9 +580,9 @@ async def submit_answer(
                 language=request.language,
             )
 
-            # Queue comprehensive background task for all deferred operations
+            # Queue background task to persist pre-computed SM-2 values
             background_tasks.add_task(
-                process_culture_answer_full_async,
+                persist_culture_answer_task,
                 user_id=current_user.id,
                 question_id=question_id,
                 selected_option=request.selected_option,
@@ -591,7 +591,13 @@ async def submit_answer(
                 is_correct=context["is_correct"],
                 is_perfect=context["is_perfect"],
                 deck_category=context["deck_category"],
-                db_url=settings.database_url,
+                sm2_new_ef=context["sm2_new_ef"],
+                sm2_new_interval=context["sm2_new_interval"],
+                sm2_new_repetitions=context["sm2_new_repetitions"],
+                sm2_new_status=context["sm2_new_status"],
+                sm2_next_review_date=context["sm2_next_review_date"],
+                stats_previous_status=context["stats_previous_status"],
+                db_url=str(settings.database_url),
             )
 
             return response
