@@ -12,6 +12,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@/lib/test-utils';
 import userEvent from '@testing-library/user-event';
+import posthog from 'posthog-js';
 import { useCultureSessionStore } from '@/stores/cultureSessionStore';
 import type { CultureQuestionResponse } from '@/types/culture';
 import type { CultureQuestionState } from '@/types/cultureSession';
@@ -466,7 +467,7 @@ describe('CulturePracticePage', () => {
       useCultureSessionStore.setState(createActiveSessionState(5));
       render(<CulturePracticePage />);
 
-      expect(mockTrack).toHaveBeenCalledWith(
+      expect(posthog.capture).toHaveBeenCalledWith(
         'culture_session_started',
         expect.objectContaining({
           deck_id: 'test-deck-1',
@@ -481,7 +482,7 @@ describe('CulturePracticePage', () => {
       useCultureSessionStore.setState(createSummaryState());
       render(<CulturePracticePage />);
 
-      expect(mockTrack).toHaveBeenCalledWith(
+      expect(posthog.capture).toHaveBeenCalledWith(
         'culture_session_completed',
         expect.objectContaining({
           deck_id: 'test-deck-1',

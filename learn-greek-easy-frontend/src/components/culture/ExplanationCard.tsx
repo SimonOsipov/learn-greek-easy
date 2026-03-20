@@ -79,18 +79,18 @@ export const ExplanationCard: FC<ExplanationCardProps> = ({
 
       <div
         className={cn(
-          'animate-cult-slide-up',
+          'animate-practice-slide-up',
           // Base layout
           'rounded-2xl border-[1px] px-5 py-4',
           // Correct state
-          isCorrect && 'bg-[var(--cult-correct-soft)]',
+          isCorrect && 'bg-[var(--practice-correct-soft)]',
           // Incorrect state
-          !isCorrect && 'bg-[var(--cult-incorrect-soft)]',
+          !isCorrect && 'bg-[var(--practice-incorrect-soft)]',
           // Parent positioning
           className
         )}
         style={{
-          borderColor: `color-mix(in srgb, var(${isCorrect ? '--cult-correct' : '--cult-incorrect'}) 20%, transparent)`,
+          borderColor: `color-mix(in srgb, var(${isCorrect ? '--practice-correct' : '--practice-incorrect'}) 20%, transparent)`,
         }}
         data-testid="explanation-card"
       >
@@ -103,7 +103,7 @@ export const ExplanationCard: FC<ExplanationCardProps> = ({
           )}
           <span
             className={cn(
-              'font-cult-mono text-[13px] font-semibold uppercase tracking-wide',
+              'font-practice-mono text-[13px] font-semibold uppercase tracking-wide',
               isCorrect ? 'text-emerald-600' : 'text-red-600'
             )}
           >
@@ -125,7 +125,7 @@ export const ExplanationCard: FC<ExplanationCardProps> = ({
         {/* Explanation body text */}
         {explanationText && (
           <p
-            className="mt-2 font-cult-serif text-sm leading-[1.7] text-slate-500"
+            className="mt-2 font-practice-serif text-sm leading-[1.7] text-slate-500"
             data-testid="explanation-text"
           >
             {explanationText}

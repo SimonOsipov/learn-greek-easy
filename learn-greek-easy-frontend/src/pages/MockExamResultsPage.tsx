@@ -222,8 +222,10 @@ export function MockExamResultsPage() {
           {/* Correct Answers */}
           <Card>
             <CardContent className="flex flex-col items-center p-4">
-              <CheckCircle className="mb-2 h-8 w-8" style={{ color: 'var(--cult-correct)' }} />
-              <p className="font-cult-mono text-2xl font-bold text-foreground">{summary.score}</p>
+              <CheckCircle className="mb-2 h-8 w-8" style={{ color: 'var(--practice-correct)' }} />
+              <p className="font-practice-mono text-2xl font-bold text-foreground">
+                {summary.score}
+              </p>
               <p className="text-center text-sm text-muted-foreground">
                 {t('common:correct', 'Correct')}
               </p>
@@ -233,8 +235,8 @@ export function MockExamResultsPage() {
           {/* Percentage */}
           <Card>
             <CardContent className="flex flex-col items-center p-4">
-              <Percent className="mb-2 h-8 w-8" style={{ color: 'var(--cult-accent)' }} />
-              <p className="font-cult-mono text-2xl font-bold text-foreground">
+              <Percent className="mb-2 h-8 w-8" style={{ color: 'var(--practice-accent)' }} />
+              <p className="font-practice-mono text-2xl font-bold text-foreground">
                 {summary.percentage}%
               </p>
               <p className="text-center text-sm text-muted-foreground">
@@ -247,7 +249,7 @@ export function MockExamResultsPage() {
           <Card>
             <CardContent className="flex flex-col items-center p-4">
               <Clock className="mb-2 h-8 w-8 text-blue-600 dark:text-blue-400" />
-              <p className="font-cult-mono text-2xl font-bold text-foreground">
+              <p className="font-practice-mono text-2xl font-bold text-foreground">
                 {summary.timerExpired
                   ? t('results.timeExpired', 'Time Expired')
                   : formatDuration(summary.timeTakenSeconds)}
@@ -262,7 +264,7 @@ export function MockExamResultsPage() {
           <Card>
             <CardContent className="flex flex-col items-center p-4">
               <Target className="mb-2 h-8 w-8 text-orange-600 dark:text-orange-400" />
-              <p className="font-cult-mono text-2xl font-bold text-foreground">
+              <p className="font-practice-mono text-2xl font-bold text-foreground">
                 {summary.passThreshold}%
               </p>
               <p className="text-center text-sm text-muted-foreground">
@@ -342,8 +344,8 @@ export function MockExamResultsPage() {
                           key={result.question.id}
                           className="rounded-lg border p-4"
                           style={{
-                            borderColor: 'var(--cult-incorrect-glow)',
-                            backgroundColor: 'var(--cult-incorrect-soft)',
+                            borderColor: 'var(--practice-incorrect-glow)',
+                            backgroundColor: 'var(--practice-incorrect-soft)',
                           }}
                         >
                           <p className="mb-3 font-medium text-foreground">

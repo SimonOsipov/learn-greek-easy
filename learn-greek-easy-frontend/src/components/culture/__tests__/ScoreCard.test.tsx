@@ -163,11 +163,11 @@ describe('ScoreCard', () => {
   });
 
   describe('Animation', () => {
-    it('applies animate-cult-fade-in class by default', () => {
+    it('applies animate-practice-fade-in class by default', () => {
       render(<ScoreCard {...defaultProps} />);
 
       const wrapper = screen.getByTestId('score-card');
-      expect(wrapper.className).toContain('animate-cult-fade-in');
+      expect(wrapper.className).toContain('animate-practice-fade-in');
     });
 
     it('suppresses animation when prefers-reduced-motion is set', () => {
@@ -188,7 +188,7 @@ describe('ScoreCard', () => {
 
       render(<ScoreCard {...defaultProps} />);
       const wrapper = screen.getByTestId('score-card');
-      expect(wrapper.className).not.toContain('animate-cult-fade-in');
+      expect(wrapper.className).not.toContain('animate-practice-fade-in');
     });
   });
 

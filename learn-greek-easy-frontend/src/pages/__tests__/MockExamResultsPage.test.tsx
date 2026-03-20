@@ -279,14 +279,14 @@ describe('MockExamResultsPage', () => {
       expect(screen.getByText('60%')).toBeInTheDocument();
     });
 
-    it('uses font-cult-mono class on stat numbers', () => {
+    it('uses font-practice-mono class on stat numbers', () => {
       const summary = createMockSummary({ score: 20, percentage: 80 });
       useMockExamSessionStore.setState({ summary });
 
       render(<MockExamResultsPage />);
 
-      // Find all elements with font-cult-mono class
-      const monoElements = document.querySelectorAll('.font-cult-mono');
+      // Find all elements with font-practice-mono class
+      const monoElements = document.querySelectorAll('.font-practice-mono');
       expect(monoElements.length).toBeGreaterThan(0);
     });
   });
