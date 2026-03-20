@@ -46,6 +46,7 @@ class TestModuleImports:
             is_background_tasks_enabled,
             log_analytics_task,
             persist_culture_answer_task,
+            persist_deck_review_task,
             process_answer_side_effects_task,
             process_culture_answer_full_async,
         )
@@ -55,6 +56,7 @@ class TestModuleImports:
         assert callable(is_background_tasks_enabled)
         assert callable(log_analytics_task)
         assert callable(persist_culture_answer_task)
+        assert callable(persist_deck_review_task)
         assert callable(process_answer_side_effects_task)
         assert callable(process_culture_answer_full_async)
         assert isinstance(ANALYTICS_EVENTS, dict)
@@ -1600,3 +1602,430 @@ class TestSessionCleanupOrder:
                         )
 
                         assert call_order == ["session.close", "engine.dispose"]
+
+
+# =============================================================================
+# Helpers for new task tests
+# =============================================================================
+
+
+def _make_persist_deck_review_kwargs(
+    db_url: str = "postgresql+asyncpg://test:test@localhost/test",
+) -> dict:
+    """Return a complete set of kwargs for persist_deck_review_task."""
+    from uuid import uuid4
+
+    return {
+        "user_id": str(uuid4()),
+        "card_record_id": str(uuid4()),
+        "deck_id": str(uuid4()),
+        "card_type_value": "meaning_el_to_en",
+        "quality": 4,
+        "time_taken": 10,
+        "stats_id": str(uuid4()),
+        "stats_created_at_iso": None,
+        "new_ef": 2.5,
+        "new_interval": 1,
+        "new_repetitions": 1,
+        "new_status_value": "learning",
+        "next_review_date_iso": "2026-03-20",
+        "previous_status_value": "new",
+        "is_newly_mastered": False,
+        "reviews_before": 0,
+        "user_email": None,
+        "db_url": db_url,
+    }
+
+
+def _make_persist_culture_answer_kwargs(
+    db_url: str = "postgresql+asyncpg://test:test@localhost/test",
+) -> dict:
+    """Return a complete set of kwargs for persist_culture_answer_task."""
+    from uuid import uuid4
+
+    return {
+        "user_id": uuid4(),
+        "question_id": uuid4(),
+        "selected_option": 1,
+        "time_taken": 10,
+        "language": "en",
+        "is_correct": True,
+        "is_perfect": False,
+        "deck_category": "history",
+        "sm2_new_ef": 2.5,
+        "sm2_new_interval": 1,
+        "sm2_new_repetitions": 1,
+        "sm2_new_status": "learning",
+        "sm2_next_review_date": "2026-03-20",
+        "stats_previous_status": "new",
+        "db_url": db_url,
+    }
+
+
+class TestPersistDeckReviewTask:
+    """Tests for persist_deck_review_task background task."""
+
+    def test_is_async(self):
+        """persist_deck_review_task must be an async function."""
+        from src.tasks.background import persist_deck_review_task
+
+        assert asyncio.iscoroutinefunction(persist_deck_review_task)
+
+    @pytest.mark.asyncio
+    async def test_skipped_when_disabled(self):
+        """Task exits early without creating an engine when background tasks disabled."""
+        from src.tasks.background import persist_deck_review_task
+
+        kwargs = _make_persist_deck_review_kwargs()
+        with patch.object(settings, "feature_background_tasks", False):
+            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
+                await persist_deck_review_task(**kwargs)
+
+        mock_engine_creator.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_creates_engine_and_session(self):
+        """Task must create an async engine and session factory."""
+        from src.tasks.background import persist_deck_review_task
+
+        db_url = "postgresql+asyncpg://test:test@localhost/test"
+        kwargs = _make_persist_deck_review_kwargs(db_url=db_url)
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
+                mock_engine = AsyncMock()
+                mock_engine_creator.return_value = mock_engine
+
+                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
+                    mock_session = AsyncMock()
+                    mock_session_factory = MagicMock(return_value=mock_session)
+                    mock_sessionmaker.return_value = mock_session_factory
+
+                    with patch("src.tasks.background._persist_review_core", new_callable=AsyncMock):
+                        with patch(
+                            "src.tasks.background._run_review_side_effects", new_callable=AsyncMock
+                        ):
+                            await persist_deck_review_task(**kwargs)
+
+        mock_engine_creator.assert_called_once()
+        mock_sessionmaker.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_calls_persist_review_core(self):
+        """Task must delegate DB writes to _persist_review_core."""
+        from src.tasks.background import persist_deck_review_task
+
+        kwargs = _make_persist_deck_review_kwargs()
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
+                mock_engine = AsyncMock()
+                mock_engine_creator.return_value = mock_engine
+
+                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
+                    mock_session = AsyncMock()
+                    mock_session_factory = MagicMock(return_value=mock_session)
+                    mock_sessionmaker.return_value = mock_session_factory
+
+                    with patch(
+                        "src.tasks.background._persist_review_core", new_callable=AsyncMock
+                    ) as mock_core:
+                        with patch(
+                            "src.tasks.background._run_review_side_effects", new_callable=AsyncMock
+                        ):
+                            await persist_deck_review_task(**kwargs)
+
+        mock_core.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_no_sm2_recalculation(self):
+        """persist_deck_review_task must not call calculate_sm2."""
+        from src.tasks.background import persist_deck_review_task
+
+        kwargs = _make_persist_deck_review_kwargs()
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
+                mock_engine = AsyncMock()
+                mock_engine_creator.return_value = mock_engine
+
+                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
+                    mock_session = AsyncMock()
+                    mock_session_factory = MagicMock(return_value=mock_session)
+                    mock_sessionmaker.return_value = mock_session_factory
+
+                    with patch("src.tasks.background._persist_review_core", new_callable=AsyncMock):
+                        with patch(
+                            "src.tasks.background._run_review_side_effects", new_callable=AsyncMock
+                        ):
+                            with patch("src.core.sm2.calculate_sm2") as mock_calc:
+                                await persist_deck_review_task(**kwargs)
+
+        mock_calc.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_disposes_engine_after_completion(self):
+        """Engine must be disposed after successful task completion."""
+        from src.tasks.background import persist_deck_review_task
+
+        kwargs = _make_persist_deck_review_kwargs()
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
+                mock_engine = AsyncMock()
+                mock_engine_creator.return_value = mock_engine
+
+                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
+                    mock_session = AsyncMock()
+                    mock_session_factory = MagicMock(return_value=mock_session)
+                    mock_sessionmaker.return_value = mock_session_factory
+
+                    with patch("src.tasks.background._persist_review_core", new_callable=AsyncMock):
+                        with patch(
+                            "src.tasks.background._run_review_side_effects", new_callable=AsyncMock
+                        ):
+                            await persist_deck_review_task(**kwargs)
+
+        mock_engine.dispose.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_disposes_engine_on_error(self):
+        """Engine must be disposed even when an error occurs inside the task."""
+        from src.tasks.background import persist_deck_review_task
+
+        kwargs = _make_persist_deck_review_kwargs()
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
+                mock_engine = AsyncMock()
+                mock_engine_creator.return_value = mock_engine
+
+                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
+                    mock_sessionmaker.side_effect = Exception("Session creation failed")
+
+                    # Should not raise — errors are caught internally
+                    await persist_deck_review_task(**kwargs)
+
+        mock_engine.dispose.assert_awaited_once()
+
+
+class TestPersistCultureAnswerTask:
+    """Tests for persist_culture_answer_task background task."""
+
+    def test_is_async(self):
+        """persist_culture_answer_task must be an async function."""
+        from src.tasks.background import persist_culture_answer_task
+
+        assert asyncio.iscoroutinefunction(persist_culture_answer_task)
+
+    @pytest.mark.asyncio
+    async def test_skipped_when_disabled(self):
+        """Task exits early without creating an engine when background tasks disabled."""
+        from src.tasks.background import persist_culture_answer_task
+
+        kwargs = _make_persist_culture_answer_kwargs()
+        with patch.object(settings, "feature_background_tasks", False):
+            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
+                await persist_culture_answer_task(**kwargs)
+
+        mock_engine_creator.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_creates_engine_and_session(self):
+        """Task must create an async engine and session factory."""
+        from src.tasks.background import persist_culture_answer_task
+
+        db_url = "postgresql+asyncpg://test:test@localhost/test"
+        kwargs = _make_persist_culture_answer_kwargs(db_url=db_url)
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
+                mock_engine = AsyncMock()
+                mock_engine_creator.return_value = mock_engine
+
+                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
+                    mock_session = AsyncMock()
+                    mock_result = MagicMock()
+                    mock_result.scalar_one_or_none.return_value = MagicMock(
+                        easiness_factor=2.5,
+                        interval=1,
+                        repetitions=0,
+                        status=MagicMock(value="new"),
+                    )
+                    mock_session.execute = AsyncMock(return_value=mock_result)
+                    mock_session_factory = MagicMock(return_value=mock_session)
+                    mock_sessionmaker.return_value = mock_session_factory
+
+                    with patch("src.services.xp_service.XPService") as mock_xp_cls:
+                        mock_xp = AsyncMock()
+                        mock_xp.award_culture_answer_xp = AsyncMock(return_value=10)
+                        mock_xp.award_first_review_bonus = AsyncMock(return_value=0)
+                        mock_xp_cls.return_value = mock_xp
+
+                        with patch(
+                            "src.tasks.background._check_and_notify_daily_goal",
+                            new_callable=AsyncMock,
+                        ):
+                            with patch(
+                                "src.services.achievement_service.AchievementService"
+                            ) as mock_ach_cls:
+                                mock_ach = AsyncMock()
+                                mock_ach.check_culture_achievements = AsyncMock(return_value=[])
+                                mock_ach_cls.return_value = mock_ach
+
+                                with patch(
+                                    "src.repositories.culture_question_stats.CultureQuestionStatsRepository"
+                                ) as mock_stats_cls:
+                                    mock_stats_repo = AsyncMock()
+                                    mock_stats_repo.count_answers_today = AsyncMock(return_value=1)
+                                    mock_stats_cls.return_value = mock_stats_repo
+
+                                    await persist_culture_answer_task(**kwargs)
+
+        mock_engine_creator.assert_called_once()
+        mock_sessionmaker.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_applies_precomputed_sm2_values(self):
+        """Task must apply pre-computed SM2 values without recalculating."""
+        from src.tasks.background import persist_culture_answer_task
+
+        kwargs = _make_persist_culture_answer_kwargs()
+        mock_stats_obj = MagicMock()
+        mock_stats_obj.easiness_factor = 2.5
+        mock_stats_obj.interval = 1
+        mock_stats_obj.repetitions = 0
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
+                mock_engine = AsyncMock()
+                mock_engine_creator.return_value = mock_engine
+
+                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
+                    mock_session = AsyncMock()
+                    mock_result = MagicMock()
+                    mock_result.scalar_one_or_none.return_value = mock_stats_obj
+                    mock_session.execute = AsyncMock(return_value=mock_result)
+                    mock_session_factory = MagicMock(return_value=mock_session)
+                    mock_sessionmaker.return_value = mock_session_factory
+
+                    with patch("src.services.xp_service.XPService") as mock_xp_cls:
+                        mock_xp = AsyncMock()
+                        mock_xp.award_culture_answer_xp = AsyncMock(return_value=10)
+                        mock_xp.award_first_review_bonus = AsyncMock(return_value=0)
+                        mock_xp_cls.return_value = mock_xp
+
+                        with patch(
+                            "src.tasks.background._check_and_notify_daily_goal",
+                            new_callable=AsyncMock,
+                        ):
+                            with patch(
+                                "src.services.achievement_service.AchievementService"
+                            ) as mock_ach_cls:
+                                mock_ach = AsyncMock()
+                                mock_ach.check_culture_achievements = AsyncMock(return_value=[])
+                                mock_ach_cls.return_value = mock_ach
+
+                                with patch(
+                                    "src.repositories.culture_question_stats.CultureQuestionStatsRepository"
+                                ) as mock_stats_cls:
+                                    mock_stats_repo = AsyncMock()
+                                    mock_stats_repo.count_answers_today = AsyncMock(return_value=1)
+                                    mock_stats_cls.return_value = mock_stats_repo
+
+                                    await persist_culture_answer_task(**kwargs)
+
+        # Verify SM-2 values were set directly (not recalculated)
+        assert mock_stats_obj.easiness_factor == kwargs["sm2_new_ef"]
+        assert mock_stats_obj.interval == kwargs["sm2_new_interval"]
+        assert mock_stats_obj.repetitions == kwargs["sm2_new_repetitions"]
+
+    @pytest.mark.asyncio
+    async def test_no_sm2_recalculation(self):
+        """persist_culture_answer_task must not call calculate_sm2."""
+        from src.tasks.background import persist_culture_answer_task
+
+        kwargs = _make_persist_culture_answer_kwargs()
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
+                mock_engine = AsyncMock()
+                mock_engine_creator.return_value = mock_engine
+
+                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
+                    mock_sessionmaker.side_effect = Exception("Session creation failed")
+
+                    with patch("src.core.sm2.calculate_sm2") as mock_calc:
+                        await persist_culture_answer_task(**kwargs)
+
+        mock_calc.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_records_answer_history(self):
+        """Task must call session.add to record CultureAnswerHistory."""
+        from src.tasks.background import persist_culture_answer_task
+
+        kwargs = _make_persist_culture_answer_kwargs()
+        mock_stats_obj = MagicMock()
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
+                mock_engine = AsyncMock()
+                mock_engine_creator.return_value = mock_engine
+
+                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
+                    mock_session = AsyncMock()
+                    mock_result = MagicMock()
+                    mock_result.scalar_one_or_none.return_value = mock_stats_obj
+                    mock_session.execute = AsyncMock(return_value=mock_result)
+                    mock_session_factory = MagicMock(return_value=mock_session)
+                    mock_sessionmaker.return_value = mock_session_factory
+
+                    with patch("src.services.xp_service.XPService") as mock_xp_cls:
+                        mock_xp = AsyncMock()
+                        mock_xp.award_culture_answer_xp = AsyncMock(return_value=10)
+                        mock_xp.award_first_review_bonus = AsyncMock(return_value=0)
+                        mock_xp_cls.return_value = mock_xp
+
+                        with patch(
+                            "src.tasks.background._check_and_notify_daily_goal",
+                            new_callable=AsyncMock,
+                        ):
+                            with patch(
+                                "src.services.achievement_service.AchievementService"
+                            ) as mock_ach_cls:
+                                mock_ach = AsyncMock()
+                                mock_ach.check_culture_achievements = AsyncMock(return_value=[])
+                                mock_ach_cls.return_value = mock_ach
+
+                                with patch(
+                                    "src.repositories.culture_question_stats.CultureQuestionStatsRepository"
+                                ) as mock_stats_cls:
+                                    mock_stats_repo = AsyncMock()
+                                    mock_stats_repo.count_answers_today = AsyncMock(return_value=1)
+                                    mock_stats_cls.return_value = mock_stats_repo
+
+                                    await persist_culture_answer_task(**kwargs)
+
+        # session.add should be called at least once (for CultureAnswerHistory)
+        mock_session.add.assert_called()
+
+    @pytest.mark.asyncio
+    async def test_disposes_engine_on_error(self):
+        """Engine must be disposed even when an error occurs."""
+        from src.tasks.background import persist_culture_answer_task
+
+        kwargs = _make_persist_culture_answer_kwargs()
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
+                mock_engine = AsyncMock()
+                mock_engine_creator.return_value = mock_engine
+
+                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
+                    mock_sessionmaker.side_effect = Exception("Session creation failed")
+
+                    # Should not raise — errors are caught internally
+                    await persist_culture_answer_task(**kwargs)
+
+        mock_engine.dispose.assert_awaited_once()

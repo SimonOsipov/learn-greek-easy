@@ -5,7 +5,7 @@ from uuid import uuid4
 import pytest
 
 from src.db.models import CardRecord, CardRecordStatistics, CardStatus, CardType, Deck, WordEntry
-from src.schemas.v2_sm2 import V2StudyQueueCard
+from src.schemas.v2_sm2 import V2ReviewResult, V2StudyQueueCard
 from src.services.v2_sm2_service import V2SM2Service
 
 
@@ -531,3 +531,245 @@ class TestV2SM2ServiceAudioEnrichment:
             await service._enrich_with_audio([card])
 
         assert card.example_audio_url is None
+
+
+def _make_mock_stats(status: CardStatus = CardStatus.NEW) -> MagicMock:
+    """Build a mock CardRecordStatistics with sensible defaults."""
+    stats = MagicMock(spec=CardRecordStatistics)
+    stats.id = uuid4()
+    stats.status = status
+    stats.easiness_factor = 2.5
+    stats.interval = 1
+    stats.repetitions = 0
+    stats.created_at = None
+    return stats
+
+
+def _make_mock_card_record_for_review(
+    card_type: CardType = CardType.MEANING_EL_TO_EN,
+) -> MagicMock:
+    """Build a mock CardRecord for compute/persist review tests."""
+    mock_deck = MagicMock(spec=Deck)
+    mock_deck.name_en = "Test Deck"
+
+    cr = MagicMock(spec=CardRecord)
+    cr.id = uuid4()
+    cr.card_type = card_type
+    cr.deck_id = uuid4()
+    cr.deck = mock_deck
+    return cr
+
+
+@pytest.mark.unit
+@pytest.mark.sm2
+class TestV2SM2ServiceComputeReview:
+    """Tests for compute_review() — pure computation, no DB writes."""
+
+    EXPECTED_CONTEXT_KEYS = {
+        "user_id",
+        "card_record_id",
+        "deck_id",
+        "card_type_value",
+        "quality",
+        "time_taken",
+        "stats_id",
+        "stats_created_at_iso",
+        "new_ef",
+        "new_interval",
+        "new_repetitions",
+        "new_status_value",
+        "next_review_date_iso",
+        "previous_status_value",
+        "is_newly_mastered",
+    }
+
+    @pytest.mark.asyncio
+    async def test_compute_review_returns_result_and_context(self, mock_db_session):
+        """compute_review should return a (V2ReviewResult, dict) 2-tuple."""
+        card_record = _make_mock_card_record_for_review()
+        mock_stats = _make_mock_stats()
+
+        with patch("src.services.v2_sm2_service.CardRecordStatisticsRepository") as mock_repo_cls:
+            mock_repo_cls.return_value.get_or_create = AsyncMock(return_value=mock_stats)
+
+            service = V2SM2Service(mock_db_session)
+            result, context = await service.compute_review(
+                user_id=uuid4(),
+                card_record=card_record,
+                quality=4,
+                time_taken=10,
+            )
+
+        assert isinstance(result, V2ReviewResult)
+        assert isinstance(context, dict)
+
+    @pytest.mark.asyncio
+    async def test_compute_review_does_not_write_to_db(self, mock_db_session):
+        """compute_review must not call update_sm2_data or db.add."""
+        card_record = _make_mock_card_record_for_review()
+        mock_stats = _make_mock_stats()
+
+        with patch("src.services.v2_sm2_service.CardRecordStatisticsRepository") as mock_repo_cls:
+            mock_stats_repo_instance = mock_repo_cls.return_value
+            mock_stats_repo_instance.get_or_create = AsyncMock(return_value=mock_stats)
+
+            service = V2SM2Service(mock_db_session)
+            await service.compute_review(
+                user_id=uuid4(),
+                card_record=card_record,
+                quality=4,
+                time_taken=10,
+            )
+
+        mock_stats_repo_instance.update_sm2_data.assert_not_called()
+        mock_db_session.add.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_compute_review_context_keys(self, mock_db_session):
+        """Context dict must contain exactly the 15 expected keys."""
+        card_record = _make_mock_card_record_for_review()
+        mock_stats = _make_mock_stats()
+
+        with patch("src.services.v2_sm2_service.CardRecordStatisticsRepository") as mock_repo_cls:
+            mock_repo_cls.return_value.get_or_create = AsyncMock(return_value=mock_stats)
+
+            service = V2SM2Service(mock_db_session)
+            _, context = await service.compute_review(
+                user_id=uuid4(),
+                card_record=card_record,
+                quality=4,
+                time_taken=10,
+            )
+
+        assert set(context.keys()) == self.EXPECTED_CONTEXT_KEYS
+
+    @pytest.mark.asyncio
+    async def test_compute_review_new_card_transitions_to_learning(self, mock_db_session):
+        """NEW card with quality >= 3 should transition to LEARNING."""
+        card_record = _make_mock_card_record_for_review()
+        mock_stats = _make_mock_stats(status=CardStatus.NEW)
+
+        with patch("src.services.v2_sm2_service.CardRecordStatisticsRepository") as mock_repo_cls:
+            mock_repo_cls.return_value.get_or_create = AsyncMock(return_value=mock_stats)
+
+            service = V2SM2Service(mock_db_session)
+            result, context = await service.compute_review(
+                user_id=uuid4(),
+                card_record=card_record,
+                quality=4,
+                time_taken=10,
+            )
+
+        assert context["new_status_value"] == "learning"
+        assert result.new_status == CardStatus.LEARNING
+
+    @pytest.mark.asyncio
+    async def test_compute_review_mastered_message(self, mock_db_session):
+        """High quality + many repetitions should produce a mastery message."""
+        card_record = _make_mock_card_record_for_review()
+        mock_stats = _make_mock_stats(status=CardStatus.REVIEW)
+        mock_stats.repetitions = 10
+        mock_stats.interval = 21
+        mock_stats.easiness_factor = 2.5
+
+        with patch("src.services.v2_sm2_service.CardRecordStatisticsRepository") as mock_repo_cls:
+            mock_repo_cls.return_value.get_or_create = AsyncMock(return_value=mock_stats)
+
+            service = V2SM2Service(mock_db_session)
+            result, context = await service.compute_review(
+                user_id=uuid4(),
+                card_record=card_record,
+                quality=5,
+                time_taken=5,
+            )
+
+        # With quality=5 and interval=21, new_status should be MASTERED
+        if context["is_newly_mastered"]:
+            assert result.message == "Congratulations! Card mastered!"
+
+
+@pytest.mark.unit
+@pytest.mark.sm2
+class TestV2SM2ServicePersistReview:
+    """Tests for persist_review() — DB writes using pre-computed context."""
+
+    def _make_context(self, is_newly_mastered: bool = False) -> dict:
+        return {
+            "user_id": str(uuid4()),
+            "card_record_id": str(uuid4()),
+            "deck_id": str(uuid4()),
+            "card_type_value": "meaning_el_to_en",
+            "quality": 4,
+            "time_taken": 10,
+            "stats_id": str(uuid4()),
+            "stats_created_at_iso": None,
+            "new_ef": 2.5,
+            "new_interval": 1,
+            "new_repetitions": 1,
+            "new_status_value": "learning",
+            "next_review_date_iso": "2026-03-20",
+            "previous_status_value": "new",
+            "is_newly_mastered": is_newly_mastered,
+        }
+
+    @pytest.mark.asyncio
+    async def test_persist_review_calls_update_sm2_data(self, mock_db_session):
+        """persist_review should call update_sm2_data with values from context."""
+        context = self._make_context()
+
+        with patch("src.services.v2_sm2_service.CardRecordStatisticsRepository") as mock_repo_cls:
+            mock_stats_repo = mock_repo_cls.return_value
+            mock_stats_repo.update_sm2_data = AsyncMock()
+
+            service = V2SM2Service(mock_db_session)
+            await service.persist_review(context)
+
+        mock_stats_repo.update_sm2_data.assert_awaited_once()
+        call_kwargs = mock_stats_repo.update_sm2_data.call_args.kwargs
+        assert call_kwargs["easiness_factor"] == context["new_ef"]
+        assert call_kwargs["interval"] == context["new_interval"]
+        assert call_kwargs["repetitions"] == context["new_repetitions"]
+
+    @pytest.mark.asyncio
+    async def test_persist_review_creates_review_record(self, mock_db_session):
+        """persist_review should add a review record and flush the session."""
+        context = self._make_context()
+
+        with patch("src.services.v2_sm2_service.CardRecordStatisticsRepository") as mock_repo_cls:
+            mock_repo_cls.return_value.update_sm2_data = AsyncMock()
+
+            service = V2SM2Service(mock_db_session)
+            await service.persist_review(context)
+
+        mock_db_session.add.assert_called_once()
+        mock_db_session.flush.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_persist_review_does_not_recalculate_sm2(self, mock_db_session):
+        """persist_review must not call calculate_sm2 — values come from context."""
+        context = self._make_context()
+
+        with patch("src.services.v2_sm2_service.CardRecordStatisticsRepository") as mock_repo_cls:
+            mock_repo_cls.return_value.update_sm2_data = AsyncMock()
+
+            with patch("src.core.sm2.calculate_sm2") as mock_calc:
+                service = V2SM2Service(mock_db_session)
+                await service.persist_review(context)
+
+        mock_calc.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_persist_review_fires_posthog_on_mastery(self, mock_db_session):
+        """persist_review should fire a PostHog event when is_newly_mastered=True."""
+        context = self._make_context(is_newly_mastered=True)
+
+        with patch("src.services.v2_sm2_service.CardRecordStatisticsRepository") as mock_repo_cls:
+            mock_repo_cls.return_value.update_sm2_data = AsyncMock()
+
+            with patch("src.services.v2_sm2_service.capture_event") as mock_capture:
+                service = V2SM2Service(mock_db_session)
+                await service.persist_review(context)
+
+        mock_capture.assert_called_once()
+        call_kwargs = mock_capture.call_args.kwargs
+        assert call_kwargs["event"] == "card_mastered_v2"

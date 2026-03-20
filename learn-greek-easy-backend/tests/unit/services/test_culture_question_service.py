@@ -1851,11 +1851,11 @@ class TestBulkCreateQuestionsVariableOptions:
         assert result.questions[2].option_count == 4
 
 
-class TestProcessAnswerFast:
+class TestComputeAnswer:
     """Tests for compute_answer method (SM-2 hot path pattern)."""
 
     @pytest.mark.asyncio
-    async def test_process_answer_fast_correct_answer(
+    async def test_compute_answer_correct_answer(
         self,
         db_session: AsyncSession,
         test_user: User,
@@ -1884,7 +1884,7 @@ class TestProcessAnswerFast:
         assert response.deck_category == culture_deck.category
 
     @pytest.mark.asyncio
-    async def test_process_answer_fast_wrong_answer(
+    async def test_compute_answer_wrong_answer(
         self,
         db_session: AsyncSession,
         test_user: User,
@@ -1912,7 +1912,7 @@ class TestProcessAnswerFast:
         assert response.deck_category == culture_deck.category
 
     @pytest.mark.asyncio
-    async def test_process_answer_fast_perfect_answer(
+    async def test_compute_answer_perfect_answer(
         self,
         db_session: AsyncSession,
         test_user: User,
@@ -1938,7 +1938,7 @@ class TestProcessAnswerFast:
         assert context["is_perfect"] is True
 
     @pytest.mark.asyncio
-    async def test_process_answer_fast_returns_context_for_background_task(
+    async def test_compute_answer_returns_context_for_background_task(
         self,
         db_session: AsyncSession,
         test_user: User,
@@ -1977,7 +1977,7 @@ class TestProcessAnswerFast:
         assert "stats_previous_status" in context
 
     @pytest.mark.asyncio
-    async def test_process_answer_fast_invalid_option_raises_error(
+    async def test_compute_answer_invalid_option_raises_error(
         self,
         db_session: AsyncSession,
         test_user: User,
@@ -2006,7 +2006,7 @@ class TestProcessAnswerFast:
             )
 
     @pytest.mark.asyncio
-    async def test_process_answer_fast_question_not_found(
+    async def test_compute_answer_question_not_found(
         self,
         db_session: AsyncSession,
         test_user: User,
@@ -2024,7 +2024,7 @@ class TestProcessAnswerFast:
             )
 
     @pytest.mark.asyncio
-    async def test_process_answer_fast_creates_stats_in_request_session(
+    async def test_compute_answer_creates_stats_in_request_session(
         self,
         db_session: AsyncSession,
         test_user: User,
@@ -2065,7 +2065,7 @@ class TestProcessAnswerFast:
         assert post_stats.scalar_one_or_none() is not None
 
     @pytest.mark.asyncio
-    async def test_process_answer_fast_different_languages(
+    async def test_compute_answer_different_languages(
         self,
         db_session: AsyncSession,
         test_user: User,
@@ -2087,6 +2087,51 @@ class TestProcessAnswerFast:
             )
 
             assert context["language"] == lang
+
+    @pytest.mark.asyncio
+    async def test_compute_answer_xp_matches_constants(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        culture_deck: CultureDeck,
+        culture_questions: list[CultureQuestion],
+        mock_s3_service,
+    ):
+        """XP values returned by compute_answer must match the XP constants."""
+        from src.services.xp_constants import XP_CORRECT_ANSWER, XP_CULTURE_WRONG, XP_PERFECT_ANSWER
+
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+        question = culture_questions[0]  # correct_option = 1
+
+        # Correct (non-perfect) answer
+        response, _ = await service.compute_answer(
+            user_id=test_user.id,
+            question_id=question.id,
+            selected_option=1,
+            time_taken=10,
+            language="en",
+        )
+        assert response.xp_earned == XP_CORRECT_ANSWER
+
+        # Perfect answer (fast response)
+        response_perfect, _ = await service.compute_answer(
+            user_id=test_user.id,
+            question_id=question.id,
+            selected_option=1,
+            time_taken=1,
+            language="en",
+        )
+        assert response_perfect.xp_earned == XP_PERFECT_ANSWER
+
+        # Wrong answer
+        response_wrong, _ = await service.compute_answer(
+            user_id=test_user.id,
+            question_id=question.id,
+            selected_option=2,
+            time_taken=10,
+            language="en",
+        )
+        assert response_wrong.xp_earned == XP_CULTURE_WRONG
 
 
 # =============================================================================

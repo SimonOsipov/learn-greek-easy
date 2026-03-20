@@ -22,6 +22,26 @@ def _make_v2_review_result() -> V2ReviewResult:
     )
 
 
+def _make_review_context():
+    return {
+        "user_id": str(uuid4()),
+        "card_record_id": str(uuid4()),
+        "deck_id": str(uuid4()),
+        "card_type_value": "meaning_el_to_en",
+        "quality": 4,
+        "time_taken": 10,
+        "stats_id": str(uuid4()),
+        "stats_created_at_iso": None,
+        "new_ef": 2.5,
+        "new_interval": 1,
+        "new_repetitions": 1,
+        "new_status_value": "learning",
+        "next_review_date_iso": "2026-03-20",
+        "previous_status_value": "new",
+        "is_newly_mastered": False,
+    }
+
+
 def _valid_review_body(card_record_id=None) -> dict:
     return {
         "card_record_id": str(card_record_id or uuid4()),
@@ -67,7 +87,8 @@ class TestSubmitV2Review:
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_daily_goal_notification_created(self, client, auth_headers):
+    async def test_fallback_persist_review_called(self, client, auth_headers):
+        """When background tasks disabled, persist_review is called synchronously."""
         mock_card_record = MagicMock()
         mock_card_record.deck = MagicMock()
 
@@ -76,16 +97,14 @@ class TestSubmitV2Review:
             patch("src.api.v1.reviews_v2.CardRecordReviewRepository") as mock_review_repo_cls,
             patch("src.api.v1.reviews_v2.V2SM2Service") as mock_service_cls,
             patch("src.api.v1.reviews_v2.check_premium_deck_access"),
-            patch("src.api.v1.reviews_v2._check_daily_goal_notification") as mock_goal,
             patch("src.api.v1.reviews_v2.settings") as mock_settings,
         ):
-
             mock_repo_cls.return_value.get = AsyncMock(return_value=mock_card_record)
-            mock_review_repo_cls.return_value.get_streak = AsyncMock(return_value=1)
-            mock_review_repo_cls.return_value.count_reviews_today = AsyncMock(return_value=19)
-            mock_service_cls.return_value.process_review = AsyncMock(
-                return_value=_make_v2_review_result()
+            mock_review_repo_cls.return_value.count_reviews_today = AsyncMock(return_value=0)
+            mock_service_cls.return_value.compute_review = AsyncMock(
+                return_value=(_make_v2_review_result(), _make_review_context())
             )
+            mock_service_cls.return_value.persist_review = AsyncMock()
             mock_settings.feature_background_tasks = False
 
             response = await client.post(
@@ -95,7 +114,7 @@ class TestSubmitV2Review:
             )
 
         assert response.status_code == 200
-        mock_goal.assert_called_once()
+        mock_service_cls.return_value.persist_review.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_background_tasks_scheduled_when_enabled(self, client, auth_headers):
@@ -107,17 +126,13 @@ class TestSubmitV2Review:
             patch("src.api.v1.reviews_v2.CardRecordReviewRepository") as mock_review_repo_cls,
             patch("src.api.v1.reviews_v2.V2SM2Service") as mock_service_cls,
             patch("src.api.v1.reviews_v2.check_premium_deck_access"),
-            patch("src.api.v1.reviews_v2._check_daily_goal_notification"),
-            patch("src.api.v1.reviews_v2.check_achievements_task"),
-            patch("src.api.v1.reviews_v2.log_analytics_task"),
+            patch("src.api.v1.reviews_v2.persist_deck_review_task"),
             patch("src.api.v1.reviews_v2.settings") as mock_settings,
         ):
-
             mock_repo_cls.return_value.get = AsyncMock(return_value=mock_card_record)
-            mock_review_repo_cls.return_value.get_streak = AsyncMock(return_value=1)
             mock_review_repo_cls.return_value.count_reviews_today = AsyncMock(return_value=0)
-            mock_service_cls.return_value.process_review = AsyncMock(
-                return_value=_make_v2_review_result()
+            mock_service_cls.return_value.compute_review = AsyncMock(
+                return_value=(_make_v2_review_result(), _make_review_context())
             )
             mock_settings.feature_background_tasks = True
             mock_settings.database_url = "postgresql://test"
@@ -140,18 +155,14 @@ class TestSubmitV2Review:
             patch("src.api.v1.reviews_v2.CardRecordReviewRepository") as mock_review_repo_cls,
             patch("src.api.v1.reviews_v2.V2SM2Service") as mock_service_cls,
             patch("src.api.v1.reviews_v2.check_premium_deck_access"),
-            patch("src.api.v1.reviews_v2._check_daily_goal_notification"),
-            patch("src.api.v1.reviews_v2.check_achievements_task"),
-            patch("src.api.v1.reviews_v2.log_analytics_task"),
             patch("src.api.v1.reviews_v2.settings") as mock_settings,
         ):
-
             mock_repo_cls.return_value.get = AsyncMock(return_value=mock_card_record)
-            mock_review_repo_cls.return_value.get_streak = AsyncMock(return_value=1)
             mock_review_repo_cls.return_value.count_reviews_today = AsyncMock(return_value=0)
-            mock_service_cls.return_value.process_review = AsyncMock(
-                return_value=_make_v2_review_result()
+            mock_service_cls.return_value.compute_review = AsyncMock(
+                return_value=(_make_v2_review_result(), _make_review_context())
             )
+            mock_service_cls.return_value.persist_review = AsyncMock()
             mock_settings.feature_background_tasks = False
 
             response = await client.post(
@@ -161,8 +172,6 @@ class TestSubmitV2Review:
             )
 
         assert response.status_code == 200
-        # Background task functions should not have been called as actual tasks
-        # (They may be referenced but not called since feature_background_tasks=False)
 
     @pytest.mark.asyncio
     async def test_dashboard_sse_signaled(self, client, auth_headers):
@@ -174,17 +183,15 @@ class TestSubmitV2Review:
             patch("src.api.v1.reviews_v2.CardRecordReviewRepository") as mock_review_repo_cls,
             patch("src.api.v1.reviews_v2.V2SM2Service") as mock_service_cls,
             patch("src.api.v1.reviews_v2.check_premium_deck_access"),
-            patch("src.api.v1.reviews_v2._check_daily_goal_notification"),
             patch("src.api.v1.reviews_v2.dashboard_event_bus") as mock_bus,
             patch("src.api.v1.reviews_v2.settings") as mock_settings,
         ):
-
             mock_repo_cls.return_value.get = AsyncMock(return_value=mock_card_record)
-            mock_review_repo_cls.return_value.get_streak = AsyncMock(return_value=1)
             mock_review_repo_cls.return_value.count_reviews_today = AsyncMock(return_value=0)
-            mock_service_cls.return_value.process_review = AsyncMock(
-                return_value=_make_v2_review_result()
+            mock_service_cls.return_value.compute_review = AsyncMock(
+                return_value=(_make_v2_review_result(), _make_review_context())
             )
+            mock_service_cls.return_value.persist_review = AsyncMock()
             mock_bus.signal = AsyncMock()
             mock_settings.feature_background_tasks = False
 
@@ -207,7 +214,6 @@ class TestSubmitV2Review:
             patch("src.api.v1.reviews_v2.CardRecordRepository") as mock_repo_cls,
             patch("src.api.v1.reviews_v2.check_premium_deck_access") as mock_premium,
         ):
-
             mock_repo_cls.return_value.get = AsyncMock(return_value=mock_card_record)
             mock_premium.side_effect = FastAPIHTTPException(
                 status_code=403, detail="Premium required"
@@ -222,8 +228,8 @@ class TestSubmitV2Review:
         assert response.status_code == 403
 
     @pytest.mark.asyncio
-    async def test_flashcard_xp_task_scheduled(self, client, auth_headers):
-        """XP background task is scheduled with correct args when background tasks enabled."""
+    async def test_persist_task_scheduled_when_background_enabled(self, client, auth_headers):
+        """persist_deck_review_task is registered via BackgroundTasks when background tasks enabled."""
         mock_card_record = MagicMock()
         mock_card_record.deck = MagicMock()
         review_body = _valid_review_body()
@@ -233,18 +239,14 @@ class TestSubmitV2Review:
             patch("src.api.v1.reviews_v2.CardRecordReviewRepository") as mock_review_repo_cls,
             patch("src.api.v1.reviews_v2.V2SM2Service") as mock_service_cls,
             patch("src.api.v1.reviews_v2.check_premium_deck_access"),
-            patch("src.api.v1.reviews_v2._check_daily_goal_notification"),
-            patch("src.api.v1.reviews_v2.check_achievements_task"),
-            patch("src.api.v1.reviews_v2.log_analytics_task"),
-            patch("src.api.v1.reviews_v2.award_flashcard_xp_task") as mock_xp_task,
+            patch("src.api.v1.reviews_v2.persist_deck_review_task") as mock_persist_task,
             patch("src.api.v1.reviews_v2.settings") as mock_settings,
             patch("starlette.background.BackgroundTasks.add_task") as mock_add_task,
         ):
             mock_repo_cls.return_value.get = AsyncMock(return_value=mock_card_record)
-            mock_review_repo_cls.return_value.get_streak = AsyncMock(return_value=1)
             mock_review_repo_cls.return_value.count_reviews_today = AsyncMock(return_value=0)
-            mock_service_cls.return_value.process_review = AsyncMock(
-                return_value=_make_v2_review_result()
+            mock_service_cls.return_value.compute_review = AsyncMock(
+                return_value=(_make_v2_review_result(), _make_review_context())
             )
             mock_settings.feature_background_tasks = True
             mock_settings.database_url = "postgresql://test"
@@ -256,9 +258,9 @@ class TestSubmitV2Review:
             )
 
         assert response.status_code == 200
-        # Verify the XP task was actually registered via BackgroundTasks.add_task
+        # Verify persist_deck_review_task was registered via BackgroundTasks.add_task
         scheduled_funcs = [call.args[0] for call in mock_add_task.call_args_list]
-        assert mock_xp_task in scheduled_funcs
+        assert mock_persist_task in scheduled_funcs
 
     @pytest.mark.asyncio
     async def test_successful_review_returns_v2_result(self, client, auth_headers):
@@ -271,14 +273,14 @@ class TestSubmitV2Review:
             patch("src.api.v1.reviews_v2.CardRecordReviewRepository") as mock_review_repo_cls,
             patch("src.api.v1.reviews_v2.V2SM2Service") as mock_service_cls,
             patch("src.api.v1.reviews_v2.check_premium_deck_access"),
-            patch("src.api.v1.reviews_v2._check_daily_goal_notification"),
             patch("src.api.v1.reviews_v2.settings") as mock_settings,
         ):
-
             mock_repo_cls.return_value.get = AsyncMock(return_value=mock_card_record)
-            mock_review_repo_cls.return_value.get_streak = AsyncMock(return_value=0)
             mock_review_repo_cls.return_value.count_reviews_today = AsyncMock(return_value=0)
-            mock_service_cls.return_value.process_review = AsyncMock(return_value=expected_result)
+            mock_service_cls.return_value.compute_review = AsyncMock(
+                return_value=(expected_result, _make_review_context())
+            )
+            mock_service_cls.return_value.persist_review = AsyncMock()
             mock_settings.feature_background_tasks = False
 
             response = await client.post(
