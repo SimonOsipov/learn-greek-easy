@@ -36,6 +36,7 @@ router = APIRouter(
 async def get_v2_study_queue(
     deck_id: UUID | None = Query(default=None, description="Optional deck to scope queue to"),
     card_type: CardType | None = Query(default=None, description="Optional card type filter"),
+    word_entry_id: UUID | None = Query(default=None, description="Optional word entry filter"),
     limit: int = Query(default=20, ge=1, le=100, description="Max cards to return"),
     include_new: bool = Query(default=True, description="Include unstudied cards"),
     new_cards_limit: int = Query(default=10, ge=0, le=50, description="Max new cards"),
@@ -83,10 +84,10 @@ async def get_v2_study_queue(
         GET /api/v1/study/queue/v2?card_type=vocabulary&limit=10
         GET /api/v1/study/queue/v2?deck_id=660e8400-e29b-41d4-a716-446655440001&limit=10
     """
-    if deck_id is None and card_type is None:
+    if deck_id is None and card_type is None and word_entry_id is None:
         raise HTTPException(
             status_code=400,
-            detail="Either deck_id or card_type must be provided",
+            detail="At least one of deck_id, card_type, or word_entry_id must be provided",
         )
 
     if deck_id is not None:
@@ -104,6 +105,7 @@ async def get_v2_study_queue(
         user_id=current_user.id,
         deck_id=deck_id,
         card_type=card_type,
+        word_entry_id=word_entry_id,
         limit=limit,
         include_new=include_new,
         new_cards_limit=new_cards_limit,

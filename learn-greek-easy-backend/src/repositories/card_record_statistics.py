@@ -63,6 +63,7 @@ class CardRecordStatisticsRepository(BaseRepository[CardRecordStatistics]):
         deck_id: UUID | None = None,
         *,
         card_type: CardType | None = None,
+        word_entry_id: UUID | None = None,
         limit: int = 20,
         exclude_premium_decks: bool = False,
     ) -> list[CardRecordStatistics]:
@@ -94,6 +95,8 @@ class CardRecordStatisticsRepository(BaseRepository[CardRecordStatistics]):
             query = query.where(CardRecord.deck_id == deck_id)
         if card_type is not None:
             query = query.where(CardRecord.card_type == card_type)
+        if word_entry_id is not None:
+            query = query.where(CardRecord.word_entry_id == word_entry_id)
         if exclude_premium_decks:
             query = query.where(Deck.is_premium == False)  # noqa: E712
         result = await self.db.execute(query)
@@ -106,6 +109,7 @@ class CardRecordStatisticsRepository(BaseRepository[CardRecordStatistics]):
         limit: int = 10,
         *,
         card_type: CardType | None = None,
+        word_entry_id: UUID | None = None,
         exclude_premium_decks: bool = False,
     ) -> list[CardRecord]:
         """Get card records not yet studied by this user.
@@ -141,6 +145,8 @@ class CardRecordStatisticsRepository(BaseRepository[CardRecordStatistics]):
             query = query.where(CardRecord.deck_id == deck_id)
         if card_type is not None:
             query = query.where(CardRecord.card_type == card_type)
+        if word_entry_id is not None:
+            query = query.where(CardRecord.word_entry_id == word_entry_id)
         if exclude_premium_decks:
             query = query.where(Deck.is_premium == False)  # noqa: E712
         result = await self.db.execute(query)
@@ -152,6 +158,7 @@ class CardRecordStatisticsRepository(BaseRepository[CardRecordStatistics]):
         deck_id: UUID | None = None,
         *,
         card_type: CardType | None = None,
+        word_entry_id: UUID | None = None,
         limit: int = 10,
         exclude_premium_decks: bool = False,
     ) -> list[CardRecordStatistics]:
@@ -187,6 +194,8 @@ class CardRecordStatisticsRepository(BaseRepository[CardRecordStatistics]):
             query = query.where(CardRecord.deck_id == deck_id)
         if card_type is not None:
             query = query.where(CardRecord.card_type == card_type)
+        if word_entry_id is not None:
+            query = query.where(CardRecord.word_entry_id == word_entry_id)
         if exclude_premium_decks:
             query = query.where(Deck.is_premium == False)  # noqa: E712
         result = await self.db.execute(query)
