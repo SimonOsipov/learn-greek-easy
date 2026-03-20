@@ -144,13 +144,6 @@ const WordReferencePage = lazyWithRetry(() =>
   }))
 );
 
-// Word practice page (full-screen practice experience)
-const WordPracticePage = lazyWithRetry(() =>
-  import('@/features/words/pages/WordPracticePage').then((m) => ({
-    default: m.WordPracticePage,
-  }))
-);
-
 // V2 flashcard practice page (full-screen SM-2 v2 experience)
 const V2FlashcardPracticePage = lazyWithRetry(() =>
   import('@/pages/V2FlashcardPracticePage').then((m) => ({
@@ -230,7 +223,7 @@ function AppContent() {
                 {/* Word practice page outside AppLayout for full-screen experience */}
                 <Route
                   path="/decks/:deckId/words/:wordId/practice"
-                  element={<WordPracticePage />}
+                  element={<V2FlashcardPracticePage />}
                 />
                 <Route path="/my-decks" element={<AppLayout />}>
                   <Route index element={<MyDecksPage />} />

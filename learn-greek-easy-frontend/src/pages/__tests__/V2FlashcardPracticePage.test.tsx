@@ -17,13 +17,14 @@ import { V2FlashcardPracticePage } from '../V2FlashcardPracticePage';
 
 const mockNavigate = vi.fn();
 const mockStartSession = vi.fn();
+let mockParams: Record<string, string> = { deckId: 'deck-123' };
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
   return {
     ...actual,
     useNavigate: () => mockNavigate,
-    useParams: () => ({ deckId: 'deck-123' }),
+    useParams: () => mockParams,
     useSearchParams: () => [new URLSearchParams(), vi.fn()],
   };
 });
@@ -62,6 +63,7 @@ const defaultStoreState = {
     cardsRelearning: 0,
   },
   sessionSummary: null,
+  wordEntryId: null,
   startSession: mockStartSession,
   rateCard: vi.fn(),
   flipCard: vi.fn(),
@@ -111,6 +113,7 @@ vi.mock('@/hooks/useAudioPlayer', () => ({
 describe('V2FlashcardPracticePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockParams = { deckId: 'deck-123' };
     mockStartSession.mockResolvedValue(undefined);
     mockStoreState = { ...defaultStoreState, startSession: mockStartSession };
   });
@@ -188,5 +191,29 @@ describe('V2FlashcardPracticePage', () => {
     expect(screen.getByText('3:45')).toBeInTheDocument(); // duration formatted
     expect(screen.getByRole('button', { name: /Study More/i })).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /Back to Deck/i }).length).toBeGreaterThan(0);
+  });
+
+  it('word-scoped mode calls startSession with wordId', () => {
+    mockParams = { deckId: 'deck-123', wordId: 'word-456' };
+    render(<V2FlashcardPracticePage />);
+
+    expect(mockStartSession).toHaveBeenCalledWith('deck-123', undefined, 'word-456');
+  });
+
+  it('back navigation goes to word detail page when wordId present', () => {
+    mockParams = { deckId: 'deck-123', wordId: 'word-456' };
+    mockStoreState = {
+      ...mockStoreState,
+      isLoading: false,
+      queue: [],
+      sessionSummary: null,
+      error: null,
+    };
+    render(<V2FlashcardPracticePage />);
+
+    const backButtons = screen.getAllByRole('button', { name: /Back to Deck/i });
+    backButtons[0].click();
+
+    expect(mockNavigate).toHaveBeenCalledWith('/decks/deck-123/words/word-456');
   });
 });
