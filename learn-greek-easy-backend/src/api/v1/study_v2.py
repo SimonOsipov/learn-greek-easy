@@ -50,19 +50,20 @@ async def get_v2_study_queue(
     """Get V2 study queue with cards from the V2 SM2 card system.
 
     Supports both deck-scoped and cross-deck modes via the optional deck_id parameter.
-    At least one of deck_id or card_type must be provided.
+    At least one of deck_id, card_type, or word_entry_id must be provided.
 
     In deck-scoped mode (deck_id provided):
     - Validates deck exists, is active, and uses V2 card system
     - Checks premium access for the deck
 
     In cross-deck mode (no deck_id):
-    - Requires card_type to be provided
+    - Requires card_type or word_entry_id to be provided
     - Free-tier users have premium decks excluded automatically
 
     Args:
         deck_id: Optional UUID to scope queue to a specific deck
         card_type: Optional card type filter
+        word_entry_id: Optional UUID to filter cards for a specific word entry
         limit: Maximum cards to return (1-100, default 20)
         include_new: Whether to include unstudied cards (default True)
         new_cards_limit: Maximum new cards to include (0-50, default 10)
@@ -75,7 +76,7 @@ async def get_v2_study_queue(
         V2StudyQueue with counts and list of cards to study
 
     Raises:
-        HTTPException 400: If neither deck_id nor card_type is provided
+        HTTPException 400: If none of deck_id, card_type, or word_entry_id is provided
         HTTPException 400: If deck_id is provided and deck uses V1 card system
         DeckNotFoundException 404: If deck_id is provided but deck not found or inactive
         HTTPException 403: If deck is premium and user is on free tier

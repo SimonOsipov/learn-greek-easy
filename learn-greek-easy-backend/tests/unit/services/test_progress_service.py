@@ -1,6 +1,6 @@
 """Unit tests for ProgressService."""
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
