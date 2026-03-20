@@ -80,7 +80,7 @@ describe('SessionSummary', () => {
     it('grid columns match stats length', () => {
       renderWithProviders(<SessionSummary {...defaultProps} />);
       const statsGrid = screen.getByTestId('session-summary-stats');
-      expect(statsGrid).toHaveStyle({ gridTemplateColumns: 'repeat(3, 1fr)' });
+      expect(statsGrid).toHaveStyle({ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' });
     });
 
     it('renders correct number of stat items', () => {

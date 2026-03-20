@@ -34,7 +34,7 @@ export const SessionSummary: React.FC<SessionSummaryProps> = ({
 
       <div
         className="mb-6 grid gap-4"
-        style={{ gridTemplateColumns: `repeat(${stats.length}, 1fr)` }}
+        style={{ gridTemplateColumns: `repeat(${Math.max(stats.length, 1)}, minmax(0, 1fr))` }}
         data-testid="session-summary-stats"
       >
         {stats.map((stat, index) => {

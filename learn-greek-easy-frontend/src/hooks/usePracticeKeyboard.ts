@@ -18,11 +18,15 @@ export function usePracticeKeyboard(options: UsePracticeKeyboardOptions): void {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Focus guard: skip if user is typing
+      // Focus guard: skip if user is typing or interacting with interactive elements
+      const target = e.target as Element | null;
       if (
-        e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLTextAreaElement ||
-        e.target instanceof HTMLSelectElement
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        target instanceof HTMLButtonElement ||
+        target instanceof HTMLAnchorElement ||
+        (target instanceof HTMLElement && target.isContentEditable)
       ) {
         return;
       }

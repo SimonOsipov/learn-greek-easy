@@ -70,7 +70,8 @@ export function capAnswerTime(timeSeconds: number): number {
  * @returns Formatted duration string in M:SS format
  */
 export function formatDuration(totalSeconds: number): string {
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
+  const normalized = Number.isFinite(totalSeconds) ? Math.max(0, Math.floor(totalSeconds)) : 0;
+  const minutes = Math.floor(normalized / 60);
+  const seconds = normalized % 60;
   return `${minutes}:${String(seconds).padStart(2, '0')}`;
 }

@@ -46,6 +46,7 @@ export function usePracticeSession(options: UsePracticeSessionOptions): UsePract
   const sessionStartTimeRef = useRef<number | null>(null);
   const hasTrackedStartRef = useRef(false);
   const hasTrackedCompleteRef = useRef(false);
+  const hasTrackedAbandonRef = useRef(false);
 
   // Track session start
   useEffect(() => {
@@ -85,6 +86,14 @@ export function usePracticeSession(options: UsePracticeSessionOptions): UsePract
   // Track session abandoned on beforeunload
   useEffect(() => {
     const handleBeforeUnload = () => {
+      if (
+        !hasTrackedStartRef.current ||
+        hasTrackedCompleteRef.current ||
+        hasTrackedAbandonRef.current
+      ) {
+        return;
+      }
+      hasTrackedAbandonRef.current = true;
       const durationSec = sessionStartTimeRef.current
         ? Math.round((Date.now() - sessionStartTimeRef.current) / 1000)
         : (fallbackDurationSec ?? 0);
@@ -105,6 +114,7 @@ export function usePracticeSession(options: UsePracticeSessionOptions): UsePract
     sessionStartTimeRef.current = null;
     hasTrackedStartRef.current = false;
     hasTrackedCompleteRef.current = false;
+    hasTrackedAbandonRef.current = false;
   };
 
   return { sessionStartTimeRef, resetTracking };

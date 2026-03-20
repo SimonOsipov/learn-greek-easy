@@ -121,5 +121,9 @@ describe('timeFormatUtils', () => {
     it('should return "60:00" for 3600 seconds', () => {
       expect(formatDuration(3600)).toBe('60:00');
     });
+
+    it('should return "0:00" for negative values', () => {
+      expect(formatDuration(-1)).toBe('0:00');
+    });
   });
 });
