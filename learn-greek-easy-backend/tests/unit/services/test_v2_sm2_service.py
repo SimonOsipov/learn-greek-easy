@@ -684,8 +684,9 @@ class TestV2SM2ServiceComputeReview:
             )
 
         # With quality=5 and interval=21, new_status should be MASTERED
-        if context["is_newly_mastered"]:
-            assert result.message == "Congratulations! Card mastered!"
+        assert context["is_newly_mastered"] is True
+        assert result.new_status == CardStatus.MASTERED
+        assert result.message == "Congratulations! Card mastered!"
 
 
 @pytest.mark.unit

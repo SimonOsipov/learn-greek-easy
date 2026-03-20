@@ -411,6 +411,7 @@ async def _check_daily_goal_for_review(
 
     from src.core.redis import get_redis
     from src.db.models import UserSettings
+    from src.repositories.culture_question_stats import CultureQuestionStatsRepository
     from src.services.notification_service import NotificationService
 
     try:
@@ -420,12 +421,18 @@ async def _check_daily_goal_for_review(
         user_settings = result.scalar_one_or_none()
         daily_goal = user_settings.daily_goal if user_settings else 20
 
-        reviews_after = reviews_before + 1
+        # Include culture answers in total (daily goal combines flashcard + culture reviews)
+        culture_stats_repo = CultureQuestionStatsRepository(session)
+        culture_answers_today = await culture_stats_repo.count_answers_today(UUID(user_id))
 
-        if reviews_before >= daily_goal:
+        total_reviews_before = reviews_before + culture_answers_today
+        reviews_after = reviews_before + 1
+        total_reviews_after = reviews_after + culture_answers_today
+
+        if total_reviews_before >= daily_goal:
             return
 
-        if reviews_after < daily_goal:
+        if total_reviews_after < daily_goal:
             return
 
         redis = get_redis()
@@ -439,12 +446,12 @@ async def _check_daily_goal_for_review(
         notification_service = NotificationService(session)
         await notification_service.notify_daily_goal_complete(
             user_id=UUID(user_id),
-            reviews_completed=reviews_after,
+            reviews_completed=total_reviews_after,
         )
 
         logger.info(
             "Daily goal notification created (deck review background)",
-            extra={"user_id": user_id, "reviews": reviews_after},
+            extra={"user_id": user_id, "reviews": total_reviews_after},
         )
 
     except Exception as e:
@@ -1077,8 +1084,10 @@ async def persist_culture_answer_task(
                 source_id=question_id,
             )
 
-            # Step 5: Award first review bonus (once per day - service handles dedup)
-            first_review_bonus = await xp_service.award_first_review_bonus(user_id)
+            # Step 5: Award first review bonus (once per day - only for correct answers)
+            first_review_bonus = 0
+            if is_correct:
+                first_review_bonus = await xp_service.award_first_review_bonus(user_id)
             total_xp = xp_earned + first_review_bonus
 
             logger.debug(

@@ -457,6 +457,119 @@ class V2SM2Service:
                 },
             )
 
+        await self._run_persist_review_side_effects(context)
+
+    async def _run_persist_review_side_effects(self, context: dict[str, Any]) -> None:
+        """Run non-critical side effects (XP, daily goal, achievements, analytics)."""
+        user_id_uuid = UUID(context["user_id"])
+        card_record_id_uuid = UUID(context["card_record_id"])
+
+        # Award flashcard XP
+        try:
+            from src.services.xp_service import XPService
+
+            xp_service = XPService(self.db)
+            await xp_service.award_flashcard_review_xp(
+                user_id=user_id_uuid,
+                quality=context["quality"],
+                card_record_id=card_record_id_uuid,
+            )
+        except Exception as e:
+            logger.warning(
+                "XP award failed in persist_review",
+                extra={"user_id": context["user_id"], "error": str(e)},
+            )
+
+        # Check daily goal
+        await self._check_daily_goal_sync(user_id_uuid, context["user_id"])
+
+        # Check achievements
+        try:
+            from src.services.achievement_definitions import AchievementMetric
+            from src.services.achievement_service import AchievementService
+
+            achievement_service = AchievementService(self.db)
+            stats = await achievement_service._get_user_stats(user_id_uuid)
+            for metric, stat_key in [
+                (AchievementMetric.CARDS_LEARNED, "cards_learned"),
+                (AchievementMetric.CARDS_MASTERED, "cards_mastered"),
+                (AchievementMetric.TOTAL_REVIEWS, "total_reviews"),
+            ]:
+                value = int(stats.get(stat_key, 0))
+                if value > 0:
+                    await achievement_service.check_and_unlock_achievements(
+                        user_id_uuid, metric, value
+                    )
+        except Exception as e:
+            logger.warning(
+                "Achievement check failed in persist_review",
+                extra={"user_id": context["user_id"], "error": str(e)},
+            )
+
+        # Log analytics
+        logger.info(
+            "ANALYTICS: review_completed",
+            extra={
+                "analytics": True,
+                "event_type": "review_completed",
+                "user_id": context["user_id"],
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "event_data": {
+                    "card_record_id": context["card_record_id"],
+                    "quality": context["quality"],
+                    "time_taken": context["time_taken"],
+                    "new_status": context["new_status_value"],
+                },
+            },
+        )
+
+    async def _check_daily_goal_sync(self, user_id_uuid: UUID, user_id_str: str) -> None:
+        """Check daily goal and notify if just completed (synchronous path)."""
+        try:
+            from sqlalchemy import select
+
+            from src.core.redis import get_redis
+            from src.db.models import UserSettings
+            from src.repositories.card_record_review import CardRecordReviewRepository
+            from src.services.notification_service import NotificationService
+
+            result = await self.db.execute(
+                select(UserSettings).where(UserSettings.user_id == user_id_uuid)
+            )
+            user_settings = result.scalar_one_or_none()
+            daily_goal = user_settings.daily_goal if user_settings else 20
+
+            review_repo = CardRecordReviewRepository(self.db)
+            reviews_today = await review_repo.count_reviews_today(user_id_uuid)
+            reviews_before = max(reviews_today - 1, 0)
+
+            if reviews_before < daily_goal <= reviews_today:
+                redis = get_redis()
+                should_notify = True
+                if redis:
+                    cache_key = f"daily_goal_notified:{user_id_uuid}:{date.today().isoformat()}"
+                    was_set = await redis.setnx(cache_key, "1")
+                    if not was_set:
+                        should_notify = False
+                    else:
+                        await redis.expire(cache_key, 86400)
+
+                if should_notify:
+                    notification_service = NotificationService(self.db)
+                    await notification_service.notify_daily_goal_complete(
+                        user_id=user_id_uuid,
+                        reviews_completed=reviews_today,
+                    )
+                    logger.info(
+                        "Daily goal notification created (persist_review sync path)",
+                        extra={"user_id": user_id_str, "reviews": reviews_today},
+                    )
+        except Exception as e:
+            logger.warning(
+                "Daily goal check failed in persist_review",
+                extra={"user_id": user_id_str, "error": str(e)},
+            )
+
     def _get_review_message(
         self,
         quality: int,
