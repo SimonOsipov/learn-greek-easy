@@ -25,7 +25,6 @@ class TestModuleImports:
             log_analytics_task,
             persist_culture_answer_task,
             process_answer_side_effects_task,
-            process_culture_answer_full_async,
         )
 
         assert callable(check_achievements_task)
@@ -34,7 +33,6 @@ class TestModuleImports:
         assert callable(log_analytics_task)
         assert callable(persist_culture_answer_task)
         assert callable(process_answer_side_effects_task)
-        assert callable(process_culture_answer_full_async)
         assert isinstance(ANALYTICS_EVENTS, dict)
 
     def test_import_from_background_module(self):
@@ -48,7 +46,6 @@ class TestModuleImports:
             persist_culture_answer_task,
             persist_deck_review_task,
             process_answer_side_effects_task,
-            process_culture_answer_full_async,
         )
 
         assert callable(check_achievements_task)
@@ -58,7 +55,6 @@ class TestModuleImports:
         assert callable(persist_culture_answer_task)
         assert callable(persist_deck_review_task)
         assert callable(process_answer_side_effects_task)
-        assert callable(process_culture_answer_full_async)
         assert isinstance(ANALYTICS_EVENTS, dict)
 
     def test_all_exports_defined(self):
@@ -70,7 +66,6 @@ class TestModuleImports:
             "ANALYTICS_EVENTS",
             "check_achievements_task",
             "award_flashcard_xp_task",
-            "check_culture_achievements_task",
             "create_announcement_notifications_task",
             "generate_a2_audio_for_news_item_task",
             "generate_audio_for_culture_question_task",
@@ -80,7 +75,6 @@ class TestModuleImports:
             "log_analytics_task",
             "persist_culture_answer_task",
             "process_answer_side_effects_task",
-            "process_culture_answer_full_async",
             # Scheduler (dedicated service)
             "get_scheduler",
             "setup_scheduler",
@@ -1113,217 +1107,6 @@ class TestAnalyticsEventsConstant:
             ), f"Event type '{event_type}' should be lowercase"
 
 
-class TestProcessCultureAnswerFullAsync:
-    """Test the process_culture_answer_full_async task (early response pattern)."""
-
-    def test_process_culture_answer_full_async_is_async(self):
-        """Test that process_culture_answer_full_async is an async function."""
-        from src.tasks.background import process_culture_answer_full_async
-
-        assert asyncio.iscoroutinefunction(process_culture_answer_full_async)
-
-    def test_process_culture_answer_full_async_signature(self):
-        """Test that process_culture_answer_full_async has correct signature."""
-        from src.tasks.background import process_culture_answer_full_async
-
-        sig = inspect.signature(process_culture_answer_full_async)
-        params = list(sig.parameters.keys())
-        expected_params = [
-            "user_id",
-            "question_id",
-            "selected_option",
-            "time_taken",
-            "language",
-            "is_correct",
-            "is_perfect",
-            "deck_category",
-            "db_url",
-        ]
-        assert params == expected_params
-
-    @pytest.mark.asyncio
-    async def test_process_culture_answer_full_async_skipped_when_disabled(self):
-        """Test that task is skipped when background tasks are disabled."""
-        from src.tasks.background import process_culture_answer_full_async
-
-        with patch.object(settings, "feature_background_tasks", False):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                await process_culture_answer_full_async(
-                    user_id=uuid4(),
-                    question_id=uuid4(),
-                    selected_option=1,
-                    time_taken=5,
-                    language="en",
-                    is_correct=True,
-                    is_perfect=False,
-                    deck_category="history",
-                    db_url="postgresql+asyncpg://test:test@localhost/test",
-                )
-
-                # Engine should not be created when disabled
-                mock_engine_creator.assert_not_called()
-
-    @pytest.mark.asyncio
-    async def test_process_culture_answer_full_async_logs_when_disabled(self):
-        """Test that task logs debug message when disabled."""
-        from src.tasks.background import process_culture_answer_full_async
-
-        with patch.object(settings, "feature_background_tasks", False):
-            with patch("src.tasks.background.logger") as mock_logger:
-                await process_culture_answer_full_async(
-                    user_id=uuid4(),
-                    question_id=uuid4(),
-                    selected_option=1,
-                    time_taken=5,
-                    language="en",
-                    is_correct=True,
-                    is_perfect=False,
-                    deck_category="history",
-                    db_url="postgresql+asyncpg://test:test@localhost/test",
-                )
-
-                mock_logger.debug.assert_called_once()
-                assert "disabled" in mock_logger.debug.call_args[0][0].lower()
-
-    @pytest.mark.asyncio
-    async def test_process_culture_answer_full_async_handles_database_error(self):
-        """Test that database connection errors are handled gracefully."""
-        from src.tasks.background import process_culture_answer_full_async
-
-        user_id = uuid4()
-        question_id = uuid4()
-
-        with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine_creator.side_effect = Exception("Connection failed")
-
-                with patch("src.tasks.background.logger") as mock_logger:
-                    # Should not raise - errors are caught and logged
-                    await process_culture_answer_full_async(
-                        user_id=user_id,
-                        question_id=question_id,
-                        selected_option=1,
-                        time_taken=5,
-                        language="en",
-                        is_correct=True,
-                        is_perfect=False,
-                        deck_category="history",
-                        db_url="postgresql+asyncpg://test:test@localhost/test",
-                    )
-
-                    # Should log the error
-                    mock_logger.error.assert_called()
-                    error_call = mock_logger.error.call_args
-                    assert "Full culture answer processing failed" in error_call[0][0]
-
-    @pytest.mark.asyncio
-    async def test_process_culture_answer_full_async_disposes_engine_on_error(self):
-        """Test that engine is disposed even when an error occurs."""
-        from src.tasks.background import process_culture_answer_full_async
-
-        user_id = uuid4()
-        question_id = uuid4()
-
-        with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine = AsyncMock()
-                mock_engine_creator.return_value = mock_engine
-
-                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    # Make session factory raise an error
-                    mock_sessionmaker.side_effect = Exception("Session creation failed")
-
-                    await process_culture_answer_full_async(
-                        user_id=user_id,
-                        question_id=question_id,
-                        selected_option=1,
-                        time_taken=5,
-                        language="en",
-                        is_correct=True,
-                        is_perfect=False,
-                        deck_category="history",
-                        db_url="postgresql+asyncpg://test:test@localhost/test",
-                    )
-
-                    # Engine should still be disposed even after error
-                    mock_engine.dispose.assert_awaited_once()
-
-    @pytest.mark.asyncio
-    async def test_process_culture_answer_full_async_creates_engine_with_pool_pre_ping(self):
-        """Test that engine is created with pool_pre_ping=True."""
-        from src.tasks.background import process_culture_answer_full_async
-
-        user_id = uuid4()
-        question_id = uuid4()
-        db_url = "postgresql+asyncpg://test:test@localhost/test"
-
-        with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine = AsyncMock()
-                mock_engine_creator.return_value = mock_engine
-
-                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    # Make session factory raise an error to exit quickly
-                    mock_sessionmaker.side_effect = Exception("Session creation failed")
-
-                    await process_culture_answer_full_async(
-                        user_id=user_id,
-                        question_id=question_id,
-                        selected_option=1,
-                        time_taken=5,
-                        language="en",
-                        is_correct=True,
-                        is_perfect=False,
-                        deck_category="history",
-                        db_url=db_url,
-                    )
-
-                    # Verify create_async_engine was called with pool_pre_ping and connect_args
-                    mock_engine_creator.assert_called_once_with(
-                        db_url,
-                        pool_pre_ping=True,
-                        connect_args={},
-                    )
-
-    @pytest.mark.asyncio
-    async def test_process_culture_answer_full_async_logs_start(self):
-        """Test that task logs start message with correct extra fields."""
-        from src.tasks.background import process_culture_answer_full_async
-
-        user_id = uuid4()
-        question_id = uuid4()
-
-        with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine = AsyncMock()
-                mock_engine_creator.return_value = mock_engine
-
-                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    # Make session factory raise an error to exit quickly
-                    mock_sessionmaker.side_effect = Exception("Session creation failed")
-
-                    with patch("src.tasks.background.logger") as mock_logger:
-                        await process_culture_answer_full_async(
-                            user_id=user_id,
-                            question_id=question_id,
-                            selected_option=1,
-                            time_taken=5,
-                            language="en",
-                            is_correct=True,
-                            is_perfect=False,
-                            deck_category="history",
-                            db_url="postgresql+asyncpg://test:test@localhost/test",
-                        )
-
-                        # Check start log was called
-                        start_call = mock_logger.info.call_args_list[0]
-                        assert "Starting full culture answer processing" in start_call[0][0]
-                        assert start_call[1]["extra"]["user_id"] == str(user_id)
-                        assert start_call[1]["extra"]["question_id"] == str(question_id)
-                        assert start_call[1]["extra"]["is_correct"] is True
-                        assert start_call[1]["extra"]["task"] == "process_culture_answer_full"
-
-
 class TestSessionCleanupOrder:
     """Test that session is closed before engine is disposed.
 
@@ -1453,100 +1236,6 @@ class TestSessionCleanupOrder:
                             time_taken_seconds=5,
                             deck_category="history",
                             culture_answers_before=0,
-                            db_url="postgresql+asyncpg://test:test@localhost/test",
-                        )
-
-                        assert call_order == ["session.close", "engine.dispose"]
-
-    @pytest.mark.asyncio
-    async def test_process_culture_answer_full_closes_session_before_engine_dispose(self):
-        """Test that process_culture_answer_full_async closes session before engine dispose."""
-        from src.tasks.background import process_culture_answer_full_async
-
-        user_id = uuid4()
-        question_id = uuid4()
-        call_order = []
-
-        with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine = AsyncMock()
-
-                async def mock_dispose():
-                    call_order.append("engine.dispose")
-
-                mock_engine.dispose = mock_dispose
-                mock_engine_creator.return_value = mock_engine
-
-                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    mock_session = AsyncMock()
-
-                    async def mock_close():
-                        call_order.append("session.close")
-
-                    mock_session.close = mock_close
-
-                    # Mock execute to raise an error to trigger session close
-                    mock_session.execute.side_effect = Exception("DB error")
-
-                    mock_session_factory = MagicMock(return_value=mock_session)
-                    mock_sessionmaker.return_value = mock_session_factory
-
-                    await process_culture_answer_full_async(
-                        user_id=user_id,
-                        question_id=question_id,
-                        selected_option=1,
-                        time_taken=5,
-                        language="en",
-                        is_correct=True,
-                        is_perfect=False,
-                        deck_category="history",
-                        db_url="postgresql+asyncpg://test:test@localhost/test",
-                    )
-
-                    assert call_order == ["session.close", "engine.dispose"]
-
-    @pytest.mark.asyncio
-    async def test_check_culture_achievements_closes_session_before_engine_dispose(self):
-        """Test that check_culture_achievements_task closes session before engine dispose."""
-        from src.tasks.background import check_culture_achievements_task
-
-        user_id = uuid4()
-        question_id = uuid4()
-        call_order = []
-
-        with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine = AsyncMock()
-
-                async def mock_dispose():
-                    call_order.append("engine.dispose")
-
-                mock_engine.dispose = mock_dispose
-                mock_engine_creator.return_value = mock_engine
-
-                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    mock_session = AsyncMock()
-
-                    async def mock_close():
-                        call_order.append("session.close")
-
-                    mock_session.close = mock_close
-                    mock_session_factory = MagicMock(return_value=mock_session)
-                    mock_sessionmaker.return_value = mock_session_factory
-
-                    with patch(
-                        "src.services.achievement_service.AchievementService"
-                    ) as mock_service_class:
-                        mock_service = AsyncMock()
-                        mock_service.check_culture_achievements.return_value = []
-                        mock_service_class.return_value = mock_service
-
-                        await check_culture_achievements_task(
-                            user_id=user_id,
-                            question_id=question_id,
-                            is_correct=True,
-                            language="en",
-                            deck_category="history",
                             db_url="postgresql+asyncpg://test:test@localhost/test",
                         )
 
