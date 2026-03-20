@@ -71,12 +71,12 @@ export const Dashboard: React.FC = () => {
       (d) => (d.progress?.cardsReview ?? 0) > 0 || d.progress?.status === 'in-progress'
     );
     if (deckWithDue) {
-      // Culture decks go to /culture/{id}/practice, vocabulary decks go to /decks/{id}/review
+      // Culture decks go to /culture/{id}/practice, vocabulary decks go to /decks/{id}/practice
       const isCultureDeck = deckWithDue.category === 'culture';
       if (isCultureDeck) {
         navigate(`/culture/${deckWithDue.id}/practice`);
       } else {
-        navigate(`/decks/${deckWithDue.id}/review`);
+        navigate(`/decks/${deckWithDue.id}/practice`);
       }
     } else if (decks.length > 0) {
       const firstDeck = decks[0];
@@ -84,7 +84,7 @@ export const Dashboard: React.FC = () => {
       if (isCultureDeck) {
         navigate(`/culture/${firstDeck.id}/practice`);
       } else {
-        navigate(`/decks/${firstDeck.id}/review`);
+        navigate(`/decks/${firstDeck.id}/practice`);
       }
     } else {
       navigate('/decks');
@@ -95,12 +95,12 @@ export const Dashboard: React.FC = () => {
   const handleContinueDeck = useCallback(
     (deckId: string) => {
       const deck = decks.find((d) => d.id === deckId);
-      // Culture decks go to /culture/{id}/practice, vocabulary decks go to /decks/{id}/review
+      // Culture decks go to /culture/{id}/practice, vocabulary decks go to /decks/{id}/practice
       const isCultureDeck = deck?.category === 'culture';
       if (isCultureDeck) {
         navigate(`/culture/${deckId}/practice`);
       } else {
-        navigate(`/decks/${deckId}/review`);
+        navigate(`/decks/${deckId}/practice`);
       }
     },
     [decks, navigate]
