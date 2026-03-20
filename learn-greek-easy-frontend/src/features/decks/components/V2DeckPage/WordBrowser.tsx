@@ -79,7 +79,11 @@ function calculateFilterCounts(
     const m = masteryMap.get(entry.id);
     if (m && m.mastered_count === m.total_count && m.total_count > 0) {
       learned++;
-    } else if (m && m.mastered_count > 0 && m.mastered_count < m.total_count) {
+    } else if (
+      m &&
+      m.studied_count > 0 &&
+      !(m.mastered_count === m.total_count && m.total_count > 0)
+    ) {
       reviewing++;
     } else {
       newCount++;
@@ -203,12 +207,14 @@ export const WordBrowser: React.FC<WordBrowserProps> = ({ deckId, className }) =
     } else if (activeFilter === 'reviewing') {
       result = result.filter((e) => {
         const m = masteryMap.get(e.id);
-        return m && m.mastered_count > 0 && m.mastered_count < m.total_count;
+        return (
+          m && m.studied_count > 0 && !(m.mastered_count === m.total_count && m.total_count > 0)
+        );
       });
     } else if (activeFilter === 'new') {
       result = result.filter((e) => {
         const m = masteryMap.get(e.id);
-        return !m || m.mastered_count === 0;
+        return !m || m.studied_count === 0;
       });
     }
 
