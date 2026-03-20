@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import select
@@ -340,6 +341,234 @@ class V2SM2Service:
             next_review_date=next_review_date,
             message=message,
         )
+
+    async def compute_review(
+        self,
+        user_id: UUID,
+        card_record: CardRecord,
+        quality: int,
+        time_taken: int,
+    ) -> tuple[V2ReviewResult, dict[str, Any]]:
+        """Compute SM2 review result without persisting to DB.
+
+        Returns a (result, context) tuple where context contains all serializable
+        data needed for the persist phase (background or synchronous).
+        """
+        stats_repo = CardRecordStatisticsRepository(self.db)
+        stats = await stats_repo.get_or_create(user_id, card_record.id)
+
+        previous_status = stats.status
+        is_first_review = stats.status == CardStatus.NEW
+        was_mastered = stats.status == CardStatus.MASTERED
+
+        sm2_result = calculate_sm2(
+            current_ef=stats.easiness_factor,
+            current_interval=stats.interval,
+            current_repetitions=stats.repetitions,
+            quality=quality,
+        )
+
+        next_review_date = calculate_next_review_date(sm2_result.new_interval)
+
+        is_newly_mastered = not was_mastered and sm2_result.new_status == CardStatus.MASTERED
+
+        message = self._get_review_message(
+            quality=quality,
+            is_first_review=is_first_review,
+            was_mastered=was_mastered,
+            is_now_mastered=sm2_result.new_status == CardStatus.MASTERED,
+        )
+
+        result = V2ReviewResult(
+            card_record_id=card_record.id,
+            quality=quality,
+            previous_status=previous_status,
+            new_status=sm2_result.new_status,
+            easiness_factor=sm2_result.new_easiness_factor,
+            interval=sm2_result.new_interval,
+            repetitions=sm2_result.new_repetitions,
+            next_review_date=next_review_date,
+            message=message,
+        )
+
+        context: dict[str, Any] = {
+            "user_id": str(user_id),
+            "card_record_id": str(card_record.id),
+            "deck_id": str(card_record.deck_id),
+            "card_type_value": card_record.card_type.value,
+            "quality": quality,
+            "time_taken": time_taken,
+            "stats_id": str(stats.id),
+            "stats_created_at_iso": stats.created_at.isoformat() if stats.created_at else None,
+            "new_ef": sm2_result.new_easiness_factor,
+            "new_interval": sm2_result.new_interval,
+            "new_repetitions": sm2_result.new_repetitions,
+            "new_status_value": sm2_result.new_status.value,
+            "next_review_date_iso": next_review_date.isoformat(),
+            "previous_status_value": previous_status.value,
+            "is_newly_mastered": is_newly_mastered,
+        }
+
+        return result, context
+
+    async def persist_review(self, context: dict[str, Any]) -> None:
+        """Persist a previously computed review to the DB (synchronous fallback path).
+
+        Performs the DB writes (update SM2 data, create review record) and fires
+        the PostHog mastery event when background tasks are disabled.
+        """
+        stats_repo = CardRecordStatisticsRepository(self.db)
+        await stats_repo.update_sm2_data(
+            stats_id=UUID(context["stats_id"]),
+            easiness_factor=context["new_ef"],
+            interval=context["new_interval"],
+            repetitions=context["new_repetitions"],
+            next_review_date=date.fromisoformat(context["next_review_date_iso"]),
+            status=CardStatus(context["new_status_value"]),
+        )
+
+        review = CardRecordReview(
+            card_record_id=UUID(context["card_record_id"]),
+            user_id=UUID(context["user_id"]),
+            quality=context["quality"],
+            time_taken=context["time_taken"],
+            reviewed_at=datetime.now(timezone.utc),
+        )
+        self.db.add(review)
+        await self.db.flush()
+
+        if context["is_newly_mastered"]:
+            stats_created_at_iso: str | None = context["stats_created_at_iso"]
+            days_to_master = 0
+            if stats_created_at_iso:
+                created_at = datetime.fromisoformat(stats_created_at_iso)
+                if created_at.tzinfo is not None:
+                    created_at = created_at.replace(tzinfo=None)
+                days_to_master = (datetime.now(timezone.utc).replace(tzinfo=None) - created_at).days
+            capture_event(
+                distinct_id=context["user_id"],
+                event="card_mastered_v2",
+                properties={
+                    "deck_id": context["deck_id"],
+                    "card_record_id": context["card_record_id"],
+                    "card_type": context["card_type_value"],
+                    "reviews_to_master": context["new_repetitions"],
+                    "days_to_master": days_to_master,
+                },
+            )
+
+        await self._run_persist_review_side_effects(context)
+
+    async def _run_persist_review_side_effects(self, context: dict[str, Any]) -> None:
+        """Run non-critical side effects (XP, daily goal, achievements, analytics)."""
+        user_id_uuid = UUID(context["user_id"])
+        card_record_id_uuid = UUID(context["card_record_id"])
+
+        # Award flashcard XP
+        try:
+            from src.services.xp_service import XPService
+
+            xp_service = XPService(self.db)
+            await xp_service.award_flashcard_review_xp(
+                user_id=user_id_uuid,
+                quality=context["quality"],
+                card_record_id=card_record_id_uuid,
+            )
+        except Exception as e:
+            logger.warning(
+                "XP award failed in persist_review",
+                extra={"user_id": context["user_id"], "error": str(e)},
+            )
+
+        # Check daily goal
+        await self._check_daily_goal_sync(user_id_uuid, context["user_id"])
+
+        # Check achievements
+        try:
+            from src.services.achievement_definitions import AchievementMetric
+            from src.services.achievement_service import AchievementService
+
+            achievement_service = AchievementService(self.db)
+            stats = await achievement_service._get_user_stats(user_id_uuid)
+            for metric, stat_key in [
+                (AchievementMetric.CARDS_LEARNED, "cards_learned"),
+                (AchievementMetric.CARDS_MASTERED, "cards_mastered"),
+                (AchievementMetric.TOTAL_REVIEWS, "total_reviews"),
+            ]:
+                value = int(stats.get(stat_key, 0))
+                if value > 0:
+                    await achievement_service.check_and_unlock_achievements(
+                        user_id_uuid, metric, value
+                    )
+        except Exception as e:
+            logger.warning(
+                "Achievement check failed in persist_review",
+                extra={"user_id": context["user_id"], "error": str(e)},
+            )
+
+        # Log analytics
+        logger.info(
+            "ANALYTICS: review_completed",
+            extra={
+                "analytics": True,
+                "event_type": "review_completed",
+                "user_id": context["user_id"],
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "event_data": {
+                    "card_record_id": context["card_record_id"],
+                    "quality": context["quality"],
+                    "time_taken": context["time_taken"],
+                    "new_status": context["new_status_value"],
+                },
+            },
+        )
+
+    async def _check_daily_goal_sync(self, user_id_uuid: UUID, user_id_str: str) -> None:
+        """Check daily goal and notify if just completed (synchronous path)."""
+        try:
+            from sqlalchemy import select
+
+            from src.core.redis import get_redis
+            from src.db.models import UserSettings
+            from src.repositories.card_record_review import CardRecordReviewRepository
+            from src.services.notification_service import NotificationService
+
+            result = await self.db.execute(
+                select(UserSettings).where(UserSettings.user_id == user_id_uuid)
+            )
+            user_settings = result.scalar_one_or_none()
+            daily_goal = user_settings.daily_goal if user_settings else 20
+
+            review_repo = CardRecordReviewRepository(self.db)
+            reviews_today = await review_repo.count_reviews_today(user_id_uuid)
+            reviews_before = max(reviews_today - 1, 0)
+
+            if reviews_before < daily_goal <= reviews_today:
+                redis = get_redis()
+                should_notify = True
+                if redis:
+                    cache_key = f"daily_goal_notified:{user_id_uuid}:{date.today().isoformat()}"
+                    was_set = await redis.setnx(cache_key, "1")
+                    if not was_set:
+                        should_notify = False
+                    else:
+                        await redis.expire(cache_key, 86400)
+
+                if should_notify:
+                    notification_service = NotificationService(self.db)
+                    await notification_service.notify_daily_goal_complete(
+                        user_id=user_id_uuid,
+                        reviews_completed=reviews_today,
+                    )
+                    logger.info(
+                        "Daily goal notification created (persist_review sync path)",
+                        extra={"user_id": user_id_str, "reviews": reviews_today},
+                    )
+        except Exception as e:
+            logger.warning(
+                "Daily goal check failed in persist_review",
+                extra={"user_id": user_id_str, "error": str(e)},
+            )
 
     def _get_review_message(
         self,

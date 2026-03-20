@@ -40,7 +40,6 @@ from src.tasks.background import (
     ANALYTICS_EVENTS,
     award_flashcard_xp_task,
     check_achievements_task,
-    check_culture_achievements_task,
     create_announcement_notifications_task,
     generate_a2_audio_for_news_item_task,
     generate_audio_for_culture_question_task,
@@ -48,8 +47,8 @@ from src.tasks.background import (
     invalidate_cache_task,
     is_background_tasks_enabled,
     log_analytics_task,
+    persist_culture_answer_task,
     process_answer_side_effects_task,
-    process_culture_answer_full_async,
 )
 from src.tasks.scheduler import get_scheduler, setup_scheduler, shutdown_scheduler
 
@@ -58,7 +57,6 @@ __all__ = [
     "ANALYTICS_EVENTS",
     "award_flashcard_xp_task",
     "check_achievements_task",
-    "check_culture_achievements_task",
     "create_announcement_notifications_task",
     "generate_a2_audio_for_news_item_task",
     "generate_audio_for_culture_question_task",
@@ -66,8 +64,8 @@ __all__ = [
     "invalidate_cache_task",
     "is_background_tasks_enabled",
     "log_analytics_task",
+    "persist_culture_answer_task",
     "process_answer_side_effects_task",
-    "process_culture_answer_full_async",
     # Scheduler (dedicated service)
     "get_scheduler",
     "setup_scheduler",

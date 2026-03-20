@@ -88,7 +88,6 @@ from src.services.xp_constants import (
     PERFECT_RECALL_THRESHOLD_SECONDS,
     XP_CORRECT_ANSWER,
     XP_CULTURE_WRONG,
-    XP_FIRST_REVIEW,
     XP_PERFECT_ANSWER,
 )
 from src.services.xp_service import XPService
@@ -648,7 +647,7 @@ class CultureQuestionService:
             deck_category=deck_category,
         )
 
-    async def process_answer_fast(
+    async def compute_answer(
         self,
         user_id: UUID,
         question_id: UUID,
@@ -656,19 +655,17 @@ class CultureQuestionService:
         time_taken: int,
         language: str = "en",
     ) -> tuple[CultureAnswerResponseFast, dict]:
-        """Process answer submission with minimal DB queries for fast response.
+        """Compute answer result with SM-2 and exact XP in the hot path.
 
-        This method implements the early response pattern - it returns immediately
-        with the essential information (correctness, XP estimate, feedback) while
-        deferring SM-2 calculations, XP persistence, and achievement checks to
-        background tasks.
+        This method runs SM-2 computation synchronously so the response
+        contains exact XP (not an optimistic estimate). Only persistence
+        is deferred to a background task.
 
-        Performance: ~23ms vs ~134ms for full process_answer() - 83% reduction.
-
-        XP Calculation (from constants, NO DB queries):
-        - Correct answer: XP_CORRECT_ANSWER (10) or XP_PERFECT_ANSWER (15)
+        XP Calculation (from constants, with real SM-2 state):
+        - Perfect answer: XP_PERFECT_ANSWER (15)
+        - Correct answer: XP_CORRECT_ANSWER (10)
         - Wrong answer: XP_CULTURE_WRONG (2)
-        - First review bonus: XP_FIRST_REVIEW (20) - optimistically included
+        - First review bonus: NOT included — handled in background task
 
         Args:
             user_id: User submitting the answer
@@ -679,14 +676,13 @@ class CultureQuestionService:
 
         Returns:
             Tuple of (CultureAnswerResponseFast, context_dict) where context_dict
-            contains all data needed by the background task to complete processing.
+            contains pre-computed SM-2 values for the background task to persist.
 
         Raises:
             CultureQuestionNotFoundException: If question doesn't exist
             ValueError: If selected_option not in valid range for question
         """
         # Step 1: Get question with deck category in single JOIN query
-        # This is the ONLY DB query in the fast path
         question, deck_category = await self._get_question_with_deck_category(question_id)
 
         # Validate selected_option against question's option count
@@ -695,46 +691,64 @@ class CultureQuestionService:
                 f"selected_option must be between 1 and {question.option_count}, got {selected_option}"
             )
 
-        # Step 2: Determine correctness (no DB needed)
-        is_correct = selected_option == question.correct_option
-        is_perfect = time_taken <= PERFECT_RECALL_THRESHOLD_SECONDS
+        # Step 2: Determine correctness
+        correct_option = question.correct_option
+        is_correct = selected_option == correct_option
+        is_perfect = is_correct and time_taken <= PERFECT_RECALL_THRESHOLD_SECONDS
+        quality = 5 if is_perfect else (4 if is_correct else 1)
 
         logger.debug(
-            "Processing culture answer (fast path)",
+            "Computing culture answer (hot path)",
             extra={
                 "user_id": str(user_id),
                 "question_id": str(question_id),
                 "is_correct": is_correct,
                 "is_perfect": is_perfect,
+                "quality": quality,
             },
         )
 
-        # Step 3: Calculate XP from constants (NO DB query)
-        # This is an optimistic estimate - includes first review bonus for correct answers only
+        # Step 3: Get or create stats (reads request session — not committed here)
+        stats = await self._get_or_create_stats(user_id, question_id)
+        previous_status = stats.status
+
+        # Step 4: Calculate SM-2 (pure math — does not mutate stats)
+        sm2_result = calculate_sm2(
+            current_ef=stats.easiness_factor,
+            current_interval=stats.interval,
+            current_repetitions=stats.repetitions,
+            quality=quality,
+        )
+
+        # Step 5: Compute next review date
+        next_review_date = date.today() + timedelta(days=sm2_result.new_interval)
+
+        # Step 6: Compute exact base XP (first-review-of-day bonus excluded)
         if is_correct:
             base_xp = XP_PERFECT_ANSWER if is_perfect else XP_CORRECT_ANSWER
         else:
             base_xp = XP_CULTURE_WRONG
 
-        # Optimistically include first review bonus for correct answers only
-        # Wrong answers don't get the first review bonus
-        # The background task will handle deduplication
-        estimated_xp = base_xp + XP_FIRST_REVIEW if is_correct else base_xp
-
-        # Step 4: Generate feedback message (no DB needed)
-        # For fast path, we don't know previous status, so use simplified logic
-        if is_correct:
-            message = "Correct!"
-        else:
-            message = "Not quite. Review this question."
+        # Step 7: Generate feedback message using real SM-2 state
+        is_first = previous_status == CardStatus.NEW
+        is_mastered = sm2_result.new_status == CardStatus.MASTERED
+        was_mastered = previous_status == CardStatus.MASTERED
+        message = self._get_feedback_message(
+            is_correct=is_correct,
+            is_first=is_first,
+            is_mastered=is_mastered,
+            was_mastered=was_mastered,
+        )
 
         logger.info(
-            "Culture answer processed (fast path)",
+            "Culture answer computed (hot path)",
             extra={
                 "user_id": str(user_id),
                 "question_id": str(question_id),
                 "is_correct": is_correct,
-                "estimated_xp": estimated_xp,
+                "base_xp": base_xp,
+                "previous_status": previous_status.value,
+                "new_status": sm2_result.new_status.value,
                 "deck_category": deck_category,
             },
         )
@@ -742,14 +756,14 @@ class CultureQuestionService:
         # Build response
         response = CultureAnswerResponseFast(
             is_correct=is_correct,
-            correct_option=question.correct_option,
-            xp_earned=estimated_xp,
+            correct_option=correct_option,
+            xp_earned=base_xp,
             message=message,
             deck_category=deck_category,
         )
 
-        # Build context for background task
-        context = {
+        # Build context dict for background task (pre-computed SM-2 values)
+        context_dict = {
             "user_id": user_id,
             "question_id": question_id,
             "selected_option": selected_option,
@@ -758,10 +772,16 @@ class CultureQuestionService:
             "is_correct": is_correct,
             "is_perfect": is_perfect,
             "deck_category": deck_category,
-            "correct_option": question.correct_option,
+            "correct_option": correct_option,
+            "sm2_new_ef": sm2_result.new_easiness_factor,
+            "sm2_new_interval": sm2_result.new_interval,
+            "sm2_new_repetitions": sm2_result.new_repetitions,
+            "sm2_new_status": sm2_result.new_status.value,
+            "sm2_next_review_date": next_review_date.isoformat(),
+            "stats_previous_status": previous_status.value,
         }
 
-        return response, context
+        return response, context_dict
 
     # =========================================================================
     # Progress Methods

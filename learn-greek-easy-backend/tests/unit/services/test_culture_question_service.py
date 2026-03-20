@@ -1618,22 +1618,22 @@ class TestVariableAnswerCount:
         assert result2.is_correct is False
 
     # -------------------------------------------------------------------------
-    # process_answer_fast validation tests
+    # compute_answer validation tests
     # -------------------------------------------------------------------------
 
     @pytest.mark.asyncio
-    async def test_process_answer_fast_two_option_question_option_3_raises_error(
+    async def test_compute_answer_two_option_question_option_3_raises_error(
         self,
         db_session: AsyncSession,
         test_user: User,
         two_option_question: CultureQuestion,
         mock_s3_service,
     ):
-        """Answering option 3 on 2-option question (fast path) should raise ValueError."""
+        """Answering option 3 on 2-option question (compute path) should raise ValueError."""
         service = CultureQuestionService(db_session, s3_service=mock_s3_service)
 
         with pytest.raises(ValueError, match="selected_option must be between 1 and 2"):
-            await service.process_answer_fast(
+            await service.compute_answer(
                 user_id=test_user.id,
                 question_id=two_option_question.id,
                 selected_option=3,  # Invalid for 2-option question
@@ -1641,18 +1641,18 @@ class TestVariableAnswerCount:
             )
 
     @pytest.mark.asyncio
-    async def test_process_answer_fast_three_option_question_option_4_raises_error(
+    async def test_compute_answer_three_option_question_option_4_raises_error(
         self,
         db_session: AsyncSession,
         test_user: User,
         three_option_question: CultureQuestion,
         mock_s3_service,
     ):
-        """Answering option 4 on 3-option question (fast path) should raise ValueError."""
+        """Answering option 4 on 3-option question (compute path) should raise ValueError."""
         service = CultureQuestionService(db_session, s3_service=mock_s3_service)
 
         with pytest.raises(ValueError, match="selected_option must be between 1 and 3"):
-            await service.process_answer_fast(
+            await service.compute_answer(
                 user_id=test_user.id,
                 question_id=three_option_question.id,
                 selected_option=4,  # Invalid for 3-option question
@@ -1660,18 +1660,18 @@ class TestVariableAnswerCount:
             )
 
     @pytest.mark.asyncio
-    async def test_process_answer_fast_two_option_question_valid_options(
+    async def test_compute_answer_two_option_question_valid_options(
         self,
         db_session: AsyncSession,
         test_user: User,
         two_option_question: CultureQuestion,
         mock_s3_service,
     ):
-        """2-option question (fast path) should accept options 1 and 2."""
+        """2-option question (compute path) should accept options 1 and 2."""
         service = CultureQuestionService(db_session, s3_service=mock_s3_service)
 
         # Option 1 should work
-        response1, _ = await service.process_answer_fast(
+        response1, _ = await service.compute_answer(
             user_id=test_user.id,
             question_id=two_option_question.id,
             selected_option=1,  # Valid: True
@@ -1680,7 +1680,7 @@ class TestVariableAnswerCount:
         assert response1.is_correct is True
 
         # Option 2 should also work (but be wrong)
-        response2, _ = await service.process_answer_fast(
+        response2, _ = await service.compute_answer(
             user_id=test_user.id,
             question_id=two_option_question.id,
             selected_option=2,  # Valid: False (wrong answer)
@@ -1851,11 +1851,11 @@ class TestBulkCreateQuestionsVariableOptions:
         assert result.questions[2].option_count == 4
 
 
-class TestProcessAnswerFast:
-    """Tests for process_answer_fast method (early response pattern)."""
+class TestComputeAnswer:
+    """Tests for compute_answer method (SM-2 hot path pattern)."""
 
     @pytest.mark.asyncio
-    async def test_process_answer_fast_correct_answer(
+    async def test_compute_answer_correct_answer(
         self,
         db_session: AsyncSession,
         test_user: User,
@@ -1863,11 +1863,11 @@ class TestProcessAnswerFast:
         culture_questions: list[CultureQuestion],
         mock_s3_service,
     ):
-        """Correct answer should return is_correct=True with estimated XP."""
+        """Correct answer should return is_correct=True with exact base XP (no first-review bonus)."""
         service = CultureQuestionService(db_session, s3_service=mock_s3_service)
         question = culture_questions[0]  # correct_option = 1
 
-        response, context = await service.process_answer_fast(
+        response, context = await service.compute_answer(
             user_id=test_user.id,
             question_id=question.id,
             selected_option=1,  # Correct answer
@@ -1877,13 +1877,14 @@ class TestProcessAnswerFast:
 
         assert response.is_correct is True
         assert response.correct_option == 1
-        # XP should include base (10) + first review bonus (20) = 30
-        assert response.xp_earned == 30
-        assert response.message == "Correct!"
+        # Exact base XP: correct (10), no first-review bonus (that's background-only)
+        assert response.xp_earned == 10
+        # First answer to a NEW question → "Good start!"
+        assert response.message == "Good start!"
         assert response.deck_category == culture_deck.category
 
     @pytest.mark.asyncio
-    async def test_process_answer_fast_wrong_answer(
+    async def test_compute_answer_wrong_answer(
         self,
         db_session: AsyncSession,
         test_user: User,
@@ -1895,7 +1896,7 @@ class TestProcessAnswerFast:
         service = CultureQuestionService(db_session, s3_service=mock_s3_service)
         question = culture_questions[0]  # correct_option = 1
 
-        response, context = await service.process_answer_fast(
+        response, context = await service.compute_answer(
             user_id=test_user.id,
             question_id=question.id,
             selected_option=2,  # Wrong answer
@@ -1905,13 +1906,13 @@ class TestProcessAnswerFast:
 
         assert response.is_correct is False
         assert response.correct_option == 1
-        # XP should be base wrong (2) only - no first review bonus for wrong answers
+        # XP should be base wrong (2) only
         assert response.xp_earned == 2
         assert response.message == "Not quite. Review this question."
         assert response.deck_category == culture_deck.category
 
     @pytest.mark.asyncio
-    async def test_process_answer_fast_perfect_answer(
+    async def test_compute_answer_perfect_answer(
         self,
         db_session: AsyncSession,
         test_user: User,
@@ -1919,11 +1920,11 @@ class TestProcessAnswerFast:
         culture_questions: list[CultureQuestion],
         mock_s3_service,
     ):
-        """Perfect answer (< 2 seconds) should get bonus XP."""
+        """Perfect answer (< threshold seconds) should get exact perfect XP (no first-review bonus)."""
         service = CultureQuestionService(db_session, s3_service=mock_s3_service)
         question = culture_questions[0]
 
-        response, context = await service.process_answer_fast(
+        response, context = await service.compute_answer(
             user_id=test_user.id,
             question_id=question.id,
             selected_option=1,  # Correct answer
@@ -1932,12 +1933,12 @@ class TestProcessAnswerFast:
         )
 
         assert response.is_correct is True
-        # Perfect XP (15) + first review bonus (20) = 35
-        assert response.xp_earned == 35
+        # Exact base XP: perfect (15), no first-review bonus
+        assert response.xp_earned == 15
         assert context["is_perfect"] is True
 
     @pytest.mark.asyncio
-    async def test_process_answer_fast_returns_context_for_background_task(
+    async def test_compute_answer_returns_context_for_background_task(
         self,
         db_session: AsyncSession,
         test_user: User,
@@ -1949,7 +1950,7 @@ class TestProcessAnswerFast:
         service = CultureQuestionService(db_session, s3_service=mock_s3_service)
         question = culture_questions[0]
 
-        response, context = await service.process_answer_fast(
+        response, context = await service.compute_answer(
             user_id=test_user.id,
             question_id=question.id,
             selected_option=1,
@@ -1957,7 +1958,7 @@ class TestProcessAnswerFast:
             language="el",
         )
 
-        # Verify context contains all required fields
+        # Verify context contains base fields
         assert context["user_id"] == test_user.id
         assert context["question_id"] == question.id
         assert context["selected_option"] == 1
@@ -1967,9 +1968,16 @@ class TestProcessAnswerFast:
         assert context["is_perfect"] is False
         assert context["deck_category"] == culture_deck.category
         assert context["correct_option"] == question.correct_option
+        # Verify SM-2 pre-computed fields are present
+        assert "sm2_new_ef" in context
+        assert "sm2_new_interval" in context
+        assert "sm2_new_repetitions" in context
+        assert "sm2_new_status" in context
+        assert "sm2_next_review_date" in context
+        assert "stats_previous_status" in context
 
     @pytest.mark.asyncio
-    async def test_process_answer_fast_invalid_option_raises_error(
+    async def test_compute_answer_invalid_option_raises_error(
         self,
         db_session: AsyncSession,
         test_user: User,
@@ -1982,7 +1990,7 @@ class TestProcessAnswerFast:
         question = culture_questions[0]
 
         with pytest.raises(ValueError, match="selected_option must be between 1 and 4"):
-            await service.process_answer_fast(
+            await service.compute_answer(
                 user_id=test_user.id,
                 question_id=question.id,
                 selected_option=5,  # Invalid
@@ -1990,7 +1998,7 @@ class TestProcessAnswerFast:
             )
 
         with pytest.raises(ValueError, match="selected_option must be between 1 and 4"):
-            await service.process_answer_fast(
+            await service.compute_answer(
                 user_id=test_user.id,
                 question_id=question.id,
                 selected_option=0,  # Invalid
@@ -1998,7 +2006,7 @@ class TestProcessAnswerFast:
             )
 
     @pytest.mark.asyncio
-    async def test_process_answer_fast_question_not_found(
+    async def test_compute_answer_question_not_found(
         self,
         db_session: AsyncSession,
         test_user: User,
@@ -2008,7 +2016,7 @@ class TestProcessAnswerFast:
         service = CultureQuestionService(db_session, s3_service=mock_s3_service)
 
         with pytest.raises(CultureQuestionNotFoundException):
-            await service.process_answer_fast(
+            await service.compute_answer(
                 user_id=test_user.id,
                 question_id=uuid4(),  # Non-existent
                 selected_option=1,
@@ -2016,7 +2024,7 @@ class TestProcessAnswerFast:
             )
 
     @pytest.mark.asyncio
-    async def test_process_answer_fast_does_not_create_stats(
+    async def test_compute_answer_creates_stats_in_request_session(
         self,
         db_session: AsyncSession,
         test_user: User,
@@ -2024,7 +2032,7 @@ class TestProcessAnswerFast:
         culture_questions: list[CultureQuestion],
         mock_s3_service,
     ):
-        """Fast path should NOT create stats (that's done in background task)."""
+        """compute_answer creates stats in the request session for SM-2 computation."""
         from sqlalchemy import select
 
         service = CultureQuestionService(db_session, s3_service=mock_s3_service)
@@ -2039,25 +2047,25 @@ class TestProcessAnswerFast:
         )
         assert initial_stats.scalar_one_or_none() is None
 
-        # Process answer via fast path
-        await service.process_answer_fast(
+        # Process answer via compute_answer
+        await service.compute_answer(
             user_id=test_user.id,
             question_id=question.id,
             selected_option=1,
             time_taken=10,
         )
 
-        # Stats should still not exist (created by background task, not fast path)
+        # Stats are created in the session (flushed but not committed)
         post_stats = await db_session.execute(
             select(CultureQuestionStats).where(
                 CultureQuestionStats.user_id == test_user.id,
                 CultureQuestionStats.question_id == question.id,
             )
         )
-        assert post_stats.scalar_one_or_none() is None
+        assert post_stats.scalar_one_or_none() is not None
 
     @pytest.mark.asyncio
-    async def test_process_answer_fast_different_languages(
+    async def test_compute_answer_different_languages(
         self,
         db_session: AsyncSession,
         test_user: User,
@@ -2070,7 +2078,7 @@ class TestProcessAnswerFast:
         question = culture_questions[0]
 
         for lang in ["en", "el", "ru"]:
-            response, context = await service.process_answer_fast(
+            response, context = await service.compute_answer(
                 user_id=test_user.id,
                 question_id=question.id,
                 selected_option=1,
@@ -2079,6 +2087,51 @@ class TestProcessAnswerFast:
             )
 
             assert context["language"] == lang
+
+    @pytest.mark.asyncio
+    async def test_compute_answer_xp_matches_constants(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        culture_deck: CultureDeck,
+        culture_questions: list[CultureQuestion],
+        mock_s3_service,
+    ):
+        """XP values returned by compute_answer must match the XP constants."""
+        from src.services.xp_constants import XP_CORRECT_ANSWER, XP_CULTURE_WRONG, XP_PERFECT_ANSWER
+
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+        question = culture_questions[0]  # correct_option = 1
+
+        # Correct (non-perfect) answer
+        response, _ = await service.compute_answer(
+            user_id=test_user.id,
+            question_id=question.id,
+            selected_option=1,
+            time_taken=10,
+            language="en",
+        )
+        assert response.xp_earned == XP_CORRECT_ANSWER
+
+        # Perfect answer (fast response)
+        response_perfect, _ = await service.compute_answer(
+            user_id=test_user.id,
+            question_id=question.id,
+            selected_option=1,
+            time_taken=1,
+            language="en",
+        )
+        assert response_perfect.xp_earned == XP_PERFECT_ANSWER
+
+        # Wrong answer
+        response_wrong, _ = await service.compute_answer(
+            user_id=test_user.id,
+            question_id=question.id,
+            selected_option=2,
+            time_taken=10,
+            language="en",
+        )
+        assert response_wrong.xp_earned == XP_CULTURE_WRONG
 
 
 # =============================================================================
