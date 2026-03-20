@@ -4109,6 +4109,102 @@ def _redistribute_degenerate_timing(
     return new_timing_map, new_word_timestamps_map
 
 
+def _apply_forced_alignment(  # noqa: C901
+    alignment_response: dict[str, Any],
+    timing_map: dict[int, tuple[int, int]],
+    sorted_lines: list[dict],
+    word_timestamps_map: dict[int, list[dict] | None],
+) -> tuple[dict[int, tuple[int, int]], dict[int, list[dict] | None]]:
+    """Map forced alignment word timestamps to degenerate dialog lines.
+
+    Pure function — no side effects, no DB access, no logging.
+    Returns shallow copies of the input maps with degenerate lines updated.
+
+    Args:
+        alignment_response: FA API response dict with 'words' list (text, start, end).
+        timing_map: Map of line_index -> (start_ms, end_ms). Degenerate when start==end.
+        sorted_lines: List of line dicts with 'text' key, in line_index order.
+        word_timestamps_map: Map of line_index -> word timestamp list or None.
+
+    Returns:
+        Updated (timing_map, word_timestamps_map) copies with degenerate lines fixed.
+    """
+    degenerate_indices = {i for i, (s, e) in timing_map.items() if s == e}
+    if not degenerate_indices:
+        return timing_map, word_timestamps_map
+
+    # Build full transcript and per-line character ranges
+    full_text = "\n".join(line["text"] for line in sorted_lines)
+
+    line_ranges: list[tuple[int, int, int]] = []  # (line_index, char_start, char_end)
+    offset = 0
+    for i, line in enumerate(sorted_lines):
+        length = len(line["text"])
+        line_ranges.append((i, offset, offset + length))
+        offset += length + 1  # +1 for \n separator
+
+    # Map FA words to degenerate lines using cursor approach with drift recovery
+    line_words: dict[int, list[dict]] = {i: [] for i in degenerate_indices}
+
+    cursor = 0
+    for word in alignment_response.get("words", []):
+        word_text = word["text"]
+        word_len = len(word_text)
+
+        # Try exact match at cursor position
+        if full_text[cursor : cursor + word_len] == word_text:
+            match_pos = cursor
+        else:
+            # Drift recovery: search within +/- 10 chars
+            match_pos = None
+            search_start = max(0, cursor - 10)
+            search_end = min(len(full_text), cursor + 10 + word_len)
+            window = full_text[search_start:search_end]
+            idx = window.find(word_text)
+            if idx != -1:
+                match_pos = search_start + idx
+
+        if match_pos is None:
+            # Word not found — skip (do not assign, do not advance cursor)
+            continue
+
+        # Advance cursor past this word and trailing whitespace/newlines
+        cursor = match_pos + word_len
+        while cursor < len(full_text) and full_text[cursor] in (" ", "\n"):
+            cursor += 1
+
+        # Assign word to its line if that line is degenerate
+        for line_idx, char_start, char_end in line_ranges:
+            if char_start <= match_pos < char_end:
+                if line_idx in degenerate_indices:
+                    line_words[line_idx].append(word)
+                break
+
+    # Build updated maps for degenerate lines that have matched words
+    new_timing_map = dict(timing_map)
+    new_word_timestamps_map = dict(word_timestamps_map)
+
+    for i in degenerate_indices:
+        words = line_words[i]
+        if not words:
+            # Zero mapped words — leave unchanged (remains degenerate for fallback)
+            continue
+
+        word_list = [
+            {
+                "word": w["text"],
+                "start_ms": int(w["start"] * 1000),
+                "end_ms": int(w["end"] * 1000),
+            }
+            for w in words
+        ]
+
+        new_timing_map[i] = (word_list[0]["start_ms"], word_list[-1]["end_ms"])
+        new_word_timestamps_map[i] = word_list
+
+    return new_timing_map, new_word_timestamps_map
+
+
 def _build_word_timestamps(  # noqa: C901
     result_data: dict, sorted_lines: list[dict]
 ) -> dict[int, list[dict] | None]:
@@ -4323,10 +4419,7 @@ async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, Non
             )
             return
 
-        yield format_sse_event(
-            {"segments_count": len(voice_segments), "redistributed": degenerate_line_count > 0},
-            event="dialog_audio:timing",
-        )
+        alignment_source = "original"
 
         # Stage 4.5 — Parse actual MP3 duration from audio bytes
         from io import BytesIO
@@ -4352,8 +4445,42 @@ async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, Non
                 exc,
             )
 
-        # Stage 5 — Redistribute degenerate timing
+        # Stage 5.5 — Forced alignment for degenerate lines
         if degenerate_line_count > 0:
+            try:
+                full_transcript = "\n".join(line["text"] for line in sorted_lines)
+                fa_response = await elevenlabs.forced_align(audio_bytes, full_transcript)
+                timing_map, word_timestamps_map = _apply_forced_alignment(
+                    fa_response,
+                    timing_map,
+                    sorted_lines,
+                    word_timestamps_map,
+                )
+                remaining = sum(1 for s, e in timing_map.values() if s == e)
+                if remaining > 0:
+                    logger.warning(
+                        "Forced alignment left {} degenerate line(s) in dialog {}, falling through to redistribution",
+                        remaining,
+                        dialog_id,
+                    )
+                else:
+                    alignment_source = "forced_alignment"
+                    logger.info(
+                        "Forced alignment fixed {} degenerate line(s) in dialog {}, loss={:.4f}",
+                        degenerate_line_count,
+                        dialog_id,
+                        fa_response.get("loss", -1),
+                    )
+            except Exception as exc:
+                logger.warning(
+                    "Forced alignment failed for dialog {}, falling back to redistribution: {}",
+                    dialog_id,
+                    exc,
+                )
+
+        # Stage 5 — Redistribute degenerate timing
+        remaining_degenerate = sum(1 for s, e in timing_map.values() if s == e)
+        if remaining_degenerate > 0:
             duration_ms = int(duration_seconds * 1000)
             timing_map, word_timestamps_map = _redistribute_degenerate_timing(
                 timing_map,
@@ -4361,11 +4488,18 @@ async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, Non
                 duration_ms,
                 word_timestamps_map,
             )
+            if alignment_source == "original":
+                alignment_source = "redistribution"
             logger.info(
-                "Redistributed timing for {} degenerate line(s) in dialog {}",
-                degenerate_line_count,
+                "Redistributed timing for {} remaining degenerate line(s) in dialog {}",
+                remaining_degenerate,
                 dialog_id,
             )
+
+        yield format_sse_event(
+            {"segments_count": len(voice_segments), "alignment_source": alignment_source},
+            event="dialog_audio:timing",
+        )
 
         # Stage 4 (continued) — Upload after timing is validated
         s3 = get_s3_service()
@@ -4427,6 +4561,7 @@ async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, Non
                 "audio_size_bytes": len(audio_bytes),
                 "has_exercises": has_exercises,
                 "degenerate_line_count": degenerate_line_count,
+                "alignment_source": alignment_source,
             },
             event="dialog_audio:complete",
         )

@@ -392,6 +392,70 @@ class ElevenLabsService:
             )
             raise ElevenLabsAPIError(status_code=0, detail=f"Network error: {e}")
 
+    async def forced_align(self, audio_bytes: bytes, text: str) -> dict[str, Any]:
+        """Align audio with transcript via ElevenLabs Forced Alignment API.
+
+        Args:
+            audio_bytes: Raw MP3 audio bytes to align.
+            text: Full text transcript of the audio.
+
+        Returns:
+            Parsed JSON response dict with 'characters', 'words', and 'loss' keys.
+
+        Raises:
+            ElevenLabsNotConfiguredError: If API key not set.
+            ElevenLabsAuthenticationError: If API key invalid (401).
+            ElevenLabsRateLimitError: If rate limit exceeded (429).
+            ElevenLabsAPIError: For other API errors or network failures.
+        """
+        self._check_configured()
+        try:
+            async with httpx.AsyncClient(timeout=settings.elevenlabs_timeout) as client:
+                response = await client.post(
+                    "https://api.elevenlabs.io/v1/forced-alignment",
+                    headers={"xi-api-key": settings.elevenlabs_api_key},
+                    files={"file": ("dialog.mp3", audio_bytes, "audio/mpeg")},
+                    data={"text": text},
+                )
+
+                if response.status_code == 401:
+                    raise ElevenLabsAuthenticationError(
+                        f"Authentication failed (forced_alignment): {response.text[:200]}"
+                    )
+
+                if response.status_code == 429:
+                    raise ElevenLabsRateLimitError("Rate limit exceeded")
+
+                if response.status_code >= 400:
+                    raise ElevenLabsAPIError(
+                        status_code=response.status_code,
+                        detail=response.text[:200],
+                    )
+
+                data = cast(dict[str, Any], response.json())
+                logger.info(
+                    "Forced alignment completed",
+                    extra={
+                        "word_count": len(data.get("words", [])),
+                        "loss": data.get("loss"),
+                        "audio_bytes_length": len(audio_bytes),
+                    },
+                )
+                return data
+
+        except (
+            ElevenLabsAuthenticationError,
+            ElevenLabsRateLimitError,
+            ElevenLabsAPIError,
+        ):
+            raise
+        except httpx.RequestError as e:
+            logger.error(
+                "Network error during forced alignment",
+                extra={"error": str(e)},
+            )
+            raise ElevenLabsAPIError(status_code=0, detail=f"Network error: {e}") from e
+
 
 # Singleton instance for use across the application
 _elevenlabs_service: Optional[ElevenLabsService] = None
