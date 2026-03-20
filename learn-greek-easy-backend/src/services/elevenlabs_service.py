@@ -454,7 +454,7 @@ class ElevenLabsService:
                 "Network error during forced alignment",
                 extra={"error": str(e)},
             )
-            raise ElevenLabsAPIError(status_code=0, detail=f"Network error: {e}")
+            raise ElevenLabsAPIError(status_code=0, detail=f"Network error: {e}") from e
 
 
 # Singleton instance for use across the application

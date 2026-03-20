@@ -225,7 +225,7 @@ class TestApplyForcedAlignment:
                 {"text": "σας", "start": 0.70, "end": 1.00},
             ]
         }
-        result_timing, result_words = _apply_forced_alignment(
+        _result_timing, result_words = _apply_forced_alignment(
             fa_response, timing_map, sorted_lines, word_timestamps_map
         )
         assert result_words[0][0]["start_ms"] == 350
@@ -261,7 +261,7 @@ class TestApplyForcedAlignment:
         timing_map = {0: (0, 0)}
         word_timestamps_map = {0: None}
         sorted_lines = [{"id": "a", "text": "Γεια σας", "line_index": 0}]
-        result_timing, result_words = _apply_forced_alignment(
+        _result_timing, result_words = _apply_forced_alignment(
             SAMPLE_FA_RESPONSE, timing_map, sorted_lines, word_timestamps_map
         )
         words = result_words[0]
@@ -282,7 +282,7 @@ class TestApplyForcedAlignment:
                 {"text": "Πώς", "start": 0.7, "end": 1.0},
             ]
         }
-        result_timing, result_words = _apply_forced_alignment(
+        _result_timing, result_words = _apply_forced_alignment(
             fa_response, timing_map, sorted_lines, word_timestamps_map
         )
         # All three words matched
@@ -300,7 +300,7 @@ class TestApplyForcedAlignment:
                 {"text": "σας", "start": 0.5, "end": 0.8},
             ]
         }
-        result_timing, result_words = _apply_forced_alignment(
+        _result_timing, result_words = _apply_forced_alignment(
             fa_response, timing_map, sorted_lines, word_timestamps_map
         )
         # Unmatchable word skipped; "Γεια" and "σας" still matched
