@@ -4419,10 +4419,7 @@ async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, Non
             )
             return
 
-        yield format_sse_event(
-            {"segments_count": len(voice_segments), "redistributed": degenerate_line_count > 0},
-            event="dialog_audio:timing",
-        )
+        alignment_source = "original"
 
         # Stage 4.5 — Parse actual MP3 duration from audio bytes
         from io import BytesIO
@@ -4448,8 +4445,42 @@ async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, Non
                 exc,
             )
 
-        # Stage 5 — Redistribute degenerate timing
+        # Stage 5.5 — Forced alignment for degenerate lines
         if degenerate_line_count > 0:
+            try:
+                full_transcript = "\n".join(line["text"] for line in sorted_lines)
+                fa_response = await elevenlabs.forced_align(audio_bytes, full_transcript)
+                timing_map, word_timestamps_map = _apply_forced_alignment(
+                    fa_response,
+                    timing_map,
+                    sorted_lines,
+                    word_timestamps_map,
+                )
+                remaining = sum(1 for s, e in timing_map.values() if s == e)
+                if remaining > 0:
+                    logger.warning(
+                        "Forced alignment left {} degenerate line(s) in dialog {}, falling through to redistribution",
+                        remaining,
+                        dialog_id,
+                    )
+                else:
+                    alignment_source = "forced_alignment"
+                    logger.info(
+                        "Forced alignment fixed {} degenerate line(s) in dialog {}, loss={:.4f}",
+                        degenerate_line_count,
+                        dialog_id,
+                        fa_response.get("loss", -1),
+                    )
+            except Exception as exc:
+                logger.warning(
+                    "Forced alignment failed for dialog {}, falling back to redistribution: {}",
+                    dialog_id,
+                    exc,
+                )
+
+        # Stage 5 — Redistribute degenerate timing
+        remaining_degenerate = sum(1 for s, e in timing_map.values() if s == e)
+        if remaining_degenerate > 0:
             duration_ms = int(duration_seconds * 1000)
             timing_map, word_timestamps_map = _redistribute_degenerate_timing(
                 timing_map,
@@ -4457,11 +4488,18 @@ async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, Non
                 duration_ms,
                 word_timestamps_map,
             )
+            if alignment_source == "original":
+                alignment_source = "redistribution"
             logger.info(
-                "Redistributed timing for {} degenerate line(s) in dialog {}",
-                degenerate_line_count,
+                "Redistributed timing for {} remaining degenerate line(s) in dialog {}",
+                remaining_degenerate,
                 dialog_id,
             )
+
+        yield format_sse_event(
+            {"segments_count": len(voice_segments), "alignment_source": alignment_source},
+            event="dialog_audio:timing",
+        )
 
         # Stage 4 (continued) — Upload after timing is validated
         s3 = get_s3_service()
@@ -4523,6 +4561,7 @@ async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, Non
                 "audio_size_bytes": len(audio_bytes),
                 "has_exercises": has_exercises,
                 "degenerate_line_count": degenerate_line_count,
+                "alignment_source": alignment_source,
             },
             event="dialog_audio:complete",
         )
