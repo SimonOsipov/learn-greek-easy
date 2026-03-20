@@ -60,10 +60,9 @@ describe('PracticeHeader', () => {
       expect(screen.getByTestId('practice-exit-button')).toBeInTheDocument();
     });
 
-    it('has data-exit-testid attribute with alias testids on exit button', () => {
-      renderWithProviders(<PracticeHeader {...defaultProps} />);
-      const exitButton = screen.getByTestId('practice-exit-button');
-      expect(exitButton).toHaveAttribute('data-exit-testid', 'exit-button practice-close-button');
+    it('uses custom exitTestId when provided', () => {
+      renderWithProviders(<PracticeHeader {...defaultProps} exitTestId="exit-button" />);
+      expect(screen.getByTestId('exit-button')).toBeInTheDocument();
     });
   });
 });

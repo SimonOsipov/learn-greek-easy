@@ -10,6 +10,7 @@ export interface PracticeHeaderProps {
   exitLabel?: string;
   rightSlot?: React.ReactNode;
   className?: string;
+  exitTestId?: string;
 }
 
 export const PracticeHeader: React.FC<PracticeHeaderProps> = ({
@@ -17,20 +18,14 @@ export const PracticeHeader: React.FC<PracticeHeaderProps> = ({
   exitLabel = 'Exit',
   rightSlot,
   className,
+  exitTestId = 'practice-exit-button',
 }) => {
   return (
     <div
       className={cn('flex items-center justify-between px-4 py-3', className)}
       data-testid="practice-header"
     >
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={onExit}
-        data-testid="practice-exit-button"
-        // Forward-compatible aliases for CulturePracticePage and V2FlashcardPracticePage
-        data-exit-testid="exit-button practice-close-button"
-      >
+      <Button variant="ghost" size="sm" onClick={onExit} data-testid={exitTestId}>
         <ChevronLeft className="mr-1 h-4 w-4" />
         {exitLabel}
       </Button>

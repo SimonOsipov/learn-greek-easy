@@ -14,15 +14,15 @@
  * - PostHog analytics events
  */
 
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 
 import { AlertCircle, CheckCircle, ChevronLeft, Loader2 } from 'lucide-react';
-import posthog from 'posthog-js';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
 
 import { MCQComponent, LanguageSelector, ScoreCard } from '@/components/culture';
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
+import { PracticeHeader } from '@/components/practice';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -35,6 +35,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import { usePracticeSession } from '@/hooks/usePracticeSession';
 import { useTrackEvent } from '@/hooks/useTrackEvent';
 import i18n from '@/i18n';
 import { trackNewsLevelToggled } from '@/lib/analytics';
@@ -134,10 +135,60 @@ export function CulturePracticePage() {
     return { ...q, audio_url: effectiveAudioUrl };
   }, [currentQuestion, newsLevel]);
 
-  // Refs for tracking
-  const hasTrackedStart = useRef(false);
-  const hasTrackedComplete = useRef(false);
-  const sessionStartTime = useRef<number | null>(null);
+  const { resetTracking } = usePracticeSession({
+    startEvent: 'culture_session_started',
+    completeEvent: 'culture_session_completed',
+    abandonEvent: 'culture_session_abandoned',
+    isSessionActive: Boolean(session && session.status === 'active'),
+    isSessionComplete: Boolean(summary),
+    getStartProps: useCallback(() => {
+      if (!session) return null;
+      return {
+        deck_id: session.deckId,
+        session_id: session.sessionId,
+        question_count: session.questions.length,
+        language: session.config.language,
+      };
+    }, [session]),
+    getCompleteProps: useCallback(
+      (_durationSec: number) => {
+        if (!summary) return null;
+        return {
+          deck_id: summary.deckId,
+          session_id: summary.sessionId,
+          questions_total: summary.questionResults.length,
+          questions_correct: summary.stats.correctCount,
+          accuracy: summary.stats.accuracy,
+          duration_sec: summary.durationSeconds,
+          xp_earned: summary.stats.xpEarned,
+        };
+      },
+      [summary]
+    ),
+    getAbandonProps: useCallback(
+      (durationSec: number) => {
+        if (
+          !session ||
+          session.status !== 'active' ||
+          session.stats.questionsAnswered === 0 ||
+          summary
+        ) {
+          return null;
+        }
+        return {
+          deck_id: session.deckId,
+          session_id: session.sessionId,
+          questions_answered: session.stats.questionsAnswered,
+          duration_sec: durationSec,
+        };
+      },
+      [session, summary]
+    ),
+    fallbackDurationSec: 0,
+    onCompleteTracked: useCallback(() => {
+      loadXPStats(true);
+    }, [loadXPStats]),
+  });
 
   // Check for recoverable session on mount
   useEffect(() => {
@@ -155,48 +206,6 @@ export function CulturePracticePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deckId]);
 
-  // Track session start
-  useEffect(() => {
-    if (session && session.status === 'active' && !hasTrackedStart.current) {
-      hasTrackedStart.current = true;
-      sessionStartTime.current = Date.now();
-
-      try {
-        track('culture_session_started', {
-          deck_id: session.deckId,
-          deck_name: session.deckName,
-          category: session.category,
-          question_count: session.questions.length,
-          language: session.config.language,
-          session_id: session.sessionId,
-        });
-      } catch {
-        // Silent failure
-      }
-    }
-  }, [session, track]);
-
-  // Track session completed
-  useEffect(() => {
-    if (summary && !hasTrackedComplete.current) {
-      hasTrackedComplete.current = true;
-      try {
-        track('culture_session_completed', {
-          deck_id: summary.deckId,
-          session_id: summary.sessionId,
-          questions_total: summary.questionResults.length,
-          questions_correct: summary.stats.correctCount,
-          accuracy: summary.stats.accuracy,
-          duration_sec: summary.durationSeconds,
-          xp_earned: summary.stats.xpEarned,
-        });
-      } catch {
-        // Silent failure for analytics
-      }
-      loadXPStats(true);
-    }
-  }, [summary, track, loadXPStats]);
-
   // beforeunload handler for browser close protection
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -209,38 +218,6 @@ export function CulturePracticePage() {
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [session]);
-
-  // Track abandonment on page unload
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      if (
-        session &&
-        session.status === 'active' &&
-        session.stats.questionsAnswered > 0 &&
-        !summary
-      ) {
-        const durationSec = sessionStartTime.current
-          ? Math.round((Date.now() - sessionStartTime.current) / 1000)
-          : session.stats.totalTimeSeconds;
-
-        if (typeof posthog?.capture === 'function') {
-          try {
-            posthog.capture('culture_session_abandoned', {
-              deck_id: session.deckId,
-              session_id: session.sessionId,
-              questions_answered: session.stats.questionsAnswered,
-              duration_sec: durationSec,
-            });
-          } catch {
-            // Silent failure
-          }
-        }
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [session, summary]);
 
   /**
    * Initialize a new practice session
@@ -435,10 +412,9 @@ export function CulturePracticePage() {
    */
   const handleTryAgain = useCallback(() => {
     resetSession();
-    hasTrackedStart.current = false;
-    hasTrackedComplete.current = false;
+    resetTracking();
     initializeSession();
-  }, [resetSession, initializeSession]);
+  }, [resetSession, resetTracking, initializeSession]);
 
   /**
    * Handle "Practice Anyway" - fetch weakest questions when no questions are due
@@ -669,48 +645,49 @@ export function CulturePracticePage() {
     <div className="min-h-screen bg-[var(--practice-bg)] px-4 py-6 md:px-6 md:py-8">
       <div className="mx-auto max-w-[520px]">
         {/* Header */}
-        <div className="mb-4 flex items-center justify-between">
-          <Button variant="outline" size="sm" onClick={handleExitClick} data-testid="exit-button">
-            <ChevronLeft className="h-4 w-4" />
-            {t('practice.exit', 'Exit')}
-          </Button>
-          <div className="flex items-center gap-2">
-            {/* A2/B2 level toggle - only for news-derived questions */}
-            {showLevelToggle && (
-              <div
-                className="flex items-center gap-1"
-                aria-label={t('common:news.level.label', 'Content level')}
-              >
-                <span className="whitespace-nowrap text-sm text-muted-foreground">
-                  {t('common:news.level.difficulty')}
-                </span>
-                <Button
-                  variant={newsLevel === 'a2' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => handleNewsLevelChange('a2')}
-                  data-testid="level-toggle-a2"
+        <PracticeHeader
+          onExit={handleExitClick}
+          exitLabel={t('practice.exit', 'Exit')}
+          exitTestId="exit-button"
+          className="mb-4 px-0 py-0"
+          rightSlot={
+            <>
+              {showLevelToggle && (
+                <div
+                  className="flex items-center gap-1"
+                  aria-label={t('common:news.level.label', 'Content level')}
                 >
-                  {t('common:news.level.a2', 'A2')}
-                </Button>
-                <Button
-                  variant={newsLevel === 'b2' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => handleNewsLevelChange('b2')}
-                  data-testid="level-toggle-b2"
-                >
-                  {t('common:news.level.b2', 'B2')}
-                </Button>
-              </div>
-            )}
-            {showLevelToggle && <div className="h-6 w-px bg-border" aria-hidden="true" />}
-            <LanguageSelector
-              value={currentLanguage}
-              onChange={handleLanguageChange}
-              variant="pill"
-              size="sm"
-            />
-          </div>
-        </div>
+                  <span className="whitespace-nowrap text-sm text-muted-foreground">
+                    {t('common:news.level.difficulty')}
+                  </span>
+                  <Button
+                    variant={newsLevel === 'a2' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => handleNewsLevelChange('a2')}
+                    data-testid="level-toggle-a2"
+                  >
+                    {t('common:news.level.a2', 'A2')}
+                  </Button>
+                  <Button
+                    variant={newsLevel === 'b2' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => handleNewsLevelChange('b2')}
+                    data-testid="level-toggle-b2"
+                  >
+                    {t('common:news.level.b2', 'B2')}
+                  </Button>
+                </div>
+              )}
+              {showLevelToggle && <div className="h-6 w-px bg-border" aria-hidden="true" />}
+              <LanguageSelector
+                value={currentLanguage}
+                onChange={handleLanguageChange}
+                variant="pill"
+                size="sm"
+              />
+            </>
+          }
+        />
 
         {/* Question with inline feedback */}
         <div key={session.currentIndex} className="flex justify-center">
