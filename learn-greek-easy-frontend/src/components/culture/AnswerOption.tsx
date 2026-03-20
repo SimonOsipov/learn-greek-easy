@@ -113,31 +113,31 @@ export const AnswerOption: React.FC<AnswerOptionProps> = ({
 
         // Default state
         resolvedState === 'default' && [
-          'border-[var(--cult-border)] bg-[var(--cult-card)]',
+          'border-[var(--practice-border)] bg-[var(--practice-card)]',
           'hover:border-slate-300 hover:bg-slate-50/60 dark:hover:border-slate-600 dark:hover:bg-slate-700/60',
         ],
 
         // Selected state (before submit)
         resolvedState === 'selected' && [
-          'border-[var(--cult-accent)] bg-[var(--cult-accent-soft)]',
-          'shadow-[0_0_0_3px_var(--cult-accent-glow)]',
+          'border-[var(--practice-accent)] bg-[var(--practice-accent-soft)]',
+          'shadow-[0_0_0_3px_var(--practice-accent-glow)]',
         ],
 
         // Correct state (after submit)
         resolvedState === 'correct' && [
-          'border-[var(--cult-correct)] bg-[var(--cult-correct-soft)]',
-          'shadow-[0_0_0_3px_var(--cult-correct-glow)]',
+          'border-[var(--practice-correct)] bg-[var(--practice-correct-soft)]',
+          'shadow-[0_0_0_3px_var(--practice-correct-glow)]',
         ],
 
         // Incorrect state (after submit, selected + wrong)
         resolvedState === 'incorrect' && [
-          'border-[var(--cult-incorrect)] bg-[var(--cult-incorrect-soft)]',
-          'shadow-[0_0_0_3px_var(--cult-incorrect-glow)]',
+          'border-[var(--practice-incorrect)] bg-[var(--practice-incorrect-soft)]',
+          'shadow-[0_0_0_3px_var(--practice-incorrect-glow)]',
         ],
 
         // Dimmed state (non-selected, non-correct after submit)
         resolvedState === 'dimmed' &&
-          'border-[var(--cult-border)] bg-[var(--cult-card)] opacity-[0.35]',
+          'border-[var(--practice-border)] bg-[var(--practice-card)] opacity-[0.35]',
 
         // Disabled (pointer-events-none after submit)
         disabled && 'pointer-events-none'
@@ -158,19 +158,19 @@ export const AnswerOption: React.FC<AnswerOptionProps> = ({
       </span>
 
       {/* Option text */}
-      <span className="flex-1 font-cult-serif text-base text-foreground">{text}</span>
+      <span className="flex-1 font-practice-serif text-base text-foreground">{text}</span>
 
       {/* Result icons (post-submit) */}
       {resolvedState === 'correct' && (
         <Check
-          className="h-5 w-5 flex-shrink-0 animate-cult-pop-in text-emerald-500"
+          className="h-5 w-5 flex-shrink-0 animate-practice-pop-in text-emerald-500"
           aria-hidden="true"
           data-testid="result-icon-correct"
         />
       )}
       {resolvedState === 'incorrect' && (
         <X
-          className="h-5 w-5 flex-shrink-0 animate-cult-pop-in text-red-500"
+          className="h-5 w-5 flex-shrink-0 animate-practice-pop-in text-red-500"
           aria-hidden="true"
           data-testid="result-icon-incorrect"
         />

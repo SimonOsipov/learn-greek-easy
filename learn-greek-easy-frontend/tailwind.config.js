@@ -90,8 +90,8 @@ export default {
   				'"Segoe UI Emoji"',
   				'"Segoe UI Symbol"'
   			],
-  			'cult-serif': ['Georgia', '"Times New Roman"', 'Times', 'serif'],
-  			'cult-mono': ['ui-monospace', 'SFMono-Regular', '"SF Mono"', 'Menlo', 'Consolas', 'monospace']
+  			'practice-serif': ['Georgia', '"Times New Roman"', 'Times', 'serif'],
+  			'practice-mono': ['ui-monospace', 'SFMono-Regular', '"SF Mono"', 'Menlo', 'Consolas', 'monospace']
   		},
   		fontSize: {
   			xs: [
@@ -235,9 +235,9 @@ export default {
   			'scale-in': 'scale-in 0.3s ease-out forwards',
   			'float': 'float 6s ease-in-out infinite',
   			'shimmer': 'shimmer 2s linear infinite',
-			'cult-fade-in': 'cultFadeIn 0.35s ease-out',
-			'cult-slide-up': 'cultSlideUp 0.35s ease-out',
-			'cult-pop-in': 'cultPopIn 0.3s ease-out'
+			'practice-fade-in': 'practiceFadeIn 0.35s ease-out',
+			'practice-slide-up': 'practiceSlideUp 0.35s ease-out',
+			'practice-pop-in': 'practicePopIn 0.3s ease-out'
   		},
   		keyframes: {
   			fadeIn: {
@@ -335,7 +335,7 @@ export default {
   					backgroundPosition: '200% 0'
   				}
   			},
-			cultFadeIn: {
+			practiceFadeIn: {
 				from: {
 					opacity: '0',
 					transform: 'translateY(6px)'
@@ -345,7 +345,7 @@ export default {
 					transform: 'translateY(0)'
 				}
 			},
-			cultSlideUp: {
+			practiceSlideUp: {
 				from: {
 					opacity: '0',
 					transform: 'translateY(12px)'
@@ -355,7 +355,7 @@ export default {
 					transform: 'translateY(0)'
 				}
 			},
-			cultPopIn: {
+			practicePopIn: {
 				'0%': {
 					transform: 'scale(0)'
 				},

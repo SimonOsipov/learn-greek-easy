@@ -30,10 +30,10 @@ function StatItem({
 }) {
   return (
     <div className="flex flex-col items-center" data-testid={testId}>
-      <span className="font-cult-mono text-[24px] font-bold leading-none" style={{ color }}>
+      <span className="font-practice-mono text-[24px] font-bold leading-none" style={{ color }}>
         {value}
       </span>
-      <span className="mt-1 text-[12px]" style={{ color: 'var(--cult-text-muted)' }}>
+      <span className="mt-1 text-[12px]" style={{ color: 'var(--practice-text-muted)' }}>
         {label}
       </span>
     </div>
@@ -64,7 +64,7 @@ export function ScoreCard({ correct, incorrect, total, onTryAgain, className }: 
       data-testid="score-card"
       className={cn(
         'flex flex-col items-center',
-        !prefersReducedMotion && 'animate-cult-fade-in',
+        !prefersReducedMotion && 'animate-practice-fade-in',
         className
       )}
     >
@@ -110,7 +110,7 @@ export function ScoreCard({ correct, incorrect, total, onTryAgain, className }: 
             {percentage}%
           </span>
           <span
-            className="mt-1 font-cult-mono text-sm text-[var(--cult-text-muted)]"
+            className="mt-1 font-practice-mono text-sm text-[var(--practice-text-muted)]"
             data-testid="score-fraction"
           >
             {correct}/{total}
@@ -120,8 +120,8 @@ export function ScoreCard({ correct, incorrect, total, onTryAgain, className }: 
 
       {/* Title */}
       <h2
-        className="mt-4 font-cult-serif text-[22px] font-bold leading-tight"
-        style={{ color: 'var(--cult-text)' }}
+        className="mt-4 font-practice-serif text-[22px] font-bold leading-tight"
+        style={{ color: 'var(--practice-text)' }}
         data-testid="score-card-title"
       >
         {isPassing
@@ -132,7 +132,7 @@ export function ScoreCard({ correct, incorrect, total, onTryAgain, className }: 
       {/* Subtitle */}
       <p
         className="mt-1 text-[14px]"
-        style={{ color: 'var(--cult-text-muted)' }}
+        style={{ color: 'var(--practice-text-muted)' }}
         data-testid="score-card-subtitle"
       >
         {isPassing
@@ -148,27 +148,27 @@ export function ScoreCard({ correct, incorrect, total, onTryAgain, className }: 
       <div
         className="mt-5 flex w-full items-center justify-center gap-8 py-4"
         style={{
-          borderTop: '1px solid var(--cult-border)',
-          borderBottom: '1px solid var(--cult-border)',
+          borderTop: '1px solid var(--practice-border)',
+          borderBottom: '1px solid var(--practice-border)',
         }}
         data-testid="score-card-stats"
       >
         <StatItem
           value={correct}
           label={t('scoreCard.correct', { defaultValue: 'Correct' })}
-          color="var(--cult-correct)"
+          color="var(--practice-correct)"
           testId="stat-correct"
         />
         <StatItem
           value={incorrect}
           label={t('scoreCard.incorrect', { defaultValue: 'Incorrect' })}
-          color="var(--cult-incorrect)"
+          color="var(--practice-incorrect)"
           testId="stat-incorrect"
         />
         <StatItem
           value={total}
           label={t('scoreCard.total', { defaultValue: 'Total' })}
-          color="var(--cult-accent)"
+          color="var(--practice-accent)"
           testId="stat-total"
         />
       </div>
@@ -180,8 +180,8 @@ export function ScoreCard({ correct, incorrect, total, onTryAgain, className }: 
         className={cn(
           'mt-5 w-full rounded-xl px-6 py-2.5',
           'text-[15px] font-semibold text-white',
-          'bg-[var(--cult-accent)]',
-          'shadow-[0_0_0_3px_var(--cult-accent-glow)]',
+          'bg-[var(--practice-accent)]',
+          'shadow-[0_0_0_3px_var(--practice-accent-glow)]',
           'transition-colors hover:brightness-110',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
         )}

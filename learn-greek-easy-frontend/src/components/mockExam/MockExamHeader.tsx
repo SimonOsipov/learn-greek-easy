@@ -84,7 +84,7 @@ export const MockExamHeader: React.FC<MockExamHeaderProps> = ({
         {/* Timer display */}
         <div
           className={cn(
-            'flex items-center gap-2 rounded-lg px-3 py-1.5 font-cult-mono text-lg font-semibold transition-colors',
+            'flex items-center gap-2 rounded-lg px-3 py-1.5 font-practice-mono text-lg font-semibold transition-colors',
             warningLevel === 'warning_1min' && 'animate-pulse bg-red-100 dark:bg-red-950/50',
             warningLevel === 'warning_5min' && 'bg-amber-100 dark:bg-amber-950/50'
           )}
@@ -104,7 +104,7 @@ export const MockExamHeader: React.FC<MockExamHeaderProps> = ({
         <div className="flex items-center gap-4 text-sm">
           {/* Question progress */}
           <div
-            className="hidden font-cult-mono text-muted-foreground sm:block"
+            className="hidden font-practice-mono text-muted-foreground sm:block"
             data-testid="mock-exam-progress"
           >
             {t('session.question', {
@@ -115,7 +115,7 @@ export const MockExamHeader: React.FC<MockExamHeaderProps> = ({
 
           {/* Mobile-friendly short progress */}
           <div
-            className="font-cult-mono text-muted-foreground sm:hidden"
+            className="font-practice-mono text-muted-foreground sm:hidden"
             data-testid="mock-exam-progress-short"
           >
             {currentQuestion}/{totalQuestions}

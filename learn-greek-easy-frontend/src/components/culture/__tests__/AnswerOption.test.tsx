@@ -72,7 +72,7 @@ describe('AnswerOption', () => {
       render(<AnswerOption {...defaultProps} text="Thessaloniki" />);
 
       const button = screen.getByTestId('answer-option-a');
-      const textSpan = button.querySelector('.font-cult-serif');
+      const textSpan = button.querySelector('.font-practice-serif');
       expect(textSpan).toBeInTheDocument();
       expect(textSpan).toHaveTextContent('Thessaloniki');
     });
@@ -90,8 +90,8 @@ describe('AnswerOption', () => {
       render(<AnswerOption {...defaultProps} />);
 
       const button = screen.getByTestId('answer-option-a');
-      expect(button.className).toContain('border-[var(--cult-border)]');
-      expect(button.className).toContain('bg-[var(--cult-card)]');
+      expect(button.className).toContain('border-[var(--practice-border)]');
+      expect(button.className).toContain('bg-[var(--practice-card)]');
     });
 
     it('should have hover classes when in default state', () => {
@@ -132,17 +132,17 @@ describe('AnswerOption', () => {
       render(<AnswerOption {...defaultProps} state="selected" />);
 
       const button = screen.getByTestId('answer-option-a');
-      expect(button.className).toContain('border-[var(--cult-accent)]');
-      expect(button.className).toContain('bg-[var(--cult-accent-soft)]');
-      expect(button.className).toContain('shadow-[0_0_0_3px_var(--cult-accent-glow)]');
+      expect(button.className).toContain('border-[var(--practice-accent)]');
+      expect(button.className).toContain('bg-[var(--practice-accent-soft)]');
+      expect(button.className).toContain('shadow-[0_0_0_3px_var(--practice-accent-glow)]');
     });
 
     it('should apply accent border via isSelected boolean fallback', () => {
       render(<AnswerOption {...defaultProps} isSelected={true} />);
 
       const button = screen.getByTestId('answer-option-a');
-      expect(button.className).toContain('border-[var(--cult-accent)]');
-      expect(button.className).toContain('bg-[var(--cult-accent-soft)]');
+      expect(button.className).toContain('border-[var(--practice-accent)]');
+      expect(button.className).toContain('bg-[var(--practice-accent-soft)]');
     });
 
     it('should not show keyboard hint', () => {
@@ -174,9 +174,9 @@ describe('AnswerOption', () => {
       render(<AnswerOption {...defaultProps} submitted={true} isCorrect={true} />);
 
       const button = screen.getByTestId('answer-option-a');
-      expect(button.className).toContain('border-[var(--cult-correct)]');
-      expect(button.className).toContain('bg-[var(--cult-correct-soft)]');
-      expect(button.className).toContain('shadow-[0_0_0_3px_var(--cult-correct-glow)]');
+      expect(button.className).toContain('border-[var(--practice-correct)]');
+      expect(button.className).toContain('bg-[var(--practice-correct-soft)]');
+      expect(button.className).toContain('shadow-[0_0_0_3px_var(--practice-correct-glow)]');
     });
 
     it('should show checkmark icon with data-testid result-icon-correct', () => {
@@ -186,11 +186,11 @@ describe('AnswerOption', () => {
       expect(checkIcon).toBeInTheDocument();
     });
 
-    it('should have checkmark with animate-cult-pop-in class', () => {
+    it('should have checkmark with animate-practice-pop-in class', () => {
       render(<AnswerOption {...defaultProps} submitted={true} isCorrect={true} />);
 
       const checkIcon = screen.getByTestId('result-icon-correct');
-      expect(checkIcon).toHaveClass('animate-cult-pop-in');
+      expect(checkIcon).toHaveClass('animate-practice-pop-in');
     });
 
     it('should have letter badge with bg-emerald-500', () => {
@@ -223,9 +223,9 @@ describe('AnswerOption', () => {
       render(<AnswerOption {...defaultProps} submitted={true} isSelectedIncorrect={true} />);
 
       const button = screen.getByTestId('answer-option-a');
-      expect(button.className).toContain('border-[var(--cult-incorrect)]');
-      expect(button.className).toContain('bg-[var(--cult-incorrect-soft)]');
-      expect(button.className).toContain('shadow-[0_0_0_3px_var(--cult-incorrect-glow)]');
+      expect(button.className).toContain('border-[var(--practice-incorrect)]');
+      expect(button.className).toContain('bg-[var(--practice-incorrect-soft)]');
+      expect(button.className).toContain('shadow-[0_0_0_3px_var(--practice-incorrect-glow)]');
     });
 
     it('should show cross icon with data-testid result-icon-incorrect', () => {
@@ -235,11 +235,11 @@ describe('AnswerOption', () => {
       expect(crossIcon).toBeInTheDocument();
     });
 
-    it('should have cross icon with animate-cult-pop-in class', () => {
+    it('should have cross icon with animate-practice-pop-in class', () => {
       render(<AnswerOption {...defaultProps} submitted={true} isSelectedIncorrect={true} />);
 
       const crossIcon = screen.getByTestId('result-icon-incorrect');
-      expect(crossIcon).toHaveClass('animate-cult-pop-in');
+      expect(crossIcon).toHaveClass('animate-practice-pop-in');
     });
 
     it('should have letter badge with bg-red-500', () => {
@@ -329,14 +329,14 @@ describe('AnswerOption', () => {
       render(<AnswerOption {...defaultProps} state="correct" isSelected={true} submitted={true} />);
 
       const button = screen.getByTestId('answer-option-a');
-      expect(button.className).toContain('border-[var(--cult-correct)]');
+      expect(button.className).toContain('border-[var(--practice-correct)]');
     });
 
     it('should resolve to correct when submitted + isCorrect', () => {
       render(<AnswerOption {...defaultProps} submitted={true} isCorrect={true} />);
 
       const button = screen.getByTestId('answer-option-a');
-      expect(button.className).toContain('border-[var(--cult-correct)]');
+      expect(button.className).toContain('border-[var(--practice-correct)]');
       expect(screen.getByTestId('result-icon-correct')).toBeInTheDocument();
     });
 
@@ -344,7 +344,7 @@ describe('AnswerOption', () => {
       render(<AnswerOption {...defaultProps} submitted={true} isSelectedIncorrect={true} />);
 
       const button = screen.getByTestId('answer-option-a');
-      expect(button.className).toContain('border-[var(--cult-incorrect)]');
+      expect(button.className).toContain('border-[var(--practice-incorrect)]');
       expect(screen.getByTestId('result-icon-incorrect')).toBeInTheDocument();
     });
 
@@ -359,7 +359,7 @@ describe('AnswerOption', () => {
       render(<AnswerOption {...defaultProps} isSelected={true} />);
 
       const button = screen.getByTestId('answer-option-a');
-      expect(button.className).toContain('border-[var(--cult-accent)]');
+      expect(button.className).toContain('border-[var(--practice-accent)]');
       expect(button).toHaveAttribute('aria-pressed', 'true');
     });
 
@@ -367,8 +367,8 @@ describe('AnswerOption', () => {
       render(<AnswerOption {...defaultProps} />);
 
       const button = screen.getByTestId('answer-option-a');
-      expect(button.className).toContain('border-[var(--cult-border)]');
-      expect(button.className).toContain('bg-[var(--cult-card)]');
+      expect(button.className).toContain('border-[var(--practice-border)]');
+      expect(button.className).toContain('bg-[var(--practice-card)]');
     });
   });
 

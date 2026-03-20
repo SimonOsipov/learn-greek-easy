@@ -389,7 +389,7 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
                           ? 'hsl(var(--primary))'
                           : isNewsMini
                             ? 'rgba(255,255,255,0.8)'
-                            : 'var(--cult-accent)',
+                            : 'var(--practice-accent)',
                       }
                     : undefined),
                 }}
@@ -403,7 +403,7 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
         <div className="flex flex-shrink-0 flex-col items-end gap-1.5">
           <span
             data-testid="waveform-time"
-            className={cn('text-xs', isAdmin ? 'font-mono' : 'font-cult-mono')}
+            className={cn('text-xs', isAdmin ? 'font-mono' : 'font-practice-mono')}
             style={{ fontVariantNumeric: 'tabular-nums' }}
           >
             <span
@@ -418,8 +418,8 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
                       ? 'rgba(255,255,255,1)'
                       : 'rgba(255,255,255,0.6)'
                     : isPlaying && !disabled
-                      ? 'var(--cult-accent)'
-                      : 'var(--cult-text-muted)',
+                      ? 'var(--practice-accent)'
+                      : 'var(--practice-text-muted)',
               }}
             >
               {formatTime(disabled ? 0 : currentTime)}
@@ -430,7 +430,7 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
                   ? 'hsl(var(--muted-foreground))'
                   : isNewsMini
                     ? 'rgba(255,255,255,0.5)'
-                    : 'var(--cult-text-muted)',
+                    : 'var(--practice-text-muted)',
               }}
             >
               {' / '}
@@ -442,7 +442,7 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
                   ? 'hsl(var(--muted-foreground))'
                   : isNewsMini
                     ? 'rgba(255,255,255,0.5)'
-                    : 'var(--cult-text-muted)',
+                    : 'var(--practice-text-muted)',
               }}
             >
               {formatTime(disabled ? 0 : effectiveDuration)}
@@ -469,7 +469,7 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
                     className={cn(
                       'rounded-full px-2.5 py-0.5 text-xs transition-colors duration-150',
                       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
-                      isAdmin ? 'font-mono' : 'font-cult-mono',
+                      isAdmin ? 'font-mono' : 'font-practice-mono',
                       disabled && 'cursor-not-allowed',
                       isSelected
                         ? isAdmin
@@ -482,16 +482,16 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
                             ? 'text-muted-foreground hover:bg-muted'
                             : isNewsMini
                               ? 'text-white/60 hover:bg-white/15'
-                              : 'text-[var(--cult-text-muted)] hover:bg-[var(--cult-accent-soft)]'
+                              : 'text-[var(--practice-text-muted)] hover:bg-[var(--practice-accent-soft)]'
                           : isAdmin
                             ? 'text-muted-foreground'
                             : isNewsMini
                               ? 'text-white/40'
-                              : 'text-[var(--cult-text-muted)]'
+                              : 'text-[var(--practice-text-muted)]'
                     )}
                     style={
                       isSelected && !isAdmin && !isNewsMini
-                        ? { backgroundColor: 'var(--cult-accent)' }
+                        ? { backgroundColor: 'var(--practice-accent)' }
                         : undefined
                     }
                   >
