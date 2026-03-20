@@ -165,12 +165,14 @@ function CardFront({
   tapToRevealLabel,
   partOfSpeech,
   cardType,
+  audioCluster,
 }: {
   front: MeaningFrontContent;
   typeBadgeLabel: string;
   tapToRevealLabel: string;
   partOfSpeech: PartOfSpeech | null;
   cardType: string;
+  audioCluster?: React.ReactNode;
 }) {
   const mainFontSize = cardType === 'sentence_translation' ? 'text-xl' : 'text-3xl';
 
@@ -193,6 +195,9 @@ function CardFront({
       {/* Sub text (pronunciation) */}
       {front.sub && <p className="text-center text-sm italic text-muted-foreground">{front.sub}</p>}
 
+      {/* Audio controls */}
+      {audioCluster}
+
       {/* Pronunciation hint */}
       {front.hint && <p className="text-center text-sm text-muted-foreground">{front.hint}</p>}
 
@@ -212,6 +217,11 @@ function CardBack({
   displayAnswer,
   onRate,
   cardType,
+  contextSentenceRu,
+  currentLang,
+  frontMain,
+  frontSub,
+  audioCluster,
 }: {
   back: MeaningBackContent;
   typeBadgeLabel: string;
@@ -222,6 +232,11 @@ function CardBack({
   displayAnswer: string;
   onRate?: (rating: number) => void;
   cardType: string;
+  contextSentenceRu?: string | null;
+  currentLang: 'en' | 'ru';
+  frontMain: string;
+  frontSub?: string | null;
+  audioCluster?: React.ReactNode;
 }) {
   const answerFontSize = cardType === 'sentence_translation' ? 'text-xl' : 'text-3xl';
 
@@ -233,6 +248,15 @@ function CardBack({
           {typeBadgeLabel}
         </Badge>
         {partOfSpeech && <PartOfSpeechBadge partOfSpeech={partOfSpeech} />}
+      </div>
+
+      {/* Question word echo */}
+      <div className="flex flex-col items-center gap-1">
+        <p className="break-words text-center text-lg font-bold text-muted-foreground">
+          {frontMain}
+        </p>
+        {frontSub && <p className="text-center text-sm italic text-muted-foreground">{frontSub}</p>}
+        {audioCluster}
       </div>
 
       {/* Answer section */}
@@ -258,7 +282,9 @@ function CardBack({
             </Badge>
           )}
           <p className="text-lg font-medium text-foreground">{back.context.greek}</p>
-          <p className="mt-2 text-sm text-muted-foreground">{back.context.english}</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {currentLang === 'ru' && contextSentenceRu ? contextSentenceRu : back.context.english}
+          </p>
         </Card>
       )}
 
@@ -370,9 +396,10 @@ export function PracticeCard({
   const isSentenceElToTarget = isSentenceCard && front.prompt === 'Translate this sentence';
   const isSentenceTargetToEl = isSentenceCard && front.prompt === 'Translate to Greek';
 
-  const showAudioOnFront = card.card_type === 'meaning_el_to_en' || isSentenceElToTarget;
-  const showAudioOnBack = card.card_type === 'meaning_en_to_el' || isSentenceTargetToEl;
-  const showAudioCluster = isFlipped ? showAudioOnBack : showAudioOnFront;
+  const cardSupportsAudio =
+    card.card_type === 'meaning_el_to_en' ||
+    card.card_type === 'meaning_en_to_el' ||
+    isSentenceCard;
 
   const handleAudioPlay = () => {
     if (isSentenceCard) {
@@ -445,28 +472,45 @@ export function PracticeCard({
             ? translationRu
             : back.answer;
 
-  // Translate stored English prompts to Russian when language is switched
-  const translatePrompt = (englishPrompt: string, lang: string): string => {
+  // Translate stored English prompts to Russian when language is switched.
+  // Keyed off card_type to handle all prompt variants for each card type.
+  const translatePrompt = (englishPrompt: string, lang: string, cardType: string): string => {
     if (lang !== 'ru') return englishPrompt;
 
-    const promptTranslations: Record<string, string> = {
-      'What does that mean?': 'Что это значит?',
-      'How do you say this in Greek?': 'Как это сказать по-гречески?',
-      'What is this?': 'Что это?',
-      'What does this mean?': 'Что это значит?',
-      'What is the plural?': 'Какое множественное число?',
-      'What is the plural form?': 'Какая форма множественного числа?',
-      'What is the singular?': 'Какое единственное число?',
-      'What is the singular form?': 'Какая форма единственного числа?',
-      'Translate this sentence': 'Переведите это предложение',
-      'Translate to Greek': 'Переведите на греческий',
-      'What is the article?': 'Какой артикль?',
+    const cardTypePrompts: Record<string, string> = {
+      meaning_el_to_en:
+        '\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?',
+      meaning_en_to_el:
+        '\u041a\u0430\u043a \u044d\u0442\u043e \u0441\u043a\u0430\u0437\u0430\u0442\u044c \u043f\u043e-\u0433\u0440\u0435\u0447\u0435\u0441\u043a\u0438?',
+      article: '\u041a\u0430\u043a\u043e\u0439 \u0430\u0440\u0442\u0438\u043a\u043b\u044c?',
     };
 
-    return promptTranslations[englishPrompt] || englishPrompt;
+    // For card types with a fixed mapping, use it
+    if (cardType in cardTypePrompts) {
+      return cardTypePrompts[cardType];
+    }
+
+    // For card types with variable prompts (plural_form, sentence_translation),
+    // fall back to per-text lookup
+    const promptTranslations: Record<string, string> = {
+      'What is the plural?':
+        '\u041a\u0430\u043a\u043e\u0435 \u043c\u043d\u043e\u0436\u0435\u0441\u0442\u0432\u0435\u043d\u043d\u043e\u0435 \u0447\u0438\u0441\u043b\u043e?',
+      'What is the plural form?':
+        '\u041a\u0430\u043a\u0430\u044f \u0444\u043e\u0440\u043c\u0430 \u043c\u043d\u043e\u0436\u0435\u0441\u0442\u0432\u0435\u043d\u043d\u043e\u0433\u043e \u0447\u0438\u0441\u043b\u0430?',
+      'What is the singular?':
+        '\u041a\u0430\u043a\u043e\u0435 \u0435\u0434\u0438\u043d\u0441\u0442\u0432\u0435\u043d\u043d\u043e\u0435 \u0447\u0438\u0441\u043b\u043e?',
+      'What is the singular form?':
+        '\u041a\u0430\u043a\u0430\u044f \u0444\u043e\u0440\u043c\u0430 \u0435\u0434\u0438\u043d\u0441\u0442\u0432\u0435\u043d\u043d\u043e\u0433\u043e \u0447\u0438\u0441\u043b\u0430?',
+      'Translate this sentence':
+        '\u041f\u0435\u0440\u0435\u0432\u0435\u0434\u0438\u0442\u0435 \u044d\u0442\u043e \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u0435',
+      'Translate to Greek':
+        '\u041f\u0435\u0440\u0435\u0432\u0435\u0434\u0438\u0442\u0435 \u043d\u0430 \u0433\u0440\u0435\u0447\u0435\u0441\u043a\u0438\u0439',
+    };
+
+    return promptTranslations[englishPrompt] ?? englishPrompt;
   };
 
-  const translatedPrompt = translatePrompt(front.prompt, currentLang);
+  const translatedPrompt = translatePrompt(front.prompt, currentLang, card.card_type);
 
   const typeBadgeLabel =
     card.card_type === 'plural_form'
@@ -506,6 +550,27 @@ export function PracticeCard({
   const handleLangChange = (lang: 'en' | 'ru') => {
     i18n.changeLanguage(lang);
   };
+
+  const audioClusterElement =
+    cardSupportsAudio && audioUrl ? (
+      <div
+        className="flex items-center gap-2"
+        data-testid="audio-cluster"
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+      >
+        <AudioSpeedToggle
+          speed={audioState?.speed ?? 1}
+          onSpeedChange={audioState?.setSpeed ?? (() => {})}
+        />
+        <SpeakerButton
+          audioUrl={audioUrl}
+          size="sm"
+          onPlay={handleAudioPlay}
+          controlledState={audioControlledState}
+        />
+      </div>
+    ) : null;
 
   return (
     <Card
@@ -570,6 +635,7 @@ export function PracticeCard({
             tapToRevealLabel={tapToRevealLabel}
             partOfSpeech={partOfSpeech}
             cardType={card.card_type}
+            audioCluster={audioClusterElement}
           />
         ) : (
           <CardBack
@@ -582,28 +648,14 @@ export function PracticeCard({
             displayAnswer={displayAnswer}
             onRate={onRate}
             cardType={card.card_type}
+            contextSentenceRu={sentenceRu}
+            currentLang={currentLang}
+            frontMain={displayFront.main}
+            frontSub={displayFront.sub}
+            audioCluster={audioClusterElement}
           />
         )}
       </CardContent>
-      {showAudioCluster && audioUrl && (
-        <div
-          className="absolute bottom-3 right-3 z-10 flex items-center gap-2"
-          data-testid="audio-cluster"
-          onClick={(e) => e.stopPropagation()}
-          onKeyDown={(e) => e.stopPropagation()}
-        >
-          <AudioSpeedToggle
-            speed={audioState?.speed ?? 1}
-            onSpeedChange={audioState?.setSpeed ?? (() => {})}
-          />
-          <SpeakerButton
-            audioUrl={audioUrl}
-            size="sm"
-            onPlay={handleAudioPlay}
-            controlledState={audioControlledState}
-          />
-        </div>
-      )}
     </Card>
   );
 }

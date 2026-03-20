@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -32,6 +32,8 @@ from src.schemas.progress import (
     TodayStats,
     TrendsSummary,
 )
+
+_DATETIME_MIN_UTC = datetime.min.replace(tzinfo=timezone.utc)
 
 
 class ProgressService:
@@ -473,7 +475,7 @@ class ProgressService:
 
         all_decks = sorted(
             vocab_deck_summaries + culture_deck_summaries,
-            key=lambda x: x.last_studied_at or datetime.min,
+            key=lambda x: x.last_studied_at or _DATETIME_MIN_UTC,
             reverse=True,
         )
         total = len(all_decks)

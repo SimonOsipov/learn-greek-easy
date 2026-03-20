@@ -150,18 +150,23 @@ export const V2DeckHeader: React.FC<V2DeckHeaderProps> = ({ deck }) => {
           </div>
 
           {/* Card Type Filter Pills */}
-          <div className="mt-4 flex flex-wrap gap-2">
-            {CARD_TYPE_FILTERS.map(({ value, labelKey }) => (
-              <Button
-                key={value}
-                variant={selectedCardType === value ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setSelectedCardType(value)}
-                aria-pressed={selectedCardType === value}
-              >
-                {t(labelKey)}
-              </Button>
-            ))}
+          <div className="mt-4">
+            <p className="mb-2 text-sm font-medium text-foreground">
+              {t('v2Practice.filterLabel')}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {CARD_TYPE_FILTERS.map(({ value, labelKey }) => (
+                <Button
+                  key={value}
+                  variant={selectedCardType === value ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSelectedCardType(value)}
+                  aria-pressed={selectedCardType === value}
+                >
+                  {t(labelKey)}
+                </Button>
+              ))}
+            </div>
           </div>
 
           {/* Study Button */}

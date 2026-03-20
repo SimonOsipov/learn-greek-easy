@@ -46,7 +46,7 @@ function formatDuration(totalSeconds: number): string {
 
 export function V2FlashcardPracticePage() {
   const { t } = useTranslation('deck');
-  const { deckId } = useParams<{ deckId: string }>();
+  const { deckId, wordId } = useParams<{ deckId: string; wordId?: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
@@ -74,11 +74,11 @@ export function V2FlashcardPracticePage() {
   // Start session on mount
   useEffect(() => {
     if (deckId) {
-      startSession(deckId, cardType).catch(() => {
+      startSession(deckId, cardType, wordId).catch(() => {
         // Error is handled by the store
       });
     }
-  }, [deckId, cardType, startSession]);
+  }, [deckId, cardType, wordId, startSession]);
 
   // Track session started when queue loads (non-empty)
   useEffect(() => {
@@ -224,7 +224,8 @@ export function V2FlashcardPracticePage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isFlipped, flipCard, audioUrl, audioToggle, handleRate]);
 
-  const backToDeck = () => navigate(`/decks/${deckId}`);
+  const backToDeck = () =>
+    navigate(wordId && deckId ? `/decks/${deckId}/words/${wordId}` : `/decks/${deckId}`);
 
   // ============================================
   // Render: Loading
@@ -270,7 +271,7 @@ export function V2FlashcardPracticePage() {
           <div className="mt-4 flex gap-3">
             <Button
               onClick={() => {
-                if (deckId) startSession(deckId, cardType).catch(() => {});
+                if (deckId) startSession(deckId, cardType, wordId).catch(() => {});
               }}
             >
               {t('v2Practice.retry')}
@@ -381,7 +382,7 @@ export function V2FlashcardPracticePage() {
               onClick={() => {
                 hasTrackedStartRef.current = false;
                 hasTrackedCompleteRef.current = false;
-                if (deckId) startSession(deckId, cardType).catch(() => {});
+                if (deckId) startSession(deckId, cardType, wordId).catch(() => {});
               }}
             >
               {t('v2Practice.studyMore')}

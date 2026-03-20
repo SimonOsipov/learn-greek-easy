@@ -69,6 +69,7 @@ export interface V2StudyQueueParams {
   new_cards_limit?: number;
   include_early_practice?: boolean;
   early_practice_limit?: number;
+  word_entry_id?: string;
 }
 
 // ============================================
@@ -88,6 +89,7 @@ export const studyAPI = {
       new_cards_limit: params.new_cards_limit || 10,
       include_early_practice: params.include_early_practice,
       early_practice_limit: params.early_practice_limit,
+      word_entry_id: params.word_entry_id,
     });
     return api.get<V2StudyQueue>(`/api/v1/study/queue/v2${queryString}`);
   },

@@ -534,9 +534,11 @@ describe('PracticeCard', () => {
         renderCard({ card: mockSentenceCard, isFlipped: true });
 
         // answer_sub is null in mockSentenceCard, so no sub-answer text
-        // The answer_sub element is conditionally rendered with text-lg class
+        // The answer_sub element has text-lg but no font-bold (unlike the question echo)
         const backEl = screen.getByTestId('practice-card-back');
-        const subAnswerElements = backEl.querySelectorAll('.text-lg.text-muted-foreground');
+        const subAnswerElements = backEl.querySelectorAll(
+          '.break-words.text-lg.text-muted-foreground:not(.font-bold)'
+        );
         expect(subAnswerElements).toHaveLength(0);
       });
     });
@@ -887,14 +889,14 @@ describe('PracticeCard', () => {
       expect(screen.getByTestId('speaker-button')).toBeInTheDocument();
     });
 
-    it('does NOT show speaker button on back for meaning_el_to_en', () => {
+    it('shows speaker button on back for meaning_el_to_en', () => {
       renderCard({ card: mockCard, isFlipped: true, audioState: makeAudioState(audioUrl) });
-      expect(screen.queryByTestId('speaker-button')).not.toBeInTheDocument();
+      expect(screen.getByTestId('speaker-button')).toBeInTheDocument();
     });
 
-    it('does NOT show speaker button on front for meaning_en_to_el', () => {
+    it('shows speaker button on front for meaning_en_to_el', () => {
       renderCard({ card: mockEnToElCard, audioState: makeAudioState(audioUrl) });
-      expect(screen.queryByTestId('speaker-button')).not.toBeInTheDocument();
+      expect(screen.getByTestId('speaker-button')).toBeInTheDocument();
     });
 
     it('shows speaker button on back for meaning_en_to_el when flipped', () => {
@@ -907,14 +909,14 @@ describe('PracticeCard', () => {
       expect(screen.getByTestId('speaker-button')).toBeInTheDocument();
     });
 
-    it('does NOT show speaker button on back for sentence_translation (el_to_target)', () => {
+    it('shows speaker button on back for sentence_translation (el_to_target)', () => {
       renderCard({ card: mockSentenceCard, isFlipped: true, audioState: makeAudioState(audioUrl) });
-      expect(screen.queryByTestId('speaker-button')).not.toBeInTheDocument();
+      expect(screen.getByTestId('speaker-button')).toBeInTheDocument();
     });
 
-    it('does NOT show speaker button on front for sentence_translation (target_to_el)', () => {
+    it('shows speaker button on front for sentence_translation (target_to_el)', () => {
       renderCard({ card: mockTargetToElSentenceCard, audioState: makeAudioState(audioUrl) });
-      expect(screen.queryByTestId('speaker-button')).not.toBeInTheDocument();
+      expect(screen.getByTestId('speaker-button')).toBeInTheDocument();
     });
 
     it('shows speaker button on back for sentence_translation (target_to_el) when flipped', () => {
@@ -987,6 +989,34 @@ describe('PracticeCard', () => {
           deck_id: 'deck-001',
         })
       );
+    });
+
+    it('renders Russian context sentence when RU language is active and sentenceRu is provided', () => {
+      renderCard({
+        card: mockCard,
+        isFlipped: true,
+        sentenceRu: 'Русское предложение',
+      });
+      fireEvent.click(screen.getByTestId('lang-toggle-ru'));
+      expect(screen.getByText('Русское предложение')).toBeInTheDocument();
+    });
+
+    it('renders Greek word and pronunciation on back side after flip', () => {
+      renderCard({ card: mockCard, isFlipped: true });
+      const backEl = screen.getByTestId('practice-card-back');
+      // Greek word (frontMain echo) should be visible
+      expect(backEl).toHaveTextContent('σπίτι');
+      // Pronunciation (frontSub echo) should be visible
+      expect(backEl).toHaveTextContent('[spee-tee]');
+    });
+
+    it('renders audio controls on back side for meaning_el_to_en', () => {
+      renderCard({
+        card: mockCard,
+        isFlipped: true,
+        audioState: makeAudioState(audioUrl),
+      });
+      expect(screen.getByTestId('speaker-button')).toBeInTheDocument();
     });
 
     it('word_audio_played analytics uses Greek answer as lemma for meaning_en_to_el', () => {

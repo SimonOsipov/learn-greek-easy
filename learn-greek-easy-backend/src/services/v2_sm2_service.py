@@ -36,6 +36,7 @@ class V2SM2Service:
         user_id: UUID,
         deck_id: UUID | None,
         card_type: CardType | None = None,
+        word_entry_id: UUID | None = None,
         limit: int = 20,
         include_new: bool = True,
         new_cards_limit: int = 10,
@@ -58,6 +59,7 @@ class V2SM2Service:
             user_id,
             deck_id,
             card_type=card_type,
+            word_entry_id=word_entry_id,
             limit=limit,
             exclude_premium_decks=exclude_premium_decks,
         )
@@ -79,6 +81,7 @@ class V2SM2Service:
                 deck_id,
                 remaining_slots,
                 card_type=card_type,
+                word_entry_id=word_entry_id,
                 exclude_premium_decks=exclude_premium_decks,
             )
             new_cards = [self._build_card_from_record(record) for record in new_records]
@@ -96,6 +99,7 @@ class V2SM2Service:
                 user_id,
                 deck_id,
                 card_type=card_type,
+                word_entry_id=word_entry_id,
                 limit=remaining_slots,
                 exclude_premium_decks=exclude_premium_decks,
             )

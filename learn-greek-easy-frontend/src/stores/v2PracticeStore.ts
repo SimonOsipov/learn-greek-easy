@@ -137,6 +137,7 @@ interface V2PracticeState {
   sessionId: string | null;
   deckId: string | null;
   cardType: CardRecordType | null;
+  wordEntryId: string | null;
   sessionStats: V2SessionStats;
   isLoading: boolean;
   error: string | null;
@@ -150,7 +151,11 @@ interface V2PracticeState {
   _pendingReviews: number;
 
   // Actions
-  startSession: (deckId: string | null, cardType?: CardRecordType) => Promise<void>;
+  startSession: (
+    deckId: string | null,
+    cardType?: CardRecordType,
+    wordEntryId?: string
+  ) => Promise<void>;
   rateCard: (rating: 1 | 2 | 3 | 4) => void;
   flipCard: () => void;
   endSession: () => void;
@@ -173,6 +178,7 @@ export const useV2PracticeStore = create<V2PracticeState>()(
       sessionId: null,
       deckId: null,
       cardType: null,
+      wordEntryId: null,
       sessionStats: { ...DEFAULT_SESSION_STATS },
       isLoading: false,
       error: null,
@@ -187,7 +193,11 @@ export const useV2PracticeStore = create<V2PracticeState>()(
        * For cardType='meaning': fetches with no card_type filter (limit=50),
        * then filters client-side to cards where card_type starts with 'meaning_'.
        */
-      startSession: async (deckId: string | null, cardType?: CardRecordType) => {
+      startSession: async (
+        deckId: string | null,
+        cardType?: CardRecordType,
+        wordEntryId?: string
+      ) => {
         set({ isLoading: true, error: null });
 
         try {
@@ -205,6 +215,7 @@ export const useV2PracticeStore = create<V2PracticeState>()(
               limit: 50,
               include_new: true,
               new_cards_limit: 10,
+              word_entry_id: wordEntryId,
             });
             queueData = {
               ...queueData,
@@ -217,6 +228,7 @@ export const useV2PracticeStore = create<V2PracticeState>()(
               limit: 20,
               include_new: true,
               new_cards_limit: 10,
+              word_entry_id: wordEntryId,
             });
           }
 
@@ -228,6 +240,7 @@ export const useV2PracticeStore = create<V2PracticeState>()(
             sessionId: generateSessionId(),
             deckId,
             cardType: cardType ?? null,
+            wordEntryId: wordEntryId ?? null,
             sessionStats: { ...DEFAULT_SESSION_STATS },
             isLoading: false,
             error: null,
@@ -379,6 +392,7 @@ export const useV2PracticeStore = create<V2PracticeState>()(
           sessionId: null,
           deckId: null,
           cardType: null,
+          wordEntryId: null,
           sessionStats: { ...DEFAULT_SESSION_STATS },
           isLoading: false,
           error: null,
@@ -399,6 +413,7 @@ export const useV2PracticeStore = create<V2PracticeState>()(
           sessionId: null,
           deckId: null,
           cardType: null,
+          wordEntryId: null,
           sessionStats: { ...DEFAULT_SESSION_STATS },
           isLoading: false,
           error: null,

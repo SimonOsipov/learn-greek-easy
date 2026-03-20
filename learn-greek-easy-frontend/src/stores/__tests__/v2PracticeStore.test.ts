@@ -100,6 +100,7 @@ describe('v2PracticeStore', () => {
       sessionId: null,
       deckId: null,
       cardType: null,
+      wordEntryId: null,
       sessionStats: {
         cardsReviewed: 0,
         againCount: 0,
@@ -324,5 +325,34 @@ describe('v2PracticeStore', () => {
       example_audio_url: 'https://s3.example.com/example.mp3',
     });
     expect(resolveV2CardAudioUrl(meaningCard)).toBe('https://s3.example.com/word.mp3');
+  });
+
+  // ============================================
+  // Test: startSession with wordEntryId passes word_entry_id to API
+  // ============================================
+
+  it('startSession with wordEntryId passes word_entry_id to API', async () => {
+    const card = makeMockCard();
+    const queue = makeMockQueue([card]);
+    vi.mocked(studyAPI.getV2Queue).mockResolvedValue(queue);
+
+    await useV2PracticeStore.getState().startSession('deck-1', undefined, 'word-entry-1');
+
+    expect(vi.mocked(studyAPI.getV2Queue)).toHaveBeenCalledWith(
+      expect.objectContaining({ word_entry_id: 'word-entry-1' })
+    );
+    expect(useV2PracticeStore.getState().wordEntryId).toBe('word-entry-1');
+  });
+
+  // ============================================
+  // Test: endSession resets wordEntryId to null
+  // ============================================
+
+  it('endSession resets wordEntryId to null', () => {
+    useV2PracticeStore.setState({ wordEntryId: 'some-id' });
+
+    useV2PracticeStore.getState().endSession();
+
+    expect(useV2PracticeStore.getState().wordEntryId).toBeNull();
   });
 });
