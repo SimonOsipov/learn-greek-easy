@@ -472,18 +472,27 @@ export function PracticeCard({
             ? translationRu
             : back.answer;
 
-  // Translate stored English prompts to Russian when language is switched
-  const translatePrompt = (englishPrompt: string, lang: string): string => {
+  // Translate stored English prompts to Russian when language is switched.
+  // Keyed off card_type to handle all prompt variants for each card type.
+  const translatePrompt = (englishPrompt: string, lang: string, cardType: string): string => {
     if (lang !== 'ru') return englishPrompt;
 
-    const promptTranslations: Record<string, string> = {
-      'What does that mean?':
+    const cardTypePrompts: Record<string, string> = {
+      meaning_el_to_en:
         '\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?',
-      'How do you say this in Greek?':
+      meaning_en_to_el:
         '\u041a\u0430\u043a \u044d\u0442\u043e \u0441\u043a\u0430\u0437\u0430\u0442\u044c \u043f\u043e-\u0433\u0440\u0435\u0447\u0435\u0441\u043a\u0438?',
-      'What is this?': '\u0427\u0442\u043e \u044d\u0442\u043e?',
-      'What does this mean?':
-        '\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?',
+      article: '\u041a\u0430\u043a\u043e\u0439 \u0430\u0440\u0442\u0438\u043a\u043b\u044c?',
+    };
+
+    // For card types with a fixed mapping, use it
+    if (cardType in cardTypePrompts) {
+      return cardTypePrompts[cardType];
+    }
+
+    // For card types with variable prompts (plural_form, sentence_translation),
+    // fall back to per-text lookup
+    const promptTranslations: Record<string, string> = {
       'What is the plural?':
         '\u041a\u0430\u043a\u043e\u0435 \u043c\u043d\u043e\u0436\u0435\u0441\u0442\u0432\u0435\u043d\u043d\u043e\u0435 \u0447\u0438\u0441\u043b\u043e?',
       'What is the plural form?':
@@ -496,14 +505,12 @@ export function PracticeCard({
         '\u041f\u0435\u0440\u0435\u0432\u0435\u0434\u0438\u0442\u0435 \u044d\u0442\u043e \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u0435',
       'Translate to Greek':
         '\u041f\u0435\u0440\u0435\u0432\u0435\u0434\u0438\u0442\u0435 \u043d\u0430 \u0433\u0440\u0435\u0447\u0435\u0441\u043a\u0438\u0439',
-      'What is the article?':
-        '\u041a\u0430\u043a\u043e\u0439 \u0430\u0440\u0442\u0438\u043a\u043b\u044c?',
     };
 
-    return promptTranslations[englishPrompt] || englishPrompt;
+    return promptTranslations[englishPrompt] ?? englishPrompt;
   };
 
-  const translatedPrompt = translatePrompt(front.prompt, currentLang);
+  const translatedPrompt = translatePrompt(front.prompt, currentLang, card.card_type);
 
   const typeBadgeLabel =
     card.card_type === 'plural_form'

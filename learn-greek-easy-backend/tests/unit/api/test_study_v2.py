@@ -66,10 +66,14 @@ class TestStudyV2Route:
                 headers=auth_headers,
             )
         assert response.status_code == 200
+        kwargs = mock_instance.get_study_queue.await_args.kwargs
+        assert kwargs["word_entry_id"] == word_entry_id
+        assert kwargs["deck_id"] is None
 
     @pytest.mark.asyncio
     async def test_200_with_word_entry_id_and_deck_id(self, client, auth_headers):
         word_entry_id = uuid4()
+        deck_id = uuid4()
         mock_deck = MagicMock(spec=Deck)
         mock_deck.is_premium = False
         mock_repo = MagicMock()
@@ -82,7 +86,10 @@ class TestStudyV2Route:
             mock_instance = MockService.return_value
             mock_instance.get_study_queue = AsyncMock(return_value=mock_queue)
             response = await client.get(
-                f"/api/v1/study/queue/v2?deck_id={uuid4()}&word_entry_id={word_entry_id}",
+                f"/api/v1/study/queue/v2?deck_id={deck_id}&word_entry_id={word_entry_id}",
                 headers=auth_headers,
             )
         assert response.status_code == 200
+        kwargs = mock_instance.get_study_queue.await_args.kwargs
+        assert kwargs["word_entry_id"] == word_entry_id
+        assert kwargs["deck_id"] == deck_id

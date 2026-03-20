@@ -112,12 +112,12 @@ test.describe('V2 Flashcard Review', () => {
     await page.goto(`/decks/${v2NounsDeckId}`);
     await expect(page.locator('[data-testid="v2-deck-detail"]')).toBeVisible({ timeout: 10000 });
 
-    for (const label of ['All', 'Translation', 'Sentence', 'Plural Form', 'Article']) {
+    for (const label of ['All Words', 'Translations', 'Sentences', 'Plural Form', 'Article']) {
       await expect(page.getByRole('button', { name: label, exact: true })).toBeVisible();
     }
 
-    await page.getByRole('button', { name: 'Translation', exact: true }).click();
-    await expect(page.getByRole('button', { name: 'Translation', exact: true })).toHaveAttribute(
+    await page.getByRole('button', { name: 'Translations', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Translations', exact: true })).toHaveAttribute(
       'aria-pressed',
       'true'
     );

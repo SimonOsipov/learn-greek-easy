@@ -217,7 +217,7 @@ test.describe('Card Audio Playback', () => {
   }
 
   /**
-   * Helper: intercept word entry and cards APIs to inject audio URL.
+   * Helper: intercept word entry, cards, and study queue APIs to inject audio URL.
    */
   async function setupAudioMocks(
     page: Parameters<Parameters<typeof test>[1]>[0],
@@ -298,6 +298,51 @@ test.describe('Card Audio Playback', () => {
         });
       }
     );
+
+    // Mock V2 study queue API to return a queue card with audio_url.
+    // The V2FlashcardPracticePage reads audio from the queue card (not word-entry API).
+    await page.route(
+      (url) => url.pathname === '/api/v1/study/queue/v2',
+      (route) => {
+        if (route.request().method() !== 'GET') {
+          void route.continue();
+          return;
+        }
+        const mockCard = buildMockCard(cardType, 'test-card-001', testWordEntryId, v2DeckId, audioUrl);
+        const queueCard = {
+          card_record_id: 'test-card-001',
+          word_entry_id: testWordEntryId,
+          deck_id: v2DeckId,
+          deck_name: 'E2E V2 Nouns',
+          card_type: cardType,
+          variant_key: 'default',
+          front_content: mockCard.front_content,
+          back_content: mockCard.back_content,
+          status: 'new',
+          is_new: true,
+          is_early_practice: false,
+          due_date: null,
+          easiness_factor: null,
+          interval: null,
+          audio_url: cardType === 'sentence_translation' ? null : audioUrl,
+          example_audio_url: cardType === 'sentence_translation' ? audioUrl : null,
+          translation_ru: null,
+          translation_ru_plural: null,
+          sentence_ru: null,
+        };
+        void route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            total_due: 0,
+            total_new: 1,
+            total_early_practice: 0,
+            total_in_queue: 1,
+            cards: [queueCard],
+          }),
+        });
+      }
+    );
   }
 
   const practiceUrl = () => `/decks/${v2DeckId}/words/${testWordEntryId}/practice`;
@@ -311,21 +356,22 @@ test.describe('Card Audio Playback', () => {
     await expect(speakerButton).toBeVisible({ timeout: 5000 });
   });
 
-  test('no speaker on meaning_en_to_el front, speaker appears on back after flip', async ({
+  test('speaker visible on meaning_en_to_el front and back after flip', async ({
     page,
   }) => {
     await setupAudioMocks(page, { cardType: 'meaning_en_to_el' });
     await page.goto(practiceUrl());
     await page.waitForSelector('[data-testid="practice-card-front"]', { timeout: 10000 });
 
-    // No speaker on front (English side has no Greek audio)
-    await expect(page.getByRole('button', { name: /play audio/i })).not.toBeVisible();
+    // Speaker is visible on front (audio controls shown on both sides for supported card types)
+    const speakerButtonFront = page.getByRole('button', { name: /play audio/i });
+    await expect(speakerButtonFront).toBeVisible({ timeout: 5000 });
 
     // Flip card
     await page.keyboard.press('Space');
     await page.waitForSelector('[data-testid="practice-card-back"]', { timeout: 5000 });
 
-    // Speaker appears on back
+    // Speaker still visible on back
     const speakerButton = page.getByRole('button', { name: /play audio/i });
     await expect(speakerButton).toBeVisible({ timeout: 5000 });
   });
@@ -379,6 +425,51 @@ test.describe('Card Audio Playback', () => {
       }
     );
 
+    // Override the study queue mock to have null audio_url
+    const mockCard = buildMockCard('meaning_el_to_en', 'test-card-001', testWordEntryId, v2DeckId, '');
+    await page.route(
+      (url) => url.pathname === '/api/v1/study/queue/v2',
+      (route) => {
+        if (route.request().method() !== 'GET') {
+          void route.continue();
+          return;
+        }
+        void route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            total_due: 0,
+            total_new: 1,
+            total_early_practice: 0,
+            total_in_queue: 1,
+            cards: [
+              {
+                card_record_id: 'test-card-001',
+                word_entry_id: testWordEntryId,
+                deck_id: v2DeckId,
+                deck_name: 'E2E V2 Nouns',
+                card_type: 'meaning_el_to_en',
+                variant_key: 'default',
+                front_content: mockCard.front_content,
+                back_content: mockCard.back_content,
+                status: 'new',
+                is_new: true,
+                is_early_practice: false,
+                due_date: null,
+                easiness_factor: null,
+                interval: null,
+                audio_url: null,
+                example_audio_url: null,
+                translation_ru: null,
+                translation_ru_plural: null,
+                sentence_ru: null,
+              },
+            ],
+          }),
+        });
+      }
+    );
+
     await page.goto(practiceUrl());
     await page.waitForSelector('[data-testid="practice-card-front"]', { timeout: 10000 });
 
@@ -414,22 +505,21 @@ test.describe('Card Audio Playback', () => {
     await audioRequest;
   });
 
-  test('"A" key is no-op when no speaker is visible (meaning_en_to_el front)', async ({
+  test('"A" key triggers audio on meaning_en_to_el front', async ({
     page,
   }) => {
     await setupAudioMocks(page, { cardType: 'meaning_en_to_el' });
     await page.goto(practiceUrl());
     await page.waitForSelector('[data-testid="practice-card-front"]', { timeout: 10000 });
 
-    // No speaker on front
-    await expect(page.getByRole('button', { name: /play audio/i })).not.toBeVisible();
+    // Speaker is visible on front (audio controls shown on both sides for supported card types)
+    await expect(page.getByRole('button', { name: /play audio/i })).toBeVisible({ timeout: 5000 });
 
-    // Press "A" -- should be silent no-op, no speaker button appears
+    // Press "A" -- triggers audio playback
+    const audioRequest = page.waitForRequest(
+      (req) => req.method() === 'GET' && req.url() === 'https://test.local/audio.wav'
+    );
     await page.keyboard.press('a');
-
-    // Still no speaker button
-    await expect(
-      page.getByRole('button', { name: /play audio|pause audio|loading audio/i })
-    ).not.toBeVisible();
+    await audioRequest;
   });
 });
