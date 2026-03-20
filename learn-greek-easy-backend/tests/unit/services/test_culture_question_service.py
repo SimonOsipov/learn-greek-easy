@@ -1622,7 +1622,7 @@ class TestVariableAnswerCount:
     # -------------------------------------------------------------------------
 
     @pytest.mark.asyncio
-    async def test_process_answer_fast_two_option_question_option_3_raises_error(
+    async def test_compute_answer_two_option_question_option_3_raises_error(
         self,
         db_session: AsyncSession,
         test_user: User,
@@ -1641,7 +1641,7 @@ class TestVariableAnswerCount:
             )
 
     @pytest.mark.asyncio
-    async def test_process_answer_fast_three_option_question_option_4_raises_error(
+    async def test_compute_answer_three_option_question_option_4_raises_error(
         self,
         db_session: AsyncSession,
         test_user: User,
@@ -1660,7 +1660,7 @@ class TestVariableAnswerCount:
             )
 
     @pytest.mark.asyncio
-    async def test_process_answer_fast_two_option_question_valid_options(
+    async def test_compute_answer_two_option_question_valid_options(
         self,
         db_session: AsyncSession,
         test_user: User,
