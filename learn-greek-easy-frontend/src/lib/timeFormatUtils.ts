@@ -55,3 +55,22 @@ export function formatStudyTime(totalSeconds: number): string {
 export function capAnswerTime(timeSeconds: number): number {
   return Math.min(timeSeconds, MAX_ANSWER_TIME_SECONDS);
 }
+
+/**
+ * Format a duration in seconds to M:SS format.
+ *
+ * Examples:
+ * - 0 -> "0:00"
+ * - 5 -> "0:05"
+ * - 60 -> "1:00"
+ * - 90 -> "1:30"
+ * - 3600 -> "60:00"
+ *
+ * @param totalSeconds - Total time in seconds
+ * @returns Formatted duration string in M:SS format
+ */
+export function formatDuration(totalSeconds: number): string {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${String(seconds).padStart(2, '0')}`;
+}

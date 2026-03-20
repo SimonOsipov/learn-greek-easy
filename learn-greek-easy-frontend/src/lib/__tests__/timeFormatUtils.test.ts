@@ -5,7 +5,12 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { formatStudyTime, capAnswerTime, MAX_ANSWER_TIME_SECONDS } from '../timeFormatUtils';
+import {
+  formatStudyTime,
+  capAnswerTime,
+  formatDuration,
+  MAX_ANSWER_TIME_SECONDS,
+} from '../timeFormatUtils';
 
 describe('timeFormatUtils', () => {
   describe('formatStudyTime', () => {
@@ -85,6 +90,36 @@ describe('timeFormatUtils', () => {
   describe('MAX_ANSWER_TIME_SECONDS', () => {
     it('should be 180 seconds (3 minutes)', () => {
       expect(MAX_ANSWER_TIME_SECONDS).toBe(180);
+    });
+  });
+
+  describe('formatDuration', () => {
+    it('should return "0:00" for 0 seconds', () => {
+      expect(formatDuration(0)).toBe('0:00');
+    });
+
+    it('should return "0:05" for 5 seconds', () => {
+      expect(formatDuration(5)).toBe('0:05');
+    });
+
+    it('should return "0:59" for 59 seconds', () => {
+      expect(formatDuration(59)).toBe('0:59');
+    });
+
+    it('should return "1:00" for 60 seconds', () => {
+      expect(formatDuration(60)).toBe('1:00');
+    });
+
+    it('should return "1:30" for 90 seconds', () => {
+      expect(formatDuration(90)).toBe('1:30');
+    });
+
+    it('should return "59:59" for 3599 seconds', () => {
+      expect(formatDuration(3599)).toBe('59:59');
+    });
+
+    it('should return "60:00" for 3600 seconds', () => {
+      expect(formatDuration(3600)).toBe('60:00');
     });
   });
 });
