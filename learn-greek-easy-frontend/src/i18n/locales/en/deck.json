@@ -21,7 +21,6 @@
     "notStarted": "Not Started",
     "inProgress": "In Progress",
     "completed": "Completed",
-    "premiumOnly": "Premium Only",
     "clearAll": "Clear All",
     "showing": "Showing {{count}} of {{total}} decks",
     "levelDisabledForCulture": "Level filter is not available for Culture decks",

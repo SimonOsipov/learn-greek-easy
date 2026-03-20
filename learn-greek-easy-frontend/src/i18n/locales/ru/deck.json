@@ -21,7 +21,6 @@
     "notStarted": "Не начато",
     "inProgress": "В процессе",
     "completed": "Завершено",
-    "premiumOnly": "Только премиум",
     "clearAll": "Сбросить всё",
     "showing": "Показано {{count}} из {{total}} колод",
     "levelDisabledForCulture": "Фильтр по уровню недоступен для колод Культуры",

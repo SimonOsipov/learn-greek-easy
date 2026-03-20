@@ -55,6 +55,18 @@ export const NewsPage: React.FC = () => {
   // Track if we've already tracked the page view (only track on first successful load)
   const hasTrackedPageView = useRef(false);
 
+  // Cache for previously fetched country+page results (cleared on unmount)
+  const newsCache = useRef<
+    Record<
+      string,
+      {
+        articles: NewsItemResponse[];
+        totalItems: number;
+        countryCounts: { cyprus: number; greece: number; world: number };
+      }
+    >
+  >({});
+
   // Calculate total pages
   const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
 
@@ -63,6 +75,19 @@ export const NewsPage: React.FC = () => {
    */
   const fetchNews = useCallback(
     async (page: number, country?: NewsCountry) => {
+      const cacheKey = `${country ?? 'all'}:${page}`;
+
+      // Return cached data instantly (no loading spinner, no API call)
+      const cached = newsCache.current[cacheKey];
+      if (cached) {
+        setArticles(cached.articles);
+        setTotalItems(cached.totalItems);
+        setCurrentPage(page);
+        setCountryCounts(cached.countryCounts);
+        setError(null);
+        return;
+      }
+
       setIsLoading(true);
       setError(null);
 
@@ -73,6 +98,13 @@ export const NewsPage: React.FC = () => {
         setCurrentPage(page);
         if (response.country_counts) {
           setCountryCounts(response.country_counts);
+
+          // Cache the result for future filter toggles
+          newsCache.current[cacheKey] = {
+            articles: response.items,
+            totalItems: response.total,
+            countryCounts: response.country_counts,
+          };
         }
 
         // Track page view only on first successful load

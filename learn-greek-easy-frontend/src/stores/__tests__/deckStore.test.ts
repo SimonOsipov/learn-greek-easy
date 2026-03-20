@@ -195,7 +195,7 @@ describe('deckStore.setFilters - Culture/Level Filter Behavior', () => {
     levels: [],
     categories: [],
     status: [],
-    showPremiumOnly: false,
+
     deckType: 'all',
   };
 
@@ -203,6 +203,7 @@ describe('deckStore.setFilters - Culture/Level Filter Behavior', () => {
     // Reset store to default state before each test
     useDeckStore.setState({
       decks: [],
+      rawDecks: [],
       totalDecks: 0,
       selectedDeck: null,
       filters: { ...DEFAULT_FILTERS },
@@ -269,7 +270,6 @@ describe('deckStore.setFilters - Culture/Level Filter Behavior', () => {
           search: 'greek',
           levels: ['A1'],
           status: ['in-progress'],
-          showPremiumOnly: true,
           deckType: 'all',
         },
       });
@@ -286,7 +286,6 @@ describe('deckStore.setFilters - Culture/Level Filter Behavior', () => {
         // Other filters should be preserved
         expect(result.current.filters.search).toBe('greek');
         expect(result.current.filters.status).toEqual(['in-progress']);
-        expect(result.current.filters.showPremiumOnly).toBe(true);
         expect(result.current.filters.deckType).toBe('culture');
       });
     });

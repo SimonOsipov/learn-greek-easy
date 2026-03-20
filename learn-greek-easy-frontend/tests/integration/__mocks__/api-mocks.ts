@@ -333,7 +333,7 @@ export const setupDecks = (useDeckStore: any) => {
       },
     ],
     selectedDeck: null,
-    filters: { search: '', levels: [], categories: [], status: [], showPremiumOnly: false },
+    filters: { search: '', levels: [], categories: [], status: [] },
     isLoading: false,
     error: null,
   });

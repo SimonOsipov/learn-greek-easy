@@ -23,3 +23,12 @@ Architectural decisions and established patterns. All agents (Feature, Architect
 | Backend privacy | Backend only accessible via frontend proxy (`/api/v1/*`) | docs/railway-backend-privacy.md |
 | Swagger UI | `/docs` only available when `debug=True` (not in production) | — |
 | Manual dispatch | Production workflow supports `workflow_dispatch` with `skip_health_check` | docs/deployment-guide.md |
+
+## Frontend Data Fetching
+
+| Decision | Convention | Reference |
+|----------|-----------|-----------|
+| Filter classification | Every filter must be classified as server-side or client-side | docs/filtering-conventions.md |
+| Client-side filters | Must NOT trigger API refetches — filter cached data locally | docs/filtering-conventions.md |
+| Stable data caching | Cache data that doesn't change with filters (culture decks, progress, country results) | docs/filtering-conventions.md |
+| No loading flash | Cached/local results must not show loading spinners | docs/filtering-conventions.md |

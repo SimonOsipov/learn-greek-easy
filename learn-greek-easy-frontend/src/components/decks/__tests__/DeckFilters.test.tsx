@@ -26,7 +26,6 @@ const defaultProps: DeckFiltersProps = {
     levels: [],
     categories: [],
     status: [],
-    showPremiumOnly: false,
   },
   onChange: vi.fn(),
   onClear: vi.fn(),

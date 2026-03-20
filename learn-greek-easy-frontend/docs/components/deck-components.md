@@ -323,7 +323,6 @@ const { filters, setFilters, clearFilters, decks } = useDeckStore();
 - **search**: string (debounced 300ms)
 - **levels**: DeckLevel[] (A1, A2, B1, B2)
 - **status**: DeckStatus[] (not-started, in-progress, completed)
-- **showPremiumOnly**: boolean (true/false)
 
 **Level Filter Button Colors** (Tier-based):
 - **A1, A2 (Beginner)**: Green (`bg-green-500`)

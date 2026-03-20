@@ -76,7 +76,6 @@ export interface DeckFilters {
   levels: DeckLevel[];
   categories: DeckCategory[];
   status: DeckStatus[];
-  showPremiumOnly: boolean;
 }
 
 // ============================================================================

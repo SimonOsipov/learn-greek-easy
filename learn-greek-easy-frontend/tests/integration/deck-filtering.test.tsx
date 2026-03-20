@@ -105,7 +105,7 @@ describe.skip('Deck Filtering and Search', () => {
 
     useDeckStore.setState({
       decks: [],
-      filters: { search: '', levels: [], categories: [], status: [], showPremiumOnly: false },
+      filters: { search: '', levels: [], categories: [], status: [] },
       isLoading: false,
       error: null,
     });

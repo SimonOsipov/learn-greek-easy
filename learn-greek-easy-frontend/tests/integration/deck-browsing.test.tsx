@@ -19,7 +19,7 @@ describe.skip('Deck Browsing Integration', () => {
     useDeckStore.setState({
       decks: [],
       selectedDeck: null,
-      filters: { search: '', levels: [], categories: [], status: [], showPremiumOnly: false },
+      filters: { search: '', levels: [], categories: [], status: [] },
     });
   });
 

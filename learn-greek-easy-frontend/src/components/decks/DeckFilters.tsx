@@ -89,10 +89,6 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
     onChange({ status: newStatuses });
   };
 
-  const handlePremiumToggle = () => {
-    onChange({ showPremiumOnly: !filters.showPremiumOnly });
-  };
-
   const handleClearFilters = () => {
     setSearchInput('');
     debouncedSearch('');
@@ -101,10 +97,7 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
 
   // Count active filters
   const activeFilterCount =
-    filters.levels.length +
-    filters.status.length +
-    (filters.showPremiumOnly ? 1 : 0) +
-    (filters.search.length > 0 ? 1 : 0);
+    filters.levels.length + filters.status.length + (filters.search.length > 0 ? 1 : 0);
 
   // Level filter is disabled when culture deck type is selected
   // Culture decks don't have CEFR levels
@@ -184,17 +177,6 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
             {t(labelKey)}
           </Button>
         ))}
-
-        {/* Premium Filter */}
-        <Button
-          variant={filters.showPremiumOnly ? 'default' : 'outline'}
-          size="sm"
-          onClick={handlePremiumToggle}
-          className={filters.showPremiumOnly ? 'bg-amber-500 text-white hover:bg-amber-600' : ''}
-          aria-pressed={filters.showPremiumOnly}
-        >
-          {t('filters.premiumOnly')}
-        </Button>
 
         {/* Clear Filters Button */}
         {activeFilterCount > 0 && (

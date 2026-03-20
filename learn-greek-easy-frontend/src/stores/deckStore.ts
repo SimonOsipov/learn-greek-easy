@@ -5,6 +5,12 @@
  *
  * Uses Zustand for state management with real backend API integration.
  * Progress is managed server-side via SM-2 algorithm.
+ *
+ * Caching strategy:
+ * - Vocabulary decks: refetched when server-side params (search, single level) change
+ * - Culture decks: fetched once per page session, cached in module scope
+ * - Progress data: fetched once per page session, cached in module scope
+ * - Client-side filters (status, deckType, multi-level): applied locally without API calls
  */
 
 import { create } from 'zustand';
@@ -36,9 +42,57 @@ const DEFAULT_FILTERS: DeckStoreFilters = {
   levels: [], // Empty = show all levels (A1, A2, B1, B2)
   categories: [], // Empty = show all categories
   status: [], // Empty = show all statuses (not-started, in-progress, completed)
-  showPremiumOnly: false, // Default to showing both free and premium decks
   deckType: 'all', // Empty = show all deck types (vocabulary, culture)
 };
+
+// ---------------------------------------------------------------------------
+// Module-level caches for culture decks and progress
+// Populated on first fetchDecks(), reused on filter-only changes
+// Invalidated when fetchDecks() is called again (e.g., page re-mount)
+// ---------------------------------------------------------------------------
+let _cachedCultureDecks: Deck[] | null = null;
+let _cachedProgressMap: Map<string, DeckProgressSummary> | null = null;
+
+/**
+ * Compute effective API params from filters.
+ * Only search and single-level are sent to the backend.
+ */
+function getEffectiveApiParams(filters: DeckStoreFilters) {
+  return {
+    level: filters.levels.length === 1 ? filters.levels[0] : undefined,
+    search: filters.search || undefined,
+  };
+}
+
+/**
+ * Apply client-side filters to the raw (unfiltered) deck list.
+ */
+function filterDecks(rawDecks: Deck[], filters: DeckStoreFilters): Deck[] {
+  let decks = rawDecks;
+
+  // Multiple levels — filter client-side (backend only supports single level)
+  if (filters.levels.length > 1) {
+    decks = decks.filter((deck) => filters.levels.includes(deck.level));
+  }
+
+  // Status filter — always client-side
+  if (filters.status.length > 0) {
+    decks = decks.filter((deck) => filters.status.includes(deck.progress?.status ?? 'not-started'));
+  }
+
+  // Deck type filter — always client-side
+  if (filters.deckType !== 'all') {
+    decks = decks.filter((deck) => {
+      if (filters.deckType === 'culture') {
+        return deck.category === 'culture';
+      }
+      // vocabulary — show all non-culture decks
+      return deck.category !== 'culture';
+    });
+  }
+
+  return decks;
+}
 
 /**
  * Transform backend deck response to frontend Deck type
@@ -178,8 +232,11 @@ const transformCultureDeckResponse = (deck: CultureDeckResponse): Deck => {
  * Deck Store State Interface
  */
 interface DeckState {
-  /** All available decks (fetched from API) */
+  /** Filtered decks (for display) */
   decks: Deck[];
+
+  /** All decks before client-side filtering (internal) */
+  rawDecks: Deck[];
 
   /** Total number of decks before filtering (for display purposes) */
   totalDecks: number;
@@ -196,8 +253,11 @@ interface DeckState {
   /** Error message for user display (null = no error) */
   error: string | null;
 
-  /** Fetch all decks from API with current filters applied */
+  /** Fetch all decks from API (full refresh — vocab + culture + progress) */
   fetchDecks: () => Promise<void>;
+
+  /** Re-apply client-side filters to rawDecks without any API calls */
+  applyFilters: () => void;
 
   /** Select a deck by ID and fetch its full details */
   selectDeck: (deckId: string) => Promise<void>;
@@ -205,7 +265,7 @@ interface DeckState {
   /** Clear the currently selected deck */
   clearSelection: () => void;
 
-  /** Update filter settings (partial update) */
+  /** Update filter settings (partial update) — smart about when to refetch */
   setFilters: (filters: Partial<DeckStoreFilters>) => void;
 
   /** Reset all filters to default state */
@@ -223,6 +283,7 @@ export const useDeckStore = create<DeckState>()(
     (set, get) => ({
       // Initial state
       decks: [],
+      rawDecks: [],
       totalDecks: 0,
       selectedDeck: null,
       filters: DEFAULT_FILTERS,
@@ -230,7 +291,8 @@ export const useDeckStore = create<DeckState>()(
       error: null,
 
       /**
-       * Fetch all decks with current filters
+       * Full fetch: vocabulary decks + culture decks + progress.
+       * Always refreshes all caches. Called on page mount and clearFilters.
        */
       fetchDecks: async () => {
         const { filters } = get();
@@ -262,60 +324,38 @@ export const useDeckStore = create<DeckState>()(
           // Fetch vocabulary decks, culture decks, and progress in parallel
           const [deckResponse, cultureResponse, progressResponse] = await Promise.all([
             deckAPI.getList(params),
-            cultureDeckAPI.getList().catch(() => ({ decks: [], total: 0 })), // Graceful fallback if culture API fails
+            cultureDeckAPI.getList().catch(() => ({ decks: [], total: 0 })),
             progressAPI
               .getDeckProgressList({ page: 1, page_size: 50 })
-              .catch(() => ({ decks: [] })), // Graceful fallback if progress API is unavailable
+              .catch(() => ({ decks: [] })),
           ]);
 
-          // Create progress lookup map
-          const progressMap = new Map<string, DeckProgressSummary>();
+          // Update progress cache
+          _cachedProgressMap = new Map<string, DeckProgressSummary>();
           for (const progress of progressResponse.decks) {
-            progressMap.set(progress.deck_id, progress);
+            _cachedProgressMap.set(progress.deck_id, progress);
           }
 
           // Transform vocabulary decks with progress
           const vocabDecks = deckResponse.decks.map((deck) =>
-            transformDeckResponse(deck, progressMap.get(deck.id))
+            transformDeckResponse(deck, _cachedProgressMap!.get(deck.id))
           );
 
-          // Transform culture decks (they have their own progress structure)
-          const cultureDecks = cultureResponse.decks.map((deck) =>
+          // Transform and cache culture decks
+          _cachedCultureDecks = cultureResponse.decks.map((deck) =>
             transformCultureDeckResponse(deck)
           );
 
           // Merge both deck types
-          let decks = [...vocabDecks, ...cultureDecks];
+          const rawDecks = [...vocabDecks, ..._cachedCultureDecks];
 
-          // Store total count before filtering for display purposes
-          const totalDecks = decks.length;
-
-          // Apply client-side filters for multiple levels
-          if (filters.levels.length > 1) {
-            decks = decks.filter((deck) => filters.levels.includes(deck.level));
-          }
-
-          // Apply status filter client-side
-          if (filters.status.length > 0) {
-            decks = decks.filter((deck) =>
-              filters.status.includes(deck.progress?.status ?? 'not-started')
-            );
-          }
-
-          // Apply deck type filter client-side
-          if (filters.deckType !== 'all') {
-            decks = decks.filter((deck) => {
-              if (filters.deckType === 'culture') {
-                return deck.category === 'culture';
-              }
-              // vocabulary - show all non-culture decks
-              return deck.category !== 'culture';
-            });
-          }
+          // Apply client-side filters
+          const decks = filterDecks(rawDecks, filters);
 
           set({
+            rawDecks,
             decks,
-            totalDecks,
+            totalDecks: rawDecks.length,
             isLoading: false,
             error: null,
           });
@@ -327,11 +367,21 @@ export const useDeckStore = create<DeckState>()(
             isLoading: false,
             error: errorMessage,
             decks: [],
+            rawDecks: [],
             totalDecks: 0,
           });
 
           throw error;
         }
+      },
+
+      /**
+       * Re-apply client-side filters to rawDecks. No API calls.
+       */
+      applyFilters: () => {
+        const { rawDecks, filters } = get();
+        const decks = filterDecks(rawDecks, filters);
+        set({ decks, totalDecks: rawDecks.length });
       },
 
       /**
@@ -405,14 +455,17 @@ export const useDeckStore = create<DeckState>()(
       },
 
       /**
-       * Update filters and automatically re-fetch decks
+       * Update filters — only refetches when server-side params change.
+       *
+       * Server-side params: search, single level (sent to vocab deck API)
+       * Client-side params: status, deckType, multi-level (filtered locally)
        */
       setFilters: (newFilters: Partial<DeckStoreFilters>) => {
-        const { filters, fetchDecks } = get();
+        const { filters: prevFilters, fetchDecks, applyFilters } = get();
 
         // Merge new filters with existing
         let updatedFilters = {
-          ...filters,
+          ...prevFilters,
           ...newFilters,
         };
 
@@ -427,10 +480,35 @@ export const useDeckStore = create<DeckState>()(
 
         set({ filters: updatedFilters });
 
-        // Automatically re-fetch with new filters
-        fetchDecks().catch((error) => {
-          reportAPIError(error, { operation: 'fetchDecksAfterFilterChange', endpoint: '/decks' });
-        });
+        // Determine if server-side API params changed
+        const prevParams = getEffectiveApiParams(prevFilters);
+        const newParams = getEffectiveApiParams(updatedFilters);
+        const serverParamsChanged =
+          prevParams.search !== newParams.search || prevParams.level !== newParams.level;
+
+        if (serverParamsChanged) {
+          // Server-side params changed — need to refetch vocab decks
+          if (_cachedCultureDecks && _cachedProgressMap) {
+            // Use cached culture + progress, only refetch vocab decks
+            _refetchVocabOnly(get, set, updatedFilters).catch((error) => {
+              reportAPIError(error, {
+                operation: 'refetchVocabAfterFilterChange',
+                endpoint: '/decks',
+              });
+            });
+          } else {
+            // No cache yet — full fetch
+            fetchDecks().catch((error) => {
+              reportAPIError(error, {
+                operation: 'fetchDecksAfterFilterChange',
+                endpoint: '/decks',
+              });
+            });
+          }
+        } else {
+          // Only client-side filters changed — re-filter locally, no API calls
+          applyFilters();
+        }
       },
 
       /**
@@ -441,7 +519,7 @@ export const useDeckStore = create<DeckState>()(
 
         set({ filters: DEFAULT_FILTERS });
 
-        // Re-fetch with default filters
+        // Re-fetch with default filters (refreshes all caches)
         fetchDecks().catch((error) => {
           reportAPIError(error, { operation: 'fetchDecksAfterClearFilters', endpoint: '/decks' });
         });
@@ -457,3 +535,66 @@ export const useDeckStore = create<DeckState>()(
     { name: 'deckStore' }
   )
 );
+
+/**
+ * Refetch only vocabulary decks (server-side params changed),
+ * using cached culture decks and progress data.
+ */
+async function _refetchVocabOnly(
+  get: () => DeckState,
+  set: (state: Partial<DeckState>) => void,
+  filters: DeckStoreFilters
+): Promise<void> {
+  set({ isLoading: true, error: null });
+
+  try {
+    const params: {
+      page?: number;
+      page_size?: number;
+      level?: DeckLevel;
+      search?: string;
+    } = {
+      page: 1,
+      page_size: 50,
+    };
+
+    if (filters.levels.length === 1) {
+      params.level = filters.levels[0] as DeckLevel;
+    }
+
+    if (filters.search) {
+      params.search = filters.search;
+    }
+
+    const deckResponse = await deckAPI.getList(params);
+
+    // Transform vocab decks with cached progress
+    const vocabDecks = deckResponse.decks.map((deck) =>
+      transformDeckResponse(deck, _cachedProgressMap!.get(deck.id))
+    );
+
+    // Merge with cached culture decks
+    const rawDecks = [...vocabDecks, ..._cachedCultureDecks!];
+
+    // Apply client-side filters
+    const decks = filterDecks(rawDecks, filters);
+
+    set({
+      rawDecks,
+      decks,
+      totalDecks: rawDecks.length,
+      isLoading: false,
+      error: null,
+    });
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : 'Failed to load decks. Please try again.';
+
+    set({
+      isLoading: false,
+      error: errorMessage,
+    });
+
+    throw error;
+  }
+}
