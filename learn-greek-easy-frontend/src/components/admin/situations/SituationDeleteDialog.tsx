@@ -41,7 +41,12 @@ export function SituationDeleteDialog({
   if (!situation) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!isDeleting) onOpenChange(next);
+      }}
+    >
       <DialogContent className="sm:max-w-md" data-testid="situation-delete-dialog">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-destructive">

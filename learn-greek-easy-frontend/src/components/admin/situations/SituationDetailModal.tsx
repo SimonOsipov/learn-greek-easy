@@ -199,7 +199,7 @@ export function SituationDetailModal({
 
             {/* Dialog Tab */}
             <TabsContent value="dialog" className="space-y-4">
-              {selectedSituation.dialog ? (
+              {selectedSituation.dialog && selectedSituation.dialog.lines.length > 0 ? (
                 <div className="space-y-2">
                   {selectedSituation.dialog.lines.map((line) => {
                     const speakerIdx = getSpeakerIndex(line.speaker_id);

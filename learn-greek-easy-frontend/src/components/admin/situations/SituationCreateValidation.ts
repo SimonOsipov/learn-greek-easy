@@ -50,7 +50,8 @@ export function validateSituationJson(raw: string): SituationValidationResult {
     return { valid: false, error: { messageKey: 'situations.validation.missingFields' } };
   }
 
-  if (!VALID_CEFR_LEVELS.includes(parsed.cefr_level as (typeof VALID_CEFR_LEVELS)[number])) {
+  const cefrLevel = (parsed.cefr_level as string).trim();
+  if (!VALID_CEFR_LEVELS.includes(cefrLevel as (typeof VALID_CEFR_LEVELS)[number])) {
     return { valid: false, error: { messageKey: 'situations.validation.invalidCefrLevel' } };
   }
 
@@ -60,7 +61,7 @@ export function validateSituationJson(raw: string): SituationValidationResult {
       scenario_el: (parsed.scenario_el as string).trim(),
       scenario_en: (parsed.scenario_en as string).trim(),
       scenario_ru: (parsed.scenario_ru as string).trim(),
-      cefr_level: parsed.cefr_level as SituationCreatePayload['cefr_level'],
+      cefr_level: cefrLevel as SituationCreatePayload['cefr_level'],
     },
   };
 }

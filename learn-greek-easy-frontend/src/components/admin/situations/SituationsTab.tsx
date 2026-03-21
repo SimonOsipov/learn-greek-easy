@@ -184,13 +184,18 @@ export function SituationsTab() {
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 data-testid="situation-search-input"
+                aria-label={t('situations.search.placeholder')}
               />
             </div>
             <Select
               value={cefrFilter ?? 'all'}
               onValueChange={(v) => setCefrFilter(v === 'all' ? null : (v as DeckLevel))}
             >
-              <SelectTrigger className="w-[140px]" data-testid="situation-cefr-filter">
+              <SelectTrigger
+                className="w-[140px]"
+                data-testid="situation-cefr-filter"
+                aria-label={t('situations.filter.allLevels')}
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -206,7 +211,11 @@ export function SituationsTab() {
               value={statusFilter ?? 'all'}
               onValueChange={(v) => setStatusFilter(v === 'all' ? null : (v as SituationStatus))}
             >
-              <SelectTrigger className="w-[160px]" data-testid="situation-status-filter">
+              <SelectTrigger
+                className="w-[160px]"
+                data-testid="situation-status-filter"
+                aria-label={t('situations.filter.allStatuses')}
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -257,7 +266,16 @@ export function SituationsTab() {
                   key={situation.id}
                   className="flex cursor-pointer items-center justify-between rounded-lg border p-4 hover:bg-muted/50"
                   data-testid={`situation-row-${situation.id}`}
+                  role="button"
+                  tabIndex={0}
                   onClick={(e) => handleRowClick(e, situation)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setSelectedSituationId(situation.id);
+                      setDetailModalOpen(true);
+                    }
+                  }}
                 >
                   <div className="min-w-0 flex-1">
                     <p className="max-w-[400px] truncate font-medium">

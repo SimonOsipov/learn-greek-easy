@@ -219,6 +219,7 @@ const MOCK_DETAIL_MAP: MockDetailMap = {
 
 // Mutable working copy (allows create/delete mutations)
 let mockSituations = [...MOCK_SITUATIONS];
+let mockDetailMap: MockDetailMap = { ...MOCK_DETAIL_MAP };
 
 // --- Store interface ---
 
@@ -301,6 +302,7 @@ export const useAdminSituationStore = create<AdminSituationState>()(
           const query = searchQuery.toLowerCase();
           filtered = filtered.filter(
             (s) =>
+              s.scenario_el.toLowerCase().includes(query) ||
               s.scenario_en.toLowerCase().includes(query) ||
               s.scenario_ru.toLowerCase().includes(query)
           );
@@ -308,10 +310,11 @@ export const useAdminSituationStore = create<AdminSituationState>()(
 
         const total = filtered.length;
         const totalPages = Math.max(1, Math.ceil(total / pageSize));
-        const start = (page - 1) * pageSize;
+        const clampedPage = Math.min(page, totalPages);
+        const start = (clampedPage - 1) * pageSize;
         const situations = filtered.slice(start, start + pageSize);
 
-        set({ situations, total, totalPages, isLoading: false });
+        set({ situations, total, totalPages, page: clampedPage, isLoading: false });
       },
 
       createSituation: async (payload: SituationCreatePayload) => {
@@ -334,6 +337,10 @@ export const useAdminSituationStore = create<AdminSituationState>()(
         };
 
         mockSituations = [...mockSituations, newItem];
+        mockDetailMap = {
+          ...mockDetailMap,
+          [newItem.id]: { dialog: null, description: null, picture: null },
+        };
         set({ isCreating: false });
         await get().fetchSituations();
       },
@@ -351,7 +358,7 @@ export const useAdminSituationStore = create<AdminSituationState>()(
         await new Promise<void>((resolve) => setTimeout(resolve, 200));
 
         const situation = mockSituations.find((s) => s.id === id);
-        const detail = MOCK_DETAIL_MAP[id];
+        const detail = mockDetailMap[id];
 
         if (!situation || !detail) {
           set({
