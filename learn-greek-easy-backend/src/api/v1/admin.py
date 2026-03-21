@@ -63,6 +63,7 @@ from src.db.models import (
     NewsItem,
     PartOfSpeech,
     Situation,
+    SituationStatus,
     User,
     WiktionaryMorphology,
     WordEntry,
@@ -133,7 +134,14 @@ from src.schemas.news_item import (
     NewsItemWithQuestionCreate,
 )
 from src.schemas.nlp import GeneratedNounData, NormalizedLemma, VerificationSummary
-from src.schemas.situation import SituationCreate, SituationResponse, SituationUpdate
+from src.schemas.situation import (
+    SituationCreate,
+    SituationDetailResponse,
+    SituationListItem,
+    SituationListResponse,
+    SituationResponse,
+    SituationUpdate,
+)
 from src.schemas.word_entry import (
     AdminWordEntryCreateRequest,
     AdminWordEntryCreateResponse,
@@ -4730,3 +4738,92 @@ async def delete_situation(
 
     await db.delete(situation)
     await db.commit()
+
+
+@router.get("/situations", response_model=SituationListResponse)
+async def list_situations(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    cefr_level: DeckLevel | None = Query(default=None),
+    status: SituationStatus | None = Query(default=None),
+    search: str | None = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> SituationListResponse:
+    count_query = select(func.count(Situation.id))
+    if cefr_level is not None:
+        count_query = count_query.where(Situation.cefr_level == cefr_level)
+    if status is not None:
+        count_query = count_query.where(Situation.status == status)
+    if search:
+        pattern = f"%{search}%"
+        search_filter = or_(
+            Situation.scenario_el.ilike(pattern),
+            Situation.scenario_en.ilike(pattern),
+            Situation.scenario_ru.ilike(pattern),
+        )
+        count_query = count_query.where(search_filter)
+    total = (await db.execute(count_query)).scalar_one()
+
+    data_query = (
+        select(Situation)
+        .options(
+            selectinload(Situation.dialog),
+            selectinload(Situation.description),
+            selectinload(Situation.picture),
+        )
+        .order_by(Situation.created_at.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
+    if cefr_level is not None:
+        data_query = data_query.where(Situation.cefr_level == cefr_level)
+    if status is not None:
+        data_query = data_query.where(Situation.status == status)
+    if search:
+        data_query = data_query.where(search_filter)
+
+    result = await db.execute(data_query)
+    situations = result.scalars().all()
+
+    items = [
+        SituationListItem(
+            id=s.id,
+            scenario_el=s.scenario_el,
+            scenario_en=s.scenario_en,
+            scenario_ru=s.scenario_ru,
+            cefr_level=s.cefr_level,
+            status=s.status,
+            created_at=s.created_at,
+            has_dialog=s.dialog is not None,
+            has_description=s.description is not None,
+            has_picture=s.picture is not None,
+            has_dialog_audio=s.dialog is not None and s.dialog.audio_s3_key is not None,
+            has_description_audio=s.description is not None
+            and s.description.audio_s3_key is not None,
+        )
+        for s in situations
+    ]
+    return SituationListResponse(items=items, total=total, page=page, page_size=page_size)
+
+
+@router.get("/situations/{situation_id}", response_model=SituationDetailResponse)
+async def get_situation(
+    situation_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> SituationDetailResponse:
+    result = await db.execute(
+        select(Situation)
+        .options(
+            selectinload(Situation.dialog).selectinload(ListeningDialog.speakers),
+            selectinload(Situation.dialog).selectinload(ListeningDialog.lines),
+            selectinload(Situation.description),
+            selectinload(Situation.picture),
+        )
+        .where(Situation.id == situation_id)
+    )
+    situation = result.scalar_one_or_none()
+    if situation is None:
+        raise HTTPException(status_code=404, detail="Situation not found")
+    return SituationDetailResponse.model_validate(situation)
