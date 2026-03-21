@@ -26,6 +26,7 @@ interface DeckEditModalProps {
   onSave: (data: DeckEditFormData) => void | Promise<void>;
   isLoading?: boolean;
   onUploadCoverImage?: (file: File) => Promise<void>;
+  onRemoveCoverImage?: () => Promise<void>;
 }
 
 /**
@@ -42,6 +43,7 @@ export const DeckEditModal: React.FC<DeckEditModalProps> = ({
   onSave,
   isLoading = false,
   onUploadCoverImage,
+  onRemoveCoverImage,
 }) => {
   const { t } = useTranslation('admin');
 
@@ -89,6 +91,7 @@ export const DeckEditModal: React.FC<DeckEditModalProps> = ({
             itemCount={deck.item_count}
             createdAt={deck.created_at}
             onUploadCoverImage={onUploadCoverImage}
+            onRemoveCoverImage={onRemoveCoverImage}
           />
         ) : (
           <CultureDeckEditForm
@@ -97,6 +100,7 @@ export const DeckEditModal: React.FC<DeckEditModalProps> = ({
             onCancel={handleCancel}
             isLoading={isLoading}
             onUploadCoverImage={onUploadCoverImage}
+            onRemoveCoverImage={onRemoveCoverImage}
           />
         )}
       </DialogContent>
