@@ -1,15 +1,6 @@
 import { Helmet } from '@dr.pogodin/react-helmet';
 
-import {
-  Header,
-  Hero,
-  Features,
-  SocialProof,
-  Pricing,
-  FAQ,
-  FinalCTA,
-  Footer,
-} from '@/components/landing';
+import { Header, Hero, Features, SocialProof, FAQ, FinalCTA, Footer } from '@/components/landing';
 
 // Site configuration
 const SITE_URL = 'https://learngreekeasy.com';
@@ -54,7 +45,8 @@ const organizationStructuredData = {
   name: 'Learn Greek Easy',
   url: SITE_URL,
   logo: `${SITE_URL}/logo.png`,
-  description: 'Interactive Greek language learning platform for citizenship exam preparation',
+  description:
+    'Interactive Greek language learning platform for citizenship exam preparation. Launching May 2026 — join the waitlist.',
 };
 
 /**
@@ -83,7 +75,7 @@ export default function LandingPage() {
         <title>Learn Greek Easy - Master Cypriot Greek with AI-Powered Lessons</title>
         <meta
           name="description"
-          content="Learn Cypriot Greek through interactive lessons, spaced repetition, and AI-powered practice. Perfect for beginners and intermediate learners preparing for citizenship exams."
+          content="Join the waitlist for Learn Greek Easy — an AI-powered Greek learning platform for Cyprus citizenship exam preparation. Launching May 2026."
         />
         <meta
           name="keywords"
@@ -97,7 +89,7 @@ export default function LandingPage() {
         <meta property="og:title" content="Learn Greek Easy - Master Cypriot Greek" />
         <meta
           property="og:description"
-          content="Interactive Greek learning with spaced repetition and AI practice"
+          content="Join the waitlist for an interactive Greek learning platform with spaced repetition and AI practice. Launching May 2026."
         />
         <meta property="og:image" content={OG_IMAGE_URL} />
         <meta property="og:site_name" content="Learn Greek Easy" />
@@ -126,7 +118,6 @@ export default function LandingPage() {
           <Hero />
           <Features />
           <SocialProof />
-          <Pricing />
           <FAQ />
           <FinalCTA />
         </main>

@@ -1,9 +1,8 @@
-import { ArrowRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
 
 import ctaImage from '@/assets/landing/limassol-cta.webp';
-import { Button } from '@/components/ui/button';
+
+import WaitlistForm from './WaitlistForm';
 
 const FinalCTA = () => {
   const { t } = useTranslation('landing');
@@ -43,16 +42,7 @@ const FinalCTA = () => {
           </p>
 
           <div className="motion-safe:animate-fade-up" style={{ animationDelay: '0.3s' }}>
-            <Button
-              asChild
-              size="xl"
-              className="group bg-white text-gray-900 shadow-lg hover:bg-white/90"
-            >
-              <Link to="/register">
-                {t('finalCta.primaryCta')}
-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </Link>
-            </Button>
+            <WaitlistForm variant="dark" />
           </div>
         </div>
       </div>

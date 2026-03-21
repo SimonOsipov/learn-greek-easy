@@ -2,7 +2,6 @@ import { useState } from 'react';
 
 import { Menu } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
 
 import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 import { ThemeSwitcher } from '@/components/theme';
@@ -16,7 +15,6 @@ const Header = () => {
 
   const navLinks = [
     { href: '#features', labelKey: 'header.nav.features' },
-    { href: '#pricing', labelKey: 'header.nav.pricing' },
     { href: '#faq', labelKey: 'header.nav.faq' },
   ];
 
@@ -59,14 +57,6 @@ const Header = () => {
         <div className="flex items-center gap-3">
           <ThemeSwitcher data-testid="landing-theme-switcher" />
           <LanguageSwitcher variant="icon" data-testid="landing-language-switcher" />
-          <Button
-            variant="ghost"
-            className="hidden text-lg md:inline-flex"
-            data-testid="landing-login-button"
-            asChild
-          >
-            <Link to="/login">{t('header.cta.login')}</Link>
-          </Button>
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
               <Button
@@ -95,21 +85,27 @@ const Header = () => {
               </nav>
               <Separator className="my-4" />
               <div className="flex flex-col gap-3">
-                <Button variant="ghost" className="justify-start" asChild>
-                  <Link to="/login" onClick={() => setOpen(false)}>
-                    {t('header.cta.login')}
-                  </Link>
-                </Button>
-                <Button asChild>
-                  <Link to="/register" onClick={() => setOpen(false)}>
-                    {t('header.cta.getStarted')}
-                  </Link>
+                <Button
+                  className="justify-start"
+                  data-testid="landing-get-started-button-mobile"
+                  onClick={() => {
+                    setOpen(false);
+                    document.getElementById('hero')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                >
+                  {t('header.cta.getStarted')}
                 </Button>
               </div>
             </SheetContent>
           </Sheet>
-          <Button className="text-lg" data-testid="landing-get-started-button" asChild>
-            <Link to="/register">{t('header.cta.getStarted')}</Link>
+          <Button
+            className="text-lg"
+            data-testid="landing-get-started-button"
+            onClick={() => {
+              document.getElementById('hero')?.scrollIntoView({ behavior: 'smooth' });
+            }}
+          >
+            {t('header.cta.getStarted')}
           </Button>
         </div>
       </div>

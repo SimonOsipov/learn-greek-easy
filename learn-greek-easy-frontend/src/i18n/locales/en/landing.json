@@ -10,17 +10,17 @@
     },
     "cta": {
       "login": "Log In",
-      "getStarted": "Get Started"
+      "getStarted": "Join Waitlist"
     },
     "logoAriaLabel": "Greekly - back to top"
   },
   "hero": {
-    "badge": "Now in Beta",
+    "badge": "Launching May 2026",
     "title": "Your Greek Practice",
     "titleHighlight": "Companion",
     "subtitle": "One place to practice reading, listening, and speaking - the perfect support alongside your books and lessons.",
-    "cta": "Start Learning Free",
-    "socialProof": "Join 500+ learners preparing for the Greek language, Cyprus Culture Exams and Cypriot Citizenship Interview",
+    "cta": "Join the Waitlist",
+    "socialProof": "Join 500+ learners on the waitlist for the Greek language and Cyprus Culture exam prep platform",
     "heroImageAlt": "Ancient Greek ruins overlooking the Mediterranean Sea in Cyprus"
   },
   "features": {
@@ -270,8 +270,16 @@
   "finalCta": {
     "title": "Your Greek journey starts with the right foundation",
     "subtitle": "Stop wasting time with scattered resources. Get a structured path to Greek fluency.",
-    "primaryCta": "Start Free Trial",
+    "primaryCta": "Join the Waitlist",
     "imageAlt": "Limassol cityscape with Mediterranean Sea"
+  },
+  "waitlistForm": {
+    "emailPlaceholder": "Enter your email address",
+    "submitButton": "Join the Waitlist",
+    "submitting": "Joining...",
+    "alreadyOnWaitlist": "You're already on the waitlist!",
+    "validationError": "Please enter a valid email address",
+    "genericError": "Something went wrong. Please try again later."
   },
   "footer": {
     "brandName": "Greekly",
