@@ -180,6 +180,10 @@ class Settings(BaseSettings):
         default="",
         description="Resend Audience ID for the Waitlist contact list",
     )
+    waitlist_frontend_base_url: str = Field(
+        default="",
+        description="Frontend base URL for waitlist confirmation links (e.g., https://learngreekeasy.com)",
+    )
 
     # =========================================================================
     # CORS
