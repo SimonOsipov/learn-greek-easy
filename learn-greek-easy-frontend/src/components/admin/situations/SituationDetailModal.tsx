@@ -261,6 +261,7 @@ export function SituationDetailModal({
                 <Image className="h-8 w-8 opacity-40" />
                 <p className="text-sm">{t('situations.detail.pictureEmpty')}</p>
               </div>
+              <AudioPlaceholder />
               <RegenerateButton />
             </TabsContent>
           </Tabs>

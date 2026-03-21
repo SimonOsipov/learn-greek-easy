@@ -79,7 +79,9 @@ export function SituationsTab() {
   const [selectedSituationId, setSelectedSituationId] = useState<string | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [situationToDelete, setSituationToDelete] = useState<SituationListItem | null>(null);
+  const [situationToDelete, setSituationToDelete] = useState<
+    SituationListItem | SituationDetailResponse | null
+  >(null);
 
   const [searchInput, setSearchInput] = useState('');
   const debouncedSearch = useDebounce(searchInput, 300);

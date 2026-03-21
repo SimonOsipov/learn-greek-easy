@@ -12,12 +12,10 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
 import { useAdminSituationStore } from '@/stores/adminSituationStore';
-import type { SituationListItem } from '@/types/situation';
-
 interface SituationDeleteDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  situation: SituationListItem | null;
+  situation: { id: string; scenario_el: string } | null;
 }
 
 export function SituationDeleteDialog({
