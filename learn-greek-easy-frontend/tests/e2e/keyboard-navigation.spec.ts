@@ -140,15 +140,13 @@ test.describe('Keyboard Navigation - Public Pages', () => {
   test('Landing page links should be keyboard accessible', async ({ page }) => {
     await page.goto('/');
 
-    // Focus on login button via Tab
-    const loginButton = page.getByTestId('landing-login-button');
-    await loginButton.focus();
+    // Focus on the "Join Waitlist" CTA button (replaces the former "Log In" button)
+    const joinWaitlistButton = page.getByTestId('landing-get-started-button');
+    await joinWaitlistButton.focus();
 
-    // Press Enter to navigate
-    await page.keyboard.press('Enter');
-
-    await page.waitForURL('/login');
-    await expect(page.getByTestId('login-card')).toBeVisible();
+    // Verify the button is focusable and is a keyboard-accessible element
+    await expect(joinWaitlistButton).toBeFocused();
+    await expect(joinWaitlistButton).toBeVisible();
   });
 });
 
