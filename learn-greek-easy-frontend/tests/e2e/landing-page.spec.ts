@@ -47,8 +47,9 @@ test.describe('Landing Page - Unauthenticated', () => {
       await expect(page.getByTestId('hero-title')).toBeVisible();
       await expect(page.getByTestId('hero-subtitle')).toBeVisible();
       // Hero CTA is now the WaitlistForm email input + submit button
-      await expect(page.getByTestId('waitlist-email-input')).toBeVisible();
-      await expect(page.getByTestId('waitlist-submit-button')).toBeVisible();
+      // Use .first() since WaitlistForm appears in both Hero and FinalCTA
+      await expect(page.getByTestId('waitlist-email-input').first()).toBeVisible();
+      await expect(page.getByTestId('waitlist-submit-button').first()).toBeVisible();
     });
 
     test('should display feature cards', async ({ page }) => {
