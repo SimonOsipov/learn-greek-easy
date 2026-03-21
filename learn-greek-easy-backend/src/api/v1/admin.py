@@ -588,6 +588,40 @@ async def upload_deck_cover_image(
     )
 
 
+@router.delete(
+    "/decks/{deck_id}/cover-image",
+    response_model=DeckAdminResponse,
+    summary="Delete deck cover image",
+)
+async def delete_deck_cover_image(
+    deck_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> DeckAdminResponse:
+    """Delete the cover image for a vocabulary deck."""
+    deck_repo = DeckRepository(db)
+    deck = await deck_repo.get(deck_id)
+    if deck is None:
+        raise DeckNotFoundException(str(deck_id))
+
+    if deck.cover_image_s3_key is None:
+        raise HTTPException(status_code=404, detail="Deck has no cover image")
+
+    s3 = get_s3_service()
+    deleted = s3.delete_object(deck.cover_image_s3_key)
+    if not deleted:
+        raise HTTPException(status_code=500, detail="Failed to delete cover image")
+
+    deck.cover_image_s3_key = None
+    await db.commit()
+    await db.refresh(deck)
+
+    card_count = await deck_repo.count_cards(deck_id)
+    return DeckAdminResponse.model_validate(deck, from_attributes=True).model_copy(
+        update={"cover_image_url": None, "card_count": card_count}
+    )
+
+
 # ============================================================================
 # Feedback Management Endpoints
 # ============================================================================
