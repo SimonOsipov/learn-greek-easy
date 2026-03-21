@@ -35,7 +35,7 @@ test.describe('Landing Page - Unauthenticated', () => {
       await expect(page.getByTestId('hero-section')).toBeVisible();
       await expect(page.getByTestId('features-section')).toBeVisible();
       await expect(page.getByTestId('social-proof-section')).toBeVisible();
-      await expect(page.getByTestId('pricing-section')).toBeVisible();
+      // Pricing section is intentionally hidden during waitlist phase
       await expect(page.getByTestId('faq-section')).toBeVisible();
       await expect(page.getByTestId('final-cta-section')).toBeVisible();
       await expect(page.getByTestId('landing-footer')).toBeVisible();
@@ -46,7 +46,9 @@ test.describe('Landing Page - Unauthenticated', () => {
 
       await expect(page.getByTestId('hero-title')).toBeVisible();
       await expect(page.getByTestId('hero-subtitle')).toBeVisible();
-      await expect(page.getByTestId('hero-cta-button')).toBeVisible();
+      // Hero CTA is now the WaitlistForm email input + submit button
+      await expect(page.getByTestId('waitlist-email-input')).toBeVisible();
+      await expect(page.getByTestId('waitlist-submit-button')).toBeVisible();
     });
 
     test('should display feature cards', async ({ page }) => {
@@ -65,20 +67,17 @@ test.describe('Landing Page - Unauthenticated', () => {
       expect(count).toBeGreaterThanOrEqual(3);
     });
 
-    test('should display pricing cards', async ({ page }) => {
+    test('should display waitlist form in FinalCTA section', async ({ page }) => {
       await page.goto('/');
 
-      // Scroll to pricing section
-      const pricingSection = page.getByTestId('pricing-section');
-      await pricingSection.scrollIntoViewIfNeeded();
-      await expect(pricingSection).toBeInViewport();
+      // Scroll to final CTA section
+      const finalCtaSection = page.getByTestId('final-cta-section');
+      await finalCtaSection.scrollIntoViewIfNeeded();
+      await expect(finalCtaSection).toBeInViewport();
 
-      const pricingCards = page.getByTestId('pricing-card');
-      await expect(pricingCards.first()).toBeVisible();
-
-      // Verify pricing CTAs exist (4 plans)
-      const ctaButtons = page.getByTestId('pricing-cta');
-      expect(await ctaButtons.count()).toBe(4);
+      // FinalCTA now contains the WaitlistForm (dark variant) instead of a register button
+      await expect(finalCtaSection.getByTestId('waitlist-email-input')).toBeVisible();
+      await expect(finalCtaSection.getByTestId('waitlist-submit-button')).toBeVisible();
     });
 
     test('should display FAQ items', async ({ page }) => {
@@ -99,31 +98,20 @@ test.describe('Landing Page - Unauthenticated', () => {
   });
 
   test.describe('Navigation', () => {
-    test('should navigate to login from header', async ({ page }) => {
+    test('should scroll to hero section when Join Waitlist button is clicked', async ({
+      page,
+    }) => {
       await page.goto('/');
 
-      await page.getByTestId('landing-login-button').click();
-      await page.waitForURL('/login');
+      // The "Join Waitlist" button in the header scrolls to #hero
+      const joinWaitlistButton = page.getByTestId('landing-get-started-button');
+      await expect(joinWaitlistButton).toBeVisible();
+      await joinWaitlistButton.click();
 
-      await expect(page.getByTestId('login-card')).toBeVisible();
-    });
-
-    test('should navigate to register from header "Get Started" button', async ({ page }) => {
-      await page.goto('/');
-
-      await page.getByTestId('landing-get-started-button').click();
-      await page.waitForURL('/register');
-
-      await expect(page.getByTestId('register-card')).toBeVisible();
-    });
-
-    test('should navigate to register from hero CTA', async ({ page }) => {
-      await page.goto('/');
-
-      await page.getByTestId('hero-cta-button').click();
-      await page.waitForURL('/register');
-
-      await expect(page.getByTestId('register-card')).toBeVisible();
+      // After scrolling, the hero email input should be in viewport
+      await expect(page.getByTestId('waitlist-email-input').first()).toBeInViewport({
+        timeout: 3000,
+      });
     });
 
     test('should scroll to sections via anchor links', async ({ page }) => {
@@ -166,9 +154,9 @@ test.describe('Landing Page - Unauthenticated', () => {
     test('should have proper button labels', async ({ page }) => {
       await page.goto('/');
 
-      // All CTA buttons should have accessible text
-      const heroCta = page.getByTestId('hero-cta-button');
-      const buttonText = await heroCta.textContent();
+      // Waitlist submit button should have accessible text
+      const submitBtn = page.getByTestId('waitlist-submit-button').first();
+      const buttonText = await submitBtn.textContent();
       expect(buttonText).toBeTruthy();
       expect(buttonText!.length).toBeGreaterThan(0);
     });
@@ -262,21 +250,12 @@ test.describe('Landing Page - Responsive', () => {
       expect(viewportSize?.width).toBe(768);
     });
 
-    test('should show pricing cards in grid layout', async ({ page }) => {
+    test('should display waitlist form on tablet', async ({ page }) => {
       await page.goto('/');
 
-      // Scroll to pricing
-      const pricingSection = page.getByTestId('pricing-section');
-      await pricingSection.scrollIntoViewIfNeeded();
-      await expect(pricingSection).toBeInViewport();
-
-      const pricingCards = page.getByTestId('pricing-card');
-      await expect(pricingCards.first()).toBeVisible();
-
-      // Cards should not be full width on tablet
-      const firstCard = pricingCards.first();
-      const cardWidth = await firstCard.evaluate((el) => el.offsetWidth);
-      expect(cardWidth).toBeLessThan(768 * 0.9);
+      // WaitlistForm should be visible in hero section on tablet
+      await expect(page.getByTestId('waitlist-email-input').first()).toBeVisible();
+      await expect(page.getByTestId('waitlist-submit-button').first()).toBeVisible();
     });
   });
 
@@ -290,10 +269,10 @@ test.describe('Landing Page - Responsive', () => {
       await expect(page.getByTestId('landing-nav')).toBeVisible();
     });
 
-    test('should show all nav items inline', async ({ page }) => {
+    test('should show nav items inline', async ({ page }) => {
       await page.goto('/');
 
-      await expect(page.getByTestId('landing-login-button')).toBeVisible();
+      // Header now shows only "Join Waitlist" button (Log In removed during waitlist phase)
       await expect(page.getByTestId('landing-get-started-button')).toBeVisible();
     });
   });
