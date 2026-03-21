@@ -2607,13 +2607,9 @@ class Situation(Base, TimestampMixin):
         nullable=False,
         server_default=text("'draft'"),
     )
-    created_by: Mapped[UUID | None] = mapped_column(
-        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
-    )
-
     # One-to-one with ListeningDialog (uselist=False).
     dialog: Mapped["ListeningDialog | None"] = relationship(
-        back_populates="situation", lazy="raise", uselist=False
+        back_populates="situation", lazy="raise", uselist=False, cascade="all, delete-orphan"
     )
     # One-to-one with SituationDescription (uselist=False).
     description: Mapped["SituationDescription | None"] = relationship(
@@ -2678,9 +2674,6 @@ class SituationDescription(Base, TimestampMixin):
         ),
         nullable=False,
         server_default=text("'draft'"),
-    )
-    created_by: Mapped[UUID | None] = mapped_column(
-        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
     )
 
     # Relationships
@@ -2800,9 +2793,6 @@ class SituationPicture(Base, TimestampMixin):
         ),
         nullable=False,
         server_default=text("'draft'"),
-    )
-    created_by: Mapped[UUID | None] = mapped_column(
-        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
     )
 
     # Relationships

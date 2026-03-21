@@ -62,6 +62,8 @@ from src.db.models import (
     ListeningDialog,
     NewsItem,
     PartOfSpeech,
+    Situation,
+    SituationStatus,
     User,
     WiktionaryMorphology,
     WordEntry,
@@ -132,6 +134,14 @@ from src.schemas.news_item import (
     NewsItemWithQuestionCreate,
 )
 from src.schemas.nlp import GeneratedNounData, NormalizedLemma, VerificationSummary
+from src.schemas.situation import (
+    SituationCreate,
+    SituationDetailResponse,
+    SituationListItem,
+    SituationListResponse,
+    SituationResponse,
+    SituationUpdate,
+)
 from src.schemas.word_entry import (
     AdminWordEntryCreateRequest,
     AdminWordEntryCreateResponse,
@@ -4634,3 +4644,189 @@ async def reverse_lookup(
             for r in results
         ],
     )
+
+
+@router.post("/situations", response_model=SituationResponse, status_code=201)
+async def create_situation(
+    data: SituationCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> SituationResponse:
+    try:
+        situation = Situation(
+            scenario_el=data.scenario_el,
+            scenario_en=data.scenario_en,
+            scenario_ru=data.scenario_ru,
+            cefr_level=data.cefr_level,
+        )
+        db.add(situation)
+        await db.commit()
+        await db.refresh(situation)
+        return SituationResponse.model_validate(situation)
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(
+            status_code=409, detail="Situation could not be created due to a conflict"
+        )
+
+
+@router.patch("/situations/{situation_id}", response_model=SituationResponse)
+async def update_situation(
+    situation_id: UUID,
+    data: SituationUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> SituationResponse:
+    result = await db.execute(select(Situation).where(Situation.id == situation_id))
+    situation = result.scalar_one_or_none()
+    if situation is None:
+        raise HTTPException(status_code=404, detail="Situation not found")
+    update_data = data.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(situation, field, value)
+    await db.commit()
+    await db.refresh(situation)
+    return SituationResponse.model_validate(situation)
+
+
+@router.delete(
+    "/situations/{situation_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        204: {"description": "Situation deleted successfully"},
+        404: {"description": "Situation not found"},
+    },
+)
+async def delete_situation(
+    situation_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> None:
+    result = await db.execute(
+        select(Situation)
+        .options(
+            selectinload(Situation.dialog),
+            selectinload(Situation.description),
+            selectinload(Situation.picture),
+        )
+        .where(Situation.id == situation_id)
+    )
+    situation = result.scalar_one_or_none()
+    if situation is None:
+        raise HTTPException(status_code=404, detail="Situation not found")
+
+    keys: list[str] = []
+    if situation.dialog and situation.dialog.audio_s3_key:
+        keys.append(situation.dialog.audio_s3_key)
+    if situation.description and situation.description.audio_s3_key:
+        keys.append(situation.description.audio_s3_key)
+    if situation.description and situation.description.audio_a2_s3_key:
+        keys.append(situation.description.audio_a2_s3_key)
+    if situation.picture and situation.picture.image_s3_key:
+        keys.append(situation.picture.image_s3_key)
+
+    await db.delete(situation)
+    await db.commit()
+
+    if keys:
+        s3 = get_s3_service()
+        for key in keys:
+            try:
+                s3.delete_object(key)
+            except Exception:
+                logger.warning(
+                    "Failed to delete S3 object during situation deletion",
+                    extra={"s3_key": key, "situation_id": str(situation_id)},
+                )
+
+
+@router.get("/situations", response_model=SituationListResponse)
+async def list_situations(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    cefr_level: DeckLevel | None = Query(default=None),
+    status: SituationStatus | None = Query(default=None),
+    search: str | None = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> SituationListResponse:
+    count_query = select(func.count(Situation.id))
+    if cefr_level is not None:
+        count_query = count_query.where(Situation.cefr_level == cefr_level)
+    if status is not None:
+        count_query = count_query.where(Situation.status == status)
+    if search:
+        pattern = f"%{search}%"
+        search_filter = or_(
+            Situation.scenario_el.ilike(pattern),
+            Situation.scenario_en.ilike(pattern),
+            Situation.scenario_ru.ilike(pattern),
+        )
+        count_query = count_query.where(search_filter)
+    total = (await db.execute(count_query)).scalar_one()
+
+    data_query = (
+        select(Situation)
+        .options(
+            selectinload(Situation.dialog),
+            selectinload(Situation.description),
+            selectinload(Situation.picture),
+        )
+        .order_by(Situation.created_at.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
+    if cefr_level is not None:
+        data_query = data_query.where(Situation.cefr_level == cefr_level)
+    if status is not None:
+        data_query = data_query.where(Situation.status == status)
+    if search:
+        data_query = data_query.where(search_filter)
+
+    result = await db.execute(data_query)
+    situations = result.scalars().all()
+
+    items = [
+        SituationListItem(
+            id=s.id,
+            scenario_el=s.scenario_el,
+            scenario_en=s.scenario_en,
+            scenario_ru=s.scenario_ru,
+            cefr_level=s.cefr_level,
+            status=s.status,
+            created_at=s.created_at,
+            has_dialog=s.dialog is not None,
+            has_description=s.description is not None,
+            has_picture=s.picture is not None,
+            has_dialog_audio=s.dialog is not None and s.dialog.audio_s3_key is not None,
+            has_description_audio=s.description is not None
+            and s.description.audio_s3_key is not None,
+        )
+        for s in situations
+    ]
+    return SituationListResponse(items=items, total=total, page=page, page_size=page_size)
+
+
+@router.get("/situations/{situation_id}", response_model=SituationDetailResponse)
+async def get_situation(
+    situation_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> SituationDetailResponse:
+    result = await db.execute(
+        select(Situation)
+        .options(
+            selectinload(Situation.dialog).selectinload(ListeningDialog.speakers),
+            selectinload(Situation.dialog).selectinload(ListeningDialog.lines),
+            selectinload(Situation.description),
+            selectinload(Situation.picture),
+        )
+        .where(Situation.id == situation_id)
+    )
+    situation = result.scalar_one_or_none()
+    if situation is None:
+        raise HTTPException(status_code=404, detail="Situation not found")
+    if situation.dialog:
+        situation.dialog.speakers.sort(key=lambda s: s.speaker_index)
+        situation.dialog.lines.sort(key=lambda ln: ln.line_index)
+    return SituationDetailResponse.model_validate(situation)
