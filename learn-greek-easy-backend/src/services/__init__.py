@@ -19,6 +19,7 @@ from src.services.cross_ai_verification_service import (
 from src.services.culture_deck_service import CultureDeckService
 from src.services.culture_question_service import CultureQuestionService
 from src.services.duplicate_detection_service import DuplicateDetectionService
+from src.services.email_service import EmailService, get_email_service
 from src.services.feedback_admin_service import FeedbackAdminService
 from src.services.lemma_normalization_service import (
     LemmaNormalizationService,
@@ -66,6 +67,7 @@ __all__ = [
     "CultureQuestionService",
     "DeletionResult",
     "DuplicateDetectionService",
+    "EmailService",
     "FeedbackAdminService",
     "LemmaNormalizationService",
     "LexiconEntry",
@@ -90,6 +92,7 @@ __all__ = [
     "WiktionaryVerificationService",
     "XPService",
     "get_cross_ai_verification_service",
+    "get_email_service",
     "get_lemma_normalization_service",
     "get_local_verification_service",
     "get_morphology_service",

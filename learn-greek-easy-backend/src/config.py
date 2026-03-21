@@ -170,17 +170,16 @@ class Settings(BaseSettings):
     )
 
     # =========================================================================
-    # Email (Future)
+    # Email (Resend)
     # =========================================================================
-    smtp_host: str = Field(default="smtp.gmail.com", description="SMTP server host")
-    smtp_port: int = Field(default=587, description="SMTP server port")
-    smtp_user: Optional[str] = Field(default=None, description="SMTP username")
-    smtp_password: Optional[str] = Field(default=None, description="SMTP password")
-    smtp_from_email: str = Field(
-        default="noreply@learngreekeasy.com",
-        description="From email address",
+    resend_api_key: str = Field(
+        default="",
+        description="Resend API key for transactional email delivery",
     )
-    smtp_from_name: str = Field(default="Learn Greek Easy", description="From name")
+    resend_audience_id: str = Field(
+        default="",
+        description="Resend Audience ID for the Waitlist contact list",
+    )
 
     # =========================================================================
     # CORS
@@ -693,6 +692,11 @@ class Settings(BaseSettings):
     def stripe_configured(self) -> bool:
         """Check if Stripe is properly configured."""
         return bool(self.stripe_secret_key)
+
+    @property
+    def resend_configured(self) -> bool:
+        """Check if Resend email service is properly configured."""
+        return bool(self.resend_api_key)
 
     @property
     def database_url_sync(self) -> str:
