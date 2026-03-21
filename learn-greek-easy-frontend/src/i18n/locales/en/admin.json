@@ -285,6 +285,7 @@
     "changelog": "Changelog",
     "cardErrors": "Card Errors",
     "listeningDialogs": "Listening",
+    "situations": "Situations",
     "groups": {
       "content": "Content",
       "exercises": "Exercises",
@@ -1213,6 +1214,59 @@
     "errors": {
       "fetchFailed": "Failed to load dialogs",
       "retry": "Retry"
+    }
+  },
+  "situations": {
+    "title": "Situations",
+    "description": "Manage conversation situations for practice exercises",
+    "stats": {
+      "total": "Total Situations",
+      "status": {
+        "draft": "Draft",
+        "partial_ready": "Partial Ready",
+        "ready": "Ready"
+      }
+    },
+    "search": {
+      "placeholder": "Search situations...",
+      "noResults": "No situations match your search",
+      "filteredCount": "Showing {{filtered}} of {{total}} situations"
+    },
+    "filter": {
+      "allLevels": "All Levels",
+      "allStatuses": "All Statuses"
+    },
+    "columns": {
+      "scenario": "Scenario",
+      "cefrLevel": "CEFR Level",
+      "status": "Status",
+      "media": "Media",
+      "created": "Created",
+      "actions": "Actions"
+    },
+    "status": {
+      "draft": "Draft",
+      "partial_ready": "Partial Ready",
+      "ready": "Ready"
+    },
+    "media": {
+      "dialogAudio": "Dialog Audio",
+      "descriptionAudio": "Description Audio",
+      "picture": "Picture"
+    },
+    "empty": {
+      "title": "No situations yet",
+      "description": "Situations will appear here once created"
+    },
+    "delete": {
+      "title": "Delete Situation",
+      "description": "This will permanently delete this situation and all associated data.",
+      "warning": "This action cannot be undone.",
+      "cancel": "Cancel",
+      "confirm": "Delete",
+      "deleting": "Deleting...",
+      "success": "Situation deleted successfully",
+      "error": "Failed to delete situation"
     }
   }
 }
