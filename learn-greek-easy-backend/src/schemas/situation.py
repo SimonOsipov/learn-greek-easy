@@ -55,9 +55,11 @@ class SituationUpdate(BaseModel):
 
     @model_validator(mode="after")
     def check_at_least_one_field(self) -> "SituationUpdate":
-        values = self.model_dump(exclude_unset=True)
-        if not values:
+        if not self.model_fields_set:
             raise ValueError("At least one field must be provided for update")
+        for field_name in self.model_fields_set:
+            if getattr(self, field_name) is None:
+                raise ValueError(f"{field_name} cannot be null")
         return self
 
     @model_validator(mode="after")

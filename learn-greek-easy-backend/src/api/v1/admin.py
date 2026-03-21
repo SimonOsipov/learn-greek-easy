@@ -4725,6 +4725,9 @@ async def delete_situation(
     if situation.picture and situation.picture.image_s3_key:
         keys.append(situation.picture.image_s3_key)
 
+    await db.delete(situation)
+    await db.commit()
+
     if keys:
         s3 = get_s3_service()
         for key in keys:
@@ -4735,9 +4738,6 @@ async def delete_situation(
                     "Failed to delete S3 object during situation deletion",
                     extra={"s3_key": key, "situation_id": str(situation_id)},
                 )
-
-    await db.delete(situation)
-    await db.commit()
 
 
 @router.get("/situations", response_model=SituationListResponse)
@@ -4826,4 +4826,7 @@ async def get_situation(
     situation = result.scalar_one_or_none()
     if situation is None:
         raise HTTPException(status_code=404, detail="Situation not found")
+    if situation.dialog:
+        situation.dialog.speakers.sort(key=lambda s: s.speaker_index)
+        situation.dialog.lines.sort(key=lambda ln: ln.line_index)
     return SituationDetailResponse.model_validate(situation)
