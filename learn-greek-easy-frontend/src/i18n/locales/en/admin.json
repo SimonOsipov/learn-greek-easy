@@ -1258,6 +1258,33 @@
       "title": "No situations yet",
       "description": "Situations will appear here once created"
     },
+    "create": {
+      "title": "Create Situation",
+      "description": "Paste a JSON object with the situation details.",
+      "cancel": "Cancel",
+      "submit": "Create",
+      "submitting": "Creating...",
+      "success": "Situation created successfully",
+      "error": "Failed to create situation"
+    },
+    "validation": {
+      "invalidJson": "Invalid JSON format",
+      "missingFields": "Missing or empty required fields: scenario_el, scenario_en, scenario_ru, cefr_level",
+      "invalidCefrLevel": "cefr_level must be one of: A1, A2, B1, B2"
+    },
+    "detail": {
+      "tabs": {
+        "dialog": "Dialog",
+        "description": "Description",
+        "picture": "Picture"
+      },
+      "dialogEmpty": "No dialog created yet",
+      "descriptionEmpty": "No description created yet",
+      "pictureEmpty": "No picture generated yet",
+      "audioNotGenerated": "Audio not generated",
+      "regenerate": "Regenerate",
+      "backendNotConnected": "Backend not connected"
+    },
     "delete": {
       "title": "Delete Situation",
       "description": "This will permanently delete this situation and all associated data.",

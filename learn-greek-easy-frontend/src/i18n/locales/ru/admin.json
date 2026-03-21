@@ -1270,6 +1270,33 @@
       "title": "Ситуаций пока нет",
       "description": "Ситуации появятся здесь после создания"
     },
+    "create": {
+      "title": "Создать ситуацию",
+      "description": "Вставьте JSON-объект с данными ситуации.",
+      "cancel": "Отмена",
+      "submit": "Создать",
+      "submitting": "Создание...",
+      "success": "Ситуация успешно создана",
+      "error": "Не удалось создать ситуацию"
+    },
+    "validation": {
+      "invalidJson": "Неверный формат JSON",
+      "missingFields": "Отсутствуют или пустые обязательные поля: scenario_el, scenario_en, scenario_ru, cefr_level",
+      "invalidCefrLevel": "cefr_level должен быть одним из: A1, A2, B1, B2"
+    },
+    "detail": {
+      "tabs": {
+        "dialog": "Диалог",
+        "description": "Описание",
+        "picture": "Картинка"
+      },
+      "dialogEmpty": "Диалог ещё не создан",
+      "descriptionEmpty": "Описание ещё не создано",
+      "pictureEmpty": "Картинка ещё не создана",
+      "audioNotGenerated": "Аудио не создано",
+      "regenerate": "Перегенерировать",
+      "backendNotConnected": "Сервер не подключён"
+    },
     "delete": {
       "title": "Удалить ситуацию",
       "description": "Это навсегда удалит ситуацию и все связанные данные.",

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { format } from 'date-fns';
-import { ChevronLeft, ChevronRight, Layers, Search, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Layers, Plus, Search, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
@@ -28,7 +28,11 @@ import {
   selectSearchQuery,
   selectIsDeleting,
 } from '@/stores/adminSituationStore';
-import type { SituationListItem, SituationStatus } from '@/types/situation';
+import type {
+  SituationDetailResponse,
+  SituationListItem,
+  SituationStatus,
+} from '@/types/situation';
 
 import { SummaryCard } from '../SummaryCard';
 import {
@@ -36,6 +40,9 @@ import {
   CEFR_BADGE_FALLBACK,
   SITUATION_STATUS_BADGE_CLASSES,
 } from './situationBadges';
+import { SituationCreateModal } from './SituationCreateModal';
+import { SituationDeleteDialog } from './SituationDeleteDialog';
+import { SituationDetailModal } from './SituationDetailModal';
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -61,23 +68,18 @@ export function SituationsTab() {
   const { page, pageSize, total, totalPages } = useAdminSituationStore(selectPagination);
   const cefrFilter = useAdminSituationStore(selectCefrFilter);
   const statusFilter = useAdminSituationStore(selectStatusFilter);
-  const _searchQuery = useAdminSituationStore(selectSearchQuery);
-  const _isDeleting = useAdminSituationStore(selectIsDeleting);
+  useAdminSituationStore(selectSearchQuery);
+  useAdminSituationStore(selectIsDeleting);
 
-  const {
-    fetchSituations,
-    deleteSituation: _deleteSituation,
-    setPage,
-    setCefrFilter,
-    setStatusFilter,
-    setSearchQuery,
-  } = useAdminSituationStore();
+  const { fetchSituations, setPage, setCefrFilter, setStatusFilter, setSearchQuery } =
+    useAdminSituationStore();
 
-  // Modal state — prepared for SUI-03 wiring
-  const [_selectedSituationId, setSelectedSituationId] = useState<string | null>(null);
-  const [_detailModalOpen, setDetailModalOpen] = useState(false);
-  const [_deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [_situationToDelete, setSituationToDelete] = useState<SituationListItem | null>(null);
+  // Modal state
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [selectedSituationId, setSelectedSituationId] = useState<string | null>(null);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [situationToDelete, setSituationToDelete] = useState<SituationListItem | null>(null);
 
   const [searchInput, setSearchInput] = useState('');
   const debouncedSearch = useDebounce(searchInput, 300);
@@ -106,6 +108,12 @@ export function SituationsTab() {
 
   const handleDeleteClick = (e: React.MouseEvent, situation: SituationListItem) => {
     e.stopPropagation();
+    setSituationToDelete(situation);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDetailDelete = (situation: SituationDetailResponse) => {
+    setDetailModalOpen(false);
     setSituationToDelete(situation);
     setDeleteDialogOpen(true);
   };
@@ -156,6 +164,14 @@ export function SituationsTab() {
               <CardTitle>{t('situations.title')}</CardTitle>
               <CardDescription>{t('situations.description')}</CardDescription>
             </div>
+            <Button
+              size="sm"
+              onClick={() => setCreateModalOpen(true)}
+              data-testid="situation-create-btn"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              {t('situations.create.title')}
+            </Button>
           </div>
           <div className="flex gap-2 pt-2">
             <div className="relative flex-1">
@@ -349,6 +365,19 @@ export function SituationsTab() {
           )}
         </CardContent>
       </Card>
+
+      <SituationCreateModal open={createModalOpen} onOpenChange={setCreateModalOpen} />
+      <SituationDetailModal
+        situationId={selectedSituationId}
+        open={detailModalOpen}
+        onOpenChange={setDetailModalOpen}
+        onDelete={handleDetailDelete}
+      />
+      <SituationDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        situation={situationToDelete}
+      />
     </div>
   );
 }
