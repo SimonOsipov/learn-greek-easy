@@ -32,6 +32,7 @@ import type {
   SituationDetailResponse,
   SituationListResponse,
   SituationResponse,
+  SituationStatus,
   SituationUpdatePayload,
 } from '@/types/situation';
 
@@ -1797,7 +1798,7 @@ export const adminAPI = {
     page: number,
     pageSize: number,
     cefrLevel?: DeckLevel,
-    status?: string,
+    status?: SituationStatus,
     search?: string
   ): Promise<SituationListResponse> => {
     const queryString = buildQueryString({

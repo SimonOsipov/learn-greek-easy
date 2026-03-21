@@ -127,7 +127,7 @@ export const useAdminSituationStore = create<AdminSituationState>()(
       },
 
       fetchSituationDetail: async (id: string) => {
-        set({ isLoadingDetail: true, detailError: null });
+        set({ isLoadingDetail: true, detailError: null, selectedSituation: null });
         try {
           const detail = await adminAPI.getSituationDetail(id);
           set({ selectedSituation: detail, isLoadingDetail: false });
@@ -135,6 +135,7 @@ export const useAdminSituationStore = create<AdminSituationState>()(
           set({
             detailError: err instanceof Error ? err.message : 'Failed to load situation details',
             isLoadingDetail: false,
+            selectedSituation: null,
           });
         }
       },
