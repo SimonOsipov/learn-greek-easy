@@ -251,7 +251,9 @@ export function SituationsTab() {
           )}
 
           {!isLoading && error && (
-            <div className="py-8 text-center text-sm text-destructive">{error}</div>
+            <div className="py-8 text-center text-sm text-destructive">
+              {t('situations.fetch.error')}
+            </div>
           )}
 
           {!isLoading && !error && situations.length === 0 && (
