@@ -22,7 +22,10 @@ import {
   selectSituations,
   selectIsLoading,
   selectError,
-  selectPagination,
+  selectPage,
+  selectPageSize,
+  selectTotal,
+  selectTotalPages,
   selectCefrFilter,
   selectStatusFilter,
   selectSearchQuery,
@@ -65,7 +68,10 @@ export function SituationsTab() {
   const situations = useAdminSituationStore(selectSituations);
   const isLoading = useAdminSituationStore(selectIsLoading);
   const error = useAdminSituationStore(selectError);
-  const { page, pageSize, total, totalPages } = useAdminSituationStore(selectPagination);
+  const page = useAdminSituationStore(selectPage);
+  const pageSize = useAdminSituationStore(selectPageSize);
+  const total = useAdminSituationStore(selectTotal);
+  const totalPages = useAdminSituationStore(selectTotalPages);
   const cefrFilter = useAdminSituationStore(selectCefrFilter);
   const statusFilter = useAdminSituationStore(selectStatusFilter);
   useAdminSituationStore(selectSearchQuery);
