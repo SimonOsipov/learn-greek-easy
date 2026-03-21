@@ -297,6 +297,7 @@
     "newsComingSoon": "Скоро",
     "newsComingSoonDescription": "Вкладка Новости обновляется. Скоро появятся новые функции.",
     "listeningDialogs": "Аудирование",
+    "situations": "Ситуации",
     "groups": {
       "content": "Контент",
       "exercises": "Упражнения",
@@ -1225,6 +1226,86 @@
     "errors": {
       "fetchFailed": "Не удалось загрузить диалоги",
       "retry": "Повторить"
+    }
+  },
+  "situations": {
+    "title": "Ситуации",
+    "description": "Управление разговорными ситуациями для упражнений",
+    "stats": {
+      "total": "Всего ситуаций",
+      "status": {
+        "draft": "Черновик",
+        "partial_ready": "Частично готово",
+        "ready": "Готово"
+      }
+    },
+    "search": {
+      "placeholder": "Поиск ситуаций...",
+      "noResults": "Ситуации не найдены",
+      "filteredCount": "Показано {{filtered}} из {{total}} ситуаций"
+    },
+    "filter": {
+      "allLevels": "Все уровни",
+      "allStatuses": "Все статусы"
+    },
+    "columns": {
+      "scenario": "Сценарий",
+      "cefrLevel": "Уровень CEFR",
+      "status": "Статус",
+      "media": "Медиа",
+      "created": "Создано",
+      "actions": "Действия"
+    },
+    "status": {
+      "draft": "Черновик",
+      "partial_ready": "Частично готово",
+      "ready": "Готово"
+    },
+    "media": {
+      "dialogAudio": "Аудио диалога",
+      "descriptionAudio": "Аудио описания",
+      "picture": "Картинка"
+    },
+    "empty": {
+      "title": "Ситуаций пока нет",
+      "description": "Ситуации появятся здесь после создания"
+    },
+    "create": {
+      "title": "Создать ситуацию",
+      "description": "Вставьте JSON-объект с данными ситуации.",
+      "cancel": "Отмена",
+      "submit": "Создать",
+      "submitting": "Создание...",
+      "success": "Ситуация успешно создана",
+      "error": "Не удалось создать ситуацию"
+    },
+    "validation": {
+      "invalidJson": "Неверный формат JSON",
+      "missingFields": "Отсутствуют или пустые обязательные поля: scenario_el, scenario_en, scenario_ru, cefr_level",
+      "invalidCefrLevel": "cefr_level должен быть одним из: A1, A2, B1, B2"
+    },
+    "detail": {
+      "tabs": {
+        "dialog": "Диалог",
+        "description": "Описание",
+        "picture": "Картинка"
+      },
+      "dialogEmpty": "Диалог ещё не создан",
+      "descriptionEmpty": "Описание ещё не создано",
+      "pictureEmpty": "Картинка ещё не создана",
+      "audioNotGenerated": "Аудио не создано",
+      "regenerate": "Перегенерировать",
+      "backendNotConnected": "Сервер не подключён"
+    },
+    "delete": {
+      "title": "Удалить ситуацию",
+      "description": "Это навсегда удалит ситуацию и все связанные данные.",
+      "warning": "Это действие нельзя отменить.",
+      "cancel": "Отмена",
+      "confirm": "Удалить",
+      "deleting": "Удаление...",
+      "success": "Ситуация успешно удалена",
+      "error": "Не удалось удалить ситуацию"
     }
   }
 }

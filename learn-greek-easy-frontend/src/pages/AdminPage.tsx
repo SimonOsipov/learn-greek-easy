@@ -39,6 +39,7 @@ import {
   type DeckType,
   ListeningDialogsTab,
   NewsTab,
+  SituationsTab,
   SummaryCard,
 } from '@/components/admin';
 import { CultureBadge, type CultureCategory } from '@/components/culture';
@@ -556,10 +557,11 @@ type AdminTabType =
   | 'changelog'
   | 'cardErrors'
   | 'feedback'
-  | 'listeningDialogs';
+  | 'listeningDialogs'
+  | 'situations';
 
 const ADMIN_TAB_GROUPS: { key: string; tabs: AdminTabType[] }[] = [
-  { key: 'content', tabs: ['decks', 'news'] },
+  { key: 'content', tabs: ['decks', 'news', 'situations'] },
   { key: 'exercises', tabs: ['listeningDialogs'] },
   { key: 'reviews', tabs: ['cardErrors', 'feedback'] },
   { key: 'system', tabs: ['changelog', 'announcements'] },
@@ -1126,6 +1128,15 @@ const AdminPage: React.FC = () => {
             {t('tabs.listeningDialogs')}
           </h2>
           <ListeningDialogsTab />
+        </section>
+      )}
+
+      {activeTab === 'situations' && (
+        <section aria-labelledby="situations-heading">
+          <h2 id="situations-heading" className="sr-only">
+            {t('tabs.situations')}
+          </h2>
+          <SituationsTab />
         </section>
       )}
 

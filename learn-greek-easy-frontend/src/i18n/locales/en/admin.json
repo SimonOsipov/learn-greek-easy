@@ -285,6 +285,7 @@
     "changelog": "Changelog",
     "cardErrors": "Card Errors",
     "listeningDialogs": "Listening",
+    "situations": "Situations",
     "groups": {
       "content": "Content",
       "exercises": "Exercises",
@@ -1213,6 +1214,86 @@
     "errors": {
       "fetchFailed": "Failed to load dialogs",
       "retry": "Retry"
+    }
+  },
+  "situations": {
+    "title": "Situations",
+    "description": "Manage conversation situations for practice exercises",
+    "stats": {
+      "total": "Total Situations",
+      "status": {
+        "draft": "Draft",
+        "partial_ready": "Partial Ready",
+        "ready": "Ready"
+      }
+    },
+    "search": {
+      "placeholder": "Search situations...",
+      "noResults": "No situations match your search",
+      "filteredCount": "Showing {{filtered}} of {{total}} situations"
+    },
+    "filter": {
+      "allLevels": "All Levels",
+      "allStatuses": "All Statuses"
+    },
+    "columns": {
+      "scenario": "Scenario",
+      "cefrLevel": "CEFR Level",
+      "status": "Status",
+      "media": "Media",
+      "created": "Created",
+      "actions": "Actions"
+    },
+    "status": {
+      "draft": "Draft",
+      "partial_ready": "Partial Ready",
+      "ready": "Ready"
+    },
+    "media": {
+      "dialogAudio": "Dialog Audio",
+      "descriptionAudio": "Description Audio",
+      "picture": "Picture"
+    },
+    "empty": {
+      "title": "No situations yet",
+      "description": "Situations will appear here once created"
+    },
+    "create": {
+      "title": "Create Situation",
+      "description": "Paste a JSON object with the situation details.",
+      "cancel": "Cancel",
+      "submit": "Create",
+      "submitting": "Creating...",
+      "success": "Situation created successfully",
+      "error": "Failed to create situation"
+    },
+    "validation": {
+      "invalidJson": "Invalid JSON format",
+      "missingFields": "Missing or empty required fields: scenario_el, scenario_en, scenario_ru, cefr_level",
+      "invalidCefrLevel": "cefr_level must be one of: A1, A2, B1, B2"
+    },
+    "detail": {
+      "tabs": {
+        "dialog": "Dialog",
+        "description": "Description",
+        "picture": "Picture"
+      },
+      "dialogEmpty": "No dialog created yet",
+      "descriptionEmpty": "No description created yet",
+      "pictureEmpty": "No picture generated yet",
+      "audioNotGenerated": "Audio not generated",
+      "regenerate": "Regenerate",
+      "backendNotConnected": "Backend not connected"
+    },
+    "delete": {
+      "title": "Delete Situation",
+      "description": "This will permanently delete this situation and all associated data.",
+      "warning": "This action cannot be undone.",
+      "cancel": "Cancel",
+      "confirm": "Delete",
+      "deleting": "Deleting...",
+      "success": "Situation deleted successfully",
+      "error": "Failed to delete situation"
     }
   }
 }

@@ -30,6 +30,7 @@ export { DialogDetailModal } from './DialogDetailModal';
 export { ListeningDialogsTab } from './ListeningDialogsTab';
 export { NewsItemDeleteDialog, NewsItemEditModal, NewsItemsTable, NewsTab } from './news';
 export { SummaryCard } from './SummaryCard';
+export { SituationsTab } from './situations';
 export {
   VocabularyDeckCreateForm,
   type VocabularyDeckCreateFormData,
