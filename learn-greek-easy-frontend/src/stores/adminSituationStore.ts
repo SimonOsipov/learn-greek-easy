@@ -299,7 +299,11 @@ export const useAdminSituationStore = create<AdminSituationState>()(
         }
         if (searchQuery.trim()) {
           const query = searchQuery.toLowerCase();
-          filtered = filtered.filter((s) => s.scenario_en.toLowerCase().includes(query));
+          filtered = filtered.filter(
+            (s) =>
+              s.scenario_en.toLowerCase().includes(query) ||
+              s.scenario_ru.toLowerCase().includes(query)
+          );
         }
 
         const total = filtered.length;

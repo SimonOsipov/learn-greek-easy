@@ -61,7 +61,7 @@ export function SituationsTab() {
   const { page, pageSize, total, totalPages } = useAdminSituationStore(selectPagination);
   const cefrFilter = useAdminSituationStore(selectCefrFilter);
   const statusFilter = useAdminSituationStore(selectStatusFilter);
-  const searchQuery = useAdminSituationStore(selectSearchQuery);
+  const _searchQuery = useAdminSituationStore(selectSearchQuery);
   const _isDeleting = useAdminSituationStore(selectIsDeleting);
 
   const {
@@ -201,11 +201,6 @@ export function SituationsTab() {
               </SelectContent>
             </Select>
           </div>
-          {searchQuery && (
-            <p className="text-sm text-muted-foreground">
-              {t('situations.search.filteredCount', { filtered: total, total: total })}
-            </p>
-          )}
         </CardHeader>
 
         <CardContent>
