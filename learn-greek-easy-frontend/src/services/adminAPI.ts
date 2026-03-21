@@ -27,6 +27,14 @@ import type {
   AdminFeedbackListResponse,
   AdminFeedbackUpdateRequest,
 } from '@/types/feedback';
+import type {
+  SituationCreatePayload,
+  SituationDetailResponse,
+  SituationListResponse,
+  SituationResponse,
+  SituationStatus,
+  SituationUpdatePayload,
+} from '@/types/situation';
 
 import { api, buildQueryString, postFormData } from './api';
 
@@ -1780,6 +1788,43 @@ export const adminAPI = {
   reverseLookup: async (query: string, lang: 'en' | 'ru'): Promise<ReverseLookupResponse> => {
     const queryString = buildQueryString({ q: query, lang });
     return api.get<ReverseLookupResponse>(`/api/v1/admin/reverse-lookup${queryString}`);
+  },
+
+  // ============================================
+  // Situation Management
+  // ============================================
+
+  getSituations: async (
+    page: number,
+    pageSize: number,
+    cefrLevel?: DeckLevel,
+    status?: SituationStatus,
+    search?: string
+  ): Promise<SituationListResponse> => {
+    const queryString = buildQueryString({
+      page,
+      page_size: pageSize,
+      cefr_level: cefrLevel,
+      status,
+      search,
+    });
+    return api.get<SituationListResponse>(`/api/v1/admin/situations${queryString}`);
+  },
+
+  getSituationDetail: async (id: string): Promise<SituationDetailResponse> => {
+    return api.get<SituationDetailResponse>(`/api/v1/admin/situations/${id}`);
+  },
+
+  createSituation: async (data: SituationCreatePayload): Promise<SituationResponse> => {
+    return api.post<SituationResponse>('/api/v1/admin/situations', data);
+  },
+
+  updateSituation: async (id: string, data: SituationUpdatePayload): Promise<SituationResponse> => {
+    return api.patch<SituationResponse>(`/api/v1/admin/situations/${id}`, data);
+  },
+
+  deleteSituation: async (id: string): Promise<void> => {
+    return api.delete<void>(`/api/v1/admin/situations/${id}`);
   },
 };
 

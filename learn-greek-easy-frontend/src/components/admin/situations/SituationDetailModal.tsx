@@ -175,7 +175,9 @@ export function SituationDetailModal({
             </>
           )}
           {!isLoadingDetail && detailError && (
-            <DialogTitle className="text-destructive">{detailError}</DialogTitle>
+            <DialogTitle className="text-destructive">
+              {t('situations.detail.fetchError')}
+            </DialogTitle>
           )}
         </DialogHeader>
 

@@ -107,6 +107,15 @@ export interface SituationCreatePayload {
   cefr_level: DeckLevel;
 }
 
+// --- Update payload ---
+
+export interface SituationUpdatePayload {
+  scenario_el?: string;
+  scenario_en?: string;
+  scenario_ru?: string;
+  cefr_level?: DeckLevel;
+}
+
 // --- List response (matches SituationListResponse) ---
 
 export interface SituationListResponse {
