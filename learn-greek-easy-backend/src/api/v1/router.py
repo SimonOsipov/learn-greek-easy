@@ -37,6 +37,7 @@ from src.api.v1.progress import router as progress_router
 from src.api.v1.reviews_v2 import router as reviews_v2_router
 from src.api.v1.study_v2 import router as study_v2_router
 from src.api.v1.users import router as users_router
+from src.api.v1.waitlist import router as waitlist_router
 from src.api.v1.webhooks import router as webhooks_router
 from src.api.v1.word_entries import router as word_entries_router
 from src.api.v1.xp import router as xp_router
@@ -197,6 +198,15 @@ v1_router.include_router(
 # Webhook Routes (Stripe - no auth required)
 # =============================================================================
 v1_router.include_router(webhooks_router)
+
+# =============================================================================
+# Waitlist Routes (public - no auth required)
+# =============================================================================
+v1_router.include_router(
+    waitlist_router,
+    prefix="/waitlist",
+    tags=["Waitlist"],
+)
 
 # =============================================================================
 # Test Routes (non-production only)

@@ -27,12 +27,6 @@ const Footer = () => {
               {t('footer.nav.features')}
             </a>
             <a
-              href="#pricing"
-              className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-            >
-              {t('footer.nav.pricing')}
-            </a>
-            <a
               href="#faq"
               className="text-sm text-muted-foreground transition-colors hover:text-foreground"
             >

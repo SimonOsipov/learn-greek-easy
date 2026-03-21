@@ -1,0 +1,16 @@
+{
+  "pending": {
+    "title": "Check Your Inbox",
+    "body": "We've sent a confirmation link to your email. Click it to secure your spot on the waitlist.",
+    "spamHint": "Don't see it? Check your spam or junk folder."
+  },
+  "confirmed": {
+    "title": "You're on the Waitlist!",
+    "body": "We'll notify you as soon as Greekly launches. Thanks for your interest!"
+  },
+  "error": {
+    "title": "Something Went Wrong",
+    "body": "This confirmation link is invalid or has already been used. If you haven't confirmed yet, try signing up again."
+  },
+  "backToHome": "Back to Home"
+}

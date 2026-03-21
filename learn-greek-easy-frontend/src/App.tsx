@@ -154,6 +154,11 @@ const V2FlashcardPracticePage = lazyWithRetry(() =>
 const CheckoutSuccessPage = lazyWithRetry(() =>
   import('@/pages/CheckoutSuccessPage').then((m) => ({ default: m.CheckoutSuccessPage }))
 );
+const WaitlistConfirmPage = lazyWithRetry(() =>
+  import('@/pages/waitlist/WaitlistConfirmPage').then((m) => ({
+    default: m.WaitlistConfirmPage,
+  }))
+);
 const CheckoutCancelPage = lazyWithRetry(() =>
   import('@/pages/CheckoutCancelPage').then((m) => ({ default: m.CheckoutCancelPage }))
 );
@@ -206,6 +211,9 @@ function AppContent() {
                   Supabase fires SIGNED_IN before PASSWORD_RECOVERY, which would cause
                   PublicRoute to redirect to dashboard before user can set password */}
               <Route path="/reset-password" element={<ResetPassword />} />
+
+              {/* Waitlist confirm page - accessible to everyone */}
+              <Route path="/waitlist/confirm" element={<WaitlistConfirmPage />} />
 
               {/* Protected Routes - require authentication */}
               <Route element={<ProtectedRoute />}>

@@ -43,6 +43,7 @@ export const NAMESPACES = [
   'changelog', // Changelog tag labels
   'upgrade', // Upgrade/pricing page
   'subscription', // Subscription management page
+  'waitlist', // Waitlist signup and confirmation
 ] as const;
 
 export type Namespace = (typeof NAMESPACES)[number];

@@ -1,15 +1,15 @@
-import { ArrowRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
 
 import heroImage from '@/assets/landing/cyprus-hero.webp';
-import { Button } from '@/components/ui/button';
+
+import WaitlistForm from './WaitlistForm';
 
 const Hero = () => {
   const { t } = useTranslation('landing');
 
   return (
     <section
+      id="hero"
       data-testid="hero-section"
       className="relative flex min-h-[50vh] items-center justify-center overflow-hidden"
     >
@@ -50,20 +50,9 @@ const Hero = () => {
             {t('hero.subtitle')}
           </p>
 
-          {/* CTAs */}
-          <div className="flex flex-col items-center justify-center gap-4 [animation-delay:0.4s] motion-safe:animate-fade-up sm:flex-row">
-            <Button
-              variant="hero"
-              size="xl"
-              className="group"
-              data-testid="hero-cta-button"
-              asChild
-            >
-              <Link to="/register">
-                {t('hero.cta')}
-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </Link>
-            </Button>
+          {/* Waitlist Form */}
+          <div className="flex flex-col items-center justify-center [animation-delay:0.4s] motion-safe:animate-fade-up">
+            <WaitlistForm variant="hero" />
           </div>
 
           {/* Social proof hint */}
