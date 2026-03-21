@@ -11,7 +11,7 @@ All Resend API errors are caught and logged as WARNING, never re-raised
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Optional
 
 import resend
 
@@ -72,7 +72,7 @@ class EmailService:
         try:
             resend.api_key = settings.resend_api_key
 
-            params: dict[str, object] = {
+            params: Any = {
                 "from": from_address,
                 "to": recipients,
                 "subject": subject,
