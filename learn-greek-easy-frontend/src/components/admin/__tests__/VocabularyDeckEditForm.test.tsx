@@ -652,4 +652,91 @@ describe('VocabularyDeckEditForm', () => {
       expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
     });
   });
+
+  describe('Remove Image', () => {
+    it('should render Remove Image button when cover_image_url is present and onRemoveCoverImage is provided', () => {
+      const deck = createMockDeck({ cover_image_url: 'https://example.com/cover.jpg' });
+
+      renderWithI18n(
+        <VocabularyDeckEditForm
+          deck={deck}
+          onSave={mockOnSave}
+          onCancel={mockOnCancel}
+          onRemoveCoverImage={vi.fn()}
+        />
+      );
+
+      expect(screen.getByTestId('deck-edit-remove-image')).toBeInTheDocument();
+    });
+
+    it('should not render Remove Image button when cover_image_url is null', () => {
+      const deck = createMockDeck({ cover_image_url: null });
+
+      renderWithI18n(
+        <VocabularyDeckEditForm
+          deck={deck}
+          onSave={mockOnSave}
+          onCancel={mockOnCancel}
+          onRemoveCoverImage={vi.fn()}
+        />
+      );
+
+      expect(screen.queryByTestId('deck-edit-remove-image')).not.toBeInTheDocument();
+    });
+
+    it('should not render Remove Image button when onRemoveCoverImage is not provided', () => {
+      const deck = createMockDeck({ cover_image_url: 'https://example.com/cover.jpg' });
+
+      renderWithI18n(
+        <VocabularyDeckEditForm deck={deck} onSave={mockOnSave} onCancel={mockOnCancel} />
+      );
+
+      expect(screen.queryByTestId('deck-edit-remove-image')).not.toBeInTheDocument();
+    });
+
+    it('should call onRemoveCoverImage when Remove Image button is clicked', async () => {
+      const user = userEvent.setup();
+      const mockRemove = vi.fn(() => Promise.resolve());
+      const deck = createMockDeck({ cover_image_url: 'https://example.com/cover.jpg' });
+
+      renderWithI18n(
+        <VocabularyDeckEditForm
+          deck={deck}
+          onSave={mockOnSave}
+          onCancel={mockOnCancel}
+          onRemoveCoverImage={mockRemove}
+        />
+      );
+
+      await user.click(screen.getByTestId('deck-edit-remove-image'));
+
+      await waitFor(() => {
+        expect(mockRemove).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it('should display error when onRemoveCoverImage rejects', async () => {
+      const user = userEvent.setup();
+      const mockRemove = vi.fn(() => Promise.reject(new Error('delete failed')));
+      const deck = createMockDeck({ cover_image_url: 'https://example.com/cover.jpg' });
+
+      renderWithI18n(
+        <VocabularyDeckEditForm
+          deck={deck}
+          onSave={mockOnSave}
+          onCancel={mockOnCancel}
+          onRemoveCoverImage={mockRemove}
+        />
+      );
+
+      await user.click(screen.getByTestId('deck-edit-remove-image'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('deck-edit-image-error')).toBeInTheDocument();
+      });
+      expect(screen.getByTestId('deck-edit-image-error')).toHaveTextContent(
+        'Failed to remove image. Please try again.'
+      );
+    });
+  });
 });
