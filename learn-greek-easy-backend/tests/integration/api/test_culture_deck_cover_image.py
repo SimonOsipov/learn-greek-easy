@@ -1,7 +1,8 @@
-"""Integration tests for culture deck cover image upload endpoint.
+"""Integration tests for culture deck cover image upload and delete endpoints.
 
 Tests for:
 - POST /api/v1/culture/decks/{deck_id}/cover-image - Upload cover image
+- DELETE /api/v1/culture/decks/{deck_id}/cover-image - Delete cover image
 
 Run with:
     pytest tests/integration/api/test_culture_deck_cover_image.py -v
@@ -184,3 +185,121 @@ class TestUploadCultureDeckCoverImage:
         await db_session.refresh(deck)
         assert deck.cover_image_s3_key == f"culture-deck-images/{deck.id}.png"
         mock_s3.delete_object.assert_called_once_with(f"culture-deck-images/{deck.id}.jpg")
+
+
+# ============================================================================
+# DELETE /api/v1/culture/decks/{deck_id}/cover-image Tests
+# ============================================================================
+
+
+class TestDeleteCultureDeckCoverImage:
+    """Tests for DELETE /api/v1/culture/decks/{deck_id}/cover-image endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_delete_cover_image_success(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+        mock_s3: MagicMock,
+    ) -> None:
+        """Successfully delete a culture deck cover image."""
+        deck = await CultureDeckFactory.create(
+            session=db_session,
+            cover_image_s3_key="culture-deck-images/test-id.jpg",
+        )
+
+        response = await client.delete(
+            f"/api/v1/culture/decks/{deck.id}/cover-image",
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["cover_image_url"] is None
+        mock_s3.delete_object.assert_called_once_with("culture-deck-images/test-id.jpg")
+        await db_session.refresh(deck)
+        assert deck.cover_image_s3_key is None
+
+    @pytest.mark.asyncio
+    async def test_delete_cover_image_deck_not_found(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        mock_s3: MagicMock,
+    ) -> None:
+        """Returns 404 when culture deck does not exist."""
+        random_id = uuid4()
+
+        response = await client.delete(
+            f"/api/v1/culture/decks/{random_id}/cover-image",
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 404
+        mock_s3.delete_object.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_delete_cover_image_no_cover(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+        mock_s3: MagicMock,
+    ) -> None:
+        """Returns 404 when culture deck has no cover image."""
+        deck = await CultureDeckFactory.create(session=db_session)
+
+        response = await client.delete(
+            f"/api/v1/culture/decks/{deck.id}/cover-image",
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 404
+        mock_s3.delete_object.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_delete_cover_image_requires_superuser(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        db_session: AsyncSession,
+        mock_s3: MagicMock,
+    ) -> None:
+        """Returns 403 for non-superuser."""
+        deck = await CultureDeckFactory.create(
+            session=db_session,
+            cover_image_s3_key="culture-deck-images/test-id.jpg",
+        )
+
+        response = await client.delete(
+            f"/api/v1/culture/decks/{deck.id}/cover-image",
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 403
+        mock_s3.delete_object.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_delete_cover_image_s3_failure(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+        mock_s3: MagicMock,
+    ) -> None:
+        """Returns 500 and does not clear DB when S3 deletion fails."""
+        deck = await CultureDeckFactory.create(
+            session=db_session,
+            cover_image_s3_key="culture-deck-images/test-id.jpg",
+        )
+        mock_s3.delete_object.return_value = False
+
+        response = await client.delete(
+            f"/api/v1/culture/decks/{deck.id}/cover-image",
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 500
+        await db_session.refresh(deck)
+        assert deck.cover_image_s3_key == "culture-deck-images/test-id.jpg"

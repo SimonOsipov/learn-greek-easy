@@ -732,6 +732,16 @@ const AdminPage: React.FC = () => {
     }
   };
 
+  const handleRemoveCoverImage = async () => {
+    if (!selectedDeck) return;
+    if (selectedDeck.type === 'culture') {
+      await adminAPI.deleteCultureDeckCoverImage(selectedDeck.id);
+    } else {
+      await adminAPI.deleteDeckCoverImage(selectedDeck.id);
+    }
+    setSelectedDeck((prev) => (prev ? { ...prev, cover_image_url: null } : null));
+  };
+
   /**
    * Handle modal close (track cancel if not saving)
    */
@@ -1148,6 +1158,7 @@ const AdminPage: React.FC = () => {
         onSave={handleSaveDeck}
         isLoading={isSaving}
         onUploadCoverImage={handleUploadCoverImage}
+        onRemoveCoverImage={handleRemoveCoverImage}
       />
 
       {/* Deck Create Modal */}

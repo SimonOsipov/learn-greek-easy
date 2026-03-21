@@ -1040,6 +1040,26 @@ export const adminAPI = {
     );
   },
 
+  /**
+   * Delete the cover image for a vocabulary deck
+   *
+   * Removes the S3 object and clears cover_image_url on the deck.
+   * Requires superuser authentication.
+   */
+  deleteDeckCoverImage: async (deckId: string): Promise<void> => {
+    return api.delete<void>(`/api/v1/admin/decks/${deckId}/cover-image`);
+  },
+
+  /**
+   * Delete the cover image for a culture deck
+   *
+   * Removes the S3 object and clears cover_image_url on the deck.
+   * Requires superuser authentication.
+   */
+  deleteCultureDeckCoverImage: async (deckId: string): Promise<void> => {
+    return api.delete<void>(`/api/v1/culture/decks/${deckId}/cover-image`);
+  },
+
   // ============================================
   // Feedback Management
   // ============================================

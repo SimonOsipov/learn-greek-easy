@@ -98,6 +98,7 @@ interface VocabularyDeckEditFormProps {
   itemCount?: number;
   createdAt?: string;
   onUploadCoverImage?: (file: File) => Promise<void>;
+  onRemoveCoverImage?: () => Promise<void>;
 }
 
 /**
@@ -118,6 +119,7 @@ export const VocabularyDeckEditForm: React.FC<VocabularyDeckEditFormProps> = ({
   itemCount,
   createdAt,
   onUploadCoverImage,
+  onRemoveCoverImage,
 }) => {
   const { t } = useTranslation('admin');
   const [showDeactivationWarning, setShowDeactivationWarning] = useState(false);
@@ -170,6 +172,20 @@ export const VocabularyDeckEditForm: React.FC<VocabularyDeckEditFormProps> = ({
       setImageError(t('deckEdit.imageUploadError'));
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const handleRemoveImage = async () => {
+    if (!onRemoveCoverImage) return;
+    try {
+      setImageError(null);
+      await onRemoveCoverImage();
+      if (imagePreview && imagePreview.startsWith('blob:')) {
+        URL.revokeObjectURL(imagePreview);
+      }
+      setImagePreview(null);
+    } catch {
+      setImageError(t('deckEdit.imageRemoveError'));
     }
   };
 
@@ -403,15 +419,28 @@ export const VocabularyDeckEditForm: React.FC<VocabularyDeckEditFormProps> = ({
                 {t('deckEdit.imageUploading')}
               </p>
             ) : (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => fileInputRef.current?.click()}
-                data-testid="deck-edit-upload-image"
-              >
-                {currentImageUrl ? t('deckEdit.replaceImage') : t('deckEdit.uploadImage')}
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  data-testid="deck-edit-upload-image"
+                >
+                  {currentImageUrl ? t('deckEdit.replaceImage') : t('deckEdit.uploadImage')}
+                </Button>
+                {deck.cover_image_url && onRemoveCoverImage && (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleRemoveImage}
+                    data-testid="deck-edit-remove-image"
+                  >
+                    {t('deckEdit.removeImage')}
+                  </Button>
+                )}
+              </div>
             )}
             <input
               ref={fileInputRef}

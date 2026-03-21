@@ -962,6 +962,54 @@ async def upload_culture_deck_cover_image(
     )
 
 
+@router.delete(
+    "/decks/{deck_id}/cover-image",
+    response_model=CultureDeckAdminResponse,
+    summary="Delete culture deck cover image",
+)
+async def delete_culture_deck_cover_image(
+    deck_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> CultureDeckAdminResponse:
+    """Delete the cover image for a culture deck."""
+    deck_repo = CultureDeckRepository(db)
+    deck = await deck_repo.get(deck_id)
+    if deck is None:
+        raise HTTPException(status_code=404, detail="Culture deck not found")
+
+    if deck.cover_image_s3_key is None:
+        raise HTTPException(status_code=404, detail="Deck has no cover image")
+
+    s3 = get_s3_service()
+    deleted = s3.delete_object(deck.cover_image_s3_key)
+    if not deleted:
+        raise HTTPException(status_code=500, detail="Failed to delete cover image")
+
+    deck.cover_image_s3_key = None
+    await db.commit()
+    await db.refresh(deck)
+
+    question_count = await deck_repo.count_questions(deck_id)
+    return CultureDeckAdminResponse(
+        id=deck.id,
+        name_en=deck.name_en,
+        name_el=deck.name_el,
+        name_ru=deck.name_ru,
+        description_en=deck.description_en,
+        description_el=deck.description_el,
+        description_ru=deck.description_ru,
+        category=deck.category,
+        question_count=question_count,
+        is_premium=deck.is_premium,
+        is_active=deck.is_active,
+        order_index=deck.order_index,
+        created_at=deck.created_at,
+        updated_at=deck.updated_at,
+        cover_image_url=None,
+    )
+
+
 @router.post(
     "/questions",
     response_model=CultureQuestionAdminResponse,
