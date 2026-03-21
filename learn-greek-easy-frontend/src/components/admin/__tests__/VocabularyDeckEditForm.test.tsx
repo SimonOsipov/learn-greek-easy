@@ -708,6 +708,7 @@ describe('VocabularyDeckEditForm', () => {
         />
       );
 
+      expect(mockRemove).not.toHaveBeenCalled();
       await user.click(screen.getByTestId('deck-edit-remove-image'));
 
       await waitFor(() => {

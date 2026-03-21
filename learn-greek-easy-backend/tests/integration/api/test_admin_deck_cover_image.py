@@ -389,3 +389,26 @@ class TestDeleteDeckCoverImage:
 
         assert response.status_code == 403
         mock_s3.delete_object.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_delete_cover_image_s3_failure(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+        mock_s3: MagicMock,
+    ) -> None:
+        """Returns 500 and does not clear DB when S3 deletion fails."""
+        deck = await DeckFactory.create(
+            session=db_session, cover_image_s3_key="deck-images/test-id.jpg"
+        )
+        mock_s3.delete_object.return_value = False
+
+        response = await client.delete(
+            f"/api/v1/admin/decks/{deck.id}/cover-image",
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 500
+        await db_session.refresh(deck)
+        assert deck.cover_image_s3_key == "deck-images/test-id.jpg"
