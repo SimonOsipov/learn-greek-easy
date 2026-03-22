@@ -281,7 +281,7 @@
   },
   "waitlistForm": {
     "emailPlaceholder": "Введите ваш email",
-    "submitButton": "Записаться в лист ожидания",
+    "submitButton": "Записаться",
     "submitting": "Отправка...",
     "alreadyOnWaitlist": "Вы уже в листе ожидания!",
     "validationError": "Введите корректный email адрес",
