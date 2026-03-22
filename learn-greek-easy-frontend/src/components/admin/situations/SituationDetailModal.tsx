@@ -42,11 +42,7 @@ import {
 import type { SituationDetailResponse } from '@/types/situation';
 import type { SSEEvent } from '@/types/sse';
 
-import {
-  CEFR_BADGE_CLASSES,
-  CEFR_BADGE_FALLBACK,
-  SITUATION_STATUS_BADGE_CLASSES,
-} from './situationBadges';
+import { SITUATION_STATUS_BADGE_CLASSES } from './situationBadges';
 
 // Defined locally — same values as DialogDetailModal but NOT imported from it
 const SPEAKER_BUBBLE_STYLES = [
@@ -335,14 +331,6 @@ export function SituationDetailModal({
               <DialogTitle>{localizedScenario}</DialogTitle>
               <DialogDescription>{selectedSituation.scenario_el}</DialogDescription>
               <div className="flex flex-wrap gap-2 pt-2">
-                <Badge
-                  variant="outline"
-                  className={
-                    CEFR_BADGE_CLASSES[selectedSituation.cefr_level] ?? CEFR_BADGE_FALLBACK
-                  }
-                >
-                  {selectedSituation.cefr_level}
-                </Badge>
                 <Badge
                   variant="outline"
                   className={SITUATION_STATUS_BADGE_CLASSES[selectedSituation.status]}

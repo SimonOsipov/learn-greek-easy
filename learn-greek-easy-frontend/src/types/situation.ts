@@ -1,5 +1,3 @@
-import type { DeckLevel } from '@/services/adminAPI';
-
 // --- Enums as union types ---
 
 export type SituationStatus = 'draft' | 'partial_ready' | 'ready';
@@ -68,7 +66,6 @@ export interface SituationListItem {
   scenario_el: string;
   scenario_en: string;
   scenario_ru: string;
-  cefr_level: DeckLevel;
   status: SituationStatus;
   created_at: string;
   has_dialog: boolean;
@@ -85,7 +82,6 @@ export interface SituationResponse {
   scenario_el: string;
   scenario_en: string;
   scenario_ru: string;
-  cefr_level: DeckLevel;
   status: SituationStatus;
   created_at: string;
   updated_at: string;
@@ -105,7 +101,6 @@ export interface SituationCreatePayload {
   scenario_el: string;
   scenario_en: string;
   scenario_ru: string;
-  cefr_level: DeckLevel;
 }
 
 // --- Update payload ---
@@ -114,7 +109,6 @@ export interface SituationUpdatePayload {
   scenario_el?: string;
   scenario_en?: string;
   scenario_ru?: string;
-  cefr_level?: DeckLevel;
 }
 
 // --- List response (matches SituationListResponse) ---

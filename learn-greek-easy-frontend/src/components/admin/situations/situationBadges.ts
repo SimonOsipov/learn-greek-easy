@@ -1,5 +1,3 @@
-export { CEFR_BADGE_CLASSES, CEFR_BADGE_FALLBACK } from '../dialogBadges';
-
 export type SituationStatus = 'draft' | 'partial_ready' | 'ready';
 
 export const SITUATION_STATUS_BADGE_CLASSES: Record<SituationStatus, string> = {

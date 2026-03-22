@@ -1240,7 +1240,6 @@
     },
     "columns": {
       "scenario": "Scenario",
-      "cefrLevel": "CEFR Level",
       "status": "Status",
       "media": "Media",
       "created": "Created",
@@ -1271,8 +1270,7 @@
     },
     "validation": {
       "invalidJson": "Invalid JSON format",
-      "missingFields": "Missing or empty required fields: scenario_el, scenario_en, scenario_ru, cefr_level",
-      "invalidCefrLevel": "cefr_level must be one of: A1, A2, B1, B2"
+      "missingFields": "Missing or empty required fields: scenario_el, scenario_en, scenario_ru"
     },
     "detail": {
       "tabs": {

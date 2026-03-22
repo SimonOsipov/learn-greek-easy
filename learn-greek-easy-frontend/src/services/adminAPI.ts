@@ -1797,14 +1797,12 @@ export const adminAPI = {
   getSituations: async (
     page: number,
     pageSize: number,
-    cefrLevel?: DeckLevel,
     status?: SituationStatus,
     search?: string
   ): Promise<SituationListResponse> => {
     const queryString = buildQueryString({
       page,
       page_size: pageSize,
-      cefr_level: cefrLevel,
       status,
       search,
     });
