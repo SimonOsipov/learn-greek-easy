@@ -416,6 +416,7 @@ class TestGetSituationDetail:
         assert data["dialog"]["speakers"][0]["character_name"] == "Γιάννης"
         assert len(data["dialog"]["lines"]) == 1
         assert data["dialog"]["lines"][0]["text"] == "Γεια σου!"
+        assert data["dialog"]["audio_url"] is None
         assert data["description"] is not None
         assert data["picture"] is not None
 
@@ -445,3 +446,26 @@ class TestGetSituationDetail:
     async def test_404_nonexistent(self, client: AsyncClient, superuser_auth_headers: dict):
         response = await client.get(f"{BASE_URL}/{uuid4()}", headers=superuser_auth_headers)
         assert response.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_detail_dialog_audio_url(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+    ):
+        situation = await SituationFactory.create()
+        dialog = await ListeningDialogFactory.create(situation_id=situation.id)
+        dialog.audio_s3_key = "test-audio.mp3"
+        await db_session.flush()
+
+        mock_s3_service.generate_presigned_url.return_value = (
+            "https://s3.example.com/test-audio.mp3"
+        )
+
+        response = await client.get(f"{BASE_URL}/{situation.id}", headers=superuser_auth_headers)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["dialog"]["audio_url"] == "https://s3.example.com/test-audio.mp3"
+        mock_s3_service.generate_presigned_url.assert_called_once_with("test-audio.mp3")

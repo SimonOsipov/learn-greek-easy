@@ -38,6 +38,7 @@ export interface DialogNested {
   status: SituationDialogStatus;
   num_speakers: number;
   audio_duration_seconds: number | null;
+  audio_url: string | null;
   created_at: string;
   speakers: DialogSpeaker[];
   lines: DialogLine[];

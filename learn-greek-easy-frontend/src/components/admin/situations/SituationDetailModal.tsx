@@ -1,8 +1,21 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { FileText, Image, MessageSquare, RefreshCw, Trash2 } from 'lucide-react';
+import { FileText, Image, Loader2, MessageSquare, RefreshCw, Trash2, Wand2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { WaveformPlayer } from '@/components/culture/WaveformPlayer';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,6 +30,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useLanguage } from '@/hooks/useLanguage';
+import { useSSE } from '@/hooks/useSSE';
+import { getDialogAudioStreamUrl } from '@/services/adminAPI';
 import {
   useAdminSituationStore,
   selectSelectedSituation,
@@ -24,6 +39,7 @@ import {
   selectDetailError,
 } from '@/stores/adminSituationStore';
 import type { SituationDetailResponse } from '@/types/situation';
+import type { SSEEvent } from '@/types/sse';
 
 import {
   CEFR_BADGE_CLASSES,
@@ -109,6 +125,11 @@ export function SituationDetailModal({
   const detailError = useAdminSituationStore(selectDetailError);
   const { fetchSituationDetail, clearSelectedSituation } = useAdminSituationStore();
 
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [sseEnabled, setSseEnabled] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState<string | null>(null);
+  const [generationError, setGenerationError] = useState<string | null>(null);
+
   useEffect(() => {
     if (open && situationId) {
       void fetchSituationDetail(situationId);
@@ -118,8 +139,85 @@ export function SituationDetailModal({
   useEffect(() => {
     if (!open) {
       clearSelectedSituation();
+      setSseEnabled(false);
+      setGenerationProgress(null);
+      setGenerationError(null);
     }
   }, [open, clearSelectedSituation]);
+
+  const startAudioRegeneration = useCallback(() => {
+    const audioEl = containerRef.current?.querySelector<HTMLAudioElement>(
+      '[data-testid="waveform-audio-element"]'
+    );
+    audioEl?.pause();
+    setGenerationError(null);
+    setSseEnabled(true);
+  }, []);
+
+  const handleSSEEvent = useCallback(
+    (event: SSEEvent<unknown>) => {
+      switch (event.type) {
+        case 'dialog_audio:start':
+          setGenerationProgress(t('listeningDialogs.detail.generateAudio.progress.starting'));
+          break;
+        case 'dialog_audio:elevenlabs':
+          setGenerationProgress(
+            t('listeningDialogs.detail.generateAudio.progress.callingElevenLabs')
+          );
+          break;
+        case 'dialog_audio:timing':
+          setGenerationProgress(
+            t('listeningDialogs.detail.generateAudio.progress.settingTimestamps')
+          );
+          break;
+        case 'dialog_audio:upload':
+          setGenerationProgress(t('listeningDialogs.detail.generateAudio.progress.uploading'));
+          break;
+        case 'dialog_audio:complete':
+          setSseEnabled(false);
+          setGenerationProgress(null);
+          if (situationId) {
+            void fetchSituationDetail(situationId);
+          }
+          break;
+        case 'dialog_audio:error': {
+          const errData = event.data as Record<string, unknown>;
+          const errMsg = (errData?.error ?? errData?.message ?? '') as string;
+          setSseEnabled(false);
+          setGenerationProgress(null);
+          setGenerationError(
+            t('listeningDialogs.detail.generateAudio.error', {
+              message: errMsg || t('listeningDialogs.detail.errors.loadFailed'),
+            })
+          );
+          break;
+        }
+      }
+    },
+    [t, situationId, fetchSituationDetail]
+  );
+
+  const handleSSEError = useCallback(() => {
+    setSseEnabled(false);
+    setGenerationProgress(null);
+    setGenerationError(
+      t('listeningDialogs.detail.generateAudio.error', {
+        message: t('listeningDialogs.detail.errors.loadFailed'),
+      })
+    );
+  }, [t]);
+
+  const dialogId = selectedSituation?.dialog?.id;
+  const sseUrl = dialogId ? getDialogAudioStreamUrl(dialogId) : '';
+  useSSE(sseUrl, {
+    method: 'POST',
+    body: {},
+    enabled: sseEnabled && !!dialogId,
+    maxRetries: 0,
+    reconnect: false,
+    onEvent: handleSSEEvent,
+    onError: handleSSEError,
+  });
 
   const localizedScenario = selectedSituation
     ? currentLanguage === 'ru'
@@ -233,8 +331,136 @@ export function SituationDetailModal({
                   <p className="text-sm">{t('situations.detail.dialogEmpty')}</p>
                 </div>
               )}
-              <AudioPlaceholder />
-              <RegenerateButton />
+
+              {/* Audio player — shown when audio exists and SSE is not active */}
+              {selectedSituation.dialog &&
+                (selectedSituation.dialog.status === 'audio_ready' ||
+                  selectedSituation.dialog.status === 'exercises_ready') &&
+                !sseEnabled &&
+                !generationProgress && (
+                  <div ref={containerRef} data-testid="situation-dialog-audio-player">
+                    {selectedSituation.dialog.audio_url ? (
+                      <WaveformPlayer
+                        variant="admin"
+                        audioUrl={selectedSituation.dialog.audio_url}
+                        showSpeedControl={false}
+                        barCount={60}
+                      />
+                    ) : (
+                      <Alert variant="destructive">
+                        <AlertDescription>
+                          {t('listeningDialogs.detail.errors.audioUrlMissing')}
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                  </div>
+                )}
+
+              {/* Generate Audio — shown for draft dialog */}
+              {selectedSituation.dialog && selectedSituation.dialog.status === 'draft' && (
+                <div className="space-y-2 pt-2">
+                  {!sseEnabled && !generationProgress && !generationError && (
+                    <Button
+                      data-testid="situation-dialog-generate-audio-btn"
+                      onClick={() => {
+                        setGenerationError(null);
+                        setSseEnabled(true);
+                      }}
+                    >
+                      <Wand2 className="mr-2 h-4 w-4" />
+                      {t('listeningDialogs.detail.generateAudio.button')}
+                    </Button>
+                  )}
+                  {generationProgress && (
+                    <div
+                      data-testid="situation-dialog-generation-progress"
+                      className="flex items-center gap-2 text-sm text-muted-foreground"
+                    >
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      {generationProgress}
+                    </div>
+                  )}
+                  {generationError && (
+                    <div data-testid="situation-dialog-generation-error">
+                      <Alert variant="destructive">
+                        <AlertDescription>{generationError}</AlertDescription>
+                      </Alert>
+                      <Button
+                        variant="outline"
+                        className="mt-2"
+                        onClick={() => {
+                          setGenerationError(null);
+                          setSseEnabled(true);
+                        }}
+                      >
+                        {t('listeningDialogs.detail.generateAudio.tryAgain')}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Regenerate Audio — shown when audio already exists */}
+              {selectedSituation.dialog &&
+                (selectedSituation.dialog.status === 'audio_ready' ||
+                  selectedSituation.dialog.status === 'exercises_ready') && (
+                  <div className="space-y-2 pt-2">
+                    {!sseEnabled && !generationProgress && !generationError && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            data-testid="situation-dialog-regenerate-audio-btn"
+                          >
+                            <RefreshCw className="mr-2 h-4 w-4" />
+                            {t('listeningDialogs.detail.regenerateAudio.button')}
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>
+                              {t('listeningDialogs.detail.regenerateAudio.confirmTitle')}
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                              {t('listeningDialogs.detail.regenerateAudio.confirmDescription')}
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>
+                              {t('listeningDialogs.detail.regenerateAudio.cancelButton')}
+                            </AlertDialogCancel>
+                            <AlertDialogAction
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              onClick={startAudioRegeneration}
+                            >
+                              {t('listeningDialogs.detail.regenerateAudio.confirmButton')}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+                    {generationProgress && (
+                      <div
+                        data-testid="situation-dialog-generation-progress"
+                        className="flex items-center gap-2 text-sm text-muted-foreground"
+                      >
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        {generationProgress}
+                      </div>
+                    )}
+                    {generationError && (
+                      <div data-testid="situation-dialog-generation-error">
+                        <Alert variant="destructive">
+                          <AlertDescription>{generationError}</AlertDescription>
+                        </Alert>
+                        <Button variant="outline" className="mt-2" onClick={startAudioRegeneration}>
+                          {t('listeningDialogs.detail.generateAudio.tryAgain')}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
             </TabsContent>
 
             {/* Description Tab */}

@@ -114,6 +114,7 @@ class DialogNested(BaseModel):
     status: DialogStatus
     num_speakers: int
     audio_duration_seconds: float | None
+    audio_url: str | None = None
     created_at: datetime
     speakers: list[DialogSpeakerDetail]
     lines: list[DialogLineDetail]
