@@ -31,6 +31,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useSSE } from '@/hooks/useSSE';
+import { cn } from '@/lib/utils';
 import { getDialogAudioStreamUrl } from '@/services/adminAPI';
 import {
   useAdminSituationStore,
@@ -126,6 +127,7 @@ export function SituationDetailModal({
   const { fetchSituationDetail, clearSelectedSituation } = useAdminSituationStore();
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const [audioCurrentTimeMs, setAudioCurrentTimeMs] = useState(0);
   const [sseEnabled, setSseEnabled] = useState(false);
   const [generationProgress, setGenerationProgress] = useState<string | null>(null);
   const [generationError, setGenerationError] = useState<string | null>(null);
@@ -139,6 +141,7 @@ export function SituationDetailModal({
   useEffect(() => {
     if (!open) {
       clearSelectedSituation();
+      setAudioCurrentTimeMs(0);
       setSseEnabled(false);
       setGenerationProgress(null);
       setGenerationError(null);
@@ -150,9 +153,77 @@ export function SituationDetailModal({
       '[data-testid="waveform-audio-element"]'
     );
     audioEl?.pause();
+    setAudioCurrentTimeMs(0);
     setGenerationError(null);
     setSseEnabled(true);
   }, []);
+
+  // Effect — sync audioCurrentTimeMs via requestAnimationFrame
+  useEffect(() => {
+    if (
+      !selectedSituation?.dialog ||
+      (selectedSituation.dialog.status !== 'audio_ready' &&
+        selectedSituation.dialog.status !== 'exercises_ready')
+    ) {
+      return;
+    }
+
+    const container = containerRef.current;
+    if (!container) return;
+
+    const audio = container.querySelector<HTMLAudioElement>(
+      '[data-testid="waveform-audio-element"]'
+    );
+    if (!audio) return;
+
+    let rafId: number | null = null;
+    let lastUpdateMs = 0;
+
+    const tick = () => {
+      const nowMs = audio.currentTime * 1000;
+      if (Math.abs(nowMs - lastUpdateMs) > 10) {
+        setAudioCurrentTimeMs(nowMs);
+        lastUpdateMs = nowMs;
+      }
+      rafId = requestAnimationFrame(tick);
+    };
+
+    const startLoop = () => {
+      if (rafId === null) {
+        rafId = requestAnimationFrame(tick);
+      }
+    };
+
+    const stopLoop = () => {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+    };
+
+    const syncCurrentTime = () => {
+      const nowMs = audio.currentTime * 1000;
+      setAudioCurrentTimeMs(nowMs);
+      lastUpdateMs = nowMs;
+    };
+
+    audio.addEventListener('play', startLoop);
+    audio.addEventListener('pause', stopLoop);
+    audio.addEventListener('ended', stopLoop);
+    audio.addEventListener('seeked', syncCurrentTime);
+
+    if (!audio.paused) {
+      startLoop();
+    }
+
+    return () => {
+      stopLoop();
+      audio.removeEventListener('play', startLoop);
+      audio.removeEventListener('pause', stopLoop);
+      audio.removeEventListener('ended', stopLoop);
+      audio.removeEventListener('seeked', syncCurrentTime);
+    };
+  }, [selectedSituation, sseEnabled]);
 
   const handleSSEEvent = useCallback(
     (event: SSEEvent<unknown>) => {
@@ -240,6 +311,15 @@ export function SituationDetailModal({
     return selectedSituation.dialog.speakers.findIndex((s) => s.id === speakerId) ?? 0;
   };
 
+  const activeLine =
+    selectedSituation?.dialog?.lines.find(
+      (line) =>
+        line.start_time_ms !== null &&
+        line.end_time_ms !== null &&
+        line.start_time_ms <= audioCurrentTimeMs &&
+        audioCurrentTimeMs < line.end_time_ms
+    ) ?? null;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-3xl" data-testid="situation-detail-modal">
@@ -299,39 +379,6 @@ export function SituationDetailModal({
 
             {/* Dialog Tab */}
             <TabsContent value="dialog" className="space-y-4">
-              {selectedSituation.dialog && selectedSituation.dialog.lines.length > 0 ? (
-                <div className="space-y-2">
-                  {selectedSituation.dialog.lines.map((line) => {
-                    const speakerIdx = getSpeakerIndex(line.speaker_id);
-                    const style = getSpeakerStyle(speakerIdx);
-                    const isLeft = speakerIdx % 2 === 0;
-                    return (
-                      <div
-                        key={line.id}
-                        className={`flex ${isLeft ? 'justify-start' : 'justify-end'}`}
-                      >
-                        <div
-                          className={`max-w-[70%] rounded-lg border p-3 ${style.bg} ${style.border}`}
-                        >
-                          <p className={`mb-1 text-xs font-semibold ${style.name}`}>
-                            {getSpeakerName(line.speaker_id)}
-                          </p>
-                          <p className="text-sm">{line.text}</p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div
-                  className="flex flex-col items-center gap-3 py-8 text-center text-muted-foreground"
-                  data-testid="situation-dialog-empty"
-                >
-                  <MessageSquare className="h-8 w-8 opacity-40" />
-                  <p className="text-sm">{t('situations.detail.dialogEmpty')}</p>
-                </div>
-              )}
-
               {/* Audio player — shown when audio exists and SSE is not active */}
               {selectedSituation.dialog &&
                 (selectedSituation.dialog.status === 'audio_ready' ||
@@ -355,6 +402,71 @@ export function SituationDetailModal({
                     )}
                   </div>
                 )}
+
+              {selectedSituation.dialog && selectedSituation.dialog.lines.length > 0 ? (
+                <div className="space-y-2">
+                  {selectedSituation.dialog.lines.map((line) => {
+                    const speakerIdx = getSpeakerIndex(line.speaker_id);
+                    const style = getSpeakerStyle(speakerIdx);
+                    const isLeft = speakerIdx % 2 === 0;
+                    return (
+                      <div key={line.id} className={cn('flex', !isLeft && 'justify-end')}>
+                        <div
+                          className={cn(
+                            'max-w-[70%] rounded-lg border p-3 transition-shadow duration-200',
+                            style.bg,
+                            style.border,
+                            activeLine?.id === line.id && 'shadow-md'
+                          )}
+                        >
+                          <p className={`mb-1 text-xs font-semibold ${style.name}`}>
+                            {getSpeakerName(line.speaker_id)}
+                          </p>
+                          {line.word_timestamps &&
+                          line.word_timestamps.length > 0 &&
+                          audioCurrentTimeMs > 0 ? (
+                            <p className="text-sm">
+                              {line.word_timestamps.map((wt, idx) => {
+                                const state =
+                                  wt.end_ms <= audioCurrentTimeMs
+                                    ? 'spoken'
+                                    : wt.start_ms <= audioCurrentTimeMs
+                                      ? 'speaking'
+                                      : 'pending';
+                                return (
+                                  <span
+                                    key={idx}
+                                    className={cn(
+                                      'transition-all duration-150',
+                                      state === 'spoken' && 'text-foreground',
+                                      state === 'speaking' &&
+                                        'rounded bg-primary/20 px-0.5 font-medium',
+                                      state === 'pending' && 'text-muted-foreground'
+                                    )}
+                                  >
+                                    {wt.word}
+                                    {idx < line.word_timestamps.length - 1 ? ' ' : ''}
+                                  </span>
+                                );
+                              })}
+                            </p>
+                          ) : (
+                            <p className="text-sm">{line.text}</p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div
+                  className="flex flex-col items-center gap-3 py-8 text-center text-muted-foreground"
+                  data-testid="situation-dialog-empty"
+                >
+                  <MessageSquare className="h-8 w-8 opacity-40" />
+                  <p className="text-sm">{t('situations.detail.dialogEmpty')}</p>
+                </div>
+              )}
 
               {/* Generate Audio — shown for draft dialog */}
               {selectedSituation.dialog && selectedSituation.dialog.status === 'draft' && (
