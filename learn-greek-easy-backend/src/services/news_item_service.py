@@ -8,8 +8,8 @@ This service handles:
 Example Usage:
     async with get_db_session() as db:
         service = NewsItemService(db)
-        news_item = await service.create(create_data)
-        print(f"Created news item: {news_item.id}")
+        news_item = await service.create_with_question(create_data)
+        print(f"Created news item: {news_item.news_item.id}")
 """
 
 from typing import Any, Optional
@@ -27,7 +27,6 @@ from src.repositories.news_item import NewsItemRepository
 from src.schemas.news_item import (
     CardBrief,
     NewsCardInfo,
-    NewsItemCreate,
     NewsItemListResponse,
     NewsItemListWithCardsResponse,
     NewsItemResponse,
@@ -84,72 +83,6 @@ class NewsItemService:
     # =========================================================================
     # CRUD Operations
     # =========================================================================
-
-    async def create(self, data: NewsItemCreate) -> NewsItemResponse:
-        """Create a new news item with image upload.
-
-        Args:
-            data: News item creation data including source_image_url
-
-        Returns:
-            NewsItemResponse with presigned image URL
-
-        Raises:
-            ValueError: If image download fails, content-type invalid, or size exceeds limit
-        """
-        logger.info(
-            "Creating news item",
-            extra={
-                "original_article_url": str(data.original_article_url),
-                "source_image_url": str(data.source_image_url),
-            },
-        )
-
-        # Check for duplicate article URL
-        if await self.repo.exists_by_url(str(data.original_article_url)):
-            raise ValueError(f"News item with URL '{data.original_article_url}' already exists")
-
-        # Download and validate image
-        image_data, content_type = await self._download_image(str(data.source_image_url))
-
-        # Generate S3 key
-        ext = CONTENT_TYPE_TO_EXT.get(content_type, "jpg")
-        s3_key = f"{NEWS_IMAGES_PREFIX}/{uuid4()}.{ext}"
-
-        # Upload to S3
-        upload_success = self.s3_service.upload_object(s3_key, image_data, content_type)
-        if not upload_success:
-            raise ValueError("Failed to upload image to S3")
-
-        # Create news item in database
-        news_item_dict = {
-            "title_el": data.title_el,
-            "title_en": data.title_en,
-            "title_ru": data.title_ru,
-            "description_el": data.description_el,
-            "description_en": data.description_en,
-            "description_ru": data.description_ru,
-            "publication_date": data.publication_date,
-            "original_article_url": str(data.original_article_url),
-            "image_s3_key": s3_key,
-            "country": data.country.value,
-            "title_el_a2": data.title_el_a2,
-            "description_el_a2": data.description_el_a2,
-        }
-
-        news_item = await self.repo.create(news_item_dict)
-        await self.db.commit()
-        await self.db.refresh(news_item)
-
-        logger.info(
-            "News item created successfully",
-            extra={
-                "news_item_id": str(news_item.id),
-                "s3_key": s3_key,
-            },
-        )
-
-        return self._to_response(news_item)
 
     async def create_with_question(
         self, data: NewsItemWithQuestionCreate
