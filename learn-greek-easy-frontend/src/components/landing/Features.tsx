@@ -265,15 +265,14 @@ const Features = () => {
         </span>
       </div>
       {/* Story excerpt */}
-      <div className="mb-3 rounded-xl bg-secondary/50 p-3">
-        <p className="line-clamp-3 text-sm italic text-foreground">
-          &quot;Ο Γιάννης πήγε στο ταχυδρομείο για να στείλει ένα δέμα στην Ελλάδα. Η υπάλληλος τον
-          ρώτησε...&quot;
+      <div className="mb-2 rounded-xl bg-secondary/50 p-3">
+        <p className="line-clamp-2 text-sm italic text-foreground">
+          &quot;Ο Γιάννης πήγε στο ταχυδρομείο για να στείλει ένα δέμα στην Ελλάδα...&quot;
         </p>
       </div>
       {/* Question + answers (all Greek) */}
       <p className="mb-2 text-sm font-medium text-foreground">Πού πήγε ο Γιάννης;</p>
-      <div className="mb-3 grid flex-1 grid-cols-2 gap-2">
+      <div className="mb-3 grid grid-cols-2 gap-2">
         <div className="rounded-lg border border-border p-2.5 text-sm text-foreground">
           Στην τράπεζα
         </div>
@@ -305,10 +304,8 @@ const Features = () => {
           {t('features.mockups.questionOf', { current: 5, total: 20 })}
         </span>
       </div>
-      <p className="mb-3 line-clamp-2 text-sm font-bold text-foreground">
-        Πότε η Κύπρος απέκτησε την ανεξαρτησία της από τη Βρετανία;
-      </p>
-      <div className="mb-3 grid flex-1 grid-cols-2 gap-2">
+      <p className="mb-3 text-sm font-bold text-foreground">Πότε η Κύπρος έγινε ανεξάρτητη;</p>
+      <div className="mb-3 grid grid-cols-2 gap-2">
         <div className="rounded-lg border border-border p-2.5 text-sm text-foreground">1821</div>
         <div className="flex items-center justify-between rounded-lg border-2 border-primary bg-primary/5 p-2.5">
           <span className="text-sm font-semibold text-foreground">1832</span>
