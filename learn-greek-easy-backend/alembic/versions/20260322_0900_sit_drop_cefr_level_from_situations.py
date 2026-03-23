@@ -1,6 +1,6 @@
-"""sit_drop_cefr_level_from_situations
+"""sit_drop_cefr_from_situations
 
-Revision ID: sit_drop_cefr_level_from_situations
+Revision ID: sit_drop_cefr_from_situations
 Revises: sit_04_drop_created_by
 Create Date: 2026-03-22 09:00:00.000000
 
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 from alembic import op
 
-revision: str = "sit_drop_cefr_level_from_situations"
+revision: str = "sit_drop_cefr_from_situations"
 down_revision: str | None = "sit_04_drop_created_by"
 branch_labels: str | tuple[str, ...] | None = None
 depends_on: str | tuple[str, ...] | None = None
