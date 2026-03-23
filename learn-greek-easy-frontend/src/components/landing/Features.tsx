@@ -165,9 +165,7 @@ const Features = () => {
           <Volume2 className="h-6 w-6 text-primary" />
         </div>
         <div>
-          <p className="text-base font-bold text-foreground">
-            {t('features.mockups.atThePharmacy')}
-          </p>
+          <p className="text-base font-bold text-foreground">Στο Φαρμακείο</p>
           <p className="text-sm text-muted-foreground">{t('features.mockups.dialog')} - 2:34</p>
         </div>
       </div>
@@ -221,9 +219,7 @@ const Features = () => {
         <span className="text-xs text-muted-foreground">0:12</span>
       </div>
       {/* Prompt */}
-      <p className="mb-2 text-sm font-medium text-foreground">
-        {t('features.mockups.fillInMissing')}
-      </p>
+      <p className="mb-2 text-sm font-medium text-foreground">Συμπληρώστε τη λέξη:</p>
       <p className="mb-3 text-sm italic text-muted-foreground">
         &quot;Θέλω ένα _____ παρακαλώ&quot;
       </p>
@@ -477,11 +473,10 @@ const Features = () => {
         </span>
       </div>
       <div className="mb-3 flex-1 rounded-xl bg-secondary/50 p-4">
-        <p className="mb-2 text-sm font-medium text-foreground">
-          Η κυβέρνηση ανακοίνωσε νέα μέτρα...
-        </p>
-        <p className="line-clamp-2 text-xs text-muted-foreground">
-          {t('features.mockups.newsHeadline')}
+        <p className="line-clamp-5 text-sm text-foreground">
+          Η κυβέρνηση ανακοίνωσε νέα μέτρα για την ενίσχυση της οικονομίας, με έμφαση στη στήριξη
+          των μικρών επιχειρήσεων. Οι αλλαγές περιλαμβάνουν μείωση φόρων και νέα προγράμματα
+          επιδοτήσεων. Ο πρωθυπουργός δήλωσε ότι στόχος είναι η δημιουργία νέων θέσεων εργασίας.
         </p>
       </div>
       <div className="mb-3 flex items-center gap-3">
