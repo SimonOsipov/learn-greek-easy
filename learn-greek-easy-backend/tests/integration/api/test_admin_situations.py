@@ -124,6 +124,12 @@ class TestCreateSituation:
         response = await client.post(BASE_URL, json={}, headers=superuser_auth_headers)
         assert response.status_code == 422
 
+    @pytest.mark.asyncio
+    async def test_422_extra_field_ignored(self, client: AsyncClient, superuser_auth_headers: dict):
+        payload = {**VALID_PAYLOAD, "extra_field": "value"}
+        response = await client.post(BASE_URL, json=payload, headers=superuser_auth_headers)
+        assert response.status_code == 201
+
 
 class TestUpdateSituation:
     """Tests for PATCH /api/v1/admin/situations/{id}."""
@@ -271,6 +277,19 @@ class TestListSituations:
         assert "id" in item
         assert "scenario_el" in item
         assert "has_dialog" in item
+
+    @pytest.mark.asyncio
+    async def test_cefr_level_query_param_ignored(
+        self, client: AsyncClient, superuser_auth_headers: dict
+    ):
+        situation = await SituationFactory.create()
+        # cefr_level is no longer a valid filter — extra query params are ignored
+        response = await client.get(f"{BASE_URL}?cefr_level=A1", headers=superuser_auth_headers)
+        assert response.status_code == 200
+        # All situations are returned regardless of the unknown query param
+        data = response.json()
+        ids = [item["id"] for item in data["items"]]
+        assert str(situation.id) in ids
 
     @pytest.mark.asyncio
     async def test_filter_status(self, client: AsyncClient, superuser_auth_headers: dict):

@@ -92,6 +92,7 @@ class DescriptionNested(BaseModel):
 
     id: UUID
     text_el: str
+    text_el_a2: str | None
     source_type: DescriptionSourceType
     status: DescriptionStatus
     audio_duration_seconds: float | None
