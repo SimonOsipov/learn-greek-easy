@@ -26,7 +26,6 @@ VALID_PAYLOAD = {
     "scenario_el": "Στο εστιατόριο",
     "scenario_en": "At the restaurant",
     "scenario_ru": "В ресторане",
-    "cefr_level": "B1",
 }
 
 
@@ -110,7 +109,6 @@ class TestCreateSituation:
         assert data["scenario_el"] == VALID_PAYLOAD["scenario_el"]
         assert data["scenario_en"] == VALID_PAYLOAD["scenario_en"]
         assert data["scenario_ru"] == VALID_PAYLOAD["scenario_ru"]
-        assert data["cefr_level"] == "B1"
         assert "created_at" in data
 
     @pytest.mark.asyncio
@@ -127,10 +125,10 @@ class TestCreateSituation:
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_422_invalid_cefr_level(self, client: AsyncClient, superuser_auth_headers: dict):
-        payload = {**VALID_PAYLOAD, "cefr_level": "C1"}
+    async def test_422_extra_field_ignored(self, client: AsyncClient, superuser_auth_headers: dict):
+        payload = {**VALID_PAYLOAD, "extra_field": "value"}
         response = await client.post(BASE_URL, json=payload, headers=superuser_auth_headers)
-        assert response.status_code == 422
+        assert response.status_code == 201
 
 
 class TestUpdateSituation:
@@ -154,13 +152,13 @@ class TestUpdateSituation:
         situation = await SituationFactory.create()
         response = await client.patch(
             f"{BASE_URL}/{situation.id}",
-            json={"scenario_el": "Ενημερωμένο", "cefr_level": "A1"},
+            json={"scenario_el": "Ενημερωμένο", "scenario_en": "Updated"},
             headers=superuser_auth_headers,
         )
         assert response.status_code == 200
         data = response.json()
         assert data["scenario_el"] == "Ενημερωμένο"
-        assert data["cefr_level"] == "A1"
+        assert data["scenario_en"] == "Updated"
 
     @pytest.mark.asyncio
     async def test_404_nonexistent(self, client: AsyncClient, superuser_auth_headers: dict):
@@ -281,15 +279,17 @@ class TestListSituations:
         assert "has_dialog" in item
 
     @pytest.mark.asyncio
-    async def test_filter_cefr_level(self, client: AsyncClient, superuser_auth_headers: dict):
-        a1 = await SituationFactory.create(a1_level=True)
-        b1 = await SituationFactory.create()  # default B1
+    async def test_cefr_level_query_param_ignored(
+        self, client: AsyncClient, superuser_auth_headers: dict
+    ):
+        situation = await SituationFactory.create()
+        # cefr_level is no longer a valid filter — extra query params are ignored
         response = await client.get(f"{BASE_URL}?cefr_level=A1", headers=superuser_auth_headers)
         assert response.status_code == 200
+        # All situations are returned regardless of the unknown query param
         data = response.json()
         ids = [item["id"] for item in data["items"]]
-        assert str(a1.id) in ids
-        assert str(b1.id) not in ids
+        assert str(situation.id) in ids
 
     @pytest.mark.asyncio
     async def test_filter_status(self, client: AsyncClient, superuser_auth_headers: dict):

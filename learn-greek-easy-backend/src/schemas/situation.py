@@ -1,11 +1,10 @@
 from datetime import datetime
-from typing import ClassVar, Optional
+from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from src.db.models import (
-    DeckLevel,
     DescriptionSourceType,
     DescriptionStatus,
     DialogStatus,
@@ -21,21 +20,6 @@ class SituationCreate(BaseModel):
     scenario_el: str = Field(min_length=1, max_length=500)
     scenario_en: str = Field(min_length=1, max_length=500)
     scenario_ru: str = Field(min_length=1, max_length=500)
-    cefr_level: DeckLevel
-
-    ALLOWED_CEFR_LEVELS: ClassVar[set[DeckLevel]] = {
-        DeckLevel.A1,
-        DeckLevel.A2,
-        DeckLevel.B1,
-        DeckLevel.B2,
-    }
-
-    @model_validator(mode="after")
-    def validate_cefr_level(self) -> "SituationCreate":
-        if self.cefr_level not in self.ALLOWED_CEFR_LEVELS:
-            allowed = ", ".join(sorted(level.value for level in self.ALLOWED_CEFR_LEVELS))
-            raise ValueError(f"cefr_level must be one of: {allowed}")
-        return self
 
 
 class SituationUpdate(BaseModel):
@@ -44,14 +28,6 @@ class SituationUpdate(BaseModel):
     scenario_el: Optional[str] = Field(default=None, min_length=1, max_length=500)
     scenario_en: Optional[str] = Field(default=None, min_length=1, max_length=500)
     scenario_ru: Optional[str] = Field(default=None, min_length=1, max_length=500)
-    cefr_level: Optional[DeckLevel] = None
-
-    ALLOWED_CEFR_LEVELS: ClassVar[set[DeckLevel]] = {
-        DeckLevel.A1,
-        DeckLevel.A2,
-        DeckLevel.B1,
-        DeckLevel.B2,
-    }
 
     @model_validator(mode="after")
     def check_at_least_one_field(self) -> "SituationUpdate":
@@ -62,13 +38,6 @@ class SituationUpdate(BaseModel):
                 raise ValueError(f"{field_name} cannot be null")
         return self
 
-    @model_validator(mode="after")
-    def validate_cefr_level(self) -> "SituationUpdate":
-        if self.cefr_level is not None and self.cefr_level not in self.ALLOWED_CEFR_LEVELS:
-            allowed = ", ".join(sorted(level.value for level in self.ALLOWED_CEFR_LEVELS))
-            raise ValueError(f"cefr_level must be one of: {allowed}")
-        return self
-
 
 class SituationListItem(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -77,7 +46,6 @@ class SituationListItem(BaseModel):
     scenario_el: str
     scenario_en: str
     scenario_ru: str
-    cefr_level: DeckLevel
     status: SituationStatus
     created_at: datetime
     has_dialog: bool
@@ -101,7 +69,6 @@ class SituationResponse(BaseModel):
     scenario_el: str
     scenario_en: str
     scenario_ru: str
-    cefr_level: DeckLevel
     status: SituationStatus
     created_at: datetime
     updated_at: datetime

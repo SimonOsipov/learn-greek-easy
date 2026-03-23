@@ -2606,7 +2606,6 @@ class Situation(Base, TimestampMixin):
     scenario_el: Mapped[str] = mapped_column(Text, nullable=False)
     scenario_en: Mapped[str] = mapped_column(Text, nullable=False)
     scenario_ru: Mapped[str] = mapped_column(Text, nullable=False)
-    cefr_level: Mapped[DeckLevel] = mapped_column(nullable=False)
     status: Mapped[SituationStatus] = mapped_column(
         SAEnum(
             SituationStatus,
@@ -2637,7 +2636,7 @@ class Situation(Base, TimestampMixin):
     )
 
     def __repr__(self) -> str:
-        return f"<Situation id={self.id} cefr_level={self.cefr_level} status={self.status}>"
+        return f"<Situation id={self.id} status={self.status}>"
 
 
 class SituationDescription(Base, TimestampMixin):

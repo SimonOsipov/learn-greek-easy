@@ -4691,7 +4691,6 @@ async def create_situation(
             scenario_el=data.scenario_el,
             scenario_en=data.scenario_en,
             scenario_ru=data.scenario_ru,
-            cefr_level=data.cefr_level,
         )
         db.add(situation)
         await db.commit()
@@ -4778,15 +4777,12 @@ async def delete_situation(
 async def list_situations(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
-    cefr_level: DeckLevel | None = Query(default=None),
     status: SituationStatus | None = Query(default=None),
     search: str | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_superuser),
 ) -> SituationListResponse:
     count_query = select(func.count(Situation.id))
-    if cefr_level is not None:
-        count_query = count_query.where(Situation.cefr_level == cefr_level)
     if status is not None:
         count_query = count_query.where(Situation.status == status)
     if search:
@@ -4810,8 +4806,6 @@ async def list_situations(
         .offset((page - 1) * page_size)
         .limit(page_size)
     )
-    if cefr_level is not None:
-        data_query = data_query.where(Situation.cefr_level == cefr_level)
     if status is not None:
         data_query = data_query.where(Situation.status == status)
     if search:
@@ -4826,7 +4820,6 @@ async def list_situations(
             scenario_el=s.scenario_el,
             scenario_en=s.scenario_en,
             scenario_ru=s.scenario_ru,
-            cefr_level=s.cefr_level,
             status=s.status,
             created_at=s.created_at,
             has_dialog=s.dialog is not None,
