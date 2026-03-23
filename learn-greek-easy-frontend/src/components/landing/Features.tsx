@@ -273,7 +273,7 @@ const Features = () => {
       </div>
       {/* Question + answers (all Greek) */}
       <p className="mb-2 text-sm font-medium text-foreground">Πού πήγε ο Γιάννης;</p>
-      <div className="flex-1 space-y-1.5">
+      <div className="mb-3 grid flex-1 grid-cols-2 gap-2">
         <div className="rounded-lg border border-border p-2.5 text-sm text-foreground">
           Στην τράπεζα
         </div>
@@ -283,6 +283,9 @@ const Features = () => {
         </div>
         <div className="rounded-lg border border-border p-2.5 text-sm text-foreground">
           Στο νοσοκομείο
+        </div>
+        <div className="rounded-lg border border-border p-2.5 text-sm text-foreground">
+          Στο σχολείο
         </div>
       </div>
       {/* CTA in Greek */}
@@ -305,13 +308,14 @@ const Features = () => {
       <p className="mb-3 line-clamp-2 text-sm font-bold text-foreground">
         {t('features.mockups.independenceQuestion')}
       </p>
-      <div className="flex-1 space-y-1.5">
+      <div className="mb-3 grid flex-1 grid-cols-2 gap-2">
         <div className="rounded-lg border border-border p-2.5 text-sm text-foreground">1821</div>
         <div className="flex items-center justify-between rounded-lg border-2 border-primary bg-primary/5 p-2.5">
           <span className="text-sm font-semibold text-foreground">1832</span>
           <CheckCircle className="h-4 w-4 text-primary" />
         </div>
         <div className="rounded-lg border border-border p-2.5 text-sm text-foreground">1829</div>
+        <div className="rounded-lg border border-border p-2.5 text-sm text-foreground">1878</div>
       </div>
       <Button tabIndex={-1} className="mt-auto h-11 w-full rounded-lg font-semibold">
         {t('features.mockups.nextQuestion')}
