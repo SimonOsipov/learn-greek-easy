@@ -160,22 +160,47 @@ const Features = () => {
   const AudioMockup = () => (
     <MockupWrapper>
       {/* Header */}
-      <div className="mb-4 flex items-center gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-          <Volume2 className="h-6 w-6 text-primary" />
+      <div className="mb-3 flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+          <Volume2 className="h-5 w-5 text-primary" />
         </div>
         <div>
-          <p className="text-base font-bold text-foreground">Στο Φαρμακείο</p>
-          <p className="text-sm text-muted-foreground">{t('features.mockups.dialog')} - 2:34</p>
+          <p className="text-sm font-bold text-foreground">Στο Φαρμακείο</p>
+          <p className="text-xs text-muted-foreground">{t('features.mockups.dialog')} - 2:34</p>
         </div>
       </div>
-      {/* Gray content area - only contains transcript */}
-      <div className="mb-3 flex-1 rounded-xl bg-secondary/50 p-4">
-        <p className="line-clamp-2 text-sm italic text-foreground">
-          "Καλημέρα, θέλω κάτι για τον πονοκέφαλο..."
-        </p>
+      {/* Dialog bubbles */}
+      <div className="mb-3 flex-1 space-y-2 overflow-hidden">
+        {/* Speaker A - left */}
+        <div className="mr-8">
+          <div className="rounded-2xl rounded-tl-sm bg-secondary/60 px-3 py-2">
+            <p className="text-xs text-foreground">Καλημέρα, θέλω κάτι για τον πονοκέφαλο.</p>
+          </div>
+        </div>
+        {/* Speaker B - right, with karaoke highlight */}
+        <div className="ml-8">
+          <div className="rounded-2xl rounded-tr-sm bg-primary/10 px-3 py-2">
+            <p className="text-xs text-foreground">
+              Βεβαίως, πόσο{' '}
+              <span className="rounded bg-primary/25 px-0.5 font-semibold text-primary">συχνά</span>{' '}
+              έχετε πονοκέφαλο;
+            </p>
+          </div>
+        </div>
+        {/* Speaker A - left */}
+        <div className="mr-8">
+          <div className="rounded-2xl rounded-tl-sm bg-secondary/60 px-3 py-2">
+            <p className="text-xs text-foreground">Σχεδόν κάθε μέρα αυτή την εβδομάδα.</p>
+          </div>
+        </div>
+        {/* Speaker B - right */}
+        <div className="ml-8">
+          <div className="rounded-2xl rounded-tr-sm bg-primary/10 px-3 py-2">
+            <p className="text-xs text-foreground">Θα σας δώσω παρακεταμόλη.</p>
+          </div>
+        </div>
       </div>
-      {/* Audio player - separate element */}
+      {/* Audio player */}
       <div className="mb-3 flex items-center gap-3">
         <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/20">
           <Play className="ml-0.5 h-4 w-4 text-primary" />
