@@ -265,15 +265,15 @@ const Features = () => {
         </span>
       </div>
       {/* Story excerpt */}
-      <div className="mb-3 flex-1 rounded-xl bg-secondary/50 p-4">
-        <p className="line-clamp-4 text-sm italic text-foreground">
+      <div className="mb-3 rounded-xl bg-secondary/50 p-3">
+        <p className="line-clamp-3 text-sm italic text-foreground">
           &quot;Ο Γιάννης πήγε στο ταχυδρομείο για να στείλει ένα δέμα στην Ελλάδα. Η υπάλληλος τον
           ρώτησε...&quot;
         </p>
       </div>
       {/* Question + answers (all Greek) */}
       <p className="mb-2 text-sm font-medium text-foreground">Πού πήγε ο Γιάννης;</p>
-      <div className="mb-3 space-y-1.5">
+      <div className="flex-1 space-y-1.5">
         <div className="rounded-lg border border-border p-2.5 text-sm text-foreground">
           Στην τράπεζα
         </div>
