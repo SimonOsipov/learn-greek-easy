@@ -63,6 +63,14 @@
       "historyCulture": {
         "title": "History & Culture Questions",
         "description": "Prepare for the citizenship exam history and culture section with curated questions about Cypriot heritage and traditions."
+      },
+      "listeningExercises": {
+        "title": "Listening Exercises",
+        "description": "Test your comprehension with fill-the-gap, \"select what you heard\", and true/false exercises based on real Greek conversations."
+      },
+      "readingComprehension": {
+        "title": "Reading Comprehension",
+        "description": "Read short Greek stories and situations, then answer comprehension questions to build your reading confidence step by step."
       }
     },
     "mockups": {
@@ -113,7 +121,13 @@
       "workVocabulary": "Work Vocabulary",
       "restaurantPhrases": "Restaurant Phrases",
       "independenceQuestion": "When did Cyprus gain independence from Britain?",
-      "newsHeadline": "The government announced new measures for the economy, focusing on support for small businesses."
+      "newsHeadline": "The government announced new measures for the economy, focusing on support for small businesses.",
+      "listening": "Listening",
+      "exerciseOf": "Exercise {{current}}/{{total}}",
+      "fillInMissing": "Fill in the missing word:",
+      "checkAnswer": "Check Answer",
+      "reading": "Reading",
+      "storyOf": "Story {{current}}/{{total}}"
     }
   },
   "pricing": {
