@@ -1,4 +1,4 @@
-"""NMIG: news-to-situation data migration
+"""NMIG: news-to-situation data migration.
 
 Revision ID: nmig_news_data_migration
 Revises: sit_04_drop_created_by
