@@ -157,8 +157,6 @@ class TestSituationDescriptionModel:
 
         assert fetched.source_url is None
         assert fetched.country is None
-        assert fetched.news_date is None
-        assert fetched.original_language is None
 
     async def test_default_values_status_and_source_type(self, db_session: AsyncSession):
         """Test 8: Default values: status=draft, source_type=original."""

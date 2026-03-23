@@ -2272,6 +2272,16 @@ class NewsItem(Base, TimestampMixin):
         comment="Country/region this news item belongs to",
     )
 
+    # Link to Situation (optional — populated during migration)
+    situation_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("situations.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
+    # Relationships
+    situation: Mapped["Situation | None"] = relationship(lazy="raise")
+
     def __repr__(self) -> str:
         return f"<NewsItem(id={self.id}, title_en={self.title_en[:30] if self.title_en else ''}, publication_date={self.publication_date})>"
 
@@ -2640,6 +2650,7 @@ class SituationDescription(Base, TimestampMixin):
         ForeignKey("situations.id", ondelete="CASCADE"), unique=True, nullable=False
     )
     text_el: Mapped[str] = mapped_column(Text, nullable=False)
+    text_el_a2: Mapped[str | None] = mapped_column(Text, nullable=True)
     source_type: Mapped[DescriptionSourceType] = mapped_column(
         SAEnum(
             DescriptionSourceType,
@@ -2649,7 +2660,6 @@ class SituationDescription(Base, TimestampMixin):
         nullable=False,
         server_default=text("'original'"),
     )
-    full_article_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     audio_s3_key: Mapped[str | None] = mapped_column(Text, nullable=True)
     audio_a2_s3_key: Mapped[str | None] = mapped_column(Text, nullable=True)
     audio_duration_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
@@ -2664,8 +2674,6 @@ class SituationDescription(Base, TimestampMixin):
         ),
         nullable=True,
     )
-    news_date: Mapped[date | None] = mapped_column(Date, nullable=True)
-    original_language: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[DescriptionStatus] = mapped_column(
         SAEnum(
             DescriptionStatus,
