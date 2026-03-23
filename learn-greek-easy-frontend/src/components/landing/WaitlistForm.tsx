@@ -47,8 +47,8 @@ const WaitlistForm = ({ variant }: WaitlistFormProps) => {
 
   const isDark = variant === 'dark';
   const inputClasses = isDark
-    ? 'bg-white/10 border-white/30 text-white placeholder:text-white/60 focus:border-white'
-    : '';
+    ? 'h-14 rounded-xl bg-white/10 border-white/30 text-white placeholder:text-white/60 focus:border-white'
+    : 'h-14 rounded-xl';
   const errorClasses = isDark ? 'text-red-300' : 'text-destructive';
 
   return (

@@ -76,6 +76,13 @@ class WaitlistService:
             WaitlistDuplicateError: if email already exists in audience.
             WaitlistAPIError: if any Resend API call fails.
         """
+        if not settings.resend_configured:
+            logger.info(
+                "Waitlist subscribe (dry run — no API key configured)",
+                extra={"email": email},
+            )
+            return {"message": "Check your email to confirm"}
+
         resend.api_key = settings.resend_api_key
         random_secret = secrets.token_urlsafe(32)
 
@@ -132,12 +139,15 @@ class WaitlistService:
 
         return {"message": "Check your email to confirm"}
 
-    async def confirm(self, token: str) -> bool:
+    async def confirm(self, token: str) -> bool:  # noqa: C901
         """Verify token, mark contact as subscribed.
 
         Returns:
             True if confirmed (or already confirmed), False if invalid token.
         """
+        if not settings.resend_configured:
+            return False
+
         # Split token into contact_id and random_secret
         if "." not in token:
             return False

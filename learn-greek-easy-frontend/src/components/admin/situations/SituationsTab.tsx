@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import { format } from 'date-fns';
 import { ChevronLeft, ChevronRight, Layers, Plus, Search, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -16,7 +15,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useLanguage } from '@/hooks/useLanguage';
-import type { DeckLevel } from '@/services/adminAPI';
 import {
   useAdminSituationStore,
   selectSituations,
@@ -26,7 +24,6 @@ import {
   selectPageSize,
   selectTotal,
   selectTotalPages,
-  selectCefrFilter,
   selectStatusFilter,
   selectSearchQuery,
   selectIsDeleting,
@@ -38,11 +35,7 @@ import type {
 } from '@/types/situation';
 
 import { SummaryCard } from '../SummaryCard';
-import {
-  CEFR_BADGE_CLASSES,
-  CEFR_BADGE_FALLBACK,
-  SITUATION_STATUS_BADGE_CLASSES,
-} from './situationBadges';
+import { SITUATION_STATUS_BADGE_CLASSES } from './situationBadges';
 import { SituationCreateModal } from './SituationCreateModal';
 import { SituationDeleteDialog } from './SituationDeleteDialog';
 import { SituationDetailModal } from './SituationDetailModal';
@@ -58,7 +51,6 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
-const ALL_CEFR_LEVELS: DeckLevel[] = ['A1', 'A2', 'B1', 'B2'];
 const ALL_STATUSES: SituationStatus[] = ['draft', 'partial_ready', 'ready'];
 
 export function SituationsTab() {
@@ -72,13 +64,11 @@ export function SituationsTab() {
   const pageSize = useAdminSituationStore(selectPageSize);
   const total = useAdminSituationStore(selectTotal);
   const totalPages = useAdminSituationStore(selectTotalPages);
-  const cefrFilter = useAdminSituationStore(selectCefrFilter);
   const statusFilter = useAdminSituationStore(selectStatusFilter);
   useAdminSituationStore(selectSearchQuery);
   useAdminSituationStore(selectIsDeleting);
 
-  const { fetchSituations, setPage, setCefrFilter, setStatusFilter, setSearchQuery } =
-    useAdminSituationStore();
+  const { fetchSituations, setPage, setStatusFilter, setSearchQuery } = useAdminSituationStore();
 
   // Modal state
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -194,26 +184,6 @@ export function SituationsTab() {
               />
             </div>
             <Select
-              value={cefrFilter ?? 'all'}
-              onValueChange={(v) => setCefrFilter(v === 'all' ? null : (v as DeckLevel))}
-            >
-              <SelectTrigger
-                className="w-[140px]"
-                data-testid="situation-cefr-filter"
-                aria-label={t('situations.filter.allLevels')}
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('situations.filter.allLevels')}</SelectItem>
-                {ALL_CEFR_LEVELS.map((level) => (
-                  <SelectItem key={level} value={level}>
-                    {level}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
               value={statusFilter ?? 'all'}
               onValueChange={(v) => setStatusFilter(v === 'all' ? null : (v as SituationStatus))}
             >
@@ -292,12 +262,6 @@ export function SituationsTab() {
                     <div className="mt-1 flex flex-wrap gap-2">
                       <Badge
                         variant="outline"
-                        className={CEFR_BADGE_CLASSES[situation.cefr_level] ?? CEFR_BADGE_FALLBACK}
-                      >
-                        {situation.cefr_level}
-                      </Badge>
-                      <Badge
-                        variant="outline"
                         className={SITUATION_STATUS_BADGE_CLASSES[situation.status]}
                         data-testid={`situation-status-badge-${situation.id}`}
                       >
@@ -333,9 +297,6 @@ export function SituationsTab() {
                       >
                         {t('situations.media.picture')}
                       </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        {format(new Date(situation.created_at), 'MMM d, yyyy')}
-                      </span>
                     </div>
                   </div>
                   <div className="ml-4 flex shrink-0 items-center gap-3">

@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
-import type { DeckLevel } from '@/services/adminAPI';
 import { adminAPI } from '@/services/adminAPI';
 import type {
   SituationCreatePayload,
@@ -34,7 +33,6 @@ interface AdminSituationState {
   detailError: string | null;
 
   // Filters
-  cefrFilter: DeckLevel | null;
   statusFilter: SituationStatus | null;
   searchQuery: string;
 
@@ -44,7 +42,6 @@ interface AdminSituationState {
   deleteSituation: (id: string) => Promise<void>;
   fetchSituationDetail: (id: string) => Promise<void>;
   setPage: (page: number) => void;
-  setCefrFilter: (level: DeckLevel | null) => void;
   setStatusFilter: (status: SituationStatus | null) => void;
   setSearchQuery: (query: string) => void;
   setSelectedSituation: (situation: SituationDetailResponse | null) => void;
@@ -70,18 +67,16 @@ export const useAdminSituationStore = create<AdminSituationState>()(
       isDeleting: false,
       error: null,
       detailError: null,
-      cefrFilter: null,
       statusFilter: null,
       searchQuery: '',
 
       fetchSituations: async () => {
         set({ isLoading: true, error: null });
         try {
-          const { page, pageSize, cefrFilter, statusFilter, searchQuery } = get();
+          const { page, pageSize, statusFilter, searchQuery } = get();
           const response = await adminAPI.getSituations(
             page,
             pageSize,
-            cefrFilter ?? undefined,
             statusFilter ?? undefined,
             searchQuery || undefined
           );
@@ -145,11 +140,6 @@ export const useAdminSituationStore = create<AdminSituationState>()(
         get().fetchSituations();
       },
 
-      setCefrFilter: (level: DeckLevel | null) => {
-        set({ cefrFilter: level, page: 1 });
-        get().fetchSituations();
-      },
-
       setStatusFilter: (status: SituationStatus | null) => {
         set({ statusFilter: status, page: 1 });
         get().fetchSituations();
@@ -190,6 +180,5 @@ export const selectPage = (state: AdminSituationState) => state.page;
 export const selectPageSize = (state: AdminSituationState) => state.pageSize;
 export const selectTotal = (state: AdminSituationState) => state.total;
 export const selectTotalPages = (state: AdminSituationState) => state.totalPages;
-export const selectCefrFilter = (state: AdminSituationState) => state.cefrFilter;
 export const selectStatusFilter = (state: AdminSituationState) => state.statusFilter;
 export const selectSearchQuery = (state: AdminSituationState) => state.searchQuery;

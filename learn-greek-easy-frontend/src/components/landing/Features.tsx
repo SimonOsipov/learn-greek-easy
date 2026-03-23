@@ -89,6 +89,18 @@ const Features = () => {
       mockup: 'audio',
     },
     {
+      icon: <Headphones className="h-8 w-8" />,
+      titleKey: 'features.cards.listeningExercises.title',
+      descriptionKey: 'features.cards.listeningExercises.description',
+      mockup: 'listeningExercises',
+    },
+    {
+      icon: <BookOpen className="h-8 w-8" />,
+      titleKey: 'features.cards.readingComprehension.title',
+      descriptionKey: 'features.cards.readingComprehension.description',
+      mockup: 'readingComprehension',
+    },
+    {
       icon: <Landmark className="h-8 w-8" />,
       titleKey: 'features.cards.historyCulture.title',
       descriptionKey: 'features.cards.historyCulture.description',
@@ -187,6 +199,102 @@ const Features = () => {
     </MockupWrapper>
   );
 
+  const ListeningExercisesMockup = () => (
+    <MockupWrapper>
+      {/* Header */}
+      <div className="mb-3 flex items-center justify-between">
+        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${MOCKUP_BADGE.blue}`}>
+          {t('features.mockups.listening')}
+        </span>
+        <span className="text-xs text-muted-foreground dark:text-foreground/70">
+          {t('features.mockups.exerciseOf', { current: 3, total: 8 })}
+        </span>
+      </div>
+      {/* Audio player bar */}
+      <div className="mb-3 flex items-center gap-3">
+        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/20">
+          <Volume2 className="h-4 w-4 text-primary" />
+        </div>
+        <div className="h-2 flex-1 overflow-hidden rounded-full bg-primary/20">
+          <div className="h-full w-2/3 rounded-full bg-primary" />
+        </div>
+        <span className="text-xs text-muted-foreground">0:12</span>
+      </div>
+      {/* Prompt */}
+      <p className="mb-2 text-sm font-medium text-foreground">
+        {t('features.mockups.fillInMissing')}
+      </p>
+      <p className="mb-3 text-sm italic text-muted-foreground">
+        &quot;Θέλω ένα _____ παρακαλώ&quot;
+      </p>
+      {/* Answer grid */}
+      <div className="mb-3 grid flex-1 grid-cols-2 gap-2">
+        <div className="flex items-center justify-between rounded-lg border-2 border-primary bg-primary/5 p-2.5">
+          <span className="text-sm font-semibold text-foreground">καφέ</span>
+          <CheckCircle className="h-4 w-4 text-primary" />
+        </div>
+        <div className="rounded-lg border border-border p-2.5 text-sm text-foreground">νερό</div>
+        <div className="rounded-lg border border-border p-2.5 text-sm text-foreground">ψωμί</div>
+        <div className="rounded-lg border border-border p-2.5 text-sm text-foreground">τσάι</div>
+      </div>
+      {/* CTA */}
+      <Button tabIndex={-1} className="mt-auto h-11 w-full rounded-lg font-semibold">
+        {t('features.mockups.checkAnswer')}
+      </Button>
+    </MockupWrapper>
+  );
+
+  const ReadingComprehensionMockup = () => (
+    <MockupWrapper>
+      {/* Header */}
+      <div className="mb-3 flex items-center justify-between">
+        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${MOCKUP_BADGE.green}`}>
+          {t('features.mockups.reading')}
+        </span>
+        <span className="text-xs text-muted-foreground dark:text-foreground/70">
+          {t('features.mockups.storyOf', { current: 2, total: 6 })}
+        </span>
+      </div>
+      {/* Story title + level */}
+      <div className="mb-2 flex items-center justify-between">
+        <p className="text-base font-bold text-foreground">Στο Ταχυδρομείο</p>
+        <span
+          className={`rounded px-2 py-0.5 text-xs font-semibold ${getCEFRColor('B1')} ${getCEFRTextColor('B1')}`}
+        >
+          B1
+        </span>
+      </div>
+      {/* Story excerpt */}
+      <div className="mb-3 rounded-xl bg-secondary/50 p-3">
+        <p className="line-clamp-3 text-sm italic text-foreground">
+          &quot;Ο Γιάννης πήγε στο ταχυδρομείο για να στείλει ένα δέμα στην Ελλάδα. Η υπάλληλος τον
+          ρώτησε...&quot;
+        </p>
+      </div>
+      {/* Question + answers (all Greek) */}
+      <p className="mb-2 text-sm font-medium text-foreground">Πού πήγε ο Γιάννης;</p>
+      <div className="mb-3 grid flex-1 grid-cols-2 gap-2">
+        <div className="rounded-lg border border-border p-2.5 text-sm text-foreground">
+          Στην τράπεζα
+        </div>
+        <div className="flex items-center justify-between rounded-lg border-2 border-primary bg-primary/5 p-2.5">
+          <span className="text-sm font-semibold text-foreground">Στο ταχυδρομείο</span>
+          <CheckCircle className="h-4 w-4 text-primary" />
+        </div>
+        <div className="rounded-lg border border-border p-2.5 text-sm text-foreground">
+          Στο νοσοκομείο
+        </div>
+        <div className="rounded-lg border border-border p-2.5 text-sm text-foreground">
+          Στο σχολείο
+        </div>
+      </div>
+      {/* CTA in Greek */}
+      <Button tabIndex={-1} className="mt-auto h-11 w-full rounded-lg font-semibold">
+        Επόμενη Ερώτηση
+      </Button>
+    </MockupWrapper>
+  );
+
   const QuizMockup = () => (
     <MockupWrapper>
       <div className="mb-3 flex items-center justify-between">
@@ -200,13 +308,14 @@ const Features = () => {
       <p className="mb-3 line-clamp-2 text-sm font-bold text-foreground">
         {t('features.mockups.independenceQuestion')}
       </p>
-      <div className="flex-1 space-y-1.5">
+      <div className="mb-3 grid flex-1 grid-cols-2 gap-2">
         <div className="rounded-lg border border-border p-2.5 text-sm text-foreground">1821</div>
         <div className="flex items-center justify-between rounded-lg border-2 border-primary bg-primary/5 p-2.5">
           <span className="text-sm font-semibold text-foreground">1832</span>
           <CheckCircle className="h-4 w-4 text-primary" />
         </div>
         <div className="rounded-lg border border-border p-2.5 text-sm text-foreground">1829</div>
+        <div className="rounded-lg border border-border p-2.5 text-sm text-foreground">1878</div>
       </div>
       <Button tabIndex={-1} className="mt-auto h-11 w-full rounded-lg font-semibold">
         {t('features.mockups.nextQuestion')}
@@ -462,6 +571,10 @@ const Features = () => {
         return <NewsMockup />;
       case 'audio':
         return <AudioMockup />;
+      case 'listeningExercises':
+        return <ListeningExercisesMockup />;
+      case 'readingComprehension':
+        return <ReadingComprehensionMockup />;
       case 'quiz':
         return <QuizMockup />;
       default:

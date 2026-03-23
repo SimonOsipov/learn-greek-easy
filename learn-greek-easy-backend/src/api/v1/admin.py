@@ -4856,4 +4856,8 @@ async def get_situation(
     if situation.dialog:
         situation.dialog.speakers.sort(key=lambda s: s.speaker_index)
         situation.dialog.lines.sort(key=lambda ln: ln.line_index)
-    return SituationDetailResponse.model_validate(situation)
+    response = SituationDetailResponse.model_validate(situation)
+    if response.dialog and situation.dialog and situation.dialog.audio_s3_key:
+        s3 = get_s3_service()
+        response.dialog.audio_url = s3.generate_presigned_url(situation.dialog.audio_s3_key)
+    return response

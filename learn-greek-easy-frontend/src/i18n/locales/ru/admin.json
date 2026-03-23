@@ -1252,7 +1252,6 @@
     },
     "columns": {
       "scenario": "Сценарий",
-      "cefrLevel": "Уровень CEFR",
       "status": "Статус",
       "media": "Медиа",
       "created": "Создано",
@@ -1283,8 +1282,7 @@
     },
     "validation": {
       "invalidJson": "Неверный формат JSON",
-      "missingFields": "Отсутствуют или пустые обязательные поля: scenario_el, scenario_en, scenario_ru, cefr_level",
-      "invalidCefrLevel": "cefr_level должен быть одним из: A1, A2, B1, B2"
+      "missingFields": "Отсутствуют или пустые обязательные поля: scenario_el, scenario_en, scenario_ru"
     },
     "detail": {
       "tabs": {

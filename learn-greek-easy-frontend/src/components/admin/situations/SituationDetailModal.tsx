@@ -1,8 +1,21 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { FileText, Image, MessageSquare, RefreshCw, Trash2 } from 'lucide-react';
+import { FileText, Image, Loader2, MessageSquare, RefreshCw, Trash2, Wand2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { WaveformPlayer } from '@/components/culture/WaveformPlayer';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,6 +30,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useLanguage } from '@/hooks/useLanguage';
+import { useSSE } from '@/hooks/useSSE';
+import { cn } from '@/lib/utils';
+import { getDialogAudioStreamUrl } from '@/services/adminAPI';
 import {
   useAdminSituationStore,
   selectSelectedSituation,
@@ -24,12 +40,9 @@ import {
   selectDetailError,
 } from '@/stores/adminSituationStore';
 import type { SituationDetailResponse } from '@/types/situation';
+import type { SSEEvent } from '@/types/sse';
 
-import {
-  CEFR_BADGE_CLASSES,
-  CEFR_BADGE_FALLBACK,
-  SITUATION_STATUS_BADGE_CLASSES,
-} from './situationBadges';
+import { SITUATION_STATUS_BADGE_CLASSES } from './situationBadges';
 
 // Defined locally — same values as DialogDetailModal but NOT imported from it
 const SPEAKER_BUBBLE_STYLES = [
@@ -109,6 +122,12 @@ export function SituationDetailModal({
   const detailError = useAdminSituationStore(selectDetailError);
   const { fetchSituationDetail, clearSelectedSituation } = useAdminSituationStore();
 
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [audioCurrentTimeMs, setAudioCurrentTimeMs] = useState(0);
+  const [sseEnabled, setSseEnabled] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState<string | null>(null);
+  const [generationError, setGenerationError] = useState<string | null>(null);
+
   useEffect(() => {
     if (open && situationId) {
       void fetchSituationDetail(situationId);
@@ -118,8 +137,154 @@ export function SituationDetailModal({
   useEffect(() => {
     if (!open) {
       clearSelectedSituation();
+      setAudioCurrentTimeMs(0);
+      setSseEnabled(false);
+      setGenerationProgress(null);
+      setGenerationError(null);
     }
   }, [open, clearSelectedSituation]);
+
+  const startAudioRegeneration = useCallback(() => {
+    const audioEl = containerRef.current?.querySelector<HTMLAudioElement>(
+      '[data-testid="waveform-audio-element"]'
+    );
+    audioEl?.pause();
+    setAudioCurrentTimeMs(0);
+    setGenerationError(null);
+    setSseEnabled(true);
+  }, []);
+
+  // Effect — sync audioCurrentTimeMs via requestAnimationFrame
+  useEffect(() => {
+    if (
+      !selectedSituation?.dialog ||
+      (selectedSituation.dialog.status !== 'audio_ready' &&
+        selectedSituation.dialog.status !== 'exercises_ready')
+    ) {
+      return;
+    }
+
+    const container = containerRef.current;
+    if (!container) return;
+
+    const audio = container.querySelector<HTMLAudioElement>(
+      '[data-testid="waveform-audio-element"]'
+    );
+    if (!audio) return;
+
+    let rafId: number | null = null;
+    let lastUpdateMs = 0;
+
+    const tick = () => {
+      const nowMs = audio.currentTime * 1000;
+      if (Math.abs(nowMs - lastUpdateMs) > 10) {
+        setAudioCurrentTimeMs(nowMs);
+        lastUpdateMs = nowMs;
+      }
+      rafId = requestAnimationFrame(tick);
+    };
+
+    const startLoop = () => {
+      if (rafId === null) {
+        rafId = requestAnimationFrame(tick);
+      }
+    };
+
+    const stopLoop = () => {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+    };
+
+    const syncCurrentTime = () => {
+      const nowMs = audio.currentTime * 1000;
+      setAudioCurrentTimeMs(nowMs);
+      lastUpdateMs = nowMs;
+    };
+
+    audio.addEventListener('play', startLoop);
+    audio.addEventListener('pause', stopLoop);
+    audio.addEventListener('ended', stopLoop);
+    audio.addEventListener('seeked', syncCurrentTime);
+
+    if (!audio.paused) {
+      startLoop();
+    }
+
+    return () => {
+      stopLoop();
+      audio.removeEventListener('play', startLoop);
+      audio.removeEventListener('pause', stopLoop);
+      audio.removeEventListener('ended', stopLoop);
+      audio.removeEventListener('seeked', syncCurrentTime);
+    };
+  }, [selectedSituation, sseEnabled]);
+
+  const handleSSEEvent = useCallback(
+    (event: SSEEvent<unknown>) => {
+      switch (event.type) {
+        case 'dialog_audio:start':
+          setGenerationProgress(t('listeningDialogs.detail.generateAudio.progress.starting'));
+          break;
+        case 'dialog_audio:elevenlabs':
+          setGenerationProgress(
+            t('listeningDialogs.detail.generateAudio.progress.callingElevenLabs')
+          );
+          break;
+        case 'dialog_audio:timing':
+          setGenerationProgress(
+            t('listeningDialogs.detail.generateAudio.progress.settingTimestamps')
+          );
+          break;
+        case 'dialog_audio:upload':
+          setGenerationProgress(t('listeningDialogs.detail.generateAudio.progress.uploading'));
+          break;
+        case 'dialog_audio:complete':
+          setSseEnabled(false);
+          setGenerationProgress(null);
+          if (situationId) {
+            void fetchSituationDetail(situationId);
+          }
+          break;
+        case 'dialog_audio:error': {
+          const errData = event.data as Record<string, unknown>;
+          const errMsg = (errData?.error ?? errData?.message ?? '') as string;
+          setSseEnabled(false);
+          setGenerationProgress(null);
+          setGenerationError(
+            t('listeningDialogs.detail.generateAudio.error', {
+              message: errMsg || t('listeningDialogs.detail.errors.loadFailed'),
+            })
+          );
+          break;
+        }
+      }
+    },
+    [t, situationId, fetchSituationDetail]
+  );
+
+  const handleSSEError = useCallback(() => {
+    setSseEnabled(false);
+    setGenerationProgress(null);
+    setGenerationError(
+      t('listeningDialogs.detail.generateAudio.error', {
+        message: t('listeningDialogs.detail.errors.loadFailed'),
+      })
+    );
+  }, [t]);
+
+  const dialogId = selectedSituation?.dialog?.id;
+  const sseUrl = dialogId ? getDialogAudioStreamUrl(dialogId) : '';
+  useSSE(sseUrl, {
+    method: 'POST',
+    body: {},
+    enabled: sseEnabled && !!dialogId,
+    maxRetries: 0,
+    reconnect: false,
+    onEvent: handleSSEEvent,
+    onError: handleSSEError,
+  });
 
   const localizedScenario = selectedSituation
     ? currentLanguage === 'ru'
@@ -142,6 +307,15 @@ export function SituationDetailModal({
     return selectedSituation.dialog.speakers.findIndex((s) => s.id === speakerId) ?? 0;
   };
 
+  const activeLine =
+    selectedSituation?.dialog?.lines.find(
+      (line) =>
+        line.start_time_ms !== null &&
+        line.end_time_ms !== null &&
+        line.start_time_ms <= audioCurrentTimeMs &&
+        audioCurrentTimeMs < line.end_time_ms
+    ) ?? null;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-3xl" data-testid="situation-detail-modal">
@@ -157,14 +331,6 @@ export function SituationDetailModal({
               <DialogTitle>{localizedScenario}</DialogTitle>
               <DialogDescription>{selectedSituation.scenario_el}</DialogDescription>
               <div className="flex flex-wrap gap-2 pt-2">
-                <Badge
-                  variant="outline"
-                  className={
-                    CEFR_BADGE_CLASSES[selectedSituation.cefr_level] ?? CEFR_BADGE_FALLBACK
-                  }
-                >
-                  {selectedSituation.cefr_level}
-                </Badge>
                 <Badge
                   variant="outline"
                   className={SITUATION_STATUS_BADGE_CLASSES[selectedSituation.status]}
@@ -201,6 +367,30 @@ export function SituationDetailModal({
 
             {/* Dialog Tab */}
             <TabsContent value="dialog" className="space-y-4">
+              {/* Audio player — shown when audio exists and SSE is not active */}
+              {selectedSituation.dialog &&
+                (selectedSituation.dialog.status === 'audio_ready' ||
+                  selectedSituation.dialog.status === 'exercises_ready') &&
+                !sseEnabled &&
+                !generationProgress && (
+                  <div ref={containerRef} data-testid="situation-dialog-audio-player">
+                    {selectedSituation.dialog.audio_url ? (
+                      <WaveformPlayer
+                        variant="admin"
+                        audioUrl={selectedSituation.dialog.audio_url}
+                        showSpeedControl={false}
+                        barCount={60}
+                      />
+                    ) : (
+                      <Alert variant="destructive">
+                        <AlertDescription>
+                          {t('listeningDialogs.detail.errors.audioUrlMissing')}
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                  </div>
+                )}
+
               {selectedSituation.dialog && selectedSituation.dialog.lines.length > 0 ? (
                 <div className="space-y-2">
                   {selectedSituation.dialog.lines.map((line) => {
@@ -208,17 +398,49 @@ export function SituationDetailModal({
                     const style = getSpeakerStyle(speakerIdx);
                     const isLeft = speakerIdx % 2 === 0;
                     return (
-                      <div
-                        key={line.id}
-                        className={`flex ${isLeft ? 'justify-start' : 'justify-end'}`}
-                      >
+                      <div key={line.id} className={cn('flex', !isLeft && 'justify-end')}>
                         <div
-                          className={`max-w-[70%] rounded-lg border p-3 ${style.bg} ${style.border}`}
+                          className={cn(
+                            'max-w-[70%] rounded-lg border p-3 transition-shadow duration-200',
+                            style.bg,
+                            style.border,
+                            activeLine?.id === line.id && 'shadow-md'
+                          )}
                         >
                           <p className={`mb-1 text-xs font-semibold ${style.name}`}>
                             {getSpeakerName(line.speaker_id)}
                           </p>
-                          <p className="text-sm">{line.text}</p>
+                          {line.word_timestamps &&
+                          line.word_timestamps.length > 0 &&
+                          audioCurrentTimeMs > 0 ? (
+                            <p className="text-sm">
+                              {line.word_timestamps.map((wt, idx) => {
+                                const state =
+                                  wt.end_ms <= audioCurrentTimeMs
+                                    ? 'spoken'
+                                    : wt.start_ms <= audioCurrentTimeMs
+                                      ? 'speaking'
+                                      : 'pending';
+                                return (
+                                  <span
+                                    key={idx}
+                                    className={cn(
+                                      'transition-all duration-150',
+                                      state === 'spoken' && 'text-foreground',
+                                      state === 'speaking' &&
+                                        'rounded bg-primary/20 px-0.5 font-medium',
+                                      state === 'pending' && 'text-muted-foreground'
+                                    )}
+                                  >
+                                    {wt.word}
+                                    {idx < line.word_timestamps.length - 1 ? ' ' : ''}
+                                  </span>
+                                );
+                              })}
+                            </p>
+                          ) : (
+                            <p className="text-sm">{line.text}</p>
+                          )}
                         </div>
                       </div>
                     );
@@ -233,8 +455,112 @@ export function SituationDetailModal({
                   <p className="text-sm">{t('situations.detail.dialogEmpty')}</p>
                 </div>
               )}
-              <AudioPlaceholder />
-              <RegenerateButton />
+
+              {/* Generate Audio — shown for draft dialog */}
+              {selectedSituation.dialog && selectedSituation.dialog.status === 'draft' && (
+                <div className="space-y-2 pt-2">
+                  {!sseEnabled && !generationProgress && !generationError && (
+                    <Button
+                      data-testid="situation-dialog-generate-audio-btn"
+                      onClick={() => {
+                        setGenerationError(null);
+                        setSseEnabled(true);
+                      }}
+                    >
+                      <Wand2 className="mr-2 h-4 w-4" />
+                      {t('listeningDialogs.detail.generateAudio.button')}
+                    </Button>
+                  )}
+                  {generationProgress && (
+                    <div
+                      data-testid="situation-dialog-generation-progress"
+                      className="flex items-center gap-2 text-sm text-muted-foreground"
+                    >
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      {generationProgress}
+                    </div>
+                  )}
+                  {generationError && (
+                    <div data-testid="situation-dialog-generation-error">
+                      <Alert variant="destructive">
+                        <AlertDescription>{generationError}</AlertDescription>
+                      </Alert>
+                      <Button
+                        variant="outline"
+                        className="mt-2"
+                        onClick={() => {
+                          setGenerationError(null);
+                          setSseEnabled(true);
+                        }}
+                      >
+                        {t('listeningDialogs.detail.generateAudio.tryAgain')}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Regenerate Audio — shown when audio already exists */}
+              {selectedSituation.dialog &&
+                (selectedSituation.dialog.status === 'audio_ready' ||
+                  selectedSituation.dialog.status === 'exercises_ready') && (
+                  <div className="space-y-2 pt-2">
+                    {!sseEnabled && !generationProgress && !generationError && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            data-testid="situation-dialog-regenerate-audio-btn"
+                          >
+                            <RefreshCw className="mr-2 h-4 w-4" />
+                            {t('listeningDialogs.detail.regenerateAudio.button')}
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>
+                              {t('listeningDialogs.detail.regenerateAudio.confirmTitle')}
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                              {t('listeningDialogs.detail.regenerateAudio.confirmDescription')}
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>
+                              {t('listeningDialogs.detail.regenerateAudio.cancelButton')}
+                            </AlertDialogCancel>
+                            <AlertDialogAction
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              onClick={startAudioRegeneration}
+                            >
+                              {t('listeningDialogs.detail.regenerateAudio.confirmButton')}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+                    {generationProgress && (
+                      <div
+                        data-testid="situation-dialog-generation-progress"
+                        className="flex items-center gap-2 text-sm text-muted-foreground"
+                      >
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        {generationProgress}
+                      </div>
+                    )}
+                    {generationError && (
+                      <div data-testid="situation-dialog-generation-error">
+                        <Alert variant="destructive">
+                          <AlertDescription>{generationError}</AlertDescription>
+                        </Alert>
+                        <Button variant="outline" className="mt-2" onClick={startAudioRegeneration}>
+                          {t('listeningDialogs.detail.generateAudio.tryAgain')}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
             </TabsContent>
 
             {/* Description Tab */}

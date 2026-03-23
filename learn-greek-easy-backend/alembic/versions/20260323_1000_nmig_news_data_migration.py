@@ -53,7 +53,7 @@ def upgrade() -> None:
         CREATE TEMP TABLE _nmig_mapping AS
         SELECT
             ni.id AS news_item_id,
-            gen_random_uuid() AS situation_id
+            uuid_generate_v4() AS situation_id
         FROM news_items ni
     """
         )
@@ -88,7 +88,7 @@ def upgrade() -> None:
             created_at, updated_at
         )
         SELECT
-            gen_random_uuid(),
+            uuid_generate_v4(),
             m.situation_id,
             ni.description_el,
             ni.description_el_a2,
@@ -149,14 +149,14 @@ def upgrade() -> None:
 def downgrade() -> None:
     conn = op.get_bind()
 
-    # 1. Delete news-sourced situations (CASCADE removes their descriptions)
+    # 1. Delete situations linked to news_items (identified via news_items.situation_id)
     conn.execute(
         sa.text(
             """
         DELETE FROM situations
         WHERE id IN (
-            SELECT situation_id FROM situation_descriptions
-            WHERE source_type = 'news'
+            SELECT situation_id FROM news_items
+            WHERE situation_id IS NOT NULL
         )
     """
         )
@@ -178,8 +178,12 @@ def downgrade() -> None:
     # 4. Drop text_el_a2 from situation_descriptions
     op.drop_column("situation_descriptions", "text_el_a2")
 
-    # 5. Re-add cefr_level to situations (restored nullable since data is lost)
+    # 5. Re-add cefr_level to situations as nullable (data is lost; original was NOT NULL)
     op.add_column(
         "situations",
-        sa.Column("cefr_level", sa.Text(), nullable=True),
+        sa.Column(
+            "cefr_level",
+            sa.Enum("A1", "A2", "B1", "B2", "C1", "C2", name="decklevel", create_type=False),
+            nullable=True,
+        ),
     )
