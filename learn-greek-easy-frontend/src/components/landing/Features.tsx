@@ -306,7 +306,7 @@ const Features = () => {
         </span>
       </div>
       <p className="mb-3 line-clamp-2 text-sm font-bold text-foreground">
-        {t('features.mockups.independenceQuestion')}
+        Πότε η Κύπρος απέκτησε την ανεξαρτησία της από τη Βρετανία;
       </p>
       <div className="mb-3 grid flex-1 grid-cols-2 gap-2">
         <div className="rounded-lg border border-border p-2.5 text-sm text-foreground">1821</div>
