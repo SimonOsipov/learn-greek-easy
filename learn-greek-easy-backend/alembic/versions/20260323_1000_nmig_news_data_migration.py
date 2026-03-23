@@ -12,16 +12,13 @@ import sqlalchemy as sa
 from alembic import op
 
 revision = "nmig_news_data_migration"
-down_revision = "sit_04_drop_created_by"
+down_revision = "sit_drop_cefr_from_situations"
 branch_labels = None
 depends_on = None
 
 
 def upgrade() -> None:
     conn = op.get_bind()
-
-    # Step 0: Drop cefr_level from situations (NOT NULL, no default — must go before data INSERT)
-    op.drop_column("situations", "cefr_level")
 
     # Step 1: Add text_el_a2 to situation_descriptions
     op.add_column("situation_descriptions", sa.Column("text_el_a2", sa.Text(), nullable=True))
@@ -177,13 +174,3 @@ def downgrade() -> None:
 
     # 4. Drop text_el_a2 from situation_descriptions
     op.drop_column("situation_descriptions", "text_el_a2")
-
-    # 5. Re-add cefr_level to situations as nullable (data is lost; original was NOT NULL)
-    op.add_column(
-        "situations",
-        sa.Column(
-            "cefr_level",
-            sa.Enum("A1", "A2", "B1", "B2", "C1", "C2", name="decklevel", create_type=False),
-            nullable=True,
-        ),
-    )
