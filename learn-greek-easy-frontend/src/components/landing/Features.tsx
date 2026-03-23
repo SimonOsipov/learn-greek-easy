@@ -11,6 +11,7 @@ import {
   Newspaper,
   Play,
   Plus,
+  Timer,
   Tv,
   Volume2,
 } from 'lucide-react';
@@ -93,6 +94,12 @@ const Features = () => {
       titleKey: 'features.cards.listeningExercises.title',
       descriptionKey: 'features.cards.listeningExercises.description',
       mockup: 'listeningExercises',
+    },
+    {
+      icon: <Timer className="h-8 w-8" />,
+      titleKey: 'features.cards.ellinomatheia.title',
+      descriptionKey: 'features.cards.ellinomatheia.description',
+      mockup: 'ellinomatheia',
     },
     {
       icon: <BookOpen className="h-8 w-8" />,
@@ -261,6 +268,63 @@ const Features = () => {
       {/* CTA */}
       <Button tabIndex={-1} className="mt-auto h-11 w-full rounded-lg font-semibold">
         {t('features.mockups.checkAnswer')}
+      </Button>
+    </MockupWrapper>
+  );
+
+  const EllinomatheiaMockup = () => (
+    <MockupWrapper>
+      {/* Header: badge + CEFR level */}
+      <div className="mb-2 flex items-center gap-2">
+        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${MOCKUP_BADGE.indigo}`}>
+          Ellinomatheia
+        </span>
+        <span
+          className={`rounded px-2 py-0.5 text-xs font-semibold ${getCEFRColor('B1')} ${getCEFRTextColor('B1')}`}
+        >
+          B1
+        </span>
+      </div>
+      {/* Section label + timer */}
+      <div className="mb-2 flex items-center justify-between">
+        <p className="text-sm font-medium text-foreground">Ενότητα 2: Ανάγνωση</p>
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <Timer className="h-3.5 w-3.5" />
+          <span>12:34</span>
+        </div>
+      </div>
+      {/* Progress bar */}
+      <div className="mb-2 flex items-center gap-2">
+        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-primary/20">
+          <div className="h-full w-[40%] rounded-full bg-primary" />
+        </div>
+        <span className="text-xs text-muted-foreground">4/10</span>
+      </div>
+      {/* Question area */}
+      <div className="mb-2 rounded-xl bg-secondary/50 p-3">
+        <p className="text-xs text-foreground">
+          Διαβάστε το κείμενο και απαντήστε: Τι πρέπει να κάνει ο Μάρκος μέχρι την Παρασκευή;
+        </p>
+      </div>
+      {/* 2x2 answer grid */}
+      <div className="mb-3 grid grid-cols-2 gap-2">
+        <div className="rounded-lg border border-border p-2 text-xs text-foreground">
+          Να πάει στο γραφείο
+        </div>
+        <div className="flex items-center justify-between rounded-lg border-2 border-primary bg-primary/5 p-2">
+          <span className="text-xs font-semibold text-foreground">Να στείλει τα έγγραφα</span>
+          <CheckCircle className="h-3.5 w-3.5 text-primary" />
+        </div>
+        <div className="rounded-lg border border-border p-2 text-xs text-foreground">
+          Να πάρει τηλέφωνο
+        </div>
+        <div className="rounded-lg border border-border p-2 text-xs text-foreground">
+          Να καλέσει τον γιατρό
+        </div>
+      </div>
+      {/* CTA in Greek */}
+      <Button tabIndex={-1} className="mt-auto h-11 w-full rounded-lg font-semibold">
+        Επόμενη Ερώτηση
       </Button>
     </MockupWrapper>
   );
@@ -593,6 +657,8 @@ const Features = () => {
         return <AudioMockup />;
       case 'listeningExercises':
         return <ListeningExercisesMockup />;
+      case 'ellinomatheia':
+        return <EllinomatheiaMockup />;
       case 'readingComprehension':
         return <ReadingComprehensionMockup />;
       case 'quiz':

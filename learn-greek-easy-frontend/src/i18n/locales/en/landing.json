@@ -68,6 +68,10 @@
         "title": "Listening Exercises",
         "description": "Test your comprehension with fill-the-gap, \"select what you heard\", and true/false exercises based on real Greek conversations."
       },
+      "ellinomatheia": {
+        "title": "Ellinomatheia Exam Practice",
+        "description": "Simulate the official Greek language certification exam with timed sections and real exam-format questions."
+      },
       "readingComprehension": {
         "title": "Reading Comprehension",
         "description": "Read short Greek stories and situations, then answer comprehension questions to build your reading confidence."
