@@ -4782,10 +4782,11 @@ async def list_situations(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_superuser),
 ) -> SituationListResponse:
-    # Global status counts (no filters applied)
+    # Global status counts (no filters applied) — all buckets always present
     counts_query = select(Situation.status, func.count(Situation.id)).group_by(Situation.status)
     counts_result = await db.execute(counts_query)
-    status_counts = {s.value: count for s, count in counts_result.all()}
+    status_counts = {status_enum.value: 0 for status_enum in SituationStatus}
+    status_counts.update({status_enum.value: count for status_enum, count in counts_result.all()})
 
     count_query = select(func.count(Situation.id))
     if status is not None:
