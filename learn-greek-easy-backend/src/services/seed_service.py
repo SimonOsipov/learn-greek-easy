@@ -3565,7 +3565,7 @@ class SeedService:
             },
             {
                 "type": NotificationType.WELCOME,
-                "title": "Welcome to Greekly!",
+                "title": "Welcome to Greeklish!",
                 "message": "Start your Greek learning journey today. Choose a deck to begin!",
                 "icon": "wave",
                 "action_url": "/decks",
