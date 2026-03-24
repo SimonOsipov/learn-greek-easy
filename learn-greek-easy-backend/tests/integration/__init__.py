@@ -1,4 +1,4 @@
-"""Integration tests for Learn Greek Easy backend.
+"""Integration tests for Greeklish backend.
 
 Integration tests verify that multiple components work together correctly.
 These tests use a real PostgreSQL database and test actual API endpoints.
