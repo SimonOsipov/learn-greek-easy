@@ -33,7 +33,7 @@ class EmailService:
         to: str | list[str],
         subject: str,
         html: str,
-        from_address: str = "Learn Greek Easy <noreply@learngreekeasy.com>",
+        from_address: str = "Greeklish <sam@greeklish.eu>",
         reply_to: str | None = None,
     ) -> None:
         """Send a transactional email via Resend.
