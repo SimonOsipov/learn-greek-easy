@@ -126,8 +126,8 @@ async def seed_all(
 
     By default, truncates all tables first, then seeds:
     - 4 test users (learner, beginner, advanced, admin)
-    - 6 decks (A1-C2 CEFR levels)
-    - 60 cards (10 per deck)
+    - 4 decks (A1-B2 CEFR levels)
+    - 40 cards (10 per deck)
     - Card statistics for the learner user
     - Review history for the learner user
 
@@ -197,7 +197,7 @@ async def truncate_tables(
     response_model=SeedResultResponse,
     summary="Seed decks and cards only",
     description="Create test decks and cards without users or progress. "
-    "Creates 6 CEFR-level decks with 10 Greek vocabulary cards each.",
+    "Creates 4 CEFR-level decks with 10 Greek vocabulary cards each.",
     dependencies=[Depends(verify_seed_access)],
 )
 async def seed_content(
@@ -206,8 +206,8 @@ async def seed_content(
     """Create test decks and cards without users or progress.
 
     Creates:
-    - 6 decks (A1, A2, B1, B2, C1, C2 CEFR levels)
-    - 60 cards total (10 Greek vocabulary cards per deck)
+    - 4 decks (A1, A2, B1, B2 CEFR levels)
+    - 40 cards total (10 Greek vocabulary cards per deck)
 
     Returns:
         SeedResultResponse with content creation results and timing

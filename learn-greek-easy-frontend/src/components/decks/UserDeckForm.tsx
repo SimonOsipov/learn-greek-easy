@@ -31,7 +31,7 @@ import type { CreateDeckInput, DeckLevel } from '@/services/deckAPI';
 /**
  * CEFR levels for vocabulary decks
  */
-const CEFR_LEVELS: DeckLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+const CEFR_LEVELS: DeckLevel[] = ['A1', 'A2', 'B1', 'B2'];
 
 /**
  * Validation schema for user deck form
@@ -46,7 +46,7 @@ const userDeckSchema = z.object({
     .max(1000, 'deck:form.validation.descriptionMaxLength')
     .optional()
     .or(z.literal('')),
-  level: z.enum(['A1', 'A2', 'B1', 'B2', 'C1', 'C2'] as const),
+  level: z.enum(['A1', 'A2', 'B1', 'B2'] as const),
 });
 
 export type UserDeckFormData = z.infer<typeof userDeckSchema>;
@@ -65,7 +65,7 @@ export interface UserDeckFormProps {
  * Fields:
  * - name: Required text input (1-255 chars)
  * - description: Optional textarea (max 1000 chars)
- * - level: CEFR level dropdown (A1-C2, default A1)
+ * - level: CEFR level dropdown (A1-B2, default A1)
  *
  * Note: User decks are always active and never premium,
  * so those fields are omitted from this form.

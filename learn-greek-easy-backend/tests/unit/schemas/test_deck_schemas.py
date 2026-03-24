@@ -84,8 +84,6 @@ class TestDeckCreate:
             DeckLevel.A2,
             DeckLevel.B1,
             DeckLevel.B2,
-            DeckLevel.C1,
-            DeckLevel.C2,
         ]
         for level in levels:
             deck = DeckCreate(name=f"Level {level.value}", level=level)
@@ -132,8 +130,8 @@ class TestDeckUpdate:
 
     def test_deck_update_level_only(self):
         """Test updating only level."""
-        update = DeckUpdate(level=DeckLevel.C1)
-        assert update.level == DeckLevel.C1
+        update = DeckUpdate(level=DeckLevel.B1)
+        assert update.level == DeckLevel.B1
         assert update.name is None
 
     def test_deck_update_is_active(self):
@@ -245,7 +243,7 @@ class TestDeckResponse:
             id=uuid4(),
             name="Archived Premium",
             description="Old premium deck",
-            level=DeckLevel.C1,
+            level=DeckLevel.B1,
             is_active=False,
             is_premium=True,
             created_at=now,
@@ -262,8 +260,6 @@ class TestDeckResponse:
             DeckLevel.A2,
             DeckLevel.B1,
             DeckLevel.B2,
-            DeckLevel.C1,
-            DeckLevel.C2,
         ]
         for level in levels:
             response = DeckResponse(
@@ -557,8 +553,6 @@ class TestDeckAdminCreate:
             DeckLevel.A2,
             DeckLevel.B1,
             DeckLevel.B2,
-            DeckLevel.C1,
-            DeckLevel.C2,
         ]
         for level in levels:
             schema = DeckAdminCreate(
@@ -637,8 +631,8 @@ class TestDeckAdminUpdate:
         """Test updating only the level field."""
         from src.schemas.deck import DeckAdminUpdate
 
-        update = DeckAdminUpdate(level=DeckLevel.C2)
-        assert update.level == DeckLevel.C2
+        update = DeckAdminUpdate(level=DeckLevel.B2)
+        assert update.level == DeckLevel.B2
         assert update.name_el is None
 
     def test_update_is_active_and_is_premium(self):

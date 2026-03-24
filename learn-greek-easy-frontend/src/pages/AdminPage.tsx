@@ -665,7 +665,7 @@ const AdminPage: React.FC = () => {
           name_ru?: string;
           description_en?: string;
           description_ru?: string;
-          level?: 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
+          level?: 'A1' | 'A2' | 'B1' | 'B2';
           is_active: boolean;
           is_premium: boolean;
         };
@@ -774,7 +774,7 @@ const AdminPage: React.FC = () => {
           name_ru: string;
           description_en?: string;
           description_ru?: string;
-          level: 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
+          level: 'A1' | 'A2' | 'B1' | 'B2';
           is_premium: boolean;
         };
         const payload: VocabularyDeckCreatePayload = {

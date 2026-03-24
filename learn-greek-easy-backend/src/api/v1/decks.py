@@ -90,7 +90,7 @@ async def list_decks(
     page: int = Query(default=1, ge=1, description="Page number (starting from 1)"),
     page_size: int = Query(default=20, ge=1, le=100, description="Items per page (max 100)"),
     level: Optional[DeckLevel] = Query(
-        default=None, description="Filter by CEFR level (A1, A2, B1, B2, C1, C2)"
+        default=None, description="Filter by CEFR level (A1, A2, B1, B2)"
     ),
     locale: str = Depends(get_locale_from_header),
     db: AsyncSession = Depends(get_db),
@@ -455,7 +455,7 @@ async def list_my_decks(
     page: int = Query(default=1, ge=1, description="Page number (starting from 1)"),
     page_size: int = Query(default=20, ge=1, le=100, description="Items per page (max 100)"),
     level: Optional[DeckLevel] = Query(
-        default=None, description="Filter by CEFR level (A1, A2, B1, B2, C1, C2)"
+        default=None, description="Filter by CEFR level (A1, A2, B1, B2)"
     ),
     locale: str = Depends(get_locale_from_header),
     db: AsyncSession = Depends(get_db),

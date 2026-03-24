@@ -45,7 +45,7 @@ const LANGUAGE_LABELS: Record<DeckLanguage, string> = {
 /**
  * CEFR levels for vocabulary decks
  */
-const CEFR_LEVELS: DeckLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+const CEFR_LEVELS: DeckLevel[] = ['A1', 'A2', 'B1', 'B2'];
 
 /**
  * Validation schema for vocabulary deck create form with bilingual support
@@ -63,7 +63,7 @@ const vocabularyDeckCreateSchema = z.object({
     .max(1000, 'Description must be at most 1000 characters')
     .optional()
     .or(z.literal('')),
-  level: z.enum(['A1', 'A2', 'B1', 'B2', 'C1', 'C2'] as const),
+  level: z.enum(['A1', 'A2', 'B1', 'B2'] as const),
   is_premium: z.boolean(),
 });
 
@@ -81,7 +81,7 @@ interface VocabularyDeckCreateFormProps {
  * Fields:
  * - name_en/name_ru: Required text inputs (1-255 chars each)
  * - description_en/description_ru: Optional textareas (max 1000 chars each)
- * - level: CEFR level dropdown (A1-C2)
+ * - level: CEFR level dropdown (A1-B2)
  * - is_premium: Toggle switch for premium status
  */
 export const VocabularyDeckCreateForm: React.FC<VocabularyDeckCreateFormProps> = ({

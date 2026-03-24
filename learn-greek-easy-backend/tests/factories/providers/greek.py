@@ -225,7 +225,7 @@ class GreekProvider(BaseProvider):
         """Generate a deck name for the given CEFR level.
 
         Args:
-            level: CEFR level (A1-C2)
+            level: CEFR level (A1-B2)
 
         Returns:
             str: Deck name
@@ -242,7 +242,7 @@ class GreekProvider(BaseProvider):
         """Generate a deck description for the given CEFR level.
 
         Args:
-            level: CEFR level (A1-C2)
+            level: CEFR level (A1-B2)
 
         Returns:
             str: Deck description
@@ -252,7 +252,5 @@ class GreekProvider(BaseProvider):
             "A2": "Elementary Greek vocabulary for daily life situations.",
             "B1": "Intermediate Greek vocabulary and expressions for confident communication.",
             "B2": "Upper-intermediate Greek for advanced learners.",
-            "C1": "Advanced Greek vocabulary, idioms, and complex expressions.",
-            "C2": "Near-native Greek proficiency vocabulary and nuanced expressions.",
         }
         return descriptions.get(level, descriptions["A1"])
