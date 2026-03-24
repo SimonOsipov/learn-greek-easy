@@ -51,7 +51,7 @@ export const WaitlistConfirmPage: React.FC = () => {
     <>
       <Helmet>
         <meta name="robots" content="noindex, nofollow" />
-        <title>Waitlist - Greekly</title>
+        <title>Waitlist - Greeklish</title>
       </Helmet>
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-background to-purple-50 px-4 dark:from-blue-950/20 dark:to-purple-950/20">
         <div className="max-w-md text-center">
