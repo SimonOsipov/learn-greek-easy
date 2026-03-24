@@ -24,7 +24,7 @@ function AuthLoadingScreen() {
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
         <div>
-          <h2 className="text-lg font-semibold">Learn Greek Easy</h2>
+          <h2 className="text-lg font-semibold">Greeklish</h2>
           <p className="mt-1 text-sm text-muted-foreground">Loading your experience...</p>
         </div>
       </div>

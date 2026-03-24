@@ -154,7 +154,7 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
             )}
 
             <Link to="/dashboard" className="flex items-center space-x-2">
-              <h1 className="text-xl font-semibold text-foreground">Learn Greek Easy</h1>
+              <h1 className="text-xl font-semibold text-foreground">Greeklish</h1>
             </Link>
           </div>
 

@@ -24,7 +24,7 @@ const faqStructuredData = {
       name: 'What level of Greek do I need to pass?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'Most applicants need to demonstrate B1 level proficiency. Some categories may require B2 level. Learn Greek Easy covers vocabulary and grammar from A1 through B2.',
+        text: 'Most applicants need to demonstrate B1 level proficiency. Some categories may require B2 level. Greeklish covers vocabulary and grammar from A1 through B2.',
       },
     },
     {
@@ -42,7 +42,7 @@ const faqStructuredData = {
 const organizationStructuredData = {
   '@context': 'https://schema.org',
   '@type': 'Organization',
-  name: 'Learn Greek Easy',
+  name: 'Greeklish',
   url: SITE_URL,
   logo: `${SITE_URL}/logo.png`,
   description:
@@ -72,10 +72,10 @@ export default function LandingPage() {
     <>
       <Helmet>
         {/* Primary Meta Tags */}
-        <title>Learn Greek Easy - Master Cypriot Greek with AI-Powered Lessons</title>
+        <title>Greeklish - Master Cypriot Greek with AI-Powered Lessons</title>
         <meta
           name="description"
-          content="Join the waitlist for Learn Greek Easy — an AI-powered Greek learning platform for Cyprus citizenship exam preparation. Launching May 2026."
+          content="Join the waitlist for Greeklish — an AI-powered Greek learning platform for Cyprus citizenship exam preparation. Launching May 2026."
         />
         <meta
           name="keywords"
@@ -86,26 +86,26 @@ export default function LandingPage() {
         {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
         <meta property="og:url" content={SITE_URL} />
-        <meta property="og:title" content="Learn Greek Easy - Master Cypriot Greek" />
+        <meta property="og:title" content="Greeklish - Master Cypriot Greek" />
         <meta
           property="og:description"
           content="Join the waitlist for an interactive Greek learning platform with spaced repetition and AI practice. Launching May 2026."
         />
         <meta property="og:image" content={OG_IMAGE_URL} />
-        <meta property="og:site_name" content="Learn Greek Easy" />
+        <meta property="og:site_name" content="Greeklish" />
         <meta property="og:locale" content="en_US" />
 
         {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:url" content={SITE_URL} />
-        <meta name="twitter:title" content="Learn Greek Easy" />
+        <meta name="twitter:title" content="Greeklish" />
         <meta name="twitter:description" content="Master Cypriot Greek with AI-Powered Lessons" />
         <meta name="twitter:image" content={OG_IMAGE_URL} />
 
         {/* Additional SEO */}
         <meta name="robots" content="index, follow" />
         <meta name="language" content="English" />
-        <meta name="author" content="Learn Greek Easy" />
+        <meta name="author" content="Greeklish" />
 
         {/* Structured Data */}
         <script type="application/ld+json">{JSON.stringify(faqStructuredData)}</script>
