@@ -1,6 +1,6 @@
 {
   "header": {
-    "brandName": "Greekly",
+    "brandName": "Greeklish",
     "nav": {
       "features": "Features",
       "pricing": "Pricing",
@@ -12,7 +12,7 @@
       "login": "Log In",
       "getStarted": "Join Waitlist"
     },
-    "logoAriaLabel": "Greekly - back to top"
+    "logoAriaLabel": "Greeklish - back to top"
   },
   "hero": {
     "badge": "Launching May 2026",
@@ -199,7 +199,7 @@
   "faq": {
     "label": "COMMON QUESTIONS",
     "title": "Frequently Asked Questions",
-    "subtitle": "Everything you need to know about Greekly and the citizenship exam",
+    "subtitle": "Everything you need to know about Greeklish and the citizenship exam",
     "items": {
       "exam": {
         "question": "What is the Cypriot citizenship language exam?",
@@ -207,11 +207,11 @@
       },
       "level": {
         "question": "What level of Greek do I need to pass?",
-        "answer": "Most applicants need to demonstrate B1 level proficiency, which means you can understand the main points of clear standard input on familiar matters. Some categories may require B2 level. Greekly covers vocabulary and grammar from A1 through B2 to ensure you are fully prepared."
+        "answer": "Most applicants need to demonstrate B1 level proficiency, which means you can understand the main points of clear standard input on familiar matters. Some categories may require B2 level. Greeklish covers vocabulary and grammar from A1 through B2 to ensure you are fully prepared."
       },
       "difference": {
-        "question": "How is Greekly different from other language apps?",
-        "answer": "Greekly is built specifically for the Cypriot citizenship exam. Unlike general language apps, we focus on the vocabulary, grammar, and cultural knowledge you will actually be tested on. Our content includes themed vocabulary for real-life situations (banking, medical visits, bureaucracy), history and culture questions, and authentic audio from Greek media."
+        "question": "How is Greeklish different from other language apps?",
+        "answer": "Greeklish is built specifically for the Cypriot citizenship exam. Unlike general language apps, we focus on the vocabulary, grammar, and cultural knowledge you will actually be tested on. Our content includes themed vocabulary for real-life situations (banking, medical visits, bureaucracy), history and culture questions, and authentic audio from Greek media."
       },
       "customCards": {
         "question": "Can I create my own flashcards?",
@@ -223,7 +223,7 @@
       },
       "freePlan": {
         "question": "What is included in the Free plan?",
-        "answer": "The Free plan includes access to basic A1 vocabulary cards, limited daily practice sessions, progress tracking, and community access. It is a great way to get started and see if Greekly is right for you before upgrading to Premium."
+        "answer": "The Free plan includes access to basic A1 vocabulary cards, limited daily practice sessions, progress tracking, and community access. It is a great way to get started and see if Greeklish is right for you before upgrading to Premium."
       },
       "monthlyVsYearly": {
         "question": "What is the difference between the plans?",
@@ -231,14 +231,14 @@
       },
       "foundersEdition": {
         "question": "What is the Semi-Annual plan?",
-        "answer": "The Semi-Annual plan is €249 for 6 months of full access to Greekly, including all features and priority support. At approximately €41.50 per month, it offers the best value of all our plans. It includes early access to new features and priority support."
+        "answer": "The Semi-Annual plan is €249 for 6 months of full access to Greeklish, including all features and priority support. At approximately €41.50 per month, it offers the best value of all our plans. It includes early access to new features and priority support."
       },
       "refundPolicy": {
         "question": "What is your refund policy?",
-        "answer": "We offer a 14-day money-back guarantee on all paid plans, no questions asked. If Greekly is not the right fit for you, simply contact us within 14 days of your purchase for a full refund."
+        "answer": "We offer a 14-day money-back guarantee on all paid plans, no questions asked. If Greeklish is not the right fit for you, simply contact us within 14 days of your purchase for a full refund."
       },
       "offline": {
-        "question": "Can I use Greekly offline?",
+        "question": "Can I use Greeklish offline?",
         "answer": "Offline mode is coming soon for Quarterly and Semi-Annual plan members. This will allow you to download vocabulary decks and practice without an internet connection - perfect for studying on your commute or when traveling."
       }
     }
@@ -256,7 +256,7 @@
     "quotes": {
       "founder": {
         "text": "Built by someone actively preparing for the same exam you are taking. I understand the journey because I am on it too.",
-        "author": "Greekly Founder",
+        "author": "Greeklish Founder",
         "role": "Cypriot Citizenship Applicant"
       },
       "mariaK": {
@@ -296,7 +296,7 @@
     "genericError": "Something went wrong. Please try again later."
   },
   "footer": {
-    "brandName": "Greekly",
+    "brandName": "Greeklish",
     "nav": {
       "features": "Features",
       "pricing": "Pricing",
@@ -306,6 +306,6 @@
     },
     "language": "English",
     "languageCode": "EN",
-    "copyright": "{{year}} Greekly. Made with care and souvlaki for Greek learners in Cyprus"
+    "copyright": "{{year}} Greeklish. Made with care and souvlaki for Greek learners in Cyprus"
   }
 }
