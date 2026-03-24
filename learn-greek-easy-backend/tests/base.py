@@ -1,4 +1,4 @@
-"""Base test classes for Learn Greek Easy backend tests.
+"""Base test classes for Greeklish backend tests.
 
 This module provides reusable base classes that encapsulate common
 testing patterns and utilities:

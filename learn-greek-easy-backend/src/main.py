@@ -64,7 +64,7 @@ async def _close_openrouter_client() -> None:
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan manager."""
     # Startup
-    logger.info("Starting Learn Greek Easy API", version=settings.app_version)
+    logger.info("Starting Greeklish API", version=settings.app_version)
 
     # Validate CORS configuration
     cors_warnings = settings.validate_cors_for_production()
@@ -147,7 +147,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     yield
 
     # Shutdown
-    logger.info("Shutting down Learn Greek Easy API")
+    logger.info("Shutting down Greeklish API")
 
     # Shutdown Sentry (flush events before closing connections)
     shutdown_sentry()

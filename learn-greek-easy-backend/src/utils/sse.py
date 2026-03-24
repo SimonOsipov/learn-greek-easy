@@ -1,4 +1,4 @@
-"""Server-Sent Events (SSE) utility functions for Learn Greek Easy backend.
+"""Server-Sent Events (SSE) utility functions for Greeklish backend.
 
 This module provides infrastructure for Server-Sent Events streaming:
 - format_sse_event: Format a single SSE event string from any data type

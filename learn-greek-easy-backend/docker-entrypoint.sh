@@ -6,7 +6,7 @@ set -e
 # Handles startup tasks before running the main application
 # =============================================================================
 
-echo "Starting Learn Greek Easy Backend..."
+echo "Starting Greeklish Backend..."
 echo "Environment: ${APP_ENV:-production}"
 
 # -----------------------------------------------------------------------------

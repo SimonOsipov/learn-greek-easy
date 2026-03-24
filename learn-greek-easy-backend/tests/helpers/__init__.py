@@ -1,4 +1,4 @@
-"""Test helpers for Learn Greek Easy.
+"""Test helpers for Greeklish.
 
 This package provides utility functions and helpers for testing:
 - database: Database utilities (existing)

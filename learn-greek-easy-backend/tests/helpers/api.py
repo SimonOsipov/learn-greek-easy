@@ -1,4 +1,4 @@
-"""API testing utilities for Learn Greek Easy.
+"""API testing utilities for Greeklish.
 
 This module provides helpers for HTTP request testing:
 - Authenticated request wrappers

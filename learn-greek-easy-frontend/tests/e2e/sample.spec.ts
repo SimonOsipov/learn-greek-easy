@@ -8,7 +8,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Playwright Setup Validation - Authenticated', () => {
   test('should load homepage', async ({ page }) => {
     await page.goto('/dashboard');
-    await expect(page).toHaveTitle(/Learn Greek Easy/i);
+    await expect(page).toHaveTitle(/Greeklish/i);
   });
 
   test('should access dashboard when authenticated', async ({ page }) => {

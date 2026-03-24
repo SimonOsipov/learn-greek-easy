@@ -1,4 +1,4 @@
-"""Utility modules for Learn Greek Easy backend.
+"""Utility modules for Greeklish backend.
 
 This package contains utility functions and helpers for:
 - Request validation (validation.py)

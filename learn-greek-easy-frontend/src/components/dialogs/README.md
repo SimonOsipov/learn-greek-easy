@@ -1,6 +1,6 @@
 # Dialog Components
 
-Reusable dialog components for consistent user interactions across the Learn Greek Easy application.
+Reusable dialog components for consistent user interactions across the Greeklish application.
 
 ## Components
 

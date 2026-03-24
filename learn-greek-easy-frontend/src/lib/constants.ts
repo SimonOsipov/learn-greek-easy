@@ -1,6 +1,6 @@
 // Application constants
 
-export const APP_NAME = 'Learn Greek Easy';
+export const APP_NAME = 'Greeklish';
 export const APP_VERSION = '1.0.0';
 
 export const ROUTES = {

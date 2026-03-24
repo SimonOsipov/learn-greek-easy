@@ -1,4 +1,4 @@
-"""Middleware package for Learn Greek Easy backend.
+"""Middleware package for Greeklish backend.
 
 This package contains custom middleware components for:
 - Authentication logging and security monitoring

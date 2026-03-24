@@ -1,4 +1,4 @@
-"""Global test fixtures and configuration for Learn Greek Easy backend.
+"""Global test fixtures and configuration for Greeklish backend.
 
 This module provides:
 - Event loop configuration for async tests
@@ -347,7 +347,7 @@ def pytest_report_header(config: pytest.Config) -> list[str]:
             parallel_info = "Sequential Mode: Single process"
 
     return [
-        "Learn Greek Easy Backend Test Suite",
+        "Greeklish Backend Test Suite",
         "Database: PostgreSQL (test_learn_greek)",
         f"URL: {db_url.split('@')[1] if '@' in db_url else db_url}",
         "Async Mode: auto (pytest-asyncio)",
