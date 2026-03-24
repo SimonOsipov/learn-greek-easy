@@ -35,7 +35,7 @@ async def streak_reset_task() -> None:
     - This task logs users who would have their streak reset
     - Future: Could update a cached streak value for performance
 
-    Note: The Learn Greek Easy app calculates streaks in real-time from the
+    Note: The Greeklish app calculates streaks in real-time from the
     `reviews` table. This task is for monitoring/logging purposes and future
     cached streak support.
     """

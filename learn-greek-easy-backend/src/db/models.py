@@ -1,4 +1,4 @@
-"""Database models for Learn Greek Easy application.
+"""Database models for Greeklish application.
 
 This module contains all SQLAlchemy models for the application:
 - User management (User, UserSettings)
