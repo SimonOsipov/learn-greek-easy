@@ -1,4 +1,4 @@
-"""Custom assertion helpers for Learn Greek Easy tests.
+"""Custom assertion helpers for Greeklish tests.
 
 This module provides domain-specific assertion functions that:
 - Validate API response structures

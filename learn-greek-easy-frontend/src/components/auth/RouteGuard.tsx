@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { Loader2 } from 'lucide-react';
 
+import { APP_NAME } from '@/lib/constants';
 import { supabase } from '@/lib/supabaseClient';
 import { useAppStore } from '@/stores/appStore';
 import { useAuthStore } from '@/stores/authStore';
@@ -24,7 +25,7 @@ function AuthLoadingScreen() {
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
         <div>
-          <h2 className="text-lg font-semibold">Learn Greek Easy</h2>
+          <h2 className="text-lg font-semibold">{APP_NAME}</h2>
           <p className="mt-1 text-sm text-muted-foreground">Loading your experience...</p>
         </div>
       </div>

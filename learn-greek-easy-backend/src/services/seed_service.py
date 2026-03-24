@@ -3997,8 +3997,8 @@ class SeedService:
             },
             # Announcements (4)
             {
-                "title_en": "Welcome to Learn Greek Easy!",
-                "title_ru": "Добро пожаловать в Learn Greek Easy!",
+                "title_en": "Welcome to Greeklish!",
+                "title_ru": "Добро пожаловать в Greeklish!",
                 "content_en": "Thank you for joining us on your Greek learning journey!",
                 "content_ru": "Спасибо, что присоединились к нам в изучении греческого языка!",
                 "tag": ChangelogTag.ANNOUNCEMENT,

@@ -1,4 +1,4 @@
-"""Test utilities for Learn Greek Easy.
+"""Test utilities for Greeklish.
 
 This package provides utility classes for testing:
 - builders: Fluent test data builders

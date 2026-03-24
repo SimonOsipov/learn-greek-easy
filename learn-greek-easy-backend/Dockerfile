@@ -1,5 +1,5 @@
 # =============================================================================
-# Learn Greek Easy - Backend Dockerfile
+# Greeklish - Backend Dockerfile
 # Multi-stage build for production deployment
 # =============================================================================
 
@@ -57,9 +57,9 @@ COPY alembic.ini ./
 FROM python:3.13-slim AS runtime
 
 # Labels for image metadata
-LABEL maintainer="Learn Greek Easy Team" \
+LABEL maintainer="Greeklish Team" \
       version="0.1.0" \
-      description="Learn Greek Easy Backend API"
+      description="Greeklish Backend API"
 
 # Runtime environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \

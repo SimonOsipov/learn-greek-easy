@@ -144,7 +144,7 @@ const transformDeckResponse = (deck: DeckResponse, progressData?: DeckProgressSu
     tags: deck.tags || [],
     thumbnail: `/images/decks/${deck.level.toLowerCase()}.jpg`,
     coverImageUrl: deck.cover_image_url ?? undefined,
-    createdBy: 'Learn Greek Easy', // Default author
+    createdBy: 'Greeklish', // Default author
     createdAt: new Date(deck.created_at),
     updatedAt: new Date(deck.updated_at),
     progress,
@@ -217,7 +217,7 @@ const transformCultureDeckResponse = (deck: CultureDeckResponse): Deck => {
     tags: [deck.category], // Use culture category as tag (history, geography, etc.)
     thumbnail: `/images/culture/${deck.category}.jpg`,
     coverImageUrl: deck.cover_image_url ?? undefined,
-    createdBy: 'Learn Greek Easy',
+    createdBy: 'Greeklish',
     createdAt: new Date(),
     updatedAt: new Date(),
     progress,

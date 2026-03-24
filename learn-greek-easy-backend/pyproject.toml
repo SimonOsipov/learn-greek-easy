@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "learn-greek-easy-backend"
 version = "0.1.0"
-description = "Backend API for Learn Greek Easy - Greek Language Learning Application"
-authors = ["Learn Greek Easy Team"]
+description = "Backend API for Greeklish - Greek Language Learning Application"
+authors = ["Greeklish Team"]
 license = "MIT"
 readme = "README.md"
 packages = [{include = "src"}]
@@ -407,7 +407,7 @@ directory = "htmlcov"
 show_contexts = true
 
 # Title for HTML report
-title = "Learn Greek Easy Backend - Coverage Report"
+title = "Greeklish Backend - Coverage Report"
 
 # Skip files with 100% coverage in HTML report (optional, set to true if desired)
 skip_covered = false

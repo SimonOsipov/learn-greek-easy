@@ -31,7 +31,7 @@ import {
 const mockAnnouncements = [
   {
     id: 'ann-001',
-    title: 'Welcome to Learn Greek Easy v2.0',
+    title: 'Welcome to Greeklish v2.0',
     message:
       'We are excited to announce the release of version 2.0 with new features including improved flashcards, better progress tracking, and more!',
     link_url: 'https://learngreekeasy.com/blog/v2-release',
@@ -75,7 +75,7 @@ const mockAnnouncements = [
 
 const mockAnnouncementDetail = {
   id: 'ann-001',
-  title: 'Welcome to Learn Greek Easy v2.0',
+  title: 'Welcome to Greeklish v2.0',
   message:
     'We are excited to announce the release of version 2.0 with new features including improved flashcards, better progress tracking, and more!\n\nKey highlights:\n- New spaced repetition algorithm\n- Improved progress dashboard\n- Mobile app improvements\n\nThank you for being part of our community!',
   link_url: 'https://learngreekeasy.com/blog/v2-release',
@@ -93,7 +93,7 @@ const mockNotifications = [
   {
     id: 'notif-001',
     type: 'admin_announcement',
-    title: 'Welcome to Learn Greek Easy v2.0',
+    title: 'Welcome to Greeklish v2.0',
     message: 'We are excited to announce the release of version 2.0...',
     icon: 'megaphone',
     action_url: 'https://learngreekeasy.com/blog/v2-release',

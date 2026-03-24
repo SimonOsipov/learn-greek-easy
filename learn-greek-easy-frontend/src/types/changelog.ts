@@ -1,5 +1,5 @@
 /**
- * Changelog entry types for the Learn Greek Easy application.
+ * Changelog entry types for the Greeklish application.
  */
 
 /** Tag classification for changelog entries */

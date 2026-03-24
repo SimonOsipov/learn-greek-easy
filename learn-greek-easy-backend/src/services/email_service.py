@@ -33,7 +33,7 @@ class EmailService:
         to: str | list[str],
         subject: str,
         html: str,
-        from_address: str = "Learn Greek Easy <noreply@learngreekeasy.com>",
+        from_address: str = "Greeklish <sam@greeklish.eu>",
         reply_to: str | None = None,
     ) -> None:
         """Send a transactional email via Resend.
@@ -61,9 +61,8 @@ class EmailService:
             logger.info(
                 "Email send (dry run — no API key configured)",
                 extra={
-                    "to": recipients,
+                    "recipient_count": len(recipients),
                     "subject": subject,
-                    "from_address": from_address,
                     "html_length": len(html),
                 },
             )
@@ -86,7 +85,7 @@ class EmailService:
             logger.info(
                 "Email sent via Resend",
                 extra={
-                    "to": recipients,
+                    "recipient_count": len(recipients),
                     "subject": subject,
                 },
             )
@@ -94,7 +93,7 @@ class EmailService:
             logger.warning(
                 "Failed to send email via Resend",
                 extra={
-                    "to": recipients,
+                    "recipient_count": len(recipients),
                     "subject": subject,
                 },
                 exc_info=True,

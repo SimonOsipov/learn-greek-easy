@@ -1,4 +1,4 @@
-"""Unit tests for Learn Greek Easy backend.
+"""Unit tests for Greeklish backend.
 
 Unit tests are fast, isolated tests that test individual functions,
 classes, or methods in isolation. Dependencies are mocked.
