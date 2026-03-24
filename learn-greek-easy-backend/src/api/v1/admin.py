@@ -4782,6 +4782,12 @@ async def list_situations(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_superuser),
 ) -> SituationListResponse:
+    # Global status counts (no filters applied) — all buckets always present
+    counts_query = select(Situation.status, func.count(Situation.id)).group_by(Situation.status)
+    counts_result = await db.execute(counts_query)
+    status_counts = {status_enum.value: 0 for status_enum in SituationStatus}
+    status_counts.update({status_enum.value: count for status_enum, count in counts_result.all()})
+
     count_query = select(func.count(Situation.id))
     if status is not None:
         count_query = count_query.where(Situation.status == status)
@@ -4831,7 +4837,9 @@ async def list_situations(
         )
         for s in situations
     ]
-    return SituationListResponse(items=items, total=total, page=page, page_size=page_size)
+    return SituationListResponse(
+        items=items, total=total, page=page, page_size=page_size, status_counts=status_counts
+    )
 
 
 @router.get("/situations/{situation_id}", response_model=SituationDetailResponse)
@@ -4860,4 +4868,14 @@ async def get_situation(
     if response.dialog and situation.dialog and situation.dialog.audio_s3_key:
         s3 = get_s3_service()
         response.dialog.audio_url = s3.generate_presigned_url(situation.dialog.audio_s3_key)
+    if response.description and situation.description:
+        s3 = get_s3_service()
+        if situation.description.audio_s3_key:
+            response.description.audio_url = s3.generate_presigned_url(
+                situation.description.audio_s3_key
+            )
+        if situation.description.audio_a2_s3_key:
+            response.description.audio_a2_url = s3.generate_presigned_url(
+                situation.description.audio_a2_s3_key
+            )
     return response

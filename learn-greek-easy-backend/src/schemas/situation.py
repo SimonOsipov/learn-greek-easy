@@ -60,6 +60,7 @@ class SituationListResponse(BaseModel):
     total: int
     page: int
     page_size: int
+    status_counts: dict[str, int] = {}
 
 
 class SituationResponse(BaseModel):
@@ -97,6 +98,8 @@ class DescriptionNested(BaseModel):
     status: DescriptionStatus
     audio_duration_seconds: float | None
     audio_a2_duration_seconds: float | None
+    audio_url: str | None = None
+    audio_a2_url: str | None = None
     created_at: datetime
 
 

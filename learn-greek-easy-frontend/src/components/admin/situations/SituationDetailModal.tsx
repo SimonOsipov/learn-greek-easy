@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { FileText, Image, Loader2, MessageSquare, RefreshCw, Trash2, Wand2 } from 'lucide-react';
+import { FileText, Image, Loader2, MessageSquare, RefreshCw, Wand2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { WaveformPlayer } from '@/components/culture/WaveformPlayer';
@@ -22,7 +22,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -39,7 +38,6 @@ import {
   selectIsLoadingDetail,
   selectDetailError,
 } from '@/stores/adminSituationStore';
-import type { SituationDetailResponse } from '@/types/situation';
 import type { SSEEvent } from '@/types/sse';
 
 import { SITUATION_STATUS_BADGE_CLASSES } from './situationBadges';
@@ -72,7 +70,6 @@ interface SituationDetailModalProps {
   situationId: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onDelete: (situation: SituationDetailResponse) => void;
 }
 
 function AudioPlaceholder() {
@@ -112,7 +109,6 @@ export function SituationDetailModal({
   situationId,
   open,
   onOpenChange,
-  onDelete,
 }: SituationDetailModalProps) {
   const { t } = useTranslation('admin');
   const { currentLanguage } = useLanguage();
@@ -566,7 +562,49 @@ export function SituationDetailModal({
             {/* Description Tab */}
             <TabsContent value="description" className="space-y-4">
               {selectedSituation.description ? (
-                <p className="text-sm leading-relaxed">{selectedSituation.description.text_el}</p>
+                <>
+                  {/* B1 Section */}
+                  <div data-testid="situation-description-b1-section" className="space-y-2">
+                    <Badge variant="outline">B1</Badge>
+                    <p className="text-sm leading-relaxed">
+                      {selectedSituation.description.text_el}
+                    </p>
+                    {selectedSituation.description.audio_url ? (
+                      <WaveformPlayer
+                        variant="admin"
+                        audioUrl={selectedSituation.description.audio_url}
+                        showSpeedControl={false}
+                        barCount={60}
+                      />
+                    ) : (
+                      <AudioPlaceholder />
+                    )}
+                  </div>
+
+                  {/* A2 Section */}
+                  <div data-testid="situation-description-a2-section" className="space-y-2">
+                    <Badge variant="outline">A2</Badge>
+                    {selectedSituation.description.text_el_a2 ? (
+                      <p className="text-sm leading-relaxed">
+                        {selectedSituation.description.text_el_a2}
+                      </p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        {t('situations.detail.descriptionA2Empty')}
+                      </p>
+                    )}
+                    {selectedSituation.description.audio_a2_url ? (
+                      <WaveformPlayer
+                        variant="admin"
+                        audioUrl={selectedSituation.description.audio_a2_url}
+                        showSpeedControl={false}
+                        barCount={60}
+                      />
+                    ) : (
+                      <AudioPlaceholder />
+                    )}
+                  </div>
+                </>
               ) : (
                 <div
                   className="flex flex-col items-center gap-3 py-8 text-center text-muted-foreground"
@@ -576,8 +614,6 @@ export function SituationDetailModal({
                   <p className="text-sm">{t('situations.detail.descriptionEmpty')}</p>
                 </div>
               )}
-              <AudioPlaceholder />
-              <RegenerateButton />
             </TabsContent>
 
             {/* Picture Tab */}
@@ -594,19 +630,6 @@ export function SituationDetailModal({
             </TabsContent>
           </Tabs>
         )}
-
-        <DialogFooter>
-          {selectedSituation && (
-            <Button
-              variant="destructive"
-              onClick={() => onDelete(selectedSituation)}
-              data-testid="situation-detail-delete-btn"
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              {t('situations.delete.title')}
-            </Button>
-          )}
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

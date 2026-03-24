@@ -378,6 +378,29 @@ class TestListSituations:
         assert data["total"] == 0
         assert data["items"] == []
 
+    @pytest.mark.asyncio
+    async def test_list_returns_status_counts(
+        self, client: AsyncClient, superuser_auth_headers: dict
+    ):
+        """List endpoint returns global status counts regardless of filters."""
+        from src.db.models import SituationStatus
+
+        await SituationFactory.create(status=SituationStatus.DRAFT)
+        await SituationFactory.create(status=SituationStatus.DRAFT)
+        await SituationFactory.create(status=SituationStatus.READY)
+
+        # Apply a filter that would exclude draft situations
+        response = await client.get(
+            f"{BASE_URL}?status=ready",
+            headers=superuser_auth_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        # status_counts must reflect ALL situations globally, not just filtered ones
+        assert data["status_counts"]["draft"] >= 2
+        assert data["status_counts"]["ready"] >= 1
+        assert data["status_counts"].get("partial_ready", 0) == 0
+
 
 class TestGetSituationDetail:
     """Tests for GET /api/v1/admin/situations/{id}."""
@@ -469,3 +492,44 @@ class TestGetSituationDetail:
         data = response.json()
         assert data["dialog"]["audio_url"] == "https://s3.example.com/test-audio.mp3"
         mock_s3_service.generate_presigned_url.assert_called_once_with("test-audio.mp3")
+
+    @pytest.mark.asyncio
+    async def test_detail_description_audio_urls(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        mock_s3_service: MagicMock,
+    ):
+        """get_situation returns presigned URLs for description audio."""
+        mock_s3_service.generate_presigned_url.side_effect = (
+            lambda key: f"https://s3.example.com/{key}"
+        )
+
+        situation = await SituationFactory.create()
+        await SituationDescriptionFactory.create(
+            situation_id=situation.id,
+            audio_s3_key="audio/desc/b1.mp3",
+            audio_a2_s3_key="audio/desc/a2.mp3",
+        )
+
+        response = await client.get(f"{BASE_URL}/{situation.id}", headers=superuser_auth_headers)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["description"]["audio_url"] == "https://s3.example.com/audio/desc/b1.mp3"
+        assert data["description"]["audio_a2_url"] == "https://s3.example.com/audio/desc/a2.mp3"
+
+    @pytest.mark.asyncio
+    async def test_detail_description_no_audio_keys_returns_null(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+    ):
+        """get_situation returns null audio URLs when description has no S3 keys."""
+        situation = await SituationFactory.create()
+        await SituationDescriptionFactory.create(situation_id=situation.id)
+
+        response = await client.get(f"{BASE_URL}/{situation.id}", headers=superuser_auth_headers)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["description"]["audio_url"] is None
+        assert data["description"]["audio_a2_url"] is None

@@ -1292,6 +1292,7 @@
       },
       "dialogEmpty": "Диалог ещё не создан",
       "descriptionEmpty": "Описание ещё не создано",
+      "descriptionA2Empty": "Описание A2 недоступно",
       "pictureEmpty": "Картинка ещё не создана",
       "audioNotGenerated": "Аудио не создано",
       "regenerate": "Перегенерировать",
