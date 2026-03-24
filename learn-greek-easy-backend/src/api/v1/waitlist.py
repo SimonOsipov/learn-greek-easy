@@ -33,7 +33,7 @@ class WaitlistConfirmRequest(BaseModel):
     response_model=WaitlistSubscribeResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Subscribe to waitlist",
-    description="Submit email to join the Greekly waitlist. Sends a double opt-in confirmation email.",
+    description="Submit email to join the Greeklish waitlist. Sends a double opt-in confirmation email.",
     responses={
         201: {"description": "Confirmation email sent"},
         409: {"description": "Email already registered"},

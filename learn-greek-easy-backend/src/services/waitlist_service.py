@@ -44,7 +44,7 @@ def _build_confirmation_email(confirm_url: str) -> str:
 <html><head><meta charset="utf-8"></head>
 <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f9f9f9;">
   <div style="background: white; border-radius: 8px; padding: 40px; text-align: center;">
-    <h1 style="color: #1a1a2e; margin-bottom: 8px;">Greekly</h1>
+    <h1 style="color: #1a1a2e; margin-bottom: 8px;">Greeklish</h1>
     <p style="color: #666; font-size: 16px; margin-bottom: 24px;">
       Thanks for signing up! Please confirm your email to secure your spot on the waitlist.
     </p>
@@ -54,7 +54,7 @@ def _build_confirmation_email(confirm_url: str) -> str:
       Confirm my spot
     </a>
     <p style="color: #999; font-size: 13px; margin-top: 24px;">
-      If you didn't sign up for Greekly, you can safely ignore this email.
+      If you didn't sign up for Greeklish, you can safely ignore this email.
     </p>
   </div>
 </body></html>"""
@@ -125,7 +125,7 @@ class WaitlistService:
         # Send confirmation email via shared EmailService (not resend.Emails.send directly)
         get_email_service().send(
             to=email,
-            subject="Confirm your spot on the Greekly waitlist",
+            subject="Confirm your spot on the Greeklish waitlist",
             html=_build_confirmation_email(confirm_url),
             from_address="sam@greeklish.eu",
         )

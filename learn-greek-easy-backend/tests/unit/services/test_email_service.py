@@ -183,13 +183,13 @@ class TestConfiguredSend:
             service = get_email_service()
             service.send(
                 to="user@example.com",
-                subject="Welcome to Greekly",
+                subject="Welcome to Greeklish",
                 html="<p>Hi there</p>",
                 from_address="sam@greeklish.eu",
             )
             call_args = mock_resend.Emails.send.call_args[0][0]
             assert call_args["to"] == ["user@example.com"]
-            assert call_args["subject"] == "Welcome to Greekly"
+            assert call_args["subject"] == "Welcome to Greeklish"
             assert call_args["from"] == "sam@greeklish.eu"
 
 
