@@ -1280,6 +1280,7 @@
       },
       "dialogEmpty": "No dialog created yet",
       "descriptionEmpty": "No description created yet",
+      "descriptionA2Empty": "A2 description not available",
       "pictureEmpty": "No picture generated yet",
       "audioNotGenerated": "Audio not generated",
       "regenerate": "Regenerate",

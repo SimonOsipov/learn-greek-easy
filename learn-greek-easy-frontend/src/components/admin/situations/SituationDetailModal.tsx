@@ -562,7 +562,49 @@ export function SituationDetailModal({
             {/* Description Tab */}
             <TabsContent value="description" className="space-y-4">
               {selectedSituation.description ? (
-                <p className="text-sm leading-relaxed">{selectedSituation.description.text_el}</p>
+                <>
+                  {/* B1 Section */}
+                  <div data-testid="situation-description-b1-section" className="space-y-2">
+                    <Badge variant="outline">B1</Badge>
+                    <p className="text-sm leading-relaxed">
+                      {selectedSituation.description.text_el}
+                    </p>
+                    {selectedSituation.description.audio_url ? (
+                      <WaveformPlayer
+                        variant="admin"
+                        audioUrl={selectedSituation.description.audio_url}
+                        showSpeedControl={false}
+                        barCount={60}
+                      />
+                    ) : (
+                      <AudioPlaceholder />
+                    )}
+                  </div>
+
+                  {/* A2 Section */}
+                  <div data-testid="situation-description-a2-section" className="space-y-2">
+                    <Badge variant="outline">A2</Badge>
+                    {selectedSituation.description.text_el_a2 ? (
+                      <p className="text-sm leading-relaxed">
+                        {selectedSituation.description.text_el_a2}
+                      </p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        {t('situations.detail.descriptionA2Empty')}
+                      </p>
+                    )}
+                    {selectedSituation.description.audio_a2_url ? (
+                      <WaveformPlayer
+                        variant="admin"
+                        audioUrl={selectedSituation.description.audio_a2_url}
+                        showSpeedControl={false}
+                        barCount={60}
+                      />
+                    ) : (
+                      <AudioPlaceholder />
+                    )}
+                  </div>
+                </>
               ) : (
                 <div
                   className="flex flex-col items-center gap-3 py-8 text-center text-muted-foreground"
@@ -572,8 +614,6 @@ export function SituationDetailModal({
                   <p className="text-sm">{t('situations.detail.descriptionEmpty')}</p>
                 </div>
               )}
-              <AudioPlaceholder />
-              <RegenerateButton />
             </TabsContent>
 
             {/* Picture Tab */}
