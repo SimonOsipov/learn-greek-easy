@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useLayoutContext } from '@/contexts/LayoutContext';
 import { useAuth } from '@/hooks/useAuth';
+import { APP_NAME } from '@/lib/constants';
 import { startTour, buildTourSteps, waitForElement } from '@/lib/tour';
 import { cn } from '@/lib/utils';
 
@@ -154,7 +155,7 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
             )}
 
             <Link to="/dashboard" className="flex items-center space-x-2">
-              <h1 className="text-xl font-semibold text-foreground">Greeklish</h1>
+              <h1 className="text-xl font-semibold text-foreground">{APP_NAME}</h1>
             </Link>
           </div>
 
