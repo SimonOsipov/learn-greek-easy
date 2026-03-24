@@ -260,7 +260,7 @@ class NotificationService:
         return await self.create_notification(
             user_id=user_id,
             type=NotificationType.WELCOME,
-            title="Welcome to Greekly!",
+            title="Welcome to Greeklish!",
             message="Start your Greek learning journey today. Choose a deck to begin!",
             icon="wave",
             action_url="/decks",
