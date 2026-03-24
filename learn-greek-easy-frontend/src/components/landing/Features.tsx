@@ -189,7 +189,9 @@ const Features = () => {
           <div className="rounded-2xl rounded-tr-sm bg-primary/10 px-3 py-2">
             <p className="text-xs text-foreground">
               Βεβαίως, πόσο{' '}
-              <span className="rounded bg-primary/25 px-0.5 font-semibold text-primary">συχνά</span>{' '}
+              <span className="rounded bg-primary/15 px-0.5 font-semibold text-blue-800 dark:text-blue-300">
+                συχνά
+              </span>{' '}
               έχετε πονοκέφαλο;
             </p>
           </div>
