@@ -1,4 +1,4 @@
-/** SSE type definitions for Learn Greek Easy frontend.
+/** SSE type definitions for Greeklish frontend.
  *
  * These types are used by the useSSE hook and all SSE-consuming components
  * to ensure consistent event handling across the application.
