@@ -9,8 +9,8 @@ test.describe('Playwright Installation & Configuration', () => {
   test('should load application homepage', async ({ page }) => {
     await page.goto('/');
 
-    // Verify page title contains "Learn Greek Easy"
-    await expect(page).toHaveTitle(/Learn Greek Easy/i);
+    // Verify page title contains "Greeklish"
+    await expect(page).toHaveTitle(/Greeklish/i);
 
     // Verify page loaded successfully
     const content = await page.content();
@@ -22,7 +22,7 @@ test.describe('Playwright Installation & Configuration', () => {
     test.skip(browserName !== 'chromium', 'Chromium-specific test');
 
     await page.goto('/');
-    await expect(page).toHaveTitle(/Learn Greek Easy/i);
+    await expect(page).toHaveTitle(/Greeklish/i);
   });
 
   test('should test on Firefox browser', async ({ page, browserName }) => {
@@ -30,7 +30,7 @@ test.describe('Playwright Installation & Configuration', () => {
     test.skip(browserName !== 'firefox', 'Firefox-specific test');
 
     await page.goto('/');
-    await expect(page).toHaveTitle(/Learn Greek Easy/i);
+    await expect(page).toHaveTitle(/Greeklish/i);
   });
 
   test('should test on WebKit browser', async ({ page, browserName }) => {
@@ -38,7 +38,7 @@ test.describe('Playwright Installation & Configuration', () => {
     test.skip(browserName !== 'webkit', 'WebKit-specific test');
 
     await page.goto('/');
-    await expect(page).toHaveTitle(/Learn Greek Easy/i);
+    await expect(page).toHaveTitle(/Greeklish/i);
   });
 
   test('should capture viewport correctly', async ({ page }) => {
