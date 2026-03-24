@@ -21,7 +21,7 @@ export const config: AppConfig = {
   apiUrl: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
   apiTimeout: parseNumber(import.meta.env.VITE_API_TIMEOUT, 30000),
   googleClientId: import.meta.env.VITE_GOOGLE_CLIENT_ID || '',
-  appName: import.meta.env.VITE_APP_NAME || 'Learn Greek Easy',
+  appName: import.meta.env.VITE_APP_NAME || 'Greeklish',
   appVersion: import.meta.env.VITE_APP_VERSION || '0.1.0',
   appEnv: (import.meta.env.VITE_APP_ENV || 'development') as
     | 'development'
