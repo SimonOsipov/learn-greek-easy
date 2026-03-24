@@ -35,6 +35,7 @@ interface AdminSituationState {
   // Filters
   statusFilter: SituationStatus | null;
   searchQuery: string;
+  statusCounts: Record<string, number>;
 
   // Actions
   fetchSituations: () => Promise<void>;
@@ -69,6 +70,7 @@ export const useAdminSituationStore = create<AdminSituationState>()(
       detailError: null,
       statusFilter: null,
       searchQuery: '',
+      statusCounts: {},
 
       fetchSituations: async () => {
         set({ isLoading: true, error: null });
@@ -84,6 +86,7 @@ export const useAdminSituationStore = create<AdminSituationState>()(
             situations: response.items,
             total: response.total,
             totalPages: Math.ceil(response.total / response.page_size),
+            statusCounts: response.status_counts,
             isLoading: false,
           });
         } catch (err) {
@@ -182,3 +185,4 @@ export const selectTotal = (state: AdminSituationState) => state.total;
 export const selectTotalPages = (state: AdminSituationState) => state.totalPages;
 export const selectStatusFilter = (state: AdminSituationState) => state.statusFilter;
 export const selectSearchQuery = (state: AdminSituationState) => state.searchQuery;
+export const selectStatusCounts = (state: AdminSituationState) => state.statusCounts;

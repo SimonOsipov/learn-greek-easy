@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 
-import { ChevronLeft, ChevronRight, Layers, Plus, Search, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Layers, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
@@ -27,6 +27,7 @@ import {
   selectStatusFilter,
   selectSearchQuery,
   selectIsDeleting,
+  selectStatusCounts,
 } from '@/stores/adminSituationStore';
 import type {
   SituationDetailResponse,
@@ -90,28 +91,10 @@ export function SituationsTab() {
     fetchSituations();
   }, [fetchSituations]);
 
-  const statusCounts = useMemo(() => {
-    const counts: Record<SituationStatus, number> = { draft: 0, partial_ready: 0, ready: 0 };
-    situations.forEach((s) => {
-      counts[s.status] = (counts[s.status] ?? 0) + 1;
-    });
-    return counts;
-  }, [situations]);
-
-  const handleRowClick = (e: React.MouseEvent, situation: SituationListItem) => {
-    if ((e.target as HTMLElement).closest('button')) return;
-    setSelectedSituationId(situation.id);
-    setDetailModalOpen(true);
-  };
+  const statusCounts = useAdminSituationStore(selectStatusCounts);
 
   const handleDeleteClick = (e: React.MouseEvent, situation: SituationListItem) => {
     e.stopPropagation();
-    setSituationToDelete(situation);
-    setDeleteDialogOpen(true);
-  };
-
-  const handleDetailDelete = (situation: SituationDetailResponse) => {
-    setDetailModalOpen(false);
     setSituationToDelete(situation);
     setDeleteDialogOpen(true);
   };
@@ -143,7 +126,7 @@ export function SituationsTab() {
           <SummaryCard
             key={status}
             title={t(`situations.stats.status.${status}`)}
-            value={statusCounts[status]}
+            value={statusCounts[status] ?? 0}
             icon={
               <Badge variant="outline" className={`h-5 ${SITUATION_STATUS_BADGE_CLASSES[status]}`}>
                 {t(`situations.status.${status}`)}
@@ -242,23 +225,11 @@ export function SituationsTab() {
               {situations.map((situation) => (
                 <div
                   key={situation.id}
-                  className="flex cursor-pointer items-center justify-between rounded-lg border p-4 hover:bg-muted/50"
+                  className="flex items-center justify-between rounded-lg border p-4"
                   data-testid={`situation-row-${situation.id}`}
-                  role="button"
-                  tabIndex={0}
-                  onClick={(e) => handleRowClick(e, situation)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      setSelectedSituationId(situation.id);
-                      setDetailModalOpen(true);
-                    }
-                  }}
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="max-w-[400px] truncate font-medium">
-                      {getLocalizedScenario(situation)}
-                    </p>
+                    <p className="line-clamp-2 font-medium">{getLocalizedScenario(situation)}</p>
                     <div className="mt-1 flex flex-wrap gap-2">
                       <Badge
                         variant="outline"
@@ -300,6 +271,19 @@ export function SituationsTab() {
                     </div>
                   </div>
                   <div className="ml-4 flex shrink-0 items-center gap-3">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      data-testid={`situation-edit-btn-${situation.id}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedSituationId(situation.id);
+                        setDetailModalOpen(true);
+                      }}
+                    >
+                      <Pencil className="h-4 w-4" />
+                      <span className="sr-only">{t('actions.edit')}</span>
+                    </Button>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -360,7 +344,6 @@ export function SituationsTab() {
         situationId={selectedSituationId}
         open={detailModalOpen}
         onOpenChange={setDetailModalOpen}
-        onDelete={handleDetailDelete}
       />
       <SituationDeleteDialog
         open={deleteDialogOpen}

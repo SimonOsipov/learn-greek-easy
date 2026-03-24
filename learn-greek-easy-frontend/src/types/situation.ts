@@ -45,10 +45,13 @@ export interface DialogNested {
 export interface DescriptionNested {
   id: string;
   text_el: string;
+  text_el_a2: string | null;
   source_type: SituationDescriptionSourceType;
   status: SituationDescriptionStatus;
   audio_duration_seconds: number | null;
   audio_a2_duration_seconds: number | null;
+  audio_url: string | null;
+  audio_a2_url: string | null;
   created_at: string;
 }
 
@@ -118,4 +121,5 @@ export interface SituationListResponse {
   total: number;
   page: number;
   page_size: number;
+  status_counts: Record<string, number>;
 }
