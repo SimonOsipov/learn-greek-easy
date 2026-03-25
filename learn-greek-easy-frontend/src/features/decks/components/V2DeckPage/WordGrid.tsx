@@ -62,6 +62,7 @@ export function WordGrid({ entries, masteryMap }: WordGridProps) {
       className="grid gap-4"
       style={{
         gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+        gridAutoFlow: 'dense',
       }}
       data-testid="word-grid"
     >
