@@ -27,6 +27,21 @@ import { cn } from '@/lib/utils';
 import type { WordEntryResponse } from '@/services/wordEntryAPI';
 
 // ============================================
+// POS Abbreviations
+// ============================================
+
+const POS_ABBREVIATIONS: Record<string, string> = {
+  noun: 'noun',
+  verb: 'verb',
+  adjective: 'adj.',
+  adverb: 'adv.',
+  phrase: 'phrase',
+};
+
+const getPosLabel = (pos: string): string =>
+  POS_ABBREVIATIONS[pos.toLowerCase()] ?? pos.toLowerCase();
+
+// ============================================
 // Types
 // ============================================
 
@@ -80,6 +95,9 @@ export const WordCardSkeleton: React.FC = () => {
   return (
     <Card data-testid="word-card-skeleton" className="relative overflow-hidden">
       <CardContent className="p-4">
+        <div className="absolute left-3 top-3">
+          <Skeleton className="h-3 w-8" />
+        </div>
         <div className="absolute right-3 top-3">
           <Skeleton className="h-2.5 w-2.5 rounded-full" />
         </div>
@@ -154,6 +172,14 @@ export const WordCard: React.FC<WordCardProps> = ({
       aria-label={`${lemma} - ${displayTranslation}`}
     >
       <CardContent className="p-4">
+        {/* Top-left POS label */}
+        <span
+          data-testid="word-card-pos"
+          className="absolute left-3 top-3 text-xs text-muted-foreground"
+        >
+          {getPosLabel(wordEntry.part_of_speech)}
+        </span>
+
         {/* Top-right mastery indicator */}
         <div className="absolute right-3 top-3">
           <MasteryIndicator level={0} status={masteryStatus} />

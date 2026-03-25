@@ -68,6 +68,19 @@ describe('WordCard', () => {
 
       expect(screen.queryByTestId('word-card-pronunciation')).not.toBeInTheDocument();
     });
+
+    it('renders part of speech label', () => {
+      render(<WordCard wordEntry={mockWordEntry} />);
+      const pos = screen.getByTestId('word-card-pos');
+      expect(pos).toHaveTextContent('verb');
+    });
+
+    it('abbreviates adjective to adj.', () => {
+      const adjEntry = { ...mockWordEntry, part_of_speech: 'adjective' };
+      render(<WordCard wordEntry={adjEntry} />);
+      const pos = screen.getByTestId('word-card-pos');
+      expect(pos).toHaveTextContent('adj.');
+    });
   });
 
   describe('Mastery Indicators', () => {
