@@ -20,7 +20,7 @@ import { WordCard } from '../WordCard';
 // ============================================
 
 const WIDE_LEMMA_THRESHOLD = 12;
-const WIDE_TRANSLATION_THRESHOLD = 20;
+const WIDE_TRANSLATION_THRESHOLD = 17;
 
 /** Returns true when a word entry needs a wide (2-column) card. */
 export function isWideCard(entry: WordEntryResponse): boolean {
