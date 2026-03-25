@@ -92,14 +92,14 @@ describe('V2DeckHeader', () => {
     expect(screen.getByTestId('start-review-button')).toBeInTheDocument();
   });
 
-  it('renders all five filter pills', () => {
+  it('renders all four filter pills', () => {
     renderV2DeckHeader();
     // All pills should be present - check by aria-pressed
     const allPressedButtons = screen.getAllByRole('button');
-    // Filter pills: All, Translation, Sentence, Plural Form, Article
+    // Filter pills: All, Translation, Plural Form, Article
     // Look for aria-pressed attribute
     const pills = allPressedButtons.filter((btn) => btn.getAttribute('aria-pressed') !== null);
-    expect(pills.length).toBe(5);
+    expect(pills.length).toBe(4);
   });
 
   it('has "All" selected by default', () => {

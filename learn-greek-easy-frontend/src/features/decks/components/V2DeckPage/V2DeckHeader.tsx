@@ -22,7 +22,6 @@ import type { Deck } from '@/types/deck';
 const CARD_TYPE_FILTERS = [
   { value: 'all', labelKey: 'v2Practice.filterAll' },
   { value: 'meaning', labelKey: 'v2Practice.filterTranslation' },
-  { value: 'sentence_translation', labelKey: 'v2Practice.filterSentence' },
   { value: 'plural_form', labelKey: 'v2Practice.filterPluralForm' },
   { value: 'article', labelKey: 'v2Practice.filterArticle' },
 ] as const;
