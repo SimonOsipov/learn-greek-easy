@@ -248,6 +248,7 @@
     "filterTranslation": "Translations",
     "filterPluralForm": "Plural Form",
     "filterArticle": "Article",
+    "filterDeclension": "Declension",
     "reviewSubmitError": "Failed to submit review. Please try again.",
     "accuracy": "Accuracy"
   },

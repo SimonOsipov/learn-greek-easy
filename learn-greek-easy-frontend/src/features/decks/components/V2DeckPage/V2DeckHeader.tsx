@@ -24,6 +24,7 @@ const CARD_TYPE_FILTERS = [
   { value: 'meaning', labelKey: 'v2Practice.filterTranslation' },
   { value: 'plural_form', labelKey: 'v2Practice.filterPluralForm' },
   { value: 'article', labelKey: 'v2Practice.filterArticle' },
+  { value: 'declension', labelKey: 'v2Practice.filterDeclension' },
 ] as const;
 
 /**
