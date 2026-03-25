@@ -265,19 +265,26 @@ export function WordReferencePage() {
     <div className="space-y-6" data-testid="word-reference-page">
       {/* Gradient Header */}
       <div className="relative rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 p-6 pb-12">
-        {/* Back navigation */}
-        <Button
-          asChild
-          variant="ghost"
-          size="sm"
-          className="mb-4 hover:bg-transparent"
-          data-testid="back-button"
-        >
-          <Link to={`/decks/${deckId}`}>
-            <ChevronLeft className="mr-1 h-4 w-4" />
-            {t('deck:detail.goBack')}
-          </Link>
-        </Button>
+        {/* Top navigation row */}
+        <div className="mb-4 flex items-center justify-between">
+          <Button
+            asChild
+            variant="ghost"
+            size="sm"
+            className="hover:bg-transparent"
+            data-testid="back-button"
+          >
+            <Link to={`/decks/${deckId}`}>
+              <ChevronLeft className="mr-1 h-4 w-4" />
+              {t('deck:detail.goBack')}
+            </Link>
+          </Button>
+
+          <ReportErrorButton
+            onClick={() => setIsReportModalOpen(true)}
+            data-testid="report-error-button"
+          />
+        </div>
 
         {/* Type badges */}
         <div className="mb-4 flex flex-wrap gap-2">
@@ -358,61 +365,50 @@ export function WordReferencePage() {
         </Card>
       )}
 
-      {/* Practice Button + Report Error (same vertical level) */}
-      <div className="relative pb-6 pt-4">
-        {/* Report Error - absolute bottom-left */}
-        <div className="absolute bottom-6 left-0">
-          <ReportErrorButton
-            onClick={() => setIsReportModalOpen(true)}
-            data-testid="report-error-button"
-          />
-        </div>
-
-        {/* Practice Button - centered */}
-        <div className="flex justify-center">
-          {isCardsLoading ? (
-            <Button
-              variant="default"
-              size="lg"
-              disabled
-              className="min-w-[250px]"
-              data-testid="practice-word-button"
-            >
+      {/* Practice Button */}
+      <div className="flex justify-center pb-6 pt-4">
+        {isCardsLoading ? (
+          <Button
+            variant="default"
+            size="lg"
+            disabled
+            className="min-w-[250px]"
+            data-testid="practice-word-button"
+          >
+            {t('deck:wordReference.practiceWord')}
+          </Button>
+        ) : cards.length === 0 ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span>
+                <Button
+                  variant="default"
+                  size="lg"
+                  disabled
+                  className="min-w-[250px] cursor-not-allowed"
+                  data-testid="practice-word-button"
+                >
+                  {t('deck:wordReference.practiceWord')}
+                </Button>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{t('deck:practice.noCards')}</p>
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          <Button
+            asChild
+            variant="default"
+            size="lg"
+            className="min-w-[250px]"
+            data-testid="practice-word-button"
+          >
+            <Link to={`/decks/${deckId}/words/${wordId}/practice`}>
               {t('deck:wordReference.practiceWord')}
-            </Button>
-          ) : cards.length === 0 ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span>
-                  <Button
-                    variant="default"
-                    size="lg"
-                    disabled
-                    className="min-w-[250px] cursor-not-allowed"
-                    data-testid="practice-word-button"
-                  >
-                    {t('deck:wordReference.practiceWord')}
-                  </Button>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{t('deck:practice.noCards')}</p>
-              </TooltipContent>
-            </Tooltip>
-          ) : (
-            <Button
-              asChild
-              variant="default"
-              size="lg"
-              className="min-w-[250px]"
-              data-testid="practice-word-button"
-            >
-              <Link to={`/decks/${deckId}/words/${wordId}/practice`}>
-                {t('deck:wordReference.practiceWord')}
-              </Link>
-            </Button>
-          )}
-        </div>
+            </Link>
+          </Button>
+        )}
       </div>
 
       <ReportErrorModal
