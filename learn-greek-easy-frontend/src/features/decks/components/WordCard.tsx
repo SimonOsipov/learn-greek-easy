@@ -59,8 +59,6 @@ export interface WordCardProps {
 }
 
 interface MasteryIndicatorProps {
-  /** 0-5, where 0 = not started, 5 = mastered */
-  level: number;
   status?: CardStatus;
 }
 
@@ -70,15 +68,14 @@ interface MasteryIndicatorProps {
 
 /**
  * Mastery indicator dot (top-right corner).
- * V2 placeholder: always gray for now.
- * Future: color based on level (green for mastered, yellow for learning, etc.)
+ * Color reflects mastery status: gray (new), blue (learning), green (mastered).
  */
-const MasteryIndicator: React.FC<MasteryIndicatorProps> = ({ level, status = 'new' }) => {
+const MasteryIndicator: React.FC<MasteryIndicatorProps> = ({ status = 'new' }) => {
   return (
     <div
       data-testid="word-card-mastery-indicator"
       className={cn('h-2.5 w-2.5 rounded-full', STATUS_DOT_CLASS[status])}
-      aria-label={`Mastery level: ${level} of 5`}
+      aria-label={`Mastery: ${status}`}
     />
   );
 };
@@ -182,7 +179,7 @@ export const WordCard: React.FC<WordCardProps> = ({
 
         {/* Top-right mastery indicator */}
         <div className="absolute right-3 top-3">
-          <MasteryIndicator level={0} status={masteryStatus} />
+          <MasteryIndicator status={masteryStatus} />
         </div>
 
         {/* Main content - centered */}

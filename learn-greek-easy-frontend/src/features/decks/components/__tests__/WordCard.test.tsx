@@ -89,7 +89,7 @@ describe('WordCard', () => {
 
       const indicator = screen.getByTestId('word-card-mastery-indicator');
       expect(indicator).toBeInTheDocument();
-      expect(indicator).toHaveAttribute('aria-label', 'Mastery level: 0 of 5');
+      expect(indicator).toHaveAttribute('aria-label', 'Mastery: new');
     });
 
     it('renders mastery dots (bottom row)', () => {
