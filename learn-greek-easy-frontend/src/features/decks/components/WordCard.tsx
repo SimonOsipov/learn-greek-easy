@@ -48,10 +48,13 @@ const getPosLabel = (pos: string): string =>
 // ============================================
 
 const CARD_TYPE_GROUPS = [
-  { label: 'Translation', types: ['meaning_el_to_en', 'meaning_en_to_el', 'sentence_translation'] },
-  { label: 'Plural', types: ['plural_form'] },
-  { label: 'Article', types: ['article'] },
-  { label: 'Declension', types: ['declension'] },
+  {
+    labelKey: 'v2Practice.filterTranslation',
+    types: ['meaning_el_to_en', 'meaning_en_to_el', 'sentence_translation'],
+  },
+  { labelKey: 'v2Practice.filterPluralForm', types: ['plural_form'] },
+  { labelKey: 'v2Practice.filterArticle', types: ['article'] },
+  { labelKey: 'v2Practice.filterDeclension', types: ['declension'] },
 ];
 
 function computeDotStatuses(typeProgress: CardTypeMastery[]): TypedDot[] {
@@ -68,7 +71,7 @@ function computeDotStatuses(typeProgress: CardTypeMastery[]): TypedDot[] {
       status = 'studied';
     }
 
-    return { label: group.label, status };
+    return { labelKey: group.labelKey, status };
   });
 }
 
