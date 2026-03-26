@@ -239,11 +239,19 @@ class DeckWordEntriesResponse(BaseModel):
 # ============================================================================
 
 
+class CardTypeMastery(BaseModel):
+    card_type: str
+    mastered_count: int = Field(..., ge=0)
+    studied_count: int = Field(..., ge=0)
+    total_count: int = Field(..., ge=0)
+
+
 class WordMasteryItem(BaseModel):
     word_entry_id: UUID
     mastered_count: int = Field(..., ge=0)
     studied_count: int = Field(..., ge=0)
     total_count: int = Field(..., ge=0)
+    type_progress: list[CardTypeMastery] = Field(default_factory=list)
 
 
 class WordMasteryResponse(BaseModel):

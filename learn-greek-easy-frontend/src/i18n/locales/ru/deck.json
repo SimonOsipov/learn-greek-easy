@@ -250,7 +250,12 @@
     "filterArticle": "Артикль",
     "filterDeclension": "Склонение",
     "reviewSubmitError": "Не удалось отправить оценку. Попробуйте ещё раз.",
-    "accuracy": "Точность"
+    "accuracy": "Точность",
+    "typeProgress": {
+      "notStarted": "Не начато",
+      "inProgress": "В процессе",
+      "mastered": "Освоено"
+    }
   },
   "wordBrowser": {
     "searchPlaceholder": "Поиск слов...",

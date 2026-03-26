@@ -250,7 +250,12 @@
     "filterArticle": "Article",
     "filterDeclension": "Declension",
     "reviewSubmitError": "Failed to submit review. Please try again.",
-    "accuracy": "Accuracy"
+    "accuracy": "Accuracy",
+    "typeProgress": {
+      "notStarted": "Not started",
+      "inProgress": "In progress",
+      "mastered": "Mastered"
+    }
   },
   "wordBrowser": {
     "searchPlaceholder": "Search words...",

@@ -20,10 +20,12 @@ import { useTranslation } from 'react-i18next';
 import { STATUS_DOT_CLASS } from '@/components/shared/cardStatusColors';
 import type { CardStatus } from '@/components/shared/cardStatusColors';
 import { MasteryDots } from '@/components/shared/MasteryDots';
+import type { DotStatus, TypedDot } from '@/components/shared/MasteryDots';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getLocalizedTranslation } from '@/lib/localeUtils';
 import { cn } from '@/lib/utils';
+import type { CardTypeMastery } from '@/services/progressAPI';
 import type { WordEntryResponse } from '@/services/wordEntryAPI';
 
 // ============================================
@@ -42,6 +44,35 @@ const getPosLabel = (pos: string): string =>
   POS_ABBREVIATIONS[pos.toLowerCase()] ?? pos.toLowerCase();
 
 // ============================================
+// Card Type Groups
+// ============================================
+
+const CARD_TYPE_GROUPS = [
+  { label: 'Translation', types: ['meaning_el_to_en', 'meaning_en_to_el', 'sentence_translation'] },
+  { label: 'Plural', types: ['plural_form'] },
+  { label: 'Article', types: ['article'] },
+  { label: 'Declension', types: ['declension'] },
+];
+
+function computeDotStatuses(typeProgress: CardTypeMastery[]): TypedDot[] {
+  return CARD_TYPE_GROUPS.map((group) => {
+    const matches = typeProgress.filter((tp) => group.types.includes(tp.card_type));
+    const totalStudied = matches.reduce((sum, m) => sum + m.studied_count, 0);
+    const totalMastered = matches.reduce((sum, m) => sum + m.mastered_count, 0);
+    const totalCount = matches.reduce((sum, m) => sum + m.total_count, 0);
+
+    let status: DotStatus = 'none';
+    if (totalCount > 0 && totalMastered === totalCount) {
+      status = 'mastered';
+    } else if (totalStudied > 0) {
+      status = 'studied';
+    }
+
+    return { label: group.label, status };
+  });
+}
+
+// ============================================
 // Types
 // ============================================
 
@@ -56,6 +87,8 @@ export interface WordCardProps {
   masteryStatus?: CardStatus;
   /** Number of mastery dots filled (0-4) */
   masteryFilled?: number;
+  /** Per-card-type mastery breakdown for typed dots */
+  typeProgress?: CardTypeMastery[];
 }
 
 interface MasteryIndicatorProps {
@@ -136,6 +169,7 @@ export const WordCard: React.FC<WordCardProps> = ({
   loading = false,
   masteryStatus = 'new',
   masteryFilled = 0,
+  typeProgress,
 }) => {
   const { i18n } = useTranslation();
   const { lemma, pronunciation, translation_en, translation_ru } = wordEntry;
@@ -206,7 +240,14 @@ export const WordCard: React.FC<WordCardProps> = ({
 
           {/* Bottom mastery dots */}
           <div className="pt-2">
-            <MasteryDots filled={masteryFilled} />
+            <MasteryDots
+              dots={
+                typeProgress && typeProgress.length > 0
+                  ? computeDotStatuses(typeProgress)
+                  : undefined
+              }
+              filled={Math.min(masteryFilled, 4)}
+            />
           </div>
         </div>
       </CardContent>

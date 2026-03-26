@@ -230,6 +230,16 @@ export interface AchievementsResponse {
 }
 
 /**
+ * Per-card-type mastery breakdown for a single word entry
+ */
+export interface CardTypeMastery {
+  card_type: string;
+  mastered_count: number;
+  studied_count: number;
+  total_count: number;
+}
+
+/**
  * Word mastery item for a single word entry
  */
 export interface WordMasteryItem {
@@ -237,6 +247,7 @@ export interface WordMasteryItem {
   mastered_count: number;
   studied_count: number;
   total_count: number;
+  type_progress: CardTypeMastery[];
 }
 
 /**

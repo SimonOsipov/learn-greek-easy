@@ -83,6 +83,7 @@ export function WordGrid({ entries, masteryMap }: WordGridProps) {
               onClick={() => handleWordCardClick(entry.id)}
               masteryStatus={masteryStatus}
               masteryFilled={masteryFilled}
+              typeProgress={m?.type_progress}
             />
           </div>
         );
