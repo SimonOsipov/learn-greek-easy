@@ -97,7 +97,7 @@ const TypedMasteryDots: React.FC<{ dots: TypedDot[]; className?: string }> = ({
           ))}
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-48 p-3" data-testid="mastery-dots-popover">
+      <PopoverContent className="w-56 p-3" data-testid="mastery-dots-popover">
         <div className="space-y-2">
           {dots.map((dot, i) => (
             <div key={i} className="flex items-center justify-between text-xs">
