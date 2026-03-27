@@ -8,7 +8,7 @@
  * - Grammar tables (conjugation for verbs, declension for nouns/adjectives)
  * - Usage examples
  * - Notes section (if available)
- * - Dynamic "Practice this word" button (navigates to practice page when cards available)
+ * - Tab layout with word-info and cards tabs
  */
 
 import { useState } from 'react';
@@ -26,7 +26,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SpeakerButton } from '@/components/ui/SpeakerButton';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { trackWordAudioPlayed } from '@/lib/analytics';
 import { getLocalizedTranslation } from '@/lib/localeUtils';
 import type { AdjectiveData, AdverbData, NounDataAny, NounGender, VerbData } from '@/types/grammar';
@@ -39,7 +39,7 @@ import {
   ExamplesSection,
   NounDeclensionTable,
 } from '../components';
-import { useWordEntry, useWordEntryCards } from '../hooks';
+import { useWordEntry } from '../hooks';
 
 // ============================================
 // Loading Skeleton Component
@@ -194,11 +194,6 @@ export function WordReferencePage() {
     setPersistedAudioSpeed(newSpeed);
   };
 
-  const { cards, isLoading: isCardsLoading } = useWordEntryCards({
-    wordEntryId: wordId || '',
-    enabled: !!wordId,
-  });
-
   // Loading state
   if (isLoading) {
     return <WordReferencePageSkeleton />;
@@ -335,85 +330,54 @@ export function WordReferencePage() {
         )}
       </div>
 
-      {/* Grammar Section */}
-      {renderGrammarSection()}
-
-      {/* Examples Section */}
-      <ExamplesSection
-        examples={wordEntry.examples}
-        wordEntryId={wordEntry.id}
-        deckId={deckId}
-        speed={audioSpeed}
-      />
-
-      {/* Notes Section (if available) */}
-      {notes && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Notes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">{notes}</p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Practice Button + Report Error (same vertical level) */}
-      <div className="relative pb-6 pt-4">
-        {/* Report Error - absolute bottom-left */}
-        <div className="absolute bottom-6 left-0">
-          <ReportErrorButton
-            onClick={() => setIsReportModalOpen(true)}
-            data-testid="report-error-button"
-          />
-        </div>
-
-        {/* Practice Button - centered */}
-        <div className="flex justify-center">
-          {isCardsLoading ? (
-            <Button
-              variant="default"
-              size="lg"
-              disabled
-              className="min-w-[250px]"
-              data-testid="practice-word-button"
-            >
-              {t('deck:wordReference.practiceWord')}
-            </Button>
-          ) : cards.length === 0 ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span>
-                  <Button
-                    variant="default"
-                    size="lg"
-                    disabled
-                    className="min-w-[250px] cursor-not-allowed"
-                    data-testid="practice-word-button"
-                  >
-                    {t('deck:wordReference.practiceWord')}
-                  </Button>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{t('deck:practice.noCards')}</p>
-              </TooltipContent>
-            </Tooltip>
-          ) : (
-            <Button
-              asChild
-              variant="default"
-              size="lg"
-              className="min-w-[250px]"
-              data-testid="practice-word-button"
-            >
-              <Link to={`/decks/${deckId}/words/${wordId}/practice`}>
-                {t('deck:wordReference.practiceWord')}
-              </Link>
-            </Button>
-          )}
-        </div>
+      {/* Report Error Button */}
+      <div className="flex justify-end">
+        <ReportErrorButton
+          onClick={() => setIsReportModalOpen(true)}
+          data-testid="report-error-button"
+        />
       </div>
+
+      {/* Tabs */}
+      <Tabs defaultValue="word-info" data-testid="word-reference-tabs">
+        <TabsList>
+          <TabsTrigger value="word-info" data-testid="word-reference-tab-word-info">
+            {t('deck:wordReference.tabWordInfo')}
+          </TabsTrigger>
+          <TabsTrigger value="cards" data-testid="word-reference-tab-cards">
+            {t('deck:wordReference.tabCards')}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="word-info" className="space-y-6">
+          {/* Grammar Section */}
+          {renderGrammarSection()}
+
+          {/* Examples Section */}
+          <ExamplesSection
+            examples={wordEntry.examples}
+            wordEntryId={wordEntry.id}
+            deckId={deckId}
+            speed={audioSpeed}
+          />
+
+          {/* Notes Section (if available) */}
+          {notes && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Notes</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">{notes}</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="cards">
+          <div className="py-8 text-center text-muted-foreground">Cards content coming soon</div>
+        </TabsContent>
+      </Tabs>
 
       <ReportErrorModal
         isOpen={isReportModalOpen}

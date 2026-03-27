@@ -5,7 +5,7 @@
  * - Article display before lemma for nouns (masculine/feminine/neuter)
  * - No article for non-noun parts of speech (verb, adjective, adverb)
  * - Article styling (font-normal, text-muted-foreground, mr-2)
- * - Practice button localization via i18n key
+ * - Tab layout
  * - Edge cases: missing grammar data, missing gender field, unknown gender
  */
 
@@ -14,7 +14,6 @@ import { render, screen } from '@testing-library/react';
 import i18n from 'i18next';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { TooltipProvider } from '@/components/ui/tooltip';
 import type { WordEntryResponse } from '@/services/wordEntryAPI';
 
 // Mock SpeakerButton — captures callbacks and exposes via test buttons
@@ -62,24 +61,18 @@ vi.mock('react-router-dom', async (importOriginal) => {
   };
 });
 
-// Mock useWordEntry and useWordEntryCards hooks
+// Mock useWordEntry hook
 const mockUseWordEntry = vi.fn();
-const mockUseWordEntryCards = vi.fn();
 vi.mock('../../hooks', () => ({
   useWordEntry: (opts: unknown) => mockUseWordEntry(opts),
-  useWordEntryCards: (opts: unknown) => mockUseWordEntryCards(opts),
 }));
 
 // Import component after mocks
 import { WordReferencePage } from '../WordReferencePage';
 
-/** Render helper that wraps with TooltipProvider (required by Radix Tooltip) */
+/** Render helper */
 function renderPage() {
-  return render(
-    <TooltipProvider>
-      <WordReferencePage />
-    </TooltipProvider>
-  );
+  return render(<WordReferencePage />);
 }
 
 // ============================================
@@ -224,13 +217,6 @@ function makeAdverb(): WordEntryResponse {
 beforeEach(() => {
   vi.clearAllMocks();
   mockUseParams.mockReturnValue({ deckId: 'test-deck-id', wordId: 'test-word-id' });
-  mockUseWordEntryCards.mockReturnValue({
-    cards: [],
-    isLoading: false,
-    isError: false,
-    error: null,
-    refetch: vi.fn(),
-  });
 });
 
 afterEach(() => {
@@ -437,11 +423,10 @@ describe('WordReferencePage', () => {
     });
   });
 
-  describe('Practice Button Localization', () => {
-    it('renders practice button with English i18n text', () => {
-      const entry = makeMasculineNoun();
+  describe('Tab Layout', () => {
+    it('renders tabs container with word-info as default active tab', () => {
       mockUseWordEntry.mockReturnValue({
-        wordEntry: entry,
+        wordEntry: makeMasculineNoun(),
         isLoading: false,
         isError: false,
         error: null,
@@ -449,151 +434,51 @@ describe('WordReferencePage', () => {
 
       renderPage();
 
-      const button = screen.getByTestId('practice-word-button');
-      expect(button).toHaveTextContent('Practice this word');
-    });
-
-    it('renders practice button with Russian i18n text when locale is ru', async () => {
-      // Change language to Russian
-      await i18n.changeLanguage('ru');
-
-      const entry = makeMasculineNoun();
-      mockUseWordEntry.mockReturnValue({
-        wordEntry: entry,
-        isLoading: false,
-        isError: false,
-        error: null,
-      });
-
-      renderPage();
-
-      const button = screen.getByTestId('practice-word-button');
-      // The key deck:wordReference.practiceWord resolves to Russian text
-      // Note: Russian translations may not be loaded in test setup,
-      // but the key should at least not show the raw key
-      expect(button.textContent).toBeTruthy();
-      expect(button.textContent).not.toBe('deck:wordReference.practiceWord');
-
-      // Restore English
-      await i18n.changeLanguage('en');
-    });
-
-    it('practice button is disabled when no cards exist', () => {
-      const entry = makeMasculineNoun();
-      mockUseWordEntry.mockReturnValue({
-        wordEntry: entry,
-        isLoading: false,
-        isError: false,
-        error: null,
-      });
-      // Default mock returns cards: [] — button should be disabled
-      mockUseWordEntryCards.mockReturnValue({
-        cards: [],
-        isLoading: false,
-        isError: false,
-        error: null,
-        refetch: vi.fn(),
-      });
-
-      renderPage();
-
-      const button = screen.getByTestId('practice-word-button');
-      expect(button).toBeDisabled();
-    });
-
-    it('practice button is enabled when cards are available', () => {
-      const entry = makeMasculineNoun();
-      mockUseWordEntry.mockReturnValue({
-        wordEntry: entry,
-        isLoading: false,
-        isError: false,
-        error: null,
-      });
-      mockUseWordEntryCards.mockReturnValue({
-        cards: [
-          {
-            id: 'card-1',
-            word_entry_id: 'test-word-id',
-            deck_id: 'test-deck-id',
-            card_type: 'meaning_el_to_en',
-            tier: 1,
-            front_content: { main: 'test' },
-            back_content: { answer: 'test' },
-            is_active: true,
-            created_at: '2024-01-01T00:00:00Z',
-            updated_at: '2024-01-01T00:00:00Z',
-          },
-        ],
-        isLoading: false,
-        isError: false,
-        error: null,
-        refetch: vi.fn(),
-      });
-
-      renderPage();
-
-      const button = screen.getByTestId('practice-word-button');
-      expect(button).not.toBeDisabled();
-    });
-
-    it('practice button links to practice page', () => {
-      const entry = makeMasculineNoun();
-      mockUseWordEntry.mockReturnValue({
-        wordEntry: entry,
-        isLoading: false,
-        isError: false,
-        error: null,
-      });
-      mockUseWordEntryCards.mockReturnValue({
-        cards: [
-          {
-            id: 'card-1',
-            word_entry_id: 'test-word-id',
-            deck_id: 'test-deck-id',
-            card_type: 'meaning_el_to_en',
-            tier: 1,
-            front_content: { main: 'test' },
-            back_content: { answer: 'test' },
-            is_active: true,
-            created_at: '2024-01-01T00:00:00Z',
-            updated_at: '2024-01-01T00:00:00Z',
-          },
-        ],
-        isLoading: false,
-        isError: false,
-        error: null,
-        refetch: vi.fn(),
-      });
-
-      renderPage();
-
-      const link = screen.getByTestId('practice-word-button').closest('a');
-      expect(link).not.toBeNull();
-      expect(link!.getAttribute('href')).toContain(
-        '/decks/test-deck-id/words/test-word-id/practice'
+      expect(screen.getByTestId('word-reference-tabs')).toBeInTheDocument();
+      expect(screen.getByTestId('word-reference-tab-word-info')).toHaveAttribute(
+        'data-state',
+        'active'
+      );
+      expect(screen.getByTestId('word-reference-tab-cards')).toHaveAttribute(
+        'data-state',
+        'inactive'
       );
     });
 
-    it('practice button is disabled while cards are loading', () => {
-      const entry = makeMasculineNoun();
+    it('switches to Cards tab on click', async () => {
+      const user = userEvent.setup();
       mockUseWordEntry.mockReturnValue({
-        wordEntry: entry,
+        wordEntry: makeMasculineNoun(),
         isLoading: false,
         isError: false,
         error: null,
       });
-      mockUseWordEntryCards.mockReturnValue({
-        cards: [],
-        isLoading: true,
+
+      renderPage();
+
+      await user.click(screen.getByTestId('word-reference-tab-cards'));
+
+      expect(screen.getByTestId('word-reference-tab-cards')).toHaveAttribute(
+        'data-state',
+        'active'
+      );
+      expect(screen.getByTestId('word-reference-tab-word-info')).toHaveAttribute(
+        'data-state',
+        'inactive'
+      );
+    });
+
+    it('does not render practice button', () => {
+      mockUseWordEntry.mockReturnValue({
+        wordEntry: makeMasculineNoun(),
+        isLoading: false,
         isError: false,
         error: null,
-        refetch: vi.fn(),
       });
 
       renderPage();
 
-      const button = screen.getByTestId('practice-word-button');
-      expect(button).toBeDisabled();
+      expect(screen.queryByTestId('practice-word-button')).not.toBeInTheDocument();
     });
   });
 
