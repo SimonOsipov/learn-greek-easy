@@ -67,17 +67,17 @@ test.describe('Word Reference - Cards Tab', () => {
 
     const headers = { Authorization: `Bearer ${accessToken}` };
 
-    // Find "E2E V2 Nouns" deck
+    // Find "E2E V2 Nouns Deck (A1)"
     const decksResp = await request.get(`${apiBaseUrl}/api/v1/decks?page_size=100`, { headers });
     if (!decksResp.ok()) {
       throw new Error(`[WCRD] Failed to fetch decks: ${decksResp.status()}`);
     }
     const decksData = await decksResp.json();
     const v2Deck = (decksData.decks ?? []).find(
-      (d: { name: string }) => d.name === 'E2E V2 Nouns'
+      (d: { name: string }) => d.name === 'E2E V2 Nouns Deck (A1)'
     );
     if (!v2Deck) {
-      throw new Error('[WCRD] Could not find "E2E V2 Nouns" deck. Ensure seed data is loaded.');
+      throw new Error('[WCRD] Could not find "E2E V2 Nouns Deck (A1)" deck. Ensure seed data is loaded.');
     }
     v2DeckId = v2Deck.id as string;
 
@@ -92,7 +92,7 @@ test.describe('Word Reference - Cards Tab', () => {
     const wordsData = await wordsResp.json();
     const firstWord = (wordsData.word_entries ?? [])[0];
     if (!firstWord) {
-      throw new Error('[WCRD] No word entries found in E2E V2 Nouns deck.');
+      throw new Error('[WCRD] No word entries found in E2E V2 Nouns Deck (A1).');
     }
     testWordId = firstWord.id as string;
   });
