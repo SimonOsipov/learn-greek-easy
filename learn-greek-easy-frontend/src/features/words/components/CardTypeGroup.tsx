@@ -27,9 +27,12 @@ export function CardTypeGroup({
   const { t } = useTranslation('deck');
 
   return (
-    <div className="space-y-1" data-testid={`card-group-${groupKey}`}>
+    <div
+      className="space-y-3 rounded-lg border bg-card p-4 shadow-sm"
+      data-testid={`card-group-${groupKey}`}
+    >
       <div
-        className="flex items-center justify-between px-3 py-2"
+        className="flex items-center justify-between"
         data-testid={`card-group-header-${groupKey}`}
       >
         <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">

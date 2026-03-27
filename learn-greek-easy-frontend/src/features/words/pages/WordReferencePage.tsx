@@ -371,11 +371,15 @@ export function WordReferencePage() {
           });
         }}
       >
-        <TabsList>
-          <TabsTrigger value="word-info" data-testid="word-reference-tab-word-info">
+        <TabsList className="w-full">
+          <TabsTrigger
+            value="word-info"
+            data-testid="word-reference-tab-word-info"
+            className="flex-1"
+          >
             {t('deck:wordReference.tabWordInfo')}
           </TabsTrigger>
-          <TabsTrigger value="cards" data-testid="word-reference-tab-cards">
+          <TabsTrigger value="cards" data-testid="word-reference-tab-cards" className="flex-1">
             {totalCards > 0
               ? t('deck:wordReference.tabCardsWithCount', {
                   mastered: masteredCards,
