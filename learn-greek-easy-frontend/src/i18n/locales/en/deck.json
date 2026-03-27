@@ -326,7 +326,13 @@
     },
     "cardsEmpty": "No cards available for this word yet.",
     "cardsError": "Failed to load cards. Please try again.",
-    "cardsRetry": "Retry"
+    "cardsRetry": "Retry",
+    "flipToReveal": "Tap to flip",
+    "promptMeaning": "What does this mean?",
+    "promptMeaningReverse": "How do you say this in Greek?",
+    "promptArticle": "What is the article?",
+    "promptPlural": "What is the plural?",
+    "promptSentence": "Translate this sentence"
   },
   "practice": {
     "title": "Practice",

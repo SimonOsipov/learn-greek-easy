@@ -49,7 +49,7 @@ export function MiniFlipCard({ card, onFlip }: MiniFlipCardProps) {
   return (
     <div
       data-testid={`mini-flip-card-${card.id}`}
-      className="aspect-[4/3] cursor-pointer [perspective:600px]"
+      className="aspect-[4/3] cursor-pointer overflow-hidden [perspective:600px]"
       onClick={handleFlip}
       onKeyDown={handleKeyDown}
       role="button"
