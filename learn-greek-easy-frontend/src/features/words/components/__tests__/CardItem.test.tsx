@@ -63,6 +63,7 @@ vi.mock('@/components/ui/collapsible', () => ({
 
 function makeCard(overrides: Partial<CardMasteryItem> = {}): CardMasteryItem {
   return {
+    id: 'card-1',
     card_type: 'meaning_el_to_en',
     front_content: { prompt: 'Γεια σου' },
     back_content: { answer: 'Hello' },

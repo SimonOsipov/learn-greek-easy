@@ -20,3 +20,5 @@ export { CardItem } from './CardItem';
 export type { CardItemProps } from './CardItem';
 export { groupCards } from './cardGrouping';
 export type { CardGroupKey, GroupedCards, CardGroupDefinition } from './cardGrouping';
+export { MiniFlipCard } from './MiniFlipCard';
+export type { MiniFlipCardProps } from './MiniFlipCard';

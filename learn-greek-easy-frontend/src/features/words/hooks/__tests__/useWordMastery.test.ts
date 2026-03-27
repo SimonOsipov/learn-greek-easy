@@ -106,6 +106,8 @@ describe('useWordMastery Hook', () => {
     });
 
     expect(result.current.cards).toHaveLength(2);
+    expect(result.current.cards[0].id).toBe('card-1');
+    expect(result.current.cards[1].id).toBe('card-2');
     expect(result.current.cards[0].mastery_status).toBe('mastered');
     expect(result.current.cards[1].mastery_status).toBe('mastered');
     expect(result.current.wordMasteryStatus).toBe('mastered');
