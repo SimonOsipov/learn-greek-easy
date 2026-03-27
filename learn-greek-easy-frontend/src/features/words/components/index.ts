@@ -16,8 +16,6 @@ export { CardsSummaryBar } from './CardsSummaryBar';
 export type { CardsSummaryBarProps } from './CardsSummaryBar';
 export { CardTypeGroup } from './CardTypeGroup';
 export type { CardTypeGroupProps } from './CardTypeGroup';
-export { CardItem } from './CardItem';
-export type { CardItemProps } from './CardItem';
 export { groupCards } from './cardGrouping';
 export type { CardGroupKey, GroupedCards, CardGroupDefinition } from './cardGrouping';
 export { MiniFlipCard } from './MiniFlipCard';

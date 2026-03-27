@@ -211,6 +211,7 @@ export function WordReferencePage() {
 
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [audioSpeed, setAudioSpeed] = useState<AudioSpeed>(getPersistedAudioSpeed);
+  const [activeTab, setActiveTab] = useState('word-info');
   const handleSpeedChange = (newSpeed: AudioSpeed) => {
     setAudioSpeed(newSpeed);
     setPersistedAudioSpeed(newSpeed);
@@ -361,9 +362,10 @@ export function WordReferencePage() {
 
       {/* Tabs */}
       <Tabs
-        defaultValue="word-info"
+        value={activeTab}
         data-testid="word-reference-tabs"
         onValueChange={(value) => {
+          setActiveTab(value);
           trackWordReferenceTabSwitched({
             tab: value === 'word-info' ? 'word_info' : 'cards',
             word_entry_id: wordId ?? '',
@@ -433,7 +435,7 @@ export function WordReferencePage() {
               <p className="text-sm">{t('deck:wordReference.cardsEmpty')}</p>
             </div>
           ) : (
-            <div className="space-y-4 py-4">
+            <div className="space-y-4 py-4" key={`cards-content-${activeTab}`}>
               <CardsSummaryBar mastered={masteredCards} total={totalCards} />
               {groupedCards.map((group) => (
                 <CardTypeGroup
