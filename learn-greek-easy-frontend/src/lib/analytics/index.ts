@@ -120,3 +120,11 @@ export {
   trackWordAudioPlayed,
   trackExampleAudioPlayed,
 } from './audioAnalytics';
+export {
+  // Type interfaces
+  type WordReferenceTabSwitchedProperties,
+  type WordReferenceCardExpandedProperties,
+  // Tracking functions
+  trackWordReferenceTabSwitched,
+  trackWordReferenceCardExpanded,
+} from './wordReferenceAnalytics';

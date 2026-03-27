@@ -27,7 +27,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SpeakerButton } from '@/components/ui/SpeakerButton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { trackWordAudioPlayed } from '@/lib/analytics';
+import { trackWordAudioPlayed, trackWordReferenceTabSwitched } from '@/lib/analytics';
 import { getLocalizedTranslation } from '@/lib/localeUtils';
 import type { AdjectiveData, AdverbData, NounDataAny, NounGender, VerbData } from '@/types/grammar';
 import { getPersistedAudioSpeed, setPersistedAudioSpeed } from '@/utils/audioSpeed';
@@ -361,7 +361,17 @@ export function WordReferencePage() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="word-info" data-testid="word-reference-tabs">
+      <Tabs
+        defaultValue="word-info"
+        data-testid="word-reference-tabs"
+        onValueChange={(value) => {
+          trackWordReferenceTabSwitched({
+            tab: value === 'word-info' ? 'word_info' : 'cards',
+            word_entry_id: wordId ?? '',
+            deck_id: deckId ?? '',
+          });
+        }}
+      >
         <TabsList>
           <TabsTrigger value="word-info" data-testid="word-reference-tab-word-info">
             {t('deck:wordReference.tabWordInfo')}

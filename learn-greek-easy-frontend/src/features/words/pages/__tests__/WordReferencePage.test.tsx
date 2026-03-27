@@ -44,6 +44,7 @@ vi.mock('@/components/ui/SpeakerButton', () => ({
 // Mock analytics module
 vi.mock('@/lib/analytics', () => ({
   trackWordAudioPlayed: vi.fn(),
+  trackWordReferenceTabSwitched: vi.fn(),
 }));
 
 // Mock react-router-dom

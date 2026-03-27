@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { MasteryDots } from '@/components/shared/MasteryDots';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { trackWordReferenceCardExpanded } from '@/lib/analytics';
 
 import type { CardMasteryItem, MasteryStatus } from '../hooks';
 
@@ -33,12 +34,7 @@ function extractFrontPreview(frontContent: Record<string, unknown>): string {
   return '';
 }
 
-export function CardItem({
-  card,
-  index,
-  wordEntryId: _wordEntryId,
-  deckId: _deckId,
-}: CardItemProps) {
+export function CardItem({ card, index, wordEntryId, deckId }: CardItemProps) {
   const { t } = useTranslation('deck');
   const [isOpen, setIsOpen] = useState(false);
   const filled = getMasteryFilled(card.mastery_status);
@@ -47,7 +43,16 @@ export function CardItem({
   return (
     <Collapsible
       open={isOpen}
-      onOpenChange={setIsOpen}
+      onOpenChange={(open) => {
+        if (open) {
+          trackWordReferenceCardExpanded({
+            card_type: card.card_type,
+            word_entry_id: wordEntryId,
+            deck_id: deckId,
+          });
+        }
+        setIsOpen(open);
+      }}
       data-testid={`card-item-${card.card_type}-${index}`}
     >
       <CollapsibleTrigger className="flex w-full items-center justify-between rounded-md p-3 text-left transition-colors hover:bg-muted/50">
