@@ -401,7 +401,7 @@ export function WordReferencePage() {
           {notes && (
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-lg">Notes</CardTitle>
+                <CardTitle className="text-lg">{t('deck:wordReference.notes')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">{notes}</p>
