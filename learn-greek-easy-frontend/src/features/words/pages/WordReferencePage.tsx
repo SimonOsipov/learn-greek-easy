@@ -359,14 +359,6 @@ export function WordReferencePage() {
         )}
       </div>
 
-      {/* Report Error Button */}
-      <div className="flex justify-end">
-        <ReportErrorButton
-          onClick={() => setIsReportModalOpen(true)}
-          data-testid="report-error-button"
-        />
-      </div>
-
       {/* Tabs */}
       <Tabs
         defaultValue="word-info"
