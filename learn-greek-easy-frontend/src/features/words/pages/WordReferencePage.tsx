@@ -211,6 +211,7 @@ export function WordReferencePage() {
 
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [audioSpeed, setAudioSpeed] = useState<AudioSpeed>(getPersistedAudioSpeed);
+  const [activeTab, setActiveTab] = useState('word-info');
   const handleSpeedChange = (newSpeed: AudioSpeed) => {
     setAudioSpeed(newSpeed);
     setPersistedAudioSpeed(newSpeed);
@@ -361,9 +362,10 @@ export function WordReferencePage() {
 
       {/* Tabs */}
       <Tabs
-        defaultValue="word-info"
+        value={activeTab}
         data-testid="word-reference-tabs"
         onValueChange={(value) => {
+          setActiveTab(value);
           trackWordReferenceTabSwitched({
             tab: value === 'word-info' ? 'word_info' : 'cards',
             word_entry_id: wordId ?? '',
@@ -371,11 +373,15 @@ export function WordReferencePage() {
           });
         }}
       >
-        <TabsList>
-          <TabsTrigger value="word-info" data-testid="word-reference-tab-word-info">
+        <TabsList className="w-full">
+          <TabsTrigger
+            value="word-info"
+            data-testid="word-reference-tab-word-info"
+            className="flex-1"
+          >
             {t('deck:wordReference.tabWordInfo')}
           </TabsTrigger>
-          <TabsTrigger value="cards" data-testid="word-reference-tab-cards">
+          <TabsTrigger value="cards" data-testid="word-reference-tab-cards" className="flex-1">
             {totalCards > 0
               ? t('deck:wordReference.tabCardsWithCount', {
                   mastered: masteredCards,
@@ -429,7 +435,7 @@ export function WordReferencePage() {
               <p className="text-sm">{t('deck:wordReference.cardsEmpty')}</p>
             </div>
           ) : (
-            <div className="space-y-4 py-4">
+            <div className="space-y-4 py-4" key={`cards-content-${activeTab}`}>
               <CardsSummaryBar mastered={masteredCards} total={totalCards} />
               {groupedCards.map((group) => (
                 <CardTypeGroup

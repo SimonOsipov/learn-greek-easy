@@ -123,8 +123,8 @@ export {
 export {
   // Type interfaces
   type WordReferenceTabSwitchedProperties,
-  type WordReferenceCardExpandedProperties,
+  type WordReferenceCardFlippedProperties,
   // Tracking functions
   trackWordReferenceTabSwitched,
-  trackWordReferenceCardExpanded,
+  trackWordReferenceCardFlipped,
 } from './wordReferenceAnalytics';

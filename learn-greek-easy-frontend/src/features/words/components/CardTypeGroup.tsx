@@ -1,6 +1,8 @@
 import { useTranslation } from 'react-i18next';
 
-import { CardItem } from './CardItem';
+import { trackWordReferenceCardFlipped } from '@/lib/analytics';
+
+import { MiniFlipCard } from './MiniFlipCard';
 
 import type { CardGroupKey, GroupedCards } from './cardGrouping';
 import type { CardMasteryItem } from '../hooks';
@@ -27,9 +29,12 @@ export function CardTypeGroup({
   const { t } = useTranslation('deck');
 
   return (
-    <div className="space-y-1" data-testid={`card-group-${groupKey}`}>
+    <div
+      className="space-y-3 rounded-lg border bg-card p-4 shadow-sm"
+      data-testid={`card-group-${groupKey}`}
+    >
       <div
-        className="flex items-center justify-between px-3 py-2"
+        className="flex items-center justify-between"
         data-testid={`card-group-header-${groupKey}`}
       >
         <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -39,14 +44,19 @@ export function CardTypeGroup({
           {t('wordReference.groupMastered', { mastered: masteredCount, total: totalCount })}
         </span>
       </div>
-      <div className="divide-y divide-border rounded-md border">
-        {cards.map((card, idx) => (
-          <CardItem
-            key={`${card.card_type}-${idx}`}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        {cards.map((card) => (
+          <MiniFlipCard
+            key={card.id}
             card={card}
-            index={idx}
-            wordEntryId={wordEntryId}
-            deckId={deckId}
+            onFlip={(flipped) => {
+              trackWordReferenceCardFlipped({
+                card_type: card.card_type,
+                word_entry_id: wordEntryId,
+                deck_id: deckId,
+                direction: flipped ? 'to_back' : 'to_front',
+              });
+            }}
           />
         ))}
       </div>

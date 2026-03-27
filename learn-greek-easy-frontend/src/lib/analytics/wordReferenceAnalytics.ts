@@ -3,7 +3,7 @@
  *
  * Tracks user interactions on the Word Reference page:
  * - Tab switching between word info and cards
- * - Card expansion to reveal content
+ * - Card flipping to reveal content
  */
 
 import posthog from 'posthog-js';
@@ -18,10 +18,11 @@ export interface WordReferenceTabSwitchedProperties {
   deck_id: string;
 }
 
-export interface WordReferenceCardExpandedProperties {
+export interface WordReferenceCardFlippedProperties {
   card_type: string;
   word_entry_id: string;
   deck_id: string;
+  direction: 'to_back' | 'to_front';
 }
 
 // ============================================================================
@@ -40,12 +41,12 @@ export function trackWordReferenceTabSwitched(
 }
 
 /**
- * Track when user expands a card to reveal its content.
+ * Track when user flips a card to reveal its content.
  */
-export function trackWordReferenceCardExpanded(
-  properties: WordReferenceCardExpandedProperties
+export function trackWordReferenceCardFlipped(
+  properties: WordReferenceCardFlippedProperties
 ): void {
   if (typeof posthog?.capture === 'function') {
-    posthog.capture('word_reference_card_expanded', properties);
+    posthog.capture('word_reference_card_flipped', properties);
   }
 }

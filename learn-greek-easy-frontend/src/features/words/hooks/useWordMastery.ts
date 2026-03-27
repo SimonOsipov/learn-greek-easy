@@ -11,6 +11,7 @@ import { useWordEntryCards } from './useWordEntryCards';
 export type MasteryStatus = 'none' | 'studied' | 'mastered';
 
 export interface CardMasteryItem {
+  id: string;
   card_type: CardRecordType;
   front_content: Record<string, unknown>;
   back_content: Record<string, unknown>;
@@ -73,6 +74,7 @@ export function useWordMastery({
     return cardRecords
       .filter((card) => card.is_active)
       .map((card) => ({
+        id: card.id,
         card_type: card.card_type,
         front_content: card.front_content,
         back_content: card.back_content,

@@ -118,22 +118,30 @@ test.describe('Word Reference - Cards Tab', () => {
 
     await expect(page.getByTestId('cards-summary-bar')).toBeVisible({ timeout: 10000 });
     await expect(page.locator('[data-testid^="card-group-"]').first()).toBeVisible();
-    await expect(page.locator('[data-testid^="card-item-"]').first()).toBeVisible();
+    await expect(page.locator('[data-testid^="mini-flip-card-"]').first()).toBeVisible();
   });
 
-  test('WCRD-E2E-03: tap card expands and collapses front content', async ({ page }) => {
+  test('WCRD-E2E-03: tap card flips to show back face', async ({ page }) => {
     await navigateToWordReference(page);
     await page.getByTestId('word-reference-tab-cards').click();
     await expect(page.getByTestId('cards-summary-bar')).toBeVisible({ timeout: 10000 });
 
-    const firstCard = page.locator('[data-testid^="card-item-"]').first();
-    await expect(firstCard).toHaveAttribute('data-state', 'closed');
+    const firstCard = page.locator('[data-testid^="mini-flip-card-"]').first();
+    await expect(firstCard).toBeVisible();
 
-    await firstCard.locator('button').first().click();
-    await expect(firstCard).toHaveAttribute('data-state', 'open');
+    const innerContainer = firstCard.locator('> div').first();
+    await expect(innerContainer).not.toHaveClass(/rotateY/);
 
-    await firstCard.locator('button').first().click();
-    await expect(firstCard).toHaveAttribute('data-state', 'closed');
+    await firstCard.click();
+    await expect(innerContainer).toHaveClass(/rotateY/);
+
+    // Switching tabs resets flip state
+    await page.getByTestId('word-reference-tab-word-info').click();
+    await page.getByTestId('word-reference-tab-cards').click();
+    await expect(page.getByTestId('cards-summary-bar')).toBeVisible({ timeout: 10000 });
+    const resetCard = page.locator('[data-testid^="mini-flip-card-"]').first();
+    const resetInner = resetCard.locator('> div').first();
+    await expect(resetInner).not.toHaveClass(/rotateY/);
   });
 
   test('WCRD-E2E-04: Cards tab label shows mastery fraction', async ({ page }) => {
