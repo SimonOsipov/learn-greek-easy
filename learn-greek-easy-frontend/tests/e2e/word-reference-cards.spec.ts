@@ -135,8 +135,13 @@ test.describe('Word Reference - Cards Tab', () => {
     await firstCard.click();
     await expect(innerContainer).toHaveClass(/rotateY/);
 
-    await firstCard.click();
-    await expect(innerContainer).not.toHaveClass(/rotateY/);
+    // Switching tabs resets flip state
+    await page.getByTestId('word-reference-tab-word-info').click();
+    await page.getByTestId('word-reference-tab-cards').click();
+    await expect(page.getByTestId('cards-summary-bar')).toBeVisible({ timeout: 10000 });
+    const resetCard = page.locator('[data-testid^="mini-flip-card-"]').first();
+    const resetInner = resetCard.locator('> div').first();
+    await expect(resetInner).not.toHaveClass(/rotateY/);
   });
 
   test('WCRD-E2E-04: Cards tab label shows mastery fraction', async ({ page }) => {

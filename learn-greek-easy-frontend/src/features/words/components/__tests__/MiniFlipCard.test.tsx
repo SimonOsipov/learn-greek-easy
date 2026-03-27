@@ -32,8 +32,10 @@ describe('MiniFlipCard', () => {
   it('flips on click to reveal back answer', () => {
     render(<MiniFlipCard card={makeCard()} />);
     const card = screen.getByTestId('mini-flip-card-test-card-1');
+    const inner = card.firstElementChild as HTMLElement;
+    expect(inner.className).not.toContain('[transform:rotateY(180deg)]');
     fireEvent.click(card);
-    expect(screen.getByText('house')).toBeInTheDocument();
+    expect(inner.className).toContain('[transform:rotateY(180deg)]');
   });
 
   it('flips back on second click', () => {

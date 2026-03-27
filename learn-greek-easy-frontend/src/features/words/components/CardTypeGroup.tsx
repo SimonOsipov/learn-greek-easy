@@ -45,9 +45,9 @@ export function CardTypeGroup({
         </span>
       </div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        {cards.map((card, idx) => (
+        {cards.map((card) => (
           <MiniFlipCard
-            key={`${card.card_type}-${idx}`}
+            key={card.id}
             card={card}
             onFlip={(flipped) => {
               trackWordReferenceCardFlipped({

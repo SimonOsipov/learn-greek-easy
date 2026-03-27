@@ -14,9 +14,17 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
+let mockFlipState = false;
+
 vi.mock('../MiniFlipCard', () => ({
   MiniFlipCard: ({ card, onFlip }: { card: CardMasteryItem; onFlip: (f: boolean) => void }) => (
-    <div data-testid={`mock-mini-flip-card-${card.card_type}`} onClick={() => onFlip(true)} />
+    <div
+      data-testid={`mock-mini-flip-card-${card.card_type}`}
+      onClick={() => {
+        mockFlipState = !mockFlipState;
+        onFlip(mockFlipState);
+      }}
+    />
   ),
 }));
 
@@ -45,6 +53,11 @@ const defaultProps = {
 };
 
 describe('CardTypeGroup', () => {
+  beforeEach(() => {
+    mockFlipState = false;
+    vi.clearAllMocks();
+  });
+
   it('renders with correct data-testid', () => {
     render(<CardTypeGroup {...defaultProps} />);
     expect(screen.getByTestId('card-group-translation')).toBeInTheDocument();
@@ -79,7 +92,7 @@ describe('CardTypeGroup', () => {
     expect(grid).toBeInTheDocument();
   });
 
-  it('fires trackWordReferenceCardFlipped on flip', async () => {
+  it('fires trackWordReferenceCardFlipped with to_back on first flip', async () => {
     render(<CardTypeGroup {...defaultProps} />);
     const card = screen.getByTestId('mock-mini-flip-card-meaning_el_to_en');
     await userEvent.click(card);
@@ -88,6 +101,19 @@ describe('CardTypeGroup', () => {
       word_entry_id: 'we-1',
       deck_id: 'deck-1',
       direction: 'to_back',
+    });
+  });
+
+  it('fires trackWordReferenceCardFlipped with to_front on second flip', async () => {
+    render(<CardTypeGroup {...defaultProps} />);
+    const card = screen.getByTestId('mock-mini-flip-card-meaning_el_to_en');
+    await userEvent.click(card); // to_back
+    await userEvent.click(card); // to_front
+    expect(trackWordReferenceCardFlipped).toHaveBeenLastCalledWith({
+      card_type: 'meaning_el_to_en',
+      word_entry_id: 'we-1',
+      deck_id: 'deck-1',
+      direction: 'to_front',
     });
   });
 });

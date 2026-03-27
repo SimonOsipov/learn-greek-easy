@@ -15,15 +15,18 @@ const MASTERY_DOT_COLOR: Record<MasteryStatus, string> = {
   mastered: 'bg-green-500',
 };
 
+function asString(value: unknown): string {
+  return typeof value === 'string' ? value : '';
+}
+
 function extractCardContent(card: CardMasteryItem) {
   const front = card.front_content;
   const back = card.back_content;
   return {
-    frontPrompt: (front.prompt as string) ?? '',
-    frontMain: (front.main as string) ?? '',
-    backAnswer: (back.answer as string) ?? '',
-    backSub:
-      (back.answer_sub as string) ?? (back.gender as string) ?? (back.answer_ru as string) ?? '',
+    frontPrompt: asString(front.prompt),
+    frontMain: asString(front.main),
+    backAnswer: asString(back.answer),
+    backSub: asString(back.answer_sub) || asString(back.gender) || asString(back.answer_ru),
   };
 }
 
@@ -54,12 +57,16 @@ export function MiniFlipCard({ card, onFlip }: MiniFlipCardProps) {
       onKeyDown={handleKeyDown}
       role="button"
       tabIndex={0}
+      aria-pressed={flipped}
     >
       <div
         className={`relative h-full w-full transition-transform duration-300 [transform-style:preserve-3d] ${flipped ? '[transform:rotateY(180deg)]' : ''}`}
       >
         {/* Front face */}
-        <div className="absolute inset-0 flex flex-col justify-between rounded-lg border bg-card p-3 shadow-sm [backface-visibility:hidden]">
+        <div
+          aria-hidden={flipped}
+          className="absolute inset-0 flex flex-col justify-between rounded-lg border bg-card p-3 shadow-sm [backface-visibility:hidden]"
+        >
           <span className="line-clamp-1 text-[10px] text-muted-foreground">{frontPrompt}</span>
           <span className="line-clamp-2 text-center text-sm font-bold">{frontMain}</span>
           <div className="flex items-end justify-between">
@@ -70,7 +77,10 @@ export function MiniFlipCard({ card, onFlip }: MiniFlipCardProps) {
           </div>
         </div>
         {/* Back face */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center rounded-lg border bg-muted p-3 shadow-sm [backface-visibility:hidden] [transform:rotateY(180deg)]">
+        <div
+          aria-hidden={!flipped}
+          className="absolute inset-0 flex flex-col items-center justify-center rounded-lg border bg-muted p-3 shadow-sm [backface-visibility:hidden] [transform:rotateY(180deg)]"
+        >
           <span className="line-clamp-2 text-center text-sm font-bold">{backAnswer}</span>
           {backSub && (
             <span className="mt-1 line-clamp-1 text-center text-xs text-muted-foreground">
