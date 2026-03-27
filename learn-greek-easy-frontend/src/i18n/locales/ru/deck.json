@@ -42,9 +42,7 @@
     "a1": "A1 - Начальный",
     "a2": "A2 - Элементарный",
     "b1": "B1 - Средний",
-    "b2": "B2 - Выше среднего",
-    "c1": "C1 - Продвинутый",
-    "c2": "C2 - Мастерство"
+    "b2": "B2 - Выше среднего"
   },
   "detail": {
     "breadcrumb": "Колоды",
@@ -247,12 +245,17 @@
     "backToDashboard": "На главную",
     "filterLabel": "Я хочу практиковать:",
     "filterAll": "Все слова",
-    "filterTranslation": "Переводы",
-    "filterSentence": "Предложения",
-    "filterPluralForm": "Множественное число",
+    "filterTranslation": "Перевод",
+    "filterPluralForm": "Множ. число",
     "filterArticle": "Артикль",
+    "filterDeclension": "Склонение",
     "reviewSubmitError": "Не удалось отправить оценку. Попробуйте ещё раз.",
-    "accuracy": "Точность"
+    "accuracy": "Точность",
+    "typeProgress": {
+      "notStarted": "Не начато",
+      "inProgress": "В процессе",
+      "mastered": "Освоено"
+    }
   },
   "wordBrowser": {
     "searchPlaceholder": "Поиск слов...",

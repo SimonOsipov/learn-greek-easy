@@ -207,7 +207,7 @@ def create_deck_data(
     Args:
         name: Deck name in English (auto-generated if None)
         description: Deck description in English
-        level: CEFR level (A1-C2)
+        level: CEFR level (A1-B2)
         is_active: Whether deck is active
         owner_id: Owner user ID (None for system decks)
 
@@ -223,8 +223,6 @@ def create_deck_data(
             DeckLevel.A2: "Elementary Greek vocabulary for daily life",
             DeckLevel.B1: "Intermediate Greek vocabulary and expressions",
             DeckLevel.B2: "Upper-intermediate Greek for confident speakers",
-            DeckLevel.C1: "Advanced Greek vocabulary and idioms",
-            DeckLevel.C2: "Near-native Greek proficiency vocabulary",
         }
         description = descriptions.get(level, "Greek vocabulary deck")
 

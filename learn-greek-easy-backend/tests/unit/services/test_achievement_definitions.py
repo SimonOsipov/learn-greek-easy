@@ -25,8 +25,8 @@ class TestAchievementCount:
     """Tests for achievement count requirements."""
 
     def test_achievement_count_minimum_47(self):
-        """Should have at least 47 achievements defined (35 original + 12 culture)."""
-        assert len(ACHIEVEMENTS) >= 47, f"Expected 47+ achievements, got {len(ACHIEVEMENTS)}"
+        """Should have at least 45 achievements defined (33 original + 12 culture)."""
+        assert len(ACHIEVEMENTS) >= 45, f"Expected 45+ achievements, got {len(ACHIEVEMENTS)}"
 
     def test_streak_achievements_count(self):
         """Should have 7 streak achievements."""
@@ -57,11 +57,11 @@ class TestAchievementCount:
         ), f"Expected 4 accuracy achievements, got {len(accuracy_achievements)}"
 
     def test_cefr_achievements_count(self):
-        """Should have 6 CEFR achievements."""
+        """Should have 4 CEFR achievements (A1, A2, B1, B2 — C1/C2 removed)."""
         cefr_achievements = get_achievements_by_category(AchievementCategory.CEFR)
         assert (
-            len(cefr_achievements) == 6
-        ), f"Expected 6 CEFR achievements, got {len(cefr_achievements)}"
+            len(cefr_achievements) == 4
+        ), f"Expected 4 CEFR achievements, got {len(cefr_achievements)}"
 
     def test_special_achievements_count(self):
         """Should have at least 5 special achievements."""
@@ -316,14 +316,12 @@ class TestSpecificAchievements:
         assert ach.category == AchievementCategory.LEARNING
 
     def test_all_cefr_achievements_exist(self):
-        """All CEFR level achievements should exist."""
+        """All CEFR level achievements should exist (A1-B2; C1/C2 removed)."""
         cefr_ids = [
             "cefr_a1_explorer",
             "cefr_a2_traveler",
             "cefr_b1_conversant",
             "cefr_b2_proficient",
-            "cefr_c1_advanced",
-            "cefr_c2_mastery",
         ]
         for ach_id in cefr_ids:
             ach = get_achievement_by_id(ach_id)
@@ -435,8 +433,8 @@ class TestCultureAchievements:
             assert ach.metric in culture_metrics, f"{ach.id} uses non-culture metric {ach.metric}"
 
     def test_total_achievement_count_increased(self):
-        """Total achievement count should be 47 (35 original + 12 culture)."""
-        assert len(ACHIEVEMENTS) == 47, f"Expected 47 achievements, got {len(ACHIEVEMENTS)}"
+        """Total achievement count should be 45 (33 original + 12 culture)."""
+        assert len(ACHIEVEMENTS) == 45, f"Expected 45 achievements, got {len(ACHIEVEMENTS)}"
 
     def test_culture_category_exists_in_enum(self):
         """CULTURE should be a valid AchievementCategory."""

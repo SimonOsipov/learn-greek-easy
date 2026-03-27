@@ -20,11 +20,60 @@ import { useTranslation } from 'react-i18next';
 import { STATUS_DOT_CLASS } from '@/components/shared/cardStatusColors';
 import type { CardStatus } from '@/components/shared/cardStatusColors';
 import { MasteryDots } from '@/components/shared/MasteryDots';
+import type { DotStatus, TypedDot } from '@/components/shared/MasteryDots';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getLocalizedTranslation } from '@/lib/localeUtils';
 import { cn } from '@/lib/utils';
+import type { CardTypeMastery } from '@/services/progressAPI';
 import type { WordEntryResponse } from '@/services/wordEntryAPI';
+
+// ============================================
+// POS Abbreviations
+// ============================================
+
+const POS_ABBREVIATIONS: Record<string, string> = {
+  noun: 'noun',
+  verb: 'verb',
+  adjective: 'adj.',
+  adverb: 'adv.',
+  phrase: 'phrase',
+};
+
+const getPosLabel = (pos: string): string =>
+  POS_ABBREVIATIONS[pos.toLowerCase()] ?? pos.toLowerCase();
+
+// ============================================
+// Card Type Groups
+// ============================================
+
+const CARD_TYPE_GROUPS = [
+  {
+    labelKey: 'v2Practice.filterTranslation',
+    types: ['meaning_el_to_en', 'meaning_en_to_el', 'sentence_translation'],
+  },
+  { labelKey: 'v2Practice.filterPluralForm', types: ['plural_form'] },
+  { labelKey: 'v2Practice.filterArticle', types: ['article'] },
+  { labelKey: 'v2Practice.filterDeclension', types: ['declension'] },
+];
+
+function computeDotStatuses(typeProgress: CardTypeMastery[]): TypedDot[] {
+  return CARD_TYPE_GROUPS.map((group) => {
+    const matches = typeProgress.filter((tp) => group.types.includes(tp.card_type));
+    const totalStudied = matches.reduce((sum, m) => sum + m.studied_count, 0);
+    const totalMastered = matches.reduce((sum, m) => sum + m.mastered_count, 0);
+    const totalCount = matches.reduce((sum, m) => sum + m.total_count, 0);
+
+    let status: DotStatus = 'none';
+    if (totalCount > 0 && totalMastered === totalCount) {
+      status = 'mastered';
+    } else if (totalStudied > 0) {
+      status = 'studied';
+    }
+
+    return { labelKey: group.labelKey, status };
+  });
+}
 
 // ============================================
 // Types
@@ -41,11 +90,11 @@ export interface WordCardProps {
   masteryStatus?: CardStatus;
   /** Number of mastery dots filled (0-4) */
   masteryFilled?: number;
+  /** Per-card-type mastery breakdown for typed dots */
+  typeProgress?: CardTypeMastery[];
 }
 
 interface MasteryIndicatorProps {
-  /** 0-5, where 0 = not started, 5 = mastered */
-  level: number;
   status?: CardStatus;
 }
 
@@ -55,15 +104,14 @@ interface MasteryIndicatorProps {
 
 /**
  * Mastery indicator dot (top-right corner).
- * V2 placeholder: always gray for now.
- * Future: color based on level (green for mastered, yellow for learning, etc.)
+ * Color reflects mastery status: gray (new), blue (learning), green (mastered).
  */
-const MasteryIndicator: React.FC<MasteryIndicatorProps> = ({ level, status = 'new' }) => {
+const MasteryIndicator: React.FC<MasteryIndicatorProps> = ({ status = 'new' }) => {
   return (
     <div
       data-testid="word-card-mastery-indicator"
       className={cn('h-2.5 w-2.5 rounded-full', STATUS_DOT_CLASS[status])}
-      aria-label={`Mastery level: ${level} of 5`}
+      aria-label={`Mastery: ${status}`}
     />
   );
 };
@@ -80,6 +128,9 @@ export const WordCardSkeleton: React.FC = () => {
   return (
     <Card data-testid="word-card-skeleton" className="relative overflow-hidden">
       <CardContent className="p-4">
+        <div className="absolute left-3 top-3">
+          <Skeleton className="h-3 w-8" />
+        </div>
         <div className="absolute right-3 top-3">
           <Skeleton className="h-2.5 w-2.5 rounded-full" />
         </div>
@@ -121,6 +172,7 @@ export const WordCard: React.FC<WordCardProps> = ({
   loading = false,
   masteryStatus = 'new',
   masteryFilled = 0,
+  typeProgress,
 }) => {
   const { i18n } = useTranslation();
   const { lemma, pronunciation, translation_en, translation_ru } = wordEntry;
@@ -154,9 +206,17 @@ export const WordCard: React.FC<WordCardProps> = ({
       aria-label={`${lemma} - ${displayTranslation}`}
     >
       <CardContent className="p-4">
+        {/* Top-left POS label */}
+        <span
+          data-testid="word-card-pos"
+          className="absolute left-3 top-3 text-xs text-muted-foreground"
+        >
+          {getPosLabel(wordEntry.part_of_speech)}
+        </span>
+
         {/* Top-right mastery indicator */}
         <div className="absolute right-3 top-3">
-          <MasteryIndicator level={0} status={masteryStatus} />
+          <MasteryIndicator status={masteryStatus} />
         </div>
 
         {/* Main content - centered */}
@@ -183,7 +243,14 @@ export const WordCard: React.FC<WordCardProps> = ({
 
           {/* Bottom mastery dots */}
           <div className="pt-2">
-            <MasteryDots filled={masteryFilled} />
+            <MasteryDots
+              dots={
+                typeProgress && typeProgress.length > 0
+                  ? computeDotStatuses(typeProgress)
+                  : undefined
+              }
+              filled={Math.min(masteryFilled, 4)}
+            />
           </div>
         </div>
       </CardContent>

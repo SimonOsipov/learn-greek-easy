@@ -31,7 +31,7 @@ class DeckRepository(BaseRepository[Deck]):
         Args:
             skip: Pagination offset
             limit: Max results
-            level: Optional CEFR level filter (A1, A2, B1, B2, C1, C2)
+            level: Optional CEFR level filter (A1, A2, B1, B2)
 
         Returns:
             List of active system decks
@@ -59,7 +59,7 @@ class DeckRepository(BaseRepository[Deck]):
         excluded and should be counted via count_user_owned().
 
         Args:
-            level: Optional CEFR level filter (A1, A2, B1, B2, C1, C2)
+            level: Optional CEFR level filter (A1, A2, B1, B2)
 
         Returns:
             Total number of active system decks matching criteria
@@ -209,7 +209,7 @@ class DeckRepository(BaseRepository[Deck]):
             user_id: Owner's user UUID
             skip: Pagination offset
             limit: Max results
-            level: Optional CEFR level filter (A1, A2, B1, B2, C1, C2)
+            level: Optional CEFR level filter (A1, A2, B1, B2)
 
         Returns:
             List of active decks owned by the user
@@ -233,7 +233,7 @@ class DeckRepository(BaseRepository[Deck]):
 
         Args:
             user_id: Owner's user UUID
-            level: Optional CEFR level filter (A1, A2, B1, B2, C1, C2)
+            level: Optional CEFR level filter (A1, A2, B1, B2)
 
         Returns:
             Total number of active decks owned by the user

@@ -91,8 +91,9 @@ describe('useWordMastery Hook', () => {
     expect(result.current.cards).toEqual([]);
   });
 
-  it('should merge cards with mastered status when mastered_count > 0', async () => {
-    vi.mocked(progressAPI.getWordMastery).mockResolvedValue(mockMasteryResponse(1, 2));
+  it('should return mastered status when mastered_count equals total_count', async () => {
+    // All cards mastered: mastered_count (2) >= total_count (2)
+    vi.mocked(progressAPI.getWordMastery).mockResolvedValue(mockMasteryResponse(2, 2));
     vi.mocked(wordEntryAPI.getCardsByWordEntry).mockResolvedValue(mockCards);
 
     const { result } = renderHook(
@@ -108,6 +109,26 @@ describe('useWordMastery Hook', () => {
     expect(result.current.cards[0].mastery_status).toBe('mastered');
     expect(result.current.cards[1].mastery_status).toBe('mastered');
     expect(result.current.wordMasteryStatus).toBe('mastered');
+  });
+
+  it('should return studied status when mastered_count > 0 but less than total_count', async () => {
+    // Partial mastery: mastered_count (1) < total_count (2)
+    vi.mocked(progressAPI.getWordMastery).mockResolvedValue(mockMasteryResponse(1, 2));
+    vi.mocked(wordEntryAPI.getCardsByWordEntry).mockResolvedValue(mockCards);
+
+    const { result } = renderHook(
+      () => useWordMastery({ deckId: 'deck-1', wordEntryId: 'word-1' }),
+      { wrapper: createWrapper() }
+    );
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(result.current.cards).toHaveLength(2);
+    expect(result.current.cards[0].mastery_status).toBe('studied');
+    expect(result.current.cards[1].mastery_status).toBe('studied');
+    expect(result.current.wordMasteryStatus).toBe('studied');
   });
 
   it('should return studied status when mastered_count is 0 and studied_count > 0', async () => {

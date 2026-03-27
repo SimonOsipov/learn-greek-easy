@@ -18,7 +18,7 @@ import { api, buildQueryString } from './api';
 /**
  * CEFR language proficiency levels
  */
-export type DeckLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
+export type DeckLevel = 'A1' | 'A2' | 'B1' | 'B2';
 
 /**
  * Deck response from backend

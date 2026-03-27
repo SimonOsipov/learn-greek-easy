@@ -4,6 +4,7 @@ This module provides HTTP endpoints for deck operations including
 listing decks with pagination and filtering.
 """
 
+from collections import defaultdict
 from typing import Optional
 from uuid import UUID
 
@@ -20,6 +21,7 @@ from src.repositories.card_record_statistics import CardRecordStatisticsReposito
 from src.repositories.deck import DeckRepository
 from src.repositories.word_entry import WordEntryRepository
 from src.schemas.deck import (
+    CardTypeMastery,
     DeckCreate,
     DeckDetailResponse,
     DeckListResponse,
@@ -90,7 +92,7 @@ async def list_decks(
     page: int = Query(default=1, ge=1, description="Page number (starting from 1)"),
     page_size: int = Query(default=20, ge=1, le=100, description="Items per page (max 100)"),
     level: Optional[DeckLevel] = Query(
-        default=None, description="Filter by CEFR level (A1, A2, B1, B2, C1, C2)"
+        default=None, description="Filter by CEFR level (A1, A2, B1, B2)"
     ),
     locale: str = Depends(get_locale_from_header),
     db: AsyncSession = Depends(get_db),
@@ -455,7 +457,7 @@ async def list_my_decks(
     page: int = Query(default=1, ge=1, description="Page number (starting from 1)"),
     page_size: int = Query(default=20, ge=1, le=100, description="Items per page (max 100)"),
     level: Optional[DeckLevel] = Query(
-        default=None, description="Filter by CEFR level (A1, A2, B1, B2, C1, C2)"
+        default=None, description="Filter by CEFR level (A1, A2, B1, B2)"
     ),
     locale: str = Depends(get_locale_from_header),
     db: AsyncSession = Depends(get_db),
@@ -786,18 +788,29 @@ async def get_word_mastery(
     if deck.owner_id is not None and deck.owner_id != current_user.id:
         raise ForbiddenException(detail="You do not have permission to access this deck")
 
-    rows = await CardRecordStatisticsRepository(db).get_word_mastery_by_deck(
+    rows = await CardRecordStatisticsRepository(db).get_word_mastery_by_deck_with_types(
         user_id=current_user.id,
         deck_id=deck_id,
     )
+    grouped: dict[UUID, list[CardTypeMastery]] = defaultdict(list)
+    for word_entry_id, card_type, mastered_count, studied_count, total_count in rows:
+        grouped[word_entry_id].append(
+            CardTypeMastery(
+                card_type=card_type,
+                mastered_count=mastered_count,
+                studied_count=studied_count,
+                total_count=total_count,
+            )
+        )
     items = [
         WordMasteryItem(
-            word_entry_id=word_entry_id,
-            mastered_count=mastered_count,
-            studied_count=studied_count,
-            total_count=total_count,
+            word_entry_id=wid,
+            mastered_count=sum(t.mastered_count for t in types),
+            studied_count=sum(t.studied_count for t in types),
+            total_count=sum(t.total_count for t in types),
+            type_progress=types,
         )
-        for word_entry_id, mastered_count, studied_count, total_count in rows
+        for wid, types in grouped.items()
     ]
     return WordMasteryResponse(deck_id=deck_id, items=items)
 

@@ -219,7 +219,9 @@ export const useV2PracticeStore = create<V2PracticeState>()(
             });
             queueData = {
               ...queueData,
-              cards: queueData.cards.filter((c) => c.card_type.startsWith('meaning_')),
+              cards: queueData.cards.filter(
+                (c) => c.card_type.startsWith('meaning_') || c.card_type === 'sentence_translation'
+              ),
             };
           } else {
             queueData = await studyAPI.getV2Queue({

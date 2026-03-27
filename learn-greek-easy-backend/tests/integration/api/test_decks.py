@@ -312,7 +312,7 @@ class TestCreateDeckEndpoint:
     @pytest.mark.asyncio
     async def test_create_deck_all_levels(self, client: AsyncClient, superuser_auth_headers: dict):
         """Test creating decks with all valid CEFR levels."""
-        levels = ["A1", "A2", "B1", "B2", "C1", "C2"]
+        levels = ["A1", "A2", "B1", "B2"]
 
         for level in levels:
             deck_data = {
@@ -1053,7 +1053,7 @@ class TestUpdateDeckEndpoint:
         update_data = {
             "name": "Completely Updated Deck",
             "description": "A completely new description",
-            "level": "C1",
+            "level": "B1",
             "is_active": False,
         }
 
@@ -1093,7 +1093,7 @@ class TestUpdateDeckEndpoint:
         self, client: AsyncClient, superuser_auth_headers: dict, empty_deck: Deck
     ):
         """Test updating deck level to different CEFR levels."""
-        levels = ["A1", "A2", "B1", "B2", "C1", "C2"]
+        levels = ["A1", "A2", "B1", "B2"]
 
         for level in levels:
             response = await client.patch(
@@ -1752,7 +1752,7 @@ class TestDeckCRUDFlow:
         # Update deck with new name and level
         update_data = {
             "name": "After Update",
-            "level": "C2",
+            "level": "B2",
         }
         update_response = await client.patch(
             f"/api/v1/decks/{deck_id}",
@@ -1762,13 +1762,13 @@ class TestDeckCRUDFlow:
         assert update_response.status_code == 200
 
         # Verify changes in list (now requires auth)
-        list_response = await client.get("/api/v1/decks?level=C2", headers=auth_headers)
+        list_response = await client.get("/api/v1/decks?level=B2", headers=auth_headers)
         assert list_response.status_code == 200
         decks = list_response.json()["decks"]
         matching = [d for d in decks if d["id"] == deck_id]
         assert len(matching) == 1
         assert matching[0]["name"] == "After Update"
-        assert matching[0]["level"] == "C2"
+        assert matching[0]["level"] == "B2"
 
     @pytest.mark.asyncio
     async def test_auth_flow_for_admin_endpoints(
@@ -2159,7 +2159,7 @@ class TestListMyDecksEndpoint:
         assert data["total"] == 1
 
         # Filter by different level - should return empty
-        response = await client.get("/api/v1/decks/mine?level=C2", headers=auth_headers)
+        response = await client.get("/api/v1/decks/mine?level=B2", headers=auth_headers)
 
         assert response.status_code == 200
         data = response.json()

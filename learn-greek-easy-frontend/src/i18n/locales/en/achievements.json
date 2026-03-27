@@ -199,16 +199,6 @@
       "description": "Complete all B2 deck cards",
       "hint": "Master the B2 vocabulary deck"
     },
-    "cefr_c1_advanced": {
-      "name": "C1 Advanced",
-      "description": "Complete all C1 deck cards",
-      "hint": "Master the C1 vocabulary deck"
-    },
-    "cefr_c2_mastery": {
-      "name": "C2 Mastery",
-      "description": "Complete all C2 deck cards",
-      "hint": "Master the C2 vocabulary deck"
-    },
     "special_first_review": {
       "name": "First Steps",
       "description": "Complete your first review",

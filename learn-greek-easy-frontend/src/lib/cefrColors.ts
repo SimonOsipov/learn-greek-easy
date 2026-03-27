@@ -7,9 +7,8 @@ import type { DeckLevel } from '@/types/deck';
  * CEFR Level Tiers
  * - Beginner: A1, A2 (Green)
  * - Intermediate: B1, B2 (Blue)
- * - Advanced: C1, C2 (Red)
  */
-export type CEFRTier = 'beginner' | 'intermediate' | 'advanced';
+export type CEFRTier = 'beginner' | 'intermediate';
 
 /**
  * CEFR color configuration for each level
@@ -82,36 +81,11 @@ export const CEFR_COLORS: Record<DeckLevel, CEFRColorConfig> = {
     border: 'border-blue-700',
     text: 'text-white',
   },
-  // Advanced Tier (Red)
-  C1: {
-    label: 'C1 - Advanced',
-    shortLabel: 'C1',
-    bgColor: 'bg-red-700',
-    bgColorLight: 'bg-red-500',
-    textColor: 'text-white',
-    tier: 'advanced',
-    dot: 'bg-white',
-    bg: 'bg-red-600',
-    border: 'border-red-700',
-    text: 'text-white',
-  },
-  C2: {
-    label: 'C2 - Mastery',
-    shortLabel: 'C2',
-    bgColor: 'bg-red-700',
-    bgColorLight: 'bg-red-500',
-    textColor: 'text-white',
-    tier: 'advanced',
-    dot: 'bg-white',
-    bg: 'bg-red-600',
-    border: 'border-red-700',
-    text: 'text-white',
-  },
 } as const;
 
 /**
  * Get the background color class for a CEFR level (darker variant)
- * @param level - CEFR level (A1, A2, B1, B2, C1, C2)
+ * @param level - CEFR level (A1, A2, B1, B2)
  * @returns Tailwind CSS background color class (e.g., 'bg-green-700')
  */
 export function getCEFRColor(level: DeckLevel): string {
@@ -120,7 +94,7 @@ export function getCEFRColor(level: DeckLevel): string {
 
 /**
  * Get the lighter background color class for a CEFR level (for filter buttons)
- * @param level - CEFR level (A1, A2, B1, B2, C1, C2)
+ * @param level - CEFR level (A1, A2, B1, B2)
  * @returns Tailwind CSS background color class (e.g., 'bg-green-500')
  */
 export function getCEFRColorLight(level: DeckLevel): string {
@@ -129,7 +103,7 @@ export function getCEFRColorLight(level: DeckLevel): string {
 
 /**
  * Get the text color class for a CEFR level
- * @param level - CEFR level (A1, A2, B1, B2, C1, C2)
+ * @param level - CEFR level (A1, A2, B1, B2)
  * @returns Tailwind CSS text color class (e.g., 'text-white')
  */
 export function getCEFRTextColor(level: DeckLevel): string {
@@ -138,7 +112,7 @@ export function getCEFRTextColor(level: DeckLevel): string {
 
 /**
  * Get the full label for a CEFR level
- * @param level - CEFR level (A1, A2, B1, B2, C1, C2)
+ * @param level - CEFR level (A1, A2, B1, B2)
  * @returns Full label string (e.g., 'A1 - Beginner')
  */
 export function getCEFRLabel(level: DeckLevel): string {
@@ -147,8 +121,8 @@ export function getCEFRLabel(level: DeckLevel): string {
 
 /**
  * Get the tier for a CEFR level
- * @param level - CEFR level (A1, A2, B1, B2, C1, C2)
- * @returns Tier name ('beginner', 'intermediate', 'advanced')
+ * @param level - CEFR level (A1, A2, B1, B2)
+ * @returns Tier name ('beginner', 'intermediate')
  */
 export function getCEFRTier(level: DeckLevel): CEFRTier {
   return CEFR_COLORS[level].tier;
@@ -156,7 +130,7 @@ export function getCEFRTier(level: DeckLevel): CEFRTier {
 
 /**
  * Get the full configuration for a CEFR level
- * @param level - CEFR level (A1, A2, B1, B2, C1, C2)
+ * @param level - CEFR level (A1, A2, B1, B2)
  * @returns Complete color configuration object
  */
 export function getCEFRConfig(level: DeckLevel): CEFRColorConfig {
@@ -165,7 +139,7 @@ export function getCEFRConfig(level: DeckLevel): CEFRColorConfig {
 
 /**
  * Get the dot color class for a CEFR level (solid color for badge dots)
- * @param level - CEFR level (A1, A2, B1, B2, C1, C2)
+ * @param level - CEFR level (A1, A2, B1, B2)
  * @returns Tailwind CSS background color class (e.g., 'bg-green-500')
  */
 export function getCEFRDot(level: DeckLevel): string {
@@ -174,7 +148,7 @@ export function getCEFRDot(level: DeckLevel): string {
 
 /**
  * Get the background color class with opacity for a CEFR level
- * @param level - CEFR level (A1, A2, B1, B2, C1, C2)
+ * @param level - CEFR level (A1, A2, B1, B2)
  * @returns Tailwind CSS background color class with opacity (e.g., 'bg-green-500/10')
  */
 export function getCEFRBg(level: DeckLevel): string {
@@ -183,7 +157,7 @@ export function getCEFRBg(level: DeckLevel): string {
 
 /**
  * Get the border color class with opacity for a CEFR level
- * @param level - CEFR level (A1, A2, B1, B2, C1, C2)
+ * @param level - CEFR level (A1, A2, B1, B2)
  * @returns Tailwind CSS border color class with opacity (e.g., 'border-green-500/20')
  */
 export function getCEFRBorder(level: DeckLevel): string {
@@ -192,7 +166,7 @@ export function getCEFRBorder(level: DeckLevel): string {
 
 /**
  * Get the text color class with dark mode for a CEFR level
- * @param level - CEFR level (A1, A2, B1, B2, C1, C2)
+ * @param level - CEFR level (A1, A2, B1, B2)
  * @returns Tailwind CSS text color class with dark mode (e.g., 'text-green-700 dark:text-green-300')
  */
 export function getCEFRText(level: DeckLevel): string {
@@ -202,7 +176,7 @@ export function getCEFRText(level: DeckLevel): string {
 /**
  * All CEFR levels in order
  */
-export const CEFR_LEVELS: DeckLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+export const CEFR_LEVELS: DeckLevel[] = ['A1', 'A2', 'B1', 'B2'];
 
 /**
  * Level options for filter components

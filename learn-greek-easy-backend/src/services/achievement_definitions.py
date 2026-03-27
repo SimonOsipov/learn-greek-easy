@@ -46,8 +46,6 @@ class AchievementMetric(str, Enum):
     CEFR_A2_COMPLETE = "cefr_a2_complete"
     CEFR_B1_COMPLETE = "cefr_b1_complete"
     CEFR_B2_COMPLETE = "cefr_b2_complete"
-    CEFR_C1_COMPLETE = "cefr_c1_complete"
-    CEFR_C2_COMPLETE = "cefr_c2_complete"
 
     # Special metrics
     FIRST_REVIEW = "first_review"
@@ -95,7 +93,7 @@ class AchievementDef:
 
 
 # ============================================================================
-# Achievement Definitions (47 achievements)
+# Achievement Definitions (45 achievements)
 # ============================================================================
 
 ACHIEVEMENTS: list[AchievementDef] = [
@@ -411,28 +409,6 @@ ACHIEVEMENTS: list[AchievementDef] = [
         1,
         500,
         "Master the B2 vocabulary deck",
-    ),
-    AchievementDef(
-        "cefr_c1_advanced",
-        "C1 Advanced",
-        "Complete all C1 deck cards",
-        AchievementCategory.CEFR,
-        "medal_gold",
-        AchievementMetric.CEFR_C1_COMPLETE,
-        1,
-        750,
-        "Master the C1 vocabulary deck",
-    ),
-    AchievementDef(
-        "cefr_c2_mastery",
-        "C2 Mastery",
-        "Complete all C2 deck cards",
-        AchievementCategory.CEFR,
-        "crown",
-        AchievementMetric.CEFR_C2_COMPLETE,
-        1,
-        1000,
-        "Master the C2 vocabulary deck",
     ),
     # === SPECIAL ACHIEVEMENTS (5+) ===
     AchievementDef(

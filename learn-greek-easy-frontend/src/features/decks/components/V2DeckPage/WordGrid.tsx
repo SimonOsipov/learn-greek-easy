@@ -20,7 +20,7 @@ import { WordCard } from '../WordCard';
 // ============================================
 
 const WIDE_LEMMA_THRESHOLD = 12;
-const WIDE_TRANSLATION_THRESHOLD = 20;
+const WIDE_TRANSLATION_THRESHOLD = 17;
 
 /** Returns true when a word entry needs a wide (2-column) card. */
 export function isWideCard(entry: WordEntryResponse): boolean {
@@ -62,6 +62,7 @@ export function WordGrid({ entries, masteryMap }: WordGridProps) {
       className="grid gap-4"
       style={{
         gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+        gridAutoFlow: 'dense',
       }}
       data-testid="word-grid"
     >
@@ -82,6 +83,7 @@ export function WordGrid({ entries, masteryMap }: WordGridProps) {
               onClick={() => handleWordCardClick(entry.id)}
               masteryStatus={masteryStatus}
               masteryFilled={masteryFilled}
+              typeProgress={m?.type_progress}
             />
           </div>
         );

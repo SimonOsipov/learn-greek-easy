@@ -62,7 +62,7 @@ interface BaseEventProperties {
 // Event-specific property types (optional strict typing)
 export interface StudySessionStartedProperties extends BaseEventProperties {
   deck_id: string;
-  deck_level: 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
+  deck_level: 'A1' | 'A2' | 'B1' | 'B2';
   cards_due: number;
   is_first_session: boolean;
   session_id: string;
@@ -98,7 +98,7 @@ export interface StudySessionAbandonedProperties extends BaseEventProperties {
 export interface DeckSelectedProperties extends BaseEventProperties {
   deck_id: string;
   deck_name: string;
-  level: 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
+  level: 'A1' | 'A2' | 'B1' | 'B2';
   total_cards: number;
   cards_due: number;
 }

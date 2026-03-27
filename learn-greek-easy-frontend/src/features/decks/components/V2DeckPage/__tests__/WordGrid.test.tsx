@@ -123,6 +123,12 @@ describe('WordGrid Component', () => {
       expect(grid).toBeInTheDocument();
       expect(grid.children).toHaveLength(0);
     });
+
+    it('should have dense grid auto flow', () => {
+      renderWithRouter(mockWordEntries);
+      const grid = screen.getByTestId('word-grid');
+      expect(grid).toHaveStyle({ gridAutoFlow: 'dense' });
+    });
   });
 
   describe('WordCard - Content Display', () => {
@@ -217,14 +223,14 @@ describe('isWideCard', () => {
     });
   });
 
-  describe('translation threshold (>20)', () => {
+  describe('translation threshold (>17)', () => {
     it('should return false for short translations', () => {
       expect(isWideCard(makeEntry({ translation_en: 'aunt' }))).toBe(false);
       expect(isWideCard(makeEntry({ translation_en: 'sister-in-law' }))).toBe(false); // 13
     });
 
-    it('should return false at the boundary (20 chars)', () => {
-      expect(isWideCard(makeEntry({ translation_en: '12345678901234567890' }))).toBe(false);
+    it('should return false at the boundary (17 chars)', () => {
+      expect(isWideCard(makeEntry({ translation_en: '12345678901234567' }))).toBe(false);
     });
 
     it('should return true for long EN translation', () => {
@@ -308,7 +314,7 @@ describe('WordGrid - Wide Cards', () => {
 
     expect(wrappers[0].style.gridColumn).toBe(''); // 'test' - short
     expect(wrappers[1].style.gridColumn).toBe('span 2'); // long lemma
-    expect(wrappers[2].style.gridColumn).toBe(''); // 'another' - short
+    expect(wrappers[2].style.gridColumn).toBe('span 2'); // 'another translation' = 19 chars > 17
     expect(wrappers[3].style.gridColumn).toBe('span 2'); // long translation
   });
 });

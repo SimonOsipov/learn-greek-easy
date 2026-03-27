@@ -396,7 +396,7 @@ def assert_valid_deck_response(
     Args:
         data: Deck response data
         name: Expected deck name
-        level: Expected CEFR level (A1, A2, B1, B2, C1, C2)
+        level: Expected CEFR level (A1, A2, B1, B2)
         is_active: Expected active status
 
     Raises:
@@ -413,7 +413,7 @@ def assert_valid_deck_response(
         raise AssertionError(f"Invalid UUID format for id: {data['id']}")
 
     # Level validation
-    valid_levels = ["A1", "A2", "B1", "B2", "C1", "C2"]
+    valid_levels = ["A1", "A2", "B1", "B2"]
     assert (
         data["level"] in valid_levels
     ), f"Invalid level: {data['level']}, expected one of {valid_levels}"

@@ -671,6 +671,91 @@ describe('WordBrowser Component', () => {
         expect(cards).toHaveLength(3);
       });
     });
+
+    it('should sort words: reviewing first, new second, learned last', async () => {
+      const sortEntries = [
+        {
+          id: 'learned-1',
+          deck_id: 'deck-1',
+          lemma: 'βeta',
+          part_of_speech: 'NOUN',
+          translation_en: 'learned word',
+          translation_en_plural: null,
+          translation_ru: null,
+          translation_ru_plural: null,
+          pronunciation: null,
+          grammar_data: null,
+          examples: null,
+          audio_key: null,
+          is_active: true,
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z',
+        },
+        {
+          id: 'new-1',
+          deck_id: 'deck-1',
+          lemma: 'alpha',
+          part_of_speech: 'NOUN',
+          translation_en: 'new word',
+          translation_en_plural: null,
+          translation_ru: null,
+          translation_ru_plural: null,
+          pronunciation: null,
+          grammar_data: null,
+          examples: null,
+          audio_key: null,
+          is_active: true,
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z',
+        },
+        {
+          id: 'reviewing-1',
+          deck_id: 'deck-1',
+          lemma: 'gamma',
+          part_of_speech: 'NOUN',
+          translation_en: 'reviewing word',
+          translation_en_plural: null,
+          translation_ru: null,
+          translation_ru_plural: null,
+          pronunciation: null,
+          grammar_data: null,
+          examples: null,
+          audio_key: null,
+          is_active: true,
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z',
+        },
+      ];
+
+      vi.mocked(wordEntryAPI.getByDeck).mockResolvedValue({
+        deck_id: 'deck-1',
+        total: 3,
+        page: 1,
+        page_size: 40,
+        word_entries: sortEntries,
+      });
+
+      vi.mocked(progressAPI.getWordMastery).mockResolvedValue({
+        deck_id: 'deck-1',
+        items: [
+          // reviewing: studied > 0, not mastered
+          { word_entry_id: 'reviewing-1', mastered_count: 0, studied_count: 2, total_count: 4 },
+          // learned: fully mastered
+          { word_entry_id: 'learned-1', mastered_count: 2, studied_count: 2, total_count: 2 },
+          // new-1 has no mastery entry
+        ],
+      });
+
+      render(<WordBrowser deckId="deck-1" />, { wrapper: createWrapper() });
+
+      await waitFor(() => {
+        const lemmas = screen.getAllByTestId('word-card-lemma');
+        expect(lemmas).toHaveLength(3);
+        expect(lemmas[0]).toHaveTextContent('gamma'); // reviewing
+        expect(lemmas[1]).toHaveTextContent('alpha'); // new
+        expect(lemmas[2]).toHaveTextContent('βeta'); // learned
+      });
+    });
   });
 
   describe('Error State', () => {

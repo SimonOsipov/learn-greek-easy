@@ -252,14 +252,14 @@ describe('UserDeckForm', () => {
     });
 
     it('should show different level when deck has different level in edit mode', () => {
-      const deck = createMockDeck({ level: 'C2' });
+      const deck = createMockDeck({ level: 'B2' });
 
       renderWithI18n(
         <UserDeckForm mode="edit" deck={deck} onSubmit={mockOnSubmit} onCancel={mockOnCancel} />
       );
 
       const levelTrigger = screen.getByTestId('user-deck-form-level');
-      expect(levelTrigger).toHaveTextContent('C2');
+      expect(levelTrigger).toHaveTextContent('B2');
     });
   });
 

@@ -34,8 +34,8 @@ export interface UseWordMasteryResult {
 
 function deriveMasteryStatus(mastery: WordMasteryItem | null | undefined): MasteryStatus {
   if (!mastery) return 'none';
-  if (mastery.mastered_count > 0) return 'mastered';
-  if (mastery.studied_count > 0) return 'studied';
+  if (mastery.total_count > 0 && mastery.mastered_count >= mastery.total_count) return 'mastered';
+  if (mastery.mastered_count > 0 || mastery.studied_count > 0) return 'studied';
   return 'none';
 }
 

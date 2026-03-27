@@ -185,7 +185,7 @@ class StudyQueueCard(BaseModel):
     )
     level: Optional[DeckLevel] = Field(
         default=None,
-        description="CEFR proficiency level (A1-C2)",
+        description="CEFR proficiency level (A1-B2)",
     )
     examples: Optional[list[Example]] = Field(
         default=None,

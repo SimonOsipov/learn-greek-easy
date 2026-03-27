@@ -112,7 +112,7 @@ test.describe('V2 Flashcard Review', () => {
     await page.goto(`/decks/${v2NounsDeckId}`);
     await expect(page.locator('[data-testid="v2-deck-detail"]')).toBeVisible({ timeout: 10000 });
 
-    for (const label of ['All Words', 'Translations', 'Sentences', 'Plural Form', 'Article']) {
+    for (const label of ['All Words', 'Translations', 'Plural Form', 'Article', 'Declension']) {
       await expect(page.getByRole('button', { name: label, exact: true })).toBeVisible();
     }
 

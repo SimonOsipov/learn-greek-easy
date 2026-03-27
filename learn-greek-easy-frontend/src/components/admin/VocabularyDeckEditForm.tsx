@@ -49,7 +49,7 @@ const LANGUAGE_LABELS: Record<DeckLanguage, string> = {
 /**
  * CEFR levels for vocabulary decks
  */
-const CEFR_LEVELS: DeckLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+const CEFR_LEVELS: DeckLevel[] = ['A1', 'A2', 'B1', 'B2'];
 
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_IMAGE_SIZE_BYTES = 3 * 1024 * 1024;
@@ -70,7 +70,7 @@ const vocabularyDeckSchema = z.object({
     .max(1000, 'Description must be at most 1000 characters')
     .optional()
     .or(z.literal('')),
-  level: z.enum(['A1', 'A2', 'B1', 'B2', 'C1', 'C2'] as const),
+  level: z.enum(['A1', 'A2', 'B1', 'B2'] as const),
   is_active: z.boolean(),
   is_premium: z.boolean(),
 });
@@ -107,7 +107,7 @@ interface VocabularyDeckEditFormProps {
  * Fields:
  * - name_en/name_ru: Required text inputs (1-255 chars each)
  * - description_en/description_ru: Optional textareas (max 1000 chars each)
- * - level: CEFR level dropdown (A1-C2)
+ * - level: CEFR level dropdown (A1-B2)
  * - is_active: Toggle switch for active status
  * - is_premium: Toggle switch for premium status
  */

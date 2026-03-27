@@ -128,26 +128,6 @@ class DeckFactory(BaseFactory):
             description_ru=factory.LazyAttribute(lambda _: "Описание для B2"),
         )
 
-        c1 = factory.Trait(
-            level=DeckLevel.C1,
-            name_el=factory.LazyAttribute(lambda _: "Ελληνικό Deck C1"),
-            name_en=factory.LazyAttribute(lambda _: fake.deck_name("C1")),
-            name_ru=factory.LazyAttribute(lambda _: "Русский Deck C1"),
-            description_el=factory.LazyAttribute(lambda _: "Περιγραφή για C1"),
-            description_en=factory.LazyAttribute(lambda _: fake.deck_description("C1")),
-            description_ru=factory.LazyAttribute(lambda _: "Описание для C1"),
-        )
-
-        c2 = factory.Trait(
-            level=DeckLevel.C2,
-            name_el=factory.LazyAttribute(lambda _: "Ελληνικό Deck C2"),
-            name_en=factory.LazyAttribute(lambda _: fake.deck_name("C2")),
-            name_ru=factory.LazyAttribute(lambda _: "Русский Deck C2"),
-            description_el=factory.LazyAttribute(lambda _: "Περιγραφή για C2"),
-            description_en=factory.LazyAttribute(lambda _: fake.deck_description("C2")),
-            description_ru=factory.LazyAttribute(lambda _: "Описание для C2"),
-        )
-
     @classmethod
     async def create_with_cards(
         cls,

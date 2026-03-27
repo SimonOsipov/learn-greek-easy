@@ -155,10 +155,14 @@ describe('v2PracticeStore', () => {
   // Test 2: meaning mode fetches limit=50 without card_type, filters client-side
   // ============================================
 
-  it('meaning filter fetches limit=50 without card_type and filters to meaning_*', async () => {
+  it('meaning filter fetches limit=50 without card_type and filters to meaning_* and sentence_translation', async () => {
     const meaningCard = makeMockCard({ card_type: 'meaning_el_to_en' });
-    const otherCard = makeMockCard({ card_record_id: 'cr-2', card_type: 'sentence_translation' });
-    const queue = makeMockQueue([meaningCard, otherCard]);
+    const sentenceCard = makeMockCard({
+      card_record_id: 'cr-2',
+      card_type: 'sentence_translation',
+    });
+    const otherCard = makeMockCard({ card_record_id: 'cr-3', card_type: 'plural_form' });
+    const queue = makeMockQueue([meaningCard, sentenceCard, otherCard]);
     vi.mocked(studyAPI.getV2Queue).mockResolvedValue(queue);
 
     await useV2PracticeStore
@@ -169,9 +173,10 @@ describe('v2PracticeStore', () => {
       );
 
     const state = useV2PracticeStore.getState();
-    // Should filter to only meaning_* cards
-    expect(state.queue).toHaveLength(1);
+    // Should filter to meaning_* and sentence_translation cards
+    expect(state.queue).toHaveLength(2);
     expect(state.queue[0].card_type).toBe('meaning_el_to_en');
+    expect(state.queue[1].card_type).toBe('sentence_translation');
 
     // Should NOT have card_type in the API call
     expect(studyAPI.getV2Queue).toHaveBeenCalledWith(

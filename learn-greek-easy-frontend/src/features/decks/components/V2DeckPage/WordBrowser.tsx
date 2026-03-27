@@ -92,6 +92,16 @@ function calculateFilterCounts(
   return { all: entries.length, learned, reviewing, new: newCount };
 }
 
+/**
+ * Priority for sort order: reviewing (0) > new (1) > learned (2).
+ */
+function getStatusPriority(m: WordMasteryItem | undefined): number {
+  if (m && m.studied_count > 0 && !(m.mastered_count === m.total_count && m.total_count > 0))
+    return 0;
+  if (!m || m.studied_count === 0) return 1;
+  return 2;
+}
+
 // ============================================
 // FilterPills Component
 // ============================================
@@ -218,7 +228,17 @@ export const WordBrowser: React.FC<WordBrowserProps> = ({ deckId, className }) =
       });
     }
 
-    return result;
+    return result.sort((a, b) => {
+      const mA = masteryMap.get(a.id);
+      const mB = masteryMap.get(b.id);
+      const priorityA = getStatusPriority(mA);
+      const priorityB = getStatusPriority(mB);
+      if (priorityA !== priorityB) return priorityA - priorityB;
+      if (priorityA === 0) {
+        return (mB?.studied_count ?? 0) - (mA?.studied_count ?? 0);
+      }
+      return a.lemma.localeCompare(b.lemma, 'el');
+    });
   }, [wordEntries, searchQuery, activeFilter, masteryMap]);
 
   // Calculate counts (always from full list, not filtered)

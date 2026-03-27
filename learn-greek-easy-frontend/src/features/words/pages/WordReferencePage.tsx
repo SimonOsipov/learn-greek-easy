@@ -282,19 +282,26 @@ export function WordReferencePage() {
     <div className="space-y-6" data-testid="word-reference-page">
       {/* Gradient Header */}
       <div className="relative rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 p-6 pb-12">
-        {/* Back navigation */}
-        <Button
-          asChild
-          variant="ghost"
-          size="sm"
-          className="mb-4 hover:bg-transparent"
-          data-testid="back-button"
-        >
-          <Link to={`/decks/${deckId}`}>
-            <ChevronLeft className="mr-1 h-4 w-4" />
-            {t('deck:detail.goBack')}
-          </Link>
-        </Button>
+        {/* Top navigation row */}
+        <div className="mb-4 flex items-center justify-between">
+          <Button
+            asChild
+            variant="ghost"
+            size="sm"
+            className="hover:bg-transparent"
+            data-testid="back-button"
+          >
+            <Link to={`/decks/${deckId}`}>
+              <ChevronLeft className="mr-1 h-4 w-4" />
+              {t('deck:detail.goBack')}
+            </Link>
+          </Button>
+
+          <ReportErrorButton
+            onClick={() => setIsReportModalOpen(true)}
+            data-testid="report-error-button"
+          />
+        </div>
 
         {/* Type badges */}
         <div className="mb-4 flex flex-wrap gap-2">

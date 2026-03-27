@@ -225,45 +225,6 @@ class SeedService:
             ("προτεραιότητα", "priority", "Importance", PartOfSpeech.NOUN),
             ("αξιολόγηση", "evaluation", "Assessment", PartOfSpeech.NOUN),
         ],
-        DeckLevel.C1: [
-            ("διαφάνεια", "transparency", "Openness", PartOfSpeech.NOUN),
-            ("αειφορία", "sustainability", "Environment", PartOfSpeech.NOUN),
-            ("διακυβέρνηση", "governance", "Administration", PartOfSpeech.NOUN),
-            ("αντικειμενικότητα", "objectivity", "Impartiality", PartOfSpeech.NOUN),
-            ("υποκειμενικότητα", "subjectivity", "Personal view", PartOfSpeech.NOUN),
-            (
-                "διεπιστημονικός",
-                "interdisciplinary",
-                "Academic",
-                PartOfSpeech.ADJECTIVE,
-            ),
-            ("πολυπλοκότητα", "complexity", "Intricacy", PartOfSpeech.NOUN),
-            ("ενσωμάτωση", "integration", "Incorporation", PartOfSpeech.NOUN),
-            ("διαφοροποίηση", "differentiation", "Distinction", PartOfSpeech.NOUN),
-            ("συνεισφορά", "contribution", "Input", PartOfSpeech.NOUN),
-        ],
-        DeckLevel.C2: [
-            ("μεταμοντερνισμός", "postmodernism", "Philosophy", PartOfSpeech.NOUN),
-            ("επιστημολογία", "epistemology", "Theory of knowledge", PartOfSpeech.NOUN),
-            (
-                "υπερβατικός",
-                "transcendent",
-                "Beyond experience",
-                PartOfSpeech.ADJECTIVE,
-            ),
-            ("διαλεκτική", "dialectic", "Philosophical method", PartOfSpeech.NOUN),
-            (
-                "παραδειγματικός",
-                "paradigmatic",
-                "Model example",
-                PartOfSpeech.ADJECTIVE,
-            ),
-            ("αποδόμηση", "deconstruction", "Analysis method", PartOfSpeech.NOUN),
-            ("ερμηνευτική", "hermeneutics", "Interpretation theory", PartOfSpeech.NOUN),
-            ("φαινομενολογία", "phenomenology", "Philosophy branch", PartOfSpeech.NOUN),
-            ("οντολογία", "ontology", "Study of being", PartOfSpeech.NOUN),
-            ("αισθητική", "aesthetics", "Beauty philosophy", PartOfSpeech.NOUN),
-        ],
     }
 
     # User-owned deck definitions for E2E testing
@@ -1798,7 +1759,7 @@ class SeedService:
         """Create test decks with cards for each CEFR level.
 
         Creates:
-        - 1 deck per CEFR level (A1, A2, B1, B2, C1, C2)
+        - 1 deck per CEFR level (A1, A2, B1, B2)
         - 10 cards per deck (vocabulary items)
         - Realistic Greek vocabulary with translations
 
@@ -1812,25 +1773,18 @@ class SeedService:
 
         created_decks = []
 
-        # Premium levels - C1 and C2 are premium content
-        premium_levels = {DeckLevel.C1, DeckLevel.C2}
-
         # Greek translations for CEFR levels
         level_translations_el = {
             DeckLevel.A1: "Ελληνικό Λεξιλόγιο A1",
             DeckLevel.A2: "Ελληνικό Λεξιλόγιο A2",
             DeckLevel.B1: "Ελληνικό Λεξιλόγιο B1",
             DeckLevel.B2: "Ελληνικό Λεξιλόγιο B2",
-            DeckLevel.C1: "Ελληνικό Λεξιλόγιο C1",
-            DeckLevel.C2: "Ελληνικό Λεξιλόγιο C2",
         }
         description_translations_el = {
             DeckLevel.A1: "Βασικό ελληνικό λεξιλόγιο για επίπεδο CEFR A1",
             DeckLevel.A2: "Βασικό ελληνικό λεξιλόγιο για επίπεδο CEFR A2",
             DeckLevel.B1: "Βασικό ελληνικό λεξιλόγιο για επίπεδο CEFR B1",
             DeckLevel.B2: "Βασικό ελληνικό λεξιλόγιο για επίπεδο CEFR B2",
-            DeckLevel.C1: "Βασικό ελληνικό λεξιλόγιο για επίπεδο CEFR C1",
-            DeckLevel.C2: "Βασικό ελληνικό λεξιλόγιο για επίπεδο CEFR C2",
         }
         # Russian translations for CEFR levels
         level_translations_ru = {
@@ -1838,21 +1792,15 @@ class SeedService:
             DeckLevel.A2: "Греческий словарь A2",
             DeckLevel.B1: "Греческий словарь B1",
             DeckLevel.B2: "Греческий словарь B2",
-            DeckLevel.C1: "Греческий словарь C1",
-            DeckLevel.C2: "Греческий словарь C2",
         }
         description_translations_ru = {
             DeckLevel.A1: "Основной греческий словарь для уровня CEFR A1",
             DeckLevel.A2: "Основной греческий словарь для уровня CEFR A2",
             DeckLevel.B1: "Основной греческий словарь для уровня CEFR B1",
             DeckLevel.B2: "Основной греческий словарь для уровня CEFR B2",
-            DeckLevel.C1: "Основной греческий словарь для уровня CEFR C1",
-            DeckLevel.C2: "Основной греческий словарь для уровня CEFR C2",
         }
 
         for level, words in self.VOCABULARY.items():
-            # Create deck - C1 and C2 are premium
-            is_premium = level in premium_levels
             deck = Deck(
                 name_en=f"Greek {level.value} Vocabulary",
                 name_el=level_translations_el[level],
@@ -1862,7 +1810,7 @@ class SeedService:
                 description_ru=description_translations_ru[level],
                 level=level,
                 is_active=True,
-                is_premium=is_premium,
+                is_premium=False,
             )
             self.db.add(deck)
             await self.db.flush()
@@ -1873,7 +1821,7 @@ class SeedService:
                     "name": deck.name_en,
                     "level": level.value,
                     "card_count": 0,
-                    "is_premium": is_premium,
+                    "is_premium": False,
                 }
             )
 

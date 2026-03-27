@@ -169,7 +169,7 @@ class TestSeedServiceContent:
         result = await seed_service.seed_decks_and_cards()
 
         assert result["success"] is True
-        assert len(result["decks"]) == 6
+        assert len(result["decks"]) == 4
 
         # Check all CEFR levels
         levels = [d["level"] for d in result["decks"]]
@@ -177,8 +177,6 @@ class TestSeedServiceContent:
         assert "A2" in levels
         assert "B1" in levels
         assert "B2" in levels
-        assert "C1" in levels
-        assert "C2" in levels
 
     @pytest.mark.asyncio
     async def test_deck_card_counts_are_zero(self, seed_service, mock_db, mock_settings_can_seed):
