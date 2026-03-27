@@ -8,10 +8,10 @@
  * - Grammar tables (conjugation for verbs, declension for nouns/adjectives)
  * - Usage examples
  * - Notes section (if available)
- * - Dynamic "Practice this word" button (navigates to practice page when cards available)
+ * - Tab layout with word-info and cards tabs
  */
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { ChevronLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -26,8 +26,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SpeakerButton } from '@/components/ui/SpeakerButton';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { trackWordAudioPlayed } from '@/lib/analytics';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { trackWordAudioPlayed, trackWordReferenceTabSwitched } from '@/lib/analytics';
 import { getLocalizedTranslation } from '@/lib/localeUtils';
 import type { AdjectiveData, AdverbData, NounDataAny, NounGender, VerbData } from '@/types/grammar';
 import { getPersistedAudioSpeed, setPersistedAudioSpeed } from '@/utils/audioSpeed';
@@ -35,11 +35,16 @@ import type { AudioSpeed } from '@/utils/audioSpeed';
 
 import {
   AdjectiveDeclensionTable,
+  CardsSummaryBar,
+  CardTypeGroup,
   ConjugationTable,
   ExamplesSection,
   NounDeclensionTable,
 } from '../components';
-import { useWordEntry, useWordEntryCards } from '../hooks';
+import { groupCards } from '../components/cardGrouping';
+import { useWordEntry, useWordMastery } from '../hooks';
+
+import type { CardMasteryItem } from '../hooks';
 
 // ============================================
 // Loading Skeleton Component
@@ -187,17 +192,29 @@ export function WordReferencePage() {
     enabled: !!wordId,
   });
 
+  const {
+    cards: masteryCards,
+    isLoading: isMasteryLoading,
+    isError: isMasteryError,
+    refetch: refetchMastery,
+  } = useWordMastery({
+    deckId: deckId ?? '',
+    wordEntryId: wordId ?? '',
+    enabled: !!deckId && !!wordId,
+  });
+
+  const groupedCards = useMemo(() => groupCards(masteryCards), [masteryCards]);
+  const totalCards = masteryCards.length;
+  const masteredCards = masteryCards.filter(
+    (c: CardMasteryItem) => c.mastery_status === 'mastered'
+  ).length;
+
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [audioSpeed, setAudioSpeed] = useState<AudioSpeed>(getPersistedAudioSpeed);
   const handleSpeedChange = (newSpeed: AudioSpeed) => {
     setAudioSpeed(newSpeed);
     setPersistedAudioSpeed(newSpeed);
   };
-
-  const { cards, isLoading: isCardsLoading } = useWordEntryCards({
-    wordEntryId: wordId || '',
-    enabled: !!wordId,
-  });
 
   // Loading state
   if (isLoading) {
@@ -342,74 +359,94 @@ export function WordReferencePage() {
         )}
       </div>
 
-      {/* Grammar Section */}
-      {renderGrammarSection()}
+      {/* Tabs */}
+      <Tabs
+        defaultValue="word-info"
+        data-testid="word-reference-tabs"
+        onValueChange={(value) => {
+          trackWordReferenceTabSwitched({
+            tab: value === 'word-info' ? 'word_info' : 'cards',
+            word_entry_id: wordId ?? '',
+            deck_id: deckId ?? '',
+          });
+        }}
+      >
+        <TabsList>
+          <TabsTrigger value="word-info" data-testid="word-reference-tab-word-info">
+            {t('deck:wordReference.tabWordInfo')}
+          </TabsTrigger>
+          <TabsTrigger value="cards" data-testid="word-reference-tab-cards">
+            {totalCards > 0
+              ? t('deck:wordReference.tabCardsWithCount', {
+                  mastered: masteredCards,
+                  total: totalCards,
+                })
+              : t('deck:wordReference.tabCards')}
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Examples Section */}
-      <ExamplesSection
-        examples={wordEntry.examples}
-        wordEntryId={wordEntry.id}
-        deckId={deckId}
-        speed={audioSpeed}
-      />
+        <TabsContent value="word-info" className="space-y-6">
+          {/* Grammar Section */}
+          {renderGrammarSection()}
 
-      {/* Notes Section (if available) */}
-      {notes && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Notes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">{notes}</p>
-          </CardContent>
-        </Card>
-      )}
+          {/* Examples Section */}
+          <ExamplesSection
+            examples={wordEntry.examples}
+            wordEntryId={wordEntry.id}
+            deckId={deckId}
+            speed={audioSpeed}
+          />
 
-      {/* Practice Button */}
-      <div className="flex justify-center pb-6 pt-4">
-        {isCardsLoading ? (
-          <Button
-            variant="default"
-            size="lg"
-            disabled
-            className="min-w-[250px]"
-            data-testid="practice-word-button"
-          >
-            {t('deck:wordReference.practiceWord')}
-          </Button>
-        ) : cards.length === 0 ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span>
-                <Button
-                  variant="default"
-                  size="lg"
-                  disabled
-                  className="min-w-[250px] cursor-not-allowed"
-                  data-testid="practice-word-button"
-                >
-                  {t('deck:wordReference.practiceWord')}
-                </Button>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{t('deck:practice.noCards')}</p>
-            </TooltipContent>
-          </Tooltip>
-        ) : (
-          <Button
-            asChild
-            variant="default"
-            size="lg"
-            className="min-w-[250px]"
-            data-testid="practice-word-button"
-          >
-            <Link to={`/decks/${deckId}/words/${wordId}/practice`}>
-              {t('deck:wordReference.practiceWord')}
-            </Link>
-          </Button>
-        )}
-      </div>
+          {/* Notes Section (if available) */}
+          {notes && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">{t('deck:wordReference.notes')}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">{notes}</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="cards">
+          {isMasteryLoading ? (
+            <div className="space-y-3 p-4" data-testid="cards-tab-loading">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-24 w-full" />
+            </div>
+          ) : isMasteryError ? (
+            <div className="space-y-3 py-8 text-center" data-testid="cards-tab-error">
+              <p className="text-sm text-muted-foreground">{t('deck:wordReference.cardsError')}</p>
+              <Button variant="outline" size="sm" onClick={refetchMastery}>
+                {t('deck:wordReference.cardsRetry')}
+              </Button>
+            </div>
+          ) : groupedCards.length === 0 ? (
+            <div className="py-8 text-center text-muted-foreground" data-testid="cards-tab-empty">
+              <p className="text-sm">{t('deck:wordReference.cardsEmpty')}</p>
+            </div>
+          ) : (
+            <div className="space-y-4 py-4">
+              <CardsSummaryBar mastered={masteredCards} total={totalCards} />
+              {groupedCards.map((group) => (
+                <CardTypeGroup
+                  key={group.key}
+                  groupKey={group.key}
+                  i18nKey={group.i18nKey}
+                  cards={group.cards}
+                  masteredCount={group.masteredCount}
+                  totalCount={group.totalCount}
+                  wordEntryId={wordId ?? ''}
+                  deckId={deckId ?? ''}
+                />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
 
       <ReportErrorModal
         isOpen={isReportModalOpen}

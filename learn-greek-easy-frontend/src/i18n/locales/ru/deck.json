@@ -305,7 +305,28 @@
       "masculine": "Мужской",
       "feminine": "Женский",
       "neuter": "Средний"
-    }
+    },
+    "tabWordInfo": "О слове",
+    "tabCards": "Карточки",
+    "tabCardsWithCount": "Карточки ({{mastered}}/{{total}})",
+    "cardsMasterySummary": "{{mastered}} из {{total}} карточек освоено",
+    "groupTranslation": "Перевод",
+    "groupGrammar": "Грамматика",
+    "groupDeclension": "Склонение",
+    "groupMastered": "{{mastered}}/{{total}} освоено",
+    "cardType": {
+      "meaning_el_to_en": "Греческий → Английский",
+      "meaning_en_to_el": "Английский → Греческий",
+      "sentence_translation": "Перевод предложения",
+      "plural_form": "Множественное число",
+      "article": "Артикль",
+      "declension": "Склонение",
+      "conjugation": "Спряжение",
+      "cloze": "Пропуск"
+    },
+    "cardsEmpty": "Для этого слова пока нет карточек.",
+    "cardsError": "Не удалось загрузить карточки. Попробуйте ещё раз.",
+    "cardsRetry": "Повторить"
   },
   "practice": {
     "title": "Практика",

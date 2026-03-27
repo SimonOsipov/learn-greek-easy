@@ -212,7 +212,6 @@ class TestAdminStatsIntegration:
             name_en="Schema Test Deck",
             name_el="Schema Test Deck",
             name_ru="Schema Test Deck",
-            c1=True,
             is_active=True,
         )
         await _create_word_entry_in_deck(db_session, deck.id)
