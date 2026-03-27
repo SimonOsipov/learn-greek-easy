@@ -302,7 +302,26 @@
       "masculine": "Masculine",
       "feminine": "Feminine",
       "neuter": "Neuter"
-    }
+    },
+    "tabWordInfo": "Word Info",
+    "tabCards": "Cards",
+    "tabCardsWithCount": "Cards ({{mastered}}/{{total}})",
+    "cardsMasterySummary": "{{mastered}} of {{total}} cards mastered",
+    "groupTranslation": "Translation",
+    "groupGrammar": "Grammar",
+    "groupDeclension": "Declension",
+    "groupMastered": "{{mastered}}/{{total}} mastered",
+    "cardType": {
+      "meaning_el_to_en": "Greek → English",
+      "meaning_en_to_el": "English → Greek",
+      "sentence_translation": "Sentence Translation",
+      "plural_form": "Plural Form",
+      "article": "Article",
+      "declension": "Declension"
+    },
+    "cardsEmpty": "No cards available for this word yet.",
+    "cardsError": "Failed to load cards. Please try again.",
+    "cardsRetry": "Retry"
   },
   "practice": {
     "title": "Practice",
