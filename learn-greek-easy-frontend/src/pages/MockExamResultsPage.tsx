@@ -39,11 +39,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useQuestionLanguage } from '@/hooks/useQuestionLanguage';
-import {
-  trackMockExamResultsViewed,
-  trackMockExamIncorrectReviewExpanded,
-  trackMockExamRetryClicked,
-} from '@/lib/analytics';
+import { track } from '@/lib/analytics';
 import log from '@/lib/logger';
 import { cn } from '@/lib/utils';
 import { useMockExamSessionStore } from '@/stores/mockExamSessionStore';
@@ -123,7 +119,7 @@ export function MockExamResultsPage() {
     if (summary && !hasTrackedView.current) {
       hasTrackedView.current = true;
 
-      trackMockExamResultsViewed({
+      track('mock_exam_results_viewed', {
         session_id: summary.sessionId,
         score: summary.score,
         total_questions: summary.totalQuestions,
@@ -147,7 +143,7 @@ export function MockExamResultsPage() {
     setAccordionValue(value);
 
     if (value === 'incorrect-answers' && summary) {
-      trackMockExamIncorrectReviewExpanded({
+      track('mock_exam_incorrect_review_expanded', {
         session_id: summary.sessionId,
         incorrect_count: incorrectQuestions.length,
       });
@@ -171,7 +167,7 @@ export function MockExamResultsPage() {
   };
 
   const handleStartNewExam = () => {
-    trackMockExamRetryClicked({
+    track('mock_exam_retry_clicked', {
       session_id: summary.sessionId,
       previous_passed: summary.passed,
       previous_score: summary.score,

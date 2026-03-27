@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next';
 
 import { useMCQKeyboardShortcuts } from '@/hooks/useMCQKeyboardShortcuts';
 import { useTrackEvent } from '@/hooks/useTrackEvent';
-import { trackNewsSourceLinkClicked } from '@/lib/analytics';
 import { cn } from '@/lib/utils';
 import type {
   CultureCategory,
@@ -169,11 +168,11 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
       // URL parsing failed, use fallback
     }
 
-    trackNewsSourceLinkClicked({
+    track('news_source_link_clicked', {
       card_id: question.id,
       article_domain: domain,
     });
-  }, [question.id, question.original_article_url]);
+  }, [question.id, question.original_article_url, track]);
 
   const handleAudioPlay = useCallback(
     (duration?: number) => {

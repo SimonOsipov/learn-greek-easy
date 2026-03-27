@@ -14,11 +14,8 @@ vi.mock('@/lib/waveform', () => ({
   generateBars: (count: number) => Array.from({ length: count }, (_, i) => (i + 1) / count),
 }));
 
-vi.mock('@/lib/analytics/newsAnalytics', () => ({
-  trackNewsArticleClicked: vi.fn(),
-  trackNewsAudioPlayStarted: vi.fn(),
-  trackNewsAudioPlayPaused: vi.fn(),
-  trackNewsAudioPlayCompleted: vi.fn(),
+vi.mock('@/lib/analytics', () => ({
+  track: vi.fn(),
 }));
 
 vi.mock('@/lib/newsAudioCoordinator', () => ({

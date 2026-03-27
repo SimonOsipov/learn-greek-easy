@@ -57,62 +57,11 @@ vi.mock('@/hooks/useMockExamKeyboardShortcuts', () => ({
   useMockExamKeyboardShortcuts: vi.fn(),
 }));
 
-// Mock analytics - must include ALL exports to prevent "No export defined" errors
+// Mock analytics
 vi.mock('@/lib/analytics', () => ({
-  // Language analytics
-  registerInterfaceLanguage: vi.fn(),
-  trackLanguageSwitch: vi.fn(),
-  // Culture analytics
-  trackCultureDeckViewed: vi.fn(),
-  trackCultureSessionStarted: vi.fn(),
-  trackCultureQuestionAnswered: vi.fn(),
-  trackCultureSessionCompleted: vi.fn(),
-  trackCultureSessionAbandoned: vi.fn(),
-  trackCultureLanguageChanged: vi.fn(),
-  generateCultureSessionId: vi.fn(),
-  // Deck analytics
-  trackPremiumDeckLockedViewed: vi.fn(),
-  trackPremiumDeckLockedClicked: vi.fn(),
-  // Theme analytics
+  track: vi.fn(),
   registerTheme: vi.fn(),
-  trackThemeChange: vi.fn(),
-  trackThemePreferenceLoaded: vi.fn(),
-  // Mock exam analytics
-  trackMockExamPageViewed: vi.fn(),
-  trackMockExamStarted: vi.fn(),
-  trackMockExamQuestionAnswered: vi.fn(),
-  trackMockExamCompleted: vi.fn(),
-  trackMockExamAbandoned: vi.fn(),
-  trackMockExamResultsViewed: vi.fn(),
-  trackMockExamIncorrectReviewExpanded: vi.fn(),
-  trackMockExamRetryClicked: vi.fn(),
-  // News analytics
-  trackNewsArticleClicked: vi.fn(),
-  trackNewsQuestionsButtonClicked: vi.fn(),
-  trackNewsSourceLinkClicked: vi.fn(),
-  trackNewsPageViewed: vi.fn(),
-  trackNewsPagePaginated: vi.fn(),
-  trackNewsPageArticleClicked: vi.fn(),
-  trackNewsPageQuestionsClicked: vi.fn(),
-  trackNewsPageSeeAllClicked: vi.fn(),
-  // Changelog analytics
-  trackChangelogPageViewed: vi.fn(),
-  trackChangelogPagePaginated: vi.fn(),
-  trackChangelogEntryViewed: vi.fn(),
-  // User card analytics
-  trackUserCardCreateStarted: vi.fn(),
-  trackUserCardCreateCompleted: vi.fn(),
-  trackUserCardCreateCancelled: vi.fn(),
-  trackUserCardEditStarted: vi.fn(),
-  trackUserCardEditCompleted: vi.fn(),
-  trackUserCardEditCancelled: vi.fn(),
-  trackUserCardDeleteStarted: vi.fn(),
-  trackUserCardDeleteCompleted: vi.fn(),
-  trackUserCardDeleteCancelled: vi.fn(),
-  // Card error analytics
-  trackCardErrorReported: vi.fn(),
-  trackCardErrorModalOpened: vi.fn(),
-  trackCardErrorModalClosed: vi.fn(),
+  registerInterfaceLanguage: vi.fn(),
 }));
 
 // Mock logger

@@ -18,11 +18,7 @@ import { EmptyState } from '@/components/feedback/EmptyState';
 import { NewsFilters, NewsGrid, NewsPagination, ScrollToTopButton } from '@/components/news';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-  trackNewsLevelToggled,
-  trackNewsPagePaginated,
-  trackNewsPageViewed,
-} from '@/lib/analytics/newsAnalytics';
+import { track } from '@/lib/analytics';
 import { reportAPIError } from '@/lib/errorReporting';
 import { adminAPI, type NewsCountry, type NewsItemResponse } from '@/services/adminAPI';
 import { getPersistedNewsLevel, setPersistedNewsLevel, type NewsLevel } from '@/utils/newsLevel';
@@ -109,7 +105,7 @@ export const NewsPage: React.FC = () => {
 
         // Track page view only on first successful load
         if (!hasTrackedPageView.current) {
-          trackNewsPageViewed({ total_articles: response.total });
+          track('news_page_viewed', { total_articles: response.total });
           hasTrackedPageView.current = true;
         }
       } catch (err) {
@@ -132,7 +128,7 @@ export const NewsPage: React.FC = () => {
    */
   const handlePageChange = useCallback(
     (newPage: number) => {
-      trackNewsPagePaginated({
+      track('news_page_paginated', {
         from_page: currentPage,
         to_page: newPage,
         total_pages: totalPages,
@@ -165,7 +161,7 @@ export const NewsPage: React.FC = () => {
   const handleLevelChange = useCallback((level: NewsLevel) => {
     setPersistedNewsLevel(level);
     setNewsLevel(level);
-    trackNewsLevelToggled({ level, page: 'news' });
+    track('news_level_toggled', { level, page: 'news' });
   }, []);
 
   // Initial load

@@ -10,7 +10,7 @@ vi.mock('@/lib/analytics', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/analytics')>();
   return {
     ...actual,
-    trackCultureLanguageChanged: vi.fn(),
+    track: vi.fn(),
   };
 });
 
@@ -18,7 +18,7 @@ vi.mock('@/lib/logger', () => ({
   default: { warn: vi.fn() },
 }));
 
-import { trackCultureLanguageChanged } from '@/lib/analytics';
+import { track } from '@/lib/analytics';
 
 describe('LanguageSelector — pill variant', () => {
   const defaultProps = {
@@ -138,7 +138,10 @@ describe('LanguageSelector — pill variant', () => {
       const group = screen.getByRole('group');
       const buttons = within(group).getAllByRole('button');
       await user.click(buttons[0]); // click EL
-      expect(trackCultureLanguageChanged).toHaveBeenCalledWith('en', 'el');
+      expect(track).toHaveBeenCalledWith('culture_language_changed', {
+        from_lang: 'en',
+        to_lang: 'el',
+      });
     });
 
     it('should not track when clicking same language', async () => {
@@ -147,7 +150,7 @@ describe('LanguageSelector — pill variant', () => {
       const group = screen.getByRole('group');
       const buttons = within(group).getAllByRole('button');
       await user.click(buttons[1]); // click EN (same)
-      expect(trackCultureLanguageChanged).not.toHaveBeenCalled();
+      expect(track).not.toHaveBeenCalledWith('culture_language_changed', expect.anything());
     });
   });
 
@@ -363,7 +366,10 @@ describe('LanguageSelector — buttons variant (regression)', () => {
       const group = screen.getByRole('group');
       const buttons = within(group).getAllByRole('button');
       await user.click(buttons[0]); // click EL
-      expect(trackCultureLanguageChanged).toHaveBeenCalledWith('en', 'el');
+      expect(track).toHaveBeenCalledWith('culture_language_changed', {
+        from_lang: 'en',
+        to_lang: 'el',
+      });
     });
   });
 

@@ -8,7 +8,7 @@
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { trackWordAudioPlayed } from '@/lib/analytics';
+import { track } from '@/lib/analytics';
 import { render, screen } from '@/lib/test-utils';
 import type { CardReview } from '@/types/review';
 
@@ -50,7 +50,7 @@ vi.mock('@/lib/analytics', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/analytics')>();
   return {
     ...actual,
-    trackWordAudioPlayed: vi.fn(),
+    track: vi.fn(),
   };
 });
 
@@ -115,14 +115,14 @@ describe('CardHeader — SpeakerButton audio integration', () => {
     expect(onFlip).not.toHaveBeenCalled();
   });
 
-  it('4. trackWordAudioPlayed called with correct properties on play', async () => {
+  it('4. track("word_audio_played") called with correct properties on play', async () => {
     const user = userEvent.setup();
     const card = makeCard();
     render(<CardHeader card={card} onFlip={onFlip} isCardFlipped={false} />);
 
     await user.click(screen.getByTestId('speaker-button'));
 
-    expect(trackWordAudioPlayed).toHaveBeenCalledWith({
+    expect(track).toHaveBeenCalledWith('word_audio_played', {
       word_entry_id: 'we-123',
       lemma: 'γράφω',
       part_of_speech: 'verb',

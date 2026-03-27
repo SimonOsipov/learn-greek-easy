@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 
 import { useLanguage } from '@/contexts/LanguageContext';
-import { trackCultureLanguageChanged } from '@/lib/analytics/cultureAnalytics';
+import { track } from '@/lib/analytics';
 import log from '@/lib/logger';
 import type { CultureLanguage } from '@/types/culture';
 
@@ -128,7 +128,10 @@ export function useQuestionLanguage(): UseQuestionLanguageResult {
       }
 
       // Track analytics
-      trackCultureLanguageChanged(previousLang, lang);
+      track('culture_language_changed', {
+        from_lang: previousLang,
+        to_lang: lang,
+      });
     },
     [] // No dependencies - uses refs for state tracking
   );

@@ -21,7 +21,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { SpeakerButton } from '@/components/ui/SpeakerButton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { AudioSpeed } from '@/hooks';
-import { trackWordAudioPlayed, trackExampleAudioPlayed } from '@/lib/analytics';
+import { track } from '@/lib/analytics';
 import { cn } from '@/lib/utils';
 import type { CardRecordResponse } from '@/services/wordEntryAPI';
 import type { PartOfSpeech } from '@/types/grammar';
@@ -407,7 +407,7 @@ export function PracticeCard({
         typeof (card.front_content as Record<string, unknown>).example_id === 'string'
           ? ((card.front_content as Record<string, unknown>).example_id as string)
           : '';
-      trackExampleAudioPlayed({
+      track('example_audio_played', {
         word_entry_id: wordEntryId ?? '',
         example_id: exampleId,
         context: 'review',
@@ -415,7 +415,7 @@ export function PracticeCard({
         playback_speed: audioState?.speed ?? 1,
       });
     } else {
-      trackWordAudioPlayed({
+      track('word_audio_played', {
         word_entry_id: wordEntryId ?? '',
         lemma: card.card_type === 'meaning_en_to_el' ? back.answer : front.main,
         part_of_speech: front.badge?.toLowerCase() ?? null,

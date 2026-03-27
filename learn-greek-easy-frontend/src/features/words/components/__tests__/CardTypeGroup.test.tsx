@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi } from 'vitest';
 
-import { trackWordReferenceCardFlipped } from '@/lib/analytics';
+import { track } from '@/lib/analytics';
 
 import { CardTypeGroup } from '../CardTypeGroup';
 import type { CardMasteryItem } from '../../hooks';
@@ -29,7 +29,7 @@ vi.mock('../MiniFlipCard', () => ({
 }));
 
 vi.mock('@/lib/analytics', () => ({
-  trackWordReferenceCardFlipped: vi.fn(),
+  track: vi.fn(),
 }));
 
 function makeCard(card_type: string, id = 'card-1'): CardMasteryItem {
@@ -92,11 +92,11 @@ describe('CardTypeGroup', () => {
     expect(grid).toBeInTheDocument();
   });
 
-  it('fires trackWordReferenceCardFlipped with to_back on first flip', async () => {
+  it('fires track("word_reference_card_flipped") with to_back on first flip', async () => {
     render(<CardTypeGroup {...defaultProps} />);
     const card = screen.getByTestId('mock-mini-flip-card-meaning_el_to_en');
     await userEvent.click(card);
-    expect(trackWordReferenceCardFlipped).toHaveBeenCalledWith({
+    expect(track).toHaveBeenCalledWith('word_reference_card_flipped', {
       card_type: 'meaning_el_to_en',
       word_entry_id: 'we-1',
       deck_id: 'deck-1',
@@ -104,12 +104,12 @@ describe('CardTypeGroup', () => {
     });
   });
 
-  it('fires trackWordReferenceCardFlipped with to_front on second flip', async () => {
+  it('fires track("word_reference_card_flipped") with to_front on second flip', async () => {
     render(<CardTypeGroup {...defaultProps} />);
     const card = screen.getByTestId('mock-mini-flip-card-meaning_el_to_en');
     await userEvent.click(card); // to_back
     await userEvent.click(card); // to_front
-    expect(trackWordReferenceCardFlipped).toHaveBeenLastCalledWith({
+    expect(track).toHaveBeenLastCalledWith('word_reference_card_flipped', {
       card_type: 'meaning_el_to_en',
       word_entry_id: 'we-1',
       deck_id: 'deck-1',

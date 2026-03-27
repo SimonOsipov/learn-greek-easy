@@ -7,7 +7,7 @@ vi.mock('@/lib/analytics', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/analytics')>();
   return {
     ...actual,
-    trackCultureLanguageChanged: vi.fn(),
+    track: vi.fn(),
   };
 });
 

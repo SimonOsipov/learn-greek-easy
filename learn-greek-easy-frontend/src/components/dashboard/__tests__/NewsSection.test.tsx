@@ -29,8 +29,7 @@ vi.mock('@/lib/analytics', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/analytics')>();
   return {
     ...actual,
-    trackNewsLevelToggled: vi.fn(),
-    trackNewsPageSeeAllClicked: vi.fn(),
+    track: vi.fn(),
   };
 });
 

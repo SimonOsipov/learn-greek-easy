@@ -12,14 +12,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import {
-  trackUserDeckCreateStarted,
-  trackUserDeckCreateCompleted,
-  trackUserDeckCreateCancelled,
-  trackUserDeckEditStarted,
-  trackUserDeckEditCompleted,
-  trackUserDeckEditCancelled,
-} from '@/lib/analytics/myDecksAnalytics';
+import { track } from '@/lib/analytics';
 import type { CreateDeckInput, DeckLevel, DeckResponse } from '@/services/deckAPI';
 import { deckAPI } from '@/services/deckAPI';
 
@@ -75,11 +68,11 @@ export const UserDeckEditModal: React.FC<UserDeckEditModalProps> = ({
     if (isOpen && !hasTrackedOpen.current) {
       hasTrackedOpen.current = true;
       if (isCreateMode && source) {
-        trackUserDeckCreateStarted({
+        track('user_deck_create_started', {
           source: source as CreateSource,
         });
       } else if (!isCreateMode && deck && source) {
-        trackUserDeckEditStarted({
+        track('user_deck_edit_started', {
           deck_id: deck.id,
           deck_name: deck.name,
           source: source as EditSource,
@@ -114,7 +107,7 @@ export const UserDeckEditModal: React.FC<UserDeckEditModalProps> = ({
         result = await deckAPI.createDeck(data);
         // Track create completed
         if (source) {
-          trackUserDeckCreateCompleted({
+          track('user_deck_create_completed', {
             deck_id: result.id,
             deck_name: result.name,
             level: result.level,
@@ -133,7 +126,7 @@ export const UserDeckEditModal: React.FC<UserDeckEditModalProps> = ({
         result = await deckAPI.updateMyDeck(deck.id, data);
         // Track edit completed
         if (source) {
-          trackUserDeckEditCompleted({
+          track('user_deck_edit_completed', {
             deck_id: result.id,
             deck_name: result.name,
             fields_changed: fieldsChanged,
@@ -160,11 +153,11 @@ export const UserDeckEditModal: React.FC<UserDeckEditModalProps> = ({
   const handleCancel = () => {
     // Track cancellation
     if (isCreateMode && source) {
-      trackUserDeckCreateCancelled({
+      track('user_deck_create_cancelled', {
         source: source as CreateSource,
       });
     } else if (!isCreateMode && deck && source) {
-      trackUserDeckEditCancelled({
+      track('user_deck_edit_cancelled', {
         deck_id: deck.id,
         deck_name: deck.name,
         source: source as EditSource,

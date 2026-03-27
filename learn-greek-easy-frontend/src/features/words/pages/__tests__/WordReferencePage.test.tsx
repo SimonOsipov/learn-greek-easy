@@ -43,8 +43,7 @@ vi.mock('@/components/ui/SpeakerButton', () => ({
 
 // Mock analytics module
 vi.mock('@/lib/analytics', () => ({
-  trackWordAudioPlayed: vi.fn(),
-  trackWordReferenceTabSwitched: vi.fn(),
+  track: vi.fn(),
 }));
 
 // Mock react-router-dom
@@ -587,8 +586,8 @@ describe('WordReferencePage — Audio SpeakerButton integration', () => {
     expect(screen.queryByTestId('speaker-button')).not.toBeInTheDocument();
   });
 
-  it('3. trackWordAudioPlayed called with context: reference on play', async () => {
-    const { trackWordAudioPlayed } = await import('@/lib/analytics');
+  it('3. track("word_audio_played") called with context: reference on play', async () => {
+    const { track } = await import('@/lib/analytics');
     const user = userEvent.setup();
 
     mockUseWordEntry.mockReturnValue({
@@ -602,7 +601,7 @@ describe('WordReferencePage — Audio SpeakerButton integration', () => {
 
     await user.click(screen.getByTestId('speaker-button'));
 
-    expect(trackWordAudioPlayed).toHaveBeenCalledWith({
+    expect(track).toHaveBeenCalledWith('word_audio_played', {
       word_entry_id: 'word-1',
       lemma: 'γράφω',
       part_of_speech: 'verb',

@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-import { trackWordReferenceCardFlipped } from '@/lib/analytics';
+import { track } from '@/lib/analytics';
 
 import { MiniFlipCard } from './MiniFlipCard';
 
@@ -50,7 +50,7 @@ export function CardTypeGroup({
             key={card.id}
             card={card}
             onFlip={(flipped) => {
-              trackWordReferenceCardFlipped({
+              track('word_reference_card_flipped', {
                 card_type: card.card_type,
                 word_entry_id: wordEntryId,
                 deck_id: deckId,

@@ -37,7 +37,7 @@ vi.mock('@/lib/analytics', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/analytics')>();
   return {
     ...actual,
-    trackCultureQuestionDetailViewed: vi.fn(),
+    track: vi.fn(),
   };
 });
 
@@ -50,7 +50,7 @@ vi.mock('../WaveformPlayer', () => ({
 }));
 
 // Import after mock so we get the mocked version
-import { trackCultureQuestionDetailViewed } from '@/lib/analytics';
+import { track } from '@/lib/analytics';
 
 // ============================================
 // Test helpers
@@ -296,12 +296,12 @@ describe('QuestionDetailDialog', () => {
   });
 
   describe('Analytics', () => {
-    it('fires trackCultureQuestionDetailViewed on successful load', async () => {
+    it('fires track("culture_question_detail_viewed") on successful load', async () => {
       vi.mocked(cultureDeckAPI.getQuestionDetail).mockResolvedValue(makeDetailResponse());
       renderDialog();
 
       await waitFor(() => {
-        expect(trackCultureQuestionDetailViewed).toHaveBeenCalledWith({
+        expect(track).toHaveBeenCalledWith('culture_question_detail_viewed', {
           question_id: 'q-1',
           deck_id: 'deck-1',
           question_status: 'new',

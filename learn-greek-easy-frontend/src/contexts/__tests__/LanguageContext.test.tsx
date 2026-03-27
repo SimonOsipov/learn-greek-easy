@@ -30,7 +30,7 @@ vi.mock('@/services/api', () => ({
 
 vi.mock('@/lib/analytics', () => ({
   registerInterfaceLanguage: vi.fn(),
-  trackLanguageSwitch: vi.fn(),
+  track: vi.fn(),
 }));
 
 describe('LanguageContext', () => {

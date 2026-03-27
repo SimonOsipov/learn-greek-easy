@@ -27,7 +27,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
-import { trackMockExamPageViewed } from '@/lib/analytics';
+import { track } from '@/lib/analytics';
 import log from '@/lib/logger';
 import { mockExamAPI } from '@/services/mockExamAPI';
 import { useMockExamSessionStore } from '@/stores/mockExamSessionStore';
@@ -297,7 +297,7 @@ export const MockExamPage: React.FC = () => {
   useEffect(() => {
     if (!isLoading && !error && statistics && !hasTrackedPageView.current) {
       hasTrackedPageView.current = true;
-      trackMockExamPageViewed({
+      track('mock_exam_page_viewed', {
         has_previous_attempts: (statistics.stats?.total_exams ?? 0) > 0,
         best_score: statistics.stats?.best_score ?? null,
         total_attempts: statistics.stats?.total_exams ?? 0,

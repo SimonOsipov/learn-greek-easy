@@ -10,7 +10,7 @@ import {
 } from '@/i18n';
 import { loadLanguageResources } from '@/i18n/lazy-resources';
 import { LANGUAGE_OPTIONS, type LanguageOption } from '@/i18n/types';
-import { registerInterfaceLanguage, trackLanguageSwitch } from '@/lib/analytics';
+import { registerInterfaceLanguage, track } from '@/lib/analytics';
 import { reportAPIError } from '@/lib/errorReporting';
 import log from '@/lib/logger';
 import { api } from '@/services/api';
@@ -163,7 +163,12 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
         // Step 4: Track analytics
         registerInterfaceLanguage(lang);
-        trackLanguageSwitch(previousLang, lang, source, isAuthenticated);
+        track('language_switched', {
+          from_language: previousLang,
+          to_language: lang,
+          source,
+          is_authenticated: isAuthenticated,
+        });
 
         log.debug(
           `[LanguageContext] Language changed: ${previousLang} -> ${lang} (source: ${source})`

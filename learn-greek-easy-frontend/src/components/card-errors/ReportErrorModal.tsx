@@ -12,7 +12,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
-import { trackCardErrorReported } from '@/lib/analytics';
+import { track } from '@/lib/analytics';
 import { reportAPIError } from '@/lib/errorReporting';
 import { cn } from '@/lib/utils';
 import { cardErrorAPI } from '@/services/cardErrorAPI';
@@ -79,7 +79,7 @@ export function ReportErrorModal({ isOpen, onClose, cardId, cardType }: ReportEr
       });
 
       // Track analytics event
-      trackCardErrorReported({ cardType, cardId });
+      track('card_error_reported', { cardType, cardId });
 
       // Show success and close
       toast({

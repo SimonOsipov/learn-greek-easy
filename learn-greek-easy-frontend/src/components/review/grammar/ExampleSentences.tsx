@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { AudioSpeedToggle } from '@/components/ui/AudioSpeedToggle';
 import { Card, CardContent } from '@/components/ui/card';
 import { SpeakerButton } from '@/components/ui/SpeakerButton';
-import { trackExampleAudioPlayed } from '@/lib/analytics';
+import { track } from '@/lib/analytics';
 import { cn } from '@/lib/utils';
 import type { Example } from '@/types/grammar';
 
@@ -83,7 +83,7 @@ export function ExampleSentences({
                     audioUrl={example.audio_url}
                     size="sm"
                     onPlay={() =>
-                      trackExampleAudioPlayed({
+                      track('example_audio_played', {
                         word_entry_id: wordEntryId ?? '',
                         example_id: example.id ?? '',
                         context: 'review',

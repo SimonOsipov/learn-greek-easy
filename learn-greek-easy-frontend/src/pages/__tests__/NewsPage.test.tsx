@@ -16,7 +16,7 @@ import userEvent from '@testing-library/user-event';
 import { NewsPage } from '@/pages/NewsPage';
 import { render, screen, waitFor, within } from '@/lib/test-utils';
 import { adminAPI, type NewsItemResponse } from '@/services/adminAPI';
-import * as newsAnalytics from '@/lib/analytics/newsAnalytics';
+import { track } from '@/lib/analytics';
 
 // Mock adminAPI
 vi.mock('@/services/adminAPI', () => ({
@@ -27,9 +27,10 @@ vi.mock('@/services/adminAPI', () => ({
 }));
 
 // Mock analytics
-vi.mock('@/lib/analytics/newsAnalytics', () => ({
-  trackNewsPageViewed: vi.fn(),
-  trackNewsPagePaginated: vi.fn(),
+vi.mock('@/lib/analytics', () => ({
+  track: vi.fn(),
+  registerTheme: vi.fn(),
+  registerInterfaceLanguage: vi.fn(),
 }));
 
 // Mock error reporting
@@ -385,7 +386,7 @@ describe('NewsPage Component', () => {
         expect(screen.getByTestId('news-grid')).toBeInTheDocument();
       });
 
-      expect(newsAnalytics.trackNewsPageViewed).toHaveBeenCalledWith({
+      expect(track).toHaveBeenCalledWith('news_page_viewed', {
         total_articles: 25,
       });
     });
@@ -405,7 +406,10 @@ describe('NewsPage Component', () => {
       });
 
       // Page view tracked once
-      expect(newsAnalytics.trackNewsPageViewed).toHaveBeenCalledTimes(1);
+      const newsPageViewedCalls = vi
+        .mocked(track)
+        .mock.calls.filter(([event]) => event === 'news_page_viewed');
+      expect(newsPageViewedCalls).toHaveLength(1);
 
       // Navigate to next page
       await user.click(screen.getByTestId('news-pagination-next'));
@@ -415,7 +419,10 @@ describe('NewsPage Component', () => {
       });
 
       // Should still only be called once
-      expect(newsAnalytics.trackNewsPageViewed).toHaveBeenCalledTimes(1);
+      const newsPageViewedCallsAfter = vi
+        .mocked(track)
+        .mock.calls.filter(([event]) => event === 'news_page_viewed');
+      expect(newsPageViewedCallsAfter).toHaveLength(1);
     });
 
     it('should track pagination events on page change', async () => {
@@ -435,7 +442,7 @@ describe('NewsPage Component', () => {
       // Navigate to next page
       await user.click(screen.getByTestId('news-pagination-next'));
 
-      expect(newsAnalytics.trackNewsPagePaginated).toHaveBeenCalledWith({
+      expect(track).toHaveBeenCalledWith('news_page_paginated', {
         from_page: 1,
         to_page: 2,
         total_pages: 3,
@@ -451,7 +458,10 @@ describe('NewsPage Component', () => {
         expect(screen.getByTestId('news-error')).toBeInTheDocument();
       });
 
-      expect(newsAnalytics.trackNewsPageViewed).not.toHaveBeenCalled();
+      const newsPageViewedCalls = vi
+        .mocked(track)
+        .mock.calls.filter(([event]) => event === 'news_page_viewed');
+      expect(newsPageViewedCalls).toHaveLength(0);
     });
   });
 
