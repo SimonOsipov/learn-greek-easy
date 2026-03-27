@@ -29,6 +29,7 @@ export interface UseWordMasteryResult {
   isLoading: boolean;
   error: Error | null;
   isError: boolean;
+  refetch: () => Promise<void>;
 }
 
 function deriveMasteryStatus(mastery: WordMasteryItem | null | undefined): MasteryStatus {
@@ -56,10 +57,15 @@ export function useWordMastery({
     isLoading: cardsLoading,
     error: cardsError,
     isError: cardsIsError,
+    refetch: cardsRefetch,
   } = useWordEntryCards({
     wordEntryId,
     enabled: enabled && !!wordEntryId,
   });
+
+  const refetch = async () => {
+    await Promise.all([masteryQuery.refetch(), cardsRefetch()]);
+  };
 
   const mergedCards = useMemo(() => {
     if (!cardRecords.length) return [];
@@ -84,5 +90,6 @@ export function useWordMastery({
     isLoading: masteryQuery.isLoading || cardsLoading,
     error: masteryQuery.error ?? cardsError,
     isError: masteryQuery.isError || cardsIsError,
+    refetch,
   };
 }

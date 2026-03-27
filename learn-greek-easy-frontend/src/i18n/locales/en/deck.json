@@ -317,7 +317,9 @@
       "sentence_translation": "Sentence Translation",
       "plural_form": "Plural Form",
       "article": "Article",
-      "declension": "Declension"
+      "declension": "Declension",
+      "conjugation": "Conjugation",
+      "cloze": "Cloze"
     },
     "cardsEmpty": "No cards available for this word yet.",
     "cardsError": "Failed to load cards. Please try again.",

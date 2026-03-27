@@ -11,7 +11,7 @@
  * - Tab layout with word-info and cards tabs
  */
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { ChevronLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -35,11 +35,16 @@ import type { AudioSpeed } from '@/utils/audioSpeed';
 
 import {
   AdjectiveDeclensionTable,
+  CardsSummaryBar,
+  CardTypeGroup,
   ConjugationTable,
   ExamplesSection,
   NounDeclensionTable,
 } from '../components';
-import { useWordEntry } from '../hooks';
+import { groupCards } from '../components/cardGrouping';
+import { useWordEntry, useWordMastery } from '../hooks';
+
+import type { CardMasteryItem } from '../hooks';
 
 // ============================================
 // Loading Skeleton Component
@@ -186,6 +191,23 @@ export function WordReferencePage() {
     wordId: wordId || '',
     enabled: !!wordId,
   });
+
+  const {
+    cards: masteryCards,
+    isLoading: isMasteryLoading,
+    isError: isMasteryError,
+    refetch: refetchMastery,
+  } = useWordMastery({
+    deckId: deckId ?? '',
+    wordEntryId: wordId ?? '',
+    enabled: !!deckId && !!wordId,
+  });
+
+  const groupedCards = useMemo(() => groupCards(masteryCards), [masteryCards]);
+  const totalCards = masteryCards.length;
+  const masteredCards = masteryCards.filter(
+    (c: CardMasteryItem) => c.mastery_status === 'mastered'
+  ).length;
 
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [audioSpeed, setAudioSpeed] = useState<AudioSpeed>(getPersistedAudioSpeed);
@@ -345,7 +367,12 @@ export function WordReferencePage() {
             {t('deck:wordReference.tabWordInfo')}
           </TabsTrigger>
           <TabsTrigger value="cards" data-testid="word-reference-tab-cards">
-            {t('deck:wordReference.tabCards')}
+            {totalCards > 0
+              ? t('deck:wordReference.tabCardsWithCount', {
+                  mastered: masteredCards,
+                  total: totalCards,
+                })
+              : t('deck:wordReference.tabCards')}
           </TabsTrigger>
         </TabsList>
 
@@ -375,7 +402,40 @@ export function WordReferencePage() {
         </TabsContent>
 
         <TabsContent value="cards">
-          <div className="py-8 text-center text-muted-foreground">Cards content coming soon</div>
+          {isMasteryLoading ? (
+            <div className="space-y-3 p-4" data-testid="cards-tab-loading">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-24 w-full" />
+            </div>
+          ) : isMasteryError ? (
+            <div className="space-y-3 py-8 text-center" data-testid="cards-tab-error">
+              <p className="text-sm text-muted-foreground">{t('deck:wordReference.cardsError')}</p>
+              <Button variant="outline" size="sm" onClick={refetchMastery}>
+                {t('deck:wordReference.cardsRetry')}
+              </Button>
+            </div>
+          ) : groupedCards.length === 0 ? (
+            <div className="py-8 text-center text-muted-foreground" data-testid="cards-tab-empty">
+              <p className="text-sm">{t('deck:wordReference.cardsEmpty')}</p>
+            </div>
+          ) : (
+            <div className="space-y-4 py-4">
+              <CardsSummaryBar mastered={masteredCards} total={totalCards} />
+              {groupedCards.map((group) => (
+                <CardTypeGroup
+                  key={group.key}
+                  groupKey={group.key}
+                  i18nKey={group.i18nKey}
+                  cards={group.cards}
+                  masteredCount={group.masteredCount}
+                  totalCount={group.totalCount}
+                  wordEntryId={wordId ?? ''}
+                  deckId={deckId ?? ''}
+                />
+              ))}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
 

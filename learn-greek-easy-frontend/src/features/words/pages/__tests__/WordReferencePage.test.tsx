@@ -65,6 +65,14 @@ vi.mock('react-router-dom', async (importOriginal) => {
 const mockUseWordEntry = vi.fn();
 vi.mock('../../hooks', () => ({
   useWordEntry: (opts: unknown) => mockUseWordEntry(opts),
+  useWordMastery: () => ({
+    cards: [],
+    wordMasteryStatus: 'none',
+    isLoading: false,
+    error: null,
+    isError: false,
+    refetch: vi.fn(),
+  }),
 }));
 
 // Import component after mocks
