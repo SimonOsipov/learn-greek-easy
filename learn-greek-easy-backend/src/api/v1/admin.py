@@ -2660,6 +2660,269 @@ async def generate_word_entry_audio_stream(
     )
 
 
+async def _news_b2_audio_sse_pipeline(
+    news_item_id: UUID,
+) -> AsyncGenerator[str, None]:
+    """SSE pipeline for B2-level news audio generation."""
+    from src.services.elevenlabs_service import get_elevenlabs_service
+    from src.services.s3_service import get_s3_service
+
+    yield format_sse_event("", event="connected")
+    factory = get_session_factory()
+
+    # Stage 1 — Load & validate
+    async with factory.begin() as session:
+        result = await session.execute(select(NewsItem).where(NewsItem.id == news_item_id))
+        news_item = result.scalar_one_or_none()
+        if news_item is None:
+            yield format_sse_event(
+                {
+                    "news_item_id": str(news_item_id),
+                    "level": "b2",
+                    "stage": "load",
+                    "error": "News item not found",
+                },
+                event="news_audio:error",
+            )
+            return
+        description_el: str = news_item.description_el or ""
+
+    if not description_el.strip():
+        yield format_sse_event(
+            {
+                "news_item_id": str(news_item_id),
+                "level": "b2",
+                "stage": "load",
+                "error": "No Greek description",
+            },
+            event="news_audio:error",
+        )
+        return
+
+    yield format_sse_event(
+        {"news_item_id": str(news_item_id), "level": "b2"},
+        event="news_audio:start",
+    )
+
+    current_stage = "tts"
+    try:
+        # Stage 2 — TTS
+        elevenlabs = get_elevenlabs_service()
+        yield format_sse_event(
+            {"news_item_id": str(news_item_id), "level": "b2"},
+            event="news_audio:tts",
+        )
+        audio_bytes: bytes = await elevenlabs.generate_speech(
+            description_el, news_item_id=news_item_id
+        )
+
+        # Stage 3 — S3 upload
+        current_stage = "upload"
+        s3 = get_s3_service()
+        s3_key = f"{settings.audio_s3_prefix}/{news_item_id}.mp3"
+        yield format_sse_event(
+            {"news_item_id": str(news_item_id), "level": "b2", "s3_key": s3_key},
+            event="news_audio:upload",
+        )
+        upload_ok = s3.upload_object(s3_key, audio_bytes, "audio/mpeg")
+        if not upload_ok:
+            raise RuntimeError("S3 upload failed")
+
+        # Stage 4 — DB persist
+        current_stage = "persist"
+        audio_duration_seconds = (len(audio_bytes) * 8) / (128 * 1000)
+        yield format_sse_event(
+            {"news_item_id": str(news_item_id), "level": "b2"},
+            event="news_audio:persist",
+        )
+        async with factory.begin() as session:
+            await session.execute(
+                update(NewsItem)
+                .where(NewsItem.id == news_item_id)
+                .values(
+                    audio_s3_key=s3_key,
+                    audio_generated_at=datetime.now(timezone.utc),
+                    audio_file_size_bytes=len(audio_bytes),
+                    audio_duration_seconds=audio_duration_seconds,
+                )
+            )
+            await session.execute(
+                update(CultureQuestion)
+                .where(CultureQuestion.news_item_id == news_item_id)
+                .values(audio_s3_key=s3_key)
+            )
+
+        # Stage 5 — Complete
+        presigned_url = s3.generate_presigned_url(s3_key)
+        yield format_sse_event(
+            {"news_item_id": str(news_item_id), "level": "b2", "audio_url": presigned_url},
+            event="news_audio:complete",
+        )
+
+    except Exception as exc:
+        yield format_sse_event(
+            {
+                "news_item_id": str(news_item_id),
+                "level": "b2",
+                "stage": current_stage,
+                "error": str(exc),
+            },
+            event="news_audio:error",
+        )
+
+
+async def _news_a2_audio_sse_pipeline(
+    news_item_id: UUID,
+) -> AsyncGenerator[str, None]:
+    """SSE pipeline for A2-level news audio generation."""
+    from src.services.elevenlabs_service import get_elevenlabs_service
+    from src.services.s3_service import get_s3_service
+
+    yield format_sse_event("", event="connected")
+    factory = get_session_factory()
+
+    # Stage 1 — Load & validate
+    async with factory.begin() as session:
+        result = await session.execute(select(NewsItem).where(NewsItem.id == news_item_id))
+        news_item = result.scalar_one_or_none()
+        if news_item is None:
+            yield format_sse_event(
+                {
+                    "news_item_id": str(news_item_id),
+                    "level": "a2",
+                    "stage": "load",
+                    "error": "News item not found",
+                },
+                event="news_audio:error",
+            )
+            return
+        description_el_a2: str = news_item.description_el_a2 or ""
+
+    if not description_el_a2.strip():
+        yield format_sse_event(
+            {
+                "news_item_id": str(news_item_id),
+                "level": "a2",
+                "stage": "load",
+                "error": "No A2 Greek description",
+            },
+            event="news_audio:error",
+        )
+        return
+
+    yield format_sse_event(
+        {"news_item_id": str(news_item_id), "level": "a2"},
+        event="news_audio:start",
+    )
+
+    current_stage = "tts"
+    try:
+        # Stage 2 — TTS
+        elevenlabs = get_elevenlabs_service()
+        yield format_sse_event(
+            {"news_item_id": str(news_item_id), "level": "a2"},
+            event="news_audio:tts",
+        )
+        audio_bytes: bytes = await elevenlabs.generate_speech(description_el_a2)
+
+        # Stage 3 — S3 upload
+        current_stage = "upload"
+        s3 = get_s3_service()
+        s3_key = f"{settings.audio_a2_s3_prefix}/{news_item_id}.mp3"
+        yield format_sse_event(
+            {"news_item_id": str(news_item_id), "level": "a2", "s3_key": s3_key},
+            event="news_audio:upload",
+        )
+        upload_ok = s3.upload_object(s3_key, audio_bytes, "audio/mpeg")
+        if not upload_ok:
+            raise RuntimeError("S3 upload failed")
+
+        # Stage 4 — DB persist
+        current_stage = "persist"
+        audio_duration_seconds = (len(audio_bytes) * 8) / (128 * 1000)
+        yield format_sse_event(
+            {"news_item_id": str(news_item_id), "level": "a2"},
+            event="news_audio:persist",
+        )
+        async with factory.begin() as session:
+            await session.execute(
+                update(NewsItem)
+                .where(NewsItem.id == news_item_id)
+                .values(
+                    audio_a2_s3_key=s3_key,
+                    audio_a2_generated_at=datetime.now(timezone.utc),
+                    audio_a2_file_size_bytes=len(audio_bytes),
+                    audio_a2_duration_seconds=audio_duration_seconds,
+                )
+            )
+
+        # Stage 5 — Complete
+        presigned_url = s3.generate_presigned_url(s3_key)
+        yield format_sse_event(
+            {"news_item_id": str(news_item_id), "level": "a2", "audio_url": presigned_url},
+            event="news_audio:complete",
+        )
+
+    except Exception as exc:
+        yield format_sse_event(
+            {
+                "news_item_id": str(news_item_id),
+                "level": "a2",
+                "stage": current_stage,
+                "error": str(exc),
+            },
+            event="news_audio:error",
+        )
+
+
+@router.post(
+    "/news/{news_item_id}/generate-b2-audio/stream",
+    summary="Generate B2 news audio via ElevenLabs TTS as SSE stream",
+    response_class=StreamingResponse,
+)
+async def generate_news_b2_audio_stream(
+    news_item_id: UUID,
+    sse_auth: SSEAuthResult = Depends(get_sse_auth),
+) -> StreamingResponse:
+    if not sse_auth.is_authenticated:
+        return _sse_single_error(
+            sse_auth.error_code or "auth_required",
+            sse_auth.error_message or "Authentication required",
+        )
+    assert sse_auth.user is not None
+    if not sse_auth.user.is_superuser:
+        return _sse_single_error("forbidden", "Admin access required")
+    if not settings.elevenlabs_configured:
+        return _sse_single_error("service_unavailable", "ElevenLabs is not configured")
+    return create_sse_response(
+        sse_stream(_news_b2_audio_sse_pipeline(news_item_id), heartbeat_interval=15)
+    )
+
+
+@router.post(
+    "/news/{news_item_id}/generate-a2-audio/stream",
+    summary="Generate A2 news audio via ElevenLabs TTS as SSE stream",
+    response_class=StreamingResponse,
+)
+async def generate_news_a2_audio_stream(
+    news_item_id: UUID,
+    sse_auth: SSEAuthResult = Depends(get_sse_auth),
+) -> StreamingResponse:
+    if not sse_auth.is_authenticated:
+        return _sse_single_error(
+            sse_auth.error_code or "auth_required",
+            sse_auth.error_message or "Authentication required",
+        )
+    assert sse_auth.user is not None
+    if not sse_auth.user.is_superuser:
+        return _sse_single_error("forbidden", "Admin access required")
+    if not settings.elevenlabs_configured:
+        return _sse_single_error("service_unavailable", "ElevenLabs is not configured")
+    return create_sse_response(
+        sse_stream(_news_a2_audio_sse_pipeline(news_item_id), heartbeat_interval=15)
+    )
+
+
 def _validate_meaning_eligibility(word_entry: "WordEntry") -> None:
     if not word_entry.translation_en or not word_entry.translation_ru:
         raise HTTPException(
