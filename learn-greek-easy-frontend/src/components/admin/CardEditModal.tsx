@@ -22,13 +22,15 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
+import { useSSE } from '@/hooks/useSSE';
 import type {
   AdminCultureQuestion,
   CultureQuestionCreatePayload,
   CultureQuestionUpdatePayload,
 } from '@/services/adminAPI';
-import { adminAPI } from '@/services/adminAPI';
+import { adminAPI, getCultureQuestionAudioStreamUrl } from '@/services/adminAPI';
 import type { AudioStatus } from '@/services/wordEntryAPI';
+import type { SSEEvent } from '@/types/sse';
 
 import { AudioGenerateButton } from './AudioGenerateButton';
 import { AudioStatusBadge } from './AudioStatusBadge';
@@ -57,12 +59,15 @@ export function CardEditModal({ open, onOpenChange, question, onSuccess }: CardE
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
-  const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
+  const [streamEnabled, setStreamEnabled] = useState(false);
+  const [audioStage, setAudioStage] = useState<string | null>(null);
   const [audioCooldown, setAudioCooldown] = useState(false);
 
   // Reset state when modal closes
   useEffect(() => {
     if (!open) {
+      setStreamEnabled(false);
+      setAudioStage(null);
       // Delay reset to allow close animation
       const timeout = setTimeout(() => {
         setIsDirty(false);
@@ -111,21 +116,55 @@ export function CardEditModal({ open, onOpenChange, question, onSuccess }: CardE
     }
   };
 
-  // Handle audio generation
-  const handleGenerateAudio = async () => {
-    if (!question || isGeneratingAudio || audioCooldown) return;
-    setIsGeneratingAudio(true);
-    try {
-      await adminAPI.generateCultureQuestionAudio(question.id);
-      toast({ title: t('cultureAudio.success') });
-      setAudioCooldown(true);
-      setTimeout(() => setAudioCooldown(false), 15000);
-    } catch {
+  // Handle SSE events for audio generation
+  const handleAudioSSEEvent = useCallback(
+    (event: SSEEvent) => {
+      switch (event.type) {
+        case 'culture_audio:tts':
+        case 'culture_audio:upload':
+        case 'culture_audio:persist':
+          setAudioStage(event.type.split(':')[1]);
+          break;
+        case 'culture_audio:complete':
+          setAudioStage(null);
+          setStreamEnabled(false);
+          setAudioCooldown(true);
+          setTimeout(() => setAudioCooldown(false), 15000);
+          toast({ title: t('cultureAudio.success') });
+          break;
+        case 'culture_audio:error': {
+          const d = event.data as { error?: string };
+          setAudioStage(null);
+          setStreamEnabled(false);
+          toast({ title: d.error ?? t('cultureAudio.error'), variant: 'destructive' });
+          break;
+        }
+      }
+    },
+    [t]
+  );
+
+  // Wire SSE for audio generation
+  useSSE(question ? getCultureQuestionAudioStreamUrl(question.id) : '', {
+    method: 'POST',
+    body: {},
+    enabled: streamEnabled && !!question,
+    onEvent: handleAudioSSEEvent,
+    onError: () => {
+      setAudioStage(null);
+      setStreamEnabled(false);
       toast({ title: t('cultureAudio.error'), variant: 'destructive' });
-    } finally {
-      setIsGeneratingAudio(false);
-    }
-  };
+    },
+    maxRetries: 0,
+    reconnect: false,
+  });
+
+  // Handle audio generation button click
+  const handleGenerateAudio = useCallback(() => {
+    if (!question || streamEnabled || audioCooldown) return;
+    setAudioStage(null);
+    setStreamEnabled(true);
+  }, [question, streamEnabled, audioCooldown]);
 
   // Handle cancel button click
   const handleCancel = () => {
@@ -144,7 +183,7 @@ export function CardEditModal({ open, onOpenChange, question, onSuccess }: CardE
   };
 
   // Derive audio status for AudioStatusBadge / AudioGenerateButton
-  const audioStatus: AudioStatus = isGeneratingAudio
+  const audioStatus: AudioStatus = streamEnabled
     ? 'generating'
     : question?.audio_s3_key
       ? 'ready'
@@ -186,12 +225,17 @@ export function CardEditModal({ open, onOpenChange, question, onSuccess }: CardE
                   {t('cultureAudio.managedByNews')}
                 </span>
               ) : (
-                <AudioGenerateButton
-                  status={audioStatus}
-                  onClick={handleGenerateAudio}
-                  isLoading={audioCooldown}
-                  data-testid="generate-audio-btn"
-                />
+                <div className="flex items-center gap-2">
+                  <AudioGenerateButton
+                    status={audioStatus}
+                    onClick={handleGenerateAudio}
+                    isLoading={audioCooldown}
+                    data-testid="generate-audio-btn"
+                  />
+                  {audioStage && (
+                    <span className="text-xs text-muted-foreground">{audioStage}</span>
+                  )}
+                </div>
               )}
             </div>
           )}

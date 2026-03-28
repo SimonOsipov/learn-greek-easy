@@ -1439,14 +1439,6 @@ export const adminAPI = {
     return api.patch<CultureQuestionAdminResponse>(`/api/v1/culture/questions/${questionId}`, data);
   },
 
-  /**
-   * Generate or regenerate audio for a culture question
-   * Requires superuser authentication.
-   */
-  generateCultureQuestionAudio: async (questionId: string): Promise<void> => {
-    return api.post<void>(`/api/v1/culture/questions/${questionId}/generate-audio`);
-  },
-
   // ============================================
   // News Item Management
   // ============================================
@@ -1797,6 +1789,10 @@ export const adminAPI = {
     return api.delete<void>(`/api/v1/admin/situations/${id}`);
   },
 };
+
+export function getCultureQuestionAudioStreamUrl(questionId: string): string {
+  return `/api/v1/admin/culture-questions/${questionId}/generate-audio/stream`;
+}
 
 export function getDialogAudioStreamUrl(dialogId: string): string {
   return `/api/v1/admin/listening-dialogs/${dialogId}/generate-audio/stream`;
