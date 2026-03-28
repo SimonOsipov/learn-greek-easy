@@ -25,7 +25,6 @@ from starlette.responses import StreamingResponse
 
 from src.config import settings
 from src.core.dependencies import SSEAuthResult, get_current_superuser, get_sse_auth
-from src.core.event_bus import news_audio_event_bus
 from src.core.exceptions import (
     ConflictException,
     DeckNotFoundException,
@@ -171,12 +170,7 @@ from src.services.verification_tier import compute_combined_tier_v2
 from src.services.wiktionary_morphology_service import WiktionaryMorphologyService
 from src.services.wiktionary_verification_service import WiktionaryVerificationService
 from src.services.word_entry_response import word_entry_to_response
-from src.tasks import (
-    create_announcement_notifications_task,
-    generate_a2_audio_for_news_item_task,
-    generate_audio_for_news_item_task,
-    is_background_tasks_enabled,
-)
+from src.tasks import create_announcement_notifications_task
 from src.utils.greek_text import resolve_tts_text
 from src.utils.sse import create_sse_response, format_sse_error, format_sse_event, sse_stream
 
@@ -190,6 +184,16 @@ router = APIRouter(
         422: {"description": "Validation error"},
     },
 )
+
+
+def _sse_single_error(code: str, message: str) -> StreamingResponse:
+    """Return an SSE response containing a single error event."""
+
+    async def _gen() -> AsyncGenerator[str, None]:
+        yield format_sse_error(code, message)
+
+    return create_sse_response(_gen())
+
 
 WORD_AUDIO_S3_PREFIX = "word-audio"
 WORD_AUDIO_VOICE_ID = "n0vzWypeCK1NlWPVwhOc"
@@ -1182,7 +1186,6 @@ async def list_deck_questions(
 )
 async def create_news_item(
     data: NewsItemWithQuestionCreate,
-    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_superuser),
 ) -> NewsItemWithCardResponse:
@@ -1190,12 +1193,10 @@ async def create_news_item(
 
     Downloads the image from source_image_url, uploads to S3, and creates
     the news item in the database. If question data is provided, creates
-    a linked CultureQuestion in the specified deck. Schedules background
-    audio generation for the Greek description.
+    a linked CultureQuestion in the specified deck.
 
     Args:
         data: News item creation data with optional question
-        background_tasks: FastAPI background tasks handler
         db: Database session (injected)
         current_user: Authenticated superuser (injected)
 
@@ -1215,23 +1216,6 @@ async def create_news_item(
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=error_msg)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error_msg)
 
-    # Schedule audio generation in background (DB commit already happened inside service)
-    background_tasks.add_task(
-        generate_audio_for_news_item_task,
-        news_item_id=result.news_item.id,
-        description_el=data.description_el,
-        db_url=settings.database_url,
-    )
-
-    description_el_a2 = (data.description_el_a2 or "").strip()
-    if description_el_a2:
-        background_tasks.add_task(
-            generate_a2_audio_for_news_item_task,
-            news_item_id=result.news_item.id,
-            description_el_a2=description_el_a2,
-            db_url=settings.database_url,
-        )
-
     return result
 
 
@@ -1249,20 +1233,17 @@ async def create_news_item(
 async def update_news_item(
     news_item_id: UUID,
     data: NewsItemUpdate,
-    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_superuser),
 ) -> NewsItemResponse:
     """Update an existing news item (admin only).
 
     If source_image_url is provided, downloads the new image and replaces
-    the existing one in S3. If description_el is updated, schedules background
-    audio regeneration.
+    the existing one in S3.
 
     Args:
         news_item_id: UUID of the news item to update
         data: Fields to update (all optional)
-        background_tasks: FastAPI background tasks handler
         db: Database session (injected)
         current_user: Authenticated superuser (injected)
 
@@ -1278,23 +1259,6 @@ async def update_news_item(
         result = await service.update(news_item_id, data)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-
-    if data.description_el is not None:
-        background_tasks.add_task(
-            generate_audio_for_news_item_task,
-            news_item_id=news_item_id,
-            description_el=data.description_el,
-            db_url=settings.database_url,
-        )
-
-    _description_el_a2 = (data.description_el_a2 or "").strip()
-    if _description_el_a2:
-        background_tasks.add_task(
-            generate_a2_audio_for_news_item_task,
-            news_item_id=news_item_id,
-            description_el_a2=_description_el_a2,
-            db_url=settings.database_url,
-        )
 
     return result
 
@@ -1326,244 +1290,6 @@ async def delete_news_item(
     """
     service = NewsItemService(db)
     await service.delete(news_item_id)
-
-
-@router.post(
-    "/news/{news_item_id}/regenerate-audio",
-    status_code=status.HTTP_202_ACCEPTED,
-    summary="Regenerate audio for news item",
-    description="Trigger audio regeneration for a news item's Greek description. Requires superuser privileges.",
-    responses={
-        202: {
-            "description": "Audio regeneration started",
-            "content": {"application/json": {"example": {"message": "Audio regeneration started"}}},
-        },
-        400: {"description": "News item has no Greek description"},
-        404: {"description": "News item not found"},
-        503: {"description": "Audio service unavailable"},
-    },
-)
-async def regenerate_news_audio(
-    news_item_id: UUID,
-    background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_superuser),
-) -> dict:
-    # Gate check: both background tasks and ElevenLabs must be available
-    if not is_background_tasks_enabled() or not settings.elevenlabs_configured:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Audio generation is not available",
-        )
-
-    # Fetch news item directly
-    result = await db.execute(select(NewsItem).where(NewsItem.id == news_item_id))
-    news_item = result.scalar_one_or_none()
-    if news_item is None:
-        raise NotFoundException(
-            resource="News item",
-            detail=f"News item with ID '{news_item_id}' not found",
-        )
-
-    # Validate Greek description exists
-    if not news_item.description_el or not news_item.description_el.strip():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="News item has no Greek description for audio generation",
-        )
-
-    # Schedule background audio generation
-    background_tasks.add_task(
-        generate_audio_for_news_item_task,
-        news_item_id=news_item_id,
-        description_el=news_item.description_el,
-        db_url=settings.database_url,
-    )
-
-    logger.info(
-        "Audio regeneration scheduled for news item",
-        extra={
-            "news_item_id": str(news_item_id),
-            "triggered_by": str(current_user.id),
-            "text_length": len(news_item.description_el),
-        },
-    )
-
-    return {"message": "Audio regeneration started"}
-
-
-@router.post(
-    "/news/{news_item_id}/regenerate-a2-audio",
-    status_code=status.HTTP_202_ACCEPTED,
-    summary="Regenerate A2 audio for news item",
-    description="Trigger A2-level audio regeneration for a news item's simplified Greek description. Requires superuser privileges.",
-    responses={
-        202: {
-            "description": "A2 audio regeneration started",
-            "content": {
-                "application/json": {"example": {"message": "A2 audio regeneration started"}}
-            },
-        },
-        404: {"description": "News item not found or no A2 Greek description"},
-        503: {"description": "Audio service unavailable"},
-    },
-)
-async def regenerate_a2_news_audio(
-    news_item_id: UUID,
-    background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_superuser),
-) -> dict:
-    if not is_background_tasks_enabled() or not settings.elevenlabs_configured:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Audio generation is not available",
-        )
-
-    result = await db.execute(select(NewsItem).where(NewsItem.id == news_item_id))
-    news_item = result.scalar_one_or_none()
-    if news_item is None:
-        raise NotFoundException(
-            resource="News item",
-            detail=f"News item with ID '{news_item_id}' not found",
-        )
-
-    if not news_item.description_el_a2 or not news_item.description_el_a2.strip():
-        raise NotFoundException(
-            resource="A2 description",
-            detail=f"News item with ID '{news_item_id}' has no A2 Greek description",
-        )
-
-    background_tasks.add_task(
-        generate_a2_audio_for_news_item_task,
-        news_item_id=news_item_id,
-        description_el_a2=news_item.description_el_a2,
-        db_url=settings.database_url,
-    )
-
-    logger.info(
-        "A2 audio regeneration scheduled for news item",
-        extra={
-            "news_item_id": str(news_item_id),
-            "triggered_by": str(current_user.id),
-            "text_length": len(news_item.description_el_a2),
-        },
-    )
-
-    return {"message": "A2 audio regeneration started"}
-
-
-async def _fetch_news_item_for_sse(news_item_id: UUID) -> NewsItem | None:
-    """Load a NewsItem using a short-lived session (DB-free generator pattern)."""
-    factory = get_session_factory()
-    async with factory.begin() as db:
-        stmt = select(NewsItem).where(NewsItem.id == news_item_id)
-        result = await db.execute(stmt)
-        return result.scalar_one_or_none()
-
-
-def _sse_single_error(code: str, message: str) -> StreamingResponse:
-    """Return an SSE response containing a single error event."""
-
-    async def _gen() -> AsyncGenerator[str, None]:
-        yield format_sse_error(code, message)
-
-    return create_sse_response(_gen())
-
-
-_NEWS_AUDIO_TERMINAL_EVENTS = {"audio_completed", "audio_failed"}
-_NEWS_AUDIO_SAFETY_TIMEOUT = 300.0  # 5 minutes
-
-
-async def _wait_for_news_audio_event(
-    queue: asyncio.Queue,
-    deadline: float,
-) -> dict | None:
-    """Wait for the next event respecting the 5-minute deadline.
-
-    Returns the event dict, or None if the overall deadline has been exceeded.
-    Uses 30s sub-timeouts to keep the loop responsive without breaking early.
-    """
-    while True:
-        remaining = deadline - asyncio.get_event_loop().time()
-        if remaining <= 0:
-            return None
-        try:
-            return await asyncio.wait_for(queue.get(), timeout=min(remaining, 30.0))
-        except (asyncio.TimeoutError, TimeoutError):
-            # 30s slice elapsed; re-check overall deadline before retrying.
-            if asyncio.get_event_loop().time() >= deadline:
-                return None
-
-
-async def _news_audio_queue_generator(
-    queue: asyncio.Queue,
-    bus_key: str,
-) -> AsyncGenerator[str, None]:
-    """Read from news_audio_event_bus until all started levels are terminal or timeout."""
-    started_levels: set[str] = set()
-    terminal_levels: set[str] = set()
-    deadline = asyncio.get_event_loop().time() + _NEWS_AUDIO_SAFETY_TIMEOUT
-
-    try:
-        while True:
-            event_data = await _wait_for_news_audio_event(queue, deadline)
-            if event_data is None:
-                break
-
-            level = event_data.get("level") or event_data.get("data", {}).get("level")
-            event_type = event_data.get("type", "audio_progress")
-
-            if level:
-                started_levels.add(level)
-                if event_type in _NEWS_AUDIO_TERMINAL_EVENTS:
-                    terminal_levels.add(level)
-
-            yield format_sse_event(event_data, event=event_type)
-
-            if started_levels and terminal_levels >= started_levels:
-                break
-    except asyncio.CancelledError:
-        pass
-    finally:
-        await news_audio_event_bus.unsubscribe(bus_key, queue)
-
-
-async def _news_audio_event_generator(news_item_id: UUID) -> AsyncGenerator[str, None]:
-    """Yield a connected event then stream news audio progress events from the bus."""
-    yield format_sse_event({}, event="connected")
-
-    bus_key = f"news_audio:{news_item_id}"
-    queue = await news_audio_event_bus.subscribe(bus_key)
-    async for chunk in sse_stream(_news_audio_queue_generator(queue, bus_key)):
-        yield chunk
-
-
-@router.get(
-    "/news/{news_item_id}/audio/stream",
-    summary="Stream news audio generation progress via SSE",
-    responses={200: {"content": {"text/event-stream": {}}}},
-)
-async def stream_news_audio(
-    news_item_id: UUID,
-    sse_auth: SSEAuthResult = Depends(get_sse_auth),
-) -> StreamingResponse:
-    """SSE stream for news item audio generation progress. Admin only."""
-    if not sse_auth.is_authenticated:
-        return _sse_single_error(
-            sse_auth.error_code or "auth_required",
-            sse_auth.error_message or "Authentication required",
-        )
-
-    assert sse_auth.user is not None
-    if not sse_auth.user.is_superuser:
-        return _sse_single_error("forbidden", "Superuser privileges required")
-
-    news_item = await asyncio.shield(_fetch_news_item_for_sse(news_item_id))
-    if news_item is None:
-        return _sse_single_error("not_found", f"News item {news_item_id} not found")
-
-    return create_sse_response(_news_audio_event_generator(news_item_id))
 
 
 @router.get(
