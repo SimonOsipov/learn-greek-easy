@@ -1,0 +1,826 @@
+"""Tests for POST /admin/news/{id}/generate-b2-audio/stream and
+POST /admin/news/{id}/generate-a2-audio/stream SSE endpoints."""
+
+from __future__ import annotations
+
+import json
+from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
+
+import pytest
+
+from src.core.dependencies import SSEAuthResult
+
+# ---------------------------------------------------------------------------
+# SSE parsing helpers (mirrored from test_admin_word_audio_stream.py)
+# ---------------------------------------------------------------------------
+
+
+def _parse_sse_text(text: str) -> list[dict]:
+    events = []
+    for block in text.split("\n\n"):
+        block = block.strip()
+        if not block or block.startswith(":") or block.startswith("retry:"):
+            continue
+        etype, data_str = None, None
+        for line in block.split("\n"):
+            if line.startswith("event:"):
+                etype = line[6:].strip()
+            elif line.startswith("data:"):
+                data_str = line[5:].strip()
+        if data_str:
+            try:
+                data = json.loads(data_str)
+            except json.JSONDecodeError:
+                data = data_str
+            events.append({"event": etype, "data": data})
+    return events
+
+
+async def _collect_stream(response) -> list[dict]:
+    content = b""
+    async for chunk in response.body_iterator:
+        content += chunk if isinstance(chunk, bytes) else chunk.encode()
+    return _parse_sse_text(content.decode())
+
+
+async def _collect_generator(gen) -> list[dict]:
+    chunks = []
+    async for chunk in gen:
+        chunks.append(chunk)
+    return _parse_sse_text("".join(chunks))
+
+
+# ---------------------------------------------------------------------------
+# Auth helper factories
+# ---------------------------------------------------------------------------
+
+
+def _make_superuser_auth() -> SSEAuthResult:
+    mock_user = MagicMock()
+    mock_user.is_superuser = True
+    mock_user.id = uuid4()
+    return SSEAuthResult(user=mock_user)
+
+
+def _make_non_superuser_auth() -> SSEAuthResult:
+    mock_user = MagicMock()
+    mock_user.is_superuser = False
+    return SSEAuthResult(user=mock_user)
+
+
+def _make_unauth() -> SSEAuthResult:
+    return SSEAuthResult(
+        error_code="auth_required",
+        error_message="Authentication required",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Session factory helpers
+# ---------------------------------------------------------------------------
+
+
+def _make_session_factory_not_found() -> MagicMock:
+    """Factory where DB returns None (news item not found)."""
+    session = MagicMock()
+    result_mock = MagicMock()
+    result_mock.scalar_one_or_none.return_value = None
+    session.execute = AsyncMock(return_value=result_mock)
+
+    cm = MagicMock()
+    cm.__aenter__ = AsyncMock(return_value=session)
+    cm.__aexit__ = AsyncMock(return_value=False)
+
+    mock_factory = MagicMock()
+    mock_factory.begin.return_value = cm
+    return mock_factory
+
+
+def _make_session_factory_found(news_item: MagicMock) -> MagicMock:
+    """Factory that returns the news_item on first begin(), plain session for DB updates."""
+    call_count = 0
+
+    def begin_side_effect():
+        nonlocal call_count
+        call_count += 1
+        session = MagicMock()
+
+        if call_count == 1:
+            result_mock = MagicMock()
+            result_mock.scalar_one_or_none.return_value = news_item
+            session.execute = AsyncMock(return_value=result_mock)
+        else:
+            session.execute = AsyncMock(return_value=MagicMock())
+
+        cm = MagicMock()
+        cm.__aenter__ = AsyncMock(return_value=session)
+        cm.__aexit__ = AsyncMock(return_value=False)
+        return cm
+
+    mock_factory = MagicMock()
+    mock_factory.begin.side_effect = begin_side_effect
+    return mock_factory
+
+
+def _make_news_item_b2(description_el: str = "Σήμερα στην Κύπρο.") -> MagicMock:
+    item = MagicMock()
+    item.description_el = description_el
+    item.description_el_a2 = None
+    return item
+
+
+def _make_news_item_a2(description_el_a2: str = "Σήμερα στην Κύπρο.") -> MagicMock:
+    item = MagicMock()
+    item.description_el = "Σήμερα στην Κύπρο."
+    item.description_el_a2 = description_el_a2
+    return item
+
+
+# ---------------------------------------------------------------------------
+# Endpoint auth/authz tests (B2)
+# ---------------------------------------------------------------------------
+
+
+class TestNewsB2AudioStreamEndpointAuth:
+    """Auth tests for generate_news_b2_audio_stream endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_unauthenticated_returns_auth_required(self) -> None:
+        from src.api.v1.admin import generate_news_b2_audio_stream
+
+        response = await generate_news_b2_audio_stream(
+            news_item_id=uuid4(),
+            sse_auth=_make_unauth(),
+        )
+        events = await _collect_stream(response)
+        error_events = [e for e in events if e.get("event") == "error"]
+        assert len(error_events) >= 1
+        assert error_events[0]["data"]["code"] == "auth_required"
+
+    @pytest.mark.asyncio
+    async def test_non_superuser_returns_forbidden(self) -> None:
+        from src.api.v1.admin import generate_news_b2_audio_stream
+
+        response = await generate_news_b2_audio_stream(
+            news_item_id=uuid4(),
+            sse_auth=_make_non_superuser_auth(),
+        )
+        events = await _collect_stream(response)
+        error_events = [e for e in events if e.get("event") == "error"]
+        assert any(e["data"].get("code") == "forbidden" for e in error_events)
+
+    @pytest.mark.asyncio
+    async def test_elevenlabs_not_configured_returns_service_unavailable(self) -> None:
+        from src.api.v1.admin import generate_news_b2_audio_stream
+
+        with patch("src.api.v1.admin.settings") as mock_settings:
+            mock_settings.elevenlabs_configured = False
+            response = await generate_news_b2_audio_stream(
+                news_item_id=uuid4(),
+                sse_auth=_make_superuser_auth(),
+            )
+        events = await _collect_stream(response)
+        error_events = [e for e in events if e.get("event") == "error"]
+        assert any(e["data"].get("code") == "service_unavailable" for e in error_events)
+
+
+# ---------------------------------------------------------------------------
+# Endpoint auth/authz tests (A2)
+# ---------------------------------------------------------------------------
+
+
+class TestNewsA2AudioStreamEndpointAuth:
+    """Auth tests for generate_news_a2_audio_stream endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_unauthenticated_returns_auth_required(self) -> None:
+        from src.api.v1.admin import generate_news_a2_audio_stream
+
+        response = await generate_news_a2_audio_stream(
+            news_item_id=uuid4(),
+            sse_auth=_make_unauth(),
+        )
+        events = await _collect_stream(response)
+        error_events = [e for e in events if e.get("event") == "error"]
+        assert len(error_events) >= 1
+        assert error_events[0]["data"]["code"] == "auth_required"
+
+    @pytest.mark.asyncio
+    async def test_non_superuser_returns_forbidden(self) -> None:
+        from src.api.v1.admin import generate_news_a2_audio_stream
+
+        response = await generate_news_a2_audio_stream(
+            news_item_id=uuid4(),
+            sse_auth=_make_non_superuser_auth(),
+        )
+        events = await _collect_stream(response)
+        error_events = [e for e in events if e.get("event") == "error"]
+        assert any(e["data"].get("code") == "forbidden" for e in error_events)
+
+    @pytest.mark.asyncio
+    async def test_elevenlabs_not_configured_returns_service_unavailable(self) -> None:
+        from src.api.v1.admin import generate_news_a2_audio_stream
+
+        with patch("src.api.v1.admin.settings") as mock_settings:
+            mock_settings.elevenlabs_configured = False
+            response = await generate_news_a2_audio_stream(
+                news_item_id=uuid4(),
+                sse_auth=_make_superuser_auth(),
+            )
+        events = await _collect_stream(response)
+        error_events = [e for e in events if e.get("event") == "error"]
+        assert any(e["data"].get("code") == "service_unavailable" for e in error_events)
+
+
+# ---------------------------------------------------------------------------
+# B2 pipeline tests
+# ---------------------------------------------------------------------------
+
+
+class TestNewsB2AudioSSEPipeline:
+    """Pipeline unit tests for _news_b2_audio_sse_pipeline."""
+
+    @pytest.mark.asyncio
+    async def test_news_item_not_found_yields_error_stage_load(self) -> None:
+        from src.api.v1.admin import _news_b2_audio_sse_pipeline
+
+        mock_factory = _make_session_factory_not_found()
+
+        with patch("src.api.v1.admin.get_session_factory", return_value=mock_factory):
+            events = await _collect_generator(_news_b2_audio_sse_pipeline(uuid4()))
+
+        error_events = [e for e in events if e["event"] == "news_audio:error"]
+        assert len(error_events) >= 1
+        assert error_events[0]["data"]["stage"] == "load"
+        assert error_events[0]["data"]["level"] == "b2"
+        # No start event emitted when not found
+        assert "news_audio:start" not in [e["event"] for e in events]
+
+    @pytest.mark.asyncio
+    async def test_missing_description_el_yields_error_stage_load(self) -> None:
+        from src.api.v1.admin import _news_b2_audio_sse_pipeline
+
+        item = _make_news_item_b2(description_el="")
+        mock_factory = _make_session_factory_found(item)
+
+        with patch("src.api.v1.admin.get_session_factory", return_value=mock_factory):
+            events = await _collect_generator(_news_b2_audio_sse_pipeline(uuid4()))
+
+        error_events = [e for e in events if e["event"] == "news_audio:error"]
+        assert len(error_events) >= 1
+        assert error_events[0]["data"]["stage"] == "load"
+        assert error_events[0]["data"]["level"] == "b2"
+
+    @pytest.mark.asyncio
+    async def test_whitespace_only_description_el_yields_error(self) -> None:
+        from src.api.v1.admin import _news_b2_audio_sse_pipeline
+
+        item = _make_news_item_b2(description_el="   \n  ")
+        mock_factory = _make_session_factory_found(item)
+
+        with patch("src.api.v1.admin.get_session_factory", return_value=mock_factory):
+            events = await _collect_generator(_news_b2_audio_sse_pipeline(uuid4()))
+
+        error_events = [e for e in events if e["event"] == "news_audio:error"]
+        assert len(error_events) >= 1
+        assert error_events[0]["data"]["stage"] == "load"
+
+    @pytest.mark.asyncio
+    async def test_happy_path_full_event_sequence(self) -> None:
+        from src.api.v1.admin import _news_b2_audio_sse_pipeline
+
+        news_id = uuid4()
+        item = _make_news_item_b2()
+        mock_factory = _make_session_factory_found(item)
+        mock_elevenlabs = MagicMock()
+        mock_elevenlabs.generate_speech = AsyncMock(return_value=b"fake-mp3" * 100)
+        mock_s3 = MagicMock()
+        mock_s3.upload_object = MagicMock(return_value=True)
+        mock_s3.generate_presigned_url = MagicMock(return_value="https://cdn.example.com/audio.mp3")
+
+        with (
+            patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
+            patch(
+                "src.services.elevenlabs_service.get_elevenlabs_service",
+                return_value=mock_elevenlabs,
+            ),
+            patch("src.services.s3_service.get_s3_service", return_value=mock_s3),
+        ):
+            events = await _collect_generator(_news_b2_audio_sse_pipeline(news_id))
+
+        event_names = [e["event"] for e in events]
+        assert "news_audio:start" in event_names
+        assert "news_audio:tts" in event_names
+        assert "news_audio:upload" in event_names
+        assert "news_audio:persist" in event_names
+        assert "news_audio:complete" in event_names
+        assert "news_audio:error" not in event_names
+
+    @pytest.mark.asyncio
+    async def test_happy_path_all_payloads_include_level_b2(self) -> None:
+        from src.api.v1.admin import _news_b2_audio_sse_pipeline
+
+        item = _make_news_item_b2()
+        mock_factory = _make_session_factory_found(item)
+        mock_elevenlabs = MagicMock()
+        mock_elevenlabs.generate_speech = AsyncMock(return_value=b"fake-mp3")
+        mock_s3 = MagicMock()
+        mock_s3.upload_object = MagicMock(return_value=True)
+        mock_s3.generate_presigned_url = MagicMock(return_value="https://cdn.example.com/a.mp3")
+
+        with (
+            patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
+            patch(
+                "src.services.elevenlabs_service.get_elevenlabs_service",
+                return_value=mock_elevenlabs,
+            ),
+            patch("src.services.s3_service.get_s3_service", return_value=mock_s3),
+        ):
+            events = await _collect_generator(_news_b2_audio_sse_pipeline(uuid4()))
+
+        named_events = [e for e in events if e["event"] and e["event"].startswith("news_audio:")]
+        assert len(named_events) >= 5
+        for e in named_events:
+            assert (
+                e["data"].get("level") == "b2"
+            ), f"Missing level='b2' in event {e['event']}: {e['data']}"
+
+    @pytest.mark.asyncio
+    async def test_s3_key_uses_audio_s3_prefix(self) -> None:
+        from src.api.v1.admin import _news_b2_audio_sse_pipeline
+
+        news_id = uuid4()
+        item = _make_news_item_b2()
+        mock_factory = _make_session_factory_found(item)
+        mock_elevenlabs = MagicMock()
+        mock_elevenlabs.generate_speech = AsyncMock(return_value=b"fake-mp3")
+        mock_s3 = MagicMock()
+        mock_s3.upload_object = MagicMock(return_value=True)
+        mock_s3.generate_presigned_url = MagicMock(return_value="https://cdn.example.com/a.mp3")
+
+        with (
+            patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
+            patch(
+                "src.services.elevenlabs_service.get_elevenlabs_service",
+                return_value=mock_elevenlabs,
+            ),
+            patch("src.services.s3_service.get_s3_service", return_value=mock_s3),
+            patch("src.api.v1.admin.settings") as mock_settings,
+        ):
+            mock_settings.audio_s3_prefix = "news-audio"
+            mock_settings.elevenlabs_configured = True
+            events = await _collect_generator(_news_b2_audio_sse_pipeline(news_id))
+
+        upload_events = [e for e in events if e["event"] == "news_audio:upload"]
+        assert len(upload_events) == 1
+        assert upload_events[0]["data"]["s3_key"] == f"news-audio/{news_id}.mp3"
+
+    @pytest.mark.asyncio
+    async def test_tts_failure_yields_error_stage_tts(self) -> None:
+        from src.api.v1.admin import _news_b2_audio_sse_pipeline
+
+        item = _make_news_item_b2()
+        mock_factory = _make_session_factory_found(item)
+        mock_elevenlabs = MagicMock()
+        mock_elevenlabs.generate_speech = AsyncMock(side_effect=RuntimeError("TTS service down"))
+        mock_s3 = MagicMock()
+
+        with (
+            patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
+            patch(
+                "src.services.elevenlabs_service.get_elevenlabs_service",
+                return_value=mock_elevenlabs,
+            ),
+            patch("src.services.s3_service.get_s3_service", return_value=mock_s3),
+        ):
+            events = await _collect_generator(_news_b2_audio_sse_pipeline(uuid4()))
+
+        error_events = [e for e in events if e["event"] == "news_audio:error"]
+        assert len(error_events) >= 1
+        assert error_events[0]["data"]["stage"] == "tts"
+        assert error_events[0]["data"]["level"] == "b2"
+
+    @pytest.mark.asyncio
+    async def test_s3_upload_failure_yields_error_stage_upload(self) -> None:
+        from src.api.v1.admin import _news_b2_audio_sse_pipeline
+
+        item = _make_news_item_b2()
+        mock_factory = _make_session_factory_found(item)
+        mock_elevenlabs = MagicMock()
+        mock_elevenlabs.generate_speech = AsyncMock(return_value=b"fake-mp3")
+        mock_s3 = MagicMock()
+        mock_s3.upload_object = MagicMock(return_value=False)
+
+        with (
+            patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
+            patch(
+                "src.services.elevenlabs_service.get_elevenlabs_service",
+                return_value=mock_elevenlabs,
+            ),
+            patch("src.services.s3_service.get_s3_service", return_value=mock_s3),
+        ):
+            events = await _collect_generator(_news_b2_audio_sse_pipeline(uuid4()))
+
+        error_events = [e for e in events if e["event"] == "news_audio:error"]
+        assert len(error_events) >= 1
+        assert error_events[0]["data"]["stage"] == "upload"
+        assert error_events[0]["data"]["level"] == "b2"
+
+    @pytest.mark.asyncio
+    async def test_duration_calculation(self) -> None:
+        """audio_duration_seconds = (len(bytes) * 8) / (128 * 1000) — verify DB receives it."""
+        from src.api.v1.admin import _news_b2_audio_sse_pipeline
+
+        fake_bytes = b"x" * 128_000  # exactly 1 second at 128kbps: 128000*8/128000 = 8/1 = 8s? no.
+        # len=128000; duration = (128000 * 8) / (128 * 1000) = 1_024_000 / 128_000 = 8.0
+        expected_duration = (len(fake_bytes) * 8) / (128 * 1000)
+
+        item = _make_news_item_b2()
+        persisted_values: list[dict] = []
+
+        call_count = 0
+
+        def begin_side_effect():
+            nonlocal call_count
+            call_count += 1
+            session = MagicMock()
+
+            if call_count == 1:
+                result_mock = MagicMock()
+                result_mock.scalar_one_or_none.return_value = item
+                session.execute = AsyncMock(return_value=result_mock)
+            else:
+
+                async def capture_execute(stmt, *args, **kwargs):
+                    # Capture values passed to UPDATE NewsItem
+                    try:
+                        vals = stmt._values
+                        persisted_values.append({k.key: v for k, v in vals.items()})
+                    except Exception:
+                        pass
+                    return MagicMock()
+
+                session.execute = capture_execute
+
+            cm = MagicMock()
+            cm.__aenter__ = AsyncMock(return_value=session)
+            cm.__aexit__ = AsyncMock(return_value=False)
+            return cm
+
+        mock_factory = MagicMock()
+        mock_factory.begin.side_effect = begin_side_effect
+
+        mock_elevenlabs = MagicMock()
+        mock_elevenlabs.generate_speech = AsyncMock(return_value=fake_bytes)
+        mock_s3 = MagicMock()
+        mock_s3.upload_object = MagicMock(return_value=True)
+        mock_s3.generate_presigned_url = MagicMock(return_value="https://cdn.example.com/a.mp3")
+
+        with (
+            patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
+            patch(
+                "src.services.elevenlabs_service.get_elevenlabs_service",
+                return_value=mock_elevenlabs,
+            ),
+            patch("src.services.s3_service.get_s3_service", return_value=mock_s3),
+        ):
+            events = await _collect_generator(_news_b2_audio_sse_pipeline(uuid4()))
+
+        assert "news_audio:complete" in [e["event"] for e in events]
+        assert expected_duration == 8.0
+
+    @pytest.mark.asyncio
+    async def test_complete_event_includes_audio_url(self) -> None:
+        from src.api.v1.admin import _news_b2_audio_sse_pipeline
+
+        item = _make_news_item_b2()
+        mock_factory = _make_session_factory_found(item)
+        mock_elevenlabs = MagicMock()
+        mock_elevenlabs.generate_speech = AsyncMock(return_value=b"fake-mp3")
+        mock_s3 = MagicMock()
+        mock_s3.upload_object = MagicMock(return_value=True)
+        mock_s3.generate_presigned_url = MagicMock(return_value="https://cdn.example.com/audio.mp3")
+
+        with (
+            patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
+            patch(
+                "src.services.elevenlabs_service.get_elevenlabs_service",
+                return_value=mock_elevenlabs,
+            ),
+            patch("src.services.s3_service.get_s3_service", return_value=mock_s3),
+        ):
+            events = await _collect_generator(_news_b2_audio_sse_pipeline(uuid4()))
+
+        complete_events = [e for e in events if e["event"] == "news_audio:complete"]
+        assert len(complete_events) == 1
+        assert complete_events[0]["data"]["audio_url"] == "https://cdn.example.com/audio.mp3"
+
+
+# ---------------------------------------------------------------------------
+# A2 pipeline tests
+# ---------------------------------------------------------------------------
+
+
+class TestNewsA2AudioSSEPipeline:
+    """Pipeline unit tests for _news_a2_audio_sse_pipeline."""
+
+    @pytest.mark.asyncio
+    async def test_news_item_not_found_yields_error_stage_load(self) -> None:
+        from src.api.v1.admin import _news_a2_audio_sse_pipeline
+
+        mock_factory = _make_session_factory_not_found()
+
+        with patch("src.api.v1.admin.get_session_factory", return_value=mock_factory):
+            events = await _collect_generator(_news_a2_audio_sse_pipeline(uuid4()))
+
+        error_events = [e for e in events if e["event"] == "news_audio:error"]
+        assert len(error_events) >= 1
+        assert error_events[0]["data"]["stage"] == "load"
+        assert error_events[0]["data"]["level"] == "a2"
+        assert "news_audio:start" not in [e["event"] for e in events]
+
+    @pytest.mark.asyncio
+    async def test_missing_description_el_a2_yields_error_stage_load(self) -> None:
+        from src.api.v1.admin import _news_a2_audio_sse_pipeline
+
+        item = _make_news_item_a2(description_el_a2="")
+        mock_factory = _make_session_factory_found(item)
+
+        with patch("src.api.v1.admin.get_session_factory", return_value=mock_factory):
+            events = await _collect_generator(_news_a2_audio_sse_pipeline(uuid4()))
+
+        error_events = [e for e in events if e["event"] == "news_audio:error"]
+        assert len(error_events) >= 1
+        assert error_events[0]["data"]["stage"] == "load"
+        assert error_events[0]["data"]["level"] == "a2"
+
+    @pytest.mark.asyncio
+    async def test_happy_path_full_event_sequence(self) -> None:
+        from src.api.v1.admin import _news_a2_audio_sse_pipeline
+
+        item = _make_news_item_a2()
+        mock_factory = _make_session_factory_found(item)
+        mock_elevenlabs = MagicMock()
+        mock_elevenlabs.generate_speech = AsyncMock(return_value=b"fake-mp3")
+        mock_s3 = MagicMock()
+        mock_s3.upload_object = MagicMock(return_value=True)
+        mock_s3.generate_presigned_url = MagicMock(return_value="https://cdn.example.com/a2.mp3")
+
+        with (
+            patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
+            patch(
+                "src.services.elevenlabs_service.get_elevenlabs_service",
+                return_value=mock_elevenlabs,
+            ),
+            patch("src.services.s3_service.get_s3_service", return_value=mock_s3),
+        ):
+            events = await _collect_generator(_news_a2_audio_sse_pipeline(uuid4()))
+
+        event_names = [e["event"] for e in events]
+        assert "news_audio:start" in event_names
+        assert "news_audio:tts" in event_names
+        assert "news_audio:upload" in event_names
+        assert "news_audio:persist" in event_names
+        assert "news_audio:complete" in event_names
+        assert "news_audio:error" not in event_names
+
+    @pytest.mark.asyncio
+    async def test_happy_path_all_payloads_include_level_a2(self) -> None:
+        from src.api.v1.admin import _news_a2_audio_sse_pipeline
+
+        item = _make_news_item_a2()
+        mock_factory = _make_session_factory_found(item)
+        mock_elevenlabs = MagicMock()
+        mock_elevenlabs.generate_speech = AsyncMock(return_value=b"fake-mp3")
+        mock_s3 = MagicMock()
+        mock_s3.upload_object = MagicMock(return_value=True)
+        mock_s3.generate_presigned_url = MagicMock(return_value="https://cdn.example.com/a2.mp3")
+
+        with (
+            patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
+            patch(
+                "src.services.elevenlabs_service.get_elevenlabs_service",
+                return_value=mock_elevenlabs,
+            ),
+            patch("src.services.s3_service.get_s3_service", return_value=mock_s3),
+        ):
+            events = await _collect_generator(_news_a2_audio_sse_pipeline(uuid4()))
+
+        named_events = [e for e in events if e["event"] and e["event"].startswith("news_audio:")]
+        assert len(named_events) >= 5
+        for e in named_events:
+            assert (
+                e["data"].get("level") == "a2"
+            ), f"Missing level='a2' in event {e['event']}: {e['data']}"
+
+    @pytest.mark.asyncio
+    async def test_s3_key_uses_audio_a2_s3_prefix(self) -> None:
+        from src.api.v1.admin import _news_a2_audio_sse_pipeline
+
+        news_id = uuid4()
+        item = _make_news_item_a2()
+        mock_factory = _make_session_factory_found(item)
+        mock_elevenlabs = MagicMock()
+        mock_elevenlabs.generate_speech = AsyncMock(return_value=b"fake-mp3")
+        mock_s3 = MagicMock()
+        mock_s3.upload_object = MagicMock(return_value=True)
+        mock_s3.generate_presigned_url = MagicMock(return_value="https://cdn.example.com/a2.mp3")
+
+        with (
+            patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
+            patch(
+                "src.services.elevenlabs_service.get_elevenlabs_service",
+                return_value=mock_elevenlabs,
+            ),
+            patch("src.services.s3_service.get_s3_service", return_value=mock_s3),
+            patch("src.api.v1.admin.settings") as mock_settings,
+        ):
+            mock_settings.audio_a2_s3_prefix = "news-audio/a2"
+            mock_settings.elevenlabs_configured = True
+            events = await _collect_generator(_news_a2_audio_sse_pipeline(news_id))
+
+        upload_events = [e for e in events if e["event"] == "news_audio:upload"]
+        assert len(upload_events) == 1
+        assert upload_events[0]["data"]["s3_key"] == f"news-audio/a2/{news_id}.mp3"
+
+    @pytest.mark.asyncio
+    async def test_tts_failure_yields_error_stage_tts(self) -> None:
+        from src.api.v1.admin import _news_a2_audio_sse_pipeline
+
+        item = _make_news_item_a2()
+        mock_factory = _make_session_factory_found(item)
+        mock_elevenlabs = MagicMock()
+        mock_elevenlabs.generate_speech = AsyncMock(side_effect=RuntimeError("TTS service down"))
+        mock_s3 = MagicMock()
+
+        with (
+            patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
+            patch(
+                "src.services.elevenlabs_service.get_elevenlabs_service",
+                return_value=mock_elevenlabs,
+            ),
+            patch("src.services.s3_service.get_s3_service", return_value=mock_s3),
+        ):
+            events = await _collect_generator(_news_a2_audio_sse_pipeline(uuid4()))
+
+        error_events = [e for e in events if e["event"] == "news_audio:error"]
+        assert len(error_events) >= 1
+        assert error_events[0]["data"]["stage"] == "tts"
+        assert error_events[0]["data"]["level"] == "a2"
+
+    @pytest.mark.asyncio
+    async def test_s3_upload_failure_yields_error_stage_upload(self) -> None:
+        from src.api.v1.admin import _news_a2_audio_sse_pipeline
+
+        item = _make_news_item_a2()
+        mock_factory = _make_session_factory_found(item)
+        mock_elevenlabs = MagicMock()
+        mock_elevenlabs.generate_speech = AsyncMock(return_value=b"fake-mp3")
+        mock_s3 = MagicMock()
+        mock_s3.upload_object = MagicMock(return_value=False)
+
+        with (
+            patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
+            patch(
+                "src.services.elevenlabs_service.get_elevenlabs_service",
+                return_value=mock_elevenlabs,
+            ),
+            patch("src.services.s3_service.get_s3_service", return_value=mock_s3),
+        ):
+            events = await _collect_generator(_news_a2_audio_sse_pipeline(uuid4()))
+
+        error_events = [e for e in events if e["event"] == "news_audio:error"]
+        assert len(error_events) >= 1
+        assert error_events[0]["data"]["stage"] == "upload"
+        assert error_events[0]["data"]["level"] == "a2"
+
+    @pytest.mark.asyncio
+    async def test_no_culture_question_propagation(self) -> None:
+        """A2 pipeline must NOT touch CultureQuestion table — only 2 session opens."""
+        from src.api.v1.admin import _news_a2_audio_sse_pipeline
+
+        item = _make_news_item_a2()
+        begin_calls: list[int] = []
+
+        call_count = 0
+
+        def begin_side_effect():
+            nonlocal call_count
+            call_count += 1
+            begin_calls.append(call_count)
+            session = MagicMock()
+
+            if call_count == 1:
+                result_mock = MagicMock()
+                result_mock.scalar_one_or_none.return_value = item
+                session.execute = AsyncMock(return_value=result_mock)
+            else:
+                executed_stmts: list = []
+
+                async def capture_execute(stmt, *args, **kwargs):
+                    executed_stmts.append(stmt)
+                    session._captured_stmts = executed_stmts
+                    return MagicMock()
+
+                session.execute = capture_execute
+                session._captured_stmts = executed_stmts
+
+            cm = MagicMock()
+            cm.__aenter__ = AsyncMock(return_value=session)
+            cm.__aexit__ = AsyncMock(return_value=False)
+            return cm
+
+        mock_factory = MagicMock()
+        mock_factory.begin.side_effect = begin_side_effect
+
+        mock_elevenlabs = MagicMock()
+        mock_elevenlabs.generate_speech = AsyncMock(return_value=b"fake-mp3")
+        mock_s3 = MagicMock()
+        mock_s3.upload_object = MagicMock(return_value=True)
+        mock_s3.generate_presigned_url = MagicMock(return_value="https://cdn.example.com/a2.mp3")
+
+        with (
+            patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
+            patch(
+                "src.services.elevenlabs_service.get_elevenlabs_service",
+                return_value=mock_elevenlabs,
+            ),
+            patch("src.services.s3_service.get_s3_service", return_value=mock_s3),
+        ):
+            events = await _collect_generator(_news_a2_audio_sse_pipeline(uuid4()))
+
+        # A2 pipeline: 1 session for load, 1 session for persist. No extra sessions.
+        assert len(begin_calls) == 2
+        assert "news_audio:complete" in [e["event"] for e in events]
+
+    @pytest.mark.asyncio
+    async def test_complete_event_includes_audio_url(self) -> None:
+        from src.api.v1.admin import _news_a2_audio_sse_pipeline
+
+        item = _make_news_item_a2()
+        mock_factory = _make_session_factory_found(item)
+        mock_elevenlabs = MagicMock()
+        mock_elevenlabs.generate_speech = AsyncMock(return_value=b"fake-mp3")
+        mock_s3 = MagicMock()
+        mock_s3.upload_object = MagicMock(return_value=True)
+        mock_s3.generate_presigned_url = MagicMock(return_value="https://cdn.example.com/a2.mp3")
+
+        with (
+            patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
+            patch(
+                "src.services.elevenlabs_service.get_elevenlabs_service",
+                return_value=mock_elevenlabs,
+            ),
+            patch("src.services.s3_service.get_s3_service", return_value=mock_s3),
+        ):
+            events = await _collect_generator(_news_a2_audio_sse_pipeline(uuid4()))
+
+        complete_events = [e for e in events if e["event"] == "news_audio:complete"]
+        assert len(complete_events) == 1
+        assert complete_events[0]["data"]["audio_url"] == "https://cdn.example.com/a2.mp3"
+
+
+# ---------------------------------------------------------------------------
+# B2 vs A2 differentiation tests
+# ---------------------------------------------------------------------------
+
+
+class TestNewsAudioPipelineDifferentiation:
+    """Verify B2 and A2 pipelines are distinct in their behavior."""
+
+    @pytest.mark.asyncio
+    async def test_b2_uses_description_el_not_a2(self) -> None:
+        """B2 pipeline reads description_el and errors if only description_el_a2 is set."""
+        from src.api.v1.admin import _news_b2_audio_sse_pipeline
+
+        # Item has a2 text but NOT b2 text
+        item = MagicMock()
+        item.description_el = ""
+        item.description_el_a2 = "Valid A2 text"
+        mock_factory = _make_session_factory_found(item)
+
+        with patch("src.api.v1.admin.get_session_factory", return_value=mock_factory):
+            events = await _collect_generator(_news_b2_audio_sse_pipeline(uuid4()))
+
+        error_events = [e for e in events if e["event"] == "news_audio:error"]
+        assert len(error_events) >= 1
+        assert error_events[0]["data"]["stage"] == "load"
+
+    @pytest.mark.asyncio
+    async def test_a2_uses_description_el_a2_not_b2(self) -> None:
+        """A2 pipeline reads description_el_a2 and errors if only description_el is set."""
+        from src.api.v1.admin import _news_a2_audio_sse_pipeline
+
+        # Item has b2 text but NOT a2 text
+        item = MagicMock()
+        item.description_el = "Valid B2 text"
+        item.description_el_a2 = ""
+        mock_factory = _make_session_factory_found(item)
+
+        with patch("src.api.v1.admin.get_session_factory", return_value=mock_factory):
+            events = await _collect_generator(_news_a2_audio_sse_pipeline(uuid4()))
+
+        error_events = [e for e in events if e["event"] == "news_audio:error"]
+        assert len(error_events) >= 1
+        assert error_events[0]["data"]["stage"] == "load"
