@@ -358,7 +358,8 @@ class AudioGenerationService:
         duration_seconds = voice_segments[-1]["end_time_seconds"]
         try:
             mp3 = MP3(fileobj=BytesIO(audio_bytes))
-            duration_seconds = mp3.info.length
+            if mp3.info is not None:
+                duration_seconds = mp3.info.length
         except Exception:
             pass
 
