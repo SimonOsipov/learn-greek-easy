@@ -309,6 +309,9 @@ class AudioGenerationService:
             file_size_bytes=len(audio_bytes),
         )
 
+    def generate_presigned_url(self, s3_key: str) -> str | None:
+        return self._s3.generate_presigned_url(s3_key)
+
     async def generate_dialog(  # noqa: C901
         self,
         inputs: list[DialogInput],

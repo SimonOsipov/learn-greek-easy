@@ -147,6 +147,7 @@ from src.schemas.word_entry import (
     WordEntryResponse,
 )
 from src.services.announcement_service import AnnouncementService
+from src.services.audio_generation_service import get_audio_generation_service
 from src.services.card_error_admin_service import CardErrorAdminService
 from src.services.card_generator_service import CardGeneratorService
 from src.services.changelog_service import ChangelogService
@@ -2390,9 +2391,6 @@ async def _news_b2_audio_sse_pipeline(
     news_item_id: UUID,
 ) -> AsyncGenerator[str, None]:
     """SSE pipeline for B2-level news audio generation."""
-    from src.services.elevenlabs_service import get_elevenlabs_service
-    from src.services.s3_service import get_s3_service
-
     yield format_sse_event("", event="connected")
     factory = get_session_factory()
 
@@ -2432,31 +2430,32 @@ async def _news_b2_audio_sse_pipeline(
 
     current_stage = "tts"
     try:
-        # Stage 2 — TTS
-        elevenlabs = get_elevenlabs_service()
+        # Stage 2 — TTS + upload
+        audio_service = get_audio_generation_service()
+        s3_key = f"{settings.audio_s3_prefix}/{news_item_id}.mp3"
         yield format_sse_event(
             {"news_item_id": str(news_item_id), "level": "b2"},
             event="news_audio:tts",
         )
-        audio_bytes: bytes = await elevenlabs.generate_speech(
-            description_el, news_item_id=news_item_id
+
+        async def _on_progress_b2(stage: str, **kwargs: Any) -> None:
+            nonlocal current_stage
+            current_stage = stage
+
+        audio_result = await audio_service.generate_single(
+            text=description_el,
+            s3_key=s3_key,
+            on_progress=_on_progress_b2,
+            news_item_id=news_item_id,
         )
 
-        # Stage 3 — S3 upload
-        current_stage = "upload"
-        s3 = get_s3_service()
-        s3_key = f"{settings.audio_s3_prefix}/{news_item_id}.mp3"
         yield format_sse_event(
             {"news_item_id": str(news_item_id), "level": "b2", "s3_key": s3_key},
             event="news_audio:upload",
         )
-        upload_ok = s3.upload_object(s3_key, audio_bytes, "audio/mpeg")
-        if not upload_ok:
-            raise RuntimeError("S3 upload failed")
 
         # Stage 4 — DB persist
         current_stage = "persist"
-        audio_duration_seconds = (len(audio_bytes) * 8) / (128 * 1000)
         yield format_sse_event(
             {"news_item_id": str(news_item_id), "level": "b2"},
             event="news_audio:persist",
@@ -2468,8 +2467,8 @@ async def _news_b2_audio_sse_pipeline(
                 .values(
                     audio_s3_key=s3_key,
                     audio_generated_at=datetime.now(timezone.utc),
-                    audio_file_size_bytes=len(audio_bytes),
-                    audio_duration_seconds=audio_duration_seconds,
+                    audio_file_size_bytes=audio_result.file_size_bytes,
+                    audio_duration_seconds=audio_result.duration_seconds,
                 )
             )
             await session.execute(
@@ -2479,7 +2478,7 @@ async def _news_b2_audio_sse_pipeline(
             )
 
         # Stage 5 — Complete
-        presigned_url = s3.generate_presigned_url(s3_key)
+        presigned_url = audio_service.generate_presigned_url(s3_key)
         yield format_sse_event(
             {"news_item_id": str(news_item_id), "level": "b2", "audio_url": presigned_url},
             event="news_audio:complete",
@@ -2501,9 +2500,6 @@ async def _news_a2_audio_sse_pipeline(
     news_item_id: UUID,
 ) -> AsyncGenerator[str, None]:
     """SSE pipeline for A2-level news audio generation."""
-    from src.services.elevenlabs_service import get_elevenlabs_service
-    from src.services.s3_service import get_s3_service
-
     yield format_sse_event("", event="connected")
     factory = get_session_factory()
 
@@ -2543,29 +2539,31 @@ async def _news_a2_audio_sse_pipeline(
 
     current_stage = "tts"
     try:
-        # Stage 2 — TTS
-        elevenlabs = get_elevenlabs_service()
+        # Stage 2 — TTS + upload
+        audio_service = get_audio_generation_service()
+        s3_key = f"{settings.audio_a2_s3_prefix}/{news_item_id}.mp3"
         yield format_sse_event(
             {"news_item_id": str(news_item_id), "level": "a2"},
             event="news_audio:tts",
         )
-        audio_bytes: bytes = await elevenlabs.generate_speech(description_el_a2)
 
-        # Stage 3 — S3 upload
-        current_stage = "upload"
-        s3 = get_s3_service()
-        s3_key = f"{settings.audio_a2_s3_prefix}/{news_item_id}.mp3"
+        async def _on_progress_a2(stage: str, **kwargs: Any) -> None:
+            nonlocal current_stage
+            current_stage = stage
+
+        audio_result = await audio_service.generate_single(
+            text=description_el_a2,
+            s3_key=s3_key,
+            on_progress=_on_progress_a2,
+        )
+
         yield format_sse_event(
             {"news_item_id": str(news_item_id), "level": "a2", "s3_key": s3_key},
             event="news_audio:upload",
         )
-        upload_ok = s3.upload_object(s3_key, audio_bytes, "audio/mpeg")
-        if not upload_ok:
-            raise RuntimeError("S3 upload failed")
 
         # Stage 4 — DB persist
         current_stage = "persist"
-        audio_duration_seconds = (len(audio_bytes) * 8) / (128 * 1000)
         yield format_sse_event(
             {"news_item_id": str(news_item_id), "level": "a2"},
             event="news_audio:persist",
@@ -2577,13 +2575,13 @@ async def _news_a2_audio_sse_pipeline(
                 .values(
                     audio_a2_s3_key=s3_key,
                     audio_a2_generated_at=datetime.now(timezone.utc),
-                    audio_a2_file_size_bytes=len(audio_bytes),
-                    audio_a2_duration_seconds=audio_duration_seconds,
+                    audio_a2_file_size_bytes=audio_result.file_size_bytes,
+                    audio_a2_duration_seconds=audio_result.duration_seconds,
                 )
             )
 
         # Stage 5 — Complete
-        presigned_url = s3.generate_presigned_url(s3_key)
+        presigned_url = audio_service.generate_presigned_url(s3_key)
         yield format_sse_event(
             {"news_item_id": str(news_item_id), "level": "a2", "audio_url": presigned_url},
             event="news_audio:complete",
@@ -2653,9 +2651,6 @@ async def _culture_question_audio_sse_pipeline(
     question_id: UUID,
 ) -> AsyncGenerator[str, None]:
     """SSE pipeline for culture question audio generation."""
-    from src.services.elevenlabs_service import get_elevenlabs_service
-    from src.services.s3_service import get_s3_service
-
     yield format_sse_event("", event="connected")
     factory = get_session_factory()
 
@@ -2708,25 +2703,28 @@ async def _culture_question_audio_sse_pipeline(
 
     current_stage = "tts"
     try:
-        # Stage 2 — TTS
-        elevenlabs = get_elevenlabs_service()
+        # Stage 2 — TTS + upload
+        audio_service = get_audio_generation_service()
+        s3_key = f"culture/audio/{question_id}.mp3"
         yield format_sse_event(
             {"question_id": str(question_id)},
             event="culture_audio:tts",
         )
-        audio_bytes: bytes = await elevenlabs.generate_speech(greek_text)
 
-        # Stage 3 — S3 upload
-        current_stage = "upload"
-        s3 = get_s3_service()
-        s3_key = f"culture/audio/{question_id}.mp3"
+        async def _on_progress_cq(stage: str, **kwargs: Any) -> None:
+            nonlocal current_stage
+            current_stage = stage
+
+        await audio_service.generate_single(
+            text=greek_text,
+            s3_key=s3_key,
+            on_progress=_on_progress_cq,
+        )
+
         yield format_sse_event(
             {"question_id": str(question_id), "s3_key": s3_key},
             event="culture_audio:upload",
         )
-        upload_ok = s3.upload_object(s3_key, audio_bytes, "audio/mpeg")
-        if not upload_ok:
-            raise RuntimeError("S3 upload failed")
 
         # Stage 4 — DB persist
         current_stage = "persist"
