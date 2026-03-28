@@ -11,12 +11,15 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
-from src.api.v1.admin import _apply_forced_alignment, _redistribute_degenerate_timing
 from src.core.exceptions import (
     ElevenLabsAPIError,
     ElevenLabsAuthenticationError,
     ElevenLabsNotConfiguredError,
     ElevenLabsRateLimitError,
+)
+from src.services.audio_generation_service import (
+    _apply_forced_alignment,
+    _redistribute_degenerate_timing,
 )
 from src.services.elevenlabs_service import ElevenLabsService
 

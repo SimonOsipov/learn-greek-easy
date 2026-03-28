@@ -1049,7 +1049,7 @@ class TestBuildWordTimestamps:
 
     def test_happy_path_multi_word(self) -> None:
         """Groups characters into words correctly with ms conversion."""
-        from src.api.v1.admin import _build_word_timestamps
+        from src.services.audio_generation_service import _build_word_timestamps
 
         chars = ["Γ", "ε", "ι", "α", " ", "σ", "ο", "υ", "!"]
         starts = [0.0, 0.04, 0.053, 0.066, 0.079, 0.139, 0.199, 0.259, 0.319]
@@ -1068,7 +1068,7 @@ class TestBuildWordTimestamps:
 
     def test_single_word(self) -> None:
         """Single word with no spaces produces one entry."""
-        from src.api.v1.admin import _build_word_timestamps
+        from src.services.audio_generation_service import _build_word_timestamps
 
         chars = list("hello")
         starts = [0.0, 0.1, 0.2, 0.3, 0.4]
@@ -1087,7 +1087,7 @@ class TestBuildWordTimestamps:
 
     def test_consecutive_spaces_filtered(self) -> None:
         """Multiple consecutive spaces produce no empty word entries."""
-        from src.api.v1.admin import _build_word_timestamps
+        from src.services.audio_generation_service import _build_word_timestamps
 
         chars = ["a", " ", " ", " ", "b"]
         starts = [0.0, 0.1, 0.2, 0.3, 0.4]
@@ -1106,7 +1106,7 @@ class TestBuildWordTimestamps:
 
     def test_missing_alignment_returns_all_none(self) -> None:
         """Missing alignment key returns None for all lines."""
-        from src.api.v1.admin import _build_word_timestamps
+        from src.services.audio_generation_service import _build_word_timestamps
 
         result_data = {
             "voice_segments": [
@@ -1119,7 +1119,7 @@ class TestBuildWordTimestamps:
 
     def test_missing_character_indices_returns_none_for_line(self) -> None:
         """Segment missing character_start_index returns None for that line, others still work."""
-        from src.api.v1.admin import _build_word_timestamps
+        from src.services.audio_generation_service import _build_word_timestamps
 
         chars = list("ab cd")
         starts = [0.0, 0.1, 0.2, 0.3, 0.4]
@@ -1142,7 +1142,7 @@ class TestBuildWordTimestamps:
 
     def test_punctuation_attached_to_word(self) -> None:
         """Punctuation attached to a word stays with the word."""
-        from src.api.v1.admin import _build_word_timestamps
+        from src.services.audio_generation_service import _build_word_timestamps
 
         chars = list("hello!")
         starts = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
@@ -1159,7 +1159,7 @@ class TestBuildWordTimestamps:
 
     def test_fewer_segments_than_lines(self) -> None:
         """Lines without a matching voice_segment get None."""
-        from src.api.v1.admin import _build_word_timestamps
+        from src.services.audio_generation_service import _build_word_timestamps
 
         chars = list("hi")
         starts = [0.0, 0.1]
