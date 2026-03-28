@@ -32,3 +32,11 @@ Architectural decisions and established patterns. All agents (Feature, Architect
 | Client-side filters | Must NOT trigger API refetches — filter cached data locally | docs/filtering-conventions.md |
 | Stable data caching | Cache data that doesn't change with filters (culture decks, progress, country results) | docs/filtering-conventions.md |
 | No loading flash | Cached/local results must not show loading spinners | docs/filtering-conventions.md |
+
+## Admin Generation Pipelines
+
+| Decision | Convention | Reference |
+|----------|-----------|-----------|
+| SSE vs BackgroundTasks | SSE for admin generation with progress; BackgroundTasks for fire-and-forget | [docs/sse-pipelines.md](sse-pipelines.md) |
+| Event naming | `{domain}:{stage}` format | [docs/sse-pipelines.md](sse-pipelines.md) |
+| Frontend consumption | `useSSE` hook with POST, no retries, no reconnect | [docs/sse-pipelines.md](sse-pipelines.md) |
