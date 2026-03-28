@@ -24,6 +24,7 @@ from src.db.models import (
     ExerciseType,
     ListeningDialog,
 )
+from src.services.audio_generation_service import DialogAudioResult
 from tests.factories import SituationFactory
 
 
@@ -223,29 +224,32 @@ class TestDialogAudioStreamPipeline:
         db_session.add_all(lines)
         await db_session.flush()
 
-        elevenlabs_response = _make_elevenlabs_response(num_lines=3)
         mock_factory = _make_session_factory_mock(db_session)
 
-        mock_elevenlabs = MagicMock()
-        mock_elevenlabs.generate_dialog_audio = AsyncMock(return_value=elevenlabs_response)
-
-        mock_s3 = MagicMock()
-        mock_s3.upload_object = MagicMock(return_value=True)
-
-        mock_mp3_instance = MagicMock()
-        mock_mp3_instance.info.length = 4.5  # matches last segment end_time_seconds for num_lines=3
+        mock_audio_service = MagicMock()
+        mock_audio_service.generate_dialog = AsyncMock(
+            return_value=DialogAudioResult(
+                audio_bytes=b"fake-mp3-bytes",
+                s3_key=f"dialog-audio/{dialog.id}.mp3",
+                duration_seconds=4.5,
+                file_size_bytes=14,
+                line_timings={0: (0, 1500), 1: (1500, 3000), 2: (3000, 4500)},
+                word_timestamps_map={
+                    0: [{"word": "Γεια", "start_ms": 0, "end_ms": 750}],
+                    1: [{"word": "Γεια", "start_ms": 1500, "end_ms": 2250}],
+                    2: [{"word": "Πώς", "start_ms": 3000, "end_ms": 3750}],
+                },
+                alignment_source="original",
+                degenerate_line_count=0,
+            )
+        )
 
         sse_auth = _make_superuser_auth()
 
         with (
             patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
-            patch(
-                "src.services.elevenlabs_service.get_elevenlabs_service",
-                return_value=mock_elevenlabs,
-            ),
-            patch("src.api.v1.admin.get_s3_service", return_value=mock_s3),
+            patch("src.api.v1.admin.get_audio_generation_service", return_value=mock_audio_service),
             patch("src.api.v1.admin.settings") as mock_settings,
-            patch("mutagen.mp3.MP3", return_value=mock_mp3_instance),
         ):
             mock_settings.elevenlabs_configured = True
             response = await generate_dialog_audio_stream(
@@ -356,29 +360,32 @@ class TestDialogAudioStreamPipeline:
         )
         await db_session.flush()
 
-        elevenlabs_response = _make_elevenlabs_response(num_lines=3)
         mock_factory = _make_session_factory_mock(db_session)
 
-        mock_elevenlabs = MagicMock()
-        mock_elevenlabs.generate_dialog_audio = AsyncMock(return_value=elevenlabs_response)
-
-        mock_s3 = MagicMock()
-        mock_s3.upload_object = MagicMock(return_value=True)
-
-        mock_mp3_instance = MagicMock()
-        mock_mp3_instance.info.length = 4.5  # matches last segment end_time_seconds for num_lines=3
+        mock_audio_service = MagicMock()
+        mock_audio_service.generate_dialog = AsyncMock(
+            return_value=DialogAudioResult(
+                audio_bytes=b"fake-mp3-bytes",
+                s3_key=f"dialog-audio/{dialog.id}.mp3",
+                duration_seconds=4.5,
+                file_size_bytes=14,
+                line_timings={0: (0, 1500), 1: (1500, 3000), 2: (3000, 4500)},
+                word_timestamps_map={
+                    0: [{"word": "Γεια", "start_ms": 0, "end_ms": 750}],
+                    1: [{"word": "Γεια", "start_ms": 1500, "end_ms": 2250}],
+                    2: [{"word": "Πώς", "start_ms": 3000, "end_ms": 3750}],
+                },
+                alignment_source="original",
+                degenerate_line_count=0,
+            )
+        )
 
         sse_auth = _make_superuser_auth()
 
         with (
             patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
-            patch(
-                "src.services.elevenlabs_service.get_elevenlabs_service",
-                return_value=mock_elevenlabs,
-            ),
-            patch("src.api.v1.admin.get_s3_service", return_value=mock_s3),
+            patch("src.api.v1.admin.get_audio_generation_service", return_value=mock_audio_service),
             patch("src.api.v1.admin.settings") as mock_settings,
-            patch("mutagen.mp3.MP3", return_value=mock_mp3_instance),
         ):
             mock_settings.elevenlabs_configured = True
             response = await generate_dialog_audio_stream(
@@ -439,32 +446,28 @@ class TestDialogAudioStreamPipeline:
         db_session.add_all(lines)
         await db_session.flush()
 
-        response_no_alignment = _make_elevenlabs_response(num_lines=2)
-        del response_no_alignment["alignment"]
-        for seg in response_no_alignment["voice_segments"]:
-            seg.pop("character_start_index", None)
-            seg.pop("character_end_index", None)
-
         mock_factory = _make_session_factory_mock(db_session)
-        mock_elevenlabs = MagicMock()
-        mock_elevenlabs.generate_dialog_audio = AsyncMock(return_value=response_no_alignment)
-        mock_s3 = MagicMock()
-        mock_s3.upload_object = MagicMock(return_value=True)
 
-        mock_mp3_instance = MagicMock()
-        mock_mp3_instance.info.length = 3.0  # matches last segment end_time_seconds for num_lines=2
+        mock_audio_service = MagicMock()
+        mock_audio_service.generate_dialog = AsyncMock(
+            return_value=DialogAudioResult(
+                audio_bytes=b"fake-mp3-bytes",
+                s3_key=f"dialog-audio/{dialog.id}.mp3",
+                duration_seconds=3.0,
+                file_size_bytes=14,
+                line_timings={0: (0, 1500), 1: (1500, 3000)},
+                word_timestamps_map={0: None, 1: None},
+                alignment_source="original",
+                degenerate_line_count=0,
+            )
+        )
 
         sse_auth = _make_superuser_auth()
 
         with (
             patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
-            patch(
-                "src.services.elevenlabs_service.get_elevenlabs_service",
-                return_value=mock_elevenlabs,
-            ),
-            patch("src.api.v1.admin.get_s3_service", return_value=mock_s3),
+            patch("src.api.v1.admin.get_audio_generation_service", return_value=mock_audio_service),
             patch("src.api.v1.admin.settings") as mock_settings,
-            patch("mutagen.mp3.MP3", return_value=mock_mp3_instance),
         ):
             mock_settings.elevenlabs_configured = True
             response = await generate_dialog_audio_stream(
@@ -596,33 +599,30 @@ class TestDialogAudioStreamPipeline:
         db_session.add_all(lines)
         await db_session.flush()
 
-        elevenlabs_response = _make_elevenlabs_response(num_lines=3)
         mock_factory = _make_session_factory_mock(db_session)
 
-        mock_elevenlabs = MagicMock()
-        mock_elevenlabs.generate_dialog_audio = AsyncMock(return_value=elevenlabs_response)
-
-        mock_s3 = MagicMock()
-        mock_s3.upload_object = MagicMock(return_value=True)
-
-        mock_mp3_instance = MagicMock()
-        mock_mp3_instance.info.length = 4.5  # matches last segment end_time_seconds for num_lines=3
+        mock_audio_service = MagicMock()
+        mock_audio_service.generate_dialog = AsyncMock(
+            return_value=DialogAudioResult(
+                audio_bytes=b"fake-mp3-bytes",
+                s3_key=f"dialog-audio/{dialog.id}.mp3",
+                duration_seconds=4.5,
+                file_size_bytes=14,
+                line_timings={0: (0, 1500), 1: (1500, 3000), 2: (3000, 4500)},
+                word_timestamps_map={0: None, 1: None, 2: None},
+                alignment_source="original",
+                degenerate_line_count=0,
+            )
+        )
 
         sse_auth = _make_superuser_auth()
 
         with (
             patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
-            patch(
-                "src.services.elevenlabs_service.get_elevenlabs_service",
-                return_value=mock_elevenlabs,
-            ),
-            patch("src.api.v1.admin.get_s3_service", return_value=mock_s3),
+            patch("src.api.v1.admin.get_audio_generation_service", return_value=mock_audio_service),
             patch("src.api.v1.admin.settings") as mock_settings,
-            patch("mutagen.mp3.MP3", return_value=mock_mp3_instance),
         ):
             mock_settings.elevenlabs_configured = True
-            mock_settings.aws_s3_bucket = "test-bucket"
-            mock_settings.aws_s3_prefix = "dialog-audio"
             response = await generate_dialog_audio_stream(
                 dialog_id=dialog.id,
                 sse_auth=sse_auth,
@@ -702,33 +702,30 @@ class TestDialogAudioStreamPipeline:
         db_session.add_all(lines)
         await db_session.flush()
 
-        elevenlabs_response = _make_elevenlabs_response(num_lines=3)
         mock_factory = _make_session_factory_mock(db_session)
 
-        mock_elevenlabs = MagicMock()
-        mock_elevenlabs.generate_dialog_audio = AsyncMock(return_value=elevenlabs_response)
-
-        mock_s3 = MagicMock()
-        mock_s3.upload_object = MagicMock(return_value=True)
-
-        mock_mp3_instance = MagicMock()
-        mock_mp3_instance.info.length = 4.5  # matches last segment end_time_seconds for num_lines=3
+        mock_audio_service = MagicMock()
+        mock_audio_service.generate_dialog = AsyncMock(
+            return_value=DialogAudioResult(
+                audio_bytes=b"fake-mp3-bytes",
+                s3_key=f"dialog-audio/{dialog.id}.mp3",
+                duration_seconds=4.5,
+                file_size_bytes=14,
+                line_timings={0: (0, 1500), 1: (1500, 3000), 2: (3000, 4500)},
+                word_timestamps_map={0: None, 1: None, 2: None},
+                alignment_source="original",
+                degenerate_line_count=0,
+            )
+        )
 
         sse_auth = _make_superuser_auth()
 
         with (
             patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
-            patch(
-                "src.services.elevenlabs_service.get_elevenlabs_service",
-                return_value=mock_elevenlabs,
-            ),
-            patch("src.api.v1.admin.get_s3_service", return_value=mock_s3),
+            patch("src.api.v1.admin.get_audio_generation_service", return_value=mock_audio_service),
             patch("src.api.v1.admin.settings") as mock_settings,
-            patch("mutagen.mp3.MP3", return_value=mock_mp3_instance),
         ):
             mock_settings.elevenlabs_configured = True
-            mock_settings.aws_s3_bucket = "test-bucket"
-            mock_settings.aws_s3_prefix = "dialog-audio"
             response = await generate_dialog_audio_stream(
                 dialog_id=dialog.id,
                 sse_auth=sse_auth,
@@ -783,18 +780,15 @@ class TestDialogAudioStreamPipeline:
         await db_session.flush()
 
         mock_factory = _make_session_factory_mock(db_session)
-        mock_elevenlabs = MagicMock()
-        mock_elevenlabs.generate_dialog_audio = AsyncMock(
+        mock_audio_service = MagicMock()
+        mock_audio_service.generate_dialog = AsyncMock(
             side_effect=ElevenLabsAPIError(status_code=500, detail="Service error")
         )
         sse_auth = _make_superuser_auth()
 
         with (
             patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
-            patch(
-                "src.services.elevenlabs_service.get_elevenlabs_service",
-                return_value=mock_elevenlabs,
-            ),
+            patch("src.api.v1.admin.get_audio_generation_service", return_value=mock_audio_service),
             patch("src.api.v1.admin.settings") as mock_settings,
         ):
             mock_settings.elevenlabs_configured = True
@@ -813,7 +807,7 @@ class TestDialogAudioStreamPipeline:
 
     @pytest.mark.asyncio
     async def test_generate_dialog_audio_s3_upload_failure(self, db_session: AsyncSession) -> None:
-        """S3 upload failure → error event with stage=upload, dialog stays DRAFT."""
+        """S3 upload failure → error event with stage=elevenlabs (all exceptions from generate_dialog), dialog stays DRAFT."""
         from src.api.v1.admin import generate_dialog_audio_stream
 
         situation = await _create_situation(db_session)
@@ -840,19 +834,13 @@ class TestDialogAudioStreamPipeline:
         await db_session.flush()
 
         mock_factory = _make_session_factory_mock(db_session)
-        mock_elevenlabs = MagicMock()
-        mock_elevenlabs.generate_dialog_audio = AsyncMock(return_value=_make_elevenlabs_response(1))
-        mock_s3 = MagicMock()
-        mock_s3.upload_object = MagicMock(return_value=False)
+        mock_audio_service = MagicMock()
+        mock_audio_service.generate_dialog = AsyncMock(side_effect=RuntimeError("S3 upload failed"))
         sse_auth = _make_superuser_auth()
 
         with (
             patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
-            patch(
-                "src.services.elevenlabs_service.get_elevenlabs_service",
-                return_value=mock_elevenlabs,
-            ),
-            patch("src.api.v1.admin.get_s3_service", return_value=mock_s3),
+            patch("src.api.v1.admin.get_audio_generation_service", return_value=mock_audio_service),
             patch("src.api.v1.admin.settings") as mock_settings,
         ):
             mock_settings.elevenlabs_configured = True
@@ -864,14 +852,14 @@ class TestDialogAudioStreamPipeline:
 
         error_events = [e for e in events if e.get("event") == "dialog_audio:error"]
         assert len(error_events) >= 1
-        assert error_events[0]["data"]["stage"] == "upload"
+        assert error_events[0]["data"]["stage"] == "elevenlabs"
 
         await db_session.refresh(dialog)
         assert dialog.status == DialogStatus.DRAFT
 
     @pytest.mark.asyncio
     async def test_generate_dialog_audio_missing_segments(self, db_session: AsyncSession) -> None:
-        """ElevenLabs response without voice_segments → error with stage=timing."""
+        """Missing voice_segments → error with stage=elevenlabs (all exceptions from generate_dialog)."""
         from src.api.v1.admin import generate_dialog_audio_stream
 
         situation = await _create_situation(db_session)
@@ -897,23 +885,16 @@ class TestDialogAudioStreamPipeline:
         db_session.add(line)
         await db_session.flush()
 
-        # Response missing voice_segments
-        bad_response = {"audio_base64": base64.b64encode(b"fake").decode()}
-
         mock_factory = _make_session_factory_mock(db_session)
-        mock_elevenlabs = MagicMock()
-        mock_elevenlabs.generate_dialog_audio = AsyncMock(return_value=bad_response)
-        mock_s3 = MagicMock()
-        mock_s3.upload_object = MagicMock(return_value=True)
+        mock_audio_service = MagicMock()
+        mock_audio_service.generate_dialog = AsyncMock(
+            side_effect=ValueError("voice_segments missing")
+        )
         sse_auth = _make_superuser_auth()
 
         with (
             patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
-            patch(
-                "src.services.elevenlabs_service.get_elevenlabs_service",
-                return_value=mock_elevenlabs,
-            ),
-            patch("src.api.v1.admin.get_s3_service", return_value=mock_s3),
+            patch("src.api.v1.admin.get_audio_generation_service", return_value=mock_audio_service),
             patch("src.api.v1.admin.settings") as mock_settings,
         ):
             mock_settings.elevenlabs_configured = True
@@ -925,7 +906,7 @@ class TestDialogAudioStreamPipeline:
 
         error_events = [e for e in events if e.get("event") == "dialog_audio:error"]
         assert len(error_events) >= 1
-        assert error_events[0]["data"]["stage"] == "timing"
+        assert error_events[0]["data"]["stage"] == "elevenlabs"
 
     async def _setup_dialog_3lines(self, db_session: AsyncSession):
         """Create a dialog with 2 speakers and 3 lines for mutagen tests."""
@@ -973,208 +954,33 @@ class TestDialogAudioStreamPipeline:
         return dialog
 
     @pytest.mark.asyncio
-    async def test_mutagen_duration_overrides_segment_duration(
-        self, db_session: AsyncSession
-    ) -> None:
-        """Mutagen-parsed duration replaces voice_segments end_time_seconds."""
+    async def test_degenerate_segments_detected(self, db_session: AsyncSession) -> None:
+        """degenerate_line_count=1 in complete event when service returns degenerate_line_count=1."""
         from src.api.v1.admin import generate_dialog_audio_stream
 
         dialog = await self._setup_dialog_3lines(db_session)
 
-        elevenlabs_response = _make_elevenlabs_response(num_lines=3)
         mock_factory = _make_session_factory_mock(db_session)
-        mock_elevenlabs = MagicMock()
-        mock_elevenlabs.generate_dialog_audio = AsyncMock(return_value=elevenlabs_response)
-        mock_s3 = MagicMock()
-        mock_s3.upload_object = MagicMock(return_value=True)
-
-        # Parsed duration differs significantly from segment duration (4.5)
-        mock_mp3 = MagicMock()
-        mock_mp3.info.length = 16.5
-
-        sse_auth = _make_superuser_auth()
-
-        with (
-            patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
-            patch(
-                "src.services.elevenlabs_service.get_elevenlabs_service",
-                return_value=mock_elevenlabs,
-            ),
-            patch("src.api.v1.admin.get_s3_service", return_value=mock_s3),
-            patch("src.api.v1.admin.settings") as mock_settings,
-            patch("mutagen.mp3.MP3", return_value=mock_mp3),
-        ):
-            mock_settings.elevenlabs_configured = True
-            response = await generate_dialog_audio_stream(
-                dialog_id=dialog.id,
-                sse_auth=sse_auth,
+        mock_audio_service = MagicMock()
+        mock_audio_service.generate_dialog = AsyncMock(
+            return_value=DialogAudioResult(
+                audio_bytes=b"fake-mp3-bytes",
+                s3_key=f"dialog-audio/{dialog.id}.mp3",
+                duration_seconds=4.5,
+                file_size_bytes=14,
+                line_timings={0: (0, 0), 1: (1500, 3000), 2: (3000, 4500)},
+                word_timestamps_map={0: None, 1: None, 2: None},
+                alignment_source="redistribution",
+                degenerate_line_count=1,
             )
-            await _collect_stream(response)
-
-        await db_session.refresh(dialog)
-        assert dialog.audio_duration_seconds == pytest.approx(16.5)
-
-    @pytest.mark.asyncio
-    async def test_mutagen_failure_falls_back_to_segment_duration(
-        self, db_session: AsyncSession, caplog_loguru
-    ) -> None:
-        """HeaderNotFoundError → falls back to voice_segments duration with warning."""
-        from mutagen.mp3 import HeaderNotFoundError
-
-        from src.api.v1.admin import generate_dialog_audio_stream
-
-        dialog = await self._setup_dialog_3lines(db_session)
-
-        elevenlabs_response = _make_elevenlabs_response(num_lines=3)
-        mock_factory = _make_session_factory_mock(db_session)
-        mock_elevenlabs = MagicMock()
-        mock_elevenlabs.generate_dialog_audio = AsyncMock(return_value=elevenlabs_response)
-        mock_s3 = MagicMock()
-        mock_s3.upload_object = MagicMock(return_value=True)
+        )
 
         sse_auth = _make_superuser_auth()
 
         with (
             patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
-            patch(
-                "src.services.elevenlabs_service.get_elevenlabs_service",
-                return_value=mock_elevenlabs,
-            ),
-            patch("src.api.v1.admin.get_s3_service", return_value=mock_s3),
+            patch("src.api.v1.admin.get_audio_generation_service", return_value=mock_audio_service),
             patch("src.api.v1.admin.settings") as mock_settings,
-            patch("mutagen.mp3.MP3", side_effect=HeaderNotFoundError("bad mp3")),
-        ):
-            mock_settings.elevenlabs_configured = True
-            response = await generate_dialog_audio_stream(
-                dialog_id=dialog.id,
-                sse_auth=sse_auth,
-            )
-            await _collect_stream(response)
-
-        await db_session.refresh(dialog)
-        # Falls back to voice_segments duration (last segment end_time_seconds for num_lines=3 = 4.5)
-        assert dialog.audio_duration_seconds == pytest.approx(4.5)
-        assert "Failed to parse MP3 duration" in caplog_loguru.text
-
-    @pytest.mark.asyncio
-    async def test_mutagen_mismatch_warning_logged(
-        self, db_session: AsyncSession, caplog_loguru
-    ) -> None:
-        """Mismatch >1s between parsed and segment duration → warning logged."""
-        from src.api.v1.admin import generate_dialog_audio_stream
-
-        dialog = await self._setup_dialog_3lines(db_session)
-
-        elevenlabs_response = _make_elevenlabs_response(num_lines=3)
-        mock_factory = _make_session_factory_mock(db_session)
-        mock_elevenlabs = MagicMock()
-        mock_elevenlabs.generate_dialog_audio = AsyncMock(return_value=elevenlabs_response)
-        mock_s3 = MagicMock()
-        mock_s3.upload_object = MagicMock(return_value=True)
-
-        # segment=4.5, parsed=16.5, diff=12.0 → mismatch warning
-        mock_mp3 = MagicMock()
-        mock_mp3.info.length = 16.5
-
-        sse_auth = _make_superuser_auth()
-
-        with (
-            patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
-            patch(
-                "src.services.elevenlabs_service.get_elevenlabs_service",
-                return_value=mock_elevenlabs,
-            ),
-            patch("src.api.v1.admin.get_s3_service", return_value=mock_s3),
-            patch("src.api.v1.admin.settings") as mock_settings,
-            patch("mutagen.mp3.MP3", return_value=mock_mp3),
-        ):
-            mock_settings.elevenlabs_configured = True
-            response = await generate_dialog_audio_stream(
-                dialog_id=dialog.id,
-                sse_auth=sse_auth,
-            )
-            await _collect_stream(response)
-
-        assert "MP3 duration mismatch" in caplog_loguru.text
-        await db_session.refresh(dialog)
-        assert dialog.audio_duration_seconds == pytest.approx(16.5)
-
-    @pytest.mark.asyncio
-    async def test_mutagen_close_durations_no_warning(
-        self, db_session: AsyncSession, caplog_loguru
-    ) -> None:
-        """Mismatch <=1s → no mismatch warning."""
-        from src.api.v1.admin import generate_dialog_audio_stream
-
-        dialog = await self._setup_dialog_3lines(db_session)
-
-        elevenlabs_response = _make_elevenlabs_response(num_lines=3)
-        mock_factory = _make_session_factory_mock(db_session)
-        mock_elevenlabs = MagicMock()
-        mock_elevenlabs.generate_dialog_audio = AsyncMock(return_value=elevenlabs_response)
-        mock_s3 = MagicMock()
-        mock_s3.upload_object = MagicMock(return_value=True)
-
-        # segment=4.5, parsed=4.55, diff=0.05 → no mismatch warning
-        mock_mp3 = MagicMock()
-        mock_mp3.info.length = 4.55
-
-        sse_auth = _make_superuser_auth()
-
-        with (
-            patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
-            patch(
-                "src.services.elevenlabs_service.get_elevenlabs_service",
-                return_value=mock_elevenlabs,
-            ),
-            patch("src.api.v1.admin.get_s3_service", return_value=mock_s3),
-            patch("src.api.v1.admin.settings") as mock_settings,
-            patch("mutagen.mp3.MP3", return_value=mock_mp3),
-        ):
-            mock_settings.elevenlabs_configured = True
-            response = await generate_dialog_audio_stream(
-                dialog_id=dialog.id,
-                sse_auth=sse_auth,
-            )
-            await _collect_stream(response)
-
-        assert "MP3 duration mismatch" not in caplog_loguru.text
-        await db_session.refresh(dialog)
-        assert dialog.audio_duration_seconds == pytest.approx(4.55)
-
-    @pytest.mark.asyncio
-    async def test_degenerate_segments_detected(
-        self, db_session: AsyncSession, caplog_loguru
-    ) -> None:
-        """degenerate_line_count=1 in complete event and warning logged when one segment is zero-width."""
-        from src.api.v1.admin import generate_dialog_audio_stream
-
-        dialog = await self._setup_dialog_3lines(db_session)
-
-        elevenlabs_response = _make_elevenlabs_response(num_lines=3)
-        elevenlabs_response["voice_segments"][0]["end_time_seconds"] = elevenlabs_response[
-            "voice_segments"
-        ][0]["start_time_seconds"]
-
-        mock_factory = _make_session_factory_mock(db_session)
-        mock_elevenlabs = MagicMock()
-        mock_elevenlabs.generate_dialog_audio = AsyncMock(return_value=elevenlabs_response)
-        mock_s3 = MagicMock()
-        mock_s3.upload_object = MagicMock(return_value=True)
-        mock_mp3_instance = MagicMock()
-        mock_mp3_instance.info.length = 4.5
-
-        sse_auth = _make_superuser_auth()
-
-        with (
-            patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
-            patch(
-                "src.services.elevenlabs_service.get_elevenlabs_service",
-                return_value=mock_elevenlabs,
-            ),
-            patch("src.api.v1.admin.get_s3_service", return_value=mock_s3),
-            patch("src.api.v1.admin.settings") as mock_settings,
-            patch("mutagen.mp3.MP3", return_value=mock_mp3_instance),
         ):
             mock_settings.elevenlabs_configured = True
             response = await generate_dialog_audio_stream(
@@ -1185,35 +991,35 @@ class TestDialogAudioStreamPipeline:
 
         complete_event = next(e for e in events if e["event"] == "dialog_audio:complete")
         assert complete_event["data"]["degenerate_line_count"] == 1
-        assert "degenerate" in caplog_loguru.text
 
     @pytest.mark.asyncio
     async def test_normal_segments_degenerate_count_zero(self, db_session: AsyncSession) -> None:
-        """degenerate_line_count=0 in complete event when all segments are non-degenerate."""
+        """degenerate_line_count=0 in complete event when service returns degenerate_line_count=0."""
         from src.api.v1.admin import generate_dialog_audio_stream
 
         dialog = await self._setup_dialog_3lines(db_session)
 
-        elevenlabs_response = _make_elevenlabs_response(num_lines=3)
         mock_factory = _make_session_factory_mock(db_session)
-        mock_elevenlabs = MagicMock()
-        mock_elevenlabs.generate_dialog_audio = AsyncMock(return_value=elevenlabs_response)
-        mock_s3 = MagicMock()
-        mock_s3.upload_object = MagicMock(return_value=True)
-        mock_mp3_instance = MagicMock()
-        mock_mp3_instance.info.length = 4.5
+        mock_audio_service = MagicMock()
+        mock_audio_service.generate_dialog = AsyncMock(
+            return_value=DialogAudioResult(
+                audio_bytes=b"fake-mp3-bytes",
+                s3_key=f"dialog-audio/{dialog.id}.mp3",
+                duration_seconds=4.5,
+                file_size_bytes=14,
+                line_timings={0: (0, 1500), 1: (1500, 3000), 2: (3000, 4500)},
+                word_timestamps_map={0: None, 1: None, 2: None},
+                alignment_source="original",
+                degenerate_line_count=0,
+            )
+        )
 
         sse_auth = _make_superuser_auth()
 
         with (
             patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
-            patch(
-                "src.services.elevenlabs_service.get_elevenlabs_service",
-                return_value=mock_elevenlabs,
-            ),
-            patch("src.api.v1.admin.get_s3_service", return_value=mock_s3),
+            patch("src.api.v1.admin.get_audio_generation_service", return_value=mock_audio_service),
             patch("src.api.v1.admin.settings") as mock_settings,
-            patch("mutagen.mp3.MP3", return_value=mock_mp3_instance),
         ):
             mock_settings.elevenlabs_configured = True
             response = await generate_dialog_audio_stream(

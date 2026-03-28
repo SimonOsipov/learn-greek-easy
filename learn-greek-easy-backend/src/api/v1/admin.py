@@ -9,7 +9,6 @@ All endpoints require superuser authentication.
 """
 
 import asyncio
-import base64
 import json
 from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
@@ -147,7 +146,7 @@ from src.schemas.word_entry import (
     WordEntryResponse,
 )
 from src.services.announcement_service import AnnouncementService
-from src.services.audio_generation_service import get_audio_generation_service
+from src.services.audio_generation_service import DialogInput, get_audio_generation_service
 from src.services.card_error_admin_service import CardErrorAdminService
 from src.services.card_generator_service import CardGeneratorService
 from src.services.changelog_service import ChangelogService
@@ -4528,12 +4527,17 @@ async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, Non
             event="dialog_audio:elevenlabs",
         )
 
-        # Stage 3 — ElevenLabs call
-        from src.services.elevenlabs_service import get_elevenlabs_service
+        audio_service = get_audio_generation_service()
+        dialog_inputs = [
+            DialogInput(text=line["text"], voice_id=speakers_data[line["speaker_id"]])
+            for line in sorted_lines
+        ]
 
-        elevenlabs = get_elevenlabs_service()
         try:
-            result_data = await elevenlabs.generate_dialog_audio(inputs)
+            audio_result = await audio_service.generate_dialog(
+                inputs=dialog_inputs,
+                s3_key=f"dialog-audio/{dialog_id}.mp3",
+            )
         except Exception as e:
             yield format_sse_event(
                 {"stage": "elevenlabs", "error": str(e), "dialog_id": dialog_data["id"]},
@@ -4541,143 +4545,16 @@ async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, Non
             )
             return
 
-        # Stage 4 — Decode audio bytes
-        audio_bytes = base64.b64decode(result_data["audio_base64"])
-        s3_key = f"dialog-audio/{dialog_id}.mp3"
-
-        # Stage 5 — Timing (validate before uploading to avoid orphaned S3 objects)
-        word_timestamps_map: dict[int, list[dict] | None] = {
-            i: None for i in range(len(sorted_lines))
-        }
-        try:
-            voice_segments = result_data.get("voice_segments")
-            if not voice_segments:
-                raise ValueError("voice_segments missing or empty in ElevenLabs response")
-
-            timing_map: dict[int, tuple[int, int]] = {}
-            for seg in voice_segments:
-                idx = seg["dialogue_input_index"]
-                start_ms = int(seg["start_time_seconds"] * 1000)
-                end_ms = int(seg["end_time_seconds"] * 1000)
-                timing_map[idx] = (start_ms, end_ms)
-
-            degenerate_line_count = sum(
-                1 for start_ms, end_ms in timing_map.values() if start_ms == end_ms
-            )
-            if degenerate_line_count > 0:
-                logger.warning(
-                    "Dialog {} has {} degenerate line(s) (start_ms == end_ms)",
-                    dialog_id,
-                    degenerate_line_count,
-                )
-
-            for i in range(len(sorted_lines)):
-                if i not in timing_map:
-                    raise ValueError(f"No timing segment for line index {i}")
-
-            duration_seconds = voice_segments[-1]["end_time_seconds"]
-            word_timestamps_map = _build_word_timestamps(result_data, sorted_lines)
-        except Exception as e:
-            yield format_sse_event(
-                {"stage": "timing", "error": str(e), "dialog_id": dialog_data["id"]},
-                event="dialog_audio:error",
-            )
-            return
-
-        alignment_source = "original"
-
-        # Stage 4.5 — Parse actual MP3 duration from audio bytes
-        from io import BytesIO
-
-        from mutagen.mp3 import MP3
-
-        segment_duration = duration_seconds
-        try:
-            mp3_info: Any = MP3(fileobj=BytesIO(audio_bytes))
-            parsed_duration: float = mp3_info.info.length
-            if abs(parsed_duration - segment_duration) > 1.0:
-                logger.warning(
-                    "MP3 duration mismatch for dialog {}: parsed={:.2f}s, segments={:.2f}s",
-                    dialog_id,
-                    parsed_duration,
-                    segment_duration,
-                )
-            duration_seconds = parsed_duration
-        except Exception as exc:
-            logger.warning(
-                "Failed to parse MP3 duration for dialog {}, falling back to voice_segments: {}",
-                dialog_id,
-                exc,
-            )
-
-        # Stage 5.5 — Forced alignment for degenerate lines
-        if degenerate_line_count > 0:
-            try:
-                full_transcript = "\n".join(line["text"] for line in sorted_lines)
-                fa_response = await elevenlabs.forced_align(audio_bytes, full_transcript)
-                timing_map, word_timestamps_map = _apply_forced_alignment(
-                    fa_response,
-                    timing_map,
-                    sorted_lines,
-                    word_timestamps_map,
-                )
-                remaining = sum(1 for s, e in timing_map.values() if s == e)
-                if remaining > 0:
-                    logger.warning(
-                        "Forced alignment left {} degenerate line(s) in dialog {}, falling through to redistribution",
-                        remaining,
-                        dialog_id,
-                    )
-                else:
-                    alignment_source = "forced_alignment"
-                    logger.info(
-                        "Forced alignment fixed {} degenerate line(s) in dialog {}, loss={:.4f}",
-                        degenerate_line_count,
-                        dialog_id,
-                        fa_response.get("loss", -1),
-                    )
-            except Exception as exc:
-                logger.warning(
-                    "Forced alignment failed for dialog {}, falling back to redistribution: {}",
-                    dialog_id,
-                    exc,
-                )
-
-        # Stage 5 — Redistribute degenerate timing
-        remaining_degenerate = sum(1 for s, e in timing_map.values() if s == e)
-        if remaining_degenerate > 0:
-            duration_ms = int(duration_seconds * 1000)
-            timing_map, word_timestamps_map = _redistribute_degenerate_timing(
-                timing_map,
-                sorted_lines,
-                duration_ms,
-                word_timestamps_map,
-            )
-            if alignment_source == "original":
-                alignment_source = "redistribution"
-            logger.info(
-                "Redistributed timing for {} remaining degenerate line(s) in dialog {}",
-                remaining_degenerate,
-                dialog_id,
-            )
-
         yield format_sse_event(
-            {"segments_count": len(voice_segments), "alignment_source": alignment_source},
+            {
+                "segments_count": len(audio_result.line_timings),
+                "alignment_source": audio_result.alignment_source,
+            },
             event="dialog_audio:timing",
         )
 
-        # Stage 4 (continued) — Upload after timing is validated
-        s3 = get_s3_service()
-        upload_ok = s3.upload_object(s3_key, audio_bytes, "audio/mpeg")
-        if not upload_ok:
-            yield format_sse_event(
-                {"stage": "upload", "error": "S3 upload failed", "dialog_id": dialog_data["id"]},
-                event="dialog_audio:error",
-            )
-            return
-
         yield format_sse_event(
-            {"s3_key": s3_key, "audio_size_bytes": len(audio_bytes)},
+            {"s3_key": audio_result.s3_key, "audio_size_bytes": audio_result.file_size_bytes},
             event="dialog_audio:upload",
         )
 
@@ -4699,34 +4576,34 @@ async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, Non
                 update(ListeningDialog)
                 .where(ListeningDialog.id == dialog_id)
                 .values(
-                    audio_s3_key=s3_key,
+                    audio_s3_key=audio_result.s3_key,
                     audio_generated_at=datetime.now(timezone.utc),
-                    audio_file_size_bytes=len(audio_bytes),
-                    audio_duration_seconds=duration_seconds,
+                    audio_file_size_bytes=audio_result.file_size_bytes,
+                    audio_duration_seconds=audio_result.duration_seconds,
                     status=target_status,
                 )
             )
             for i, line in enumerate(sorted_lines):
-                start_ms, end_ms = timing_map[i]
+                start_ms, end_ms = audio_result.line_timings[i]
                 await session.execute(
                     update(DialogLine)
                     .where(DialogLine.id == UUID(line["id"]))
                     .values(
                         start_time_ms=start_ms,
                         end_time_ms=end_ms,
-                        word_timestamps=word_timestamps_map.get(i),
+                        word_timestamps=audio_result.word_timestamps_map.get(i),
                     )
                 )
 
         yield format_sse_event(
             {
                 "dialog_id": dialog_data["id"],
-                "s3_key": s3_key,
-                "duration_seconds": duration_seconds,
-                "audio_size_bytes": len(audio_bytes),
+                "s3_key": audio_result.s3_key,
+                "duration_seconds": audio_result.duration_seconds,
+                "audio_size_bytes": audio_result.file_size_bytes,
                 "has_exercises": has_exercises,
-                "degenerate_line_count": degenerate_line_count,
-                "alignment_source": alignment_source,
+                "degenerate_line_count": audio_result.degenerate_line_count,
+                "alignment_source": audio_result.alignment_source,
             },
             event="dialog_audio:complete",
         )
