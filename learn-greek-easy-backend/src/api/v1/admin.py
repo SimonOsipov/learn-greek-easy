@@ -2216,8 +2216,6 @@ async def _word_audio_sse_pipeline(
     uploading each to S3 and persisting the audio key to the database.
     Emits SSE events for each stage of the pipeline per part.
     """
-    from src.services.elevenlabs_service import get_elevenlabs_service
-
     yield format_sse_event("", event="connected")
 
     factory = get_session_factory()
@@ -2272,8 +2270,7 @@ async def _word_audio_sse_pipeline(
     )
 
     # Stage 2: Per-part TTS + S3 upload + DB persist loop
-    elevenlabs = get_elevenlabs_service()
-    s3 = get_s3_service()
+    audio_service = get_audio_generation_service()
     parts_completed = 0
 
     for part_index, part_info in enumerate(parts):
@@ -2298,9 +2295,6 @@ async def _word_audio_sse_pipeline(
             else:
                 tts_text = next(ex["greek"] for ex in examples_data if ex["id"] == example_id)
 
-            # Generate speech
-            audio_bytes = await elevenlabs.generate_speech(tts_text, voice_id=WORD_AUDIO_VOICE_ID)
-
             # Compute S3 key
             s3_key = (
                 f"{WORD_AUDIO_S3_PREFIX}/{word_entry_id}.mp3"
@@ -2308,23 +2302,30 @@ async def _word_audio_sse_pipeline(
                 else f"{WORD_AUDIO_S3_PREFIX}/{word_entry_id}/{example_id}.mp3"
             )
 
-            current_stage = "upload"
-            yield format_sse_event(
-                {"part": part_name, "example_id": example_id, "s3_key": s3_key},
-                event="word_audio:upload",
+            async def _on_progress(stage: str, **_kwargs: object) -> None:
+                nonlocal current_stage
+                current_stage = stage
+
+            audio_result = await audio_service.generate_single(
+                text=tts_text,
+                s3_key=s3_key,
+                voice_id=WORD_AUDIO_VOICE_ID,
+                on_progress=_on_progress,
             )
 
-            upload_ok = s3.upload_object(s3_key, audio_bytes, "audio/mpeg")
-            if not upload_ok:
-                raise RuntimeError(f"S3 upload failed for {s3_key}")
-
             current_stage = "persist"
+            yield format_sse_event(
+                {"part": part_name, "example_id": example_id, "s3_key": audio_result.s3_key},
+                event="word_audio:upload",
+            )
             yield format_sse_event(
                 {"part": part_name, "example_id": example_id},
                 event="word_audio:persist",
             )
 
-            await _word_audio_persist_ready(factory, word_entry_id, part_name, example_id, s3_key)
+            await _word_audio_persist_ready(
+                factory, word_entry_id, part_name, example_id, audio_result.s3_key
+            )
 
             parts_completed += 1
             yield format_sse_event(
