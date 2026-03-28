@@ -447,7 +447,15 @@ class TestWordAudioSSEPipeline:
 
         mock_factory = _make_session_factory_mock(word_entry)
         mock_audio_service = MagicMock()
-        mock_audio_service.generate_single = AsyncMock(side_effect=RuntimeError("S3 upload failed"))
+
+        async def _s3_failure(*args: object, **kwargs: object) -> None:
+            on_progress = kwargs.get("on_progress")
+            if on_progress is not None:
+                await on_progress("tts")
+                await on_progress("upload")
+            raise RuntimeError("S3 upload failed")
+
+        mock_audio_service.generate_single = AsyncMock(side_effect=_s3_failure)
 
         with (
             patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
@@ -460,7 +468,7 @@ class TestWordAudioSSEPipeline:
 
         error_events = [e for e in events if e["event"] == "word_audio:error"]
         assert len(error_events) >= 1
-        assert error_events[0]["data"]["stage"] == "tts"
+        assert error_events[0]["data"]["stage"] == "upload"
         assert error_events[0]["data"]["part"] == "lemma"
 
         # Complete event still emitted with 0 parts completed
