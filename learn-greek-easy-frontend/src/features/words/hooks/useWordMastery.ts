@@ -40,6 +40,18 @@ function deriveMasteryStatus(mastery: WordMasteryItem | null | undefined): Maste
   return 'none';
 }
 
+export function deriveCardTypeMasteryStatus(
+  mastery: WordMasteryItem | null | undefined,
+  cardType: string
+): MasteryStatus {
+  if (!mastery?.type_progress) return 'none';
+  const entry = mastery.type_progress.find((tp) => tp.card_type === cardType);
+  if (!entry) return 'none';
+  if (entry.total_count > 0 && entry.mastered_count >= entry.total_count) return 'mastered';
+  if (entry.mastered_count > 0 || entry.studied_count > 0) return 'studied';
+  return 'none';
+}
+
 export function useWordMastery({
   deckId,
   wordEntryId,
@@ -78,7 +90,7 @@ export function useWordMastery({
         card_type: card.card_type,
         front_content: card.front_content,
         back_content: card.back_content,
-        mastery_status: deriveMasteryStatus(mastery),
+        mastery_status: deriveCardTypeMasteryStatus(mastery, card.card_type),
       }));
   }, [cardRecords, masteryQuery.data]);
 

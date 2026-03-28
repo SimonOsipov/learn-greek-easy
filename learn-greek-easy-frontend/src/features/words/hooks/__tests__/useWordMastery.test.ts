@@ -43,7 +43,16 @@ const mockCards = [
   },
 ];
 
-const mockMasteryResponse = (masteredCount: number, studiedCount: number) => ({
+const mockMasteryResponse = (
+  masteredCount: number,
+  studiedCount: number,
+  typeProgress?: Array<{
+    card_type: string;
+    mastered_count: number;
+    studied_count: number;
+    total_count: number;
+  }>
+) => ({
   deck_id: 'deck-1',
   items: [
     {
@@ -51,6 +60,7 @@ const mockMasteryResponse = (masteredCount: number, studiedCount: number) => ({
       mastered_count: masteredCount,
       studied_count: studiedCount,
       total_count: 2,
+      type_progress: typeProgress ?? [],
     },
   ],
 });
@@ -108,8 +118,8 @@ describe('useWordMastery Hook', () => {
     expect(result.current.cards).toHaveLength(2);
     expect(result.current.cards[0].id).toBe('card-1');
     expect(result.current.cards[1].id).toBe('card-2');
-    expect(result.current.cards[0].mastery_status).toBe('mastered');
-    expect(result.current.cards[1].mastery_status).toBe('mastered');
+    expect(result.current.cards[0].mastery_status).toBe('none');
+    expect(result.current.cards[1].mastery_status).toBe('none');
     expect(result.current.wordMasteryStatus).toBe('mastered');
   });
 
@@ -128,8 +138,8 @@ describe('useWordMastery Hook', () => {
     });
 
     expect(result.current.cards).toHaveLength(2);
-    expect(result.current.cards[0].mastery_status).toBe('studied');
-    expect(result.current.cards[1].mastery_status).toBe('studied');
+    expect(result.current.cards[0].mastery_status).toBe('none');
+    expect(result.current.cards[1].mastery_status).toBe('none');
     expect(result.current.wordMasteryStatus).toBe('studied');
   });
 
@@ -147,7 +157,7 @@ describe('useWordMastery Hook', () => {
     });
 
     expect(result.current.wordMasteryStatus).toBe('studied');
-    expect(result.current.cards[0].mastery_status).toBe('studied');
+    expect(result.current.cards[0].mastery_status).toBe('none');
   });
 
   it('should return none status when both mastered_count and studied_count are 0', async () => {
@@ -270,5 +280,98 @@ describe('useWordMastery Hook', () => {
     expect(wordEntryAPI.getCardsByWordEntry).not.toHaveBeenCalled();
     expect(result.current.isLoading).toBe(false);
     expect(result.current.cards).toEqual([]);
+  });
+
+  describe('per-card-type mastery', () => {
+    it('should return mastered for a card whose type_progress entry is fully mastered', async () => {
+      const typeProgress = [
+        { card_type: 'meaning_el_to_en', mastered_count: 1, studied_count: 1, total_count: 1 },
+        { card_type: 'meaning_en_to_el', mastered_count: 0, studied_count: 1, total_count: 1 },
+      ];
+      vi.mocked(progressAPI.getWordMastery).mockResolvedValue(
+        mockMasteryResponse(1, 2, typeProgress)
+      );
+      vi.mocked(wordEntryAPI.getCardsByWordEntry).mockResolvedValue(mockCards);
+
+      const { result } = renderHook(
+        () => useWordMastery({ deckId: 'deck-1', wordEntryId: 'word-1' }),
+        { wrapper: createWrapper() }
+      );
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      expect(result.current.cards[0].mastery_status).toBe('mastered');
+      expect(result.current.cards[1].mastery_status).toBe('studied');
+      expect(result.current.wordMasteryStatus).toBe('studied');
+    });
+
+    it('should return studied for a card whose type_progress entry has studied but not mastered', async () => {
+      const typeProgress = [
+        { card_type: 'meaning_el_to_en', mastered_count: 0, studied_count: 1, total_count: 1 },
+      ];
+      vi.mocked(progressAPI.getWordMastery).mockResolvedValue(
+        mockMasteryResponse(0, 1, typeProgress)
+      );
+      vi.mocked(wordEntryAPI.getCardsByWordEntry).mockResolvedValue(mockCards);
+
+      const { result } = renderHook(
+        () => useWordMastery({ deckId: 'deck-1', wordEntryId: 'word-1' }),
+        { wrapper: createWrapper() }
+      );
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      expect(result.current.cards[0].mastery_status).toBe('studied');
+      expect(result.current.cards[1].mastery_status).toBe('none');
+    });
+
+    it('should return none for a card whose type_progress entry has zero counts', async () => {
+      const typeProgress = [
+        { card_type: 'meaning_el_to_en', mastered_count: 0, studied_count: 0, total_count: 1 },
+      ];
+      vi.mocked(progressAPI.getWordMastery).mockResolvedValue(
+        mockMasteryResponse(0, 0, typeProgress)
+      );
+      vi.mocked(wordEntryAPI.getCardsByWordEntry).mockResolvedValue(mockCards);
+
+      const { result } = renderHook(
+        () => useWordMastery({ deckId: 'deck-1', wordEntryId: 'word-1' }),
+        { wrapper: createWrapper() }
+      );
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      expect(result.current.cards[0].mastery_status).toBe('none');
+      expect(result.current.cards[1].mastery_status).toBe('none');
+    });
+
+    it('should return none when card type has no matching type_progress entry', async () => {
+      const typeProgress = [
+        { card_type: 'article', mastered_count: 1, studied_count: 1, total_count: 1 },
+      ];
+      vi.mocked(progressAPI.getWordMastery).mockResolvedValue(
+        mockMasteryResponse(1, 1, typeProgress)
+      );
+      vi.mocked(wordEntryAPI.getCardsByWordEntry).mockResolvedValue(mockCards);
+
+      const { result } = renderHook(
+        () => useWordMastery({ deckId: 'deck-1', wordEntryId: 'word-1' }),
+        { wrapper: createWrapper() }
+      );
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      expect(result.current.cards[0].mastery_status).toBe('none');
+      expect(result.current.cards[1].mastery_status).toBe('none');
+      expect(result.current.wordMasteryStatus).toBe('studied');
+    });
   });
 });
