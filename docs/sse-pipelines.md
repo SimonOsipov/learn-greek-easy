@@ -16,10 +16,7 @@ Admin-triggered generation tasks (audio, noun generation, dialog audio) use **SS
 Every SSE pipeline is an `async def` generator in `src/api/v1/admin.py` that follows this shape:
 
 ```python
-async def _my_sse_pipeline(resource_id: UUID) -> AsyncGenerator[str, None]:
-    from src.services.elevenlabs_service import get_elevenlabs_service  # lazy import
-    from src.services.s3_service import get_s3_service
-
+async def _my_audio_sse_pipeline(resource_id: UUID) -> AsyncGenerator[str, None]:
     yield format_sse_event("", event="connected")
     factory = get_session_factory()
 
@@ -34,19 +31,35 @@ async def _my_sse_pipeline(resource_id: UUID) -> AsyncGenerator[str, None]:
     # Progress events + work (wrapped in try/except)
     current_stage = "tts"
     try:
-        yield format_sse_event({"id": str(resource_id)}, event="domain:tts")
-        audio_bytes = await get_elevenlabs_service().generate_speech(plain_value)
-
-        current_stage = "upload"
         s3_key = f"prefix/{resource_id}.mp3"
+        audio_service = get_audio_generation_service()
+
+        yield format_sse_event({"id": str(resource_id)}, event="domain:tts")
+
+        async def _on_progress(stage: str, **kwargs: Any) -> None:
+            nonlocal current_stage
+            current_stage = stage
+
+        audio_result = await audio_service.generate_single(
+            text=plain_value,
+            s3_key=s3_key,
+            on_progress=_on_progress,
+        )
+
         yield format_sse_event({"id": str(resource_id), "s3_key": s3_key}, event="domain:upload")
-        if not get_s3_service().upload_object(s3_key, audio_bytes, "audio/mpeg"):
-            raise RuntimeError("S3 upload failed")
 
         current_stage = "persist"
         yield format_sse_event({"id": str(resource_id)}, event="domain:persist")
         async with factory.begin() as session:
-            await session.execute(update(MyModel).where(MyModel.id == resource_id).values(audio_s3_key=s3_key))
+            await session.execute(
+                update(MyModel)
+                .where(MyModel.id == resource_id)
+                .values(
+                    audio_s3_key=s3_key,
+                    audio_duration_seconds=audio_result.duration_seconds,
+                    audio_file_size_bytes=audio_result.file_size_bytes,
+                )
+            )
 
         yield format_sse_event({"id": str(resource_id), "s3_key": s3_key}, event="domain:complete")
 
@@ -58,8 +71,48 @@ Key rules:
 - **One session per DB operation** via `factory.begin()` — never reuse across stages
 - **Extract plain Python values** before the session context closes
 - **`try/except` wraps all stages after load** — all exceptions become `domain:error` SSE events
-- **Lazy imports** for ElevenLabs and S3 services inside the function body
+- **Use `AudioGenerationService`** for all audio generation — do not call ElevenLabs or S3 directly
+- **`on_progress` callback updates `current_stage`** — enables accurate error stage reporting
 - **`asyncio.shield` is handled automatically** by `sse_stream()` — do not add it manually
+
+## Audio Generation Service
+
+For audio generation within SSE pipelines, use `AudioGenerationService` from `src/services/audio_generation_service.py`. Do **not** call `get_elevenlabs_service()` or `get_s3_service()` directly inside pipeline functions.
+
+```python
+from src.services.audio_generation_service import (
+    DialogInput,
+    get_audio_generation_service,
+)
+
+audio_service = get_audio_generation_service()
+
+# Single-narrator TTS (news, culture, word audio)
+audio_result = await audio_service.generate_single(
+    text=text,
+    s3_key=s3_key,
+    voice_id=VOICE_ID,          # optional — uses ElevenLabs default if omitted
+    on_progress=_on_progress,   # optional — callback receives "tts" then "upload"
+    news_item_id=news_item_id,  # optional — forwarded to ElevenLabs for logging
+)
+# audio_result.duration_seconds, audio_result.file_size_bytes, audio_result.s3_key
+
+# Multi-speaker dialog TTS
+dialog_inputs = [
+    DialogInput(text=line["text"], voice_id=speakers[line["speaker_id"]])
+    for line in sorted_lines
+]
+dialog_result = await audio_service.generate_dialog(
+    inputs=dialog_inputs,
+    s3_key=s3_key,
+)
+# dialog_result.line_timings, dialog_result.word_timestamps_map,
+# dialog_result.alignment_source, dialog_result.degenerate_line_count
+```
+
+`generate_single()` handles: ElevenLabs TTS call, bitrate-based duration calculation, S3 upload.
+
+`generate_dialog()` handles: ElevenLabs dialog TTS call, timing extraction, word timestamps, MP3 duration (via mutagen), forced alignment for degenerate lines, redistribution fallback, S3 upload.
 
 ## Endpoint Wrapper Pattern
 
