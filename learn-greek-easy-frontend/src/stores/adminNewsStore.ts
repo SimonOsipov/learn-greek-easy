@@ -46,17 +46,11 @@ interface AdminNewsState {
   // Filter
   countryFilter: NewsCountry | 'all';
 
-  // Regeneration state
-  regeneratingId: string | null;
-  regeneratingA2Id: string | null;
-
   // Actions
   fetchNewsItems: () => Promise<void>;
   createNewsItem: (data: NewsItemWithQuestionCreate) => Promise<NewsItemWithCardResponse>;
   updateNewsItem: (id: string, data: NewsItemUpdate) => Promise<NewsItemResponse>;
   deleteNewsItem: (id: string) => Promise<void>;
-  regenerateAudio: (id: string) => Promise<void>;
-  regenerateA2Audio: (id: string) => Promise<void>;
   updateItemAudioFromSSE: (
     id: string,
     level: 'b2' | 'a2',
@@ -89,8 +83,6 @@ export const useAdminNewsStore = create<AdminNewsState>()(
       isDeleting: false,
       error: null,
       countryFilter: 'all' as NewsCountry | 'all',
-      regeneratingId: null,
-      regeneratingA2Id: null,
 
       /**
        * Fetch paginated news items list from admin API
@@ -193,42 +185,6 @@ export const useAdminNewsStore = create<AdminNewsState>()(
       },
 
       /**
-       * Regenerate audio for a news item
-       */
-      regenerateAudio: async (id: string) => {
-        if (get().regeneratingId !== null) return;
-
-        set({ regeneratingId: id, error: null });
-
-        try {
-          await adminAPI.regenerateAudio(id);
-          set({ regeneratingId: null });
-        } catch (error) {
-          const message = error instanceof Error ? error.message : 'Failed to regenerate audio';
-          set({ regeneratingId: null, error: message });
-          throw error;
-        }
-      },
-
-      /**
-       * Regenerate A2 audio for a news item
-       */
-      regenerateA2Audio: async (id: string) => {
-        if (get().regeneratingA2Id !== null) return;
-
-        set({ regeneratingA2Id: id, error: null });
-
-        try {
-          await adminAPI.regenerateA2Audio(id);
-          set({ regeneratingA2Id: null });
-        } catch (error) {
-          const message = error instanceof Error ? error.message : 'Failed to regenerate A2 audio';
-          set({ regeneratingA2Id: null, error: message });
-          throw error;
-        }
-      },
-
-      /**
        * Update a news item's audio URL from an SSE audio_completed event
        */
       updateItemAudioFromSSE: (
@@ -302,6 +258,4 @@ export const selectPagination = (state: AdminNewsState) => ({
   total: state.total,
   totalPages: state.totalPages,
 });
-export const selectRegeneratingId = (state: AdminNewsState) => state.regeneratingId;
-export const selectRegeneratingA2Id = (state: AdminNewsState) => state.regeneratingA2Id;
 export const selectCountryFilter = (state: AdminNewsState) => state.countryFilter;

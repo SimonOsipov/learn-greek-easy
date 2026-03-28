@@ -1518,34 +1518,6 @@ export const adminAPI = {
   },
 
   /**
-   * Regenerate audio narration for a news item
-   *
-   * Triggers background TTS generation for the news item's Greek description.
-   * Requires superuser authentication.
-   *
-   * @param newsItemId - UUID of the news item
-   * @throws 404 if news item not found
-   * @throws 503 if ElevenLabs service is unavailable or not configured
-   */
-  regenerateAudio: async (newsItemId: string): Promise<void> => {
-    return api.post<void>(`/api/v1/admin/news/${newsItemId}/regenerate-audio`);
-  },
-
-  /**
-   * Regenerate A2 audio narration for a news item
-   *
-   * Triggers background TTS generation for the news item's A2 Greek description.
-   * Requires superuser authentication.
-   *
-   * @param newsItemId - UUID of the news item
-   * @throws 404 if news item not found
-   * @throws 503 if ElevenLabs service is unavailable or not configured
-   */
-  regenerateA2Audio: async (newsItemId: string): Promise<void> => {
-    return api.post<void>(`/api/v1/admin/news/${newsItemId}/regenerate-a2-audio`);
-  },
-
-  /**
    * Get a culture question by ID (regardless of pending status)
    *
    * Used to fetch the question associated with a news item for preview.
@@ -1828,4 +1800,12 @@ export const adminAPI = {
 
 export function getDialogAudioStreamUrl(dialogId: string): string {
   return `/api/v1/admin/listening-dialogs/${dialogId}/generate-audio/stream`;
+}
+
+export function getNewsB2AudioStreamUrl(newsItemId: string): string {
+  return `/api/v1/admin/news/${newsItemId}/generate-b2-audio/stream`;
+}
+
+export function getNewsA2AudioStreamUrl(newsItemId: string): string {
+  return `/api/v1/admin/news/${newsItemId}/generate-a2-audio/stream`;
 }

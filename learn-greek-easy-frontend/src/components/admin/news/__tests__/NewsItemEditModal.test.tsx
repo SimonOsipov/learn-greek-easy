@@ -92,29 +92,33 @@ vi.mock('@/hooks/use-toast', () => ({
 
 // Mock adminNewsStore
 const mockUpdateNewsItem = vi.fn();
-const mockRegenerateAudio = vi.fn();
-const mockRegenerateA2Audio = vi.fn();
 const mockUpdateItemAudioFromSSE = vi.fn();
 vi.mock('@/stores/adminNewsStore', () => ({
   useAdminNewsStore: () => ({
     updateNewsItem: mockUpdateNewsItem,
     isUpdating: false,
-    regenerateAudio: mockRegenerateAudio,
-    regenerateA2Audio: mockRegenerateA2Audio,
     updateItemAudioFromSSE: mockUpdateItemAudioFromSSE,
   }),
 }));
 
 // Mock useSSE
 type SSEOptions = {
+  method?: string;
+  body?: unknown;
   enabled?: boolean;
   onEvent?: (event: { type: string; data: unknown }) => void;
   onError?: () => void;
+  maxRetries?: number;
+  reconnect?: boolean;
 };
-const mockUseSSE = vi.fn((_url: string, _options: SSEOptions) => ({
-  state: 'disconnected',
-  close: vi.fn(),
-}));
+
+let capturedB2Options: SSEOptions = {};
+let capturedA2Options: SSEOptions = {};
+const mockUseSSE = vi.fn((url: string, options: SSEOptions) => {
+  if (url.includes('generate-b2-audio')) capturedB2Options = options;
+  if (url.includes('generate-a2-audio')) capturedA2Options = options;
+  return { state: 'disconnected', close: vi.fn() };
+});
 vi.mock('@/hooks/useSSE', () => ({
   useSSE: (url: string, options: SSEOptions) => mockUseSSE(url, options),
 }));
@@ -567,98 +571,67 @@ describe('NewsItemEditModal — Question preview card', () => {
 });
 
 describe('NewsItemEditModal — SSE audio regeneration', () => {
-  let capturedSSECallbacks: SSEOptions = {};
-
   beforeEach(() => {
     mockCurrentLanguage.value = 'en';
     vi.clearAllMocks();
-    capturedSSECallbacks = {};
-    mockUseSSE.mockImplementation((_url: string, options: SSEOptions) => {
-      capturedSSECallbacks = options;
+    capturedB2Options = {};
+    capturedA2Options = {};
+    mockUseSSE.mockImplementation((url: string, options: SSEOptions) => {
+      if (url.includes('generate-b2-audio')) capturedB2Options = options;
+      if (url.includes('generate-a2-audio')) capturedA2Options = options;
       return { state: 'disconnected', close: vi.fn() };
     });
-    mockRegenerateAudio.mockResolvedValue(undefined);
-    mockRegenerateA2Audio.mockResolvedValue(undefined);
   });
 
-  it('calls useSSE with URL containing news item id when B2 regenerate is clicked', async () => {
+  it('calls useSSE with B2 stream URL containing news item id', async () => {
     const item = makeNewsItem({ id: 'item-abc' });
     render(<NewsItemEditModal open={true} onOpenChange={vi.fn()} item={item} />);
 
     const button = screen.getByTestId('modal-regenerate-b2-audio');
     await userEvent.click(button);
 
-    // useSSE should have been called with the SSE URL for the item
     expect(mockUseSSE).toHaveBeenCalledWith(
       expect.stringContaining('item-abc'),
-      expect.objectContaining({ enabled: true })
+      expect.objectContaining({ method: 'POST' })
+    );
+    expect(mockUseSSE).toHaveBeenCalledWith(
+      expect.stringContaining('generate-b2-audio/stream'),
+      expect.anything()
     );
   });
 
-  it('calls regenerateAudio when B2 regenerate is clicked', async () => {
+  it('B2 regenerate button is disabled while SSE stream active', async () => {
     const item = makeNewsItem({ id: 'item-abc' });
     render(<NewsItemEditModal open={true} onOpenChange={vi.fn()} item={item} />);
 
     const button = screen.getByTestId('modal-regenerate-b2-audio');
     await userEvent.click(button);
 
-    expect(mockRegenerateAudio).toHaveBeenCalledWith('item-abc');
+    await waitFor(() => {
+      expect(button).toBeDisabled();
+    });
   });
 
-  it('shows stage text during B2 generation via audio_progress event', async () => {
+  it('shows stage text during B2 generation via news_audio:tts event', async () => {
     const item = makeNewsItem({ id: 'item-abc' });
     render(<NewsItemEditModal open={true} onOpenChange={vi.fn()} item={item} />);
 
-    // Click B2 regenerate to open SSE connection
     const button = screen.getByTestId('modal-regenerate-b2-audio');
     await userEvent.click(button);
 
-    // Simulate audio_progress SSE event
     act(() => {
-      capturedSSECallbacks.onEvent?.({
-        type: 'audio_progress',
-        data: { level: 'b2', stage: 'Synthesizing speech' },
+      capturedB2Options.onEvent?.({
+        type: 'news_audio:tts',
+        data: {},
       });
     });
 
     await waitFor(() => {
-      expect(screen.getByText('Synthesizing speech')).toBeInTheDocument();
+      expect(screen.getByText('tts')).toBeInTheDocument();
     });
   });
 
-  it('clears B2 stage text on audio_completed event', async () => {
-    const item = makeNewsItem({ id: 'item-abc' });
-    render(<NewsItemEditModal open={true} onOpenChange={vi.fn()} item={item} />);
-
-    const button = screen.getByTestId('modal-regenerate-b2-audio');
-    await userEvent.click(button);
-
-    // First fire progress to set stage text
-    act(() => {
-      capturedSSECallbacks.onEvent?.({
-        type: 'audio_progress',
-        data: { level: 'b2', stage: 'Uploading' },
-      });
-    });
-
-    await waitFor(() => {
-      expect(screen.getByText('Uploading')).toBeInTheDocument();
-    });
-
-    // Then fire completed to clear it
-    act(() => {
-      capturedSSECallbacks.onEvent?.({
-        type: 'audio_completed',
-        data: { level: 'b2', news_item_id: 'item-abc', audio_url: 'https://cdn/audio.mp3' },
-      });
-    });
-
-    await waitFor(() => {
-      expect(screen.queryByText('Uploading')).not.toBeInTheDocument();
-    });
-  });
-
-  it('shows destructive toast on audio_failed event', async () => {
+  it('clears B2 stage text on news_audio:complete event', async () => {
     const item = makeNewsItem({ id: 'item-abc' });
     render(<NewsItemEditModal open={true} onOpenChange={vi.fn()} item={item} />);
 
@@ -666,9 +639,39 @@ describe('NewsItemEditModal — SSE audio regeneration', () => {
     await userEvent.click(button);
 
     act(() => {
-      capturedSSECallbacks.onEvent?.({
-        type: 'audio_failed',
-        data: { level: 'b2', error: 'TTS service unavailable' },
+      capturedB2Options.onEvent?.({
+        type: 'news_audio:upload',
+        data: {},
+      });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('upload')).toBeInTheDocument();
+    });
+
+    act(() => {
+      capturedB2Options.onEvent?.({
+        type: 'news_audio:complete',
+        data: { news_item_id: 'item-abc', audio_url: 'https://cdn/audio.mp3' },
+      });
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText('upload')).not.toBeInTheDocument();
+    });
+  });
+
+  it('shows destructive toast on news_audio:error event', async () => {
+    const item = makeNewsItem({ id: 'item-abc' });
+    render(<NewsItemEditModal open={true} onOpenChange={vi.fn()} item={item} />);
+
+    const button = screen.getByTestId('modal-regenerate-b2-audio');
+    await userEvent.click(button);
+
+    act(() => {
+      capturedB2Options.onEvent?.({
+        type: 'news_audio:error',
+        data: { stage: 'tts', error: 'TTS service unavailable' },
       });
     });
 
@@ -677,7 +680,7 @@ describe('NewsItemEditModal — SSE audio regeneration', () => {
     });
   });
 
-  it('calls updateItemAudioFromSSE on audio_completed with b2 level', async () => {
+  it('calls updateItemAudioFromSSE on news_audio:complete with b2 level', async () => {
     const item = makeNewsItem({ id: 'item-abc' });
     render(<NewsItemEditModal open={true} onOpenChange={vi.fn()} item={item} />);
 
@@ -685,9 +688,9 @@ describe('NewsItemEditModal — SSE audio regeneration', () => {
     await userEvent.click(button);
 
     act(() => {
-      capturedSSECallbacks.onEvent?.({
-        type: 'audio_completed',
-        data: { level: 'b2', news_item_id: 'item-abc', audio_url: 'https://cdn/audio.mp3' },
+      capturedB2Options.onEvent?.({
+        type: 'news_audio:complete',
+        data: { news_item_id: 'item-abc', audio_url: 'https://cdn/audio.mp3' },
       });
     });
 
@@ -696,6 +699,30 @@ describe('NewsItemEditModal — SSE audio regeneration', () => {
         'item-abc',
         'b2',
         'https://cdn/audio.mp3',
+        null
+      );
+    });
+  });
+
+  it('calls updateItemAudioFromSSE on news_audio:complete for A2 level', async () => {
+    const item = makeNewsItem({ id: 'item-abc', has_a2_content: true });
+    render(<NewsItemEditModal open={true} onOpenChange={vi.fn()} item={item} />);
+
+    const button = screen.getByTestId('modal-regenerate-a2-audio');
+    await userEvent.click(button);
+
+    act(() => {
+      capturedA2Options.onEvent?.({
+        type: 'news_audio:complete',
+        data: { news_item_id: 'item-abc', audio_url: 'https://cdn/audio_a2.mp3' },
+      });
+    });
+
+    await waitFor(() => {
+      expect(mockUpdateItemAudioFromSSE).toHaveBeenCalledWith(
+        'item-abc',
+        'a2',
+        'https://cdn/audio_a2.mp3',
         null
       );
     });
