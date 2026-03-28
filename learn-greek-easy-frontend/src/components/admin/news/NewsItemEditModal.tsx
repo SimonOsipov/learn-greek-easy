@@ -35,7 +35,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useSSE } from '@/hooks/useSSE';
-import { adminAPI } from '@/services/adminAPI';
+import { adminAPI, getNewsA2AudioStreamUrl, getNewsB2AudioStreamUrl } from '@/services/adminAPI';
 import type { NewsItemResponse, NewsItemUpdate, PendingQuestion } from '@/services/adminAPI';
 import { useAdminNewsStore } from '@/stores/adminNewsStore';
 
@@ -240,45 +240,47 @@ export const NewsItemEditModal: React.FC<NewsItemEditModalProps> = ({
   const { t } = useTranslation('admin');
   const { currentLanguage } = useLanguage();
   const [jsonInput, setJsonInput] = useState('');
-  const { updateNewsItem, isUpdating, regenerateAudio, regenerateA2Audio, updateItemAudioFromSSE } =
-    useAdminNewsStore();
+  const { updateNewsItem, isUpdating, updateItemAudioFromSSE } = useAdminNewsStore();
   const [audioError, setAudioError] = useState(false);
 
   const [b2Stage, setB2Stage] = useState<string | null>(null);
   const [a2Stage, setA2Stage] = useState<string | null>(null);
-  const [sseUrl, setSseUrl] = useState<string | null>(null);
+  const [b2SseEnabled, setB2SseEnabled] = useState(false);
+  const [a2SseEnabled, setA2SseEnabled] = useState(false);
 
   const [audioA2Error, setAudioA2Error] = useState<string | null>(null);
   const [questionData, setQuestionData] = useState<PendingQuestion | null>(null);
 
-  useSSE(sseUrl ?? '', {
-    enabled: sseUrl !== null,
+  // B2 audio stream
+  useSSE(item ? getNewsB2AudioStreamUrl(item.id) : '', {
+    method: 'POST',
+    body: {},
+    enabled: b2SseEnabled && !!item,
+    maxRetries: 0,
+    reconnect: false,
     onEvent: (event) => {
-      const data = event.data as any;
-      const level = data?.level as 'b2' | 'a2';
+      const data = event.data as Record<string, unknown>;
       switch (event.type) {
-        case 'audio_progress':
-          if (level === 'b2') setB2Stage(data.stage ?? data.message ?? 'Generating...');
-          else setA2Stage(data.stage ?? data.message ?? 'Generating...');
+        case 'news_audio:tts':
+        case 'news_audio:upload':
+        case 'news_audio:persist':
+          setB2Stage(event.type.split(':')[1]);
           break;
-        case 'audio_completed':
-          if (level === 'b2') {
-            setB2Stage(null);
-            if (data.audio_url)
-              updateItemAudioFromSSE(data.news_item_id, 'b2', data.audio_url, null);
-          } else {
-            setA2Stage(null);
-            if (data.audio_url)
-              updateItemAudioFromSSE(data.news_item_id, 'a2', data.audio_url, null);
-          }
+        case 'news_audio:complete':
+          setB2Stage(null);
+          setB2SseEnabled(false);
+          updateItemAudioFromSSE(
+            String(data.news_item_id ?? item?.id ?? ''),
+            'b2',
+            String(data.audio_url ?? ''),
+            null
+          );
           break;
-        case 'audio_failed':
-          if (level === 'b2') setB2Stage(null);
-          else setA2Stage(null);
+        case 'news_audio:error':
+          setB2Stage(null);
+          setB2SseEnabled(false);
           toast({
-            title:
-              level === 'b2' ? t('news.audio.regenerateError') : t('news.audio.regenerateA2Error'),
-            description: data.error ?? 'Audio generation failed',
+            title: String(data.error ?? t('news.audio.regenerateError')),
             variant: 'destructive',
           });
           break;
@@ -286,7 +288,50 @@ export const NewsItemEditModal: React.FC<NewsItemEditModalProps> = ({
     },
     onError: () => {
       setB2Stage(null);
+      setB2SseEnabled(false);
+      toast({ title: t('news.audio.regenerateError'), variant: 'destructive' });
+    },
+  });
+
+  // A2 audio stream
+  useSSE(item ? getNewsA2AudioStreamUrl(item.id) : '', {
+    method: 'POST',
+    body: {},
+    enabled: a2SseEnabled && !!item,
+    maxRetries: 0,
+    reconnect: false,
+    onEvent: (event) => {
+      const data = event.data as Record<string, unknown>;
+      switch (event.type) {
+        case 'news_audio:tts':
+        case 'news_audio:upload':
+        case 'news_audio:persist':
+          setA2Stage(event.type.split(':')[1]);
+          break;
+        case 'news_audio:complete':
+          setA2Stage(null);
+          setA2SseEnabled(false);
+          updateItemAudioFromSSE(
+            String(data.news_item_id ?? item?.id ?? ''),
+            'a2',
+            String(data.audio_url ?? ''),
+            null
+          );
+          break;
+        case 'news_audio:error':
+          setA2Stage(null);
+          setA2SseEnabled(false);
+          toast({
+            title: String(data.error ?? t('news.audio.regenerateA2Error')),
+            variant: 'destructive',
+          });
+          break;
+      }
+    },
+    onError: () => {
       setA2Stage(null);
+      setA2SseEnabled(false);
+      toast({ title: t('news.audio.regenerateA2Error'), variant: 'destructive' });
     },
   });
 
@@ -321,36 +366,25 @@ export const NewsItemEditModal: React.FC<NewsItemEditModalProps> = ({
   // Clear SSE state when modal closes
   useEffect(() => {
     if (!open) {
-      setSseUrl(null);
+      setB2SseEnabled(false);
+      setA2SseEnabled(false);
       setB2Stage(null);
       setA2Stage(null);
       setAudioA2Error(null);
     }
   }, [open]);
 
-  const handleRegenerateB2 = useCallback(async () => {
-    if (!item || b2Stage !== null) return;
-    setB2Stage('Starting...');
-    setSseUrl(`/api/v1/admin/news/${item.id}/audio/stream`);
-    try {
-      await regenerateAudio(item.id);
-    } catch (error) {
-      setB2Stage(null);
-      toast({ title: t('news.audio.regenerateError'), variant: 'destructive' });
-    }
-  }, [item, b2Stage, regenerateAudio, t]);
+  const handleRegenerateB2 = useCallback(() => {
+    if (!item || b2SseEnabled) return;
+    setB2Stage('starting');
+    setB2SseEnabled(true);
+  }, [item, b2SseEnabled]);
 
-  const handleRegenerateA2 = useCallback(async () => {
-    if (!item || !item.has_a2_content || a2Stage !== null) return;
-    setA2Stage('Starting...');
-    setSseUrl(`/api/v1/admin/news/${item.id}/audio/stream`);
-    try {
-      await regenerateA2Audio(item.id);
-    } catch {
-      setA2Stage(null);
-      toast({ title: t('news.audio.regenerateA2Error'), variant: 'destructive' });
-    }
-  }, [item, a2Stage, regenerateA2Audio, t]);
+  const handleRegenerateA2 = useCallback(() => {
+    if (!item || !item.has_a2_content || a2SseEnabled) return;
+    setA2Stage('starting');
+    setA2SseEnabled(true);
+  }, [item, a2SseEnabled]);
 
   const handleAudioError = useCallback(() => {
     setAudioError(true);
@@ -459,7 +493,7 @@ export const NewsItemEditModal: React.FC<NewsItemEditModalProps> = ({
                 variant="outline"
                 size="sm"
                 onClick={handleRegenerateB2}
-                disabled={b2Stage !== null}
+                disabled={b2SseEnabled}
                 data-testid="modal-regenerate-b2-audio"
               >
                 {b2Stage !== null ? (
@@ -537,7 +571,7 @@ export const NewsItemEditModal: React.FC<NewsItemEditModalProps> = ({
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={a2Stage !== null || !item.has_a2_content}
+                  disabled={a2SseEnabled || !item.has_a2_content}
                   onClick={handleRegenerateA2}
                   data-testid="modal-regenerate-a2-audio"
                 >

@@ -1439,14 +1439,6 @@ export const adminAPI = {
     return api.patch<CultureQuestionAdminResponse>(`/api/v1/culture/questions/${questionId}`, data);
   },
 
-  /**
-   * Generate or regenerate audio for a culture question
-   * Requires superuser authentication.
-   */
-  generateCultureQuestionAudio: async (questionId: string): Promise<void> => {
-    return api.post<void>(`/api/v1/culture/questions/${questionId}/generate-audio`);
-  },
-
   // ============================================
   // News Item Management
   // ============================================
@@ -1515,34 +1507,6 @@ export const adminAPI = {
    */
   deleteNewsItem: async (id: string): Promise<void> => {
     return api.delete<void>(`/api/v1/admin/news/${id}`);
-  },
-
-  /**
-   * Regenerate audio narration for a news item
-   *
-   * Triggers background TTS generation for the news item's Greek description.
-   * Requires superuser authentication.
-   *
-   * @param newsItemId - UUID of the news item
-   * @throws 404 if news item not found
-   * @throws 503 if ElevenLabs service is unavailable or not configured
-   */
-  regenerateAudio: async (newsItemId: string): Promise<void> => {
-    return api.post<void>(`/api/v1/admin/news/${newsItemId}/regenerate-audio`);
-  },
-
-  /**
-   * Regenerate A2 audio narration for a news item
-   *
-   * Triggers background TTS generation for the news item's A2 Greek description.
-   * Requires superuser authentication.
-   *
-   * @param newsItemId - UUID of the news item
-   * @throws 404 if news item not found
-   * @throws 503 if ElevenLabs service is unavailable or not configured
-   */
-  regenerateA2Audio: async (newsItemId: string): Promise<void> => {
-    return api.post<void>(`/api/v1/admin/news/${newsItemId}/regenerate-a2-audio`);
   },
 
   /**
@@ -1826,6 +1790,18 @@ export const adminAPI = {
   },
 };
 
+export function getCultureQuestionAudioStreamUrl(questionId: string): string {
+  return `/api/v1/admin/culture-questions/${questionId}/generate-audio/stream`;
+}
+
 export function getDialogAudioStreamUrl(dialogId: string): string {
   return `/api/v1/admin/listening-dialogs/${dialogId}/generate-audio/stream`;
+}
+
+export function getNewsB2AudioStreamUrl(newsItemId: string): string {
+  return `/api/v1/admin/news/${newsItemId}/generate-b2-audio/stream`;
+}
+
+export function getNewsA2AudioStreamUrl(newsItemId: string): string {
+  return `/api/v1/admin/news/${newsItemId}/generate-a2-audio/stream`;
 }

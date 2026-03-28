@@ -196,4 +196,3 @@ class GenericEventBus:
 
 audio_event_bus = GenericEventBus()
 dashboard_event_bus = GenericEventBus()
-news_audio_event_bus = GenericEventBus()

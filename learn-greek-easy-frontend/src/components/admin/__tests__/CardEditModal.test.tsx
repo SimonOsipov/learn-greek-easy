@@ -13,13 +13,14 @@
  */
 
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { I18nextProvider } from 'react-i18next';
 
 import { CardEditModal, type CardEditModalProps } from '../CardEditModal';
 import { adminAPI } from '@/services/adminAPI';
 import type { AdminCultureQuestion } from '@/services/adminAPI';
+import type { SSEEvent } from '@/types/sse';
 import i18n from '@/i18n';
 
 // ============================================
@@ -30,13 +31,38 @@ vi.mock('@/services/adminAPI', () => ({
   GENERATE_WORD_ENTRY_STREAM_URL: '/api/v1/admin/word-entries/generate/stream',
   adminAPI: {
     updateCultureQuestion: vi.fn(),
-    generateCultureQuestionAudio: vi.fn(),
   },
+  getCultureQuestionAudioStreamUrl: vi.fn(
+    (id: string) => `/api/v1/admin/culture-questions/${id}/generate-audio/stream`
+  ),
 }));
 
 const mockToast = vi.fn();
 vi.mock('@/hooks/use-toast', () => ({
   toast: (args: unknown) => mockToast(args),
+}));
+
+type SSEOptions = {
+  method?: string;
+  body?: unknown;
+  enabled?: boolean;
+  onEvent?: (event: SSEEvent) => void;
+  onError?: () => void;
+  maxRetries?: number;
+  reconnect?: boolean;
+};
+
+let capturedOnEvent: ((event: SSEEvent) => void) | undefined;
+let capturedEnabled = false;
+
+const mockUseSSE = vi.fn((url: string, options: SSEOptions) => {
+  capturedEnabled = options.enabled ?? false;
+  if (options.enabled && options.onEvent) capturedOnEvent = options.onEvent;
+  return { state: options.enabled ? 'connected' : 'disconnected', close: vi.fn() };
+});
+
+vi.mock('@/hooks/useSSE', () => ({
+  useSSE: (url: string, options: SSEOptions) => mockUseSSE(url, options),
 }));
 
 // ============================================
@@ -133,6 +159,9 @@ const renderModal = (props: Partial<CardEditModalProps> = {}) => {
 describe('CardEditModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    capturedOnEvent = undefined;
+    capturedEnabled = false;
+    mockUseSSE.mockClear();
     (adminAPI.updateCultureQuestion as Mock).mockResolvedValue({ id: 'question-123' });
   });
 
@@ -625,59 +654,61 @@ describe('CardEditModal', () => {
       expect(screen.getByTestId('generate-audio-btn')).toHaveTextContent('Regenerate');
     });
 
-    it('calls generateCultureQuestionAudio on click', async () => {
+    it('calls useSSE with stream URL when generate clicked', async () => {
       const question = createMockQuestion({ audio_s3_key: null });
-      vi.mocked(adminAPI.generateCultureQuestionAudio).mockResolvedValueOnce(undefined);
       renderModal({ question });
       await userEvent.click(screen.getByTestId('generate-audio-btn'));
-      expect(adminAPI.generateCultureQuestionAudio).toHaveBeenCalledWith(question.id);
+      expect(mockUseSSE).toHaveBeenCalledWith(
+        expect.stringContaining('generate-audio/stream'),
+        expect.objectContaining({ method: 'POST', enabled: true })
+      );
     });
 
-    it('shows loading state during generation', async () => {
+    it('shows generating state while SSE stream is active', async () => {
       const question = createMockQuestion({ audio_s3_key: null });
-      let resolve: () => void;
-      vi.mocked(adminAPI.generateCultureQuestionAudio).mockImplementationOnce(
-        () =>
-          new Promise<void>((res) => {
-            resolve = res;
-          })
-      );
       renderModal({ question });
       await userEvent.click(screen.getByTestId('generate-audio-btn'));
       expect(screen.getByTestId('generate-audio-btn')).toBeDisabled();
-      resolve!();
     });
 
-    it('shows success toast on success', async () => {
+    it('shows success toast on culture_audio:complete', async () => {
       const question = createMockQuestion({ audio_s3_key: null });
-      vi.mocked(adminAPI.generateCultureQuestionAudio).mockResolvedValueOnce(undefined);
       renderModal({ question });
       await userEvent.click(screen.getByTestId('generate-audio-btn'));
-      await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith(
-          expect.objectContaining({ title: 'Audio generation started' })
-        );
+      act(() => {
+        capturedOnEvent?.({
+          type: 'culture_audio:complete',
+          data: { question_id: 'q-1', s3_key: 'key' },
+        });
       });
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({ title: expect.any(String) })
+      );
     });
 
-    it('shows error toast on failure', async () => {
+    it('shows error toast on culture_audio:error', async () => {
       const question = createMockQuestion({ audio_s3_key: null });
-      vi.mocked(adminAPI.generateCultureQuestionAudio).mockRejectedValueOnce(new Error('fail'));
       renderModal({ question });
       await userEvent.click(screen.getByTestId('generate-audio-btn'));
-      await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ variant: 'destructive' }));
+      act(() => {
+        capturedOnEvent?.({
+          type: 'culture_audio:error',
+          data: { error: 'TTS failed', stage: 'tts' },
+        });
       });
+      expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ variant: 'destructive' }));
     });
 
     it('does not call onSuccess after audio generation (modal stays open)', async () => {
       const question = createMockQuestion({ audio_s3_key: null });
       const onSuccess = vi.fn();
-      vi.mocked(adminAPI.generateCultureQuestionAudio).mockResolvedValueOnce(undefined);
       renderModal({ question, onSuccess });
       await userEvent.click(screen.getByTestId('generate-audio-btn'));
-      await waitFor(() => {
-        expect(mockToast).toHaveBeenCalled();
+      act(() => {
+        capturedOnEvent?.({
+          type: 'culture_audio:complete',
+          data: { question_id: 'q-1', s3_key: 'key' },
+        });
       });
       expect(onSuccess).not.toHaveBeenCalled();
     });

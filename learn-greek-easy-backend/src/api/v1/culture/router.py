@@ -41,7 +41,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.api.v1.culture.mock_exam import router as mock_exam_router
 from src.config import settings
 from src.core.dependencies import get_current_superuser, get_current_user, get_locale_from_header
-from src.core.exceptions import CultureQuestionNotFoundException, ValidationException
+from src.core.exceptions import ValidationException
 from src.core.logging import get_logger
 from src.db.dependencies import get_db
 from src.db.models import User
@@ -72,11 +72,7 @@ from src.services.s3_service import (
     S3Service,
     get_s3_service,
 )
-from src.tasks import (
-    generate_audio_for_culture_question_task,
-    is_background_tasks_enabled,
-    persist_culture_answer_task,
-)
+from src.tasks import is_background_tasks_enabled, persist_culture_answer_task
 
 logger = get_logger(__name__)
 
@@ -1280,100 +1276,3 @@ async def delete_culture_question(
     await db.commit()
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-
-@router.post(
-    "/questions/{question_id}/generate-audio",
-    status_code=status.HTTP_202_ACCEPTED,
-    summary="Generate audio for a culture question",
-    description="""
-    Trigger TTS audio generation for a culture question's Greek text.
-
-    **Authentication**: Required (Superuser only)
-
-    Generates speech audio from question_text.el using ElevenLabs,
-    uploads to S3, and updates the question's audio_s3_key field.
-    """,
-    responses={
-        202: {
-            "description": "Audio generation started",
-            "content": {"application/json": {"example": {"message": "Audio generation started"}}},
-        },
-        400: {"description": "Question has no Greek text"},
-        404: {"description": "Question not found"},
-        503: {"description": "Audio service unavailable"},
-    },
-)
-async def generate_culture_question_audio(
-    question_id: UUID,
-    background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_superuser),
-) -> dict:
-    """Generate TTS audio for a culture question.
-
-    Requires superuser privileges.
-
-    Args:
-        question_id: UUID of the question to generate audio for
-        background_tasks: FastAPI background tasks (injected)
-        db: Database session (injected)
-        current_user: Authenticated superuser (injected)
-
-    Returns:
-        202 with status message
-
-    Raises:
-        400: If question has no Greek text
-        404: If question not found
-        503: If audio service unavailable
-    """
-    # Gate check: both background tasks and ElevenLabs must be available
-    if not is_background_tasks_enabled() or not settings.elevenlabs_configured:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Audio generation is not available",
-        )
-
-    # Fetch question directly
-    from sqlalchemy import select
-
-    from src.db.models import CultureQuestion
-
-    result = await db.execute(select(CultureQuestion).where(CultureQuestion.id == question_id))
-    question = result.scalar_one_or_none()
-    if question is None:
-        raise CultureQuestionNotFoundException(question_id=str(question_id))
-
-    # Block audio generation for news-linked questions
-    if question.news_item_id is not None:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Cannot regenerate audio for news-linked questions. Audio is managed by the news item.",
-        )
-
-    # Validate Greek text exists
-    question_text_el = question.question_text.get("el", "") if question.question_text else ""
-    if not question_text_el.strip():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Question has no Greek text for audio generation",
-        )
-
-    # Schedule background audio generation
-    background_tasks.add_task(
-        generate_audio_for_culture_question_task,
-        question_id=question_id,
-        question_text_el=question_text_el,
-        db_url=settings.database_url,
-    )
-
-    logger.info(
-        "Audio generation scheduled for culture question",
-        extra={
-            "question_id": str(question_id),
-            "text_length": len(question_text_el),
-        },
-    )
-
-    return {"message": "Audio generation started"}
