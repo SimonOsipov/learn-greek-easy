@@ -19,21 +19,57 @@ function asString(value: unknown): string {
   return typeof value === 'string' ? value : '';
 }
 
-function extractCardContent(card: CardMasteryItem) {
+function translatePrompt(englishPrompt: string, lang: string, cardType: string): string {
+  if (lang !== 'ru') return englishPrompt;
+
+  const cardTypePrompts: Record<string, string> = {
+    meaning_el_to_en: 'Что это значит?',
+    meaning_en_to_el: 'Как это сказать по-гречески?',
+    article: 'Какой артикль?',
+  };
+
+  if (cardType in cardTypePrompts) return cardTypePrompts[cardType];
+
+  const promptTranslations: Record<string, string> = {
+    'What is the plural form?': 'Какая форма множественного числа?',
+    'What is the singular form?': 'Какая форма единственного числа?',
+    'What is the plural?': 'Какое множественное число?',
+    'What is the singular?': 'Какое единственное число?',
+    'Translate this sentence': 'Переведите это предложение',
+    'Translate to Greek': 'Переведите на греческий',
+    'What is the genitive singular?': 'Какой родительный падеж ед. числа?',
+    'What is the genitive plural?': 'Какой родительный падеж мн. числа?',
+    'What is the accusative singular?': 'Какой винительный падеж ед. числа?',
+    'What is the accusative plural?': 'Какой винительный падеж мн. числа?',
+    'What is the vocative singular?': 'Какое звательное ед. числа?',
+    'What is the vocative plural?': 'Какое звательное мн. числа?',
+  };
+
+  return promptTranslations[englishPrompt] ?? englishPrompt;
+}
+
+function extractCardContent(card: CardMasteryItem, lang: string) {
+  const isRu = lang === 'ru';
   const front = card.front_content;
   const back = card.back_content;
   return {
-    frontPrompt: asString(front.prompt),
+    frontPrompt: translatePrompt(asString(front.prompt), lang, card.card_type),
     frontMain: asString(front.main),
-    backAnswer: asString(back.answer),
-    backSub: asString(back.answer_sub) || asString(back.gender) || asString(back.answer_ru),
+    backAnswer: isRu ? asString(back.answer_ru) || asString(back.answer) : asString(back.answer),
+    backSub: isRu
+      ? asString(back.answer_sub_ru) ||
+        asString(back.gender_ru) ||
+        asString(back.answer_sub) ||
+        asString(back.gender)
+      : asString(back.answer_sub) || asString(back.gender) || asString(back.answer_ru),
   };
 }
 
 export function MiniFlipCard({ card, onFlip }: MiniFlipCardProps) {
   const [flipped, setFlipped] = useState(false);
-  const { t } = useTranslation('deck');
-  const { frontPrompt, frontMain, backAnswer, backSub } = extractCardContent(card);
+  const { t, i18n } = useTranslation('deck');
+  const lang = i18n.language?.split('-')[0] ?? 'en';
+  const { frontPrompt, frontMain, backAnswer, backSub } = extractCardContent(card, lang);
   const dotColor = MASTERY_DOT_COLOR[card.mastery_status];
 
   const handleFlip = () => {

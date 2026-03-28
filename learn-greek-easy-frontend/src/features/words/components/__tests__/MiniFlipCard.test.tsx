@@ -1,13 +1,20 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { MiniFlipCard } from '../MiniFlipCard';
 import type { CardMasteryItem } from '../../hooks';
+
+const mockLanguage = { current: 'en' };
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, unknown>) =>
       opts?.defaultValue ? String(opts.defaultValue) : key,
+    i18n: {
+      get language() {
+        return mockLanguage.current;
+      },
+    },
   }),
 }));
 
@@ -110,5 +117,88 @@ describe('MiniFlipCard', () => {
   it('renders correct data-testid based on card id', () => {
     render(<MiniFlipCard card={makeCard({ id: 'my-card-42' })} />);
     expect(screen.getByTestId('mini-flip-card-my-card-42')).toBeInTheDocument();
+  });
+
+  describe('Russian language', () => {
+    beforeEach(() => {
+      mockLanguage.current = 'ru';
+    });
+    afterEach(() => {
+      mockLanguage.current = 'en';
+    });
+
+    it('translates prompt for meaning_el_to_en card type', () => {
+      render(
+        <MiniFlipCard
+          card={makeCard({
+            card_type: 'meaning_el_to_en',
+            front_content: { prompt: 'What does this mean?', main: 'σπίτι' },
+          })}
+        />
+      );
+      expect(screen.getByText('Что это значит?')).toBeInTheDocument();
+    });
+
+    it('shows answer_ru on back face for sentence_translation card', () => {
+      render(
+        <MiniFlipCard
+          card={makeCard({
+            card_type: 'sentence_translation',
+            back_content: {
+              answer: 'My sister lives in London.',
+              answer_ru: 'Моя сестра живёт в Лондоне.',
+            },
+          })}
+        />
+      );
+      fireEvent.click(screen.getByTestId('mini-flip-card-test-card-1'));
+      expect(screen.getByText('Моя сестра живёт в Лондоне.')).toBeInTheDocument();
+    });
+
+    it('shows gender_ru as backSub for article card', () => {
+      render(
+        <MiniFlipCard
+          card={makeCard({
+            card_type: 'article',
+            back_content: {
+              answer: 'η',
+              gender: 'Feminine',
+              gender_ru: 'Женский',
+            },
+          })}
+        />
+      );
+      fireEvent.click(screen.getByTestId('mini-flip-card-test-card-1'));
+      expect(screen.getByText('Женский')).toBeInTheDocument();
+    });
+
+    it('shows answer_sub_ru as backSub for plural_form card', () => {
+      render(
+        <MiniFlipCard
+          card={makeCard({
+            card_type: 'plural_form',
+            back_content: {
+              answer: 'αδερφές',
+              answer_sub: 'sisters',
+              answer_sub_ru: 'сёстры',
+            },
+          })}
+        />
+      );
+      fireEvent.click(screen.getByTestId('mini-flip-card-test-card-1'));
+      expect(screen.getByText('сёстры')).toBeInTheDocument();
+    });
+
+    it('translates accusative plural prompt for declension card', () => {
+      render(
+        <MiniFlipCard
+          card={makeCard({
+            card_type: 'declension',
+            front_content: { prompt: 'What is the accusative plural?', main: 'αδερφή' },
+          })}
+        />
+      );
+      expect(screen.getByText('Какой винительный падеж мн. числа?')).toBeInTheDocument();
+    });
   });
 });
