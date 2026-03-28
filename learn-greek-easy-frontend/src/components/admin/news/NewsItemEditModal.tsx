@@ -279,14 +279,17 @@ export const NewsItemEditModal: React.FC<NewsItemEditModalProps> = ({
         case 'news_audio:error':
           setB2Stage(null);
           setB2SseEnabled(false);
-          toast({ title: String(data.error ?? 'Audio generation failed'), variant: 'destructive' });
+          toast({
+            title: String(data.error ?? t('news.audio.regenerateError')),
+            variant: 'destructive',
+          });
           break;
       }
     },
     onError: () => {
       setB2Stage(null);
       setB2SseEnabled(false);
-      toast({ title: 'Audio generation failed', variant: 'destructive' });
+      toast({ title: t('news.audio.regenerateError'), variant: 'destructive' });
     },
   });
 
@@ -319,7 +322,7 @@ export const NewsItemEditModal: React.FC<NewsItemEditModalProps> = ({
           setA2Stage(null);
           setA2SseEnabled(false);
           toast({
-            title: String(data.error ?? 'A2 audio generation failed'),
+            title: String(data.error ?? t('news.audio.regenerateA2Error')),
             variant: 'destructive',
           });
           break;
@@ -328,7 +331,7 @@ export const NewsItemEditModal: React.FC<NewsItemEditModalProps> = ({
     onError: () => {
       setA2Stage(null);
       setA2SseEnabled(false);
-      toast({ title: 'A2 audio generation failed', variant: 'destructive' });
+      toast({ title: t('news.audio.regenerateA2Error'), variant: 'destructive' });
     },
   });
 
