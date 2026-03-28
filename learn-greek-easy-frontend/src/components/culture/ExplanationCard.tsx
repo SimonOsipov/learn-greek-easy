@@ -4,7 +4,7 @@ import { Check, ExternalLink, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { ReportErrorButton, ReportErrorModal } from '@/components/card-errors';
-import { trackNewsSourceLinkClicked } from '@/lib/analytics';
+import { track } from '@/lib/analytics';
 import { cn } from '@/lib/utils';
 
 /** Props for the ExplanationCard component */
@@ -55,7 +55,7 @@ export const ExplanationCard: FC<ExplanationCardProps> = ({
       // URL parsing failed, use fallback
     }
 
-    trackNewsSourceLinkClicked({
+    track('news_source_link_clicked', {
       card_id: cardId,
       article_domain: domain,
     });

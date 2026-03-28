@@ -15,7 +15,7 @@ import i18n from 'i18next';
 import { afterEach, describe, it, expect, vi } from 'vitest';
 
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { trackWordAudioPlayed, trackExampleAudioPlayed } from '@/lib/analytics';
+import { track } from '@/lib/analytics';
 import type { CardRecordResponse } from '@/services/wordEntryAPI';
 
 import { PracticeCard } from '@/components/shared/PracticeCard';
@@ -65,8 +65,7 @@ vi.mock('@/components/ui/AudioSpeedToggle', () => ({
 }));
 
 vi.mock('@/lib/analytics', () => ({
-  trackWordAudioPlayed: vi.fn(),
-  trackExampleAudioPlayed: vi.fn(),
+  track: vi.fn(),
 }));
 
 // ============================================
@@ -964,7 +963,8 @@ describe('PracticeCard', () => {
         deckId: 'deck-001',
       });
       fireEvent.click(screen.getByTestId('speaker-button'));
-      expect(trackWordAudioPlayed).toHaveBeenCalledWith(
+      expect(track).toHaveBeenCalledWith(
+        'word_audio_played',
         expect.objectContaining({
           word_entry_id: 'word-001',
           context: 'review',
@@ -981,7 +981,8 @@ describe('PracticeCard', () => {
         deckId: 'deck-001',
       });
       fireEvent.click(screen.getByTestId('speaker-button'));
-      expect(trackExampleAudioPlayed).toHaveBeenCalledWith(
+      expect(track).toHaveBeenCalledWith(
+        'example_audio_played',
         expect.objectContaining({
           word_entry_id: 'word-001',
           example_id: 'example-001',
@@ -1028,7 +1029,8 @@ describe('PracticeCard', () => {
         deckId: 'deck-001',
       });
       fireEvent.click(screen.getByTestId('speaker-button'));
-      expect(trackWordAudioPlayed).toHaveBeenCalledWith(
+      expect(track).toHaveBeenCalledWith(
+        'word_audio_played',
         expect.objectContaining({
           lemma: 'γεια σας', // back.answer, NOT 'hello' (front.main)
         })

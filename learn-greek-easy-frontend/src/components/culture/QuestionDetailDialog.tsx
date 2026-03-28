@@ -14,7 +14,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { trackCultureQuestionDetailViewed } from '@/lib/analytics';
+import { track } from '@/lib/analytics';
 import { cn } from '@/lib/utils';
 import { cultureDeckAPI } from '@/services/cultureDeckAPI';
 import type { CultureLanguage } from '@/types/culture';
@@ -80,7 +80,7 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
   // Analytics
   useEffect(() => {
     if (data && questionId) {
-      trackCultureQuestionDetailViewed({
+      track('culture_question_detail_viewed', {
         question_id: questionId,
         deck_id: deckId,
         question_status: data.status,

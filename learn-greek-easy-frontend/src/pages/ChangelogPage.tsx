@@ -16,10 +16,7 @@ import {
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-  trackChangelogPagePaginated,
-  trackChangelogPageViewed,
-} from '@/lib/analytics/changelogAnalytics';
+import { track } from '@/lib/analytics';
 import {
   selectActiveTag,
   selectAllItems,
@@ -72,7 +69,7 @@ export function ChangelogPage() {
   // Track page view on first successful load
   useEffect(() => {
     if (!isLoading && items.length > 0 && !hasTrackedPageView.current) {
-      trackChangelogPageViewed({
+      track('changelog_page_viewed', {
         page_number: page,
         total_items: total,
         items_on_page: items.length,
@@ -119,7 +116,7 @@ export function ChangelogPage() {
   const handlePageChange = useCallback(
     (newPage: number) => {
       if (newPage !== page) {
-        trackChangelogPagePaginated({
+        track('changelog_page_paginated', {
           from_page: page,
           to_page: newPage,
           total_pages: totalPages,

@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SpeakerButton } from '@/components/ui/SpeakerButton';
-import { trackExampleAudioPlayed } from '@/lib/analytics';
+import { track } from '@/lib/analytics';
 import { getLocalizedTranslation } from '@/lib/localeUtils';
 import type { WordEntryExampleSentence } from '@/services/wordEntryAPI';
 import type { AudioSpeed } from '@/utils/audioSpeed';
@@ -78,7 +78,7 @@ export function ExamplesSection({ examples, wordEntryId, deckId, speed }: Exampl
                     size="sm"
                     speed={speed}
                     onPlay={() =>
-                      trackExampleAudioPlayed({
+                      track('example_audio_played', {
                         word_entry_id: wordEntryId ?? '',
                         example_id: example.id ?? '',
                         context: 'reference',

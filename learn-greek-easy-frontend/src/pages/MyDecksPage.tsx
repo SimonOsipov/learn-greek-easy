@@ -13,10 +13,7 @@ import { CardSkeleton } from '@/components/feedback';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import {
-  trackUserDeckDeleteStarted,
-  trackUserDeckDeleteCancelled,
-} from '@/lib/analytics/myDecksAnalytics';
+import { track } from '@/lib/analytics';
 import { reportAPIError } from '@/lib/errorReporting';
 import { deckAPI, type DeckLevel, type DeckResponse } from '@/services/deckAPI';
 import type { Deck, DeckProgress } from '@/types/deck';
@@ -129,7 +126,7 @@ export const MyDecksPage: React.FC = () => {
 
   // Delete deck handlers
   const handleDeleteDeckClick = (deck: Deck) => {
-    trackUserDeckDeleteStarted({
+    track('user_deck_delete_started', {
       deck_id: deck.id,
       deck_name: deck.title,
       source: 'grid_card',
@@ -162,7 +159,7 @@ export const MyDecksPage: React.FC = () => {
 
   const handleDeleteCancel = () => {
     if (deletingDeck) {
-      trackUserDeckDeleteCancelled({
+      track('user_deck_delete_cancelled', {
         deck_id: deletingDeck.id,
         deck_name: deletingDeck.title,
         source: 'grid_card',

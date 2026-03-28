@@ -27,7 +27,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SpeakerButton } from '@/components/ui/SpeakerButton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { trackWordAudioPlayed, trackWordReferenceTabSwitched } from '@/lib/analytics';
+import { track } from '@/lib/analytics';
 import { getLocalizedTranslation } from '@/lib/localeUtils';
 import type { AdjectiveData, AdverbData, NounDataAny, NounGender, VerbData } from '@/types/grammar';
 import { getPersistedAudioSpeed, setPersistedAudioSpeed } from '@/utils/audioSpeed';
@@ -329,7 +329,7 @@ export function WordReferencePage() {
               speed={audioSpeed}
               className="hover:bg-transparent [&_svg]:size-8"
               onPlay={() =>
-                trackWordAudioPlayed({
+                track('word_audio_played', {
                   word_entry_id: wordEntry.id,
                   lemma: wordEntry.lemma,
                   part_of_speech: wordEntry.part_of_speech ?? null,
@@ -366,7 +366,7 @@ export function WordReferencePage() {
         data-testid="word-reference-tabs"
         onValueChange={(value) => {
           setActiveTab(value);
-          trackWordReferenceTabSwitched({
+          track('word_reference_tab_switched', {
             tab: value === 'word-info' ? 'word_info' : 'cards',
             word_entry_id: wordId ?? '',
             deck_id: deckId ?? '',

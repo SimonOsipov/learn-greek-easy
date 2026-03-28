@@ -8,7 +8,7 @@ import React, {
   useRef,
 } from 'react';
 
-import { registerTheme, trackThemeChange, trackThemePreferenceLoaded } from '@/lib/analytics';
+import { registerTheme, track } from '@/lib/analytics';
 import { reportAPIError } from '@/lib/errorReporting';
 import log from '@/lib/logger';
 import { api } from '@/services/api';
@@ -81,10 +81,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Register theme on mount
   useEffect(() => {
     registerTheme(currentTheme);
-    trackThemePreferenceLoaded(
-      currentTheme,
-      localStorage.getItem(THEME_STORAGE_KEY) ? 'localStorage' : 'default'
-    );
+    track('theme_preference_loaded', {
+      theme: currentTheme,
+      source: localStorage.getItem(THEME_STORAGE_KEY) ? 'localStorage' : 'default',
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -139,7 +139,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       // Only update if different from current (and not default 'light')
       if (userTheme !== currentTheme) {
         setCurrentTheme(userTheme);
-        trackThemePreferenceLoaded(userTheme, 'api');
+        track('theme_preference_loaded', { theme: userTheme, source: 'api' });
       }
       // Clear guest marker since we're now using account preference
       localStorage.removeItem(GUEST_THEME_KEY);
@@ -171,7 +171,12 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       setCurrentTheme(theme);
       registerTheme(theme);
-      trackThemeChange(previousTheme, theme, source, isAuthenticated);
+      track('theme_changed', {
+        from_theme: previousTheme,
+        to_theme: theme,
+        source,
+        is_authenticated: isAuthenticated,
+      });
 
       // If authenticated, sync to API (debounced)
       if (isAuthenticated) {

@@ -38,7 +38,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { usePracticeSession } from '@/hooks/usePracticeSession';
 import { useTrackEvent } from '@/hooks/useTrackEvent';
 import i18n from '@/i18n';
-import { trackNewsLevelToggled } from '@/lib/analytics';
 import { reportAPIError } from '@/lib/errorReporting';
 import log from '@/lib/logger';
 import { MAX_ANSWER_TIME_SECONDS } from '@/lib/timeFormatUtils';
@@ -404,7 +403,7 @@ export function CulturePracticePage() {
   const handleNewsLevelChange = useCallback((level: NewsLevel) => {
     setPersistedNewsLevel(level);
     setNewsLevel(level);
-    trackNewsLevelToggled({ level, page: 'culture_practice' });
+    track('news_level_toggled', { level, page: 'culture_practice' });
   }, []);
 
   /**

@@ -21,7 +21,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
 import { NewsCard, NewsCardSkeleton, NewsFilters } from '@/components/news';
-import { trackNewsLevelToggled, trackNewsPageSeeAllClicked } from '@/lib/analytics';
+import { track } from '@/lib/analytics';
 import { reportAPIError } from '@/lib/errorReporting';
 import { adminAPI, type NewsCountry, type NewsItemResponse } from '@/services/adminAPI';
 import { getPersistedNewsLevel, setPersistedNewsLevel, type NewsLevel } from '@/utils/newsLevel';
@@ -51,7 +51,7 @@ export const NewsSection: React.FC = () => {
   const handleLevelChange = useCallback((level: NewsLevel) => {
     setPersistedNewsLevel(level);
     setNewsLevel(level);
-    trackNewsLevelToggled({ level, page: 'dashboard' });
+    track('news_level_toggled', { level, page: 'dashboard' });
   }, []);
 
   const fetchNews = useCallback(async (country?: NewsCountry) => {
@@ -101,7 +101,7 @@ export const NewsSection: React.FC = () => {
         <h2 className="text-lg font-semibold text-foreground">{t('dashboard.news.title')}</h2>
         <Link
           to="/news"
-          onClick={() => trackNewsPageSeeAllClicked()}
+          onClick={() => track('news_page_see_all_clicked')}
           className="text-sm text-primary hover:underline"
           data-testid="news-section-see-all"
         >

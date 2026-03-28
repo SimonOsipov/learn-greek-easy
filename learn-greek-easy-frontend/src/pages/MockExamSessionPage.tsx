@@ -42,11 +42,7 @@ import { toast } from '@/hooks/use-toast';
 import { useMockExamKeyboardShortcuts } from '@/hooks/useMockExamKeyboardShortcuts';
 import { useMockExamTimer } from '@/hooks/useMockExamTimer';
 import { useQuestionLanguage } from '@/hooks/useQuestionLanguage';
-import {
-  trackMockExamStarted,
-  trackMockExamQuestionAnswered,
-  trackMockExamAbandoned,
-} from '@/lib/analytics';
+import { track } from '@/lib/analytics';
 import log from '@/lib/logger';
 import { useMockExamSessionStore } from '@/stores/mockExamSessionStore';
 import type { CultureQuestionResponse } from '@/types/culture';
@@ -192,7 +188,7 @@ export const MockExamSessionPage: React.FC = () => {
   useEffect(() => {
     if (session && session.status === 'active' && !hasTrackedStart.current) {
       hasTrackedStart.current = true;
-      trackMockExamStarted({
+      track('mock_exam_started', {
         session_id: session.backendSession.id,
         total_questions: session.questions.length,
         is_resumed: session.isResumed,
@@ -227,7 +223,7 @@ export const MockExamSessionPage: React.FC = () => {
 
       // Track answer event immediately
       // Note: We don't know if correct yet - that's determined when exam completes
-      trackMockExamQuestionAnswered({
+      track('mock_exam_question_answered', {
         session_id: session.backendSession.id,
         question_id: currentQuestion.question.id,
         question_number: progress.current,
@@ -269,7 +265,7 @@ export const MockExamSessionPage: React.FC = () => {
   const handleConfirmExit = useCallback(async () => {
     // Track abandonment
     if (session) {
-      trackMockExamAbandoned({
+      track('mock_exam_abandoned', {
         session_id: session.backendSession.id,
         questions_answered: session.stats.questionsAnswered,
         timer_remaining_seconds: remainingSeconds,

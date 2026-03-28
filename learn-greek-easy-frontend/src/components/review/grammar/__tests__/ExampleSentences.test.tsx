@@ -13,7 +13,7 @@ import userEvent from '@testing-library/user-event';
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { trackExampleAudioPlayed } from '@/lib/analytics';
+import { track } from '@/lib/analytics';
 import type { Example } from '@/types/grammar';
 
 // Mock AudioSpeedToggle
@@ -49,7 +49,7 @@ vi.mock('@/components/ui/SpeakerButton', () => ({
 
 // Mock analytics for audio tests
 vi.mock('@/lib/analytics', () => ({
-  trackExampleAudioPlayed: vi.fn(),
+  track: vi.fn(),
 }));
 
 // Mock i18n with configurable language
@@ -495,7 +495,7 @@ describe('ExampleSentences — Audio SpeakerButton integration', () => {
     );
     await user.click(screen.getByTestId('speaker-button'));
 
-    expect(trackExampleAudioPlayed).toHaveBeenCalledWith({
+    expect(track).toHaveBeenCalledWith('example_audio_played', {
       word_entry_id: 'we-123',
       example_id: 'ex-001',
       context: 'review',

@@ -28,7 +28,7 @@ import {
   selectChangelogTotal,
   selectChangelogTotalPages,
 } from '@/stores/changelogStore';
-import * as changelogAnalytics from '@/lib/analytics/changelogAnalytics';
+import { track } from '@/lib/analytics';
 
 // Mock the changelog store
 vi.mock('@/stores/changelogStore', () => ({
@@ -45,9 +45,10 @@ vi.mock('@/stores/changelogStore', () => ({
 }));
 
 // Mock analytics
-vi.mock('@/lib/analytics/changelogAnalytics', () => ({
-  trackChangelogPageViewed: vi.fn(),
-  trackChangelogPagePaginated: vi.fn(),
+vi.mock('@/lib/analytics', () => ({
+  track: vi.fn(),
+  registerTheme: vi.fn(),
+  registerInterfaceLanguage: vi.fn(),
 }));
 
 // Mock window.scrollTo
@@ -449,7 +450,7 @@ describe('ChangelogPage', () => {
       render(<ChangelogPage />);
 
       await waitFor(() => {
-        expect(changelogAnalytics.trackChangelogPageViewed).toHaveBeenCalledWith({
+        expect(track).toHaveBeenCalledWith('changelog_page_viewed', {
           page_number: 1,
           total_items: 10,
           items_on_page: 1,
@@ -467,7 +468,7 @@ describe('ChangelogPage', () => {
 
       render(<ChangelogPage />);
 
-      expect(changelogAnalytics.trackChangelogPageViewed).not.toHaveBeenCalled();
+      expect(track).not.toHaveBeenCalledWith('changelog_page_viewed', expect.anything());
     });
 
     it('should track pagination events when changing pages', async () => {
@@ -499,7 +500,7 @@ describe('ChangelogPage', () => {
       const page2Button = screen.getByTestId('changelog-pagination-page-2');
       await user.click(page2Button);
 
-      expect(changelogAnalytics.trackChangelogPagePaginated).toHaveBeenCalledWith({
+      expect(track).toHaveBeenCalledWith('changelog_page_paginated', {
         from_page: 1,
         to_page: 2,
         total_pages: 3,

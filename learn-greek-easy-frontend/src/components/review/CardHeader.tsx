@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { SpeakerButton } from '@/components/ui/SpeakerButton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { trackWordAudioPlayed } from '@/lib/analytics';
+import { track } from '@/lib/analytics';
 import type { NounGender } from '@/types/grammar';
 import type { CardReview } from '@/types/review';
 
@@ -80,7 +80,7 @@ export function CardHeader({ card, onFlip, isCardFlipped }: CardHeaderProps) {
           <SpeakerButton
             audioUrl={card.audio_url}
             onPlay={() =>
-              trackWordAudioPlayed({
+              track('word_audio_played', {
                 word_entry_id: card.word_entry_id ?? '',
                 lemma: card.word || card.front,
                 part_of_speech: card.part_of_speech ?? null,

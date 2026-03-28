@@ -10,7 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { trackCultureLanguageChanged } from '@/lib/analytics';
+import { track } from '@/lib/analytics';
 import log from '@/lib/logger';
 import { cn } from '@/lib/utils';
 import type { CultureLanguage } from '@/types/culture';
@@ -125,7 +125,10 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
       if (lang === value) return;
 
       // Track analytics event
-      trackCultureLanguageChanged(value, lang);
+      track('culture_language_changed', {
+        from_lang: value,
+        to_lang: lang,
+      });
 
       // Persist to localStorage
       try {

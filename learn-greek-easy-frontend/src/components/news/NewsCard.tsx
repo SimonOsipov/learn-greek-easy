@@ -15,12 +15,7 @@ import { ExternalLink } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { WaveformPlayer } from '@/components/culture/WaveformPlayer';
-import {
-  trackNewsArticleClicked,
-  trackNewsAudioPlayCompleted,
-  trackNewsAudioPlayPaused,
-  trackNewsAudioPlayStarted,
-} from '@/lib/analytics/newsAnalytics';
+import { track } from '@/lib/analytics';
 import { clearActivePlayer, registerActivePlayer } from '@/lib/newsAudioCoordinator';
 import { cn } from '@/lib/utils';
 import type { NewsCountry, NewsItemResponse } from '@/services/adminAPI';
@@ -73,7 +68,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({
   const handlePlay = useCallback(
     (duration: number) => {
       registerActivePlayer(stopFnRef.current);
-      trackNewsAudioPlayStarted({
+      track('news_audio_play_started', {
         news_item_id: article.id,
         audio_duration_seconds: duration,
         page: pageName,
@@ -86,7 +81,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({
 
   const handlePause = useCallback(
     (currentTime: number) => {
-      trackNewsAudioPlayPaused({
+      track('news_audio_play_paused', {
         news_item_id: article.id,
         paused_at_seconds: currentTime,
         audio_duration_seconds: 0, // Duration not available in onPause callback
@@ -100,7 +95,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({
   const handleComplete = useCallback(
     (duration: number) => {
       clearActivePlayer(stopFnRef.current);
-      trackNewsAudioPlayCompleted({
+      track('news_audio_play_completed', {
         news_item_id: article.id,
         audio_duration_seconds: duration,
         page: pageName,
@@ -150,14 +145,14 @@ export const NewsCard: React.FC<NewsCardProps> = ({
   const handleClick = () => {
     try {
       const domain = new URL(article.original_article_url).hostname;
-      trackNewsArticleClicked({
+      track('news_article_clicked', {
         item_id: article.id,
         article_domain: domain,
         level: level ?? 'b2',
       });
     } catch {
       // If URL parsing fails, still track but without domain
-      trackNewsArticleClicked({
+      track('news_article_clicked', {
         item_id: article.id,
         article_domain: 'unknown',
         level: level ?? 'b2',

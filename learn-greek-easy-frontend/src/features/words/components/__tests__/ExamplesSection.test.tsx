@@ -45,7 +45,7 @@ vi.mock('@/components/ui/SpeakerButton', () => ({
 
 // Mock analytics module
 vi.mock('@/lib/analytics', () => ({
-  trackExampleAudioPlayed: vi.fn(),
+  track: vi.fn(),
 }));
 
 // Mock example data
@@ -280,8 +280,8 @@ describe('ExamplesSection — Audio SpeakerButton integration (reference)', () =
     expect(screen.getByTestId('speaker-button')).toBeInTheDocument();
   });
 
-  it('5. trackExampleAudioPlayed called with context: reference on play', async () => {
-    const { trackExampleAudioPlayed } = await import('@/lib/analytics');
+  it('5. track("example_audio_played") called with context: reference on play', async () => {
+    const { track } = await import('@/lib/analytics');
     const user = userEvent.setup();
 
     render(
@@ -290,7 +290,7 @@ describe('ExamplesSection — Audio SpeakerButton integration (reference)', () =
 
     await user.click(screen.getByTestId('speaker-button'));
 
-    expect(trackExampleAudioPlayed).toHaveBeenCalledWith({
+    expect(track).toHaveBeenCalledWith('example_audio_played', {
       word_entry_id: 'we-abc',
       example_id: 'ex-1',
       context: 'reference',
