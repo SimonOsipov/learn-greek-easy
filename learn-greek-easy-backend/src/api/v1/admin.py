@@ -2923,6 +2923,139 @@ async def generate_news_a2_audio_stream(
     )
 
 
+async def _culture_question_audio_sse_pipeline(
+    question_id: UUID,
+) -> AsyncGenerator[str, None]:
+    """SSE pipeline for culture question audio generation."""
+    from src.services.elevenlabs_service import get_elevenlabs_service
+    from src.services.s3_service import get_s3_service
+
+    yield format_sse_event("", event="connected")
+    factory = get_session_factory()
+
+    # Stage 1 — Load & validate
+    async with factory.begin() as session:
+        result = await session.execute(
+            select(CultureQuestion).where(CultureQuestion.id == question_id)
+        )
+        question = result.scalar_one_or_none()
+        if question is None:
+            yield format_sse_event(
+                {
+                    "question_id": str(question_id),
+                    "stage": "load",
+                    "error": "Culture question not found",
+                },
+                event="culture_audio:error",
+            )
+            return
+        news_item_id = question.news_item_id
+        question_text: dict = question.question_text or {}
+
+    if news_item_id is not None:
+        yield format_sse_event(
+            {
+                "question_id": str(question_id),
+                "stage": "load",
+                "error": "Cannot generate audio for news-linked questions. Audio is managed by the news item.",
+            },
+            event="culture_audio:error",
+        )
+        return
+
+    greek_text = question_text.get("el", "").strip()
+    if not greek_text:
+        yield format_sse_event(
+            {
+                "question_id": str(question_id),
+                "stage": "load",
+                "error": "Question has no Greek text for audio generation",
+            },
+            event="culture_audio:error",
+        )
+        return
+
+    yield format_sse_event(
+        {"question_id": str(question_id), "text_length": len(greek_text)},
+        event="culture_audio:start",
+    )
+
+    current_stage = "tts"
+    try:
+        # Stage 2 — TTS
+        elevenlabs = get_elevenlabs_service()
+        yield format_sse_event(
+            {"question_id": str(question_id)},
+            event="culture_audio:tts",
+        )
+        audio_bytes: bytes = await elevenlabs.generate_speech(greek_text)
+
+        # Stage 3 — S3 upload
+        current_stage = "upload"
+        s3 = get_s3_service()
+        s3_key = f"culture/audio/{question_id}.mp3"
+        yield format_sse_event(
+            {"question_id": str(question_id), "s3_key": s3_key},
+            event="culture_audio:upload",
+        )
+        upload_ok = s3.upload_object(s3_key, audio_bytes, "audio/mpeg")
+        if not upload_ok:
+            raise RuntimeError("S3 upload failed")
+
+        # Stage 4 — DB persist
+        current_stage = "persist"
+        yield format_sse_event(
+            {"question_id": str(question_id)},
+            event="culture_audio:persist",
+        )
+        async with factory.begin() as session:
+            await session.execute(
+                update(CultureQuestion)
+                .where(CultureQuestion.id == question_id)
+                .values(audio_s3_key=s3_key)
+            )
+
+        # Stage 5 — Complete
+        yield format_sse_event(
+            {"question_id": str(question_id), "s3_key": s3_key},
+            event="culture_audio:complete",
+        )
+
+    except Exception as exc:
+        yield format_sse_event(
+            {
+                "question_id": str(question_id),
+                "stage": current_stage,
+                "error": str(exc),
+            },
+            event="culture_audio:error",
+        )
+
+
+@router.post(
+    "/culture-questions/{question_id}/generate-audio/stream",
+    summary="Generate culture question audio via ElevenLabs TTS as SSE stream",
+    response_class=StreamingResponse,
+)
+async def generate_culture_question_audio_stream(
+    question_id: UUID,
+    sse_auth: SSEAuthResult = Depends(get_sse_auth),
+) -> StreamingResponse:
+    if not sse_auth.is_authenticated:
+        return _sse_single_error(
+            sse_auth.error_code or "auth_required",
+            sse_auth.error_message or "Authentication required",
+        )
+    assert sse_auth.user is not None
+    if not sse_auth.user.is_superuser:
+        return _sse_single_error("forbidden", "Admin access required")
+    if not settings.elevenlabs_configured:
+        return _sse_single_error("service_unavailable", "ElevenLabs is not configured")
+    return create_sse_response(
+        sse_stream(_culture_question_audio_sse_pipeline(question_id), heartbeat_interval=15)
+    )
+
+
 def _validate_meaning_eligibility(word_entry: "WordEntry") -> None:
     if not word_entry.translation_en or not word_entry.translation_ru:
         raise HTTPException(
