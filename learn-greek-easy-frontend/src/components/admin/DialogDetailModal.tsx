@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AlertTriangle, BookOpen, Loader2, RefreshCw, Wand2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { KaraokeText } from '@/components/admin/KaraokeText';
 import { WaveformPlayer } from '@/components/culture/WaveformPlayer';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
@@ -29,6 +30,7 @@ import {
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useAudioTimeMs } from '@/hooks/useAudioTimeMs';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useSSE } from '@/hooks/useSSE';
 import { cn } from '@/lib/utils';
@@ -120,7 +122,6 @@ export function DialogDetailModal({ dialogId, open, onOpenChange }: DialogDetail
     useAdminDialogStore();
 
   // Local state
-  const [audioCurrentTimeMs, setAudioCurrentTimeMs] = useState(0);
   const [sseEnabled, setSseEnabled] = useState(false);
   const [generationProgress, setGenerationProgress] = useState<string | null>(null);
   const [generationError, setGenerationError] = useState<string | null>(null);
@@ -128,12 +129,18 @@ export function DialogDetailModal({ dialogId, open, onOpenChange }: DialogDetail
   // Ref for finding the audio element inside WaveformPlayer's container
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const dialogAudioEnabled =
+    !!selectedDialog &&
+    (selectedDialog.status === 'audio_ready' || selectedDialog.status === 'exercises_ready') &&
+    !sseEnabled;
+
+  const audioCurrentTimeMs = useAudioTimeMs(containerRef, dialogAudioEnabled);
+
   const startAudioRegeneration = useCallback(() => {
     const audioEl = containerRef.current?.querySelector<HTMLAudioElement>(
       '[data-testid="waveform-audio-element"]'
     );
     audioEl?.pause();
-    setAudioCurrentTimeMs(0);
     setGenerationError(null);
     setSseEnabled(true);
   }, []);
@@ -149,78 +156,11 @@ export function DialogDetailModal({ dialogId, open, onOpenChange }: DialogDetail
   useEffect(() => {
     if (!open) {
       clearSelectedDialog();
-      setAudioCurrentTimeMs(0);
       setSseEnabled(false);
       setGenerationProgress(null);
       setGenerationError(null);
     }
   }, [open, clearSelectedDialog]);
-
-  // Effect 3 — sync audioCurrentTimeMs via requestAnimationFrame
-  useEffect(() => {
-    if (
-      !selectedDialog ||
-      (selectedDialog.status !== 'audio_ready' && selectedDialog.status !== 'exercises_ready')
-    ) {
-      return;
-    }
-
-    const container = containerRef.current;
-    if (!container) return;
-
-    const audio = container.querySelector<HTMLAudioElement>(
-      '[data-testid="waveform-audio-element"]'
-    );
-    if (!audio) return;
-
-    let rafId: number | null = null;
-    let lastUpdateMs = 0;
-
-    const tick = () => {
-      const nowMs = audio.currentTime * 1000;
-      if (Math.abs(nowMs - lastUpdateMs) > 10) {
-        setAudioCurrentTimeMs(nowMs);
-        lastUpdateMs = nowMs;
-      }
-      rafId = requestAnimationFrame(tick);
-    };
-
-    const startLoop = () => {
-      if (rafId === null) {
-        rafId = requestAnimationFrame(tick);
-      }
-    };
-
-    const stopLoop = () => {
-      if (rafId !== null) {
-        cancelAnimationFrame(rafId);
-        rafId = null;
-      }
-    };
-
-    const syncCurrentTime = () => {
-      const nowMs = audio.currentTime * 1000;
-      setAudioCurrentTimeMs(nowMs);
-      lastUpdateMs = nowMs;
-    };
-
-    audio.addEventListener('play', startLoop);
-    audio.addEventListener('pause', stopLoop);
-    audio.addEventListener('ended', stopLoop);
-    audio.addEventListener('seeked', syncCurrentTime);
-
-    if (!audio.paused) {
-      startLoop();
-    }
-
-    return () => {
-      stopLoop();
-      audio.removeEventListener('play', startLoop);
-      audio.removeEventListener('pause', stopLoop);
-      audio.removeEventListener('ended', stopLoop);
-      audio.removeEventListener('seeked', syncCurrentTime);
-    };
-  }, [selectedDialog, sseEnabled]);
 
   const handleSSEEvent = useCallback(
     (event: SSEEvent<unknown>) => {
@@ -463,37 +403,11 @@ export function DialogDetailModal({ dialogId, open, onOpenChange }: DialogDetail
                                 />
                               )}
                           </p>
-                          {line.word_timestamps &&
-                          line.word_timestamps.length > 0 &&
-                          audioCurrentTimeMs > 0 ? (
-                            <p className="text-sm">
-                              {line.word_timestamps.map((wt, idx) => {
-                                const state =
-                                  wt.end_ms <= audioCurrentTimeMs
-                                    ? 'spoken'
-                                    : wt.start_ms <= audioCurrentTimeMs
-                                      ? 'speaking'
-                                      : 'pending';
-                                return (
-                                  <span
-                                    key={idx}
-                                    className={cn(
-                                      'transition-all duration-150',
-                                      state === 'spoken' && 'text-foreground',
-                                      state === 'speaking' &&
-                                        'rounded bg-primary/20 px-0.5 font-medium',
-                                      state === 'pending' && 'text-muted-foreground'
-                                    )}
-                                  >
-                                    {wt.word}
-                                    {idx < line.word_timestamps.length - 1 ? ' ' : ''}
-                                  </span>
-                                );
-                              })}
-                            </p>
-                          ) : (
-                            <p className="text-sm">{line.text}</p>
-                          )}
+                          <KaraokeText
+                            wordTimestamps={line.word_timestamps ?? []}
+                            currentTimeMs={audioCurrentTimeMs}
+                            fallbackText={line.text}
+                          />
                         </div>
                       </div>
                     );
