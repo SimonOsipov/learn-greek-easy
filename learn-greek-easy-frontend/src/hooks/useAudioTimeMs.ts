@@ -64,9 +64,14 @@ export function useAudioTimeMs(
       lastUpdateMs = nowMs;
     };
 
+    const handleEnded = () => {
+      syncCurrentTime();
+      stopLoop();
+    };
+
     audio.addEventListener('play', startLoop);
     audio.addEventListener('pause', stopLoop);
-    audio.addEventListener('ended', stopLoop);
+    audio.addEventListener('ended', handleEnded);
     audio.addEventListener('seeked', syncCurrentTime);
 
     if (!audio.paused) {
@@ -77,7 +82,7 @@ export function useAudioTimeMs(
       stopLoop();
       audio.removeEventListener('play', startLoop);
       audio.removeEventListener('pause', stopLoop);
-      audio.removeEventListener('ended', stopLoop);
+      audio.removeEventListener('ended', handleEnded);
       audio.removeEventListener('seeked', syncCurrentTime);
     };
   }, [containerRef, enabled]);
