@@ -34,6 +34,7 @@ The seeding infrastructure provides deterministic test data for E2E tests, enabl
 | `/api/v1/test/seed/news-questions` | POST | Seed news items with linked culture questions |
 | `/api/v1/test/seed/changelog` | POST | Create 12 changelog entries |
 | `/api/v1/test/seed/announcements` | POST | Create 4 announcement campaigns |
+| `/api/v1/test/seed/situations` | POST | Create 3 situations with descriptions |
 
 ### User & Account Endpoints
 
@@ -91,6 +92,7 @@ The full seed executes 19 steps in order:
 | 17 | Subscription users | 5 users with various subscription states |
 | 18 | Lexicon | Reference lexicon data |
 | 19 | Translations | Reference translation data |
+| 20 | Situations | 3 situations with B1/A2 descriptions |
 
 > **Note:** Danger zone users are NOT included in `/seed/all`. Use `/seed/danger-zone` separately.
 

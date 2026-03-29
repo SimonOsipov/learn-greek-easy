@@ -35,6 +35,8 @@ from src.db.models import (
     Deck,
     DeckLevel,
     DeckWordEntry,
+    DescriptionSourceType,
+    DescriptionStatus,
     Feedback,
     FeedbackCategory,
     FeedbackStatus,
@@ -46,6 +48,9 @@ from src.db.models import (
     Notification,
     NotificationType,
     PartOfSpeech,
+    Situation,
+    SituationDescription,
+    SituationStatus,
     SubscriptionStatus,
     SubscriptionTier,
     User,
@@ -367,6 +372,30 @@ class SeedService:
             "description_ru": "Самые важные культурные события месяца.",
             "days_ago": 30,
             "country": "world",
+        },
+    ]
+
+    SITUATIONS: list[dict[str, str]] = [
+        {
+            "scenario_el": "Στην καφετέρια",
+            "scenario_en": "At the coffee shop",
+            "scenario_ru": "В кафе",
+            "text_el": "Ο Γιάννης μπαίνει στην καφετέρια και κοιτάζει τον κατάλογο. Θέλει έναν ελληνικό καφέ και ένα κομμάτι τυρόπιτα. Η σερβιτόρα τον χαιρετάει και του ζητάει την παραγγελία. Ο Γιάννης παραγγέλνει και κάθεται δίπλα στο παράθυρο.",
+            "text_el_a2": "Ο Γιάννης πάει στην καφετέρια. Θέλει καφέ και τυρόπιτα. Η σερβιτόρα λέει «Καλημέρα!». Ο Γιάννης λέει τι θέλει. Κάθεται κοντά στο παράθυρο.",
+        },
+        {
+            "scenario_el": "Στο λεωφορείο",
+            "scenario_en": "On the bus",
+            "scenario_ru": "В автобусе",
+            "text_el": "Η Μαρία περιμένει στη στάση του λεωφορείου. Το λεωφορείο έρχεται μετά από δέκα λεπτά. Ανεβαίνει και χτυπάει την κάρτα της. Δεν υπάρχουν ελεύθερες θέσεις, οπότε στέκεται κοντά στην πόρτα. Μετά από τρεις στάσεις, κατεβαίνει.",
+            "text_el_a2": "Η Μαρία περιμένει το λεωφορείο. Το λεωφορείο έρχεται. Ανεβαίνει και χτυπάει την κάρτα. Δεν έχει θέσεις. Στέκεται κοντά στην πόρτα. Κατεβαίνει μετά από τρεις στάσεις.",
+        },
+        {
+            "scenario_el": "Στο σούπερ μάρκετ",
+            "scenario_en": "At the supermarket",
+            "scenario_ru": "В супермаркете",
+            "text_el": "Ο Νίκος πηγαίνει στο σούπερ μάρκετ για ψώνια. Χρειάζεται ψωμί, γάλα, αυγά και λαχανικά. Παίρνει ένα καλάθι και ψάχνει τα προϊόντα στα ράφια. Στο ταμείο, η ταμίας του λέει το σύνολο και πληρώνει με κάρτα.",
+            "text_el_a2": "Ο Νίκος πάει στο σούπερ μάρκετ. Θέλει ψωμί, γάλα και αυγά. Παίρνει ένα καλάθι. Βρίσκει τα πράγματα. Πηγαίνει στο ταμείο και πληρώνει.",
         },
     ]
 
@@ -4206,6 +4235,50 @@ class SeedService:
         count = result.scalar_one()
         return {"success": True, "translation_entries_created": count}
 
+    async def seed_situations(self) -> dict[str, Any]:
+        """Create sample situations with descriptions for E2E testing."""
+        self._check_can_seed()
+
+        seed_scenario_ens = [s["scenario_en"] for s in self.SITUATIONS]
+        await self.db.execute(delete(Situation).where(Situation.scenario_en.in_(seed_scenario_ens)))
+
+        created_situations = []
+        for sit_data in self.SITUATIONS:
+            situation = Situation(
+                scenario_el=sit_data["scenario_el"],
+                scenario_en=sit_data["scenario_en"],
+                scenario_ru=sit_data["scenario_ru"],
+                status=SituationStatus.DRAFT,
+            )
+            self.db.add(situation)
+            await self.db.flush()
+
+            description = SituationDescription(
+                situation_id=situation.id,
+                text_el=sit_data["text_el"],
+                text_el_a2=sit_data["text_el_a2"],
+                source_type=DescriptionSourceType.ORIGINAL,
+                status=DescriptionStatus.DRAFT,
+                audio_s3_key=None,
+                audio_a2_s3_key=None,
+            )
+            self.db.add(description)
+            await self.db.flush()
+
+            created_situations.append(
+                {
+                    "id": str(situation.id),
+                    "scenario_en": situation.scenario_en,
+                    "description_id": str(description.id),
+                }
+            )
+
+        return {
+            "success": True,
+            "situations": created_situations,
+            "count": len(created_situations),
+        }
+
     # =====================
     # Full Seed Orchestration
     # =====================
@@ -4516,6 +4589,9 @@ class SeedService:
         # Step 19: Seed reference translation data
         translations_result = await self.seed_translations()
 
+        # Step 20: Seed situations with descriptions
+        situations_result = await self.seed_situations()
+
         # Commit all changes
         await self.db.commit()
 
@@ -4547,6 +4623,7 @@ class SeedService:
             "subscription_users": subscription_users_result,
             "lexicon": lexicon_result,
             "translations": translations_result,
+            "situations": situations_result,
         }
 
     async def _create_word_entries_from_vocab(

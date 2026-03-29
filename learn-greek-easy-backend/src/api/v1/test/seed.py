@@ -754,3 +754,41 @@ async def seed_subscription_users(
         duration_ms=duration_ms,
         results=result,
     )
+
+
+@router.post(
+    "/situations",
+    response_model=SeedResultResponse,
+    summary="Seed situation records",
+    description="Create 3 sample situations with B1/A2 descriptions for E2E testing.",
+    dependencies=[Depends(verify_seed_access)],
+)
+async def seed_situations(
+    db: AsyncSession = Depends(get_db),
+) -> SeedResultResponse:
+    """Create situation records with descriptions for E2E testing.
+
+    Creates:
+    - 3 Situation records (DRAFT status)
+    - 3 SituationDescription records with B1 text_el and A2 text_el_a2
+
+    This endpoint is idempotent - existing seed situations are replaced.
+
+    Returns:
+        SeedResultResponse with situation creation results and timing
+    """
+    start_time = perf_counter()
+
+    service = SeedService(db)
+    result = await service.seed_situations()
+    await db.commit()
+
+    duration_ms = (perf_counter() - start_time) * 1000
+
+    return SeedResultResponse(
+        success=result.get("success", False),
+        operation="situations",
+        timestamp=datetime.now(timezone.utc),
+        duration_ms=duration_ms,
+        results=result,
+    )
