@@ -1,6 +1,6 @@
 """Unit tests for _redistribute_degenerate_timing."""
 
-from src.api.v1.admin import _redistribute_degenerate_timing
+from src.services.audio_generation_service import _redistribute_degenerate_timing
 
 
 def _make_timing_map(*entries: tuple[int, int]) -> dict[int, tuple[int, int]]:

@@ -289,23 +289,30 @@ class TestNewsB2AudioSSEPipeline:
     @pytest.mark.asyncio
     async def test_happy_path_full_event_sequence(self) -> None:
         from src.api.v1.admin import _news_b2_audio_sse_pipeline
+        from src.services.audio_generation_service import AudioResult
 
         news_id = uuid4()
         item = _make_news_item_b2()
         mock_factory = _make_session_factory_found(item)
-        mock_elevenlabs = MagicMock()
-        mock_elevenlabs.generate_speech = AsyncMock(return_value=b"fake-mp3" * 100)
-        mock_s3 = MagicMock()
-        mock_s3.upload_object = MagicMock(return_value=True)
-        mock_s3.generate_presigned_url = MagicMock(return_value="https://cdn.example.com/audio.mp3")
+        mock_audio_service = MagicMock()
+        mock_audio_service.generate_single = AsyncMock(
+            return_value=AudioResult(
+                audio_bytes=b"fake-audio",
+                s3_key=f"news-audio/{news_id}.mp3",
+                duration_seconds=1.234,
+                file_size_bytes=9,
+            )
+        )
+        mock_audio_service.generate_presigned_url = MagicMock(
+            return_value="https://cdn.example.com/audio.mp3"
+        )
 
         with (
             patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
             patch(
-                "src.services.elevenlabs_service.get_elevenlabs_service",
-                return_value=mock_elevenlabs,
+                "src.api.v1.admin.get_audio_generation_service",
+                return_value=mock_audio_service,
             ),
-            patch("src.services.s3_service.get_s3_service", return_value=mock_s3),
         ):
             events = await _collect_generator(_news_b2_audio_sse_pipeline(news_id))
 
@@ -320,22 +327,29 @@ class TestNewsB2AudioSSEPipeline:
     @pytest.mark.asyncio
     async def test_happy_path_all_payloads_include_level_b2(self) -> None:
         from src.api.v1.admin import _news_b2_audio_sse_pipeline
+        from src.services.audio_generation_service import AudioResult
 
         item = _make_news_item_b2()
         mock_factory = _make_session_factory_found(item)
-        mock_elevenlabs = MagicMock()
-        mock_elevenlabs.generate_speech = AsyncMock(return_value=b"fake-mp3")
-        mock_s3 = MagicMock()
-        mock_s3.upload_object = MagicMock(return_value=True)
-        mock_s3.generate_presigned_url = MagicMock(return_value="https://cdn.example.com/a.mp3")
+        mock_audio_service = MagicMock()
+        mock_audio_service.generate_single = AsyncMock(
+            return_value=AudioResult(
+                audio_bytes=b"fake-audio",
+                s3_key="news-audio/fake.mp3",
+                duration_seconds=1.234,
+                file_size_bytes=9,
+            )
+        )
+        mock_audio_service.generate_presigned_url = MagicMock(
+            return_value="https://cdn.example.com/a.mp3"
+        )
 
         with (
             patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
             patch(
-                "src.services.elevenlabs_service.get_elevenlabs_service",
-                return_value=mock_elevenlabs,
+                "src.api.v1.admin.get_audio_generation_service",
+                return_value=mock_audio_service,
             ),
-            patch("src.services.s3_service.get_s3_service", return_value=mock_s3),
         ):
             events = await _collect_generator(_news_b2_audio_sse_pipeline(uuid4()))
 
@@ -349,23 +363,30 @@ class TestNewsB2AudioSSEPipeline:
     @pytest.mark.asyncio
     async def test_s3_key_uses_audio_s3_prefix(self) -> None:
         from src.api.v1.admin import _news_b2_audio_sse_pipeline
+        from src.services.audio_generation_service import AudioResult
 
         news_id = uuid4()
         item = _make_news_item_b2()
         mock_factory = _make_session_factory_found(item)
-        mock_elevenlabs = MagicMock()
-        mock_elevenlabs.generate_speech = AsyncMock(return_value=b"fake-mp3")
-        mock_s3 = MagicMock()
-        mock_s3.upload_object = MagicMock(return_value=True)
-        mock_s3.generate_presigned_url = MagicMock(return_value="https://cdn.example.com/a.mp3")
+        mock_audio_service = MagicMock()
+        mock_audio_service.generate_single = AsyncMock(
+            return_value=AudioResult(
+                audio_bytes=b"fake-audio",
+                s3_key=f"news-audio/{news_id}.mp3",
+                duration_seconds=1.234,
+                file_size_bytes=9,
+            )
+        )
+        mock_audio_service.generate_presigned_url = MagicMock(
+            return_value="https://cdn.example.com/a.mp3"
+        )
 
         with (
             patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
             patch(
-                "src.services.elevenlabs_service.get_elevenlabs_service",
-                return_value=mock_elevenlabs,
+                "src.api.v1.admin.get_audio_generation_service",
+                return_value=mock_audio_service,
             ),
-            patch("src.services.s3_service.get_s3_service", return_value=mock_s3),
             patch("src.api.v1.admin.settings") as mock_settings,
         ):
             mock_settings.audio_s3_prefix = "news-audio"
@@ -382,17 +403,15 @@ class TestNewsB2AudioSSEPipeline:
 
         item = _make_news_item_b2()
         mock_factory = _make_session_factory_found(item)
-        mock_elevenlabs = MagicMock()
-        mock_elevenlabs.generate_speech = AsyncMock(side_effect=RuntimeError("TTS service down"))
-        mock_s3 = MagicMock()
+        mock_audio_service = MagicMock()
+        mock_audio_service.generate_single = AsyncMock(side_effect=RuntimeError("ElevenLabs error"))
 
         with (
             patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
             patch(
-                "src.services.elevenlabs_service.get_elevenlabs_service",
-                return_value=mock_elevenlabs,
+                "src.api.v1.admin.get_audio_generation_service",
+                return_value=mock_audio_service,
             ),
-            patch("src.services.s3_service.get_s3_service", return_value=mock_s3),
         ):
             events = await _collect_generator(_news_b2_audio_sse_pipeline(uuid4()))
 
@@ -407,34 +426,28 @@ class TestNewsB2AudioSSEPipeline:
 
         item = _make_news_item_b2()
         mock_factory = _make_session_factory_found(item)
-        mock_elevenlabs = MagicMock()
-        mock_elevenlabs.generate_speech = AsyncMock(return_value=b"fake-mp3")
-        mock_s3 = MagicMock()
-        mock_s3.upload_object = MagicMock(return_value=False)
+        mock_audio_service = MagicMock()
+        mock_audio_service.generate_single = AsyncMock(side_effect=RuntimeError("S3 upload failed"))
 
         with (
             patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
             patch(
-                "src.services.elevenlabs_service.get_elevenlabs_service",
-                return_value=mock_elevenlabs,
+                "src.api.v1.admin.get_audio_generation_service",
+                return_value=mock_audio_service,
             ),
-            patch("src.services.s3_service.get_s3_service", return_value=mock_s3),
         ):
             events = await _collect_generator(_news_b2_audio_sse_pipeline(uuid4()))
 
         error_events = [e for e in events if e["event"] == "news_audio:error"]
         assert len(error_events) >= 1
-        assert error_events[0]["data"]["stage"] == "upload"
+        assert error_events[0]["data"]["stage"] == "tts"
         assert error_events[0]["data"]["level"] == "b2"
 
     @pytest.mark.asyncio
     async def test_duration_calculation(self) -> None:
-        """audio_duration_seconds = (len(bytes) * 8) / (128 * 1000) — verify DB receives it."""
+        """duration_seconds comes from AudioResult — verify DB receives it."""
         from src.api.v1.admin import _news_b2_audio_sse_pipeline
-
-        fake_bytes = b"x" * 128_000  # exactly 1 second at 128kbps: 128000*8/128000 = 8/1 = 8s? no.
-        # len=128000; duration = (128000 * 8) / (128 * 1000) = 1_024_000 / 128_000 = 8.0
-        expected_duration = (len(fake_bytes) * 8) / (128 * 1000)
+        from src.services.audio_generation_service import AudioResult
 
         item = _make_news_item_b2()
         persisted_values: list[dict] = []
@@ -471,46 +484,60 @@ class TestNewsB2AudioSSEPipeline:
         mock_factory = MagicMock()
         mock_factory.begin.side_effect = begin_side_effect
 
-        mock_elevenlabs = MagicMock()
-        mock_elevenlabs.generate_speech = AsyncMock(return_value=fake_bytes)
-        mock_s3 = MagicMock()
-        mock_s3.upload_object = MagicMock(return_value=True)
-        mock_s3.generate_presigned_url = MagicMock(return_value="https://cdn.example.com/a.mp3")
+        news_id = uuid4()
+        mock_audio_service = MagicMock()
+        mock_audio_service.generate_single = AsyncMock(
+            return_value=AudioResult(
+                audio_bytes=b"fake-audio",
+                s3_key=f"news-audio/{news_id}.mp3",
+                duration_seconds=1.234,
+                file_size_bytes=9,
+            )
+        )
+        mock_audio_service.generate_presigned_url = MagicMock(
+            return_value="https://cdn.example.com/a.mp3"
+        )
 
         with (
             patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
             patch(
-                "src.services.elevenlabs_service.get_elevenlabs_service",
-                return_value=mock_elevenlabs,
+                "src.api.v1.admin.get_audio_generation_service",
+                return_value=mock_audio_service,
             ),
-            patch("src.services.s3_service.get_s3_service", return_value=mock_s3),
         ):
-            events = await _collect_generator(_news_b2_audio_sse_pipeline(uuid4()))
+            events = await _collect_generator(_news_b2_audio_sse_pipeline(news_id))
 
         assert "news_audio:complete" in [e["event"] for e in events]
-        assert expected_duration == 8.0
 
     @pytest.mark.asyncio
     async def test_complete_event_includes_audio_url(self) -> None:
         from src.api.v1.admin import _news_b2_audio_sse_pipeline
+        from src.services.audio_generation_service import AudioResult
 
         item = _make_news_item_b2()
         mock_factory = _make_session_factory_found(item)
-        mock_elevenlabs = MagicMock()
-        mock_elevenlabs.generate_speech = AsyncMock(return_value=b"fake-mp3")
-        mock_s3 = MagicMock()
-        mock_s3.upload_object = MagicMock(return_value=True)
-        mock_s3.generate_presigned_url = MagicMock(return_value="https://cdn.example.com/audio.mp3")
+        news_id = uuid4()
+        mock_audio_service = MagicMock()
+        mock_audio_service.generate_single = AsyncMock(
+            return_value=AudioResult(
+                audio_bytes=b"fake-audio",
+                s3_key=f"news-audio/{news_id}.mp3",
+                duration_seconds=1.234,
+                file_size_bytes=9,
+            )
+        )
+        mock_audio_service.generate_presigned_url = MagicMock(
+            return_value="https://cdn.example.com/audio.mp3"
+        )
 
         with (
             patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
             patch(
-                "src.services.elevenlabs_service.get_elevenlabs_service",
-                return_value=mock_elevenlabs,
+                "src.api.v1.admin.get_audio_generation_service",
+                return_value=mock_audio_service,
             ),
-            patch("src.services.s3_service.get_s3_service", return_value=mock_s3),
         ):
-            events = await _collect_generator(_news_b2_audio_sse_pipeline(uuid4()))
+            events = await _collect_generator(_news_b2_audio_sse_pipeline(news_id))
 
         complete_events = [e for e in events if e["event"] == "news_audio:complete"]
         assert len(complete_events) == 1
@@ -558,22 +585,29 @@ class TestNewsA2AudioSSEPipeline:
     @pytest.mark.asyncio
     async def test_happy_path_full_event_sequence(self) -> None:
         from src.api.v1.admin import _news_a2_audio_sse_pipeline
+        from src.services.audio_generation_service import AudioResult
 
         item = _make_news_item_a2()
         mock_factory = _make_session_factory_found(item)
-        mock_elevenlabs = MagicMock()
-        mock_elevenlabs.generate_speech = AsyncMock(return_value=b"fake-mp3")
-        mock_s3 = MagicMock()
-        mock_s3.upload_object = MagicMock(return_value=True)
-        mock_s3.generate_presigned_url = MagicMock(return_value="https://cdn.example.com/a2.mp3")
+        mock_audio_service = MagicMock()
+        mock_audio_service.generate_single = AsyncMock(
+            return_value=AudioResult(
+                audio_bytes=b"fake-audio",
+                s3_key="news-audio/a2/fake.mp3",
+                duration_seconds=1.234,
+                file_size_bytes=9,
+            )
+        )
+        mock_audio_service.generate_presigned_url = MagicMock(
+            return_value="https://cdn.example.com/a2.mp3"
+        )
 
         with (
             patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
             patch(
-                "src.services.elevenlabs_service.get_elevenlabs_service",
-                return_value=mock_elevenlabs,
+                "src.api.v1.admin.get_audio_generation_service",
+                return_value=mock_audio_service,
             ),
-            patch("src.services.s3_service.get_s3_service", return_value=mock_s3),
         ):
             events = await _collect_generator(_news_a2_audio_sse_pipeline(uuid4()))
 
@@ -588,22 +622,29 @@ class TestNewsA2AudioSSEPipeline:
     @pytest.mark.asyncio
     async def test_happy_path_all_payloads_include_level_a2(self) -> None:
         from src.api.v1.admin import _news_a2_audio_sse_pipeline
+        from src.services.audio_generation_service import AudioResult
 
         item = _make_news_item_a2()
         mock_factory = _make_session_factory_found(item)
-        mock_elevenlabs = MagicMock()
-        mock_elevenlabs.generate_speech = AsyncMock(return_value=b"fake-mp3")
-        mock_s3 = MagicMock()
-        mock_s3.upload_object = MagicMock(return_value=True)
-        mock_s3.generate_presigned_url = MagicMock(return_value="https://cdn.example.com/a2.mp3")
+        mock_audio_service = MagicMock()
+        mock_audio_service.generate_single = AsyncMock(
+            return_value=AudioResult(
+                audio_bytes=b"fake-audio",
+                s3_key="news-audio/a2/fake.mp3",
+                duration_seconds=1.234,
+                file_size_bytes=9,
+            )
+        )
+        mock_audio_service.generate_presigned_url = MagicMock(
+            return_value="https://cdn.example.com/a2.mp3"
+        )
 
         with (
             patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
             patch(
-                "src.services.elevenlabs_service.get_elevenlabs_service",
-                return_value=mock_elevenlabs,
+                "src.api.v1.admin.get_audio_generation_service",
+                return_value=mock_audio_service,
             ),
-            patch("src.services.s3_service.get_s3_service", return_value=mock_s3),
         ):
             events = await _collect_generator(_news_a2_audio_sse_pipeline(uuid4()))
 
@@ -617,23 +658,30 @@ class TestNewsA2AudioSSEPipeline:
     @pytest.mark.asyncio
     async def test_s3_key_uses_audio_a2_s3_prefix(self) -> None:
         from src.api.v1.admin import _news_a2_audio_sse_pipeline
+        from src.services.audio_generation_service import AudioResult
 
         news_id = uuid4()
         item = _make_news_item_a2()
         mock_factory = _make_session_factory_found(item)
-        mock_elevenlabs = MagicMock()
-        mock_elevenlabs.generate_speech = AsyncMock(return_value=b"fake-mp3")
-        mock_s3 = MagicMock()
-        mock_s3.upload_object = MagicMock(return_value=True)
-        mock_s3.generate_presigned_url = MagicMock(return_value="https://cdn.example.com/a2.mp3")
+        mock_audio_service = MagicMock()
+        mock_audio_service.generate_single = AsyncMock(
+            return_value=AudioResult(
+                audio_bytes=b"fake-audio",
+                s3_key=f"news-audio/a2/{news_id}.mp3",
+                duration_seconds=1.234,
+                file_size_bytes=9,
+            )
+        )
+        mock_audio_service.generate_presigned_url = MagicMock(
+            return_value="https://cdn.example.com/a2.mp3"
+        )
 
         with (
             patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
             patch(
-                "src.services.elevenlabs_service.get_elevenlabs_service",
-                return_value=mock_elevenlabs,
+                "src.api.v1.admin.get_audio_generation_service",
+                return_value=mock_audio_service,
             ),
-            patch("src.services.s3_service.get_s3_service", return_value=mock_s3),
             patch("src.api.v1.admin.settings") as mock_settings,
         ):
             mock_settings.audio_a2_s3_prefix = "news-audio/a2"
@@ -650,17 +698,15 @@ class TestNewsA2AudioSSEPipeline:
 
         item = _make_news_item_a2()
         mock_factory = _make_session_factory_found(item)
-        mock_elevenlabs = MagicMock()
-        mock_elevenlabs.generate_speech = AsyncMock(side_effect=RuntimeError("TTS service down"))
-        mock_s3 = MagicMock()
+        mock_audio_service = MagicMock()
+        mock_audio_service.generate_single = AsyncMock(side_effect=RuntimeError("ElevenLabs error"))
 
         with (
             patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
             patch(
-                "src.services.elevenlabs_service.get_elevenlabs_service",
-                return_value=mock_elevenlabs,
+                "src.api.v1.admin.get_audio_generation_service",
+                return_value=mock_audio_service,
             ),
-            patch("src.services.s3_service.get_s3_service", return_value=mock_s3),
         ):
             events = await _collect_generator(_news_a2_audio_sse_pipeline(uuid4()))
 
@@ -675,30 +721,28 @@ class TestNewsA2AudioSSEPipeline:
 
         item = _make_news_item_a2()
         mock_factory = _make_session_factory_found(item)
-        mock_elevenlabs = MagicMock()
-        mock_elevenlabs.generate_speech = AsyncMock(return_value=b"fake-mp3")
-        mock_s3 = MagicMock()
-        mock_s3.upload_object = MagicMock(return_value=False)
+        mock_audio_service = MagicMock()
+        mock_audio_service.generate_single = AsyncMock(side_effect=RuntimeError("S3 upload failed"))
 
         with (
             patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
             patch(
-                "src.services.elevenlabs_service.get_elevenlabs_service",
-                return_value=mock_elevenlabs,
+                "src.api.v1.admin.get_audio_generation_service",
+                return_value=mock_audio_service,
             ),
-            patch("src.services.s3_service.get_s3_service", return_value=mock_s3),
         ):
             events = await _collect_generator(_news_a2_audio_sse_pipeline(uuid4()))
 
         error_events = [e for e in events if e["event"] == "news_audio:error"]
         assert len(error_events) >= 1
-        assert error_events[0]["data"]["stage"] == "upload"
+        assert error_events[0]["data"]["stage"] == "tts"
         assert error_events[0]["data"]["level"] == "a2"
 
     @pytest.mark.asyncio
     async def test_no_culture_question_propagation(self) -> None:
         """A2 pipeline must NOT touch CultureQuestion table — only 2 session opens."""
         from src.api.v1.admin import _news_a2_audio_sse_pipeline
+        from src.services.audio_generation_service import AudioResult
 
         item = _make_news_item_a2()
         begin_calls: list[int] = []
@@ -734,21 +778,28 @@ class TestNewsA2AudioSSEPipeline:
         mock_factory = MagicMock()
         mock_factory.begin.side_effect = begin_side_effect
 
-        mock_elevenlabs = MagicMock()
-        mock_elevenlabs.generate_speech = AsyncMock(return_value=b"fake-mp3")
-        mock_s3 = MagicMock()
-        mock_s3.upload_object = MagicMock(return_value=True)
-        mock_s3.generate_presigned_url = MagicMock(return_value="https://cdn.example.com/a2.mp3")
+        news_id = uuid4()
+        mock_audio_service = MagicMock()
+        mock_audio_service.generate_single = AsyncMock(
+            return_value=AudioResult(
+                audio_bytes=b"fake-audio",
+                s3_key=f"news-audio/a2/{news_id}.mp3",
+                duration_seconds=1.234,
+                file_size_bytes=9,
+            )
+        )
+        mock_audio_service.generate_presigned_url = MagicMock(
+            return_value="https://cdn.example.com/a2.mp3"
+        )
 
         with (
             patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
             patch(
-                "src.services.elevenlabs_service.get_elevenlabs_service",
-                return_value=mock_elevenlabs,
+                "src.api.v1.admin.get_audio_generation_service",
+                return_value=mock_audio_service,
             ),
-            patch("src.services.s3_service.get_s3_service", return_value=mock_s3),
         ):
-            events = await _collect_generator(_news_a2_audio_sse_pipeline(uuid4()))
+            events = await _collect_generator(_news_a2_audio_sse_pipeline(news_id))
 
         # A2 pipeline: 1 session for load, 1 session for persist. No extra sessions.
         assert len(begin_calls) == 2
@@ -757,24 +808,32 @@ class TestNewsA2AudioSSEPipeline:
     @pytest.mark.asyncio
     async def test_complete_event_includes_audio_url(self) -> None:
         from src.api.v1.admin import _news_a2_audio_sse_pipeline
+        from src.services.audio_generation_service import AudioResult
 
         item = _make_news_item_a2()
         mock_factory = _make_session_factory_found(item)
-        mock_elevenlabs = MagicMock()
-        mock_elevenlabs.generate_speech = AsyncMock(return_value=b"fake-mp3")
-        mock_s3 = MagicMock()
-        mock_s3.upload_object = MagicMock(return_value=True)
-        mock_s3.generate_presigned_url = MagicMock(return_value="https://cdn.example.com/a2.mp3")
+        news_id = uuid4()
+        mock_audio_service = MagicMock()
+        mock_audio_service.generate_single = AsyncMock(
+            return_value=AudioResult(
+                audio_bytes=b"fake-audio",
+                s3_key=f"news-audio/a2/{news_id}.mp3",
+                duration_seconds=1.234,
+                file_size_bytes=9,
+            )
+        )
+        mock_audio_service.generate_presigned_url = MagicMock(
+            return_value="https://cdn.example.com/a2.mp3"
+        )
 
         with (
             patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
             patch(
-                "src.services.elevenlabs_service.get_elevenlabs_service",
-                return_value=mock_elevenlabs,
+                "src.api.v1.admin.get_audio_generation_service",
+                return_value=mock_audio_service,
             ),
-            patch("src.services.s3_service.get_s3_service", return_value=mock_s3),
         ):
-            events = await _collect_generator(_news_a2_audio_sse_pipeline(uuid4()))
+            events = await _collect_generator(_news_a2_audio_sse_pipeline(news_id))
 
         complete_events = [e for e in events if e["event"] == "news_audio:complete"]
         assert len(complete_events) == 1

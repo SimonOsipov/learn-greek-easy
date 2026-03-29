@@ -9,7 +9,6 @@ All endpoints require superuser authentication.
 """
 
 import asyncio
-import base64
 import json
 from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
@@ -147,6 +146,7 @@ from src.schemas.word_entry import (
     WordEntryResponse,
 )
 from src.services.announcement_service import AnnouncementService
+from src.services.audio_generation_service import DialogInput, get_audio_generation_service
 from src.services.card_error_admin_service import CardErrorAdminService
 from src.services.card_generator_service import CardGeneratorService
 from src.services.changelog_service import ChangelogService
@@ -2215,8 +2215,6 @@ async def _word_audio_sse_pipeline(
     uploading each to S3 and persisting the audio key to the database.
     Emits SSE events for each stage of the pipeline per part.
     """
-    from src.services.elevenlabs_service import get_elevenlabs_service
-
     yield format_sse_event("", event="connected")
 
     factory = get_session_factory()
@@ -2271,8 +2269,7 @@ async def _word_audio_sse_pipeline(
     )
 
     # Stage 2: Per-part TTS + S3 upload + DB persist loop
-    elevenlabs = get_elevenlabs_service()
-    s3 = get_s3_service()
+    audio_service = get_audio_generation_service()
     parts_completed = 0
 
     for part_index, part_info in enumerate(parts):
@@ -2297,9 +2294,6 @@ async def _word_audio_sse_pipeline(
             else:
                 tts_text = next(ex["greek"] for ex in examples_data if ex["id"] == example_id)
 
-            # Generate speech
-            audio_bytes = await elevenlabs.generate_speech(tts_text, voice_id=WORD_AUDIO_VOICE_ID)
-
             # Compute S3 key
             s3_key = (
                 f"{WORD_AUDIO_S3_PREFIX}/{word_entry_id}.mp3"
@@ -2307,23 +2301,30 @@ async def _word_audio_sse_pipeline(
                 else f"{WORD_AUDIO_S3_PREFIX}/{word_entry_id}/{example_id}.mp3"
             )
 
-            current_stage = "upload"
-            yield format_sse_event(
-                {"part": part_name, "example_id": example_id, "s3_key": s3_key},
-                event="word_audio:upload",
+            async def _on_progress(stage: str, **_kwargs: object) -> None:
+                nonlocal current_stage
+                current_stage = stage
+
+            audio_result = await audio_service.generate_single(
+                text=tts_text,
+                s3_key=s3_key,
+                voice_id=WORD_AUDIO_VOICE_ID,
+                on_progress=_on_progress,
             )
 
-            upload_ok = s3.upload_object(s3_key, audio_bytes, "audio/mpeg")
-            if not upload_ok:
-                raise RuntimeError(f"S3 upload failed for {s3_key}")
-
             current_stage = "persist"
+            yield format_sse_event(
+                {"part": part_name, "example_id": example_id, "s3_key": audio_result.s3_key},
+                event="word_audio:upload",
+            )
             yield format_sse_event(
                 {"part": part_name, "example_id": example_id},
                 event="word_audio:persist",
             )
 
-            await _word_audio_persist_ready(factory, word_entry_id, part_name, example_id, s3_key)
+            await _word_audio_persist_ready(
+                factory, word_entry_id, part_name, example_id, audio_result.s3_key
+            )
 
             parts_completed += 1
             yield format_sse_event(
@@ -2390,9 +2391,6 @@ async def _news_b2_audio_sse_pipeline(
     news_item_id: UUID,
 ) -> AsyncGenerator[str, None]:
     """SSE pipeline for B2-level news audio generation."""
-    from src.services.elevenlabs_service import get_elevenlabs_service
-    from src.services.s3_service import get_s3_service
-
     yield format_sse_event("", event="connected")
     factory = get_session_factory()
 
@@ -2432,31 +2430,32 @@ async def _news_b2_audio_sse_pipeline(
 
     current_stage = "tts"
     try:
-        # Stage 2 — TTS
-        elevenlabs = get_elevenlabs_service()
+        # Stage 2 — TTS + upload
+        audio_service = get_audio_generation_service()
+        s3_key = f"{settings.audio_s3_prefix}/{news_item_id}.mp3"
         yield format_sse_event(
             {"news_item_id": str(news_item_id), "level": "b2"},
             event="news_audio:tts",
         )
-        audio_bytes: bytes = await elevenlabs.generate_speech(
-            description_el, news_item_id=news_item_id
+
+        async def _on_progress_b2(stage: str, **kwargs: Any) -> None:
+            nonlocal current_stage
+            current_stage = stage
+
+        audio_result = await audio_service.generate_single(
+            text=description_el,
+            s3_key=s3_key,
+            on_progress=_on_progress_b2,
+            news_item_id=news_item_id,
         )
 
-        # Stage 3 — S3 upload
-        current_stage = "upload"
-        s3 = get_s3_service()
-        s3_key = f"{settings.audio_s3_prefix}/{news_item_id}.mp3"
         yield format_sse_event(
             {"news_item_id": str(news_item_id), "level": "b2", "s3_key": s3_key},
             event="news_audio:upload",
         )
-        upload_ok = s3.upload_object(s3_key, audio_bytes, "audio/mpeg")
-        if not upload_ok:
-            raise RuntimeError("S3 upload failed")
 
         # Stage 4 — DB persist
         current_stage = "persist"
-        audio_duration_seconds = (len(audio_bytes) * 8) / (128 * 1000)
         yield format_sse_event(
             {"news_item_id": str(news_item_id), "level": "b2"},
             event="news_audio:persist",
@@ -2468,8 +2467,8 @@ async def _news_b2_audio_sse_pipeline(
                 .values(
                     audio_s3_key=s3_key,
                     audio_generated_at=datetime.now(timezone.utc),
-                    audio_file_size_bytes=len(audio_bytes),
-                    audio_duration_seconds=audio_duration_seconds,
+                    audio_file_size_bytes=audio_result.file_size_bytes,
+                    audio_duration_seconds=audio_result.duration_seconds,
                 )
             )
             await session.execute(
@@ -2479,7 +2478,7 @@ async def _news_b2_audio_sse_pipeline(
             )
 
         # Stage 5 — Complete
-        presigned_url = s3.generate_presigned_url(s3_key)
+        presigned_url = audio_service.generate_presigned_url(s3_key)
         yield format_sse_event(
             {"news_item_id": str(news_item_id), "level": "b2", "audio_url": presigned_url},
             event="news_audio:complete",
@@ -2501,9 +2500,6 @@ async def _news_a2_audio_sse_pipeline(
     news_item_id: UUID,
 ) -> AsyncGenerator[str, None]:
     """SSE pipeline for A2-level news audio generation."""
-    from src.services.elevenlabs_service import get_elevenlabs_service
-    from src.services.s3_service import get_s3_service
-
     yield format_sse_event("", event="connected")
     factory = get_session_factory()
 
@@ -2543,29 +2539,31 @@ async def _news_a2_audio_sse_pipeline(
 
     current_stage = "tts"
     try:
-        # Stage 2 — TTS
-        elevenlabs = get_elevenlabs_service()
+        # Stage 2 — TTS + upload
+        audio_service = get_audio_generation_service()
+        s3_key = f"{settings.audio_a2_s3_prefix}/{news_item_id}.mp3"
         yield format_sse_event(
             {"news_item_id": str(news_item_id), "level": "a2"},
             event="news_audio:tts",
         )
-        audio_bytes: bytes = await elevenlabs.generate_speech(description_el_a2)
 
-        # Stage 3 — S3 upload
-        current_stage = "upload"
-        s3 = get_s3_service()
-        s3_key = f"{settings.audio_a2_s3_prefix}/{news_item_id}.mp3"
+        async def _on_progress_a2(stage: str, **kwargs: Any) -> None:
+            nonlocal current_stage
+            current_stage = stage
+
+        audio_result = await audio_service.generate_single(
+            text=description_el_a2,
+            s3_key=s3_key,
+            on_progress=_on_progress_a2,
+        )
+
         yield format_sse_event(
             {"news_item_id": str(news_item_id), "level": "a2", "s3_key": s3_key},
             event="news_audio:upload",
         )
-        upload_ok = s3.upload_object(s3_key, audio_bytes, "audio/mpeg")
-        if not upload_ok:
-            raise RuntimeError("S3 upload failed")
 
         # Stage 4 — DB persist
         current_stage = "persist"
-        audio_duration_seconds = (len(audio_bytes) * 8) / (128 * 1000)
         yield format_sse_event(
             {"news_item_id": str(news_item_id), "level": "a2"},
             event="news_audio:persist",
@@ -2577,13 +2575,13 @@ async def _news_a2_audio_sse_pipeline(
                 .values(
                     audio_a2_s3_key=s3_key,
                     audio_a2_generated_at=datetime.now(timezone.utc),
-                    audio_a2_file_size_bytes=len(audio_bytes),
-                    audio_a2_duration_seconds=audio_duration_seconds,
+                    audio_a2_file_size_bytes=audio_result.file_size_bytes,
+                    audio_a2_duration_seconds=audio_result.duration_seconds,
                 )
             )
 
         # Stage 5 — Complete
-        presigned_url = s3.generate_presigned_url(s3_key)
+        presigned_url = audio_service.generate_presigned_url(s3_key)
         yield format_sse_event(
             {"news_item_id": str(news_item_id), "level": "a2", "audio_url": presigned_url},
             event="news_audio:complete",
@@ -2653,9 +2651,6 @@ async def _culture_question_audio_sse_pipeline(
     question_id: UUID,
 ) -> AsyncGenerator[str, None]:
     """SSE pipeline for culture question audio generation."""
-    from src.services.elevenlabs_service import get_elevenlabs_service
-    from src.services.s3_service import get_s3_service
-
     yield format_sse_event("", event="connected")
     factory = get_session_factory()
 
@@ -2708,25 +2703,28 @@ async def _culture_question_audio_sse_pipeline(
 
     current_stage = "tts"
     try:
-        # Stage 2 — TTS
-        elevenlabs = get_elevenlabs_service()
+        # Stage 2 — TTS + upload
+        audio_service = get_audio_generation_service()
+        s3_key = f"culture/audio/{question_id}.mp3"
         yield format_sse_event(
             {"question_id": str(question_id)},
             event="culture_audio:tts",
         )
-        audio_bytes: bytes = await elevenlabs.generate_speech(greek_text)
 
-        # Stage 3 — S3 upload
-        current_stage = "upload"
-        s3 = get_s3_service()
-        s3_key = f"culture/audio/{question_id}.mp3"
+        async def _on_progress_cq(stage: str, **kwargs: Any) -> None:
+            nonlocal current_stage
+            current_stage = stage
+
+        await audio_service.generate_single(
+            text=greek_text,
+            s3_key=s3_key,
+            on_progress=_on_progress_cq,
+        )
+
         yield format_sse_event(
             {"question_id": str(question_id), "s3_key": s3_key},
             event="culture_audio:upload",
         )
-        upload_ok = s3.upload_object(s3_key, audio_bytes, "audio/mpeg")
-        if not upload_ok:
-            raise RuntimeError("S3 upload failed")
 
         # Stage 4 — DB persist
         current_stage = "persist"
@@ -4200,260 +4198,6 @@ async def get_listening_dialog_detail(
     )
 
 
-def _redistribute_degenerate_timing(
-    timing_map: dict[int, tuple[int, int]],
-    sorted_lines: list[dict],
-    duration_ms: int,
-    word_timestamps_map: dict[int, list[dict] | None],
-) -> tuple[dict[int, tuple[int, int]], dict[int, list[dict] | None]]:
-    """Redistribute timing for degenerate lines proportionally by character count."""
-    degenerate_indices = {i for i, (s, e) in timing_map.items() if s == e}
-    if not degenerate_indices:
-        return timing_map, word_timestamps_map
-
-    char_counts = {i: len(sorted_lines[i]["text"]) for i in degenerate_indices}
-    total_chars = sum(char_counts.values())
-    if total_chars == 0:
-        return timing_map, word_timestamps_map
-
-    total_non_degenerate_time = sum(
-        end - start for i, (start, end) in timing_map.items() if i not in degenerate_indices
-    )
-    unclaimed_ms = max(0, duration_ms - total_non_degenerate_time)
-
-    # Proportional shares per degenerate line
-    shares = {i: unclaimed_ms * (char_counts[i] / total_chars) for i in degenerate_indices}
-
-    # Find ordered non-degenerate start times for clamping
-    sorted_non_degen_starts = sorted(
-        timing_map[i][0] for i in timing_map if i not in degenerate_indices
-    )
-
-    # Cursor walk: fill degenerate lines into gaps chronologically
-    new_timing_map = dict(timing_map)
-    cursor = 0
-    ordered_indices = sorted(timing_map.keys())
-    for i in ordered_indices:
-        if i not in degenerate_indices:
-            cursor = timing_map[i][1]
-        else:
-            start = cursor
-            end = cursor + round(shares[i])
-            # Clamp: find next non-degenerate start after cursor
-            next_non_degen_start = next(
-                (s for s in sorted_non_degen_starts if s > cursor), duration_ms
-            )
-            end = min(end, next_non_degen_start)
-            # Clamp to duration_ms
-            end = min(end, duration_ms)
-            new_timing_map[i] = (start, end)
-            cursor = end
-
-    # Redistribute word timestamps for redistributed lines
-    new_word_timestamps_map = dict(word_timestamps_map)
-    for i in degenerate_indices:
-        words = word_timestamps_map.get(i)
-        if words is None:
-            continue
-        line_start, line_end = new_timing_map[i]
-        line_duration = line_end - line_start
-        total_word_chars = sum(len(w["word"]) for w in words)
-        if total_word_chars == 0:
-            continue
-        word_cursor = line_start
-        new_words = []
-        for w_idx, w in enumerate(words):
-            w_start = word_cursor
-            if w_idx == len(words) - 1:
-                w_end = line_end
-            else:
-                w_end = word_cursor + round(line_duration * len(w["word"]) / total_word_chars)
-            new_words.append({**w, "start_ms": w_start, "end_ms": w_end})
-            word_cursor = w_end
-        new_word_timestamps_map[i] = new_words
-
-    return new_timing_map, new_word_timestamps_map
-
-
-def _apply_forced_alignment(  # noqa: C901
-    alignment_response: dict[str, Any],
-    timing_map: dict[int, tuple[int, int]],
-    sorted_lines: list[dict],
-    word_timestamps_map: dict[int, list[dict] | None],
-) -> tuple[dict[int, tuple[int, int]], dict[int, list[dict] | None]]:
-    """Map forced alignment word timestamps to degenerate dialog lines.
-
-    Pure function — no side effects, no DB access, no logging.
-    Returns shallow copies of the input maps with degenerate lines updated.
-
-    Args:
-        alignment_response: FA API response dict with 'words' list (text, start, end).
-        timing_map: Map of line_index -> (start_ms, end_ms). Degenerate when start==end.
-        sorted_lines: List of line dicts with 'text' key, in line_index order.
-        word_timestamps_map: Map of line_index -> word timestamp list or None.
-
-    Returns:
-        Updated (timing_map, word_timestamps_map) copies with degenerate lines fixed.
-    """
-    degenerate_indices = {i for i, (s, e) in timing_map.items() if s == e}
-    if not degenerate_indices:
-        return timing_map, word_timestamps_map
-
-    # Build full transcript and per-line character ranges
-    full_text = "\n".join(line["text"] for line in sorted_lines)
-
-    line_ranges: list[tuple[int, int, int]] = []  # (line_index, char_start, char_end)
-    offset = 0
-    for i, line in enumerate(sorted_lines):
-        length = len(line["text"])
-        line_ranges.append((i, offset, offset + length))
-        offset += length + 1  # +1 for \n separator
-
-    # Map FA words to degenerate lines using cursor approach with drift recovery
-    line_words: dict[int, list[dict]] = {i: [] for i in degenerate_indices}
-
-    cursor = 0
-    for word in alignment_response.get("words", []):
-        word_text = word["text"]
-        word_len = len(word_text)
-
-        # Try exact match at cursor position
-        if full_text[cursor : cursor + word_len] == word_text:
-            match_pos = cursor
-        else:
-            # Drift recovery: search within +/- 10 chars
-            match_pos = None
-            search_start = max(0, cursor - 10)
-            search_end = min(len(full_text), cursor + 10 + word_len)
-            window = full_text[search_start:search_end]
-            idx = window.find(word_text)
-            if idx != -1:
-                match_pos = search_start + idx
-
-        if match_pos is None:
-            # Word not found — skip (do not assign, do not advance cursor)
-            continue
-
-        # Advance cursor past this word and trailing whitespace/newlines
-        cursor = match_pos + word_len
-        while cursor < len(full_text) and full_text[cursor] in (" ", "\n"):
-            cursor += 1
-
-        # Assign word to its line if that line is degenerate
-        for line_idx, char_start, char_end in line_ranges:
-            if char_start <= match_pos < char_end:
-                if line_idx in degenerate_indices:
-                    line_words[line_idx].append(word)
-                break
-
-    # Build updated maps for degenerate lines that have matched words
-    new_timing_map = dict(timing_map)
-    new_word_timestamps_map = dict(word_timestamps_map)
-
-    for i in degenerate_indices:
-        words = line_words[i]
-        if not words:
-            # Zero mapped words — leave unchanged (remains degenerate for fallback)
-            continue
-
-        word_list = [
-            {
-                "word": w["text"],
-                "start_ms": int(w["start"] * 1000),
-                "end_ms": int(w["end"] * 1000),
-            }
-            for w in words
-        ]
-
-        new_timing_map[i] = (word_list[0]["start_ms"], word_list[-1]["end_ms"])
-        new_word_timestamps_map[i] = word_list
-
-    return new_timing_map, new_word_timestamps_map
-
-
-def _build_word_timestamps(  # noqa: C901
-    result_data: dict, sorted_lines: list[dict]
-) -> dict[int, list[dict] | None]:
-    """Extract word-level timing from ElevenLabs alignment data.
-
-    Returns a dict mapping line index → list of word timing dicts, or None if data is missing.
-    """
-    try:
-        alignment = result_data.get("alignment")
-        if not alignment:
-            logger.warning(
-                "_build_word_timestamps: alignment missing in result_data, returning all None"
-            )
-            return {i: None for i in range(len(sorted_lines))}
-
-        chars = alignment.get("characters", [])
-        starts = alignment.get("character_start_times_seconds", [])
-        ends = alignment.get("character_end_times_seconds", [])
-        voice_segments = result_data.get("voice_segments", [])
-
-        result: dict[int, list[dict] | None] = {i: None for i in range(len(sorted_lines))}
-
-        for seg in voice_segments:
-            line_idx = seg.get("dialogue_input_index")
-            if line_idx is None:
-                logger.warning(
-                    "_build_word_timestamps: segment missing dialogue_input_index, skipping"
-                )
-                continue
-
-            char_start = seg.get("character_start_index")
-            char_end = seg.get("character_end_index")
-
-            if char_start is None or char_end is None:
-                logger.warning(
-                    "_build_word_timestamps: segment {} missing character indices, skipping",
-                    line_idx,
-                )
-                continue
-
-            seg_chars = chars[char_start:char_end]
-            seg_starts = starts[char_start:char_end]
-            seg_ends = ends[char_start:char_end]
-
-            words: list[dict] = []
-            word_chars: list[str] = []
-            word_start_idx: int | None = None
-
-            for j, ch in enumerate(seg_chars):
-                if ch == " ":
-                    if word_chars:
-                        words.append(
-                            {
-                                "word": "".join(word_chars),
-                                "start_ms": int(seg_starts[word_start_idx] * 1000),
-                                "end_ms": int(seg_ends[j - 1] * 1000),
-                            }
-                        )
-                        word_chars = []
-                        word_start_idx = None
-                else:
-                    if not word_chars:
-                        word_start_idx = j
-                    word_chars.append(ch)
-
-            if word_chars:
-                last_idx = len(seg_chars) - 1
-                words.append(
-                    {
-                        "word": "".join(word_chars),
-                        "start_ms": int(seg_starts[word_start_idx] * 1000),
-                        "end_ms": int(seg_ends[last_idx] * 1000),
-                    }
-                )
-
-            result[line_idx] = words
-
-        return result
-    except (IndexError, KeyError, TypeError) as exc:
-        logger.warning("_build_word_timestamps: unexpected error, returning all None: {}", exc)
-        return {i: None for i in range(len(sorted_lines))}
-
-
 _ALLOWED_AUDIO_GEN_STATUSES = {
     DialogStatus.DRAFT,
     DialogStatus.AUDIO_READY,
@@ -4529,12 +4273,17 @@ async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, Non
             event="dialog_audio:elevenlabs",
         )
 
-        # Stage 3 — ElevenLabs call
-        from src.services.elevenlabs_service import get_elevenlabs_service
+        audio_service = get_audio_generation_service()
+        dialog_inputs = [
+            DialogInput(text=line["text"], voice_id=speakers_data[line["speaker_id"]])
+            for line in sorted_lines
+        ]
 
-        elevenlabs = get_elevenlabs_service()
         try:
-            result_data = await elevenlabs.generate_dialog_audio(inputs)
+            audio_result = await audio_service.generate_dialog(
+                inputs=dialog_inputs,
+                s3_key=f"dialog-audio/{dialog_id}.mp3",
+            )
         except Exception as e:
             yield format_sse_event(
                 {"stage": "elevenlabs", "error": str(e), "dialog_id": dialog_data["id"]},
@@ -4542,143 +4291,16 @@ async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, Non
             )
             return
 
-        # Stage 4 — Decode audio bytes
-        audio_bytes = base64.b64decode(result_data["audio_base64"])
-        s3_key = f"dialog-audio/{dialog_id}.mp3"
-
-        # Stage 5 — Timing (validate before uploading to avoid orphaned S3 objects)
-        word_timestamps_map: dict[int, list[dict] | None] = {
-            i: None for i in range(len(sorted_lines))
-        }
-        try:
-            voice_segments = result_data.get("voice_segments")
-            if not voice_segments:
-                raise ValueError("voice_segments missing or empty in ElevenLabs response")
-
-            timing_map: dict[int, tuple[int, int]] = {}
-            for seg in voice_segments:
-                idx = seg["dialogue_input_index"]
-                start_ms = int(seg["start_time_seconds"] * 1000)
-                end_ms = int(seg["end_time_seconds"] * 1000)
-                timing_map[idx] = (start_ms, end_ms)
-
-            degenerate_line_count = sum(
-                1 for start_ms, end_ms in timing_map.values() if start_ms == end_ms
-            )
-            if degenerate_line_count > 0:
-                logger.warning(
-                    "Dialog {} has {} degenerate line(s) (start_ms == end_ms)",
-                    dialog_id,
-                    degenerate_line_count,
-                )
-
-            for i in range(len(sorted_lines)):
-                if i not in timing_map:
-                    raise ValueError(f"No timing segment for line index {i}")
-
-            duration_seconds = voice_segments[-1]["end_time_seconds"]
-            word_timestamps_map = _build_word_timestamps(result_data, sorted_lines)
-        except Exception as e:
-            yield format_sse_event(
-                {"stage": "timing", "error": str(e), "dialog_id": dialog_data["id"]},
-                event="dialog_audio:error",
-            )
-            return
-
-        alignment_source = "original"
-
-        # Stage 4.5 — Parse actual MP3 duration from audio bytes
-        from io import BytesIO
-
-        from mutagen.mp3 import MP3
-
-        segment_duration = duration_seconds
-        try:
-            mp3_info: Any = MP3(fileobj=BytesIO(audio_bytes))
-            parsed_duration: float = mp3_info.info.length
-            if abs(parsed_duration - segment_duration) > 1.0:
-                logger.warning(
-                    "MP3 duration mismatch for dialog {}: parsed={:.2f}s, segments={:.2f}s",
-                    dialog_id,
-                    parsed_duration,
-                    segment_duration,
-                )
-            duration_seconds = parsed_duration
-        except Exception as exc:
-            logger.warning(
-                "Failed to parse MP3 duration for dialog {}, falling back to voice_segments: {}",
-                dialog_id,
-                exc,
-            )
-
-        # Stage 5.5 — Forced alignment for degenerate lines
-        if degenerate_line_count > 0:
-            try:
-                full_transcript = "\n".join(line["text"] for line in sorted_lines)
-                fa_response = await elevenlabs.forced_align(audio_bytes, full_transcript)
-                timing_map, word_timestamps_map = _apply_forced_alignment(
-                    fa_response,
-                    timing_map,
-                    sorted_lines,
-                    word_timestamps_map,
-                )
-                remaining = sum(1 for s, e in timing_map.values() if s == e)
-                if remaining > 0:
-                    logger.warning(
-                        "Forced alignment left {} degenerate line(s) in dialog {}, falling through to redistribution",
-                        remaining,
-                        dialog_id,
-                    )
-                else:
-                    alignment_source = "forced_alignment"
-                    logger.info(
-                        "Forced alignment fixed {} degenerate line(s) in dialog {}, loss={:.4f}",
-                        degenerate_line_count,
-                        dialog_id,
-                        fa_response.get("loss", -1),
-                    )
-            except Exception as exc:
-                logger.warning(
-                    "Forced alignment failed for dialog {}, falling back to redistribution: {}",
-                    dialog_id,
-                    exc,
-                )
-
-        # Stage 5 — Redistribute degenerate timing
-        remaining_degenerate = sum(1 for s, e in timing_map.values() if s == e)
-        if remaining_degenerate > 0:
-            duration_ms = int(duration_seconds * 1000)
-            timing_map, word_timestamps_map = _redistribute_degenerate_timing(
-                timing_map,
-                sorted_lines,
-                duration_ms,
-                word_timestamps_map,
-            )
-            if alignment_source == "original":
-                alignment_source = "redistribution"
-            logger.info(
-                "Redistributed timing for {} remaining degenerate line(s) in dialog {}",
-                remaining_degenerate,
-                dialog_id,
-            )
-
         yield format_sse_event(
-            {"segments_count": len(voice_segments), "alignment_source": alignment_source},
+            {
+                "segments_count": len(audio_result.line_timings),
+                "alignment_source": audio_result.alignment_source,
+            },
             event="dialog_audio:timing",
         )
 
-        # Stage 4 (continued) — Upload after timing is validated
-        s3 = get_s3_service()
-        upload_ok = s3.upload_object(s3_key, audio_bytes, "audio/mpeg")
-        if not upload_ok:
-            yield format_sse_event(
-                {"stage": "upload", "error": "S3 upload failed", "dialog_id": dialog_data["id"]},
-                event="dialog_audio:error",
-            )
-            return
-
         yield format_sse_event(
-            {"s3_key": s3_key, "audio_size_bytes": len(audio_bytes)},
+            {"s3_key": audio_result.s3_key, "audio_size_bytes": audio_result.file_size_bytes},
             event="dialog_audio:upload",
         )
 
@@ -4700,34 +4322,34 @@ async def _dialog_audio_sse_pipeline(dialog_id: UUID) -> AsyncGenerator[str, Non
                 update(ListeningDialog)
                 .where(ListeningDialog.id == dialog_id)
                 .values(
-                    audio_s3_key=s3_key,
+                    audio_s3_key=audio_result.s3_key,
                     audio_generated_at=datetime.now(timezone.utc),
-                    audio_file_size_bytes=len(audio_bytes),
-                    audio_duration_seconds=duration_seconds,
+                    audio_file_size_bytes=audio_result.file_size_bytes,
+                    audio_duration_seconds=audio_result.duration_seconds,
                     status=target_status,
                 )
             )
             for i, line in enumerate(sorted_lines):
-                start_ms, end_ms = timing_map[i]
+                start_ms, end_ms = audio_result.line_timings[i]
                 await session.execute(
                     update(DialogLine)
                     .where(DialogLine.id == UUID(line["id"]))
                     .values(
                         start_time_ms=start_ms,
                         end_time_ms=end_ms,
-                        word_timestamps=word_timestamps_map.get(i),
+                        word_timestamps=audio_result.word_timestamps_map.get(i),
                     )
                 )
 
         yield format_sse_event(
             {
                 "dialog_id": dialog_data["id"],
-                "s3_key": s3_key,
-                "duration_seconds": duration_seconds,
-                "audio_size_bytes": len(audio_bytes),
+                "s3_key": audio_result.s3_key,
+                "duration_seconds": audio_result.duration_seconds,
+                "audio_size_bytes": audio_result.file_size_bytes,
                 "has_exercises": has_exercises,
-                "degenerate_line_count": degenerate_line_count,
-                "alignment_source": alignment_source,
+                "degenerate_line_count": audio_result.degenerate_line_count,
+                "alignment_source": audio_result.alignment_source,
             },
             event="dialog_audio:complete",
         )

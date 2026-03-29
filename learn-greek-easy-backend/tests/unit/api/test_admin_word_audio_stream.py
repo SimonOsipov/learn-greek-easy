@@ -10,6 +10,7 @@ import pytest
 
 from src.core.dependencies import SSEAuthResult
 from src.db.models import PartOfSpeech
+from src.services.audio_generation_service import AudioResult
 
 
 def _parse_sse_text(text: str) -> list[dict]:
@@ -191,13 +192,22 @@ class TestWordAudioStreamEndpoint:
 
 
 class TestWordAudioSSEPipeline:
-    """Pipeline tests — mock session factory, elevenlabs, and s3."""
+    """Pipeline tests — mock session factory and audio_generation_service."""
+
+    def _make_audio_result(self, s3_key: str) -> AudioResult:
+        return AudioResult(
+            audio_bytes=b"fake-mp3",
+            s3_key=s3_key,
+            duration_seconds=1.0,
+            file_size_bytes=8,
+        )
 
     @pytest.mark.asyncio
     async def test_happy_path_lemma_and_examples(self) -> None:
         """Word entry with lemma + 2 examples produces full event sequence."""
         from src.api.v1.admin import _word_audio_sse_pipeline
 
+        word_entry_id = uuid4()
         word_entry = _make_word_entry_mock(
             lemma="σπίτι",
             part_of_speech=PartOfSpeech.NOUN,
@@ -208,20 +218,23 @@ class TestWordAudioSSEPipeline:
         )
 
         mock_factory = _make_session_factory_mock(word_entry)
-        mock_elevenlabs = MagicMock()
-        mock_elevenlabs.generate_speech = AsyncMock(return_value=b"fake-mp3")
-        mock_s3 = MagicMock()
-        mock_s3.upload_object = MagicMock(return_value=True)
+        mock_audio_service = MagicMock()
+        mock_audio_service.generate_single = AsyncMock(
+            side_effect=[
+                self._make_audio_result(f"word-audio/{word_entry_id}.mp3"),
+                self._make_audio_result(f"word-audio/{word_entry_id}/ex1.mp3"),
+                self._make_audio_result(f"word-audio/{word_entry_id}/ex2.mp3"),
+            ]
+        )
 
         with (
             patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
             patch(
-                "src.services.elevenlabs_service.get_elevenlabs_service",
-                return_value=mock_elevenlabs,
+                "src.api.v1.admin.get_audio_generation_service",
+                return_value=mock_audio_service,
             ),
-            patch("src.api.v1.admin.get_s3_service", return_value=mock_s3),
         ):
-            events = await _collect_generator(_word_audio_sse_pipeline(uuid4()))
+            events = await _collect_generator(_word_audio_sse_pipeline(word_entry_id))
 
         event_types = [e["event"] for e in events]
 
@@ -242,31 +255,31 @@ class TestWordAudioSSEPipeline:
         complete_events = [e for e in events if e["event"] == "word_audio:complete"]
         assert complete_events[0]["data"]["parts_completed"] == 3
 
-        # Verify generate_speech called 3 times
-        assert mock_elevenlabs.generate_speech.call_count == 3
+        # Verify generate_single called 3 times
+        assert mock_audio_service.generate_single.call_count == 3
 
     @pytest.mark.asyncio
     async def test_happy_path_lemma_only(self) -> None:
         """Word entry with no examples produces single-part event sequence."""
         from src.api.v1.admin import _word_audio_sse_pipeline
 
+        word_entry_id = uuid4()
         word_entry = _make_word_entry_mock(lemma="σπίτι", examples=None)
 
         mock_factory = _make_session_factory_mock(word_entry)
-        mock_elevenlabs = MagicMock()
-        mock_elevenlabs.generate_speech = AsyncMock(return_value=b"fake-mp3")
-        mock_s3 = MagicMock()
-        mock_s3.upload_object = MagicMock(return_value=True)
+        mock_audio_service = MagicMock()
+        mock_audio_service.generate_single = AsyncMock(
+            return_value=self._make_audio_result(f"word-audio/{word_entry_id}.mp3")
+        )
 
         with (
             patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
             patch(
-                "src.services.elevenlabs_service.get_elevenlabs_service",
-                return_value=mock_elevenlabs,
+                "src.api.v1.admin.get_audio_generation_service",
+                return_value=mock_audio_service,
             ),
-            patch("src.api.v1.admin.get_s3_service", return_value=mock_s3),
         ):
-            events = await _collect_generator(_word_audio_sse_pipeline(uuid4()))
+            events = await _collect_generator(_word_audio_sse_pipeline(word_entry_id))
 
         start_events = [e for e in events if e["event"] == "word_audio:start"]
         assert start_events[0]["data"]["part_count"] == 1
@@ -274,7 +287,7 @@ class TestWordAudioSSEPipeline:
         complete_events = [e for e in events if e["event"] == "word_audio:complete"]
         assert complete_events[0]["data"]["parts_completed"] == 1
 
-        assert mock_elevenlabs.generate_speech.call_count == 1
+        assert mock_audio_service.generate_single.call_count == 1
 
         tts_events = [e for e in events if e["event"] == "word_audio:tts"]
         assert len(tts_events) == 1
@@ -302,6 +315,7 @@ class TestWordAudioSSEPipeline:
         """TTS raises on lemma, succeeds on examples — pipeline continues."""
         from src.api.v1.admin import _word_audio_sse_pipeline
 
+        word_entry_id = uuid4()
         word_entry = _make_word_entry_mock(
             lemma="σπίτι",
             part_of_speech=PartOfSpeech.NOUN,
@@ -312,23 +326,24 @@ class TestWordAudioSSEPipeline:
         )
 
         mock_factory = _make_session_factory_mock(word_entry)
-        mock_elevenlabs = MagicMock()
+        mock_audio_service = MagicMock()
         # Fail on first call (lemma), succeed on subsequent (examples)
-        mock_elevenlabs.generate_speech = AsyncMock(
-            side_effect=[RuntimeError("TTS failed for lemma"), b"fake-mp3-ex1", b"fake-mp3-ex2"]
+        mock_audio_service.generate_single = AsyncMock(
+            side_effect=[
+                RuntimeError("TTS failed for lemma"),
+                self._make_audio_result(f"word-audio/{word_entry_id}/ex1.mp3"),
+                self._make_audio_result(f"word-audio/{word_entry_id}/ex2.mp3"),
+            ]
         )
-        mock_s3 = MagicMock()
-        mock_s3.upload_object = MagicMock(return_value=True)
 
         with (
             patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
             patch(
-                "src.services.elevenlabs_service.get_elevenlabs_service",
-                return_value=mock_elevenlabs,
+                "src.api.v1.admin.get_audio_generation_service",
+                return_value=mock_audio_service,
             ),
-            patch("src.api.v1.admin.get_s3_service", return_value=mock_s3),
         ):
-            events = await _collect_generator(_word_audio_sse_pipeline(uuid4()))
+            events = await _collect_generator(_word_audio_sse_pipeline(word_entry_id))
 
         event_types = [e["event"] for e in events]
 
@@ -349,14 +364,15 @@ class TestWordAudioSSEPipeline:
         assert len(complete_events) == 1
         assert complete_events[0]["data"]["parts_completed"] == 2
 
-        # generate_speech was called 3 times total (failed once, succeeded twice)
-        assert mock_elevenlabs.generate_speech.call_count == 3
+        # generate_single was called 3 times total (failed once, succeeded twice)
+        assert mock_audio_service.generate_single.call_count == 3
 
     @pytest.mark.asyncio
     async def test_generating_status_set_before_tts(self) -> None:
-        """Verify DB GENERATING update happens before generate_speech is called."""
+        """Verify DB GENERATING update happens before generate_single is called."""
         from src.api.v1.admin import _word_audio_sse_pipeline
 
+        word_entry_id = uuid4()
         word_entry = _make_word_entry_mock(lemma="σπίτι", examples=None)
 
         call_order: list[str] = []
@@ -394,27 +410,28 @@ class TestWordAudioSSEPipeline:
         mock_factory = MagicMock()
         mock_factory.begin.side_effect = begin_side_effect
 
-        async def generate_speech_side_effect(*args, **kwargs):
+        async def generate_single_side_effect(*args, **kwargs):
             call_order.append("generate_speech")
-            return b"fake-mp3"
+            return AudioResult(
+                audio_bytes=b"fake-mp3",
+                s3_key=f"word-audio/{word_entry_id}.mp3",
+                duration_seconds=1.0,
+                file_size_bytes=8,
+            )
 
-        mock_elevenlabs = MagicMock()
-        mock_elevenlabs.generate_speech = generate_speech_side_effect
-
-        mock_s3 = MagicMock()
-        mock_s3.upload_object = MagicMock(return_value=True)
+        mock_audio_service = MagicMock()
+        mock_audio_service.generate_single = generate_single_side_effect
 
         with (
             patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
             patch(
-                "src.services.elevenlabs_service.get_elevenlabs_service",
-                return_value=mock_elevenlabs,
+                "src.api.v1.admin.get_audio_generation_service",
+                return_value=mock_audio_service,
             ),
-            patch("src.api.v1.admin.get_s3_service", return_value=mock_s3),
         ):
-            await _collect_generator(_word_audio_sse_pipeline(uuid4()))
+            await _collect_generator(_word_audio_sse_pipeline(word_entry_id))
 
-        # DB update (GENERATING) must happen before generate_speech
+        # DB update (GENERATING) must happen before generate_single
         assert "db_update" in call_order
         assert "generate_speech" in call_order
         db_update_idx = call_order.index("db_update")
@@ -423,24 +440,29 @@ class TestWordAudioSSEPipeline:
 
     @pytest.mark.asyncio
     async def test_s3_upload_failure(self) -> None:
-        """upload_object returning False causes error event and FAILED status."""
+        """S3 upload failure inside generate_single causes error event and FAILED status."""
         from src.api.v1.admin import _word_audio_sse_pipeline
 
         word_entry = _make_word_entry_mock(lemma="σπίτι", examples=None)
 
         mock_factory = _make_session_factory_mock(word_entry)
-        mock_elevenlabs = MagicMock()
-        mock_elevenlabs.generate_speech = AsyncMock(return_value=b"fake-mp3")
-        mock_s3 = MagicMock()
-        mock_s3.upload_object = MagicMock(return_value=False)
+        mock_audio_service = MagicMock()
+
+        async def _s3_failure(*args: object, **kwargs: object) -> None:
+            on_progress = kwargs.get("on_progress")
+            if on_progress is not None:
+                await on_progress("tts")
+                await on_progress("upload")
+            raise RuntimeError("S3 upload failed")
+
+        mock_audio_service.generate_single = AsyncMock(side_effect=_s3_failure)
 
         with (
             patch("src.api.v1.admin.get_session_factory", return_value=mock_factory),
             patch(
-                "src.services.elevenlabs_service.get_elevenlabs_service",
-                return_value=mock_elevenlabs,
+                "src.api.v1.admin.get_audio_generation_service",
+                return_value=mock_audio_service,
             ),
-            patch("src.api.v1.admin.get_s3_service", return_value=mock_s3),
         ):
             events = await _collect_generator(_word_audio_sse_pipeline(uuid4()))
 
