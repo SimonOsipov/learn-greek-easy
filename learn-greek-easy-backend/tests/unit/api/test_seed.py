@@ -387,10 +387,10 @@ class TestSeedContentEndpoint:
             assert response.status_code == 403
 
     def test_seeds_content_successfully(self, client: TestClient):
-        """Should seed decks and cards and return results."""
+        """Should seed V2 decks and return results."""
         mock_result = {
-            "decks": [{"name": "A1"}, {"name": "A2"}],
-            "cards": [{"front": "Hello"}],
+            "success": True,
+            "v2_decks": [{"id": "abc", "name": "Greek Nouns"}],
         }
 
         with patch("src.api.v1.test.seed.settings") as mock_settings:
@@ -400,7 +400,7 @@ class TestSeedContentEndpoint:
 
             with patch("src.api.v1.test.seed.SeedService") as mock_service_class:
                 mock_service = AsyncMock()
-                mock_service.seed_decks_and_cards.return_value = mock_result
+                mock_service._seed_v2_decks.return_value = mock_result
                 mock_service_class.return_value = mock_service
 
                 response = client.post("/test/seed/content")

@@ -195,26 +195,23 @@ async def truncate_tables(
 @router.post(
     "/content",
     response_model=SeedResultResponse,
-    summary="Seed decks and cards only",
-    description="Create test decks and cards without users or progress. "
-    "Creates 4 CEFR-level decks with 10 Greek vocabulary cards each.",
+    summary="Seed V2 decks and word entries",
+    description="Create V2 vocabulary decks with word entries without users or progress.",
     dependencies=[Depends(verify_seed_access)],
 )
 async def seed_content(
     db: AsyncSession = Depends(get_db),
 ) -> SeedResultResponse:
-    """Create test decks and cards without users or progress.
+    """Create V2 vocabulary decks with word entries without users or progress.
 
-    Creates:
-    - 4 decks (A1, A2, B1, B2 CEFR levels)
-    - 40 cards total (10 Greek vocabulary cards per deck)
+    Creates V2 decks (Nouns, Verbs) with associated word entries.
 
     Returns:
         SeedResultResponse with content creation results and timing
     """
     start_time = perf_counter()
     service = SeedService(db)
-    result = await service.seed_decks_and_cards()
+    result = await service._seed_v2_decks()
     await db.commit()
     duration_ms = (perf_counter() - start_time) * 1000
 

@@ -24,7 +24,7 @@ The seeding infrastructure provides deterministic test data for E2E tests, enabl
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/v1/test/seed/content` | POST | Create decks/cards only |
+| `/api/v1/test/seed/content` | POST | Create V2 decks with word entries only |
 | `/api/v1/test/seed/culture` | POST | Create culture decks/questions only |
 | `/api/v1/test/seed/mock-exams` | POST | Create mock exam history for learner |
 | `/api/v1/test/seed/pending-question` | POST | Create pending question for review testing |
@@ -72,7 +72,6 @@ The full seed executes 19 steps in order:
 |------|------|---------|
 | 1 | Truncate | Clean slate (all tables) |
 | 2 | Base users | 4 test users (get or create) |
-| 3 | V1 content | 6 decks (A1-C2), 60 cards (10 per deck) |
 | 3b | User decks | User-owned decks for learner + admin (My Decks) |
 | 3c | V2 decks | V2 card system decks with word entries |
 | 3d | V2 statistics | CardRecordStatistics for learner on V2 Nouns deck (60% progress) |

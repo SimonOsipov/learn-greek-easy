@@ -204,60 +204,6 @@ class SeedService:
     # Default test user password (hashed once for performance)
     DEFAULT_PASSWORD = "TestPassword123!"
 
-    # Greek vocabulary by CEFR level
-    # Each tuple: (greek, english, category, part_of_speech)
-    # part_of_speech is None for interjections (greetings) and particles (ναι/όχι)
-    VOCABULARY: dict[DeckLevel, list[tuple[str, str, str, PartOfSpeech | None]]] = {
-        DeckLevel.A1: [
-            ("γεια", "hello", "Common greeting", None),
-            ("ναι", "yes", "Affirmative", None),
-            ("όχι", "no", "Negative", None),
-            ("ευχαριστώ", "thank you", "Gratitude", PartOfSpeech.VERB),
-            ("παρακαλώ", "please/you're welcome", "Politeness", PartOfSpeech.VERB),
-            ("νερό", "water", "Basic noun", PartOfSpeech.NOUN),
-            ("ψωμί", "bread", "Basic noun", PartOfSpeech.NOUN),
-            ("σπίτι", "house", "Basic noun", PartOfSpeech.NOUN),
-            ("καλημέρα", "good morning", "Morning greeting", None),
-            ("καληνύχτα", "good night", "Night greeting", None),
-        ],
-        DeckLevel.A2: [
-            ("δουλειά", "work/job", "Employment", PartOfSpeech.NOUN),
-            ("οικογένεια", "family", "Relations", PartOfSpeech.NOUN),
-            ("φίλος", "friend", "Relations", PartOfSpeech.NOUN),
-            ("αγαπώ", "I love", "Emotion verb", PartOfSpeech.VERB),
-            ("θέλω", "I want", "Desire verb", PartOfSpeech.VERB),
-            ("μπορώ", "I can", "Ability verb", PartOfSpeech.VERB),
-            ("πρέπει", "must/should", "Impersonal modal verb", PartOfSpeech.VERB),
-            ("χρόνια", "years", "Time", PartOfSpeech.NOUN),
-            ("σήμερα", "today", "Time adverb", PartOfSpeech.ADVERB),
-            ("αύριο", "tomorrow", "Time adverb", PartOfSpeech.ADVERB),
-        ],
-        DeckLevel.B1: [
-            ("συζήτηση", "discussion", "Communication", PartOfSpeech.NOUN),
-            ("απόφαση", "decision", "Abstract noun", PartOfSpeech.NOUN),
-            ("εμπειρία", "experience", "Abstract noun", PartOfSpeech.NOUN),
-            ("προσπαθώ", "I try", "Effort verb", PartOfSpeech.VERB),
-            ("επιτυγχάνω", "I achieve", "Success verb", PartOfSpeech.VERB),
-            ("αναπτύσσω", "I develop", "Growth verb", PartOfSpeech.VERB),
-            ("κατάσταση", "situation", "State noun", PartOfSpeech.NOUN),
-            ("σχέση", "relationship", "Connection noun", PartOfSpeech.NOUN),
-            ("ευκαιρία", "opportunity", "Chance noun", PartOfSpeech.NOUN),
-            ("πρόβλημα", "problem", "Challenge noun", PartOfSpeech.NOUN),
-        ],
-        DeckLevel.B2: [
-            ("διαπραγμάτευση", "negotiation", "Business", PartOfSpeech.NOUN),
-            ("συμφωνία", "agreement", "Contract", PartOfSpeech.NOUN),
-            ("ανάλυση", "analysis", "Examination", PartOfSpeech.NOUN),
-            ("επιχείρηση", "enterprise/business", "Commerce", PartOfSpeech.NOUN),
-            ("στρατηγική", "strategy", "Planning", PartOfSpeech.NOUN),
-            ("αποτέλεσμα", "result/outcome", "Conclusion", PartOfSpeech.NOUN),
-            ("επιρροή", "influence", "Impact", PartOfSpeech.NOUN),
-            ("παράγοντας", "factor", "Element", PartOfSpeech.NOUN),
-            ("προτεραιότητα", "priority", "Importance", PartOfSpeech.NOUN),
-            ("αξιολόγηση", "evaluation", "Assessment", PartOfSpeech.NOUN),
-        ],
-    }
-
     # User-owned deck definitions for E2E testing
     # Maps user email -> list of deck configurations
     USER_DECKS: dict[str, list[dict[str, Any]]] = {
@@ -1785,84 +1731,6 @@ class SeedService:
     # =====================
     # Content Seeding
     # =====================
-
-    async def seed_decks_and_cards(self) -> dict[str, Any]:
-        """Create test decks with cards for each CEFR level.
-
-        Creates:
-        - 1 deck per CEFR level (A1, A2, B1, B2)
-        - 10 cards per deck (vocabulary items)
-        - Realistic Greek vocabulary with translations
-
-        Returns:
-            dict with 'decks' list containing deck and card info
-
-        Raises:
-            RuntimeError: If seeding not allowed
-        """
-        self._check_can_seed()
-
-        created_decks = []
-
-        # Greek translations for CEFR levels
-        level_translations_el = {
-            DeckLevel.A1: "Ελληνικό Λεξιλόγιο A1",
-            DeckLevel.A2: "Ελληνικό Λεξιλόγιο A2",
-            DeckLevel.B1: "Ελληνικό Λεξιλόγιο B1",
-            DeckLevel.B2: "Ελληνικό Λεξιλόγιο B2",
-        }
-        description_translations_el = {
-            DeckLevel.A1: "Βασικό ελληνικό λεξιλόγιο για επίπεδο CEFR A1",
-            DeckLevel.A2: "Βασικό ελληνικό λεξιλόγιο για επίπεδο CEFR A2",
-            DeckLevel.B1: "Βασικό ελληνικό λεξιλόγιο για επίπεδο CEFR B1",
-            DeckLevel.B2: "Βασικό ελληνικό λεξιλόγιο για επίπεδο CEFR B2",
-        }
-        # Russian translations for CEFR levels
-        level_translations_ru = {
-            DeckLevel.A1: "Греческий словарь A1",
-            DeckLevel.A2: "Греческий словарь A2",
-            DeckLevel.B1: "Греческий словарь B1",
-            DeckLevel.B2: "Греческий словарь B2",
-        }
-        description_translations_ru = {
-            DeckLevel.A1: "Основной греческий словарь для уровня CEFR A1",
-            DeckLevel.A2: "Основной греческий словарь для уровня CEFR A2",
-            DeckLevel.B1: "Основной греческий словарь для уровня CEFR B1",
-            DeckLevel.B2: "Основной греческий словарь для уровня CEFR B2",
-        }
-
-        for level, words in self.VOCABULARY.items():
-            deck = Deck(
-                name_en=f"Greek {level.value} Vocabulary",
-                name_el=level_translations_el[level],
-                name_ru=level_translations_ru[level],
-                description_en=f"Essential Greek vocabulary for CEFR level {level.value}",
-                description_el=description_translations_el[level],
-                description_ru=description_translations_ru[level],
-                level=level,
-                is_active=True,
-                is_premium=False,
-            )
-            self.db.add(deck)
-            await self.db.flush()
-
-            created_decks.append(
-                {
-                    "id": str(deck.id),
-                    "name": deck.name_en,
-                    "level": level.value,
-                    "card_count": 0,
-                    "is_premium": False,
-                }
-            )
-
-        await self.db.flush()
-
-        return {
-            "success": True,
-            "decks": created_decks,
-            "total_cards": 0,
-        }
 
     async def seed_user_decks(self, users: list[dict[str, Any]]) -> dict[str, Any]:
         """Create user-owned decks with cards for E2E testing.
@@ -4425,9 +4293,6 @@ class SeedService:
             "password": self.DEFAULT_PASSWORD,
         }
 
-        # Step 3: Create content
-        content_result = await self.seed_decks_and_cards()
-
         # Step 3b: Create user-owned decks (My Decks feature)
         user_decks_result = await self.seed_user_decks(users_result["users"])
 
@@ -4445,8 +4310,6 @@ class SeedService:
             if user_dict["email"] == "e2e_learner@test.com":
                 learner_id = UUID(user_dict["id"])
 
-        stats_result: dict[str, Any] = {"success": True, "stats_created": 0}
-        reviews_result: dict[str, Any] = {"success": True, "reviews_created": 0}
         notifications_result: dict[str, Any] = {
             "success": True,
             "notifications_created": 0,
@@ -4660,15 +4523,11 @@ class SeedService:
             "success": True,
             "truncation": truncate_result,
             "users": users_result,
-            "content": content_result,
             "user_decks": user_decks_result,
             "v2_decks": v2_decks_result,
-            "v1_deck_id": content_result["decks"][0]["id"] if content_result.get("decks") else None,
             "v2_deck_id": (
                 v2_decks_result["v2_decks"][0]["id"] if v2_decks_result.get("v2_decks") else None
             ),
-            "statistics": stats_result,
-            "reviews": reviews_result,
             "v2_statistics": v2_stats_result,
             "v2_reviews": v2_reviews_result,
             "v2_verbs_statistics": v2_verbs_stats_result,

@@ -91,17 +91,6 @@ class TestSeedServiceGuards:
         assert "Database seeding not allowed" in str(exc_info.value)
 
     @pytest.mark.asyncio
-    @pytest.mark.asyncio
-    async def test_seed_decks_and_cards_blocked_in_production(
-        self, seed_service, mock_settings_cannot_seed
-    ):
-        """seed_decks_and_cards should raise RuntimeError in production."""
-        with pytest.raises(RuntimeError) as exc_info:
-            await seed_service.seed_decks_and_cards()
-
-        assert "Database seeding not allowed" in str(exc_info.value)
-
-    @pytest.mark.asyncio
     async def test_seed_all_blocked_in_production(self, seed_service, mock_settings_cannot_seed):
         """seed_all should raise RuntimeError in production."""
         with pytest.raises(RuntimeError) as exc_info:
@@ -163,48 +152,6 @@ class TestSeedServiceTruncation:
 class TestSeedServiceContent:
     """Tests for deck and card seeding."""
 
-    @pytest.mark.asyncio
-    async def test_creates_six_decks(self, seed_service, mock_db, mock_settings_can_seed):
-        """Verify 6 CEFR level decks are created."""
-        result = await seed_service.seed_decks_and_cards()
-
-        assert result["success"] is True
-        assert len(result["decks"]) == 4
-
-        # Check all CEFR levels
-        levels = [d["level"] for d in result["decks"]]
-        assert "A1" in levels
-        assert "A2" in levels
-        assert "B1" in levels
-        assert "B2" in levels
-
-    @pytest.mark.asyncio
-    async def test_deck_card_counts_are_zero(self, seed_service, mock_db, mock_settings_can_seed):
-        """Verify card_count is 0 (cards are seeded separately via V2 word entries)."""
-        result = await seed_service.seed_decks_and_cards()
-
-        for deck in result["decks"]:
-            assert deck["card_count"] == 0
-
-        assert result["total_cards"] == 0
-
-    @pytest.mark.asyncio
-    async def test_vocabulary_has_greek_text(self, seed_service):
-        """Verify vocabulary contains Greek characters."""
-        # Check that vocabulary data contains Greek text
-        for level, words in SeedService.VOCABULARY.items():
-            for greek, english, category, part_of_speech in words:
-                # Greek text should contain Greek characters
-                assert any(
-                    "\u0370" <= char <= "\u03FF" or "\u1F00" <= char <= "\u1FFF" for char in greek
-                ), f"'{greek}' should contain Greek characters"
-
-    def test_vocabulary_covers_all_cefr_levels(self, seed_service):
-        """Verify vocabulary exists for all CEFR levels."""
-        for level in DeckLevel:
-            assert level in SeedService.VOCABULARY
-            assert len(SeedService.VOCABULARY[level]) == 10
-
 
 # ============================================================================
 
@@ -255,9 +202,7 @@ class TestSeedServiceOrchestration:
         assert result["success"] is True
         assert "truncation" in result
         assert "users" in result
-        assert "content" in result
-        assert "statistics" in result
-        assert "reviews" in result
+        assert "v2_decks" in result
 
     @pytest.mark.asyncio
     async def test_seed_all_commits_transaction(self, mock_db_with_ids, mock_settings_can_seed):
@@ -269,17 +214,17 @@ class TestSeedServiceOrchestration:
         mock_db_with_ids.commit.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_seed_all_includes_statistics_and_reviews_keys(
+    async def test_seed_all_includes_v2_statistics_and_reviews_keys(
         self, mock_db_with_ids, mock_settings_can_seed
     ):
-        """Verify seed_all result includes statistics and reviews keys."""
+        """Verify seed_all result includes v2 statistics and reviews keys."""
         seed_service = SeedService(mock_db_with_ids)
 
         result = await seed_service.seed_all()
 
-        # Check that statistics and reviews keys are present in result
-        assert result["statistics"]["success"] is True
-        assert result["reviews"]["success"] is True
+        # Check that v2 statistics and reviews keys are present in result
+        assert result["v2_statistics"]["success"] is True
+        assert result["v2_reviews"]["success"] is True
 
     @pytest.mark.asyncio
     async def test_seed_all_calls_v2_seed_methods(self, mock_db_with_ids, mock_settings_can_seed):
