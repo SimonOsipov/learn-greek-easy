@@ -9,6 +9,7 @@ Create Date: 2026-03-29 07:00:00.000000
 from typing import Sequence, Union
 
 import sqlalchemy as sa
+from sqlalchemy.dialects.postgresql import JSONB
 
 from alembic import op
 
@@ -20,10 +21,8 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.add_column("situation_descriptions", sa.Column("word_timestamps", sa.JSON(), nullable=True))
-    op.add_column(
-        "situation_descriptions", sa.Column("word_timestamps_a2", sa.JSON(), nullable=True)
-    )
+    op.add_column("situation_descriptions", sa.Column("word_timestamps", JSONB, nullable=True))
+    op.add_column("situation_descriptions", sa.Column("word_timestamps_a2", JSONB, nullable=True))
 
 
 def downgrade() -> None:
