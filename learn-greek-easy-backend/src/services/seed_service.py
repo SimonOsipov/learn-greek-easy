@@ -140,34 +140,65 @@ class SeedService:
 
     # FK-safe truncation order (children first, then parents)
     TRUNCATION_ORDER = [
-        # Mock Exam tables (children first)
-        "mock_exam_answers",
-        "mock_exam_sessions",
-        # News items (no FK dependencies)
-        "news_items",
-        # XP & Achievement tables (children first)
-        "xp_transactions",
-        "user_achievements",
-        "user_xp",
-        "achievements",
-        # Notification tables
-        "notifications",
-        "announcement_campaigns",
-        # Changelog tables
-        "changelog_entries",
-        # Culture tables (children first)
-        "culture_question_stats",
-        "culture_questions",
-        "culture_decks",
-        # Webhook events (no FK dependencies)
-        "webhook_events",
-        # Existing tables
-        "feedback_votes",
-        "feedback",
-        "deck_word_entries",
-        "word_entries",
-        "users",
-        "decks",
+        # --- Dialog/Situation leaf tables (deepest children first) ---
+        "dialog_exercise_attempts",  # → users, dialog_exercises
+        "dialog_progress",  # → users, listening_dialogs
+        "exercise_items",  # → dialog_exercises
+        "dialog_lines",  # → listening_dialogs, dialog_speakers
+        "dialog_exercises",  # → listening_dialogs
+        "dialog_speakers",  # → listening_dialogs
+        "listening_dialogs",  # → users (nullable), situations
+        "description_exercise_items",  # → description_exercises
+        "description_exercises",  # → situation_descriptions
+        "situation_descriptions",  # → situations
+        "picture_exercise_items",  # → picture_exercises
+        "picture_exercises",  # → situation_pictures
+        "situation_pictures",  # → situations
+        # --- Mock Exam tables ---
+        "mock_exam_answers",  # → mock_exam_sessions, culture_questions
+        "mock_exam_sessions",  # → users
+        # --- Culture tables (children first) ---
+        "culture_answer_history",  # → users, culture_questions
+        "culture_question_stats",  # → users, culture_questions
+        "culture_questions",  # → culture_decks, news_items (nullable)
+        "culture_decks",  # no FKs
+        # --- News items (FK to situations) ---
+        "news_items",  # → situations (nullable)
+        # --- Situations (parent, after all children above) ---
+        "situations",  # no FKs
+        # --- Card tables (children first) ---
+        "card_record_reviews",  # → users, card_records
+        "card_record_statistics",  # → users, card_records
+        "card_records",  # → word_entries, decks
+        # --- Card error reports ---
+        "card_error_reports",  # → users (x2)
+        # --- XP & Achievement tables ---
+        "xp_transactions",  # → users
+        "user_achievements",  # → users, achievements
+        "user_xp",  # → users
+        "achievements",  # no FKs
+        # --- Notification & Announcement tables ---
+        "notifications",  # → users
+        "announcement_campaigns",  # → users
+        # --- Changelog ---
+        "changelog_entries",  # no FKs
+        # --- Webhook ---
+        "webhook_events",  # no FKs
+        # --- Feedback tables ---
+        "feedback_votes",  # → users, feedback
+        "feedback",  # → users
+        # --- User settings ---
+        "user_settings",  # → users
+        # --- Content tables ---
+        "deck_word_entries",  # → decks, word_entries
+        "word_entries",  # → users (nullable)
+        "decks",  # → users (nullable)
+        # --- Core user table (parent of most) ---
+        "users",  # no FKs
+        # --- Reference schema tables (no FKs to public) ---
+        "reference.greek_lexicon",  # reference schema, no FKs
+        "reference.translations",  # reference schema, no FKs
+        "reference.wiktionary_morphology",  # reference schema, no FKs
     ]
 
     # Default test user password (hashed once for performance)
