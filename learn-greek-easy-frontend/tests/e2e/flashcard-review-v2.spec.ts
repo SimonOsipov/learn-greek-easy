@@ -86,7 +86,7 @@ test.describe('V2 Flashcard Review', () => {
     const decks = data.decks as Array<{ id: string; name: string }>;
 
     // card_system removed in SM2V2-06 — find V2 deck by name
-    const v2Deck = decks.find((d) => d.name.includes('V2 Nouns'));
+    const v2Deck = decks.find((d) => d.name.includes('Greek A1 Vocabulary'));
 
     if (!v2Deck) {
       throw new Error(
