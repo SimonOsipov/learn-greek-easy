@@ -11,6 +11,7 @@ import src.services.audio_generation_service as audio_module
 from src.services.audio_generation_service import (
     AudioGenerationService,
     AudioResult,
+    AudioWithTimestampsResult,
     DialogAudioResult,
     DialogInput,
     get_audio_generation_service,
@@ -28,6 +29,7 @@ def reset_singleton():
 def mock_elevenlabs():
     mock = MagicMock()
     mock.generate_speech = AsyncMock(return_value=b"audio_data_here")
+    mock.forced_align = AsyncMock(return_value={"words": [], "loss": 0.0})
     return mock
 
 
@@ -296,3 +298,65 @@ class TestGenerateDialog:
             result = await svc.generate_dialog(inputs=inputs, s3_key="dialog/key.mp3")
 
         assert result.alignment_source == "redistribution"
+
+
+class TestGenerateSingleWithTimestamps:
+    async def test_generate_single_with_timestamps_happy_path(
+        self, service, mock_elevenlabs, mock_s3
+    ):
+        mock_elevenlabs.forced_align = AsyncMock(
+            return_value={
+                "words": [
+                    {"text": "Hello", "start": 0.0, "end": 0.5},
+                    {"text": "world", "start": 0.6, "end": 1.2},
+                ]
+            }
+        )
+        result = await service.generate_single(
+            text="Hello world", s3_key="test/key.mp3", with_timestamps=True
+        )
+        assert isinstance(result, AudioWithTimestampsResult)
+        assert result.word_timestamps == [
+            {"word": "Hello", "start_ms": 0, "end_ms": 500},
+            {"word": "world", "start_ms": 600, "end_ms": 1200},
+        ]
+        mock_elevenlabs.forced_align.assert_called_once_with(b"audio_data_here", "Hello world")
+
+    async def test_generate_single_with_timestamps_duration_from_mutagen(
+        self, service, mock_elevenlabs
+    ):
+        with patch("src.services.audio_generation_service.MP3") as mock_mp3_cls:
+            mock_mp3_instance = MagicMock()
+            mock_mp3_instance.info.length = 3.75
+            mock_mp3_cls.return_value = mock_mp3_instance
+            result = await service.generate_single(
+                text="Hello", s3_key="key.mp3", with_timestamps=True
+            )
+        assert result.duration_seconds == pytest.approx(3.75)
+
+    async def test_generate_single_with_timestamps_alignment_failure(
+        self, service, mock_elevenlabs
+    ):
+        mock_elevenlabs.forced_align = AsyncMock(side_effect=RuntimeError("FA failed"))
+        result = await service.generate_single(text="Hello", s3_key="key.mp3", with_timestamps=True)
+        assert isinstance(result, AudioWithTimestampsResult)
+        assert result.word_timestamps == []  # graceful degradation
+
+    async def test_generate_single_with_timestamps_progress_callback(self, service):
+        stages = []
+
+        async def on_progress(stage: str, **kwargs: Any) -> None:
+            stages.append(stage)
+
+        await service.generate_single(
+            text="Hello", s3_key="key.mp3", with_timestamps=True, on_progress=on_progress
+        )
+        assert stages == ["tts", "alignment", "upload"]
+
+    async def test_generate_single_without_timestamps_unchanged(self, service, mock_elevenlabs):
+        result = await service.generate_single(
+            text="Hello", s3_key="key.mp3"
+        )  # with_timestamps=False (default)
+        assert isinstance(result, AudioResult)
+        assert not isinstance(result, AudioWithTimestampsResult)
+        mock_elevenlabs.forced_align.assert_not_called()
