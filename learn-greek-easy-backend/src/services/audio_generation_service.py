@@ -325,8 +325,8 @@ class AudioGenerationService:
                 mp3 = MP3(fileobj=BytesIO(audio_bytes))
                 if mp3.info is not None:
                     duration_seconds = mp3.info.length
-            except Exception:
-                pass  # keep bitrate estimate
+            except Exception as exc:
+                logger.warning("MP3 duration parse failed, using bitrate estimate: {}", exc)
 
         if on_progress is not None:
             await on_progress("upload")

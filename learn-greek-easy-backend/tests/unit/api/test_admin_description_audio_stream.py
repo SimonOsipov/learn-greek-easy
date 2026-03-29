@@ -244,10 +244,10 @@ class TestDescriptionAudioSSEPipeline:
         assert complete_events[0]["data"]["duration_seconds"] == 2.0
         assert complete_events[0]["data"]["audio_url"] == "https://cdn.example.com/audio.mp3"
 
-        # Verify generate_single called with b1 s3_key
+        # Verify generate_single called with correct args
         call_kwargs = mock_audio_service.generate_single.call_args
-        assert f"situation-description-audio/{description_id}.mp3" in str(call_kwargs)
-        assert "a2" not in str(call_kwargs)
+        assert call_kwargs.kwargs["s3_key"] == f"situation-description-audio/{description_id}.mp3"
+        assert call_kwargs.kwargs["with_timestamps"] is True
 
     @pytest.mark.asyncio
     async def test_a2_happy_path(self) -> None:
@@ -287,9 +287,12 @@ class TestDescriptionAudioSSEPipeline:
         complete_events = [e for e in events if e["event"] == "description_audio:complete"]
         assert complete_events[0]["data"]["level"] == "a2"
 
-        # Verify a2 s3_key was used
+        # Verify a2 s3_key and with_timestamps=True were used
         call_kwargs = mock_audio_service.generate_single.call_args
-        assert f"situation-description-audio/a2/{description_id}.mp3" in str(call_kwargs)
+        assert (
+            call_kwargs.kwargs["s3_key"] == f"situation-description-audio/a2/{description_id}.mp3"
+        )
+        assert call_kwargs.kwargs["with_timestamps"] is True
 
     @pytest.mark.asyncio
     async def test_invalid_level(self) -> None:

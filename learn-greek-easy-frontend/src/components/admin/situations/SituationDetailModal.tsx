@@ -695,7 +695,9 @@ export function SituationDetailModal({
                         variant="outline"
                         size="sm"
                         onClick={handleRegenerateDescB1}
-                        disabled={descB1SseEnabled || !selectedSituation.description.text_el}
+                        disabled={
+                          descB1SseEnabled || !selectedSituation.description.text_el?.trim()
+                        }
                         data-testid="situation-desc-regenerate-b1-audio"
                       >
                         {descB1Stage !== null ? (
@@ -740,7 +742,9 @@ export function SituationDetailModal({
                         variant="outline"
                         size="sm"
                         onClick={handleRegenerateDescA2}
-                        disabled={descA2SseEnabled || !selectedSituation.description.text_el_a2}
+                        disabled={
+                          descA2SseEnabled || !selectedSituation.description.text_el_a2?.trim()
+                        }
                         data-testid="situation-desc-regenerate-a2-audio"
                       >
                         {descA2Stage !== null ? (
