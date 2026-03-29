@@ -217,68 +217,6 @@ class TestSessionRepositoryIntegration:
         assert len(sessions) == 0
 
 
-@pytest.mark.skip(reason="TODO: Update for Supabase auth - AuthService removed")
-class TestAuthServiceRedisIntegration:
-    """Integration tests for AuthService with Redis session storage."""
-
-    @pytest.mark.asyncio
-    async def test_refresh_token_includes_jti(self):
-        """Test that new refresh tokens include jti claim."""
-        user_id = uuid4()
-        token, expires_at, token_id = create_refresh_token(user_id)  # noqa: F821
-
-        # Verify token_id is returned
-        assert token_id is not None
-        assert len(token_id) > 10
-
-        # Verify jti can be extracted from token
-        verified_user_id, verified_jti = verify_refresh_token_with_jti(token)  # noqa: F821
-        assert verified_user_id == user_id
-        assert verified_jti == token_id
-
-
-@pytest.mark.skip(reason="TODO: Update for Supabase auth - AuthService removed")
-class TestRedisOnlySessionStorage:
-    """Test Redis-only session storage behavior.
-
-    Note: PostgreSQL fallback has been deprecated. Sessions are stored
-    exclusively in Redis. These tests verify the current Redis-only behavior.
-    """
-
-    @pytest.mark.asyncio
-    async def test_get_user_sessions_returns_redis_only(self, db_session):
-        """Test that get_user_sessions returns sessions from Redis only.
-
-        PostgreSQL is no longer used for session storage.
-        """
-        from unittest.mock import AsyncMock
-
-        user_id = uuid4()
-
-        # Create a mock session repo that returns Redis sessions
-        mock_session_repo = AsyncMock(spec=SessionRepository)
-        mock_session_repo.get_user_sessions.return_value = [
-            {
-                "token_id": "redis_session_1",
-                "created_at": datetime.utcnow().isoformat(),
-                "expires_at": (datetime.utcnow() + timedelta(days=30)).isoformat(),
-                "ip_address": "192.168.1.1",
-                "user_agent": "Chrome",
-            }
-        ]
-        mock_session_repo.revoke_all_user_sessions.return_value = 0
-
-        # Create auth service
-        auth_service = AuthService(db=db_session, session_repo=mock_session_repo)  # noqa: F821
-
-        # Get sessions - should return Redis sessions only
-        sessions = await auth_service.get_user_sessions(user_id)
-
-        # Should have exactly the sessions from Redis
-        assert len(sessions) == 1
-        assert sessions[0]["id"] == "redis_session_1"
-
-
 # =============================================================================
 # Pytest Fixtures for Redis
 # =============================================================================

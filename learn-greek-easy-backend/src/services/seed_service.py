@@ -35,6 +35,8 @@ from src.db.models import (
     Deck,
     DeckLevel,
     DeckWordEntry,
+    DescriptionSourceType,
+    DescriptionStatus,
     Feedback,
     FeedbackCategory,
     FeedbackStatus,
@@ -46,6 +48,9 @@ from src.db.models import (
     Notification,
     NotificationType,
     PartOfSpeech,
+    Situation,
+    SituationDescription,
+    SituationStatus,
     SubscriptionStatus,
     SubscriptionTier,
     User,
@@ -140,92 +145,68 @@ class SeedService:
 
     # FK-safe truncation order (children first, then parents)
     TRUNCATION_ORDER = [
-        # Mock Exam tables (children first)
-        "mock_exam_answers",
-        "mock_exam_sessions",
-        # News items (no FK dependencies)
-        "news_items",
-        # XP & Achievement tables (children first)
-        "xp_transactions",
-        "user_achievements",
-        "user_xp",
-        "achievements",
-        # Notification tables
-        "notifications",
-        "announcement_campaigns",
-        # Changelog tables
-        "changelog_entries",
-        # Culture tables (children first)
-        "culture_question_stats",
-        "culture_questions",
-        "culture_decks",
-        # Webhook events (no FK dependencies)
-        "webhook_events",
-        # Existing tables
-        "feedback_votes",
-        "feedback",
-        "deck_word_entries",
-        "word_entries",
-        "users",
-        "decks",
+        # --- Dialog/Situation leaf tables (deepest children first) ---
+        "dialog_exercise_attempts",  # → users, dialog_exercises
+        "dialog_progress",  # → users, listening_dialogs
+        "exercise_items",  # → dialog_exercises
+        "dialog_lines",  # → listening_dialogs, dialog_speakers
+        "dialog_exercises",  # → listening_dialogs
+        "dialog_speakers",  # → listening_dialogs
+        "listening_dialogs",  # → users (nullable), situations
+        "description_exercise_items",  # → description_exercises
+        "description_exercises",  # → situation_descriptions
+        "situation_descriptions",  # → situations
+        "picture_exercise_items",  # → picture_exercises
+        "picture_exercises",  # → situation_pictures
+        "situation_pictures",  # → situations
+        # --- Mock Exam tables ---
+        "mock_exam_answers",  # → mock_exam_sessions, culture_questions
+        "mock_exam_sessions",  # → users
+        # --- Culture tables (children first) ---
+        "culture_answer_history",  # → users, culture_questions
+        "culture_question_stats",  # → users, culture_questions
+        "culture_questions",  # → culture_decks, news_items (nullable)
+        "culture_decks",  # no FKs
+        # --- News items (FK to situations) ---
+        "news_items",  # → situations (nullable)
+        # --- Situations (parent, after all children above) ---
+        "situations",  # no FKs
+        # --- Card tables (children first) ---
+        "card_record_reviews",  # → users, card_records
+        "card_record_statistics",  # → users, card_records
+        "card_records",  # → word_entries, decks
+        # --- Card error reports ---
+        "card_error_reports",  # → users (x2)
+        # --- XP & Achievement tables ---
+        "xp_transactions",  # → users
+        "user_achievements",  # → users, achievements
+        "user_xp",  # → users
+        "achievements",  # no FKs
+        # --- Notification & Announcement tables ---
+        "notifications",  # → users
+        "announcement_campaigns",  # → users
+        # --- Changelog ---
+        "changelog_entries",  # no FKs
+        # --- Webhook ---
+        "webhook_events",  # no FKs
+        # --- Feedback tables ---
+        "feedback_votes",  # → users, feedback
+        "feedback",  # → users
+        # --- User settings ---
+        "user_settings",  # → users
+        # --- Content tables ---
+        "deck_word_entries",  # → decks, word_entries
+        "word_entries",  # → users (nullable)
+        "decks",  # → users (nullable)
+        # --- Core user table (parent of most) ---
+        "users",  # no FKs
+        # --- Reference schema tables (no FKs to public) ---
+        "reference.greek_lexicon",  # reference schema, no FKs
+        "reference.translations",  # reference schema, no FKs
     ]
 
     # Default test user password (hashed once for performance)
     DEFAULT_PASSWORD = "TestPassword123!"
-
-    # Greek vocabulary by CEFR level
-    # Each tuple: (greek, english, category, part_of_speech)
-    # part_of_speech is None for interjections (greetings) and particles (ναι/όχι)
-    VOCABULARY: dict[DeckLevel, list[tuple[str, str, str, PartOfSpeech | None]]] = {
-        DeckLevel.A1: [
-            ("γεια", "hello", "Common greeting", None),
-            ("ναι", "yes", "Affirmative", None),
-            ("όχι", "no", "Negative", None),
-            ("ευχαριστώ", "thank you", "Gratitude", PartOfSpeech.VERB),
-            ("παρακαλώ", "please/you're welcome", "Politeness", PartOfSpeech.VERB),
-            ("νερό", "water", "Basic noun", PartOfSpeech.NOUN),
-            ("ψωμί", "bread", "Basic noun", PartOfSpeech.NOUN),
-            ("σπίτι", "house", "Basic noun", PartOfSpeech.NOUN),
-            ("καλημέρα", "good morning", "Morning greeting", None),
-            ("καληνύχτα", "good night", "Night greeting", None),
-        ],
-        DeckLevel.A2: [
-            ("δουλειά", "work/job", "Employment", PartOfSpeech.NOUN),
-            ("οικογένεια", "family", "Relations", PartOfSpeech.NOUN),
-            ("φίλος", "friend", "Relations", PartOfSpeech.NOUN),
-            ("αγαπώ", "I love", "Emotion verb", PartOfSpeech.VERB),
-            ("θέλω", "I want", "Desire verb", PartOfSpeech.VERB),
-            ("μπορώ", "I can", "Ability verb", PartOfSpeech.VERB),
-            ("πρέπει", "must/should", "Impersonal modal verb", PartOfSpeech.VERB),
-            ("χρόνια", "years", "Time", PartOfSpeech.NOUN),
-            ("σήμερα", "today", "Time adverb", PartOfSpeech.ADVERB),
-            ("αύριο", "tomorrow", "Time adverb", PartOfSpeech.ADVERB),
-        ],
-        DeckLevel.B1: [
-            ("συζήτηση", "discussion", "Communication", PartOfSpeech.NOUN),
-            ("απόφαση", "decision", "Abstract noun", PartOfSpeech.NOUN),
-            ("εμπειρία", "experience", "Abstract noun", PartOfSpeech.NOUN),
-            ("προσπαθώ", "I try", "Effort verb", PartOfSpeech.VERB),
-            ("επιτυγχάνω", "I achieve", "Success verb", PartOfSpeech.VERB),
-            ("αναπτύσσω", "I develop", "Growth verb", PartOfSpeech.VERB),
-            ("κατάσταση", "situation", "State noun", PartOfSpeech.NOUN),
-            ("σχέση", "relationship", "Connection noun", PartOfSpeech.NOUN),
-            ("ευκαιρία", "opportunity", "Chance noun", PartOfSpeech.NOUN),
-            ("πρόβλημα", "problem", "Challenge noun", PartOfSpeech.NOUN),
-        ],
-        DeckLevel.B2: [
-            ("διαπραγμάτευση", "negotiation", "Business", PartOfSpeech.NOUN),
-            ("συμφωνία", "agreement", "Contract", PartOfSpeech.NOUN),
-            ("ανάλυση", "analysis", "Examination", PartOfSpeech.NOUN),
-            ("επιχείρηση", "enterprise/business", "Commerce", PartOfSpeech.NOUN),
-            ("στρατηγική", "strategy", "Planning", PartOfSpeech.NOUN),
-            ("αποτέλεσμα", "result/outcome", "Conclusion", PartOfSpeech.NOUN),
-            ("επιρροή", "influence", "Impact", PartOfSpeech.NOUN),
-            ("παράγοντας", "factor", "Element", PartOfSpeech.NOUN),
-            ("προτεραιότητα", "priority", "Importance", PartOfSpeech.NOUN),
-            ("αξιολόγηση", "evaluation", "Assessment", PartOfSpeech.NOUN),
-        ],
-    }
 
     # User-owned deck definitions for E2E testing
     # Maps user email -> list of deck configurations
@@ -390,6 +371,30 @@ class SeedService:
             "description_ru": "Самые важные культурные события месяца.",
             "days_ago": 30,
             "country": "world",
+        },
+    ]
+
+    SITUATIONS: list[dict[str, str]] = [
+        {
+            "scenario_el": "Στην καφετέρια",
+            "scenario_en": "At the coffee shop",
+            "scenario_ru": "В кафе",
+            "text_el": "Ο Γιάννης μπαίνει στην καφετέρια και κοιτάζει τον κατάλογο. Θέλει έναν ελληνικό καφέ και ένα κομμάτι τυρόπιτα. Η σερβιτόρα τον χαιρετάει και του ζητάει την παραγγελία. Ο Γιάννης παραγγέλνει και κάθεται δίπλα στο παράθυρο.",
+            "text_el_a2": "Ο Γιάννης πάει στην καφετέρια. Θέλει καφέ και τυρόπιτα. Η σερβιτόρα λέει «Καλημέρα!». Ο Γιάννης λέει τι θέλει. Κάθεται κοντά στο παράθυρο.",
+        },
+        {
+            "scenario_el": "Στο λεωφορείο",
+            "scenario_en": "On the bus",
+            "scenario_ru": "В автобусе",
+            "text_el": "Η Μαρία περιμένει στη στάση του λεωφορείου. Το λεωφορείο έρχεται μετά από δέκα λεπτά. Ανεβαίνει και χτυπάει την κάρτα της. Δεν υπάρχουν ελεύθερες θέσεις, οπότε στέκεται κοντά στην πόρτα. Μετά από τρεις στάσεις, κατεβαίνει.",
+            "text_el_a2": "Η Μαρία περιμένει το λεωφορείο. Το λεωφορείο έρχεται. Ανεβαίνει και χτυπάει την κάρτα. Δεν έχει θέσεις. Στέκεται κοντά στην πόρτα. Κατεβαίνει μετά από τρεις στάσεις.",
+        },
+        {
+            "scenario_el": "Στο σούπερ μάρκετ",
+            "scenario_en": "At the supermarket",
+            "scenario_ru": "В супермаркете",
+            "text_el": "Ο Νίκος πηγαίνει στο σούπερ μάρκετ για ψώνια. Χρειάζεται ψωμί, γάλα, αυγά και λαχανικά. Παίρνει ένα καλάθι και ψάχνει τα προϊόντα στα ράφια. Στο ταμείο, η ταμίας του λέει το σύνολο και πληρώνει με κάρτα.",
+            "text_el_a2": "Ο Νίκος πάει στο σούπερ μάρκετ. Θέλει ψωμί, γάλα και αυγά. Παίρνει ένα καλάθι. Βρίσκει τα πράγματα. Πηγαίνει στο ταμείο και πληρώνει.",
         },
     ]
 
@@ -1754,84 +1759,6 @@ class SeedService:
     # =====================
     # Content Seeding
     # =====================
-
-    async def seed_decks_and_cards(self) -> dict[str, Any]:
-        """Create test decks with cards for each CEFR level.
-
-        Creates:
-        - 1 deck per CEFR level (A1, A2, B1, B2)
-        - 10 cards per deck (vocabulary items)
-        - Realistic Greek vocabulary with translations
-
-        Returns:
-            dict with 'decks' list containing deck and card info
-
-        Raises:
-            RuntimeError: If seeding not allowed
-        """
-        self._check_can_seed()
-
-        created_decks = []
-
-        # Greek translations for CEFR levels
-        level_translations_el = {
-            DeckLevel.A1: "Ελληνικό Λεξιλόγιο A1",
-            DeckLevel.A2: "Ελληνικό Λεξιλόγιο A2",
-            DeckLevel.B1: "Ελληνικό Λεξιλόγιο B1",
-            DeckLevel.B2: "Ελληνικό Λεξιλόγιο B2",
-        }
-        description_translations_el = {
-            DeckLevel.A1: "Βασικό ελληνικό λεξιλόγιο για επίπεδο CEFR A1",
-            DeckLevel.A2: "Βασικό ελληνικό λεξιλόγιο για επίπεδο CEFR A2",
-            DeckLevel.B1: "Βασικό ελληνικό λεξιλόγιο για επίπεδο CEFR B1",
-            DeckLevel.B2: "Βασικό ελληνικό λεξιλόγιο για επίπεδο CEFR B2",
-        }
-        # Russian translations for CEFR levels
-        level_translations_ru = {
-            DeckLevel.A1: "Греческий словарь A1",
-            DeckLevel.A2: "Греческий словарь A2",
-            DeckLevel.B1: "Греческий словарь B1",
-            DeckLevel.B2: "Греческий словарь B2",
-        }
-        description_translations_ru = {
-            DeckLevel.A1: "Основной греческий словарь для уровня CEFR A1",
-            DeckLevel.A2: "Основной греческий словарь для уровня CEFR A2",
-            DeckLevel.B1: "Основной греческий словарь для уровня CEFR B1",
-            DeckLevel.B2: "Основной греческий словарь для уровня CEFR B2",
-        }
-
-        for level, words in self.VOCABULARY.items():
-            deck = Deck(
-                name_en=f"Greek {level.value} Vocabulary",
-                name_el=level_translations_el[level],
-                name_ru=level_translations_ru[level],
-                description_en=f"Essential Greek vocabulary for CEFR level {level.value}",
-                description_el=description_translations_el[level],
-                description_ru=description_translations_ru[level],
-                level=level,
-                is_active=True,
-                is_premium=False,
-            )
-            self.db.add(deck)
-            await self.db.flush()
-
-            created_decks.append(
-                {
-                    "id": str(deck.id),
-                    "name": deck.name_en,
-                    "level": level.value,
-                    "card_count": 0,
-                    "is_premium": False,
-                }
-            )
-
-        await self.db.flush()
-
-        return {
-            "success": True,
-            "decks": created_decks,
-            "total_cards": 0,
-        }
 
     async def seed_user_decks(self, users: list[dict[str, Any]]) -> dict[str, Any]:
         """Create user-owned decks with cards for E2E testing.
@@ -4307,6 +4234,50 @@ class SeedService:
         count = result.scalar_one()
         return {"success": True, "translation_entries_created": count}
 
+    async def seed_situations(self) -> dict[str, Any]:
+        """Create sample situations with descriptions for E2E testing."""
+        self._check_can_seed()
+
+        seed_scenario_ens = [s["scenario_en"] for s in self.SITUATIONS]
+        await self.db.execute(delete(Situation).where(Situation.scenario_en.in_(seed_scenario_ens)))
+
+        created_situations = []
+        for sit_data in self.SITUATIONS:
+            situation = Situation(
+                scenario_el=sit_data["scenario_el"],
+                scenario_en=sit_data["scenario_en"],
+                scenario_ru=sit_data["scenario_ru"],
+                status=SituationStatus.DRAFT,
+            )
+            self.db.add(situation)
+            await self.db.flush()
+
+            description = SituationDescription(
+                situation_id=situation.id,
+                text_el=sit_data["text_el"],
+                text_el_a2=sit_data["text_el_a2"],
+                source_type=DescriptionSourceType.ORIGINAL,
+                status=DescriptionStatus.DRAFT,
+                audio_s3_key=None,
+                audio_a2_s3_key=None,
+            )
+            self.db.add(description)
+            await self.db.flush()
+
+            created_situations.append(
+                {
+                    "id": str(situation.id),
+                    "scenario_en": situation.scenario_en,
+                    "description_id": str(description.id),
+                }
+            )
+
+        return {
+            "success": True,
+            "situations": created_situations,
+            "count": len(created_situations),
+        }
+
     # =====================
     # Full Seed Orchestration
     # =====================
@@ -4394,9 +4365,6 @@ class SeedService:
             "password": self.DEFAULT_PASSWORD,
         }
 
-        # Step 3: Create content
-        content_result = await self.seed_decks_and_cards()
-
         # Step 3b: Create user-owned decks (My Decks feature)
         user_decks_result = await self.seed_user_decks(users_result["users"])
 
@@ -4414,8 +4382,6 @@ class SeedService:
             if user_dict["email"] == "e2e_learner@test.com":
                 learner_id = UUID(user_dict["id"])
 
-        stats_result: dict[str, Any] = {"success": True, "stats_created": 0}
-        reviews_result: dict[str, Any] = {"success": True, "reviews_created": 0}
         notifications_result: dict[str, Any] = {
             "success": True,
             "notifications_created": 0,
@@ -4622,6 +4588,9 @@ class SeedService:
         # Step 19: Seed reference translation data
         translations_result = await self.seed_translations()
 
+        # Step 20: Seed situations with descriptions
+        situations_result = await self.seed_situations()
+
         # Commit all changes
         await self.db.commit()
 
@@ -4629,15 +4598,11 @@ class SeedService:
             "success": True,
             "truncation": truncate_result,
             "users": users_result,
-            "content": content_result,
             "user_decks": user_decks_result,
             "v2_decks": v2_decks_result,
-            "v1_deck_id": content_result["decks"][0]["id"] if content_result.get("decks") else None,
             "v2_deck_id": (
                 v2_decks_result["v2_decks"][0]["id"] if v2_decks_result.get("v2_decks") else None
             ),
-            "statistics": stats_result,
-            "reviews": reviews_result,
             "v2_statistics": v2_stats_result,
             "v2_reviews": v2_reviews_result,
             "v2_verbs_statistics": v2_verbs_stats_result,
@@ -4657,6 +4622,7 @@ class SeedService:
             "subscription_users": subscription_users_result,
             "lexicon": lexicon_result,
             "translations": translations_result,
+            "situations": situations_result,
         }
 
     async def _create_word_entries_from_vocab(
@@ -4709,9 +4675,9 @@ class SeedService:
         """Create V2 decks with word entries for E2E testing.
 
         Creates 3 V2 decks:
-        - E2E V2 Nouns Deck (A1): 10 nouns with declension grammar_data
-        - E2E V2 Verbs Deck (A2): 10 verbs with conjugation grammar_data
-        - E2E V2 Mixed Deck (A2): 4 adjectives + 4 adverbs + 2 phrases
+        - Greek A1 Vocabulary (Nouns): 10 nouns with declension grammar_data
+        - Greek A2 Vocabulary (Verbs): 10 verbs with conjugation grammar_data
+        - Greek A2 Vocabulary (Mixed): 4 adjectives + 4 adverbs + 2 phrases
 
         NOTE: Does NOT call self.db.commit() - caller is responsible for committing.
 
@@ -4720,9 +4686,9 @@ class SeedService:
         """
         # ========== Create V2 Nouns Deck ==========
         v2_nouns_deck = Deck(
-            name_en="E2E V2 Nouns Deck (A1)",
+            name_en="Greek A1 Vocabulary (Nouns)",
             name_el="Βασικά Ελληνικά Ουσιαστικά",
-            name_ru="Основные греческие существительные",
+            name_ru="Греческий словарь A1 (существительные)",
             description_en="Test deck for V2 system with Greek nouns and declension data",
             description_el="Βασικά ουσιαστικά στα καθημερινά ελληνικά. Μάθετε κλίσεις, γένος και χρήση.",
             description_ru="Основные существительные в повседневном греческом. Изучайте склонения, род и употребление.",
@@ -4734,9 +4700,9 @@ class SeedService:
 
         # ========== Create V2 Verbs Deck ==========
         v2_verbs_deck = Deck(
-            name_en="E2E V2 Verbs Deck (A2)",
+            name_en="Greek A2 Vocabulary (Verbs)",
             name_el="Βασικά Ελληνικά Ρήματα",
-            name_ru="Основные греческие глаголы",
+            name_ru="Греческий словарь A2 (глаголы)",
             description_en="Test deck for V2 system with Greek verbs and conjugation data",
             description_el="Βασικά ρήματα για καθημερινή επικοινωνία. Κλίσεις, χρόνοι και πρακτικά παραδείγματα.",
             description_ru="Основные глаголы для повседневного общения. Спряжения, времена и практические примеры.",
@@ -4748,9 +4714,9 @@ class SeedService:
 
         # ========== Create V2 Mixed Deck ==========
         v2_mixed_deck = Deck(
-            name_en="E2E V2 Mixed Deck (A2)",
+            name_en="Greek A2 Vocabulary (Mixed)",
             name_el="Βασικά Ελληνικά Επίθετα & Επιρρήματα",
-            name_ru="Основные греческие прилагательные и наречия",
+            name_ru="Греческий словарь A2 (смешанный)",
             description_en="Test deck for V2 system with adjectives, adverbs, and phrases",
             description_el="Σημαντικά επίθετα και επιρρήματα για περιγραφικά ελληνικά. Μορφές γένους και βαθμοί σύγκρισης.",
             description_ru="Важные прилагательные и наречия для описательного греческого. Формы рода и степени сравнения.",

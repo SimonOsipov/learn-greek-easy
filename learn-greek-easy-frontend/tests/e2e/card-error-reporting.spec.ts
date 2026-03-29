@@ -139,7 +139,7 @@ test.describe('Card Error Reporting - Word Entry', () => {
     const decks = data.decks as Array<{ id: string; name: string; card_count: number }>;
 
     // Use a deck that has word entries (V2 decks seeded by E2E setup have word entries)
-    const deck = decks.find((d) => d.name.includes('E2E V2 Nouns')) ?? decks[0];
+    const deck = decks.find((d) => d.name.includes('Greek A1 Vocabulary')) ?? decks[0];
 
     if (!deck) {
       throw new Error(

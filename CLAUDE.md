@@ -133,3 +133,4 @@ Update this file when features are merged, phases change, or key decisions are m
 - [PreCompact Hook Setup](docs/precompact-hook-setup.md) - Session continuity configuration
 - [Supabase Database](docs/supabase-database.md) - Database credentials, connectivity, and migration guide
 - [Analytics Events](docs/analytics-events.md) - PostHog event naming, when to create, and implementation patterns
+- [Testing](docs/testing.md) - Test strategy, fixtures, factories, coverage, and CI/CD

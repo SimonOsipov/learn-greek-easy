@@ -40,3 +40,13 @@ Architectural decisions and established patterns. All agents (Feature, Architect
 | SSE vs BackgroundTasks | SSE for admin generation with progress; BackgroundTasks for fire-and-forget | [docs/sse-pipelines.md](sse-pipelines.md) |
 | Event naming | `{domain}:{stage}` format | [docs/sse-pipelines.md](sse-pipelines.md) |
 | Frontend consumption | `useSSE` hook with POST, no retries, no reconnect | [docs/sse-pipelines.md](sse-pipelines.md) |
+
+## Testing
+
+| Decision | Convention | Reference |
+|----------|-----------|-----------|
+| Test strategy | Three-tier: unit > integration > E2E (test pyramid) | docs/testing.md |
+| Coverage threshold | 80% target (current: statements/lines 52%, functions 58%, branches 80%) | docs/testing.md |
+| Factories | Inherit BaseFactory, async create, flush not commit | docs/testing.md |
+| Markers | 19 markers in pyproject.toml, --strict-markers enforced | docs/testing.md |
+| DB isolation | db_session wraps each test in rolled-back transaction | docs/testing.md |

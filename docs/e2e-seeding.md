@@ -24,7 +24,7 @@ The seeding infrastructure provides deterministic test data for E2E tests, enabl
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/v1/test/seed/content` | POST | Create decks/cards only |
+| `/api/v1/test/seed/content` | POST | Create V2 decks with word entries only |
 | `/api/v1/test/seed/culture` | POST | Create culture decks/questions only |
 | `/api/v1/test/seed/mock-exams` | POST | Create mock exam history for learner |
 | `/api/v1/test/seed/pending-question` | POST | Create pending question for review testing |
@@ -34,6 +34,7 @@ The seeding infrastructure provides deterministic test data for E2E tests, enabl
 | `/api/v1/test/seed/news-questions` | POST | Seed news items with linked culture questions |
 | `/api/v1/test/seed/changelog` | POST | Create 12 changelog entries |
 | `/api/v1/test/seed/announcements` | POST | Create 4 announcement campaigns |
+| `/api/v1/test/seed/situations` | POST | Create 3 situations with descriptions |
 
 ### User & Account Endpoints
 
@@ -72,7 +73,6 @@ The full seed executes 19 steps in order:
 |------|------|---------|
 | 1 | Truncate | Clean slate (all tables) |
 | 2 | Base users | 4 test users (get or create) |
-| 3 | V1 content | 6 decks (A1-C2), 60 cards (10 per deck) |
 | 3b | User decks | User-owned decks for learner + admin (My Decks) |
 | 3c | V2 decks | V2 card system decks with word entries |
 | 3d | V2 statistics | CardRecordStatistics for learner on V2 Nouns deck (60% progress) |
@@ -92,6 +92,7 @@ The full seed executes 19 steps in order:
 | 17 | Subscription users | 5 users with various subscription states |
 | 18 | Lexicon | Reference lexicon data |
 | 19 | Translations | Reference translation data |
+| 20 | Situations | 3 situations with B1/A2 descriptions |
 
 > **Note:** Danger zone users are NOT included in `/seed/all`. Use `/seed/danger-zone` separately.
 

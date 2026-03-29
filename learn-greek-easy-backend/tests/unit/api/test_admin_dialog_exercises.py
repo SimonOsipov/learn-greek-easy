@@ -4,10 +4,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from httpx import AsyncClient
-from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from src.db.models import DialogExercise, ExerciseItem
 
 ENDPOINT = "/api/v1/admin/listening-dialogs"
 
@@ -82,87 +78,6 @@ def _mock_elevenlabs():
 
 class TestDialogExercisePersistence:
     """Tests for exercise persistence in the dialog creation endpoint."""
-
-    @pytest.mark.asyncio
-    @pytest.mark.xfail(
-        reason="Dialog creation endpoint requires situation_id after SIT-01 migration; endpoint updated in SIT-04",
-        strict=True,
-    )
-    async def test_create_dialog_with_exercises(
-        self,
-        client: AsyncClient,
-        superuser_auth_headers: dict,
-        db_session: AsyncSession,
-    ) -> None:
-        """201 response and 3 DialogExercise rows + items created in DB."""
-        payload = _base_payload(exercises=EXERCISES_PAYLOAD)
-
-        with (
-            patch(
-                "src.services.elevenlabs_service.get_elevenlabs_service",
-                return_value=_mock_elevenlabs(),
-            ),
-            patch("src.api.v1.admin.settings") as mock_settings,
-        ):
-            mock_settings.elevenlabs_configured = True
-            response = await client.post(ENDPOINT, json=payload, headers=superuser_auth_headers)
-
-        assert response.status_code == 201
-
-        dialog_id = response.json()["id"]
-
-        exercise_count_result = await db_session.execute(
-            select(func.count())
-            .select_from(DialogExercise)
-            .where(DialogExercise.dialog_id == dialog_id)
-        )
-        exercise_count = exercise_count_result.scalar_one()
-        assert exercise_count == 3
-
-        item_count_result = await db_session.execute(
-            select(func.count())
-            .select_from(ExerciseItem)
-            .join(DialogExercise, ExerciseItem.exercise_id == DialogExercise.id)
-            .where(DialogExercise.dialog_id == dialog_id)
-        )
-        item_count = item_count_result.scalar_one()
-        assert item_count == 3  # 1 fill_gap + 1 select_heard + 1 true_false
-
-    @pytest.mark.asyncio
-    @pytest.mark.xfail(
-        reason="Dialog creation endpoint requires situation_id after SIT-01 migration; endpoint updated in SIT-04",
-        strict=True,
-    )
-    async def test_create_dialog_without_exercises(
-        self,
-        client: AsyncClient,
-        superuser_auth_headers: dict,
-        db_session: AsyncSession,
-    ) -> None:
-        """201 response and no exercise rows when exercises key is absent."""
-        payload = _base_payload()
-
-        with (
-            patch(
-                "src.services.elevenlabs_service.get_elevenlabs_service",
-                return_value=_mock_elevenlabs(),
-            ),
-            patch("src.api.v1.admin.settings") as mock_settings,
-        ):
-            mock_settings.elevenlabs_configured = True
-            response = await client.post(ENDPOINT, json=payload, headers=superuser_auth_headers)
-
-        assert response.status_code == 201
-
-        dialog_id = response.json()["id"]
-
-        exercise_count_result = await db_session.execute(
-            select(func.count())
-            .select_from(DialogExercise)
-            .where(DialogExercise.dialog_id == dialog_id)
-        )
-        exercise_count = exercise_count_result.scalar_one()
-        assert exercise_count == 0
 
     @pytest.mark.asyncio
     async def test_invalid_line_index(

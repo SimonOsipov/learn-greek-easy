@@ -40,15 +40,14 @@ export default defineConfig({
         'src/services/mockDeckData.ts',
         'src/services/mockReviewData.ts',
         'src/services/mockAnalyticsData.ts',
+        'tests/**',
       ],
-      // Coverage thresholds (disabled initially - will be enforced as tests are added)
-      // Uncomment when adding comprehensive test coverage
-      // thresholds: {
-      //   lines: 70,
-      //   functions: 70,
-      //   branches: 70,
-      //   statements: 70,
-      // },
+      thresholds: {
+        lines: 52,
+        functions: 58,
+        branches: 80,
+        statements: 52,
+      },
     },
 
     // Include/exclude patterns

@@ -935,42 +935,6 @@ class TestCultureAnswerSubmission(E2ETestCase):
         assert data["xp_earned"] >= 0
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(
-        reason="SM-2 processing moved to background in PERF-03 - immediate state transitions via API response no longer available"
-    )
-    async def test_submit_answer_sm2_updates_status(
-        self,
-        client: AsyncClient,
-        fresh_user_session: UserSession,
-        db_session: AsyncSession,
-    ) -> None:
-        """Test that SM-2 algorithm updates question status.
-
-        NOTE: This test was skipped in PERF-03 because SM-2 processing now
-        happens in background tasks. The API response (CultureAnswerResponseFast)
-        no longer includes sm2_result. SM-2 updates are eventually consistent.
-        """
-        deck = await CultureDeckFactory.create(session=db_session)
-        question = await CultureQuestionFactory.create(
-            session=db_session,
-            deck_id=deck.id,
-            correct_option=1,
-        )
-        await db_session.commit()
-
-        # First answer - should transition from new to learning
-        response = await client.post(
-            f"/api/v1/culture/questions/{question.id}/answer",
-            json={"selected_option": 1, "time_taken": 10, "language": "en"},
-            headers=fresh_user_session.headers,
-        )
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["sm2_result"]["previous_status"] == "new"
-        assert data["sm2_result"]["new_status"] in ["learning", "review"]
-
-    @pytest.mark.asyncio
     async def test_submit_answer_time_taken_boundary(
         self,
         client: AsyncClient,

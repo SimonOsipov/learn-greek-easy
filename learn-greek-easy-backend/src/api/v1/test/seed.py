@@ -195,26 +195,23 @@ async def truncate_tables(
 @router.post(
     "/content",
     response_model=SeedResultResponse,
-    summary="Seed decks and cards only",
-    description="Create test decks and cards without users or progress. "
-    "Creates 4 CEFR-level decks with 10 Greek vocabulary cards each.",
+    summary="Seed V2 decks and word entries",
+    description="Create V2 vocabulary decks with word entries without users or progress.",
     dependencies=[Depends(verify_seed_access)],
 )
 async def seed_content(
     db: AsyncSession = Depends(get_db),
 ) -> SeedResultResponse:
-    """Create test decks and cards without users or progress.
+    """Create V2 vocabulary decks with word entries without users or progress.
 
-    Creates:
-    - 4 decks (A1, A2, B1, B2 CEFR levels)
-    - 40 cards total (10 Greek vocabulary cards per deck)
+    Creates V2 decks (Nouns, Verbs) with associated word entries.
 
     Returns:
         SeedResultResponse with content creation results and timing
     """
     start_time = perf_counter()
     service = SeedService(db)
-    result = await service.seed_decks_and_cards()
+    result = await service._seed_v2_decks()
     await db.commit()
     duration_ms = (perf_counter() - start_time) * 1000
 
@@ -753,6 +750,44 @@ async def seed_subscription_users(
     return SeedResultResponse(
         success=result.get("success", False),
         operation="subscription-users",
+        timestamp=datetime.now(timezone.utc),
+        duration_ms=duration_ms,
+        results=result,
+    )
+
+
+@router.post(
+    "/situations",
+    response_model=SeedResultResponse,
+    summary="Seed situation records",
+    description="Create 3 sample situations with B1/A2 descriptions for E2E testing.",
+    dependencies=[Depends(verify_seed_access)],
+)
+async def seed_situations(
+    db: AsyncSession = Depends(get_db),
+) -> SeedResultResponse:
+    """Create situation records with descriptions for E2E testing.
+
+    Creates:
+    - 3 Situation records (DRAFT status)
+    - 3 SituationDescription records with B1 text_el and A2 text_el_a2
+
+    This endpoint is idempotent - existing seed situations are replaced.
+
+    Returns:
+        SeedResultResponse with situation creation results and timing
+    """
+    start_time = perf_counter()
+
+    service = SeedService(db)
+    result = await service.seed_situations()
+    await db.commit()
+
+    duration_ms = (perf_counter() - start_time) * 1000
+
+    return SeedResultResponse(
+        success=result.get("success", False),
+        operation="situations",
         timestamp=datetime.now(timezone.utc),
         duration_ms=duration_ms,
         results=result,
