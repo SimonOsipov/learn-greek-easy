@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { FileText, Image, Loader2, MessageSquare, RefreshCw, Wand2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { KaraokeText } from '@/components/admin/KaraokeText';
 import { WaveformPlayer } from '@/components/culture/WaveformPlayer';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
@@ -29,6 +30,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from '@/hooks/use-toast';
+import { useAudioTimeMs } from '@/hooks/useAudioTimeMs';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useSSE } from '@/hooks/useSSE';
 import { cn } from '@/lib/utils';
@@ -120,6 +122,8 @@ export function SituationDetailModal({
   const { fetchSituationDetail, clearSelectedSituation } = useAdminSituationStore();
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const descB1ContainerRef = useRef<HTMLDivElement>(null);
+  const descA2ContainerRef = useRef<HTMLDivElement>(null);
   const [audioCurrentTimeMs, setAudioCurrentTimeMs] = useState(0);
   const [sseEnabled, setSseEnabled] = useState(false);
   const [generationProgress, setGenerationProgress] = useState<string | null>(null);
@@ -128,6 +132,19 @@ export function SituationDetailModal({
   const [descB1Stage, setDescB1Stage] = useState<string | null>(null);
   const [descA2SseEnabled, setDescA2SseEnabled] = useState(false);
   const [descA2Stage, setDescA2Stage] = useState<string | null>(null);
+
+  const descB1Enabled =
+    !!selectedSituation?.description?.audio_url &&
+    !!selectedSituation?.description?.word_timestamps?.length &&
+    !descB1SseEnabled;
+
+  const descA2Enabled =
+    !!selectedSituation?.description?.audio_a2_url &&
+    !!selectedSituation?.description?.word_timestamps_a2?.length &&
+    !descA2SseEnabled;
+
+  const descB1TimeMs = useAudioTimeMs(descB1ContainerRef, descB1Enabled);
+  const descA2TimeMs = useAudioTimeMs(descA2ContainerRef, descA2Enabled);
 
   useEffect(() => {
     if (open && situationId) {
@@ -677,16 +694,27 @@ export function SituationDetailModal({
                   {/* B1 Section */}
                   <div data-testid="situation-description-b1-section" className="space-y-2">
                     <Badge variant="outline">B1</Badge>
-                    <p className="text-sm leading-relaxed">
-                      {selectedSituation.description.text_el}
-                    </p>
-                    {selectedSituation.description.audio_url ? (
-                      <WaveformPlayer
-                        variant="admin"
-                        audioUrl={selectedSituation.description.audio_url}
-                        showSpeedControl={false}
-                        barCount={60}
+                    {selectedSituation.description.word_timestamps?.length ? (
+                      <KaraokeText
+                        wordTimestamps={selectedSituation.description.word_timestamps}
+                        currentTimeMs={descB1TimeMs}
+                        fallbackText={selectedSituation.description.text_el}
+                        className="leading-relaxed"
                       />
+                    ) : (
+                      <p className="text-sm leading-relaxed">
+                        {selectedSituation.description.text_el}
+                      </p>
+                    )}
+                    {selectedSituation.description.audio_url ? (
+                      <div ref={descB1ContainerRef}>
+                        <WaveformPlayer
+                          variant="admin"
+                          audioUrl={selectedSituation.description.audio_url}
+                          showSpeedControl={false}
+                          barCount={60}
+                        />
+                      </div>
                     ) : (
                       <AudioPlaceholder />
                     )}
@@ -719,21 +747,32 @@ export function SituationDetailModal({
                   <div data-testid="situation-description-a2-section" className="space-y-2">
                     <Badge variant="outline">A2</Badge>
                     {selectedSituation.description.text_el_a2 ? (
-                      <p className="text-sm leading-relaxed">
-                        {selectedSituation.description.text_el_a2}
-                      </p>
+                      selectedSituation.description.word_timestamps_a2?.length ? (
+                        <KaraokeText
+                          wordTimestamps={selectedSituation.description.word_timestamps_a2}
+                          currentTimeMs={descA2TimeMs}
+                          fallbackText={selectedSituation.description.text_el_a2}
+                          className="leading-relaxed"
+                        />
+                      ) : (
+                        <p className="text-sm leading-relaxed">
+                          {selectedSituation.description.text_el_a2}
+                        </p>
+                      )
                     ) : (
                       <p className="text-sm text-muted-foreground">
                         {t('situations.detail.descriptionA2Empty')}
                       </p>
                     )}
                     {selectedSituation.description.audio_a2_url ? (
-                      <WaveformPlayer
-                        variant="admin"
-                        audioUrl={selectedSituation.description.audio_a2_url}
-                        showSpeedControl={false}
-                        barCount={60}
-                      />
+                      <div ref={descA2ContainerRef}>
+                        <WaveformPlayer
+                          variant="admin"
+                          audioUrl={selectedSituation.description.audio_a2_url}
+                          showSpeedControl={false}
+                          barCount={60}
+                        />
+                      </div>
                     ) : (
                       <AudioPlaceholder />
                     )}
