@@ -11,7 +11,7 @@ from src.db.models import (
     PictureStatus,
     SituationStatus,
 )
-from src.schemas.admin import DialogLineDetail, DialogSpeakerDetail
+from src.schemas.admin import DialogLineDetail, DialogSpeakerDetail, WordTimestamp
 
 
 class SituationCreate(BaseModel):
@@ -100,6 +100,8 @@ class DescriptionNested(BaseModel):
     audio_a2_duration_seconds: float | None
     audio_url: str | None = None
     audio_a2_url: str | None = None
+    word_timestamps: list[WordTimestamp] | None = None
+    word_timestamps_a2: list[WordTimestamp] | None = None
     created_at: datetime
 
 

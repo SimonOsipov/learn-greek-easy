@@ -1295,7 +1295,17 @@
       "audioNotGenerated": "Аудио не создано",
       "regenerate": "Перегенерировать",
       "backendNotConnected": "Сервер не подключён",
-      "fetchError": "Не удалось загрузить детали ситуации"
+      "fetchError": "Не удалось загрузить детали ситуации",
+      "descriptionAudio": {
+        "regenerateB1": "Перегенерировать аудио B1",
+        "regenerateA2": "Перегенерировать аудио A2",
+        "regenerateError": "Не удалось перегенерировать аудио описания",
+        "stage": {
+          "starting": "Запуск...",
+          "generating": "Генерация аудио...",
+          "uploading": "Загрузка..."
+        }
+      }
     },
     "delete": {
       "title": "Удалить ситуацию",

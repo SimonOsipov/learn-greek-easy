@@ -52,6 +52,8 @@ export interface DescriptionNested {
   audio_a2_duration_seconds: number | null;
   audio_url: string | null;
   audio_a2_url: string | null;
+  word_timestamps: WordTimestamp[] | null;
+  word_timestamps_a2: WordTimestamp[] | null;
   created_at: string;
 }
 

@@ -2661,6 +2661,8 @@ class SituationDescription(Base, TimestampMixin):
     audio_a2_s3_key: Mapped[str | None] = mapped_column(Text, nullable=True)
     audio_duration_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
     audio_a2_duration_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
+    word_timestamps: Mapped[list | None] = mapped_column(JSONB, nullable=True, default=None)
+    word_timestamps_a2: Mapped[list | None] = mapped_column(JSONB, nullable=True, default=None)
     source_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     country: Mapped[NewsCountry | None] = mapped_column(
         SAEnum(

@@ -26,6 +26,11 @@ class AudioResult:
 
 
 @dataclass
+class AudioWithTimestampsResult(AudioResult):
+    word_timestamps: list[dict]  # [{word: str, start_ms: int, end_ms: int}]
+
+
+@dataclass
 class DialogAudioResult(AudioResult):
     line_timings: dict[int, tuple[int, int]]
     word_timestamps_map: dict[int, list[dict] | None]
@@ -276,14 +281,15 @@ class AudioGenerationService:
         self._elevenlabs = get_elevenlabs_service()
         self._s3 = get_s3_service()
 
-    async def generate_single(
+    async def generate_single(  # noqa: C901
         self,
         text: str,
         s3_key: str,
         voice_id: str | None = None,
         on_progress: ProgressCallback | None = None,
         news_item_id: Optional[UUID] = None,
-    ) -> AudioResult:
+        with_timestamps: bool = False,
+    ) -> AudioResult | AudioWithTimestampsResult:
         if on_progress is not None:
             await on_progress("tts")
 
@@ -293,7 +299,34 @@ class AudioGenerationService:
             news_item_id=news_item_id,
         )
 
+        # Optional word-level timestamps via forced alignment
+        word_timestamps: list[dict] = []
+        if with_timestamps:
+            if on_progress is not None:
+                await on_progress("alignment")
+            try:
+                fa_response = await self._elevenlabs.forced_align(audio_bytes, text)
+                word_timestamps = [
+                    {
+                        "word": w["text"],
+                        "start_ms": int(w["start"] * 1000),
+                        "end_ms": int(w["end"] * 1000),
+                    }
+                    for w in fa_response.get("words", [])
+                ]
+            except Exception:
+                logger.warning(
+                    "forced_align failed for generate_single, returning empty word_timestamps"
+                )
+
         duration_seconds = (len(audio_bytes) * 8) / (128 * 1000)
+        if with_timestamps:
+            try:
+                mp3 = MP3(fileobj=BytesIO(audio_bytes))
+                if mp3.info is not None:
+                    duration_seconds = mp3.info.length
+            except Exception as exc:
+                logger.warning("MP3 duration parse failed, using bitrate estimate: {}", exc)
 
         if on_progress is not None:
             await on_progress("upload")
@@ -302,6 +335,14 @@ class AudioGenerationService:
         if not upload_ok:
             raise RuntimeError("S3 upload failed")
 
+        if with_timestamps:
+            return AudioWithTimestampsResult(
+                audio_bytes=audio_bytes,
+                s3_key=s3_key,
+                duration_seconds=duration_seconds,
+                file_size_bytes=len(audio_bytes),
+                word_timestamps=word_timestamps,
+            )
         return AudioResult(
             audio_bytes=audio_bytes,
             s3_key=s3_key,

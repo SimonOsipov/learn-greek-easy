@@ -48,6 +48,7 @@ from src.db.models import (
     Deck,
     DeckLevel,
     DeckWordEntry,
+    DescriptionStatus,
     DialogExercise,
     DialogLine,
     DialogSpeaker,
@@ -61,6 +62,7 @@ from src.db.models import (
     NewsItem,
     PartOfSpeech,
     Situation,
+    SituationDescription,
     SituationStatus,
     User,
     WiktionaryMorphology,
@@ -146,7 +148,11 @@ from src.schemas.word_entry import (
     WordEntryResponse,
 )
 from src.services.announcement_service import AnnouncementService
-from src.services.audio_generation_service import DialogInput, get_audio_generation_service
+from src.services.audio_generation_service import (
+    AudioWithTimestampsResult,
+    DialogInput,
+    get_audio_generation_service,
+)
 from src.services.card_error_admin_service import CardErrorAdminService
 from src.services.card_generator_service import CardGeneratorService
 from src.services.changelog_service import ChangelogService
@@ -4387,6 +4393,176 @@ async def generate_dialog_audio_stream(
 
     return create_sse_response(
         sse_stream(_dialog_audio_sse_pipeline(dialog_id), heartbeat_interval=15)
+    )
+
+
+async def _description_audio_sse_pipeline(
+    situation_id: UUID, level: str
+) -> AsyncGenerator[str, None]:
+    """SSE pipeline for situation description audio generation."""
+    yield format_sse_event("", event="connected")
+    factory = get_session_factory()
+
+    # Validate level
+    if level not in ("b1", "a2"):
+        yield format_sse_event(
+            {
+                "situation_id": str(situation_id),
+                "stage": "load",
+                "error": f"Invalid level: {level}. Must be 'b1' or 'a2'",
+            },
+            event="description_audio:error",
+        )
+        return
+
+    # Load description
+    async with factory.begin() as session:
+        db_result = await session.execute(
+            select(SituationDescription).where(SituationDescription.situation_id == situation_id)
+        )
+        description = db_result.scalar_one_or_none()
+        if description is None:
+            yield format_sse_event(
+                {
+                    "situation_id": str(situation_id),
+                    "stage": "load",
+                    "error": "No description found for this situation",
+                },
+                event="description_audio:error",
+            )
+            return
+        description_id = description.id
+        text = description.text_el if level == "b1" else description.text_el_a2
+
+    if not text or not text.strip():
+        yield format_sse_event(
+            {
+                "situation_id": str(situation_id),
+                "stage": "load",
+                "error": f"No text for level {level}",
+            },
+            event="description_audio:error",
+        )
+        return
+
+    s3_key = (
+        f"situation-description-audio/{description_id}.mp3"
+        if level == "b1"
+        else f"situation-description-audio/a2/{description_id}.mp3"
+    )
+
+    yield format_sse_event(
+        {"situation_id": str(situation_id), "level": level},
+        event="description_audio:start",
+    )
+
+    current_stage = "tts"
+    try:
+        audio_service = get_audio_generation_service()
+
+        yield format_sse_event(
+            {"situation_id": str(situation_id)},
+            event="description_audio:tts",
+        )
+
+        async def _on_progress(stage: str, **kwargs: Any) -> None:
+            nonlocal current_stage
+            current_stage = stage
+
+        audio_result = await audio_service.generate_single(
+            text=text.strip(),
+            s3_key=s3_key,
+            with_timestamps=True,
+            on_progress=_on_progress,
+        )
+
+        word_timestamps = (
+            audio_result.word_timestamps
+            if isinstance(audio_result, AudioWithTimestampsResult)
+            else []
+        )
+
+        yield format_sse_event(
+            {"situation_id": str(situation_id)},
+            event="description_audio:alignment",
+        )
+        yield format_sse_event(
+            {"situation_id": str(situation_id), "s3_key": s3_key},
+            event="description_audio:upload",
+        )
+
+        current_stage = "persist"
+        yield format_sse_event(
+            {"situation_id": str(situation_id)},
+            event="description_audio:persist",
+        )
+
+        async with factory.begin() as session:
+            if level == "b1":
+                values: dict = {
+                    "audio_s3_key": s3_key,
+                    "audio_duration_seconds": audio_result.duration_seconds,
+                    "word_timestamps": word_timestamps,
+                    "status": DescriptionStatus.AUDIO_READY,
+                }
+            else:
+                values = {
+                    "audio_a2_s3_key": s3_key,
+                    "audio_a2_duration_seconds": audio_result.duration_seconds,
+                    "word_timestamps_a2": word_timestamps,
+                    "status": DescriptionStatus.AUDIO_READY,
+                }
+            await session.execute(
+                update(SituationDescription)
+                .where(SituationDescription.id == description_id)
+                .values(**values)
+            )
+
+        audio_url = audio_service.generate_presigned_url(s3_key)
+
+        yield format_sse_event(
+            {
+                "situation_id": str(situation_id),
+                "level": level,
+                "audio_url": audio_url,
+                "duration_seconds": audio_result.duration_seconds,
+            },
+            event="description_audio:complete",
+        )
+
+    except Exception as exc:
+        yield format_sse_event(
+            {
+                "situation_id": str(situation_id),
+                "stage": current_stage,
+                "error": str(exc),
+            },
+            event="description_audio:error",
+        )
+
+
+@router.post(
+    "/situations/{situation_id}/description-audio/stream",
+    summary="Generate situation description audio via ElevenLabs TTS as SSE stream",
+    response_class=StreamingResponse,
+)
+async def generate_description_audio_stream(
+    situation_id: UUID,
+    level: str = Query(..., description="Audio level: 'b1' or 'a2'"),
+    sse_auth: SSEAuthResult = Depends(get_sse_auth),
+) -> StreamingResponse:
+    if not sse_auth.is_authenticated:
+        return _sse_single_error(
+            sse_auth.error_code or "auth_required",
+            sse_auth.error_message or "Authentication required",
+        )
+    assert sse_auth.user is not None
+    if not sse_auth.user.is_superuser:
+        return _sse_single_error("forbidden", "Admin access required")
+    if not settings.elevenlabs_configured:
+        return _sse_single_error("service_unavailable", "ElevenLabs is not configured")
+    return create_sse_response(
+        sse_stream(_description_audio_sse_pipeline(situation_id, level), heartbeat_interval=15)
     )
 
 
