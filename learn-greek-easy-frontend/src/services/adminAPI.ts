@@ -1805,3 +1805,7 @@ export function getNewsB2AudioStreamUrl(newsItemId: string): string {
 export function getNewsA2AudioStreamUrl(newsItemId: string): string {
   return `/api/v1/admin/news/${newsItemId}/generate-a2-audio/stream`;
 }
+
+export function getDescriptionAudioStreamUrl(situationId: string, level: 'b1' | 'a2'): string {
+  return `/api/v1/admin/situations/${situationId}/description-audio/stream?level=${level}`;
+}

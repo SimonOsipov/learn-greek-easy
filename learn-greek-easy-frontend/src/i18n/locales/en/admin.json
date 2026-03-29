@@ -1283,7 +1283,17 @@
       "audioNotGenerated": "Audio not generated",
       "regenerate": "Regenerate",
       "backendNotConnected": "Backend not connected",
-      "fetchError": "Failed to load situation details"
+      "fetchError": "Failed to load situation details",
+      "descriptionAudio": {
+        "regenerateB1": "Regenerate B1 Audio",
+        "regenerateA2": "Regenerate A2 Audio",
+        "regenerateError": "Failed to regenerate description audio",
+        "stage": {
+          "starting": "Starting...",
+          "generating": "Generating audio...",
+          "uploading": "Uploading..."
+        }
+      }
     },
     "delete": {
       "title": "Delete Situation",

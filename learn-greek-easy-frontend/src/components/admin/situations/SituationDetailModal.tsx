@@ -28,10 +28,11 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { toast } from '@/hooks/use-toast';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useSSE } from '@/hooks/useSSE';
 import { cn } from '@/lib/utils';
-import { getDialogAudioStreamUrl } from '@/services/adminAPI';
+import { getDescriptionAudioStreamUrl, getDialogAudioStreamUrl } from '@/services/adminAPI';
 import {
   useAdminSituationStore,
   selectSelectedSituation,
@@ -123,6 +124,10 @@ export function SituationDetailModal({
   const [sseEnabled, setSseEnabled] = useState(false);
   const [generationProgress, setGenerationProgress] = useState<string | null>(null);
   const [generationError, setGenerationError] = useState<string | null>(null);
+  const [descB1SseEnabled, setDescB1SseEnabled] = useState(false);
+  const [descB1Stage, setDescB1Stage] = useState<string | null>(null);
+  const [descA2SseEnabled, setDescA2SseEnabled] = useState(false);
+  const [descA2Stage, setDescA2Stage] = useState<string | null>(null);
 
   useEffect(() => {
     if (open && situationId) {
@@ -137,6 +142,10 @@ export function SituationDetailModal({
       setSseEnabled(false);
       setGenerationProgress(null);
       setGenerationError(null);
+      setDescB1SseEnabled(false);
+      setDescB1Stage(null);
+      setDescA2SseEnabled(false);
+      setDescA2Stage(null);
     }
   }, [open, clearSelectedSituation]);
 
@@ -281,6 +290,108 @@ export function SituationDetailModal({
     onEvent: handleSSEEvent,
     onError: handleSSEError,
   });
+
+  // B1 description audio stream
+  useSSE(situationId ? getDescriptionAudioStreamUrl(situationId, 'b1') : '', {
+    method: 'POST',
+    body: {},
+    enabled: descB1SseEnabled && !!situationId,
+    maxRetries: 0,
+    reconnect: false,
+    onEvent: (event) => {
+      const data = (event.data ?? {}) as Record<string, unknown>;
+      switch (event.type) {
+        case 'description_audio:start':
+          setDescB1Stage('starting');
+          break;
+        case 'description_audio:tts':
+        case 'description_audio:elevenlabs':
+          setDescB1Stage('generating');
+          break;
+        case 'description_audio:upload':
+          setDescB1Stage('uploading');
+          break;
+        case 'description_audio:complete':
+          setDescB1Stage(null);
+          setDescB1SseEnabled(false);
+          if (situationId) void fetchSituationDetail(situationId);
+          break;
+        case 'description_audio:error':
+          setDescB1Stage(null);
+          setDescB1SseEnabled(false);
+          toast({
+            title: String(data.error ?? t('situations.detail.descriptionAudio.regenerateError')),
+            variant: 'destructive',
+          });
+          break;
+      }
+    },
+    onError: () => {
+      setDescB1Stage(null);
+      setDescB1SseEnabled(false);
+      toast({
+        title: t('situations.detail.descriptionAudio.regenerateError'),
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // A2 description audio stream
+  useSSE(situationId ? getDescriptionAudioStreamUrl(situationId, 'a2') : '', {
+    method: 'POST',
+    body: {},
+    enabled: descA2SseEnabled && !!situationId,
+    maxRetries: 0,
+    reconnect: false,
+    onEvent: (event) => {
+      const data = (event.data ?? {}) as Record<string, unknown>;
+      switch (event.type) {
+        case 'description_audio:start':
+          setDescA2Stage('starting');
+          break;
+        case 'description_audio:tts':
+        case 'description_audio:elevenlabs':
+          setDescA2Stage('generating');
+          break;
+        case 'description_audio:upload':
+          setDescA2Stage('uploading');
+          break;
+        case 'description_audio:complete':
+          setDescA2Stage(null);
+          setDescA2SseEnabled(false);
+          if (situationId) void fetchSituationDetail(situationId);
+          break;
+        case 'description_audio:error':
+          setDescA2Stage(null);
+          setDescA2SseEnabled(false);
+          toast({
+            title: String(data.error ?? t('situations.detail.descriptionAudio.regenerateError')),
+            variant: 'destructive',
+          });
+          break;
+      }
+    },
+    onError: () => {
+      setDescA2Stage(null);
+      setDescA2SseEnabled(false);
+      toast({
+        title: t('situations.detail.descriptionAudio.regenerateError'),
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const handleRegenerateDescB1 = useCallback(() => {
+    if (!situationId || descB1SseEnabled) return;
+    setDescB1Stage('starting');
+    setDescB1SseEnabled(true);
+  }, [situationId, descB1SseEnabled]);
+
+  const handleRegenerateDescA2 = useCallback(() => {
+    if (!situationId || descA2SseEnabled) return;
+    setDescA2Stage('starting');
+    setDescA2SseEnabled(true);
+  }, [situationId, descA2SseEnabled]);
 
   const localizedScenario = selectedSituation
     ? currentLanguage === 'ru'
@@ -579,6 +690,27 @@ export function SituationDetailModal({
                     ) : (
                       <AudioPlaceholder />
                     )}
+                    <div className="mt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleRegenerateDescB1}
+                        disabled={descB1SseEnabled || !selectedSituation.description.text_el}
+                        data-testid="situation-desc-regenerate-b1-audio"
+                      >
+                        {descB1Stage !== null ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            {t(`situations.detail.descriptionAudio.stage.${descB1Stage}`)}
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw className="mr-2 h-4 w-4" />
+                            {t('situations.detail.descriptionAudio.regenerateB1')}
+                          </>
+                        )}
+                      </Button>
+                    </div>
                   </div>
 
                   {/* A2 Section */}
@@ -603,6 +735,27 @@ export function SituationDetailModal({
                     ) : (
                       <AudioPlaceholder />
                     )}
+                    <div className="mt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleRegenerateDescA2}
+                        disabled={descA2SseEnabled || !selectedSituation.description.text_el_a2}
+                        data-testid="situation-desc-regenerate-a2-audio"
+                      >
+                        {descA2Stage !== null ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            {t(`situations.detail.descriptionAudio.stage.${descA2Stage}`)}
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw className="mr-2 h-4 w-4" />
+                            {t('situations.detail.descriptionAudio.regenerateA2')}
+                          </>
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 </>
               ) : (
