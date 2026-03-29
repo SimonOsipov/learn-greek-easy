@@ -4676,9 +4676,9 @@ class SeedService:
         """Create V2 decks with word entries for E2E testing.
 
         Creates 3 V2 decks:
-        - E2E V2 Nouns Deck (A1): 10 nouns with declension grammar_data
-        - E2E V2 Verbs Deck (A2): 10 verbs with conjugation grammar_data
-        - E2E V2 Mixed Deck (A2): 4 adjectives + 4 adverbs + 2 phrases
+        - Greek A1 Vocabulary (Nouns): 10 nouns with declension grammar_data
+        - Greek A2 Vocabulary (Verbs): 10 verbs with conjugation grammar_data
+        - Greek A2 Vocabulary (Mixed): 4 adjectives + 4 adverbs + 2 phrases
 
         NOTE: Does NOT call self.db.commit() - caller is responsible for committing.
 
@@ -4687,9 +4687,9 @@ class SeedService:
         """
         # ========== Create V2 Nouns Deck ==========
         v2_nouns_deck = Deck(
-            name_en="E2E V2 Nouns Deck (A1)",
+            name_en="Greek A1 Vocabulary (Nouns)",
             name_el="Βασικά Ελληνικά Ουσιαστικά",
-            name_ru="Основные греческие существительные",
+            name_ru="Греческий словарь A1 (существительные)",
             description_en="Test deck for V2 system with Greek nouns and declension data",
             description_el="Βασικά ουσιαστικά στα καθημερινά ελληνικά. Μάθετε κλίσεις, γένος και χρήση.",
             description_ru="Основные существительные в повседневном греческом. Изучайте склонения, род и употребление.",
@@ -4701,9 +4701,9 @@ class SeedService:
 
         # ========== Create V2 Verbs Deck ==========
         v2_verbs_deck = Deck(
-            name_en="E2E V2 Verbs Deck (A2)",
+            name_en="Greek A2 Vocabulary (Verbs)",
             name_el="Βασικά Ελληνικά Ρήματα",
-            name_ru="Основные греческие глаголы",
+            name_ru="Греческий словарь A2 (глаголы)",
             description_en="Test deck for V2 system with Greek verbs and conjugation data",
             description_el="Βασικά ρήματα για καθημερινή επικοινωνία. Κλίσεις, χρόνοι και πρακτικά παραδείγματα.",
             description_ru="Основные глаголы для повседневного общения. Спряжения, времена и практические примеры.",
@@ -4715,9 +4715,9 @@ class SeedService:
 
         # ========== Create V2 Mixed Deck ==========
         v2_mixed_deck = Deck(
-            name_en="E2E V2 Mixed Deck (A2)",
+            name_en="Greek A2 Vocabulary (Mixed)",
             name_el="Βασικά Ελληνικά Επίθετα & Επιρρήματα",
-            name_ru="Основные греческие прилагательные и наречия",
+            name_ru="Греческий словарь A2 (смешанный)",
             description_en="Test deck for V2 system with adjectives, adverbs, and phrases",
             description_el="Σημαντικά επίθετα και επιρρήματα για περιγραφικά ελληνικά. Μορφές γένους και βαθμοί σύγκρισης.",
             description_ru="Важные прилагательные и наречия для описательного греческого. Формы рода и степени сравнения.",

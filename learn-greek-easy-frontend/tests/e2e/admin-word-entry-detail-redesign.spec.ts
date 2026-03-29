@@ -14,7 +14,7 @@
  *
  * Architecture notes:
  * - Seed endpoint: /api/v1/test/seed/all (creates V2 decks)
- * - V2 deck name: "E2E V2 Nouns Deck (A1)"
+ * - V2 deck name: "Greek A1 Vocabulary (Nouns)"
  * - Section IDs are HTML id attrs, not data-testid: use page.locator('#section-identity')
  * - Auth storage state: playwright/.auth/admin.json
  * - Deck list is paginated — use search input to find deck reliably
@@ -31,7 +31,7 @@ import { navigateToAdminTab } from './helpers/admin-helpers';
 const ADMIN_AUTH = 'playwright/.auth/admin.json';
 
 // V2 deck name as created by /api/v1/test/seed/all (full name for search)
-const V2_NOUNS_DECK_NAME = 'E2E V2 Nouns Deck';
+const V2_NOUNS_DECK_NAME = 'Greek A1 Vocabulary';
 
 /**
  * Seed test data using /api/v1/test/seed/all (creates V2 decks).
