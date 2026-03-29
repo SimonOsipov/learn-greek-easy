@@ -419,6 +419,11 @@ class ElevenLabsService:
                 )
 
                 if response.status_code == 401:
+                    logger.error(
+                        "Forced alignment 401 response: status={} body={}",
+                        response.status_code,
+                        response.text[:500],
+                    )
                     raise ElevenLabsAuthenticationError(
                         f"Authentication failed (forced_alignment): {response.text[:200]}"
                     )
@@ -427,6 +432,11 @@ class ElevenLabsService:
                     raise ElevenLabsRateLimitError("Rate limit exceeded")
 
                 if response.status_code >= 400:
+                    logger.error(
+                        "Forced alignment error: status={} body={}",
+                        response.status_code,
+                        response.text[:500],
+                    )
                     raise ElevenLabsAPIError(
                         status_code=response.status_code,
                         detail=response.text[:200],

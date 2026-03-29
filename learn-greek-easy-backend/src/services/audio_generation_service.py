@@ -315,9 +315,9 @@ class AudioGenerationService:
                     for w in fa_response.get("words", [])
                 ]
             except Exception as exc:
-                logger.warning(
-                    "forced_align failed for generate_single, returning empty word_timestamps",
-                    exc_info=exc,
+                logger.opt(exception=True).warning(
+                    "forced_align failed for generate_single, returning empty word_timestamps: {}",
+                    str(exc),
                 )
 
         duration_seconds = (len(audio_bytes) * 8) / (128 * 1000)
