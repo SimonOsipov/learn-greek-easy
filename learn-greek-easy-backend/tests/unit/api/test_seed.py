@@ -412,6 +412,36 @@ class TestSeedContentEndpoint:
 
 
 # ============================================================================
+# POST /test/seed/situations Endpoint Tests
+# ============================================================================
+
+
+class TestSeedSituationsEndpoint:
+    """Tests for POST /test/seed/situations."""
+
+    def test_seeds_situations_successfully(self, client: TestClient):
+        """Should seed situations and return results."""
+        mock_result = {"success": True, "situations": [], "count": 0}
+
+        with patch("src.api.v1.test.seed.settings") as mock_settings:
+            mock_settings.is_production = False
+            mock_settings.test_seed_enabled = True
+            mock_settings.seed_requires_secret = False
+
+            with patch("src.api.v1.test.seed.SeedService") as mock_service_class:
+                mock_service = AsyncMock()
+                mock_service.seed_situations.return_value = mock_result
+                mock_service_class.return_value = mock_service
+
+                response = client.post("/test/seed/situations")
+
+                assert response.status_code == 200
+                data = response.json()
+                assert data["success"] is True
+                assert data["operation"] == "situations"
+
+
+# ============================================================================
 # Header Validation Tests
 # ============================================================================
 

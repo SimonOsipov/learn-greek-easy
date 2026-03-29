@@ -203,7 +203,6 @@ class SeedService:
         # --- Reference schema tables (no FKs to public) ---
         "reference.greek_lexicon",  # reference schema, no FKs
         "reference.translations",  # reference schema, no FKs
-        "reference.wiktionary_morphology",  # reference schema, no FKs
     ]
 
     # Default test user password (hashed once for performance)

@@ -46,7 +46,7 @@ Architectural decisions and established patterns. All agents (Feature, Architect
 | Decision | Convention | Reference |
 |----------|-----------|-----------|
 | Test strategy | Three-tier: unit > integration > E2E (test pyramid) | docs/testing.md |
-| Coverage threshold | 80% backend, 80% frontend | docs/testing.md |
+| Coverage threshold | 80% target (current: statements/lines 52%, functions 58%, branches 80%) | docs/testing.md |
 | Factories | Inherit BaseFactory, async create, flush not commit | docs/testing.md |
 | Markers | 19 markers in pyproject.toml, --strict-markers enforced | docs/testing.md |
 | DB isolation | db_session wraps each test in rolled-back transaction | docs/testing.md |
