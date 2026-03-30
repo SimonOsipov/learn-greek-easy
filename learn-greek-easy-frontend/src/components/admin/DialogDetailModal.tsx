@@ -1,6 +1,6 @@
 // src/components/admin/DialogDetailModal.tsx
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { AlertTriangle, BookOpen, Loader2, RefreshCw, Wand2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -127,23 +127,23 @@ export function DialogDetailModal({ dialogId, open, onOpenChange }: DialogDetail
   const [generationError, setGenerationError] = useState<string | null>(null);
 
   // Ref for finding the audio element inside WaveformPlayer's container
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerEl, setContainerEl] = useState<HTMLDivElement | null>(null);
 
   const dialogAudioEnabled =
     !!selectedDialog &&
     (selectedDialog.status === 'audio_ready' || selectedDialog.status === 'exercises_ready') &&
     !sseEnabled;
 
-  const audioCurrentTimeMs = useAudioTimeMs(containerRef, dialogAudioEnabled);
+  const audioCurrentTimeMs = useAudioTimeMs(containerEl, dialogAudioEnabled);
 
   const startAudioRegeneration = useCallback(() => {
-    const audioEl = containerRef.current?.querySelector<HTMLAudioElement>(
+    const audioEl = containerEl?.querySelector<HTMLAudioElement>(
       '[data-testid="waveform-audio-element"]'
     );
     audioEl?.pause();
     setGenerationError(null);
     setSseEnabled(true);
-  }, []);
+  }, [containerEl]);
 
   // Effect 1: Fetch detail when modal opens
   useEffect(() => {
@@ -350,7 +350,7 @@ export function DialogDetailModal({ dialogId, open, onOpenChange }: DialogDetail
                   selectedDialog.status === 'exercises_ready') &&
                   !sseEnabled &&
                   !generationProgress && (
-                    <div ref={containerRef} data-testid="dialog-audio-player">
+                    <div ref={setContainerEl} data-testid="dialog-audio-player">
                       {selectedDialog.audio_url ? (
                         <WaveformPlayer
                           variant="admin"

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { FileText, Image, Loader2, MessageSquare, RefreshCw, Wand2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -121,9 +121,9 @@ export function SituationDetailModal({
   const detailError = useAdminSituationStore(selectDetailError);
   const { fetchSituationDetail, clearSelectedSituation } = useAdminSituationStore();
 
-  const containerRef = useRef<HTMLDivElement>(null);
-  const descB1ContainerRef = useRef<HTMLDivElement>(null);
-  const descA2ContainerRef = useRef<HTMLDivElement>(null);
+  const [containerEl, setContainerEl] = useState<HTMLDivElement | null>(null);
+  const [descB1ContainerEl, setDescB1ContainerEl] = useState<HTMLDivElement | null>(null);
+  const [descA2ContainerEl, setDescA2ContainerEl] = useState<HTMLDivElement | null>(null);
   const [sseEnabled, setSseEnabled] = useState(false);
   const [generationProgress, setGenerationProgress] = useState<string | null>(null);
   const [generationError, setGenerationError] = useState<string | null>(null);
@@ -138,7 +138,7 @@ export function SituationDetailModal({
       selectedSituation.dialog.status === 'exercises_ready') &&
     !sseEnabled;
 
-  const audioCurrentTimeMs = useAudioTimeMs(containerRef, dialogAudioEnabled);
+  const audioCurrentTimeMs = useAudioTimeMs(containerEl, dialogAudioEnabled);
 
   const descB1Enabled =
     !!selectedSituation?.description?.audio_url &&
@@ -150,8 +150,8 @@ export function SituationDetailModal({
     !!selectedSituation?.description?.word_timestamps_a2?.length &&
     !descA2SseEnabled;
 
-  const descB1TimeMs = useAudioTimeMs(descB1ContainerRef, descB1Enabled);
-  const descA2TimeMs = useAudioTimeMs(descA2ContainerRef, descA2Enabled);
+  const descB1TimeMs = useAudioTimeMs(descB1ContainerEl, descB1Enabled);
+  const descA2TimeMs = useAudioTimeMs(descA2ContainerEl, descA2Enabled);
 
   useEffect(() => {
     if (open && situationId) {
@@ -173,13 +173,13 @@ export function SituationDetailModal({
   }, [open, clearSelectedSituation]);
 
   const startAudioRegeneration = useCallback(() => {
-    const audioEl = containerRef.current?.querySelector<HTMLAudioElement>(
+    const audioEl = containerEl?.querySelector<HTMLAudioElement>(
       '[data-testid="waveform-audio-element"]'
     );
     audioEl?.pause();
     setGenerationError(null);
     setSseEnabled(true);
-  }, []);
+  }, [containerEl]);
 
   const handleSSEEvent = useCallback(
     (event: SSEEvent<unknown>) => {
@@ -435,7 +435,7 @@ export function SituationDetailModal({
                   selectedSituation.dialog.status === 'exercises_ready') &&
                 !sseEnabled &&
                 !generationProgress && (
-                  <div ref={containerRef} data-testid="situation-dialog-audio-player">
+                  <div ref={setContainerEl} data-testid="situation-dialog-audio-player">
                     {selectedSituation.dialog.audio_url ? (
                       <WaveformPlayer
                         variant="admin"
@@ -619,7 +619,7 @@ export function SituationDetailModal({
                       </p>
                     )}
                     {selectedSituation.description.audio_url ? (
-                      <div ref={descB1ContainerRef}>
+                      <div ref={setDescB1ContainerEl}>
                         <WaveformPlayer
                           variant="admin"
                           audioUrl={selectedSituation.description.audio_url}
@@ -677,7 +677,7 @@ export function SituationDetailModal({
                       </p>
                     )}
                     {selectedSituation.description.audio_a2_url ? (
-                      <div ref={descA2ContainerRef}>
+                      <div ref={setDescA2ContainerEl}>
                         <WaveformPlayer
                           variant="admin"
                           audioUrl={selectedSituation.description.audio_a2_url}

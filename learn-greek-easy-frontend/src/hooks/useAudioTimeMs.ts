@@ -1,4 +1,4 @@
-import { useEffect, useState, type RefObject } from 'react';
+import { useEffect, useState } from 'react';
 
 /**
  * Tracks audio playback time in milliseconds via requestAnimationFrame.
@@ -6,12 +6,13 @@ import { useEffect, useState, type RefObject } from 'react';
  * Queries for `[data-testid="waveform-audio-element"]` inside the given container,
  * then polls `audio.currentTime` at ~60fps while audio is playing.
  *
+ * Accepts `HTMLElement | null` directly (NOT a RefObject) so the effect re-runs
+ * when the container mounts/unmounts (e.g. when switching tabs).
+ * Consumers should use a callback ref via `useState` + `ref={setContainer}`.
+ *
  * Returns 0 when disabled or when audio is not playing.
  */
-export function useAudioTimeMs(
-  containerRef: RefObject<HTMLElement | null>,
-  enabled: boolean
-): number {
+export function useAudioTimeMs(container: HTMLElement | null, enabled: boolean): number {
   const [audioCurrentTimeMs, setAudioCurrentTimeMs] = useState(0);
 
   // Reset to 0 when disabled
@@ -21,12 +22,9 @@ export function useAudioTimeMs(
     }
   }, [enabled]);
 
-  // rAF polling loop — uses MutationObserver to wait for audio element
+  // rAF polling loop
   useEffect(() => {
-    if (!enabled) return;
-
-    const container = containerRef.current;
-    if (!container) return;
+    if (!enabled || !container) return;
 
     let rafId: number | null = null;
     let lastUpdateMs = 0;
@@ -115,7 +113,7 @@ export function useAudioTimeMs(
       detachFromAudio();
       observer?.disconnect();
     };
-  }, [containerRef, enabled]);
+  }, [container, enabled]);
 
   return audioCurrentTimeMs;
 }
