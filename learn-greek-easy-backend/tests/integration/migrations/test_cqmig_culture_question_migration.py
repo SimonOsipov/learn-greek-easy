@@ -48,17 +48,23 @@ downgrade = _migration.downgrade
 # ---------------------------------------------------------------------------
 async def _run_upgrade(db_session: AsyncSession) -> None:
     connection = await db_session.connection()
-    sync_conn = connection.sync_connection
-    with patch("alembic.op.get_bind", return_value=sync_conn):
-        upgrade()
+
+    def _do_upgrade(sync_conn):
+        with patch("alembic.op.get_bind", return_value=sync_conn):
+            upgrade()
+
+    await connection.run_sync(_do_upgrade)
     await db_session.flush()
 
 
 async def _run_downgrade(db_session: AsyncSession) -> None:
     connection = await db_session.connection()
-    sync_conn = connection.sync_connection
-    with patch("alembic.op.get_bind", return_value=sync_conn):
-        downgrade()
+
+    def _do_downgrade(sync_conn):
+        with patch("alembic.op.get_bind", return_value=sync_conn):
+            downgrade()
+
+    await connection.run_sync(_do_downgrade)
     await db_session.flush()
 
 
