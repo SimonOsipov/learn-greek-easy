@@ -419,6 +419,40 @@ def calculate_next_review_date(interval: int, from_date: date | None = None) -> 
     return base + timedelta(days=interval)
 
 
+def derive_exercise_quality(score: int, max_score: int) -> int:
+    """Map an exercise score to an SM-2 quality value (0–5).
+
+    Args:
+        score: The raw score achieved (must be >= 0).
+        max_score: The maximum possible score. If <= 0, returns 0.
+
+    Returns:
+        SM-2 quality integer in range [0, 5].
+        Quality >= 3 means pass (interval grows).
+        Quality < 3 means fail (interval resets).
+
+    Raises:
+        ValueError: If score is negative.
+    """
+    if score < 0:
+        raise ValueError(f"score must be >= 0, got {score}")
+    if max_score <= 0:
+        return 0
+    ratio = score / max_score
+    if ratio >= 1.0:
+        return 5
+    elif ratio >= 0.8:
+        return 4
+    elif ratio >= 0.6:
+        return 3
+    elif ratio >= 0.4:
+        return 2
+    elif ratio >= 0.2:
+        return 1
+    else:
+        return 0
+
+
 # ============================================================================
 # Module Exports
 # ============================================================================
@@ -432,6 +466,7 @@ __all__ = [
     "calculate_interval",
     "determine_status",
     "calculate_next_review_date",
+    "derive_exercise_quality",
     # Constants
     "MIN_EASINESS_FACTOR",
     "DEFAULT_EASINESS_FACTOR",
