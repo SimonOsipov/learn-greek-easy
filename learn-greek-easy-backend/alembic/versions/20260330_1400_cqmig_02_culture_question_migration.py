@@ -14,6 +14,7 @@ from collections import defaultdict
 from datetime import datetime, timezone
 
 import sqlalchemy as sa
+from pydantic import ValidationError
 
 from alembic import op
 from src.services.exercise_migration_helpers import build_select_correct_answer_payload
@@ -78,6 +79,7 @@ def upgrade() -> None:
 
     total_questions_migrated = 0
     total_questions_skipped = 0
+    descriptions_with_containers = 0
     now = datetime.now(timezone.utc)
 
     for description_id, questions in questions_by_desc.items():
@@ -94,7 +96,7 @@ def upgrade() -> None:
                     correct_option=row.correct_option,
                 )
                 payloads.append(payload)
-            except Exception as exc:
+            except (ValueError, ValidationError) as exc:
                 logger.warning("Skipping culture question id=%s: %s", row.id, exc)
                 total_questions_skipped += 1
 
@@ -105,6 +107,7 @@ def upgrade() -> None:
             )
             continue
 
+        descriptions_with_containers += 1
         # Create one container per level (B1 and A2)
         for level in ("B1", "A2"):
             container_id = str(uuid.uuid4())
@@ -164,7 +167,7 @@ def upgrade() -> None:
             total_questions_migrated += len(payloads)
 
     # Post-migration checks
-    unique_desc_count = len(questions_by_desc)
+    unique_desc_count = descriptions_with_containers
     total_questions_count = len(rows) - total_questions_skipped
 
     result = conn.execute(
