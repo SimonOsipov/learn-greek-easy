@@ -134,7 +134,7 @@ def upgrade() -> None:
                         "INSERT INTO description_exercise_items "
                         "(id, description_exercise_id, item_index, payload, created_at) "
                         "VALUES (:id, :description_exercise_id, :item_index, "
-                        "        :payload::jsonb, :created_at)"
+                        "        CAST(:payload AS jsonb), :created_at)"
                     ),
                     {
                         "id": str(uuid.uuid4()),
