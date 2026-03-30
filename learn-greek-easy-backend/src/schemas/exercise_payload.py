@@ -3,6 +3,14 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 from src.db.models import ExerciseType
 
 
+class MultilingualField(BaseModel):
+    """Trilingual text field for exercise payloads."""
+
+    el: str = Field(min_length=1)
+    en: str = Field(min_length=1)
+    ru: str = Field(min_length=1)
+
+
 class FillGapsPayload(BaseModel):
     """Payload schema for a fill-in-the-gaps exercise item."""
 
@@ -73,10 +81,42 @@ class TrueFalsePayload(BaseModel):
         return v
 
 
+class SelectCorrectAnswerPayload(BaseModel):
+    """Payload schema for a select-correct-answer exercise item."""
+
+    prompt: MultilingualField
+    options: list[MultilingualField]
+    correct_answer_index: int
+
+    @field_validator("options")
+    @classmethod
+    def options_length(cls, v: list[MultilingualField]) -> list[MultilingualField]:
+        if not 2 <= len(v) <= 4:
+            raise ValueError("options must have 2-4 items")
+        return v
+
+    @field_validator("correct_answer_index")
+    @classmethod
+    def correct_answer_index_non_negative(cls, v: int) -> int:
+        if v < 0:
+            raise ValueError("correct_answer_index must be >= 0")
+        return v
+
+    @model_validator(mode="after")
+    def correct_answer_in_range(self) -> "SelectCorrectAnswerPayload":
+        if self.correct_answer_index >= len(self.options):
+            raise ValueError(
+                f"correct_answer_index ({self.correct_answer_index}) "
+                f"must be < number of options ({len(self.options)})"
+            )
+        return self
+
+
 PAYLOAD_SCHEMA_MAP: dict[ExerciseType, type[BaseModel]] = {
     ExerciseType.FILL_GAPS: FillGapsPayload,
     ExerciseType.SELECT_HEARD: SelectHeardPayload,
     ExerciseType.TRUE_FALSE: TrueFalsePayload,
+    ExerciseType.SELECT_CORRECT_ANSWER: SelectCorrectAnswerPayload,
 }
 
 

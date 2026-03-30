@@ -290,6 +290,7 @@ class ExerciseType(str, enum.Enum):
     FILL_GAPS = "fill_gaps"
     SELECT_HEARD = "select_heard"
     TRUE_FALSE = "true_false"
+    SELECT_CORRECT_ANSWER = "select_correct_answer"
 
 
 class ExerciseSourceType(str, enum.Enum):
