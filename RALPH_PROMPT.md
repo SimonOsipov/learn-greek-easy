@@ -31,11 +31,15 @@ Never guess, assume, or reduce functionality. If unclear, ask the user.
 | "This feature is complex, let's disable it" | "This feature is complex, let's implement it properly" |
 | "The bug is hard to fix, let's remove the feature" | "The bug is hard to fix, let's investigate and fix it" |
 
-### 3. Deploy + Smoke Gate (BLOCKING)
-Cannot output `ALL_TASKS_COMPLETE` until deploy + smoke tests pass.
+### 3. CI Test Gate (BLOCKING)
+Cannot output `ALL_TASKS_COMPLETE` until all CI *test* checks pass. Deploy/Smoke are NOT required.
 
 ```bash
-gh pr checks  # Required: deploy + smoke-tests pass
+# Use CI Monitoring Protocol — poll every 3 minutes
+gh pr checks [PR_NUMBER]
+# Required: Alembic Migration Check, Backend Tests, Unit & Integration Tests,
+#           E2E Tests (all shards), E2E API Tests, Backend Lint & Format, Frontend Lint & Format
+# NOT required: Deploy, Seed Dev Database, Health and Smoke Tests, Lighthouse, K6, Accessibility
 ```
 
 ### 4. ONE Branch, ONE PR
@@ -199,24 +203,19 @@ gh pr create --draft --title "[FEATURE] Name" --body "..." --label "skip-visual"
 gh pr edit --remove-label "skip-visual" && gh pr ready
 ```
 
-3. Wait for deploy + smoke:
-```bash
-gh pr checks  # Required: deploy + smoke-tests pass
-```
+3. **Monitor CI** — poll `gh pr checks [PR_NUMBER]` every 3 minutes using the CI Monitoring Protocol below.
 
-4. **Review CodeRabbit comments** — after all CI checks pass, read every CodeRabbit review comment on the PR:
+4. **Review CodeRabbit comments** — as soon as all *test* checks pass (Alembic, Backend Tests, Unit & Integration, E2E, Frontend Lint/Format), do NOT wait for Deploy/Smoke. Read every CodeRabbit review comment:
 ```bash
 gh pr view [PR_NUMBER] --comments
-# or via API:
 gh api repos/{owner}/{repo}/pulls/{PR_NUMBER}/reviews
 gh api repos/{owner}/{repo}/pulls/{PR_NUMBER}/comments
 ```
-- Read each comment carefully
 - For each comment you **agree with**: fix the issue in code, then commit and push
 - For each comment you **disagree with** or that is not applicable: skip it
-- After all agreed-upon fixes are committed and pushed, wait for CI to go green again
+- After fixes are pushed, monitor CI again until green
 
-5. **Move all tasks to "Done"** — after deploy + smoke tests pass AND CodeRabbit fixes are in:
+5. **Move all tasks to "Done"** — after all test checks pass AND CodeRabbit fixes are in:
 ```
 For each task ID:
   mcp__backlog__task_edit(id=task_id, status="Done")
@@ -391,24 +390,19 @@ cd /home/dev/learn-greek-easy/learn-greek-easy-frontend && npm test -- --run
 gh pr edit --remove-label "skip-visual" && gh pr ready
 ```
 
-4. **Wait for deploy + smoke:**
-```bash
-gh pr checks  # Required: deploy + smoke-tests pass
-```
+4. **Monitor CI** — poll `gh pr checks [PR_NUMBER]` every 3 minutes using the CI Monitoring Protocol below.
 
-5. **Review CodeRabbit comments** — after all CI checks pass, read every CodeRabbit review comment on the PR:
+5. **Review CodeRabbit comments** — as soon as all *test* checks pass (Alembic, Backend Tests, Unit & Integration, E2E, Frontend Lint/Format), do NOT wait for Deploy/Smoke. Read every CodeRabbit review comment:
 ```bash
 gh pr view [PR_NUMBER] --comments
-# or via API:
 gh api repos/{owner}/{repo}/pulls/{PR_NUMBER}/reviews
 gh api repos/{owner}/{repo}/pulls/{PR_NUMBER}/comments
 ```
-- Read each comment carefully
 - For each comment you **agree with**: fix the issue in code, then commit and push
 - For each comment you **disagree with** or that is not applicable: skip it
-- After all agreed-upon fixes are committed and pushed, wait for CI to go green again
+- After fixes are pushed, monitor CI again until green
 
-6. **Move all tasks to "Done"** — after deploy + smoke tests pass AND CodeRabbit fixes are in:
+6. **Move all tasks to "Done"** — after all test checks pass AND CodeRabbit fixes are in:
 ```
 For each task ID:
   mcp__backlog__task_edit(id=task_id, status="Done")
@@ -464,6 +458,57 @@ A PreCompact hook auto-saves state. After compaction, READ the handoff to contin
 
 ---
 
+## CI Monitoring Protocol
+
+Use this protocol whenever waiting for CI after a push.
+
+### Poll every 3 minutes
+
+```bash
+gh pr checks [PR_NUMBER]
+```
+
+### On each poll — decision tree
+
+**1. Any check has FAILED?**
+```bash
+# Identify the failed check, read its logs
+gh run view [RUN_ID] --job [JOB_ID] --log 2>&1 | tail -50
+
+# Cancel the current run
+gh run cancel [RUN_ID]
+
+# Fix the issue, commit, push — CI restarts automatically on push
+git add ... && git commit -m "fix: ..." && git push
+```
+
+**2. Only 1 E2E job remains "pending" AND it's in early setup steps?**
+
+This is a known GitHub Actions bug where one parallel E2E shard is very slow to start.
+
+```bash
+# Check the job's current progress
+gh run view [RUN_ID] --job [JOB_ID] --log 2>&1 | head -30
+```
+
+If the log shows ONLY setup steps like: `Set up job`, `Initialize containers`, `Checkout code`, `Setup Node.js`, `Install frontend dependencies`, `Get Playwright version` — with NO actual test output — this is the slow-start bug.
+
+**Treat CI as passed.** Do not wait. Move on to CodeRabbit review.
+
+**3. All test checks pass?**
+
+"Test checks" = Alembic Migration Check, Backend Tests, Unit & Integration Tests, E2E Tests (all shards), E2E API Tests, Backend Lint & Format, Frontend Lint & Format.
+
+When all of these pass → **move on immediately**. Do NOT wait for Deploy, Seed Dev Database, Health and Smoke Tests, Lighthouse CI, Accessibility Tests, K6, or other post-deploy checks. These run independently and do not block CodeRabbit review or task completion.
+
+### Get the current run ID
+
+```bash
+gh run list --branch feature/[name] --limit 1 --json databaseId,status -q '.[0]'
+```
+
+---
+
 ## PR Rules (ONE branch, ONE PR for ALL tasks)
 
 ### First task in batch:
@@ -491,11 +536,12 @@ git checkout main && git pull origin main && git branch -d feature/[name]
 
 ## Completion Rules
 
-1. **Local tests green ≠ merge ready** — deploy + smoke tests must pass
-2. **Task status transitions:**
+1. **Local tests green ≠ done** — all CI test checks must pass (see CI Monitoring Protocol)
+2. **Deploy/Smoke are NOT blockers** — CodeRabbit review and task completion do not require deploy or smoke tests to finish
+3. **Task status transitions:**
    - Start: "To Do" → "In Progress" (when ralph starts working on them)
-   - Complete: "In Progress" → "Done" (after deploy + smoke tests pass)
-3. Output `<promise>ALL_TASKS_COMPLETE</promise>` ONLY after moving tasks to "Done"
+   - Complete: "In Progress" → "Done" (after all CI test checks pass AND CodeRabbit fixes committed)
+4. Output `<promise>ALL_TASKS_COMPLETE</promise>` ONLY after moving tasks to "Done"
 
 ---
 
@@ -513,4 +559,7 @@ git checkout main && git pull origin main && git branch -d feature/[name]
 | Not updating handoff during long runs | Update every 2-3 tasks |
 | Hiding/disabling features to "fix" bugs | Actually fix the bug, add missing data |
 | Assuming root cause without verification | Investigate thoroughly, verify with Playwright |
-| Outputting ALL_TASKS_COMPLETE before deploy+smoke | Wait for deploy + smoke-tests to pass |
+| Outputting ALL_TASKS_COMPLETE before CI test checks pass | Wait for all test checks (not deploy/smoke) to pass |
+| Waiting for Deploy/Smoke before CodeRabbit review | Start CodeRabbit review as soon as test checks pass |
+| Sleeping/polling in a tight loop for CI | Poll every 3 minutes using CI Monitoring Protocol |
+| Waiting indefinitely for a stuck E2E shard | Check logs — if only setup steps visible, it's the slow-start bug; treat as pass |
