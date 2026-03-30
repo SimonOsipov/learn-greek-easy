@@ -212,9 +212,8 @@ class TestCQMIGOrphanSkipping:
         await CultureQuestionFactory.create(deck_id=deck.id, news_item_id=None)
         await db_session.flush()
 
-        # Should raise RuntimeError because no eligible questions found
-        with pytest.raises(RuntimeError, match="No eligible culture questions found"):
-            await _run_upgrade(db_session)
+        # No eligible questions — upgrade is a no-op (logs warning, returns)
+        await _run_upgrade(db_session)
 
         result = await db_session.execute(
             select(DescriptionExercise).where(
@@ -231,9 +230,8 @@ class TestCQMIGOrphanSkipping:
         await CultureQuestionFactory.create(deck_id=deck.id, news_item_id=news_item.id)
         await db_session.flush()
 
-        # Should raise RuntimeError because no eligible questions found
-        with pytest.raises(RuntimeError, match="No eligible culture questions found"):
-            await _run_upgrade(db_session)
+        # No eligible questions — upgrade is a no-op (logs warning, returns)
+        await _run_upgrade(db_session)
 
         result = await db_session.execute(
             select(DescriptionExercise).where(

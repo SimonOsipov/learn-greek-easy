@@ -66,9 +66,10 @@ def upgrade() -> None:
         )
     ).fetchall()
 
-    # Pre-check 3: eligible questions found
+    # Pre-check 3: eligible questions found (no-op on empty DB, e.g. CI)
     if not rows:
-        raise RuntimeError("No eligible culture questions found — aborting CQMIG-02")
+        logger.warning("No eligible culture questions found — CQMIG-02 is a no-op")
+        return
 
     # Group questions by description_id
     questions_by_desc: dict[str, list] = defaultdict(list)
