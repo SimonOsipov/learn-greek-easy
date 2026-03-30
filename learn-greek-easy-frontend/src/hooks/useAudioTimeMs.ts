@@ -21,22 +21,20 @@ export function useAudioTimeMs(
     }
   }, [enabled]);
 
-  // rAF polling loop
+  // rAF polling loop — uses MutationObserver to wait for audio element
   useEffect(() => {
     if (!enabled) return;
 
     const container = containerRef.current;
     if (!container) return;
 
-    const audio = container.querySelector<HTMLAudioElement>(
-      '[data-testid="waveform-audio-element"]'
-    );
-    if (!audio) return;
-
     let rafId: number | null = null;
     let lastUpdateMs = 0;
+    let audio: HTMLAudioElement | null = null;
+    let observer: MutationObserver | null = null;
 
     const tick = () => {
+      if (!audio) return;
       const nowMs = audio.currentTime * 1000;
       if (Math.abs(nowMs - lastUpdateMs) > 10) {
         setAudioCurrentTimeMs(nowMs);
@@ -59,6 +57,7 @@ export function useAudioTimeMs(
     };
 
     const syncCurrentTime = () => {
+      if (!audio) return;
       const nowMs = audio.currentTime * 1000;
       setAudioCurrentTimeMs(nowMs);
       lastUpdateMs = nowMs;
@@ -69,21 +68,52 @@ export function useAudioTimeMs(
       stopLoop();
     };
 
-    audio.addEventListener('play', startLoop);
-    audio.addEventListener('pause', stopLoop);
-    audio.addEventListener('ended', handleEnded);
-    audio.addEventListener('seeked', syncCurrentTime);
+    const attachToAudio = (el: HTMLAudioElement) => {
+      audio = el;
+      audio.addEventListener('play', startLoop);
+      audio.addEventListener('pause', stopLoop);
+      audio.addEventListener('ended', handleEnded);
+      audio.addEventListener('seeked', syncCurrentTime);
+      if (!audio.paused) {
+        startLoop();
+      }
+    };
 
-    if (!audio.paused) {
-      startLoop();
+    const detachFromAudio = () => {
+      if (audio) {
+        stopLoop();
+        audio.removeEventListener('play', startLoop);
+        audio.removeEventListener('pause', stopLoop);
+        audio.removeEventListener('ended', handleEnded);
+        audio.removeEventListener('seeked', syncCurrentTime);
+        audio = null;
+      }
+    };
+
+    // Try to find audio element immediately
+    const found = container.querySelector<HTMLAudioElement>(
+      '[data-testid="waveform-audio-element"]'
+    );
+    if (found) {
+      attachToAudio(found);
+    } else {
+      // Audio element not yet in DOM — observe for it
+      observer = new MutationObserver(() => {
+        const el = container.querySelector<HTMLAudioElement>(
+          '[data-testid="waveform-audio-element"]'
+        );
+        if (el) {
+          observer?.disconnect();
+          observer = null;
+          attachToAudio(el);
+        }
+      });
+      observer.observe(container, { childList: true, subtree: true });
     }
 
     return () => {
-      stopLoop();
-      audio.removeEventListener('play', startLoop);
-      audio.removeEventListener('pause', stopLoop);
-      audio.removeEventListener('ended', handleEnded);
-      audio.removeEventListener('seeked', syncCurrentTime);
+      detachFromAudio();
+      observer?.disconnect();
     };
   }, [containerRef, enabled]);
 
