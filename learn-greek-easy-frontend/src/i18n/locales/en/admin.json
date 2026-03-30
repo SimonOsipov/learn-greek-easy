@@ -1251,6 +1251,7 @@
     "media": {
       "dialogAudio": "Dialog Audio",
       "descriptionAudio": "Description Audio",
+      "timestamps": "Timestamps {{count}}/2",
       "picture": "Picture"
     },
     "empty": {

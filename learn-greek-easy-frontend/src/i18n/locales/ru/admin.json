@@ -1263,6 +1263,7 @@
     "media": {
       "dialogAudio": "Аудио диалога",
       "descriptionAudio": "Аудио описания",
+      "timestamps": "Таймстемпы {{count}}/2",
       "picture": "Картинка"
     },
     "empty": {

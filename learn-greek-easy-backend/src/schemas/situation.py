@@ -53,6 +53,7 @@ class SituationListItem(BaseModel):
     has_picture: bool
     has_dialog_audio: bool
     has_description_audio: bool
+    description_timestamps_count: int
 
 
 class SituationListResponse(BaseModel):

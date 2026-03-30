@@ -261,6 +261,20 @@ export function SituationsTab() {
                       <Badge
                         variant="outline"
                         className={
+                          situation.description_timestamps_count === 2
+                            ? 'border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-400'
+                            : situation.description_timestamps_count === 1
+                              ? 'border-yellow-500/30 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400'
+                              : 'border-gray-300/30 bg-gray-100/10 text-gray-400 dark:text-gray-600'
+                        }
+                      >
+                        {t('situations.media.timestamps', {
+                          count: situation.description_timestamps_count,
+                        })}
+                      </Badge>
+                      <Badge
+                        variant="outline"
+                        className={
                           situation.has_picture
                             ? 'border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-400'
                             : 'border-gray-300/30 bg-gray-100/10 text-gray-400 dark:text-gray-600'

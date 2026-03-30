@@ -4754,6 +4754,12 @@ async def list_situations(
             has_dialog_audio=s.dialog is not None and s.dialog.audio_s3_key is not None,
             has_description_audio=s.description is not None
             and s.description.audio_s3_key is not None,
+            description_timestamps_count=(
+                (1 if s.description.word_timestamps else 0)
+                + (1 if s.description.word_timestamps_a2 else 0)
+                if s.description is not None
+                else 0
+            ),
         )
         for s in situations
     ]
