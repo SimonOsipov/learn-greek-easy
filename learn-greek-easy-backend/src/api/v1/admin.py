@@ -70,6 +70,7 @@ from src.db.models import (
 )
 from src.db.session import get_session_factory
 from src.repositories.deck import DeckRepository
+from src.repositories.exercise import ExerciseRepository
 from src.repositories.word_entry import WordEntryRepository
 from src.schemas.admin import (
     AdminCultureQuestionItem,
@@ -4134,6 +4135,8 @@ async def create_listening_dialog(  # noqa: C901
                 )
                 db.add(exercise)
                 await db.flush()
+                exercise_repo = ExerciseRepository(db)
+                await exercise_repo.create_for_dialog(exercise.id)
                 for idx, item in enumerate(items):
                     db.add(
                         ExerciseItem(
