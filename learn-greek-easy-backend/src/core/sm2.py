@@ -420,7 +420,7 @@ def calculate_next_review_date(interval: int, from_date: date | None = None) -> 
 
 
 def derive_exercise_quality(score: int, max_score: int) -> int:
-    """Map an exercise score to an SM-2 quality value (0–5).
+    """Map an exercise score to an SM-2 quality value (0-5).
 
     Args:
         score: The raw score achieved (must be >= 0).

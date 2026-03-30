@@ -3011,7 +3011,13 @@ class ExerciseReview(Base):
     """Immutable per-review audit log for exercise SM-2. No TimestampMixin."""
 
     __tablename__ = "exercise_reviews"
-    __table_args__ = (Index("ix_exercise_reviews_user_reviewed_at", "user_id", "reviewed_at"),)
+    __table_args__ = (
+        Index("ix_exercise_reviews_user_reviewed_at", "user_id", "reviewed_at"),
+        CheckConstraint("quality >= 0 AND quality <= 5", name="ck_exercise_reviews_quality_range"),
+        CheckConstraint("score >= 0", name="ck_exercise_reviews_score_non_negative"),
+        CheckConstraint("max_score > 0", name="ck_exercise_reviews_max_score_positive"),
+        CheckConstraint("score <= max_score", name="ck_exercise_reviews_score_lte_max"),
+    )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.uuid_generate_v4())
     exercise_record_id: Mapped[UUID] = mapped_column(

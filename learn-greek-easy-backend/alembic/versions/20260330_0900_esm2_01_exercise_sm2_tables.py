@@ -164,6 +164,12 @@ def upgrade() -> None:
             server_default=sa.text("now()"),
             nullable=False,
         ),
+        sa.CheckConstraint(
+            "quality >= 0 AND quality <= 5", name="ck_exercise_reviews_quality_range"
+        ),
+        sa.CheckConstraint("score >= 0", name="ck_exercise_reviews_score_non_negative"),
+        sa.CheckConstraint("max_score > 0", name="ck_exercise_reviews_max_score_positive"),
+        sa.CheckConstraint("score <= max_score", name="ck_exercise_reviews_score_lte_max"),
         sa.ForeignKeyConstraint(
             ["exercise_record_id"], ["exercise_records.id"], ondelete="CASCADE"
         ),
@@ -215,12 +221,14 @@ def downgrade() -> None:
             sa.DateTime(timezone=True),
             server_default=sa.text("now()"),
             nullable=False,
+            comment="Timestamp when record was created",
         ),
         sa.Column(
             "updated_at",
             sa.DateTime(timezone=True),
             server_default=sa.text("now()"),
             nullable=False,
+            comment="Timestamp when record was last updated",
         ),
         sa.CheckConstraint(
             "exercises_completed >= 0", name="ck_dialog_progress_exercises_completed_non_negative"

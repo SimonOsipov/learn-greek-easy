@@ -37,11 +37,6 @@ class ExerciseRecordRepository(BaseRepository[ExerciseRecord]):
                 record = ExerciseRecord(
                     user_id=user_id,
                     exercise_id=exercise_id,
-                    easiness_factor=2.5,
-                    interval=0,
-                    repetitions=0,
-                    next_review_date=date.today(),
-                    status=CardStatus.NEW,
                 )
                 self.db.add(record)
                 await self.db.flush()
