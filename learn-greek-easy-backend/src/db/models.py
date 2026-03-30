@@ -2910,6 +2910,24 @@ class Exercise(Base, TimestampMixin):
             " + (picture_exercise_id IS NOT NULL)::int = 1",
             name="ck_exercises_exactly_one_source",
         ),
+        Index(
+            "uq_exercises_description_exercise_id",
+            "description_exercise_id",
+            unique=True,
+            postgresql_where=text("description_exercise_id IS NOT NULL"),
+        ),
+        Index(
+            "uq_exercises_dialog_exercise_id",
+            "dialog_exercise_id",
+            unique=True,
+            postgresql_where=text("dialog_exercise_id IS NOT NULL"),
+        ),
+        Index(
+            "uq_exercises_picture_exercise_id",
+            "picture_exercise_id",
+            unique=True,
+            postgresql_where=text("picture_exercise_id IS NOT NULL"),
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.uuid_generate_v4())
@@ -2921,6 +2939,7 @@ class Exercise(Base, TimestampMixin):
             create_type=False,
         ),
         nullable=False,
+        index=True,
     )
     description_exercise_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("description_exercises.id", ondelete="CASCADE"), nullable=True, index=True

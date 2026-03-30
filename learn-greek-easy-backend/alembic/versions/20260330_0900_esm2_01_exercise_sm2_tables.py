@@ -99,9 +99,9 @@ def upgrade() -> None:
         sa.Column("id", sa.Uuid(), server_default=sa.text("uuid_generate_v4()"), nullable=False),
         sa.Column("user_id", sa.Uuid(), nullable=False),
         sa.Column("exercise_id", sa.Uuid(), nullable=False),
-        sa.Column("easiness_factor", sa.Float(), nullable=False, server_default=sa.text("2.5")),
-        sa.Column("interval", sa.Integer(), nullable=False, server_default=sa.text("0")),
-        sa.Column("repetitions", sa.Integer(), nullable=False, server_default=sa.text("0")),
+        sa.Column("easiness_factor", sa.Float(), nullable=False),
+        sa.Column("interval", sa.Integer(), nullable=False),
+        sa.Column("repetitions", sa.Integer(), nullable=False),
         sa.Column(
             "next_review_date", sa.Date(), nullable=False, server_default=sa.text("CURRENT_DATE")
         ),
@@ -127,10 +127,13 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["exercise_id"], ["exercises.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("user_id", "exercise_id", name="uq_exercise_records_user_exercise"),
+        sa.UniqueConstraint("user_id", "exercise_id", name="uq_exercise_record_user_exercise"),
     )
     op.create_index(
-        "ix_er_user_next_review", "exercise_records", ["user_id", "next_review_date"], unique=False
+        "ix_exercise_records_user_next_review",
+        "exercise_records",
+        ["user_id", "next_review_date"],
+        unique=False,
     )
     op.create_index(
         op.f("ix_exercise_records_exercise_id"), "exercise_records", ["exercise_id"], unique=False
@@ -157,18 +160,6 @@ def upgrade() -> None:
             server_default=sa.text("now()"),
             nullable=False,
         ),
-        sa.Column(
-            "created_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=False,
-        ),
-        sa.Column(
-            "updated_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=False,
-        ),
         sa.ForeignKeyConstraint(
             ["exercise_record_id"], ["exercise_records.id"], ondelete="CASCADE"
         ),
@@ -176,7 +167,10 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
-        "ix_erv_user_reviewed_at", "exercise_reviews", ["user_id", "reviewed_at"], unique=False
+        "ix_exercise_reviews_user_reviewed_at",
+        "exercise_reviews",
+        ["user_id", "reviewed_at"],
+        unique=False,
     )
     op.create_index(
         op.f("ix_exercise_reviews_exercise_record_id"),
@@ -284,11 +278,11 @@ def downgrade() -> None:
 
     # Drop new tables in reverse dependency order
     op.drop_index(op.f("ix_exercise_reviews_exercise_record_id"), table_name="exercise_reviews")
-    op.drop_index("ix_erv_user_reviewed_at", table_name="exercise_reviews")
+    op.drop_index("ix_exercise_reviews_user_reviewed_at", table_name="exercise_reviews")
     op.drop_table("exercise_reviews")
 
     op.drop_index(op.f("ix_exercise_records_exercise_id"), table_name="exercise_records")
-    op.drop_index("ix_er_user_next_review", table_name="exercise_records")
+    op.drop_index("ix_exercise_records_user_next_review", table_name="exercise_records")
     op.drop_table("exercise_records")
 
     op.execute("DROP INDEX IF EXISTS uq_exercises_description_exercise_id")
