@@ -336,6 +336,7 @@ class TestListSituations:
         assert item["has_picture"] is True
         assert item["has_dialog_audio"] is True
         assert item["has_description_audio"] is True
+        assert item["description_timestamps_count"] == 0
 
     @pytest.mark.asyncio
     async def test_boolean_flags_no_children(
@@ -353,6 +354,44 @@ class TestListSituations:
         assert item["has_picture"] is False
         assert item["has_dialog_audio"] is False
         assert item["has_description_audio"] is False
+        assert item["description_timestamps_count"] == 0
+
+    @pytest.mark.asyncio
+    async def test_description_timestamps_count_both(
+        self, client: AsyncClient, superuser_auth_headers: dict
+    ):
+        """description_timestamps_count is 2 when both B1 and A2 have word timestamps."""
+        situation = await SituationFactory.create()
+        await SituationDescriptionFactory.create(
+            situation_id=situation.id,
+            word_timestamps=[{"word": "Γεια", "start_ms": 0, "end_ms": 100}],
+            word_timestamps_a2=[{"word": "Γεια", "start_ms": 0, "end_ms": 100}],
+        )
+
+        response = await client.get(
+            f"{BASE_URL}?search={situation.scenario_en[:10]}", headers=superuser_auth_headers
+        )
+        assert response.status_code == 200
+        item = next(i for i in response.json()["items"] if i["id"] == str(situation.id))
+        assert item["description_timestamps_count"] == 2
+
+    @pytest.mark.asyncio
+    async def test_description_timestamps_count_partial(
+        self, client: AsyncClient, superuser_auth_headers: dict
+    ):
+        """description_timestamps_count is 1 when only B1 has word timestamps."""
+        situation = await SituationFactory.create()
+        await SituationDescriptionFactory.create(
+            situation_id=situation.id,
+            word_timestamps=[{"word": "Γεια", "start_ms": 0, "end_ms": 100}],
+        )
+
+        response = await client.get(
+            f"{BASE_URL}?search={situation.scenario_en[:10]}", headers=superuser_auth_headers
+        )
+        assert response.status_code == 200
+        item = next(i for i in response.json()["items"] if i["id"] == str(situation.id))
+        assert item["description_timestamps_count"] == 1
 
     @pytest.mark.asyncio
     async def test_pagination(self, client: AsyncClient, superuser_auth_headers: dict):
