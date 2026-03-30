@@ -440,6 +440,7 @@ export function SituationDetailModal({
                       <WaveformPlayer
                         variant="admin"
                         audioUrl={selectedSituation.dialog.audio_url}
+                        duration={selectedSituation.dialog.audio_duration_seconds ?? undefined}
                         showSpeedControl={false}
                         barCount={60}
                       />
@@ -623,6 +624,9 @@ export function SituationDetailModal({
                         <WaveformPlayer
                           variant="admin"
                           audioUrl={selectedSituation.description.audio_url}
+                          duration={
+                            selectedSituation.description.audio_duration_seconds ?? undefined
+                          }
                           showSpeedControl={false}
                           barCount={60}
                         />
@@ -681,6 +685,9 @@ export function SituationDetailModal({
                         <WaveformPlayer
                           variant="admin"
                           audioUrl={selectedSituation.description.audio_a2_url}
+                          duration={
+                            selectedSituation.description.audio_a2_duration_seconds ?? undefined
+                          }
                           showSpeedControl={false}
                           barCount={60}
                         />
