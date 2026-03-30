@@ -146,8 +146,9 @@ class SeedService:
     # FK-safe truncation order (children first, then parents)
     TRUNCATION_ORDER = [
         # --- Dialog/Situation leaf tables (deepest children first) ---
-        "dialog_exercise_attempts",  # → users, dialog_exercises
-        "dialog_progress",  # → users, listening_dialogs
+        "exercise_reviews",  # → users, exercise_records
+        "exercise_records",  # → users, exercises
+        "exercises",  # → dialog_exercises, description_exercises, picture_exercises
         "exercise_items",  # → dialog_exercises
         "dialog_lines",  # → listening_dialogs, dialog_speakers
         "dialog_exercises",  # → listening_dialogs

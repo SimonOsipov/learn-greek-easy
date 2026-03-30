@@ -90,6 +90,9 @@ from tests.factories.culture import (
     CultureQuestionStatsFactory,
 )
 
+# Exercise factories
+from tests.factories.exercise import ExerciseFactory, ExerciseRecordFactory, ExerciseReviewFactory
+
 # Feedback factories
 from tests.factories.feedback import FeedbackFactory, FeedbackVoteFactory
 
@@ -160,6 +163,10 @@ __all__ = [
     # Content
     "DeckFactory",
     "CardFactory",
+    # Exercises
+    "ExerciseFactory",
+    "ExerciseRecordFactory",
+    "ExerciseReviewFactory",
     # Feedback
     "FeedbackFactory",
     "FeedbackVoteFactory",

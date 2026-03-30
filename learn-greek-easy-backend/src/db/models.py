@@ -12,7 +12,8 @@ This module contains all SQLAlchemy models for the application:
 - Announcement Campaigns (AnnouncementCampaign)
 - Changelog (ChangelogEntry)
 - Situations (Situation, SituationDescription, DescriptionExercise, DescriptionExerciseItem, SituationPicture, PictureExercise, PictureExerciseItem)
-- Listening Dialogs (ListeningDialog, DialogSpeaker, DialogLine, DialogExercise, ExerciseItem, DialogExerciseAttempt, DialogProgress)
+- Listening Dialogs (ListeningDialog, DialogSpeaker, DialogLine, DialogExercise, ExerciseItem)
+- Exercise Tracking (Exercise, ExerciseRecord, ExerciseReview, ExerciseSourceType)
 
 All models use:
 - UUID primary keys with server-side generation
@@ -290,6 +291,14 @@ class ExerciseType(str, enum.Enum):
     SELECT_HEARD = "select_heard"
     TRUE_FALSE = "true_false"
     SELECT_CORRECT_ANSWER = "select_correct_answer"
+
+
+class ExerciseSourceType(str, enum.Enum):
+    """Source type discriminator for the unified Exercise supertable."""
+
+    DESCRIPTION = "description"
+    DIALOG = "dialog"
+    PICTURE = "picture"
 
 
 class ExerciseStatus(str, enum.Enum):
@@ -2747,6 +2756,9 @@ class DescriptionExercise(Base, TimestampMixin):
         cascade="all, delete-orphan",
         order_by="DescriptionExerciseItem.item_index",
     )
+    exercise: Mapped["Exercise | None"] = relationship(
+        back_populates="description_exercise", uselist=False, lazy="raise"
+    )
 
     def __repr__(self) -> str:
         return (
@@ -2853,6 +2865,9 @@ class PictureExercise(Base, TimestampMixin):
         cascade="all, delete-orphan",
         order_by="PictureExerciseItem.item_index",
     )
+    exercise: Mapped["Exercise | None"] = relationship(
+        back_populates="picture_exercise", uselist=False, lazy="raise"
+    )
 
     def __repr__(self) -> str:
         return f"<PictureExercise id={self.id} type={self.exercise_type}>"
@@ -2882,6 +2897,154 @@ class PictureExerciseItem(Base):
 
     def __repr__(self) -> str:
         return f"<PictureExerciseItem id={self.id} index={self.item_index}>"
+
+
+class Exercise(Base, TimestampMixin):
+    """Unified exercise record linking to exactly one source exercise."""
+
+    __tablename__ = "exercises"
+    __table_args__ = (
+        CheckConstraint(
+            "(description_exercise_id IS NOT NULL)::int"
+            " + (dialog_exercise_id IS NOT NULL)::int"
+            " + (picture_exercise_id IS NOT NULL)::int = 1",
+            name="ck_exercises_exactly_one_source",
+        ),
+        Index(
+            "uq_exercises_description_exercise_id",
+            "description_exercise_id",
+            unique=True,
+            postgresql_where=text("description_exercise_id IS NOT NULL"),
+        ),
+        Index(
+            "uq_exercises_dialog_exercise_id",
+            "dialog_exercise_id",
+            unique=True,
+            postgresql_where=text("dialog_exercise_id IS NOT NULL"),
+        ),
+        Index(
+            "uq_exercises_picture_exercise_id",
+            "picture_exercise_id",
+            unique=True,
+            postgresql_where=text("picture_exercise_id IS NOT NULL"),
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.uuid_generate_v4())
+    source_type: Mapped["ExerciseSourceType"] = mapped_column(
+        SAEnum(
+            ExerciseSourceType,
+            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+            name="exercisesourcetype",
+            create_type=False,
+        ),
+        nullable=False,
+        index=True,
+    )
+    description_exercise_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("description_exercises.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    dialog_exercise_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("dialog_exercises.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    picture_exercise_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("picture_exercises.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+
+    # Relationships
+    description_exercise: Mapped["DescriptionExercise | None"] = relationship(
+        back_populates="exercise", lazy="raise"
+    )
+    dialog_exercise: Mapped["DialogExercise | None"] = relationship(
+        back_populates="exercise", lazy="raise"
+    )
+    picture_exercise: Mapped["PictureExercise | None"] = relationship(
+        back_populates="exercise", lazy="raise"
+    )
+    records: Mapped[List["ExerciseRecord"]] = relationship(
+        back_populates="exercise", lazy="raise", cascade="all, delete-orphan"
+    )
+
+    def __repr__(self) -> str:
+        return f"<Exercise id={self.id} source_type={self.source_type}>"
+
+
+class ExerciseRecord(Base, TimestampMixin):
+    """SM-2 spaced repetition state for a user-exercise pair."""
+
+    __tablename__ = "exercise_records"
+    __table_args__ = (
+        UniqueConstraint("user_id", "exercise_id", name="uq_exercise_record_user_exercise"),
+        Index("ix_exercise_records_user_next_review", "user_id", "next_review_date"),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.uuid_generate_v4())
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    exercise_id: Mapped[UUID] = mapped_column(
+        ForeignKey("exercises.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    easiness_factor: Mapped[float] = mapped_column(Float, nullable=False, default=2.5)
+    interval: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    repetitions: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    next_review_date: Mapped[date] = mapped_column(
+        Date, nullable=False, server_default=func.current_date()
+    )
+    status: Mapped[CardStatus] = mapped_column(nullable=False, default=CardStatus.NEW)
+
+    # Relationships
+    user: Mapped["User"] = relationship(lazy="raise")
+    exercise: Mapped["Exercise"] = relationship(back_populates="records", lazy="raise")
+    reviews: Mapped[List["ExerciseReview"]] = relationship(
+        back_populates="exercise_record", lazy="raise", cascade="all, delete-orphan"
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<ExerciseRecord user_id={self.user_id} exercise_id={self.exercise_id}"
+            f" status={self.status} next_review={self.next_review_date}>"
+        )
+
+
+class ExerciseReview(Base):
+    """Immutable per-review audit log for exercise SM-2. No TimestampMixin."""
+
+    __tablename__ = "exercise_reviews"
+    __table_args__ = (
+        Index("ix_exercise_reviews_user_reviewed_at", "user_id", "reviewed_at"),
+        CheckConstraint("quality >= 0 AND quality <= 5", name="ck_exercise_reviews_quality_range"),
+        CheckConstraint("score >= 0", name="ck_exercise_reviews_score_non_negative"),
+        CheckConstraint("max_score > 0", name="ck_exercise_reviews_max_score_positive"),
+        CheckConstraint("score <= max_score", name="ck_exercise_reviews_score_lte_max"),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.uuid_generate_v4())
+    exercise_record_id: Mapped[UUID] = mapped_column(
+        ForeignKey("exercise_records.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    quality: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    score: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    max_score: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    easiness_factor_before: Mapped[float] = mapped_column(Float, nullable=False)
+    easiness_factor_after: Mapped[float] = mapped_column(Float, nullable=False)
+    interval_before: Mapped[int] = mapped_column(Integer, nullable=False)
+    interval_after: Mapped[int] = mapped_column(Integer, nullable=False)
+    repetitions_before: Mapped[int] = mapped_column(Integer, nullable=False)
+    repetitions_after: Mapped[int] = mapped_column(Integer, nullable=False)
+    reviewed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    # Relationships
+    exercise_record: Mapped["ExerciseRecord"] = relationship(back_populates="reviews", lazy="raise")
+    user: Mapped["User"] = relationship(lazy="raise")
+
+    def __repr__(self) -> str:
+        return f"<ExerciseReview id={self.id} exercise_record_id={self.exercise_record_id} quality={self.quality}>"
 
 
 class ListeningDialog(Base, TimestampMixin):
@@ -2932,9 +3095,6 @@ class ListeningDialog(Base, TimestampMixin):
         back_populates="dialog", lazy="raise", cascade="all, delete-orphan"
     )
     exercises: Mapped[List["DialogExercise"]] = relationship(
-        back_populates="dialog", lazy="raise", cascade="all, delete-orphan"
-    )
-    progress: Mapped[List["DialogProgress"]] = relationship(
         back_populates="dialog", lazy="raise", cascade="all, delete-orphan"
     )
     situation: Mapped["Situation"] = relationship(back_populates="dialog", lazy="raise")
@@ -3045,8 +3205,8 @@ class DialogExercise(Base, TimestampMixin):
         cascade="all, delete-orphan",
         order_by="ExerciseItem.item_index",
     )
-    attempts: Mapped[List["DialogExerciseAttempt"]] = relationship(
-        back_populates="exercise", lazy="raise", cascade="all, delete-orphan"
+    exercise: Mapped["Exercise | None"] = relationship(
+        back_populates="dialog_exercise", uselist=False, lazy="raise"
     )
 
 
@@ -3070,76 +3230,6 @@ class ExerciseItem(Base):
     )
 
     exercise: Mapped["DialogExercise"] = relationship(back_populates="items", lazy="raise")
-
-
-class DialogExerciseAttempt(Base):
-    """Record of a student's attempt at a dialog exercise."""
-
-    __tablename__ = "dialog_exercise_attempts"
-    __table_args__ = (
-        Index("ix_dialog_exercise_attempts_user_exercise", "user_id", "exercise_id"),
-        CheckConstraint("score >= 0", name="ck_dialog_exercise_attempts_score_non_negative"),
-        CheckConstraint("max_score > 0", name="ck_dialog_exercise_attempts_max_score_positive"),
-        CheckConstraint("score <= max_score", name="ck_dialog_exercise_attempts_score_lte_max"),
-        CheckConstraint(
-            "time_taken_seconds IS NULL OR time_taken_seconds >= 0",
-            name="ck_dialog_exercise_attempts_time_non_negative",
-        ),
-    )
-
-    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.uuid_generate_v4())
-    user_id: Mapped[UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
-    )
-    exercise_id: Mapped[UUID] = mapped_column(
-        ForeignKey("dialog_exercises.id", ondelete="CASCADE"), nullable=False, index=True
-    )
-    score: Mapped[int] = mapped_column(SmallInteger, nullable=False)
-    max_score: Mapped[int] = mapped_column(SmallInteger, nullable=False)
-    time_taken_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    completed_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
-
-    exercise: Mapped["DialogExercise"] = relationship(back_populates="attempts", lazy="raise")
-
-    def __repr__(self) -> str:
-        return f"<DialogExerciseAttempt id={self.id} user_id={self.user_id} exercise_id={self.exercise_id} score={self.score}/{self.max_score}>"
-
-
-class DialogProgress(Base, TimestampMixin):
-    """Per-user progress on a listening dialog."""
-
-    __tablename__ = "dialog_progress"
-    __table_args__ = (
-        UniqueConstraint("user_id", "dialog_id", name="uq_dialog_progress_user_dialog"),
-        CheckConstraint(
-            "exercises_completed >= 0",
-            name="ck_dialog_progress_exercises_completed_non_negative",
-        ),
-    )
-
-    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.uuid_generate_v4())
-    user_id: Mapped[UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
-    )
-    dialog_id: Mapped[UUID] = mapped_column(
-        ForeignKey("listening_dialogs.id", ondelete="CASCADE"), nullable=False, index=True
-    )
-    exercises_completed: Mapped[int] = mapped_column(
-        SmallInteger, nullable=False, default=0, server_default=text("0")
-    )
-    all_completed: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=False, server_default=text("false")
-    )
-    first_completed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-
-    dialog: Mapped["ListeningDialog"] = relationship(back_populates="progress", lazy="raise")
-
-    def __repr__(self) -> str:
-        return f"<DialogProgress id={self.id} user_id={self.user_id} dialog_id={self.dialog_id} completed={self.exercises_completed}/3>"
 
 
 class Translation(Base):

@@ -12,6 +12,9 @@ from src.repositories.culture_deck import CultureDeckRepository
 from src.repositories.culture_question import CultureQuestionRepository
 from src.repositories.culture_question_stats import CultureQuestionStatsRepository
 from src.repositories.deck import DeckRepository
+from src.repositories.exercise import ExerciseRepository
+from src.repositories.exercise_record import ExerciseRecordRepository
+from src.repositories.exercise_review import ExerciseReviewRepository
 from src.repositories.feedback import FeedbackRepository
 from src.repositories.mock_exam import MockExamRepository
 from src.repositories.news_item import NewsItemRepository
@@ -38,6 +41,10 @@ __all__ = [
     "CardRecordReviewRepository",
     # Session (Redis)
     "SessionRepository",
+    # Exercise
+    "ExerciseRepository",
+    "ExerciseRecordRepository",
+    "ExerciseReviewRepository",
     # Feedback
     "FeedbackRepository",
     # Card Error
