@@ -3,11 +3,20 @@
 from datetime import date
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import not_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
-from src.db.models import CardStatus, ExerciseRecord
+from src.db.models import (
+    CardStatus,
+    DeckLevel,
+    DescriptionExercise,
+    Exercise,
+    ExerciseModality,
+    ExerciseRecord,
+    ExerciseSourceType,
+)
 from src.repositories.base import BaseRepository
 
 
@@ -70,3 +79,106 @@ class ExerciseRecordRepository(BaseRepository[ExerciseRecord]):
         self.db.add(record)
         await self.db.flush()
         return record
+
+    async def get_due_exercises(
+        self,
+        user_id: UUID,
+        *,
+        source_type: ExerciseSourceType | None = None,
+        modality: ExerciseModality | None = None,
+        audio_level: DeckLevel | None = None,
+        limit: int = 20,
+    ) -> list[ExerciseRecord]:
+        """Get exercise records due for review today or earlier."""
+        query = (
+            select(ExerciseRecord)
+            .join(Exercise, ExerciseRecord.exercise_id == Exercise.id)
+            .where(ExerciseRecord.user_id == user_id)
+            .where(ExerciseRecord.next_review_date <= date.today())
+            .where(ExerciseRecord.status != CardStatus.NEW)
+            .options(selectinload(ExerciseRecord.exercise))
+            .order_by(ExerciseRecord.next_review_date)
+            .limit(limit)
+        )
+        if source_type is not None:
+            query = query.where(Exercise.source_type == source_type)
+        if modality is not None or audio_level is not None:
+            query = query.join(
+                DescriptionExercise,
+                Exercise.description_exercise_id == DescriptionExercise.id,
+            )
+            if modality is not None:
+                query = query.where(DescriptionExercise.modality == modality)
+            if audio_level is not None:
+                query = query.where(DescriptionExercise.audio_level == audio_level)
+        result = await self.db.execute(query)
+        return list(result.scalars().all())
+
+    async def get_new_exercises(
+        self,
+        user_id: UUID,
+        *,
+        source_type: ExerciseSourceType | None = None,
+        modality: ExerciseModality | None = None,
+        audio_level: DeckLevel | None = None,
+        limit: int = 10,
+    ) -> list[Exercise]:
+        """Get exercises not yet studied by this user."""
+        studied_subq = (
+            select(ExerciseRecord.exercise_id)
+            .where(ExerciseRecord.user_id == user_id)
+            .scalar_subquery()
+        )
+        query = (
+            select(Exercise)
+            .where(not_(Exercise.id.in_(studied_subq)))
+            .order_by(Exercise.created_at)
+            .limit(limit)
+        )
+        if source_type is not None:
+            query = query.where(Exercise.source_type == source_type)
+        if modality is not None or audio_level is not None:
+            query = query.join(
+                DescriptionExercise,
+                Exercise.description_exercise_id == DescriptionExercise.id,
+            )
+            if modality is not None:
+                query = query.where(DescriptionExercise.modality == modality)
+            if audio_level is not None:
+                query = query.where(DescriptionExercise.audio_level == audio_level)
+        result = await self.db.execute(query)
+        return list(result.scalars().all())
+
+    async def get_early_practice_exercises(
+        self,
+        user_id: UUID,
+        *,
+        source_type: ExerciseSourceType | None = None,
+        modality: ExerciseModality | None = None,
+        audio_level: DeckLevel | None = None,
+        limit: int = 10,
+    ) -> list[ExerciseRecord]:
+        """Get exercise records not yet due but eligible for early practice."""
+        query = (
+            select(ExerciseRecord)
+            .join(Exercise, ExerciseRecord.exercise_id == Exercise.id)
+            .where(ExerciseRecord.user_id == user_id)
+            .where(ExerciseRecord.next_review_date > date.today())
+            .where(ExerciseRecord.status.in_([CardStatus.LEARNING, CardStatus.REVIEW]))
+            .options(selectinload(ExerciseRecord.exercise))
+            .order_by(ExerciseRecord.next_review_date)
+            .limit(limit)
+        )
+        if source_type is not None:
+            query = query.where(Exercise.source_type == source_type)
+        if modality is not None or audio_level is not None:
+            query = query.join(
+                DescriptionExercise,
+                Exercise.description_exercise_id == DescriptionExercise.id,
+            )
+            if modality is not None:
+                query = query.where(DescriptionExercise.modality == modality)
+            if audio_level is not None:
+                query = query.where(DescriptionExercise.audio_level == audio_level)
+        result = await self.db.execute(query)
+        return list(result.scalars().all())
