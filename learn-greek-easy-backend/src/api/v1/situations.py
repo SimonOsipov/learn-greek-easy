@@ -36,7 +36,7 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=LearnerSituationListResponse)
+@router.get("", response_model=LearnerSituationListResponse)
 async def list_situations(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
