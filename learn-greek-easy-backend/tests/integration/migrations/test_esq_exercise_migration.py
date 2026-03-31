@@ -32,7 +32,8 @@ class TestEsqMigrationSchema:
         result = await db_session.execute(
             text(
                 "SELECT constraint_name FROM information_schema.table_constraints "
-                "WHERE table_name = 'description_exercises' "
+                "WHERE table_schema = 'public' "
+                "AND table_name = 'description_exercises' "
                 "AND constraint_name = 'uq_desc_exercise_type_level_modality'"
             )
         )
@@ -42,7 +43,8 @@ class TestEsqMigrationSchema:
         result = await db_session.execute(
             text(
                 "SELECT constraint_name FROM information_schema.table_constraints "
-                "WHERE table_name = 'description_exercises' "
+                "WHERE table_schema = 'public' "
+                "AND table_name = 'description_exercises' "
                 "AND constraint_name = 'uq_desc_exercise_type_level'"
             )
         )

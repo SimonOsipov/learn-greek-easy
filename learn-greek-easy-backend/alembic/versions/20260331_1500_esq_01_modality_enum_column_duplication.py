@@ -140,15 +140,18 @@ def upgrade() -> None:
         sa.text("SELECT COUNT(*) FROM exercises WHERE source_type = 'description'")
     ).scalar()
 
-    assert (
-        total_de == original_count * 2
-    ), f"[esq_01] Expected {original_count * 2} description_exercises, got {total_de}"
-    assert (
-        listening_count == reading_count
-    ), f"[esq_01] Listening count ({listening_count}) != reading count ({reading_count})"
-    assert (
-        total_exercises == original_count * 2
-    ), f"[esq_01] Expected {original_count * 2} exercises (description), got {total_exercises}"
+    if total_de != original_count * 2:
+        raise RuntimeError(
+            f"[esq_01] Expected {original_count * 2} description_exercises, got {total_de}"
+        )
+    if listening_count != reading_count:
+        raise RuntimeError(
+            f"[esq_01] Listening count ({listening_count}) != reading count ({reading_count})"
+        )
+    if total_exercises != original_count * 2:
+        raise RuntimeError(
+            f"[esq_01] Expected {original_count * 2} exercises (description), got {total_exercises}"
+        )
 
     print(
         f"[esq_01] Migration complete: {original_count} listening + {reading_count} reading = {total_de} total"

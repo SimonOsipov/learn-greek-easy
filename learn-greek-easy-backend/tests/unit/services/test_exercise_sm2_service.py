@@ -93,7 +93,11 @@ class TestExerciseSM2ServicePostHogEvents:
             )
 
         mock_capture.assert_called_once()
-        assert mock_capture.call_args.kwargs["event"] == "exercise_mastered"
+        call_kwargs = mock_capture.call_args.kwargs
+        assert call_kwargs["event"] == "exercise_mastered"
+        assert call_kwargs["distinct_id"] == str(user_id)
+        assert call_kwargs["properties"]["exercise_id"] == str(exercise_id)
+        assert call_kwargs["properties"]["source_type"] == mock_exercise.source_type.value
 
     @pytest.mark.asyncio
     async def test_already_mastered_does_not_fire_event(self, mock_db_session):

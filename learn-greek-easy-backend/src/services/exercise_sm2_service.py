@@ -138,9 +138,9 @@ class ExerciseSM2Service:
                     exercise_type = enriched.get("exercise_type")
                     if exercise_type is not None:
                         item.exercise_type = exercise_type
-                    modality = enriched.get("modality")
-                    if modality is not None:
-                        item.modality = modality
+                    enriched_modality = enriched.get("modality")
+                    if enriched_modality is not None:
+                        item.modality = enriched_modality
                     audio_level_value = enriched.get("audio_level_value")
                     if audio_level_value is not None:
                         item.audio_level = audio_level_value
