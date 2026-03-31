@@ -6,7 +6,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import Situation, SituationStatus
+from src.db.models import ExerciseType, Situation, SituationStatus
 from tests.factories.exercise import ExerciseFactory, ExerciseRecordFactory
 from tests.factories.situation import SituationFactory
 from tests.factories.situation_description import (
@@ -14,7 +14,7 @@ from tests.factories.situation_description import (
     SituationDescriptionFactory,
 )
 
-LIST_URL = "/api/v1/situations"
+LIST_URL = "/api/v1/situations/"
 
 
 def _detail_url(situation_id) -> str:
@@ -41,11 +41,17 @@ async def _create_situation_with_exercises(
         situation_id=situation.id,
         audio_s3_key=audio_s3_key,
     )
+    _exercise_types = [
+        ExerciseType.FILL_GAPS,
+        ExerciseType.SELECT_HEARD,
+        ExerciseType.TRUE_FALSE,
+    ]
     exercises = []
-    for _ in range(num_exercises):
+    for i in range(num_exercises):
         de = await DescriptionExerciseFactory.create(
             session=db_session,
             description_id=description.id,
+            exercise_type=_exercise_types[i % len(_exercise_types)],
         )
         ex = await ExerciseFactory.create(
             session=db_session,
