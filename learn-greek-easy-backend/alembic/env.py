@@ -42,6 +42,7 @@ from src.db.models import (  # noqa: F401
     DialogStatus,
     Exercise,
     ExerciseItem,
+    ExerciseModality,
     ExerciseRecord,
     ExerciseReview,
     ExerciseSourceType,

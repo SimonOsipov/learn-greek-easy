@@ -308,6 +308,13 @@ class ExerciseStatus(str, enum.Enum):
     APPROVED = "approved"
 
 
+class ExerciseModality(str, enum.Enum):
+    """Modality of an exercise — listening or reading."""
+
+    LISTENING = "listening"
+    READING = "reading"
+
+
 # ============================================================================
 # User Models
 # ============================================================================
@@ -2698,7 +2705,11 @@ class DescriptionExercise(Base, TimestampMixin):
     __tablename__ = "description_exercises"
     __table_args__ = (
         UniqueConstraint(
-            "description_id", "exercise_type", "audio_level", name="uq_desc_exercise_type_level"
+            "description_id",
+            "exercise_type",
+            "audio_level",
+            "modality",
+            name="uq_desc_exercise_type_level_modality",
         ),
     )
 
@@ -2733,6 +2744,15 @@ class DescriptionExercise(Base, TimestampMixin):
         ),
         nullable=False,
         server_default=text("'draft'"),
+    )
+    modality: Mapped[ExerciseModality] = mapped_column(
+        SAEnum(
+            ExerciseModality,
+            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+            name="exercisemodality",
+            create_type=False,
+        ),
+        nullable=False,
     )
 
     # Relationships
