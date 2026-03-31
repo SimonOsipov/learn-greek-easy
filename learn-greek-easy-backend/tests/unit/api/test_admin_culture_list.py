@@ -5,7 +5,6 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tests.factories.culture import CultureDeckFactory, CultureQuestionFactory
-from tests.factories.news import NewsItemFactory
 
 
 class TestListDeckQuestions:
@@ -36,38 +35,11 @@ class TestListDeckQuestions:
         data = resp.json()
         q = data["questions"][0]
         assert "audio_s3_key" in q
-        assert "news_item_id" in q
         assert "original_article_url" in q
         assert "order_index" in q
-        assert "news_item_audio_a2_s3_key" in q
         assert q["audio_s3_key"] == "culture/audio/test.mp3"
         assert q["original_article_url"] == "https://example.com/article"
         assert q["order_index"] == 5
-
-    @pytest.mark.asyncio
-    async def test_list_questions_with_news_join(
-        self,
-        client: AsyncClient,
-        superuser_auth_headers: dict,
-        db_session: AsyncSession,
-    ):
-        deck = await CultureDeckFactory.create(session=db_session)
-        news = await NewsItemFactory.create(session=db_session, audio_a2_s3_key="news/audio/a2.mp3")
-        await CultureQuestionFactory.create(
-            session=db_session,
-            deck_id=deck.id,
-            news_item_id=news.id,
-        )
-        await db_session.flush()
-
-        resp = await client.get(
-            f"/api/v1/admin/culture/decks/{deck.id}/questions",
-            headers=superuser_auth_headers,
-        )
-        assert resp.status_code == 200
-        q = resp.json()["questions"][0]
-        assert q["news_item_id"] == str(news.id)
-        assert q["news_item_audio_a2_s3_key"] == "news/audio/a2.mp3"
 
     @pytest.mark.asyncio
     async def test_list_questions_without_news_item(
@@ -85,9 +57,6 @@ class TestListDeckQuestions:
             headers=superuser_auth_headers,
         )
         assert resp.status_code == 200
-        q = resp.json()["questions"][0]
-        assert q["news_item_id"] is None
-        assert q["news_item_audio_a2_s3_key"] is None
 
     @pytest.mark.asyncio
     async def test_search_by_greek_text(

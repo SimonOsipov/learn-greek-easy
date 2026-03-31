@@ -509,8 +509,6 @@ class TestCreateWithQuestion:
             assert culture_question.image_key is not None
             assert culture_question.image_key.startswith("news-images/")
             assert culture_question.image_key.endswith(".jpg")
-            # Verify FK relationship
-            assert culture_question.news_item_id == result.news_item.id
 
     @pytest.mark.asyncio
     async def test_raises_error_for_nonexistent_deck(

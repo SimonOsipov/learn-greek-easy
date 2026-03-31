@@ -3,7 +3,6 @@
 import base64
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import UUID
 
 import pytest
 
@@ -52,9 +51,7 @@ class TestGenerateSingle:
     async def test_generate_single_happy_path(self, service, mock_elevenlabs, mock_s3):
         result = await service.generate_single(text="Hello", s3_key="test/key.mp3")
 
-        mock_elevenlabs.generate_speech.assert_called_once_with(
-            "Hello", voice_id=None, news_item_id=None
-        )
+        mock_elevenlabs.generate_speech.assert_called_once_with("Hello", voice_id=None)
         mock_s3.upload_object.assert_called_once_with(
             "test/key.mp3", b"audio_data_here", "audio/mpeg"
         )
@@ -68,16 +65,7 @@ class TestGenerateSingle:
 
     async def test_generate_single_with_voice_id(self, service, mock_elevenlabs):
         await service.generate_single(text="Hello", s3_key="key.mp3", voice_id="voice-123")
-        mock_elevenlabs.generate_speech.assert_called_once_with(
-            "Hello", voice_id="voice-123", news_item_id=None
-        )
-
-    async def test_generate_single_news_item_id_passthrough(self, service, mock_elevenlabs):
-        nid = UUID("12345678-1234-5678-1234-567812345678")
-        await service.generate_single(text="Hello", s3_key="key.mp3", news_item_id=nid)
-        mock_elevenlabs.generate_speech.assert_called_once_with(
-            "Hello", voice_id=None, news_item_id=nid
-        )
+        mock_elevenlabs.generate_speech.assert_called_once_with("Hello", voice_id="voice-123")
 
     async def test_generate_single_s3_failure(self, service, mock_s3):
         mock_s3.upload_object.return_value = False
