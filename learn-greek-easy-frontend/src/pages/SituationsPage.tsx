@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AlertCircle, BookOpen, Volume2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { Button } from '@/components/ui/button';
@@ -26,7 +26,6 @@ function useDebounce<T>(value: T, delay: number): T {
 
 export const SituationsPage: React.FC = () => {
   const { t } = useTranslation('common');
-  const navigate = useNavigate();
   const { currentLanguage } = useLanguage();
 
   const [page, setPage] = useState(1);
@@ -90,6 +89,7 @@ export const SituationsPage: React.FC = () => {
           value={search}
           onChange={handleSearchChange}
           placeholder={t('situations.search.placeholder')}
+          aria-label={t('situations.search.placeholder')}
           className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring sm:max-w-xs"
           data-testid="situations-search"
         />
@@ -149,31 +149,33 @@ export const SituationsPage: React.FC = () => {
         <>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {data.items.map((item) => (
-              <Card
+              <Link
                 key={item.id}
-                className="cursor-pointer transition-shadow hover:shadow-md"
-                onClick={() => navigate(`/situations/${item.id}`)}
+                to={`/situations/${item.id}`}
+                className="block"
                 data-testid="situation-item"
               >
-                <CardContent className="flex flex-col gap-2 p-4">
-                  <p className="text-sm text-foreground">{getScenario(item)}</p>
-                  <div className="flex items-center gap-2">
-                    {item.has_audio && (
-                      <Volume2 className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-                    )}
-                    <span
-                      className="rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground"
-                      data-testid="exercise-badge"
-                    >
-                      <BookOpen className="mr-1 inline h-3 w-3" />
-                      {t('situations.card.exercises', {
-                        completed: item.exercise_completed,
-                        total: item.exercise_total,
-                      })}
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
+                <Card className="h-full cursor-pointer transition-shadow hover:shadow-md">
+                  <CardContent className="flex flex-col gap-2 p-4">
+                    <p className="text-sm text-foreground">{getScenario(item)}</p>
+                    <div className="flex items-center gap-2">
+                      {item.has_audio && (
+                        <Volume2 className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                      )}
+                      <span
+                        className="rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground"
+                        data-testid="exercise-badge"
+                      >
+                        <BookOpen className="mr-1 inline h-3 w-3" />
+                        {t('situations.card.exercises', {
+                          completed: item.exercise_completed,
+                          total: item.exercise_total,
+                        })}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
             ))}
           </div>
 
@@ -189,6 +191,7 @@ export const SituationsPage: React.FC = () => {
                   size="sm"
                   onClick={() => setPage((p) => p - 1)}
                   disabled={page <= 1}
+                  aria-label="Previous page"
                 >
                   &larr;
                 </Button>
@@ -200,6 +203,7 @@ export const SituationsPage: React.FC = () => {
                   size="sm"
                   onClick={() => setPage((p) => p + 1)}
                   disabled={page >= totalPages}
+                  aria-label="Next page"
                 >
                   &rarr;
                 </Button>

@@ -146,7 +146,7 @@ export const SituationDetailPage: React.FC = () => {
     );
   }
 
-  if (is404 || (!isLoading && !situation)) {
+  if (is404 || (!isError && !isLoading && !situation)) {
     return (
       <div
         className="container mx-auto max-w-3xl px-4 py-8 text-center"
@@ -339,12 +339,7 @@ export const SituationDetailPage: React.FC = () => {
 
       {/* Practice CTA */}
       <section className="mt-8">
-        <Button
-          size="lg"
-          disabled={situation.exercise_total === 0}
-          className="w-full"
-          data-testid="practice-cta"
-        >
+        <Button size="lg" disabled className="w-full" data-testid="practice-cta">
           {t('situations.detail.practice', {
             completed: situation.exercise_completed,
             total: situation.exercise_total,
