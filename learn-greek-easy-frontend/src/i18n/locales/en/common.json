@@ -213,6 +213,15 @@
     },
     "pagination": {
       "showing": "Showing {{from}}-{{to}} of {{total}}"
+    },
+    "detail": {
+      "back": "Back to situations",
+      "description": "Description",
+      "dialog": "Dialogue",
+      "exercises": "{{completed}} / {{total}} exercises completed",
+      "practice": "Practice exercises ({{completed}}/{{total}})",
+      "notFound": "Situation not found",
+      "backToList": "Back to situations"
     }
   },
   "notifications": {

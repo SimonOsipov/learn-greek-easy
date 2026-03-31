@@ -213,6 +213,15 @@
     },
     "pagination": {
       "showing": "Показано {{from}}-{{to}} из {{total}}"
+    },
+    "detail": {
+      "back": "К ситуациям",
+      "description": "Описание",
+      "dialog": "Диалог",
+      "exercises": "{{completed}} / {{total}} упражнений выполнено",
+      "practice": "Практиковать упражнения ({{completed}}/{{total}})",
+      "notFound": "Ситуация не найдена",
+      "backToList": "К ситуациям"
     }
   },
   "notifications": {

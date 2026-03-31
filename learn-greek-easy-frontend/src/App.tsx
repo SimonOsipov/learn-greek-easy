@@ -124,6 +124,9 @@ const NewsPage = lazyWithRetry(() =>
 const SituationsPage = lazyWithRetry(() =>
   import('@/pages/SituationsPage').then((m) => ({ default: m.SituationsPage }))
 );
+const SituationDetailPage = lazyWithRetry(() =>
+  import('@/pages/SituationDetailPage').then((m) => ({ default: m.SituationDetailPage }))
+);
 
 // Admin page (requires admin role)
 const AdminPage = lazyWithRetry(() => import('@/pages/AdminPage'));
@@ -292,6 +295,7 @@ function AppContent() {
                 {/* Situations page */}
                 <Route path="/situations" element={<AppLayout />}>
                   <Route index element={<SituationsPage />} />
+                  <Route path=":id" element={<SituationDetailPage />} />
                 </Route>
                 <Route path="/checkout/success" element={<CheckoutSuccessPage />} />
                 <Route path="/checkout/cancel" element={<CheckoutCancelPage />} />
