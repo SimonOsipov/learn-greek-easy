@@ -35,8 +35,15 @@ from src.db.models import (
     Deck,
     DeckLevel,
     DeckWordEntry,
+    DescriptionExercise,
     DescriptionSourceType,
     DescriptionStatus,
+    Exercise,
+    ExerciseModality,
+    ExerciseRecord,
+    ExerciseSourceType,
+    ExerciseStatus,
+    ExerciseType,
     Feedback,
     FeedbackCategory,
     FeedbackStatus,
@@ -4234,20 +4241,23 @@ class SeedService:
         count = result.scalar_one()
         return {"success": True, "translation_entries_created": count}
 
-    async def seed_situations(self) -> dict[str, Any]:
-        """Create sample situations with descriptions for E2E testing."""
+    async def seed_situations(self, learner_id: UUID | None = None) -> dict[str, Any]:
+        """Create sample situations with descriptions and exercises for E2E testing."""
         self._check_can_seed()
 
         seed_scenario_ens = [s["scenario_en"] for s in self.SITUATIONS]
         await self.db.execute(delete(Situation).where(Situation.scenario_en.in_(seed_scenario_ens)))
 
         created_situations = []
-        for sit_data in self.SITUATIONS:
+        exercises_created = 0
+        exercise_records_created = 0
+
+        for sit_index, sit_data in enumerate(self.SITUATIONS):
             situation = Situation(
                 scenario_el=sit_data["scenario_el"],
                 scenario_en=sit_data["scenario_en"],
                 scenario_ru=sit_data["scenario_ru"],
-                status=SituationStatus.DRAFT,
+                status=SituationStatus.READY,
             )
             self.db.add(situation)
             await self.db.flush()
@@ -4264,6 +4274,45 @@ class SeedService:
             self.db.add(description)
             await self.db.flush()
 
+            sit_exercises = []
+            # First two situations (coffee shop index 0, bus index 1) get 2 exercises each
+            if sit_index < 2:
+                for ex_type in (ExerciseType.FILL_GAPS, ExerciseType.SELECT_HEARD):
+                    de = DescriptionExercise(
+                        description_id=description.id,
+                        exercise_type=ex_type,
+                        audio_level=DeckLevel.B2,
+                        modality=ExerciseModality.LISTENING,
+                        status=ExerciseStatus.APPROVED,
+                    )
+                    self.db.add(de)
+                    await self.db.flush()
+
+                    ex = Exercise(
+                        source_type=ExerciseSourceType.DESCRIPTION,
+                        description_exercise_id=de.id,
+                    )
+                    self.db.add(ex)
+                    await self.db.flush()
+
+                    sit_exercises.append(ex)
+                    exercises_created += 1
+
+            # First situation only: create 1 ExerciseRecord for the learner
+            if sit_index == 0 and learner_id is not None and sit_exercises:
+                er = ExerciseRecord(
+                    user_id=learner_id,
+                    exercise_id=sit_exercises[0].id,
+                    status=CardStatus.LEARNING,
+                    easiness_factor=2.5,
+                    interval=1,
+                    repetitions=1,
+                    next_review_date=date.today(),
+                )
+                self.db.add(er)
+                await self.db.flush()
+                exercise_records_created += 1
+
             created_situations.append(
                 {
                     "id": str(situation.id),
@@ -4276,6 +4325,8 @@ class SeedService:
             "success": True,
             "situations": created_situations,
             "count": len(created_situations),
+            "exercises_created": exercises_created,
+            "exercise_records_created": exercise_records_created,
         }
 
     # =====================
@@ -4588,8 +4639,8 @@ class SeedService:
         # Step 19: Seed reference translation data
         translations_result = await self.seed_translations()
 
-        # Step 20: Seed situations with descriptions
-        situations_result = await self.seed_situations()
+        # Step 20: Seed situations with descriptions and exercises
+        situations_result = await self.seed_situations(learner_id=learner_id)
 
         # Commit all changes
         await self.db.commit()
