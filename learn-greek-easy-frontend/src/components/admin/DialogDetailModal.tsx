@@ -5,8 +5,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { AlertTriangle, BookOpen, Loader2, RefreshCw, Wand2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { KaraokeText } from '@/components/admin/KaraokeText';
 import { WaveformPlayer } from '@/components/culture/WaveformPlayer';
+import { KaraokeText } from '@/components/shared/KaraokeText';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   AlertDialog,
