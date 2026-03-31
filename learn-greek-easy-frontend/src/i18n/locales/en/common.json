@@ -123,7 +123,8 @@
     "practice": "Practice",
     "practiceDropdown": {
       "cultureExam": "Culture Exam",
-      "newsFeed": "News Feed"
+      "newsFeed": "News Feed",
+      "situations": "Situations"
     },
     "premium": "Premium",
     "upgradeToPremium": "Upgrade to Premium",
@@ -185,6 +186,33 @@
       "b2": "B2",
       "label": "Content level",
       "difficulty": "Difficulty:"
+    }
+  },
+  "situations": {
+    "page": {
+      "title": "Situations",
+      "subtitle": "Practice real-life Greek conversations"
+    },
+    "search": {
+      "placeholder": "Search situations..."
+    },
+    "filter": {
+      "hasAudio": "Has audio"
+    },
+    "card": {
+      "exercises": "{{completed}}/{{total}}"
+    },
+    "empty": {
+      "title": "No situations found",
+      "description": "Try adjusting your search or filters."
+    },
+    "error": {
+      "title": "Failed to load situations",
+      "description": "Something went wrong while loading situations.",
+      "retry": "Try again"
+    },
+    "pagination": {
+      "showing": "Showing {{from}}-{{to}} of {{total}}"
     }
   },
   "notifications": {
