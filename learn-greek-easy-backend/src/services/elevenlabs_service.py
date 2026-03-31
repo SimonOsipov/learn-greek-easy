@@ -16,7 +16,6 @@ Configuration:
 import random
 import time
 from typing import Any, Optional, cast
-from uuid import UUID
 
 import httpx
 
@@ -243,7 +242,6 @@ class ElevenLabsService:
         text: str,
         *,
         voice_id: str | None = None,
-        news_item_id: Optional[UUID] = None,
     ) -> bytes:
         """Generate Greek speech audio from text using ElevenLabs API.
 
@@ -256,7 +254,6 @@ class ElevenLabsService:
             text: Greek text to convert to speech.
             voice_id: Optional voice ID to use directly, skipping voice list
                 lookup. When provided, 404 errors are not retried.
-            news_item_id: Optional UUID for logging context.
 
         Returns:
             Raw MP3 audio bytes.
@@ -293,7 +290,6 @@ class ElevenLabsService:
             extra={
                 "voice_id": selected["voice_id"],
                 "voice_name": selected["name"],
-                "news_item_id": str(news_item_id) if news_item_id else None,
                 "text_length": len(text),
             },
         )

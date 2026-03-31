@@ -3257,7 +3257,6 @@ class SeedService:
                     questions_data.append(
                         {
                             "id": str(question.id),
-                            "news_item_id": str(news_item.id),
                             "article_url": article_url,
                         }
                     )

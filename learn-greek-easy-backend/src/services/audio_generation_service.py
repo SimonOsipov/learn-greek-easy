@@ -3,8 +3,7 @@ from __future__ import annotations
 import base64
 from dataclasses import dataclass
 from io import BytesIO
-from typing import Any, Optional, Protocol
-from uuid import UUID
+from typing import Any, Protocol
 
 from mutagen.mp3 import MP3
 
@@ -287,7 +286,6 @@ class AudioGenerationService:
         s3_key: str,
         voice_id: str | None = None,
         on_progress: ProgressCallback | None = None,
-        news_item_id: Optional[UUID] = None,
         with_timestamps: bool = False,
     ) -> AudioResult | AudioWithTimestampsResult:
         if on_progress is not None:
@@ -296,7 +294,6 @@ class AudioGenerationService:
         audio_bytes = await self._elevenlabs.generate_speech(
             text,
             voice_id=voice_id,
-            news_item_id=news_item_id,
         )
 
         # Optional word-level timestamps via forced alignment

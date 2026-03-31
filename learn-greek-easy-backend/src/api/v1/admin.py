@@ -1099,13 +1099,9 @@ async def list_deck_questions(
     sort_col = getattr(CultureQuestion, sort_by)
     order_expr = sort_col.asc() if sort_order == "asc" else sort_col.desc()
 
-    # Data query with LEFT JOIN for A2 audio
+    # Data query
     data_query = (
-        select(
-            CultureQuestion,
-            NewsItem.audio_a2_s3_key.label("news_item_audio_a2_s3_key"),
-        )
-        .outerjoin(NewsItem, CultureQuestion.news_item_id == NewsItem.id)
+        select(CultureQuestion)
         .where(*base_conditions)
         .order_by(order_expr)
         .offset((page - 1) * page_size)
@@ -1114,9 +1110,7 @@ async def list_deck_questions(
     result = await db.execute(data_query)
 
     items = []
-    for row in result.all():
-        question = row[0]
-        news_audio = row[1]
+    for question in result.scalars().all():
         items.append(
             AdminCultureQuestionItem(
                 id=question.id,
@@ -1129,10 +1123,8 @@ async def list_deck_questions(
                 source_article_url=question.source_article_url,
                 is_pending_review=question.is_pending_review,
                 audio_s3_key=question.audio_s3_key,
-                news_item_id=question.news_item_id,
                 original_article_url=question.original_article_url,
                 order_index=question.order_index,
-                news_item_audio_a2_s3_key=news_audio,
                 created_at=question.created_at,
             )
         )
@@ -2453,7 +2445,6 @@ async def _news_b2_audio_sse_pipeline(
             text=description_el,
             s3_key=s3_key,
             on_progress=_on_progress_b2,
-            news_item_id=news_item_id,
         )
 
         yield format_sse_event(
@@ -2477,11 +2468,6 @@ async def _news_b2_audio_sse_pipeline(
                     audio_file_size_bytes=audio_result.file_size_bytes,
                     audio_duration_seconds=audio_result.duration_seconds,
                 )
-            )
-            await session.execute(
-                update(CultureQuestion)
-                .where(CultureQuestion.news_item_id == news_item_id)
-                .values(audio_s3_key=s3_key)
             )
 
         # Stage 5 — Complete
@@ -2677,19 +2663,7 @@ async def _culture_question_audio_sse_pipeline(
                 event="culture_audio:error",
             )
             return
-        news_item_id = question.news_item_id
         question_text: dict = question.question_text or {}
-
-    if news_item_id is not None:
-        yield format_sse_event(
-            {
-                "question_id": str(question_id),
-                "stage": "load",
-                "error": "Cannot generate audio for news-linked questions. Audio is managed by the news item.",
-            },
-            event="culture_audio:error",
-        )
-        return
 
     greek_text = question_text.get("el", "").strip()
     if not greek_text:
