@@ -29,14 +29,16 @@ def upgrade() -> None:
     op.execute("DELETE FROM culture_questions WHERE news_item_id IS NOT NULL")
 
     # 2. Find and delete the "Cyprus News" culture deck
-    result = conn.execute(sa.text("SELECT id, title FROM culture_decks WHERE title ILIKE '%news%'"))
+    result = conn.execute(
+        sa.text("SELECT id, name_en FROM culture_decks WHERE name_en ILIKE '%news%'")
+    )
     rows = result.fetchall()
     if rows:
         for row in rows:
-            print(f"[ndel_01] Deleting culture deck: id={row[0]}, title={row[1]!r}")
-        op.execute("DELETE FROM culture_decks WHERE title ILIKE '%news%'")
+            print(f"[ndel_01] Deleting culture deck: id={row[0]}, name_en={row[1]!r}")
+        op.execute("DELETE FROM culture_decks WHERE name_en ILIKE '%news%'")
     else:
-        print("[ndel_01] WARNING: No culture deck with 'news' in title found")
+        print("[ndel_01] WARNING: No culture deck with 'news' in name_en found")
 
     # 3. Drop FK constraint
     op.execute(
