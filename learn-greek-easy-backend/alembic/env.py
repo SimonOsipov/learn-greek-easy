@@ -175,6 +175,7 @@ def do_run_migrations(connection: Connection) -> None:
         compare_server_default=True,
         include_name=include_name,  # Filter out pgvector indexes and reference schema
         include_object=include_object,  # Filter reference schema from metadata side
+        transaction_per_migration=True,  # Each migration in its own transaction (required for ALTER TYPE ADD VALUE)
     )
 
     with context.begin_transaction():
