@@ -8,6 +8,7 @@ from src.db.models import (
     DescriptionExerciseItem,
     DescriptionSourceType,
     DescriptionStatus,
+    ExerciseModality,
     ExerciseStatus,
     ExerciseType,
     SituationDescription,
@@ -49,6 +50,7 @@ class DescriptionExerciseFactory(BaseFactory):
 
     exercise_type = ExerciseType.FILL_GAPS
     audio_level = DeckLevel.B2
+    modality = ExerciseModality.LISTENING
     status = ExerciseStatus.DRAFT
 
     class Params:
