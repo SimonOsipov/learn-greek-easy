@@ -164,10 +164,8 @@ class AdminCultureQuestionItem(BaseModel):
     source_article_url: Optional[str] = None
     is_pending_review: bool = False
     audio_s3_key: Optional[str] = None
-    news_item_id: Optional[UUID] = None
     original_article_url: Optional[str] = None
     order_index: int = 0
-    news_item_audio_a2_s3_key: Optional[str] = None
     created_at: datetime
 
 

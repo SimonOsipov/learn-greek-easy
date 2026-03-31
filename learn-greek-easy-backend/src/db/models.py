@@ -1799,14 +1799,6 @@ class CultureQuestion(Base, TimestampMixin):
         comment="URL of source news article for cards created from news items",
     )
 
-    # Foreign key to source news item (direct relational link)
-    news_item_id: Mapped[UUID | None] = mapped_column(
-        ForeignKey("news_items.id", ondelete="SET NULL"),
-        nullable=True,
-        index=True,
-        comment="FK to news_items.id for questions derived from news articles",
-    )
-
     # Audio file reference
     audio_s3_key: Mapped[str | None] = mapped_column(
         String(500),
@@ -1837,9 +1829,6 @@ class CultureQuestion(Base, TimestampMixin):
         back_populates="question",
         lazy="raise",
         cascade="all, delete-orphan",
-    )
-    news_item: Mapped["NewsItem | None"] = relationship(
-        lazy="raise",
     )
 
     @property
