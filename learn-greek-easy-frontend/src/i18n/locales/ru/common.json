@@ -123,7 +123,8 @@
     "practice": "Практика",
     "practiceDropdown": {
       "cultureExam": "Экзамен по культуре",
-      "newsFeed": "Лента новостей"
+      "newsFeed": "Лента новостей",
+      "situations": "Ситуации"
     },
     "premium": "Премиум",
     "upgradeToPremium": "Перейти на Премиум",
@@ -185,6 +186,42 @@
       "b2": "B2",
       "label": "Уровень контента",
       "difficulty": "Сложность:"
+    }
+  },
+  "situations": {
+    "page": {
+      "title": "Ситуации",
+      "subtitle": "Практикуйте разговорный греческий"
+    },
+    "search": {
+      "placeholder": "Поиск ситуаций..."
+    },
+    "filter": {
+      "hasAudio": "С аудио"
+    },
+    "card": {
+      "exercises": "{{completed}}/{{total}}"
+    },
+    "empty": {
+      "title": "Ситуации не найдены",
+      "description": "Попробуйте изменить поиск или фильтры."
+    },
+    "error": {
+      "title": "Не удалось загрузить ситуации",
+      "description": "Произошла ошибка при загрузке ситуаций.",
+      "retry": "Попробовать снова"
+    },
+    "pagination": {
+      "showing": "Показано {{from}}-{{to}} из {{total}}"
+    },
+    "detail": {
+      "back": "К ситуациям",
+      "description": "Описание",
+      "dialog": "Диалог",
+      "exercises": "{{completed}} / {{total}} упражнений выполнено",
+      "practice": "Практиковать упражнения ({{completed}}/{{total}})",
+      "notFound": "Ситуация не найдена",
+      "backToList": "К ситуациям"
     }
   },
   "notifications": {
