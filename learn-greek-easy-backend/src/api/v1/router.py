@@ -29,6 +29,7 @@ from src.api.v1.card_errors import router as card_errors_router
 from src.api.v1.changelog import router as changelog_router
 from src.api.v1.culture import router as culture_router
 from src.api.v1.decks import router as deck_router
+from src.api.v1.exercises import router as exercises_router
 from src.api.v1.feedback import router as feedback_router
 from src.api.v1.health import router as health_router
 from src.api.v1.news import router as news_router
@@ -66,6 +67,15 @@ v1_router.include_router(
     deck_router,
     prefix="/decks",
     tags=["Decks"],
+)
+
+# =============================================================================
+# Exercise Routes
+# =============================================================================
+v1_router.include_router(
+    exercises_router,
+    prefix="/exercises",
+    tags=["Exercises"],
 )
 
 # =============================================================================
