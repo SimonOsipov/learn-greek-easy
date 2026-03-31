@@ -126,3 +126,54 @@ export interface SituationListResponse {
   page_size: number;
   status_counts: Record<string, number>;
 }
+
+// --- Learner-facing types (matches learner_situation.py schemas) ---
+
+export interface LearnerDescriptionNested {
+  text_el: string;
+  text_el_a2: string | null;
+  audio_url: string | null;
+  audio_a2_url: string | null;
+  audio_duration_seconds: number | null;
+  audio_a2_duration_seconds: number | null;
+  word_timestamps: WordTimestamp[] | null;
+  word_timestamps_a2: WordTimestamp[] | null;
+}
+
+export interface LearnerDialogNested {
+  speakers: DialogSpeaker[];
+  lines: DialogLine[];
+  audio_url: string | null;
+  audio_duration_seconds: number | null;
+}
+
+export interface LearnerSituationListItem {
+  id: string;
+  scenario_el: string;
+  scenario_en: string;
+  scenario_ru: string;
+  status: SituationStatus;
+  has_audio: boolean;
+  has_dialog: boolean;
+  exercise_total: number;
+  exercise_completed: number;
+}
+
+export interface LearnerSituationListResponse {
+  items: LearnerSituationListItem[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface LearnerSituationDetailResponse {
+  id: string;
+  scenario_el: string;
+  scenario_en: string;
+  scenario_ru: string;
+  status: SituationStatus;
+  description: LearnerDescriptionNested | null;
+  dialog: LearnerDialogNested | null;
+  exercise_total: number;
+  exercise_completed: number;
+}
