@@ -136,7 +136,7 @@ export const SituationDetailPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto max-w-3xl px-4 py-8" data-testid="situation-detail">
+      <div className="container mx-auto px-4 py-8" data-testid="situation-detail">
         <Skeleton className="mb-6 h-8 w-32" />
         <Skeleton className="mb-2 h-12 w-3/4" />
         <Skeleton className="mb-8 h-6 w-1/2" />
@@ -148,10 +148,7 @@ export const SituationDetailPage: React.FC = () => {
 
   if (is404 || (!isError && !isLoading && !situation)) {
     return (
-      <div
-        className="container mx-auto max-w-3xl px-4 py-8 text-center"
-        data-testid="situation-detail"
-      >
+      <div className="container mx-auto px-4 py-8 text-center" data-testid="situation-detail">
         <p className="mb-4 text-muted-foreground">{t('situations.detail.notFound')}</p>
         <Button onClick={() => navigate('/situations')}>{t('situations.detail.backToList')}</Button>
       </div>
@@ -160,10 +157,7 @@ export const SituationDetailPage: React.FC = () => {
 
   if (isError) {
     return (
-      <div
-        className="container mx-auto max-w-3xl px-4 py-8 text-center"
-        data-testid="situation-detail"
-      >
+      <div className="container mx-auto px-4 py-8 text-center" data-testid="situation-detail">
         <p className="mb-4 text-muted-foreground">{t('situations.error.description')}</p>
         <Button onClick={() => void refetch()}>{t('situations.error.retry')}</Button>
       </div>
@@ -185,10 +179,7 @@ export const SituationDetailPage: React.FC = () => {
     ) ?? null;
 
   return (
-    <div
-      className="container mx-auto max-w-3xl px-4 py-8 pb-20 lg:pb-8"
-      data-testid="situation-detail"
-    >
+    <div className="container mx-auto px-4 py-8 pb-20 lg:pb-8" data-testid="situation-detail">
       {/* Back button */}
       <Button
         variant="ghost"

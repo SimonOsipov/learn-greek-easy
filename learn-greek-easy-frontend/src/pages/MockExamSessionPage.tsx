@@ -55,7 +55,7 @@ function SessionPageSkeleton() {
     <div className="min-h-screen bg-background">
       {/* Header skeleton */}
       <div className="border-b border-border bg-background/95 px-4 py-4">
-        <div className="mx-auto flex max-w-4xl items-center justify-between">
+        <div className="mx-auto flex items-center justify-between">
           <Skeleton className="h-9 w-24" />
           <Skeleton className="h-9 w-28" />
           <Skeleton className="h-9 w-32" />
@@ -63,7 +63,7 @@ function SessionPageSkeleton() {
       </div>
       {/* Content skeleton */}
       <div className="p-4 pt-8 md:p-8">
-        <div className="mx-auto max-w-2xl">
+        <div className="mx-auto">
           <Skeleton className="mb-6 h-10 w-48" />
           <Skeleton className="mb-8 h-4 w-full" />
           <Card className="bg-card/95">
@@ -337,7 +337,7 @@ export const MockExamSessionPage: React.FC = () => {
   if (error) {
     return (
       <div className="min-h-screen bg-background p-4 md:p-8">
-        <div className="mx-auto max-w-2xl">
+        <div className="mx-auto">
           <Alert variant="destructive" className="bg-card">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>{t('common:error', { defaultValue: 'Error' })}</AlertTitle>
@@ -360,7 +360,7 @@ export const MockExamSessionPage: React.FC = () => {
   if (!currentQuestion) {
     return (
       <div className="min-h-screen bg-background p-4 md:p-8">
-        <div className="mx-auto max-w-2xl">
+        <div className="mx-auto">
           <Alert className="bg-card">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>{t('session.noQuestions', { defaultValue: 'No Questions' })}</AlertTitle>
@@ -407,7 +407,7 @@ export const MockExamSessionPage: React.FC = () => {
 
       {/* Main Content */}
       <div className="p-4 pt-6 md:p-8">
-        <div className="mx-auto max-w-2xl">
+        <div className="mx-auto">
           {/* Language selector */}
           <div className="mb-4 flex justify-end">
             <LanguageSelector

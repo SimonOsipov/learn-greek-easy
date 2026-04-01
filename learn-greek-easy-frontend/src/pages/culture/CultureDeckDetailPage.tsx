@@ -124,7 +124,7 @@ export function CultureDeckDetailPage() {
   const cultureCategory = deck.category;
 
   return (
-    <div data-testid="deck-detail" className="container mx-auto max-w-4xl px-4 py-6 md:py-8">
+    <div data-testid="deck-detail" className="container mx-auto px-4 py-6 md:py-8">
       {/* Breadcrumb Navigation */}
       <nav
         data-testid="breadcrumb"
@@ -241,7 +241,7 @@ export function CultureDeckDetailPage() {
 // Loading Skeleton Component
 const LoadingSkeleton: React.FC = () => {
   return (
-    <div data-testid="deck-detail" className="container mx-auto max-w-4xl px-4 py-6 md:py-8">
+    <div data-testid="deck-detail" className="container mx-auto px-4 py-6 md:py-8">
       {/* Breadcrumb Skeleton */}
       <div className="mb-4 flex items-center gap-2">
         <Skeleton className="h-4 w-32" />
@@ -296,7 +296,7 @@ const ErrorState: React.FC<ErrorStateProps> = ({ error, onRetry }) => {
   const { t } = useTranslation('deck');
 
   return (
-    <div data-testid="deck-detail" className="container mx-auto max-w-4xl px-4 py-6 md:py-8">
+    <div data-testid="deck-detail" className="container mx-auto px-4 py-6 md:py-8">
       <Alert variant="destructive" className="mb-4">
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>{t('detail.error.title')}</AlertTitle>
@@ -330,7 +330,7 @@ const NotFoundState: React.FC = () => {
   const navigate = useNavigate();
 
   return (
-    <div data-testid="deck-detail" className="container mx-auto max-w-4xl px-4 py-6 md:py-8">
+    <div data-testid="deck-detail" className="container mx-auto px-4 py-6 md:py-8">
       <Card>
         <CardContent className="py-12 pt-6 text-center">
           <BookOpen className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />

@@ -66,7 +66,7 @@ export const DeckDetailPage: React.FC = () => {
 // Loading Skeleton Component
 const LoadingSkeleton: React.FC = () => {
   return (
-    <div className="container mx-auto max-w-4xl px-4 py-6 md:py-8">
+    <div className="container mx-auto px-4 py-6 md:py-8">
       <div className="mb-4 flex items-center gap-2">
         <Skeleton className="h-4 w-32" />
       </div>
@@ -95,7 +95,7 @@ const ErrorState: React.FC<ErrorStateProps> = ({ error, onRetry }) => {
   const { t } = useTranslation('deck');
 
   return (
-    <div className="container mx-auto max-w-4xl px-4 py-6 md:py-8">
+    <div className="container mx-auto px-4 py-6 md:py-8">
       <Alert variant="destructive" className="mb-4">
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>{t('detail.error.title')}</AlertTitle>
@@ -129,7 +129,7 @@ const NotFoundState: React.FC = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="container mx-auto max-w-4xl px-4 py-6 md:py-8">
+    <div className="container mx-auto px-4 py-6 md:py-8">
       <Card>
         <CardContent className="py-12 pt-6 text-center">
           <BookOpen className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />

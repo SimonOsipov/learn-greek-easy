@@ -78,7 +78,7 @@ function formatDuration(seconds: number): string {
 function ResultsPageSkeleton() {
   return (
     <div className="min-h-screen bg-background py-8 md:py-12">
-      <div className="container mx-auto max-w-3xl space-y-6 px-4">
+      <div className="container mx-auto space-y-6 px-4">
         <Skeleton className="h-48 w-full" />
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           <Skeleton className="h-32" />
@@ -179,7 +179,7 @@ export function MockExamResultsPage() {
 
   return (
     <div className="min-h-screen bg-background py-8 md:py-12">
-      <div className="container mx-auto max-w-3xl px-4">
+      <div className="container mx-auto px-4">
         {/* Header Card - Pass/Fail Status */}
         <Card
           className={cn(

@@ -54,7 +54,7 @@ export const V2DeckPage: React.FC<V2DeckPageProps> = ({ deckId }) => {
   }
 
   return (
-    <div data-testid="v2-deck-detail" className="container mx-auto max-w-4xl px-4 py-6 md:py-8">
+    <div data-testid="v2-deck-detail" className="container mx-auto px-4 py-6 md:py-8">
       {/* Breadcrumb Navigation */}
       <nav
         data-testid="breadcrumb"
@@ -93,7 +93,7 @@ export const V2DeckPage: React.FC<V2DeckPageProps> = ({ deckId }) => {
  */
 const LoadingSkeleton: React.FC = () => {
   return (
-    <div className="container mx-auto max-w-4xl px-4 py-6 md:py-8">
+    <div className="container mx-auto px-4 py-6 md:py-8">
       {/* Breadcrumb Skeleton */}
       <div className="mb-4 flex items-center gap-2">
         <Skeleton className="h-4 w-32" />
@@ -155,7 +155,7 @@ const ErrorState: React.FC<ErrorStateProps> = ({ error, onRetry }) => {
   const { t } = useTranslation('deck');
 
   return (
-    <div className="container mx-auto max-w-4xl px-4 py-6 md:py-8">
+    <div className="container mx-auto px-4 py-6 md:py-8">
       <Alert variant="destructive" className="mb-4">
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>{t('detail.error.title')}</AlertTitle>
