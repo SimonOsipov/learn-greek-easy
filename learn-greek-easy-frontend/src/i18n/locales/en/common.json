@@ -21,6 +21,47 @@
     "tryAgain": "Try Again",
     "goHome": "Go Home"
   },
+  "exercises": {
+    "preSession": {
+      "title": "Exercise Practice",
+      "subtitle": "Review and practice exercises from your situations",
+      "modality": {
+        "all": "All",
+        "listening": "Listening",
+        "reading": "Reading"
+      },
+      "queueCount_one": "{{count}} exercise ready to practice",
+      "queueCount_other": "{{count}} exercises ready to practice",
+      "startSession": "Start Session",
+      "empty": {
+        "title": "No exercises available",
+        "description": "Complete some situations first, then come back to practice."
+      },
+      "error": {
+        "title": "Unable to load exercises",
+        "description": "We couldn't check your exercise queue. Please try again.",
+        "retry": "Try Again"
+      }
+    },
+    "session": {
+      "exerciseLabel": "Exercise",
+      "allCaughtUp": "All caught up!",
+      "allCaughtUpDescription": "You've completed all available exercises. Check back later for more.",
+      "sessionComplete": "Session Complete",
+      "correct": "Correct",
+      "accuracy": "Accuracy",
+      "totalTime": "Total Time",
+      "backToExercises": "Back to Exercises",
+      "practiceAgain": "Practice Again",
+      "retry": "Retry",
+      "exitDialog": {
+        "title": "Leave Practice?",
+        "description": "Your progress in this session will be lost.",
+        "leave": "Leave",
+        "stay": "Stay"
+      }
+    }
+  },
   "dashboard": {
     "title": "Dashboard",
     "progress": {
@@ -123,6 +164,7 @@
     "practice": "Practice",
     "practiceDropdown": {
       "cultureExam": "Culture Exam",
+      "exercises": "Exercises",
       "newsFeed": "News Feed",
       "situations": "Situations"
     },

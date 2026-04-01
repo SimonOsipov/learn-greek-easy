@@ -104,6 +104,7 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
       labelKey: 'nav.practice',
       children: [
         { path: '/practice/culture-exam', labelKey: 'nav.practiceDropdown.cultureExam' },
+        { path: '/practice/exercises', labelKey: 'nav.practiceDropdown.exercises' },
         { path: '/news', labelKey: 'nav.practiceDropdown.newsFeed' },
         { path: '/situations', labelKey: 'nav.practiceDropdown.situations' },
       ],

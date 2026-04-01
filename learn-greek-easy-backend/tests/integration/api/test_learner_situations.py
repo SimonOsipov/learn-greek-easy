@@ -14,7 +14,7 @@ from tests.factories.situation_description import (
     SituationDescriptionFactory,
 )
 
-LIST_URL = "/api/v1/situations/"
+LIST_URL = "/api/v1/situations"
 
 
 def _detail_url(situation_id) -> str:

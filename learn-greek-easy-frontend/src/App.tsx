@@ -127,6 +127,12 @@ const SituationsPage = lazyWithRetry(() =>
 const SituationDetailPage = lazyWithRetry(() =>
   import('@/pages/SituationDetailPage').then((m) => ({ default: m.SituationDetailPage }))
 );
+const ExercisePreSessionPage = lazyWithRetry(() =>
+  import('@/pages/ExercisePreSessionPage').then((m) => ({ default: m.ExercisePreSessionPage }))
+);
+const ExercisePracticePage = lazyWithRetry(() =>
+  import('@/pages/ExercisePracticePage').then((m) => ({ default: m.ExercisePracticePage }))
+);
 
 // Admin page (requires admin role)
 const AdminPage = lazyWithRetry(() => import('@/pages/AdminPage'));
@@ -297,6 +303,12 @@ function AppContent() {
                   <Route index element={<SituationsPage />} />
                   <Route path=":id" element={<SituationDetailPage />} />
                 </Route>
+                {/* Exercise practice - pre-session inside AppLayout */}
+                <Route path="/practice/exercises" element={<AppLayout />}>
+                  <Route index element={<ExercisePreSessionPage />} />
+                </Route>
+                {/* Exercise practice session - outside AppLayout (full-screen) */}
+                <Route path="/practice/exercises/session" element={<ExercisePracticePage />} />
                 <Route path="/checkout/success" element={<CheckoutSuccessPage />} />
                 <Route path="/checkout/cancel" element={<CheckoutCancelPage />} />
                 <Route path="/upgrade" element={<AppLayout />}>
