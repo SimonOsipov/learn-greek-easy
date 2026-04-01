@@ -161,14 +161,14 @@
     "userMenu": "Меню пользователя",
     "decksDropdown": {
       "allDecks": "Публичные Колоды",
-      "myDecks": "Мои Колоды"
+      "myDecks": "Мои Колоды",
+      "situations": "Ситуации"
     },
     "practice": "Практика",
     "practiceDropdown": {
       "cultureExam": "Экзамен по культуре",
       "exercises": "Упражнения",
-      "newsFeed": "Лента новостей",
-      "situations": "Ситуации"
+      "newsFeed": "Лента новостей"
     },
     "premium": "Премиум",
     "upgradeToPremium": "Перейти на Премиум",

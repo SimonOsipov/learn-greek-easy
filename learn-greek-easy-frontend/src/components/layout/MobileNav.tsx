@@ -41,10 +41,11 @@ const navItems: NavItem[] = [
     labelKey: 'nav.decks',
     icon: Layers,
     href: '/decks',
-    additionalActivePaths: ['/my-decks'],
+    additionalActivePaths: ['/my-decks', '/situations'],
     children: [
       { labelKey: 'nav.decksDropdown.allDecks', href: '/decks' },
       { labelKey: 'nav.decksDropdown.myDecks', href: '/my-decks' },
+      { labelKey: 'nav.decksDropdown.situations', href: '/situations' },
     ],
   },
   {
@@ -52,17 +53,11 @@ const navItems: NavItem[] = [
     labelKey: 'nav.practice',
     icon: GraduationCap,
     href: '/practice',
-    additionalActivePaths: [
-      '/practice/culture-exam',
-      '/practice/exercises',
-      '/news',
-      '/situations',
-    ],
+    additionalActivePaths: ['/practice/culture-exam', '/practice/exercises', '/news'],
     children: [
       { labelKey: 'nav.practiceDropdown.cultureExam', href: '/practice/culture-exam' },
       { labelKey: 'nav.practiceDropdown.exercises', href: '/practice/exercises' },
       { labelKey: 'nav.practiceDropdown.newsFeed', href: '/news' },
-      { labelKey: 'nav.practiceDropdown.situations', href: '/situations' },
     ],
   },
   {
