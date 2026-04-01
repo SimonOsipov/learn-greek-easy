@@ -21,6 +21,28 @@
     "tryAgain": "Try Again",
     "goHome": "Go Home"
   },
+  "exercises": {
+    "preSession": {
+      "title": "Exercise Practice",
+      "subtitle": "Review and practice exercises from your situations",
+      "modality": {
+        "all": "All",
+        "listening": "Listening",
+        "reading": "Reading"
+      },
+      "queueCount": "{{count}} exercises ready to practice",
+      "startSession": "Start Session",
+      "empty": {
+        "title": "No exercises available",
+        "description": "Complete some situations first, then come back to practice."
+      },
+      "error": {
+        "title": "Unable to load exercises",
+        "description": "We couldn't check your exercise queue. Please try again.",
+        "retry": "Try Again"
+      }
+    }
+  },
   "dashboard": {
     "title": "Dashboard",
     "progress": {
