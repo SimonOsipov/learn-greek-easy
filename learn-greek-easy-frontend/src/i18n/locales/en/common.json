@@ -41,6 +41,24 @@
         "description": "We couldn't check your exercise queue. Please try again.",
         "retry": "Try Again"
       }
+    },
+    "session": {
+      "exerciseLabel": "Exercise",
+      "allCaughtUp": "All caught up!",
+      "allCaughtUpDescription": "You've completed all available exercises. Check back later for more.",
+      "sessionComplete": "Session Complete",
+      "correct": "Correct",
+      "accuracy": "Accuracy",
+      "totalTime": "Total Time",
+      "backToExercises": "Back to Exercises",
+      "practiceAgain": "Practice Again",
+      "retry": "Retry",
+      "exitDialog": {
+        "title": "Leave Practice?",
+        "description": "Your progress in this session will be lost.",
+        "leave": "Leave",
+        "stay": "Stay"
+      }
     }
   },
   "dashboard": {
