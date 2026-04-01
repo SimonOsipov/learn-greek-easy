@@ -71,7 +71,10 @@ export const ExercisePracticePage = () => {
   }, [modality]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Navigation
-  const backToExercises = useCallback(() => navigate('/practice/exercises'), [navigate]);
+  const backToExercises = useCallback(() => {
+    resetSession();
+    navigate('/practice/exercises');
+  }, [navigate, resetSession]);
 
   // Exit logic
   const handleExit = useCallback(() => {
@@ -133,12 +136,12 @@ export const ExercisePracticePage = () => {
         if (queue.length === 0 || sessionComplete) return null;
         return {
           modality: modality ?? 'all',
-          exercises_answered: currentIndex,
+          exercises_answered: Object.keys(answers).length,
           exercises_total: queue.length,
           duration_sec: durationSec,
         };
       },
-      [queue, sessionComplete, currentIndex, modality]
+      [queue, sessionComplete, answers, modality]
     ),
   });
 

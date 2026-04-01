@@ -30,7 +30,8 @@
         "listening": "Listening",
         "reading": "Reading"
       },
-      "queueCount": "{{count}} exercises ready to practice",
+      "queueCount_one": "{{count}} exercise ready to practice",
+      "queueCount_other": "{{count}} exercises ready to practice",
       "startSession": "Start Session",
       "empty": {
         "title": "No exercises available",

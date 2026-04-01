@@ -71,6 +71,10 @@ export const useExercisePracticeStore = create<ExercisePracticeState>()(
       ...initialState,
 
       startSession: async (modality?: ExerciseModality) => {
+        const existingTimer = get()._feedbackTimer;
+        if (existingTimer) {
+          clearTimeout(existingTimer);
+        }
         set({ isLoading: true, error: null });
         try {
           const { user } = useAuthStore.getState();

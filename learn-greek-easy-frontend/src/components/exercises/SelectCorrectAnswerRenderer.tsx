@@ -36,7 +36,9 @@ export function SelectCorrectAnswerRenderer({
   const { i18n } = useTranslation();
   const lang = i18n.language === 'ru' ? 'ru' : 'en';
 
-  const payload = items[0].payload as unknown as SelectCorrectAnswerPayload;
+  const rawPayload = items[0]?.payload;
+  if (!rawPayload) return null;
+  const payload = rawPayload as unknown as SelectCorrectAnswerPayload;
   const { prompt, options, correct_answer_index } = payload;
 
   const handleOptionClick = (e: React.MouseEvent<HTMLButtonElement>, index: number) => {

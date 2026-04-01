@@ -30,7 +30,10 @@
         "listening": "Аудирование",
         "reading": "Чтение"
       },
-      "queueCount": "{{count}} упражнений для практики",
+      "queueCount_one": "{{count}} упражнение для практики",
+      "queueCount_few": "{{count}} упражнения для практики",
+      "queueCount_many": "{{count}} упражнений для практики",
+      "queueCount_other": "{{count}} упражнений для практики",
       "startSession": "Начать сессию",
       "empty": {
         "title": "Нет доступных упражнений",
