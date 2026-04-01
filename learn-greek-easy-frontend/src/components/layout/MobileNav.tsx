@@ -52,9 +52,15 @@ const navItems: NavItem[] = [
     labelKey: 'nav.practice',
     icon: GraduationCap,
     href: '/practice',
-    additionalActivePaths: ['/practice/culture-exam', '/news', '/situations'],
+    additionalActivePaths: [
+      '/practice/culture-exam',
+      '/practice/exercises',
+      '/news',
+      '/situations',
+    ],
     children: [
       { labelKey: 'nav.practiceDropdown.cultureExam', href: '/practice/culture-exam' },
+      { labelKey: 'nav.practiceDropdown.exercises', href: '/practice/exercises' },
       { labelKey: 'nav.practiceDropdown.newsFeed', href: '/news' },
       { labelKey: 'nav.practiceDropdown.situations', href: '/situations' },
     ],
