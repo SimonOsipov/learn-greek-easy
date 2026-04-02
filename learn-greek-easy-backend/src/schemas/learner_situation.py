@@ -61,3 +61,6 @@ class LearnerSituationDetailResponse(BaseModel):
     dialog: LearnerDialogNested | None = None
     exercise_total: int
     exercise_completed: int
+    source_url: str | None = None
+    source_image_url: str | None = None
+    source_title: str | None = None

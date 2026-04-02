@@ -211,6 +211,11 @@ async def get_situation(
             audio_duration_seconds=dlg.audio_duration_seconds,
         )
 
+    # Source metadata
+    source_image_url: str | None = None
+    if situation.source_image_s3_key:
+        source_image_url = s3.generate_presigned_url(situation.source_image_s3_key)
+
     return LearnerSituationDetailResponse(
         id=situation.id,
         scenario_el=situation.scenario_el,
@@ -221,4 +226,7 @@ async def get_situation(
         dialog=dialog_nested,
         exercise_total=exercise_total,
         exercise_completed=exercise_completed,
+        source_url=situation.source_url,
+        source_image_url=source_image_url,
+        source_title=situation.source_title_en,
     )

@@ -392,3 +392,42 @@ class TestLearnerSituationDetailEndpoint:
 
         response = await client.get(_detail_url(situation.id), headers=auth_headers)
         assert response.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_detail_source_fields_null_when_not_set(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        db_session: AsyncSession,
+    ) -> None:
+        situation = await SituationFactory.create(session=db_session, ready=True)
+        await db_session.flush()
+
+        response = await client.get(_detail_url(situation.id), headers=auth_headers)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["source_url"] is None
+        assert data["source_image_url"] is None
+        assert data["source_title"] is None
+
+    @pytest.mark.asyncio
+    async def test_detail_source_fields_populated(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        db_session: AsyncSession,
+    ) -> None:
+        situation = await SituationFactory.create(
+            session=db_session,
+            ready=True,
+            source_url="https://example.com/article",
+            source_title_en="An interesting article",
+        )
+        await db_session.flush()
+
+        response = await client.get(_detail_url(situation.id), headers=auth_headers)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["source_url"] == "https://example.com/article"
+        assert data["source_title"] == "An interesting article"
+        assert data["source_image_url"] is None

@@ -176,4 +176,7 @@ export interface LearnerSituationDetailResponse {
   dialog: LearnerDialogNested | null;
   exercise_total: number;
   exercise_completed: number;
+  source_url: string | null;
+  source_image_url: string | null;
+  source_title: string | null;
 }

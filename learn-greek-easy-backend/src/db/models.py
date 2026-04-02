@@ -2638,6 +2638,11 @@ class Situation(Base, TimestampMixin):
         uselist=False,
         cascade="all, delete-orphan",
     )
+    source_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source_image_s3_key: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source_title_en: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source_title_el: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source_title_ru: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     def __repr__(self) -> str:
         return f"<Situation id={self.id} status={self.status}>"
