@@ -157,7 +157,8 @@ export const SituationsPage: React.FC = () => {
               >
                 <Card className="h-full cursor-pointer transition-shadow hover:shadow-md">
                   <CardContent className="flex flex-col gap-2 p-4">
-                    <p className="text-sm text-foreground">{getScenario(item)}</p>
+                    <p className="text-sm font-medium text-foreground">{item.scenario_el}</p>
+                    <p className="text-xs text-muted-foreground">{getScenario(item)}</p>
                     <div className="flex items-center gap-2">
                       {item.has_audio && (
                         <Volume2 className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
