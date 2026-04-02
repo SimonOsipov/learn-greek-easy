@@ -6,6 +6,8 @@ import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 
 import { WaveformPlayer } from '@/components/culture/WaveformPlayer';
+import { ExercisePreviewCard } from '@/components/exercises/ExercisePreviewCard';
+import { EmptyState } from '@/components/feedback/EmptyState';
 import { KaraokeText } from '@/components/shared/KaraokeText';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,6 +16,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAudioTimeMs } from '@/hooks/useAudioTimeMs';
 import { useLanguage } from '@/hooks/useLanguage';
 import { track } from '@/lib/analytics';
+import { exerciseAPI } from '@/services/exerciseAPI';
+import type { ExerciseQueue } from '@/services/exerciseAPI';
 import { situationAPI } from '@/services/situationAPI';
 import type { LearnerSituationDetailResponse, SituationStatus } from '@/types/situation';
 
@@ -72,6 +76,23 @@ export const SituationDetailPage: React.FC = () => {
     queryFn: () => situationAPI.getById(id!),
     enabled: !!id,
   });
+
+  // Fetch exercise queue
+  const {
+    data: exercisesData,
+    isLoading: exercisesLoading,
+    isError: exercisesError,
+    refetch: refetchExercises,
+  } = useQuery<ExerciseQueue>({
+    queryKey: ['situationExercises', id],
+    queryFn: () => exerciseAPI.getQueue({ situation_id: id!, limit: 100, include_new: true }),
+    enabled: !!id,
+  });
+
+  const exerciseTotal = exercisesData?.total_in_queue ?? 0;
+  const exerciseCompleted =
+    exercisesData?.exercises.filter((e) => e.status === 'mastered' || e.status === 'review')
+      .length ?? 0;
 
   // PostHog tracking on mount
   const hasTracked = useRef(false);
@@ -213,8 +234,8 @@ export const SituationDetailPage: React.FC = () => {
         dialogTimeMs < line.end_time_ms
     ) ?? null;
 
-  const completed = situation.exercise_completed;
-  const total = situation.exercise_total;
+  const completed = exerciseCompleted;
+  const total = exerciseTotal;
 
   return (
     <div className="container mx-auto px-4 py-8 pb-20 lg:pb-8" data-testid="situation-detail">
@@ -283,7 +304,12 @@ export const SituationDetailPage: React.FC = () => {
             {t('situations.detail.tabs.about')}
           </TabsTrigger>
           <TabsTrigger value="exercises" className="flex-1" data-testid="situation-tab-exercises">
-            {t('situations.detail.tabs.exercises', { count: situation.exercise_total })}
+            {exercisesLoading
+              ? t('situations.detail.tabs.exercises', { count: situation.exercise_total })
+              : t('situations.detail.tabs.exercisesWithCount', {
+                  completed: exerciseCompleted,
+                  total: exerciseTotal,
+                })}
           </TabsTrigger>
         </TabsList>
 
@@ -414,9 +440,33 @@ export const SituationDetailPage: React.FC = () => {
 
         {/* Exercises Tab */}
         <TabsContent value="exercises" className="mt-6">
-          <div data-testid="exercises-tab-placeholder">
-            <Skeleton className="h-40 w-full" />
-          </div>
+          {exercisesLoading ? (
+            <div className="space-y-4" data-testid="exercises-tab-loading">
+              <Skeleton className="h-32 w-full" />
+              <Skeleton className="h-32 w-full" />
+              <Skeleton className="h-32 w-full" />
+            </div>
+          ) : exercisesError ? (
+            <div className="py-8 text-center">
+              <p className="mb-4 text-muted-foreground">
+                {t('situations.detail.exercises.error.title')}
+              </p>
+              <Button onClick={() => void refetchExercises()}>
+                {t('situations.detail.exercises.error.retry')}
+              </Button>
+            </div>
+          ) : !exercisesData?.exercises.length ? (
+            <EmptyState
+              title={t('situations.detail.exercises.empty.title')}
+              description={t('situations.detail.exercises.empty.description')}
+            />
+          ) : (
+            <div className="space-y-4">
+              {exercisesData.exercises.map((exercise) => (
+                <ExercisePreviewCard key={exercise.exercise_id} exercise={exercise} />
+              ))}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
