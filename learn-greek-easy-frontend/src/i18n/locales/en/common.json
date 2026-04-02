@@ -242,6 +242,7 @@
       "hasAudio": "Has audio"
     },
     "card": {
+      "audio": "Audio",
       "exercises": "{{completed}}/{{total}}"
     },
     "empty": {

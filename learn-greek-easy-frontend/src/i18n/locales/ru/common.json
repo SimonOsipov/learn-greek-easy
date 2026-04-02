@@ -244,6 +244,7 @@
       "hasAudio": "С аудио"
     },
     "card": {
+      "audio": "Аудио",
       "exercises": "{{completed}}/{{total}}"
     },
     "empty": {

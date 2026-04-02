@@ -156,18 +156,21 @@ export const SituationsPage: React.FC = () => {
                 data-testid="situation-item"
               >
                 <Card className="h-full cursor-pointer transition-shadow hover:shadow-md">
-                  <CardContent className="flex flex-col gap-2 p-4">
+                  <CardContent className="flex h-full flex-col gap-2 p-4">
                     <p className="text-sm font-medium text-foreground">{item.scenario_el}</p>
                     <p className="text-xs text-muted-foreground">{getScenario(item)}</p>
-                    <div className="flex items-center gap-2">
+                    <div className="mt-auto flex items-center gap-2 pt-2">
                       {item.has_audio && (
-                        <Volume2 className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                        <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground">
+                          <Volume2 className="h-3 w-3" />
+                          {t('situations.card.audio')}
+                        </span>
                       )}
                       <span
-                        className="rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground"
+                        className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground"
                         data-testid="exercise-badge"
                       >
-                        <BookOpen className="mr-1 inline h-3 w-3" />
+                        <BookOpen className="h-3 w-3" />
                         {t('situations.card.exercises', {
                           completed: item.exercise_completed,
                           total: item.exercise_total,
