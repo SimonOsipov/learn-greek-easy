@@ -11,14 +11,11 @@ const FAQ = () => {
   const { t } = useTranslation('landing');
 
   const faqKeys = [
-    'exam',
-    'level',
     'difference',
     'customCards',
     'prepTime',
     'freePlan',
     'monthlyVsYearly',
-    'foundersEdition',
     'refundPolicy',
     'offline',
   ];
