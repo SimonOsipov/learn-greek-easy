@@ -67,6 +67,7 @@ export interface ExerciseReviewResult {
 }
 
 export interface ExerciseQueueParams {
+  situation_id?: string;
   source_type?: ExerciseSourceType;
   modality?: ExerciseModality;
   audio_level?: DeckLevel;

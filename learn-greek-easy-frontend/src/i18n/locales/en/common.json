@@ -62,6 +62,18 @@
       }
     }
   },
+  "exercise": {
+    "status": {
+      "new": "New",
+      "learning": "Learning",
+      "review": "Review",
+      "mastered": "Mastered"
+    },
+    "modality": {
+      "listening": "Listening",
+      "reading": "Reading"
+    }
+  },
   "dashboard": {
     "title": "Dashboard",
     "progress": {
@@ -259,12 +271,37 @@
     },
     "detail": {
       "back": "Back to situations",
-      "description": "Description",
-      "dialog": "Dialogue",
-      "exercises": "{{completed}} / {{total}} exercises completed",
-      "practice": "Practice exercises ({{completed}}/{{total}})",
       "notFound": "Situation not found",
-      "backToList": "Back to situations"
+      "backToList": "Back to situations",
+      "tabs": {
+        "about": "About",
+        "exercises": "Exercises ({{count}})",
+        "exercisesWithCount": "Exercises ({{completed}}/{{total}})"
+      },
+      "hero": {
+        "exerciseProgress": "{{completed}}/{{total}} exercises",
+        "sourceAttribution": "Source"
+      },
+      "status": {
+        "draft": "Draft",
+        "partialReady": "Partial",
+        "ready": "Ready"
+      },
+      "about": {
+        "a2Section": "A2 Level",
+        "b1Section": "B1 Level",
+        "dialogSection": "Dialogue"
+      },
+      "exercises": {
+        "empty": {
+          "title": "No exercises yet",
+          "description": "Exercises for this situation haven't been created yet."
+        },
+        "error": {
+          "title": "Failed to load exercises",
+          "retry": "Try again"
+        }
+      }
     }
   },
   "notifications": {

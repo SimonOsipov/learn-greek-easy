@@ -16,6 +16,7 @@ from src.db.models import (
     ExerciseModality,
     ExerciseRecord,
     ExerciseSourceType,
+    SituationDescription,
 )
 from src.repositories.base import BaseRepository
 
@@ -87,6 +88,7 @@ class ExerciseRecordRepository(BaseRepository[ExerciseRecord]):
         source_type: ExerciseSourceType | None = None,
         modality: ExerciseModality | None = None,
         audio_level: DeckLevel | None = None,
+        situation_id: UUID | None = None,
         limit: int = 20,
     ) -> list[ExerciseRecord]:
         """Get exercise records due for review today or earlier."""
@@ -102,15 +104,22 @@ class ExerciseRecordRepository(BaseRepository[ExerciseRecord]):
         )
         if source_type is not None:
             query = query.where(Exercise.source_type == source_type)
-        if modality is not None or audio_level is not None:
+        needs_desc_join = (
+            modality is not None or audio_level is not None or situation_id is not None
+        )
+        if needs_desc_join:
             query = query.join(
-                DescriptionExercise,
-                Exercise.description_exercise_id == DescriptionExercise.id,
+                DescriptionExercise, Exercise.description_exercise_id == DescriptionExercise.id
             )
             if modality is not None:
                 query = query.where(DescriptionExercise.modality == modality)
             if audio_level is not None:
                 query = query.where(DescriptionExercise.audio_level == audio_level)
+            if situation_id is not None:
+                query = query.join(
+                    SituationDescription,
+                    DescriptionExercise.description_id == SituationDescription.id,
+                ).where(SituationDescription.situation_id == situation_id)
         result = await self.db.execute(query)
         return list(result.scalars().all())
 
@@ -121,6 +130,7 @@ class ExerciseRecordRepository(BaseRepository[ExerciseRecord]):
         source_type: ExerciseSourceType | None = None,
         modality: ExerciseModality | None = None,
         audio_level: DeckLevel | None = None,
+        situation_id: UUID | None = None,
         limit: int = 10,
     ) -> list[Exercise]:
         """Get exercises not yet studied by this user."""
@@ -137,15 +147,22 @@ class ExerciseRecordRepository(BaseRepository[ExerciseRecord]):
         )
         if source_type is not None:
             query = query.where(Exercise.source_type == source_type)
-        if modality is not None or audio_level is not None:
+        needs_desc_join = (
+            modality is not None or audio_level is not None or situation_id is not None
+        )
+        if needs_desc_join:
             query = query.join(
-                DescriptionExercise,
-                Exercise.description_exercise_id == DescriptionExercise.id,
+                DescriptionExercise, Exercise.description_exercise_id == DescriptionExercise.id
             )
             if modality is not None:
                 query = query.where(DescriptionExercise.modality == modality)
             if audio_level is not None:
                 query = query.where(DescriptionExercise.audio_level == audio_level)
+            if situation_id is not None:
+                query = query.join(
+                    SituationDescription,
+                    DescriptionExercise.description_id == SituationDescription.id,
+                ).where(SituationDescription.situation_id == situation_id)
         result = await self.db.execute(query)
         return list(result.scalars().all())
 
@@ -156,6 +173,7 @@ class ExerciseRecordRepository(BaseRepository[ExerciseRecord]):
         source_type: ExerciseSourceType | None = None,
         modality: ExerciseModality | None = None,
         audio_level: DeckLevel | None = None,
+        situation_id: UUID | None = None,
         limit: int = 10,
     ) -> list[ExerciseRecord]:
         """Get exercise records not yet due but eligible for early practice."""
@@ -171,14 +189,21 @@ class ExerciseRecordRepository(BaseRepository[ExerciseRecord]):
         )
         if source_type is not None:
             query = query.where(Exercise.source_type == source_type)
-        if modality is not None or audio_level is not None:
+        needs_desc_join = (
+            modality is not None or audio_level is not None or situation_id is not None
+        )
+        if needs_desc_join:
             query = query.join(
-                DescriptionExercise,
-                Exercise.description_exercise_id == DescriptionExercise.id,
+                DescriptionExercise, Exercise.description_exercise_id == DescriptionExercise.id
             )
             if modality is not None:
                 query = query.where(DescriptionExercise.modality == modality)
             if audio_level is not None:
                 query = query.where(DescriptionExercise.audio_level == audio_level)
+            if situation_id is not None:
+                query = query.join(
+                    SituationDescription,
+                    DescriptionExercise.description_id == SituationDescription.id,
+                ).where(SituationDescription.situation_id == situation_id)
         result = await self.db.execute(query)
         return list(result.scalars().all())
