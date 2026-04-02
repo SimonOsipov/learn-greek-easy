@@ -51,6 +51,7 @@ class ExerciseSM2Service:
         source_type: ExerciseSourceType | None = None,
         modality: ExerciseModality | None = None,
         audio_level: DeckLevel | None = None,
+        situation_id: UUID | None = None,
         limit: int = 20,
         include_new: bool = True,
         new_limit: int = 10,
@@ -64,6 +65,7 @@ class ExerciseSM2Service:
             source_type=source_type,
             modality=modality,
             audio_level=audio_level,
+            situation_id=situation_id,
             limit=limit,
         )
 
@@ -76,6 +78,7 @@ class ExerciseSM2Service:
                 source_type=source_type,
                 modality=modality,
                 audio_level=audio_level,
+                situation_id=situation_id,
                 limit=remaining,
             )
 
@@ -88,6 +91,7 @@ class ExerciseSM2Service:
                 source_type=source_type,
                 modality=modality,
                 audio_level=audio_level,
+                situation_id=situation_id,
                 limit=remaining,
             )
 

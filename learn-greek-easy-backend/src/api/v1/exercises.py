@@ -1,5 +1,7 @@
 """Exercise API endpoints for SM2-based exercise queue and review."""
 
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,6 +28,7 @@ async def get_exercise_queue(
     ),
     modality: ExerciseModality | None = Query(default=None, description="Filter by modality"),
     audio_level: DeckLevel | None = Query(default=None, description="Filter by audio level"),
+    situation_id: UUID | None = Query(default=None, description="Filter by situation"),
     limit: int = Query(default=20, ge=1, le=100, description="Max exercises to return"),
     include_new: bool = Query(default=True, description="Include new/unstudied exercises"),
     new_limit: int = Query(default=10, ge=0, le=50, description="Max new exercises"),
@@ -48,6 +51,7 @@ async def get_exercise_queue(
         source_type=source_type,
         modality=modality,
         audio_level=audio_level,
+        situation_id=situation_id,
         limit=limit,
         include_new=include_new,
         new_limit=new_limit,
