@@ -209,7 +209,7 @@ export const SituationDetailPage: React.FC = () => {
 
       {/* Source card */}
       {situation.source_url && (
-        <div className="mb-8">
+        <div className="mb-8 lg:w-[calc(50%-0.75rem)]">
           <SourceCard
             sourceUrl={situation.source_url}
             sourceImageUrl={situation.source_image_url}
@@ -220,75 +220,61 @@ export const SituationDetailPage: React.FC = () => {
 
       {/* Descriptions grid */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* B1 Description */}
-        {situation.description && (
-          <section className="mb-8">
-            <div className="mb-3 flex items-center gap-2">
-              <h2 className="text-lg font-semibold">{t('situations.detail.description')}</h2>
-              <Badge variant="outline">B1</Badge>
-            </div>
-            {descB1Enabled ? (
-              <div ref={setDescB1ContainerEl}>
-                <KaraokeText
-                  wordTimestamps={situation.description.word_timestamps ?? []}
-                  currentTimeMs={descB1TimeMs}
-                  fallbackText={situation.description.text_el}
-                  className="mb-4 text-base leading-relaxed"
-                />
-                <WaveformPlayer
-                  audioUrl={situation.description.audio_url!}
-                  variant="culture"
-                  onPlay={handleB1Play}
-                />
-              </div>
-            ) : (
-              <>
-                <p className="mb-4 text-base leading-relaxed">{situation.description.text_el}</p>
-                {situation.description.audio_url && (
-                  <WaveformPlayer
-                    audioUrl={situation.description.audio_url}
-                    variant="culture"
-                    onPlay={handleB1Play}
-                  />
-                )}
-              </>
-            )}
-          </section>
-        )}
-
         {/* A2 Description */}
         {situation.description?.text_el_a2 && (
-          <section className="mb-8">
+          <section ref={setDescA2ContainerEl} className="flex flex-col">
             <div className="mb-3 flex items-center gap-2">
               <h2 className="text-lg font-semibold">{t('situations.detail.description')}</h2>
               <Badge variant="secondary">A2</Badge>
             </div>
             {descA2Enabled ? (
-              <div ref={setDescA2ContainerEl}>
-                <KaraokeText
-                  wordTimestamps={situation.description.word_timestamps_a2 ?? []}
-                  currentTimeMs={descA2TimeMs}
-                  fallbackText={situation.description.text_el_a2}
-                  className="mb-4 text-base leading-relaxed"
-                />
+              <KaraokeText
+                wordTimestamps={situation.description.word_timestamps_a2 ?? []}
+                currentTimeMs={descA2TimeMs}
+                fallbackText={situation.description.text_el_a2}
+                className="mb-4 text-base leading-relaxed"
+              />
+            ) : (
+              <p className="mb-4 text-base leading-relaxed">{situation.description.text_el_a2}</p>
+            )}
+            <div className="mt-auto">
+              {situation.description.audio_a2_url && (
                 <WaveformPlayer
-                  audioUrl={situation.description.audio_a2_url!}
+                  audioUrl={situation.description.audio_a2_url}
                   variant="culture"
                   onPlay={handleA2Play}
                 />
-              </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* B1 Description */}
+        {situation.description && (
+          <section ref={setDescB1ContainerEl} className="flex flex-col">
+            <div className="mb-3 flex items-center gap-2">
+              <h2 className="text-lg font-semibold">{t('situations.detail.description')}</h2>
+              <Badge variant="outline">B1</Badge>
+            </div>
+            {descB1Enabled ? (
+              <KaraokeText
+                wordTimestamps={situation.description.word_timestamps ?? []}
+                currentTimeMs={descB1TimeMs}
+                fallbackText={situation.description.text_el}
+                className="mb-4 text-base leading-relaxed"
+              />
             ) : (
-              <>
-                <p className="mb-4 text-base leading-relaxed">{situation.description.text_el_a2}</p>
-                {situation.description.audio_a2_url && (
-                  <WaveformPlayer
-                    audioUrl={situation.description.audio_a2_url}
-                    variant="culture"
-                    onPlay={handleA2Play}
-                  />
-                )}
-              </>
+              <p className="mb-4 text-base leading-relaxed">{situation.description.text_el}</p>
             )}
+            <div className="mt-auto">
+              {situation.description.audio_url && (
+                <WaveformPlayer
+                  audioUrl={situation.description.audio_url}
+                  variant="culture"
+                  onPlay={handleB1Play}
+                />
+              )}
+            </div>
           </section>
         )}
       </div>

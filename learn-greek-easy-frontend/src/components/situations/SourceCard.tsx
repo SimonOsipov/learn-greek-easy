@@ -31,15 +31,17 @@ export const SourceCard: React.FC<SourceCardProps> = ({
       target="_blank"
       rel="noopener noreferrer"
       className={cn(
-        'flex items-center gap-3 rounded-lg border bg-muted/40 px-4 py-3 text-sm transition-colors hover:bg-muted/70',
+        'block overflow-hidden rounded-lg border bg-muted/40 transition-colors hover:bg-muted/70',
         className
       )}
     >
       {sourceImageUrl && (
-        <img src={sourceImageUrl} alt="" className="h-10 w-10 flex-shrink-0 rounded object-cover" />
+        <img src={sourceImageUrl} alt="" className="aspect-video w-full object-cover" />
       )}
-      <span className="flex-1 font-medium text-foreground">{displayTitle}</span>
-      <ExternalLink className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+      <div className="flex items-center gap-2 px-4 py-3 text-sm">
+        <span className="flex-1 font-medium text-foreground">{displayTitle}</span>
+        <ExternalLink className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+      </div>
     </a>
   );
 };
