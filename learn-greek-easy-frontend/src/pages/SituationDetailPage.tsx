@@ -9,6 +9,8 @@ import { WaveformPlayer } from '@/components/culture/WaveformPlayer';
 import { ExercisePreviewCard } from '@/components/exercises/ExercisePreviewCard';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { KaraokeText } from '@/components/shared/KaraokeText';
+import { ScenePlaceholder } from '@/components/situations/ScenePlaceholder';
+import { SourceCard } from '@/components/situations/SourceCard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -16,6 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAudioTimeMs } from '@/hooks/useAudioTimeMs';
 import { useLanguage } from '@/hooks/useLanguage';
 import { track } from '@/lib/analytics';
+import { cn } from '@/lib/utils';
 import { exerciseAPI } from '@/services/exerciseAPI';
 import type { ExerciseQueue } from '@/services/exerciseAPI';
 import { situationAPI } from '@/services/situationAPI';
@@ -313,6 +316,18 @@ export const SituationDetailPage: React.FC = () => {
 
         {/* About Tab */}
         <TabsContent value="about" className="mt-6 space-y-8">
+          {/* Image row */}
+          <div className={cn('grid grid-cols-1 gap-6', situation.source_url && 'lg:grid-cols-2')}>
+            {situation.source_url && (
+              <SourceCard
+                sourceUrl={situation.source_url}
+                sourceImageUrl={situation.source_image_url}
+                sourceTitle={situation.source_title}
+              />
+            )}
+            <ScenePlaceholder />
+          </div>
+
           {/* Descriptions grid */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             {/* A2 Description */}

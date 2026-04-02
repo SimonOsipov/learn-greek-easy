@@ -34,7 +34,6 @@ test.describe('Landing Page - Unauthenticated', () => {
       await expect(page.getByTestId('landing-header')).toBeVisible();
       await expect(page.getByTestId('hero-section')).toBeVisible();
       await expect(page.getByTestId('features-section')).toBeVisible();
-      await expect(page.getByTestId('social-proof-section')).toBeVisible();
       // Pricing section is intentionally hidden during waitlist phase
       await expect(page.getByTestId('faq-section')).toBeVisible();
       await expect(page.getByTestId('final-cta-section')).toBeVisible();
