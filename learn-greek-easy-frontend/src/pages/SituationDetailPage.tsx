@@ -18,6 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAudioTimeMs } from '@/hooks/useAudioTimeMs';
 import { useLanguage } from '@/hooks/useLanguage';
 import { track } from '@/lib/analytics';
+import { cn } from '@/lib/utils';
 import { exerciseAPI } from '@/services/exerciseAPI';
 import type { ExerciseQueue } from '@/services/exerciseAPI';
 import { situationAPI } from '@/services/situationAPI';
@@ -316,7 +317,7 @@ export const SituationDetailPage: React.FC = () => {
         {/* About Tab */}
         <TabsContent value="about" className="mt-6 space-y-8">
           {/* Image row */}
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <div className={cn('grid grid-cols-1 gap-6', situation.source_url && 'lg:grid-cols-2')}>
             {situation.source_url && (
               <SourceCard
                 sourceUrl={situation.source_url}
