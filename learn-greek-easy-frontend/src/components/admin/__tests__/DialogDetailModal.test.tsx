@@ -198,7 +198,7 @@ describe('DialogDetailModal - Karaoke Word Rendering', () => {
     expect(para.querySelectorAll('span')).toHaveLength(0);
   });
 
-  it('renders plain text when audioCurrentTimeMs is 0 (default, no timeupdate dispatched)', () => {
+  it('renders word spans with muted styling when audioCurrentTimeMs is 0 (default, no timeupdate dispatched)', () => {
     mockStoreState = {
       ...baseStoreState(),
       selectedDialog: mockDialog,
@@ -206,10 +206,13 @@ describe('DialogDetailModal - Karaoke Word Rendering', () => {
 
     renderModal();
 
-    // audioCurrentTimeMs defaults to 0, so the fallback plain <p> renders
-    const para = screen.getByText('Γεια σου κόσμε');
-    expect(para.tagName).toBe('P');
-    expect(para.querySelectorAll('span')).toHaveLength(0);
+    // audioCurrentTimeMs defaults to 0 — KaraokeText renders word spans with text-muted-foreground
+    const spans = screen.getAllByText(/^(Γεια|σου|κόσμε)$/);
+    expect(spans.length).toBeGreaterThan(0);
+    spans.forEach((span) => {
+      expect(span.tagName).toBe('SPAN');
+      expect(span.className).toContain('text-muted-foreground');
+    });
   });
 
   it('applies correct karaoke state classes at mid-playback (750ms)', async () => {
