@@ -292,7 +292,8 @@
       "about": {
         "a2Section": "Уровень A2",
         "b1Section": "Уровень B1",
-        "dialogSection": "Диалог"
+        "dialogSection": "Диалог",
+        "scenePlaceholder": "Иллюстрация сцены скоро появится"
       },
       "exercises": {
         "empty": {
