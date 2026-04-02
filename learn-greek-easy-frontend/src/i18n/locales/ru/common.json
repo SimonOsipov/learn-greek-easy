@@ -261,12 +261,37 @@
     },
     "detail": {
       "back": "К ситуациям",
-      "description": "Описание",
-      "dialog": "Диалог",
-      "exercises": "{{completed}} / {{total}} упражнений выполнено",
-      "practice": "Практиковать упражнения ({{completed}}/{{total}})",
       "notFound": "Ситуация не найдена",
-      "backToList": "К ситуациям"
+      "backToList": "К ситуациям",
+      "tabs": {
+        "about": "О ситуации",
+        "exercises": "Упражнения ({{count}})",
+        "exercisesWithCount": "Упражнения ({{completed}}/{{total}})"
+      },
+      "hero": {
+        "exerciseProgress": "{{completed}}/{{total}} упражнений",
+        "sourceAttribution": "Источник"
+      },
+      "status": {
+        "draft": "Черновик",
+        "partialReady": "Частично",
+        "ready": "Готово"
+      },
+      "about": {
+        "a2Section": "Уровень A2",
+        "b1Section": "Уровень B1",
+        "dialogSection": "Диалог"
+      },
+      "exercises": {
+        "empty": {
+          "title": "Упражнений пока нет",
+          "description": "Упражнения для этой ситуации ещё не созданы."
+        },
+        "error": {
+          "title": "Не удалось загрузить упражнения",
+          "retry": "Попробовать снова"
+        }
+      }
     }
   },
   "notifications": {
