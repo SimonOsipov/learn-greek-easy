@@ -215,8 +215,17 @@ class TestExerciseQueueSituationFilter:
             session=db_session, description_exercise_id=description_exercise.id
         )
 
-        # Exercise from a different situation (should be excluded)
-        await ExerciseFactory.create(session=db_session)
+        # Second situation with its own exercise — must be excluded from first situation's filter
+        situation2 = await SituationFactory.create(session=db_session)
+        description2 = await SituationDescriptionFactory.create(
+            session=db_session, situation_id=situation2.id
+        )
+        description_exercise2 = await DescriptionExerciseFactory.create(
+            session=db_session, description_id=description2.id
+        )
+        exercise_other = await ExerciseFactory.create(
+            session=db_session, description_exercise_id=description_exercise2.id
+        )
 
         await db_session.commit()
 
@@ -229,6 +238,7 @@ class TestExerciseQueueSituationFilter:
         data = response.json()
         exercise_ids = [e["exercise_id"] for e in data["exercises"]]
         assert str(exercise.id) in exercise_ids
+        assert str(exercise_other.id) not in exercise_ids
         assert data["total_in_queue"] >= 1
 
     @pytest.mark.asyncio

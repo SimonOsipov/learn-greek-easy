@@ -17,6 +17,14 @@ interface SelectCorrectAnswerPayload {
   correct_answer_index: number;
 }
 
+function isSelectCorrectAnswerPayload(payload: unknown): payload is SelectCorrectAnswerPayload {
+  if (!payload || typeof payload !== 'object') return false;
+  const value = payload as Partial<SelectCorrectAnswerPayload>;
+  return (
+    !!value.prompt && Array.isArray(value.options) && typeof value.correct_answer_index === 'number'
+  );
+}
+
 function getLocalizedText(field: MultilingualField, lang: string): string {
   if (lang === 'ru') return field.ru;
   return field.en;
@@ -34,12 +42,13 @@ interface ExercisePreviewCardProps {
 }
 
 export function ExercisePreviewCard({ exercise }: ExercisePreviewCardProps) {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const lang = i18n.language === 'ru' ? 'ru' : 'en';
 
+  if (exercise.exercise_type !== 'select_correct_answer') return null;
   const rawPayload = exercise.items[0]?.payload;
-  if (!rawPayload) return null;
-  const payload = rawPayload as unknown as SelectCorrectAnswerPayload;
+  if (!isSelectCorrectAnswerPayload(rawPayload)) return null;
+  const payload = rawPayload;
 
   return (
     <Card data-testid="exercise-preview-card">
@@ -50,11 +59,11 @@ export function ExercisePreviewCard({ exercise }: ExercisePreviewCardProps) {
             className={cn('border-0', STATUS_STYLES[exercise.status])}
             data-testid="exercise-preview-status"
           >
-            {exercise.status}
+            {t(`exercise.status.${exercise.status}`)}
           </Badge>
           {exercise.modality && (
             <Badge variant="outline" data-testid="exercise-preview-modality">
-              {exercise.modality}
+              {t(`exercise.modality.${exercise.modality}`)}
             </Badge>
           )}
         </div>

@@ -62,6 +62,18 @@
       }
     }
   },
+  "exercise": {
+    "status": {
+      "new": "New",
+      "learning": "Learning",
+      "review": "Review",
+      "mastered": "Mastered"
+    },
+    "modality": {
+      "listening": "Listening",
+      "reading": "Reading"
+    }
+  },
   "dashboard": {
     "title": "Dashboard",
     "progress": {

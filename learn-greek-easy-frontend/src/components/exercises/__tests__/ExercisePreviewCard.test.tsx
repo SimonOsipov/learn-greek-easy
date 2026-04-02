@@ -96,16 +96,18 @@ describe('ExercisePreviewCard', () => {
   // ============================================
 
   describe('Status badge', () => {
-    it.each<CardStatus>(['new', 'learning', 'review', 'mastered'])(
-      'renders status badge for %s',
-      (status) => {
-        renderWithProviders(<ExercisePreviewCard exercise={makeExercise({ status })} />);
+    it.each<[CardStatus, string]>([
+      ['new', 'New'],
+      ['learning', 'Learning'],
+      ['review', 'Review'],
+      ['mastered', 'Mastered'],
+    ])('renders status badge for %s', (status, expectedText) => {
+      renderWithProviders(<ExercisePreviewCard exercise={makeExercise({ status })} />);
 
-        const badge = screen.getByTestId('exercise-preview-status');
-        expect(badge).toBeInTheDocument();
-        expect(badge).toHaveTextContent(status);
-      }
-    );
+      const badge = screen.getByTestId('exercise-preview-status');
+      expect(badge).toBeInTheDocument();
+      expect(badge).toHaveTextContent(expectedText);
+    });
 
     it('status badge "new" has blue classes', () => {
       renderWithProviders(<ExercisePreviewCard exercise={makeExercise({ status: 'new' })} />);
@@ -148,7 +150,7 @@ describe('ExercisePreviewCard', () => {
 
       const badge = screen.getByTestId('exercise-preview-modality');
       expect(badge).toBeInTheDocument();
-      expect(badge).toHaveTextContent('listening');
+      expect(badge).toHaveTextContent('Listening');
     });
 
     it('hides modality badge when modality is null', () => {

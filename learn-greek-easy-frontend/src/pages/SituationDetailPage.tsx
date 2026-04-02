@@ -89,10 +89,8 @@ export const SituationDetailPage: React.FC = () => {
     enabled: !!id,
   });
 
-  const exerciseTotal = exercisesData?.total_in_queue ?? 0;
-  const exerciseCompleted =
-    exercisesData?.exercises.filter((e) => e.status === 'mastered' || e.status === 'review')
-      .length ?? 0;
+  const exerciseTotal = situation?.exercise_total ?? 0;
+  const exerciseCompleted = situation?.exercise_completed ?? 0;
 
   // PostHog tracking on mount
   const hasTracked = useRef(false);

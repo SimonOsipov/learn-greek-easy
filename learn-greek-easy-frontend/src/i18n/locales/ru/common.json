@@ -64,6 +64,18 @@
       }
     }
   },
+  "exercise": {
+    "status": {
+      "new": "Новое",
+      "learning": "Изучается",
+      "review": "Повторение",
+      "mastered": "Освоено"
+    },
+    "modality": {
+      "listening": "Аудирование",
+      "reading": "Чтение"
+    }
+  },
   "dashboard": {
     "title": "Панель управления",
     "progress": {
