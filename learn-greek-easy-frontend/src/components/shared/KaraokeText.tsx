@@ -14,8 +14,21 @@ export function KaraokeText({
   fallbackText,
   className,
 }: KaraokeTextProps) {
-  if (!wordTimestamps.length || currentTimeMs <= 0) {
+  if (!wordTimestamps.length) {
     return <p className={cn('text-sm', className)}>{fallbackText}</p>;
+  }
+
+  if (currentTimeMs <= 0) {
+    return (
+      <p className={cn('text-sm', className)}>
+        {wordTimestamps.map((wt, idx) => (
+          <span key={idx} className="text-muted-foreground">
+            {wt.word}
+            {idx < wordTimestamps.length - 1 ? ' ' : ''}
+          </span>
+        ))}
+      </p>
+    );
   }
 
   return (
