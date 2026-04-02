@@ -17,7 +17,7 @@ concurrency:
 
 env:
   # Production environment URL (backend is private, accessed via frontend proxy)
-  PROD_FRONTEND_URL: https://learn-greek-frontend.up.railway.app
+  PROD_FRONTEND_URL: https://greeklish.eu
 
 permissions:
   contents: read
