@@ -1,6 +1,6 @@
 import { Helmet } from '@dr.pogodin/react-helmet';
 
-import { Header, Hero, Features, SocialProof, FAQ, FinalCTA, Footer } from '@/components/landing';
+import { Header, Hero, Features, FAQ, FinalCTA, Footer } from '@/components/landing';
 
 // Site configuration
 const SITE_URL = 'https://learngreekeasy.com';
@@ -117,7 +117,6 @@ export default function LandingPage() {
         <main>
           <Hero />
           <Features />
-          <SocialProof />
           <FAQ />
           <FinalCTA />
         </main>

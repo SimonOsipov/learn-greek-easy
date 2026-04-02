@@ -247,44 +247,6 @@
       }
     }
   },
-  "socialProof": {
-    "goToQuote": "Go to quote {{number}}",
-    "stats": {
-      "activeLearnersValue": "500+",
-      "activeLearnersLabel": "Active Learners",
-      "flashcardsValue": "2,000+",
-      "flashcardsLabel": "Flashcards",
-      "levelCoverageValue": "A1-B2",
-      "levelCoverageLabel": "Level Coverage"
-    },
-    "quotes": {
-      "founder": {
-        "text": "Built by someone actively preparing for the same exam you are taking. I understand the journey because I am on it too.",
-        "author": "Greeklish Founder",
-        "role": "Cypriot Citizenship Applicant"
-      },
-      "mariaK": {
-        "text": "The themed vocabulary cards are exactly what I needed. Real-world topics like banking and medical visits prepared me for actual conversations.",
-        "author": "Maria K.",
-        "role": "Passed B1 Exam"
-      },
-      "dimitrisP": {
-        "text": "Finally, an app that focuses on what matters for the citizenship exam. The history questions are spot-on.",
-        "author": "Dimitris P.",
-        "role": "Citizenship Applicant"
-      },
-      "annaS": {
-        "text": "The audio dialogs with real Greek speakers made such a difference. I can now understand everyday conversations.",
-        "author": "Anna S.",
-        "role": "Learning Greek"
-      },
-      "georgeM": {
-        "text": "Custom decks let me focus on my weak points. I created a deck just for verb conjugations and it helped tremendously.",
-        "author": "George M.",
-        "role": "B2 Student"
-      }
-    }
-  },
   "finalCta": {
     "title": "Your Greek journey starts with the right foundation",
     "subtitle": "Stop wasting time with scattered resources. Get a structured path to Greek fluency.",
