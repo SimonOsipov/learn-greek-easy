@@ -205,17 +205,9 @@
     "title": "Frequently Asked Questions",
     "subtitle": "Everything you need to know about Greeklish and the citizenship exam",
     "items": {
-      "exam": {
-        "question": "What is the Cypriot citizenship language exam?",
-        "answer": "The Cypriot citizenship language exam tests your ability to communicate in Greek at a B1 or B2 level (depending on your application category). It includes reading comprehension, writing, listening, and speaking sections. You will need to demonstrate that you can handle everyday situations, understand main points of clear texts, and express yourself on familiar topics."
-      },
-      "level": {
-        "question": "What level of Greek do I need to pass?",
-        "answer": "Most applicants need to demonstrate B1 level proficiency, which means you can understand the main points of clear standard input on familiar matters. Some categories may require B2 level. Greeklish covers vocabulary and grammar from A1 through B2 to ensure you are fully prepared."
-      },
       "difference": {
         "question": "How is Greeklish different from other language apps?",
-        "answer": "Greeklish is built specifically for the Cypriot citizenship exam. Unlike general language apps, we focus on the vocabulary, grammar, and cultural knowledge you will actually be tested on. Our content includes themed vocabulary for real-life situations (banking, medical visits, bureaucracy), history and culture questions, and authentic audio from Greek media."
+        "answer": "Greeklish is not a replacement for textbooks or teacher-led lessons, and it's not a gamified language app or a half-cooked Telegram bot. It's a learning companion designed to supplement your studies with structured practice. We provide exercises covering every aspect of Greek — vocabulary, grammar, reading, and listening — along with real-world practice using authentic news articles, audio dialogs, and situation-based content from Cyprus and Greece."
       },
       "customCards": {
         "question": "Can I create my own flashcards?",
@@ -227,15 +219,11 @@
       },
       "freePlan": {
         "question": "What is included in the Free plan?",
-        "answer": "The Free plan includes access to basic A1 vocabulary cards, limited daily practice sessions, progress tracking, and community access. It is a great way to get started and see if Greeklish is right for you before upgrading to Premium."
+        "answer": "The Free plan includes access to basic A1 vocabulary cards, limited daily practice sessions, progress tracking, and community access. You also get limited access to premium features so you can try them out before deciding to upgrade."
       },
       "monthlyVsYearly": {
         "question": "What is the difference between the plans?",
-        "answer": "All paid plans include full access to all features: complete vocabulary from A1-B2, unlimited practice, all grammar exercises, real news and audio content, and history/culture questions. The Quarterly plan (€129) saves you 12% compared to paying monthly, while the Semi-Annual plan (€249) offers the best value at 15% savings."
-      },
-      "foundersEdition": {
-        "question": "What is the Semi-Annual plan?",
-        "answer": "The Semi-Annual plan is €249 for 6 months of full access to Greeklish, including all features and priority support. At approximately €41.50 per month, it offers the best value of all our plans. It includes early access to new features and priority support."
+        "answer": "All paid plans include full access to all features: complete vocabulary from A1-B2, unlimited practice, all grammar exercises, real news and audio content, and history/culture questions."
       },
       "refundPolicy": {
         "question": "What is your refund policy?",
@@ -243,7 +231,7 @@
       },
       "offline": {
         "question": "Can I use Greeklish offline?",
-        "answer": "Offline mode is coming soon for Quarterly and Semi-Annual plan members. This will allow you to download vocabulary decks and practice without an internet connection - perfect for studying on your commute or when traveling."
+        "answer": "Greeklish requires an internet connection to work. However, you can download and print your vocabulary decks and flashcards in a printable format designed for offline practice."
       }
     }
   },
