@@ -1,21 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, BookOpen } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 
 import { WaveformPlayer } from '@/components/culture/WaveformPlayer';
 import { KaraokeText } from '@/components/shared/KaraokeText';
-import { SourceCard } from '@/components/situations/SourceCard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAudioTimeMs } from '@/hooks/useAudioTimeMs';
 import { useLanguage } from '@/hooks/useLanguage';
 import { track } from '@/lib/analytics';
 import { situationAPI } from '@/services/situationAPI';
-import type { LearnerSituationDetailResponse } from '@/types/situation';
+import type { LearnerSituationDetailResponse, SituationStatus } from '@/types/situation';
 
 // Speaker bubble color rotation (4-color, same as admin modal)
 const SPEAKER_BUBBLE_STYLES = [
@@ -41,9 +41,22 @@ const SPEAKER_BUBBLE_STYLES = [
   },
 ];
 
+const STATUS_BADGE_VARIANT: Record<SituationStatus, 'default' | 'secondary' | 'outline'> = {
+  ready: 'default',
+  partial_ready: 'secondary',
+  draft: 'outline',
+};
+
+function extractDomain(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
+}
+
 export const SituationDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const { t } = useTranslation('common');
   const { currentLanguage } = useLanguage();
 
@@ -93,6 +106,21 @@ export const SituationDetailPage: React.FC = () => {
   const dialogEnabled = !!situation?.dialog?.audio_url;
   const dialogTimeMs = useAudioTimeMs(dialogContainerEl, dialogEnabled);
 
+  // Tab state
+  const [activeTab, setActiveTab] = useState('about');
+  const handleTabChange = useCallback(
+    (value: string) => {
+      setActiveTab(value);
+      if (situation) {
+        track('situation_tab_switched', {
+          tab: value as 'about' | 'exercises',
+          situation_id: situation.id,
+        });
+      }
+    },
+    [situation]
+  );
+
   // PostHog audio play handlers
   const handleB1Play = useCallback(
     (duration: number) => {
@@ -138,11 +166,15 @@ export const SituationDetailPage: React.FC = () => {
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8" data-testid="situation-detail">
-        <Skeleton className="mb-6 h-8 w-32" />
-        <Skeleton className="mb-2 h-12 w-3/4" />
-        <Skeleton className="mb-8 h-6 w-1/2" />
-        <Skeleton className="mb-4 h-40 w-full" />
-        <Skeleton className="h-40 w-full" />
+        <div className="rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 p-6 pb-12">
+          <Skeleton className="mb-4 h-8 w-32" />
+          <Skeleton className="mb-2 h-12 w-3/4" />
+          <Skeleton className="h-6 w-1/2" />
+        </div>
+        <div className="mt-6">
+          <Skeleton className="mb-4 h-12 w-full" />
+          <Skeleton className="h-40 w-full" />
+        </div>
       </div>
     );
   }
@@ -151,7 +183,9 @@ export const SituationDetailPage: React.FC = () => {
     return (
       <div className="container mx-auto px-4 py-8 text-center" data-testid="situation-detail">
         <p className="mb-4 text-muted-foreground">{t('situations.detail.notFound')}</p>
-        <Button onClick={() => navigate('/situations')}>{t('situations.detail.backToList')}</Button>
+        <Button asChild variant="outline">
+          <Link to="/situations">{t('situations.detail.backToList')}</Link>
+        </Button>
       </div>
     );
   }
@@ -179,165 +213,212 @@ export const SituationDetailPage: React.FC = () => {
         dialogTimeMs < line.end_time_ms
     ) ?? null;
 
+  const completed = situation.exercise_completed;
+  const total = situation.exercise_total;
+
   return (
     <div className="container mx-auto px-4 py-8 pb-20 lg:pb-8" data-testid="situation-detail">
-      {/* Back button */}
-      <Button
-        variant="ghost"
-        size="sm"
-        className="-ml-2 mb-6"
-        onClick={() => navigate('/situations')}
+      {/* Hero Section */}
+      <div
+        className="relative rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 p-6 pb-12"
+        data-testid="situation-detail-hero"
       >
-        <ArrowLeft className="mr-1 h-4 w-4" />
-        {t('situations.detail.back')}
-      </Button>
-
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="mb-1 text-2xl font-bold">{scenarioTitle}</h1>
-        <p className="mb-3 text-muted-foreground">{situation.scenario_el}</p>
-        <div className="flex items-center gap-2">
-          <BookOpen className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm text-muted-foreground">
-            {t('situations.detail.exercises', {
-              completed: situation.exercise_completed,
-              total: situation.exercise_total,
-            })}
-          </span>
-        </div>
-      </div>
-
-      {/* Source card */}
-      {situation.source_url && (
-        <div className="mb-8 lg:w-[calc(50%-0.75rem)]">
-          <SourceCard
-            sourceUrl={situation.source_url}
-            sourceImageUrl={situation.source_image_url}
-            sourceTitle={situation.source_title}
-          />
-        </div>
-      )}
-
-      {/* Descriptions grid */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* A2 Description */}
-        {situation.description?.text_el_a2 && (
-          <section ref={setDescA2ContainerEl} className="flex flex-col">
-            <div className="mb-3 flex items-center gap-2">
-              <h2 className="text-lg font-semibold">{t('situations.detail.description')}</h2>
-              <Badge variant="secondary">A2</Badge>
-            </div>
-            {descA2Enabled ? (
-              <KaraokeText
-                wordTimestamps={situation.description.word_timestamps_a2 ?? []}
-                currentTimeMs={descA2TimeMs}
-                fallbackText={situation.description.text_el_a2}
-                className="mb-4 text-base leading-relaxed"
-              />
-            ) : (
-              <p className="mb-4 text-base leading-relaxed">{situation.description.text_el_a2}</p>
-            )}
-            <div className="mt-auto">
-              {situation.description.audio_a2_url && (
-                <WaveformPlayer
-                  audioUrl={situation.description.audio_a2_url}
-                  variant="culture"
-                  onPlay={handleA2Play}
-                />
-              )}
-            </div>
-          </section>
-        )}
-
-        {/* B1 Description */}
-        {situation.description && (
-          <section ref={setDescB1ContainerEl} className="flex flex-col">
-            <div className="mb-3 flex items-center gap-2">
-              <h2 className="text-lg font-semibold">{t('situations.detail.description')}</h2>
-              <Badge variant="outline">B1</Badge>
-            </div>
-            {descB1Enabled ? (
-              <KaraokeText
-                wordTimestamps={situation.description.word_timestamps ?? []}
-                currentTimeMs={descB1TimeMs}
-                fallbackText={situation.description.text_el}
-                className="mb-4 text-base leading-relaxed"
-              />
-            ) : (
-              <p className="mb-4 text-base leading-relaxed">{situation.description.text_el}</p>
-            )}
-            <div className="mt-auto">
-              {situation.description.audio_url && (
-                <WaveformPlayer
-                  audioUrl={situation.description.audio_url}
-                  variant="culture"
-                  onPlay={handleB1Play}
-                />
-              )}
-            </div>
-          </section>
-        )}
-      </div>
-
-      {/* Dialog */}
-      {situation.dialog && (
-        <section className="mb-8">
-          <h2 className="mb-4 text-lg font-semibold">{t('situations.detail.dialog')}</h2>
-          {situation.dialog.audio_url && (
-            <div ref={setDialogContainerEl} className="mb-4">
-              <WaveformPlayer
-                audioUrl={situation.dialog.audio_url}
-                variant="culture"
-                onPlay={handleDialogPlay}
-              />
-            </div>
-          )}
-          <div className="space-y-3">
-            {situation.dialog.lines.map((line) => {
-              const speaker = situation.dialog!.speakers.find((s) => s.id === line.speaker_id);
-              const speakerIdx = speaker ? speaker.speaker_index : 0;
-              const style = SPEAKER_BUBBLE_STYLES[speakerIdx % SPEAKER_BUBBLE_STYLES.length];
-              const isActive = activeLine?.id === line.id;
-              const isLeft = speakerIdx % 2 === 0;
-
-              return (
-                <div key={line.id} className={`flex ${isLeft ? 'justify-start' : 'justify-end'}`}>
-                  <div
-                    className={`max-w-[80%] rounded-lg border p-3 transition-all ${style.bg} ${style.border} ${
-                      isActive ? 'ring-2 ring-blue-400 ring-offset-1' : ''
-                    }`}
-                  >
-                    {speaker && (
-                      <p className={`mb-1 text-xs font-semibold ${style.name}`}>
-                        {speaker.character_name}
-                      </p>
-                    )}
-                    {line.word_timestamps?.length ? (
-                      <KaraokeText
-                        wordTimestamps={line.word_timestamps}
-                        currentTimeMs={dialogTimeMs}
-                        fallbackText={line.text}
-                      />
-                    ) : (
-                      <p className="text-sm">{line.text}</p>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      {/* Practice CTA */}
-      <section className="mt-8">
-        <Button size="lg" disabled className="w-full" data-testid="practice-cta">
-          {t('situations.detail.practice', {
-            completed: situation.exercise_completed,
-            total: situation.exercise_total,
-          })}
+        {/* Back button */}
+        <Button
+          asChild
+          variant="ghost"
+          size="sm"
+          className="hover:bg-transparent"
+          data-testid="situation-hero-back-btn"
+        >
+          <Link to="/situations">
+            <ChevronLeft className="mr-1 h-4 w-4" />
+            {t('situations.detail.back')}
+          </Link>
         </Button>
-      </section>
+
+        {/* Badges row */}
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <Badge variant={STATUS_BADGE_VARIANT[situation.status]}>
+            {t(
+              `situations.detail.status.${situation.status === 'partial_ready' ? 'partialReady' : situation.status}`
+            )}
+          </Badge>
+          <Badge variant="outline" data-testid="situation-hero-progress">
+            {t('situations.detail.hero.exerciseProgress', { completed, total })}
+          </Badge>
+        </div>
+
+        {/* Title */}
+        <h1 className="mt-4 text-4xl font-bold text-foreground sm:text-5xl">{scenarioTitle}</h1>
+
+        {/* Greek subtitle */}
+        <p className="mt-2 text-lg text-muted-foreground">{situation.scenario_el}</p>
+
+        {/* Source attribution */}
+        {situation.source_url && (
+          <p className="mt-3 text-sm text-muted-foreground">
+            {t('situations.detail.hero.sourceAttribution')}:{' '}
+            <a
+              href={situation.source_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-foreground"
+            >
+              {extractDomain(situation.source_url)}
+            </a>
+          </p>
+        )}
+      </div>
+
+      {/* Tabs */}
+      <Tabs
+        value={activeTab}
+        onValueChange={handleTabChange}
+        data-testid="situation-detail-tabs"
+        className="mt-6"
+      >
+        <TabsList className="w-full">
+          <TabsTrigger value="about" className="flex-1" data-testid="situation-tab-about">
+            {t('situations.detail.tabs.about')}
+          </TabsTrigger>
+          <TabsTrigger value="exercises" className="flex-1" data-testid="situation-tab-exercises">
+            {t('situations.detail.tabs.exercises', { count: situation.exercise_total })}
+          </TabsTrigger>
+        </TabsList>
+
+        {/* About Tab */}
+        <TabsContent value="about" className="mt-6 space-y-8">
+          {/* Descriptions grid */}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {/* A2 Description */}
+            {situation.description?.text_el_a2 && (
+              <section ref={setDescA2ContainerEl} className="flex flex-col">
+                <div className="mb-3 flex items-center gap-2">
+                  <h2 className="text-lg font-semibold">
+                    {t('situations.detail.about.a2Section')}
+                  </h2>
+                  <Badge variant="secondary">A2</Badge>
+                </div>
+                {descA2Enabled ? (
+                  <KaraokeText
+                    wordTimestamps={situation.description.word_timestamps_a2 ?? []}
+                    currentTimeMs={descA2TimeMs}
+                    fallbackText={situation.description.text_el_a2}
+                    className="mb-4 text-base leading-relaxed"
+                  />
+                ) : (
+                  <p className="mb-4 text-base leading-relaxed">
+                    {situation.description.text_el_a2}
+                  </p>
+                )}
+                <div className="mt-auto">
+                  {situation.description.audio_a2_url && (
+                    <WaveformPlayer
+                      audioUrl={situation.description.audio_a2_url}
+                      variant="culture"
+                      onPlay={handleA2Play}
+                    />
+                  )}
+                </div>
+              </section>
+            )}
+
+            {/* B1 Description */}
+            {situation.description && (
+              <section ref={setDescB1ContainerEl} className="flex flex-col">
+                <div className="mb-3 flex items-center gap-2">
+                  <h2 className="text-lg font-semibold">
+                    {t('situations.detail.about.b1Section')}
+                  </h2>
+                  <Badge variant="outline">B1</Badge>
+                </div>
+                {descB1Enabled ? (
+                  <KaraokeText
+                    wordTimestamps={situation.description.word_timestamps ?? []}
+                    currentTimeMs={descB1TimeMs}
+                    fallbackText={situation.description.text_el}
+                    className="mb-4 text-base leading-relaxed"
+                  />
+                ) : (
+                  <p className="mb-4 text-base leading-relaxed">{situation.description.text_el}</p>
+                )}
+                <div className="mt-auto">
+                  {situation.description.audio_url && (
+                    <WaveformPlayer
+                      audioUrl={situation.description.audio_url}
+                      variant="culture"
+                      onPlay={handleB1Play}
+                    />
+                  )}
+                </div>
+              </section>
+            )}
+          </div>
+
+          {/* Dialog */}
+          {situation.dialog && (
+            <section className="mb-8">
+              <h2 className="mb-4 text-lg font-semibold">
+                {t('situations.detail.about.dialogSection')}
+              </h2>
+              {situation.dialog.audio_url && (
+                <div ref={setDialogContainerEl} className="mb-4">
+                  <WaveformPlayer
+                    audioUrl={situation.dialog.audio_url}
+                    variant="culture"
+                    onPlay={handleDialogPlay}
+                  />
+                </div>
+              )}
+              <div className="space-y-3">
+                {situation.dialog.lines.map((line) => {
+                  const speaker = situation.dialog!.speakers.find((s) => s.id === line.speaker_id);
+                  const speakerIdx = speaker ? speaker.speaker_index : 0;
+                  const style = SPEAKER_BUBBLE_STYLES[speakerIdx % SPEAKER_BUBBLE_STYLES.length];
+                  const isActive = activeLine?.id === line.id;
+                  const isLeft = speakerIdx % 2 === 0;
+
+                  return (
+                    <div
+                      key={line.id}
+                      className={`flex ${isLeft ? 'justify-start' : 'justify-end'}`}
+                    >
+                      <div
+                        className={`max-w-[80%] rounded-lg border p-3 transition-all ${style.bg} ${style.border} ${
+                          isActive ? 'ring-2 ring-blue-400 ring-offset-1' : ''
+                        }`}
+                      >
+                        {speaker && (
+                          <p className={`mb-1 text-xs font-semibold ${style.name}`}>
+                            {speaker.character_name}
+                          </p>
+                        )}
+                        {line.word_timestamps?.length ? (
+                          <KaraokeText
+                            wordTimestamps={line.word_timestamps}
+                            currentTimeMs={dialogTimeMs}
+                            fallbackText={line.text}
+                          />
+                        ) : (
+                          <p className="text-sm">{line.text}</p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+        </TabsContent>
+
+        {/* Exercises Tab */}
+        <TabsContent value="exercises" className="mt-6">
+          <div data-testid="exercises-tab-placeholder">
+            <Skeleton className="h-40 w-full" />
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
