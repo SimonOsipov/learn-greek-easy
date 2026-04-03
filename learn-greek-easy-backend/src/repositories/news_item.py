@@ -6,7 +6,14 @@ from sqlalchemy import desc, func, select
 from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import CultureQuestion, NewsCountry, NewsItem, Situation, SituationDescription
+from src.db.models import (
+    CultureQuestion,
+    NewsCountry,
+    NewsItem,
+    Situation,
+    SituationDescription,
+    SituationPicture,
+)
 from src.repositories.base import BaseRepository
 
 
@@ -154,6 +161,13 @@ class NewsItemRepository(BaseRepository[NewsItem]):
         )
         result = await self.db.execute(query)
         return result.first()
+
+    async def get_picture_for_situation(self, situation_id: UUID) -> SituationPicture | None:
+        """Fetch the SituationPicture linked to a given situation."""
+        result = await self.db.execute(
+            select(SituationPicture).where(SituationPicture.situation_id == situation_id)
+        )
+        return result.scalar_one_or_none()
 
 
 # ============================================================================

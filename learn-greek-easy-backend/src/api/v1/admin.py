@@ -1175,15 +1175,12 @@ async def create_news_item(
     """
     service = NewsItemService(db)
     try:
-        result: NewsItemResponse = await service.create_with_question(data)
-    except NotImplementedError as e:
-        raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail=str(e))
+        result: NewsItemResponse = await service.create(data)
     except ValueError as e:
         error_msg = str(e)
         if "already exists" in error_msg:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=error_msg)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error_msg)
-
     return result
 
 
@@ -1225,8 +1222,6 @@ async def update_news_item(
     service = NewsItemService(db)
     try:
         result: NewsItemResponse = await service.update(news_item_id, data)
-    except NotImplementedError as e:
-        raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail=str(e))
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -1259,10 +1254,7 @@ async def delete_news_item(
         404: If news item not found
     """
     service = NewsItemService(db)
-    try:
-        await service.delete(news_item_id)
-    except NotImplementedError as e:
-        raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail=str(e))
+    await service.delete(news_item_id)
 
 
 @router.get(
