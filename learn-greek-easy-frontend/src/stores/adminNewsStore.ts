@@ -13,10 +13,10 @@ import { devtools } from 'zustand/middleware';
 import { adminAPI } from '@/services/adminAPI';
 import type {
   NewsCountry,
+  NewsItemCreate,
   NewsItemResponse,
   NewsItemUpdate,
   NewsItemWithCardResponse,
-  NewsItemWithQuestionCreate,
 } from '@/services/adminAPI';
 
 /**
@@ -48,7 +48,7 @@ interface AdminNewsState {
 
   // Actions
   fetchNewsItems: () => Promise<void>;
-  createNewsItem: (data: NewsItemWithQuestionCreate) => Promise<NewsItemWithCardResponse>;
+  createNewsItem: (data: NewsItemCreate) => Promise<NewsItemWithCardResponse>;
   updateNewsItem: (id: string, data: NewsItemUpdate) => Promise<NewsItemResponse>;
   deleteNewsItem: (id: string) => Promise<void>;
   updateItemAudioFromSSE: (
@@ -118,7 +118,7 @@ export const useAdminNewsStore = create<AdminNewsState>()(
       /**
        * Create a new news item with optional question
        */
-      createNewsItem: async (data: NewsItemWithQuestionCreate) => {
+      createNewsItem: async (data: NewsItemCreate) => {
         set({ isCreating: true, error: null });
 
         try {
