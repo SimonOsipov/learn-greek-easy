@@ -614,8 +614,8 @@ export interface NewsItemUpdate {
   original_article_url?: string;
   source_image_url?: string;
   country?: NewsCountry;
-  scenario_el_a2?: string;
-  text_el_a2?: string;
+  scenario_el_a2?: string | null;
+  text_el_a2?: string | null;
 }
 
 /**
