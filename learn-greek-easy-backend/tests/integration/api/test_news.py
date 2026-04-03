@@ -116,13 +116,14 @@ class TestListNewsEndpoint:
         assert "title_en" in item
         assert "title_ru" in item
         assert "description_el" in item
-        assert "description_en" in item
-        assert "description_ru" in item
         assert "publication_date" in item
         assert "original_article_url" in item
         assert "image_url" in item
         assert "created_at" in item
         assert "updated_at" in item
+        # description_en and description_ru come from old model — now None
+        assert item["description_en"] is None
+        assert item["description_ru"] is None
         # Card info fields (may be null if no associated card)
         assert "card_id" in item
         assert "deck_id" in item
@@ -175,8 +176,6 @@ class TestGetNewsItemEndpoint:
         assert response.status_code == 200
         data = response.json()
         assert data["id"] == str(news_item.id)
-        assert data["title_el"] == news_item.title_el
-        assert data["title_en"] == news_item.title_en
 
     @pytest.mark.asyncio
     async def test_get_news_item_not_found_returns_404(
@@ -223,13 +222,14 @@ class TestGetNewsItemEndpoint:
         assert "title_en" in data
         assert "title_ru" in data
         assert "description_el" in data
-        assert "description_en" in data
-        assert "description_ru" in data
         assert "publication_date" in data
         assert "original_article_url" in data
         assert "image_url" in data
         assert "created_at" in data
         assert "updated_at" in data
+        # description_en and description_ru come from old model — now None
+        assert data["description_en"] is None
+        assert data["description_ru"] is None
         # Audio metadata fields (may be null if no audio generated)
         assert "audio_url" in data
         assert "audio_generated_at" in data
