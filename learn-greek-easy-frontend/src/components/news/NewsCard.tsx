@@ -41,7 +41,7 @@ const heightClasses: Record<NewsCardHeight, string> = {
 
 export const NewsCard: React.FC<NewsCardProps> = ({
   article,
-  newsLang,
+  newsLang: _newsLang,
   height = 'default',
   page,
   level = 'b2',
@@ -122,22 +122,13 @@ export const NewsCard: React.FC<NewsCardProps> = ({
     };
   }, []);
 
-  // Now all 3 languages are supported in backend
   const getLocalizedContent = () => {
-    if (newsLang === 'el') {
-      return {
-        title: useA2 ? (article.title_el_a2 ?? article.title_el) : article.title_el,
-        description: useA2
-          ? (article.description_el_a2 ?? article.description_el)
-          : article.description_el,
-      };
-    }
-    switch (newsLang) {
-      case 'ru':
-        return { title: article.title_ru, description: article.description_ru };
-      default:
-        return { title: article.title_en, description: article.description_en };
-    }
+    return {
+      title: useA2 ? (article.title_el_a2 ?? article.title_el) : article.title_el,
+      description: useA2
+        ? (article.description_el_a2 ?? article.description_el)
+        : article.description_el,
+    };
   };
 
   const { title, description } = getLocalizedContent();
