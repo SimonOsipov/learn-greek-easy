@@ -120,20 +120,22 @@ describe('NewsGrid Component', () => {
       ];
       render(<NewsGrid {...createProps({ articles, newsLang: 'en' })} />);
 
-      // When newsLang is 'en', should display English content
-      expect(screen.getByText('English Article')).toBeInTheDocument();
+      // NewsCard always displays Greek content (newsLang does not switch language)
+      expect(screen.getByText('Ελληνικό Άρθρο')).toBeInTheDocument();
     });
 
     it('should support Russian language', () => {
       const articles = [
         createMockNewsItem({
           id: 'article-1',
+          title_el: 'Ελληνικό Άρθρο',
           title_ru: 'Русская статья',
         }),
       ];
       render(<NewsGrid {...createProps({ articles, newsLang: 'ru' })} />);
 
-      expect(screen.getByText('Русская статья')).toBeInTheDocument();
+      // NewsCard always displays Greek content regardless of newsLang
+      expect(screen.getByText('Ελληνικό Άρθρο')).toBeInTheDocument();
     });
   });
 

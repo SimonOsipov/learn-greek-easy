@@ -51,12 +51,6 @@ interface AdminNewsState {
   createNewsItem: (data: NewsItemCreate) => Promise<NewsItemWithCardResponse>;
   updateNewsItem: (id: string, data: NewsItemUpdate) => Promise<NewsItemResponse>;
   deleteNewsItem: (id: string) => Promise<void>;
-  updateItemAudioFromSSE: (
-    id: string,
-    level: 'b2' | 'a2',
-    audioUrl: string,
-    generatedAt: string | null
-  ) => void;
   setPage: (page: number) => void;
   setSelectedItem: (item: NewsItemResponse | null) => void;
   setCountryFilter: (filter: NewsCountry | 'all') => void;
@@ -182,33 +176,6 @@ export const useAdminNewsStore = create<AdminNewsState>()(
           set({ isDeleting: false, error: message });
           throw error;
         }
-      },
-
-      /**
-       * Update a news item's audio URL from an SSE audio_completed event
-       */
-      updateItemAudioFromSSE: (
-        id: string,
-        level: 'b2' | 'a2',
-        audioUrl: string,
-        generatedAt: string | null
-      ) => {
-        set((state) => {
-          const patch =
-            level === 'b2'
-              ? { audio_url: audioUrl, audio_generated_at: generatedAt }
-              : { audio_a2_url: audioUrl, audio_a2_generated_at: generatedAt };
-
-          return {
-            newsItems: state.newsItems.map((item) =>
-              item.id === id ? { ...item, ...patch } : item
-            ),
-            selectedItem:
-              state.selectedItem?.id === id
-                ? { ...state.selectedItem, ...patch }
-                : state.selectedItem,
-          };
-        });
       },
 
       /**
