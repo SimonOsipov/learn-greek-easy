@@ -68,9 +68,9 @@ function getLocalizedContent(
     case 'el':
       return { title: item.title_el, description: item.description_el };
     case 'ru':
-      return { title: item.title_ru, description: item.description_ru };
+      return { title: item.title_ru, description: '' };
     default: // 'en'
-      return { title: item.title_en, description: item.description_en };
+      return { title: item.title_en, description: '' };
   }
 }
 
@@ -158,8 +158,6 @@ interface NewsItemRowProps {
 const NewsItemRow: React.FC<NewsItemRowProps> = ({ item, onEdit, onDelete, t, lang }) => {
   const { title } = getLocalizedContent(item, lang);
   const isElComplete = !!item.title_el?.trim() && !!item.description_el?.trim();
-  const isEnComplete = !!item.title_en?.trim() && !!item.description_en?.trim();
-  const isRuComplete = !!item.title_ru?.trim() && !!item.description_ru?.trim();
 
   return (
     <div
@@ -203,38 +201,7 @@ const NewsItemRow: React.FC<NewsItemRowProps> = ({ item, onEdit, onDelete, t, la
                 {COUNTRY_SHORT_LABELS[item.country] ?? item.country}
               </Badge>
             )}
-            {item.card_id ? (
-              <Badge
-                variant="outline"
-                className="border-green-500/30 bg-green-500/10 px-1.5 py-0 text-[10px] text-green-700 dark:text-green-400"
-              >
-                Q
-              </Badge>
-            ) : (
-              <Badge variant="secondary" className="px-1.5 py-0 text-[10px] opacity-50">
-                Q
-              </Badge>
-            )}
-            {(['EL', 'EN', 'RU'] as const).map((badgeLang, idx) => {
-              const isComplete = [isElComplete, isEnComplete, isRuComplete][idx];
-              return isComplete ? (
-                <Badge
-                  key={badgeLang}
-                  variant="outline"
-                  className="border-green-500/30 bg-green-500/10 px-1.5 py-0 text-[10px] text-green-700 dark:text-green-400"
-                >
-                  {badgeLang}
-                </Badge>
-              ) : (
-                <Badge
-                  key={badgeLang}
-                  variant="secondary"
-                  className="px-1.5 py-0 text-[10px] opacity-50"
-                >
-                  {badgeLang}
-                </Badge>
-              );
-            })}
+
             {isElComplete ? (
               <Badge
                 variant="outline"
