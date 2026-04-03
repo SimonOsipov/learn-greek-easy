@@ -3,7 +3,6 @@
 This module tests:
 - get_by_id: Get news item with content from JOIN
 - get_list: Paginated news items
-- delete: Raises NotImplementedError (admin writes disabled)
 
 Tests use mocked S3 and real DB session.
 """
@@ -162,27 +161,6 @@ class TestGetList:
         for item in result.items:
             assert item.description_en is None
             assert item.description_ru is None
-
-
-# =============================================================================
-# Test Delete
-# =============================================================================
-
-
-class TestDelete:
-    """Tests for delete method — raises NotImplementedError."""
-
-    @pytest.mark.asyncio
-    async def test_delete_raises_not_implemented(
-        self,
-        db_session: AsyncSession,
-        mock_s3_service: MagicMock,
-    ):
-        """delete() should raise NotImplementedError during thin-news migration."""
-        service = NewsItemService(db_session, s3_service=mock_s3_service)
-
-        with pytest.raises(NotImplementedError):
-            await service.delete(uuid4())
 
 
 # =============================================================================
