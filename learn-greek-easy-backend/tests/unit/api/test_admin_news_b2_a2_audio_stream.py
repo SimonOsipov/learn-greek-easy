@@ -361,12 +361,13 @@ class TestNewsB2AudioSSEPipeline:
 
         news_id = uuid4()
         item = _make_news_row_b2()
+        desc_id = item[1]  # S3 key now uses desc_id, not news_item_id
         mock_factory = _make_session_factory_found(item)
         mock_audio_service = MagicMock()
         mock_audio_service.generate_single = AsyncMock(
             return_value=AudioResult(
                 audio_bytes=b"fake-audio",
-                s3_key=f"news-audio/{news_id}.mp3",
+                s3_key=f"news-audio/{desc_id}.mp3",
                 duration_seconds=1.234,
                 file_size_bytes=9,
             )
@@ -389,7 +390,7 @@ class TestNewsB2AudioSSEPipeline:
 
         upload_events = [e for e in events if e["event"] == "news_audio:upload"]
         assert len(upload_events) == 1
-        assert upload_events[0]["data"]["s3_key"] == f"news-audio/{news_id}.mp3"
+        assert upload_events[0]["data"]["s3_key"] == f"news-audio/{desc_id}.mp3"
 
     @pytest.mark.asyncio
     async def test_tts_failure_yields_error_stage_tts(self) -> None:
@@ -656,12 +657,13 @@ class TestNewsA2AudioSSEPipeline:
 
         news_id = uuid4()
         item = _make_news_row_a2()
+        desc_id = item[1]  # S3 key now uses desc_id, not news_item_id
         mock_factory = _make_session_factory_found(item)
         mock_audio_service = MagicMock()
         mock_audio_service.generate_single = AsyncMock(
             return_value=AudioResult(
                 audio_bytes=b"fake-audio",
-                s3_key=f"news-audio/a2/{news_id}.mp3",
+                s3_key=f"news-audio/a2/{desc_id}.mp3",
                 duration_seconds=1.234,
                 file_size_bytes=9,
             )
@@ -684,7 +686,7 @@ class TestNewsA2AudioSSEPipeline:
 
         upload_events = [e for e in events if e["event"] == "news_audio:upload"]
         assert len(upload_events) == 1
-        assert upload_events[0]["data"]["s3_key"] == f"news-audio/a2/{news_id}.mp3"
+        assert upload_events[0]["data"]["s3_key"] == f"news-audio/a2/{desc_id}.mp3"
 
     @pytest.mark.asyncio
     async def test_tts_failure_yields_error_stage_tts(self) -> None:
