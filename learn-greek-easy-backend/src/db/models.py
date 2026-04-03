@@ -2164,15 +2164,15 @@ class NewsItem(Base, TimestampMixin):
         comment="URL of the original source article",
     )
 
-    # Link to Situation (optional — populated during migration)
-    situation_id: Mapped[UUID | None] = mapped_column(
-        ForeignKey("situations.id", ondelete="SET NULL"),
-        nullable=True,
+    # Link to Situation (required)
+    situation_id: Mapped[UUID] = mapped_column(
+        ForeignKey("situations.id", ondelete="CASCADE"),
+        nullable=False,
         index=True,
     )
 
     # Relationships
-    situation: Mapped["Situation | None"] = relationship(lazy="raise")
+    situation: Mapped["Situation"] = relationship(lazy="raise")
 
     def __repr__(self) -> str:
         return f"<NewsItem(id={self.id}, situation_id={self.situation_id}, publication_date={self.publication_date})>"
