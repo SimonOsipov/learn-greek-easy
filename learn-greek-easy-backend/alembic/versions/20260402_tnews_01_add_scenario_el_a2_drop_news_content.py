@@ -26,6 +26,24 @@ def upgrade() -> None:
         )
     )
 
+    # Preflight: refuse to drop if any news row has no linked Situation or SituationDescription
+    orphan_count = conn.execute(
+        sa.text(
+            """
+            SELECT COUNT(*)
+            FROM news_items ni
+            LEFT JOIN situations s ON s.id = ni.situation_id
+            LEFT JOIN situation_descriptions sd ON sd.situation_id = s.id
+            WHERE ni.situation_id IS NULL OR s.id IS NULL OR sd.id IS NULL
+            """
+        )
+    ).scalar_one()
+    if orphan_count:
+        raise RuntimeError(
+            f"Refusing to drop news_items content columns: {orphan_count} "
+            "rows are not fully migrated to Situation/SituationDescription"
+        )
+
     # Step 3: Drop index and 18 content columns from news_items
     op.drop_index(op.f("ix_news_items_country"), table_name="news_items")
     op.drop_column("news_items", "title_el")

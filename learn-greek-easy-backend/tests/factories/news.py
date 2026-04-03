@@ -65,6 +65,14 @@ class NewsItemFactory(BaseFactory):
                 source_type=DescriptionSourceType.NEWS,
                 source_url=kwargs["original_article_url"],
             )
+        else:
+            # Caller provided a situation_id — ensure a SituationDescription exists for it
+            await SituationDescriptionFactory.create(
+                session=session,
+                situation_id=kwargs["situation_id"],
+                source_type=DescriptionSourceType.NEWS,
+                source_url=kwargs["original_article_url"],
+            )
         return await super().create(session=session, **kwargs)
 
 

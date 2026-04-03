@@ -2444,7 +2444,7 @@ async def _news_b2_audio_sse_pipeline(
     try:
         # Stage 2 — TTS + upload
         audio_service = get_audio_generation_service()
-        s3_key = f"{settings.audio_s3_prefix}/{news_item_id}.mp3"
+        s3_key = f"{settings.audio_s3_prefix}/{desc_id}.mp3"
         yield format_sse_event(
             {"news_item_id": str(news_item_id), "level": "b2"},
             event="news_audio:tts",
@@ -2478,6 +2478,7 @@ async def _news_b2_audio_sse_pipeline(
                 .values(
                     audio_s3_key=s3_key,
                     audio_duration_seconds=audio_result.duration_seconds,
+                    status=DescriptionStatus.AUDIO_READY,
                 )
             )
 
@@ -2551,7 +2552,7 @@ async def _news_a2_audio_sse_pipeline(
     try:
         # Stage 2 — TTS + upload
         audio_service = get_audio_generation_service()
-        s3_key = f"{settings.audio_a2_s3_prefix}/{news_item_id}.mp3"
+        s3_key = f"{settings.audio_a2_s3_prefix}/{desc_id}.mp3"
         yield format_sse_event(
             {"news_item_id": str(news_item_id), "level": "a2"},
             event="news_audio:tts",
@@ -2585,6 +2586,7 @@ async def _news_a2_audio_sse_pipeline(
                 .values(
                     audio_a2_s3_key=s3_key,
                     audio_a2_duration_seconds=audio_result.duration_seconds,
+                    status=DescriptionStatus.AUDIO_READY,
                 )
             )
 
