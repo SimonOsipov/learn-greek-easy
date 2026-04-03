@@ -10,15 +10,7 @@ from datetime import date, datetime
 from typing import Optional, Self
 from uuid import UUID
 
-from pydantic import (
-    BaseModel,
-    ConfigDict,
-    Field,
-    HttpUrl,
-    computed_field,
-    field_validator,
-    model_validator,
-)
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, computed_field, model_validator
 
 from src.db.models import NewsCountry
 
@@ -32,70 +24,53 @@ class CountryCounts(BaseModel):
 
 
 class NewsItemCreate(BaseModel):
-    """Schema for creating a news item.
+    """Schema for creating a news item with Situation-aligned field names.
 
     Admin provides source image URL; backend downloads and uploads to S3.
     """
 
-    title_el: str = Field(..., min_length=1, max_length=500)
-    title_en: str = Field(..., min_length=1, max_length=500)
-    title_ru: str = Field(..., min_length=1, max_length=500)
-    description_el: str = Field(..., min_length=1, max_length=1000)
-    description_en: str = Field(..., min_length=1, max_length=1000)
-    description_ru: str = Field(..., min_length=1, max_length=1000)
+    scenario_el: str = Field(..., min_length=1, max_length=500)
+    scenario_en: str = Field(..., min_length=1, max_length=500)
+    scenario_ru: str = Field(..., min_length=1, max_length=500)
+    scenario_el_a2: Optional[str] = Field(None, max_length=500)
+    text_el: str = Field(..., min_length=1)
+    text_el_a2: Optional[str] = None
+    country: NewsCountry = Field(..., description="Country/region: cyprus, greece, or world")
     publication_date: date
     original_article_url: HttpUrl = Field(..., max_length=500)
     source_image_url: HttpUrl = Field(..., description="URL to download the image from")
-    country: NewsCountry = Field(..., description="Country/region: cyprus, greece, or world")
-    title_el_a2: Optional[str] = Field(None, max_length=500)
-    description_el_a2: Optional[str] = Field(None, max_length=1000)
 
     @model_validator(mode="after")
     def validate_a2_pair(self) -> Self:
         """If one A2 field is set, the other must also be set."""
-        has_title = self.title_el_a2 is not None
-        has_desc = self.description_el_a2 is not None
-        if has_title != has_desc:
-            raise ValueError(
-                "title_el_a2 and description_el_a2 must both be provided or both omitted"
-            )
+        has_scenario = self.scenario_el_a2 is not None
+        has_text = self.text_el_a2 is not None
+        if has_scenario != has_text:
+            raise ValueError("scenario_el_a2 and text_el_a2 must both be provided or both omitted")
         return self
 
 
 class NewsItemUpdate(BaseModel):
     """Schema for updating a news item (all fields optional).
 
-    If source_image_url is provided, backend downloads new image and
-    replaces the existing one in S3.
+    Uses Situation-aligned field names. No A2 pair validation —
+    fields can be updated independently.
     """
 
-    title_el: Optional[str] = Field(None, min_length=1, max_length=500)
-    title_en: Optional[str] = Field(None, min_length=1, max_length=500)
-    title_ru: Optional[str] = Field(None, min_length=1, max_length=500)
-    description_el: Optional[str] = Field(None, min_length=1, max_length=1000)
-    description_en: Optional[str] = Field(None, min_length=1, max_length=1000)
-    description_ru: Optional[str] = Field(None, min_length=1, max_length=1000)
+    scenario_el: Optional[str] = Field(None, min_length=1, max_length=500)
+    scenario_en: Optional[str] = Field(None, min_length=1, max_length=500)
+    scenario_ru: Optional[str] = Field(None, min_length=1, max_length=500)
+    scenario_el_a2: Optional[str] = Field(None, max_length=500)
+    text_el: Optional[str] = Field(None, min_length=1)
+    text_el_a2: Optional[str] = None
+    country: Optional[NewsCountry] = Field(
+        None, description="Country/region: cyprus, greece, or world"
+    )
     publication_date: Optional[date] = None
     original_article_url: Optional[HttpUrl] = Field(None, max_length=500)
     source_image_url: Optional[HttpUrl] = Field(
         None, description="New image URL to download (replaces existing)"
     )
-    country: Optional[NewsCountry] = Field(
-        None, description="Country/region: cyprus, greece, or world"
-    )
-    title_el_a2: Optional[str] = Field(None, max_length=500)
-    description_el_a2: Optional[str] = Field(None, max_length=1000)
-
-    @model_validator(mode="after")
-    def validate_a2_pair(self) -> Self:
-        """If one A2 field is set, the other must also be set."""
-        has_title = self.title_el_a2 is not None
-        has_desc = self.description_el_a2 is not None
-        if has_title != has_desc:
-            raise ValueError(
-                "title_el_a2 and description_el_a2 must both be provided or both omitted"
-            )
-        return self
 
 
 class NewsItemResponse(BaseModel):
@@ -165,67 +140,6 @@ class NewsItemListResponse(BaseModel):
 
 
 # ============================================================================
-# News Item with Question Schemas
-# ============================================================================
-
-
-class QuestionOption(BaseModel):
-    """Single option for a multiple-choice question."""
-
-    text_el: str = Field(..., min_length=1)
-    text_en: str = Field(..., min_length=1)
-    text_ru: str = Field(..., min_length=1)
-
-
-class QuestionCreate(BaseModel):
-    """Question data for creating a culture question from news."""
-
-    deck_id: UUID
-    question_el: str = Field(..., min_length=1)
-    question_en: str = Field(..., min_length=1)
-    question_ru: str = Field(..., min_length=1)
-    options: list[QuestionOption] = Field(..., min_length=4, max_length=4)
-    correct_answer_index: int = Field(..., ge=0, le=3)
-
-    @field_validator("options")
-    @classmethod
-    def validate_unique_options(cls, v: list[QuestionOption]) -> list[QuestionOption]:
-        """Ensure all options are unique within each language."""
-        el_texts = [opt.text_el for opt in v]
-        en_texts = [opt.text_en for opt in v]
-        ru_texts = [opt.text_ru for opt in v]
-        if len(el_texts) != len(set(el_texts)):
-            raise ValueError("All Greek options must be unique")
-        if len(en_texts) != len(set(en_texts)):
-            raise ValueError("All English options must be unique")
-        if len(ru_texts) != len(set(ru_texts)):
-            raise ValueError("All Russian options must be unique")
-        return v
-
-
-class NewsItemWithQuestionCreate(NewsItemCreate):
-    """Extended news item creation with optional question."""
-
-    question: QuestionCreate | None = None
-
-
-class CardBrief(BaseModel):
-    """Brief card info for news creation response."""
-
-    id: UUID
-    deck_id: UUID
-    question_text: dict
-
-
-class NewsItemWithCardResponse(BaseModel):
-    """Response for news creation with optional card."""
-
-    news_item: NewsItemResponse
-    card: CardBrief | None = None
-    message: str
-
-
-# ============================================================================
 # News Card Lookup Schemas
 # ============================================================================
 
@@ -267,11 +181,6 @@ __all__ = [
     "NewsItemUpdate",
     "NewsItemResponse",
     "NewsItemListResponse",
-    "QuestionOption",
-    "QuestionCreate",
-    "NewsItemWithQuestionCreate",
-    "CardBrief",
-    "NewsItemWithCardResponse",
     "NewsCardInfo",
     "NewsItemWithCardInfo",
     "NewsItemListWithCardsResponse",

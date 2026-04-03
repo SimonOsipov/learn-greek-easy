@@ -5,25 +5,35 @@ This service handles:
 - Presigned URL generation for responses
 """
 
-from typing import NoReturn, Optional
-from uuid import UUID
+from typing import Optional
+from uuid import UUID, uuid4
 
+import httpx
 from sqlalchemy import String, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
 from src.core.exceptions import NewsItemNotFoundException, NotFoundException
 from src.core.logging import get_logger
-from src.db.models import CultureQuestion, NewsCountry, NewsItem, Situation, SituationDescription
+from src.db.models import (
+    CultureQuestion,
+    DescriptionSourceType,
+    NewsCountry,
+    NewsItem,
+    PictureStatus,
+    Situation,
+    SituationDescription,
+    SituationPicture,
+)
 from src.repositories.news_item import NewsItemRepository
 from src.schemas.news_item import (
     NewsCardInfo,
+    NewsItemCreate,
     NewsItemListResponse,
     NewsItemListWithCardsResponse,
     NewsItemResponse,
     NewsItemUpdate,
     NewsItemWithCardInfo,
-    NewsItemWithQuestionCreate,
 )
 from src.services.s3_service import S3Service, get_s3_service
 
@@ -57,13 +67,60 @@ class NewsItemService:
     # CRUD Operations
     # =========================================================================
 
-    async def create_with_question(self, data: NewsItemWithQuestionCreate) -> NoReturn:
-        """Create news item with optional linked culture question.
+    async def create(self, data: NewsItemCreate) -> NewsItemResponse:
+        """Create a news item, building the full Situation tree.
+
+        Downloads the image from source_image_url, uploads to S3, then creates:
+        Situation + SituationDescription + SituationPicture + NewsItem.
 
         Raises:
-            NotImplementedError: Admin write operations disabled during thin-news migration
+            ValueError: If original_article_url already exists (duplicate)
+            ValueError: If image download or S3 upload fails
         """
-        raise NotImplementedError("Admin write operations are disabled during thin-news migration")
+        url_str = str(data.original_article_url)
+        if await self.repo.exists_by_url(url_str):
+            raise ValueError(f"News item with URL '{url_str}' already exists")
+
+        image_bytes, content_type = await self._download_image(str(data.source_image_url))
+        s3_key = await self._upload_image_to_s3(image_bytes, content_type)
+
+        situation = Situation(
+            scenario_el=data.scenario_el,
+            scenario_en=data.scenario_en,
+            scenario_ru=data.scenario_ru,
+            scenario_el_a2=data.scenario_el_a2,
+            source_image_s3_key=s3_key,
+        )
+        self.db.add(situation)
+        await self.db.flush()
+
+        description = SituationDescription(
+            situation_id=situation.id,
+            text_el=data.text_el,
+            text_el_a2=data.text_el_a2,
+            country=data.country,
+            source_type=DescriptionSourceType.NEWS,
+            source_url=url_str,
+        )
+        self.db.add(description)
+
+        picture = SituationPicture(
+            situation_id=situation.id,
+            image_s3_key=s3_key,
+            image_prompt=data.scenario_en,
+            status=PictureStatus.GENERATED,
+        )
+        self.db.add(picture)
+
+        news_item = NewsItem(
+            situation_id=situation.id,
+            publication_date=data.publication_date,
+            original_article_url=url_str,
+        )
+        self.db.add(news_item)
+        await self.db.flush()
+
+        return self._to_response(news_item, situation, description)
 
     async def get_by_id(self, news_item_id: UUID) -> NewsItemResponse:
         """Get a news item by ID.
@@ -108,21 +165,89 @@ class NewsItemService:
             country_counts=country_counts,
         )
 
-    async def update(self, news_item_id: UUID, data: NewsItemUpdate) -> NoReturn:
-        """Update a news item.
+    async def update(self, news_item_id: UUID, data: NewsItemUpdate) -> NewsItemResponse:
+        """Update a news item, writing through to the Situation tree.
+
+        All fields are optional — only provided fields are updated.
 
         Raises:
-            NotImplementedError: Admin write operations disabled during thin-news migration
+            NewsItemNotFoundException: If news item not found
+            ValueError: If new image download or S3 upload fails
         """
-        raise NotImplementedError("Admin write operations are disabled during thin-news migration")
+        row = await self.repo.get_by_id_with_joins(news_item_id)
+        if row is None:
+            raise NewsItemNotFoundException(str(news_item_id))
 
-    async def delete(self, news_item_id: UUID) -> NoReturn:
-        """Delete a news item.
+        news_item, situation, description = row
+
+        if data.source_image_url is not None:
+            await self._replace_image(situation, str(data.source_image_url))
+        self._patch_situation(situation, data)
+        self._patch_description(description, data)
+        self._patch_news_item(news_item, description, data)
+
+        await self.db.flush()
+        return self._to_response(news_item, situation, description)
+
+    async def _replace_image(self, situation: Situation, image_url: str) -> None:
+        """Download a new image, upload to S3, and replace the existing one."""
+        old_s3_key = situation.source_image_s3_key
+        image_bytes, content_type = await self._download_image(image_url)
+        new_s3_key = await self._upload_image_to_s3(image_bytes, content_type)
+        situation.source_image_s3_key = new_s3_key
+        picture = await self.repo.get_picture_for_situation(situation.id)
+        if picture is not None:
+            picture.image_s3_key = new_s3_key
+        if old_s3_key:
+            self.s3_service.delete_object(old_s3_key)
+
+    @staticmethod
+    def _patch_situation(situation: Situation, data: NewsItemUpdate) -> None:
+        """Apply scenario field updates to a Situation."""
+        if data.scenario_el is not None:
+            situation.scenario_el = data.scenario_el
+        if data.scenario_en is not None:
+            situation.scenario_en = data.scenario_en
+        if data.scenario_ru is not None:
+            situation.scenario_ru = data.scenario_ru
+        if data.scenario_el_a2 is not None:
+            situation.scenario_el_a2 = data.scenario_el_a2
+
+    @staticmethod
+    def _patch_description(description: SituationDescription, data: NewsItemUpdate) -> None:
+        """Apply text/country field updates to a SituationDescription."""
+        if data.text_el is not None:
+            description.text_el = data.text_el
+        if data.text_el_a2 is not None:
+            description.text_el_a2 = data.text_el_a2
+        if data.country is not None:
+            description.country = data.country
+
+    @staticmethod
+    def _patch_news_item(
+        news_item: NewsItem, description: SituationDescription, data: NewsItemUpdate
+    ) -> None:
+        """Apply URL and date field updates to a NewsItem (and linked description)."""
+        if data.original_article_url is not None:
+            url_str = str(data.original_article_url)
+            description.source_url = url_str
+            news_item.original_article_url = url_str
+        if data.publication_date is not None:
+            news_item.publication_date = data.publication_date
+
+    async def delete(self, news_item_id: UUID) -> None:
+        """Delete a news item by ID.
+
+        Only the NewsItem row is deleted — the Situation tree is preserved.
 
         Raises:
-            NotImplementedError: Admin write operations disabled during thin-news migration
+            NewsItemNotFoundException: If news item not found
         """
-        raise NotImplementedError("Admin write operations are disabled during thin-news migration")
+        news_item = await self.repo.get(news_item_id)
+        if news_item is None:
+            raise NewsItemNotFoundException(str(news_item_id))
+        await self.db.delete(news_item)
+        await self.db.flush()
 
     async def get_card_for_news(self, news_item_id: UUID) -> NewsCardInfo:
         """Get card associated with a news item.
@@ -237,6 +362,36 @@ class NewsItemService:
     # =========================================================================
     # Helper Methods
     # =========================================================================
+
+    async def _download_image(self, url: str) -> tuple[bytes, str]:
+        """Download an image from a URL and return (bytes, content_type).
+
+        Raises:
+            ValueError: If the download fails
+        """
+        try:
+            async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+                response = await client.get(url)
+                response.raise_for_status()
+        except httpx.HTTPError as exc:
+            raise ValueError(f"Failed to download image from {url}: {exc}") from exc
+
+        raw_content_type = response.headers.get("content-type", "image/jpeg")
+        content_type = raw_content_type.split(";")[0].strip()
+        return response.content, content_type
+
+    async def _upload_image_to_s3(self, image_bytes: bytes, content_type: str) -> str:
+        """Upload image bytes to S3 and return the S3 key.
+
+        Raises:
+            ValueError: If the upload fails
+        """
+        ext = S3Service.get_extension_for_content_type(content_type) or "jpg"
+        s3_key = f"situations/images/{uuid4()}.{ext}"
+        success = self.s3_service.upload_object(s3_key, image_bytes, content_type)
+        if not success:
+            raise ValueError("Failed to upload image to S3")
+        return s3_key
 
     def _to_response(
         self, news_item: NewsItem, situation: Situation, description: SituationDescription

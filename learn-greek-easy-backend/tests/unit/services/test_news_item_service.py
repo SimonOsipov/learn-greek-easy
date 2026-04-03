@@ -3,7 +3,6 @@
 This module tests:
 - get_by_id: Get news item with content from JOIN
 - get_list: Paginated news items
-- delete: Raises NotImplementedError (admin writes disabled)
 
 Tests use mocked S3 and real DB session.
 """
@@ -16,7 +15,9 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.exceptions import NewsItemNotFoundException
-from src.schemas.news_item import NewsItemCreate, NewsItemUpdate
+from src.db.models import NewsItem as NewsItemModel
+from src.db.models import Situation as SituationModel
+from src.schemas.news_item import NewsItemCreate
 from src.services.news_item_service import NewsItemService
 from tests.factories.news import NewsItemFactory
 
@@ -165,27 +166,6 @@ class TestGetList:
 
 
 # =============================================================================
-# Test Delete
-# =============================================================================
-
-
-class TestDelete:
-    """Tests for delete method — raises NotImplementedError."""
-
-    @pytest.mark.asyncio
-    async def test_delete_raises_not_implemented(
-        self,
-        db_session: AsyncSession,
-        mock_s3_service: MagicMock,
-    ):
-        """delete() should raise NotImplementedError during thin-news migration."""
-        service = NewsItemService(db_session, s3_service=mock_s3_service)
-
-        with pytest.raises(NotImplementedError):
-            await service.delete(uuid4())
-
-
-# =============================================================================
 # Test A2 Schema Validation (Pydantic-only, no DB)
 # =============================================================================
 
@@ -194,51 +174,199 @@ class TestA2Content:
     """Tests for A2-level content paired validation."""
 
     def test_paired_validation_title_without_description(self):
-        """Should raise ValidationError when title_el_a2 set but description_el_a2 omitted."""
+        """Should raise ValidationError when scenario_el_a2 set but text_el_a2 omitted."""
         from pydantic import ValidationError
 
         with pytest.raises(ValidationError, match="must both be provided or both omitted"):
             NewsItemCreate(
-                title_el="Τίτλος",
-                title_en="Title",
-                title_ru="Title",
-                description_el="Περιγραφή",
-                description_en="Description",
-                description_ru="Description",
+                scenario_el="Τίτλος",
+                scenario_en="Title",
+                scenario_ru="Title",
+                text_el="Περιγραφή",
                 publication_date=date.today(),
                 original_article_url="https://example.com/article",
                 source_image_url="https://example.com/image.jpg",
                 country="cyprus",
-                title_el_a2="Απλός τίτλος",
-                # description_el_a2 omitted
+                scenario_el_a2="Απλός τίτλος",
+                # text_el_a2 omitted
             )
 
     def test_paired_validation_description_without_title(self):
-        """Should raise ValidationError when description_el_a2 set but title_el_a2 omitted."""
+        """Should raise ValidationError when text_el_a2 set but scenario_el_a2 omitted."""
         from pydantic import ValidationError
 
         with pytest.raises(ValidationError, match="must both be provided or both omitted"):
             NewsItemCreate(
-                title_el="Τίτλος",
-                title_en="Title",
-                title_ru="Title",
-                description_el="Περιγραφή",
-                description_en="Description",
-                description_ru="Description",
+                scenario_el="Τίτλος",
+                scenario_en="Title",
+                scenario_ru="Title",
+                text_el="Περιγραφή",
                 publication_date=date.today(),
                 original_article_url="https://example.com/article",
                 source_image_url="https://example.com/image.jpg",
                 country="cyprus",
-                # title_el_a2 omitted
-                description_el_a2="Απλή περιγραφή",
+                # scenario_el_a2 omitted
+                text_el_a2="Απλή περιγραφή",
             )
 
-    def test_paired_validation_on_update_schema(self):
-        """Should raise ValidationError on NewsItemUpdate when A2 pair is incomplete."""
-        from pydantic import ValidationError
 
-        with pytest.raises(ValidationError, match="must both be provided or both omitted"):
-            NewsItemUpdate(
-                title_el_a2="Απλός τίτλος",
-                # description_el_a2 omitted
-            )
+# =============================================================================
+# Test Delete
+# =============================================================================
+
+
+class TestDelete:
+    """Tests for delete() method."""
+
+    @pytest.mark.asyncio
+    async def test_delete_existing_item(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+        sample_news_item,
+    ):
+        """delete() removes the NewsItem row."""
+        news_item_id = sample_news_item.id
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+
+        await service.delete(news_item_id)
+        await db_session.flush()
+
+        result = await db_session.get(NewsItemModel, news_item_id)
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_delete_nonexistent_raises_not_found(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+    ):
+        """delete() raises NewsItemNotFoundException for unknown ID."""
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+
+        with pytest.raises(NewsItemNotFoundException):
+            await service.delete(uuid4())
+
+    @pytest.mark.asyncio
+    async def test_delete_preserves_situation(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+        sample_news_item,
+    ):
+        """delete() preserves the linked Situation row."""
+        situation_id = sample_news_item.situation_id
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+
+        await service.delete(sample_news_item.id)
+        await db_session.flush()
+
+        situation = await db_session.get(SituationModel, situation_id)
+        assert situation is not None
+
+
+# =============================================================================
+# Test Create
+# =============================================================================
+
+
+class TestCreate:
+    """Tests for create() method."""
+
+    def _make_create_data(self, url: str | None = None) -> NewsItemCreate:
+        return NewsItemCreate(
+            scenario_el="Τίτλος ειδήσεων",
+            scenario_en="News Title",
+            scenario_ru="Заголовок новости",
+            text_el="Κείμενο περιγραφής.",
+            country="cyprus",
+            publication_date=date.today(),
+            original_article_url=url or f"https://example.com/article-{uuid4().hex[:8]}",
+            source_image_url="https://example.com/image.jpg",
+        )
+
+    @pytest.mark.asyncio
+    async def test_create_returns_response_with_correct_fields(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+    ):
+        """create() returns NewsItemResponse with correct fields when image download succeeds."""
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        mock_response = MagicMock()
+        mock_response.content = b"fake_image"
+        mock_response.headers = {"content-type": "image/jpeg"}
+        mock_response.raise_for_status = MagicMock()
+
+        mock_client = AsyncMock()
+        mock_client.get.return_value = mock_response
+
+        mock_httpx_cls = MagicMock()
+        mock_httpx_cls.return_value.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_httpx_cls.return_value.__aexit__ = AsyncMock(return_value=False)
+
+        data = self._make_create_data()
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+
+        with patch("src.services.news_item_service.httpx.AsyncClient", mock_httpx_cls):
+            result = await service.create(data)
+
+        assert result.title_el == data.scenario_el
+        assert result.title_en == data.scenario_en
+        assert result.publication_date == data.publication_date
+
+    @pytest.mark.asyncio
+    async def test_create_duplicate_url_raises_value_error(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+        sample_news_item,
+    ):
+        """create() raises ValueError when original_article_url already exists."""
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+        data = self._make_create_data(url=sample_news_item.original_article_url)
+
+        with pytest.raises(ValueError, match="already exists"):
+            await service.create(data)
+
+
+# =============================================================================
+# Test Update
+# =============================================================================
+
+
+class TestUpdate:
+    """Tests for update() method."""
+
+    @pytest.mark.asyncio
+    async def test_update_returns_updated_response(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+        sample_news_item,
+    ):
+        """update() returns updated NewsItemResponse."""
+        from src.schemas.news_item import NewsItemUpdate
+
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+        update_data = NewsItemUpdate(scenario_el="Ενημερωμένος τίτλος")
+
+        result = await service.update(sample_news_item.id, update_data)
+
+        assert result.title_el == "Ενημερωμένος τίτλος"
+
+    @pytest.mark.asyncio
+    async def test_update_nonexistent_raises_not_found(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+    ):
+        """update() raises NewsItemNotFoundException for unknown ID."""
+        from src.schemas.news_item import NewsItemUpdate
+
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+        update_data = NewsItemUpdate(scenario_el="Τίτλος")
+
+        with pytest.raises(NewsItemNotFoundException):
+            await service.update(uuid4(), update_data)

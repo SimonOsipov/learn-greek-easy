@@ -61,12 +61,10 @@ class TestSchemaValidation:
     def test_create_accepts_cyprus(self):
         """NewsItemCreate should accept 'cyprus' as country."""
         data = NewsItemCreate(
-            title_el="Τίτλος",
-            title_en="Title",
-            title_ru="Заголовок",
-            description_el="Περιγραφή",
-            description_en="Description",
-            description_ru="Описание",
+            scenario_el="Τίτλος",
+            scenario_en="Title",
+            scenario_ru="Заголовок",
+            text_el="Περιγραφή",
             publication_date=date.today(),
             original_article_url="https://example.com/article",
             source_image_url="https://example.com/image.jpg",
@@ -77,12 +75,10 @@ class TestSchemaValidation:
     def test_create_accepts_greece(self):
         """NewsItemCreate should accept 'greece' as country."""
         data = NewsItemCreate(
-            title_el="Τίτλος",
-            title_en="Title",
-            title_ru="Заголовок",
-            description_el="Περιγραφή",
-            description_en="Description",
-            description_ru="Описание",
+            scenario_el="Τίτλος",
+            scenario_en="Title",
+            scenario_ru="Заголовок",
+            text_el="Περιγραφή",
             publication_date=date.today(),
             original_article_url="https://example.com/article2",
             source_image_url="https://example.com/image.jpg",
@@ -93,12 +89,10 @@ class TestSchemaValidation:
     def test_create_accepts_world(self):
         """NewsItemCreate should accept 'world' as country."""
         data = NewsItemCreate(
-            title_el="Τίτλος",
-            title_en="Title",
-            title_ru="Заголовок",
-            description_el="Περιγραφή",
-            description_en="Description",
-            description_ru="Описание",
+            scenario_el="Τίτλος",
+            scenario_en="Title",
+            scenario_ru="Заголовок",
+            text_el="Περιγραφή",
             publication_date=date.today(),
             original_article_url="https://example.com/article3",
             source_image_url="https://example.com/image.jpg",
@@ -110,12 +104,10 @@ class TestSchemaValidation:
         """NewsItemCreate should reject invalid country values."""
         with pytest.raises(ValidationError):
             NewsItemCreate(
-                title_el="Τίτλος",
-                title_en="Title",
-                title_ru="Заголовок",
-                description_el="Περιγραφή",
-                description_en="Description",
-                description_ru="Описание",
+                scenario_el="Τίτλος",
+                scenario_en="Title",
+                scenario_ru="Заголовок",
+                text_el="Περιγραφή",
                 publication_date=date.today(),
                 original_article_url="https://example.com/article4",
                 source_image_url="https://example.com/image.jpg",
