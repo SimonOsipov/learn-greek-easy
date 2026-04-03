@@ -2544,25 +2544,12 @@ class SeedService:
         """
         self._check_can_seed()
 
-        # Collect situation_ids of existing E2E test news items before deleting them
-        existing_result = await self.db.execute(
-            select(NewsItem.situation_id).where(
-                NewsItem.original_article_url.like("https://example.com/e2e-test-article-%"),
-                NewsItem.situation_id.isnot(None),
-            )
-        )
-        old_situation_ids = [row[0] for row in existing_result.all()]
-
         # Delete existing E2E test news items (idempotent)
         await self.db.execute(
             delete(NewsItem).where(
                 NewsItem.original_article_url.like("https://example.com/e2e-test-article-%")
             )
         )
-
-        # Delete orphaned Situations from previous seed runs
-        if old_situation_ids:
-            await self.db.execute(delete(Situation).where(Situation.id.in_(old_situation_ids)))
 
         created_items = []
         today = date.today()
@@ -2571,12 +2558,12 @@ class SeedService:
             publication_date = today - timedelta(days=item_data["days_ago"])
             article_url = f"https://example.com/e2e-test-article-{i}"
 
-            # Create situation for this news item
+            # Create situation for this news item (PARTIAL so it doesn't appear in situations browsing)
             situation = Situation(
                 scenario_el=item_data["title_el"],
                 scenario_en=item_data["title_en"],
                 scenario_ru=item_data["title_ru"],
-                status=SituationStatus.READY,
+                status=SituationStatus.DRAFT,
             )
             self.db.add(situation)
             await self.db.flush()
@@ -2743,22 +2730,11 @@ class SeedService:
                 CultureQuestion.original_article_url.like("https://example.com/e2e-news-question-%")
             )
         )
-        # Collect situation_ids before deleting news items
-        existing_result = await self.db.execute(
-            select(NewsItem.situation_id).where(
-                NewsItem.original_article_url.like("https://example.com/e2e-news-question-%"),
-                NewsItem.situation_id.isnot(None),
-            )
-        )
-        old_situation_ids = [row[0] for row in existing_result.all()]
         await self.db.execute(
             delete(NewsItem).where(
                 NewsItem.original_article_url.like("https://example.com/e2e-news-question-%")
             )
         )
-        # Delete orphaned Situations from previous seed runs
-        if old_situation_ids:
-            await self.db.execute(delete(Situation).where(Situation.id.in_(old_situation_ids)))
 
         # Find or create E2E culture deck
         result = await self.db.execute(
@@ -2784,12 +2760,12 @@ class SeedService:
         news_items_data = []
         questions_data = []
 
-        # News item 1 - WITH question
+        # News item 1 - WITH question (PARTIAL so it doesn't appear in situations browsing)
         situation_1 = Situation(
             scenario_el="Κυπριακή παράδοση E2E 1",
             scenario_en="Cypriot Tradition E2E 1",
             scenario_ru="Кипрская традиция E2E 1",
-            status=SituationStatus.READY,
+            status=SituationStatus.DRAFT,
         )
         self.db.add(situation_1)
         await self.db.flush()
@@ -2825,12 +2801,12 @@ class SeedService:
         )
         self.db.add(question_1)
 
-        # News item 2 - WITH question
+        # News item 2 - WITH question (PARTIAL so it doesn't appear in situations browsing)
         situation_2 = Situation(
             scenario_el="Κυπριακή ιστορία E2E 2",
             scenario_en="Cypriot History E2E 2",
             scenario_ru="История Кипра E2E 2",
-            status=SituationStatus.READY,
+            status=SituationStatus.DRAFT,
         )
         self.db.add(situation_2)
         await self.db.flush()
@@ -2866,12 +2842,12 @@ class SeedService:
         )
         self.db.add(question_2)
 
-        # News item 3 - WITHOUT question
+        # News item 3 - WITHOUT question (PARTIAL so it doesn't appear in situations browsing)
         situation_3 = Situation(
             scenario_el="Κυπριακές ειδήσεις E2E 3",
             scenario_en="Cypriot News E2E 3",
             scenario_ru="Новости Кипра E2E 3",
-            status=SituationStatus.READY,
+            status=SituationStatus.DRAFT,
         )
         self.db.add(situation_3)
         await self.db.flush()
@@ -2951,22 +2927,11 @@ class SeedService:
                 )
             )
         )
-        # Collect situation_ids before deleting news items
-        existing_result = await self.db.execute(
-            select(NewsItem.situation_id).where(
-                NewsItem.original_article_url.like("https://example.com/e2e-news-feed-page-%"),
-                NewsItem.situation_id.isnot(None),
-            )
-        )
-        old_situation_ids = [row[0] for row in existing_result.all()]
         await self.db.execute(
             delete(NewsItem).where(
                 NewsItem.original_article_url.like("https://example.com/e2e-news-feed-page-%")
             )
         )
-        # Delete orphaned Situations from previous seed runs
-        if old_situation_ids:
-            await self.db.execute(delete(Situation).where(Situation.id.in_(old_situation_ids)))
 
         # Find or create E2E culture deck for news page questions
         result = await self.db.execute(
@@ -3296,12 +3261,12 @@ class SeedService:
             countries = [NewsCountry.CYPRUS, NewsCountry.GREECE, NewsCountry.WORLD]
             item_country = countries[i % len(countries)]
 
-            # Create situation for this news item
+            # Create situation for this news item (PARTIAL so it doesn't appear in situations browsing)
             feed_situation = Situation(
                 scenario_el=title_el,
                 scenario_en=title_en,
                 scenario_ru=title_ru,
-                status=SituationStatus.READY,
+                status=SituationStatus.DRAFT,
             )
             self.db.add(feed_situation)
             await self.db.flush()
