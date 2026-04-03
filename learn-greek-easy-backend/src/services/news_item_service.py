@@ -1,68 +1,41 @@
 """News Item Service for news feed management.
 
 This service handles:
-- CRUD operations for news items
-- S3 image lifecycle (download from URL, upload to S3, delete on cleanup)
+- Read operations for news items via JOIN-based queries
 - Presigned URL generation for responses
-
-Example Usage:
-    async with get_db_session() as db:
-        service = NewsItemService(db)
-        news_item = await service.create_with_question(create_data)
-        print(f"Created news item: {news_item.news_item.id}")
 """
 
-from typing import Any, Optional
-from uuid import UUID, uuid4
+from typing import NoReturn, Optional
+from uuid import UUID
 
-import httpx
 from sqlalchemy import String, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
 from src.core.exceptions import NewsItemNotFoundException, NotFoundException
 from src.core.logging import get_logger
-from src.db.models import CultureDeck, CultureQuestion, NewsCountry, NewsItem
+from src.db.models import CultureQuestion, NewsCountry, NewsItem, Situation, SituationDescription
 from src.repositories.news_item import NewsItemRepository
 from src.schemas.news_item import (
-    CardBrief,
     NewsCardInfo,
     NewsItemListResponse,
     NewsItemListWithCardsResponse,
     NewsItemResponse,
     NewsItemUpdate,
     NewsItemWithCardInfo,
-    NewsItemWithCardResponse,
     NewsItemWithQuestionCreate,
 )
 from src.services.s3_service import S3Service, get_s3_service
 
 logger = get_logger(__name__)
 
-# Image download constraints
-ALLOWED_IMAGE_CONTENT_TYPES = frozenset(["image/jpeg", "image/png", "image/webp"])
-MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024  # 5MB
-IMAGE_DOWNLOAD_TIMEOUT_SECONDS = 30
-
-# Content type to extension mapping
-CONTENT_TYPE_TO_EXT = {
-    "image/jpeg": "jpg",
-    "image/png": "png",
-    "image/webp": "webp",
-}
-
-# S3 key prefix for news images
-NEWS_IMAGES_PREFIX = "news-images"
-
 
 class NewsItemService:
-    """Service for news item operations with S3 image handling.
+    """Service for news item read operations using JOIN-based queries.
 
     This service orchestrates:
-    1. CRUD operations via repository
-    2. Image download from external URLs
-    3. S3 upload/delete for images
-    4. Presigned URL generation for responses
+    1. Read operations via repository (JOIN-based)
+    2. Presigned URL generation for responses
     """
 
     def __init__(
@@ -84,160 +57,13 @@ class NewsItemService:
     # CRUD Operations
     # =========================================================================
 
-    async def create_with_question(
-        self, data: NewsItemWithQuestionCreate
-    ) -> NewsItemWithCardResponse:
+    async def create_with_question(self, data: NewsItemWithQuestionCreate) -> NoReturn:
         """Create news item with optional linked culture question.
 
-        If question data is provided:
-        - Validates deck_id exists and is active
-        - Creates CultureQuestion in same transaction
-        - Returns both in response
-
-        If deck_id is invalid, creates NewsItem only with warning message.
-
-        Args:
-            data: News item creation data with optional question
-
-        Returns:
-            NewsItemWithCardResponse with news item, optional card, and message
-
         Raises:
-            ValueError: If image download fails, content-type invalid, or size exceeds limit
+            NotImplementedError: Admin write operations disabled during thin-news migration
         """
-        logger.info(
-            "Creating news item with optional question",
-            extra={
-                "has_question": data.question is not None,
-                "original_article_url": str(data.original_article_url),
-            },
-        )
-
-        card = None
-        message = "News item created successfully"
-
-        # Check for duplicate article URL
-        if await self.repo.exists_by_url(str(data.original_article_url)):
-            raise ValueError(f"News item with URL '{data.original_article_url}' already exists")
-
-        # Download and validate image
-        image_data, content_type = await self._download_image(str(data.source_image_url))
-        ext = CONTENT_TYPE_TO_EXT.get(content_type, "jpg")
-        s3_key = f"{NEWS_IMAGES_PREFIX}/{uuid4()}.{ext}"
-
-        # Upload to S3
-        upload_success = self.s3_service.upload_object(s3_key, image_data, content_type)
-        if not upload_success:
-            raise ValueError("Failed to upload image to S3")
-
-        # Create news item
-        news_item_dict = {
-            "title_el": data.title_el,
-            "title_en": data.title_en,
-            "title_ru": data.title_ru,
-            "description_el": data.description_el,
-            "description_en": data.description_en,
-            "description_ru": data.description_ru,
-            "publication_date": data.publication_date,
-            "original_article_url": str(data.original_article_url),
-            "image_s3_key": s3_key,
-            "country": data.country.value,
-            "title_el_a2": data.title_el_a2,
-            "description_el_a2": data.description_el_a2,
-        }
-
-        news_item = await self.repo.create(news_item_dict)
-
-        # Handle question creation if provided
-        # Silent skip: questions only supported for Cyprus news
-        if data.country != NewsCountry.CYPRUS and data.question is not None:
-            logger.info(
-                "Skipping question creation for non-Cyprus news",
-                extra={"country": data.country.value},
-            )
-            data = data.model_copy(update={"question": None})
-            message = (
-                "News item created successfully. Question skipped (only supported for Cyprus news)."
-            )
-        if data.question:
-            deck_result = await self.db.execute(
-                select(CultureDeck).where(
-                    CultureDeck.id == data.question.deck_id,
-                    CultureDeck.is_active.is_(True),
-                )
-            )
-            deck = deck_result.scalar_one_or_none()
-
-            if deck:
-                culture_question = CultureQuestion(
-                    deck_id=deck.id,
-                    question_text={
-                        "el": data.question.question_el,
-                        "en": data.question.question_en,
-                        "ru": data.question.question_ru,
-                    },
-                    option_a={
-                        "el": data.question.options[0].text_el,
-                        "en": data.question.options[0].text_en,
-                        "ru": data.question.options[0].text_ru,
-                    },
-                    option_b={
-                        "el": data.question.options[1].text_el,
-                        "en": data.question.options[1].text_en,
-                        "ru": data.question.options[1].text_ru,
-                    },
-                    option_c={
-                        "el": data.question.options[2].text_el,
-                        "en": data.question.options[2].text_en,
-                        "ru": data.question.options[2].text_ru,
-                    },
-                    option_d={
-                        "el": data.question.options[3].text_el,
-                        "en": data.question.options[3].text_en,
-                        "ru": data.question.options[3].text_ru,
-                    },
-                    correct_option=data.question.correct_answer_index + 1,  # 0-indexed to 1-indexed
-                    original_article_url=str(data.original_article_url),
-                    is_pending_review=False,  # Admin-created = auto-approved
-                    image_key=s3_key,
-                    audio_s3_key=news_item.audio_s3_key,
-                    audio_a2_s3_key=news_item.audio_a2_s3_key,
-                )
-                self.db.add(culture_question)
-                await self.db.flush()
-
-                card = CardBrief(
-                    id=culture_question.id,
-                    deck_id=culture_question.deck_id,
-                    question_text=culture_question.question_text,
-                )
-                message = "News item and question created successfully"
-                logger.info(
-                    "Created linked culture question",
-                    extra={"question_id": str(culture_question.id)},
-                )
-            else:
-                raise ValueError(
-                    f"Cannot create question: Culture deck '{data.question.deck_id}' not found or is inactive. "
-                    f"Please select an active deck or create the news item without a question."
-                )
-
-        await self.db.commit()
-        await self.db.refresh(news_item)
-
-        logger.info(
-            "News item with question created successfully",
-            extra={
-                "news_item_id": str(news_item.id),
-                "has_card": card is not None,
-            },
-        )
-
-        return NewsItemWithCardResponse(
-            news_item=self._to_response(news_item),
-            card=card,
-            message=message,
-        )
+        raise NotImplementedError("Admin write operations are disabled during thin-news migration")
 
     async def get_by_id(self, news_item_id: UUID) -> NewsItemResponse:
         """Get a news item by ID.
@@ -251,11 +77,10 @@ class NewsItemService:
         Raises:
             NewsItemNotFoundException: If news item doesn't exist
         """
-        news_item = await self.repo.get(news_item_id)
-        if news_item is None:
+        row = await self.repo.get_by_id_with_joins(news_item_id)
+        if row is None:
             raise NewsItemNotFoundException(news_item_id=str(news_item_id))
-
-        return self._to_response(news_item)
+        return self._to_response(row[0], row[1], row[2])
 
     async def get_list(
         self, *, page: int = 1, page_size: int = 20, country: NewsCountry | None = None
@@ -271,7 +96,7 @@ class NewsItemService:
             NewsItemListResponse with paginated news items and country counts
         """
         skip = (page - 1) * page_size
-        news_items = await self.repo.get_list(skip=skip, limit=page_size, country=country)
+        rows = await self.repo.get_list(skip=skip, limit=page_size, country=country)
         total = await self.repo.count_all(country=country)
         country_counts = await self.repo.count_by_country()
 
@@ -279,123 +104,25 @@ class NewsItemService:
             total=total,
             page=page,
             page_size=page_size,
-            items=[self._to_response(item) for item in news_items],
+            items=[self._to_response(row[0], row[1], row[2]) for row in rows],
             country_counts=country_counts,
         )
 
-    async def get_recent(self, limit: int = 3) -> list[NewsItemResponse]:
-        """Get most recent news items for homepage widget.
-
-        Args:
-            limit: Maximum number of news items to return
-
-        Returns:
-            List of most recent news items with presigned image URLs
-        """
-        news_items = await self.repo.get_recent(limit=limit)
-        return [self._to_response(item) for item in news_items]
-
-    async def update(self, news_item_id: UUID, data: NewsItemUpdate) -> NewsItemResponse:
-        """Update a news item, optionally replacing the image.
-
-        Args:
-            news_item_id: UUID of the news item to update
-            data: Fields to update (all optional)
-
-        Returns:
-            Updated NewsItemResponse
+    async def update(self, news_item_id: UUID, data: NewsItemUpdate) -> NoReturn:
+        """Update a news item.
 
         Raises:
-            NewsItemNotFoundException: If news item doesn't exist
-            ValueError: If new image download fails
+            NotImplementedError: Admin write operations disabled during thin-news migration
         """
-        news_item = await self.repo.get(news_item_id)
-        if news_item is None:
-            raise NewsItemNotFoundException(news_item_id=str(news_item_id))
+        raise NotImplementedError("Admin write operations are disabled during thin-news migration")
 
-        logger.debug(
-            "Updating news item",
-            extra={"news_item_id": str(news_item_id)},
-        )
-
-        # Build update dict from data fields
-        update_dict = self._build_update_dict(data)
-
-        # Handle image replacement if source_image_url provided
-        old_s3_key = await self._handle_image_update(data, news_item, update_dict)
-
-        # Capture old A2 audio key if this update clears A2 content
-        old_audio_a2_s3_key: str | None = None
-        if data.description_el_a2 is not None and not data.description_el_a2.strip():
-            old_audio_a2_s3_key = news_item.audio_a2_s3_key
-
-        # Update database record
-        updated_news_item = await self.repo.update(news_item, update_dict)
-        await self.db.commit()
-        await self.db.refresh(updated_news_item)
-
-        # Delete old image after successful commit
-        if old_s3_key:
-            self.s3_service.delete_object(old_s3_key)
-            logger.info(
-                "Deleted old news item image from S3",
-                extra={"old_s3_key": old_s3_key},
-            )
-
-        if old_audio_a2_s3_key:
-            self.s3_service.delete_object(old_audio_a2_s3_key)
-            logger.info(
-                "Deleted old A2 audio from S3",
-                extra={"old_audio_a2_s3_key": old_audio_a2_s3_key},
-            )
-
-        logger.info(
-            "News item updated successfully",
-            extra={
-                "news_item_id": str(news_item_id),
-                "updated_fields": list(update_dict.keys()),
-            },
-        )
-
-        return self._to_response(updated_news_item)
-
-    async def delete(self, news_item_id: UUID) -> None:
-        """Delete a news item and its S3 image.
-
-        Args:
-            news_item_id: UUID of the news item to delete
+    async def delete(self, news_item_id: UUID) -> NoReturn:
+        """Delete a news item.
 
         Raises:
-            NewsItemNotFoundException: If news item doesn't exist
+            NotImplementedError: Admin write operations disabled during thin-news migration
         """
-        news_item = await self.repo.get(news_item_id)
-        if news_item is None:
-            raise NewsItemNotFoundException(news_item_id=str(news_item_id))
-
-        logger.debug(
-            "Deleting news item",
-            extra={"news_item_id": str(news_item_id)},
-        )
-
-        # Store S3 key for cleanup
-        s3_key = news_item.image_s3_key
-
-        # Delete from database
-        await self.repo.delete(news_item)
-        await self.db.commit()
-
-        # Delete S3 image
-        if s3_key:
-            self.s3_service.delete_object(s3_key)
-            logger.info(
-                "Deleted news item image from S3",
-                extra={"s3_key": s3_key},
-            )
-
-        logger.info(
-            "News item deleted successfully",
-            extra={"news_item_id": str(news_item_id)},
-        )
+        raise NotImplementedError("Admin write operations are disabled during thin-news migration")
 
     async def get_card_for_news(self, news_item_id: UUID) -> NewsCardInfo:
         """Get card associated with a news item.
@@ -410,9 +137,10 @@ class NewsItemService:
             NewsItemNotFoundException: If news item doesn't exist
             NotFoundException: If no associated card
         """
-        news_item = await self.repo.get(news_item_id)
-        if news_item is None:
+        row = await self.repo.get_by_id_with_joins(news_item_id)
+        if row is None:
             raise NewsItemNotFoundException(news_item_id=str(news_item_id))
+        news_item = row[0]
 
         card_info = await self.repo.get_card_for_news_item(news_item.original_article_url)
         if card_info is None:
@@ -426,45 +154,32 @@ class NewsItemService:
     async def get_list_with_cards(
         self, *, page: int = 1, page_size: int = 20, country: NewsCountry | None = None
     ) -> NewsItemListWithCardsResponse:
-        """Get paginated list of news items with card associations.
-
-        Uses a subquery to efficiently fetch the first matching card info
-        per news item, preventing duplicate rows from the JOIN.
-
-        Args:
-            page: Page number (1-indexed)
-            page_size: Number of items per page
-            country: Optional country filter
-
-        Returns:
-            NewsItemListWithCardsResponse with paginated news items and card info
-        """
+        """Get paginated list of news items with card associations."""
         skip = (page - 1) * page_size
 
         # Subquery: Get the first (MIN id) CultureQuestion per original_article_url
-        # This ensures each NewsItem maps to at most one question row
-        # Note: We cast UUID to text for MIN aggregation, then cast back when joining
         first_question_subq = (
             select(
                 CultureQuestion.original_article_url,
                 func.min(CultureQuestion.id.cast(String)).label("first_question_id"),
             )
-            .where(CultureQuestion.original_article_url.isnot(None))  # CRITICAL: filter nulls
+            .where(CultureQuestion.original_article_url.isnot(None))
             .group_by(CultureQuestion.original_article_url)
             .subquery()
         )
 
-        # Alias for the CultureQuestion we'll join to get card details
         QuestionAlias = aliased(CultureQuestion)
 
-        # Main query: NewsItem LEFT JOIN subquery LEFT JOIN CultureQuestion
-        # Cast subquery's text ID back to UUID for proper comparison
         query = (
             select(
                 NewsItem,
+                Situation,
+                SituationDescription,
                 QuestionAlias.id.label("card_id"),
                 QuestionAlias.deck_id.label("deck_id"),
             )
+            .join(Situation, Situation.id == NewsItem.situation_id)
+            .join(SituationDescription, SituationDescription.situation_id == Situation.id)
             .outerjoin(
                 first_question_subq,
                 first_question_subq.c.original_article_url == NewsItem.original_article_url,
@@ -475,7 +190,7 @@ class NewsItemService:
             )
         )
         if country is not None:
-            query = query.where(NewsItem.country == country)
+            query = query.where(SituationDescription.country == country)
         query = (
             query.order_by(
                 NewsItem.publication_date.desc(),
@@ -489,18 +204,19 @@ class NewsItemService:
         result = await self.db.execute(query)
         rows = result.all()
 
-        # Total count - counts unique NewsItems (filtered by country if provided)
         total = await self.repo.count_all(country=country)
         audio_count = await self.repo.count_with_audio(country=country)
         country_counts = await self.repo.count_by_country()
 
         items = []
         for row in rows:
-            news_item = row[0]  # NewsItem object
-            card_id = row[1]  # UUID or None
-            deck_id = row[2]  # UUID or None
+            news_item = row[0]
+            situation = row[1]
+            description = row[2]
+            card_id = row[3]
+            deck_id = row[4]
 
-            response = self._to_response(news_item)
+            response = self._to_response(news_item, situation, description)
             items.append(
                 NewsItemWithCardInfo(
                     **response.model_dump(),
@@ -522,178 +238,36 @@ class NewsItemService:
     # Helper Methods
     # =========================================================================
 
-    def _build_update_dict(self, data: NewsItemUpdate) -> dict[str, Any]:  # noqa: C901
-        """Build update dictionary from NewsItemUpdate data.
-
-        Args:
-            data: Update data with optional fields
-
-        Returns:
-            Dictionary with only non-None fields to update
-        """
-        update_dict: dict[str, Any] = {}
-        if data.title_el is not None:
-            update_dict["title_el"] = data.title_el
-        if data.title_en is not None:
-            update_dict["title_en"] = data.title_en
-        if data.title_ru is not None:
-            update_dict["title_ru"] = data.title_ru
-        if data.description_el is not None:
-            update_dict["description_el"] = data.description_el
-        if data.description_en is not None:
-            update_dict["description_en"] = data.description_en
-        if data.description_ru is not None:
-            update_dict["description_ru"] = data.description_ru
-        if data.publication_date is not None:
-            update_dict["publication_date"] = data.publication_date
-        if data.original_article_url is not None:
-            update_dict["original_article_url"] = str(data.original_article_url)
-        if data.country is not None:
-            update_dict["country"] = data.country.value
-        if data.title_el_a2 is not None:
-            update_dict["title_el_a2"] = data.title_el_a2
-        if data.description_el_a2 is not None:
-            update_dict["description_el_a2"] = data.description_el_a2
-            if not data.description_el_a2.strip():
-                update_dict["audio_a2_s3_key"] = None
-                update_dict["audio_a2_generated_at"] = None
-                update_dict["audio_a2_duration_seconds"] = None
-                update_dict["audio_a2_file_size_bytes"] = None
-        return update_dict
-
-    async def _handle_image_update(
-        self,
-        data: NewsItemUpdate,
-        news_item: NewsItem,
-        update_dict: dict[str, Any],
-    ) -> Optional[str]:
-        """Handle image replacement if source_image_url is provided.
-
-        Args:
-            data: Update data with optional source_image_url
-            news_item: Existing news item
-            update_dict: Dictionary to add new image_s3_key to
-
-        Returns:
-            Old S3 key to delete after commit, or None if no image update
-        """
-        if data.source_image_url is None:
-            return None
-
-        # Download new image
-        image_data, content_type = await self._download_image(str(data.source_image_url))
-
-        # Generate new S3 key
-        ext = CONTENT_TYPE_TO_EXT.get(content_type, "jpg")
-        new_s3_key = f"{NEWS_IMAGES_PREFIX}/{uuid4()}.{ext}"
-
-        # Upload new image
-        upload_success = self.s3_service.upload_object(new_s3_key, image_data, content_type)
-        if not upload_success:
-            raise ValueError("Failed to upload new image to S3")
-
-        # Add to update dict and return old key for cleanup
-        update_dict["image_s3_key"] = new_s3_key
-        return news_item.image_s3_key
-
-    async def _download_image(self, url: str) -> tuple[bytes, str]:
-        """Download image from URL and validate.
-
-        Args:
-            url: URL to download image from
-
-        Returns:
-            Tuple of (image_bytes, content_type)
-
-        Raises:
-            ValueError: If download fails, content-type invalid, or size exceeds limit
-        """
-        logger.debug(
-            "Downloading image from URL",
-            extra={"url": url},
-        )
-
-        try:
-            async with httpx.AsyncClient(timeout=IMAGE_DOWNLOAD_TIMEOUT_SECONDS) as client:
-                response = await client.get(url)
-                response.raise_for_status()
-
-                # Validate content-type
-                content_type = response.headers.get("content-type", "").split(";")[0].strip()
-                if content_type not in ALLOWED_IMAGE_CONTENT_TYPES:
-                    raise ValueError(
-                        f"Invalid image content-type: {content_type}. "
-                        f"Allowed: {', '.join(ALLOWED_IMAGE_CONTENT_TYPES)}"
-                    )
-
-                # Validate size
-                image_data = response.content
-                if len(image_data) > MAX_IMAGE_SIZE_BYTES:
-                    raise ValueError(
-                        f"Image size {len(image_data)} bytes exceeds maximum "
-                        f"{MAX_IMAGE_SIZE_BYTES} bytes (5MB)"
-                    )
-
-                logger.debug(
-                    "Image downloaded successfully",
-                    extra={
-                        "url": url,
-                        "content_type": content_type,
-                        "size_bytes": len(image_data),
-                    },
-                )
-
-                return image_data, content_type
-
-        except httpx.HTTPStatusError as e:
-            raise ValueError(f"Failed to download image: HTTP {e.response.status_code}")
-        except httpx.RequestError as e:
-            raise ValueError(f"Failed to download image: {str(e)}")
-
-    def _to_response(self, news_item: NewsItem) -> NewsItemResponse:
-        """Convert NewsItem model to response schema with presigned URL.
-
-        Args:
-            news_item: NewsItem database model
-
-        Returns:
-            NewsItemResponse with presigned image URL
-        """
-        # Generate presigned URL for the image
-        image_url = self.s3_service.generate_presigned_url(news_item.image_s3_key)
-
-        # Generate presigned URL for the audio
-        audio_url = self.s3_service.generate_presigned_url(news_item.audio_s3_key)
-
-        # Generate presigned URL for the A2 audio
-        audio_a2_url = self.s3_service.generate_presigned_url(news_item.audio_a2_s3_key)
+    def _to_response(
+        self, news_item: NewsItem, situation: Situation, description: SituationDescription
+    ) -> NewsItemResponse:
+        """Assemble NewsItemResponse from JOIN data."""
+        image_url = self.s3_service.generate_presigned_url(situation.source_image_s3_key)
+        audio_url = self.s3_service.generate_presigned_url(description.audio_s3_key)
+        audio_a2_url = self.s3_service.generate_presigned_url(description.audio_a2_s3_key)
 
         return NewsItemResponse(
             id=news_item.id,
-            title_el=news_item.title_el,
-            title_en=news_item.title_en,
-            title_ru=news_item.title_ru,
-            description_el=news_item.description_el,
-            description_en=news_item.description_en,
-            description_ru=news_item.description_ru,
+            title_el=situation.scenario_el or "",
+            title_en=situation.scenario_en or "",
+            title_ru=situation.scenario_ru or "",
+            title_el_a2=situation.scenario_el_a2,
+            description_el=description.text_el or "",
+            description_el_a2=description.text_el_a2,
+            description_en=None,
+            description_ru=None,
             publication_date=news_item.publication_date,
             original_article_url=news_item.original_article_url,
-            country=(
-                news_item.country.value
-                if hasattr(news_item.country, "value")
-                else (str(news_item.country) if news_item.country else "cyprus")
-            ),
+            country=description.country.value if description.country else "cyprus",
             image_url=image_url,
             audio_url=audio_url,
-            audio_generated_at=news_item.audio_generated_at,
-            audio_duration_seconds=news_item.audio_duration_seconds,
-            audio_file_size_bytes=news_item.audio_file_size_bytes,
-            title_el_a2=news_item.title_el_a2,
-            description_el_a2=news_item.description_el_a2,
+            audio_generated_at=None,
+            audio_duration_seconds=description.audio_duration_seconds,
+            audio_file_size_bytes=None,
             audio_a2_url=audio_a2_url,
-            audio_a2_generated_at=news_item.audio_a2_generated_at,
-            audio_a2_duration_seconds=news_item.audio_a2_duration_seconds,
-            audio_a2_file_size_bytes=news_item.audio_a2_file_size_bytes,
+            audio_a2_generated_at=None,
+            audio_a2_duration_seconds=description.audio_a2_duration_seconds,
+            audio_a2_file_size_bytes=None,
             created_at=news_item.created_at,
             updated_at=news_item.updated_at,
         )

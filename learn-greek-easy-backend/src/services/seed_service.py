@@ -51,6 +51,7 @@ from src.db.models import (
     MockExamAnswer,
     MockExamSession,
     MockExamStatus,
+    NewsCountry,
     NewsItem,
     Notification,
     NotificationType,
@@ -103,14 +104,14 @@ class NotificationSeedData(TypedDict, total=False):
 class NewsItemSeedData(TypedDict):
     """Type definition for news item seed data items."""
 
+    days_ago: int
+    country: str
     title_el: str
     title_en: str
     title_ru: str
     description_el: str
     description_en: str
     description_ru: str
-    days_ago: int
-    country: str
 
 
 class AnnouncementCampaignSeedData(TypedDict):
@@ -331,54 +332,54 @@ class SeedService:
     # News items for E2E testing (5 items with varied publication dates)
     NEWS_ITEMS: list[NewsItemSeedData] = [
         {
-            "title_el": "Ελληνικά Νέα: Νέα Πολιτιστική Πρωτοβουλία",
-            "title_en": "Greek News: New Cultural Initiative",
-            "title_ru": "Греческие новости: Новая культурная инициатива",
-            "description_el": "Η κυβέρνηση ανακοίνωσε νέα πολιτιστική πρωτοβουλία για την προώθηση της ελληνικής γλώσσας.",
-            "description_en": "The government announced a new cultural initiative to promote the Greek language.",
-            "description_ru": "Правительство объявило о новой культурной инициативе по продвижению греческого языка.",
             "days_ago": 0,
             "country": "cyprus",
+            "title_el": "Κυπριακές ειδήσεις E2E 1",
+            "title_en": "Cyprus News E2E 1",
+            "title_ru": "Кипрские новости E2E 1",
+            "description_el": "Περιγραφή κυπριακών ειδήσεων για δοκιμές E2E.",
+            "description_en": "Cyprus news description for E2E testing.",
+            "description_ru": "Описание кипрских новостей для тестирования E2E.",
         },
         {
-            "title_el": "Ιστορική Ανακάλυψη στην Αθήνα",
-            "title_en": "Historical Discovery in Athens",
-            "title_ru": "Историческое открытие в Афинах",
-            "description_el": "Αρχαιολόγοι ανακάλυψαν σημαντικά ευρήματα στο κέντρο της Αθήνας.",
-            "description_en": "Archaeologists discovered significant artifacts in central Athens.",
-            "description_ru": "Археологи обнаружили значительные артефакты в центре Афин.",
             "days_ago": 1,
             "country": "cyprus",
+            "title_el": "Κυπριακές ειδήσεις E2E 2",
+            "title_en": "Cyprus News E2E 2",
+            "title_ru": "Кипрские новости E2E 2",
+            "description_el": "Δεύτερη περιγραφή κυπριακών ειδήσεων για δοκιμές E2E.",
+            "description_en": "Second Cyprus news description for E2E testing.",
+            "description_ru": "Второе описание кипрских новостей для тестирования E2E.",
         },
         {
-            "title_el": "Οικονομική Ανάπτυξη στην Ελλάδα",
-            "title_en": "Economic Growth in Greece",
-            "title_ru": "Экономический рост в Греции",
-            "description_el": "Νέα οικονομικά στοιχεία δείχνουν σημαντική ανάπτυξη.",
-            "description_en": "New economic data shows significant growth.",
-            "description_ru": "Новые экономические данные показывают значительный рост.",
             "days_ago": 2,
             "country": "greece",
+            "title_el": "Ελληνικές ειδήσεις E2E 1",
+            "title_en": "Greece News E2E 1",
+            "title_ru": "Греческие новости E2E 1",
+            "description_el": "Περιγραφή ελληνικών ειδήσεων για δοκιμές E2E.",
+            "description_en": "Greece news description for E2E testing.",
+            "description_ru": "Описание греческих новостей для тестирования E2E.",
         },
         {
-            "title_el": "Τουριστική Σεζόν 2026",
-            "title_en": "Tourism Season 2026",
-            "title_ru": "Туристический сезон 2026",
-            "description_el": "Οι προβλέψεις για την τουριστική σεζόν είναι αισιόδοξες.",
-            "description_en": "Predictions for the tourism season are optimistic.",
-            "description_ru": "Прогнозы на туристический сезон оптимистичны.",
             "days_ago": 7,
             "country": "greece",
+            "title_el": "Ελληνικές ειδήσεις E2E 2",
+            "title_en": "Greece News E2E 2",
+            "title_ru": "Греческие новости E2E 2",
+            "description_el": "Δεύτερη περιγραφή ελληνικών ειδήσεων για δοκιμές E2E.",
+            "description_en": "Second Greece news description for E2E testing.",
+            "description_ru": "Второе описание греческих новостей для тестирования E2E.",
         },
         {
-            "title_el": "Πολιτιστικά Γεγονότα Ιανουαρίου",
-            "title_en": "January Cultural Events",
-            "title_ru": "Культурные события января",
-            "description_el": "Τα σημαντικότερα πολιτιστικά γεγονότα του μήνα.",
-            "description_en": "The most important cultural events of the month.",
-            "description_ru": "Самые важные культурные события месяца.",
             "days_ago": 30,
             "country": "world",
+            "title_el": "Παγκόσμιες ειδήσεις E2E 1",
+            "title_en": "World News E2E 1",
+            "title_ru": "Мировые новости E2E 1",
+            "description_el": "Περιγραφή παγκόσμιων ειδήσεων για δοκιμές E2E.",
+            "description_en": "World news description for E2E testing.",
+            "description_ru": "Описание мировых новостей для тестирования E2E.",
         },
     ]
 
@@ -2555,18 +2556,33 @@ class SeedService:
 
         for i, item_data in enumerate(self.NEWS_ITEMS, start=1):
             publication_date = today - timedelta(days=item_data["days_ago"])
+            article_url = f"https://example.com/e2e-test-article-{i}"
+
+            # Create situation for this news item (PARTIAL so it doesn't appear in situations browsing)
+            situation = Situation(
+                scenario_el=item_data["title_el"],
+                scenario_en=item_data["title_en"],
+                scenario_ru=item_data["title_ru"],
+                status=SituationStatus.DRAFT,
+            )
+            self.db.add(situation)
+            await self.db.flush()
+
+            # Create situation description
+            description = SituationDescription(
+                situation_id=situation.id,
+                text_el=item_data["description_el"],
+                source_type=DescriptionSourceType.NEWS,
+                source_url=article_url,
+                country=NewsCountry(item_data["country"]),
+            )
+            self.db.add(description)
+            await self.db.flush()
 
             news_item = NewsItem(
-                title_el=item_data["title_el"],
-                title_en=item_data["title_en"],
-                title_ru=item_data["title_ru"],
-                description_el=item_data["description_el"],
-                description_en=item_data["description_en"],
-                description_ru=item_data["description_ru"],
                 publication_date=publication_date,
-                original_article_url=f"https://example.com/e2e-test-article-{i}",
-                image_s3_key=f"news/e2e-test-image-{i}.jpg",
-                country=item_data["country"],
+                original_article_url=article_url,
+                situation_id=situation.id,
             )
             self.db.add(news_item)
             await self.db.flush()
@@ -2574,7 +2590,6 @@ class SeedService:
             created_items.append(
                 {
                     "id": str(news_item.id),
-                    "title_en": news_item.title_en,
                     "publication_date": str(news_item.publication_date),
                 }
             )
@@ -2745,18 +2760,28 @@ class SeedService:
         news_items_data = []
         questions_data = []
 
-        # News item 1 - WITH question
+        # News item 1 - WITH question (PARTIAL so it doesn't appear in situations browsing)
+        situation_1 = Situation(
+            scenario_el="Κυπριακή παράδοση E2E 1",
+            scenario_en="Cypriot Tradition E2E 1",
+            scenario_ru="Кипрская традиция E2E 1",
+            status=SituationStatus.DRAFT,
+        )
+        self.db.add(situation_1)
+        await self.db.flush()
+        desc_1 = SituationDescription(
+            situation_id=situation_1.id,
+            text_el="Περιγραφή κυπριακής παράδοσης για δοκιμές E2E.",
+            source_type=DescriptionSourceType.NEWS,
+            source_url="https://example.com/e2e-news-question-1",
+            country=NewsCountry.CYPRUS,
+        )
+        self.db.add(desc_1)
+        await self.db.flush()
         news_1 = NewsItem(
-            title_el="Κυπριακή κουλτούρα: Παραδόσεις",
-            title_en="Cypriot Culture: Traditions",
-            title_ru="Кипрская культура: Традиции",
-            description_el="Ανακαλύψτε τις παραδόσεις της Κύπρου.",
-            description_en="Discover the traditions of Cyprus.",
-            description_ru="Откройте для себя традиции Кипра.",
-            image_s3_key="news-images/e2e-placeholder.jpg",
-            country="cyprus",
             publication_date=date.today(),
             original_article_url="https://example.com/e2e-news-question-1",
+            situation_id=situation_1.id,
         )
         self.db.add(news_1)
 
@@ -2776,18 +2801,28 @@ class SeedService:
         )
         self.db.add(question_1)
 
-        # News item 2 - WITH question
+        # News item 2 - WITH question (PARTIAL so it doesn't appear in situations browsing)
+        situation_2 = Situation(
+            scenario_el="Κυπριακή ιστορία E2E 2",
+            scenario_en="Cypriot History E2E 2",
+            scenario_ru="История Кипра E2E 2",
+            status=SituationStatus.DRAFT,
+        )
+        self.db.add(situation_2)
+        await self.db.flush()
+        desc_2 = SituationDescription(
+            situation_id=situation_2.id,
+            text_el="Περιγραφή κυπριακής ιστορίας για δοκιμές E2E.",
+            source_type=DescriptionSourceType.NEWS,
+            source_url="https://example.com/e2e-news-question-2",
+            country=NewsCountry.CYPRUS,
+        )
+        self.db.add(desc_2)
+        await self.db.flush()
         news_2 = NewsItem(
-            title_el="Ιστορία της Κύπρου",
-            title_en="History of Cyprus",
-            title_ru="История Кипра",
-            description_el="Μάθετε για την πλούσια ιστορία.",
-            description_en="Learn about the rich history.",
-            description_ru="Узнайте о богатой истории.",
-            image_s3_key="news-images/e2e-placeholder.jpg",
-            country="cyprus",
             publication_date=date.today() - timedelta(days=1),
             original_article_url="https://example.com/e2e-news-question-2",
+            situation_id=situation_2.id,
         )
         self.db.add(news_2)
 
@@ -2807,18 +2842,28 @@ class SeedService:
         )
         self.db.add(question_2)
 
-        # News item 3 - WITHOUT question
+        # News item 3 - WITHOUT question (PARTIAL so it doesn't appear in situations browsing)
+        situation_3 = Situation(
+            scenario_el="Κυπριακές ειδήσεις E2E 3",
+            scenario_en="Cypriot News E2E 3",
+            scenario_ru="Новости Кипра E2E 3",
+            status=SituationStatus.DRAFT,
+        )
+        self.db.add(situation_3)
+        await self.db.flush()
+        desc_3 = SituationDescription(
+            situation_id=situation_3.id,
+            text_el="Περιγραφή κυπριακών ειδήσεων χωρίς ερώτηση για δοκιμές E2E.",
+            source_type=DescriptionSourceType.NEWS,
+            source_url="https://example.com/e2e-news-question-3-no-question",
+            country=NewsCountry.CYPRUS,
+        )
+        self.db.add(desc_3)
+        await self.db.flush()
         news_3 = NewsItem(
-            title_el="Τρέχοντα νέα",
-            title_en="Current News",
-            title_ru="Текущие новости",
-            description_el="Τελευταία νέα από την Κύπρο.",
-            description_en="Latest news from Cyprus.",
-            description_ru="Последние новости с Кипра.",
-            image_s3_key="news-images/e2e-placeholder.jpg",
-            country="world",
             publication_date=date.today() - timedelta(days=2),
             original_article_url="https://example.com/e2e-news-question-3-no-question",
+            situation_id=situation_3.id,
         )
         self.db.add(news_3)
 
@@ -3212,17 +3257,35 @@ class SeedService:
             # Create URL for this item
             article_url = f"https://example.com/e2e-news-feed-page-{i + 1}"
 
+            # Rotate country for variety (cyprus/greece/world)
+            countries = [NewsCountry.CYPRUS, NewsCountry.GREECE, NewsCountry.WORLD]
+            item_country = countries[i % len(countries)]
+
+            # Create situation for this news item (PARTIAL so it doesn't appear in situations browsing)
+            feed_situation = Situation(
+                scenario_el=title_el,
+                scenario_en=title_en,
+                scenario_ru=title_ru,
+                status=SituationStatus.DRAFT,
+            )
+            self.db.add(feed_situation)
+            await self.db.flush()
+
+            # Create situation description
+            feed_description = SituationDescription(
+                situation_id=feed_situation.id,
+                text_el=summary_el,
+                source_type=DescriptionSourceType.NEWS,
+                source_url=article_url,
+                country=item_country,
+            )
+            self.db.add(feed_description)
+            await self.db.flush()
+
             news_item = NewsItem(
-                title_el=title_el,
-                title_en=title_en,
-                title_ru=title_ru,
-                description_el=summary_el,
-                description_en=summary_en,
-                description_ru=summary_ru,
-                image_s3_key=f"news-images/e2e-news-feed-page-{i + 1}.jpg",
-                country=["cyprus", "greece", "world"][i % 3],
                 publication_date=publication_date,
                 original_article_url=article_url,
+                situation_id=feed_situation.id,
             )
             self.db.add(news_item)
             await self.db.flush()

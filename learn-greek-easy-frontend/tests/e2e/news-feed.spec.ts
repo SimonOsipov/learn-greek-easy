@@ -179,34 +179,6 @@ test.describe('News Feed - Admin Tests', () => {
     await expect(dialog).toBeHidden();
   });
 
-  test('NEWSFEED-06: Delete news item confirms deletion', async ({ page }) => {
-    await navigateToAdminNewsTab(page);
-
-    // Wait for table to load
-    const firstDeleteButton = page.locator('[data-testid^="delete-news-"]').first();
-    await expect(firstDeleteButton).toBeVisible({ timeout: 10000 });
-
-    // Get the specific item ID being deleted
-    const deleteTestId = await firstDeleteButton.getAttribute('data-testid');
-    const itemId = deleteTestId?.replace('delete-news-', '');
-
-    // Click delete on first item
-    await firstDeleteButton.click();
-
-    // Dialog should open
-    const dialog = page.getByTestId('news-delete-dialog');
-    await expect(dialog).toBeVisible({ timeout: 5000 });
-
-    // Confirm deletion
-    await page.getByTestId('news-delete-confirm').click();
-
-    // Dialog should close
-    await expect(dialog).toBeHidden({ timeout: 5000 });
-
-    // Verify the specific item row was removed from the table
-    // This is more robust than checking total count (which may not change if table is full-page)
-    await expect(page.getByTestId(`news-item-row-${itemId}`)).not.toBeVisible({ timeout: 5000 });
-  });
 });
 
 // =====================

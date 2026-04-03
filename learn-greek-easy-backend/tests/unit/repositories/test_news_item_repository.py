@@ -1,10 +1,9 @@
 """Unit tests for NewsItemRepository.
 
 This module tests:
-- get_list: Get news items with pagination ordered by date
-- get_recent: Get most recent news items
+- get_list: Get news items with pagination ordered by date (INNER JOIN)
 - exists_by_url: Check for duplicate article URLs
-- CRUD operations inherited from BaseRepository
+- count_all: Count news items (excludes orphans via INNER JOIN)
 
 Tests use real database fixtures to verify SQL queries work correctly.
 """
@@ -17,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.models import NewsItem
 from src.repositories.news_item import NewsItemRepository
+from tests.factories.news import NewsItemFactory
 
 # =============================================================================
 # Test Fixtures
@@ -24,53 +24,25 @@ from src.repositories.news_item import NewsItemRepository
 
 
 @pytest.fixture
-async def news_items(db_session: AsyncSession) -> list[NewsItem]:
+async def news_items(db_session: AsyncSession):
     """Create multiple news items with different publication dates."""
     items = []
     base_date = date.today()
 
     for i in range(5):
-        item = NewsItem(
-            title_el=f"Greek Title {i + 1}",
-            title_en=f"English Title {i + 1}",
-            title_ru=f"Russian Title {i + 1}",
-            description_el=f"Greek description for news item {i + 1}",
-            description_en=f"English description for news item {i + 1}",
-            description_ru=f"Russian description for news item {i + 1}",
-            publication_date=base_date - timedelta(days=i),  # Newest first
-            original_article_url=f"https://example.com/article-{i + 1}",
-            image_s3_key=f"news-images/{uuid4()}.jpg",
-            country="cyprus",
+        item = await NewsItemFactory.create(
+            session=db_session,
+            publication_date=base_date - timedelta(days=i),
         )
-        db_session.add(item)
         items.append(item)
-
-    await db_session.flush()
-    for item in items:
-        await db_session.refresh(item)
 
     return items
 
 
 @pytest.fixture
-async def single_news_item(db_session: AsyncSession) -> NewsItem:
+async def single_news_item(db_session: AsyncSession):
     """Create a single news item for testing."""
-    item = NewsItem(
-        title_el="Test Greek Title",
-        title_en="Test English Title",
-        title_ru="Test Russian Title",
-        description_el="Test Greek description",
-        description_en="Test English description",
-        description_ru="Test Russian description",
-        publication_date=date.today(),
-        original_article_url="https://example.com/test-article",
-        image_s3_key=f"news-images/{uuid4()}.jpg",
-        country="cyprus",
-    )
-    db_session.add(item)
-    await db_session.flush()
-    await db_session.refresh(item)
-    return item
+    return await NewsItemFactory.create(session=db_session)
 
 
 # =============================================================================
@@ -85,7 +57,7 @@ class TestGetList:
     async def test_returns_items_ordered_by_date(
         self,
         db_session: AsyncSession,
-        news_items: list[NewsItem],
+        news_items,
     ):
         """Should return news items ordered by publication_date DESC."""
         repo = NewsItemRepository(db_session)
@@ -95,13 +67,13 @@ class TestGetList:
         assert len(result) == len(news_items)
         # Verify descending order by publication_date
         for i in range(len(result) - 1):
-            assert result[i].publication_date >= result[i + 1].publication_date
+            assert result[i][0].publication_date >= result[i + 1][0].publication_date
 
     @pytest.mark.asyncio
     async def test_respects_skip_parameter(
         self,
         db_session: AsyncSession,
-        news_items: list[NewsItem],
+        news_items,
     ):
         """Should skip items correctly."""
         repo = NewsItemRepository(db_session)
@@ -114,7 +86,7 @@ class TestGetList:
     async def test_respects_limit_parameter(
         self,
         db_session: AsyncSession,
-        news_items: list[NewsItem],
+        news_items,
     ):
         """Should limit results correctly."""
         repo = NewsItemRepository(db_session)
@@ -127,7 +99,7 @@ class TestGetList:
     async def test_skip_and_limit_combined(
         self,
         db_session: AsyncSession,
-        news_items: list[NewsItem],
+        news_items,
     ):
         """Should handle skip and limit together for pagination."""
         repo = NewsItemRepository(db_session)
@@ -147,69 +119,6 @@ class TestGetList:
         result = await repo.get_list()
 
         assert result == []
-
-
-# =============================================================================
-# Test get_recent
-# =============================================================================
-
-
-class TestGetRecent:
-    """Tests for get_recent method."""
-
-    @pytest.mark.asyncio
-    async def test_returns_limited_items(
-        self,
-        db_session: AsyncSession,
-        news_items: list[NewsItem],
-    ):
-        """Should return limited number of recent items."""
-        repo = NewsItemRepository(db_session)
-
-        result = await repo.get_recent(limit=3)
-
-        assert len(result) == 3
-
-    @pytest.mark.asyncio
-    async def test_returns_most_recent(
-        self,
-        db_session: AsyncSession,
-        news_items: list[NewsItem],
-    ):
-        """Should return the most recent items by publication_date."""
-        repo = NewsItemRepository(db_session)
-
-        result = await repo.get_recent(limit=3)
-
-        # Verify these are the newest items
-        for i in range(len(result) - 1):
-            assert result[i].publication_date >= result[i + 1].publication_date
-
-    @pytest.mark.asyncio
-    async def test_default_limit_is_3(
-        self,
-        db_session: AsyncSession,
-        news_items: list[NewsItem],
-    ):
-        """Should default to 3 items when no limit specified."""
-        repo = NewsItemRepository(db_session)
-
-        result = await repo.get_recent()
-
-        assert len(result) == 3
-
-    @pytest.mark.asyncio
-    async def test_returns_all_when_fewer_than_limit(
-        self,
-        db_session: AsyncSession,
-        single_news_item: NewsItem,
-    ):
-        """Should return all items when fewer exist than limit."""
-        repo = NewsItemRepository(db_session)
-
-        result = await repo.get_recent(limit=10)
-
-        assert len(result) == 1
 
 
 # =============================================================================
@@ -247,40 +156,8 @@ class TestExistsByUrl:
 
 
 # =============================================================================
-# Test CRUD operations
+# Test get (by id)
 # =============================================================================
-
-
-class TestCreate:
-    """Tests for create method (inherited from BaseRepository)."""
-
-    @pytest.mark.asyncio
-    async def test_creates_news_item(
-        self,
-        db_session: AsyncSession,
-    ):
-        """Should create a news item successfully."""
-        repo = NewsItemRepository(db_session)
-
-        news_item_data = {
-            "title_el": "New Greek Title",
-            "title_en": "New English Title",
-            "title_ru": "New Russian Title",
-            "description_el": "New Greek description",
-            "description_en": "New English description",
-            "description_ru": "New Russian description",
-            "publication_date": date.today(),
-            "original_article_url": "https://example.com/new-article",
-            "image_s3_key": f"news-images/{uuid4()}.jpg",
-            "country": "cyprus",
-        }
-
-        result = await repo.create(news_item_data)
-
-        assert result.id is not None
-        assert result.title_el == "New Greek Title"
-        assert result.title_en == "New English Title"
-        assert result.title_ru == "New Russian Title"
 
 
 class TestGetById:
@@ -313,27 +190,9 @@ class TestGetById:
         assert result is None
 
 
-class TestUpdate:
-    """Tests for update method (inherited from BaseRepository)."""
-
-    @pytest.mark.asyncio
-    async def test_updates_news_item(
-        self,
-        db_session: AsyncSession,
-        single_news_item: NewsItem,
-    ):
-        """Should update news item fields."""
-        repo = NewsItemRepository(db_session)
-
-        update_data = {
-            "title_en": "Updated English Title",
-        }
-
-        result = await repo.update(single_news_item, update_data)
-
-        assert result.title_en == "Updated English Title"
-        # Other fields should remain unchanged
-        assert result.title_el == single_news_item.title_el
+# =============================================================================
+# Test delete
+# =============================================================================
 
 
 class TestDelete:
@@ -357,6 +216,11 @@ class TestDelete:
         assert result is None
 
 
+# =============================================================================
+# Test count_all
+# =============================================================================
+
+
 class TestCountAll:
     """Tests for count_all method."""
 
@@ -364,7 +228,7 @@ class TestCountAll:
     async def test_counts_all_items(
         self,
         db_session: AsyncSession,
-        news_items: list[NewsItem],
+        news_items,
     ):
         """Should return correct count of all news items."""
         repo = NewsItemRepository(db_session)
@@ -384,3 +248,45 @@ class TestCountAll:
         result = await repo.count_all()
 
         assert result == 0
+
+
+# =============================================================================
+# Test INNER JOIN behavior (orphan exclusion)
+# =============================================================================
+
+
+class TestInnerJoinBehavior:
+    """Repository INNER JOIN excludes orphaned NewsItems."""
+
+    @pytest.mark.asyncio
+    async def test_orphaned_news_item_excluded(self, db_session: AsyncSession):
+        """NewsItem with situation_id=None is excluded from get_list."""
+        # Create valid news item (has situation+description via factory)
+        await NewsItemFactory.create(session=db_session)
+        # Create orphan (no situation)
+        orphan = NewsItem(
+            publication_date=date.today(),
+            original_article_url="https://example.com/orphan",
+        )
+        db_session.add(orphan)
+        await db_session.flush()
+
+        repo = NewsItemRepository(db_session)
+        result = await repo.get_list()
+        # Only the valid item should appear
+        assert len(result) == 1
+
+    @pytest.mark.asyncio
+    async def test_count_excludes_orphaned(self, db_session: AsyncSession):
+        """count_all() excludes orphaned NewsItems."""
+        await NewsItemFactory.create(session=db_session)
+        orphan = NewsItem(
+            publication_date=date.today(),
+            original_article_url="https://example.com/orphan-count",
+        )
+        db_session.add(orphan)
+        await db_session.flush()
+
+        repo = NewsItemRepository(db_session)
+        count = await repo.count_all()
+        assert count == 1

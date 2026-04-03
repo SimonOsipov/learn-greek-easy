@@ -1215,12 +1215,6 @@ class TestSeedServiceNewsItems:
         assert len(news_items) == 5
 
         for item in news_items:
-            assert "title_el" in item
-            assert "title_en" in item
-            assert "title_ru" in item
-            assert "description_el" in item
-            assert "description_en" in item
-            assert "description_ru" in item
             assert "days_ago" in item
             assert isinstance(item["days_ago"], int)
             assert item["days_ago"] >= 0
@@ -1386,7 +1380,7 @@ class TestSeedServiceNewsFeedPage:
 
         def track_objects(obj):
             original_add(obj)
-            if hasattr(obj, "title_el") and hasattr(obj, "original_article_url"):
+            if hasattr(obj, "publication_date") and hasattr(obj, "original_article_url"):
                 added_news.append(obj)
             elif hasattr(obj, "question_text") and hasattr(obj, "original_article_url"):
                 added_questions.append(obj)

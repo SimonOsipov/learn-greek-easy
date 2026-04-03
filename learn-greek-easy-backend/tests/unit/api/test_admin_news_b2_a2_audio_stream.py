@@ -85,7 +85,7 @@ def _make_session_factory_not_found() -> MagicMock:
     """Factory where DB returns None (news item not found)."""
     session = MagicMock()
     result_mock = MagicMock()
-    result_mock.scalar_one_or_none.return_value = None
+    result_mock.one_or_none.return_value = None
     session.execute = AsyncMock(return_value=result_mock)
 
     cm = MagicMock()
@@ -97,8 +97,8 @@ def _make_session_factory_not_found() -> MagicMock:
     return mock_factory
 
 
-def _make_session_factory_found(news_item: MagicMock) -> MagicMock:
-    """Factory that returns the news_item on first begin(), plain session for DB updates."""
+def _make_session_factory_found(row: tuple) -> MagicMock:
+    """Factory that returns the row tuple on first begin(), plain session for DB updates."""
     call_count = 0
 
     def begin_side_effect():
@@ -108,7 +108,7 @@ def _make_session_factory_found(news_item: MagicMock) -> MagicMock:
 
         if call_count == 1:
             result_mock = MagicMock()
-            result_mock.scalar_one_or_none.return_value = news_item
+            result_mock.one_or_none.return_value = row
             session.execute = AsyncMock(return_value=result_mock)
         else:
             session.execute = AsyncMock(return_value=MagicMock())
@@ -123,18 +123,12 @@ def _make_session_factory_found(news_item: MagicMock) -> MagicMock:
     return mock_factory
 
 
-def _make_news_item_b2(description_el: str = "Σήμερα στην Κύπρο.") -> MagicMock:
-    item = MagicMock()
-    item.description_el = description_el
-    item.description_el_a2 = None
-    return item
+def _make_news_row_b2(text_el: str = "Σήμερα στην Κύπρο.") -> tuple:
+    return (uuid4(), uuid4(), text_el)
 
 
-def _make_news_item_a2(description_el_a2: str = "Σήμερα στην Κύπρο.") -> MagicMock:
-    item = MagicMock()
-    item.description_el = "Σήμερα στην Κύπρο."
-    item.description_el_a2 = description_el_a2
-    return item
+def _make_news_row_a2(text_el_a2: str = "Σήμερα στην Κύπρο.") -> tuple:
+    return (uuid4(), uuid4(), text_el_a2)
 
 
 # ---------------------------------------------------------------------------
@@ -261,7 +255,7 @@ class TestNewsB2AudioSSEPipeline:
     async def test_missing_description_el_yields_error_stage_load(self) -> None:
         from src.api.v1.admin import _news_b2_audio_sse_pipeline
 
-        item = _make_news_item_b2(description_el="")
+        item = _make_news_row_b2(text_el="")
         mock_factory = _make_session_factory_found(item)
 
         with patch("src.api.v1.admin.get_session_factory", return_value=mock_factory):
@@ -276,7 +270,7 @@ class TestNewsB2AudioSSEPipeline:
     async def test_whitespace_only_description_el_yields_error(self) -> None:
         from src.api.v1.admin import _news_b2_audio_sse_pipeline
 
-        item = _make_news_item_b2(description_el="   \n  ")
+        item = _make_news_row_b2(text_el="   \n  ")
         mock_factory = _make_session_factory_found(item)
 
         with patch("src.api.v1.admin.get_session_factory", return_value=mock_factory):
@@ -292,7 +286,7 @@ class TestNewsB2AudioSSEPipeline:
         from src.services.audio_generation_service import AudioResult
 
         news_id = uuid4()
-        item = _make_news_item_b2()
+        item = _make_news_row_b2()
         mock_factory = _make_session_factory_found(item)
         mock_audio_service = MagicMock()
         mock_audio_service.generate_single = AsyncMock(
@@ -329,7 +323,7 @@ class TestNewsB2AudioSSEPipeline:
         from src.api.v1.admin import _news_b2_audio_sse_pipeline
         from src.services.audio_generation_service import AudioResult
 
-        item = _make_news_item_b2()
+        item = _make_news_row_b2()
         mock_factory = _make_session_factory_found(item)
         mock_audio_service = MagicMock()
         mock_audio_service.generate_single = AsyncMock(
@@ -366,13 +360,14 @@ class TestNewsB2AudioSSEPipeline:
         from src.services.audio_generation_service import AudioResult
 
         news_id = uuid4()
-        item = _make_news_item_b2()
+        item = _make_news_row_b2()
+        desc_id = item[1]  # S3 key now uses desc_id, not news_item_id
         mock_factory = _make_session_factory_found(item)
         mock_audio_service = MagicMock()
         mock_audio_service.generate_single = AsyncMock(
             return_value=AudioResult(
                 audio_bytes=b"fake-audio",
-                s3_key=f"news-audio/{news_id}.mp3",
+                s3_key=f"news-audio/{desc_id}.mp3",
                 duration_seconds=1.234,
                 file_size_bytes=9,
             )
@@ -395,13 +390,13 @@ class TestNewsB2AudioSSEPipeline:
 
         upload_events = [e for e in events if e["event"] == "news_audio:upload"]
         assert len(upload_events) == 1
-        assert upload_events[0]["data"]["s3_key"] == f"news-audio/{news_id}.mp3"
+        assert upload_events[0]["data"]["s3_key"] == f"news-audio/{desc_id}.mp3"
 
     @pytest.mark.asyncio
     async def test_tts_failure_yields_error_stage_tts(self) -> None:
         from src.api.v1.admin import _news_b2_audio_sse_pipeline
 
-        item = _make_news_item_b2()
+        item = _make_news_row_b2()
         mock_factory = _make_session_factory_found(item)
         mock_audio_service = MagicMock()
         mock_audio_service.generate_single = AsyncMock(side_effect=RuntimeError("ElevenLabs error"))
@@ -424,7 +419,7 @@ class TestNewsB2AudioSSEPipeline:
     async def test_s3_upload_failure_yields_error_stage_upload(self) -> None:
         from src.api.v1.admin import _news_b2_audio_sse_pipeline
 
-        item = _make_news_item_b2()
+        item = _make_news_row_b2()
         mock_factory = _make_session_factory_found(item)
         mock_audio_service = MagicMock()
         mock_audio_service.generate_single = AsyncMock(side_effect=RuntimeError("S3 upload failed"))
@@ -449,7 +444,7 @@ class TestNewsB2AudioSSEPipeline:
         from src.api.v1.admin import _news_b2_audio_sse_pipeline
         from src.services.audio_generation_service import AudioResult
 
-        item = _make_news_item_b2()
+        item = _make_news_row_b2()
         persisted_values: list[dict] = []
 
         call_count = 0
@@ -461,7 +456,7 @@ class TestNewsB2AudioSSEPipeline:
 
             if call_count == 1:
                 result_mock = MagicMock()
-                result_mock.scalar_one_or_none.return_value = item
+                result_mock.one_or_none.return_value = item
                 session.execute = AsyncMock(return_value=result_mock)
             else:
 
@@ -514,7 +509,7 @@ class TestNewsB2AudioSSEPipeline:
         from src.api.v1.admin import _news_b2_audio_sse_pipeline
         from src.services.audio_generation_service import AudioResult
 
-        item = _make_news_item_b2()
+        item = _make_news_row_b2()
         mock_factory = _make_session_factory_found(item)
         news_id = uuid4()
         mock_audio_service = MagicMock()
@@ -571,7 +566,7 @@ class TestNewsA2AudioSSEPipeline:
     async def test_missing_description_el_a2_yields_error_stage_load(self) -> None:
         from src.api.v1.admin import _news_a2_audio_sse_pipeline
 
-        item = _make_news_item_a2(description_el_a2="")
+        item = _make_news_row_a2(text_el_a2="")
         mock_factory = _make_session_factory_found(item)
 
         with patch("src.api.v1.admin.get_session_factory", return_value=mock_factory):
@@ -587,7 +582,7 @@ class TestNewsA2AudioSSEPipeline:
         from src.api.v1.admin import _news_a2_audio_sse_pipeline
         from src.services.audio_generation_service import AudioResult
 
-        item = _make_news_item_a2()
+        item = _make_news_row_a2()
         mock_factory = _make_session_factory_found(item)
         mock_audio_service = MagicMock()
         mock_audio_service.generate_single = AsyncMock(
@@ -624,7 +619,7 @@ class TestNewsA2AudioSSEPipeline:
         from src.api.v1.admin import _news_a2_audio_sse_pipeline
         from src.services.audio_generation_service import AudioResult
 
-        item = _make_news_item_a2()
+        item = _make_news_row_a2()
         mock_factory = _make_session_factory_found(item)
         mock_audio_service = MagicMock()
         mock_audio_service.generate_single = AsyncMock(
@@ -661,13 +656,14 @@ class TestNewsA2AudioSSEPipeline:
         from src.services.audio_generation_service import AudioResult
 
         news_id = uuid4()
-        item = _make_news_item_a2()
+        item = _make_news_row_a2()
+        desc_id = item[1]  # S3 key now uses desc_id, not news_item_id
         mock_factory = _make_session_factory_found(item)
         mock_audio_service = MagicMock()
         mock_audio_service.generate_single = AsyncMock(
             return_value=AudioResult(
                 audio_bytes=b"fake-audio",
-                s3_key=f"news-audio/a2/{news_id}.mp3",
+                s3_key=f"news-audio/a2/{desc_id}.mp3",
                 duration_seconds=1.234,
                 file_size_bytes=9,
             )
@@ -690,13 +686,13 @@ class TestNewsA2AudioSSEPipeline:
 
         upload_events = [e for e in events if e["event"] == "news_audio:upload"]
         assert len(upload_events) == 1
-        assert upload_events[0]["data"]["s3_key"] == f"news-audio/a2/{news_id}.mp3"
+        assert upload_events[0]["data"]["s3_key"] == f"news-audio/a2/{desc_id}.mp3"
 
     @pytest.mark.asyncio
     async def test_tts_failure_yields_error_stage_tts(self) -> None:
         from src.api.v1.admin import _news_a2_audio_sse_pipeline
 
-        item = _make_news_item_a2()
+        item = _make_news_row_a2()
         mock_factory = _make_session_factory_found(item)
         mock_audio_service = MagicMock()
         mock_audio_service.generate_single = AsyncMock(side_effect=RuntimeError("ElevenLabs error"))
@@ -719,7 +715,7 @@ class TestNewsA2AudioSSEPipeline:
     async def test_s3_upload_failure_yields_error_stage_upload(self) -> None:
         from src.api.v1.admin import _news_a2_audio_sse_pipeline
 
-        item = _make_news_item_a2()
+        item = _make_news_row_a2()
         mock_factory = _make_session_factory_found(item)
         mock_audio_service = MagicMock()
         mock_audio_service.generate_single = AsyncMock(side_effect=RuntimeError("S3 upload failed"))
@@ -744,7 +740,7 @@ class TestNewsA2AudioSSEPipeline:
         from src.api.v1.admin import _news_a2_audio_sse_pipeline
         from src.services.audio_generation_service import AudioResult
 
-        item = _make_news_item_a2()
+        item = _make_news_row_a2()
         begin_calls: list[int] = []
 
         call_count = 0
@@ -757,7 +753,7 @@ class TestNewsA2AudioSSEPipeline:
 
             if call_count == 1:
                 result_mock = MagicMock()
-                result_mock.scalar_one_or_none.return_value = item
+                result_mock.one_or_none.return_value = item
                 session.execute = AsyncMock(return_value=result_mock)
             else:
                 executed_stmts: list = []
@@ -810,7 +806,7 @@ class TestNewsA2AudioSSEPipeline:
         from src.api.v1.admin import _news_a2_audio_sse_pipeline
         from src.services.audio_generation_service import AudioResult
 
-        item = _make_news_item_a2()
+        item = _make_news_row_a2()
         mock_factory = _make_session_factory_found(item)
         news_id = uuid4()
         mock_audio_service = MagicMock()
@@ -850,14 +846,12 @@ class TestNewsAudioPipelineDifferentiation:
 
     @pytest.mark.asyncio
     async def test_b2_uses_description_el_not_a2(self) -> None:
-        """B2 pipeline reads description_el and errors if only description_el_a2 is set."""
+        """B2 pipeline reads text_el (index 2) and errors if it is empty."""
         from src.api.v1.admin import _news_b2_audio_sse_pipeline
 
-        # Item has a2 text but NOT b2 text
-        item = MagicMock()
-        item.description_el = ""
-        item.description_el_a2 = "Valid A2 text"
-        mock_factory = _make_session_factory_found(item)
+        # Row has empty text_el (b2) — pipeline should error at load stage
+        row = _make_news_row_b2(text_el="")
+        mock_factory = _make_session_factory_found(row)
 
         with patch("src.api.v1.admin.get_session_factory", return_value=mock_factory):
             events = await _collect_generator(_news_b2_audio_sse_pipeline(uuid4()))
@@ -868,14 +862,12 @@ class TestNewsAudioPipelineDifferentiation:
 
     @pytest.mark.asyncio
     async def test_a2_uses_description_el_a2_not_b2(self) -> None:
-        """A2 pipeline reads description_el_a2 and errors if only description_el is set."""
+        """A2 pipeline reads text_el_a2 (index 2) and errors if it is empty."""
         from src.api.v1.admin import _news_a2_audio_sse_pipeline
 
-        # Item has b2 text but NOT a2 text
-        item = MagicMock()
-        item.description_el = "Valid B2 text"
-        item.description_el_a2 = ""
-        mock_factory = _make_session_factory_found(item)
+        # Row has empty text_el_a2 — pipeline should error at load stage
+        row = _make_news_row_a2(text_el_a2="")
+        mock_factory = _make_session_factory_found(row)
 
         with patch("src.api.v1.admin.get_session_factory", return_value=mock_factory):
             events = await _collect_generator(_news_a2_audio_sse_pipeline(uuid4()))

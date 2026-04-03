@@ -2135,10 +2135,10 @@ class MockExamAnswer(Base, TimestampMixin):
 
 
 class NewsItem(Base, TimestampMixin):
-    """News item for the Greek news feed.
+    """Thin join record linking a news article URL to its Situation.
 
-    Stores bilingual news articles (Greek/English) with image references.
-    Articles are displayed in the news feed, sorted by publication date.
+    Content, audio, and media now live on Situation and its children.
+    Retains publication_date and original_article_url for provenance.
     """
 
     __tablename__ = "news_items"
@@ -2147,49 +2147,6 @@ class NewsItem(Base, TimestampMixin):
     id: Mapped[UUID] = mapped_column(
         primary_key=True,
         server_default=func.uuid_generate_v4(),
-    )
-
-    # Greek content
-    title_el: Mapped[str] = mapped_column(
-        String(500),
-        nullable=False,
-        comment="Article title in Greek",
-    )
-    description_el: Mapped[str] = mapped_column(
-        Text,
-        nullable=False,
-        comment="Article description in Greek (max 1000 chars enforced at app level)",
-    )
-
-    # English content
-    title_en: Mapped[str] = mapped_column(
-        String(500),
-        nullable=False,
-        comment="Article title in English",
-    )
-    description_en: Mapped[str] = mapped_column(
-        Text,
-        nullable=False,
-        comment="Article description in English (max 1000 chars enforced at app level)",
-    )
-
-    # Russian content
-    title_ru: Mapped[str] = mapped_column(
-        String(500),
-        nullable=False,
-        comment="Article title in Russian",
-    )
-    description_ru: Mapped[str] = mapped_column(
-        Text,
-        nullable=False,
-        comment="Article description in Russian (max 1000 chars enforced at app level)",
-    )
-
-    # Media
-    image_s3_key: Mapped[str] = mapped_column(
-        String(255),
-        nullable=False,
-        comment="S3 key for news item image (e.g., news/{uuid}.jpg)",
     )
 
     # Publication metadata
@@ -2207,75 +2164,6 @@ class NewsItem(Base, TimestampMixin):
         comment="URL of the original source article",
     )
 
-    # Audio metadata (TTS-generated audio files)
-    audio_s3_key: Mapped[str | None] = mapped_column(
-        String(500),
-        nullable=True,
-        comment="S3 key for TTS-generated audio file (e.g., news/audio/{uuid}.mp3)",
-    )
-    audio_generated_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True,
-        comment="Timestamp when audio was generated via TTS",
-    )
-    audio_file_size_bytes: Mapped[int | None] = mapped_column(
-        Integer,
-        nullable=True,
-        comment="Size of audio file in bytes",
-    )
-    audio_duration_seconds: Mapped[float | None] = mapped_column(
-        Float,
-        nullable=True,
-        comment="Duration of audio in seconds",
-    )
-
-    # A2-level simplified content
-    title_el_a2: Mapped[str | None] = mapped_column(
-        String(500),
-        nullable=True,
-        comment="Simplified A2-level article title in Greek",
-    )
-    description_el_a2: Mapped[str | None] = mapped_column(
-        Text,
-        nullable=True,
-        comment="Simplified A2-level article description in Greek",
-    )
-
-    # A2 audio metadata
-    audio_a2_s3_key: Mapped[str | None] = mapped_column(
-        String(500),
-        nullable=True,
-        comment="S3 key for A2-level TTS audio file",
-    )
-    audio_a2_generated_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True,
-        comment="Timestamp when A2 audio was generated via TTS",
-    )
-    audio_a2_duration_seconds: Mapped[float | None] = mapped_column(
-        Float,
-        nullable=True,
-        comment="Duration of A2 audio file in seconds",
-    )
-    audio_a2_file_size_bytes: Mapped[int | None] = mapped_column(
-        Integer,
-        nullable=True,
-        comment="Size of A2 audio file in bytes",
-    )
-
-    # Country classification
-    country: Mapped[NewsCountry] = mapped_column(
-        SAEnum(
-            NewsCountry,
-            values_callable=lambda enum_cls: [e.value for e in enum_cls],
-            name="newscountry",
-            create_type=False,
-        ),
-        nullable=False,
-        index=True,
-        comment="Country/region this news item belongs to",
-    )
-
     # Link to Situation (optional — populated during migration)
     situation_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("situations.id", ondelete="SET NULL"),
@@ -2287,7 +2175,7 @@ class NewsItem(Base, TimestampMixin):
     situation: Mapped["Situation | None"] = relationship(lazy="raise")
 
     def __repr__(self) -> str:
-        return f"<NewsItem(id={self.id}, title_en={self.title_en[:30] if self.title_en else ''}, publication_date={self.publication_date})>"
+        return f"<NewsItem(id={self.id}, situation_id={self.situation_id}, publication_date={self.publication_date})>"
 
 
 # ============================================================================
@@ -2643,6 +2531,7 @@ class Situation(Base, TimestampMixin):
     source_title_en: Mapped[str | None] = mapped_column(Text, nullable=True)
     source_title_el: Mapped[str | None] = mapped_column(Text, nullable=True)
     source_title_ru: Mapped[str | None] = mapped_column(Text, nullable=True)
+    scenario_el_a2: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     def __repr__(self) -> str:
         return f"<Situation id={self.id} status={self.status}>"
