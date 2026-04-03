@@ -99,7 +99,7 @@ const Header = () => {
             </SheetContent>
           </Sheet>
           <Button
-            className="text-lg"
+            className="hidden text-lg md:inline-flex"
             data-testid="landing-get-started-button"
             onClick={() => {
               document.getElementById('hero')?.scrollIntoView({ behavior: 'smooth' });
