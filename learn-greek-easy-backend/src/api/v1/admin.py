@@ -1208,7 +1208,9 @@ async def create_news_item(
     """
     service = NewsItemService(db)
     try:
-        result = await service.create_with_question(data)
+        result: NewsItemWithCardResponse = await service.create_with_question(data)
+    except NotImplementedError as e:
+        raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail=str(e))
     except ValueError as e:
         error_msg = str(e)
         if "already exists" in error_msg:
@@ -1255,7 +1257,9 @@ async def update_news_item(
     """
     service = NewsItemService(db)
     try:
-        result = await service.update(news_item_id, data)
+        result: NewsItemResponse = await service.update(news_item_id, data)
+    except NotImplementedError as e:
+        raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail=str(e))
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -1288,7 +1292,10 @@ async def delete_news_item(
         404: If news item not found
     """
     service = NewsItemService(db)
-    await service.delete(news_item_id)
+    try:
+        await service.delete(news_item_id)
+    except NotImplementedError as e:
+        raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail=str(e))
 
 
 @router.get(
@@ -2395,20 +2402,26 @@ async def _news_b2_audio_sse_pipeline(
 
     # Stage 1 — Load & validate
     async with factory.begin() as session:
-        result = await session.execute(select(NewsItem).where(NewsItem.id == news_item_id))
-        news_item = result.scalar_one_or_none()
-        if news_item is None:
+        stmt = (
+            select(NewsItem.id, SituationDescription.id, SituationDescription.text_el)
+            .join(Situation, NewsItem.situation_id == Situation.id)
+            .join(SituationDescription, SituationDescription.situation_id == Situation.id)
+            .where(NewsItem.id == news_item_id)
+        )
+        row = (await session.execute(stmt)).one_or_none()
+        if row is None:
             yield format_sse_event(
                 {
                     "news_item_id": str(news_item_id),
                     "level": "b2",
                     "stage": "load",
-                    "error": "News item not found",
+                    "error": "News item not found or has no situation/description",
                 },
                 event="news_audio:error",
             )
             return
-        description_el: str = news_item.description_el or ""
+        _news_id, desc_id, description_el = row
+        description_el = description_el or ""
 
     if not description_el.strip():
         yield format_sse_event(
@@ -2460,12 +2473,10 @@ async def _news_b2_audio_sse_pipeline(
         )
         async with factory.begin() as session:
             await session.execute(
-                update(NewsItem)
-                .where(NewsItem.id == news_item_id)
+                update(SituationDescription)
+                .where(SituationDescription.id == desc_id)
                 .values(
                     audio_s3_key=s3_key,
-                    audio_generated_at=datetime.now(timezone.utc),
-                    audio_file_size_bytes=audio_result.file_size_bytes,
                     audio_duration_seconds=audio_result.duration_seconds,
                 )
             )
@@ -2498,20 +2509,26 @@ async def _news_a2_audio_sse_pipeline(
 
     # Stage 1 — Load & validate
     async with factory.begin() as session:
-        result = await session.execute(select(NewsItem).where(NewsItem.id == news_item_id))
-        news_item = result.scalar_one_or_none()
-        if news_item is None:
+        stmt = (
+            select(NewsItem.id, SituationDescription.id, SituationDescription.text_el_a2)
+            .join(Situation, NewsItem.situation_id == Situation.id)
+            .join(SituationDescription, SituationDescription.situation_id == Situation.id)
+            .where(NewsItem.id == news_item_id)
+        )
+        row = (await session.execute(stmt)).one_or_none()
+        if row is None:
             yield format_sse_event(
                 {
                     "news_item_id": str(news_item_id),
                     "level": "a2",
                     "stage": "load",
-                    "error": "News item not found",
+                    "error": "News item not found or has no situation/description",
                 },
                 event="news_audio:error",
             )
             return
-        description_el_a2: str = news_item.description_el_a2 or ""
+        _news_id, desc_id, description_el_a2 = row
+        description_el_a2 = description_el_a2 or ""
 
     if not description_el_a2.strip():
         yield format_sse_event(
@@ -2563,12 +2580,10 @@ async def _news_a2_audio_sse_pipeline(
         )
         async with factory.begin() as session:
             await session.execute(
-                update(NewsItem)
-                .where(NewsItem.id == news_item_id)
+                update(SituationDescription)
+                .where(SituationDescription.id == desc_id)
                 .values(
                     audio_a2_s3_key=s3_key,
-                    audio_a2_generated_at=datetime.now(timezone.utc),
-                    audio_a2_file_size_bytes=audio_result.file_size_bytes,
                     audio_a2_duration_seconds=audio_result.duration_seconds,
                 )
             )

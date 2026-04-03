@@ -103,12 +103,6 @@ class NotificationSeedData(TypedDict, total=False):
 class NewsItemSeedData(TypedDict):
     """Type definition for news item seed data items."""
 
-    title_el: str
-    title_en: str
-    title_ru: str
-    description_el: str
-    description_en: str
-    description_ru: str
     days_ago: int
     country: str
 
@@ -330,56 +324,11 @@ class SeedService:
 
     # News items for E2E testing (5 items with varied publication dates)
     NEWS_ITEMS: list[NewsItemSeedData] = [
-        {
-            "title_el": "Ελληνικά Νέα: Νέα Πολιτιστική Πρωτοβουλία",
-            "title_en": "Greek News: New Cultural Initiative",
-            "title_ru": "Греческие новости: Новая культурная инициатива",
-            "description_el": "Η κυβέρνηση ανακοίνωσε νέα πολιτιστική πρωτοβουλία για την προώθηση της ελληνικής γλώσσας.",
-            "description_en": "The government announced a new cultural initiative to promote the Greek language.",
-            "description_ru": "Правительство объявило о новой культурной инициативе по продвижению греческого языка.",
-            "days_ago": 0,
-            "country": "cyprus",
-        },
-        {
-            "title_el": "Ιστορική Ανακάλυψη στην Αθήνα",
-            "title_en": "Historical Discovery in Athens",
-            "title_ru": "Историческое открытие в Афинах",
-            "description_el": "Αρχαιολόγοι ανακάλυψαν σημαντικά ευρήματα στο κέντρο της Αθήνας.",
-            "description_en": "Archaeologists discovered significant artifacts in central Athens.",
-            "description_ru": "Археологи обнаружили значительные артефакты в центре Афин.",
-            "days_ago": 1,
-            "country": "cyprus",
-        },
-        {
-            "title_el": "Οικονομική Ανάπτυξη στην Ελλάδα",
-            "title_en": "Economic Growth in Greece",
-            "title_ru": "Экономический рост в Греции",
-            "description_el": "Νέα οικονομικά στοιχεία δείχνουν σημαντική ανάπτυξη.",
-            "description_en": "New economic data shows significant growth.",
-            "description_ru": "Новые экономические данные показывают значительный рост.",
-            "days_ago": 2,
-            "country": "greece",
-        },
-        {
-            "title_el": "Τουριστική Σεζόν 2026",
-            "title_en": "Tourism Season 2026",
-            "title_ru": "Туристический сезон 2026",
-            "description_el": "Οι προβλέψεις για την τουριστική σεζόν είναι αισιόδοξες.",
-            "description_en": "Predictions for the tourism season are optimistic.",
-            "description_ru": "Прогнозы на туристический сезон оптимистичны.",
-            "days_ago": 7,
-            "country": "greece",
-        },
-        {
-            "title_el": "Πολιτιστικά Γεγονότα Ιανουαρίου",
-            "title_en": "January Cultural Events",
-            "title_ru": "Культурные события января",
-            "description_el": "Τα σημαντικότερα πολιτιστικά γεγονότα του μήνα.",
-            "description_en": "The most important cultural events of the month.",
-            "description_ru": "Самые важные культурные события месяца.",
-            "days_ago": 30,
-            "country": "world",
-        },
+        {"days_ago": 0, "country": "cyprus"},
+        {"days_ago": 1, "country": "cyprus"},
+        {"days_ago": 2, "country": "greece"},
+        {"days_ago": 7, "country": "greece"},
+        {"days_ago": 30, "country": "world"},
     ]
 
     SITUATIONS: list[dict[str, str]] = [
@@ -2557,16 +2506,9 @@ class SeedService:
             publication_date = today - timedelta(days=item_data["days_ago"])
 
             news_item = NewsItem(
-                title_el=item_data["title_el"],
-                title_en=item_data["title_en"],
-                title_ru=item_data["title_ru"],
-                description_el=item_data["description_el"],
-                description_en=item_data["description_en"],
-                description_ru=item_data["description_ru"],
                 publication_date=publication_date,
                 original_article_url=f"https://example.com/e2e-test-article-{i}",
-                image_s3_key=f"news/e2e-test-image-{i}.jpg",
-                country=item_data["country"],
+                # TODO: link to Situation+SituationDescription for content
             )
             self.db.add(news_item)
             await self.db.flush()
@@ -2574,7 +2516,6 @@ class SeedService:
             created_items.append(
                 {
                     "id": str(news_item.id),
-                    "title_en": news_item.title_en,
                     "publication_date": str(news_item.publication_date),
                 }
             )
@@ -2747,16 +2688,9 @@ class SeedService:
 
         # News item 1 - WITH question
         news_1 = NewsItem(
-            title_el="Κυπριακή κουλτούρα: Παραδόσεις",
-            title_en="Cypriot Culture: Traditions",
-            title_ru="Кипрская культура: Традиции",
-            description_el="Ανακαλύψτε τις παραδόσεις της Κύπρου.",
-            description_en="Discover the traditions of Cyprus.",
-            description_ru="Откройте для себя традиции Кипра.",
-            image_s3_key="news-images/e2e-placeholder.jpg",
-            country="cyprus",
             publication_date=date.today(),
             original_article_url="https://example.com/e2e-news-question-1",
+            # TODO: link to Situation+SituationDescription for content
         )
         self.db.add(news_1)
 
@@ -2778,16 +2712,9 @@ class SeedService:
 
         # News item 2 - WITH question
         news_2 = NewsItem(
-            title_el="Ιστορία της Κύπρου",
-            title_en="History of Cyprus",
-            title_ru="История Кипра",
-            description_el="Μάθετε για την πλούσια ιστορία.",
-            description_en="Learn about the rich history.",
-            description_ru="Узнайте о богатой истории.",
-            image_s3_key="news-images/e2e-placeholder.jpg",
-            country="cyprus",
             publication_date=date.today() - timedelta(days=1),
             original_article_url="https://example.com/e2e-news-question-2",
+            # TODO: link to Situation+SituationDescription for content
         )
         self.db.add(news_2)
 
@@ -2809,16 +2736,9 @@ class SeedService:
 
         # News item 3 - WITHOUT question
         news_3 = NewsItem(
-            title_el="Τρέχοντα νέα",
-            title_en="Current News",
-            title_ru="Текущие новости",
-            description_el="Τελευταία νέα από την Κύπρο.",
-            description_en="Latest news from Cyprus.",
-            description_ru="Последние новости с Кипра.",
-            image_s3_key="news-images/e2e-placeholder.jpg",
-            country="world",
             publication_date=date.today() - timedelta(days=2),
             original_article_url="https://example.com/e2e-news-question-3-no-question",
+            # TODO: link to Situation+SituationDescription for content
         )
         self.db.add(news_3)
 
@@ -3213,16 +3133,9 @@ class SeedService:
             article_url = f"https://example.com/e2e-news-feed-page-{i + 1}"
 
             news_item = NewsItem(
-                title_el=title_el,
-                title_en=title_en,
-                title_ru=title_ru,
-                description_el=summary_el,
-                description_en=summary_en,
-                description_ru=summary_ru,
-                image_s3_key=f"news-images/e2e-news-feed-page-{i + 1}.jpg",
-                country=["cyprus", "greece", "world"][i % 3],
                 publication_date=publication_date,
                 original_article_url=article_url,
+                # TODO: link to Situation+SituationDescription for content
             )
             self.db.add(news_item)
             await self.db.flush()

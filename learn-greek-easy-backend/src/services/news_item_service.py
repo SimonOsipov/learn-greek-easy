@@ -5,7 +5,7 @@ This service handles:
 - Presigned URL generation for responses
 """
 
-from typing import Optional
+from typing import NoReturn, Optional
 from uuid import UUID
 
 from sqlalchemy import String, func, select
@@ -57,7 +57,7 @@ class NewsItemService:
     # CRUD Operations
     # =========================================================================
 
-    async def create_with_question(self, data: NewsItemWithQuestionCreate) -> None:
+    async def create_with_question(self, data: NewsItemWithQuestionCreate) -> NoReturn:
         """Create news item with optional linked culture question.
 
         Raises:
@@ -108,7 +108,7 @@ class NewsItemService:
             country_counts=country_counts,
         )
 
-    async def update(self, news_item_id: UUID, data: NewsItemUpdate) -> NewsItemResponse:
+    async def update(self, news_item_id: UUID, data: NewsItemUpdate) -> NoReturn:
         """Update a news item.
 
         Raises:
@@ -116,7 +116,7 @@ class NewsItemService:
         """
         raise NotImplementedError("Admin write operations are disabled during thin-news migration")
 
-    async def delete(self, news_item_id: UUID) -> None:
+    async def delete(self, news_item_id: UUID) -> NoReturn:
         """Delete a news item.
 
         Raises:
@@ -254,8 +254,8 @@ class NewsItemService:
             title_el_a2=situation.scenario_el_a2,
             description_el=description.text_el or "",
             description_el_a2=description.text_el_a2,
-            description_en="",
-            description_ru="",
+            description_en=None,
+            description_ru=None,
             publication_date=news_item.publication_date,
             original_article_url=news_item.original_article_url,
             country=description.country.value if description.country else "cyprus",

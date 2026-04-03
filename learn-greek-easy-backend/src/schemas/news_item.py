@@ -111,8 +111,8 @@ class NewsItemResponse(BaseModel):
     title_en: str
     title_ru: str
     description_el: str
-    description_en: str
-    description_ru: str
+    description_en: Optional[str] = None
+    description_ru: Optional[str] = None
     publication_date: date
     original_article_url: str
     country: str = Field(..., description="Country/region this news item belongs to")
