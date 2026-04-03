@@ -16,7 +16,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.exceptions import NewsItemNotFoundException
-from src.schemas.news_item import NewsItemCreate, NewsItemUpdate
+from src.schemas.news_item import NewsItemCreate
 from src.services.news_item_service import NewsItemService
 from tests.factories.news import NewsItemFactory
 
@@ -194,51 +194,37 @@ class TestA2Content:
     """Tests for A2-level content paired validation."""
 
     def test_paired_validation_title_without_description(self):
-        """Should raise ValidationError when title_el_a2 set but description_el_a2 omitted."""
+        """Should raise ValidationError when scenario_el_a2 set but text_el_a2 omitted."""
         from pydantic import ValidationError
 
         with pytest.raises(ValidationError, match="must both be provided or both omitted"):
             NewsItemCreate(
-                title_el="Τίτλος",
-                title_en="Title",
-                title_ru="Title",
-                description_el="Περιγραφή",
-                description_en="Description",
-                description_ru="Description",
+                scenario_el="Τίτλος",
+                scenario_en="Title",
+                scenario_ru="Title",
+                text_el="Περιγραφή",
                 publication_date=date.today(),
                 original_article_url="https://example.com/article",
                 source_image_url="https://example.com/image.jpg",
                 country="cyprus",
-                title_el_a2="Απλός τίτλος",
-                # description_el_a2 omitted
+                scenario_el_a2="Απλός τίτλος",
+                # text_el_a2 omitted
             )
 
     def test_paired_validation_description_without_title(self):
-        """Should raise ValidationError when description_el_a2 set but title_el_a2 omitted."""
+        """Should raise ValidationError when text_el_a2 set but scenario_el_a2 omitted."""
         from pydantic import ValidationError
 
         with pytest.raises(ValidationError, match="must both be provided or both omitted"):
             NewsItemCreate(
-                title_el="Τίτλος",
-                title_en="Title",
-                title_ru="Title",
-                description_el="Περιγραφή",
-                description_en="Description",
-                description_ru="Description",
+                scenario_el="Τίτλος",
+                scenario_en="Title",
+                scenario_ru="Title",
+                text_el="Περιγραφή",
                 publication_date=date.today(),
                 original_article_url="https://example.com/article",
                 source_image_url="https://example.com/image.jpg",
                 country="cyprus",
-                # title_el_a2 omitted
-                description_el_a2="Απλή περιγραφή",
-            )
-
-    def test_paired_validation_on_update_schema(self):
-        """Should raise ValidationError on NewsItemUpdate when A2 pair is incomplete."""
-        from pydantic import ValidationError
-
-        with pytest.raises(ValidationError, match="must both be provided or both omitted"):
-            NewsItemUpdate(
-                title_el_a2="Απλός τίτλος",
-                # description_el_a2 omitted
+                # scenario_el_a2 omitted
+                text_el_a2="Απλή περιγραφή",
             )

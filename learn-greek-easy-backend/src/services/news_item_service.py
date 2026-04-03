@@ -18,12 +18,12 @@ from src.db.models import CultureQuestion, NewsCountry, NewsItem, Situation, Sit
 from src.repositories.news_item import NewsItemRepository
 from src.schemas.news_item import (
     NewsCardInfo,
+    NewsItemCreate,
     NewsItemListResponse,
     NewsItemListWithCardsResponse,
     NewsItemResponse,
     NewsItemUpdate,
     NewsItemWithCardInfo,
-    NewsItemWithQuestionCreate,
 )
 from src.services.s3_service import S3Service, get_s3_service
 
@@ -57,7 +57,7 @@ class NewsItemService:
     # CRUD Operations
     # =========================================================================
 
-    async def create_with_question(self, data: NewsItemWithQuestionCreate) -> NoReturn:
+    async def create_with_question(self, data: NewsItemCreate) -> NewsItemResponse:
         """Create news item with optional linked culture question.
 
         Raises:
