@@ -51,6 +51,7 @@ from src.db.models import (
     MockExamAnswer,
     MockExamSession,
     MockExamStatus,
+    NewsCountry,
     NewsItem,
     Notification,
     NotificationType,
@@ -105,6 +106,12 @@ class NewsItemSeedData(TypedDict):
 
     days_ago: int
     country: str
+    title_el: str
+    title_en: str
+    title_ru: str
+    description_el: str
+    description_en: str
+    description_ru: str
 
 
 class AnnouncementCampaignSeedData(TypedDict):
@@ -324,11 +331,56 @@ class SeedService:
 
     # News items for E2E testing (5 items with varied publication dates)
     NEWS_ITEMS: list[NewsItemSeedData] = [
-        {"days_ago": 0, "country": "cyprus"},
-        {"days_ago": 1, "country": "cyprus"},
-        {"days_ago": 2, "country": "greece"},
-        {"days_ago": 7, "country": "greece"},
-        {"days_ago": 30, "country": "world"},
+        {
+            "days_ago": 0,
+            "country": "cyprus",
+            "title_el": "Κυπριακές ειδήσεις E2E 1",
+            "title_en": "Cyprus News E2E 1",
+            "title_ru": "Кипрские новости E2E 1",
+            "description_el": "Περιγραφή κυπριακών ειδήσεων για δοκιμές E2E.",
+            "description_en": "Cyprus news description for E2E testing.",
+            "description_ru": "Описание кипрских новостей для тестирования E2E.",
+        },
+        {
+            "days_ago": 1,
+            "country": "cyprus",
+            "title_el": "Κυπριακές ειδήσεις E2E 2",
+            "title_en": "Cyprus News E2E 2",
+            "title_ru": "Кипрские новости E2E 2",
+            "description_el": "Δεύτερη περιγραφή κυπριακών ειδήσεων για δοκιμές E2E.",
+            "description_en": "Second Cyprus news description for E2E testing.",
+            "description_ru": "Второе описание кипрских новостей для тестирования E2E.",
+        },
+        {
+            "days_ago": 2,
+            "country": "greece",
+            "title_el": "Ελληνικές ειδήσεις E2E 1",
+            "title_en": "Greece News E2E 1",
+            "title_ru": "Греческие новости E2E 1",
+            "description_el": "Περιγραφή ελληνικών ειδήσεων για δοκιμές E2E.",
+            "description_en": "Greece news description for E2E testing.",
+            "description_ru": "Описание греческих новостей для тестирования E2E.",
+        },
+        {
+            "days_ago": 7,
+            "country": "greece",
+            "title_el": "Ελληνικές ειδήσεις E2E 2",
+            "title_en": "Greece News E2E 2",
+            "title_ru": "Греческие новости E2E 2",
+            "description_el": "Δεύτερη περιγραφή ελληνικών ειδήσεων για δοκιμές E2E.",
+            "description_en": "Second Greece news description for E2E testing.",
+            "description_ru": "Второе описание греческих новостей для тестирования E2E.",
+        },
+        {
+            "days_ago": 30,
+            "country": "world",
+            "title_el": "Παγκόσμιες ειδήσεις E2E 1",
+            "title_en": "World News E2E 1",
+            "title_ru": "Мировые новости E2E 1",
+            "description_el": "Περιγραφή παγκόσμιων ειδήσεων για δοκιμές E2E.",
+            "description_en": "World news description for E2E testing.",
+            "description_ru": "Описание мировых новостей для тестирования E2E.",
+        },
     ]
 
     SITUATIONS: list[dict[str, str]] = [
@@ -2492,6 +2544,15 @@ class SeedService:
         """
         self._check_can_seed()
 
+        # Collect situation_ids of existing E2E test news items before deleting them
+        existing_result = await self.db.execute(
+            select(NewsItem.situation_id).where(
+                NewsItem.original_article_url.like("https://example.com/e2e-test-article-%"),
+                NewsItem.situation_id.isnot(None),
+            )
+        )
+        old_situation_ids = [row[0] for row in existing_result.all()]
+
         # Delete existing E2E test news items (idempotent)
         await self.db.execute(
             delete(NewsItem).where(
@@ -2499,16 +2560,42 @@ class SeedService:
             )
         )
 
+        # Delete orphaned Situations from previous seed runs
+        if old_situation_ids:
+            await self.db.execute(delete(Situation).where(Situation.id.in_(old_situation_ids)))
+
         created_items = []
         today = date.today()
 
         for i, item_data in enumerate(self.NEWS_ITEMS, start=1):
             publication_date = today - timedelta(days=item_data["days_ago"])
+            article_url = f"https://example.com/e2e-test-article-{i}"
+
+            # Create situation for this news item
+            situation = Situation(
+                scenario_el=item_data["title_el"],
+                scenario_en=item_data["title_en"],
+                scenario_ru=item_data["title_ru"],
+                status=SituationStatus.READY,
+            )
+            self.db.add(situation)
+            await self.db.flush()
+
+            # Create situation description
+            description = SituationDescription(
+                situation_id=situation.id,
+                text_el=item_data["description_el"],
+                source_type=DescriptionSourceType.NEWS,
+                source_url=article_url,
+                country=NewsCountry(item_data["country"]),
+            )
+            self.db.add(description)
+            await self.db.flush()
 
             news_item = NewsItem(
                 publication_date=publication_date,
-                original_article_url=f"https://example.com/e2e-test-article-{i}",
-                # TODO: link to Situation+SituationDescription for content
+                original_article_url=article_url,
+                situation_id=situation.id,
             )
             self.db.add(news_item)
             await self.db.flush()
@@ -2656,11 +2743,22 @@ class SeedService:
                 CultureQuestion.original_article_url.like("https://example.com/e2e-news-question-%")
             )
         )
+        # Collect situation_ids before deleting news items
+        existing_result = await self.db.execute(
+            select(NewsItem.situation_id).where(
+                NewsItem.original_article_url.like("https://example.com/e2e-news-question-%"),
+                NewsItem.situation_id.isnot(None),
+            )
+        )
+        old_situation_ids = [row[0] for row in existing_result.all()]
         await self.db.execute(
             delete(NewsItem).where(
                 NewsItem.original_article_url.like("https://example.com/e2e-news-question-%")
             )
         )
+        # Delete orphaned Situations from previous seed runs
+        if old_situation_ids:
+            await self.db.execute(delete(Situation).where(Situation.id.in_(old_situation_ids)))
 
         # Find or create E2E culture deck
         result = await self.db.execute(
@@ -2687,10 +2785,27 @@ class SeedService:
         questions_data = []
 
         # News item 1 - WITH question
+        situation_1 = Situation(
+            scenario_el="Κυπριακή παράδοση E2E 1",
+            scenario_en="Cypriot Tradition E2E 1",
+            scenario_ru="Кипрская традиция E2E 1",
+            status=SituationStatus.READY,
+        )
+        self.db.add(situation_1)
+        await self.db.flush()
+        desc_1 = SituationDescription(
+            situation_id=situation_1.id,
+            text_el="Περιγραφή κυπριακής παράδοσης για δοκιμές E2E.",
+            source_type=DescriptionSourceType.NEWS,
+            source_url="https://example.com/e2e-news-question-1",
+            country=NewsCountry.CYPRUS,
+        )
+        self.db.add(desc_1)
+        await self.db.flush()
         news_1 = NewsItem(
             publication_date=date.today(),
             original_article_url="https://example.com/e2e-news-question-1",
-            # TODO: link to Situation+SituationDescription for content
+            situation_id=situation_1.id,
         )
         self.db.add(news_1)
 
@@ -2711,10 +2826,27 @@ class SeedService:
         self.db.add(question_1)
 
         # News item 2 - WITH question
+        situation_2 = Situation(
+            scenario_el="Κυπριακή ιστορία E2E 2",
+            scenario_en="Cypriot History E2E 2",
+            scenario_ru="История Кипра E2E 2",
+            status=SituationStatus.READY,
+        )
+        self.db.add(situation_2)
+        await self.db.flush()
+        desc_2 = SituationDescription(
+            situation_id=situation_2.id,
+            text_el="Περιγραφή κυπριακής ιστορίας για δοκιμές E2E.",
+            source_type=DescriptionSourceType.NEWS,
+            source_url="https://example.com/e2e-news-question-2",
+            country=NewsCountry.CYPRUS,
+        )
+        self.db.add(desc_2)
+        await self.db.flush()
         news_2 = NewsItem(
             publication_date=date.today() - timedelta(days=1),
             original_article_url="https://example.com/e2e-news-question-2",
-            # TODO: link to Situation+SituationDescription for content
+            situation_id=situation_2.id,
         )
         self.db.add(news_2)
 
@@ -2735,10 +2867,27 @@ class SeedService:
         self.db.add(question_2)
 
         # News item 3 - WITHOUT question
+        situation_3 = Situation(
+            scenario_el="Κυπριακές ειδήσεις E2E 3",
+            scenario_en="Cypriot News E2E 3",
+            scenario_ru="Новости Кипра E2E 3",
+            status=SituationStatus.READY,
+        )
+        self.db.add(situation_3)
+        await self.db.flush()
+        desc_3 = SituationDescription(
+            situation_id=situation_3.id,
+            text_el="Περιγραφή κυπριακών ειδήσεων χωρίς ερώτηση για δοκιμές E2E.",
+            source_type=DescriptionSourceType.NEWS,
+            source_url="https://example.com/e2e-news-question-3-no-question",
+            country=NewsCountry.CYPRUS,
+        )
+        self.db.add(desc_3)
+        await self.db.flush()
         news_3 = NewsItem(
             publication_date=date.today() - timedelta(days=2),
             original_article_url="https://example.com/e2e-news-question-3-no-question",
-            # TODO: link to Situation+SituationDescription for content
+            situation_id=situation_3.id,
         )
         self.db.add(news_3)
 
@@ -2802,11 +2951,22 @@ class SeedService:
                 )
             )
         )
+        # Collect situation_ids before deleting news items
+        existing_result = await self.db.execute(
+            select(NewsItem.situation_id).where(
+                NewsItem.original_article_url.like("https://example.com/e2e-news-feed-page-%"),
+                NewsItem.situation_id.isnot(None),
+            )
+        )
+        old_situation_ids = [row[0] for row in existing_result.all()]
         await self.db.execute(
             delete(NewsItem).where(
                 NewsItem.original_article_url.like("https://example.com/e2e-news-feed-page-%")
             )
         )
+        # Delete orphaned Situations from previous seed runs
+        if old_situation_ids:
+            await self.db.execute(delete(Situation).where(Situation.id.in_(old_situation_ids)))
 
         # Find or create E2E culture deck for news page questions
         result = await self.db.execute(
@@ -3132,10 +3292,35 @@ class SeedService:
             # Create URL for this item
             article_url = f"https://example.com/e2e-news-feed-page-{i + 1}"
 
+            # Rotate country for variety (cyprus/greece/world)
+            countries = [NewsCountry.CYPRUS, NewsCountry.GREECE, NewsCountry.WORLD]
+            item_country = countries[i % len(countries)]
+
+            # Create situation for this news item
+            feed_situation = Situation(
+                scenario_el=title_el,
+                scenario_en=title_en,
+                scenario_ru=title_ru,
+                status=SituationStatus.READY,
+            )
+            self.db.add(feed_situation)
+            await self.db.flush()
+
+            # Create situation description
+            feed_description = SituationDescription(
+                situation_id=feed_situation.id,
+                text_el=summary_el,
+                source_type=DescriptionSourceType.NEWS,
+                source_url=article_url,
+                country=item_country,
+            )
+            self.db.add(feed_description)
+            await self.db.flush()
+
             news_item = NewsItem(
                 publication_date=publication_date,
                 original_article_url=article_url,
-                # TODO: link to Situation+SituationDescription for content
+                situation_id=feed_situation.id,
             )
             self.db.add(news_item)
             await self.db.flush()
