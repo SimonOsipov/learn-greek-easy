@@ -42,8 +42,6 @@ const createMockArticle = (overrides: Partial<NewsItemResponse> = {}): NewsItemR
   audio_file_size_bytes: null,
   created_at: '2026-01-27T00:00:00Z',
   updated_at: '2026-01-27T00:00:00Z',
-  card_id: null,
-  deck_id: null,
   country: 'cyprus',
   title_el_a2: null,
   description_el_a2: null,
@@ -78,8 +76,6 @@ describe('NewsCard', () => {
 
   it('does not render questions button', () => {
     const article = createMockArticle({
-      card_id: 'card-123',
-      deck_id: 'deck-456',
       audio_url: 'https://example.com/audio.mp3',
     });
 

@@ -83,8 +83,6 @@ function makeNewsItem(overrides: Partial<NewsItemResponse> = {}): NewsItemRespon
     audio_file_size_bytes: null,
     created_at: '2025-01-10T00:00:00Z',
     updated_at: '2025-01-10T00:00:00Z',
-    card_id: null,
-    deck_id: null,
     country: 'cyprus',
     title_el_a2: null,
     description_el_a2: null,

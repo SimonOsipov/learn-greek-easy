@@ -647,9 +647,6 @@ export interface NewsItemResponse {
   audio_a2_generated_at: string | null;
   audio_a2_file_size_bytes: number | null;
   has_a2_content: boolean;
-  // New fields for card association
-  card_id: string | null;
-  deck_id: string | null;
 }
 
 /**
