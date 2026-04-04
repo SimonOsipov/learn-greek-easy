@@ -39,6 +39,7 @@ router = APIRouter()
                         "page": 1,
                         "page_size": 10,
                         "audio_count": 12,
+                        "country_counts": {"cyprus": 6, "greece": 5, "world": 4},
                         "items": [
                             {
                                 "id": "550e8400-e29b-41d4-a716-446655440000",

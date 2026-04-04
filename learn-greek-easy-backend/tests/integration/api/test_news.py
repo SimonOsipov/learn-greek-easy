@@ -101,7 +101,7 @@ class TestListNewsEndpoint:
         client: AsyncClient,
         db_session: AsyncSession,
     ):
-        """Test that response has all expected fields including card info."""
+        """Test that response has all expected fields including audio_count."""
         await NewsItemFactory.create()
 
         response = await client.get("/api/v1/news")
