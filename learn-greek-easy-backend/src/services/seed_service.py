@@ -2707,60 +2707,24 @@ class SeedService:
         }
 
     async def seed_news_questions(self) -> dict[str, Any]:
-        """Create news items with linked culture questions for E2E testing.
+        """Create news items with Situation trees for E2E testing.
 
         Creates:
-        - 2 NewsItems WITH associated CultureQuestions
-        - 1 NewsItem WITHOUT associated question
-        - Uses/creates "E2E News Questions" culture deck
+        - 3 NewsItems with Situation + SituationDescription trees
 
         This method is idempotent - deletes existing E2E test data first.
-
-        Returns:
-            dict with seeding summary including created items
-
-        Raises:
-            RuntimeError: If seeding not allowed
         """
         self._check_can_seed()
 
-        # Delete existing E2E news-questions test data (questions first for FK safety)
-        await self.db.execute(
-            delete(CultureQuestion).where(
-                CultureQuestion.original_article_url.like("https://example.com/e2e-news-question-%")
-            )
-        )
         await self.db.execute(
             delete(NewsItem).where(
                 NewsItem.original_article_url.like("https://example.com/e2e-news-question-%")
             )
         )
 
-        # Find or create E2E culture deck
-        result = await self.db.execute(
-            select(CultureDeck).where(CultureDeck.name_en == "E2E News Questions")
-        )
-        deck = result.scalar_one_or_none()
-
-        if not deck:
-            deck = CultureDeck(
-                name_en="E2E News Questions",
-                name_el="E2E Ερωτήσεις Ειδήσεων",
-                name_ru="E2E Новостные вопросы",
-                description_en="Deck for E2E testing news-linked questions",
-                description_el="Τράπουλα για δοκιμές E2E ερωτήσεων που σχετίζονται με ειδήσεις",
-                description_ru="Колода для E2E тестирования вопросов, связанных с новостями",
-                category="culture",
-                is_active=True,
-                is_premium=False,
-            )
-            self.db.add(deck)
-            await self.db.flush()
-
         news_items_data = []
-        questions_data = []
 
-        # News item 1 - WITH question (PARTIAL so it doesn't appear in situations browsing)
+        # News item 1 - (PARTIAL so it doesn't appear in situations browsing)
         situation_1 = Situation(
             scenario_el="Κυπριακή παράδοση E2E 1",
             scenario_en="Cypriot Tradition E2E 1",
@@ -2785,23 +2749,7 @@ class SeedService:
         )
         self.db.add(news_1)
 
-        question_1 = CultureQuestion(
-            deck_id=deck.id,
-            question_text={
-                "el": "Ποια είναι η παραδοσιακή κυπριακή γιορτή την άνοιξη;",
-                "en": "What is the traditional Cypriot spring festival?",
-            },
-            option_a={"el": "Κατακλυσμός", "en": "Kataklysmos"},
-            option_b={"el": "Ανθεστήρια", "en": "Anthestiria"},
-            option_c={"el": "Πάσχα", "en": "Easter"},
-            option_d={"el": "Καρναβάλι", "en": "Carnival"},
-            correct_option=2,
-            original_article_url="https://example.com/e2e-news-question-1",
-            is_pending_review=False,
-        )
-        self.db.add(question_1)
-
-        # News item 2 - WITH question (PARTIAL so it doesn't appear in situations browsing)
+        # News item 2 - (PARTIAL so it doesn't appear in situations browsing)
         situation_2 = Situation(
             scenario_el="Κυπριακή ιστορία E2E 2",
             scenario_en="Cypriot History E2E 2",
@@ -2826,23 +2774,7 @@ class SeedService:
         )
         self.db.add(news_2)
 
-        question_2 = CultureQuestion(
-            deck_id=deck.id,
-            question_text={
-                "el": "Πότε έγινε η Κύπρος ανεξάρτητη;",
-                "en": "When did Cyprus become independent?",
-            },
-            option_a={"el": "1950", "en": "1950"},
-            option_b={"el": "1960", "en": "1960"},
-            option_c={"el": "1970", "en": "1970"},
-            option_d={"el": "1974", "en": "1974"},
-            correct_option=2,
-            original_article_url="https://example.com/e2e-news-question-2",
-            is_pending_review=False,
-        )
-        self.db.add(question_2)
-
-        # News item 3 - WITHOUT question (PARTIAL so it doesn't appear in situations browsing)
+        # News item 3 - (PARTIAL so it doesn't appear in situations browsing)
         situation_3 = Situation(
             scenario_el="Κυπριακές ειδήσεις E2E 3",
             scenario_en="Cypriot News E2E 3",
@@ -2872,87 +2804,41 @@ class SeedService:
         news_items_data = [
             {
                 "id": str(news_1.id),
-                "has_question": True,
                 "url": news_1.original_article_url,
             },
             {
                 "id": str(news_2.id),
-                "has_question": True,
                 "url": news_2.original_article_url,
             },
             {
                 "id": str(news_3.id),
-                "has_question": False,
                 "url": news_3.original_article_url,
             },
-        ]
-        questions_data = [
-            {"id": str(question_1.id), "deck_id": str(deck.id)},
-            {"id": str(question_2.id), "deck_id": str(deck.id)},
         ]
 
         return {
             "success": True,
-            "deck_id": str(deck.id),
             "news_items_created": 3,
-            "questions_created": 2,
             "news_items": news_items_data,
-            "questions": questions_data,
         }
 
     async def seed_news_feed_page(self) -> dict[str, Any]:
         """Create comprehensive news items for E2E testing of the News Feed Page.
 
         Creates:
-        - 25 NewsItems with varied categories and difficulty levels
-        - 10 items WITH associated CultureQuestions (3-5 questions each)
-        - 15 items WITHOUT associated questions
-        - Uses/creates "E2E News Feed Page" culture deck
+        - 25 NewsItems with Situation + SituationDescription trees
+        - Varied categories, difficulty levels, countries
+        - Publication dates spread over the last 30 days
 
         This method is idempotent - deletes existing E2E test data first.
-
-        Returns:
-            dict with seeding summary including created items and questions
-
-        Raises:
-            RuntimeError: If seeding not allowed
         """
         self._check_can_seed()
 
-        # Delete existing E2E news-feed-page test data (questions first for FK safety)
-        await self.db.execute(
-            delete(CultureQuestion).where(
-                CultureQuestion.original_article_url.like(
-                    "https://example.com/e2e-news-feed-page-%"
-                )
-            )
-        )
         await self.db.execute(
             delete(NewsItem).where(
                 NewsItem.original_article_url.like("https://example.com/e2e-news-feed-page-%")
             )
         )
-
-        # Find or create E2E culture deck for news page questions
-        result = await self.db.execute(
-            select(CultureDeck).where(CultureDeck.name_en == "E2E News Feed Page")
-        )
-        deck = result.scalar_one_or_none()
-
-        if not deck:
-            deck = CultureDeck(
-                name_en="E2E News Feed Page",
-                name_el="E2E Σελίδα Ροής Ειδήσεων",
-                name_ru="E2E Страница ленты новостей",
-                description_en="Deck for E2E testing news feed page pagination and filtering",
-                description_el="Τράπουλα για δοκιμές E2E σελιδοποίησης και φιλτραρίσματος ροής ειδήσεων",
-                description_ru="Колода для E2E тестирования пагинации и фильтрации страницы ленты новостей",
-                category="culture",
-                is_active=True,
-                is_premium=False,
-            )
-            self.db.add(deck)
-            await self.db.flush()
 
         # Define categories and difficulty levels for variety
         categories = [
@@ -3122,126 +3008,6 @@ class SeedService:
 
         today = date.today()
         news_items_data = []
-        questions_data = []
-
-        # Items with questions (indices 0-9)
-        items_with_questions = set(range(10))
-
-        # Question templates for news items
-        # TypedDict would be better, but inline type annotation is simpler
-        question_templates: list[dict[str, Any]] = [
-            {
-                "question": {
-                    "el": "Ποιο είναι το κύριο θέμα του άρθρου;",
-                    "en": "What is the main topic of the article?",
-                    "ru": "Какова основная тема статьи?",
-                },
-                "options": [
-                    {"el": "Πολιτική", "en": "Politics", "ru": "Политика"},
-                    {"el": "Οικονομία", "en": "Economy", "ru": "Экономика"},
-                    {"el": "Πολιτισμός", "en": "Culture", "ru": "Культура"},
-                    {"el": "Αθλητισμός", "en": "Sports", "ru": "Спорт"},
-                ],
-                "correct": 3,
-            },
-            {
-                "question": {
-                    "el": "Πού αναφέρεται το άρθρο;",
-                    "en": "Where does the article refer to?",
-                    "ru": "О каком месте идет речь в статье?",
-                },
-                "options": [
-                    {"el": "Αθήνα", "en": "Athens", "ru": "Афины"},
-                    {"el": "Θεσσαλονίκη", "en": "Thessaloniki", "ru": "Салоники"},
-                    {"el": "Κρήτη", "en": "Crete", "ru": "Крит"},
-                    {"el": "Πελοπόννησος", "en": "Peloponnese", "ru": "Пелопоннес"},
-                ],
-                "correct": 1,
-            },
-            {
-                "question": {
-                    "el": "Τι είδους ανάπτυξη περιγράφεται;",
-                    "en": "What type of development is described?",
-                    "ru": "Какой тип развития описывается?",
-                },
-                "options": [
-                    {"el": "Οικονομική", "en": "Economic", "ru": "Экономическое"},
-                    {
-                        "el": "Τεχνολογική",
-                        "en": "Technological",
-                        "ru": "Технологическое",
-                    },
-                    {"el": "Πολιτιστική", "en": "Cultural", "ru": "Культурное"},
-                    {
-                        "el": "Περιβαλλοντική",
-                        "en": "Environmental",
-                        "ru": "Экологическое",
-                    },
-                ],
-                "correct": 2,
-            },
-            {
-                "question": {
-                    "el": "Ποιος είναι ο στόχος της πρωτοβουλίας;",
-                    "en": "What is the goal of the initiative?",
-                    "ru": "Какова цель инициативы?",
-                },
-                "options": [
-                    {
-                        "el": "Βελτίωση της ποιότητας ζωής",
-                        "en": "Improving quality of life",
-                        "ru": "Улучшение качества жизни",
-                    },
-                    {
-                        "el": "Οικονομική ανάπτυξη",
-                        "en": "Economic growth",
-                        "ru": "Экономический рост",
-                    },
-                    {
-                        "el": "Προστασία περιβάλλοντος",
-                        "en": "Environmental protection",
-                        "ru": "Защита окружающей среды",
-                    },
-                    {
-                        "el": "Πολιτιστική προώθηση",
-                        "en": "Cultural promotion",
-                        "ru": "Продвижение культуры",
-                    },
-                ],
-                "correct": 1,
-            },
-            {
-                "question": {
-                    "el": "Ποιο είναι το αναμενόμενο αποτέλεσμα;",
-                    "en": "What is the expected outcome?",
-                    "ru": "Каков ожидаемый результат?",
-                },
-                "options": [
-                    {
-                        "el": "Αύξηση επισκεπτών",
-                        "en": "Increase in visitors",
-                        "ru": "Увеличение посетителей",
-                    },
-                    {
-                        "el": "Νέες θέσεις εργασίας",
-                        "en": "New jobs",
-                        "ru": "Новые рабочие места",
-                    },
-                    {
-                        "el": "Βελτίωση υποδομών",
-                        "en": "Infrastructure improvement",
-                        "ru": "Улучшение инфраструктуры",
-                    },
-                    {
-                        "el": "Διεθνής αναγνώριση",
-                        "en": "International recognition",
-                        "ru": "Международное признание",
-                    },
-                ],
-                "correct": 4,
-            },
-        ]
-
         for i, (title_el, title_en, title_ru) in enumerate(news_titles):
             # Calculate publication date spread over 30 days
             days_ago = i  # Items spread across 0-24 days ago
@@ -3290,7 +3056,6 @@ class SeedService:
             self.db.add(news_item)
             await self.db.flush()
 
-            has_questions = i in items_with_questions
             news_items_data.append(
                 {
                     "id": str(news_item.id),
@@ -3298,48 +3063,13 @@ class SeedService:
                     "publication_date": str(publication_date),
                     "category": category,
                     "difficulty": difficulty,
-                    "has_questions": has_questions,
                 }
             )
 
-            # Create questions for items 0-9 (10 items with 3-5 questions each)
-            if has_questions:
-                # Number of questions varies: 3, 4, or 5
-                num_questions = 3 + (i % 3)  # 3, 4, 5, 3, 4, 5, 3, 4, 5, 3
-
-                for q_idx in range(num_questions):
-                    template = question_templates[q_idx % len(question_templates)]
-
-                    question = CultureQuestion(
-                        deck_id=deck.id,
-                        question_text=template["question"],
-                        option_a=template["options"][0],
-                        option_b=template["options"][1],
-                        option_c=template["options"][2],
-                        option_d=template["options"][3],
-                        correct_option=template["correct"],
-                        original_article_url=article_url,
-                        is_pending_review=False,
-                    )
-                    self.db.add(question)
-                    await self.db.flush()
-
-                    questions_data.append(
-                        {
-                            "id": str(question.id),
-                            "article_url": article_url,
-                        }
-                    )
-
         return {
             "success": True,
-            "deck_id": str(deck.id),
             "news_items_created": len(news_items_data),
-            "questions_created": len(questions_data),
-            "items_with_questions": len(items_with_questions),
-            "items_without_questions": len(news_items_data) - len(items_with_questions),
             "news_items": news_items_data,
-            "questions": questions_data,
         }
 
     # =====================
