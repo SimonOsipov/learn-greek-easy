@@ -108,6 +108,7 @@ class TestListNewsEndpoint:
 
         assert response.status_code == 200
         data = response.json()
+        assert "audio_count" in data
         item = data["items"][0]
 
         # Check all expected fields
@@ -124,9 +125,6 @@ class TestListNewsEndpoint:
         # description_en and description_ru come from old model — now None
         assert item["description_en"] is None
         assert item["description_ru"] is None
-        # Card info fields (may be null if no associated card)
-        assert "card_id" in item
-        assert "deck_id" in item
         # Audio metadata fields (may be null if no audio generated)
         assert "audio_url" in item
         assert "audio_generated_at" in item
