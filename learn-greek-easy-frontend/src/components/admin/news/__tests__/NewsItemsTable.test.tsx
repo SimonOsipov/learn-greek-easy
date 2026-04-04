@@ -6,10 +6,8 @@
  * - Russian locale shows Cyrillic month names
  * - English locale uses readable date format (dd MMM yyyy)
  * - Greek locale shows Greek month names
- * - Question completeness indicator: green Q badge (card_id non-null) vs muted Q badge
- * - Translation completeness badges: EL, EN, RU — green when both title and description non-empty
  * - Audio status present without regression
- * - Completeness indicators use small colored badges
+ * - B2/A2 Text completeness badges
  */
 
 import { render, screen } from '@testing-library/react';
@@ -161,147 +159,6 @@ describe('NewsItemsTable — Date formatting', () => {
     // date-fns el locale — March abbreviated is "Μαρ"
     const publishedText = screen.getByText(/Published:/);
     expect(publishedText.textContent).toMatch(/Μαρ/i);
-  });
-});
-
-describe('NewsItemsTable — Question completeness indicator (AC-6)', () => {
-  beforeEach(() => {
-    mockCurrentLanguage.value = 'en';
-    vi.clearAllMocks();
-  });
-
-  it('shows green Q badge when card_id is non-null', () => {
-    const item = makeNewsItem({ card_id: 'card-abc' });
-    render(<NewsItemsTable {...defaultTableProps} newsItems={[item]} />);
-
-    // Find Q badges — green one has bg-green-500/10 class
-    const badges = screen.getAllByText('Q');
-    expect(badges.length).toBeGreaterThan(0);
-    const greenBadge = badges.find((b) => b.className.includes('bg-green-500'));
-    expect(greenBadge).toBeDefined();
-  });
-
-  it('shows muted Q badge when card_id is null', () => {
-    const item = makeNewsItem({ card_id: null });
-    render(<NewsItemsTable {...defaultTableProps} newsItems={[item]} />);
-
-    const badges = screen.getAllByText('Q');
-    expect(badges.length).toBeGreaterThan(0);
-    // Muted badge: no green class, has opacity-50
-    const mutedBadge = badges.find((b) => b.className.includes('opacity-50'));
-    expect(mutedBadge).toBeDefined();
-  });
-});
-
-describe('NewsItemsTable — Translation completeness badges (AC-7)', () => {
-  beforeEach(() => {
-    mockCurrentLanguage.value = 'en';
-    vi.clearAllMocks();
-  });
-
-  it('shows green EL badge when title_el and description_el are both non-empty', () => {
-    const item = makeNewsItem({
-      title_el: 'Τίτλος',
-      description_el: 'Περιγραφή',
-    });
-    render(<NewsItemsTable {...defaultTableProps} newsItems={[item]} />);
-
-    const elBadges = screen.getAllByText('EL');
-    const greenEl = elBadges.find((b) => b.className.includes('bg-green-500'));
-    expect(greenEl).toBeDefined();
-  });
-
-  it('shows muted EL badge when description_el is empty', () => {
-    const item = makeNewsItem({
-      title_el: 'Τίτλος',
-      description_el: '',
-    });
-    render(<NewsItemsTable {...defaultTableProps} newsItems={[item]} />);
-
-    const elBadges = screen.getAllByText('EL');
-    const mutedEl = elBadges.find((b) => b.className.includes('opacity-50'));
-    expect(mutedEl).toBeDefined();
-  });
-
-  it('shows muted EL badge when title_el is empty', () => {
-    const item = makeNewsItem({
-      title_el: '',
-      description_el: 'Περιγραφή',
-    });
-    render(<NewsItemsTable {...defaultTableProps} newsItems={[item]} />);
-
-    const elBadges = screen.getAllByText('EL');
-    const mutedEl = elBadges.find((b) => b.className.includes('opacity-50'));
-    expect(mutedEl).toBeDefined();
-  });
-
-  it('shows green EN badge when title_en and description_en are both non-empty', () => {
-    const item = makeNewsItem({
-      title_en: 'Title',
-      description_en: 'Description',
-    });
-    render(<NewsItemsTable {...defaultTableProps} newsItems={[item]} />);
-
-    const enBadges = screen.getAllByText('EN');
-    const greenEn = enBadges.find((b) => b.className.includes('bg-green-500'));
-    expect(greenEn).toBeDefined();
-  });
-
-  it('shows muted EN badge when description_en is empty', () => {
-    const item = makeNewsItem({
-      title_en: 'Title',
-      description_en: '',
-    });
-    render(<NewsItemsTable {...defaultTableProps} newsItems={[item]} />);
-
-    const enBadges = screen.getAllByText('EN');
-    const mutedEn = enBadges.find((b) => b.className.includes('opacity-50'));
-    expect(mutedEn).toBeDefined();
-  });
-
-  it('shows green RU badge when title_ru and description_ru are both non-empty', () => {
-    const item = makeNewsItem({
-      title_ru: 'Заголовок',
-      description_ru: 'Описание',
-    });
-    render(<NewsItemsTable {...defaultTableProps} newsItems={[item]} />);
-
-    const ruBadges = screen.getAllByText('RU');
-    const greenRu = ruBadges.find((b) => b.className.includes('bg-green-500'));
-    expect(greenRu).toBeDefined();
-  });
-
-  it('shows muted RU badge when description_ru is empty', () => {
-    const item = makeNewsItem({
-      title_ru: 'Заголовок',
-      description_ru: '',
-    });
-    render(<NewsItemsTable {...defaultTableProps} newsItems={[item]} />);
-
-    const ruBadges = screen.getAllByText('RU');
-    const mutedRu = ruBadges.find((b) => b.className.includes('opacity-50'));
-    expect(mutedRu).toBeDefined();
-  });
-
-  it('shows all three language badges per row', () => {
-    const item = makeNewsItem();
-    render(<NewsItemsTable {...defaultTableProps} newsItems={[item]} />);
-
-    expect(screen.getAllByText('EL').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('EN').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('RU').length).toBeGreaterThan(0);
-  });
-
-  it('muted badge uses whitespace-trimmed check (whitespace-only string is incomplete)', () => {
-    const item = makeNewsItem({
-      title_en: '   ',
-      description_en: 'Description',
-    });
-    render(<NewsItemsTable {...defaultTableProps} newsItems={[item]} />);
-
-    const enBadges = screen.getAllByText('EN');
-    const mutedEn = enBadges.find((b) => b.className.includes('opacity-50'));
-    expect(mutedEn).toBeDefined();
   });
 });
 

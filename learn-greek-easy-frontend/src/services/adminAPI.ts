@@ -572,47 +572,16 @@ export type NewsCountry = 'cyprus' | 'greece' | 'world';
  * Payload for creating a news item
  */
 export interface NewsItemCreate {
-  title_el: string;
-  title_en: string;
-  title_ru: string;
-  description_el: string;
-  description_en: string;
-  description_ru: string;
+  scenario_el: string;
+  scenario_en: string;
+  scenario_ru: string;
+  text_el: string;
   publication_date: string;
   original_article_url: string;
   source_image_url: string;
   country: NewsCountry;
-  title_el_a2?: string;
-  description_el_a2?: string;
-}
-
-/**
- * Single option for a multiple-choice question
- */
-export interface QuestionOption {
-  text_el: string;
-  text_en: string;
-  text_ru: string;
-}
-
-/**
- * Question data for creating a culture question from news
- */
-export interface QuestionCreate {
-  deck_id: string;
-  question_el: string;
-  question_en: string;
-  question_ru: string;
-  options: QuestionOption[]; // EXACTLY 4 options required by backend
-  correct_answer_index: number; // 0-3
-}
-
-/**
- * Payload for creating a news item with optional question
- * Matches backend NewsItemWithQuestionCreate schema
- */
-export interface NewsItemWithQuestionCreate extends NewsItemCreate {
-  question?: QuestionCreate;
+  scenario_el_a2?: string;
+  text_el_a2?: string;
 }
 
 /**
@@ -637,18 +606,16 @@ export interface NewsItemWithCardResponse {
  * Payload for updating a news item (all fields optional)
  */
 export interface NewsItemUpdate {
-  title_el?: string;
-  title_en?: string;
-  title_ru?: string;
-  description_el?: string;
-  description_en?: string;
-  description_ru?: string;
+  scenario_el?: string;
+  scenario_en?: string;
+  scenario_ru?: string;
+  text_el?: string;
   publication_date?: string;
   original_article_url?: string;
   source_image_url?: string;
   country?: NewsCountry;
-  title_el_a2?: string;
-  description_el_a2?: string;
+  scenario_el_a2?: string | null;
+  text_el_a2?: string | null;
 }
 
 /**
@@ -1474,7 +1441,7 @@ export const adminAPI = {
    * @throws 400 if image download fails or question validation fails
    * @throws 409 if original_article_url is already used
    */
-  createNewsItem: async (data: NewsItemWithQuestionCreate): Promise<NewsItemWithCardResponse> => {
+  createNewsItem: async (data: NewsItemCreate): Promise<NewsItemWithCardResponse> => {
     return api.post<NewsItemWithCardResponse>('/api/v1/admin/news', data);
   },
 
@@ -1507,20 +1474,6 @@ export const adminAPI = {
    */
   deleteNewsItem: async (id: string): Promise<void> => {
     return api.delete<void>(`/api/v1/admin/news/${id}`);
-  },
-
-  /**
-   * Get a culture question by ID (regardless of pending status)
-   *
-   * Used to fetch the question associated with a news item for preview.
-   * Requires superuser authentication.
-   *
-   * @param questionId - UUID of the question
-   * @returns Full question details
-   * @throws 404 if question not found
-   */
-  getNewsQuestion: async (questionId: string): Promise<PendingQuestion> => {
-    return api.get<PendingQuestion>(`/api/v1/admin/news/questions/${questionId}`);
   },
 
   // ============================================
@@ -1796,14 +1749,6 @@ export function getCultureQuestionAudioStreamUrl(questionId: string): string {
 
 export function getDialogAudioStreamUrl(dialogId: string): string {
   return `/api/v1/admin/listening-dialogs/${dialogId}/generate-audio/stream`;
-}
-
-export function getNewsB2AudioStreamUrl(newsItemId: string): string {
-  return `/api/v1/admin/news/${newsItemId}/generate-b2-audio/stream`;
-}
-
-export function getNewsA2AudioStreamUrl(newsItemId: string): string {
-  return `/api/v1/admin/news/${newsItemId}/generate-a2-audio/stream`;
 }
 
 export function getDescriptionAudioStreamUrl(situationId: string, level: 'b1' | 'a2'): string {

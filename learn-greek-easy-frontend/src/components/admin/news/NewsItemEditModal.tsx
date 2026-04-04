@@ -11,17 +11,12 @@
  * - JSON validation
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
-import { format } from 'date-fns';
-import { el } from 'date-fns/locale/el';
-import { ru } from 'date-fns/locale/ru';
-import { Check, Circle, Loader2, RefreshCw } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { WaveformPlayer } from '@/components/culture/WaveformPlayer';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -30,25 +25,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
 import { useLanguage } from '@/hooks/useLanguage';
-import { useSSE } from '@/hooks/useSSE';
-import { adminAPI, getNewsA2AudioStreamUrl, getNewsB2AudioStreamUrl } from '@/services/adminAPI';
-import type { NewsItemResponse, NewsItemUpdate, PendingQuestion } from '@/services/adminAPI';
+import type { NewsItemResponse, NewsItemUpdate } from '@/services/adminAPI';
 import { useAdminNewsStore } from '@/stores/adminNewsStore';
-
-function getDateLocale(lang: string) {
-  switch (lang) {
-    case 'el':
-      return el;
-    case 'ru':
-      return ru;
-    default:
-      return undefined;
-  }
-}
 
 /**
  * Get localized title based on current interface language
@@ -62,21 +43,6 @@ function getLocalizedTitle(item: NewsItemResponse, lang: string): string {
     default: // 'en'
       return item.title_en;
   }
-}
-
-function formatAudioDuration(seconds: number): string {
-  const safe = Math.max(0, seconds || 0);
-  const m = Math.floor(safe / 60);
-  const s = Math.floor(safe % 60);
-  return `${m}:${s.toString().padStart(2, '0')}`;
-}
-
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  const kb = bytes / 1024;
-  if (kb < 1024) return `${kb.toFixed(1)} KB`;
-  const mb = kb / 1024;
-  return `${mb.toFixed(1)} MB`;
 }
 
 interface NewsItemEditModalProps {
@@ -93,18 +59,14 @@ interface NewsItemEditModalProps {
 function itemToEditableJson(item: NewsItemResponse, imageUrlPlaceholder: string): string {
   const editable = {
     country: item.country,
-    title_el: item.title_el,
-    title_en: item.title_en,
-    title_ru: item.title_ru,
-    description_el: item.description_el,
-    description_en: item.description_en,
-    description_ru: item.description_ru,
-    title_el_a2: item.title_el_a2 ?? '',
-    description_el_a2: item.description_el_a2 ?? '',
+    scenario_el: item.title_el,
+    scenario_en: item.title_en,
+    scenario_ru: item.title_ru,
+    text_el: item.description_el,
+    scenario_el_a2: item.title_el_a2 ?? '',
+    text_el_a2: item.description_el_a2 ?? '',
     publication_date: item.publication_date,
     original_article_url: item.original_article_url,
-    // Include source_image_url as empty to show it's optional
-    // User can add a URL here to replace the image
     source_image_url: imageUrlPlaceholder,
   };
   return JSON.stringify(editable, null, 2);
@@ -141,12 +103,10 @@ function parseEditJson(json: string): {
 
   // Only include non-empty string fields
   const stringFields = [
-    'title_el',
-    'title_en',
-    'title_ru',
-    'description_el',
-    'description_en',
-    'description_ru',
+    'scenario_el',
+    'scenario_en',
+    'scenario_ru',
+    'text_el',
     'publication_date',
     'original_article_url',
   ] as const;
@@ -169,24 +129,24 @@ function parseEditJson(json: string): {
   }
 
   // A2 pair validation: both keys must be present together or absent together
-  const hasA2TitleKey = Object.prototype.hasOwnProperty.call(parsed, 'title_el_a2');
-  const hasA2DescKey = Object.prototype.hasOwnProperty.call(parsed, 'description_el_a2');
-  if (hasA2TitleKey !== hasA2DescKey) {
+  const hasA2ScenarioKey = Object.prototype.hasOwnProperty.call(parsed, 'scenario_el_a2');
+  const hasA2TextKey = Object.prototype.hasOwnProperty.call(parsed, 'text_el_a2');
+  if (hasA2ScenarioKey !== hasA2TextKey) {
     return { valid: false, errorType: 'a2FieldsPaired' };
   }
-  if (hasA2TitleKey && hasA2DescKey) {
-    if (typeof parsed.title_el_a2 !== 'string' || typeof parsed.description_el_a2 !== 'string') {
+  if (hasA2ScenarioKey && hasA2TextKey) {
+    if (typeof parsed.scenario_el_a2 !== 'string' || typeof parsed.text_el_a2 !== 'string') {
       return { valid: false, errorType: 'a2FieldsPaired' };
     }
-    const a2Title = parsed.title_el_a2.trim();
-    const a2Desc = parsed.description_el_a2.trim();
-    const hasA2Title = a2Title !== '';
-    const hasA2Desc = a2Desc !== '';
-    if (hasA2Title !== hasA2Desc) {
+    const a2Scenario = parsed.scenario_el_a2.trim();
+    const a2Text = parsed.text_el_a2.trim();
+    const hasA2Scenario = a2Scenario !== '';
+    const hasA2Text = a2Text !== '';
+    if (hasA2Scenario !== hasA2Text) {
       return { valid: false, errorType: 'a2FieldsPaired' };
     }
-    (update as Record<string, unknown>)['title_el_a2'] = a2Title;
-    (update as Record<string, unknown>)['description_el_a2'] = a2Desc;
+    (update as Record<string, unknown>)['scenario_el_a2'] = a2Scenario;
+    (update as Record<string, unknown>)['text_el_a2'] = a2Text;
   }
 
   // Handle source_image_url specially - only include if it's a valid URL
@@ -240,157 +200,14 @@ export const NewsItemEditModal: React.FC<NewsItemEditModalProps> = ({
   const { t } = useTranslation('admin');
   const { currentLanguage } = useLanguage();
   const [jsonInput, setJsonInput] = useState('');
-  const { updateNewsItem, isUpdating, updateItemAudioFromSSE } = useAdminNewsStore();
-  const [audioError, setAudioError] = useState(false);
-
-  const [b2Stage, setB2Stage] = useState<string | null>(null);
-  const [a2Stage, setA2Stage] = useState<string | null>(null);
-  const [b2SseEnabled, setB2SseEnabled] = useState(false);
-  const [a2SseEnabled, setA2SseEnabled] = useState(false);
-
-  const [audioA2Error, setAudioA2Error] = useState<string | null>(null);
-  const [questionData, setQuestionData] = useState<PendingQuestion | null>(null);
-
-  // B2 audio stream
-  useSSE(item ? getNewsB2AudioStreamUrl(item.id) : '', {
-    method: 'POST',
-    body: {},
-    enabled: b2SseEnabled && !!item,
-    maxRetries: 0,
-    reconnect: false,
-    onEvent: (event) => {
-      const data = event.data as Record<string, unknown>;
-      switch (event.type) {
-        case 'news_audio:tts':
-        case 'news_audio:upload':
-        case 'news_audio:persist':
-          setB2Stage(event.type.split(':')[1]);
-          break;
-        case 'news_audio:complete':
-          setB2Stage(null);
-          setB2SseEnabled(false);
-          updateItemAudioFromSSE(
-            String(data.news_item_id ?? item?.id ?? ''),
-            'b2',
-            String(data.audio_url ?? ''),
-            null
-          );
-          break;
-        case 'news_audio:error':
-          setB2Stage(null);
-          setB2SseEnabled(false);
-          toast({
-            title: String(data.error ?? t('news.audio.regenerateError')),
-            variant: 'destructive',
-          });
-          break;
-      }
-    },
-    onError: () => {
-      setB2Stage(null);
-      setB2SseEnabled(false);
-      toast({ title: t('news.audio.regenerateError'), variant: 'destructive' });
-    },
-  });
-
-  // A2 audio stream
-  useSSE(item ? getNewsA2AudioStreamUrl(item.id) : '', {
-    method: 'POST',
-    body: {},
-    enabled: a2SseEnabled && !!item,
-    maxRetries: 0,
-    reconnect: false,
-    onEvent: (event) => {
-      const data = event.data as Record<string, unknown>;
-      switch (event.type) {
-        case 'news_audio:tts':
-        case 'news_audio:upload':
-        case 'news_audio:persist':
-          setA2Stage(event.type.split(':')[1]);
-          break;
-        case 'news_audio:complete':
-          setA2Stage(null);
-          setA2SseEnabled(false);
-          updateItemAudioFromSSE(
-            String(data.news_item_id ?? item?.id ?? ''),
-            'a2',
-            String(data.audio_url ?? ''),
-            null
-          );
-          break;
-        case 'news_audio:error':
-          setA2Stage(null);
-          setA2SseEnabled(false);
-          toast({
-            title: String(data.error ?? t('news.audio.regenerateA2Error')),
-            variant: 'destructive',
-          });
-          break;
-      }
-    },
-    onError: () => {
-      setA2Stage(null);
-      setA2SseEnabled(false);
-      toast({ title: t('news.audio.regenerateA2Error'), variant: 'destructive' });
-    },
-  });
-
-  // Fetch question preview when card_id changes
-  useEffect(() => {
-    if (!item?.card_id) {
-      setQuestionData(null);
-      return;
-    }
-    let cancelled = false;
-    adminAPI
-      .getNewsQuestion(item.card_id)
-      .then((data) => {
-        if (!cancelled) setQuestionData(data);
-      })
-      .catch(() => {
-        if (!cancelled) setQuestionData(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [item?.card_id]);
+  const { updateNewsItem, isUpdating } = useAdminNewsStore();
 
   // Initialize JSON input when item changes
   useEffect(() => {
     if (item) {
       setJsonInput(itemToEditableJson(item, t('news.edit.imageUrlPlaceholder')));
-      setAudioError(false);
     }
   }, [item, t]);
-
-  // Clear SSE state when modal closes
-  useEffect(() => {
-    if (!open) {
-      setB2SseEnabled(false);
-      setA2SseEnabled(false);
-      setB2Stage(null);
-      setA2Stage(null);
-      setAudioA2Error(null);
-    }
-  }, [open]);
-
-  const handleRegenerateB2 = useCallback(() => {
-    if (!item || b2SseEnabled) return;
-    setB2Stage('starting');
-    setB2SseEnabled(true);
-  }, [item, b2SseEnabled]);
-
-  const handleRegenerateA2 = useCallback(() => {
-    if (!item || !item.has_a2_content || a2SseEnabled) return;
-    setA2Stage('starting');
-    setA2SseEnabled(true);
-  }, [item, a2SseEnabled]);
-
-  const handleAudioError = useCallback(() => {
-    setAudioError(true);
-  }, []);
-
-  const handleA2AudioError = () => setAudioA2Error(t('news.audio.loadError'));
 
   const handleSave = async () => {
     if (!item) return;
@@ -446,202 +263,6 @@ export const NewsItemEditModal: React.FC<NewsItemEditModalProps> = ({
           <DialogTitle>{t('news.edit.title')}</DialogTitle>
           <DialogDescription>{getLocalizedTitle(item, currentLanguage)}</DialogDescription>
         </DialogHeader>
-
-        {/* Audio Status Section */}
-        <Card data-testid="audio-status-section">
-          <CardContent className="p-4">
-            {/* B2 Audio Section */}
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <h4 className="text-sm font-medium">{t('news.audio.b2StatusTitle')}</h4>
-                  {item.audio_url ? (
-                    <Circle className="h-2.5 w-2.5 fill-green-500 text-green-500" />
-                  ) : (
-                    <Circle className="h-2.5 w-2.5 fill-muted-foreground/40 text-muted-foreground/40" />
-                  )}
-                </div>
-                {item.audio_url ? (
-                  <div className="space-y-0.5 text-xs text-muted-foreground">
-                    {item.audio_duration_seconds != null && (
-                      <p>
-                        {t('news.audio.duration')}:{' '}
-                        {formatAudioDuration(item.audio_duration_seconds)}
-                      </p>
-                    )}
-                    {item.audio_file_size_bytes != null && (
-                      <p>
-                        {t('news.audio.fileSize')}: {formatFileSize(item.audio_file_size_bytes)}
-                      </p>
-                    )}
-                    {item.audio_generated_at && (
-                      <p>
-                        {t('news.audio.generated')}:{' '}
-                        {format(new Date(item.audio_generated_at), 'dd MMM yyyy, HH:mm', {
-                          locale: getDateLocale(currentLanguage),
-                        })}
-                      </p>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground/60">
-                    {t('news.audio.noAudioGenerated')}
-                  </p>
-                )}
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRegenerateB2}
-                disabled={b2SseEnabled}
-                data-testid="modal-regenerate-b2-audio"
-              >
-                {b2Stage !== null ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {b2Stage}
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    {t('news.audio.regenerateB2')}
-                  </>
-                )}
-              </Button>
-            </div>
-            {/* B2 Audio Player */}
-            <div className="mt-3" data-testid="audio-player-container">
-              <WaveformPlayer
-                audioUrl={item.audio_url ?? undefined}
-                variant="admin"
-                showSpeedControl={false}
-                disabled={!item.audio_url}
-                onError={handleAudioError}
-              />
-              {audioError && (
-                <p
-                  className="mt-1.5 text-xs text-destructive"
-                  data-testid="audio-load-error"
-                  role="alert"
-                >
-                  {t('news.audio.loadError')}
-                </p>
-              )}
-            </div>
-
-            <Separator className="my-4" />
-
-            {/* A2 Audio Section */}
-            <div>
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <h4 className="text-sm font-medium">{t('news.audio.a2StatusTitle')}</h4>
-                    <div
-                      className={`h-2 w-2 rounded-full ${item.audio_a2_url ? 'bg-green-500' : 'bg-gray-300'}`}
-                    />
-                  </div>
-                  {item.audio_a2_url ? (
-                    <div className="space-y-0.5 text-xs text-muted-foreground">
-                      {item.audio_a2_duration_seconds != null && (
-                        <p>
-                          {t('news.audio.duration')}:{' '}
-                          {formatAudioDuration(item.audio_a2_duration_seconds)}
-                        </p>
-                      )}
-                      {item.audio_a2_file_size_bytes != null && (
-                        <p>
-                          {t('news.audio.fileSize')}:{' '}
-                          {formatFileSize(item.audio_a2_file_size_bytes)}
-                        </p>
-                      )}
-                      {item.audio_a2_generated_at && (
-                        <p>
-                          {t('news.audio.generated')}:{' '}
-                          {format(new Date(item.audio_a2_generated_at), 'dd MMM yyyy, HH:mm', {
-                            locale: getDateLocale(currentLanguage),
-                          })}
-                        </p>
-                      )}
-                    </div>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">{t('news.audio.noA2Content')}</p>
-                  )}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={a2SseEnabled || !item.has_a2_content}
-                  onClick={handleRegenerateA2}
-                  data-testid="modal-regenerate-a2-audio"
-                >
-                  {a2Stage !== null ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      {a2Stage}
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw className="mr-2 h-4 w-4" />
-                      {t('news.audio.regenerateA2')}
-                    </>
-                  )}
-                </Button>
-              </div>
-              {audioA2Error && <p className="mt-1 text-xs text-destructive">{audioA2Error}</p>}
-              <div className="mt-3" data-testid="audio-a2-player-container">
-                <WaveformPlayer
-                  audioUrl={item.audio_a2_url ?? undefined}
-                  variant="admin"
-                  showSpeedControl={false}
-                  disabled={!item.audio_a2_url}
-                  onError={handleA2AudioError}
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {item.card_id && questionData && (
-          <Card data-testid="question-preview-card">
-            <CardContent className="space-y-3 p-4">
-              <h4 className="text-sm font-medium">{t('news.question.previewTitle')}</h4>
-              <p className="text-sm">
-                {(questionData.question_text as Record<string, string>)[currentLanguage] ||
-                  (questionData.question_text as Record<string, string>).el}
-              </p>
-              <div className="space-y-1.5">
-                {(['A', 'B', 'C', 'D'] as const).map((letter, idx) => {
-                  const optionKey = `option_${letter.toLowerCase()}` as
-                    | 'option_a'
-                    | 'option_b'
-                    | 'option_c'
-                    | 'option_d';
-                  const option = questionData[optionKey] as Record<string, string> | null;
-                  if (!option) return null;
-                  const isCorrect = questionData.correct_option === idx + 1;
-                  return (
-                    <div
-                      key={letter}
-                      className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-sm ${
-                        isCorrect
-                          ? 'bg-green-500/10 text-green-700 dark:text-green-400'
-                          : 'bg-muted'
-                      }`}
-                    >
-                      <span className="font-medium">{letter}.</span>
-                      <span>
-                        {(option as Record<string, string>)[currentLanguage] ||
-                          (option as Record<string, string>).el}
-                      </span>
-                      {isCorrect && <Check className="ml-auto h-4 w-4" />}
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         <div className="space-y-4">
           <Textarea
