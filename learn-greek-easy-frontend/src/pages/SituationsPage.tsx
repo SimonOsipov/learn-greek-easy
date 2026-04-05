@@ -1,15 +1,18 @@
 import React, { useEffect, useRef, useState } from 'react';
 
 import { useQuery } from '@tanstack/react-query';
-import { AlertCircle, BookOpen, Volume2 } from 'lucide-react';
+import { AlertCircle, BookOpen, Search, Volume2, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useLanguage } from '@/hooks/useLanguage';
 import { track } from '@/lib/analytics';
+import { getDeckBackgroundStyle } from '@/lib/deckBackground';
 import { situationAPI } from '@/services/situationAPI';
 import type { LearnerSituationListItem } from '@/types/situation';
 
@@ -24,6 +27,54 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
+// Loading skeleton components
+const SituationCardSkeleton: React.FC = () => {
+  const { t } = useTranslation('common');
+  return (
+    <div
+      className="overflow-hidden rounded-lg border bg-card shadow-sm"
+      role="status"
+      aria-label={t('situations.skeleton.loadingCard')}
+    >
+      <Skeleton className="h-1 w-full rounded-none" />
+      <div className="space-y-3 p-4">
+        <Skeleton className="h-5 w-2/3" />
+        <Skeleton className="h-4 w-1/2" />
+      </div>
+      <div className="flex gap-2 px-4 pb-4">
+        <Skeleton className="h-5 w-16 rounded-full" />
+        <Skeleton className="h-5 w-12 rounded-full" />
+      </div>
+    </div>
+  );
+};
+
+const SituationGridSkeleton: React.FC = () => (
+  <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+    {[1, 2, 3, 4, 5, 6].map((i) => (
+      <SituationCardSkeleton key={i} />
+    ))}
+  </div>
+);
+
+type CompletionFilter = 'all' | 'not-started' | 'in-progress' | 'completed';
+
+function getCompletionStatus(
+  item: LearnerSituationListItem
+): 'not-started' | 'in-progress' | 'completed' {
+  if (item.exercise_completed === 0) return 'not-started';
+  if (item.exercise_total > 0 && item.exercise_completed === item.exercise_total)
+    return 'completed';
+  return 'in-progress';
+}
+
+function getAccentStripeColor(item: LearnerSituationListItem): string {
+  if (item.exercise_total > 0 && item.exercise_completed === item.exercise_total)
+    return 'bg-green-500';
+  if (item.exercise_completed > 0) return 'bg-blue-500';
+  return 'bg-gray-300';
+}
+
 export const SituationsPage: React.FC = () => {
   const { t } = useTranslation('common');
   const { currentLanguage } = useLanguage();
@@ -31,6 +82,7 @@ export const SituationsPage: React.FC = () => {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [hasAudioFilter, setHasAudioFilter] = useState(false);
+  const [completionFilter, setCompletionFilter] = useState<CompletionFilter>('all');
   const debouncedSearch = useDebounce(search, 300);
 
   const hasTrackedPageView = useRef(false);
@@ -65,10 +117,22 @@ export const SituationsPage: React.FC = () => {
     setPage(1);
   };
 
-  const handleAudioFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setHasAudioFilter(e.target.checked);
+  const handleAudioFilterToggle = () => {
+    setHasAudioFilter((prev) => !prev);
     setPage(1);
   };
+
+  const handleCompletionFilterToggle = (value: CompletionFilter) => {
+    setCompletionFilter((prev) => (prev === value ? 'all' : value));
+    setPage(1);
+  };
+
+  // Client-side completion filter applied to server results
+  const filteredItems =
+    data?.items.filter((item) => {
+      if (completionFilter === 'all') return true;
+      return getCompletionStatus(item) === completionFilter;
+    }) ?? [];
 
   return (
     <div className="space-y-6 pb-20 lg:pb-8" data-testid="situations-page">
@@ -83,28 +147,80 @@ export const SituationsPage: React.FC = () => {
       </div>
 
       {/* Search and Filters */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <input
-          type="text"
-          value={search}
-          onChange={handleSearchChange}
-          placeholder={t('situations.search.placeholder')}
-          aria-label={t('situations.search.placeholder')}
-          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring sm:max-w-xs"
-          data-testid="situations-search"
-        />
-        <label
-          className="flex cursor-pointer items-center gap-2 text-sm"
-          data-testid="situations-audio-filter"
-        >
-          <input
-            type="checkbox"
-            checked={hasAudioFilter}
-            onChange={handleAudioFilterChange}
-            className="h-4 w-4 rounded border-input"
-          />
-          <span>{t('situations.filter.hasAudio')}</span>
-        </label>
+      <div className="space-y-3">
+        {/* Row 1: Search + Counter */}
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1 sm:max-w-xs">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="text"
+              value={search}
+              onChange={handleSearchChange}
+              placeholder={t('situations.search.placeholder')}
+              aria-label={t('situations.search.placeholder')}
+              className="pl-10 pr-10"
+              data-testid="situations-search"
+            />
+            {search.length > 0 && (
+              <button
+                onClick={() => {
+                  setSearch('');
+                  setPage(1);
+                }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                aria-label={t('situations.search.clear')}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          {data && (
+            <span className="shrink-0 whitespace-nowrap text-sm text-muted-foreground">
+              {t('situations.filter.showing', {
+                count: filteredItems.length,
+                total: data.total,
+              })}
+            </span>
+          )}
+        </div>
+
+        {/* Row 2: Filter buttons */}
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant={hasAudioFilter ? 'default' : 'outline'}
+            size="sm"
+            onClick={handleAudioFilterToggle}
+            aria-pressed={hasAudioFilter}
+            data-testid="situations-audio-filter"
+          >
+            {t('situations.filter.hasAudio')}
+          </Button>
+          <div className="h-6 w-px bg-border" aria-hidden="true" />
+          <Button
+            variant={completionFilter === 'not-started' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => handleCompletionFilterToggle('not-started')}
+            aria-pressed={completionFilter === 'not-started'}
+          >
+            {t('situations.filter.notStarted')}
+          </Button>
+          <Button
+            variant={completionFilter === 'in-progress' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => handleCompletionFilterToggle('in-progress')}
+            aria-pressed={completionFilter === 'in-progress'}
+          >
+            {t('situations.filter.inProgress')}
+          </Button>
+          <Button
+            variant={completionFilter === 'completed' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => handleCompletionFilterToggle('completed')}
+            aria-pressed={completionFilter === 'completed'}
+          >
+            {t('situations.filter.completed')}
+          </Button>
+        </div>
       </div>
 
       {/* Error State */}
@@ -131,31 +247,33 @@ export const SituationsPage: React.FC = () => {
       )}
 
       {/* Loading State */}
-      {isLoading && (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: PAGE_SIZE }).map((_, i) => (
-            <Card key={i} className="animate-pulse">
-              <CardContent className="p-4">
-                <div className="h-4 w-3/4 rounded bg-muted" />
-                <div className="mt-2 h-3 w-1/2 rounded bg-muted" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+      {isLoading && <SituationGridSkeleton />}
 
       {/* Card Grid */}
-      {!isLoading && !isError && data && data.items.length > 0 && (
+      {!isLoading && !isError && data && filteredItems.length > 0 && (
         <>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {data.items.map((item) => (
+            {filteredItems.map((item, index) => (
               <Link
                 key={item.id}
                 to={`/situations/${item.id}`}
                 className="block"
                 data-testid="situation-item"
+                onClick={() =>
+                  track('situation_card_clicked', {
+                    situation_id: item.id,
+                    has_audio: item.has_audio,
+                    exercise_completed: item.exercise_completed,
+                    exercise_total: item.exercise_total,
+                    position: index,
+                  })
+                }
               >
-                <Card className="h-full cursor-pointer transition-shadow hover:shadow-md">
+                <Card
+                  className="relative h-full min-h-[170px] cursor-pointer overflow-hidden transition-shadow hover:shadow-lg"
+                  style={getDeckBackgroundStyle(item.source_image_url ?? undefined)}
+                >
+                  <div className={`h-1 w-full ${getAccentStripeColor(item)}`} />
                   <CardContent className="flex h-full flex-col gap-2 p-4">
                     <p className="text-sm font-medium text-foreground">{item.scenario_el}</p>
                     <p className="text-xs text-muted-foreground">{getScenario(item)}</p>
@@ -218,7 +336,7 @@ export const SituationsPage: React.FC = () => {
       )}
 
       {/* Empty State */}
-      {!isLoading && !isError && data && data.items.length === 0 && (
+      {!isLoading && !isError && data && filteredItems.length === 0 && (
         <EmptyState
           icon={BookOpen}
           title={t('situations.empty.title')}
