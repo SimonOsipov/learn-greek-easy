@@ -113,6 +113,7 @@ async def list_situations(
         data_query = data_query.where(audio_filter)
 
     rows = (await db.execute(data_query)).all()
+    s3 = get_s3_service()
     items = [
         LearnerSituationListItem(
             id=situation.id,
@@ -126,6 +127,11 @@ async def list_situations(
             has_dialog=situation.dialog is not None,
             exercise_total=exercise_total or 0,
             exercise_completed=exercise_completed or 0,
+            source_image_url=(
+                s3.generate_presigned_url(situation.source_image_s3_key)
+                if situation.source_image_s3_key
+                else None
+            ),
         )
         for situation, exercise_total, exercise_completed in rows
     ]

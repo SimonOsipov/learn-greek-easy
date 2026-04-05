@@ -1,5 +1,6 @@
 """Integration tests for learner situation list and detail endpoints."""
 
+from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
@@ -294,6 +295,42 @@ class TestLearnerSituationListEndpoint:
         item = data["items"][0]
         assert item["exercise_total"] == 2
         assert item["exercise_completed"] == 0
+
+    @pytest.mark.asyncio
+    async def test_list_includes_source_image_url(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        db_session: AsyncSession,
+    ) -> None:
+        sit_with_image = await SituationFactory.create(
+            session=db_session,
+            ready=True,
+            source_image_s3_key="images/test.jpg",
+        )
+        sit_without_image = await SituationFactory.create(
+            session=db_session,
+            ready=True,
+            source_image_s3_key=None,
+        )
+        await db_session.flush()
+
+        mock_s3 = MagicMock()
+        mock_s3.generate_presigned_url.side_effect = lambda key: f"https://s3.example.com/{key}"
+
+        with patch("src.api.v1.situations.get_s3_service", return_value=mock_s3):
+            response = await client.get(LIST_URL, headers=auth_headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 2
+
+        items_by_id = {item["id"]: item for item in data["items"]}
+        assert (
+            items_by_id[str(sit_with_image.id)]["source_image_url"]
+            == "https://s3.example.com/images/test.jpg"
+        )
+        assert items_by_id[str(sit_without_image.id)]["source_image_url"] is None
 
 
 @pytest.mark.integration
