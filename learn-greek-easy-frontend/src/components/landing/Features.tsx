@@ -393,13 +393,13 @@ const Features = () => {
       </div>
       <p className="mb-3 text-sm font-bold text-foreground">Πότε η Κύπρος έγινε ανεξάρτητη;</p>
       <div className="mb-3 grid grid-cols-2 gap-2">
-        <div className="rounded-lg border border-border p-2.5 text-sm text-foreground">1821</div>
+        <div className="rounded-lg border border-border p-2.5 text-sm text-foreground">1950</div>
         <div className="flex items-center justify-between rounded-lg border-2 border-primary bg-primary/5 p-2.5">
-          <span className="text-sm font-semibold text-foreground">1832</span>
+          <span className="text-sm font-semibold text-foreground">1960</span>
           <CheckCircle className="h-4 w-4 text-primary" />
         </div>
-        <div className="rounded-lg border border-border p-2.5 text-sm text-foreground">1829</div>
-        <div className="rounded-lg border border-border p-2.5 text-sm text-foreground">1878</div>
+        <div className="rounded-lg border border-border p-2.5 text-sm text-foreground">1974</div>
+        <div className="rounded-lg border border-border p-2.5 text-sm text-foreground">1955</div>
       </div>
       <Button tabIndex={-1} className="mt-auto h-11 w-full rounded-lg font-semibold">
         {t('features.mockups.nextQuestion')}
@@ -701,14 +701,14 @@ const Features = () => {
           {features.map((feature, index) => (
             <div key={index} className="flex flex-col" data-testid="feature-card">
               {/* Feature content */}
-              <div className="mb-4 min-h-40">
+              <div className="mb-4 sm:min-h-40">
                 <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
                   {feature.icon}
                 </div>
                 <h3 className="mb-2 line-clamp-2 text-xl font-bold text-foreground">
                   {t(feature.titleKey)}
                 </h3>
-                <p className="line-clamp-2 text-sm leading-relaxed text-muted-foreground">
+                <p className="text-sm leading-relaxed text-muted-foreground sm:line-clamp-2">
                   {t(feature.descriptionKey)}
                 </p>
               </div>
