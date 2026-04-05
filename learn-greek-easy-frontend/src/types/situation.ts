@@ -157,6 +157,7 @@ export interface LearnerSituationListItem {
   has_dialog: boolean;
   exercise_total: number;
   exercise_completed: number;
+  source_image_url: string | null;
 }
 
 export interface LearnerSituationListResponse {
