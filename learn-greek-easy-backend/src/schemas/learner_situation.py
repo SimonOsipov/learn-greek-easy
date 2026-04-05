@@ -40,6 +40,7 @@ class LearnerSituationListItem(BaseModel):
     has_dialog: bool
     exercise_total: int
     exercise_completed: int
+    source_image_url: str | None = None
 
 
 class LearnerSituationListResponse(BaseModel):

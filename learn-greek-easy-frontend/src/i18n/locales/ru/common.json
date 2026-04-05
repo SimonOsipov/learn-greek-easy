@@ -250,10 +250,18 @@
       "subtitle": "Практикуйте разговорный греческий"
     },
     "search": {
-      "placeholder": "Поиск ситуаций..."
+      "placeholder": "Поиск ситуаций...",
+      "clear": "Очистить поиск"
     },
     "filter": {
-      "hasAudio": "С аудио"
+      "hasAudio": "С аудио",
+      "notStarted": "Не начато",
+      "inProgress": "В процессе",
+      "completed": "Завершено",
+      "showing": "Показано {{count}} из {{total}} ситуаций"
+    },
+    "skeleton": {
+      "loadingCard": "Загрузка карточки ситуации"
     },
     "card": {
       "audio": "Аудио",

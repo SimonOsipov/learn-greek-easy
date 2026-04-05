@@ -248,10 +248,18 @@
       "subtitle": "Practice real-life Greek conversations"
     },
     "search": {
-      "placeholder": "Search situations..."
+      "placeholder": "Search situations...",
+      "clear": "Clear search"
     },
     "filter": {
-      "hasAudio": "Has audio"
+      "hasAudio": "Has Audio",
+      "notStarted": "Not Started",
+      "inProgress": "In Progress",
+      "completed": "Completed",
+      "showing": "Showing {{count}} of {{total}} situations"
+    },
+    "skeleton": {
+      "loadingCard": "Loading situation card"
     },
     "card": {
       "audio": "Audio",
