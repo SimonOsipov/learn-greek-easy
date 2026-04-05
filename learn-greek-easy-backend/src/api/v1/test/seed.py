@@ -371,18 +371,16 @@ async def seed_news_feed(
     "/news-questions",
     response_model=SeedResultResponse,
     summary="Seed news items with questions",
-    description="Create test news items with and without associated culture questions for E2E testing.",
+    description="Create test news items with Situation trees for E2E testing.",
     dependencies=[Depends(verify_seed_access)],
 )
 async def seed_news_questions(
     db: AsyncSession = Depends(get_db),
 ) -> SeedResultResponse:
-    """Seed news items with culture questions for E2E testing.
+    """Seed news items with Situation trees for E2E testing.
 
     Creates:
-    - 2 NewsItems WITH associated CultureQuestions
-    - 1 NewsItem WITHOUT associated question
-    - Uses/creates 'E2E News Questions' culture deck
+    - 3 NewsItems with Situation + SituationDescription trees
     """
     start_time = perf_counter()
 
@@ -405,8 +403,7 @@ async def seed_news_questions(
     "/news-feed-page",
     response_model=SeedResultResponse,
     summary="Seed news feed page",
-    description="Create comprehensive test news items for E2E testing of the News Feed Page. "
-    "Creates 25 news items (10 with questions, 15 without) with varied categories and difficulty levels.",
+    description="Creates 25 news items with Situation trees, varied categories and difficulty levels.",
     dependencies=[Depends(verify_seed_access)],
 )
 async def seed_news_feed_page(
@@ -415,15 +412,14 @@ async def seed_news_feed_page(
     """Seed news items for E2E testing of the News Feed Page.
 
     Creates:
-    - 25 NewsItems with varied categories and difficulty levels
-    - 10 items WITH associated CultureQuestions (3-5 questions each)
-    - 15 items WITHOUT associated questions
+    - 25 NewsItems with Situation + SituationDescription trees
+    - Varied categories, difficulty levels, and countries
     - Publication dates spread over the last 30 days
 
     This endpoint is idempotent - it clears existing test data before seeding.
 
     Returns:
-        SeedResultResponse with news item and question creation results
+        SeedResultResponse with news item creation results
     """
     start_time = perf_counter()
 

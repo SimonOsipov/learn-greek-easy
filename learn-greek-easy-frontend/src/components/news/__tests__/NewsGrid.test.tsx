@@ -29,8 +29,6 @@ const createMockNewsItem = (overrides: Partial<NewsItemResponse> = {}): NewsItem
   image_url: 'https://example.com/image.jpg',
   created_at: '2026-01-27T00:00:00Z',
   updated_at: '2026-01-27T00:00:00Z',
-  card_id: null,
-  deck_id: null,
   title_el_a2: null,
   description_el_a2: null,
   audio_a2_url: null,
