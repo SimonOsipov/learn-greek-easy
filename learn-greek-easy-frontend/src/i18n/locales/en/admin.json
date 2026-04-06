@@ -1267,6 +1267,8 @@
       "reading": "No reading exercises found"
     },
     "error": "Failed to load exercises. Click to retry.",
+    "retry": "Retry",
+    "clearSearch": "Clear search",
     "itemCount": "{{count}} items",
     "showing": "Showing {{from}} to {{to}} of {{total}}"
   }

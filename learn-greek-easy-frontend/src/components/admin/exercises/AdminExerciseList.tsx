@@ -56,6 +56,7 @@ export function AdminExerciseList({ modality }: AdminExerciseListProps) {
   const [statusFilter, setStatusFilter] = useState<string | undefined>();
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [retryCount, setRetryCount] = useState(0);
 
   // Debounce search 300ms
   useEffect(() => {
@@ -99,7 +100,7 @@ export function AdminExerciseList({ modality }: AdminExerciseListProps) {
     return () => {
       cancelled = true;
     };
-  }, [modality, page, pageSize, exerciseTypeFilter, statusFilter, debouncedSearch]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [modality, page, pageSize, exerciseTypeFilter, statusFilter, debouncedSearch, retryCount]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const totalPages = Math.ceil(total / pageSize);
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
@@ -123,7 +124,7 @@ export function AdminExerciseList({ modality }: AdminExerciseListProps) {
             <button
               className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground"
               onClick={() => setSearchQuery('')}
-              aria-label="Clear search"
+              aria-label={t('adminExercises.clearSearch')}
             >
               <X className="h-4 w-4" />
             </button>
@@ -195,12 +196,10 @@ export function AdminExerciseList({ modality }: AdminExerciseListProps) {
               className="underline"
               onClick={() => {
                 setError(null);
-                setLoading(true);
-                // Trigger refetch by bumping page to same value — reset via a trick
-                setPage((p) => p);
+                setRetryCount((c) => c + 1);
               }}
             >
-              Retry
+              {t('adminExercises.retry')}
             </button>
           </AlertDescription>
         </Alert>
