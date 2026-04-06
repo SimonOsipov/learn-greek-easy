@@ -181,3 +181,35 @@ export interface LearnerSituationDetailResponse {
   source_image_url: string | null;
   source_title: string | null;
 }
+
+// Exercise types for admin situation detail
+export type ExerciseType = 'fill_gaps' | 'select_heard' | 'true_false' | 'select_correct_answer';
+export type ExerciseStatus = 'draft' | 'approved';
+export type DeckLevel = 'A1' | 'A2' | 'B1' | 'B2';
+export type ExerciseModality = 'listening' | 'reading';
+
+export interface SituationExerciseItemResponse {
+  item_index: number;
+  payload: Record<string, unknown>;
+}
+
+export interface SituationExerciseResponse {
+  id: string;
+  exercise_type: ExerciseType;
+  status: ExerciseStatus;
+  item_count: number;
+  items: SituationExerciseItemResponse[];
+  audio_level?: DeckLevel;
+  modality?: ExerciseModality;
+}
+
+export interface SituationExerciseGroupResponse {
+  source_type: string;
+  exercises: SituationExerciseResponse[];
+  exercise_count: number;
+}
+
+export interface SituationExercisesResponse {
+  groups: SituationExerciseGroupResponse[];
+  total_count: number;
+}

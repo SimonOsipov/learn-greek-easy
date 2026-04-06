@@ -5,9 +5,14 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from src.db.models import (
+    DeckLevel,
     DescriptionSourceType,
     DescriptionStatus,
     DialogStatus,
+    ExerciseModality,
+    ExerciseSourceType,
+    ExerciseStatus,
+    ExerciseType,
     PictureStatus,
     SituationStatus,
 )
@@ -119,3 +124,33 @@ class SituationDetailResponse(SituationResponse):
     dialog: DialogNested | None = None
     description: DescriptionNested | None = None
     picture: PictureNested | None = None
+
+
+class SituationExerciseItemResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    item_index: int = Field(..., description="Zero-based position of this item")
+    payload: dict = Field(..., description="Exercise-type-specific JSONB content")
+
+
+class SituationExerciseResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    exercise_type: ExerciseType
+    status: ExerciseStatus
+    item_count: int = Field(..., ge=0, description="Number of items in this exercise")
+    items: list[SituationExerciseItemResponse]
+    audio_level: DeckLevel | None = None
+    modality: ExerciseModality | None = None
+
+
+class SituationExerciseGroupResponse(BaseModel):
+    source_type: ExerciseSourceType
+    exercises: list[SituationExerciseResponse]
+    exercise_count: int = Field(..., ge=0, description="Number of exercises in this group")
+
+
+class SituationExercisesResponse(BaseModel):
+    groups: list[SituationExerciseGroupResponse]
+    total_count: int = Field(..., ge=0, description="Total exercises across all groups")

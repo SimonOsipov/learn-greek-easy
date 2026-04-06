@@ -2,7 +2,15 @@
 
 import factory
 
-from src.db.models import DeckLevel, DialogStatus, ListeningDialog
+from src.db.models import (
+    DeckLevel,
+    DialogExercise,
+    DialogStatus,
+    ExerciseItem,
+    ExerciseStatus,
+    ExerciseType,
+    ListeningDialog,
+)
 from tests.factories.base import BaseFactory
 from tests.factories.situation import SituationFactory
 
@@ -34,4 +42,45 @@ class ListeningDialogFactory(BaseFactory):
         return await super().create(session=session, **kwargs)
 
 
-__all__ = ["ListeningDialogFactory"]
+class DialogExerciseFactory(BaseFactory):
+    """Factory for DialogExercise model."""
+
+    class Meta:
+        model = DialogExercise
+
+    exercise_type = ExerciseType.FILL_GAPS
+    status = ExerciseStatus.DRAFT
+
+    class Params:
+        approved = factory.Trait(status=ExerciseStatus.APPROVED)
+        select_heard = factory.Trait(exercise_type=ExerciseType.SELECT_HEARD)
+        true_false = factory.Trait(exercise_type=ExerciseType.TRUE_FALSE)
+
+    @classmethod
+    async def create(cls, session=None, **kwargs):
+        if kwargs.get("dialog_id") is None:
+            dialog = await ListeningDialogFactory.create(session=session)
+            kwargs["dialog_id"] = dialog.id
+        return await super().create(session=session, **kwargs)
+
+
+class DialogExerciseItemFactory(BaseFactory):
+    """Factory for ExerciseItem (dialog exercise items) model."""
+
+    class Meta:
+        model = ExerciseItem
+
+    item_index = factory.Sequence(lambda n: n)
+    payload = factory.LazyFunction(
+        lambda: {"type": "gap", "text": "Ο Νίκος είπε ___", "answer": "γεια"}
+    )
+
+    @classmethod
+    async def create(cls, session=None, **kwargs):
+        if kwargs.get("exercise_id") is None:
+            exercise = await DialogExerciseFactory.create(session=session)
+            kwargs["exercise_id"] = exercise.id
+        return await super().create(session=session, **kwargs)
+
+
+__all__ = ["DialogExerciseFactory", "DialogExerciseItemFactory", "ListeningDialogFactory"]
