@@ -556,10 +556,13 @@ type AdminTabType =
   | 'changelog'
   | 'cardErrors'
   | 'feedback'
-  | 'situations';
+  | 'situations'
+  | 'exercisesListening'
+  | 'exercisesReading';
 
 const ADMIN_TAB_GROUPS: { key: string; tabs: AdminTabType[] }[] = [
   { key: 'content', tabs: ['decks', 'news', 'situations'] },
+  { key: 'exercises', tabs: ['exercisesListening', 'exercisesReading'] },
   { key: 'reviews', tabs: ['cardErrors', 'feedback'] },
   { key: 'system', tabs: ['changelog', 'announcements'] },
 ];
@@ -1134,6 +1137,26 @@ const AdminPage: React.FC = () => {
             {t('tabs.situations')}
           </h2>
           <SituationsTab />
+        </section>
+      )}
+
+      {activeTab === 'exercisesListening' && (
+        <section aria-labelledby="exercises-listening-heading">
+          <h2 id="exercises-listening-heading" className="sr-only">
+            {t('tabs.exercisesListening')}
+          </h2>
+          <div className="py-8 text-center text-muted-foreground">
+            {t('tabs.exercisesListening')}
+          </div>
+        </section>
+      )}
+
+      {activeTab === 'exercisesReading' && (
+        <section aria-labelledby="exercises-reading-heading">
+          <h2 id="exercises-reading-heading" className="sr-only">
+            {t('tabs.exercisesReading')}
+          </h2>
+          <div className="py-8 text-center text-muted-foreground">{t('tabs.exercisesReading')}</div>
         </section>
       )}
 

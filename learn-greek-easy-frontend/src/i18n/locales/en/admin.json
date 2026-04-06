@@ -285,8 +285,11 @@
     "changelog": "Changelog",
     "cardErrors": "Card Errors",
     "situations": "Situations",
+    "exercisesListening": "Listening",
+    "exercisesReading": "Reading",
     "groups": {
       "content": "Content",
+      "exercises": "Exercises",
       "reviews": "Reviews",
       "system": "System"
     }

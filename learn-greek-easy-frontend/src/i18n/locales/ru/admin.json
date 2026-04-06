@@ -297,8 +297,11 @@
     "newsComingSoon": "Скоро",
     "newsComingSoonDescription": "Вкладка Новости обновляется. Скоро появятся новые функции.",
     "situations": "Ситуации",
+    "exercisesListening": "Аудирование",
+    "exercisesReading": "Чтение",
     "groups": {
       "content": "Контент",
+      "exercises": "Упражнения",
       "reviews": "Проверки",
       "system": "Система"
     }
