@@ -4504,16 +4504,40 @@ async def get_situation_exercises(
     if situation is None:
         raise HTTPException(status_code=404, detail="Situation not found")
 
-    def _build_exercise_responses(exercises: list) -> list[SituationExerciseResponse]:
+    def _build_exercise_responses(
+        exercises: list,
+        description: SituationDescription | None = None,
+    ) -> list[SituationExerciseResponse]:
+        s3 = get_s3_service() if description else None
         result = []
         for ex in exercises:
+            audio_level = getattr(ex, "audio_level", None)
+            modality = getattr(ex, "modality", None)
+            audio_url = None
+            reading_text = None
+            if description and modality == ExerciseModality.LISTENING and s3:
+                s3_key = (
+                    description.audio_a2_s3_key
+                    if audio_level == DeckLevel.A2
+                    else description.audio_s3_key
+                )
+                if s3_key:
+                    audio_url = s3.generate_presigned_url(s3_key)
+            elif description and modality == ExerciseModality.READING:
+                reading_text = (
+                    description.text_el_a2
+                    if audio_level == DeckLevel.A2 and description.text_el_a2
+                    else description.text_el
+                )
             resp = SituationExerciseResponse(
                 id=ex.id,
                 exercise_type=ex.exercise_type,
                 status=ex.status,
                 items=[SituationExerciseItemResponse.model_validate(item) for item in ex.items],
-                audio_level=getattr(ex, "audio_level", None),
-                modality=getattr(ex, "modality", None),
+                audio_level=audio_level,
+                modality=modality,
+                audio_url=audio_url,
+                reading_text=reading_text,
             )
             result.append(resp)
         return result
@@ -4533,17 +4557,9 @@ async def get_situation_exercises(
 
     desc_exercises: list[SituationExerciseResponse] = []
     if situation.description:
-        desc_exercises = _build_exercise_responses(situation.description.exercises)
-        s3 = get_s3_service()
-        for ex_resp in desc_exercises:
-            if ex_resp.modality == ExerciseModality.LISTENING:
-                s3_key = (
-                    situation.description.audio_a2_s3_key
-                    if ex_resp.audio_level == DeckLevel.A2
-                    else situation.description.audio_s3_key
-                )
-                if s3_key:
-                    ex_resp.audio_url = s3.generate_presigned_url(s3_key)
+        desc_exercises = _build_exercise_responses(
+            situation.description.exercises, description=situation.description
+        )
     groups.append(
         SituationExerciseGroupResponse(
             source_type=ExerciseSourceType.DESCRIPTION,

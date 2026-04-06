@@ -41,9 +41,11 @@ function elText(val: unknown): string {
 function ExerciseItemPayload({
   payload,
   audioUrl,
+  readingText,
 }: {
   payload: Record<string, unknown>;
   audioUrl?: string;
+  readingText?: string;
 }) {
   const questionText = elText(payload.question_text ?? payload.question ?? payload.text);
   const options = Array.isArray(payload.options) ? payload.options : undefined;
@@ -59,6 +61,11 @@ function ExerciseItemPayload({
           barCount={32}
           showSpeedControl={false}
         />
+      )}
+      {readingText && (
+        <p className="rounded-md border border-border bg-muted/50 px-3 py-2 text-sm leading-relaxed">
+          {readingText}
+        </p>
       )}
       {questionText && <p className="font-medium">{questionText}</p>}
       {options && options.length > 0 && (
@@ -140,6 +147,7 @@ function ExerciseAccordionItem({
                 key={item.item_index}
                 payload={item.payload}
                 audioUrl={exercise.audio_url}
+                readingText={exercise.reading_text}
               />
             ))}
           </div>

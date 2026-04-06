@@ -201,6 +201,7 @@ export interface SituationExerciseResponse {
   audio_level?: DeckLevel;
   modality?: ExerciseModality;
   audio_url?: string;
+  reading_text?: string;
 }
 
 export interface SituationExerciseGroupResponse {

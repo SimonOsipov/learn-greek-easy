@@ -143,6 +143,7 @@ class SituationExerciseResponse(BaseModel):
     audio_level: DeckLevel | None = None
     modality: ExerciseModality | None = None
     audio_url: str | None = None
+    reading_text: str | None = None
 
 
 class SituationExerciseGroupResponse(BaseModel):
