@@ -48,20 +48,24 @@ from src.db.models import (
     Deck,
     DeckLevel,
     DeckWordEntry,
+    DescriptionExercise,
     DescriptionStatus,
     DialogExercise,
     DialogLine,
     DialogSpeaker,
     DialogStatus,
     ExerciseItem,
+    ExerciseSourceType,
     ExerciseStatus,
     ExerciseType,
     FeedbackCategory,
     FeedbackStatus,
     ListeningDialog,
     PartOfSpeech,
+    PictureExercise,
     Situation,
     SituationDescription,
+    SituationPicture,
     SituationStatus,
     User,
     WiktionaryMorphology,
@@ -132,6 +136,10 @@ from src.schemas.nlp import GeneratedNounData, NormalizedLemma, VerificationSumm
 from src.schemas.situation import (
     SituationCreate,
     SituationDetailResponse,
+    SituationExerciseGroupResponse,
+    SituationExerciseItemResponse,
+    SituationExerciseResponse,
+    SituationExercisesResponse,
     SituationListItem,
     SituationListResponse,
     SituationResponse,
@@ -4465,3 +4473,85 @@ async def get_situation(
                 situation.description.audio_a2_s3_key
             )
     return response
+
+
+@router.get(
+    "/situations/{situation_id}/exercises",
+    response_model=SituationExercisesResponse,
+)
+async def get_situation_exercises(
+    situation_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> SituationExercisesResponse:
+    result = await db.execute(
+        select(Situation)
+        .options(
+            selectinload(Situation.dialog)
+            .selectinload(ListeningDialog.exercises)
+            .selectinload(DialogExercise.items),
+            selectinload(Situation.description)
+            .selectinload(SituationDescription.exercises)
+            .selectinload(DescriptionExercise.items),
+            selectinload(Situation.picture)
+            .selectinload(SituationPicture.exercises)
+            .selectinload(PictureExercise.items),
+        )
+        .where(Situation.id == situation_id)
+    )
+    situation = result.scalar_one_or_none()
+    if situation is None:
+        raise HTTPException(status_code=404, detail="Situation not found")
+
+    def _build_exercise_responses(exercises: list) -> list[SituationExerciseResponse]:
+        result = []
+        for ex in exercises:
+            resp = SituationExerciseResponse(
+                id=ex.id,
+                exercise_type=ex.exercise_type,
+                status=ex.status,
+                item_count=len(ex.items),
+                items=[SituationExerciseItemResponse.model_validate(item) for item in ex.items],
+                audio_level=getattr(ex, "audio_level", None),
+                modality=getattr(ex, "modality", None),
+            )
+            result.append(resp)
+        return result
+
+    groups = []
+
+    dialog_exercises: list[SituationExerciseResponse] = []
+    if situation.dialog:
+        dialog_exercises = _build_exercise_responses(situation.dialog.exercises)
+    groups.append(
+        SituationExerciseGroupResponse(
+            source_type=ExerciseSourceType.DIALOG,
+            exercises=dialog_exercises,
+            exercise_count=len(dialog_exercises),
+        )
+    )
+
+    desc_exercises: list[SituationExerciseResponse] = []
+    if situation.description:
+        desc_exercises = _build_exercise_responses(situation.description.exercises)
+    groups.append(
+        SituationExerciseGroupResponse(
+            source_type=ExerciseSourceType.DESCRIPTION,
+            exercises=desc_exercises,
+            exercise_count=len(desc_exercises),
+        )
+    )
+
+    pic_exercises: list[SituationExerciseResponse] = []
+    if situation.picture:
+        pic_exercises = _build_exercise_responses(situation.picture.exercises)
+    groups.append(
+        SituationExerciseGroupResponse(
+            source_type=ExerciseSourceType.PICTURE,
+            exercises=pic_exercises,
+            exercise_count=len(pic_exercises),
+        )
+    )
+
+    total = sum(g.exercise_count for g in groups)
+    return SituationExercisesResponse(groups=groups, total_count=total)
