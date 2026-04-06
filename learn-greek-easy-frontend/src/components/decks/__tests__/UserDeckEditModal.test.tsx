@@ -438,7 +438,12 @@ describe('UserDeckEditModal', () => {
         <UserDeckEditModal isOpen={true} onClose={mockOnClose} mode="edit" deck={deck as any} />
       );
 
-      const submitButton = screen.getByTestId('user-deck-form-submit');
+      // Wait for form validation to complete (onChange mode validates async on mount)
+      const submitButton = await screen.findByTestId('user-deck-form-submit');
+      await waitFor(() => {
+        expect(submitButton).toBeEnabled();
+      });
+
       await user.click(submitButton);
 
       await waitFor(() => {

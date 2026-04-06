@@ -48,7 +48,7 @@ class DescriptionExerciseFactory(BaseFactory):
     class Meta:
         model = DescriptionExercise
 
-    exercise_type = ExerciseType.FILL_GAPS
+    exercise_type = ExerciseType.SELECT_CORRECT_ANSWER
     audio_level = DeckLevel.B2
     modality = ExerciseModality.LISTENING
     status = ExerciseStatus.DRAFT
@@ -56,6 +56,7 @@ class DescriptionExerciseFactory(BaseFactory):
     class Params:
         approved = factory.Trait(status=ExerciseStatus.APPROVED)
         a2_level = factory.Trait(audio_level=DeckLevel.A2)
+        fill_gaps = factory.Trait(exercise_type=ExerciseType.FILL_GAPS)
         select_heard = factory.Trait(exercise_type=ExerciseType.SELECT_HEARD)
         true_false = factory.Trait(exercise_type=ExerciseType.TRUE_FALSE)
 
@@ -75,7 +76,20 @@ class DescriptionExerciseItemFactory(BaseFactory):
 
     item_index = factory.Sequence(lambda n: n)
     payload = factory.LazyFunction(
-        lambda: {"type": "gap", "text": "Ο Γιάννης πήγε στο ___", "answer": "σχολείο"}
+        lambda: {
+            "prompt": {
+                "el": "Πού πήγε ο Γιάννης;",
+                "en": "Where did Giannis go?",
+                "ru": "Куда пошёл Яннис?",
+            },
+            "options": [
+                {"el": "σχολείο", "en": "school", "ru": "школа"},
+                {"el": "σπίτι", "en": "house", "ru": "дом"},
+                {"el": "νοσοκομείο", "en": "hospital", "ru": "больница"},
+                {"el": "αγορά", "en": "market", "ru": "рынок"},
+            ],
+            "correct_answer_index": 0,
+        }
     )
 
     @classmethod

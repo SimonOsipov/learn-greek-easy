@@ -48,11 +48,12 @@ class DialogExerciseFactory(BaseFactory):
     class Meta:
         model = DialogExercise
 
-    exercise_type = ExerciseType.FILL_GAPS
+    exercise_type = ExerciseType.SELECT_CORRECT_ANSWER
     status = ExerciseStatus.DRAFT
 
     class Params:
         approved = factory.Trait(status=ExerciseStatus.APPROVED)
+        fill_gaps = factory.Trait(exercise_type=ExerciseType.FILL_GAPS)
         select_heard = factory.Trait(exercise_type=ExerciseType.SELECT_HEARD)
         true_false = factory.Trait(exercise_type=ExerciseType.TRUE_FALSE)
 
@@ -72,7 +73,20 @@ class DialogExerciseItemFactory(BaseFactory):
 
     item_index = factory.Sequence(lambda n: n)
     payload = factory.LazyFunction(
-        lambda: {"type": "gap", "text": "Ο Νίκος είπε ___", "answer": "γεια"}
+        lambda: {
+            "prompt": {
+                "el": "Τι είπε ο Νίκος;",
+                "en": "What did Nikos say?",
+                "ru": "Что сказал Никос?",
+            },
+            "options": [
+                {"el": "γεια", "en": "hello", "ru": "привет"},
+                {"el": "αντίο", "en": "goodbye", "ru": "до свидания"},
+                {"el": "ευχαριστώ", "en": "thank you", "ru": "спасибо"},
+                {"el": "παρακαλώ", "en": "please", "ru": "пожалуйста"},
+            ],
+            "correct_answer_index": 0,
+        }
     )
 
     @classmethod
