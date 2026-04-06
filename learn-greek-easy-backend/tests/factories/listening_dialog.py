@@ -48,11 +48,12 @@ class DialogExerciseFactory(BaseFactory):
     class Meta:
         model = DialogExercise
 
-    exercise_type = ExerciseType.FILL_GAPS
+    exercise_type = ExerciseType.SELECT_CORRECT_ANSWER
     status = ExerciseStatus.DRAFT
 
     class Params:
         approved = factory.Trait(status=ExerciseStatus.APPROVED)
+        fill_gaps = factory.Trait(exercise_type=ExerciseType.FILL_GAPS)
         select_heard = factory.Trait(exercise_type=ExerciseType.SELECT_HEARD)
         true_false = factory.Trait(exercise_type=ExerciseType.TRUE_FALSE)
 
