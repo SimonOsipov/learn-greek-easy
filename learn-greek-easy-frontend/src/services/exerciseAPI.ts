@@ -1,3 +1,5 @@
+import type { WordTimestamp } from '@/types/situation';
+
 import { api, buildQueryString } from './api';
 
 export type ExerciseModality = 'listening' | 'reading';
@@ -34,7 +36,7 @@ export interface ExerciseQueueItem {
   description_text_el: string | null;
   description_audio_url: string | null;
   description_audio_duration: number | null;
-  word_timestamps: unknown[] | null;
+  word_timestamps: WordTimestamp[] | null;
   items: ExerciseItemPayload[];
 }
 
