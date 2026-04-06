@@ -16,7 +16,7 @@ from typing import Any, Literal, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, UploadFile, status
-from sqlalchemy import delete, func, or_, select, text, update
+from sqlalchemy import Select, delete, func, or_, select, text, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -135,6 +135,8 @@ from src.schemas.feedback import (
 from src.schemas.news_item import NewsItemCreate, NewsItemResponse, NewsItemUpdate
 from src.schemas.nlp import GeneratedNounData, NormalizedLemma, VerificationSummary
 from src.schemas.situation import (
+    AdminExerciseListItem,
+    AdminExerciseListResponse,
     SituationCreate,
     SituationDetailResponse,
     SituationExerciseGroupResponse,
@@ -4581,3 +4583,200 @@ async def get_situation_exercises(
 
     total = sum(g.exercise_count for g in groups)
     return SituationExercisesResponse(groups=groups, total_count=total)
+
+
+def _apply_exercise_search_filter(stmt: Select, search: str | None) -> Select:
+    """Apply situation title search filter to an exercise query that joins Situation."""
+    if search:
+        stmt = stmt.where(
+            or_(
+                Situation.scenario_el.ilike(f"%{search}%"),
+                Situation.scenario_en.ilike(f"%{search}%"),
+            )
+        )
+    return stmt
+
+
+async def _query_description_exercises(
+    db: AsyncSession,
+    s3: S3Service,
+    modality: ExerciseModality,
+    exercise_type: ExerciseType | None,
+    status: ExerciseStatus | None,
+    search: str | None,
+) -> list[AdminExerciseListItem]:
+    """Query description exercises filtered by modality."""
+    stmt = (
+        select(DescriptionExercise, SituationDescription, Situation)
+        .join(SituationDescription, DescriptionExercise.description_id == SituationDescription.id)
+        .join(Situation, SituationDescription.situation_id == Situation.id)
+        .options(selectinload(DescriptionExercise.items))
+        .where(DescriptionExercise.modality == modality)
+    )
+    if exercise_type is not None:
+        stmt = stmt.where(DescriptionExercise.exercise_type == exercise_type)
+    if status is not None:
+        stmt = stmt.where(DescriptionExercise.status == status)
+    stmt = _apply_exercise_search_filter(stmt, search)
+
+    rows = (await db.execute(stmt)).all()
+    items: list[AdminExerciseListItem] = []
+    for ex, description, situation in rows:
+        audio_url = None
+        reading_text = None
+        if modality == ExerciseModality.LISTENING:
+            s3_key = (
+                description.audio_a2_s3_key
+                if ex.audio_level == DeckLevel.A2
+                else description.audio_s3_key
+            )
+            if s3_key:
+                audio_url = s3.generate_presigned_url(s3_key)
+        elif modality == ExerciseModality.READING:
+            reading_text = (
+                description.text_el_a2
+                if ex.audio_level == DeckLevel.A2 and description.text_el_a2
+                else description.text_el
+            )
+        items.append(
+            AdminExerciseListItem(
+                id=ex.id,
+                exercise_type=ex.exercise_type,
+                status=ex.status,
+                source_type=ExerciseSourceType.DESCRIPTION,
+                modality=modality,
+                audio_level=ex.audio_level,
+                situation_id=situation.id,
+                situation_title_el=situation.scenario_el,
+                situation_title_en=situation.scenario_en,
+                audio_url=audio_url,
+                reading_text=reading_text,
+                item_count=len(ex.items),
+                items=[SituationExerciseItemResponse.model_validate(item) for item in ex.items],
+            )
+        )
+    return items
+
+
+async def _query_listening_exercises(
+    db: AsyncSession,
+    s3: S3Service,
+    exercise_type: ExerciseType | None,
+    status: ExerciseStatus | None,
+    search: str | None,
+) -> list[AdminExerciseListItem]:
+    """Query dialog and picture exercises (always listening modality)."""
+    items: list[AdminExerciseListItem] = []
+
+    # Dialog exercises
+    dialog_stmt = (
+        select(DialogExercise, ListeningDialog, Situation)
+        .join(ListeningDialog, DialogExercise.dialog_id == ListeningDialog.id)
+        .join(Situation, ListeningDialog.situation_id == Situation.id)
+        .options(selectinload(DialogExercise.items))
+    )
+    if exercise_type is not None:
+        dialog_stmt = dialog_stmt.where(DialogExercise.exercise_type == exercise_type)
+    if status is not None:
+        dialog_stmt = dialog_stmt.where(DialogExercise.status == status)
+    dialog_stmt = _apply_exercise_search_filter(dialog_stmt, search)
+
+    for ex, dialog, situation in (await db.execute(dialog_stmt)).all():
+        audio_url = None
+        if dialog.audio_s3_key:
+            audio_url = s3.generate_presigned_url(dialog.audio_s3_key)
+        items.append(
+            AdminExerciseListItem(
+                id=ex.id,
+                exercise_type=ex.exercise_type,
+                status=ex.status,
+                source_type=ExerciseSourceType.DIALOG,
+                modality=ExerciseModality.LISTENING,
+                audio_level=None,
+                situation_id=situation.id,
+                situation_title_el=situation.scenario_el,
+                situation_title_en=situation.scenario_en,
+                audio_url=audio_url,
+                reading_text=None,
+                item_count=len(ex.items),
+                items=[SituationExerciseItemResponse.model_validate(item) for item in ex.items],
+            )
+        )
+
+    # Picture exercises
+    pic_stmt = (
+        select(PictureExercise, SituationPicture, Situation)
+        .join(SituationPicture, PictureExercise.picture_id == SituationPicture.id)
+        .join(Situation, SituationPicture.situation_id == Situation.id)
+        .options(selectinload(PictureExercise.items))
+    )
+    if exercise_type is not None:
+        pic_stmt = pic_stmt.where(PictureExercise.exercise_type == exercise_type)
+    if status is not None:
+        pic_stmt = pic_stmt.where(PictureExercise.status == status)
+    pic_stmt = _apply_exercise_search_filter(pic_stmt, search)
+
+    for ex, _picture, situation in (await db.execute(pic_stmt)).all():
+        items.append(
+            AdminExerciseListItem(
+                id=ex.id,
+                exercise_type=ex.exercise_type,
+                status=ex.status,
+                source_type=ExerciseSourceType.PICTURE,
+                modality=ExerciseModality.LISTENING,
+                audio_level=None,
+                situation_id=situation.id,
+                situation_title_el=situation.scenario_el,
+                situation_title_en=situation.scenario_en,
+                audio_url=None,
+                reading_text=None,
+                item_count=len(ex.items),
+                items=[SituationExerciseItemResponse.model_validate(item) for item in ex.items],
+            )
+        )
+    return items
+
+
+_SOURCE_TYPE_ORDER = {
+    ExerciseSourceType.DESCRIPTION: 0,
+    ExerciseSourceType.DIALOG: 1,
+    ExerciseSourceType.PICTURE: 2,
+}
+
+
+@router.get("/exercises", response_model=AdminExerciseListResponse)
+async def list_admin_exercises(
+    modality: ExerciseModality = Query(...),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    exercise_type: ExerciseType | None = Query(default=None),
+    status: ExerciseStatus | None = Query(default=None),
+    search: str | None = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> AdminExerciseListResponse:
+    s3 = get_s3_service()
+
+    all_items = await _query_description_exercises(db, s3, modality, exercise_type, status, search)
+
+    if modality == ExerciseModality.LISTENING:
+        all_items.extend(await _query_listening_exercises(db, s3, exercise_type, status, search))
+
+    all_items.sort(
+        key=lambda item: (
+            item.situation_title_el,
+            _SOURCE_TYPE_ORDER.get(item.source_type, 99),
+            item.exercise_type.value,
+        )
+    )
+
+    total = len(all_items)
+    offset = (page - 1) * page_size
+    page_items = all_items[offset : offset + page_size]
+
+    return AdminExerciseListResponse(
+        items=page_items,
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
