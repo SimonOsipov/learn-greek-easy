@@ -28,6 +28,8 @@ import type {
   AdminFeedbackUpdateRequest,
 } from '@/types/feedback';
 import type {
+  AdminExerciseListParams,
+  AdminExerciseListResponse,
   SituationCreatePayload,
   SituationDetailResponse,
   SituationExercisesResponse,
@@ -1618,6 +1620,18 @@ export const adminAPI = {
 
   getSituationExercises: async (id: string): Promise<SituationExercisesResponse> => {
     return api.get<SituationExercisesResponse>(`/api/v1/admin/situations/${id}/exercises`);
+  },
+
+  getExercises: async (params: AdminExerciseListParams): Promise<AdminExerciseListResponse> => {
+    const queryString = buildQueryString({
+      modality: params.modality,
+      page: params.page,
+      page_size: params.page_size,
+      exercise_type: params.exercise_type,
+      status: params.status,
+      search: params.search,
+    });
+    return api.get<AdminExerciseListResponse>(`/api/v1/admin/exercises${queryString}`);
   },
 };
 

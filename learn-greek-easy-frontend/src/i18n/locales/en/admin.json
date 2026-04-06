@@ -1240,5 +1240,34 @@
     "fetch": {
       "error": "Failed to load situations"
     }
+  },
+  "adminExercises": {
+    "filters": {
+      "exerciseType": "Exercise Type",
+      "status": "Status",
+      "searchPlaceholder": "Search by situation title..."
+    },
+    "exerciseTypes": {
+      "select_correct_answer": "Select Correct Answer",
+      "fill_gaps": "Fill the Gaps",
+      "select_heard": "Select What You Heard",
+      "true_false": "True or False"
+    },
+    "sourceTypes": {
+      "description": "Description",
+      "dialog": "Dialog",
+      "picture": "Picture"
+    },
+    "statuses": {
+      "draft": "Draft",
+      "approved": "Approved"
+    },
+    "empty": {
+      "listening": "No listening exercises found",
+      "reading": "No reading exercises found"
+    },
+    "error": "Failed to load exercises. Click to retry.",
+    "itemCount": "{{count}} items",
+    "showing": "Showing {{from}} to {{to}} of {{total}}"
   }
 }

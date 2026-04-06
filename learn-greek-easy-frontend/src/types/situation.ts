@@ -214,3 +214,37 @@ export interface SituationExercisesResponse {
   groups: SituationExerciseGroupResponse[];
   total_count: number;
 }
+
+export type ExerciseSourceType = 'description' | 'dialog' | 'picture';
+
+export interface AdminExerciseListItem {
+  id: string;
+  exercise_type: ExerciseType;
+  status: ExerciseStatus;
+  source_type: ExerciseSourceType;
+  modality: ExerciseModality;
+  audio_level: DeckLevel | null;
+  situation_id: string;
+  situation_title_el: string;
+  situation_title_en: string;
+  audio_url: string | null;
+  reading_text: string | null;
+  item_count: number;
+  items: SituationExerciseItemResponse[];
+}
+
+export interface AdminExerciseListResponse {
+  items: AdminExerciseListItem[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface AdminExerciseListParams {
+  modality: 'listening' | 'reading';
+  page?: number;
+  page_size?: number;
+  exercise_type?: string;
+  status?: string;
+  search?: string;
+}

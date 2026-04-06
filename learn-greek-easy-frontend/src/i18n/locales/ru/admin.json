@@ -1252,5 +1252,34 @@
     "fetch": {
       "error": "Не удалось загрузить ситуации"
     }
+  },
+  "adminExercises": {
+    "filters": {
+      "exerciseType": "Тип упражнения",
+      "status": "Статус",
+      "searchPlaceholder": "Поиск по названию ситуации..."
+    },
+    "exerciseTypes": {
+      "select_correct_answer": "Выбрать правильный ответ",
+      "fill_gaps": "Заполнить пропуски",
+      "select_heard": "Выбрать услышанное",
+      "true_false": "Правда или ложь"
+    },
+    "sourceTypes": {
+      "description": "Описание",
+      "dialog": "Диалог",
+      "picture": "Картинка"
+    },
+    "statuses": {
+      "draft": "Черновик",
+      "approved": "Одобрено"
+    },
+    "empty": {
+      "listening": "Упражнения на аудирование не найдены",
+      "reading": "Упражнения на чтение не найдены"
+    },
+    "error": "Не удалось загрузить упражнения. Нажмите для повтора.",
+    "itemCount": "{{count}} элементов",
+    "showing": "Показаны {{from}}–{{to}} из {{total}}"
   }
 }
