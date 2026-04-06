@@ -104,7 +104,6 @@ function ExerciseAccordionItem({
           >
             {t(`situations.detail.exercises.status.${exercise.status}`)}
           </Badge>
-          <Badge variant="outline">{exercise.item_count}</Badge>
           {sourceType === 'description' && exercise.audio_level && (
             <Badge variant="outline">
               {t(`situations.detail.exercises.audioLevel.${exercise.audio_level}`)}

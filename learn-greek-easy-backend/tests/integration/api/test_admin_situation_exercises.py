@@ -87,7 +87,6 @@ class TestSituationExercisesHappyPath:
 
         # Dialog exercise has 2 items
         dialog_group = groups_by_type["dialog"]
-        assert dialog_group["exercises"][0]["item_count"] == 2
         assert len(dialog_group["exercises"][0]["items"]) == 2
 
         # Description exercise has audio_level and modality

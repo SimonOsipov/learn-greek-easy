@@ -139,7 +139,6 @@ class SituationExerciseResponse(BaseModel):
     id: UUID
     exercise_type: ExerciseType
     status: ExerciseStatus
-    item_count: int = Field(..., ge=0, description="Number of items in this exercise")
     items: list[SituationExerciseItemResponse]
     audio_level: DeckLevel | None = None
     modality: ExerciseModality | None = None

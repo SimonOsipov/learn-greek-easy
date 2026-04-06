@@ -197,7 +197,6 @@ export interface SituationExerciseResponse {
   id: string;
   exercise_type: ExerciseType;
   status: ExerciseStatus;
-  item_count: number;
   items: SituationExerciseItemResponse[];
   audio_level?: DeckLevel;
   modality?: ExerciseModality;

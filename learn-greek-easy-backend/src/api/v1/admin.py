@@ -4510,7 +4510,6 @@ async def get_situation_exercises(
                 id=ex.id,
                 exercise_type=ex.exercise_type,
                 status=ex.status,
-                item_count=len(ex.items),
                 items=[SituationExerciseItemResponse.model_validate(item) for item in ex.items],
                 audio_level=getattr(ex, "audio_level", None),
                 modality=getattr(ex, "modality", None),
