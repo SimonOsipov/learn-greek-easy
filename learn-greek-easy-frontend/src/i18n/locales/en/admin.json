@@ -1276,7 +1276,7 @@
         "dialog": "Dialog",
         "description": "Description",
         "picture": "Picture",
-        "exercises": "Exercises ({{count}})"
+        "exercises": "Exercises"
       },
       "exercises": {
         "sourceType": {

@@ -122,7 +122,6 @@ export function SituationDetailModal({
   const detailError = useAdminSituationStore(selectDetailError);
   const { fetchSituationDetail, clearSelectedSituation } = useAdminSituationStore();
 
-  const [exerciseCount, setExerciseCount] = useState<number | null>(null);
   const [containerEl, setContainerEl] = useState<HTMLDivElement | null>(null);
   const [descB1ContainerEl, setDescB1ContainerEl] = useState<HTMLDivElement | null>(null);
   const [descA2ContainerEl, setDescA2ContainerEl] = useState<HTMLDivElement | null>(null);
@@ -171,7 +170,6 @@ export function SituationDetailModal({
       setDescB1Stage(null);
       setDescA2SseEnabled(false);
       setDescA2Stage(null);
-      setExerciseCount(null);
     }
   }, [open, clearSelectedSituation]);
 
@@ -433,9 +431,7 @@ export function SituationDetailModal({
                 className="flex-1"
                 data-testid="situation-tab-exercises"
               >
-                {exerciseCount !== null
-                  ? t('situations.detail.tabs.exercises', { count: exerciseCount })
-                  : t('situations.detail.tabs.exercises', { count: '...' })}
+                {t('situations.detail.tabs.exercises')}
               </TabsTrigger>
             </TabsList>
 
@@ -758,9 +754,7 @@ export function SituationDetailModal({
 
             {/* Exercises Tab */}
             <TabsContent value="exercises" className="space-y-4">
-              {situationId && (
-                <SituationExercisesTab situationId={situationId} onCountLoaded={setExerciseCount} />
-              )}
+              {situationId && <SituationExercisesTab situationId={situationId} />}
             </TabsContent>
           </Tabs>
         )}

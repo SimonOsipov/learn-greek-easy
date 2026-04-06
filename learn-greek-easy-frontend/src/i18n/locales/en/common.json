@@ -284,7 +284,7 @@
       "backToList": "Back to situations",
       "tabs": {
         "about": "About",
-        "exercises": "Exercises ({{count}})",
+        "exercises": "Exercises",
         "exercisesWithCount": "Exercises ({{completed}}/{{total}})"
       },
       "hero": {

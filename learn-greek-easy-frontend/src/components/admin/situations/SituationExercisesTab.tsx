@@ -20,7 +20,6 @@ import type {
 
 interface SituationExercisesTabProps {
   situationId: string;
-  onCountLoaded?: (count: number) => void;
 }
 
 const SOURCE_TYPE_ICONS: Record<string, React.ElementType> = {
@@ -29,13 +28,19 @@ const SOURCE_TYPE_ICONS: Record<string, React.ElementType> = {
   picture: Image,
 };
 
+function safeString(val: unknown): string {
+  if (val === null || val === undefined) return '';
+  if (typeof val === 'object') return JSON.stringify(val);
+  return String(val);
+}
+
 function ExerciseItemPayload({ payload }: { payload: Record<string, unknown> }) {
   const { t } = useTranslation('admin');
 
-  const question = (payload.question ?? payload.text) as string | undefined;
-  const options = payload.options as string[] | undefined;
-  const correctAnswer = (payload.correct_answer ?? payload.answer) as string | undefined;
-  const statement = payload.statement as string | undefined;
+  const question = safeString(payload.question ?? payload.text) || undefined;
+  const options = Array.isArray(payload.options) ? payload.options : undefined;
+  const correctAnswer = safeString(payload.correct_answer ?? payload.answer) || undefined;
+  const statement = safeString(payload.statement) || undefined;
 
   if (statement !== undefined && correctAnswer !== undefined) {
     return (
@@ -43,7 +48,7 @@ function ExerciseItemPayload({ payload }: { payload: Record<string, unknown> }) 
         <p className="font-medium">{statement}</p>
         <p className="text-muted-foreground">
           {t('situations.detail.exercises.meta.correctAnswer')}:{' '}
-          <span className="font-semibold text-green-600">{String(correctAnswer)}</span>
+          <span className="font-semibold text-green-600">{correctAnswer}</span>
         </p>
       </div>
     );
@@ -54,14 +59,17 @@ function ExerciseItemPayload({ payload }: { payload: Record<string, unknown> }) 
       {question && <p className="font-medium">{question}</p>}
       {options && options.length > 0 && (
         <ol className="list-decimal space-y-1 pl-5">
-          {options.map((opt, idx) => (
-            <li
-              key={idx}
-              className={opt === correctAnswer ? 'font-semibold text-green-600' : undefined}
-            >
-              {opt}
-            </li>
-          ))}
+          {options.map((opt, idx) => {
+            const optStr = safeString(opt);
+            return (
+              <li
+                key={idx}
+                className={optStr === correctAnswer ? 'font-semibold text-green-600' : undefined}
+              >
+                {optStr}
+              </li>
+            );
+          })}
         </ol>
       )}
     </div>
@@ -160,7 +168,7 @@ function GroupAccordionItem({ group }: { group: SituationExerciseGroupResponse }
   );
 }
 
-export function SituationExercisesTab({ situationId, onCountLoaded }: SituationExercisesTabProps) {
+export function SituationExercisesTab({ situationId }: SituationExercisesTabProps) {
   const { t } = useTranslation('admin');
   const [data, setData] = useState<SituationExercisesResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -175,7 +183,6 @@ export function SituationExercisesTab({ situationId, onCountLoaded }: SituationE
         const result = await adminAPI.getSituationExercises(situationId);
         if (!cancelled) {
           setData(result);
-          onCountLoaded?.(result.total_count);
         }
       } catch {
         if (!cancelled) setError(t('situations.detail.exercises.error'));

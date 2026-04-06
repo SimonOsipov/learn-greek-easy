@@ -1288,7 +1288,7 @@
         "dialog": "Диалог",
         "description": "Описание",
         "picture": "Картинка",
-        "exercises": "Упражнения ({{count}})"
+        "exercises": "Упражнения"
       },
       "exercises": {
         "sourceType": {

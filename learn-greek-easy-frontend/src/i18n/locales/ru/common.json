@@ -286,7 +286,7 @@
       "backToList": "К ситуациям",
       "tabs": {
         "about": "О ситуации",
-        "exercises": "Упражнения ({{count}})",
+        "exercises": "Упражнения",
         "exercisesWithCount": "Упражнения ({{completed}}/{{total}})"
       },
       "hero": {
