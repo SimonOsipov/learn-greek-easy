@@ -72,7 +72,20 @@ class DialogExerciseItemFactory(BaseFactory):
 
     item_index = factory.Sequence(lambda n: n)
     payload = factory.LazyFunction(
-        lambda: {"type": "gap", "text": "Ο Νίκος είπε ___", "answer": "γεια"}
+        lambda: {
+            "prompt": {
+                "el": "Τι είπε ο Νίκος;",
+                "en": "What did Nikos say?",
+                "ru": "Что сказал Никос?",
+            },
+            "options": [
+                {"el": "γεια", "en": "hello", "ru": "привет"},
+                {"el": "αντίο", "en": "goodbye", "ru": "до свидания"},
+                {"el": "ευχαριστώ", "en": "thank you", "ru": "спасибо"},
+                {"el": "παρακαλώ", "en": "please", "ru": "пожалуйста"},
+            ],
+            "correct_answer_index": 0,
+        }
     )
 
     @classmethod

@@ -75,7 +75,20 @@ class DescriptionExerciseItemFactory(BaseFactory):
 
     item_index = factory.Sequence(lambda n: n)
     payload = factory.LazyFunction(
-        lambda: {"type": "gap", "text": "Ο Γιάννης πήγε στο ___", "answer": "σχολείο"}
+        lambda: {
+            "prompt": {
+                "el": "Πού πήγε ο Γιάννης;",
+                "en": "Where did Giannis go?",
+                "ru": "Куда пошёл Яннис?",
+            },
+            "options": [
+                {"el": "σχολείο", "en": "school", "ru": "школа"},
+                {"el": "σπίτι", "en": "house", "ru": "дом"},
+                {"el": "νοσοκομείο", "en": "hospital", "ru": "больница"},
+                {"el": "αγορά", "en": "market", "ru": "рынок"},
+            ],
+            "correct_answer_index": 0,
+        }
     )
 
     @classmethod

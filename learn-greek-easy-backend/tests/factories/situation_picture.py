@@ -67,7 +67,16 @@ class PictureExerciseItemFactory(BaseFactory):
 
     item_index = factory.Sequence(lambda n: n)
     payload = factory.LazyFunction(
-        lambda: {"type": "label", "text": "Τι βλέπεις;", "answer": "σπίτι"}
+        lambda: {
+            "prompt": {"el": "Τι βλέπεις;", "en": "What do you see?", "ru": "Что ты видишь?"},
+            "options": [
+                {"el": "σπίτι", "en": "house", "ru": "дом"},
+                {"el": "δέντρο", "en": "tree", "ru": "дерево"},
+                {"el": "αυτοκίνητο", "en": "car", "ru": "машина"},
+                {"el": "γάτα", "en": "cat", "ru": "кошка"},
+            ],
+            "correct_answer_index": 0,
+        }
     )
 
     @classmethod
