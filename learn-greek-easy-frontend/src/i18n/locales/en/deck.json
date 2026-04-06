@@ -24,7 +24,8 @@
     "clearAll": "Clear All",
     "showing": "Showing {{count}} of {{total}} decks",
     "levelDisabledForCulture": "Level filter is not available for Culture decks",
-    "clearSearch": "Clear search"
+    "clearSearch": "Clear search",
+    "filtersToggle": "Filters"
   },
   "culture": {
     "badge": "Culture",

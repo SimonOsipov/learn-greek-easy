@@ -164,7 +164,7 @@
     "statistics": "Статистика",
     "generalProgress": "Общий прогресс",
     "achievements": "Достижения",
-    "feedback": "Обратная связь и поддержка",
+    "feedback": "Поддержка",
     "profile": "Профиль",
     "settings": "Настройки",
     "logout": "Выйти",
@@ -258,7 +258,8 @@
       "notStarted": "Не начато",
       "inProgress": "В процессе",
       "completed": "Завершено",
-      "showing": "Показано {{count}} из {{total}} ситуаций"
+      "showing": "Показано {{count}} из {{total}} ситуаций",
+      "filters": "Фильтры"
     },
     "skeleton": {
       "loadingCard": "Загрузка карточки ситуации"

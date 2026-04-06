@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 
 import { useQuery } from '@tanstack/react-query';
-import { AlertCircle, BookOpen, Search, Volume2, X } from 'lucide-react';
+import { AlertCircle, BookOpen, Search, SlidersHorizontal, Volume2, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useLanguage } from '@/hooks/useLanguage';
 import { track } from '@/lib/analytics';
 import { getDeckBackgroundStyle } from '@/lib/deckBackground';
@@ -78,11 +79,13 @@ function getAccentStripeColor(item: LearnerSituationListItem): string {
 export const SituationsPage: React.FC = () => {
   const { t } = useTranslation('common');
   const { currentLanguage } = useLanguage();
+  const isMobile = useIsMobile();
 
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [hasAudioFilter, setHasAudioFilter] = useState(false);
   const [completionFilter, setCompletionFilter] = useState<CompletionFilter>('all');
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const debouncedSearch = useDebounce(search, 300);
 
   const hasTrackedPageView = useRef(false);
@@ -134,6 +137,8 @@ export const SituationsPage: React.FC = () => {
       return getCompletionStatus(item) === completionFilter;
     }) ?? [];
 
+  const activeFilterCount = (hasAudioFilter ? 1 : 0) + (completionFilter !== 'all' ? 1 : 0);
+
   return (
     <div className="space-y-6 pb-20 lg:pb-8" data-testid="situations-page">
       {/* Page Header */}
@@ -148,7 +153,7 @@ export const SituationsPage: React.FC = () => {
 
       {/* Search and Filters */}
       <div className="space-y-3">
-        {/* Row 1: Search + Counter */}
+        {/* Row 1: Search + Counter (+ Filters toggle on mobile) */}
         <div className="flex items-center gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -174,7 +179,25 @@ export const SituationsPage: React.FC = () => {
               </button>
             )}
           </div>
-          {data && (
+          {isMobile && (
+            <Button
+              variant={filtersOpen ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFiltersOpen((prev) => !prev)}
+              className="shrink-0 gap-1.5"
+              aria-expanded={filtersOpen}
+              data-testid="situations-filters-toggle"
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              {t('situations.filter.filters')}
+              {activeFilterCount > 0 && (
+                <span className="ml-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary-foreground text-xs font-medium text-primary">
+                  {activeFilterCount}
+                </span>
+              )}
+            </Button>
+          )}
+          {!isMobile && data && (
             <span className="shrink-0 whitespace-nowrap text-sm text-muted-foreground">
               {t('situations.filter.showing', {
                 count: filteredItems.length,
@@ -184,43 +207,55 @@ export const SituationsPage: React.FC = () => {
           )}
         </div>
 
-        {/* Row 2: Filter buttons */}
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant={hasAudioFilter ? 'default' : 'outline'}
-            size="sm"
-            onClick={handleAudioFilterToggle}
-            aria-pressed={hasAudioFilter}
-            data-testid="situations-audio-filter"
-          >
-            {t('situations.filter.hasAudio')}
-          </Button>
-          <div className="h-6 w-px bg-border" aria-hidden="true" />
-          <Button
-            variant={completionFilter === 'not-started' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => handleCompletionFilterToggle('not-started')}
-            aria-pressed={completionFilter === 'not-started'}
-          >
-            {t('situations.filter.notStarted')}
-          </Button>
-          <Button
-            variant={completionFilter === 'in-progress' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => handleCompletionFilterToggle('in-progress')}
-            aria-pressed={completionFilter === 'in-progress'}
-          >
-            {t('situations.filter.inProgress')}
-          </Button>
-          <Button
-            variant={completionFilter === 'completed' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => handleCompletionFilterToggle('completed')}
-            aria-pressed={completionFilter === 'completed'}
-          >
-            {t('situations.filter.completed')}
-          </Button>
-        </div>
+        {/* Row 2: Counter on mobile (below search) */}
+        {isMobile && data && (
+          <span className="block text-sm text-muted-foreground">
+            {t('situations.filter.showing', {
+              count: filteredItems.length,
+              total: data.total,
+            })}
+          </span>
+        )}
+
+        {/* Row 3: Filter buttons — always visible on desktop, collapsible on mobile */}
+        {(!isMobile || filtersOpen) && (
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant={hasAudioFilter ? 'default' : 'outline'}
+              size="sm"
+              onClick={handleAudioFilterToggle}
+              aria-pressed={hasAudioFilter}
+              data-testid="situations-audio-filter"
+            >
+              {t('situations.filter.hasAudio')}
+            </Button>
+            <div className="h-6 w-px bg-border" aria-hidden="true" />
+            <Button
+              variant={completionFilter === 'not-started' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleCompletionFilterToggle('not-started')}
+              aria-pressed={completionFilter === 'not-started'}
+            >
+              {t('situations.filter.notStarted')}
+            </Button>
+            <Button
+              variant={completionFilter === 'in-progress' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleCompletionFilterToggle('in-progress')}
+              aria-pressed={completionFilter === 'in-progress'}
+            >
+              {t('situations.filter.inProgress')}
+            </Button>
+            <Button
+              variant={completionFilter === 'completed' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleCompletionFilterToggle('completed')}
+              aria-pressed={completionFilter === 'completed'}
+            >
+              {t('situations.filter.completed')}
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Error State */}

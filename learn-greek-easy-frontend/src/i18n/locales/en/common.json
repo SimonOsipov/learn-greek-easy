@@ -162,7 +162,7 @@
     "statistics": "Statistics",
     "generalProgress": "General Progress",
     "achievements": "Achievements",
-    "feedback": "Feedback & Support",
+    "feedback": "Support",
     "profile": "Profile",
     "settings": "Settings",
     "logout": "Logout",
@@ -256,7 +256,8 @@
       "notStarted": "Not Started",
       "inProgress": "In Progress",
       "completed": "Completed",
-      "showing": "Showing {{count}} of {{total}} situations"
+      "showing": "Showing {{count}} of {{total}} situations",
+      "filters": "Filters"
     },
     "skeleton": {
       "loadingCard": "Loading situation card"

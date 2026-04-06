@@ -2,11 +2,12 @@
 
 import React, { useCallback, useMemo, useState } from 'react';
 
-import { BookOpen, GraduationCap, Layers, Search, X } from 'lucide-react';
+import { BookOpen, GraduationCap, Layers, Search, SlidersHorizontal, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { CEFR_LEVEL_OPTIONS } from '@/lib/cefrColors';
 import { debounce } from '@/lib/utils';
 import type { DeckFilters as DeckFiltersType, DeckLevel, DeckStatus } from '@/types/deck';
@@ -49,6 +50,9 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
   onDeckTypeChange,
 }) => {
   const { t } = useTranslation('deck');
+  const isMobile = useIsMobile();
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
   const handleTypeChange = useCallback(
     (newType: DeckType) => {
       if (newType === deckType) return;
@@ -105,7 +109,7 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
 
   return (
     <div className="mb-6 space-y-3" data-testid="deck-filters">
-      {/* Row 1: Search + Counter */}
+      {/* Row 1: Search + Counter (+ Filters toggle on mobile) */}
       <div className="flex items-center gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -130,67 +134,98 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
             </button>
           )}
         </div>
-        <span className="shrink-0 whitespace-nowrap text-sm text-muted-foreground">
-          {t('filters.showing', { count: filteredDecks, total: totalDecks })}
-        </span>
-      </div>
-
-      {/* Row 2: All filters */}
-      <div className="flex flex-wrap items-center gap-2">
-        {TYPE_OPTIONS.map(({ value: optValue, icon: Icon, labelKey }) => (
+        {isMobile && (
           <Button
-            key={optValue}
-            variant={deckType === optValue ? 'default' : 'outline'}
+            variant={filtersOpen ? 'default' : 'outline'}
             size="sm"
-            onClick={() => handleTypeChange(optValue)}
-            className="gap-1.5"
-            aria-pressed={deckType === optValue}
+            onClick={() => setFiltersOpen((prev) => !prev)}
+            className="shrink-0 gap-1.5"
+            aria-expanded={filtersOpen}
+            data-testid="deck-filters-toggle"
           >
-            <Icon className="h-4 w-4" />
-            {t(labelKey)}
-          </Button>
-        ))}
-        <div className="h-6 w-px bg-border" aria-hidden="true" />
-        {CEFR_LEVEL_OPTIONS.map(({ value, color }) => (
-          <Button
-            key={value}
-            variant={filters.levels.includes(value) ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => handleLevelToggle(value)}
-            disabled={isLevelFilterDisabled}
-            className={filters.levels.includes(value) ? `${color} text-white hover:opacity-90` : ''}
-            aria-pressed={filters.levels.includes(value)}
-            title={isLevelFilterDisabled ? t('filters.levelDisabledForCulture') : undefined}
-          >
-            {value}
-          </Button>
-        ))}
-        <div className="h-6 w-px bg-border" aria-hidden="true" />
-        {STATUS_OPTIONS.map(({ value, labelKey }) => (
-          <Button
-            key={value}
-            variant={filters.status.includes(value) ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => handleStatusToggle(value)}
-            aria-pressed={filters.status.includes(value)}
-          >
-            {t(labelKey)}
-          </Button>
-        ))}
-
-        {/* Clear Filters Button */}
-        {activeFilterCount > 0 && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleClearFilters}
-            className="ml-auto text-muted-foreground hover:text-foreground"
-          >
-            <X className="mr-1 h-4 w-4" />
-            {t('filters.clearAll')} ({activeFilterCount})
+            <SlidersHorizontal className="h-4 w-4" />
+            {t('filters.filtersToggle')}
+            {activeFilterCount > 0 && (
+              <span className="ml-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary-foreground text-xs font-medium text-primary">
+                {activeFilterCount}
+              </span>
+            )}
           </Button>
         )}
+        {!isMobile && (
+          <span className="shrink-0 whitespace-nowrap text-sm text-muted-foreground">
+            {t('filters.showing', { count: filteredDecks, total: totalDecks })}
+          </span>
+        )}
       </div>
+
+      {/* Row 2: Counter on mobile (below search) */}
+      {isMobile && (
+        <span className="block text-sm text-muted-foreground">
+          {t('filters.showing', { count: filteredDecks, total: totalDecks })}
+        </span>
+      )}
+
+      {/* Row 3: All filters — always visible on desktop, collapsible on mobile */}
+      {(!isMobile || filtersOpen) && (
+        <div className="flex flex-wrap items-center gap-2">
+          {TYPE_OPTIONS.map(({ value: optValue, icon: Icon, labelKey }) => (
+            <Button
+              key={optValue}
+              variant={deckType === optValue ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleTypeChange(optValue)}
+              className="gap-1.5"
+              aria-pressed={deckType === optValue}
+            >
+              <Icon className="h-4 w-4" />
+              {t(labelKey)}
+            </Button>
+          ))}
+          <div className="h-6 w-px bg-border" aria-hidden="true" />
+          {CEFR_LEVEL_OPTIONS.map(({ value, color }) => (
+            <Button
+              key={value}
+              variant={filters.levels.includes(value) ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleLevelToggle(value)}
+              disabled={isLevelFilterDisabled}
+              className={
+                filters.levels.includes(value) ? `${color} text-white hover:opacity-90` : ''
+              }
+              aria-pressed={filters.levels.includes(value)}
+              title={isLevelFilterDisabled ? t('filters.levelDisabledForCulture') : undefined}
+            >
+              {value}
+            </Button>
+          ))}
+          <div className="h-6 w-px bg-border" aria-hidden="true" />
+          {STATUS_OPTIONS.map(({ value, labelKey }) => (
+            <Button
+              key={value}
+              variant={filters.status.includes(value) ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleStatusToggle(value)}
+              aria-pressed={filters.status.includes(value)}
+            >
+              {t(labelKey)}
+            </Button>
+          ))}
+
+          {/* Clear Filters Button */}
+          {activeFilterCount > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleClearFilters}
+              className="ml-auto text-muted-foreground hover:text-foreground"
+            >
+              <X className="mr-1 h-4 w-4" />
+              {t('filters.clearAll')} ({activeFilterCount})
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   );
 };

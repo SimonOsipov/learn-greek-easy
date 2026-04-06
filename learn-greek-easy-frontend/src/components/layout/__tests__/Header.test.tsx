@@ -79,7 +79,7 @@ vi.mock('react-i18next', () => ({
         'nav.statistics': 'Statistics',
         'nav.generalProgress': 'General Progress',
         'nav.achievements': 'Achievements',
-        'nav.feedback': 'Feedback & Support',
+        'nav.feedback': 'Support',
         'nav.profile': 'Profile',
         'nav.premium': 'Premium',
         'nav.upgradeToPremium': 'Upgrade to Premium',
@@ -217,7 +217,7 @@ describe('Header', () => {
       expect(screen.getByText('Dashboard')).toBeInTheDocument();
       expect(screen.getByText('Decks')).toBeInTheDocument();
       expect(screen.getByText('Statistics')).toBeInTheDocument();
-      expect(screen.getByText('Feedback & Support')).toBeInTheDocument();
+      expect(screen.getByText('Support')).toBeInTheDocument();
     });
 
     it('should render user menu trigger button', () => {
