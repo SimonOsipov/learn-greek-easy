@@ -27,6 +27,7 @@ import { useTranslation } from 'react-i18next';
 
 import {
   AdminCardErrorSection,
+  AdminExerciseList,
   AdminFeedbackSection,
   AnnouncementsTab,
   ChangelogTab,
@@ -1145,9 +1146,7 @@ const AdminPage: React.FC = () => {
           <h2 id="exercises-listening-heading" className="sr-only">
             {t('tabs.exercisesListening')}
           </h2>
-          <div className="py-8 text-center text-muted-foreground">
-            {t('tabs.exercisesListening')}
-          </div>
+          <AdminExerciseList modality="listening" />
         </section>
       )}
 
@@ -1156,7 +1155,7 @@ const AdminPage: React.FC = () => {
           <h2 id="exercises-reading-heading" className="sr-only">
             {t('tabs.exercisesReading')}
           </h2>
-          <div className="py-8 text-center text-muted-foreground">{t('tabs.exercisesReading')}</div>
+          <AdminExerciseList modality="reading" />
         </section>
       )}
 

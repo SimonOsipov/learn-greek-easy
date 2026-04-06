@@ -28,6 +28,7 @@ export { DeckEditModal, type DeckEditFormData } from './DeckEditModal';
 export { NewsItemDeleteDialog, NewsItemEditModal, NewsItemsTable, NewsTab } from './news';
 export { SummaryCard } from './SummaryCard';
 export { SituationsTab } from './situations';
+export * from './exercises';
 export {
   VocabularyDeckCreateForm,
   type VocabularyDeckCreateFormData,
