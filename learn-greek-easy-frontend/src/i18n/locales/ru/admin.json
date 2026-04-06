@@ -1287,7 +1287,46 @@
       "tabs": {
         "dialog": "Диалог",
         "description": "Описание",
-        "picture": "Картинка"
+        "picture": "Картинка",
+        "exercises": "Упражнения ({{count}})"
+      },
+      "exercises": {
+        "sourceType": {
+          "dialog": "Упражнения по диалогу",
+          "description": "Упражнения по описанию",
+          "picture": "Упражнения по картинке"
+        },
+        "type": {
+          "fill_gaps": "Заполни пропуски",
+          "select_heard": "Выбери услышанное",
+          "true_false": "Верно / Неверно",
+          "select_correct_answer": "Выбери правильный ответ"
+        },
+        "status": {
+          "draft": "Черновик",
+          "approved": "Одобрено"
+        },
+        "modality": {
+          "listening": "Аудирование",
+          "reading": "Чтение"
+        },
+        "audioLevel": {
+          "a1": "A1",
+          "a2": "A2",
+          "b1": "B1",
+          "b2": "B2"
+        },
+        "meta": {
+          "question": "Вопрос",
+          "options": "Варианты",
+          "correctAnswer": "Правильный ответ",
+          "audioLevel": "Уровень аудио",
+          "modality": "Модальность"
+        },
+        "empty": {
+          "noExercises": "Упражнений пока нет",
+          "noExercisesInGroup": "В этой группе нет упражнений"
+        }
       },
       "dialogEmpty": "Диалог ещё не создан",
       "descriptionEmpty": "Описание ещё не создано",

@@ -1275,7 +1275,46 @@
       "tabs": {
         "dialog": "Dialog",
         "description": "Description",
-        "picture": "Picture"
+        "picture": "Picture",
+        "exercises": "Exercises ({{count}})"
+      },
+      "exercises": {
+        "sourceType": {
+          "dialog": "Dialog Exercises",
+          "description": "Description Exercises",
+          "picture": "Picture Exercises"
+        },
+        "type": {
+          "fill_gaps": "Fill Gaps",
+          "select_heard": "Select Heard",
+          "true_false": "True / False",
+          "select_correct_answer": "Select Correct Answer"
+        },
+        "status": {
+          "draft": "Draft",
+          "approved": "Approved"
+        },
+        "modality": {
+          "listening": "Listening",
+          "reading": "Reading"
+        },
+        "audioLevel": {
+          "a1": "A1",
+          "a2": "A2",
+          "b1": "B1",
+          "b2": "B2"
+        },
+        "meta": {
+          "question": "Question",
+          "options": "Options",
+          "correctAnswer": "Correct Answer",
+          "audioLevel": "Audio Level",
+          "modality": "Modality"
+        },
+        "empty": {
+          "noExercises": "No exercises yet",
+          "noExercisesInGroup": "No exercises in this group"
+        }
       },
       "dialogEmpty": "No dialog created yet",
       "descriptionEmpty": "No description created yet",
