@@ -284,11 +284,9 @@
     "feedback": "Feedback",
     "changelog": "Changelog",
     "cardErrors": "Card Errors",
-    "listeningDialogs": "Listening",
     "situations": "Situations",
     "groups": {
       "content": "Content",
-      "exercises": "Exercises",
       "reviews": "Reviews",
       "system": "System"
     }
@@ -1105,116 +1103,6 @@
     "unlinkSuccess": "Word removed from deck",
     "unlinkButton": "Remove from deck",
     "unlinkTitle": "Remove from deck?"
-  },
-  "listeningDialogs": {
-    "title": "Listening Dialogs",
-    "description": "Manage listening dialog content for exercises",
-    "columns": {
-      "scenario": "Scenario",
-      "cefrLevel": "CEFR Level",
-      "speakers": "Speakers",
-      "status": "Status",
-      "created": "Created",
-      "actions": "Actions",
-      "edit": "Edit"
-    },
-    "status": {
-      "draft": "Draft",
-      "audio_ready": "Audio Ready",
-      "exercises_ready": "Exercises Ready"
-    },
-    "empty": {
-      "title": "No dialogs yet",
-      "description": "Create your first listening dialog to get started.",
-      "cta": "Create your first dialog"
-    },
-    "create": {
-      "button": "Create New Dialog",
-      "title": "Create Listening Dialog",
-      "description": "Paste a complete dialog as JSON.",
-      "placeholder": "{\n  \"scenario_el\": \"...\",\n  \"scenario_en\": \"...\",\n  \"scenario_ru\": \"...\",\n  \"cefr_level\": \"A2\",\n  \"speakers\": [{\"speaker_index\": 0, \"character_name\": \"...\", \"voice_id\": \"...\"}],\n  \"lines\": [{\"speaker_index\": 0, \"text\": \"...\"}]\n}",
-      "submit": "Create Dialog",
-      "creating": "Creating...",
-      "cancel": "Cancel",
-      "success": "Dialog created successfully",
-      "errors": {
-        "invalidJson": "Invalid JSON: {{message}}",
-        "createFailed": "Failed to create dialog: {{message}}"
-      }
-    },
-    "delete": {
-      "title": "Delete Dialog",
-      "description": "Are you sure you want to delete this dialog?",
-      "warning": "This will permanently delete the dialog and all associated speakers, lines, exercises, and exercise items.",
-      "confirm": "Delete Dialog",
-      "cancel": "Cancel",
-      "deleting": "Deleting...",
-      "success": "Dialog deleted successfully",
-      "error": "Failed to delete dialog"
-    },
-    "detail": {
-      "title": "Dialog Details",
-      "transcript": "Transcript",
-      "audioPlayer": "Audio",
-      "metadata": {
-        "cefrLevel": "CEFR Level",
-        "speakers": "Speakers",
-        "status": "Status",
-        "created": "Created",
-        "audioDuration": "Duration",
-        "audioSize": "File size",
-        "audioGenerated": "Generated"
-      },
-      "close": "Close",
-      "errors": {
-        "loadFailed": "Failed to load dialog details",
-        "retry": "Retry",
-        "audioUrlMissing": "Audio file not found. The file may have been deleted from storage."
-      },
-      "tabs": {
-        "dialog": "Dialog",
-        "exercises": "Exercises"
-      },
-      "exercises": {
-        "empty": "No exercises generated yet"
-      },
-      "generateAudio": {
-        "button": "Generate Audio",
-        "progress": {
-          "starting": "Starting audio generation...",
-          "callingElevenLabs": "Calling ElevenLabs...",
-          "settingTimestamps": "Validating line timestamps...",
-          "uploading": "Uploading audio..."
-        },
-        "error": "Audio generation failed: {{message}}",
-        "tryAgain": "Try Again"
-      },
-      "regenerateAudio": {
-        "button": "Regenerate Audio",
-        "confirmTitle": "Regenerate Audio?",
-        "confirmDescription": "This will replace the current audio. The dialog will be temporarily unavailable during generation.",
-        "confirmButton": "Regenerate",
-        "cancelButton": "Cancel"
-      },
-      "degenerateWarning": "{{count}} line(s) have zero-width timing. Karaoke highlighting will not work for these lines. Consider regenerating audio.",
-      "degenerateLine": "This line has zero-width timing — karaoke highlighting will not work."
-    },
-    "search": {
-      "placeholder": "Search dialogs...",
-      "noResults": "No dialogs match your search",
-      "filteredCount": "Showing {{filtered}} of {{total}} dialogs"
-    },
-    "filter": {
-      "allLevels": "All Levels"
-    },
-    "stats": {
-      "total": "Total Dialogs",
-      "cefrLevel": "Level {{level}}"
-    },
-    "errors": {
-      "fetchFailed": "Failed to load dialogs",
-      "retry": "Retry"
-    }
   },
   "situations": {
     "title": "Situations",
