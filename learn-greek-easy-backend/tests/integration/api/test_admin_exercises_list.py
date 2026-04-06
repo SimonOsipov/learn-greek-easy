@@ -39,24 +39,24 @@ class TestAdminExercisesList:
         superuser_auth_headers: dict,
         mock_s3_service: MagicMock,
     ):
-        situation = await SituationFactory.create()
-
-        # Description exercise with LISTENING modality
-        desc = await SituationDescriptionFactory.create(situation_id=situation.id)
+        # Each exercise needs its own situation (1-to-1 description/dialog/picture per situation)
+        sit1 = await SituationFactory.create()
+        desc = await SituationDescriptionFactory.create(situation_id=sit1.id)
         await DescriptionExerciseFactory.create(
             description_id=desc.id, modality=ExerciseModality.LISTENING
         )
 
-        # Dialog exercise (always listening)
-        dialog = await ListeningDialogFactory.create(situation_id=situation.id)
+        sit2 = await SituationFactory.create()
+        dialog = await ListeningDialogFactory.create(situation_id=sit2.id)
         await DialogExerciseFactory.create(dialog_id=dialog.id)
 
-        # Picture exercise (always listening)
-        picture = await SituationPictureFactory.create(situation_id=situation.id)
+        sit3 = await SituationFactory.create()
+        picture = await SituationPictureFactory.create(situation_id=sit3.id)
         await PictureExerciseFactory.create(picture_id=picture.id)
 
         # Description exercise with READING modality — should NOT appear
-        desc_reading = await SituationDescriptionFactory.create(situation_id=situation.id)
+        sit4 = await SituationFactory.create()
+        desc_reading = await SituationDescriptionFactory.create(situation_id=sit4.id)
         await DescriptionExerciseFactory.create(
             description_id=desc_reading.id, modality=ExerciseModality.READING
         )
@@ -116,9 +116,10 @@ class TestAdminExercisesList:
         superuser_auth_headers: dict,
         mock_s3_service: MagicMock,
     ):
-        situation = await SituationFactory.create()
-        desc = await SituationDescriptionFactory.create(situation_id=situation.id)
+        # Each exercise needs its own situation+description (unique constraint on description_id+type+level+modality)
         for _ in range(3):
+            sit = await SituationFactory.create()
+            desc = await SituationDescriptionFactory.create(situation_id=sit.id)
             await DescriptionExerciseFactory.create(
                 description_id=desc.id, modality=ExerciseModality.LISTENING
             )
@@ -184,14 +185,16 @@ class TestAdminExercisesList:
         superuser_auth_headers: dict,
         mock_s3_service: MagicMock,
     ):
-        desc = await SituationDescriptionFactory.create()
+        # Separate descriptions to avoid unique constraint (description_id+type+level+modality)
+        desc1 = await SituationDescriptionFactory.create()
         await DescriptionExerciseFactory.create(
-            description_id=desc.id,
+            description_id=desc1.id,
             modality=ExerciseModality.LISTENING,
             status=ExerciseStatus.DRAFT,
         )
+        desc2 = await SituationDescriptionFactory.create()
         await DescriptionExerciseFactory.create(
-            description_id=desc.id,
+            description_id=desc2.id,
             modality=ExerciseModality.LISTENING,
             status=ExerciseStatus.APPROVED,
         )
