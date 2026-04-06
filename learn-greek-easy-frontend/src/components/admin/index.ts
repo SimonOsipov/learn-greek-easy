@@ -25,9 +25,6 @@ export { DeckCreateModal, type DeckCreateFormData, type DeckType } from './DeckC
 export { DeckDeleteDialog } from './DeckDeleteDialog';
 export { DeckDetailModal } from './DeckDetailModal';
 export { DeckEditModal, type DeckEditFormData } from './DeckEditModal';
-export { DialogCreateModal } from './DialogCreateModal';
-export { DialogDetailModal } from './DialogDetailModal';
-export { ListeningDialogsTab } from './ListeningDialogsTab';
 export { NewsItemDeleteDialog, NewsItemEditModal, NewsItemsTable, NewsTab } from './news';
 export { SummaryCard } from './SummaryCard';
 export { SituationsTab } from './situations';

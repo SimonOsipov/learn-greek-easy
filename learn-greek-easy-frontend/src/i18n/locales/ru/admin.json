@@ -296,11 +296,9 @@
     "cardErrors": "Ошибки карточек",
     "newsComingSoon": "Скоро",
     "newsComingSoonDescription": "Вкладка Новости обновляется. Скоро появятся новые функции.",
-    "listeningDialogs": "Аудирование",
     "situations": "Ситуации",
     "groups": {
       "content": "Контент",
-      "exercises": "Упражнения",
       "reviews": "Проверки",
       "system": "Система"
     }
@@ -1117,116 +1115,6 @@
     "unlinkSuccess": "Слово удалено из колоды",
     "unlinkButton": "Удалить из колоды",
     "unlinkTitle": "Удалить из колоды?"
-  },
-  "listeningDialogs": {
-    "title": "Диалоги на слух",
-    "description": "Управление диалогами для упражнений",
-    "columns": {
-      "scenario": "Сценарий",
-      "cefrLevel": "Уровень CEFR",
-      "speakers": "Участники",
-      "status": "Статус",
-      "created": "Создан",
-      "actions": "Действия",
-      "edit": "Редактировать"
-    },
-    "status": {
-      "draft": "Черновик",
-      "audio_ready": "Аудио готово",
-      "exercises_ready": "Упражнения готовы"
-    },
-    "empty": {
-      "title": "Диалогов пока нет",
-      "description": "Создайте первый диалог для начала работы.",
-      "cta": "Создать первый диалог"
-    },
-    "create": {
-      "button": "Создать новый диалог",
-      "title": "Создать диалог",
-      "description": "Вставьте полный диалог в формате JSON.",
-      "placeholder": "{\n  \"scenario_el\": \"...\",\n  \"scenario_en\": \"...\",\n  \"scenario_ru\": \"...\",\n  \"cefr_level\": \"A2\",\n  \"speakers\": [{\"speaker_index\": 0, \"character_name\": \"...\", \"voice_id\": \"...\"}],\n  \"lines\": [{\"speaker_index\": 0, \"text\": \"...\"}]\n}",
-      "submit": "Создать диалог",
-      "creating": "Создание...",
-      "cancel": "Отмена",
-      "success": "Диалог успешно создан",
-      "errors": {
-        "invalidJson": "Некорректный JSON: {{message}}",
-        "createFailed": "Не удалось создать диалог: {{message}}"
-      }
-    },
-    "delete": {
-      "title": "Удалить диалог",
-      "description": "Вы уверены, что хотите удалить этот диалог?",
-      "warning": "Это действие удалит диалог и все связанные с ним данные: участников, реплики, упражнения.",
-      "confirm": "Удалить диалог",
-      "cancel": "Отмена",
-      "deleting": "Удаление...",
-      "success": "Диалог успешно удалён",
-      "error": "Не удалось удалить диалог"
-    },
-    "detail": {
-      "title": "Детали диалога",
-      "transcript": "Транскрипт",
-      "audioPlayer": "Аудио",
-      "metadata": {
-        "cefrLevel": "Уровень CEFR",
-        "speakers": "Участники",
-        "status": "Статус",
-        "created": "Создан",
-        "audioDuration": "Длительность",
-        "audioSize": "Размер файла",
-        "audioGenerated": "Сгенерировано"
-      },
-      "close": "Закрыть",
-      "errors": {
-        "loadFailed": "Не удалось загрузить детали диалога",
-        "retry": "Повторить",
-        "audioUrlMissing": "Аудиофайл не найден. Возможно, он был удалён из хранилища."
-      },
-      "tabs": {
-        "dialog": "Диалог",
-        "exercises": "Упражнения"
-      },
-      "exercises": {
-        "empty": "Упражнения ещё не сгенерированы"
-      },
-      "generateAudio": {
-        "button": "Сгенерировать аудио",
-        "progress": {
-          "starting": "Начинаем генерацию аудио...",
-          "callingElevenLabs": "Вызов ElevenLabs...",
-          "settingTimestamps": "Проверка временных меток...",
-          "uploading": "Загрузка аудио..."
-        },
-        "error": "Ошибка генерации аудио: {{message}}",
-        "tryAgain": "Попробовать снова"
-      },
-      "regenerateAudio": {
-        "button": "Перегенерировать аудио",
-        "confirmTitle": "Перегенерировать аудио?",
-        "confirmDescription": "Текущее аудио будет заменено. Диалог будет временно недоступен во время генерации.",
-        "confirmButton": "Перегенерировать",
-        "cancelButton": "Отмена"
-      },
-      "degenerateWarning": "{{count}} строк(а/и) имеют нулевую длительность. Караоке-подсветка для этих строк работать не будет. Рекомендуется перегенерировать аудио.",
-      "degenerateLine": "Эта строка имеет нулевую длительность — караоке-подсветка работать не будет."
-    },
-    "search": {
-      "placeholder": "Поиск диалогов...",
-      "noResults": "Диалоги не найдены",
-      "filteredCount": "Показано {{filtered}} из {{total}} диалогов"
-    },
-    "filter": {
-      "allLevels": "Все уровни"
-    },
-    "stats": {
-      "total": "Всего диалогов",
-      "cefrLevel": "Уровень {{level}}"
-    },
-    "errors": {
-      "fetchFailed": "Не удалось загрузить диалоги",
-      "retry": "Повторить"
-    }
   },
   "situations": {
     "title": "Ситуации",

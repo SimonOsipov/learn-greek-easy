@@ -37,7 +37,6 @@ import {
   DeckEditModal,
   type DeckEditFormData,
   type DeckType,
-  ListeningDialogsTab,
   NewsTab,
   SituationsTab,
   SummaryCard,
@@ -557,12 +556,10 @@ type AdminTabType =
   | 'changelog'
   | 'cardErrors'
   | 'feedback'
-  | 'listeningDialogs'
   | 'situations';
 
 const ADMIN_TAB_GROUPS: { key: string; tabs: AdminTabType[] }[] = [
   { key: 'content', tabs: ['decks', 'news', 'situations'] },
-  { key: 'exercises', tabs: ['listeningDialogs'] },
   { key: 'reviews', tabs: ['cardErrors', 'feedback'] },
   { key: 'system', tabs: ['changelog', 'announcements'] },
 ];
@@ -1128,16 +1125,6 @@ const AdminPage: React.FC = () => {
       {activeTab === 'feedback' && (
         <section aria-labelledby="feedback-heading">
           <AdminFeedbackSection />
-        </section>
-      )}
-
-      {/* Listening Dialogs Tab Content */}
-      {activeTab === 'listeningDialogs' && (
-        <section aria-labelledby="listening-dialogs-heading">
-          <h2 id="listening-dialogs-heading" className="sr-only">
-            {t('tabs.listeningDialogs')}
-          </h2>
-          <ListeningDialogsTab />
         </section>
       )}
 
