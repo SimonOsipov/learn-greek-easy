@@ -27,6 +27,7 @@ import { useTranslation } from 'react-i18next';
 
 import {
   AdminCardErrorSection,
+  AdminExerciseList,
   AdminFeedbackSection,
   AnnouncementsTab,
   ChangelogTab,
@@ -37,7 +38,6 @@ import {
   DeckEditModal,
   type DeckEditFormData,
   type DeckType,
-  ListeningDialogsTab,
   NewsTab,
   SituationsTab,
   SummaryCard,
@@ -557,12 +557,13 @@ type AdminTabType =
   | 'changelog'
   | 'cardErrors'
   | 'feedback'
-  | 'listeningDialogs'
-  | 'situations';
+  | 'situations'
+  | 'exercisesListening'
+  | 'exercisesReading';
 
 const ADMIN_TAB_GROUPS: { key: string; tabs: AdminTabType[] }[] = [
   { key: 'content', tabs: ['decks', 'news', 'situations'] },
-  { key: 'exercises', tabs: ['listeningDialogs'] },
+  { key: 'exercises', tabs: ['exercisesListening', 'exercisesReading'] },
   { key: 'reviews', tabs: ['cardErrors', 'feedback'] },
   { key: 'system', tabs: ['changelog', 'announcements'] },
 ];
@@ -1131,22 +1132,30 @@ const AdminPage: React.FC = () => {
         </section>
       )}
 
-      {/* Listening Dialogs Tab Content */}
-      {activeTab === 'listeningDialogs' && (
-        <section aria-labelledby="listening-dialogs-heading">
-          <h2 id="listening-dialogs-heading" className="sr-only">
-            {t('tabs.listeningDialogs')}
-          </h2>
-          <ListeningDialogsTab />
-        </section>
-      )}
-
       {activeTab === 'situations' && (
         <section aria-labelledby="situations-heading">
           <h2 id="situations-heading" className="sr-only">
             {t('tabs.situations')}
           </h2>
           <SituationsTab />
+        </section>
+      )}
+
+      {activeTab === 'exercisesListening' && (
+        <section aria-labelledby="exercises-listening-heading">
+          <h2 id="exercises-listening-heading" className="sr-only">
+            {t('tabs.exercisesListening')}
+          </h2>
+          <AdminExerciseList modality="listening" />
+        </section>
+      )}
+
+      {activeTab === 'exercisesReading' && (
+        <section aria-labelledby="exercises-reading-heading">
+          <h2 id="exercises-reading-heading" className="sr-only">
+            {t('tabs.exercisesReading')}
+          </h2>
+          <AdminExerciseList modality="reading" />
         </section>
       )}
 

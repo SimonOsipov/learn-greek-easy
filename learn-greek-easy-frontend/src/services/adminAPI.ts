@@ -28,6 +28,8 @@ import type {
   AdminFeedbackUpdateRequest,
 } from '@/types/feedback';
 import type {
+  AdminExerciseListParams,
+  AdminExerciseListResponse,
   SituationCreatePayload,
   SituationDetailResponse,
   SituationExercisesResponse,
@@ -50,101 +52,6 @@ export type { CultureDeckAdminResponse, DeckAdminResponse } from '@/types/deck';
  * CEFR language proficiency levels
  */
 export type DeckLevel = 'A1' | 'A2' | 'B1' | 'B2';
-
-export type DialogStatus = 'draft' | 'audio_ready' | 'exercises_ready';
-
-export interface ListeningDialogListItem {
-  id: string;
-  scenario_el: string;
-  scenario_en: string;
-  scenario_ru: string;
-  cefr_level: DeckLevel;
-  num_speakers: number;
-  status: DialogStatus;
-  audio_duration_seconds: number | null;
-  created_at: string;
-}
-
-export interface ListeningDialogCreatePayload {
-  scenario_el: string;
-  scenario_en: string;
-  scenario_ru: string;
-  cefr_level: DeckLevel;
-  speakers: Array<{
-    speaker_index: number;
-    character_name: string;
-    voice_id: string;
-  }>;
-  lines: Array<{
-    speaker_index: number;
-    text: string;
-  }>;
-  exercises?: {
-    fill_gaps: Array<{
-      line_index: number;
-      correct_answer: string;
-      options: string[];
-      context_before: string;
-      context_after: string;
-    }>;
-    select_heard: Array<{
-      question_el: string;
-      question_en: string;
-      question_ru: string;
-      correct_answer: string;
-      options: string[];
-    }>;
-    true_false: Array<{
-      statement_el: string;
-      statement_en: string;
-      statement_ru: string;
-      correct_answer: boolean;
-      explanation: string;
-    }>;
-  };
-}
-
-export interface ListeningDialogListResponse {
-  items: ListeningDialogListItem[];
-  total: number;
-  page: number;
-  page_size: number;
-}
-
-export interface DialogSpeakerDetail {
-  id: string;
-  speaker_index: number;
-  character_name: string;
-  voice_id: string;
-}
-
-export interface DialogLineDetail {
-  id: string;
-  line_index: number;
-  speaker_id: string;
-  text: string;
-  start_time_ms: number | null;
-  end_time_ms: number | null;
-  word_timestamps: Array<{ word: string; start_ms: number; end_ms: number }> | null;
-}
-
-export interface ListeningDialogDetail {
-  id: string;
-  scenario_el: string;
-  scenario_en: string;
-  scenario_ru: string;
-  cefr_level: DeckLevel;
-  num_speakers: number;
-  status: DialogStatus;
-  created_at: string;
-  audio_url: string | null;
-  audio_duration_seconds: number | null;
-  audio_generated_at: string | null;
-  audio_file_size_bytes: number | null;
-  speakers: DialogSpeakerDetail[];
-  lines: DialogLineDetail[];
-  degenerate_line_count: number;
-}
 
 /**
  * Multilingual name object for culture decks
@@ -1671,35 +1578,6 @@ export const adminAPI = {
     return api.delete<void>(`/api/v1/admin/word-entries/${wordEntryId}`);
   },
 
-  getListeningDialogs: async (
-    page: number,
-    pageSize: number,
-    status?: DialogStatus,
-    cefrLevel?: DeckLevel
-  ): Promise<ListeningDialogListResponse> => {
-    const queryString = buildQueryString({
-      page,
-      page_size: pageSize,
-      status,
-      cefr_level: cefrLevel,
-    });
-    return api.get<ListeningDialogListResponse>(`/api/v1/admin/listening-dialogs${queryString}`);
-  },
-
-  deleteListeningDialog: async (id: string): Promise<void> => {
-    return api.delete<void>(`/api/v1/admin/listening-dialogs/${id}`);
-  },
-
-  createListeningDialog: async (
-    data: ListeningDialogCreatePayload
-  ): Promise<ListeningDialogListItem> => {
-    return api.post<ListeningDialogListItem>('/api/v1/admin/listening-dialogs', data);
-  },
-
-  getListeningDialogDetail: async (id: string): Promise<ListeningDialogDetail> => {
-    return api.get<ListeningDialogDetail>(`/api/v1/admin/listening-dialogs/${id}`);
-  },
-
   reverseLookup: async (query: string, lang: 'en' | 'ru'): Promise<ReverseLookupResponse> => {
     const queryString = buildQueryString({ q: query, lang });
     return api.get<ReverseLookupResponse>(`/api/v1/admin/reverse-lookup${queryString}`);
@@ -1742,6 +1620,18 @@ export const adminAPI = {
 
   getSituationExercises: async (id: string): Promise<SituationExercisesResponse> => {
     return api.get<SituationExercisesResponse>(`/api/v1/admin/situations/${id}/exercises`);
+  },
+
+  getExercises: async (params: AdminExerciseListParams): Promise<AdminExerciseListResponse> => {
+    const queryString = buildQueryString({
+      modality: params.modality,
+      page: params.page,
+      page_size: params.page_size,
+      exercise_type: params.exercise_type,
+      status: params.status,
+      search: params.search,
+    });
+    return api.get<AdminExerciseListResponse>(`/api/v1/admin/exercises${queryString}`);
   },
 };
 

@@ -155,3 +155,28 @@ class SituationExerciseGroupResponse(BaseModel):
 class SituationExercisesResponse(BaseModel):
     groups: list[SituationExerciseGroupResponse]
     total_count: int = Field(..., ge=0, description="Total exercises across all groups")
+
+
+class AdminExerciseListItem(BaseModel):
+    """A single exercise in the flat admin exercise list."""
+
+    id: UUID
+    exercise_type: ExerciseType
+    status: ExerciseStatus
+    source_type: ExerciseSourceType
+    modality: ExerciseModality
+    audio_level: DeckLevel | None = None
+    situation_id: UUID
+    situation_title_el: str
+    situation_title_en: str
+    audio_url: str | None = None
+    reading_text: str | None = None
+    item_count: int
+    items: list[SituationExerciseItemResponse]
+
+
+class AdminExerciseListResponse(BaseModel):
+    items: list[AdminExerciseListItem]
+    total: int
+    page: int
+    page_size: int
