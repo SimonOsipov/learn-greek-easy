@@ -55,6 +55,7 @@ from src.db.models import (
     DialogSpeaker,
     DialogStatus,
     ExerciseItem,
+    ExerciseModality,
     ExerciseSourceType,
     ExerciseStatus,
     ExerciseType,
@@ -4533,6 +4534,16 @@ async def get_situation_exercises(
     desc_exercises: list[SituationExerciseResponse] = []
     if situation.description:
         desc_exercises = _build_exercise_responses(situation.description.exercises)
+        s3 = get_s3_service()
+        for ex_resp in desc_exercises:
+            if ex_resp.modality == ExerciseModality.LISTENING:
+                s3_key = (
+                    situation.description.audio_a2_s3_key
+                    if ex_resp.audio_level == DeckLevel.A2
+                    else situation.description.audio_s3_key
+                )
+                if s3_key:
+                    ex_resp.audio_url = s3.generate_presigned_url(s3_key)
     groups.append(
         SituationExerciseGroupResponse(
             source_type=ExerciseSourceType.DESCRIPTION,

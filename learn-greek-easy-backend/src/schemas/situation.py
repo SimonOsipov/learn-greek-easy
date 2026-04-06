@@ -142,6 +142,7 @@ class SituationExerciseResponse(BaseModel):
     items: list[SituationExerciseItemResponse]
     audio_level: DeckLevel | None = None
     modality: ExerciseModality | None = None
+    audio_url: str | None = None
 
 
 class SituationExerciseGroupResponse(BaseModel):

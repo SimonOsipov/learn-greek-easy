@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { FileText, Image, ListChecks, Loader2, MessageSquare } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { WaveformPlayer } from '@/components/culture/WaveformPlayer';
 import {
   Accordion,
   AccordionContent,
@@ -11,6 +12,7 @@ import {
 } from '@/components/ui/accordion';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import { adminAPI } from '@/services/adminAPI';
 import type {
   SituationExerciseGroupResponse,
@@ -28,49 +30,56 @@ const SOURCE_TYPE_ICONS: Record<string, React.ElementType> = {
   picture: Image,
 };
 
-function safeString(val: unknown): string {
+function elText(val: unknown): string {
   if (val === null || val === undefined) return '';
+  if (typeof val === 'object' && val !== null && 'el' in val)
+    return String((val as Record<string, unknown>).el);
   if (typeof val === 'object') return JSON.stringify(val);
   return String(val);
 }
 
-function ExerciseItemPayload({ payload }: { payload: Record<string, unknown> }) {
-  const { t } = useTranslation('admin');
-
-  const question = safeString(payload.question ?? payload.text) || undefined;
+function ExerciseItemPayload({
+  payload,
+  audioUrl,
+}: {
+  payload: Record<string, unknown>;
+  audioUrl?: string;
+}) {
+  const questionText = elText(payload.question_text ?? payload.question ?? payload.text);
   const options = Array.isArray(payload.options) ? payload.options : undefined;
-  const correctAnswer = safeString(payload.correct_answer ?? payload.answer) || undefined;
-  const statement = safeString(payload.statement) || undefined;
-
-  if (statement !== undefined && correctAnswer !== undefined) {
-    return (
-      <div className="space-y-1 text-sm">
-        <p className="font-medium">{statement}</p>
-        <p className="text-muted-foreground">
-          {t('situations.detail.exercises.meta.correctAnswer')}:{' '}
-          <span className="font-semibold text-green-600">{correctAnswer}</span>
-        </p>
-      </div>
-    );
-  }
+  const correctOption =
+    typeof payload.correct_option === 'number' ? payload.correct_option : undefined;
 
   return (
-    <div className="space-y-2 text-sm">
-      {question && <p className="font-medium">{question}</p>}
+    <div className="space-y-3 text-sm">
+      {audioUrl && (
+        <WaveformPlayer
+          audioUrl={audioUrl}
+          variant="admin"
+          barCount={32}
+          showSpeedControl={false}
+        />
+      )}
+      {questionText && <p className="font-medium">{questionText}</p>}
       {options && options.length > 0 && (
-        <ol className="list-decimal space-y-1 pl-5">
+        <div className="grid grid-cols-2 gap-2">
           {options.map((opt, idx) => {
-            const optStr = safeString(opt);
+            const isCorrect = correctOption !== undefined && idx + 1 === correctOption;
             return (
-              <li
+              <div
                 key={idx}
-                className={optStr === correctAnswer ? 'font-semibold text-green-600' : undefined}
+                className={cn(
+                  'rounded-md border px-3 py-2',
+                  isCorrect
+                    ? 'border-green-600 bg-green-50 font-semibold text-green-700'
+                    : 'border-border text-muted-foreground'
+                )}
               >
-                {optStr}
-              </li>
+                {elText(opt)}
+              </div>
             );
           })}
-        </ol>
+        </div>
       )}
     </div>
   );
@@ -127,7 +136,11 @@ function ExerciseAccordionItem({
             data-testid={`situation-exercises-item-payload-${exercise.id}`}
           >
             {sortedItems.map((item) => (
-              <ExerciseItemPayload key={item.item_index} payload={item.payload} />
+              <ExerciseItemPayload
+                key={item.item_index}
+                payload={item.payload}
+                audioUrl={exercise.audio_url}
+              />
             ))}
           </div>
         )}

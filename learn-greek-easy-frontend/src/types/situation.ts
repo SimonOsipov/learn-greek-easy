@@ -200,6 +200,7 @@ export interface SituationExerciseResponse {
   items: SituationExerciseItemResponse[];
   audio_level?: DeckLevel;
   modality?: ExerciseModality;
+  audio_url?: string;
 }
 
 export interface SituationExerciseGroupResponse {
