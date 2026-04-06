@@ -758,7 +758,9 @@ export function SituationDetailModal({
 
             {/* Exercises Tab */}
             <TabsContent value="exercises" className="space-y-4">
-              <SituationExercisesTab situationId={situationId!} onCountLoaded={setExerciseCount} />
+              {situationId && (
+                <SituationExercisesTab situationId={situationId} onCountLoaded={setExerciseCount} />
+              )}
             </TabsContent>
           </Tabs>
         )}

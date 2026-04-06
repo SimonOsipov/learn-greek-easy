@@ -1299,10 +1299,10 @@
           "reading": "Reading"
         },
         "audioLevel": {
-          "a1": "A1",
-          "a2": "A2",
-          "b1": "B1",
-          "b2": "B2"
+          "A1": "A1",
+          "A2": "A2",
+          "B1": "B1",
+          "B2": "B2"
         },
         "meta": {
           "question": "Question",

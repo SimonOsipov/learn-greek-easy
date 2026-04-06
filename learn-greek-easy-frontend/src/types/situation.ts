@@ -185,7 +185,7 @@ export interface LearnerSituationDetailResponse {
 // Exercise types for admin situation detail
 export type ExerciseType = 'fill_gaps' | 'select_heard' | 'true_false' | 'select_correct_answer';
 export type ExerciseStatus = 'draft' | 'approved';
-export type DeckLevel = 'a1' | 'a2' | 'b1' | 'b2' | 'c1' | 'c2';
+export type DeckLevel = 'A1' | 'A2' | 'B1' | 'B2';
 export type ExerciseModality = 'listening' | 'reading';
 
 export interface SituationExerciseItemResponse {
