@@ -97,7 +97,11 @@ from tests.factories.exercise import ExerciseFactory, ExerciseRecordFactory, Exe
 from tests.factories.feedback import FeedbackFactory, FeedbackVoteFactory
 
 # Listening Dialog factories
-from tests.factories.listening_dialog import ListeningDialogFactory
+from tests.factories.listening_dialog import (
+    DialogExerciseFactory,
+    DialogExerciseItemFactory,
+    ListeningDialogFactory,
+)
 
 # News factories
 from tests.factories.news import NewsItemFactory
@@ -171,6 +175,8 @@ __all__ = [
     "FeedbackFactory",
     "FeedbackVoteFactory",
     # Listening Dialogs
+    "DialogExerciseFactory",
+    "DialogExerciseItemFactory",
     "ListeningDialogFactory",
     # Situations
     "SituationFactory",
