@@ -47,10 +47,17 @@ function ExerciseItemPayload({
   audioUrl?: string;
   readingText?: string;
 }) {
-  const questionText = elText(payload.question_text ?? payload.question ?? payload.text);
+  const questionText = elText(
+    payload.prompt ?? payload.question_text ?? payload.question ?? payload.text
+  );
   const options = Array.isArray(payload.options) ? payload.options : undefined;
-  const correctOption =
-    typeof payload.correct_option === 'number' ? payload.correct_option : undefined;
+  // Production uses correct_answer_index (0-based), seed data uses correct_option (1-based)
+  const correctIndex =
+    typeof payload.correct_answer_index === 'number'
+      ? payload.correct_answer_index
+      : typeof payload.correct_option === 'number'
+        ? payload.correct_option - 1
+        : undefined;
 
   return (
     <div className="space-y-3 text-sm">
@@ -71,7 +78,7 @@ function ExerciseItemPayload({
       {options && options.length > 0 && (
         <div className="grid grid-cols-2 gap-2">
           {options.map((opt, idx) => {
-            const isCorrect = correctOption !== undefined && idx + 1 === correctOption;
+            const isCorrect = correctIndex !== undefined && idx === correctIndex;
             return (
               <div
                 key={idx}
