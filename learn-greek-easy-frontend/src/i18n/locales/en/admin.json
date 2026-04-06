@@ -1314,7 +1314,8 @@
         "empty": {
           "noExercises": "No exercises yet",
           "noExercisesInGroup": "No exercises in this group"
-        }
+        },
+        "error": "Failed to load exercises"
       },
       "dialogEmpty": "No dialog created yet",
       "descriptionEmpty": "No description created yet",
