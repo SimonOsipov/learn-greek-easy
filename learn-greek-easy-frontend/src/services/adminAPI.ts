@@ -30,6 +30,7 @@ import type {
 import type {
   SituationCreatePayload,
   SituationDetailResponse,
+  SituationExercisesResponse,
   SituationListResponse,
   SituationResponse,
   SituationStatus,
@@ -1737,6 +1738,10 @@ export const adminAPI = {
 
   deleteSituation: async (id: string): Promise<void> => {
     return api.delete<void>(`/api/v1/admin/situations/${id}`);
+  },
+
+  getSituationExercises: async (id: string): Promise<SituationExercisesResponse> => {
+    return api.get<SituationExercisesResponse>(`/api/v1/admin/situations/${id}/exercises`);
   },
 };
 
