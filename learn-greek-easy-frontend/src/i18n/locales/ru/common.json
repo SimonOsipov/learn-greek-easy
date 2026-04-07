@@ -61,6 +61,14 @@
         "description": "Ваш прогресс в этой сессии будет потерян.",
         "leave": "Уйти",
         "stay": "Остаться"
+      },
+      "modalityBadge": {
+        "listening": "Аудирование",
+        "reading": "Чтение"
+      },
+      "contentStep": {
+        "readingPassage": "Текст для чтения",
+        "listeningAudio": "Аудиозапись"
       }
     }
   },

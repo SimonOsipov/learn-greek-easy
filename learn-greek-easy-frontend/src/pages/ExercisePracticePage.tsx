@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 
 import { AlertDialog } from '@/components/dialogs/AlertDialog';
+import { ExerciseContentStep } from '@/components/exercises/ExerciseContentStep';
 import { SelectCorrectAnswerRenderer } from '@/components/exercises/SelectCorrectAnswerRenderer';
 import { LanguageSwitcher } from '@/components/i18n';
 import { PracticeHeader, ProgressIndicator, SessionSummary } from '@/components/practice';
@@ -105,6 +106,20 @@ export const ExercisePracticePage = () => {
       submitAnswer(currentExercise.exercise_id, selectedIndex, correctIndex);
     },
     [currentExercise, feedbackState, exerciseStartTime, submitAnswer]
+  );
+
+  // Audio play handler
+  const handleAudioPlay = useCallback(
+    (duration: number) => {
+      if (!currentExercise) return;
+      track('exercise_audio_played', {
+        exercise_id: currentExercise.exercise_id,
+        modality: currentExercise.modality ?? 'listening',
+        audio_level: currentExercise.audio_level ?? null,
+        duration_seconds: Math.round(duration),
+      });
+    },
+    [currentExercise]
   );
 
   // usePracticeSession for start/complete/abandon analytics
@@ -312,6 +327,15 @@ export const ExercisePracticePage = () => {
         />
         {currentExercise && (
           <div className="mt-4">
+            <ExerciseContentStep
+              modality={currentExercise.modality}
+              audioLevel={currentExercise.audio_level}
+              descriptionTextEl={currentExercise.description_text_el}
+              descriptionAudioUrl={currentExercise.description_audio_url}
+              descriptionAudioDuration={currentExercise.description_audio_duration}
+              wordTimestamps={currentExercise.word_timestamps}
+              onAudioPlay={handleAudioPlay}
+            />
             <SelectCorrectAnswerRenderer
               items={currentExercise.items}
               onAnswer={handleAnswer}

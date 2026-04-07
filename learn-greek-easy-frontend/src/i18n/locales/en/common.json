@@ -59,6 +59,14 @@
         "description": "Your progress in this session will be lost.",
         "leave": "Leave",
         "stay": "Stay"
+      },
+      "modalityBadge": {
+        "listening": "Listening",
+        "reading": "Reading"
+      },
+      "contentStep": {
+        "readingPassage": "Reading passage",
+        "listeningAudio": "Listening audio"
       }
     }
   },
