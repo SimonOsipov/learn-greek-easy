@@ -88,7 +88,7 @@ function ExercisesByModality({ exercises }: { exercises: ExerciseQueueItem[] }) 
   const groups = groupByModality(exercises);
 
   return (
-    <Accordion type="multiple" defaultValue={MODALITY_ORDER} className="w-full">
+    <Accordion type="multiple" className="w-full">
       {MODALITY_ORDER.filter((m) => groups.has(m)).map((modality) => {
         const items = groups.get(modality)!;
         return (
