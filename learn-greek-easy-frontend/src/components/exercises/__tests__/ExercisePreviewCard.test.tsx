@@ -1,8 +1,7 @@
 // src/components/exercises/__tests__/ExercisePreviewCard.test.tsx
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-import i18n from '@/i18n';
 import { renderWithProviders, screen } from '@/lib/test-utils';
 import type { CardStatus, ExerciseQueueItem } from '@/services/exerciseAPI';
 
@@ -56,23 +55,19 @@ function makeExercise(overrides: Partial<ExerciseQueueItem> = {}): ExerciseQueue
 // ============================================
 
 describe('ExercisePreviewCard', () => {
-  afterEach(async () => {
-    await i18n.changeLanguage('en');
-  });
-
   // ============================================
   // Rendering
   // ============================================
 
   describe('Rendering', () => {
-    it('renders prompt text and options as divs (not buttons)', () => {
+    it('renders prompt and options in Greek', () => {
       renderWithProviders(<ExercisePreviewCard exercise={makeExercise()} />);
 
       expect(screen.getByTestId('exercise-preview-card')).toBeInTheDocument();
-      expect(screen.getByText('Question prompt')).toBeInTheDocument();
-      expect(screen.getByText('1. Option 1')).toBeInTheDocument();
-      expect(screen.getByText('2. Option 2')).toBeInTheDocument();
-      expect(screen.getByText('3. Option 3')).toBeInTheDocument();
+      expect(screen.getByText('Ερώτηση')).toBeInTheDocument();
+      expect(screen.getByText('1. Επιλογή 1')).toBeInTheDocument();
+      expect(screen.getByText('2. Επιλογή 2')).toBeInTheDocument();
+      expect(screen.getByText('3. Επιλογή 3')).toBeInTheDocument();
     });
 
     it('options are not interactive (no button role)', () => {
@@ -139,28 +134,6 @@ describe('ExercisePreviewCard', () => {
   });
 
   // ============================================
-  // Modality badge
-  // ============================================
-
-  describe('Modality badge', () => {
-    it('shows modality badge when modality is "listening"', () => {
-      renderWithProviders(
-        <ExercisePreviewCard exercise={makeExercise({ modality: 'listening' })} />
-      );
-
-      const badge = screen.getByTestId('exercise-preview-modality');
-      expect(badge).toBeInTheDocument();
-      expect(badge).toHaveTextContent('Listening');
-    });
-
-    it('hides modality badge when modality is null', () => {
-      renderWithProviders(<ExercisePreviewCard exercise={makeExercise({ modality: null })} />);
-
-      expect(screen.queryByTestId('exercise-preview-modality')).not.toBeInTheDocument();
-    });
-  });
-
-  // ============================================
   // Correct answer styling
   // ============================================
 
@@ -168,38 +141,15 @@ describe('ExercisePreviewCard', () => {
     it('correct answer option has green styling', () => {
       renderWithProviders(<ExercisePreviewCard exercise={makeExercise()} />);
 
-      // correct_answer_index is 0 → "1. Option 1"
-      const correctOption = screen.getByText('1. Option 1').closest('div');
+      const correctOption = screen.getByText('1. Επιλογή 1').closest('div');
       expect(correctOption?.className).toContain('green');
     });
 
     it('incorrect options do not have green styling', () => {
       renderWithProviders(<ExercisePreviewCard exercise={makeExercise()} />);
 
-      const incorrectOption = screen.getByText('2. Option 2').closest('div');
+      const incorrectOption = screen.getByText('2. Επιλογή 2').closest('div');
       expect(incorrectOption?.className).not.toContain('green');
-    });
-  });
-
-  // ============================================
-  // Language selection
-  // ============================================
-
-  describe('Language selection', () => {
-    it('renders English text by default (EN locale)', async () => {
-      await i18n.changeLanguage('en');
-      renderWithProviders(<ExercisePreviewCard exercise={makeExercise()} />);
-
-      expect(screen.getByText('Question prompt')).toBeInTheDocument();
-      expect(screen.getByText('1. Option 1')).toBeInTheDocument();
-    });
-
-    it('renders Russian text when locale is RU', async () => {
-      await i18n.changeLanguage('ru');
-      renderWithProviders(<ExercisePreviewCard exercise={makeExercise()} />);
-
-      expect(screen.getByText('Вопрос')).toBeInTheDocument();
-      expect(screen.getByText('1. Вариант 1')).toBeInTheDocument();
     });
   });
 });

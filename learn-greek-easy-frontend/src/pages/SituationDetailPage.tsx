@@ -11,6 +11,12 @@ import { EmptyState } from '@/components/feedback/EmptyState';
 import { KaraokeText } from '@/components/shared/KaraokeText';
 import { ScenePlaceholder } from '@/components/situations/ScenePlaceholder';
 import { SourceCard } from '@/components/situations/SourceCard';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -20,7 +26,7 @@ import { useLanguage } from '@/hooks/useLanguage';
 import { track } from '@/lib/analytics';
 import { cn } from '@/lib/utils';
 import { exerciseAPI } from '@/services/exerciseAPI';
-import type { ExerciseQueue } from '@/services/exerciseAPI';
+import type { ExerciseModality, ExerciseQueue, ExerciseQueueItem } from '@/services/exerciseAPI';
 import { situationAPI } from '@/services/situationAPI';
 import type { LearnerSituationDetailResponse, SituationStatus } from '@/types/situation';
 
@@ -60,6 +66,51 @@ function extractDomain(url: string): string {
   } catch {
     return url;
   }
+}
+
+const MODALITY_ORDER: ExerciseModality[] = ['listening', 'reading'];
+
+function groupByModality(
+  exercises: ExerciseQueueItem[]
+): Map<ExerciseModality, ExerciseQueueItem[]> {
+  const groups = new Map<ExerciseModality, ExerciseQueueItem[]>();
+  for (const ex of exercises) {
+    const key = ex.modality ?? 'reading';
+    const list = groups.get(key) ?? [];
+    list.push(ex);
+    groups.set(key, list);
+  }
+  return groups;
+}
+
+function ExercisesByModality({ exercises }: { exercises: ExerciseQueueItem[] }) {
+  const { t } = useTranslation();
+  const groups = groupByModality(exercises);
+
+  return (
+    <Accordion type="multiple" defaultValue={MODALITY_ORDER} className="w-full">
+      {MODALITY_ORDER.filter((m) => groups.has(m)).map((modality) => {
+        const items = groups.get(modality)!;
+        return (
+          <AccordionItem key={modality} value={modality}>
+            <AccordionTrigger className="hover:no-underline">
+              <div className="flex items-center gap-2">
+                <span>{t(`exercises.modality.${modality}`)}</span>
+                <Badge variant="secondary">{items.length}</Badge>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent>
+              <div className="space-y-4">
+                {items.map((exercise) => (
+                  <ExercisePreviewCard key={exercise.exercise_id} exercise={exercise} />
+                ))}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        );
+      })}
+    </Accordion>
+  );
 }
 
 export const SituationDetailPage: React.FC = () => {
@@ -474,11 +525,7 @@ export const SituationDetailPage: React.FC = () => {
               description={t('situations.detail.exercises.empty.description')}
             />
           ) : (
-            <div className="space-y-4">
-              {exercisesData.exercises.map((exercise) => (
-                <ExercisePreviewCard key={exercise.exercise_id} exercise={exercise} />
-              ))}
-            </div>
+            <ExercisesByModality exercises={exercisesData.exercises} />
           )}
         </TabsContent>
       </Tabs>

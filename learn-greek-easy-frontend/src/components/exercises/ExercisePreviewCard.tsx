@@ -25,11 +25,6 @@ function isSelectCorrectAnswerPayload(payload: unknown): payload is SelectCorrec
   );
 }
 
-function getLocalizedText(field: MultilingualField, lang: string): string {
-  if (lang === 'ru') return field.ru;
-  return field.en;
-}
-
 const STATUS_STYLES: Record<CardStatus, string> = {
   new: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
   learning: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
@@ -42,8 +37,7 @@ interface ExercisePreviewCardProps {
 }
 
 export function ExercisePreviewCard({ exercise }: ExercisePreviewCardProps) {
-  const { t, i18n } = useTranslation();
-  const lang = i18n.language === 'ru' ? 'ru' : 'en';
+  const { t } = useTranslation();
 
   if (exercise.exercise_type !== 'select_correct_answer') return null;
   const rawPayload = exercise.items[0]?.payload;
@@ -53,7 +47,7 @@ export function ExercisePreviewCard({ exercise }: ExercisePreviewCardProps) {
   return (
     <Card data-testid="exercise-preview-card">
       <CardHeader>
-        <p className="text-sm font-medium">{getLocalizedText(payload.prompt, lang)}</p>
+        <p className="text-sm font-medium">{payload.prompt.el}</p>
         <div className="mt-2 flex items-center gap-2">
           <Badge
             className={cn('border-0', STATUS_STYLES[exercise.status])}
@@ -61,11 +55,6 @@ export function ExercisePreviewCard({ exercise }: ExercisePreviewCardProps) {
           >
             {t(`exercise.status.${exercise.status}`)}
           </Badge>
-          {exercise.modality && (
-            <Badge variant="outline" data-testid="exercise-preview-modality">
-              {t(`exercise.modality.${exercise.modality}`)}
-            </Badge>
-          )}
         </div>
       </CardHeader>
       <CardContent>
@@ -80,7 +69,7 @@ export function ExercisePreviewCard({ exercise }: ExercisePreviewCardProps) {
                   : 'border-border'
               )}
             >
-              {index + 1}. {getLocalizedText(option, lang)}
+              {index + 1}. {option.el}
             </div>
           ))}
         </div>
