@@ -84,7 +84,7 @@ function groupByModality(
 }
 
 function ExercisesByModality({ exercises }: { exercises: ExerciseQueueItem[] }) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('common');
   const groups = groupByModality(exercises);
 
   return (
