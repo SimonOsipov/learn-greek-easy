@@ -84,7 +84,7 @@ function groupByModality(
 }
 
 function ExercisesByModality({ exercises }: { exercises: ExerciseQueueItem[] }) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation();
   const groups = groupByModality(exercises);
 
   return (
@@ -95,7 +95,7 @@ function ExercisesByModality({ exercises }: { exercises: ExerciseQueueItem[] }) 
           <AccordionItem key={modality} value={modality}>
             <AccordionTrigger className="hover:no-underline">
               <div className="flex items-center gap-2">
-                <span>{t(`exercises.modality.${modality}`)}</span>
+                <span>{t(`exercise.modality.${modality}`)}</span>
                 <Badge variant="secondary">{items.length}</Badge>
               </div>
             </AccordionTrigger>
