@@ -10,11 +10,11 @@ import { WelcomeSection } from '@/components/display/WelcomeSection';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAnalytics } from '@/hooks/useAnalytics';
-import { useAnalyticsSSE } from '@/hooks/useAnalyticsSSE';
 import { useTourAutoTrigger } from '@/hooks/useTourAutoTrigger';
 import { getLocalizedDeckDescription, getLocalizedDeckName } from '@/lib/deckLocale';
 import { reportAPIError } from '@/lib/errorReporting';
 import { formatStudyTime } from '@/lib/timeFormatUtils';
+import { useAnalyticsStore } from '@/stores/analyticsStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useDeckStore } from '@/stores/deckStore';
 import type { Metric } from '@/types/dashboard';
@@ -56,7 +56,20 @@ export const Dashboard: React.FC = () => {
     });
   }, [fetchDecks]);
 
-  useAnalyticsSSE();
+  const loadAnalytics = useAnalyticsStore((state) => state.loadAnalytics);
+
+  // Background poll: refresh analytics every 5 minutes.
+  useEffect(() => {
+    if (!user) return;
+    const intervalId = setInterval(
+      () => {
+        loadAnalytics(user.id);
+      },
+      5 * 60 * 1000
+    );
+    return () => clearInterval(intervalId);
+  }, [user, loadAnalytics]);
+
   useTourAutoTrigger();
 
   // Memoized navigation handler for decks page

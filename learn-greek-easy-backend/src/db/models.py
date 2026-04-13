@@ -1680,7 +1680,7 @@ class CultureDeck(Base, TimestampMixin):
     # Relationships
     questions: Mapped[List["CultureQuestion"]] = relationship(
         back_populates="deck",
-        lazy="selectin",
+        lazy="raise",
         cascade="all, delete-orphan",
     )
 

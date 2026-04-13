@@ -56,10 +56,6 @@ vi.mock('@/hooks/useAnalytics', () => ({
   }),
 }));
 
-vi.mock('@/hooks/useAnalyticsSSE', () => ({
-  useAnalyticsSSE: vi.fn(),
-}));
-
 vi.mock('@/hooks/useTourAutoTrigger', () => ({
   useTourAutoTrigger: vi.fn(),
 }));
