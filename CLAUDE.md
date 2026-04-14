@@ -66,16 +66,7 @@ npm run test:e2e                             # Playwright E2E
 
 Requires `TEST_SEED_ENABLED=true`. Full docs: [docs/e2e-seeding.md](docs/e2e-seeding.md)
 
-```bash
-# Quick seed
-curl -X POST http://localhost:8000/api/v1/test/seed/all
-
-# Test users: e2e_learner@test.com, e2e_admin@test.com (password: TestPassword123!)
-```
-
 ## Environment
-
-Dev ports: Frontend 5173, Backend 8000
 
 Required prod vars: `JWT_SECRET_KEY` (min 32 chars), `DATABASE_URL`, `CORS_ORIGINS`
 
