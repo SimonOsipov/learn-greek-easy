@@ -1,7 +1,14 @@
-import { renderHook } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { createElement } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-// Module-level mocks
+import { createTestQueryClient } from '@/lib/test-utils';
+
+// ---------------------------------------------------------------------------
+// Module-level mocks (must be declared before imports that use them)
+// ---------------------------------------------------------------------------
+
 const mockStartTour = vi.fn();
 let mockTourSteps: unknown[] = [{ element: '#test', popover: { title: 'Test' } }];
 
@@ -42,10 +49,16 @@ vi.mock('@/stores/authStore', () => ({
   ) => selector({ user: mockUser, updateProfile: mockUpdateProfile }),
 }));
 
-let mockAnalyticsLoading = false;
-let mockDashboardData: object | null = { someData: true };
-vi.mock('@/hooks/useAnalytics', () => ({
-  useAnalytics: () => ({ data: mockDashboardData, loading: mockAnalyticsLoading }),
+let mockDateRange = 'last7';
+vi.mock('@/stores/dateRangeStore', () => ({
+  useDateRangeStore: (selector: (s: { dateRange: string }) => unknown) =>
+    selector({ dateRange: mockDateRange }),
+}));
+
+// Mock @/features/analytics so no real API calls are made (AC #10)
+const mockGetAnalytics = vi.fn();
+vi.mock('@/features/analytics', () => ({
+  getAnalytics: (...args: unknown[]) => mockGetAnalytics(...args),
 }));
 
 let mockDecks: Array<{ id: string; title: string }> = [];
@@ -65,7 +78,32 @@ vi.mock('posthog-js', () => ({
 
 import { useTourAutoTrigger } from '../useTourAutoTrigger';
 
+// ---------------------------------------------------------------------------
+// Helper — builds a fresh QueryClient with seeded analytics data per test
+// ---------------------------------------------------------------------------
+
+function makeWrapper(queryClient: QueryClient) {
+  return function Wrapper({ children }: { children: React.ReactNode }) {
+    return createElement(QueryClientProvider, { client: queryClient }, children);
+  };
+}
+
+// Full analytics fixture (any non-null value tells the hook "dashboard loaded")
+const fixtureData = {
+  overview: { totalReviews: 10, cardsStudied: 5, averageAccuracy: 0.8, totalStudyTime: 600 },
+  streak: { currentStreak: 1, longestStreak: 5, lastStudyDate: new Date().toISOString() },
+  progressData: [],
+  deckStats: [],
+  recentActivity: [],
+};
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
 describe('useTourAutoTrigger', () => {
+  let queryClient: QueryClient;
+
   beforeEach(() => {
     vi.useFakeTimers();
     vi.clearAllMocks();
@@ -74,27 +112,38 @@ describe('useTourAutoTrigger', () => {
     mockTourSteps = [{ element: '#test', popover: { title: 'Test' } }];
     mockIsTourCompleted.mockReturnValue(false);
     mockUpdateProfile.mockResolvedValue(undefined);
-    mockAnalyticsLoading = false;
-    mockDashboardData = { someData: true };
     mockDecks = [];
+    mockDateRange = 'last7';
+
+    // Default: data loaded, not loading
+    mockGetAnalytics.mockResolvedValue(fixtureData);
+    queryClient = createTestQueryClient();
+    // Seed cache so hook sees data immediately (avoids async fetch in timer tests)
+    queryClient.setQueryData(['analytics', '1', 'last7'], fixtureData);
   });
 
   afterEach(() => {
+    queryClient.clear();
     vi.useRealTimers();
   });
 
   it('does not trigger when analytics is loading', () => {
-    mockAnalyticsLoading = true;
-    mockDashboardData = null;
-    renderHook(() => useTourAutoTrigger());
+    // Remove seeded data so query fires and stays loading
+    queryClient.removeQueries({ queryKey: ['analytics'] });
+    let resolve!: (v: unknown) => void;
+    mockGetAnalytics.mockReturnValue(
+      new Promise((r) => {
+        resolve = r;
+      })
+    );
+
+    renderHook(() => useTourAutoTrigger(), { wrapper: makeWrapper(queryClient) });
     vi.advanceTimersByTime(250);
     expect(mockStartTour).not.toHaveBeenCalled();
   });
 
   it('triggers after dashboard data loads + 250ms delay', () => {
-    mockAnalyticsLoading = false;
-    mockDashboardData = { someData: true };
-    renderHook(() => useTourAutoTrigger());
+    renderHook(() => useTourAutoTrigger(), { wrapper: makeWrapper(queryClient) });
     // Before delay — should not have triggered
     vi.advanceTimersByTime(249);
     expect(mockStartTour).not.toHaveBeenCalled();
@@ -108,29 +157,32 @@ describe('useTourAutoTrigger', () => {
 
   it('fail-safe: sets triggeredRef after 10s, preventing late trigger', () => {
     // Dashboard never loads
-    mockAnalyticsLoading = true;
-    mockDashboardData = null;
-    renderHook(() => useTourAutoTrigger());
+    queryClient.removeQueries({ queryKey: ['analytics'] });
+    let resolve!: (v: unknown) => void;
+    mockGetAnalytics.mockReturnValue(
+      new Promise((r) => {
+        resolve = r;
+      })
+    );
+
+    renderHook(() => useTourAutoTrigger(), { wrapper: makeWrapper(queryClient) });
     vi.advanceTimersByTime(10_000);
     // Now simulate dashboard loading
-    mockAnalyticsLoading = false;
-    mockDashboardData = { someData: true };
+    queryClient.setQueryData(['analytics', '1', 'last7'], fixtureData);
     // Re-render would be needed but triggeredRef is already set
     expect(mockStartTour).not.toHaveBeenCalled();
   });
 
   it('does not trigger when tour is already completed', () => {
     mockIsTourCompleted.mockReturnValue(true);
-    renderHook(() => useTourAutoTrigger());
+    renderHook(() => useTourAutoTrigger(), { wrapper: makeWrapper(queryClient) });
     vi.advanceTimersByTime(250);
     expect(mockStartTour).not.toHaveBeenCalled();
   });
 
   it('passes essentialDeck from deckStore to buildTourSteps', () => {
     mockDecks = [{ id: 'deck-42', title: 'Essential Greek Nouns' }];
-    const buildTourStepsMock = vi.fn(() => mockTourSteps);
-    // We can't easily spy on the mock, but we verify startTour is called with the steps
-    renderHook(() => useTourAutoTrigger());
+    renderHook(() => useTourAutoTrigger(), { wrapper: makeWrapper(queryClient) });
     vi.advanceTimersByTime(250);
     expect(mockStartTour).toHaveBeenCalledWith(
       mockTourSteps,
@@ -139,7 +191,9 @@ describe('useTourAutoTrigger', () => {
   });
 
   it('cleans up timers on unmount', () => {
-    const { unmount } = renderHook(() => useTourAutoTrigger());
+    const { unmount } = renderHook(() => useTourAutoTrigger(), {
+      wrapper: makeWrapper(queryClient),
+    });
     unmount();
     vi.advanceTimersByTime(250);
     expect(mockStartTour).not.toHaveBeenCalled();
@@ -147,14 +201,14 @@ describe('useTourAutoTrigger', () => {
 
   it('does not trigger when not authenticated', () => {
     mockUser = null;
-    renderHook(() => useTourAutoTrigger());
+    renderHook(() => useTourAutoTrigger(), { wrapper: makeWrapper(queryClient) });
     vi.advanceTimersByTime(250);
     expect(mockStartTour).not.toHaveBeenCalled();
   });
 
   it('does not trigger when app not ready', () => {
     mockIsReady = false;
-    renderHook(() => useTourAutoTrigger());
+    renderHook(() => useTourAutoTrigger(), { wrapper: makeWrapper(queryClient) });
     vi.advanceTimersByTime(250);
     expect(mockStartTour).not.toHaveBeenCalled();
   });
@@ -162,20 +216,22 @@ describe('useTourAutoTrigger', () => {
   it('does not trigger when server-side tourCompletedAt is set', () => {
     mockUser = { id: '1', tourCompletedAt: '2026-01-01T00:00:00Z' };
     mockIsTourCompleted.mockReturnValue(true);
-    renderHook(() => useTourAutoTrigger());
+    renderHook(() => useTourAutoTrigger(), { wrapper: makeWrapper(queryClient) });
     vi.advanceTimersByTime(250);
     expect(mockStartTour).not.toHaveBeenCalled();
   });
 
   it('does not trigger when steps array is empty', () => {
     mockTourSteps = [];
-    renderHook(() => useTourAutoTrigger());
+    renderHook(() => useTourAutoTrigger(), { wrapper: makeWrapper(queryClient) });
     vi.advanceTimersByTime(250);
     expect(mockStartTour).not.toHaveBeenCalled();
   });
 
   it('fires only once even with re-renders', () => {
-    const { rerender } = renderHook(() => useTourAutoTrigger());
+    const { rerender } = renderHook(() => useTourAutoTrigger(), {
+      wrapper: makeWrapper(queryClient),
+    });
     vi.advanceTimersByTime(250);
     rerender();
     vi.advanceTimersByTime(250);
