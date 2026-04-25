@@ -3,11 +3,10 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
 import { reportAPIError } from '@/lib/errorReporting';
+import { queryClient } from '@/lib/queryClient';
 import { supabase } from '@/lib/supabaseClient';
 import { authAPI, type ProfileUpdateRequest } from '@/services/authAPI';
 import type { User, AuthError } from '@/types/auth';
-
-import { useAnalyticsStore } from './analyticsStore';
 
 interface AuthState {
   // State
@@ -59,8 +58,8 @@ export const useAuthStore = create<AuthState>()(
           error: null,
         });
 
-        // Clear analytics state
-        useAnalyticsStore.getState().clearAnalytics();
+        // Clear analytics query cache
+        queryClient.removeQueries({ queryKey: ['analytics'] });
 
         // Reset PostHog identity so next session is anonymous
         if (typeof posthog?.reset === 'function') {
