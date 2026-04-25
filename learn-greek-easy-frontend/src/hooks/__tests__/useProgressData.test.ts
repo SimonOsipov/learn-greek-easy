@@ -1,45 +1,41 @@
 /**
  * useProgressData Hook Tests
- * Tests progress data selector from analytics store
+ * Tests progress data selector from useAnalytics hook
  */
 
 import { renderHook } from '@testing-library/react';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import { useProgressData } from '@/hooks/useProgressData';
-import { useAnalyticsStore } from '@/stores/analyticsStore';
+
+const mockUseAnalytics = vi.fn();
+vi.mock('@/hooks/useAnalytics', () => ({
+  useAnalytics: () => mockUseAnalytics(),
+}));
 
 describe('useProgressData Hook', () => {
   beforeEach(() => {
-    // Reset analytics store
-    useAnalyticsStore.setState({
-      dashboardData: null,
-      dateRange: 'last7',
-      loading: false,
-      refreshing: false,
-      error: null,
-      lastFetch: null,
-    });
+    mockUseAnalytics.mockReturnValue({ data: null, loading: false, error: null });
   });
 
   it('should return initial state when no data', () => {
     const { result } = renderHook(() => useProgressData());
 
-    // Selector returns empty array when dashboardData is null
+    // Selector returns empty array when data is null
     expect(result.current.progressData).toEqual([]);
     expect(result.current.loading).toBe(false);
     expect(result.current.error).toBeNull();
   });
 
-  it('should return progress data from store', () => {
+  it('should return progress data from hook', () => {
     const mockProgressData = [
       { date: '2025-01-01', reviewCount: 10, cardsStudied: 5, accuracy: 0.8 },
       { date: '2025-01-02', reviewCount: 15, cardsStudied: 8, accuracy: 0.85 },
       { date: '2025-01-03', reviewCount: 12, cardsStudied: 6, accuracy: 0.9 },
     ];
 
-    useAnalyticsStore.setState({
-      dashboardData: {
+    mockUseAnalytics.mockReturnValue({
+      data: {
         overview: {
           totalReviews: 100,
           cardsStudied: 50,
@@ -56,6 +52,7 @@ describe('useProgressData Hook', () => {
         recentActivity: [],
       },
       loading: false,
+      error: null,
     });
 
     const { result } = renderHook(() => useProgressData());
@@ -66,7 +63,7 @@ describe('useProgressData Hook', () => {
   });
 
   it('should reflect loading state', () => {
-    useAnalyticsStore.setState({ loading: true });
+    mockUseAnalytics.mockReturnValue({ data: null, loading: true, error: null });
 
     const { result } = renderHook(() => useProgressData());
     expect(result.current.loading).toBe(true);
@@ -74,7 +71,7 @@ describe('useProgressData Hook', () => {
 
   it('should reflect error state', () => {
     const errorMessage = 'Failed to load progress data';
-    useAnalyticsStore.setState({ error: errorMessage });
+    mockUseAnalytics.mockReturnValue({ data: null, loading: false, error: errorMessage });
 
     const { result } = renderHook(() => useProgressData());
     expect(result.current.error).toBe(errorMessage);
@@ -86,13 +83,13 @@ describe('useProgressData Hook', () => {
     // Initially empty array
     expect(result.current.progressData).toEqual([]);
 
-    // Update store with new data
+    // Update mock with new data
     const newProgressData = [
       { date: '2025-01-04', reviewCount: 20, cardsStudied: 10, accuracy: 0.95 },
     ];
 
-    useAnalyticsStore.setState({
-      dashboardData: {
+    mockUseAnalytics.mockReturnValue({
+      data: {
         overview: {
           totalReviews: 120,
           cardsStudied: 60,
@@ -108,6 +105,8 @@ describe('useProgressData Hook', () => {
         deckStats: [],
         recentActivity: [],
       },
+      loading: false,
+      error: null,
     });
 
     rerender();

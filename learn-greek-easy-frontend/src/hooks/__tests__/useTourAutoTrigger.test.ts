@@ -44,10 +44,8 @@ vi.mock('@/stores/authStore', () => ({
 
 let mockAnalyticsLoading = false;
 let mockDashboardData: object | null = { someData: true };
-vi.mock('@/stores/analyticsStore', () => ({
-  useAnalyticsStore: (
-    selector: (state: { loading: boolean; dashboardData: object | null }) => unknown
-  ) => selector({ loading: mockAnalyticsLoading, dashboardData: mockDashboardData }),
+vi.mock('@/hooks/useAnalytics', () => ({
+  useAnalytics: () => ({ data: mockDashboardData, loading: mockAnalyticsLoading }),
 }));
 
 let mockDecks: Array<{ id: string; title: string }> = [];

@@ -1,6 +1,6 @@
 // src/hooks/useStudyStreak.ts
 
-import { useAnalyticsStore } from '@/stores/analyticsStore';
+import { useAnalytics } from '@/hooks/useAnalytics';
 
 /**
  * Hook for study streak information
@@ -21,9 +21,8 @@ import { useAnalyticsStore } from '@/stores/analyticsStore';
  * ```
  */
 export const useStudyStreak = () => {
-  const streak = useAnalyticsStore((state) => state.dashboardData?.streak);
-  const loading = useAnalyticsStore((state) => state.loading);
-  const error = useAnalyticsStore((state) => state.error);
+  const { data, loading, error } = useAnalytics();
+  const streak = data?.streak;
 
   return {
     streak,

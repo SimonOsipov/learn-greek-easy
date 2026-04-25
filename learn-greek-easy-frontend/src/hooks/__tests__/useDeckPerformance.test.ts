@@ -1,37 +1,33 @@
 /**
  * useDeckPerformance Hook Tests
- * Tests deck performance selector from analytics store
+ * Tests deck performance selector from useAnalytics hook
  */
 
 import { renderHook } from '@testing-library/react';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import { useDeckPerformance } from '@/hooks/useDeckPerformance';
-import { useAnalyticsStore } from '@/stores/analyticsStore';
+
+const mockUseAnalytics = vi.fn();
+vi.mock('@/hooks/useAnalytics', () => ({
+  useAnalytics: () => mockUseAnalytics(),
+}));
 
 describe('useDeckPerformance Hook', () => {
   beforeEach(() => {
-    // Reset analytics store
-    useAnalyticsStore.setState({
-      dashboardData: null,
-      dateRange: 'last7',
-      loading: false,
-      refreshing: false,
-      error: null,
-      lastFetch: null,
-    });
+    mockUseAnalytics.mockReturnValue({ data: null, loading: false, error: null });
   });
 
   it('should return initial state when no data', () => {
     const { result } = renderHook(() => useDeckPerformance());
 
-    // Selector returns empty array when dashboardData is null
+    // Selector returns empty array when data is null
     expect(result.current.deckStats).toEqual([]);
     expect(result.current.loading).toBe(false);
     expect(result.current.error).toBeNull();
   });
 
-  it('should return deck performance data from store', () => {
+  it('should return deck performance data from hook', () => {
     const mockDeckStats = [
       {
         deckId: 'deck-1',
@@ -51,8 +47,8 @@ describe('useDeckPerformance Hook', () => {
       },
     ];
 
-    useAnalyticsStore.setState({
-      dashboardData: {
+    mockUseAnalytics.mockReturnValue({
+      data: {
         overview: {
           totalReviews: 250,
           cardsStudied: 150,
@@ -69,6 +65,7 @@ describe('useDeckPerformance Hook', () => {
         recentActivity: [],
       },
       loading: false,
+      error: null,
     });
 
     const { result } = renderHook(() => useDeckPerformance());
@@ -79,7 +76,7 @@ describe('useDeckPerformance Hook', () => {
   });
 
   it('should reflect loading state', () => {
-    useAnalyticsStore.setState({ loading: true });
+    mockUseAnalytics.mockReturnValue({ data: null, loading: true, error: null });
 
     const { result } = renderHook(() => useDeckPerformance());
     expect(result.current.loading).toBe(true);
@@ -87,15 +84,15 @@ describe('useDeckPerformance Hook', () => {
 
   it('should reflect error state', () => {
     const errorMessage = 'Failed to load deck performance';
-    useAnalyticsStore.setState({ error: errorMessage });
+    mockUseAnalytics.mockReturnValue({ data: null, loading: false, error: errorMessage });
 
     const { result } = renderHook(() => useDeckPerformance());
     expect(result.current.error).toBe(errorMessage);
   });
 
   it('should handle empty deck performance array', () => {
-    useAnalyticsStore.setState({
-      dashboardData: {
+    mockUseAnalytics.mockReturnValue({
+      data: {
         overview: {
           totalReviews: 0,
           cardsStudied: 0,
@@ -111,6 +108,8 @@ describe('useDeckPerformance Hook', () => {
         deckStats: [],
         recentActivity: [],
       },
+      loading: false,
+      error: null,
     });
 
     const { result } = renderHook(() => useDeckPerformance());
@@ -136,8 +135,8 @@ describe('useDeckPerformance Hook', () => {
       },
     ];
 
-    useAnalyticsStore.setState({
-      dashboardData: {
+    mockUseAnalytics.mockReturnValue({
+      data: {
         overview: {
           totalReviews: 200,
           cardsStudied: 75,
@@ -153,6 +152,8 @@ describe('useDeckPerformance Hook', () => {
         deckStats: updatedStats,
         recentActivity: [],
       },
+      loading: false,
+      error: null,
     });
 
     rerender();

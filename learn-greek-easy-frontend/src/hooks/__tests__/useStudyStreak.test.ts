@@ -1,25 +1,21 @@
 /**
  * useStudyStreak Hook Tests
- * Tests study streak selector from analytics store
+ * Tests study streak selector from useAnalytics hook
  */
 
 import { renderHook } from '@testing-library/react';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import { useStudyStreak } from '@/hooks/useStudyStreak';
-import { useAnalyticsStore } from '@/stores/analyticsStore';
+
+const mockUseAnalytics = vi.fn();
+vi.mock('@/hooks/useAnalytics', () => ({
+  useAnalytics: () => mockUseAnalytics(),
+}));
 
 describe('useStudyStreak Hook', () => {
   beforeEach(() => {
-    // Reset analytics store
-    useAnalyticsStore.setState({
-      dashboardData: null,
-      dateRange: 'last7',
-      loading: false,
-      refreshing: false,
-      error: null,
-      lastFetch: null,
-    });
+    mockUseAnalytics.mockReturnValue({ data: null, loading: false, error: null });
   });
 
   it('should return undefined streak when no data', () => {
@@ -30,15 +26,15 @@ describe('useStudyStreak Hook', () => {
     expect(result.current.error).toBeNull();
   });
 
-  it('should return streak data from store', () => {
+  it('should return streak data from hook', () => {
     const mockStreakData = {
       currentStreak: 7,
       longestStreak: 15,
       lastStudyDate: '2025-01-08T10:00:00.000Z',
     };
 
-    useAnalyticsStore.setState({
-      dashboardData: {
+    mockUseAnalytics.mockReturnValue({
+      data: {
         overview: {
           totalReviews: 100,
           cardsStudied: 50,
@@ -51,6 +47,7 @@ describe('useStudyStreak Hook', () => {
         recentActivity: [],
       },
       loading: false,
+      error: null,
     });
 
     const { result } = renderHook(() => useStudyStreak());
@@ -62,7 +59,7 @@ describe('useStudyStreak Hook', () => {
   });
 
   it('should reflect loading state', () => {
-    useAnalyticsStore.setState({ loading: true });
+    mockUseAnalytics.mockReturnValue({ data: null, loading: true, error: null });
 
     const { result } = renderHook(() => useStudyStreak());
     expect(result.current.loading).toBe(true);
@@ -70,15 +67,15 @@ describe('useStudyStreak Hook', () => {
 
   it('should reflect error state', () => {
     const errorMessage = 'Failed to load streak data';
-    useAnalyticsStore.setState({ error: errorMessage });
+    mockUseAnalytics.mockReturnValue({ data: null, loading: false, error: errorMessage });
 
     const { result } = renderHook(() => useStudyStreak());
     expect(result.current.error).toBe(errorMessage);
   });
 
   it('should handle zero streak values', () => {
-    useAnalyticsStore.setState({
-      dashboardData: {
+    mockUseAnalytics.mockReturnValue({
+      data: {
         overview: {
           totalReviews: 0,
           cardsStudied: 0,
@@ -94,6 +91,8 @@ describe('useStudyStreak Hook', () => {
         deckStats: [],
         recentActivity: [],
       },
+      loading: false,
+      error: null,
     });
 
     const { result } = renderHook(() => useStudyStreak());
@@ -109,8 +108,8 @@ describe('useStudyStreak Hook', () => {
     expect(result.current.streak).toBeUndefined();
 
     // Update with initial streak
-    useAnalyticsStore.setState({
-      dashboardData: {
+    mockUseAnalytics.mockReturnValue({
+      data: {
         overview: {
           totalReviews: 50,
           cardsStudied: 25,
@@ -126,14 +125,16 @@ describe('useStudyStreak Hook', () => {
         deckStats: [],
         recentActivity: [],
       },
+      loading: false,
+      error: null,
     });
 
     rerender();
     expect(result.current.streak?.currentStreak).toBe(5);
 
     // User continues streak
-    useAnalyticsStore.setState({
-      dashboardData: {
+    mockUseAnalytics.mockReturnValue({
+      data: {
         overview: {
           totalReviews: 60,
           cardsStudied: 30,
@@ -149,6 +150,8 @@ describe('useStudyStreak Hook', () => {
         deckStats: [],
         recentActivity: [],
       },
+      loading: false,
+      error: null,
     });
 
     rerender();
@@ -156,8 +159,8 @@ describe('useStudyStreak Hook', () => {
   });
 
   it('should handle longest streak being equal to current streak', () => {
-    useAnalyticsStore.setState({
-      dashboardData: {
+    mockUseAnalytics.mockReturnValue({
+      data: {
         overview: {
           totalReviews: 200,
           cardsStudied: 100,
@@ -173,6 +176,8 @@ describe('useStudyStreak Hook', () => {
         deckStats: [],
         recentActivity: [],
       },
+      loading: false,
+      error: null,
     });
 
     const { result } = renderHook(() => useStudyStreak());

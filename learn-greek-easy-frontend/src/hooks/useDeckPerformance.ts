@@ -1,11 +1,6 @@
 // src/hooks/useDeckPerformance.ts
 
-import {
-  useAnalyticsStore,
-  selectDeckPerformance,
-  selectIsLoading,
-  selectError,
-} from '@/stores/analyticsStore';
+import { useAnalytics } from '@/hooks/useAnalytics';
 
 /**
  * Hook for deck performance statistics
@@ -23,9 +18,8 @@ import {
  * ```
  */
 export const useDeckPerformance = () => {
-  const deckStats = useAnalyticsStore(selectDeckPerformance);
-  const loading = useAnalyticsStore(selectIsLoading);
-  const error = useAnalyticsStore(selectError);
+  const { data, loading, error } = useAnalytics();
+  const deckStats = data?.deckStats ?? [];
 
   return {
     deckStats,

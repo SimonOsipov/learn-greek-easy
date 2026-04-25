@@ -5,8 +5,8 @@ import { Star, Trophy, ChevronRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useStudyStreak } from '@/hooks/useStudyStreak';
 import { cn } from '@/lib/utils';
-import { useAnalyticsStore, selectStudyStreak } from '@/stores/analyticsStore';
 import {
   useXPStore,
   selectXPStats,
@@ -83,8 +83,8 @@ export const XPCard: React.FC<XPCardProps> = ({
   const isMaxLevel = useXPStore(selectIsMaxLevel);
   const loadXPStats = useXPStore((state) => state.loadXPStats);
 
-  // Streak from analytics store (per architecture spec)
-  const streak = useAnalyticsStore(selectStudyStreak);
+  // Streak from useStudyStreak (TanStack Query-backed, single source of truth)
+  const { streak } = useStudyStreak();
 
   // Check for reduced motion preference
   const prefersReducedMotion = useMemo(() => {
