@@ -7,7 +7,7 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import { useAnalytics } from '@/hooks/useAnalytics';
-import { useAnalyticsStore } from '@/stores/analyticsStore';
+// useAnalyticsStore import removed — PERF-01-10 will rewrite this suite against the new useQuery-backed hook
 import { useAuthStore } from '@/stores/authStore';
 
 /**

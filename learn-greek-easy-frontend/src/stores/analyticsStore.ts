@@ -1,59 +1,9 @@
 // src/stores/analyticsStore.ts
-
 /**
- * Analytics Store
- *
- * Manages analytics data state and provides computed values for the analytics dashboard.
- *
- * Key Features:
- * - 5-minute cache to reduce API calls
- * - Date range filtering (last7, last30, alltime)
- * - Auto-refresh after review sessions
- * - Auto-cleanup on logout
- *
- * Usage Example:
- * ```tsx
- * function Dashboard() {
- *   const { loadAnalytics, setDateRange } = useAnalyticsStore();
- *   const dashboardData = useAnalyticsStore(selectDashboardData);
- *   const isLoading = useAnalyticsStore(selectIsLoading);
- *   const dateRange = useAnalyticsStore(selectDateRange);
- *
- *   useEffect(() => {
- *     loadAnalytics(userId);
- *   }, [userId]);
- *
- *   return (
- *     <>
- *       <DateRangeFilter
- *         selected={dateRange}
- *         onChange={setDateRange}
- *       />
- *       <ProgressLineChart />
- *       <ActivityFeed activities={dashboardData?.recentActivity} />
- *     </>
- *   );
- * }
- * ```
- *
- * Selectors:
- * - selectDashboardData: Get full dashboard data
- * - selectIsLoading: Get loading state
- * - selectError: Get error state
- * - selectDateRange: Get current date range
- *
- * Actions:
- * - loadAnalytics(userId, dateRange?): Fetch analytics data
- * - setDateRange(range): Change date range filter
- * - refreshAnalytics(): Force refresh (bypass cache)
- * - clearAnalytics(): Clear all data (on logout)
+ * Analytics fetch and transform helpers.
+ * PERF-01-09 will relocate these out of /stores into a dedicated module.
  */
 
-import { create } from 'zustand';
-import { devtools } from 'zustand/middleware';
-
-import { reportAPIError } from '@/lib/errorReporting';
-import log from '@/lib/logger';
 import { progressAPI } from '@/services/progressAPI';
 import type {
   DashboardStatsResponse,
@@ -75,44 +25,6 @@ import type {
 export type DateRangeType = 'last7' | 'last30' | 'alltime';
 
 /**
- * Analytics state interface
- */
-interface AnalyticsState {
-  // Data
-  dashboardData: AnalyticsDashboardData | null;
-  dateRange: DateRangeType;
-
-  // Loading states
-  loading: boolean;
-  refreshing: boolean;
-
-  // Error state
-  error: string | null;
-
-  // Cache
-  lastFetch: number | null;
-
-  // Actions
-  loadAnalytics: (userId: string, dateRange?: DateRangeType) => Promise<void>;
-  setDateRange: (range: DateRangeType) => void;
-  refreshAnalytics: () => Promise<void>;
-  clearAnalytics: () => void;
-}
-
-/**
- * Cache TTL in milliseconds (5 minutes)
- */
-const CACHE_TTL = 5 * 60 * 1000;
-
-/**
- * Check if cache is valid
- */
-const isCacheValid = (lastFetch: number | null): boolean => {
-  if (!lastFetch) return false;
-  return Date.now() - lastFetch < CACHE_TTL;
-};
-
-/**
  * Map date range type to API period parameter
  */
 const mapDateRangeToPeriod = (dateRange: DateRangeType): 'week' | 'month' | 'year' => {
@@ -126,6 +38,20 @@ const mapDateRangeToPeriod = (dateRange: DateRangeType): 'week' | 'month' | 'yea
     default:
       return 'month';
   }
+};
+
+/**
+ * Format relative time
+ */
+const formatRelativeTime = (date: Date): string => {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return `${diffDays} days ago`;
+  return date.toLocaleDateString();
 };
 
 /**
@@ -148,11 +74,11 @@ export const transformToAnalyticsDashboardData = (
     dateString: day.date,
     cardsMastered: day.cards_mastered,
     cardsReviewed: day.reviews_count,
-    accuracy: day.combined_accuracy ?? day.average_quality * 20, // Use combined accuracy from backend
+    accuracy: day.combined_accuracy ?? day.average_quality * 20,
     vocabAccuracy: day.vocab_accuracy ?? 0,
     cultureAccuracy: day.culture_accuracy ?? 0,
     timeStudied: day.study_time_seconds,
-    streak: 0, // Not available per day
+    streak: 0,
     cardsNew: 0,
     cardsLearning: day.cards_learning,
     cardsReview: 0,
@@ -166,19 +92,19 @@ export const transformToAnalyticsDashboardData = (
     deckType: deck.deck_type || 'vocabulary',
     cardsInDeck: deck.total_cards,
     cardsNew: deck.total_cards - deck.cards_studied,
-    cardsLearning: Math.round(deck.cards_studied * 0.3), // Estimate
-    cardsReview: Math.round(deck.cards_studied * 0.4), // Estimate
+    cardsLearning: Math.round(deck.cards_studied * 0.3),
+    cardsReview: Math.round(deck.cards_studied * 0.4),
     cardsMastered: deck.cards_mastered,
     accuracy: deck.mastery_percentage,
     successRate: deck.mastery_percentage,
     averageEaseFactor: deck.average_easiness_factor,
     timeSpent: deck.estimated_review_time_minutes * 60,
-    sessionsCompleted: 0, // Not available
+    sessionsCompleted: 0,
     averageTimePerCard: (deck.estimated_review_time_minutes * 60) / Math.max(deck.cards_studied, 1),
     mastery: deck.mastery_percentage,
     completionRate: deck.completion_percentage,
     recentAccuracy: deck.mastery_percentage,
-    cardsGraduatedRecently: 0, // Not available
+    cardsGraduatedRecently: 0,
   }));
 
   // Build word status breakdown from dashboard data
@@ -258,23 +184,9 @@ export const transformToAnalyticsDashboardData = (
     progressData,
     deckStats,
     wordStatus,
-    retention: [], // Not available from backend
+    retention: [],
     recentActivity,
   };
-};
-
-/**
- * Format relative time
- */
-const formatRelativeTime = (date: Date): string => {
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-  if (diffDays === 0) return 'Today';
-  if (diffDays === 1) return 'Yesterday';
-  if (diffDays < 7) return `${diffDays} days ago`;
-  return date.toLocaleDateString();
 };
 
 /**
@@ -286,159 +198,11 @@ export const getAnalytics = async (
 ): Promise<AnalyticsDashboardData> => {
   const period = mapDateRangeToPeriod(dateRange);
 
-  // Fetch all required data in parallel
   const [dashboard, trends, deckProgress] = await Promise.all([
     progressAPI.getDashboard(),
     progressAPI.getTrends({ period }),
     progressAPI.getDeckProgressList({ page: 1, page_size: 50 }),
   ]);
 
-  // Transform to frontend format
   return transformToAnalyticsDashboardData(userId, dateRange, dashboard, trends, deckProgress);
 };
-
-/**
- * Analytics store with Zustand
- * Manages analytics dashboard data with 5-minute cache strategy
- */
-export const useAnalyticsStore = create<AnalyticsState>()(
-  devtools(
-    (set, get) => ({
-      // Initial state
-      dashboardData: null,
-      dateRange: 'last30',
-      loading: false,
-      refreshing: false,
-      error: null,
-      lastFetch: null,
-
-      /**
-       * Load analytics data for user
-       * Implements 5-minute cache - skips fetch if data is fresh
-       */
-      loadAnalytics: async (userId: string, dateRange?: DateRangeType) => {
-        const state = get();
-
-        // Use provided dateRange or current state
-        const targetRange = dateRange || state.dateRange;
-
-        // Check cache validity (skip if same range and cache valid)
-        if (
-          state.dashboardData &&
-          state.dateRange === targetRange &&
-          isCacheValid(state.lastFetch)
-        ) {
-          log.debug('[analyticsStore] Using cached data');
-          return;
-        }
-
-        // Set loading state
-        set({ loading: true, error: null, dateRange: targetRange });
-
-        try {
-          // Fetch analytics data
-          const data = await getAnalytics(userId, targetRange);
-
-          set({
-            dashboardData: data,
-            loading: false,
-            lastFetch: Date.now(),
-          });
-        } catch (error) {
-          reportAPIError(error, { operation: 'loadAnalytics', endpoint: '/progress/dashboard' });
-          set({
-            error: error instanceof Error ? error.message : 'Failed to load analytics',
-            loading: false,
-          });
-        }
-      },
-
-      /**
-       * Set date range and refresh data
-       * Forces refresh even if cache is valid
-       */
-      setDateRange: (range: DateRangeType) => {
-        const state = get();
-
-        // If range is different, clear cache and reload
-        if (state.dateRange !== range) {
-          set({ dateRange: range, lastFetch: null });
-
-          // Get userId from dashboardData
-          const userId = state.dashboardData?.userId;
-          if (userId) {
-            state.loadAnalytics(userId, range);
-          }
-        }
-      },
-
-      /**
-       * Force refresh analytics data
-       * Ignores cache and fetches fresh data
-       */
-      refreshAnalytics: async () => {
-        const state = get();
-        const userId = state.dashboardData?.userId;
-
-        if (!userId) {
-          log.warn('[analyticsStore] No userId available for refresh');
-          return;
-        }
-
-        // Set refreshing state (different from loading)
-        set({ refreshing: true, error: null, lastFetch: null });
-
-        try {
-          const data = await getAnalytics(userId, state.dateRange);
-
-          set({
-            dashboardData: data,
-            refreshing: false,
-            lastFetch: Date.now(),
-          });
-        } catch (error) {
-          reportAPIError(error, { operation: 'refreshAnalytics', endpoint: '/progress/dashboard' });
-          set({
-            error: error instanceof Error ? error.message : 'Failed to refresh analytics',
-            refreshing: false,
-          });
-        }
-      },
-
-      /**
-       * Clear analytics state
-       * Called on logout
-       */
-      clearAnalytics: () => {
-        set({
-          dashboardData: null,
-          dateRange: 'last30',
-          loading: false,
-          refreshing: false,
-          error: null,
-          lastFetch: null,
-        });
-      },
-    }),
-    { name: 'analyticsStore' }
-  )
-);
-
-// Empty arrays for default values to prevent re-render issues
-const EMPTY_PROGRESS_DATA: any[] = [];
-const EMPTY_DECK_STATS: any[] = [];
-const EMPTY_RECENT_ACTIVITY: any[] = [];
-
-// Selectors for optimized re-renders
-export const selectDashboardData = (state: AnalyticsState) => state.dashboardData;
-export const selectProgressData = (state: AnalyticsState) =>
-  state.dashboardData?.progressData ?? EMPTY_PROGRESS_DATA;
-export const selectDeckPerformance = (state: AnalyticsState) =>
-  state.dashboardData?.deckStats ?? EMPTY_DECK_STATS;
-export const selectStudyStreak = (state: AnalyticsState) => state.dashboardData?.streak;
-export const selectRecentActivity = (state: AnalyticsState) =>
-  state.dashboardData?.recentActivity ?? EMPTY_RECENT_ACTIVITY;
-export const selectIsLoading = (state: AnalyticsState) => state.loading;
-export const selectIsRefreshing = (state: AnalyticsState) => state.refreshing;
-export const selectError = (state: AnalyticsState) => state.error;
-export const selectDateRange = (state: AnalyticsState) => state.dateRange;
