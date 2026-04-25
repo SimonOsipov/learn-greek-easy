@@ -1,6 +1,6 @@
 import { Suspense, useEffect } from 'react';
 
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
 import { AuthRoutesWrapper } from '@/components/auth/AuthRoutesWrapper';
@@ -18,26 +18,9 @@ import { LayoutProvider } from '@/contexts/LayoutContext';
 import { NotificationProvider } from '@/contexts/NotificationContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { lazyWithRetry } from '@/lib/lazyWithRetry';
+import { queryClient } from '@/lib/queryClient';
 import { PostHogProvider } from '@/providers';
 import { useAppStore, selectIsReady } from '@/stores/appStore';
-
-// ============================================================================
-// REACT QUERY CLIENT
-// ============================================================================
-// Single QueryClient instance for the entire application.
-// Provides caching, deduplication, and background refetching for API calls.
-// ============================================================================
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      gcTime: 30 * 60 * 1000, // 30 minutes (formerly cacheTime)
-      retry: 1,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
 
 // ============================================================================
 // LAZY-LOADED PAGE COMPONENTS
