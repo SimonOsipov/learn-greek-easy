@@ -6,8 +6,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { formatStudyTime } from '@/lib/timeFormatUtils';
-import type { DateRangeType } from '@/stores/analyticsStore';
 import { useDateRangeStore } from '@/stores/dateRangeStore';
+import type { DateRangeType } from '@/stores/dateRangeStore';
 
 /**
  * Props for TimeStudiedWidget component

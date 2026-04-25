@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 
-import { getAnalytics } from '@/stores/analyticsStore';
+import { getAnalytics } from '@/features/analytics';
 import { useAuthStore } from '@/stores/authStore';
 import { useDateRangeStore } from '@/stores/dateRangeStore';
 import type { AnalyticsDashboardData } from '@/types/analytics';

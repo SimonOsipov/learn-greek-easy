@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
-import type { DateRangeType } from '@/stores/analyticsStore';
+export type DateRangeType = 'last7' | 'last30' | 'alltime';
 
 interface DateRangeState {
   dateRange: DateRangeType;
