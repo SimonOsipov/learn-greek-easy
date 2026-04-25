@@ -1,56 +1,62 @@
 // src/hooks/useAnalytics.ts
 
-import { useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 
-import { useAnalyticsStore } from '@/stores/analyticsStore';
+import { getAnalytics } from '@/stores/analyticsStore';
 import { useAuthStore } from '@/stores/authStore';
+import { useDateRangeStore } from '@/stores/dateRangeStore';
+import type { AnalyticsDashboardData } from '@/types/analytics';
 
 /**
- * Primary hook for analytics dashboard data
+ * Primary hook for analytics dashboard data.
  *
- * @param autoLoad - Automatically load data on mount if true (default: false)
- * @returns Analytics data, loading states, and actions
+ * Backed by TanStack Query — data is cached per (userId, dateRange) and
+ * refetched automatically on window focus. No manual polling.
+ *
+ * @param autoLoad - Accepted for backward-compat but is a no-op.
+ *   TanStack Query loads on mount automatically when `enabled: !!userId`.
+ *   Will be removed in PERF-01-04 once Dashboard.tsx and Statistics.tsx
+ *   drop the `true` argument.
+ *
+ * @returns Analytics data plus back-compat aliases (loading, refresh).
+ *   Aliases will be removed in PERF-01-04 / PERF-01-05 as consumers migrate
+ *   to the canonical { isLoading, isFetching, refetch } shape.
  *
  * @example
  * ```tsx
- * const { data, loading, error, refresh, setDateRange } = useAnalytics(true);
+ * const { data, isLoading, error, refetch } = useAnalytics();
  *
- * if (loading) return <Loading />;
- * if (error) return <Error message={error} />;
+ * if (isLoading) return <Loading />;
+ * if (error) return <Error message={String(error)} />;
  * if (!data) return <Empty />;
  *
- * return <Dashboard data={data} onRefresh={refresh} />;
+ * return <Dashboard data={data} onRefresh={refetch} />;
  * ```
  */
-export const useAnalytics = (autoLoad = false) => {
-  const user = useAuthStore((state) => state.user);
+export const useAnalytics = (
+  _autoLoad = false // no-op: TanStack Query auto-loads on mount; remove in PERF-01-04
+) => {
+  const userId = useAuthStore((s) => s.user?.id);
+  const dateRange = useDateRangeStore((s) => s.dateRange);
 
-  const dashboardData = useAnalyticsStore((state) => state.dashboardData);
-  const loading = useAnalyticsStore((state) => state.loading);
-  const refreshing = useAnalyticsStore((state) => state.refreshing);
-  const error = useAnalyticsStore((state) => state.error);
-  const dateRange = useAnalyticsStore((state) => state.dateRange);
-
-  const setDateRange = useAnalyticsStore((state) => state.setDateRange);
-  const refreshAnalytics = useAnalyticsStore((state) => state.refreshAnalytics);
-
-  // Auto-load on mount if enabled and no data
-  // Use getState() to avoid dependency on store selectors that create new references
-  useEffect(() => {
-    if (autoLoad && user) {
-      const state = useAnalyticsStore.getState();
-      if (!state.dashboardData && !state.loading) {
-        state.loadAnalytics(user.id);
-      }
-    }
-  }, [autoLoad, user]);
+  const query = useQuery<AnalyticsDashboardData>({
+    queryKey: ['analytics', userId, dateRange],
+    queryFn: () => getAnalytics(userId!, dateRange),
+    enabled: !!userId,
+    staleTime: 5 * 60 * 1000,
+    refetchInterval: false,
+    refetchOnWindowFocus: true,
+  });
 
   return {
-    data: dashboardData,
-    loading: loading || refreshing,
-    error,
-    dateRange,
-    refresh: refreshAnalytics,
-    setDateRange,
+    data: query.data,
+    isLoading: query.isLoading,
+    isFetching: query.isFetching,
+    error: query.error,
+    refetch: query.refetch,
+    // Back-compat aliases — remove in PERF-01-04/05 once consumers are migrated
+    loading: query.isLoading, // TODO(PERF-01-04): remove
+    refresh: query.refetch, // TODO(PERF-01-04): remove
+    dateRange, // TODO(PERF-01-04): remove (TimeStudiedWidget already reads store directly)
   };
 };

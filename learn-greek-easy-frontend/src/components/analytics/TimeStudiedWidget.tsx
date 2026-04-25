@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { formatStudyTime } from '@/lib/timeFormatUtils';
 import type { DateRangeType } from '@/stores/analyticsStore';
+import { useDateRangeStore } from '@/stores/dateRangeStore';
 
 /**
  * Props for TimeStudiedWidget component
@@ -53,7 +54,8 @@ const getDateRangeLabel = (dateRange: DateRangeType): string => {
  * ```
  */
 export const TimeStudiedWidget: React.FC<TimeStudiedWidgetProps> = ({ isLoading: propLoading }) => {
-  const { data, dateRange, loading: dataLoading } = useAnalytics();
+  const { data, loading: dataLoading } = useAnalytics();
+  const dateRange = useDateRangeStore((s) => s.dateRange);
   const loading = propLoading || dataLoading;
 
   if (loading) {

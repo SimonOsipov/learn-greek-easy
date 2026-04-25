@@ -134,7 +134,7 @@ const mapDateRangeToPeriod = (dateRange: DateRangeType): 'week' | 'month' | 'yea
 /**
  * Transform backend responses to frontend AnalyticsDashboardData
  */
-const transformToAnalyticsDashboardData = (
+export const transformToAnalyticsDashboardData = (
   userId: string,
   dateRange: DateRangeType,
   dashboard: DashboardStatsResponse,
@@ -283,7 +283,7 @@ const formatRelativeTime = (date: Date): string => {
 /**
  * Fetch analytics data from backend and transform to frontend format
  */
-const getAnalytics = async (
+export const getAnalytics = async (
   userId: string,
   dateRange: DateRangeType
 ): Promise<AnalyticsDashboardData> => {
