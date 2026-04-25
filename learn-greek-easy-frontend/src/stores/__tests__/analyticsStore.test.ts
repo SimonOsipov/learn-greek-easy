@@ -368,56 +368,6 @@ describe('analyticsStore', () => {
     });
   });
 
-  describe('updateSnapshot', () => {
-    it('should invalidate cache on snapshot update', async () => {
-      setupMocks();
-
-      const { result } = renderHook(() => useAnalyticsStore());
-
-      // Load data first
-      await act(async () => {
-        await result.current.loadAnalytics('test-user-123');
-      });
-
-      expect(result.current.lastFetch).not.toBeNull();
-
-      // Update snapshot - SessionSummary no longer includes accuracy, cardsCorrect, cardsIncorrect
-      await act(async () => {
-        await result.current.updateSnapshot('test-user-123', {
-          sessionId: 'session-123',
-          deckId: 'deck-a1-basics',
-          userId: 'test-user-123',
-          completedAt: new Date(),
-          cardsReviewed: 20,
-          totalTime: 600,
-          averageTimePerCard: 30,
-          ratingBreakdown: { again: 2, hard: 3, good: 10, easy: 5 },
-          transitions: {
-            newToLearning: 15,
-            learningToReview: 8,
-            reviewToMastered: 3,
-            toRelearning: 2,
-          },
-          deckProgressBefore: {
-            cardsNew: 50,
-            cardsLearning: 30,
-            cardsReview: 15,
-            cardsMastered: 5,
-          },
-          deckProgressAfter: {
-            cardsNew: 35,
-            cardsLearning: 37,
-            cardsReview: 15,
-            cardsMastered: 8,
-          },
-        });
-      });
-
-      // Cache should be invalidated
-      expect(result.current.lastFetch).toBeNull();
-    });
-  });
-
   describe('clearAnalytics', () => {
     it('should clear all analytics state', async () => {
       setupMocks();

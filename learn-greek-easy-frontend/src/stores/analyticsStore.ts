@@ -46,7 +46,6 @@
  * - loadAnalytics(userId, dateRange?): Fetch analytics data
  * - setDateRange(range): Change date range filter
  * - refreshAnalytics(): Force refresh (bypass cache)
- * - updateSnapshot(userId, sessionSummary): Update after review session
  * - clearAnalytics(): Clear all data (on logout)
  */
 
@@ -69,7 +68,6 @@ import type {
   StudyStreak,
   AnalyticsActivityItem,
 } from '@/types/analytics';
-import type { SessionSummary } from '@/types/review';
 
 /**
  * Date range type for analytics queries
@@ -98,7 +96,6 @@ interface AnalyticsState {
   loadAnalytics: (userId: string, dateRange?: DateRangeType) => Promise<void>;
   setDateRange: (range: DateRangeType) => void;
   refreshAnalytics: () => Promise<void>;
-  updateSnapshot: (userId: string, sessionSummary: SessionSummary) => Promise<void>;
   clearAnalytics: () => void;
 }
 
@@ -301,20 +298,6 @@ export const getAnalytics = async (
 };
 
 /**
- * Update analytics snapshot after review session
- * Since backend calculates analytics from review data, we just invalidate cache
- * The actual data update happens on the backend when reviews are submitted
- */
-const updateAnalyticsSnapshot = async (
-  _userId: string,
-  _sessionSummary: SessionSummary
-): Promise<void> => {
-  // No-op: Backend analytics are derived from review data
-  // Cache invalidation happens in the store method
-  log.debug('[analyticsStore] Snapshot invalidation requested - cache will refresh on next load');
-};
-
-/**
  * Analytics store with Zustand
  * Manages analytics dashboard data with 5-minute cache strategy
  */
@@ -419,24 +402,6 @@ export const useAnalyticsStore = create<AnalyticsState>()(
             error: error instanceof Error ? error.message : 'Failed to refresh analytics',
             refreshing: false,
           });
-        }
-      },
-
-      /**
-       * Update analytics snapshot after review session
-       * Called automatically after completing a review session
-       */
-      updateSnapshot: async (userId: string, sessionSummary: SessionSummary) => {
-        try {
-          await updateAnalyticsSnapshot(userId, sessionSummary);
-
-          // Invalidate cache to force refresh on next load
-          set({ lastFetch: null });
-
-          log.debug('[analyticsStore] Analytics snapshot updated');
-        } catch (error) {
-          reportAPIError(error, { operation: 'updateSnapshot' });
-          // Non-blocking error - don't set error state
         }
       },
 
