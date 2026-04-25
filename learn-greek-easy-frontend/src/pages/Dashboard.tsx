@@ -27,7 +27,7 @@ import type { Metric } from '@/types/dashboard';
  * - Progress charts (line, area, bar, pie)
  * - Active decks
  *
- * Uses real backend API data via analyticsStore and deckStore.
+ * Uses real backend API data via useAnalytics() and deckStore.
  */
 export const Dashboard: React.FC = () => {
   const { t, i18n } = useTranslation('common');

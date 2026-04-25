@@ -40,7 +40,7 @@ export interface ActivityFeedProps {
  * import { useAnalytics } from '@/hooks/useAnalytics';
  *
  * function Dashboard() {
- *   const { data } = useAnalytics({ autoLoad: true });
+ *   const { data } = useAnalytics();
  *
  *   return (
  *     <ActivityFeed

@@ -269,33 +269,15 @@ describe('useAnalytics Hook', () => {
       await waitFor(() => expect(result.current.isLoading).toBe(false));
       expect(result.current.loading).toBe(false);
     });
-
-    it('exposes refresh alias for refetch', () => {
-      const { result } = renderHook(() => useAnalytics(), {
-        wrapper: makeWrapper(queryClient),
-      });
-
-      expect(typeof result.current.refresh).toBe('function');
-      expect(result.current.refresh).toBe(result.current.refetch);
-    });
-
-    it('exposes dateRange from store', () => {
-      const { result } = renderHook(() => useAnalytics(), {
-        wrapper: makeWrapper(queryClient),
-      });
-
-      expect(result.current.dateRange).toBe('last7');
-    });
   });
 
   // -------------------------------------------------------------------------
   // _autoLoad param is a no-op (backward-compat regression)
   // -------------------------------------------------------------------------
 
-  describe('autoLoad back-compat', () => {
-    it('fetches on mount regardless of autoLoad=false', async () => {
-      // autoLoad is a no-op — TanStack Query always loads when enabled
-      const { result } = renderHook(() => useAnalytics(false), {
+  describe('auto-load behavior', () => {
+    it('fetches on mount automatically when userId is set', async () => {
+      const { result } = renderHook(() => useAnalytics(), {
         wrapper: makeWrapper(queryClient),
       });
 

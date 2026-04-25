@@ -37,7 +37,7 @@ Custom legend component for charts.
 ### ProgressLineChart
 Line chart showing cards reviewed over time.
 
-**Data Source**: `useAnalyticsStore(selectDashboardData)?.progressData`
+**Data Source**: `useAnalytics().data?.progressData`
 
 **Features**:
 - Responsive sizing
@@ -54,7 +54,7 @@ Line chart showing cards reviewed over time.
 ### AccuracyAreaChart
 Area chart showing review accuracy trend over time.
 
-**Data Source**: `useAnalyticsStore(selectDashboardData)?.progressData`
+**Data Source**: `useAnalytics().data?.progressData`
 
 **Features**:
 - Gradient fill under area
@@ -69,7 +69,7 @@ Area chart showing review accuracy trend over time.
 ### DeckPerformanceChart
 Bar chart comparing accuracy across decks.
 
-**Data Source**: `useAnalyticsStore(selectDashboardData)?.deckStats`
+**Data Source**: `useAnalytics().data?.deckStats`
 
 **Features**:
 - Color-coded bars (green: 80%+, yellow: 60-79%, red: <60%)
@@ -84,7 +84,7 @@ Bar chart comparing accuracy across decks.
 ### StageDistributionChart
 Donut chart showing card distribution by learning stage.
 
-**Data Source**: `useAnalyticsStore(selectDashboardData)?.wordStatus`
+**Data Source**: `useAnalytics().data?.wordStatus`
 
 **Features**:
 - 5 segments: New (gray), Learning (blue), Review (yellow), Mastered (green), Relearning (red)
@@ -114,7 +114,7 @@ All charts handle empty data:
 
 ## Data Requirements
 
-Charts expect specific data shapes from analyticsStore:
-- `progressData: ProgressDataPoint[]` - Time series data
-- `deckStats: DeckPerformance[]` - Per-deck statistics
-- `wordStatus: WordStatusBreakdown` - Stage distribution counts
+Charts consume data from `useAnalytics()` (TanStack Query hook). The hook returns `{ data, isLoading, error, refetch }` where `data` is `AnalyticsDashboardData` from `@/types/analytics`:
+- `data.progressData: ProgressDataPoint[]` - Time series data
+- `data.deckStats: DeckPerformanceStats[]` - Per-deck statistics
+- `data.wordStatus: WordStatusBreakdown` - Stage distribution counts

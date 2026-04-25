@@ -13,14 +13,9 @@ import type { AnalyticsDashboardData } from '@/types/analytics';
  * Backed by TanStack Query — data is cached per (userId, dateRange) and
  * refetched automatically on window focus. No manual polling.
  *
- * @param autoLoad - Accepted for backward-compat but is a no-op.
- *   TanStack Query loads on mount automatically when `enabled: !!userId`.
- *   Will be removed in PERF-01-04 once Dashboard.tsx and Statistics.tsx
- *   drop the `true` argument.
- *
- * @returns Analytics data plus back-compat aliases (loading, refresh).
- *   Aliases will be removed in PERF-01-04 / PERF-01-05 as consumers migrate
- *   to the canonical { isLoading, isFetching, refetch } shape.
+ * @returns Analytics data and query state.
+ *   `loading` is a back-compat alias for `isLoading` — consumers should
+ *   migrate to the canonical `isLoading` name when convenient.
  *
  * @example
  * ```tsx
@@ -33,9 +28,7 @@ import type { AnalyticsDashboardData } from '@/types/analytics';
  * return <Dashboard data={data} onRefresh={refetch} />;
  * ```
  */
-export const useAnalytics = (
-  _autoLoad = false // no-op: TanStack Query auto-loads on mount; remove in PERF-01-04
-) => {
+export const useAnalytics = () => {
   const userId = useAuthStore((s) => s.user?.id);
   const dateRange = useDateRangeStore((s) => s.dateRange);
 
@@ -54,9 +47,7 @@ export const useAnalytics = (
     isFetching: query.isFetching,
     error: query.error,
     refetch: query.refetch,
-    // Back-compat aliases — remove in PERF-01-04/05 once consumers are migrated
-    loading: query.isLoading, // TODO(PERF-01-04): remove
-    refresh: query.refetch, // TODO(PERF-01-04): remove
-    dateRange, // TODO(PERF-01-04): remove (TimeStudiedWidget already reads store directly)
+    // Back-compat alias — migrate callsites to `isLoading` when convenient
+    loading: query.isLoading,
   };
 };

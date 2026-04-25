@@ -69,7 +69,7 @@ const formatXP = (xp: number): string => {
  *
  * Displays user's XP level, progress, and achievements summary.
  * Uses data from XP store with 5-minute cache.
- * Streak data comes from analyticsStore per architecture requirements.
+ * Streak data comes from the analytics API via useAnalytics().
  */
 export const XPCard: React.FC<XPCardProps> = ({
   onViewAchievements,

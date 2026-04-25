@@ -1,53 +1,5 @@
 // Dashboard and metrics type definitions
 
-export interface DashboardMetrics {
-  dueToday: number;
-  streak: number;
-  overallProgress: number;
-  masteredWords: number;
-  remainingWords: number;
-  weeklyProgress: WeeklyProgress[];
-  recentActivity: ActivityItem[];
-}
-
-export interface WeeklyProgress {
-  day: string;
-  cardsReviewed: number;
-  accuracy: number;
-  timeSpent: number;
-}
-
-export interface ActivityItem {
-  id: string;
-  type: 'review' | 'achievement' | 'milestone';
-  description: string;
-  timestamp: Date;
-  deckId?: string;
-  deckTitle?: string;
-}
-
-export interface UpcomingReview {
-  period: 'today' | 'tomorrow' | 'this-week' | 'later';
-  count: number;
-  decks: Array<{
-    deckId: string;
-    deckTitle: string;
-    cardCount: number;
-  }>;
-}
-
-export interface LearningStatistics {
-  totalCards: number;
-  totalDecks: number;
-  studyStreak: number;
-  longestStreak: number;
-  averageAccuracy: number;
-  totalStudyTime: number;
-  cardsPerDay: number;
-  retentionRate: number;
-  masteryLevel: number;
-}
-
 // Test dashboard metric types
 export interface Metric {
   id: string;
@@ -86,26 +38,4 @@ export interface Deck {
   lastStudied?: Date;
   isCulture?: boolean;
   coverImageUrl?: string;
-}
-
-// Dashboard user types (simplified for dashboard display)
-export interface DashboardUser {
-  name: string;
-  email: string;
-  avatar?: string;
-  streak: number;
-  totalWords: number;
-  lastActivity: Date;
-}
-
-// Dashboard data
-export interface DashboardData {
-  user: DashboardUser;
-  metrics: Metric[];
-  decks: Deck[];
-  upcomingReviews: {
-    today: number;
-    tomorrow: number;
-    week: number;
-  };
 }
