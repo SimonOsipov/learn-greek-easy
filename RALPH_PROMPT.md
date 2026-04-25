@@ -2,7 +2,9 @@
 
 ## Overview
 
-Automated execution of Backlog `To Do` tasks through 4 mandatory quality gates (Architecture → Explore → Execution → QA Verify). Analyzes task dependencies to determine execution mode: **parallel** (multiple independent chains via agent teams) or **sequential** (single chain, team lead executes directly).
+Automated execution of a single user story's Backlog subtasks through 4 mandatory quality gates (Architecture → Explore → Execution → QA Verify). Runs in an isolated git worktree so multiple stories can be worked in parallel from separate terminals without colliding.
+
+**Invocation**: `/ralph <STORY-ID>` (e.g., `/ralph SIT-07`). One story per invocation. To run multiple stories in parallel, open another terminal and invoke `/ralph SIT-09` — each invocation creates its own worktree, branch, and PR.
 
 ## Model Selection
 
@@ -35,15 +37,14 @@ Never guess, assume, or reduce functionality. If unclear, ask the user.
 Cannot output `ALL_TASKS_COMPLETE` until all CI *test* checks pass. Deploy/Smoke are NOT required.
 
 ```bash
-# Use CI Monitoring Protocol — poll every 3 minutes
 gh pr checks [PR_NUMBER]
 # Required: Alembic Migration Check, Backend Tests, Unit & Integration Tests,
 #           E2E Tests (all shards), E2E API Tests, Backend Lint & Format, Frontend Lint & Format
 # NOT required: Deploy, Seed Dev Database, Health and Smoke Tests, Lighthouse, K6, Accessibility
 ```
 
-### 4. ONE Branch, ONE PR
-All tasks share a single feature branch and PR. Git operations must be serialized.
+### 4. ONE Branch, ONE PR per User Story
+All subtasks of a single user story share one feature branch and one draft PR, all in one worktree. Different user stories run in different worktrees on different branches. Never mix subtasks from different stories on one branch.
 
 ---
 
@@ -68,56 +69,71 @@ Reference before making changes to related areas:
 
 ## Workflow
 
-### Phase 0: Context Loading & Planning
+### Phase 0: Story Resolution
 
-1. Check `.claude/handoff.yaml` for session continuity
-2. Study @CLAUDE.md for project conventions
-3. Query Backlog for all `To Do` tasks using `mcp__backlog__task_list` (use status="To Do")
-4. Read each task's FULL details using `mcp__backlog__task_view` to understand:
-   - Description (context)
-   - Acceptance Criteria (what needs to be done)
-   - Implementation Plan (how to do it)
-   - References (file paths, docs)
-   - Dependencies (blocking tasks)
-   - Implementation Notes (any additional context)
-5. **Build dependency graph** — identify which tasks depend on each other and which are independent
-6. **Determine chain count** — each independent subgraph becomes its own chain
-7. **Decide execution mode:**
-   - **1 chain** → **Sequential mode** — team lead executes the chain directly (no TeamCreate, no teammates)
-   - **2+ independent chains** → **Parallel mode** — spawn teammates via agent teams
-8. **Log plan** — output the chain assignments and execution mode so the user can see the strategy
-9. Create feature branch from main
+1. **Validate the story arg.** `/ralph` requires exactly one user story ID (e.g., `SIT-07`). Error and exit if missing.
+2. **Read the Obsidian user story file**:
+   - `mcp__obsidian-mcp-tools__get_vault_file` with filename matching `Simon Vault/Projects/Greekly/User Stories/<STORY-ID>*.md` (use `mcp__obsidian-mcp-tools__list_vault_files` against `Simon Vault/Projects/Greekly/User Stories/` to disambiguate the exact filename if needed)
+   - Extract the **branch slug** from the `## Branch Strategy` section (e.g., `feature/sit-07-description-audio`)
+3. **Query Backlog for subtasks**:
+   ```
+   mcp__backlog__task_list({
+     labels: ["story:<lowercase-story-id>"],   # e.g. "story:sit-07"
+     status: "To Do"
+   })
+   ```
+4. **Topo-sort the subtasks** by their `dependencies` field → linear execution order.
+5. **Validate**: if zero subtasks returned, error with: "no To Do subtasks found for story <ID>; verify subtask-generator was run and the `story:<slug>` label is set on each subtask".
+6. **Log the plan**: print the story title, branch slug, and ordered subtask list so the user can see what will run.
 
-```bash
-git checkout -b feature/[name] main
-```
+### Phase 0.5: Worktree Bootstrap
 
-10. **Move tasks to "In Progress"** — update all tasks that will be worked on:
-```
-For each task ID in the execution plan:
-  mcp__backlog__task_edit(id=task_id, status="In Progress")
-```
+1. **Resolve paths**:
+   - `MAIN_CHECKOUT=/Users/samosipov/Downloads/learn-greek-easy`
+   - `WORKTREE_PATH="$MAIN_CHECKOUT/.claude/worktrees/<lowercase-story-id>"`
+   - `BRANCH=<branch-slug-from-Obsidian>`
 
-**Chain count rules:**
-- Each independent subgraph in the dependency graph = one chain
-- A single task with no dependencies to other tasks = its own chain
-- Tasks that depend on each other = same chain, ordered by dependency
-- No artificial cap — let the dependency graph dictate the structure
+2. **Pre-flight check**:
+   ```bash
+   if [ -d "$WORKTREE_PATH" ]; then
+     # If 'git -C "$MAIN_CHECKOUT" worktree list' shows it: another /ralph instance is running this story → error and exit.
+     # Otherwise it's stale: tell the user to run /post-merge-cleanup before retrying.
+     exit 1
+   fi
+   ```
 
----
+3. **Sync main and create worktree on a fresh feature branch**:
+   ```bash
+   git -C "$MAIN_CHECKOUT" fetch origin main
+   git -C "$MAIN_CHECKOUT" worktree add -b "$BRANCH" "$WORKTREE_PATH" origin/main
+   ```
 
-## Sequential Mode (1 chain)
+4. **Bootstrap dependencies** (run in parallel to save time):
+   ```bash
+   cp "$MAIN_CHECKOUT/learn-greek-easy-backend/.env" "$WORKTREE_PATH/learn-greek-easy-backend/.env"
+   cp "$MAIN_CHECKOUT/learn-greek-easy-frontend/.env" "$WORKTREE_PATH/learn-greek-easy-frontend/.env" 2>/dev/null || true
 
-When all tasks form a single dependency chain, execute directly without spawning teammates.
+   (cd "$WORKTREE_PATH/learn-greek-easy-backend" && /Users/samosipov/.local/bin/poetry install --no-root) &
+   (cd "$WORKTREE_PATH/learn-greek-easy-frontend" && npm ci) &
+   wait
+   ```
 
-### Execution Flow
+5. **All subsequent shell commands run inside `$WORKTREE_PATH`.** Pass it as the CWD to subagents that need to read/edit/test files.
 
-For EACH task in order, execute these 4 stages. Delegate to subagents — never implement code directly.
+6. **Move all subtasks to "In Progress"**:
+   ```
+   For each subtask ID:
+     mcp__backlog__task_edit(id=task_id, status="In Progress")
+   ```
+
+### Phase 1: Sequential Subtask Execution
+
+For each subtask, in dependency order, execute the 4 stages below. Delegate to subagents — never implement code directly.
 
 #### Subagent Mapping (MANDATORY)
 | Stage | Subagent Type | Usage |
 |-------|--------------|-------|
-| Architecture | product-architecture-spec | Always — review/enhance the architecture spec (includes plan self-validation) |
+| Architecture | product-architecture-spec | Always — review/enhance the implementation plan (includes plan self-validation) |
 | Explore | Explore | Always — verify files, patterns, and placement |
 | Execution | product-executor | Always — implement all code changes |
 | QA Verify | product-qa-spec | Always — verify implementation correctness |
@@ -130,325 +146,108 @@ Read the corresponding agent technical prompt file BEFORE executing the stage yo
 | Architecture | `~/.claude/agents/product-architecture-spec.md` |
 | QA Verify | `~/.claude/agents/product-qa-spec.md` |
 | Execution | `~/.claude/agents/product-executor.md` |
-| Explore | No file needed — use Glob/Grep/Read to verify files and patterns directly |
+| Explore | No file needed — use Glob/Grep/Read directly inside the worktree |
 
 #### Stage 1: Architecture
 - Spawn a `product-architecture-spec` subagent via Task tool
-- Pass it the FULL task details from Backlog (description, acceptance criteria, implementation plan, references)
-- If the task already has a detailed implementation plan, the architect validates it and identifies file paths
-- If the implementation plan is thin, the architect enhances it with:
-  - Data models and schemas
-  - API contracts
-  - File paths and locations
-  - Edge cases and error handling
+- Pass it the FULL subtask details from Backlog (description, acceptance criteria, implementation plan, references)
+- If the subtask already has a detailed implementation plan, the architect validates it and identifies file paths
+- If thin, the architect enhances it with data models, API contracts, file paths, edge cases, error handling
 - The architect self-validates the plan (acceptance criteria coverage, edge cases, test strategy)
-- **Update the task** in Backlog using `mcp__backlog__task_edit` to populate/enhance the implementation_plan field
-- **DO NOT create subtasks** — all architecture details go in the task's implementation_plan field
+- **Update the Backlog task** via `mcp__backlog__task_edit` to populate the implementation_plan field
 - **Checkpoint:** `ARCHITECTURE_DONE`
 
 #### Stage 2: Explore Verification
-- Spawn an `Explore` subagent via Task tool
-- Pass it the implementation plan from the task and verify:
-  - All files mentioned exist
-  - Patterns, imports, and placement locations are correct
-  - Referenced files in the references field are accessible
-- If gaps found, update the task's implementation_notes field with findings
+- Spawn an `Explore` subagent via Task tool, passing `$WORKTREE_PATH` as CWD so it greps the right tree
+- Verify all referenced files exist; patterns, imports, and placement locations match; references are accessible
+- If gaps found, update the Backlog task's implementation_notes via `mcp__backlog__task_edit`
 - **Checkpoint:** `EXPLORE_DONE`
 
 #### Stage 3: Execution
-- Spawn a `product-executor` subagent via Task tool
-- Pass it the COMPLETE task details:
-  - Acceptance criteria (what to implement)
-  - Implementation plan (how to implement)
-  - References (file paths and docs)
-  - Implementation notes (any explore findings)
-- The executor handles ALL file reads, edits, and creation
-- After executor finishes, run tests to verify:
+- Spawn a `product-executor` subagent via Task tool, passing `$WORKTREE_PATH` as CWD
+- Pass it the COMPLETE Backlog subtask details: acceptance criteria, implementation plan, references, implementation notes
+- The executor handles all file reads, edits, and creation **inside the worktree**
+- The executor commits inside the worktree and (per its FIRST/MIDDLE/FINAL `**Order**` logic in `~/.claude/agents/product-executor.md`) handles `git push` and the PR draft/ready transitions
+- After the executor finishes, run tests inside the worktree:
   ```bash
-  # Backend
-  cd /home/dev/learn-greek-easy/learn-greek-easy-backend && poetry run pytest -x
-  # Frontend
-  cd /home/dev/learn-greek-easy/learn-greek-easy-frontend && npm test -- --run
+  (cd "$WORKTREE_PATH/learn-greek-easy-backend" && /Users/samosipov/.local/bin/poetry run pytest -x)
+  (cd "$WORKTREE_PATH/learn-greek-easy-frontend" && npm test -- --run)
   ```
-- Stage and commit changes with descriptive message
 - **Checkpoint:** `EXECUTION_DONE`
 
 #### Stage 4: QA Verification
 - Spawn a `product-qa-spec` subagent via Task tool
-- Pass it:
-  - Acceptance criteria (what was supposed to be done)
-  - Implementation plan (what the architecture specified)
-  - List of files changed
-  - Definition of Done items (if any in the task)
-- For backend-only tasks: verify tests pass, check model/schema correctness
-- For frontend tasks: use Playwright MCP to visually verify
-- If issues found: spawn executor to fix, then re-verify
-- Update task's implementation_notes with QA findings
+- Pass it: acceptance criteria, implementation plan, list of changed files, Definition of Done items
+- Backend-only: verify tests pass, model/schema correctness
+- Frontend: use Playwright MCP for visual verification (against the PR's preview deploy URL once available)
+- If issues found: spawn product-executor to fix, then re-verify
+- Update Backlog task's implementation_notes with QA findings
 - **Checkpoint:** `QA_VERIFIED`
 
-After each task, pick the next one and repeat stages 1-4.
+After each subtask, pick the next one (next in dependency order) and repeat stages 1–4.
 
-### PR & Deploy (Sequential)
+### Phase 2: PR Lifecycle
 
-After all tasks complete:
+The PR is managed by `product-executor` via the subtask `**Order**` field — the orchestrator does NOT manage PR state directly:
 
-1. Push and create draft PR:
+- Order = "1 of N (FIRST)" → executor pushes the worktree's branch and creates the DRAFT PR with `skip-visual` label
+- Order = "K of N" (middle) → executor pushes only; PR stays draft
+- Order = "N of N (FINAL)" → executor pushes, runs `gh pr ready`, removes `skip-visual` label
+
+The orchestrator never runs `git checkout -b`, `gh pr create`, or `gh pr ready` directly.
+
+### Phase 3: CI & CodeRabbit
+
+After the FINAL subtask's Stage 4 completes:
+
+1. **Monitor CI** — poll `gh pr checks [PR_NUMBER]` every 3 minutes (CI Monitoring Protocol below).
+2. **Review CodeRabbit comments** as soon as all *test* checks pass. Don't wait for Deploy/Smoke.
+   ```bash
+   gh pr view [PR_NUMBER] --comments
+   gh api repos/{owner}/{repo}/pulls/{PR_NUMBER}/reviews
+   gh api repos/{owner}/{repo}/pulls/{PR_NUMBER}/comments
+   ```
+   - Agree with comment → fix in code (inside worktree), commit, push
+   - Disagree or N/A → skip
+3. After CodeRabbit fixes pushed, monitor CI again until green.
+4. **Move all subtasks to "Done"**:
+   ```
+   For each subtask ID: mcp__backlog__task_edit(id=task_id, status="Done")
+   ```
+5. Output `<promise>ALL_TASKS_COMPLETE</promise>`.
+
+### Phase 4: Worktree Cleanup
+
+After the PR merges (manual user action or via `/gh-merge-pr`), run `/post-merge-cleanup` (or manually):
+
 ```bash
-git push -u origin feature/[name]
-gh pr create --draft --title "[FEATURE] Name" --body "..." --label "skip-visual"
+git -C "$MAIN_CHECKOUT" worktree remove "$WORKTREE_PATH"
+git -C "$MAIN_CHECKOUT" branch -d "$BRANCH"
 ```
-
-2. Mark PR ready:
-```bash
-gh pr edit --remove-label "skip-visual" && gh pr ready
-```
-
-3. **Monitor CI** — poll `gh pr checks [PR_NUMBER]` every 3 minutes using the CI Monitoring Protocol below.
-
-4. **Review CodeRabbit comments** — as soon as all *test* checks pass (Alembic, Backend Tests, Unit & Integration, E2E, Frontend Lint/Format), do NOT wait for Deploy/Smoke. Read every CodeRabbit review comment:
-```bash
-gh pr view [PR_NUMBER] --comments
-gh api repos/{owner}/{repo}/pulls/{PR_NUMBER}/reviews
-gh api repos/{owner}/{repo}/pulls/{PR_NUMBER}/comments
-```
-- For each comment you **agree with**: fix the issue in code, then commit and push
-- For each comment you **disagree with** or that is not applicable: skip it
-- After fixes are pushed, monitor CI again until green
-
-5. **Move all tasks to "Done"** — after all test checks pass AND CodeRabbit fixes are in:
-```
-For each task ID:
-  mcp__backlog__task_edit(id=task_id, status="Done")
-```
-
-6. Cleanup and complete:
-```bash
-rm -f .claude/handoff.yaml
-```
-
-7. Output `<promise>ALL_TASKS_COMPLETE</promise>`
-
----
-
-## Parallel Mode (2+ chains)
-
-When tasks have independent subgraphs, spawn teammate agents for parallel execution.
-
-### Team Structure
-
-```
-Team Lead (you)
-├── Orchestrates workflow, manages git/PR, assigns tasks
-├── Calls MCP tools directly (Backlog, git, gh)
-│
-├── chain-1 (general-purpose agent)
-│   └── Executes tasks in Chain 1 sequentially through all 4 stages
-│
-├── chain-2 (general-purpose agent)
-│   └── Executes tasks in Chain 2 sequentially through all 4 stages
-│
-└── chain-N (general-purpose agent)
-    └── Executes tasks in Chain N sequentially through all 4 stages
-```
-
-### Phase 1: Team Setup
-
-1. Create team with `TeamCreate`
-2. Create internal task list with `TaskCreate` — one task per Backlog task
-3. Set up `blockedBy` dependencies using `TaskUpdate`
-4. **Spawn one teammate per chain** — iterate over chains and spawn each in parallel
-
-**Teammate spawn template (repeat for each chain):**
-```
-Task(
-  subagent_type="general-purpose",
-  team_name="[team-name]",
-  name="chain-[N]",
-  mode="bypassPermissions",
-  prompt="You are a chain executor in a Ralph workflow.
-
-PROJECT DIRECTORY: /home/dev/learn-greek-easy
-Your assigned task chain (execute IN ORDER):
-[List of task IDs, titles, and Backlog task IDs]
-
-For EACH task in your chain, execute these 4 stages in order.
-CRITICAL: You MUST use the specified subagent for each stage. Do NOT implement code directly.
-
-## Subagent Mapping (MANDATORY)
-| Stage | Subagent Type | Usage |
-|-------|--------------|-------|
-| Architecture | product-architecture-spec | Always — review/enhance the architecture spec (includes plan self-validation) |
-| Explore | Explore | Always — verify files, patterns, and placement |
-| Execution | product-executor | Always — implement all code changes |
-| QA Verify | product-qa-spec | Always — verify implementation correctness |
-
-## Fallback: If Subagent Spawning Fails
-If you cannot spawn a subagent (e.g., agent teams unavailable, tool errors), read the corresponding agent technical prompt file BEFORE executing the stage yourself. These files contain the full methodology and instructions for each role:
-
-| Stage | Read this file first |
-|-------|---------------------|
-| Architecture | `~/.claude/agents/product-architecture-spec.md` |
-| QA Verify | `~/.claude/agents/product-qa-spec.md` |
-| Execution | `~/.claude/agents/product-executor.md` |
-| Explore | No file needed — use Glob/Grep/Read to verify files and patterns directly |
-
-Read the file, internalize the instructions, then execute the stage following that agent's methodology.
-
-## Stage 1: Architecture
-- Read the FULL task details from Backlog using `mcp__backlog__task_view`
-- Spawn a `product-architecture-spec` subagent via Task tool
-- Pass it all task fields: description, acceptance criteria, implementation plan, references
-- If the task already has a detailed implementation plan, the architect validates it and identifies file paths
-- If the implementation plan is thin, the architect enhances it with:
-  - Data models and schemas
-  - API contracts
-  - File paths and locations
-  - Edge cases and error handling
-- Update the task using `mcp__backlog__task_edit` to populate/enhance the implementation_plan field
-- The architect self-validates the plan (acceptance criteria coverage, edge cases, test strategy)
-- Send team lead: 'ARCHITECTURE_DONE for [TASK-ID]'
-
-## Stage 2: Explore Verification
-- Spawn an `Explore` subagent via Task tool
-- Pass it the implementation plan and references from the task
-- Verify all files mentioned exist
-- Verify patterns, imports, and placement locations
-- If gaps found, update the task's implementation_notes field using `mcp__backlog__task_edit`
-- Send team lead: 'EXPLORE_DONE for [TASK-ID]'
-
-## Stage 3: Execution
-- Spawn a `product-executor` subagent via Task tool
-- Pass it the COMPLETE task details from Backlog:
-  - Acceptance criteria (what to implement)
-  - Implementation plan (how to implement)
-  - References (file paths and docs)
-  - Implementation notes (any explore findings)
-- The executor agent handles ALL file reads, edits, and creation
-- After the executor finishes, run tests yourself to verify:
-  Backend: cd /home/dev/learn-greek-easy/learn-greek-easy-backend && poetry run pytest -x
-  Frontend: cd /home/dev/learn-greek-easy/learn-greek-easy-frontend && npm test -- --run
-- Stage and commit changes with descriptive message
-- Send team lead: 'EXECUTION_DONE for [TASK-ID]'
-
-## Stage 4: QA Verification
-- Spawn a `product-qa-spec` subagent via Task tool
-- Pass it the complete task context:
-  - Acceptance criteria (what was supposed to be done)
-  - Implementation plan (what the architecture specified)
-  - Definition of Done items (if any)
-  - List of files changed
-- For backend-only tasks: QA agent verifies tests pass, checks model/schema correctness
-- For frontend tasks: QA agent uses Playwright MCP to visually verify
-- If issues found: spawn a `product-executor` to fix, then re-spawn QA to re-verify
-- Update task's implementation_notes with QA findings using `mcp__backlog__task_edit`
-- Send team lead: 'QA_VERIFIED for [TASK-ID]'
-
-After completing ALL tasks in your chain, send team lead: 'CHAIN_COMPLETE'
-
-IMPORTANT RULES:
-- ALWAYS delegate to subagents — never implement code directly in your context
-- Work through tasks IN ORDER (respect dependencies)
-- Commit after each task (atomic commits)
-- If blocked by another chain's work, message team lead and wait
-- Never skip stages
-- Run tests before each commit
-"
-)
-```
-
-### Phase 2: Parallel Execution
-
-Team lead monitors progress:
-
-1. **Receive stage completion messages** from chain agents
-2. **Track progress** — update internal task list and handoff.yaml
-3. **Handle blockers** — if a chain agent reports being blocked, coordinate
-4. **Resolve conflicts** — if two chains modify the same file, coordinate merge order
-
-**Git coordination rule:** If chains touch different files (common case), they can commit independently. If they touch the same files, team lead tells one chain to wait.
-
-### Phase 3: PR & Deploy (Parallel)
-
-After all chains complete:
-
-1. **Push branch and create draft PR:**
-```bash
-git push -u origin feature/[name]
-gh pr create --draft --title "[FEATURE] Name" --body "..." --label "skip-visual"
-```
-
-2. **Run full test suite:**
-```bash
-# Backend
-cd /home/dev/learn-greek-easy/learn-greek-easy-backend && poetry run pytest -x
-# Frontend (if applicable)
-cd /home/dev/learn-greek-easy/learn-greek-easy-frontend && npm test -- --run
-```
-
-3. **Mark PR ready:**
-```bash
-gh pr edit --remove-label "skip-visual" && gh pr ready
-```
-
-4. **Monitor CI** — poll `gh pr checks [PR_NUMBER]` every 3 minutes using the CI Monitoring Protocol below.
-
-5. **Review CodeRabbit comments** — as soon as all *test* checks pass (Alembic, Backend Tests, Unit & Integration, E2E, Frontend Lint/Format), do NOT wait for Deploy/Smoke. Read every CodeRabbit review comment:
-```bash
-gh pr view [PR_NUMBER] --comments
-gh api repos/{owner}/{repo}/pulls/{PR_NUMBER}/reviews
-gh api repos/{owner}/{repo}/pulls/{PR_NUMBER}/comments
-```
-- For each comment you **agree with**: fix the issue in code, then commit and push
-- For each comment you **disagree with** or that is not applicable: skip it
-- After fixes are pushed, monitor CI again until green
-
-6. **Move all tasks to "Done"** — after all test checks pass AND CodeRabbit fixes are in:
-```
-For each task ID:
-  mcp__backlog__task_edit(id=task_id, status="Done")
-```
-
-7. **Shutdown teammates** via `SendMessage` with `type: "shutdown_request"`
-
-8. **Cleanup:**
-```bash
-rm -f .claude/handoff.yaml
-```
-
-9. Output `<promise>ALL_TASKS_COMPLETE</promise>`
 
 ---
 
 ## Session Continuity
 
-### On Start
-```bash
-cat .claude/handoff.yaml 2>/dev/null
-```
-If exists and recent, use it to restore progress.
+Each worktree maintains its own `.claude/handoff.yaml` at `$WORKTREE_PATH/.claude/handoff.yaml`.
 
-### During Work (every 2-3 tasks)
+### On Start
+Check the worktree's handoff first; if it exists and is recent, restore from it.
+
+### During Work (every 2–3 subtasks)
 Update `.claude/handoff.yaml`:
 
 ```yaml
-timestamp: [current time]
-workflow: "ralph"
-mode: "sequential"  # or "parallel"
-team_name: "[team-name]"  # parallel mode only
-branch: "feature/[name]"
-pr_number: null
-current_task: "[TASK-ID]"
-stage: "execution"  # architecture|explore|execution|qa-verify
-completed_tasks:
-  - "[TASK-01] First task"
-# Parallel mode adds:
-total_chains: 3
-chains:
-  chain-1:
-    tasks: ["FEAT-01", "FEAT-02"]
-    completed: ["FEAT-01"]
-    current: "FEAT-02"
-    stage: "execution"
+timestamp: <iso>
+workflow: ralph
+story_id: SIT-07
+branch: feature/sit-07-description-audio
+worktree_path: /Users/samosipov/Downloads/learn-greek-easy/.claude/worktrees/sit-07
+pr_number: null   # set after FIRST subtask creates the PR
+current_subtask: SIT-07-02
+stage: execution   # architecture | explore | execution | qa-verify
+completed_subtasks:
+  - SIT-07-01
 blockers: []
 decisions: []
 ```
@@ -463,73 +262,33 @@ A PreCompact hook auto-saves state. After compaction, READ the handoff to contin
 Use this protocol whenever waiting for CI after a push.
 
 ### Poll every 3 minutes
-
 ```bash
 gh pr checks [PR_NUMBER]
 ```
 
-### On each poll — decision tree
+### Decision tree
 
 **1. Any check has FAILED?**
 ```bash
-# Identify the failed check, read its logs
 gh run view [RUN_ID] --job [JOB_ID] --log 2>&1 | tail -50
-
-# Cancel the current run
 gh run cancel [RUN_ID]
-
-# Fix the issue, commit, push — CI restarts automatically on push
-git add ... && git commit -m "fix: ..." && git push
+# Fix in worktree, commit, push — CI restarts on push
+git -C "$WORKTREE_PATH" add ... && git -C "$WORKTREE_PATH" commit -m "fix: ..." && git -C "$WORKTREE_PATH" push
 ```
 
-**2. Only 1 E2E job remains "pending" AND it's in early setup steps?**
+**2. Only 1 E2E shard "pending" AND only setup steps in its log?**
 
-This is a known GitHub Actions bug where one parallel E2E shard is very slow to start.
-
-```bash
-# Check the job's current progress
-gh run view [RUN_ID] --job [JOB_ID] --log 2>&1 | head -30
-```
-
-If the log shows ONLY setup steps like: `Set up job`, `Initialize containers`, `Checkout code`, `Setup Node.js`, `Install frontend dependencies`, `Get Playwright version` — with NO actual test output — this is the slow-start bug.
-
-**Treat CI as passed.** Do not wait. Move on to CodeRabbit review.
+This is a known GitHub Actions slow-start bug. If `gh run view ... --log | head -30` shows only `Set up job`, `Initialize containers`, `Checkout code`, `Setup Node.js`, `Install frontend dependencies`, `Get Playwright version` — with no actual test output — **treat CI as passed**. Don't wait. Move to CodeRabbit.
 
 **3. All test checks pass?**
 
 "Test checks" = Alembic Migration Check, Backend Tests, Unit & Integration Tests, E2E Tests (all shards), E2E API Tests, Backend Lint & Format, Frontend Lint & Format.
 
-When all of these pass → **move on immediately**. Do NOT wait for Deploy, Seed Dev Database, Health and Smoke Tests, Lighthouse CI, Accessibility Tests, K6, or other post-deploy checks. These run independently and do not block CodeRabbit review or task completion.
+When all green → move on immediately. Do NOT wait for Deploy, Seed Dev Database, Health and Smoke Tests, Lighthouse CI, Accessibility Tests, K6.
 
 ### Get the current run ID
-
 ```bash
-gh run list --branch feature/[name] --limit 1 --json databaseId,status -q '.[0]'
-```
-
----
-
-## PR Rules (ONE branch, ONE PR for ALL tasks)
-
-### First task in batch:
-```bash
-git checkout -b feature/[name] main
-# After first task implemented:
-git push -u origin feature/[name]
-gh pr create --draft --title "[FEATURE] Name" --body "..." --label "skip-visual"
-```
-
-### Middle tasks:
-- Stay on SAME branch, commit to SAME branch, push to SAME PR (stays draft)
-
-### Final task:
-```bash
-gh pr edit --remove-label "skip-visual" && gh pr ready
-```
-
-### After merge:
-```bash
-git checkout main && git pull origin main && git branch -d feature/[name]
+gh run list --branch "$BRANCH" --limit 1 --json databaseId,status -q '.[0]'
 ```
 
 ---
@@ -537,11 +296,11 @@ git checkout main && git pull origin main && git branch -d feature/[name]
 ## Completion Rules
 
 1. **Local tests green ≠ done** — all CI test checks must pass (see CI Monitoring Protocol)
-2. **Deploy/Smoke are NOT blockers** — CodeRabbit review and task completion do not require deploy or smoke tests to finish
-3. **Task status transitions:**
-   - Start: "To Do" → "In Progress" (when ralph starts working on them)
-   - Complete: "In Progress" → "Done" (after all CI test checks pass AND CodeRabbit fixes committed)
-4. Output `<promise>ALL_TASKS_COMPLETE</promise>` ONLY after moving tasks to "Done"
+2. **Deploy/Smoke are NOT blockers** — CodeRabbit review and task completion don't require them
+3. **Subtask status transitions**:
+   - Start: "To Do" → "In Progress" (during Phase 0.5)
+   - Complete: "In Progress" → "Done" (after CI test checks pass AND CodeRabbit fixes committed)
+4. Output `<promise>ALL_TASKS_COMPLETE</promise>` ONLY after moving subtasks to "Done"
 
 ---
 
@@ -549,17 +308,19 @@ git checkout main && git pull origin main && git branch -d feature/[name]
 
 | Anti-Pattern | Correct Approach |
 |-------------|------------------|
-| Lead doing file edits directly | Delegate to agents (executor subagent or chain agents) |
-| Implementing code directly instead of subagent | Spawn `product-executor` subagent for all implementation |
-| Skipping architecture/explore/QA stages | Every stage is mandatory |
-| Spawning teammates for a single dependency chain | Use sequential mode — execute directly |
-| Hardcoding chain count regardless of task graph | Let dependency graph determine chain count and mode |
-| Not coordinating git between chains | Team lead manages push/merge order |
-| Skipping task status transitions | Move: To Do → In Progress → Done |
-| Not updating handoff during long runs | Update every 2-3 tasks |
-| Hiding/disabling features to "fix" bugs | Actually fix the bug, add missing data |
-| Assuming root cause without verification | Investigate thoroughly, verify with Playwright |
-| Outputting ALL_TASKS_COMPLETE before CI test checks pass | Wait for all test checks (not deploy/smoke) to pass |
+| Lead doing file edits directly | Delegate to product-executor / Explore subagents |
+| Skipping architecture / explore / QA stages | Every stage is mandatory |
+| Working in main checkout | Always work in `$WORKTREE_PATH`; main is the user's space |
+| Mixing subtasks from different stories on one branch | One story per branch, always |
+| Title-parsing Backlog tasks to find a story's subtasks | Use the `story:<slug>` label set by /subtask-generator |
+| Creating a Backlog parent task for the user story | The user story lives in Obsidian only |
+| Orchestrator running `git checkout -b` | Use `git worktree add -b`; the executor handles push and PR |
+| Auto-discovering To Do tasks across stories | `/ralph` runs one story at a time; user names which |
+| Skipping subtask status transitions | Move: To Do → In Progress → Done |
+| Not updating handoff during long runs | Update every 2–3 subtasks |
+| Hiding/disabling features to "fix" bugs | Actually fix the bug; add missing data |
+| Outputting ALL_TASKS_COMPLETE before CI test checks pass | Wait for all test checks to pass |
 | Waiting for Deploy/Smoke before CodeRabbit review | Start CodeRabbit review as soon as test checks pass |
-| Sleeping/polling in a tight loop for CI | Poll every 3 minutes using CI Monitoring Protocol |
-| Waiting indefinitely for a stuck E2E shard | Check logs — if only setup steps visible, it's the slow-start bug; treat as pass |
+| Sleeping/polling tightly for CI | Poll every 3 minutes per CI Monitoring Protocol |
+| Waiting indefinitely for stuck E2E shard | Check logs — if only setup steps, treat as passed |
+| Not cleaning up worktree after merge | Run /post-merge-cleanup or `git worktree remove` manually |
