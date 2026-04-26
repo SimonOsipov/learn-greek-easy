@@ -1,181 +1,198 @@
 /**
  * useStudyStreak Hook Tests
- * Tests study streak selector from analytics store
+ * Tests study streak selector from useAnalytics hook
+ *
+ * Mocks @/features/analytics (getAnalytics) rather than the hook itself (AC #10).
+ * Seeds query cache via queryClient.setQueryData for seeded-data tests (AC #9).
  */
 
-import { renderHook } from '@testing-library/react';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { renderHook, waitFor } from '@testing-library/react';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { createElement } from 'react';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
+import { createTestQueryClient } from '@/lib/test-utils';
 import { useStudyStreak } from '@/hooks/useStudyStreak';
-import { useAnalyticsStore } from '@/stores/analyticsStore';
+
+// ---------------------------------------------------------------------------
+// Module-level mocks
+// ---------------------------------------------------------------------------
+
+const mockGetAnalytics = vi.fn();
+
+vi.mock('@/features/analytics', () => ({
+  getAnalytics: (...args: unknown[]) => mockGetAnalytics(...args),
+}));
+
+vi.mock('@/stores/authStore', () => ({
+  useAuthStore: (selector: (s: { user: { id: string } | null }) => unknown) =>
+    selector({ user: { id: 'user-123' } }),
+}));
+
+vi.mock('@/stores/dateRangeStore', () => ({
+  useDateRangeStore: (selector: (s: { dateRange: string }) => unknown) =>
+    selector({ dateRange: 'last7' }),
+}));
+
+// ---------------------------------------------------------------------------
+// Fixture
+// ---------------------------------------------------------------------------
+
+const mockStreakData = {
+  currentStreak: 7,
+  longestStreak: 15,
+  lastStudyDate: '2025-01-08T10:00:00.000Z',
+};
+
+const fixtureData = {
+  overview: {
+    totalReviews: 100,
+    cardsStudied: 50,
+    averageAccuracy: 0.85,
+    totalStudyTime: 3600,
+  },
+  streak: mockStreakData,
+  progressData: [],
+  deckStats: [],
+  recentActivity: [],
+};
+
+// ---------------------------------------------------------------------------
+// Helper
+// ---------------------------------------------------------------------------
+
+function makeWrapper() {
+  const queryClient = createTestQueryClient();
+  const wrapper = ({ children }: { children: React.ReactNode }) =>
+    createElement(QueryClientProvider, { client: queryClient }, children);
+  return { queryClient, wrapper };
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
 
 describe('useStudyStreak Hook', () => {
   beforeEach(() => {
-    // Reset analytics store
-    useAnalyticsStore.setState({
-      dashboardData: null,
-      dateRange: 'last7',
-      loading: false,
-      refreshing: false,
-      error: null,
-      lastFetch: null,
-    });
+    vi.clearAllMocks();
   });
 
-  it('should return undefined streak when no data', () => {
-    const { result } = renderHook(() => useStudyStreak());
+  it('returns undefined streak when fetched data has no streak', async () => {
+    mockGetAnalytics.mockResolvedValue({ ...fixtureData, streak: undefined });
+
+    const { wrapper } = makeWrapper();
+
+    const { result } = renderHook(() => useStudyStreak(), { wrapper });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(result.current.streak).toBeUndefined();
-    expect(result.current.loading).toBe(false);
     expect(result.current.error).toBeNull();
   });
 
-  it('should return streak data from store', () => {
-    const mockStreakData = {
-      currentStreak: 7,
-      longestStreak: 15,
-      lastStudyDate: '2025-01-08T10:00:00.000Z',
-    };
+  it('should return streak data from seeded cache (AC #9)', () => {
+    const { queryClient, wrapper } = makeWrapper();
+    queryClient.setQueryData(['analytics', 'user-123', 'last7'], fixtureData);
+    mockGetAnalytics.mockResolvedValue(fixtureData);
 
-    useAnalyticsStore.setState({
-      dashboardData: {
-        overview: {
-          totalReviews: 100,
-          cardsStudied: 50,
-          averageAccuracy: 0.85,
-          totalStudyTime: 3600,
-        },
-        streak: mockStreakData,
-        progressData: [],
-        deckStats: [],
-        recentActivity: [],
-      },
-      loading: false,
-    });
+    const { result } = renderHook(() => useStudyStreak(), { wrapper });
 
-    const { result } = renderHook(() => useStudyStreak());
-
+    // Immediately available from cache
     expect(result.current.streak).toEqual(mockStreakData);
     expect(result.current.streak?.currentStreak).toBe(7);
     expect(result.current.streak?.longestStreak).toBe(15);
     expect(result.current.loading).toBe(false);
   });
 
-  it('should reflect loading state', () => {
-    useAnalyticsStore.setState({ loading: true });
+  it('should return streak data after API fetch', async () => {
+    mockGetAnalytics.mockResolvedValue(fixtureData);
 
-    const { result } = renderHook(() => useStudyStreak());
-    expect(result.current.loading).toBe(true);
+    const { wrapper } = makeWrapper();
+    const { result } = renderHook(() => useStudyStreak(), { wrapper });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.streak).toEqual(mockStreakData);
   });
 
-  it('should reflect error state', () => {
-    const errorMessage = 'Failed to load streak data';
-    useAnalyticsStore.setState({ error: errorMessage });
+  it('should reflect loading state', async () => {
+    let resolve!: (v: unknown) => void;
+    mockGetAnalytics.mockReturnValue(
+      new Promise((r) => {
+        resolve = r;
+      })
+    );
 
-    const { result } = renderHook(() => useStudyStreak());
-    expect(result.current.error).toBe(errorMessage);
+    const { wrapper } = makeWrapper();
+    const { result } = renderHook(() => useStudyStreak(), { wrapper });
+
+    expect(result.current.loading).toBe(true);
+
+    resolve(fixtureData);
+    await waitFor(() => expect(result.current.loading).toBe(false));
+  });
+
+  it('should reflect error state', async () => {
+    mockGetAnalytics.mockRejectedValue(new Error('Failed to load streak data'));
+
+    const { wrapper } = makeWrapper();
+    const { result } = renderHook(() => useStudyStreak(), { wrapper });
+
+    await waitFor(() => expect(result.current.error).toBeTruthy());
+    expect(result.current.streak).toBeUndefined();
   });
 
   it('should handle zero streak values', () => {
-    useAnalyticsStore.setState({
-      dashboardData: {
-        overview: {
-          totalReviews: 0,
-          cardsStudied: 0,
-          averageAccuracy: 0,
-          totalStudyTime: 0,
-        },
-        streak: {
-          currentStreak: 0,
-          longestStreak: 0,
-          lastStudyDate: null,
-        },
-        progressData: [],
-        deckStats: [],
-        recentActivity: [],
-      },
+    const { queryClient, wrapper } = makeWrapper();
+    queryClient.setQueryData(['analytics', 'user-123', 'last7'], {
+      ...fixtureData,
+      streak: { currentStreak: 0, longestStreak: 0, lastStudyDate: null },
     });
+    mockGetAnalytics.mockResolvedValue(fixtureData);
 
-    const { result } = renderHook(() => useStudyStreak());
+    const { result } = renderHook(() => useStudyStreak(), { wrapper });
+
     expect(result.current.streak?.currentStreak).toBe(0);
     expect(result.current.streak?.longestStreak).toBe(0);
     expect(result.current.streak?.lastStudyDate).toBeNull();
   });
 
-  it('should update when streak changes', () => {
-    const { result, rerender } = renderHook(() => useStudyStreak());
-
-    // Initially no data
-    expect(result.current.streak).toBeUndefined();
-
-    // Update with initial streak
-    useAnalyticsStore.setState({
-      dashboardData: {
-        overview: {
-          totalReviews: 50,
-          cardsStudied: 25,
-          averageAccuracy: 0.8,
-          totalStudyTime: 1800,
-        },
-        streak: {
-          currentStreak: 5,
-          longestStreak: 10,
-          lastStudyDate: new Date().toISOString(),
-        },
-        progressData: [],
-        deckStats: [],
-        recentActivity: [],
-      },
+  it('should update when streak changes in cache', async () => {
+    const updatedStreak = {
+      currentStreak: 6,
+      longestStreak: 10,
+      lastStudyDate: new Date().toISOString(),
+    };
+    const { queryClient, wrapper } = makeWrapper();
+    queryClient.setQueryData(['analytics', 'user-123', 'last7'], {
+      ...fixtureData,
+      streak: { currentStreak: 5, longestStreak: 10, lastStudyDate: new Date().toISOString() },
     });
+    // Mock returns streak=6 so background refetches resolve consistently with expected state
+    mockGetAnalytics.mockResolvedValue({ ...fixtureData, streak: updatedStreak });
 
-    rerender();
+    const { result } = renderHook(() => useStudyStreak(), { wrapper });
     expect(result.current.streak?.currentStreak).toBe(5);
 
-    // User continues streak
-    useAnalyticsStore.setState({
-      dashboardData: {
-        overview: {
-          totalReviews: 60,
-          cardsStudied: 30,
-          averageAccuracy: 0.82,
-          totalStudyTime: 2100,
-        },
-        streak: {
-          currentStreak: 6,
-          longestStreak: 10,
-          lastStudyDate: new Date().toISOString(),
-        },
-        progressData: [],
-        deckStats: [],
-        recentActivity: [],
-      },
+    // Streak advances
+    queryClient.setQueryData(['analytics', 'user-123', 'last7'], {
+      ...fixtureData,
+      streak: updatedStreak,
     });
 
-    rerender();
-    expect(result.current.streak?.currentStreak).toBe(6);
+    await waitFor(() => expect(result.current.streak?.currentStreak).toBe(6));
   });
 
-  it('should handle longest streak being equal to current streak', () => {
-    useAnalyticsStore.setState({
-      dashboardData: {
-        overview: {
-          totalReviews: 200,
-          cardsStudied: 100,
-          averageAccuracy: 0.9,
-          totalStudyTime: 7200,
-        },
-        streak: {
-          currentStreak: 20,
-          longestStreak: 20,
-          lastStudyDate: new Date().toISOString(),
-        },
-        progressData: [],
-        deckStats: [],
-        recentActivity: [],
-      },
+  it('should handle longest streak equal to current streak', () => {
+    const { queryClient, wrapper } = makeWrapper();
+    queryClient.setQueryData(['analytics', 'user-123', 'last7'], {
+      ...fixtureData,
+      streak: { currentStreak: 20, longestStreak: 20, lastStudyDate: new Date().toISOString() },
     });
+    mockGetAnalytics.mockResolvedValue(fixtureData);
 
-    const { result } = renderHook(() => useStudyStreak());
+    const { result } = renderHook(() => useStudyStreak(), { wrapper });
+
     expect(result.current.streak?.currentStreak).toBe(20);
     expect(result.current.streak?.longestStreak).toBe(20);
     expect(result.current.streak?.currentStreak).toBe(result.current.streak?.longestStreak);

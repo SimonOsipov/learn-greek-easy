@@ -4,8 +4,8 @@ import posthog from 'posthog-js';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
+import { useAnalytics } from '@/hooks/useAnalytics';
 import { startTour, buildTourSteps } from '@/lib/tour';
-import { useAnalyticsStore } from '@/stores/analyticsStore';
 import { useAppStore, selectIsReady } from '@/stores/appStore';
 import { useAuthStore } from '@/stores/authStore';
 import { isTourCompleted } from '@/utils/tourStatus';
@@ -18,13 +18,12 @@ export function useTourAutoTrigger(): void {
   const isAuthenticated = useAuthStore((state) => !!state.user);
   const tourCompletedAt = useAuthStore((state) => state.user?.tourCompletedAt);
   const updateProfile = useAuthStore((state) => state.updateProfile);
-  const analyticsLoading = useAnalyticsStore((state) => state.loading);
-  const dashboardData = useAnalyticsStore((state) => state.dashboardData);
+  const { data, loading } = useAnalytics();
   const { t } = useTranslation('common');
   const navigate = useNavigate();
   const triggeredRef = useRef(false);
 
-  const isDashboardReady = !analyticsLoading && dashboardData !== null;
+  const isDashboardReady = !loading && data != null;
 
   useEffect(() => {
     if (!isAppReady || !isAuthenticated) return;

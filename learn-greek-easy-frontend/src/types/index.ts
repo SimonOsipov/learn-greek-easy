@@ -26,19 +26,7 @@ export type {
 } from './auth';
 
 // Export dashboard types explicitly
-export type {
-  DashboardMetrics,
-  WeeklyProgress,
-  ActivityItem,
-  UpcomingReview,
-  LearningStatistics,
-  Metric,
-  DeckProgress,
-  DeckStats,
-  Deck,
-  DashboardUser,
-  DashboardData,
-} from './dashboard';
+export type { Metric, DeckProgress, DeckStats, Deck } from './dashboard';
 
 // Export review types explicitly
 export type {

@@ -10,6 +10,7 @@
 
 import { useEffect, useCallback } from 'react';
 
+import { useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 import posthog from 'posthog-js';
 import { useTranslation } from 'react-i18next';
@@ -43,6 +44,7 @@ export function V2FlashcardPracticePage() {
   const { deckId, wordId } = useParams<{ deckId: string; wordId?: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const cardType = (searchParams.get('cardType') ?? undefined) as CardRecordType | undefined;
 
@@ -113,6 +115,13 @@ export function V2FlashcardPracticePage() {
       });
     }
   }, [deckId, cardType, wordId, startSession]);
+
+  // Invalidate analytics cache when session completes
+  useEffect(() => {
+    if (sessionSummary) {
+      queryClient.invalidateQueries({ queryKey: ['analytics'] });
+    }
+  }, [sessionSummary, queryClient]);
 
   // Audio: resolve URL from current queue card
   const currentQueueCard = queue[currentIndex] ?? null;

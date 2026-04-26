@@ -30,7 +30,7 @@ Displays current and longest study streak with flame icon.
 **Props**:
 - `isLoading?: boolean` - Show loading skeleton
 
-**Data Source**: `useAnalyticsStore(selectDashboardData)?.streak`
+**Data Source**: `useAnalytics().data?.streak`
 
 **Usage**:
 ```tsx
@@ -43,7 +43,7 @@ Shows distribution of cards across learning stages (new, learning, review, maste
 **Props**:
 - `isLoading?: boolean` - Show loading skeleton
 
-**Data Source**: `useAnalyticsStore(selectDashboardData)?.wordStatus`
+**Data Source**: `useAnalytics().data?.wordStatus`
 
 **Usage**:
 ```tsx
@@ -56,7 +56,7 @@ Displays retention rate percentage with color-coded indicator.
 **Props**:
 - `isLoading?: boolean` - Show loading skeleton
 
-**Data Source**: `useAnalyticsStore(selectDashboardData)?.retention`
+**Data Source**: `useAnalytics().data?.retention`
 
 **Usage**:
 ```tsx
@@ -69,7 +69,7 @@ Shows total time studied with formatted duration.
 **Props**:
 - `isLoading?: boolean` - Show loading skeleton
 
-**Data Source**: `useAnalyticsStore(selectDashboardData)?.summary.totalTimeStudied`
+**Data Source**: `useAnalytics().data?.summary.totalTimeStudied`
 
 **Usage**:
 ```tsx
@@ -108,12 +108,24 @@ Individual activity feed item component.
 
 ## Data Flow
 
-All analytics widgets consume data from `analyticsStore`:
+All analytics widgets consume data from `useAnalytics()` (TanStack Query):
 
-1. Dashboard fetches analytics on mount via `loadAnalytics(userId)`
-2. Store provides selectors for efficient component updates
-3. Date range filter triggers `setDateRange()` which refetches data
-4. Widgets read from `selectDashboardData()` selector
+1. Dashboard mounts and `useAnalytics()` fetches data automatically (enabled when `userId` is set)
+2. Data is cached per `(userId, dateRange)` — no redundant fetches across widgets
+3. Date range filter changes invalidate the cache and trigger a refetch automatically
+4. Hook returns `{ data, isLoading, isFetching, loading, error, refetch }`:
+- `data: AnalyticsDashboardData | undefined` (from `@/types/analytics`):
+  - `data.progressData: ProgressDataPoint[]` — time series data
+  - `data.deckStats: DeckPerformanceStats[]` — per-deck statistics
+  - `data.wordStatus: WordStatusBreakdown` — stage distribution counts
+  - `data.streak: StudyStreak` — current study streak
+- `isLoading: boolean` — true only on the very first fetch (no cached data yet)
+- `isFetching: boolean` — true on any in-flight fetch (initial OR background refetch on focus)
+- `loading: boolean` — deprecated back-compat alias for `isLoading`; prefer `isLoading` in new code
+- `error: Error | null` — fetch error if any
+- `refetch: () => void` — manually trigger a refetch
+
+**Cache key**: `['analytics', userId, dateRange]`. Data auto-refetches on window focus when stale (5 min staleTime per global QueryClient defaults).
 
 ## Empty States
 

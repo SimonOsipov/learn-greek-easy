@@ -37,7 +37,7 @@ Custom legend component for charts.
 ### ProgressLineChart
 Line chart showing cards reviewed over time.
 
-**Data Source**: `useAnalyticsStore(selectDashboardData)?.progressData`
+**Data Source**: `useAnalytics().data?.progressData`
 
 **Features**:
 - Responsive sizing
@@ -54,7 +54,7 @@ Line chart showing cards reviewed over time.
 ### AccuracyAreaChart
 Area chart showing review accuracy trend over time.
 
-**Data Source**: `useAnalyticsStore(selectDashboardData)?.progressData`
+**Data Source**: `useAnalytics().data?.progressData`
 
 **Features**:
 - Gradient fill under area
@@ -69,7 +69,7 @@ Area chart showing review accuracy trend over time.
 ### DeckPerformanceChart
 Bar chart comparing accuracy across decks.
 
-**Data Source**: `useAnalyticsStore(selectDashboardData)?.deckStats`
+**Data Source**: `useAnalytics().data?.deckStats`
 
 **Features**:
 - Color-coded bars (green: 80%+, yellow: 60-79%, red: <60%)
@@ -84,7 +84,7 @@ Bar chart comparing accuracy across decks.
 ### StageDistributionChart
 Donut chart showing card distribution by learning stage.
 
-**Data Source**: `useAnalyticsStore(selectDashboardData)?.wordStatus`
+**Data Source**: `useAnalytics().data?.wordStatus`
 
 **Features**:
 - 5 segments: New (gray), Learning (blue), Review (yellow), Mastered (green), Relearning (red)
@@ -114,7 +114,19 @@ All charts handle empty data:
 
 ## Data Requirements
 
-Charts expect specific data shapes from analyticsStore:
-- `progressData: ProgressDataPoint[]` - Time series data
-- `deckStats: DeckPerformance[]` - Per-deck statistics
-- `wordStatus: WordStatusBreakdown` - Stage distribution counts
+Charts consume data from `useAnalytics()` (TanStack Query hook).
+
+**Return shape**: `{ data, isLoading, isFetching, loading, error, refetch }`
+
+- `data: AnalyticsDashboardData | undefined` (from `@/types/analytics`):
+  - `data.progressData: ProgressDataPoint[]` — time series data
+  - `data.deckStats: DeckPerformanceStats[]` — per-deck statistics
+  - `data.wordStatus: WordStatusBreakdown` — stage distribution counts
+  - `data.streak: StudyStreak` — current study streak
+- `isLoading: boolean` — true only on the very first fetch (no cached data yet)
+- `isFetching: boolean` — true on any in-flight fetch (initial OR background refetch on focus)
+- `loading: boolean` — deprecated back-compat alias for `isLoading`; prefer `isLoading` in new code
+- `error: Error | null` — fetch error if any
+- `refetch: () => void` — manually trigger a refetch
+
+**Cache key**: `['analytics', userId, dateRange]`. Data auto-refetches on window focus when stale (5 min staleTime per global QueryClient defaults).

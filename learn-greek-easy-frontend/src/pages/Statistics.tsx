@@ -112,7 +112,7 @@ const Statistics: React.FC = () => {
   const { t } = useTranslation('statistics');
   const user = useAuthStore((state) => state.user);
   const isLoading = useAuthStore((state) => state.isLoading);
-  const { data: analyticsData } = useAnalytics(true); // Auto-load analytics on mount
+  const { data: analyticsData } = useAnalytics();
   const xpStats = useXPStore(selectXPStats);
   const loadXPStats = useXPStore((state) => state.loadXPStats);
   const loadAchievements = useXPStore((state) => state.loadAchievements);

@@ -5,6 +5,7 @@
 
 import { ReactElement, ReactNode } from 'react';
 
+import { QueryClient } from '@tanstack/react-query';
 import { render, RenderOptions } from '@testing-library/react';
 import { I18nextProvider } from 'react-i18next';
 import { BrowserRouter } from 'react-router-dom';
@@ -50,6 +51,27 @@ export function renderWithProviders(
   }
 
   return render(ui, { wrapper: Wrapper, ...renderOptions });
+}
+
+/**
+ * Returns a fresh QueryClient per test with retries and window-focus
+ * refetch disabled. Pass into `<QueryClientProvider>` in test render
+ * helpers to avoid cross-test cache leaks.
+ */
+export function createTestQueryClient(): QueryClient {
+  return new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+        refetchOnWindowFocus: false,
+        gcTime: Infinity,
+        staleTime: 0,
+      },
+      mutations: {
+        retry: false,
+      },
+    },
+  });
 }
 
 // Re-export everything from @testing-library/react

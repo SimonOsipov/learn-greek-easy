@@ -7,7 +7,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-import { render, screen } from '@/lib/test-utils';
+import { render, screen, act } from '@/lib/test-utils';
 
 import { V2FlashcardPracticePage } from '../V2FlashcardPracticePage';
 
@@ -17,7 +17,16 @@ import { V2FlashcardPracticePage } from '../V2FlashcardPracticePage';
 
 const mockNavigate = vi.fn();
 const mockStartSession = vi.fn();
+const mockInvalidateQueries = vi.fn();
 let mockParams: Record<string, string> = { deckId: 'deck-123' };
+
+vi.mock('@tanstack/react-query', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@tanstack/react-query')>();
+  return {
+    ...actual,
+    useQueryClient: () => ({ invalidateQueries: mockInvalidateQueries }),
+  };
+});
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
@@ -115,6 +124,7 @@ describe('V2FlashcardPracticePage', () => {
     vi.clearAllMocks();
     mockParams = { deckId: 'deck-123' };
     mockStartSession.mockResolvedValue(undefined);
+    mockInvalidateQueries.mockResolvedValue(undefined);
     mockStoreState = { ...defaultStoreState, startSession: mockStartSession };
   });
 
@@ -215,5 +225,34 @@ describe('V2FlashcardPracticePage', () => {
     backButtons[0].click();
 
     expect(mockNavigate).toHaveBeenCalledWith('/decks/deck-123/words/word-456');
+  });
+
+  it('invalidates analytics cache exactly once when sessionSummary becomes populated', async () => {
+    // Start with no sessionSummary
+    mockStoreState = { ...defaultStoreState, startSession: mockStartSession, sessionSummary: null };
+    const { rerender } = render(<V2FlashcardPracticePage />);
+
+    expect(mockInvalidateQueries).not.toHaveBeenCalled();
+
+    // Simulate session completion — sessionSummary transitions from null to populated
+    await act(async () => {
+      mockStoreState = {
+        ...mockStoreState,
+        sessionSummary: {
+          sessionId: 'sess-123',
+          deckId: 'deck-123',
+          cardsReviewed: 5,
+          totalTimeSeconds: 120,
+          avgTimePerCard: 24,
+          ratingBreakdown: { again: 0, hard: 1, good: 3, easy: 1 },
+          newStarted: 2,
+          cardsMastered: 1,
+        },
+      };
+      rerender(<V2FlashcardPracticePage />);
+    });
+
+    expect(mockInvalidateQueries).toHaveBeenCalledTimes(1);
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['analytics'] });
   });
 });

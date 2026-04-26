@@ -1,351 +1,280 @@
 /**
  * useAnalytics Hook Tests
- * Tests analytics data fetching and management
- */
-
-import { renderHook, waitFor } from '@testing-library/react';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-
-import { useAnalytics } from '@/hooks/useAnalytics';
-import { useAnalyticsStore } from '@/stores/analyticsStore';
-import { useAuthStore } from '@/stores/authStore';
-
-/**
- * NOTE: These tests are skipped due to zustand persist middleware on authStore
- * incompatibility with test environment. The persist middleware
- * captures localStorage at module load time, before mocks are set up.
  *
- * TODO: Consider using msw or similar to mock storage at a lower level,
- * or test these hooks via integration tests instead of unit tests.
+ * Tests the TanStack Query-backed useAnalytics hook.
+ * Mocks @/features/analytics so no real network calls are made.
  */
-describe.skip('useAnalytics Hook', () => {
-  const mockUser = {
-    id: 'user-123',
-    email: 'test@example.com',
-    name: 'Test User',
-    role: 'free' as const,
-    createdAt: new Date().toISOString(),
+
+import { renderHook, waitFor, act } from '@testing-library/react';
+import { QueryClient, QueryClientProvider, focusManager } from '@tanstack/react-query';
+import { createElement } from 'react';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+
+import { createTestQueryClient } from '@/lib/test-utils';
+import { useAnalytics } from '@/hooks/useAnalytics';
+
+// ---------------------------------------------------------------------------
+// Module-level mocks
+// ---------------------------------------------------------------------------
+
+const mockGetAnalytics = vi.fn();
+
+vi.mock('@/features/analytics', () => ({
+  getAnalytics: (...args: unknown[]) => mockGetAnalytics(...args),
+}));
+
+// Stub stores so hook is deterministic
+let mockUserId: string | undefined = 'user-123';
+let mockDateRange: string = 'last7';
+
+vi.mock('@/stores/authStore', () => ({
+  useAuthStore: (selector: (s: { user: { id: string } | null }) => unknown) =>
+    selector({ user: mockUserId ? { id: mockUserId } : null }),
+}));
+
+vi.mock('@/stores/dateRangeStore', () => ({
+  useDateRangeStore: (selector: (s: { dateRange: string }) => unknown) =>
+    selector({ dateRange: mockDateRange }),
+}));
+
+// ---------------------------------------------------------------------------
+// Fixture
+// ---------------------------------------------------------------------------
+
+const fixtureData = {
+  overview: {
+    totalReviews: 100,
+    cardsStudied: 50,
+    averageAccuracy: 0.85,
+    totalStudyTime: 3600,
+  },
+  streak: {
+    currentStreak: 7,
+    longestStreak: 15,
+    lastStudyDate: '2025-01-08T10:00:00.000Z',
+  },
+  progressData: [{ date: '2025-01-01', reviewCount: 10, cardsStudied: 5, accuracy: 0.8 }],
+  deckStats: [],
+  recentActivity: [],
+};
+
+// ---------------------------------------------------------------------------
+// Helper: render hook inside a fresh QueryClientProvider
+// ---------------------------------------------------------------------------
+
+function makeWrapper(queryClient: QueryClient) {
+  return function Wrapper({ children }: { children: React.ReactNode }) {
+    return createElement(QueryClientProvider, { client: queryClient }, children);
   };
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+describe('useAnalytics Hook', () => {
+  let queryClient: QueryClient;
 
   beforeEach(() => {
-    // Clear localStorage
-    localStorage.clear();
-
-    // Reset analytics store
-    useAnalyticsStore.setState({
-      dashboardData: null,
-      dateRange: 'last7',
-      loading: false,
-      refreshing: false,
-      error: null,
-      lastFetch: null,
-    });
-
-    // Reset auth store (this triggers persist middleware)
-    useAuthStore.setState({
-      user: null,
-      isAuthenticated: false,
-      token: null,
-      refreshToken: null,
-      isLoading: false,
-      error: null,
-      rememberMe: false,
-    });
+    mockUserId = 'user-123';
+    mockDateRange = 'last7';
+    mockGetAnalytics.mockResolvedValue(fixtureData);
+    queryClient = createTestQueryClient();
   });
 
-  describe('Initial State', () => {
-    it('should return initial state when no data loaded', () => {
-      const { result } = renderHook(() => useAnalytics());
-
-      expect(result.current.data).toBeNull();
-      expect(result.current.loading).toBe(false);
-      expect(result.current.error).toBeNull();
-      expect(result.current.dateRange).toBe('last7');
-    });
-
-    it('should provide refresh function', () => {
-      const { result } = renderHook(() => useAnalytics());
-      expect(typeof result.current.refresh).toBe('function');
-    });
-
-    it('should provide setDateRange function', () => {
-      const { result } = renderHook(() => useAnalytics());
-      expect(typeof result.current.setDateRange).toBe('function');
-    });
+  afterEach(() => {
+    queryClient.clear();
+    vi.clearAllMocks();
   });
 
-  describe('Data Loading', () => {
-    it('should not auto-load when autoLoad is false', () => {
-      useAuthStore.setState({
-        user: mockUser,
-        isAuthenticated: true,
+  // -------------------------------------------------------------------------
+  // Load on mount
+  // -------------------------------------------------------------------------
+
+  describe('load on mount', () => {
+    it('returns loading state initially then data', async () => {
+      const { result } = renderHook(() => useAnalytics(), {
+        wrapper: makeWrapper(queryClient),
       });
 
-      const { result } = renderHook(() => useAnalytics(false));
+      // Initial loading state
+      expect(result.current.isLoading).toBe(true);
+      expect(result.current.data).toBeUndefined();
 
-      expect(result.current.loading).toBe(false);
-      expect(result.current.data).toBeNull();
-    });
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    it('should not auto-load when no user is authenticated', () => {
-      const { result } = renderHook(() => useAnalytics(true));
-
-      expect(result.current.loading).toBe(false);
-      expect(result.current.data).toBeNull();
-    });
-
-    it('should return dashboard data when available', () => {
-      const mockDashboardData = {
-        overview: {
-          totalReviews: 100,
-          cardsStudied: 50,
-          averageAccuracy: 0.85,
-          totalStudyTime: 3600,
-        },
-        streak: {
-          currentStreak: 7,
-          longestStreak: 15,
-          lastStudyDate: new Date().toISOString(),
-        },
-        progressData: [{ date: '2025-01-01', reviewCount: 10, cardsStudied: 5, accuracy: 0.8 }],
-        deckStats: [],
-        recentActivity: [],
-      };
-
-      useAnalyticsStore.setState({
-        dashboardData: mockDashboardData,
-        loading: false,
-      });
-
-      const { result } = renderHook(() => useAnalytics());
-
-      expect(result.current.data).toEqual(mockDashboardData);
-      expect(result.current.loading).toBe(false);
-    });
-  });
-
-  describe('Loading States', () => {
-    it('should reflect loading state', () => {
-      useAnalyticsStore.setState({ loading: true });
-
-      const { result } = renderHook(() => useAnalytics());
-
-      expect(result.current.loading).toBe(true);
-    });
-
-    it('should reflect refreshing state', () => {
-      useAnalyticsStore.setState({ refreshing: true });
-
-      const { result } = renderHook(() => useAnalytics());
-
-      expect(result.current.loading).toBe(true); // loading includes refreshing
-    });
-
-    it('should combine loading and refreshing states', () => {
-      useAnalyticsStore.setState({
-        loading: true,
-        refreshing: true,
-      });
-
-      const { result } = renderHook(() => useAnalytics());
-
-      expect(result.current.loading).toBe(true);
-    });
-  });
-
-  describe('Error Handling', () => {
-    it('should return error when present', () => {
-      const errorMessage = 'Failed to load analytics';
-      useAnalyticsStore.setState({ error: errorMessage });
-
-      const { result } = renderHook(() => useAnalytics());
-
-      expect(result.current.error).toBe(errorMessage);
-    });
-
-    it('should clear error when data loads successfully', () => {
-      useAnalyticsStore.setState({
-        error: 'Previous error',
-      });
-
-      const { result, rerender } = renderHook(() => useAnalytics());
-      expect(result.current.error).toBe('Previous error');
-
-      useAnalyticsStore.setState({
-        error: null,
-        dashboardData: {
-          overview: {
-            totalReviews: 100,
-            cardsStudied: 50,
-            averageAccuracy: 0.85,
-            totalStudyTime: 3600,
-          },
-          streak: {
-            currentStreak: 5,
-            longestStreak: 10,
-            lastStudyDate: new Date().toISOString(),
-          },
-          progressData: [],
-          deckStats: [],
-          recentActivity: [],
-        },
-      });
-
-      rerender();
+      expect(result.current.data).toEqual(fixtureData);
       expect(result.current.error).toBeNull();
     });
-  });
 
-  describe('Date Range', () => {
-    it('should return current date range', () => {
-      useAnalyticsStore.setState({ dateRange: 'last30' });
+    it('calls getAnalytics with userId and dateRange', async () => {
+      renderHook(() => useAnalytics(), { wrapper: makeWrapper(queryClient) });
 
-      const { result } = renderHook(() => useAnalytics());
+      await waitFor(() => expect(mockGetAnalytics).toHaveBeenCalledTimes(1));
 
-      expect(result.current.dateRange).toBe('last30');
-    });
-
-    it('should update when date range changes in store', () => {
-      const { result, rerender } = renderHook(() => useAnalytics());
-
-      expect(result.current.dateRange).toBe('last7');
-
-      useAnalyticsStore.setState({ dateRange: 'alltime' });
-
-      rerender();
-      expect(result.current.dateRange).toBe('alltime');
-    });
-
-    it('should support all date range types', () => {
-      const dateRanges: Array<'last7' | 'last30' | 'alltime'> = ['last7', 'last30', 'alltime'];
-
-      dateRanges.forEach((range) => {
-        useAnalyticsStore.setState({ dateRange: range });
-        const { result } = renderHook(() => useAnalytics());
-        expect(result.current.dateRange).toBe(range);
-      });
+      expect(mockGetAnalytics).toHaveBeenCalledWith('user-123', 'last7');
     });
   });
 
-  describe('Data Updates', () => {
-    it('should reflect data updates', () => {
-      const { result, rerender } = renderHook(() => useAnalytics());
+  // -------------------------------------------------------------------------
+  // enabled: !!userId — no fetch when unauthenticated
+  // -------------------------------------------------------------------------
 
-      expect(result.current.data).toBeNull();
+  describe('no fetch when no userId', () => {
+    it('does not call getAnalytics when userId is undefined', async () => {
+      mockUserId = undefined;
 
-      const newData = {
-        overview: {
-          totalReviews: 200,
-          cardsStudied: 100,
-          averageAccuracy: 0.9,
-          totalStudyTime: 7200,
-        },
-        streak: {
-          currentStreak: 10,
-          longestStreak: 20,
-          lastStudyDate: new Date().toISOString(),
-        },
-        progressData: [],
-        deckStats: [],
-        recentActivity: [],
-      };
+      const { result } = renderHook(() => useAnalytics(), {
+        wrapper: makeWrapper(queryClient),
+      });
 
-      useAnalyticsStore.setState({ dashboardData: newData });
-
-      rerender();
-      expect(result.current.data).toEqual(newData);
-    });
-
-    it('should update when overview stats change', () => {
-      const initialData = {
-        overview: {
-          totalReviews: 100,
-          cardsStudied: 50,
-          averageAccuracy: 0.85,
-          totalStudyTime: 3600,
-        },
-        streak: {
-          currentStreak: 5,
-          longestStreak: 10,
-          lastStudyDate: new Date().toISOString(),
-        },
-        progressData: [],
-        deckStats: [],
-        recentActivity: [],
-      };
-
-      useAnalyticsStore.setState({ dashboardData: initialData });
-
-      const { result, rerender } = renderHook(() => useAnalytics());
-
-      expect(result.current.data?.overview.totalReviews).toBe(100);
-
-      const updatedData = {
-        ...initialData,
-        overview: {
-          ...initialData.overview,
-          totalReviews: 150,
-        },
-      };
-
-      useAnalyticsStore.setState({ dashboardData: updatedData });
-
-      rerender();
-      expect(result.current.data?.overview.totalReviews).toBe(150);
+      // Not loading (disabled query), not fetching
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.data).toBeUndefined();
+      // Give Query a tick to potentially fire (it should not)
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(mockGetAnalytics).not.toHaveBeenCalled();
     });
   });
 
-  describe('Auto-load behavior', () => {
-    it('should not load if data already exists', async () => {
-      const mockData = {
-        overview: {
-          totalReviews: 100,
-          cardsStudied: 50,
-          averageAccuracy: 0.85,
-          totalStudyTime: 3600,
-        },
-        streak: {
-          currentStreak: 5,
-          longestStreak: 10,
-          lastStudyDate: new Date().toISOString(),
-        },
-        progressData: [],
-        deckStats: [],
-        recentActivity: [],
-      };
+  // -------------------------------------------------------------------------
+  // Error state
+  // -------------------------------------------------------------------------
 
-      useAuthStore.setState({
-        user: mockUser,
-        isAuthenticated: true,
+  describe('error state', () => {
+    it('exposes error when getAnalytics rejects', async () => {
+      const apiError = new Error('Network failure');
+      mockGetAnalytics.mockRejectedValue(apiError);
+
+      const { result } = renderHook(() => useAnalytics(), {
+        wrapper: makeWrapper(queryClient),
       });
 
-      useAnalyticsStore.setState({
-        dashboardData: mockData,
-        loading: false,
+      await waitFor(() => expect(result.current.error).toBeTruthy());
+      expect(result.current.data).toBeUndefined();
+      expect(result.current.isLoading).toBe(false);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // AC #4: refetchInterval: false — no poll-based refetch
+  // -------------------------------------------------------------------------
+
+  describe('refetchInterval: false', () => {
+    it('does not refetch automatically after 10 minutes (called exactly once)', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+
+      try {
+        const { result } = renderHook(() => useAnalytics(), {
+          wrapper: makeWrapper(queryClient),
+        });
+
+        // Wait for initial fetch to complete
+        await waitFor(() => expect(result.current.isLoading).toBe(false));
+        expect(mockGetAnalytics).toHaveBeenCalledTimes(1);
+
+        // Advance timers by 10 minutes — no interval-based refetch should fire
+        await act(async () => {
+          vi.advanceTimersByTime(10 * 60 * 1000);
+          await Promise.resolve();
+        });
+
+        expect(mockGetAnalytics).toHaveBeenCalledTimes(1);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // AC #5: refetchOnWindowFocus — extra fetch on window focus
+  //
+  // TanStack Query v5 subscribes to `visibilitychange` on window via its
+  // internal focusManager. In happy-dom, `document.visibilityState` is
+  // read-only so dispatching the DOM event doesn't flip the manager state.
+  //
+  // The official testing approach: use `focusManager.setFocused(true/false)`
+  // to drive the focus manager directly — this triggers `onFocus()` on the
+  // QueryCache just as a real visibilitychange event would.
+  // -------------------------------------------------------------------------
+
+  describe('refetchOnWindowFocus: true', () => {
+    it('triggers exactly one extra fetch when window regains focus', async () => {
+      // Use a client that does NOT globally disable refetchOnWindowFocus.
+      // data immediately stale so focus triggers refetch (after PERF-01-11: hook inherits staleTime from this client)
+      const focusQueryClient = new QueryClient({
+        defaultOptions: {
+          queries: {
+            retry: false,
+            gcTime: Infinity,
+            staleTime: 0,
+          },
+        },
       });
 
-      const { result } = renderHook(() => useAnalytics(true));
+      vi.useFakeTimers({ shouldAdvanceTime: true });
 
-      // Should use existing data, not trigger loading
-      expect(result.current.data).toEqual(mockData);
+      try {
+        const { result } = renderHook(() => useAnalytics(), {
+          wrapper: makeWrapper(focusQueryClient),
+        });
+
+        // Wait for initial fetch to complete
+        await waitFor(() => expect(result.current.isLoading).toBe(false));
+        expect(mockGetAnalytics).toHaveBeenCalledTimes(1);
+
+        // Simulate focus loss then regain:
+        // setFocused(false) → setFocused(true) creates the false→true transition
+        // that causes QueryClient to call queryCache.onFocus() and refetch stale queries.
+        await act(async () => {
+          focusManager.setFocused(false);
+        });
+        await act(async () => {
+          focusManager.setFocused(true);
+          await Promise.resolve();
+        });
+
+        await waitFor(() => expect(mockGetAnalytics).toHaveBeenCalledTimes(2));
+      } finally {
+        vi.useRealTimers();
+        // Restore default focus management (unset manual override)
+        focusManager.setFocused(undefined);
+        focusQueryClient.clear();
+      }
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Back-compat aliases
+  // -------------------------------------------------------------------------
+
+  describe('back-compat aliases', () => {
+    it('exposes loading alias that mirrors isLoading', async () => {
+      const { result } = renderHook(() => useAnalytics(), {
+        wrapper: makeWrapper(queryClient),
+      });
+
+      expect(result.current.loading).toBe(result.current.isLoading);
+
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
       expect(result.current.loading).toBe(false);
     });
+  });
 
-    it('should not load when already loading', () => {
-      useAuthStore.setState({
-        user: mockUser,
-        isAuthenticated: true,
+  // -------------------------------------------------------------------------
+  // _autoLoad param is a no-op (backward-compat regression)
+  // -------------------------------------------------------------------------
+
+  describe('auto-load behavior', () => {
+    it('fetches on mount automatically when userId is set', async () => {
+      const { result } = renderHook(() => useAnalytics(), {
+        wrapper: makeWrapper(queryClient),
       });
 
-      useAnalyticsStore.setState({
-        loading: true,
-        dashboardData: null,
-      });
-
-      const { result } = renderHook(() => useAnalytics(true));
-
-      expect(result.current.loading).toBe(true);
-      expect(result.current.data).toBeNull();
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+      expect(mockGetAnalytics).toHaveBeenCalledTimes(1);
     });
   });
 });

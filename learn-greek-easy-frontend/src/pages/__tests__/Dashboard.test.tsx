@@ -7,14 +7,20 @@
  * These tests exist because the SM2V2 migration changed the vocab practice
  * route from /decks/:id/review to /decks/:id/practice, and the Dashboard
  * was missed — causing a 404 in production.
+ *
+ * Analytics is tested at the API-client level (AC #10): we mock
+ * @/features/analytics.getAnalytics and seed the query cache, rather than
+ * mocking the useAnalytics hook directly.
  */
 
 import { act } from 'react';
 
-import { screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { screen, fireEvent } from '@testing-library/react';
+import { createElement } from 'react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-import { render } from '@/lib/test-utils';
+import { renderWithProviders, createTestQueryClient } from '@/lib/test-utils';
 
 import { Dashboard } from '../Dashboard';
 
@@ -43,17 +49,15 @@ vi.mock('@/stores/authStore', () => ({
   ),
 }));
 
-// Mock analytics to avoid API calls and show loaded state
-vi.mock('@/hooks/useAnalytics', () => ({
-  useAnalytics: () => ({
-    data: {
-      summary: { totalTimeStudied: 60, totalCardsReviewed: 10 },
-      streak: { currentStreak: 3 },
-      wordStatus: { learning: 5, review: 10, mastered: 2, newCards: 0 },
-    },
-    loading: false,
-    error: null,
-  }),
+vi.mock('@/stores/dateRangeStore', () => ({
+  useDateRangeStore: (selector: (s: { dateRange: string }) => unknown) =>
+    selector({ dateRange: 'last7' }),
+}));
+
+// Mock at the API-client level (AC #10) — not at the hook level
+const mockGetAnalytics = vi.fn();
+vi.mock('@/features/analytics', () => ({
+  getAnalytics: (...args: unknown[]) => mockGetAnalytics(...args),
 }));
 
 vi.mock('@/hooks/useTourAutoTrigger', () => ({
@@ -63,6 +67,20 @@ vi.mock('@/hooks/useTourAutoTrigger', () => ({
 vi.mock('@/lib/errorReporting', () => ({
   reportAPIError: vi.fn(),
 }));
+
+// ---------------------------------------------------------------------------
+// Analytics fixture — matches shape expected by Dashboard widgets
+// ---------------------------------------------------------------------------
+
+const analyticsFixture = {
+  summary: { totalTimeStudied: 60, totalCardsReviewed: 10 },
+  overview: { totalReviews: 10, cardsStudied: 5, averageAccuracy: 0.8, totalStudyTime: 60 },
+  streak: { currentStreak: 3, longestStreak: 7, lastStudyDate: new Date().toISOString() },
+  wordStatus: { learning: 5, review: 10, mastered: 2, newCards: 0 },
+  progressData: [],
+  deckStats: [],
+  recentActivity: [],
+};
 
 // ---------------------------------------------------------------------------
 // Deck fixtures
@@ -134,13 +152,37 @@ vi.mock('@/stores/deckStore', () => ({
 }));
 
 // ---------------------------------------------------------------------------
+// Helper: render Dashboard with a QueryClientProvider seeded with analytics
+//
+// renderWithProviders already wraps with BrowserRouter + i18n etc.
+// We compose QueryClientProvider around Dashboard before passing to it,
+// so React Router context is still present.
+// ---------------------------------------------------------------------------
+
+function renderDashboard(queryClient: QueryClient) {
+  const DashboardWithQuery = () =>
+    createElement(QueryClientProvider, { client: queryClient }, createElement(Dashboard));
+  return renderWithProviders(createElement(DashboardWithQuery));
+}
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
 describe('Dashboard navigation', () => {
+  let queryClient: QueryClient;
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockDecks = [vocabDeck, cultureDeck];
+    mockGetAnalytics.mockResolvedValue(analyticsFixture);
+    queryClient = createTestQueryClient();
+    // Seed analytics cache so Dashboard renders in loaded state immediately (AC #9)
+    queryClient.setQueryData(['analytics', 'u1', 'last7'], analyticsFixture);
+  });
+
+  afterEach(() => {
+    queryClient.clear();
   });
 
   // -----------------------------------------------------------------------
@@ -149,7 +191,7 @@ describe('Dashboard navigation', () => {
 
   it('navigates to /decks/:id/practice when clicking Continue Learning on a vocab deck', async () => {
     await act(async () => {
-      render(<Dashboard />);
+      renderDashboard(queryClient);
     });
 
     const buttons = screen.getAllByRole('button', { name: /continue learning/i });
@@ -161,7 +203,7 @@ describe('Dashboard navigation', () => {
 
   it('navigates to /culture/:id/practice when clicking Continue Learning on a culture deck', async () => {
     await act(async () => {
-      render(<Dashboard />);
+      renderDashboard(queryClient);
     });
 
     const buttons = screen.getAllByRole('button', { name: /continue learning/i });
@@ -179,7 +221,7 @@ describe('Dashboard navigation', () => {
     mockDecks = [vocabDeck];
 
     await act(async () => {
-      render(<Dashboard />);
+      renderDashboard(queryClient);
     });
 
     const startButton = screen.getByRole('button', { name: /start review/i });
@@ -192,7 +234,7 @@ describe('Dashboard navigation', () => {
     mockDecks = [cultureDeck];
 
     await act(async () => {
-      render(<Dashboard />);
+      renderDashboard(queryClient);
     });
 
     const startButton = screen.getByRole('button', { name: /start review/i });
@@ -205,7 +247,7 @@ describe('Dashboard navigation', () => {
     mockDecks = [];
 
     await act(async () => {
-      render(<Dashboard />);
+      renderDashboard(queryClient);
     });
 
     const startButton = screen.getByRole('button', { name: /start review/i });
@@ -222,7 +264,7 @@ describe('Dashboard navigation', () => {
     mockDecks = [vocabDeck, cultureDeck];
 
     await act(async () => {
-      render(<Dashboard />);
+      renderDashboard(queryClient);
     });
 
     // Click Start Review

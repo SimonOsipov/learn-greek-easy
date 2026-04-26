@@ -1,11 +1,6 @@
 // src/hooks/useProgressData.ts
 
-import {
-  useAnalyticsStore,
-  selectProgressData,
-  selectIsLoading,
-  selectError,
-} from '@/stores/analyticsStore';
+import { useAnalytics } from '@/hooks/useAnalytics';
 
 /**
  * Hook for progress chart data
@@ -23,9 +18,8 @@ import {
  * ```
  */
 export const useProgressData = () => {
-  const progressData = useAnalyticsStore(selectProgressData);
-  const loading = useAnalyticsStore(selectIsLoading);
-  const error = useAnalyticsStore(selectError);
+  const { data, loading, error } = useAnalytics();
+  const progressData = data?.progressData ?? [];
 
   return {
     progressData,

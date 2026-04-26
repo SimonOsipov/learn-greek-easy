@@ -14,7 +14,6 @@ import { useTourAutoTrigger } from '@/hooks/useTourAutoTrigger';
 import { getLocalizedDeckDescription, getLocalizedDeckName } from '@/lib/deckLocale';
 import { reportAPIError } from '@/lib/errorReporting';
 import { formatStudyTime } from '@/lib/timeFormatUtils';
-import { useAnalyticsStore } from '@/stores/analyticsStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useDeckStore } from '@/stores/deckStore';
 import type { Metric } from '@/types/dashboard';
@@ -28,7 +27,7 @@ import type { Metric } from '@/types/dashboard';
  * - Progress charts (line, area, bar, pie)
  * - Active decks
  *
- * Uses real backend API data via analyticsStore and deckStore.
+ * Uses real backend API data via useAnalytics() and deckStore.
  */
 export const Dashboard: React.FC = () => {
   const { t, i18n } = useTranslation('common');
@@ -38,11 +37,7 @@ export const Dashboard: React.FC = () => {
   const user = useAuthStore((state) => state.user);
 
   // Analytics data (auto-loads on mount)
-  const {
-    data: analyticsData,
-    loading: analyticsLoading,
-    error: analyticsError,
-  } = useAnalytics(true);
+  const { data: analyticsData, loading: analyticsLoading, error: analyticsError } = useAnalytics();
 
   // Deck data
   const decks = useDeckStore((state) => state.decks);
@@ -55,20 +50,6 @@ export const Dashboard: React.FC = () => {
       reportAPIError(error, { operation: 'fetchDecks', endpoint: '/decks' });
     });
   }, [fetchDecks]);
-
-  const loadAnalytics = useAnalyticsStore((state) => state.loadAnalytics);
-
-  // Background poll: refresh analytics every 5 minutes.
-  useEffect(() => {
-    if (!user) return;
-    const intervalId = setInterval(
-      () => {
-        loadAnalytics(user.id);
-      },
-      5 * 60 * 1000
-    );
-    return () => clearInterval(intervalId);
-  }, [user, loadAnalytics]);
 
   useTourAutoTrigger();
 

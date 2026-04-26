@@ -1,7 +1,12 @@
 // src/stores/__tests__/authStore.test.ts
 
+import { afterEach, describe, it, expect, vi, beforeEach } from 'vitest';
+
+import { queryClient } from '@/lib/queryClient';
+import { useAuthStore } from '@/stores/authStore';
+
 /**
- * AuthStore Tests - SKIPPED
+ * AuthStore Tests - SKIPPED (persist middleware)
  *
  * Rationale for Skipping Unit Tests:
  * ===================================
@@ -110,5 +115,58 @@ describe.skip('authStore (uses persist middleware)', () => {
   it('should be tested via integration tests', () => {
     // This test suite is intentionally skipped
     // See documentation above for rationale and testing alternatives
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AC #6: logout removes analytics cache entries from the singleton queryClient
+//
+// authStore.logout() calls queryClient.removeQueries({ queryKey: ['analytics'] })
+// on the SINGLETON queryClient from @/lib/queryClient. We must test against
+// that same singleton — createTestQueryClient would be a different instance.
+//
+// Supabase sign-out is mocked so no network call is made. PostHog is also
+// mocked to prevent warnings.
+// ---------------------------------------------------------------------------
+
+vi.mock('@/lib/supabaseClient', () => ({
+  supabase: {
+    auth: {
+      signOut: vi.fn().mockResolvedValue({ error: null }),
+    },
+  },
+}));
+
+vi.mock('posthog-js', () => ({
+  default: { capture: vi.fn(), reset: vi.fn() },
+}));
+
+vi.mock('@/lib/errorReporting', () => ({
+  reportAPIError: vi.fn(),
+}));
+
+describe('authStore — logout cache-clear (AC #6)', () => {
+  const seedKey = ['analytics', 'user-A', 'last7'] as const;
+  const seedData = { overview: { totalReviews: 5 } };
+
+  beforeEach(() => {
+    // Seed the singleton with a known analytics entry
+    queryClient.setQueryData(seedKey, seedData);
+  });
+
+  afterEach(() => {
+    // Clean up so we don't pollute other tests in the suite
+    queryClient.removeQueries({ queryKey: ['analytics'] });
+  });
+
+  it('removes analytics cache on logout', async () => {
+    // Verify seed is present
+    expect(queryClient.getQueryData(seedKey)).toEqual(seedData);
+
+    // Trigger logout on the real store (uses the singleton queryClient internally)
+    await useAuthStore.getState().logout();
+
+    // Analytics cache entry should be gone
+    expect(queryClient.getQueryData(seedKey)).toBeUndefined();
   });
 });
