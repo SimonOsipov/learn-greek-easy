@@ -172,16 +172,6 @@ describe('useDeckPerformance Hook', () => {
   });
 
   it('should update when deck stats change in cache', async () => {
-    const { queryClient, wrapper } = makeWrapper();
-    queryClient.setQueryData(['analytics', 'user-123', 'last7'], {
-      ...fixtureData,
-      deckStats: [],
-    });
-    mockGetAnalytics.mockResolvedValue(fixtureData);
-
-    const { result } = renderHook(() => useDeckPerformance(), { wrapper });
-    expect(result.current.deckStats).toEqual([]);
-
     const updatedStats = [
       {
         deckId: 'deck-3',
@@ -192,6 +182,17 @@ describe('useDeckPerformance Hook', () => {
         reviewCount: 200,
       },
     ];
+
+    const { queryClient, wrapper } = makeWrapper();
+    queryClient.setQueryData(['analytics', 'user-123', 'last7'], {
+      ...fixtureData,
+      deckStats: [],
+    });
+    // Mock returns updatedStats so background refetches resolve consistently with expected state
+    mockGetAnalytics.mockResolvedValue({ ...fixtureData, deckStats: updatedStats });
+
+    const { result } = renderHook(() => useDeckPerformance(), { wrapper });
+    expect(result.current.deckStats).toEqual([]);
 
     queryClient.setQueryData(['analytics', 'user-123', 'last7'], {
       ...fixtureData,

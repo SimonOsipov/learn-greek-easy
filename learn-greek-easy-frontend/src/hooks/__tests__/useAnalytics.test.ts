@@ -203,19 +203,17 @@ describe('useAnalytics Hook', () => {
   describe('refetchOnWindowFocus: true', () => {
     it('triggers exactly one extra fetch when window regains focus', async () => {
       // Use a client that does NOT globally disable refetchOnWindowFocus.
+      // data immediately stale so focus triggers refetch (after PERF-01-11: hook inherits staleTime from this client)
       const focusQueryClient = new QueryClient({
         defaultOptions: {
           queries: {
             retry: false,
             gcTime: Infinity,
-            staleTime: 0, // data immediately stale — focus triggers refetch
+            staleTime: 0,
           },
         },
       });
 
-      // Use fake timers so we can advance past the hook's staleTime (5 min)
-      // without waiting in real time. We need data to be stale before the
-      // focus transition, since refetchOnWindowFocus: true only refetches stale data.
       vi.useFakeTimers({ shouldAdvanceTime: true });
 
       try {
@@ -226,12 +224,6 @@ describe('useAnalytics Hook', () => {
         // Wait for initial fetch to complete
         await waitFor(() => expect(result.current.isLoading).toBe(false));
         expect(mockGetAnalytics).toHaveBeenCalledTimes(1);
-
-        // Advance time past staleTime (5 min + 1s) so data becomes stale
-        await act(async () => {
-          vi.advanceTimersByTime(5 * 60 * 1000 + 1000);
-          await Promise.resolve();
-        });
 
         // Simulate focus loss then regain:
         // setFocused(false) → setFocused(true) creates the false→true transition

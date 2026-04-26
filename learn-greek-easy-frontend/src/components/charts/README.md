@@ -114,7 +114,19 @@ All charts handle empty data:
 
 ## Data Requirements
 
-Charts consume data from `useAnalytics()` (TanStack Query hook). The hook returns `{ data, isLoading, error, refetch }` where `data` is `AnalyticsDashboardData` from `@/types/analytics`:
-- `data.progressData: ProgressDataPoint[]` - Time series data
-- `data.deckStats: DeckPerformanceStats[]` - Per-deck statistics
-- `data.wordStatus: WordStatusBreakdown` - Stage distribution counts
+Charts consume data from `useAnalytics()` (TanStack Query hook).
+
+**Return shape**: `{ data, isLoading, isFetching, loading, error, refetch }`
+
+- `data: AnalyticsDashboardData | undefined` (from `@/types/analytics`):
+  - `data.progressData: ProgressDataPoint[]` — time series data
+  - `data.deckStats: DeckPerformanceStats[]` — per-deck statistics
+  - `data.wordStatus: WordStatusBreakdown` — stage distribution counts
+  - `data.streak: StudyStreak` — current study streak
+- `isLoading: boolean` — true only on the very first fetch (no cached data yet)
+- `isFetching: boolean` — true on any in-flight fetch (initial OR background refetch on focus)
+- `loading: boolean` — deprecated back-compat alias for `isLoading`; prefer `isLoading` in new code
+- `error: Error | null` — fetch error if any
+- `refetch: () => void` — manually trigger a refetch
+
+**Cache key**: `['analytics', userId, dateRange]`. Data auto-refetches on window focus when stale (5 min staleTime per global QueryClient defaults).

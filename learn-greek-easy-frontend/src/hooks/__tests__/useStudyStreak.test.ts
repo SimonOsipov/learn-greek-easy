@@ -77,18 +77,15 @@ describe('useStudyStreak Hook', () => {
     vi.clearAllMocks();
   });
 
-  it('should return undefined streak before data loads', async () => {
-    mockGetAnalytics.mockResolvedValue(fixtureData);
-
-    const { queryClient, wrapper } = makeWrapper();
-    // No seeded data — starts in loading state
+  it('returns undefined streak when fetched data has no streak', async () => {
     mockGetAnalytics.mockResolvedValue({ ...fixtureData, streak: undefined });
+
+    const { wrapper } = makeWrapper();
 
     const { result } = renderHook(() => useStudyStreak(), { wrapper });
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
-    // streak is undefined when not in data
     expect(result.current.streak).toBeUndefined();
     expect(result.current.error).toBeNull();
   });
@@ -161,12 +158,18 @@ describe('useStudyStreak Hook', () => {
   });
 
   it('should update when streak changes in cache', async () => {
+    const updatedStreak = {
+      currentStreak: 6,
+      longestStreak: 10,
+      lastStudyDate: new Date().toISOString(),
+    };
     const { queryClient, wrapper } = makeWrapper();
     queryClient.setQueryData(['analytics', 'user-123', 'last7'], {
       ...fixtureData,
       streak: { currentStreak: 5, longestStreak: 10, lastStudyDate: new Date().toISOString() },
     });
-    mockGetAnalytics.mockResolvedValue(fixtureData);
+    // Mock returns streak=6 so background refetches resolve consistently with expected state
+    mockGetAnalytics.mockResolvedValue({ ...fixtureData, streak: updatedStreak });
 
     const { result } = renderHook(() => useStudyStreak(), { wrapper });
     expect(result.current.streak?.currentStreak).toBe(5);
@@ -174,7 +177,7 @@ describe('useStudyStreak Hook', () => {
     // Streak advances
     queryClient.setQueryData(['analytics', 'user-123', 'last7'], {
       ...fixtureData,
-      streak: { currentStreak: 6, longestStreak: 10, lastStudyDate: new Date().toISOString() },
+      streak: updatedStreak,
     });
 
     await waitFor(() => expect(result.current.streak?.currentStreak).toBe(6));

@@ -113,7 +113,19 @@ All analytics widgets consume data from `useAnalytics()` (TanStack Query):
 1. Dashboard mounts and `useAnalytics()` fetches data automatically (enabled when `userId` is set)
 2. Data is cached per `(userId, dateRange)` — no redundant fetches across widgets
 3. Date range filter changes invalidate the cache and trigger a refetch automatically
-4. Hook returns `{ data: AnalyticsDashboardData | undefined, isLoading, isFetching, error, refetch }`
+4. Hook returns `{ data, isLoading, isFetching, loading, error, refetch }`:
+- `data: AnalyticsDashboardData | undefined` (from `@/types/analytics`):
+  - `data.progressData: ProgressDataPoint[]` — time series data
+  - `data.deckStats: DeckPerformanceStats[]` — per-deck statistics
+  - `data.wordStatus: WordStatusBreakdown` — stage distribution counts
+  - `data.streak: StudyStreak` — current study streak
+- `isLoading: boolean` — true only on the very first fetch (no cached data yet)
+- `isFetching: boolean` — true on any in-flight fetch (initial OR background refetch on focus)
+- `loading: boolean` — deprecated back-compat alias for `isLoading`; prefer `isLoading` in new code
+- `error: Error | null` — fetch error if any
+- `refetch: () => void` — manually trigger a refetch
+
+**Cache key**: `['analytics', userId, dateRange]`. Data auto-refetches on window focus when stale (5 min staleTime per global QueryClient defaults).
 
 ## Empty States
 

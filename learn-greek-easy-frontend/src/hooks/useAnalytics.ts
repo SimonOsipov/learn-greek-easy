@@ -36,9 +36,6 @@ export const useAnalytics = () => {
     queryKey: ['analytics', userId, dateRange],
     queryFn: () => getAnalytics(userId!, dateRange),
     enabled: !!userId,
-    staleTime: 5 * 60 * 1000,
-    refetchInterval: false,
-    refetchOnWindowFocus: true,
   });
 
   return {

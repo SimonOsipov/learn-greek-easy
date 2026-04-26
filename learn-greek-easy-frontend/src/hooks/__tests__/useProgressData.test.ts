@@ -149,17 +149,19 @@ describe('useProgressData Hook', () => {
   });
 
   it('should update when progress data changes', async () => {
-    const { queryClient, wrapper } = makeWrapper();
     const newProgressData = [
       { date: '2025-01-04', reviewCount: 20, cardsStudied: 10, accuracy: 0.95 },
     ];
+
+    const { queryClient, wrapper } = makeWrapper();
 
     // Seed initial data
     queryClient.setQueryData(['analytics', 'user-123', 'last7'], {
       ...fixtureData,
       progressData: [],
     });
-    mockGetAnalytics.mockResolvedValue(fixtureData);
+    // Mock returns newProgressData so background refetches resolve consistently with expected state
+    mockGetAnalytics.mockResolvedValue({ ...fixtureData, progressData: newProgressData });
 
     const { result } = renderHook(() => useProgressData(), { wrapper });
     expect(result.current.progressData).toEqual([]);
