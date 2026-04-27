@@ -129,28 +129,28 @@ const SRS_BUTTONS = [
     key: 'again',
     rating: 1,
     i18nKey: 'practice.again',
-    color: 'bg-red-500',
+    color: 'bg-practice-incorrect',
     testId: 'srs-button-again',
   },
   {
     key: 'hard',
     rating: 2,
     i18nKey: 'practice.hard',
-    color: 'bg-orange-500',
+    color: 'bg-practice-incorrect-soft',
     testId: 'srs-button-hard',
   },
   {
     key: 'good',
     rating: 3,
     i18nKey: 'practice.good',
-    color: 'bg-green-500',
+    color: 'bg-practice-correct',
     testId: 'srs-button-good',
   },
   {
     key: 'easy',
     rating: 4,
     i18nKey: 'practice.easy',
-    color: 'bg-blue-500',
+    color: 'bg-practice-accent',
     testId: 'srs-button-easy',
   },
 ] as const;
@@ -180,9 +180,7 @@ function CardFront({
     <div data-testid="practice-card-front" className="flex flex-col items-center gap-6 pb-6 pt-3">
       {/* Badges row */}
       <div className="flex w-full items-start justify-start gap-2">
-        <Badge className="bg-[#6366f1]/10 text-[#6366f1] hover:bg-[#6366f1]/10">
-          {typeBadgeLabel}
-        </Badge>
+        <span className="badge b-violet">{typeBadgeLabel}</span>
         {partOfSpeech && <PartOfSpeechBadge partOfSpeech={partOfSpeech} />}
       </div>
 
@@ -241,12 +239,13 @@ function CardBack({
   const answerFontSize = cardType === 'sentence_translation' ? 'text-xl' : 'text-3xl';
 
   return (
-    <div data-testid="practice-card-back" className="flex animate-fade-in flex-col gap-6 pb-6 pt-3">
+    <div
+      data-testid="practice-card-back"
+      className="flex animate-practice-fade-in flex-col gap-6 pb-6 pt-3"
+    >
       {/* Badges row */}
       <div className="flex w-full items-start justify-start gap-2">
-        <Badge className="bg-[#6366f1]/10 text-[#6366f1] hover:bg-[#6366f1]/10">
-          {typeBadgeLabel}
-        </Badge>
+        <span className="badge b-violet">{typeBadgeLabel}</span>
         {partOfSpeech && <PartOfSpeechBadge partOfSpeech={partOfSpeech} />}
       </div>
 
@@ -262,8 +261,8 @@ function CardBack({
       {/* Answer section */}
       <div className="flex flex-col items-center gap-4">
         <div className="flex items-center gap-2">
-          <Check className="h-5 w-5 text-emerald-600" />
-          <span className="text-sm font-medium text-emerald-600">{answerLabel}</span>
+          <Check className="h-5 w-5 text-practice-correct" />
+          <span className="text-sm font-medium text-practice-correct">{answerLabel}</span>
         </div>
 
         <p className={cn('break-words text-center font-bold', answerFontSize)}>{displayAnswer}</p>

@@ -55,9 +55,10 @@ describe('MiniFlipCard', () => {
     expect(inner.className).not.toContain('[transform:rotateY(180deg)]');
   });
 
-  it('shows mastery dot with green color for mastered status', () => {
+  it('shows mastery dot with practice-correct color for mastered status', () => {
+    // REBASELINE (RESKIN-01-06): bg-green-500 → bg-practice-correct (practice token)
     render(<MiniFlipCard card={makeCard({ mastery_status: 'mastered' })} />);
-    const dot = document.querySelector('.bg-green-500');
+    const dot = document.querySelector('.bg-practice-correct');
     expect(dot).toBeInTheDocument();
   });
 

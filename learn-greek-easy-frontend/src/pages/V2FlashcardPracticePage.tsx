@@ -209,7 +209,7 @@ export function V2FlashcardPracticePage() {
   // ============================================
   if (isLoading) {
     return (
-      <div className="flex min-h-screen flex-col bg-[var(--practice-bg)]">
+      <div className="flex min-h-screen flex-col bg-practice-bg">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="w-24" />
           <div className="flex items-center gap-2">
@@ -229,7 +229,7 @@ export function V2FlashcardPracticePage() {
   // ============================================
   if (error) {
     return (
-      <div className="flex min-h-screen flex-col bg-[var(--practice-bg)]">
+      <div className="flex min-h-screen flex-col bg-practice-bg">
         <PracticeHeader
           onExit={() => backToDeck()}
           exitLabel="Exit"
@@ -268,7 +268,7 @@ export function V2FlashcardPracticePage() {
   // ============================================
   if (!isLoading && !error && queue.length === 0 && !sessionSummary) {
     return (
-      <div className="flex min-h-screen flex-col bg-[var(--practice-bg)]">
+      <div className="flex min-h-screen flex-col bg-practice-bg">
         <PracticeHeader
           onExit={() => backToDeck()}
           exitLabel="Exit"
@@ -281,7 +281,7 @@ export function V2FlashcardPracticePage() {
           }
         />
         <div className="mx-auto w-full max-w-lg px-4 py-12 text-center">
-          <CheckCircle2 className="mx-auto mb-4 h-16 w-16 text-green-500" />
+          <CheckCircle2 className="mx-auto mb-4 h-16 w-16 text-practice-correct" />
           <h2 className="mb-2 text-2xl font-bold">{t('v2Practice.allCaughtUp')}</h2>
           <p className="mb-6 text-muted-foreground">{t('v2Practice.allCaughtUpDescription')}</p>
           <Button onClick={backToDeck}>{t('v2Practice.backToDeck')}</Button>
@@ -295,7 +295,7 @@ export function V2FlashcardPracticePage() {
   // ============================================
   if (sessionSummary) {
     return (
-      <div className="flex min-h-screen flex-col bg-[var(--practice-bg)]">
+      <div className="flex min-h-screen flex-col bg-practice-bg">
         <PracticeHeader
           onExit={() => backToDeck()}
           exitLabel="Exit"
@@ -381,7 +381,7 @@ export function V2FlashcardPracticePage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-[var(--practice-bg)]">
+    <div className="flex min-h-screen flex-col bg-practice-bg">
       {/* Top bar */}
       <PracticeHeader
         onExit={() => backToDeck()}
