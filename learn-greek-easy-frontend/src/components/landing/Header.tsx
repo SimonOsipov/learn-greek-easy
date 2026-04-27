@@ -21,7 +21,7 @@ const Header = () => {
   return (
     <header
       data-testid="landing-header"
-      className="fixed left-0 right-0 top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-lg"
+      className="fixed left-0 right-0 top-0 z-50 border-b border-[hsl(var(--landing-navy))]/15 bg-[hsl(var(--landing-navy))]/80 backdrop-blur-lg motion-safe:animate-landing-fade-in dark:border-[hsl(var(--landing-navy))]/25"
     >
       <div className="relative flex h-16 w-full items-center justify-between px-6">
         <a
@@ -33,8 +33,8 @@ const Header = () => {
           className="flex items-center gap-2 text-left transition-opacity hover:opacity-80"
           aria-label={t('header.logoAriaLabel')}
         >
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <span className="text-sm font-bold text-primary-foreground">G</span>
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[hsl(var(--landing-greek-blue))]">
+            <span className="text-sm font-bold text-white">G</span>
           </div>
           <span className="text-lg font-semibold text-foreground">{t('header.brandName')}</span>
         </a>

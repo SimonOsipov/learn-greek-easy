@@ -14,7 +14,7 @@ const Hero = () => {
       className="relative flex min-h-[50vh] items-center justify-center overflow-hidden"
     >
       {/* Full-screen background image */}
-      <div className="absolute inset-0">
+      <div className="absolute inset-0 motion-safe:animate-landing-fade-in">
         <img
           src={heroImage}
           alt={t('hero.heroImageAlt')}
@@ -22,16 +22,18 @@ const Hero = () => {
           className="h-full w-full object-cover"
         />
         {/* Dark overlay for text readability */}
-        <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/60 to-background" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[hsl(var(--landing-navy))]/80 via-[hsl(var(--landing-navy))]/60 to-[hsl(var(--landing-navy))]" />
       </div>
 
       {/* Content */}
       <div className="container relative z-10 mx-auto px-6 py-32 md:py-40">
         <div className="mx-auto max-w-6xl text-center">
           {/* Badge */}
-          <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-background/90 px-5 py-2.5 backdrop-blur-sm [animation-delay:0.1s] motion-safe:animate-fade-up">
-            <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-primary" />
-            <span className="text-base font-medium text-primary">{t('hero.badge')}</span>
+          <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-[hsl(var(--landing-greek-blue))]/20 bg-[hsl(var(--landing-navy))]/90 px-5 py-2.5 backdrop-blur-sm [animation-delay:0.1s] motion-safe:animate-fade-up">
+            <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-[hsl(var(--landing-gold))]" />
+            <span className="text-base font-medium text-[hsl(var(--landing-greek-blue))]">
+              {t('hero.badge')}
+            </span>
           </div>
 
           {/* Headline */}
@@ -39,7 +41,10 @@ const Hero = () => {
             className="mb-10 text-balance text-6xl font-bold leading-[1.05] tracking-tight text-foreground [animation-delay:0.2s] motion-safe:animate-fade-up sm:text-7xl md:text-8xl lg:text-9xl"
             data-testid="hero-title"
           >
-            {t('hero.title')} <span className="text-primary">{t('hero.titleHighlight')}</span>
+            {t('hero.title')}{' '}
+            <span className="text-[hsl(var(--landing-greek-blue))]">
+              {t('hero.titleHighlight')}
+            </span>
           </h1>
 
           {/* Subheadline */}
