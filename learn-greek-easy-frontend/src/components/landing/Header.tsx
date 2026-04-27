@@ -21,7 +21,7 @@ const Header = () => {
   return (
     <header
       data-testid="landing-header"
-      className="fixed left-0 right-0 top-0 z-50 border-b border-[hsl(var(--landing-navy))]/15 bg-[hsl(var(--landing-navy))]/80 backdrop-blur-lg motion-safe:animate-landing-fade-in dark:border-[hsl(var(--landing-navy))]/25"
+      className="fixed left-0 right-0 top-0 z-50 border-b border-landing-header-bg/15 bg-landing-header-bg/80 shadow-nav backdrop-blur-lg motion-safe:animate-landing-fade-in"
     >
       <div className="relative flex h-16 w-full items-center justify-between px-6">
         <a
@@ -33,10 +33,10 @@ const Header = () => {
           className="flex items-center gap-2 text-left transition-opacity hover:opacity-80"
           aria-label={t('header.logoAriaLabel')}
         >
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[hsl(var(--landing-greek-blue))]">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-landing-greek-blue">
             <span className="text-sm font-bold text-white">G</span>
           </div>
-          <span className="text-lg font-semibold text-[hsl(var(--landing-greek-blue-light))]">
+          <span className="text-lg font-semibold text-landing-header-fg">
             {t('header.brandName')}
           </span>
         </a>
@@ -49,7 +49,7 @@ const Header = () => {
             <a
               key={link.href}
               href={link.href}
-              className="text-lg text-[hsl(var(--landing-greek-blue-light))]/80 transition-colors hover:text-[hsl(var(--landing-greek-blue-light))]"
+              className="text-lg text-landing-header-fg/80 transition-colors hover:text-landing-header-fg"
             >
               {t(link.labelKey)}
             </a>
@@ -79,7 +79,7 @@ const Header = () => {
                     key={link.href}
                     href={link.href}
                     onClick={() => setOpen(false)}
-                    className="text-lg text-[hsl(var(--landing-greek-blue-light))]/80 transition-colors hover:text-[hsl(var(--landing-greek-blue-light))]"
+                    className="text-lg text-landing-header-fg/80 transition-colors hover:text-landing-header-fg"
                   >
                     {t(link.labelKey)}
                   </a>

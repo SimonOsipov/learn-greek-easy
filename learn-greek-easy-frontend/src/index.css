@@ -84,6 +84,9 @@
     --landing-greek-blue: 212 85% 37%;
     --landing-greek-blue-light: 212 85% 95%;
     --landing-gold: 45 93% 58%;
+    /* Header-specific tokens — do NOT flip in dark mode (header is always dark-navy chrome) */
+    --landing-header-bg: 240 27% 14%;
+    --landing-header-fg: 212 85% 95%;
     --landing-shadow-card: 0 0 0 1px hsl(var(--line)), 0 4px 12px hsl(240 27% 14% / 0.04);
     --landing-shadow-card-hover:
       0 0 0 1px hsl(var(--landing-greek-blue) / 0.2), 0 8px 24px hsl(240 27% 14% / 0.08);
@@ -181,6 +184,9 @@
     --landing-greek-blue: 212 85% 60%;
     --landing-greek-blue-light: 212 50% 20%;
     --landing-gold: 45 93% 68%;
+    /* Header-specific tokens — same as light; header does not invert */
+    --landing-header-bg: 240 27% 14%;
+    --landing-header-fg: 212 85% 95%;
     --landing-shadow-card: 0 0 0 1px hsl(var(--line)), 0 4px 12px hsl(0 0% 0% / 0.3);
     --landing-shadow-card-hover:
       0 0 0 1px hsl(var(--landing-greek-blue) / 0.3), 0 8px 24px hsl(0 0% 0% / 0.4);

@@ -74,6 +74,8 @@ export default {
   				"greek-blue": "hsl(var(--landing-greek-blue))",
   				"greek-blue-light": "hsl(var(--landing-greek-blue-light))",
   				gold: "hsl(var(--landing-gold))",
+  				"header-bg": "hsl(var(--landing-header-bg))",
+  				"header-fg": "hsl(var(--landing-header-fg))",
   			},
   			practice: {
   				accent: 'hsl(var(--practice-accent))',
