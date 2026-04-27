@@ -47,7 +47,7 @@ const WaitlistForm = ({ variant }: WaitlistFormProps) => {
 
   const isDark = variant === 'dark';
   const inputClasses = isDark
-    ? 'h-14 rounded-xl bg-white/10 border-white/30 text-white placeholder:text-white/60 focus:border-white'
+    ? 'h-14 rounded-xl bg-landing-header-fg/10 border-landing-header-fg/30 text-landing-header-fg placeholder:text-landing-header-fg/60 focus:border-landing-header-fg'
     : 'h-14 rounded-xl';
   const errorClasses = isDark ? 'text-red-300' : 'text-destructive';
 
@@ -78,7 +78,7 @@ const WaitlistForm = ({ variant }: WaitlistFormProps) => {
         disabled={isSubmitting}
         variant={isDark ? 'default' : 'hero'}
         size="xl"
-        className="border-0 text-white hover:brightness-95 focus-visible:ring-2 focus-visible:ring-[hsl(var(--landing-gold))]"
+        className="border-0 text-landing-header-fg hover:brightness-95 focus-visible:ring-2 focus-visible:ring-landing-gold"
         style={{
           background:
             'linear-gradient(135deg, var(--gradient-brand-from), var(--gradient-brand-to))',

@@ -23,19 +23,19 @@ const FinalCTA = () => {
       />
 
       {/* Dark Overlay */}
-      <div className="absolute inset-0 bg-black/70" />
+      <div className="absolute inset-0 bg-landing-header-bg/70" />
 
       <div className="container relative z-10 mx-auto px-6">
         <div className="mx-auto max-w-2xl text-center">
           <h2
-            className="mb-6 text-3xl font-bold text-white motion-safe:animate-fade-up md:text-4xl lg:text-5xl"
+            className="mb-6 text-3xl font-bold text-landing-header-fg motion-safe:animate-fade-up md:text-4xl lg:text-5xl"
             style={{ animationDelay: '0.1s' }}
           >
             {t('finalCta.title')}
           </h2>
 
           <p
-            className="mb-10 text-lg text-white/80 motion-safe:animate-fade-up"
+            className="mb-10 text-lg text-landing-header-fg/80 motion-safe:animate-fade-up"
             style={{ animationDelay: '0.2s' }}
           >
             {t('finalCta.subtitle')}

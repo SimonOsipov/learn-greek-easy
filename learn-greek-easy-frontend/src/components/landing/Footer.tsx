@@ -13,7 +13,7 @@ const Footer = () => {
           {/* Logo */}
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[hsl(var(--landing-greek-blue))]">
-              <span className="text-sm font-bold text-white">G</span>
+              <span className="text-sm font-bold text-landing-header-fg">G</span>
             </div>
             <span className="font-semibold text-[hsl(var(--landing-greek-blue-light))]">
               {t('footer.brandName')}
