@@ -28,7 +28,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user, onAvatarClic
     switch (user.role) {
       case 'admin':
         return (
-          <Badge variant="destructive" className="flex items-center gap-1">
+          <Badge className="flex items-center gap-1 border-transparent bg-accent text-accent-foreground hover:bg-accent/90">
             <Shield className="h-3 w-3" />
             {t('header.roles.admin')}
           </Badge>

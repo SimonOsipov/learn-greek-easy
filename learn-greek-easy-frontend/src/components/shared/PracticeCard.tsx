@@ -136,7 +136,7 @@ const SRS_BUTTONS = [
     key: 'hard',
     rating: 2,
     i18nKey: 'practice.hard',
-    color: 'bg-practice-incorrect-soft',
+    color: 'bg-practice-gold',
     testId: 'srs-button-hard',
   },
   {
