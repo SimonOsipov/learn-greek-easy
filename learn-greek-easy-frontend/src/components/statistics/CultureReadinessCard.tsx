@@ -12,10 +12,10 @@ import { useTrackEvent } from '@/hooks/useTrackEvent';
 import { cn } from '@/lib/utils';
 
 const verdictColorMap: Record<string, { text: string; stroke: string }> = {
-  not_ready: { text: 'text-red-500', stroke: 'stroke-red-500' },
-  getting_there: { text: 'text-orange-500', stroke: 'stroke-orange-500' },
-  ready: { text: 'text-green-500', stroke: 'stroke-green-500' },
-  thoroughly_prepared: { text: 'text-emerald-500', stroke: 'stroke-emerald-500' },
+  not_ready: { text: 'text-danger', stroke: 'stroke-danger' },
+  getting_there: { text: 'text-warning', stroke: 'stroke-warning' },
+  ready: { text: 'text-success', stroke: 'stroke-success' },
+  thoroughly_prepared: { text: 'text-success', stroke: 'stroke-success' },
 };
 
 interface CultureReadinessCardProps {
@@ -67,7 +67,7 @@ export function CultureReadinessCard({ className }: CultureReadinessCardProps) {
           <CardTitle>{t('cultureReadiness.title')}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex h-[200px] items-center justify-center text-red-600">
+          <div className="flex h-[200px] items-center justify-center text-danger">
             {t('error.loadingData', { error: (error as Error)?.message ?? '' })}
           </div>
         </CardContent>

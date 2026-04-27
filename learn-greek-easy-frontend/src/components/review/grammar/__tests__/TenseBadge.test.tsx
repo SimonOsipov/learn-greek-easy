@@ -162,8 +162,8 @@ describe('TenseBadge', () => {
       render(<TenseBadge tense="subjunctive" />);
 
       const badge = screen.getByTestId('tense-badge');
-      expect(badge).toHaveClass('bg-gray-100');
-      expect(badge).toHaveClass('text-gray-600');
+      expect(badge).toHaveClass('bg-muted');
+      expect(badge).toHaveClass('text-muted-foreground');
     });
 
     it('should display raw tense value for unknown tenses', () => {

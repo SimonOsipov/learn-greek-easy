@@ -86,11 +86,11 @@ export function UpgradePage() {
   if (error) {
     return (
       <div className="flex min-h-[400px] items-center justify-center px-4">
-        <div className="w-full max-w-sm rounded-xl border border-gray-200 bg-white p-8 text-center shadow-sm dark:border-gray-700 dark:bg-gray-800">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/50">
-            <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
+        <div className="w-full max-w-sm rounded-xl border border-line bg-card p-8 text-center shadow-sm">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-danger/15">
+            <AlertTriangle className="h-6 w-6 text-danger" />
           </div>
-          <p className="mb-6 text-gray-700 dark:text-gray-300">{t('error.title')}</p>
+          <p className="mb-6 text-fg2">{t('error.title')}</p>
           <Button
             onClick={() => {
               fetchStatus();
@@ -107,14 +107,12 @@ export function UpgradePage() {
   if (billingStatus?.is_premium && billingStatus.subscription_status === 'active') {
     return (
       <div className="flex min-h-[400px] items-center justify-center px-4">
-        <div className="w-full max-w-sm rounded-xl border border-gray-200 bg-white p-8 text-center shadow-sm dark:border-gray-700 dark:bg-gray-800">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/50">
+        <div className="w-full max-w-sm rounded-xl border border-line bg-card p-8 text-center shadow-sm">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-warning/15">
             <Crown className="h-6 w-6 text-amber-600 dark:text-amber-400" />
           </div>
-          <h2 className="mb-2 text-xl font-semibold text-gray-900 dark:text-white">
-            {t('alreadyPremium.title')}
-          </h2>
-          <p className="text-gray-500 dark:text-gray-400">{t('alreadyPremium.description')}</p>
+          <h2 className="mb-2 text-xl font-semibold text-fg">{t('alreadyPremium.title')}</h2>
+          <p className="text-fg3">{t('alreadyPremium.description')}</p>
         </div>
       </div>
     );
@@ -126,7 +124,7 @@ export function UpgradePage() {
 
     if (subscription_status === 'trialing' && trial_days_remaining && trial_days_remaining > 0) {
       return (
-        <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+        <div className="mb-6 rounded-lg border border-primary/30 bg-primary/15 px-4 py-3 text-sm text-primary">
           {t('banner.trialActive', { days: trial_days_remaining })}
         </div>
       );
@@ -134,7 +132,7 @@ export function UpgradePage() {
 
     if (subscription_status === 'trialing' && trial_days_remaining === 0) {
       return (
-        <div className="mb-6 rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-800 dark:border-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
+        <div className="mb-6 rounded-lg border border-warning/30 bg-warning/15 px-4 py-3 text-sm text-warning">
           {t('banner.trialExpired')}
         </div>
       );
@@ -142,7 +140,7 @@ export function UpgradePage() {
 
     if (subscription_status === 'past_due') {
       return (
-        <div className="mb-6 rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-800 dark:border-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
+        <div className="mb-6 rounded-lg border border-warning/30 bg-warning/15 px-4 py-3 text-sm text-warning">
           {t('banner.pastDue')}
         </div>
       );
@@ -153,11 +151,7 @@ export function UpgradePage() {
 
   const pricingSection = (() => {
     if (!billingStatus || billingStatus.pricing.length === 0) {
-      return (
-        <p className="mb-12 text-center text-gray-500 dark:text-gray-400">
-          {t('pricing.unavailable')}
-        </p>
-      );
+      return <p className="mb-12 text-center text-fg3">{t('pricing.unavailable')}</p>;
     }
 
     return (
@@ -173,25 +167,23 @@ export function UpgradePage() {
             />
           ))}
         </div>
-        <p className="mb-12 mt-4 text-center text-xs text-gray-400 dark:text-gray-500">
-          {t('pricing.moneyBack')}
-        </p>
+        <p className="mb-12 mt-4 text-center text-xs text-fg3">{t('pricing.moneyBack')}</p>
       </>
     );
   })();
 
   const comparisonTable = (
-    <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700">
+    <div className="overflow-hidden rounded-xl border border-line">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50">
-            <th className="px-4 py-3 text-left font-medium text-gray-700 dark:text-gray-300">
+          <tr className="border-b border-line bg-bg-2">
+            <th className="px-4 py-3 text-left font-medium text-fg2">
               {t('comparison.featureColumn')}
             </th>
-            <th className="px-4 py-3 text-center font-medium text-gray-700 dark:text-gray-300">
+            <th className="px-4 py-3 text-center font-medium text-fg2">
               {t('comparison.freeColumn')}
             </th>
-            <th className="px-4 py-3 text-center font-medium text-gray-700 dark:text-gray-300">
+            <th className="px-4 py-3 text-center font-medium text-fg2">
               {t('comparison.premiumColumn')}
             </th>
           </tr>
@@ -200,31 +192,25 @@ export function UpgradePage() {
           {COMPARISON_FEATURES.map((feature, index) => (
             <tr
               key={feature.labelKey}
-              className={`border-b border-gray-100 dark:border-gray-700/50 ${
-                index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50/50 dark:bg-gray-800/50'
-              }`}
+              className={`border-b border-line ${index % 2 === 0 ? 'bg-card' : 'bg-bg-2'}`}
             >
-              <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{t(feature.labelKey)}</td>
+              <td className="px-4 py-3 text-fg2">{t(feature.labelKey)}</td>
               <td className="px-4 py-3 text-center">
                 {typeof feature.free === 'string' ? (
-                  <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                    {t(feature.free)}
-                  </span>
+                  <span className="text-xs font-medium text-fg3">{t(feature.free)}</span>
                 ) : feature.free ? (
-                  <Check className="mx-auto h-4 w-4 text-green-500" />
+                  <Check className="mx-auto h-4 w-4 text-success" />
                 ) : (
-                  <X className="mx-auto h-4 w-4 text-gray-300 dark:text-gray-600" />
+                  <X className="mx-auto h-4 w-4 text-fg3" />
                 )}
               </td>
               <td className="px-4 py-3 text-center">
                 {typeof feature.premium === 'string' ? (
-                  <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                    {t(feature.premium)}
-                  </span>
+                  <span className="text-xs font-medium text-fg3">{t(feature.premium)}</span>
                 ) : feature.premium ? (
-                  <Check className="mx-auto h-4 w-4 text-green-500" />
+                  <Check className="mx-auto h-4 w-4 text-success" />
                 ) : (
-                  <X className="mx-auto h-4 w-4 text-gray-300 dark:text-gray-600" />
+                  <X className="mx-auto h-4 w-4 text-fg3" />
                 )}
               </td>
             </tr>
@@ -237,16 +223,14 @@ export function UpgradePage() {
   return (
     <div className="mx-auto px-4 py-8">
       <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('page.title')}</h1>
-        <p className="mt-2 text-gray-500 dark:text-gray-400">{t('page.subtitle')}</p>
+        <h1 className="text-3xl font-bold text-fg">{t('page.title')}</h1>
+        <p className="mt-2 text-fg3">{t('page.subtitle')}</p>
       </div>
 
       {banner}
 
       {pricingSection}
-      <h2 className="mb-6 text-center text-2xl font-bold text-gray-900 dark:text-white">
-        {t('comparison.heading')}
-      </h2>
+      <h2 className="mb-6 text-center text-2xl font-bold text-fg">{t('comparison.heading')}</h2>
       {comparisonTable}
     </div>
   );

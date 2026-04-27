@@ -62,7 +62,7 @@ export const ProgressLineChart = React.forwardRef<HTMLDivElement, ProgressLineCh
             <CardDescription>{t('charts.progressOverTime.description')}</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex h-[200px] items-center justify-center text-red-600">
+            <div className="flex h-[200px] items-center justify-center text-destructive">
               {t('error.loadingData', { error })}
             </div>
           </CardContent>

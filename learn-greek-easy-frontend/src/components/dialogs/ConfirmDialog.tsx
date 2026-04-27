@@ -124,7 +124,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     <DialogContent className="sm:max-w-md">
       <DialogHeader>
         <DialogTitle
-          className={cn('flex items-center gap-2', variant === 'destructive' && 'text-red-600')}
+          className={cn('flex items-center gap-2', variant === 'destructive' && 'text-destructive')}
         >
           {icon || (variant === 'destructive' && <AlertTriangle className="h-5 w-5" />)}
           {title}

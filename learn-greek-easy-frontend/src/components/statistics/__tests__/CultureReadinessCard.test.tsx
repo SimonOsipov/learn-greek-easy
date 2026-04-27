@@ -53,10 +53,10 @@ describe('CultureReadinessCard', () => {
 
   it('applies correct verdict color classes for all 4 verdicts', () => {
     const verdicts = [
-      { verdict: 'not_ready', colorClass: 'text-red-500' },
-      { verdict: 'getting_there', colorClass: 'text-orange-500' },
-      { verdict: 'ready', colorClass: 'text-green-500' },
-      { verdict: 'thoroughly_prepared', colorClass: 'text-emerald-500' },
+      { verdict: 'not_ready', colorClass: 'text-danger' },
+      { verdict: 'getting_there', colorClass: 'text-warning' },
+      { verdict: 'ready', colorClass: 'text-success' },
+      { verdict: 'thoroughly_prepared', colorClass: 'text-success' },
     ] as const;
 
     for (const { verdict, colorClass } of verdicts) {

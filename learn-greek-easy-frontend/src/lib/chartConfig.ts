@@ -15,14 +15,14 @@ export const chartColors = {
   muted: 'hsl(var(--muted))',
 
   // 8-color palette for multi-series charts
-  chart1: '#3b82f6', // blue-500
-  chart2: '#10b981', // emerald-500
-  chart3: '#f59e0b', // amber-500
-  chart4: '#ef4444', // red-500
-  chart5: '#8b5cf6', // violet-500
-  chart6: '#06b6d4', // cyan-500
-  chart7: '#ec4899', // pink-500
-  chart8: '#84cc16', // lime-500
+  chart1: 'hsl(var(--chart-1))',
+  chart2: 'hsl(var(--chart-2))',
+  chart3: 'hsl(var(--chart-3))',
+  chart4: 'hsl(var(--chart-4))',
+  chart5: 'hsl(var(--chart-5))',
+  chart6: 'hsl(var(--chart-6))',
+  chart7: 'hsl(var(--chart-7))',
+  chart8: 'hsl(var(--chart-8))',
 
   // Grayscale for text and backgrounds
   gray50: '#f9fafb',

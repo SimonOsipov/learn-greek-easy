@@ -104,13 +104,13 @@ function calculateStrength(password: string): StrengthResult {
 
   if (score < 40) {
     level = 'weak';
-    colorClass = 'text-red-500';
+    colorClass = 'text-danger';
   } else if (score < 70) {
     level = 'fair';
-    colorClass = 'text-yellow-500';
+    colorClass = 'text-warning';
   } else {
     level = 'strong';
-    colorClass = 'text-green-500';
+    colorClass = 'text-success';
   }
 
   return { score, level, colorClass, requirements };
@@ -122,11 +122,11 @@ function calculateStrength(password: string): StrengthResult {
 function getProgressColorClass(level: 'weak' | 'fair' | 'strong'): string {
   switch (level) {
     case 'weak':
-      return '[&>div]:bg-red-500';
+      return '[&>div]:bg-danger';
     case 'fair':
-      return '[&>div]:bg-yellow-500';
+      return '[&>div]:bg-warning';
     case 'strong':
-      return '[&>div]:bg-green-500';
+      return '[&>div]:bg-success';
   }
 }
 
@@ -138,11 +138,11 @@ interface RequirementItemProps {
 const RequirementItem: React.FC<RequirementItemProps> = ({ met, label }) => (
   <li className="flex items-center gap-1.5 text-xs">
     {met ? (
-      <Check className="h-3 w-3 shrink-0 text-green-500" />
+      <Check className="h-3 w-3 shrink-0 text-success" />
     ) : (
       <X className="h-3 w-3 shrink-0 text-muted-foreground" />
     )}
-    <span className={met ? 'text-green-500' : 'text-muted-foreground'}>{label}</span>
+    <span className={met ? 'text-success' : 'text-muted-foreground'}>{label}</span>
   </li>
 );
 

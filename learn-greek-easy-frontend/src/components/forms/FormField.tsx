@@ -72,7 +72,7 @@ export function FormField({
     <div className={cn('space-y-2', className)}>
       <Label htmlFor={name} className="flex items-center gap-1">
         {label}
-        {required && <span className="text-red-500">*</span>}
+        {required && <span className="text-destructive">*</span>}
       </Label>
 
       <Input
@@ -90,7 +90,7 @@ export function FormField({
         aria-describedby={hasError ? `${name}-error` : helperText ? `${name}-helper` : undefined}
         className={cn(
           'text-base', // Prevent iOS zoom
-          hasError && 'border-red-500 focus-visible:ring-red-500'
+          hasError && 'border-destructive focus-visible:ring-destructive'
         )}
       />
 
@@ -101,7 +101,7 @@ export function FormField({
       )}
 
       {error && (
-        <p id={`${name}-error`} className="flex items-center gap-1 text-sm text-red-600">
+        <p id={`${name}-error`} className="flex items-center gap-1 text-sm text-destructive">
           <AlertCircle className="h-4 w-4" />
           {error}
         </p>

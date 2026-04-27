@@ -100,7 +100,7 @@ export const Callback: React.FC = () => {
             <div className="mb-4">
               <span className="text-4xl">⚠️</span>
             </div>
-            <CardTitle className="text-2xl font-bold text-red-600">
+            <CardTitle className="text-2xl font-bold text-destructive">
               {t('callback.error.title', 'Authentication Failed')}
             </CardTitle>
             <CardDescription>
@@ -110,7 +110,7 @@ export const Callback: React.FC = () => {
 
           <CardContent>
             <div
-              className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-600"
+              className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
               role="alert"
             >
               {error}

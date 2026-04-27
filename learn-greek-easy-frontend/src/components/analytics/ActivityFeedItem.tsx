@@ -53,9 +53,9 @@ export const ActivityFeedItem: React.FC<ActivityFeedItemProps> = ({ activity }) 
    * - Red: <60% (needs attention)
    */
   const getAccuracyColor = (accuracy: number): string => {
-    if (accuracy >= 80) return 'text-green-600 dark:text-green-400';
-    if (accuracy >= 60) return 'text-yellow-600 dark:text-yellow-400';
-    return 'text-red-600 dark:text-red-400';
+    if (accuracy >= 80) return 'text-success';
+    if (accuracy >= 60) return 'text-warning';
+    return 'text-danger';
   };
 
   /**

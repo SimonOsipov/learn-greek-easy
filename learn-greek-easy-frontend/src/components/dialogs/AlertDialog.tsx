@@ -47,19 +47,19 @@ export interface AlertDialogProps {
 const VARIANT_CONFIG = {
   info: {
     icon: Info,
-    color: 'text-blue-600',
+    color: 'text-primary',
   },
   warning: {
     icon: AlertTriangle,
-    color: 'text-yellow-600',
+    color: 'text-warning',
   },
   error: {
     icon: AlertCircle,
-    color: 'text-red-600',
+    color: 'text-destructive',
   },
   success: {
     icon: CheckCircle,
-    color: 'text-green-600',
+    color: 'text-success',
   },
 };
 

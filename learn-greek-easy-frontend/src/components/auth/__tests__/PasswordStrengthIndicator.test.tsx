@@ -81,7 +81,7 @@ describe('PasswordStrengthIndicator', () => {
       expect(items).toHaveLength(5);
       items.forEach((item) => {
         const span = item.querySelector('span');
-        expect(span).toHaveClass('text-green-500');
+        expect(span).toHaveClass('text-success');
       });
     });
 
@@ -94,7 +94,7 @@ describe('PasswordStrengthIndicator', () => {
       // minLength: not met (abc < 8)
       expect(items[0].querySelector('span')).toHaveClass('text-muted-foreground');
       // hasLowercase: met
-      expect(items[1].querySelector('span')).toHaveClass('text-green-500');
+      expect(items[1].querySelector('span')).toHaveClass('text-success');
       // hasUppercase: not met
       expect(items[2].querySelector('span')).toHaveClass('text-muted-foreground');
       // hasNumber: not met
@@ -124,7 +124,7 @@ describe('PasswordStrengthIndicator', () => {
 
       expect(screen.getByText('Weak')).toBeInTheDocument();
       const weakSpan = screen.getByText('Weak');
-      expect(weakSpan).toHaveClass('text-red-500');
+      expect(weakSpan).toHaveClass('text-danger');
     });
 
     it('shows fair strength for a password meeting 2-3 requirements', () => {
@@ -133,7 +133,7 @@ describe('PasswordStrengthIndicator', () => {
 
       expect(screen.getByText('Fair')).toBeInTheDocument();
       const fairSpan = screen.getByText('Fair');
-      expect(fairSpan).toHaveClass('text-yellow-500');
+      expect(fairSpan).toHaveClass('text-warning');
     });
 
     it('shows strong strength for a fully complex password', () => {
@@ -142,7 +142,7 @@ describe('PasswordStrengthIndicator', () => {
 
       expect(screen.getByText('Strong')).toBeInTheDocument();
       const strongSpan = screen.getByText('Strong');
-      expect(strongSpan).toHaveClass('text-green-500');
+      expect(strongSpan).toHaveClass('text-success');
     });
 
     it('shows strength label text when password is non-empty', () => {

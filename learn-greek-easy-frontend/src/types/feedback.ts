@@ -147,8 +147,8 @@ export interface StatusConfig {
 export const STATUS_CONFIG: Record<FeedbackStatus, StatusConfig> = {
   new: {
     label: 'New',
-    color: 'text-gray-700 dark:text-gray-300',
-    bgColor: 'bg-gray-100 dark:bg-gray-800',
+    color: 'text-fg2',
+    bgColor: 'bg-muted',
   },
   under_review: {
     label: 'Under Review',

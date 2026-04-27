@@ -41,8 +41,8 @@ const TENSE_CONFIG: Record<KnownTense, { bgClass: string; textClass: string }> =
 
 // Default styling for unknown tenses
 const DEFAULT_CONFIG = {
-  bgClass: 'bg-gray-100 dark:bg-gray-800',
-  textClass: 'text-gray-600 dark:text-gray-300',
+  bgClass: 'bg-muted',
+  textClass: 'text-muted-foreground',
 };
 
 function isKnownTense(tense: string): tense is KnownTense {

@@ -42,12 +42,12 @@ describe('chartConfig', () => {
       expect(chartColors.chart8).toBeDefined();
     });
 
-    it('should have chart palette colors as hex values', () => {
-      const hexRegex = /^#[0-9A-Fa-f]{6}$/;
-      expect(chartColors.chart1).toMatch(hexRegex);
-      expect(chartColors.chart2).toMatch(hexRegex);
-      expect(chartColors.chart3).toMatch(hexRegex);
-      expect(chartColors.chart4).toMatch(hexRegex);
+    it('should have chart palette colors as CSS custom property values', () => {
+      const hslVarRegex = /^hsl\(var\(--chart-\d+\)\)$/;
+      expect(chartColors.chart1).toMatch(hslVarRegex);
+      expect(chartColors.chart2).toMatch(hslVarRegex);
+      expect(chartColors.chart3).toMatch(hslVarRegex);
+      expect(chartColors.chart4).toMatch(hslVarRegex);
     });
 
     it('should have complete grayscale palette', () => {
@@ -193,7 +193,7 @@ describe('chartConfig', () => {
 
     it('should have all binary colors from chart palette', () => {
       colorSchemes.binary.forEach((color) => {
-        expect(color).toMatch(/^#[0-9A-Fa-f]{6}$/);
+        expect(color).toMatch(/^hsl\(var\(--chart-\d+\)\)$/);
       });
     });
 
@@ -314,8 +314,8 @@ describe('chartConfig', () => {
       // HSL colors should have proper format
       expect(chartColors.primary).toMatch(/hsl\(var\(--[a-z-]+\)\)/);
 
-      // Hex colors should have proper format
-      expect(chartColors.chart1).toMatch(/^#[0-9A-Fa-f]{6}$/);
+      // Chart palette uses CSS custom property tokens
+      expect(chartColors.chart1).toMatch(/^hsl\(var\(--chart-\d+\)\)$/);
     });
 
     it('should have responsive breakpoints in ascending order', () => {

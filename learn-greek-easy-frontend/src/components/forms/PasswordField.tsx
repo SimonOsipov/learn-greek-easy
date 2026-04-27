@@ -102,7 +102,7 @@ export function PasswordField({
     <div className={cn('space-y-2', className)}>
       <Label htmlFor={name} className="flex items-center gap-1">
         {label}
-        {required && <span className="text-red-500">*</span>}
+        {required && <span className="text-destructive">*</span>}
       </Label>
 
       <div className="relative">
@@ -119,7 +119,10 @@ export function PasswordField({
           aria-invalid={hasError}
           aria-describedby={hasError ? `${name}-error` : undefined}
           data-testid={testId}
-          className={cn('pr-10 text-base', hasError && 'border-red-500 focus-visible:ring-red-500')}
+          className={cn(
+            'pr-10 text-base',
+            hasError && 'border-destructive focus-visible:ring-destructive'
+          )}
         />
 
         <Button
@@ -160,7 +163,7 @@ export function PasswordField({
       )}
 
       {error && (
-        <p id={`${name}-error`} className="flex items-center gap-1 text-sm text-red-600">
+        <p id={`${name}-error`} className="flex items-center gap-1 text-sm text-destructive">
           <AlertCircle className="h-4 w-4" />
           {error}
         </p>

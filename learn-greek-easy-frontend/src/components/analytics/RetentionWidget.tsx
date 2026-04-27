@@ -33,22 +33,22 @@ interface RetentionColors {
 const getRetentionColor = (rate: number): RetentionColors => {
   if (rate >= 80) {
     return {
-      text: 'text-green-600 dark:text-green-400',
-      bg: 'bg-green-100 dark:bg-green-900/50',
-      icon: 'text-green-600 dark:text-green-400',
+      text: 'text-success',
+      bg: 'bg-success/15',
+      icon: 'text-success',
     };
   }
   if (rate >= 60) {
     return {
-      text: 'text-yellow-600 dark:text-yellow-400',
-      bg: 'bg-yellow-100 dark:bg-yellow-900/50',
-      icon: 'text-yellow-600 dark:text-yellow-400',
+      text: 'text-warning',
+      bg: 'bg-warning/15',
+      icon: 'text-warning',
     };
   }
   return {
-    text: 'text-red-600 dark:text-red-400',
-    bg: 'bg-red-100 dark:bg-red-900/50',
-    icon: 'text-red-600 dark:text-red-400',
+    text: 'text-danger',
+    bg: 'bg-danger/15',
+    icon: 'text-danger',
   };
 };
 
