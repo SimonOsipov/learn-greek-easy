@@ -108,24 +108,15 @@ describe('DeckCard', () => {
       expect(premiumBadge).not.toBeInTheDocument();
     });
 
-    it('should render premium badge with dot+opacity styling', () => {
+    it('should render premium badge with b-violet badge styling', () => {
       const deck = createMockDeck({ isPremium: true });
 
       renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
 
-      // Find the premium text
-      const premiumText = screen.getByText(/premium/i);
-      expect(premiumText.className).toContain('text-purple-700');
-
-      // Check the wrapper has dot+opacity styling
-      const wrapper = premiumText.parentElement!;
-      expect(wrapper.className).toContain('bg-purple-500/20');
-      expect(wrapper.className).toContain('border-purple-500/30');
-
-      // Check the dot is present
-      const dot = wrapper.querySelector('.rounded-full');
-      expect(dot).toBeInTheDocument();
-      expect(dot!.className).toContain('bg-purple-500');
+      // Find the premium badge span
+      const premiumBadge = screen.getByText(/premium/i);
+      expect(premiumBadge.className).toContain('badge');
+      expect(premiumBadge.className).toContain('b-violet');
     });
   });
 
@@ -180,7 +171,8 @@ describe('DeckCard', () => {
       // Overlay should be present with correct classes
       const overlay = screen.getByTestId('deck-card-locked-overlay');
       expect(overlay).toBeInTheDocument();
-      expect(overlay.className).toContain('bg-background/30');
+      // Overlay uses inline style (hsl(var(--card)/0.6)) + backdrop-blur-sm utility
+      expect(overlay.className).toContain('backdrop-blur-sm');
       expect(overlay.className).toContain('z-10');
       expect(overlay.className).toContain('pointer-events-none');
     });
@@ -375,7 +367,8 @@ describe('DeckCard', () => {
       renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
       const stripe = screen.getByTestId('deck-card-accent-stripe');
       expect(stripe).toBeInTheDocument();
-      expect(stripe.className).toContain('bg-green-500');
+      // A1 maps to bg-primary (token-based, no raw palette)
+      expect(stripe.className).toContain('bg-primary');
     });
 
     it('should render accent stripe with culture category color', () => {

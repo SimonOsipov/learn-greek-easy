@@ -10,8 +10,8 @@ import { DeckFilters } from '@/components/decks/DeckFilters';
 import type { DeckType } from '@/components/decks/DeckFilters';
 import { DecksGrid } from '@/components/decks/DecksGrid';
 import { EmptyState } from '@/components/feedback';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { reportAPIError } from '@/lib/errorReporting';
 import { useDeckStore } from '@/stores/deckStore';
@@ -64,26 +64,24 @@ export const DecksPage: React.FC = () => {
 
       {/* Error State */}
       {error && (
-        <Card className="mb-6 border-red-200 bg-red-50 p-4">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 flex-shrink-0 text-red-600" />
-            <div className="flex-1">
-              <h3 className="font-medium text-red-900">{t('list.errorLoading')}</h3>
-              <p className="mt-1 text-sm text-red-700">{error}</p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  clearError();
-                  fetchDecks();
-                }}
-                className="mt-3 border-red-300 text-red-700 hover:bg-red-100"
-              >
-                {t('list.tryAgain')}
-              </Button>
-            </div>
-          </div>
-        </Card>
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>{t('list.errorLoading')}</AlertTitle>
+          <AlertDescription>
+            {error}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                clearError();
+                fetchDecks();
+              }}
+              className="mt-3 block"
+            >
+              {t('list.tryAgain')}
+            </Button>
+          </AlertDescription>
+        </Alert>
       )}
 
       {/* Loading State */}

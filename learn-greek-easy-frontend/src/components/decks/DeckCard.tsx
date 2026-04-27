@@ -6,11 +6,10 @@ import { useTranslation } from 'react-i18next';
 import { CultureBadge, getCategoryColor, type CultureCategory } from '@/components/culture';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader } from '@/components/ui/card';
-import { CEFR_COLORS } from '@/lib/cefrColors';
 import { getDeckBackgroundStyle } from '@/lib/deckBackground';
 import { getLocalizedDeckName } from '@/lib/deckLocale';
 import { calculateCompletionPercentage } from '@/lib/progressUtils';
-import type { Deck } from '@/types/deck';
+import type { Deck, DeckLevel } from '@/types/deck';
 
 import { DeckBadge } from './DeckBadge';
 
@@ -27,6 +26,15 @@ export interface DeckCardProps {
   /** Callback when delete button is clicked */
   onDeleteClick?: () => void;
 }
+
+// Accent stripe: one documented token-based Tailwind class per CEFR level
+// Matches the badge color intent without raw palette classes.
+const CEFR_ACCENT_STRIPE: Record<DeckLevel, string> = {
+  A1: 'bg-primary',
+  A2: 'bg-accent',
+  B1: 'bg-warning',
+  B2: 'bg-success',
+};
 
 export const DeckCard: React.FC<DeckCardProps> = ({
   deck,
@@ -71,7 +79,6 @@ export const DeckCard: React.FC<DeckCardProps> = ({
     relative overflow-hidden group
     flex flex-col min-h-[170px]
     ${isClickable ? 'cursor-pointer transition-all duration-200 hover:shadow-lg' : ''}
-    ${isPremium && !isLocked ? 'border-amber-400 hover:border-amber-500' : ''}
     ${variant === 'list' ? 'flex flex-row items-center' : ''}
   `.trim();
 
@@ -79,7 +86,7 @@ export const DeckCard: React.FC<DeckCardProps> = ({
     if (isCultureDeck && cultureCategory) {
       return getCategoryColor(cultureCategory).dot;
     }
-    return CEFR_COLORS[level].bgColorLight;
+    return CEFR_ACCENT_STRIPE[level] ?? 'bg-primary';
   };
 
   return (
@@ -152,7 +159,7 @@ export const DeckCard: React.FC<DeckCardProps> = ({
 
           {isLocked && (
             <div className="flex-shrink-0">
-              <Crown className="h-4 w-4 text-amber-500" aria-label="Premium content" />
+              <Crown className="h-4 w-4 text-warning" aria-label="Premium content" />
             </div>
           )}
         </div>
@@ -171,19 +178,15 @@ export const DeckCard: React.FC<DeckCardProps> = ({
 
         {!isCultureDeck && <DeckBadge type="level" level={level} />}
 
-        {isPremium && (
-          <span className="inline-flex items-center gap-1.5 rounded-md border border-purple-500/30 bg-purple-500/20 px-2 py-1 text-xs font-medium">
-            <span className="h-2 w-2 flex-shrink-0 rounded-full bg-purple-500" aria-hidden="true" />
-            <span className="text-purple-700 dark:text-purple-300">{t('card.premium')}</span>
-          </span>
-        )}
+        {isPremium && <span className="badge b-violet">{t('card.premium')}</span>}
       </div>
 
       {/* Locked state overlay - indicates premium content */}
       {isLocked && (
         <div
           data-testid="deck-card-locked-overlay"
-          className="pointer-events-none absolute inset-0 z-10 bg-background/30"
+          className="pointer-events-none absolute inset-0 z-10 backdrop-blur-sm"
+          style={{ backgroundColor: 'hsl(var(--card) / 0.6)' }}
           aria-hidden="true"
         />
       )}
