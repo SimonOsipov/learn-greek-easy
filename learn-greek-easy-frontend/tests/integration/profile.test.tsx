@@ -80,21 +80,23 @@ describe('PreferencesSection', () => {
       // Verify daily goal card is rendered
       expect(screen.getByTestId('daily-goal-card')).toBeInTheDocument();
 
-      // Verify slider is rendered with correct attributes
-      const slider = screen.getByTestId('daily-goal-slider');
-      expect(slider).toBeInTheDocument();
-      expect(slider).toHaveAttribute('type', 'range');
-      expect(slider).toHaveAttribute('min', '5');
-      expect(slider).toHaveAttribute('max', '120');
-      expect(slider).toHaveAttribute('step', '5');
+      // Verify slider container is rendered
+      expect(screen.getByTestId('daily-goal-slider')).toBeInTheDocument();
+
+      // Radix UI Slider renders a thumb with role="slider" — verify range bounds via aria attrs
+      const thumb = screen.getByRole('slider');
+      expect(thumb).toBeInTheDocument();
+      expect(thumb).toHaveAttribute('aria-valuemin', '5');
+      expect(thumb).toHaveAttribute('aria-valuemax', '120');
     });
 
     it('should show initial value from props', () => {
       const user = createMockUser(45);
       render(<PreferencesSection user={user} />);
 
-      const slider = screen.getByTestId('daily-goal-slider');
-      expect(slider).toHaveValue('45');
+      // Radix UI Slider reports current value via aria-valuenow on the thumb
+      const thumb = screen.getByRole('slider');
+      expect(thumb).toHaveAttribute('aria-valuenow', '45');
 
       // Verify value is displayed in label
       expect(screen.getByTestId('daily-goal-value')).toHaveTextContent('45');
@@ -106,13 +108,14 @@ describe('PreferencesSection', () => {
       const user = createMockUser(20);
       render(<PreferencesSection user={user} />);
 
-      const slider = screen.getByTestId('daily-goal-slider');
+      const thumb = screen.getByRole('slider');
 
-      // Change slider value
-      fireEvent.change(slider, { target: { value: '30' } });
+      // Radix Slider responds to ArrowRight (step +5). Press twice: 20 → 25 → 30.
+      fireEvent.keyDown(thumb, { key: 'ArrowRight', code: 'ArrowRight' });
+      fireEvent.keyDown(thumb, { key: 'ArrowRight', code: 'ArrowRight' });
 
-      // Verify slider value updated
-      expect(slider).toHaveValue('30');
+      // Verify slider value updated via aria-valuenow
+      expect(thumb).toHaveAttribute('aria-valuenow', '30');
 
       // Verify label updated
       await waitFor(() => {
@@ -126,10 +129,11 @@ describe('PreferencesSection', () => {
 
       render(<PreferencesSection user={user} />);
 
-      const slider = screen.getByTestId('daily-goal-slider');
+      const thumb = screen.getByRole('slider');
 
-      // Change slider value
-      fireEvent.change(slider, { target: { value: '30' } });
+      // Press ArrowRight twice: 20 → 25 → 30
+      fireEvent.keyDown(thumb, { key: 'ArrowRight', code: 'ArrowRight' });
+      fireEvent.keyDown(thumb, { key: 'ArrowRight', code: 'ArrowRight' });
 
       // API should not be called immediately (debounced)
       expect(updateProfileSpy).not.toHaveBeenCalled();
@@ -162,10 +166,11 @@ describe('PreferencesSection', () => {
 
       render(<PreferencesSection user={user} />);
 
-      const slider = screen.getByTestId('daily-goal-slider');
+      const thumb = screen.getByRole('slider');
 
-      // Change slider value
-      fireEvent.change(slider, { target: { value: '30' } });
+      // Press ArrowRight twice: 20 → 25 → 30
+      fireEvent.keyDown(thumb, { key: 'ArrowRight', code: 'ArrowRight' });
+      fireEvent.keyDown(thumb, { key: 'ArrowRight', code: 'ArrowRight' });
 
       // Fast forward past debounce time
       await act(async () => {
@@ -194,10 +199,11 @@ describe('PreferencesSection', () => {
 
       render(<PreferencesSection user={user} />);
 
-      const slider = screen.getByTestId('daily-goal-slider');
+      const thumb = screen.getByRole('slider');
 
-      // Change slider value
-      fireEvent.change(slider, { target: { value: '30' } });
+      // Press ArrowRight twice: 20 → 25 → 30
+      fireEvent.keyDown(thumb, { key: 'ArrowRight', code: 'ArrowRight' });
+      fireEvent.keyDown(thumb, { key: 'ArrowRight', code: 'ArrowRight' });
 
       // Fast forward past debounce time
       await act(async () => {
@@ -251,31 +257,36 @@ describe('PreferencesSection', () => {
     });
 
     it('should update intensity label when slider changes', async () => {
-      const user = createMockUser(10); // Start with Light
+      const user = createMockUser(10); // Start with Light (10 min)
       render(<PreferencesSection user={user} />);
 
-      const slider = screen.getByTestId('daily-goal-slider');
+      const thumb = screen.getByRole('slider');
       let intensityLabel = screen.getByTestId('daily-goal-intensity');
 
-      // Initial: Light
+      // Initial: Light (10)
       expect(intensityLabel).toHaveTextContent(/light/i);
 
-      // Change to Moderate (20)
-      fireEvent.change(slider, { target: { value: '20' } });
+      // Change to Moderate: press ArrowRight twice to reach 20 (10→15→20)
+      fireEvent.keyDown(thumb, { key: 'ArrowRight', code: 'ArrowRight' });
+      fireEvent.keyDown(thumb, { key: 'ArrowRight', code: 'ArrowRight' });
       await waitFor(() => {
         intensityLabel = screen.getByTestId('daily-goal-intensity');
         expect(intensityLabel).toHaveTextContent(/moderate/i);
       });
 
-      // Change to Regular (45)
-      fireEvent.change(slider, { target: { value: '45' } });
+      // Change to Regular: press ArrowRight 5 more times to reach 45 (20→25→30→35→40→45)
+      for (let i = 0; i < 5; i++) {
+        fireEvent.keyDown(thumb, { key: 'ArrowRight', code: 'ArrowRight' });
+      }
       await waitFor(() => {
         intensityLabel = screen.getByTestId('daily-goal-intensity');
         expect(intensityLabel).toHaveTextContent(/regular/i);
       });
 
-      // Change to Intensive (90)
-      fireEvent.change(slider, { target: { value: '90' } });
+      // Change to Intensive: press ArrowRight 9 more times to reach 90 (45→...→90)
+      for (let i = 0; i < 9; i++) {
+        fireEvent.keyDown(thumb, { key: 'ArrowRight', code: 'ArrowRight' });
+      }
       await waitFor(() => {
         intensityLabel = screen.getByTestId('daily-goal-intensity');
         expect(intensityLabel).toHaveTextContent(/intensive/i);
@@ -288,8 +299,9 @@ describe('PreferencesSection', () => {
       const user = createMockUser(5);
       render(<PreferencesSection user={user} />);
 
-      const slider = screen.getByTestId('daily-goal-slider');
-      expect(slider).toHaveValue('5');
+      // Radix Slider reports value via aria-valuenow on the thumb
+      const thumb = screen.getByRole('slider');
+      expect(thumb).toHaveAttribute('aria-valuenow', '5');
       expect(screen.getByTestId('daily-goal-value')).toHaveTextContent('5');
     });
 
@@ -297,8 +309,8 @@ describe('PreferencesSection', () => {
       const user = createMockUser(120);
       render(<PreferencesSection user={user} />);
 
-      const slider = screen.getByTestId('daily-goal-slider');
-      expect(slider).toHaveValue('120');
+      const thumb = screen.getByRole('slider');
+      expect(thumb).toHaveAttribute('aria-valuenow', '120');
       expect(screen.getByTestId('daily-goal-value')).toHaveTextContent('120');
     });
   });
@@ -318,10 +330,11 @@ describe('PreferencesSection', () => {
 
       render(<PreferencesSection user={user} />);
 
-      const slider = screen.getByTestId('daily-goal-slider');
+      const thumb = screen.getByRole('slider');
 
-      // Change slider value
-      fireEvent.change(slider, { target: { value: '30' } });
+      // Press ArrowRight twice: 20 → 25 → 30
+      fireEvent.keyDown(thumb, { key: 'ArrowRight', code: 'ArrowRight' });
+      fireEvent.keyDown(thumb, { key: 'ArrowRight', code: 'ArrowRight' });
 
       // Fast forward past debounce time
       await act(async () => {

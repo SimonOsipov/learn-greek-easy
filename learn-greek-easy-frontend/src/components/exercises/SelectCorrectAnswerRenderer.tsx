@@ -54,13 +54,13 @@ export function SelectCorrectAnswerRenderer({
       if (index === feedbackState.correctIndex) {
         return cn(
           base,
-          'cursor-not-allowed border-[var(--practice-correct)] bg-[var(--practice-correct-soft)]'
+          'cursor-not-allowed border-[hsl(var(--practice-correct))] bg-[hsl(var(--practice-correct-soft))]'
         );
       }
       if (index === feedbackState.selectedIndex && index !== feedbackState.correctIndex) {
         return cn(
           base,
-          'cursor-not-allowed border-[var(--practice-incorrect)] bg-[var(--practice-incorrect-soft)]'
+          'cursor-not-allowed border-[hsl(var(--practice-incorrect))] bg-[hsl(var(--practice-incorrect-soft))]'
         );
       }
       return cn(base, 'cursor-not-allowed opacity-[0.35]');
