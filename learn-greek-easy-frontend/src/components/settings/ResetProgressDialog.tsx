@@ -67,8 +67,8 @@ export function ResetProgressDialog({ open, onOpenChange }: ResetProgressDialogP
       <DialogContent className="sm:max-w-[500px]" data-testid="reset-progress-modal">
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-red-600" />
-            <DialogTitle className="text-red-600" data-testid="reset-progress-title">
+            <AlertTriangle className="h-5 w-5 text-destructive" />
+            <DialogTitle className="text-destructive" data-testid="reset-progress-title">
               {t('danger.resetProgress.dialogTitle')}
             </DialogTitle>
           </div>
@@ -80,17 +80,17 @@ export function ResetProgressDialog({ open, onOpenChange }: ResetProgressDialogP
               <li>{t('danger.resetProgress.deleteItems.spacedRepetition')}</li>
               <li>{t('danger.resetProgress.deleteItems.streaks')}</li>
             </ul>
-            <p className="rounded-md bg-green-50 p-3 text-sm text-green-800 dark:bg-green-950 dark:text-green-200">
+            <p className="rounded-md bg-[hsl(var(--primary)/.08)] p-3 text-sm text-primary">
               <Check className="mr-2 inline-block h-4 w-4" />
               {t('danger.preserved')}
             </p>
-            <p className="font-medium text-red-600">{t('danger.cannotBeUndone')}</p>
+            <p className="font-medium text-destructive">{t('danger.cannotBeUndone')}</p>
           </DialogDescription>
         </DialogHeader>
 
         {error && (
           <div
-            className="rounded-md bg-red-50 p-3 text-sm text-red-600 dark:bg-red-950 dark:text-red-400"
+            className="rounded-md bg-destructive/10 p-3 text-sm text-destructive"
             data-testid="reset-error"
           >
             {error}

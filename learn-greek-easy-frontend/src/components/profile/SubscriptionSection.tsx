@@ -124,33 +124,33 @@ export const SubscriptionSection: React.FC = () => {
     switch (state) {
       case 'free':
         return (
-          <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+          <span className="badge b-gray inline-flex items-center rounded-full px-3 py-1 text-sm font-medium">
             {t('subscription.plans.free')}
           </span>
         );
       case 'trialing':
         return (
-          <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+          <span className="badge b-blue inline-flex items-center rounded-full px-3 py-1 text-sm font-medium">
             {t('subscription.plans.trial')}
           </span>
         );
       case 'active':
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-sm font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+          <span className="badge b-amber inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-medium">
             <Crown className="h-3.5 w-3.5" />
             {t('subscription.plans.premium')}
           </span>
         );
       case 'cancelled':
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-sm font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+          <span className="badge b-amber inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-medium">
             <Crown className="h-3.5 w-3.5" />
             {t('subscription.plans.cancelled')}
           </span>
         );
       case 'past_due':
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-sm font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+          <span className="badge b-amber inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-medium">
             <Crown className="h-3.5 w-3.5" />
             {t('subscription.plans.premium')}
           </span>
@@ -178,7 +178,7 @@ export const SubscriptionSection: React.FC = () => {
       {state === 'trialing' &&
         billingStatus.trial_days_remaining !== null &&
         billingStatus.trial_days_remaining > 0 && (
-          <div className="mb-4 flex items-center gap-2 rounded-lg border border-blue-300 bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+          <div className="mb-4 flex items-center gap-2 rounded-lg border border-primary/30 bg-[hsl(var(--primary)/.08)] px-4 py-3 text-sm text-primary">
             <Crown className="h-4 w-4 shrink-0" />
             <p>{t('subscription.trialDaysLeft', { count: billingStatus.trial_days_remaining })}</p>
           </div>
@@ -186,7 +186,7 @@ export const SubscriptionSection: React.FC = () => {
 
       {/* Past Due Warning Banner */}
       {state === 'past_due' && (
-        <div className="mb-4 flex items-center gap-2 rounded-lg border border-yellow-300 bg-yellow-50 px-4 py-3 text-sm text-yellow-800 dark:border-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
+        <div className="mb-4 flex items-center gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           <AlertTriangle className="h-4 w-4 shrink-0" />
           <p>{t('subscription.pastDueWarning')}</p>
         </div>

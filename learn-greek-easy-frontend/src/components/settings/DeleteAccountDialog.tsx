@@ -82,8 +82,8 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
       <DialogContent className="sm:max-w-[500px]" data-testid="delete-account-modal">
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-red-600" />
-            <DialogTitle className="text-red-600" data-testid="delete-account-title">
+            <AlertTriangle className="h-5 w-5 text-destructive" />
+            <DialogTitle className="text-destructive" data-testid="delete-account-title">
               {t('danger.deleteAccount.dialogTitle')}
             </DialogTitle>
           </div>
@@ -96,7 +96,9 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
               <li>{t('danger.deleteAccount.deleteItems.deckData')}</li>
               <li>{t('danger.deleteAccount.deleteItems.settings')}</li>
             </ul>
-            <p className="font-medium text-red-600">{t('danger.deleteAccount.permanentWarning')}</p>
+            <p className="font-medium text-destructive">
+              {t('danger.deleteAccount.permanentWarning')}
+            </p>
           </DialogDescription>
         </DialogHeader>
 
@@ -127,7 +129,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
 
         {error && (
           <div
-            className="rounded-md bg-red-50 p-3 text-sm text-red-600 dark:bg-red-950 dark:text-red-400"
+            className="rounded-md bg-destructive/10 p-3 text-sm text-destructive"
             data-testid="delete-error"
           >
             {error}

@@ -6,6 +6,8 @@ import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -84,7 +86,7 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <Globe className="h-5 w-5 text-blue-600" />
+              <Globe className="h-5 w-5 text-primary" />
               {t('preferences.language.title')}
             </CardTitle>
             <CardDescription>{t('preferences.language.description')}</CardDescription>
@@ -95,7 +97,7 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
                 onClick={() => handlePreferenceChange('language', 'en')}
                 className={`flex items-center justify-between rounded-lg border-2 p-4 transition-all ${
                   preferences.language === 'en'
-                    ? 'border-blue-600 bg-blue-50 dark:border-blue-400 dark:bg-blue-900/20'
+                    ? 'border-primary bg-primary/10'
                     : 'border-border hover:border-border/80 dark:hover:border-border/60'
                 }`}
               >
@@ -105,15 +107,13 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
                     {t('preferences.language.english')}
                   </span>
                 </div>
-                {preferences.language === 'en' && (
-                  <Check className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                )}
+                {preferences.language === 'en' && <Check className="h-5 w-5 text-primary" />}
               </button>
               <button
                 onClick={() => handlePreferenceChange('language', 'ru')}
                 className={`flex items-center justify-between rounded-lg border-2 p-4 transition-all ${
                   preferences.language === 'ru'
-                    ? 'border-blue-600 bg-blue-50 dark:border-blue-400 dark:bg-blue-900/20'
+                    ? 'border-primary bg-primary/10'
                     : 'border-border hover:border-border/80 dark:hover:border-border/60'
                 }`}
               >
@@ -123,9 +123,7 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
                     {t('preferences.language.russian')}
                   </span>
                 </div>
-                {preferences.language === 'ru' && (
-                  <Check className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                )}
+                {preferences.language === 'ru' && <Check className="h-5 w-5 text-primary" />}
               </button>
             </div>
           </CardContent>
@@ -135,7 +133,7 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
         <Card data-testid="daily-goal-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <Clock className="h-5 w-5 text-green-600" />
+              <Clock className="h-5 w-5 text-primary" />
               {t('preferences.dailyGoal.title')}
             </CardTitle>
             <CardDescription>{t('preferences.dailyGoal.description')}</CardDescription>
@@ -171,16 +169,15 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
               </div>
             </div>
             <div className="space-y-2">
-              <input
+              <Slider
                 id="dailyGoal"
-                type="range"
-                min="5"
-                max="120"
-                step="5"
-                value={preferences.dailyGoal}
-                onChange={(e) => handlePreferenceChange('dailyGoal', Number(e.target.value))}
-                className="w-full accent-green-600"
+                min={5}
+                max={120}
+                step={5}
+                value={[preferences.dailyGoal]}
+                onValueChange={(values) => handlePreferenceChange('dailyGoal', values[0])}
                 data-testid="daily-goal-slider"
+                aria-label={t('preferences.dailyGoal.title')}
               />
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>5 min</span>
@@ -197,7 +194,7 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <Bell className="h-5 w-5 text-purple-600" />
+              <Bell className="h-5 w-5 text-primary" />
               {t('preferences.notifications.title')}
             </CardTitle>
             <CardDescription>{t('preferences.notifications.description')}</CardDescription>
@@ -210,31 +207,19 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
                   {t('preferences.notifications.pushDescription')}
                 </p>
               </div>
-              <button
-                onClick={() => handlePreferenceChange('notifications', !preferences.notifications)}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 dark:focus:ring-offset-background ${
-                  preferences.notifications ? 'bg-purple-600' : 'bg-muted'
-                }`}
-                role="switch"
-                aria-checked={preferences.notifications}
+              <Switch
+                checked={preferences.notifications}
+                onCheckedChange={(checked) => handlePreferenceChange('notifications', checked)}
                 data-testid="notification-toggle"
-              >
-                <span className="sr-only">
-                  {t('preferences.notifications.enableNotifications')}
-                </span>
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    preferences.notifications ? 'translate-x-6' : 'translate-x-1'
-                  }`}
-                />
-              </button>
+                aria-label={t('preferences.notifications.enableNotifications')}
+              />
             </div>
             {preferences.notifications && (
-              <div className="mt-4 rounded-lg bg-purple-50 p-4 dark:bg-purple-900/20">
-                <p className="text-sm font-medium text-purple-900 dark:text-purple-100">
+              <div className="mt-4 rounded-lg bg-[hsl(var(--primary)/.08)] p-4">
+                <p className="text-sm font-medium text-primary">
                   {t('preferences.notifications.enabled')}
                 </p>
-                <p className="mt-1 text-sm text-purple-700 dark:text-purple-300">
+                <p className="mt-1 text-sm text-primary/70">
                   {t('preferences.notifications.enabledDescription')}
                 </p>
               </div>
@@ -246,7 +231,7 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
         <Card data-testid="theme-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <Palette className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+              <Palette className="h-5 w-5 text-accent" />
               {t('preferences.theme.title')}
             </CardTitle>
             <CardDescription>{t('preferences.theme.description')}</CardDescription>
@@ -258,7 +243,7 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
                 className={cn(
                   'flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-all',
                   currentTheme === 'light'
-                    ? 'border-purple-600 bg-purple-50 dark:border-purple-400 dark:bg-purple-900/20'
+                    ? 'border-primary bg-primary/10'
                     : 'border-border hover:border-border/80'
                 )}
                 data-testid="theme-option-light"
@@ -269,29 +254,25 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
                 <span className="text-sm font-medium text-foreground">
                   {t('preferences.theme.light')}
                 </span>
-                {currentTheme === 'light' && (
-                  <Check className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                )}
+                {currentTheme === 'light' && <Check className="h-4 w-4 text-primary" />}
               </button>
               <button
                 onClick={() => setTheme('dark', 'settings')}
                 className={cn(
                   'flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-all',
                   currentTheme === 'dark'
-                    ? 'border-purple-600 bg-purple-50 dark:border-purple-400 dark:bg-purple-900/20'
+                    ? 'border-primary bg-primary/10'
                     : 'border-border hover:border-border/80'
                 )}
                 data-testid="theme-option-dark"
               >
-                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gray-900 shadow-sm">
-                  <Moon className="h-6 w-6 text-blue-400" />
+                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted shadow-sm">
+                  <Moon className="h-6 w-6 text-accent" />
                 </div>
                 <span className="text-sm font-medium text-foreground">
                   {t('preferences.theme.dark')}
                 </span>
-                {currentTheme === 'dark' && (
-                  <Check className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                )}
+                {currentTheme === 'dark' && <Check className="h-4 w-4 text-primary" />}
               </button>
             </div>
           </CardContent>
@@ -303,7 +284,7 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
             className="flex items-center justify-center gap-2 text-sm text-muted-foreground"
             data-testid="preferences-saving"
           >
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-muted border-t-blue-600 dark:border-t-blue-400" />
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-muted border-t-primary" />
             {t('preferences.saving')}
           </div>
         )}
