@@ -2,7 +2,6 @@ import React from 'react';
 
 import { useTranslation } from 'react-i18next';
 
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { getDeckBackgroundStyle } from '@/lib/deckBackground';
@@ -13,12 +12,10 @@ interface DeckCardProps {
   onContinue?: () => void;
 }
 
-const statusVariants = {
-  'in-progress':
-    'bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/50',
-  completed:
-    'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/50',
-  'not-started': 'bg-muted text-muted-foreground hover:bg-muted/80',
+const statusBadgeClass: Record<string, string> = {
+  'in-progress': 'badge b-blue',
+  completed: 'badge b-green',
+  'not-started': 'badge b-gray',
 };
 
 export const DeckCard = React.memo<DeckCardProps>(({ deck, onContinue }) => {
@@ -35,6 +32,8 @@ export const DeckCard = React.memo<DeckCardProps>(({ deck, onContinue }) => {
     }
   };
 
+  const status = deck.status ?? 'not-started';
+
   return (
     <Card
       className="group transition-all hover:border-primary"
@@ -46,21 +45,21 @@ export const DeckCard = React.memo<DeckCardProps>(({ deck, onContinue }) => {
             <CardTitle className="text-lg">{deck.title}</CardTitle>
             <CardDescription className="text-foreground">{deck.description}</CardDescription>
           </div>
-          <Badge
-            className={`${statusVariants[deck.status ?? 'not-started']} flex-shrink-0 whitespace-nowrap`}
+          <span
+            className={`${statusBadgeClass[status] ?? 'badge b-gray'} flex-shrink-0 whitespace-nowrap`}
           >
-            {getStatusLabel(deck.status ?? 'not-started')}
-          </Badge>
+            {getStatusLabel(status)}
+          </span>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Action Button */}
         <Button
           variant="outline"
-          className="px-6 transition-colors group-hover:bg-primary group-hover:text-white"
+          className="px-6 transition-colors group-hover:bg-primary group-hover:text-primary-foreground"
           onClick={onContinue}
         >
-          {(deck.status ?? 'not-started') === 'not-started'
+          {status === 'not-started'
             ? t('card.actions.startLearning')
             : t('card.actions.continueLearning')}
         </Button>

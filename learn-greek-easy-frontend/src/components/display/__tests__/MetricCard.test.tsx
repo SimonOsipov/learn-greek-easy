@@ -35,18 +35,18 @@ describe('MetricCard', () => {
       expect(skeletons.length).toBeGreaterThan(0);
     });
 
-    it('should apply correct color class based on color prop', () => {
+    it('color prop is a no-op — value element uses .metric-value regardless of color', () => {
       const { rerender, container } = render(<MetricCard {...defaultProps} color="green" />);
-      expect(container.querySelector('.text-success')).toBeInTheDocument();
+      expect(container.querySelector('.metric-value')).toBeInTheDocument();
 
       rerender(<MetricCard {...defaultProps} color="orange" />);
-      expect(container.querySelector('.text-warning')).toBeInTheDocument();
+      expect(container.querySelector('.metric-value')).toBeInTheDocument();
 
       rerender(<MetricCard {...defaultProps} color="blue" />);
-      expect(container.querySelector('.text-info')).toBeInTheDocument();
+      expect(container.querySelector('.metric-value')).toBeInTheDocument();
 
       rerender(<MetricCard {...defaultProps} color="muted" />);
-      expect(container.querySelector('.text-muted-foreground')).toBeInTheDocument();
+      expect(container.querySelector('.metric-value')).toBeInTheDocument();
     });
   });
 
