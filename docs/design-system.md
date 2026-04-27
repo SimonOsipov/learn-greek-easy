@@ -112,7 +112,7 @@ Warmer / editorial. Don't mix with the glassy app palette.
 | `--landing-navy` | `240 27% 14%` | `240 27% 85%` |
 | `--landing-greek-blue` | `212 85% 37%` | `212 85% 60%` |
 | `--landing-greek-blue-light` | `212 85% 95%` | `212 50% 20%` |
-| `--landing-gold` | `45 93% 58%` | `45 93% 68%` |
+| `--landing-gold` | `34 100% 42%` | `34 100% 52%` (Cyprus-flag copper, Pantone 1385 / `#D57800` in light mode; +10% lightness in dark mode) |
 | `--landing-header-bg` | `240 27% 14%` | `240 27% 14%` (same — header is always dark-navy chrome) |
 | `--landing-header-fg` | `212 85% 95%` | `212 85% 95%` (same — near-white, theme-invariant) |
 | `--landing-shadow-card` | resting | (same form, dark RGB) |
