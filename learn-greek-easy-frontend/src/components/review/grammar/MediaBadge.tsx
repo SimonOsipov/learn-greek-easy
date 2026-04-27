@@ -40,23 +40,23 @@ const MEDIA_TYPE_CONFIG: Record<
   { bgClass: string; textClass: string; labelKey: string }
 > = {
   vocabulary: {
-    bgClass: 'bg-blue-500',
+    bgClass: 'bg-tense-4',
     textClass: 'text-white',
     labelKey: 'practice.meaningBadge',
   },
   sentence: {
-    bgClass: 'bg-teal-500',
+    bgClass: 'bg-tense-1',
     textClass: 'text-white',
     labelKey: 'practice.sentenceTranslationBadge',
   },
   plural: {
-    bgClass: 'bg-purple-500',
+    bgClass: 'bg-tense-5',
     textClass: 'text-white',
     labelKey: 'practice.pluralFormBadge',
   },
-  article: { bgClass: 'bg-amber-500', textClass: 'text-white', labelKey: 'practice.articleBadge' },
+  article: { bgClass: 'bg-tense-2', textClass: 'text-white', labelKey: 'practice.articleBadge' },
   grammar: {
-    bgClass: 'bg-emerald-500',
+    bgClass: 'bg-tense-1',
     textClass: 'text-white',
     labelKey: 'practice.grammarBadge',
   },

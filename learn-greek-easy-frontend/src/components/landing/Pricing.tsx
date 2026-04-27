@@ -21,11 +21,11 @@ interface Plan {
 }
 
 const FOUNDERS_COLORS = {
-  card: 'border-amber-400 bg-amber-50/50 dark:bg-amber-950/20',
-  badge: 'bg-amber-700',
-  iconBg: 'bg-amber-100 text-amber-700',
-  check: 'text-amber-500',
-  button: 'bg-amber-700 text-landing-header-fg hover:bg-amber-800',
+  card: 'border-founders-border bg-founders-surface/50',
+  badge: 'bg-founders-brand',
+  iconBg: 'bg-founders-soft text-founders-brand',
+  check: 'text-founders-accent',
+  button: 'bg-founders-brand text-landing-header-fg hover:bg-founders-brand-hover',
 } as const;
 
 const Pricing = () => {

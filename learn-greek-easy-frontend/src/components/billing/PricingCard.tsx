@@ -33,13 +33,13 @@ export function PricingCard({
     <div
       className={`relative flex flex-col overflow-visible rounded-xl border bg-white p-6 shadow-sm dark:bg-gray-800 ${
         isFeatured
-          ? 'border-amber-500 ring-2 ring-amber-500'
+          ? 'border-founders-accent ring-2 ring-founders-accent'
           : 'border-gray-200 dark:border-gray-700'
       }`}
     >
       {isFeatured && (
         <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-          <span className="whitespace-nowrap rounded-full bg-amber-500 px-3 py-1 text-xs font-semibold text-white">
+          <span className="whitespace-nowrap rounded-full bg-founders-accent px-3 py-1 text-xs font-semibold text-white">
             {t('pricing.mostPopular')}
           </span>
         </div>

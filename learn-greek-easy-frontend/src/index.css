@@ -70,6 +70,9 @@
     --practice-incorrect: 0 84% 60%;
     --practice-incorrect-glow: 0 84% 60% / 0.15;
     --practice-incorrect-soft: 0 84% 60% / 0.08;
+    --practice-hard: 25 95% 53%;
+    --practice-hard-glow: 25 95% 53% / 0.15;
+    --practice-hard-soft: 25 95% 53% / 0.08;
     --practice-gold: 38 92% 50%;
     --practice-purple: 258 90% 66%;
     --practice-bg: 210 40% 96%;
@@ -78,6 +81,22 @@
     --practice-text: 222 47% 11%;
     --practice-text-muted: 215 16% 47%;
     --practice-text-dim: 215 20% 65%;
+
+    /* ── Founders palette (pricing tier) ── */
+    --founders-surface: 48 100% 96%;
+    --founders-soft: 48 96% 89%;
+    --founders-border: 43 96% 56%;
+    --founders-accent: 38 92% 50%;
+    --founders-brand: 26 90% 37%;
+    --founders-brand-hover: 23 83% 31%;
+
+    /* ── Tense palette (decorative categorical — TenseBadge, MediaBadge) ── */
+    --tense-1: 160 64% 30%;
+    --tense-2: 26 80% 40%;
+    --tense-3: 215 25% 35%;
+    --tense-4: 200 80% 35%;
+    --tense-5: 262 60% 45%;
+    --tense-6: 350 70% 45%;
 
     /* ── Landing palette ── */
     --landing-navy: 240 27% 14%;
@@ -96,6 +115,8 @@
     --gradient-brand-to: #764ba2;
     --gradient-primary-from: #3b82f6;
     --gradient-primary-to: #1d4ed8;
+    --gradient-success-from: #10b981;
+    --gradient-success-to: #16a34a;
     /* --gradient-accent-from / -to: intentionally omitted — zero consumers in src/, not canonized */
 
     /* ── Radii ── */
@@ -170,6 +191,9 @@
     --practice-incorrect: 0 91% 71%;
     --practice-incorrect-glow: 0 91% 71% / 0.15;
     --practice-incorrect-soft: 0 91% 71% / 0.08;
+    --practice-hard: 25 95% 63%;
+    --practice-hard-glow: 25 95% 63% / 0.15;
+    --practice-hard-soft: 25 95% 63% / 0.08;
     --practice-gold: 43 96% 56%;
     --practice-purple: 250 95% 76%;
     --practice-bg: 222 47% 11%;
@@ -178,6 +202,22 @@
     --practice-text: 210 40% 96%;
     --practice-text-muted: 215 20% 65%;
     --practice-text-dim: 215 16% 47%;
+
+    /* ── Founders palette (dark) ── */
+    --founders-surface: 20 91% 14%;
+    --founders-soft: 26 80% 22%;
+    --founders-border: 43 96% 56%;
+    --founders-accent: 38 92% 50%;
+    --founders-brand: 26 90% 50%;
+    --founders-brand-hover: 23 83% 44%;
+
+    /* ── Tense palette (dark) ── */
+    --tense-1: 158 64% 75%;
+    --tense-2: 45 90% 70%;
+    --tense-3: 220 12% 75%;
+    --tense-4: 200 90% 70%;
+    --tense-5: 262 80% 75%;
+    --tense-6: 350 90% 75%;
 
     /* ── Landing palette (dark) ── */
     --landing-navy: 240 27% 85%;

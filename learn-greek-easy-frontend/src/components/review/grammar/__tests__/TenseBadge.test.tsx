@@ -56,12 +56,12 @@ describe('TenseBadge', () => {
   });
 
   describe('Present Tense', () => {
-    it('should render with emerald background', () => {
+    it('should render with tense-1 background', () => {
       render(<TenseBadge tense="present" />);
 
       const badge = screen.getByTestId('tense-badge');
-      expect(badge).toHaveClass('bg-emerald-100');
-      expect(badge).toHaveClass('text-emerald-700');
+      expect(badge).toHaveClass('bg-tense-1/15');
+      expect(badge).toHaveClass('text-tense-1');
     });
 
     it('should display localized text for present', () => {
@@ -73,12 +73,12 @@ describe('TenseBadge', () => {
   });
 
   describe('Imperfect Tense', () => {
-    it('should render with amber background', () => {
+    it('should render with tense-2 background', () => {
       render(<TenseBadge tense="imperfect" />);
 
       const badge = screen.getByTestId('tense-badge');
-      expect(badge).toHaveClass('bg-amber-100');
-      expect(badge).toHaveClass('text-amber-700');
+      expect(badge).toHaveClass('bg-tense-2/15');
+      expect(badge).toHaveClass('text-tense-2');
     });
 
     it('should display localized text for imperfect', () => {
@@ -90,12 +90,12 @@ describe('TenseBadge', () => {
   });
 
   describe('Past Tense', () => {
-    it('should render with slate background', () => {
+    it('should render with tense-3 background', () => {
       render(<TenseBadge tense="past" />);
 
       const badge = screen.getByTestId('tense-badge');
-      expect(badge).toHaveClass('bg-slate-100');
-      expect(badge).toHaveClass('text-slate-700');
+      expect(badge).toHaveClass('bg-tense-3/15');
+      expect(badge).toHaveClass('text-tense-3');
     });
 
     it('should display localized text for past', () => {
@@ -107,12 +107,12 @@ describe('TenseBadge', () => {
   });
 
   describe('Future Tense', () => {
-    it('should render with sky background', () => {
+    it('should render with tense-4 background', () => {
       render(<TenseBadge tense="future" />);
 
       const badge = screen.getByTestId('tense-badge');
-      expect(badge).toHaveClass('bg-sky-100');
-      expect(badge).toHaveClass('text-sky-700');
+      expect(badge).toHaveClass('bg-tense-4/15');
+      expect(badge).toHaveClass('text-tense-4');
     });
 
     it('should display localized text for future', () => {
@@ -124,12 +124,12 @@ describe('TenseBadge', () => {
   });
 
   describe('Perfect Tense', () => {
-    it('should render with violet background', () => {
+    it('should render with tense-5 background', () => {
       render(<TenseBadge tense="perfect" />);
 
       const badge = screen.getByTestId('tense-badge');
-      expect(badge).toHaveClass('bg-violet-100');
-      expect(badge).toHaveClass('text-violet-700');
+      expect(badge).toHaveClass('bg-tense-5/15');
+      expect(badge).toHaveClass('text-tense-5');
     });
 
     it('should display localized text for perfect', () => {
@@ -141,12 +141,12 @@ describe('TenseBadge', () => {
   });
 
   describe('Imperative Tense', () => {
-    it('should render with rose background', () => {
+    it('should render with tense-6 background', () => {
       render(<TenseBadge tense="imperative" />);
 
       const badge = screen.getByTestId('tense-badge');
-      expect(badge).toHaveClass('bg-rose-100');
-      expect(badge).toHaveClass('text-rose-700');
+      expect(badge).toHaveClass('bg-tense-6/15');
+      expect(badge).toHaveClass('text-tense-6');
     });
 
     it('should display localized text for imperative', () => {
@@ -178,28 +178,33 @@ describe('TenseBadge', () => {
     const tenses = [
       {
         tense: 'present',
-        bgColor: 'bg-emerald-100',
-        textColor: 'text-emerald-700',
+        bgColor: 'bg-tense-1/15',
+        textColor: 'text-tense-1',
         expectedText: 'Present',
       },
       {
         tense: 'imperfect',
-        bgColor: 'bg-amber-100',
-        textColor: 'text-amber-700',
+        bgColor: 'bg-tense-2/15',
+        textColor: 'text-tense-2',
         expectedText: 'Imperfect',
       },
-      { tense: 'past', bgColor: 'bg-slate-100', textColor: 'text-slate-700', expectedText: 'Past' },
-      { tense: 'future', bgColor: 'bg-sky-100', textColor: 'text-sky-700', expectedText: 'Future' },
+      { tense: 'past', bgColor: 'bg-tense-3/15', textColor: 'text-tense-3', expectedText: 'Past' },
+      {
+        tense: 'future',
+        bgColor: 'bg-tense-4/15',
+        textColor: 'text-tense-4',
+        expectedText: 'Future',
+      },
       {
         tense: 'perfect',
-        bgColor: 'bg-violet-100',
-        textColor: 'text-violet-700',
+        bgColor: 'bg-tense-5/15',
+        textColor: 'text-tense-5',
         expectedText: 'Perfect',
       },
       {
         tense: 'imperative',
-        bgColor: 'bg-rose-100',
-        textColor: 'text-rose-700',
+        bgColor: 'bg-tense-6/15',
+        textColor: 'text-tense-6',
         expectedText: 'Imperative',
       },
     ];

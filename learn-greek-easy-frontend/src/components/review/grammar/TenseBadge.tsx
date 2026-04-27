@@ -14,28 +14,28 @@ type KnownTense = (typeof KNOWN_TENSES)[number];
 
 const TENSE_CONFIG: Record<KnownTense, { bgClass: string; textClass: string }> = {
   present: {
-    bgClass: 'bg-emerald-100 dark:bg-emerald-900/30',
-    textClass: 'text-emerald-700 dark:text-emerald-300',
+    bgClass: 'bg-tense-1/15',
+    textClass: 'text-tense-1',
   },
   imperfect: {
-    bgClass: 'bg-amber-100 dark:bg-amber-900/30',
-    textClass: 'text-amber-700 dark:text-amber-300',
+    bgClass: 'bg-tense-2/15',
+    textClass: 'text-tense-2',
   },
   past: {
-    bgClass: 'bg-slate-100 dark:bg-slate-800',
-    textClass: 'text-slate-700 dark:text-slate-300',
+    bgClass: 'bg-tense-3/15',
+    textClass: 'text-tense-3',
   },
   future: {
-    bgClass: 'bg-sky-100 dark:bg-sky-900/30',
-    textClass: 'text-sky-700 dark:text-sky-300',
+    bgClass: 'bg-tense-4/15',
+    textClass: 'text-tense-4',
   },
   perfect: {
-    bgClass: 'bg-violet-100 dark:bg-violet-900/30',
-    textClass: 'text-violet-700 dark:text-violet-300',
+    bgClass: 'bg-tense-5/15',
+    textClass: 'text-tense-5',
   },
   imperative: {
-    bgClass: 'bg-rose-100 dark:bg-rose-900/30',
-    textClass: 'text-rose-700 dark:text-rose-300',
+    bgClass: 'bg-tense-6/15',
+    textClass: 'text-tense-6',
   },
 };
 

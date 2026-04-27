@@ -94,6 +94,8 @@ For flashcards, mock exam, culture cards, quiz feedback. Light → dark shifts a
 | `--practice-correct-glow` / `--practice-correct-soft` | 15% / 8% alpha | (same) | |
 | `--practice-incorrect` | `0 84% 60%` (red-500) | `0 91% 71%` (red-400) | "Again" / wrong feedback |
 | `--practice-incorrect-glow` / `--practice-incorrect-soft` | 15% / 8% alpha | (same) | |
+| `--practice-hard` | `25 95% 53%` (orange-500) | `25 95% 63%` (orange-400) | "Hard" SRS rating (between incorrect and correct) |
+| `--practice-hard-glow` / `--practice-hard-soft` | 15% / 8% alpha | (same) | |
 | `--practice-gold` | `38 92% 50%` (amber-500) | `43 96% 56%` (amber-400) | Streak, achievement |
 | `--practice-purple` | `258 90% 66%` (violet-500) | `250 95% 76%` (violet-400) | Culture / lore |
 | `--practice-bg` | `210 40% 96%` (slate-100) | `222 47% 11%` (slate-900) | Practice page background |
@@ -102,6 +104,36 @@ For flashcards, mock exam, culture cards, quiz feedback. Light → dark shifts a
 | `--practice-text` | `222 47% 11%` | `210 40% 96%` | Card primary text |
 | `--practice-text-muted` | `215 16% 47%` (slate-500) | `215 20% 65%` (slate-400) | Helper / hint |
 | `--practice-text-dim` | `215 20% 65%` (slate-400) | `215 16% 47%` (slate-500) | Tap-to-reveal placeholder |
+
+### Founders palette (pricing tier)
+
+Amber-family tokens for the Founders / semi-annual pricing tier. Auto-flips in dark mode — no manual `dark:` overrides needed in components.
+
+| Token | Light | Dark | Use |
+|---|---|---|---|
+| `--founders-surface` | `48 100% 96%` (amber-50) | `20 91% 14%` (amber-950 hue, dark surface) | Card background tint |
+| `--founders-soft` | `48 96% 89%` (amber-100) | `26 80% 22%` (lifted amber-900) | Icon bg, soft fill |
+| `--founders-border` | `43 96% 56%` (amber-400) | `43 96% 56%` (same — accent ring stays bright) | Card border, ring |
+| `--founders-accent` | `38 92% 50%` (amber-500) | `38 92% 50%` (same) | Badge bg, check icon |
+| `--founders-brand` | `26 90% 37%` (amber-700) | `26 90% 50%` (amber-600 lightness) | Button bg, text |
+| `--founders-brand-hover` | `23 83% 31%` (amber-800) | `23 83% 44%` (lighter for dark) | Button hover |
+
+Tailwind namespace: `founders-{surface,soft,border,accent,brand,brand-hover}`.
+
+### Tense palette (decorative categorical)
+
+Six categorical tokens used in `TenseBadge` and `MediaBadge`. Light values are saturated for text-on-soft-surface; dark values are lifted for readability. Soft surfaces use `/15` alpha: `bg-tense-N/15 text-tense-N`.
+
+| Token | Light | Dark | Mapping |
+|---|---|---|---|
+| `--tense-1` | `160 64% 30%` (emerald) | `158 64% 75%` | present, grammar (emerald/teal family) |
+| `--tense-2` | `26 80% 40%` (amber) | `45 90% 70%` | imperfect, article (amber/orange family) |
+| `--tense-3` | `215 25% 35%` (slate) | `220 12% 75%` | past (slate/neutral) |
+| `--tense-4` | `200 80% 35%` (sky) | `200 90% 70%` | future, vocabulary (sky/blue family) |
+| `--tense-5` | `262 60% 45%` (violet) | `262 80% 75%` | perfect, plural (violet/purple) |
+| `--tense-6` | `350 70% 45%` (rose) | `350 90% 75%` | imperative (rose/red) |
+
+Tailwind namespace: `tense-{1..6}`. For `MediaBadge` solid badges: `bg-tense-N text-white`. For `TenseBadge` soft surfaces: `bg-tense-N/15 text-tense-N`.
 
 ### Landing palette (greeklish.eu marketing only)
 
@@ -126,6 +158,7 @@ Decorative — no dark variants needed.
 |---|---|---|
 | `--gradient-brand-from / -to` | `#667eea → #764ba2` | Hero, primary CTA, achievement card. Brand identity. |
 | `--gradient-primary-from / -to` | `#3b82f6 → #1d4ed8` | Active Tabs state. Saturated blue CTAs. |
+| `--gradient-success-from / -to` | `#10b981 → #16a34a` | Success button (`button` variant `success` → `bg-gradient-success`). |
 | `--gradient-accent-from / -to` | `#fef3c7 → #fde68a` | **No consumer in `src/` today — candidate for removal, not canonization.** |
 
 ### Radii
@@ -210,7 +243,7 @@ All shadcn-based, all token-aware. Don't re-implement these inline.
 
 **Buttons & inputs:** `button`, `input`, `textarea`, `label`, `checkbox`, `switch`, `slider`, `select`, `form` (RHF wrapper)
 
-`button` variants: `default` · `destructive` · `outline` · `secondary` · `ghost` · `link` · `success` · `hero` · `hero-outline` · `landing-chrome` (icon button on the landing dark-navy chrome bar — uses `text-landing-header-fg` resting + `hover:bg-landing-header-fg/10`; do not use `ghost` on the landing header, the app `--accent` hover collides with the dark-navy surface).
+`button` variants: `default` · `destructive` · `outline` · `secondary` · `ghost` · `link` · `success` (`bg-gradient-success text-success-foreground`, emerald→green gradient) · `hero` · `hero-outline` · `landing-chrome` (icon button on the landing dark-navy chrome bar — uses `text-landing-header-fg` resting + `hover:bg-landing-header-fg/10`; do not use `ghost` on the landing header, the app `--accent` hover collides with the dark-navy surface).
 **Overlays:** `popover`, `tooltip`, `dialog`, `alert-dialog`, `alert`, `sheet`, `toast` + `toaster`, `dropdown-menu`
 **Disclosure:** `accordion`, `collapsible`, `tabs`, `navigation-menu`
 **Layout / data:** `card`, `avatar`, `skeleton`, `separator`, `scroll-area`, `table`, `scrollable-table` (sticky-header for wide tables — used in Conjugation / Declension), `chart` (Recharts wrapper, pulls from `--chart-1..8`), `progress`, `badge`

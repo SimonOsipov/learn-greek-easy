@@ -23,10 +23,26 @@ export function RatingButtons({ isFlipped = false }: RatingButtonsProps) {
   };
 
   const buttons: Array<{ rating: ReviewRating; labelKey: string; color: string }> = [
-    { rating: 'again', labelKey: 'ratings.again', color: 'bg-red-500 hover:bg-red-600' },
-    { rating: 'hard', labelKey: 'ratings.hard', color: 'bg-orange-500 hover:bg-orange-600' },
-    { rating: 'good', labelKey: 'ratings.good', color: 'bg-green-500 hover:bg-green-600' },
-    { rating: 'easy', labelKey: 'ratings.easy', color: 'bg-green-700 hover:bg-green-800' },
+    {
+      rating: 'again',
+      labelKey: 'ratings.again',
+      color: 'bg-practice-incorrect hover:bg-practice-incorrect/90',
+    },
+    {
+      rating: 'hard',
+      labelKey: 'ratings.hard',
+      color: 'bg-practice-hard hover:bg-practice-hard/90',
+    },
+    {
+      rating: 'good',
+      labelKey: 'ratings.good',
+      color: 'bg-practice-correct hover:bg-practice-correct/90',
+    },
+    {
+      rating: 'easy',
+      labelKey: 'ratings.easy',
+      color: 'bg-practice-correct hover:bg-practice-correct/90',
+    },
   ];
 
   return (

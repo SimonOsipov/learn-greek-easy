@@ -32,19 +32,19 @@ describe('MediaBadge', () => {
   });
 
   describe('Vocabulary Badge', () => {
-    it('should render with blue background for meaning_el_to_en', () => {
+    it('should render with tense-4 background for meaning_el_to_en', () => {
       render(<MediaBadge cardType="meaning_el_to_en" />);
 
       const badge = screen.getByTestId('media-badge');
-      expect(badge).toHaveClass('bg-blue-500');
+      expect(badge).toHaveClass('bg-tense-4');
       expect(badge).toHaveClass('text-white');
     });
 
-    it('should render with blue background for meaning_en_to_el', () => {
+    it('should render with tense-4 background for meaning_en_to_el', () => {
       render(<MediaBadge cardType="meaning_en_to_el" />);
 
       const badge = screen.getByTestId('media-badge');
-      expect(badge).toHaveClass('bg-blue-500');
+      expect(badge).toHaveClass('bg-tense-4');
       expect(badge).toHaveClass('text-white');
     });
 
@@ -57,11 +57,11 @@ describe('MediaBadge', () => {
   });
 
   describe('Sentence Badge', () => {
-    it('should render with teal background', () => {
+    it('should render with tense-1 background', () => {
       render(<MediaBadge cardType="sentence_translation" />);
 
       const badge = screen.getByTestId('media-badge');
-      expect(badge).toHaveClass('bg-teal-500');
+      expect(badge).toHaveClass('bg-tense-1');
       expect(badge).toHaveClass('text-white');
     });
 
@@ -74,11 +74,11 @@ describe('MediaBadge', () => {
   });
 
   describe('Plural Badge', () => {
-    it('should render with purple background', () => {
+    it('should render with tense-5 background', () => {
       render(<MediaBadge cardType="plural_form" />);
 
       const badge = screen.getByTestId('media-badge');
-      expect(badge).toHaveClass('bg-purple-500');
+      expect(badge).toHaveClass('bg-tense-5');
       expect(badge).toHaveClass('text-white');
     });
 
@@ -91,11 +91,11 @@ describe('MediaBadge', () => {
   });
 
   describe('Article Badge', () => {
-    it('should render with amber background', () => {
+    it('should render with tense-2 background', () => {
       render(<MediaBadge cardType="article" />);
 
       const badge = screen.getByTestId('media-badge');
-      expect(badge).toHaveClass('bg-amber-500');
+      expect(badge).toHaveClass('bg-tense-2');
       expect(badge).toHaveClass('text-white');
     });
 
@@ -108,27 +108,27 @@ describe('MediaBadge', () => {
   });
 
   describe('Grammar Badge', () => {
-    it('should render with emerald background for conjugation', () => {
+    it('should render with tense-1 background for conjugation', () => {
       render(<MediaBadge cardType="conjugation" />);
 
       const badge = screen.getByTestId('media-badge');
-      expect(badge).toHaveClass('bg-emerald-500');
+      expect(badge).toHaveClass('bg-tense-1');
       expect(badge).toHaveClass('text-white');
     });
 
-    it('should render with emerald background for declension', () => {
+    it('should render with tense-1 background for declension', () => {
       render(<MediaBadge cardType="declension" />);
 
       const badge = screen.getByTestId('media-badge');
-      expect(badge).toHaveClass('bg-emerald-500');
+      expect(badge).toHaveClass('bg-tense-1');
       expect(badge).toHaveClass('text-white');
     });
 
-    it('should render with emerald background for cloze', () => {
+    it('should render with tense-1 background for cloze', () => {
       render(<MediaBadge cardType="cloze" />);
 
       const badge = screen.getByTestId('media-badge');
-      expect(badge).toHaveClass('bg-emerald-500');
+      expect(badge).toHaveClass('bg-tense-1');
       expect(badge).toHaveClass('text-white');
     });
 
@@ -146,14 +146,14 @@ describe('MediaBadge', () => {
       expectedColor: string;
       expectedText: string;
     }> = [
-      { type: 'meaning_el_to_en', expectedColor: 'bg-blue-500', expectedText: 'Translation' },
-      { type: 'meaning_en_to_el', expectedColor: 'bg-blue-500', expectedText: 'Translation' },
-      { type: 'sentence_translation', expectedColor: 'bg-teal-500', expectedText: 'Sentence' },
-      { type: 'plural_form', expectedColor: 'bg-purple-500', expectedText: 'Plural Form' },
-      { type: 'article', expectedColor: 'bg-amber-500', expectedText: 'Article' },
-      { type: 'conjugation', expectedColor: 'bg-emerald-500', expectedText: 'Grammar' },
-      { type: 'declension', expectedColor: 'bg-emerald-500', expectedText: 'Grammar' },
-      { type: 'cloze', expectedColor: 'bg-emerald-500', expectedText: 'Grammar' },
+      { type: 'meaning_el_to_en', expectedColor: 'bg-tense-4', expectedText: 'Translation' },
+      { type: 'meaning_en_to_el', expectedColor: 'bg-tense-4', expectedText: 'Translation' },
+      { type: 'sentence_translation', expectedColor: 'bg-tense-1', expectedText: 'Sentence' },
+      { type: 'plural_form', expectedColor: 'bg-tense-5', expectedText: 'Plural Form' },
+      { type: 'article', expectedColor: 'bg-tense-2', expectedText: 'Article' },
+      { type: 'conjugation', expectedColor: 'bg-tense-1', expectedText: 'Grammar' },
+      { type: 'declension', expectedColor: 'bg-tense-1', expectedText: 'Grammar' },
+      { type: 'cloze', expectedColor: 'bg-tense-1', expectedText: 'Grammar' },
     ];
 
     it.each(cardTypes)(

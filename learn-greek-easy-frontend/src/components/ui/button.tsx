@@ -20,7 +20,7 @@ const buttonVariants = cva(
           'text-landing-header-fg hover:bg-landing-header-fg/10 hover:text-landing-header-fg',
         link: 'text-primary underline-offset-4 hover:underline',
         success:
-          'bg-gradient-to-br from-emerald-500 to-green-600 text-white hover:from-emerald-600 hover:to-green-700',
+          'bg-gradient-success text-success-foreground hover:brightness-110 transition-[filter]',
         hero: 'bg-primary text-primary-foreground shadow-lg hover:shadow-xl hover:bg-primary/90 active:scale-[0.98] transition-all duration-300',
         'hero-outline':
           'border-2 border-foreground/30 bg-background text-foreground hover:bg-background/90 active:scale-[0.98] transition-all duration-300',

@@ -87,6 +87,9 @@ export default {
   				incorrect: 'hsl(var(--practice-incorrect))',
   				'incorrect-glow': 'hsl(var(--practice-incorrect-glow))',
   				'incorrect-soft': 'hsl(var(--practice-incorrect-soft))',
+  				hard: 'hsl(var(--practice-hard))',
+  				'hard-glow': 'hsl(var(--practice-hard-glow))',
+  				'hard-soft': 'hsl(var(--practice-hard-soft))',
   				gold: 'hsl(var(--practice-gold))',
   				purple: 'hsl(var(--practice-purple))',
   				bg: 'hsl(var(--practice-bg))',
@@ -95,6 +98,22 @@ export default {
   				text: 'hsl(var(--practice-text))',
   				'text-muted': 'hsl(var(--practice-text-muted))',
   				'text-dim': 'hsl(var(--practice-text-dim))',
+  			},
+  			founders: {
+  				surface: 'hsl(var(--founders-surface))',
+  				soft: 'hsl(var(--founders-soft))',
+  				border: 'hsl(var(--founders-border))',
+  				accent: 'hsl(var(--founders-accent))',
+  				brand: 'hsl(var(--founders-brand))',
+  				'brand-hover': 'hsl(var(--founders-brand-hover))',
+  			},
+  			tense: {
+  				1: 'hsl(var(--tense-1))',
+  				2: 'hsl(var(--tense-2))',
+  				3: 'hsl(var(--tense-3))',
+  				4: 'hsl(var(--tense-4))',
+  				5: 'hsl(var(--tense-5))',
+  				6: 'hsl(var(--tense-6))',
   			}
   		},
   		fontFamily: {
@@ -243,6 +262,9 @@ export default {
   			lg: '0 4px 8px rgba(102, 126, 234, 0.3)',
   			xl: '0 10px 15px rgba(0, 0, 0, 0.1)',
   			'2xl': '0 20px 25px rgba(0, 0, 0, 0.15)',
+  		},
+  		backgroundImage: {
+  			'gradient-success': 'linear-gradient(to bottom right, var(--gradient-success-from), var(--gradient-success-to))',
   		},
   		transitionDuration: {
   			'200': '200ms',
