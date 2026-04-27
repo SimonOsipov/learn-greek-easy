@@ -68,7 +68,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user, onAvatarClic
                 {initials}
               </AvatarFallback>
             </Avatar>
-            <div className="absolute inset-0 flex items-center justify-center rounded-full bg-[hsl(var(--bg)/.6)] opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100">
+            <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/60 opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100">
               <span className="text-xs font-medium text-white">{t('header.change')}</span>
             </div>
           </button>

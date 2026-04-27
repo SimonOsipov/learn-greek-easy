@@ -189,7 +189,7 @@ const Features = () => {
           <div className="rounded-2xl rounded-tr-sm bg-[hsl(var(--landing-greek-blue))]/10 px-3 py-2">
             <p className="text-xs text-foreground">
               Βεβαίως, πόσο{' '}
-              <span className="rounded bg-[hsl(var(--landing-greek-blue))]/15 px-0.5 font-semibold text-blue-800 dark:text-blue-300">
+              <span className="rounded bg-[hsl(var(--landing-greek-blue))]/15 px-0.5 font-semibold text-[hsl(var(--landing-greek-blue))]">
                 συχνά
               </span>{' '}
               έχετε πονοκέφαλο;

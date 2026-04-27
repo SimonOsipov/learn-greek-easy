@@ -90,7 +90,7 @@ test.describe('Daily Goal Slider', () => {
 
     // Get initial value from aria-valuenow
     const initialValueStr = await sliderThumb.getAttribute('aria-valuenow');
-    const initialValue = parseInt(initialValueStr ?? '20');
+    const initialValue = parseInt(initialValueStr ?? '20', 10);
 
     // Move slider to 45 minutes using keyboard (step=5, so delta must be multiple of 5)
     await sliderThumb.focus();
@@ -113,7 +113,7 @@ test.describe('Daily Goal Slider', () => {
     // Helper: move slider to a target value via keyboard
     const moveToValue = async (target: number) => {
       await sliderThumb.focus();
-      const current = parseInt((await sliderThumb.getAttribute('aria-valuenow')) ?? '20');
+      const current = parseInt((await sliderThumb.getAttribute('aria-valuenow')) ?? '20', 10);
       const delta = target - current;
       if (delta === 0) return;
       const key = delta > 0 ? 'ArrowRight' : 'ArrowLeft';
@@ -196,7 +196,7 @@ test.describe('Daily Goal Slider', () => {
     const newSliderRoot = page.getByTestId('daily-goal-slider');
     const newSliderThumb = newSliderRoot.getByRole('slider');
     const newValueStr = await newSliderThumb.getAttribute('aria-valuenow');
-    const numValue = parseInt(newValueStr ?? '5');
+    const numValue = parseInt(newValueStr ?? '20', 10);
 
     // Value should be a valid number between min and max
     expect(numValue).toBeGreaterThanOrEqual(5);
@@ -211,20 +211,20 @@ test.describe('Daily Goal Slider', () => {
     await sliderThumb.focus();
 
     // Get initial value via Radix ARIA attribute
-    const initialValue = parseInt((await sliderThumb.getAttribute('aria-valuenow')) ?? '20');
+    const initialValue = parseInt((await sliderThumb.getAttribute('aria-valuenow')) ?? '20', 10);
 
     // Press ArrowRight to increase value
     await page.keyboard.press('ArrowRight');
 
     // Value should increase by step (5)
-    const newValue = parseInt((await sliderThumb.getAttribute('aria-valuenow')) ?? '20');
+    const newValue = parseInt((await sliderThumb.getAttribute('aria-valuenow')) ?? '20', 10);
     expect(newValue).toBe(initialValue + 5);
 
     // Press ArrowLeft to decrease value
     await page.keyboard.press('ArrowLeft');
 
     // Value should be back to initial
-    const finalValue = parseInt((await sliderThumb.getAttribute('aria-valuenow')) ?? '20');
+    const finalValue = parseInt((await sliderThumb.getAttribute('aria-valuenow')) ?? '20', 10);
     expect(finalValue).toBe(initialValue);
   });
 
@@ -284,7 +284,7 @@ test.describe('Profile Preferences - Different Users', () => {
     const sliderRoot = page.getByTestId('daily-goal-slider');
     const sliderThumb = sliderRoot.getByRole('slider');
     const value = await sliderThumb.getAttribute('aria-valuenow');
-    const numValue = parseInt(value ?? '20');
+    const numValue = parseInt(value ?? '20', 10);
 
     // Verify value is within valid range
     expect(numValue).toBeGreaterThanOrEqual(5);

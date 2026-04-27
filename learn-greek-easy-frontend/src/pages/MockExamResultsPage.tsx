@@ -183,10 +183,10 @@ export function MockExamResultsPage() {
         {/* Header Card - Pass/Fail Status */}
         <Card
           className={cn(
-            'relative overflow-hidden border-0 text-[hsl(var(--destructive-foreground))]',
+            'relative overflow-hidden border-0',
             summary.passed
-              ? 'bg-gradient-to-br from-[hsl(var(--success))] to-[hsl(var(--success)/.8)]'
-              : 'bg-gradient-to-br from-[hsl(var(--danger))] to-[hsl(var(--danger)/.85)]'
+              ? 'bg-gradient-to-br from-[hsl(var(--success))] to-[hsl(var(--success)/.8)] text-[hsl(var(--success-foreground))]'
+              : 'bg-gradient-to-br from-[hsl(var(--danger))] to-[hsl(var(--danger)/.85)] text-[hsl(var(--destructive-foreground))]'
           )}
         >
           <CardContent className="p-6 md:p-8">
@@ -195,7 +195,7 @@ export function MockExamResultsPage() {
               {summary.passed ? (
                 <Trophy className="h-12 w-12 text-[hsl(var(--practice-gold))]" />
               ) : (
-                <XCircle className="h-12 w-12 text-[hsl(var(--destructive-foreground)/.8)]" />
+                <XCircle className="h-12 w-12 opacity-80" />
               )}
               <div>
                 <h1 className="text-2xl font-bold md:text-3xl">
@@ -203,15 +203,13 @@ export function MockExamResultsPage() {
                     ? t('results.passed', 'Congratulations! You passed!')
                     : t('results.failed', "You didn't pass this time")}
                 </h1>
-                <p className="mt-1 text-[hsl(var(--destructive-foreground)/.8)]">
-                  {t('results.title', 'Exam Complete')}
-                </p>
+                <p className="mt-1 opacity-80">{t('results.title', 'Exam Complete')}</p>
               </div>
             </div>
 
             {/* Decorative circles */}
-            <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-[hsl(var(--destructive-foreground)/.1)]" />
-            <div className="pointer-events-none absolute -bottom-5 -left-5 h-24 w-24 rounded-full bg-[hsl(var(--destructive-foreground)/.1)]" />
+            <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-current opacity-10" />
+            <div className="pointer-events-none absolute -bottom-5 -left-5 h-24 w-24 rounded-full bg-current opacity-10" />
           </CardContent>
         </Card>
 

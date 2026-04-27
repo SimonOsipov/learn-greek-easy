@@ -104,7 +104,7 @@ interface CardErrorStatusBadgeProps {
 
 const CardErrorStatusBadge: React.FC<CardErrorStatusBadgeProps> = ({ status }) => {
   const config = CARD_ERROR_STATUS_CONFIG[status];
-  return <Badge className={cn(config.bgColor, config.color)}>{config.label}</Badge>;
+  return <Badge className={cn(config.badgeClass)}>{config.label}</Badge>;
 };
 
 // ============================================

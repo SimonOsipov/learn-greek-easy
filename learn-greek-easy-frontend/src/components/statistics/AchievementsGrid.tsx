@@ -8,7 +8,6 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
 import { AchievementIcon } from '@/components/achievements/AchievementIcon';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -217,10 +216,10 @@ export const AchievementsGrid: React.FC<AchievementsGridProps> = ({ className })
                     {tAch(`items.${nextUp.id}.hint`, nextUp.hint ?? '')}
                   </p>
                 </div>
-                <Badge variant="secondary" className="shrink-0">
-                  <Star className="mr-1 h-3 w-3" />
+                <span className="badge b-gray shrink-0">
+                  <Star className="h-3 w-3" />
                   {nextUp.xp_reward} XP
-                </Badge>
+                </span>
               </div>
               <div className="mt-3">
                 <div className="mb-1 flex justify-between text-xs text-muted-foreground">

@@ -160,9 +160,11 @@ describe('MockExamResultsPage', () => {
       const { container } = render(<MockExamResultsPage />);
 
       expect(screen.getByText(/Congratulations/i)).toBeInTheDocument();
-      // Verify a gradient card is present in the DOM for the pass/fail header
-      const gradientCard = container.querySelector('.bg-gradient-to-br');
+      // Verify the success gradient (not the danger gradient) is used for the passed state
+      const gradientCard = container.querySelector('.from-\\[hsl\\(var\\(--success\\)\\)\\]');
       expect(gradientCard).toBeInTheDocument();
+      // Trophy icon present for passed state (not XCircle)
+      expect(container.querySelector('svg')).toBeInTheDocument();
     });
 
     it('shows failed state', () => {
@@ -172,8 +174,8 @@ describe('MockExamResultsPage', () => {
       const { container } = render(<MockExamResultsPage />);
 
       expect(screen.getByText(/didn't pass/i)).toBeInTheDocument();
-      // Verify a gradient card is present in the DOM for the pass/fail header
-      const gradientCard = container.querySelector('.bg-gradient-to-br');
+      // Verify the danger gradient (not the success gradient) is used for the failed state
+      const gradientCard = container.querySelector('.from-\\[hsl\\(var\\(--danger\\)\\)\\]');
       expect(gradientCard).toBeInTheDocument();
     });
   });

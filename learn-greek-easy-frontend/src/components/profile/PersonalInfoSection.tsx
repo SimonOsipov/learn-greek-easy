@@ -213,7 +213,7 @@ export const PersonalInfoSection: React.FC<PersonalInfoSectionProps> = ({ user }
                 </AvatarFallback>
               </Avatar>
               {(isUploadingAvatar || isRemovingAvatar) && (
-                <div className="absolute inset-0 flex items-center justify-center rounded-full bg-[hsl(var(--bg)/.6)] backdrop-blur-sm">
+                <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/60 backdrop-blur-sm">
                   <Loader2 className="h-6 w-6 animate-spin text-white" />
                 </div>
               )}

@@ -592,16 +592,19 @@ function RowsTable({
                   />
                 </td>
                 <td className="py-1 align-middle">
-                  {resolvedValues?.has(row.field_path) ? (
-                    <DecisionPill
-                      fieldPath={row.field_path}
-                      pillState={resolvedValues.get(row.field_path)!}
-                      isEditable={true}
-                      onEdit={(fp, val) => onResolvedValueChange?.(fp, val)}
-                    />
-                  ) : (
-                    <span>—</span>
-                  )}
+                  {(() => {
+                    const pillState = resolvedValues?.get(row.field_path);
+                    return pillState ? (
+                      <DecisionPill
+                        fieldPath={row.field_path}
+                        pillState={pillState}
+                        isEditable={true}
+                        onEdit={(fp, val) => onResolvedValueChange?.(fp, val)}
+                      />
+                    ) : (
+                      <span>—</span>
+                    );
+                  })()}
                 </td>
               </tr>
             );

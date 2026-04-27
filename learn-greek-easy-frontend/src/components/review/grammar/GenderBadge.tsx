@@ -20,7 +20,10 @@ export function GenderBadge({ gender, className }: GenderBadgeProps) {
   const badgeVariant = GENDER_CONFIG[gender];
 
   return (
-    <span className={cn('badge', badgeVariant, className)} data-testid="gender-badge">
+    <span
+      className={cn('badge pointer-events-none', badgeVariant, className)}
+      data-testid="gender-badge"
+    >
       {t(`grammar.nounDeclension.genders.${gender}`)}
     </span>
   );
