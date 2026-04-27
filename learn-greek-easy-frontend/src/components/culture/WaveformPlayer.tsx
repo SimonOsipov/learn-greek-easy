@@ -378,17 +378,17 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
                       ? 'bg-muted-foreground/30'
                       : isNewsMini
                         ? 'bg-white/25'
-                        : 'bg-[hsl(var(--fg-3)/0.35)]')
+                        : 'bg-[hsl(var(--fg-3)/0.35)]'),
+                  // news-mini filled bar: white/80 over photo overlay — not a tokenizable surface.
+                  isFilled && isNewsMini && 'bg-white/80'
                 )}
                 style={{
                   height: `${height * 100}%`,
-                  ...(isFilled
+                  ...(isFilled && !isNewsMini
                     ? {
                         backgroundColor: isAdmin
                           ? 'hsl(var(--primary))'
-                          : isNewsMini
-                            ? 'rgba(255,255,255,0.8)'
-                            : 'hsl(var(--practice-accent))',
+                          : 'hsl(var(--practice-accent))',
                       }
                     : undefined),
                 }}
@@ -405,44 +405,54 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
             className={cn('text-xs', isAdmin ? 'font-mono' : 'font-practice-mono')}
             style={{ fontVariantNumeric: 'tabular-nums' }}
           >
+            {/* news-mini time text: white over photo overlay — not a tokenizable surface. */}
             <span
               data-testid="waveform-time-current"
-              style={{
-                color: isAdmin
-                  ? isPlaying && !disabled
-                    ? 'hsl(var(--foreground))'
-                    : 'hsl(var(--muted-foreground))'
-                  : isNewsMini
-                    ? isPlaying && !disabled
-                      ? 'rgba(255,255,255,1)'
-                      : 'rgba(255,255,255,0.6)'
-                    : isPlaying && !disabled
-                      ? 'hsl(var(--practice-accent))'
-                      : 'hsl(var(--practice-text-muted))',
-              }}
+              className={cn(
+                isNewsMini && (isPlaying && !disabled ? 'text-white' : 'text-white/60')
+              )}
+              style={
+                isNewsMini
+                  ? undefined
+                  : {
+                      color: isAdmin
+                        ? isPlaying && !disabled
+                          ? 'hsl(var(--foreground))'
+                          : 'hsl(var(--muted-foreground))'
+                        : isPlaying && !disabled
+                          ? 'hsl(var(--practice-accent))'
+                          : 'hsl(var(--practice-text-muted))',
+                    }
+              }
             >
               {formatTime(disabled ? 0 : currentTime)}
             </span>
             <span
-              style={{
-                color: isAdmin
-                  ? 'hsl(var(--muted-foreground))'
-                  : isNewsMini
-                    ? 'rgba(255,255,255,0.5)'
-                    : 'hsl(var(--practice-text-muted))',
-              }}
+              className={cn(isNewsMini && 'text-white/50')}
+              style={
+                isNewsMini
+                  ? undefined
+                  : {
+                      color: isAdmin
+                        ? 'hsl(var(--muted-foreground))'
+                        : 'hsl(var(--practice-text-muted))',
+                    }
+              }
             >
               {' / '}
             </span>
             <span
               data-testid="waveform-time-total"
-              style={{
-                color: isAdmin
-                  ? 'hsl(var(--muted-foreground))'
-                  : isNewsMini
-                    ? 'rgba(255,255,255,0.5)'
-                    : 'hsl(var(--practice-text-muted))',
-              }}
+              className={cn(isNewsMini && 'text-white/50')}
+              style={
+                isNewsMini
+                  ? undefined
+                  : {
+                      color: isAdmin
+                        ? 'hsl(var(--muted-foreground))'
+                        : 'hsl(var(--practice-text-muted))',
+                    }
+              }
             >
               {formatTime(disabled ? 0 : effectiveDuration)}
             </span>
