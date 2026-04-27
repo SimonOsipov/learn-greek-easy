@@ -148,8 +148,8 @@ const EmptyState: React.FC = () => {
 
   return (
     <div className="flex flex-col items-center justify-center py-12 text-center">
-      <div className="rounded-full bg-purple-100 p-4 dark:bg-purple-900/50">
-        <Trophy className="h-8 w-8 text-purple-600 dark:text-purple-400" />
+      <div className="rounded-full bg-primary/10 p-4">
+        <Trophy className="h-8 w-8 text-primary" />
       </div>
       <h3 className="mt-4 text-lg font-semibold text-foreground">
         {t('empty.title', 'No achievements available')}
@@ -291,8 +291,8 @@ const AchievementsPage: React.FC = () => {
             <Card className="sm:hidden">
               <CardContent className="grid grid-cols-3 gap-2 px-2 py-3">
                 <div className="flex flex-col items-center text-center">
-                  <div className="rounded-full bg-purple-100 p-1.5 dark:bg-purple-900/50">
-                    <Trophy className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                  <div className="rounded-full bg-primary/10 p-1.5">
+                    <Trophy className="h-4 w-4 text-primary" />
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">{t('stats.unlocked')}</p>
                   <p className="text-lg font-bold text-foreground">
@@ -301,15 +301,15 @@ const AchievementsPage: React.FC = () => {
                   </p>
                 </div>
                 <div className="flex flex-col items-center text-center">
-                  <div className="rounded-full bg-green-100 p-1.5 dark:bg-green-900/50">
-                    <Trophy className="h-4 w-4 text-green-600 dark:text-green-400" />
+                  <div className="rounded-full bg-[hsl(var(--success)/.1)] p-1.5">
+                    <Trophy className="h-4 w-4 text-[hsl(var(--success))]" />
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">{t('stats.progress')}</p>
                   <p className="text-lg font-bold text-foreground">{progressPercent}%</p>
                 </div>
                 <div className="flex flex-col items-center text-center">
-                  <div className="rounded-full bg-amber-100 p-1.5 dark:bg-amber-900/50">
-                    <Star className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                  <div className="rounded-full bg-[hsl(var(--practice-gold)/.12)] p-1.5">
+                    <Star className="h-4 w-4 text-practice-gold" />
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">{t('stats.xpEarned')}</p>
                   <p className="text-lg font-bold text-foreground">
@@ -323,8 +323,8 @@ const AchievementsPage: React.FC = () => {
             <div className="hidden sm:grid sm:grid-cols-3 sm:gap-4">
               <Card>
                 <CardHeader className="flex flex-row items-center gap-3 pb-2">
-                  <div className="rounded-full bg-purple-100 p-3 dark:bg-purple-900/50">
-                    <Trophy className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                  <div className="rounded-full bg-primary/10 p-3">
+                    <Trophy className="h-5 w-5 text-primary" />
                   </div>
                   <div>
                     <CardDescription>{t('stats.unlocked')}</CardDescription>
@@ -339,8 +339,8 @@ const AchievementsPage: React.FC = () => {
               </Card>
               <Card>
                 <CardHeader className="flex flex-row items-center gap-3 pb-2">
-                  <div className="rounded-full bg-green-100 p-3 dark:bg-green-900/50">
-                    <Trophy className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <div className="rounded-full bg-[hsl(var(--success)/.1)] p-3">
+                    <Trophy className="h-5 w-5 text-[hsl(var(--success))]" />
                   </div>
                   <div>
                     <CardDescription>{t('stats.progress')}</CardDescription>
@@ -350,8 +350,8 @@ const AchievementsPage: React.FC = () => {
               </Card>
               <Card>
                 <CardHeader className="flex flex-row items-center gap-3 pb-2">
-                  <div className="rounded-full bg-amber-100 p-3 dark:bg-amber-900/50">
-                    <Star className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                  <div className="rounded-full bg-[hsl(var(--practice-gold)/.12)] p-3">
+                    <Star className="h-5 w-5 text-practice-gold" />
                   </div>
                   <div>
                     <CardDescription>{t('stats.xpEarned')}</CardDescription>
@@ -381,18 +381,18 @@ const AchievementsPage: React.FC = () => {
           {/* Almost There Section */}
           {showAlmostThere && (
             <section
-              className="rounded-lg border-l-4 border-amber-400 bg-amber-50/50 p-4 dark:border-amber-500 dark:bg-amber-950/20"
+              className="rounded-lg border-l-4 border-[hsl(var(--practice-gold))] bg-[hsl(var(--practice-gold)/.08)] p-4"
               aria-labelledby="almost-there-heading"
               data-testid="almost-there-section"
             >
               <div className="mb-3">
                 <h2
                   id="almost-there-heading"
-                  className="text-base font-semibold text-amber-900 dark:text-amber-200"
+                  className="text-base font-semibold text-[hsl(var(--practice-gold))]"
                 >
                   {t('section.almostThereTitle', 'Almost There!')}
                 </h2>
-                <p className="text-sm text-amber-700 dark:text-amber-400">
+                <p className="text-sm text-fg2">
                   {t('section.almostThereSubtitle', "You're so close to unlocking these!")}
                 </p>
               </div>
@@ -401,7 +401,7 @@ const AchievementsPage: React.FC = () => {
                   <AchievementCard
                     key={achievement.id}
                     achievement={achievement}
-                    className="border-amber-200 opacity-100 dark:border-amber-800"
+                    className="border-[hsl(var(--practice-gold)/.4)] opacity-100"
                   />
                 ))}
               </div>

@@ -189,9 +189,7 @@ const UnifiedDeckListItem: React.FC<UnifiedDeckListItemProps> = ({
     <div
       className={cn(
         'flex cursor-pointer items-center justify-between rounded-lg border p-4 transition-colors',
-        deck.is_active
-          ? 'hover:bg-muted/50'
-          : 'border-red-200 bg-red-50 hover:bg-red-100 dark:border-red-900 dark:bg-red-950/20 dark:hover:bg-red-950/30'
+        deck.is_active ? 'hover:bg-muted/50' : 'border-danger/30 bg-danger/5 hover:bg-danger/10'
       )}
       onClick={handleRowClick}
       role="button"
@@ -219,19 +217,12 @@ const UnifiedDeckListItem: React.FC<UnifiedDeckListItemProps> = ({
         </div>
         {deck.is_premium && (
           <Crown
-            className="h-4 w-4 text-amber-500"
+            className="h-4 w-4 text-warning"
             aria-label="Premium deck"
             data-testid={`premium-indicator-${deck.id}`}
           />
         )}
-        {!deck.is_active && (
-          <Badge
-            variant="secondary"
-            className="bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
-          >
-            {t('deck.deactivated')}
-          </Badge>
-        )}
+        {!deck.is_active && <span className="badge b-red">{t('deck.deactivated')}</span>}
         <Badge variant="outline" className="text-xs">
           {t(`deckTypes.${deck.type}`)}
         </Badge>

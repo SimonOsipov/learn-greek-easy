@@ -534,19 +534,18 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
                     {(() => {
                       const completionPct = computeCompletionPercentage(selectedWordEntry);
                       return (
-                        <Badge
-                          variant="outline"
+                        <span
                           data-testid="detail-header-completion-badge"
                           className={
                             completionPct >= 80
-                              ? 'border-green-500 text-green-700'
+                              ? 'badge b-green'
                               : completionPct >= 40
-                                ? 'border-yellow-500 text-yellow-700'
-                                : 'border-gray-400 text-gray-500'
+                                ? 'badge b-amber'
+                                : 'badge b-gray'
                           }
                         >
                           {completionPct}%
-                        </Badge>
+                        </span>
                       );
                     })()}
                   </div>
@@ -1031,7 +1030,7 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
                             {question.question_text[locale] || question.question_text.en}
                           </p>
                           {question.is_pending_review && (
-                            <span className="text-xs text-amber-600">
+                            <span className="text-xs text-warning">
                               {t('sources.articles.alreadyGenerated')}
                             </span>
                           )}

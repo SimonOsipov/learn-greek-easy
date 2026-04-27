@@ -4,15 +4,20 @@ const Footer = () => {
   const { t } = useTranslation('landing');
 
   return (
-    <footer data-testid="landing-footer" className="border-t border-border/50 py-12">
+    <footer
+      data-testid="landing-footer"
+      className="border-t border-[hsl(var(--landing-navy))]/15 py-12 motion-safe:animate-landing-fade-in dark:border-[hsl(var(--landing-navy))]/25"
+    >
       <div className="container mx-auto px-6">
         <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
           {/* Logo */}
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-              <span className="text-sm font-bold text-primary-foreground">G</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[hsl(var(--landing-greek-blue))]">
+              <span className="text-sm font-bold text-white">G</span>
             </div>
-            <span className="font-semibold text-foreground">{t('footer.brandName')}</span>
+            <span className="font-semibold text-[hsl(var(--landing-greek-blue-light))]">
+              {t('footer.brandName')}
+            </span>
           </div>
 
           {/* Links */}
@@ -22,25 +27,25 @@ const Footer = () => {
           >
             <a
               href="#features"
-              className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+              className="text-sm text-[hsl(var(--landing-greek-blue-light))]/70 transition-colors hover:text-[hsl(var(--landing-greek-blue-light))]"
             >
               {t('footer.nav.features')}
             </a>
             <a
               href="#faq"
-              className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+              className="text-sm text-[hsl(var(--landing-greek-blue-light))]/70 transition-colors hover:text-[hsl(var(--landing-greek-blue-light))]"
             >
               {t('footer.nav.faq')}
             </a>
             <a
               href="#"
-              className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+              className="text-sm text-[hsl(var(--landing-greek-blue-light))]/70 transition-colors hover:text-[hsl(var(--landing-greek-blue-light))]"
             >
               {t('footer.nav.contact')}
             </a>
             <a
               href="#"
-              className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+              className="text-sm text-[hsl(var(--landing-greek-blue-light))]/70 transition-colors hover:text-[hsl(var(--landing-greek-blue-light))]"
             >
               {t('footer.nav.privacy')}
             </a>
@@ -48,8 +53,8 @@ const Footer = () => {
         </div>
 
         {/* Copyright */}
-        <div className="mt-8 border-t border-border/50 pt-8 text-center">
-          <p className="text-sm text-muted-foreground">
+        <div className="mt-8 border-t border-[hsl(var(--landing-navy))]/15 pt-8 text-center dark:border-[hsl(var(--landing-navy))]/25">
+          <p className="text-sm text-[hsl(var(--landing-greek-blue-light))]/70">
             {t('footer.copyright', { year: new Date().getFullYear() })}
           </p>
         </div>

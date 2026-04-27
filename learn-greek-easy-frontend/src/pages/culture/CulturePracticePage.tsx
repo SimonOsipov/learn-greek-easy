@@ -58,7 +58,7 @@ import { getPersistedNewsLevel, setPersistedNewsLevel, type NewsLevel } from '@/
  */
 function PracticePageSkeleton() {
   return (
-    <div className="min-h-screen bg-[var(--practice-bg)] px-4 py-6 md:px-6 md:py-8">
+    <div className="min-h-screen bg-[hsl(var(--practice-bg))] px-4 py-6 md:px-6 md:py-8">
       <div className="mx-auto max-w-[520px]">
         {/* Header skeleton: exit button left, language pill right */}
         <div className="mb-4 flex items-center justify-between">
@@ -477,7 +477,7 @@ export function CulturePracticePage() {
   // Recovery dialog
   if (showRecoveryDialog) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[var(--practice-bg)] p-4">
+      <div className="flex min-h-screen items-center justify-center bg-[hsl(var(--practice-bg))] p-4">
         <Dialog open={showRecoveryDialog} onOpenChange={setShowRecoveryDialog}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
@@ -506,7 +506,7 @@ export function CulturePracticePage() {
   // Session complete - show inline ScoreCard
   if (summary) {
     return (
-      <div className="min-h-screen bg-[var(--practice-bg)] px-4 py-6 md:px-6 md:py-8">
+      <div className="min-h-screen bg-[hsl(var(--practice-bg))] px-4 py-6 md:px-6 md:py-8">
         <div className="mx-auto max-w-[520px]">
           <ScoreCard
             correct={summary.stats.correctCount}
@@ -522,7 +522,7 @@ export function CulturePracticePage() {
   // No questions due for review state
   if (hasNoQuestionsDue) {
     return (
-      <div className="min-h-screen bg-[var(--practice-bg)] px-4 py-6 md:px-6 md:py-8">
+      <div className="min-h-screen bg-[hsl(var(--practice-bg))] px-4 py-6 md:px-6 md:py-8">
         <div className="mx-auto max-w-[520px]">
           <Button
             variant="ghost"
@@ -534,8 +534,8 @@ export function CulturePracticePage() {
           </Button>
           <Card className="bg-card">
             <CardContent className="py-12 text-center">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-                <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[hsl(var(--practice-correct-soft))]">
+                <CheckCircle className="h-8 w-8 text-[hsl(var(--practice-correct))]" />
               </div>
               <h2 className="mb-2 text-xl font-semibold text-foreground">
                 {t('practice.allCaughtUp', 'All Caught Up!')}
@@ -593,7 +593,7 @@ export function CulturePracticePage() {
   // Error state
   if (error) {
     return (
-      <div className="min-h-screen bg-[var(--practice-bg)] px-4 py-6 md:px-6 md:py-8">
+      <div className="min-h-screen bg-[hsl(var(--practice-bg))] px-4 py-6 md:px-6 md:py-8">
         <div className="mx-auto max-w-[520px]">
           <Button variant="ghost" onClick={() => navigate('/decks')} className="mb-4">
             <ChevronLeft className="mr-2 h-4 w-4" />
@@ -620,7 +620,7 @@ export function CulturePracticePage() {
   // No current question
   if (!currentQuestion) {
     return (
-      <div className="min-h-screen bg-[var(--practice-bg)] px-4 py-6 md:px-6 md:py-8">
+      <div className="min-h-screen bg-[hsl(var(--practice-bg))] px-4 py-6 md:px-6 md:py-8">
         <div className="mx-auto max-w-[520px]">
           <Button variant="ghost" onClick={() => navigate('/decks')} className="mb-4">
             <ChevronLeft className="mr-2 h-4 w-4" />
@@ -641,7 +641,7 @@ export function CulturePracticePage() {
   const currentLanguage = session.config.language;
 
   return (
-    <div className="min-h-screen bg-[var(--practice-bg)] px-4 py-6 md:px-6 md:py-8">
+    <div className="min-h-screen bg-[hsl(var(--practice-bg))] px-4 py-6 md:px-6 md:py-8">
       <div className="mx-auto max-w-[520px]">
         {/* Header */}
         <PracticeHeader

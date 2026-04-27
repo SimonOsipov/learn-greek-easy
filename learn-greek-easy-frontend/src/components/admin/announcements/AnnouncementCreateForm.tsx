@@ -90,7 +90,7 @@ const CharacterCounter: React.FC<CharacterCounterProps> = ({ current, max }) => 
         percentage > 100
           ? 'font-medium text-destructive'
           : percentage > 90
-            ? 'text-amber-600 dark:text-amber-500'
+            ? 'text-warning'
             : 'text-muted-foreground'
       )}
       data-testid="character-counter"

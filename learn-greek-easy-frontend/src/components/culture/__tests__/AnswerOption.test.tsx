@@ -90,16 +90,16 @@ describe('AnswerOption', () => {
       render(<AnswerOption {...defaultProps} />);
 
       const button = screen.getByTestId('answer-option-a');
-      expect(button.className).toContain('border-[var(--practice-border)]');
-      expect(button.className).toContain('bg-[var(--practice-card)]');
+      expect(button.className).toContain('border-[hsl(var(--practice-border))]');
+      expect(button.className).toContain('bg-[hsl(var(--practice-card))]');
     });
 
     it('should have hover classes when in default state', () => {
       render(<AnswerOption {...defaultProps} />);
 
       const button = screen.getByTestId('answer-option-a');
-      expect(button.className).toContain('hover:border-slate-300');
-      expect(button.className).toContain('hover:bg-slate-50/60');
+      expect(button.className).toContain('hover:border-[hsl(var(--practice-border)/0.7)]');
+      expect(button.className).toContain('hover:bg-[hsl(var(--practice-bg))]');
     });
 
     it('should show number in left badge when keyboardHintNumber provided', () => {
@@ -132,17 +132,17 @@ describe('AnswerOption', () => {
       render(<AnswerOption {...defaultProps} state="selected" />);
 
       const button = screen.getByTestId('answer-option-a');
-      expect(button.className).toContain('border-[var(--practice-accent)]');
-      expect(button.className).toContain('bg-[var(--practice-accent-soft)]');
-      expect(button.className).toContain('shadow-[0_0_0_3px_var(--practice-accent-glow)]');
+      expect(button.className).toContain('border-[hsl(var(--practice-accent))]');
+      expect(button.className).toContain('bg-[hsl(var(--practice-accent-soft))]');
+      expect(button.className).toContain('shadow-[0_0_0_3px_hsl(var(--practice-accent-glow))]');
     });
 
     it('should apply accent border via isSelected boolean fallback', () => {
       render(<AnswerOption {...defaultProps} isSelected={true} />);
 
       const button = screen.getByTestId('answer-option-a');
-      expect(button.className).toContain('border-[var(--practice-accent)]');
-      expect(button.className).toContain('bg-[var(--practice-accent-soft)]');
+      expect(button.className).toContain('border-[hsl(var(--practice-accent))]');
+      expect(button.className).toContain('bg-[hsl(var(--practice-accent-soft))]');
     });
 
     it('should not show keyboard hint', () => {
@@ -174,9 +174,9 @@ describe('AnswerOption', () => {
       render(<AnswerOption {...defaultProps} submitted={true} isCorrect={true} />);
 
       const button = screen.getByTestId('answer-option-a');
-      expect(button.className).toContain('border-[var(--practice-correct)]');
-      expect(button.className).toContain('bg-[var(--practice-correct-soft)]');
-      expect(button.className).toContain('shadow-[0_0_0_3px_var(--practice-correct-glow)]');
+      expect(button.className).toContain('border-[hsl(var(--practice-correct))]');
+      expect(button.className).toContain('bg-[hsl(var(--practice-correct-soft))]');
+      expect(button.className).toContain('shadow-[0_0_0_3px_hsl(var(--practice-correct-glow))]');
     });
 
     it('should show checkmark icon with data-testid result-icon-correct', () => {
@@ -193,12 +193,12 @@ describe('AnswerOption', () => {
       expect(checkIcon).toHaveClass('animate-practice-pop-in');
     });
 
-    it('should have letter badge with bg-emerald-500', () => {
+    it('should have letter badge with practice-correct background', () => {
       render(<AnswerOption {...defaultProps} submitted={true} isCorrect={true} />);
 
       const button = screen.getByTestId('answer-option-a');
       const badge = button.querySelector('span');
-      expect(badge).toHaveClass('bg-emerald-500');
+      expect(badge?.className).toContain('bg-[hsl(var(--practice-correct))]');
     });
 
     it('should not show keyboard hint', () => {
@@ -223,9 +223,9 @@ describe('AnswerOption', () => {
       render(<AnswerOption {...defaultProps} submitted={true} isSelectedIncorrect={true} />);
 
       const button = screen.getByTestId('answer-option-a');
-      expect(button.className).toContain('border-[var(--practice-incorrect)]');
-      expect(button.className).toContain('bg-[var(--practice-incorrect-soft)]');
-      expect(button.className).toContain('shadow-[0_0_0_3px_var(--practice-incorrect-glow)]');
+      expect(button.className).toContain('border-[hsl(var(--practice-incorrect))]');
+      expect(button.className).toContain('bg-[hsl(var(--practice-incorrect-soft))]');
+      expect(button.className).toContain('shadow-[0_0_0_3px_hsl(var(--practice-incorrect-glow))]');
     });
 
     it('should show cross icon with data-testid result-icon-incorrect', () => {
@@ -242,12 +242,12 @@ describe('AnswerOption', () => {
       expect(crossIcon).toHaveClass('animate-practice-pop-in');
     });
 
-    it('should have letter badge with bg-red-500', () => {
+    it('should have letter badge with practice-incorrect background', () => {
       render(<AnswerOption {...defaultProps} submitted={true} isSelectedIncorrect={true} />);
 
       const button = screen.getByTestId('answer-option-a');
       const badge = button.querySelector('span');
-      expect(badge).toHaveClass('bg-red-500');
+      expect(badge?.className).toContain('bg-[hsl(var(--practice-incorrect))]');
     });
 
     it('should not show keyboard hint', () => {
@@ -329,14 +329,14 @@ describe('AnswerOption', () => {
       render(<AnswerOption {...defaultProps} state="correct" isSelected={true} submitted={true} />);
 
       const button = screen.getByTestId('answer-option-a');
-      expect(button.className).toContain('border-[var(--practice-correct)]');
+      expect(button.className).toContain('border-[hsl(var(--practice-correct))]');
     });
 
     it('should resolve to correct when submitted + isCorrect', () => {
       render(<AnswerOption {...defaultProps} submitted={true} isCorrect={true} />);
 
       const button = screen.getByTestId('answer-option-a');
-      expect(button.className).toContain('border-[var(--practice-correct)]');
+      expect(button.className).toContain('border-[hsl(var(--practice-correct))]');
       expect(screen.getByTestId('result-icon-correct')).toBeInTheDocument();
     });
 
@@ -344,7 +344,7 @@ describe('AnswerOption', () => {
       render(<AnswerOption {...defaultProps} submitted={true} isSelectedIncorrect={true} />);
 
       const button = screen.getByTestId('answer-option-a');
-      expect(button.className).toContain('border-[var(--practice-incorrect)]');
+      expect(button.className).toContain('border-[hsl(var(--practice-incorrect))]');
       expect(screen.getByTestId('result-icon-incorrect')).toBeInTheDocument();
     });
 
@@ -359,7 +359,7 @@ describe('AnswerOption', () => {
       render(<AnswerOption {...defaultProps} isSelected={true} />);
 
       const button = screen.getByTestId('answer-option-a');
-      expect(button.className).toContain('border-[var(--practice-accent)]');
+      expect(button.className).toContain('border-[hsl(var(--practice-accent))]');
       expect(button).toHaveAttribute('aria-pressed', 'true');
     });
 
@@ -367,8 +367,8 @@ describe('AnswerOption', () => {
       render(<AnswerOption {...defaultProps} />);
 
       const button = screen.getByTestId('answer-option-a');
-      expect(button.className).toContain('border-[var(--practice-border)]');
-      expect(button.className).toContain('bg-[var(--practice-card)]');
+      expect(button.className).toContain('border-[hsl(var(--practice-border))]');
+      expect(button.className).toContain('bg-[hsl(var(--practice-card))]');
     });
   });
 
@@ -494,30 +494,30 @@ describe('AnswerOption', () => {
       expect(badge).toHaveClass('text-muted-foreground');
     });
 
-    it('should have bg-indigo-500 text-white in selected state', () => {
+    it('should have practice-accent background text-white in selected state', () => {
       render(<AnswerOption {...defaultProps} state="selected" />);
 
       const button = screen.getByTestId('answer-option-a');
       const badge = button.querySelector('span');
-      expect(badge).toHaveClass('bg-indigo-500');
+      expect(badge?.className).toContain('bg-[hsl(var(--practice-accent))]');
       expect(badge).toHaveClass('text-white');
     });
 
-    it('should have bg-emerald-500 text-white in correct state', () => {
+    it('should have practice-correct background text-white in correct state', () => {
       render(<AnswerOption {...defaultProps} state="correct" />);
 
       const button = screen.getByTestId('answer-option-a');
       const badge = button.querySelector('span');
-      expect(badge).toHaveClass('bg-emerald-500');
+      expect(badge?.className).toContain('bg-[hsl(var(--practice-correct))]');
       expect(badge).toHaveClass('text-white');
     });
 
-    it('should have bg-red-500 text-white in incorrect state', () => {
+    it('should have practice-incorrect background text-white in incorrect state', () => {
       render(<AnswerOption {...defaultProps} state="incorrect" />);
 
       const button = screen.getByTestId('answer-option-a');
       const badge = button.querySelector('span');
-      expect(badge).toHaveClass('bg-red-500');
+      expect(badge?.className).toContain('bg-[hsl(var(--practice-incorrect))]');
       expect(badge).toHaveClass('text-white');
     });
 

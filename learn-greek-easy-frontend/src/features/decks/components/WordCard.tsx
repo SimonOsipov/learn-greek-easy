@@ -29,7 +29,7 @@ import type { CardTypeMastery } from '@/services/progressAPI';
 import type { WordEntryResponse } from '@/services/wordEntryAPI';
 
 // ============================================
-// POS Abbreviations
+// POS Abbreviations and badge slots
 // ============================================
 
 const POS_ABBREVIATIONS: Record<string, string> = {
@@ -42,6 +42,17 @@ const POS_ABBREVIATIONS: Record<string, string> = {
 
 const getPosLabel = (pos: string): string =>
   POS_ABBREVIATIONS[pos.toLowerCase()] ?? pos.toLowerCase();
+
+// Maps part-of-speech to badge slot — matches PartOfSpeechBadge mapping
+const POS_BADGE_SLOT: Record<string, string> = {
+  noun: 'b-amber',
+  verb: 'b-green',
+  adjective: 'b-violet',
+  adverb: 'b-blue',
+  phrase: 'b-gray',
+};
+
+const getPosBadgeSlot = (pos: string): string => POS_BADGE_SLOT[pos.toLowerCase()] ?? 'b-gray';
 
 // ============================================
 // Card Type Groups
@@ -206,10 +217,10 @@ export const WordCard: React.FC<WordCardProps> = ({
       aria-label={`${lemma} - ${displayTranslation}`}
     >
       <CardContent className="p-4">
-        {/* Top-left POS label */}
+        {/* Top-left POS badge */}
         <span
           data-testid="word-card-pos"
-          className="absolute left-3 top-3 text-xs text-muted-foreground"
+          className={`badge ${getPosBadgeSlot(wordEntry.part_of_speech)} absolute left-3 top-3`}
         >
           {getPosLabel(wordEntry.part_of_speech)}
         </span>

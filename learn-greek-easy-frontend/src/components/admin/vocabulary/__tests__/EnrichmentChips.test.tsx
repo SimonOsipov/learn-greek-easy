@@ -168,89 +168,89 @@ describe('EnrichmentChips', () => {
     it('EN chip is green when singular and plural both present (2/2)', () => {
       renderChips(createCard({ translation_en_plural: 'mothers' }));
       const chip = screen.getByTestId('enrichment-en-card-1');
-      expect(chip.className).toMatch(/green/);
+      expect(chip.className).toContain('b-green');
     });
 
     it('EN chip is yellow when plural is missing (1/2)', () => {
       renderChips(createCard({ translation_en_plural: null }));
       const chip = screen.getByTestId('enrichment-en-card-1');
-      expect(chip.className).toMatch(/yellow/);
+      expect(chip.className).toContain('b-amber');
     });
 
     // RU chip — green 2/2, yellow 1/2, gray 0/2
     it('RU chip is green when both RU fields present (2/2)', () => {
       renderChips(createCard());
       const chip = screen.getByTestId('enrichment-ru-card-1');
-      expect(chip.className).toMatch(/green/);
+      expect(chip.className).toContain('b-green');
     });
 
     it('RU chip is yellow when only singular RU present (1/2)', () => {
       renderChips(createCard({ translation_ru_plural: null }));
       const chip = screen.getByTestId('enrichment-ru-card-1');
-      expect(chip.className).toMatch(/yellow/);
+      expect(chip.className).toContain('b-amber');
     });
 
     it('RU chip is gray when both RU fields missing (0/2)', () => {
       renderChips(createCard({ back_text_ru: null, translation_ru_plural: null }));
       const chip = screen.getByTestId('enrichment-ru-card-1');
-      expect(chip.className).toMatch(/muted/);
+      expect(chip.className).toContain('b-gray');
     });
 
     // Pron chip — green or gray only
     it('Pron chip is green when pronunciation present', () => {
       renderChips(createCard());
       const chip = screen.getByTestId('enrichment-pron-card-1');
-      expect(chip.className).toMatch(/green/);
+      expect(chip.className).toContain('b-green');
     });
 
     it('Pron chip is gray when pronunciation missing', () => {
       renderChips(createCard({ pronunciation: null }));
       const chip = screen.getByTestId('enrichment-pron-card-1');
-      expect(chip.className).toMatch(/muted/);
+      expect(chip.className).toContain('b-gray');
     });
 
     // Audio chip — AC-10: 3 states
     it('Audio chip is green when status is ready', () => {
       renderChips(createCard({ audio_status: 'ready' }));
       const chip = screen.getByTestId('enrichment-audio-card-1');
-      expect(chip.className).toMatch(/green/);
+      expect(chip.className).toContain('b-green');
     });
 
     it('Audio chip is yellow when status is generating', () => {
       renderChips(createCard({ audio_status: 'generating' }));
       const chip = screen.getByTestId('enrichment-audio-card-1');
-      expect(chip.className).toMatch(/yellow/);
+      expect(chip.className).toContain('b-amber');
     });
 
     it('Audio chip is gray when status is missing', () => {
       renderChips(createCard({ audio_status: 'missing' }));
       const chip = screen.getByTestId('enrichment-audio-card-1');
-      expect(chip.className).toMatch(/muted/);
+      expect(chip.className).toContain('b-gray');
     });
 
     it('Audio chip is gray when status is failed', () => {
       renderChips(createCard({ audio_status: 'failed' }));
       const chip = screen.getByTestId('enrichment-audio-card-1');
-      expect(chip.className).toMatch(/muted/);
+      expect(chip.className).toContain('b-gray');
     });
 
     // Grammar chip colors
     it('Grammar chip is green when fully filled', () => {
       renderChips(createCard({ grammar_filled: 9, grammar_total: 9 }));
       const chip = screen.getByTestId('enrichment-gram-card-1');
-      expect(chip.className).toMatch(/green/);
+      expect(chip.className).toContain('b-green');
     });
 
     it('Grammar chip is yellow when partially filled', () => {
       renderChips(createCard({ grammar_filled: 3, grammar_total: 9 }));
       const chip = screen.getByTestId('enrichment-gram-card-1');
-      expect(chip.className).toMatch(/yellow/);
+      expect(chip.className).toContain('b-amber');
     });
 
     it('Grammar chip is gray when empty (0 filled)', () => {
       renderChips(createCard({ grammar_filled: 0, grammar_total: 9 }));
       const chip = screen.getByTestId('enrichment-gram-card-1');
-      expect(chip.className).toMatch(/muted/);
+      expect(chip.className).toContain('b-gray');
     });
 
     // Example chip colors
@@ -264,7 +264,7 @@ describe('EnrichmentChips', () => {
         })
       );
       const chip = screen.getByTestId('enrichment-ex-card-1');
-      expect(chip.className).toMatch(/muted/);
+      expect(chip.className).toContain('b-gray');
     });
 
     it('Example chip is green when all examples have EN+RU+audio', () => {
@@ -277,7 +277,7 @@ describe('EnrichmentChips', () => {
         })
       );
       const chip = screen.getByTestId('enrichment-ex-card-1');
-      expect(chip.className).toMatch(/green/);
+      expect(chip.className).toContain('b-green');
     });
 
     it('Example chip is yellow when some examples are missing translations', () => {
@@ -290,7 +290,7 @@ describe('EnrichmentChips', () => {
         })
       );
       const chip = screen.getByTestId('enrichment-ex-card-1');
-      expect(chip.className).toMatch(/yellow/);
+      expect(chip.className).toContain('b-amber');
     });
 
     it('Example chip is yellow when some examples lack audio', () => {
@@ -303,23 +303,23 @@ describe('EnrichmentChips', () => {
         })
       );
       const chip = screen.getByTestId('enrichment-ex-card-1');
-      expect(chip.className).toMatch(/yellow/);
+      expect(chip.className).toContain('b-amber');
     });
   });
 
-  // ---- AC-7: Dark mode classes ----
+  // ---- AC-7: Dark mode support (handled by design-system CSS) ----
 
   describe('dark mode support', () => {
-    it('green chip has dark mode classes', () => {
+    it('green chip uses design-system token class (b-green)', () => {
       renderChips(createCard({ audio_status: 'ready' }));
       const chip = screen.getByTestId('enrichment-audio-card-1');
-      expect(chip.className).toContain('dark:');
+      expect(chip.className).toContain('b-green');
     });
 
-    it('yellow chip has dark mode classes', () => {
+    it('yellow chip uses design-system token class (b-amber)', () => {
       renderChips(createCard({ audio_status: 'generating' }));
       const chip = screen.getByTestId('enrichment-audio-card-1');
-      expect(chip.className).toContain('dark:');
+      expect(chip.className).toContain('b-amber');
     });
   });
 
@@ -356,15 +356,15 @@ describe('EnrichmentChips', () => {
       renderChips(createCard({ translation_en_plural: null }));
       const chip = screen.getByTestId('enrichment-en-card-1');
       // Must not be gray
-      expect(chip.className).not.toMatch(/muted/);
-      expect(chip.className).toMatch(/yellow/);
+      expect(chip.className).not.toContain('b-gray');
+      expect(chip.className).toContain('b-amber');
     });
 
     it('EN chip is green (2/2) when both translations present', () => {
       renderChips(createCard());
       const chip = screen.getByTestId('enrichment-en-card-1');
-      expect(chip.className).not.toMatch(/muted/);
-      expect(chip.className).toMatch(/green/);
+      expect(chip.className).not.toContain('b-gray');
+      expect(chip.className).toContain('b-green');
     });
   });
 
@@ -435,7 +435,7 @@ describe('EnrichmentChips', () => {
       const chip = screen.getByTestId('enrichment-en-card-1');
       // With plural present: EN 1/2 (yellow)
       expect(chip).toHaveTextContent('EN 1/2');
-      expect(chip.className).toMatch(/yellow/);
+      expect(chip.className).toContain('b-amber');
     });
 
     it('uses card.id in all test-ids', () => {

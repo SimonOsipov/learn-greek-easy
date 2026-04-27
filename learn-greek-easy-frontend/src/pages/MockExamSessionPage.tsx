@@ -428,7 +428,7 @@ export const MockExamSessionPage: React.FC = () => {
             {isLoading || (isSubmitting && progress.current === progress.total) ? (
               <div className="flex min-h-[400px] items-center justify-center">
                 <div className="text-center">
-                  <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-primary"></div>
+                  <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-[hsl(var(--practice-accent))]"></div>
                   <p className="text-muted-foreground">
                     {t('session.completing', { defaultValue: 'Completing exam...' })}
                   </p>

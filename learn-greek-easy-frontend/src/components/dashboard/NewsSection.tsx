@@ -96,6 +96,8 @@ export const NewsSection: React.FC = () => {
 
   return (
     <section data-testid="news-section">
+      {/* Kicker label above header */}
+      <p className="kicker mb-2">{t('dashboard.news.kicker', 'News')}</p>
       {/* Header row: title + See All link */}
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-lg font-semibold text-foreground">{t('dashboard.news.title')}</h2>

@@ -305,7 +305,7 @@ const ErrorState: React.FC<ErrorStateProps> = ({ error, onRetry }) => {
 
       <Card>
         <CardContent className="py-12 pt-6 text-center">
-          <AlertCircle className="mx-auto mb-4 h-16 w-16 text-red-500 dark:text-red-400" />
+          <AlertCircle className="mx-auto mb-4 h-16 w-16 text-[hsl(var(--practice-incorrect))]" />
           <h2 className="mb-2 text-xl font-semibold text-foreground">
             {t('detail.error.failedToLoad')}
           </h2>

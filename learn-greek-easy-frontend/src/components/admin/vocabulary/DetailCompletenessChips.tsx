@@ -48,7 +48,7 @@ export function DetailCompletenessChips({
           type="button"
           title={chip.tooltip}
           onClick={() => handleChipClick(chip.name)}
-          className={`inline-flex cursor-pointer items-center rounded-full px-2.5 py-0.5 text-xs font-medium transition-opacity hover:opacity-80 ${chipColorClasses[chip.color]}`}
+          className={`cursor-pointer transition-opacity hover:opacity-80 ${chipColorClasses[chip.color]}`}
         >
           {chip.label}
         </button>

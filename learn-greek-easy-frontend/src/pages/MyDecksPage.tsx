@@ -10,6 +10,7 @@ import { DecksGrid, UserDeckEditModal } from '@/components/decks';
 import type { CreateSource } from '@/components/decks/UserDeckEditModal';
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
 import { CardSkeleton } from '@/components/feedback';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -192,25 +193,16 @@ export const MyDecksPage: React.FC = () => {
 
       {/* Error State */}
       {error && (
-        <Card className="border-red-200 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/20">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 flex-shrink-0 text-red-600 dark:text-red-400" />
-            <div className="flex-1">
-              <h3 className="font-medium text-red-900 dark:text-red-200">
-                {t('list.errorLoading')}
-              </h3>
-              <p className="mt-1 text-sm text-red-700 dark:text-red-300">{error}</p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRetry}
-                className="mt-3 border-red-300 text-red-700 hover:bg-red-100 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950"
-              >
-                {t('list.tryAgain')}
-              </Button>
-            </div>
-          </div>
-        </Card>
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>{t('list.errorLoading')}</AlertTitle>
+          <AlertDescription>
+            {error}
+            <Button variant="outline" size="sm" onClick={handleRetry} className="mt-3 block">
+              {t('list.tryAgain')}
+            </Button>
+          </AlertDescription>
+        </Alert>
       )}
 
       {/* Loading State */}

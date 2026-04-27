@@ -50,7 +50,7 @@ describe('SourceImage', () => {
       expect(container.className).toContain('rounded-[14px]');
       expect(container.className).toContain('overflow-hidden');
       expect(container).toHaveClass('border');
-      expect(container).toHaveClass('border-slate-200');
+      expect(container.className).toContain('border-[hsl(var(--practice-border))]');
     });
 
     it('applies custom className to container', () => {

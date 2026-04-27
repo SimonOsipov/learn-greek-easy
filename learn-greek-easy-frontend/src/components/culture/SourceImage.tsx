@@ -33,7 +33,7 @@ export const SourceImage: FC<SourceImageProps> = ({
   if (!imageUrl || hasError) return null;
 
   const containerClasses = cn(
-    'relative block w-full overflow-hidden rounded-[14px] border border-slate-200',
+    'relative block w-full overflow-hidden rounded-[14px] border border-[hsl(var(--practice-border))]',
     className
   );
 

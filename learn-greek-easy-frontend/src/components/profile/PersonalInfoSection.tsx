@@ -208,12 +208,12 @@ export const PersonalInfoSection: React.FC<PersonalInfoSectionProps> = ({ user }
             <div className="relative">
               <Avatar className="h-20 w-20">
                 {user.avatar ? <AvatarImage src={user.avatar} alt={user.name} /> : null}
-                <AvatarFallback className="bg-gradient-to-br from-blue-500 to-blue-600 text-2xl font-bold text-white">
+                <AvatarFallback className="bg-primary text-2xl font-bold text-primary-foreground">
                   {getInitials(user.name)}
                 </AvatarFallback>
               </Avatar>
               {(isUploadingAvatar || isRemovingAvatar) && (
-                <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50">
+                <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/60 backdrop-blur-sm">
                   <Loader2 className="h-6 w-6 animate-spin text-white" />
                 </div>
               )}
@@ -268,9 +268,9 @@ export const PersonalInfoSection: React.FC<PersonalInfoSectionProps> = ({ user }
             type="text"
             {...register('name')}
             placeholder={t('personalInfo.fullNamePlaceholder')}
-            className={errors.name ? 'border-red-500' : ''}
+            className={errors.name ? 'border-destructive' : ''}
           />
-          {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>}
+          {errors.name && <p className="mt-1 text-sm text-destructive">{errors.name.message}</p>}
         </div>
 
         {/* Email (Read-only) */}

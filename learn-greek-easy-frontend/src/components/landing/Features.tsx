@@ -119,7 +119,7 @@ const Features = () => {
     /* h-[360px]: fixed height ensures uniform card sizing across the 3-column grid */
     <div
       aria-hidden="true"
-      className="flex h-[360px] w-full flex-col rounded-2xl border border-border/50 bg-background p-5 shadow-lg"
+      className="flex h-[360px] w-full flex-col rounded-2xl border border-[hsl(var(--landing-navy))]/15 bg-[hsl(var(--landing-navy))]/5 p-5 shadow-landing-card transition-shadow duration-300 hover:shadow-landing-card-hover dark:border-[hsl(var(--landing-navy))]/25"
     >
       {children}
     </div>
@@ -168,8 +168,8 @@ const Features = () => {
     <MockupWrapper>
       {/* Header */}
       <div className="mb-3 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-          <Volume2 className="h-5 w-5 text-primary" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[hsl(var(--landing-greek-blue))]/10">
+          <Volume2 className="h-5 w-5 text-[hsl(var(--landing-greek-blue))]" />
         </div>
         <div>
           <p className="text-sm font-bold text-foreground">Στο Φαρμακείο</p>
@@ -186,10 +186,10 @@ const Features = () => {
         </div>
         {/* Speaker B - right, with karaoke highlight */}
         <div className="ml-8">
-          <div className="rounded-2xl rounded-tr-sm bg-primary/10 px-3 py-2">
+          <div className="rounded-2xl rounded-tr-sm bg-[hsl(var(--landing-greek-blue))]/10 px-3 py-2">
             <p className="text-xs text-foreground">
               Βεβαίως, πόσο{' '}
-              <span className="rounded bg-primary/15 px-0.5 font-semibold text-blue-800 dark:text-blue-300">
+              <span className="rounded bg-[hsl(var(--landing-greek-blue))]/15 px-0.5 font-semibold text-[hsl(var(--landing-greek-blue))]">
                 συχνά
               </span>{' '}
               έχετε πονοκέφαλο;
@@ -204,18 +204,18 @@ const Features = () => {
         </div>
         {/* Speaker B - right */}
         <div className="ml-8">
-          <div className="rounded-2xl rounded-tr-sm bg-primary/10 px-3 py-2">
+          <div className="rounded-2xl rounded-tr-sm bg-[hsl(var(--landing-greek-blue))]/10 px-3 py-2">
             <p className="text-xs text-foreground">Θα σας δώσω παρακεταμόλη.</p>
           </div>
         </div>
       </div>
       {/* Audio player */}
       <div className="mb-3 flex items-center gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/20">
-          <Play className="ml-0.5 h-4 w-4 text-primary" />
+        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[hsl(var(--landing-greek-blue))]/20">
+          <Play className="ml-0.5 h-4 w-4 text-[hsl(var(--landing-greek-blue))]" />
         </div>
-        <div className="h-2 flex-1 overflow-hidden rounded-full bg-primary/20">
-          <div className="h-full w-1/3 rounded-full bg-primary" />
+        <div className="h-2 flex-1 overflow-hidden rounded-full bg-[hsl(var(--landing-greek-blue))]/20">
+          <div className="h-full w-1/3 rounded-full bg-[hsl(var(--landing-greek-blue))]" />
         </div>
         <span className="text-xs text-muted-foreground">0:48</span>
       </div>
@@ -244,11 +244,11 @@ const Features = () => {
       </div>
       {/* Audio player bar */}
       <div className="mb-3 flex items-center gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/20">
-          <Volume2 className="h-4 w-4 text-primary" />
+        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[hsl(var(--landing-greek-blue))]/20">
+          <Volume2 className="h-4 w-4 text-[hsl(var(--landing-greek-blue))]" />
         </div>
-        <div className="h-2 flex-1 overflow-hidden rounded-full bg-primary/20">
-          <div className="h-full w-2/3 rounded-full bg-primary" />
+        <div className="h-2 flex-1 overflow-hidden rounded-full bg-[hsl(var(--landing-greek-blue))]/20">
+          <div className="h-full w-2/3 rounded-full bg-[hsl(var(--landing-greek-blue))]" />
         </div>
         <span className="text-xs text-muted-foreground">0:12</span>
       </div>
@@ -259,9 +259,9 @@ const Features = () => {
       </p>
       {/* Answer grid */}
       <div className="mb-3 grid flex-1 grid-cols-2 gap-2">
-        <div className="flex items-center justify-between rounded-lg border-2 border-primary bg-primary/5 p-2.5">
+        <div className="flex items-center justify-between rounded-lg border-2 border-[hsl(var(--landing-greek-blue))] bg-[hsl(var(--landing-greek-blue))]/5 p-2.5">
           <span className="text-sm font-semibold text-foreground">καφέ</span>
-          <CheckCircle className="h-4 w-4 text-primary" />
+          <CheckCircle className="h-4 w-4 text-[hsl(var(--landing-greek-blue))]" />
         </div>
         <div className="rounded-lg border border-border p-2.5 text-sm text-foreground">νερό</div>
         <div className="rounded-lg border border-border p-2.5 text-sm text-foreground">ψωμί</div>
@@ -297,8 +297,8 @@ const Features = () => {
       </div>
       {/* Progress bar */}
       <div className="mb-2 flex items-center gap-2">
-        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-primary/20">
-          <div className="h-full w-[40%] rounded-full bg-primary" />
+        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[hsl(var(--landing-greek-blue))]/20">
+          <div className="h-full w-[40%] rounded-full bg-[hsl(var(--landing-greek-blue))]" />
         </div>
         <span className="text-xs text-muted-foreground">4/10</span>
       </div>
@@ -313,9 +313,9 @@ const Features = () => {
         <div className="rounded-lg border border-border p-2 text-xs text-foreground">
           Να πάει στο γραφείο
         </div>
-        <div className="flex items-center justify-between rounded-lg border-2 border-primary bg-primary/5 p-2">
+        <div className="flex items-center justify-between rounded-lg border-2 border-[hsl(var(--landing-greek-blue))] bg-[hsl(var(--landing-greek-blue))]/5 p-2">
           <span className="text-xs font-semibold text-foreground">Να στείλει τα έγγραφα</span>
-          <CheckCircle className="h-3.5 w-3.5 text-primary" />
+          <CheckCircle className="h-3.5 w-3.5 text-[hsl(var(--landing-greek-blue))]" />
         </div>
         <div className="rounded-lg border border-border p-2 text-xs text-foreground">
           Να πάρει τηλέφωνο
@@ -363,9 +363,9 @@ const Features = () => {
         <div className="rounded-lg border border-border p-2.5 text-sm text-foreground">
           Στην τράπεζα
         </div>
-        <div className="flex items-center justify-between rounded-lg border-2 border-primary bg-primary/5 p-2.5">
+        <div className="flex items-center justify-between rounded-lg border-2 border-[hsl(var(--landing-greek-blue))] bg-[hsl(var(--landing-greek-blue))]/5 p-2.5">
           <span className="text-sm font-semibold text-foreground">Στο ταχυδρομείο</span>
-          <CheckCircle className="h-4 w-4 text-primary" />
+          <CheckCircle className="h-4 w-4 text-[hsl(var(--landing-greek-blue))]" />
         </div>
         <div className="rounded-lg border border-border p-2.5 text-sm text-foreground">
           Στο νοσοκομείο
@@ -394,9 +394,9 @@ const Features = () => {
       <p className="mb-3 text-sm font-bold text-foreground">Πότε η Κύπρος έγινε ανεξάρτητη;</p>
       <div className="mb-3 grid grid-cols-2 gap-2">
         <div className="rounded-lg border border-border p-2.5 text-sm text-foreground">1950</div>
-        <div className="flex items-center justify-between rounded-lg border-2 border-primary bg-primary/5 p-2.5">
+        <div className="flex items-center justify-between rounded-lg border-2 border-[hsl(var(--landing-greek-blue))] bg-[hsl(var(--landing-greek-blue))]/5 p-2.5">
           <span className="text-sm font-semibold text-foreground">1960</span>
-          <CheckCircle className="h-4 w-4 text-primary" />
+          <CheckCircle className="h-4 w-4 text-[hsl(var(--landing-greek-blue))]" />
         </div>
         <div className="rounded-lg border border-border p-2.5 text-sm text-foreground">1974</div>
         <div className="rounded-lg border border-border p-2.5 text-sm text-foreground">1955</div>
@@ -557,8 +557,10 @@ const Features = () => {
   const NewsMockup = () => (
     <MockupWrapper>
       <div className="mb-4 flex items-center gap-2">
-        <Tv className="h-4 w-4 text-primary" />
-        <span className="text-xs font-semibold text-primary">ERT News</span>
+        <Tv className="h-4 w-4 text-[hsl(var(--landing-greek-blue))]" />
+        <span className="text-xs font-semibold text-[hsl(var(--landing-greek-blue))]">
+          ERT News
+        </span>
         <span className="ml-auto text-xs text-muted-foreground dark:text-foreground/70">
           {t('features.mockups.today')}
         </span>
@@ -574,11 +576,11 @@ const Features = () => {
         </p>
       </div>
       <div className="mb-3 flex items-center gap-3">
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20">
-          <Play className="ml-0.5 h-4 w-4 text-primary" />
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[hsl(var(--landing-greek-blue))]/20">
+          <Play className="ml-0.5 h-4 w-4 text-[hsl(var(--landing-greek-blue))]" />
         </div>
-        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-primary/20">
-          <div className="h-full w-1/4 rounded-full bg-primary" />
+        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[hsl(var(--landing-greek-blue))]/20">
+          <div className="h-full w-1/4 rounded-full bg-[hsl(var(--landing-greek-blue))]" />
         </div>
         <span className="text-xs text-muted-foreground">1:20</span>
       </div>
@@ -613,7 +615,7 @@ const Features = () => {
               {t('features.mockups.cardsCount', { count: 24 })}
             </p>
           </div>
-          <div className="text-xs font-medium text-primary">80%</div>
+          <div className="text-xs font-medium text-[hsl(var(--landing-greek-blue))]">80%</div>
         </div>
         <div className="flex items-center justify-between rounded-lg bg-secondary/50 p-3">
           <div>
@@ -624,7 +626,7 @@ const Features = () => {
               {t('features.mockups.cardsCount', { count: 15 })}
             </p>
           </div>
-          <div className="text-xs font-medium text-primary">65%</div>
+          <div className="text-xs font-medium text-[hsl(var(--landing-greek-blue))]">65%</div>
         </div>
         <div className="flex items-center justify-between rounded-lg border-2 border-dashed border-border bg-secondary/30 p-3">
           <div className="flex items-center gap-2 text-muted-foreground dark:text-foreground">
@@ -674,22 +676,22 @@ const Features = () => {
     <section
       data-testid="features-section"
       id="features"
-      className="bg-secondary/20 py-12 md:py-16"
+      className="bg-[hsl(var(--landing-navy))]/5 py-12 md:py-16"
     >
       <div className="container mx-auto px-6">
         {/* Section header */}
         <div className="mx-auto mb-10 max-w-2xl text-center">
-          <p className="mb-3 text-sm font-medium text-primary motion-safe:animate-fade-up">
+          <p className="mb-3 text-sm font-medium text-[hsl(var(--landing-greek-blue-light))] motion-safe:animate-fade-up">
             {t('features.label')}
           </p>
           <h2
-            className="mb-3 text-2xl font-bold text-foreground motion-safe:animate-fade-up md:text-4xl"
+            className="mb-3 text-2xl font-bold text-[hsl(var(--landing-greek-blue-light))] motion-safe:animate-fade-up md:text-4xl"
             style={{ animationDelay: '0.1s' }}
           >
             {t('features.title')}
           </h2>
           <p
-            className="text-lg text-muted-foreground motion-safe:animate-fade-up"
+            className="text-lg text-[hsl(var(--landing-greek-blue-light))]/80 motion-safe:animate-fade-up"
             style={{ animationDelay: '0.2s' }}
           >
             {t('features.subtitle')}
@@ -702,13 +704,13 @@ const Features = () => {
             <div key={index} className="flex flex-col" data-testid="feature-card">
               {/* Feature content */}
               <div className="mb-4 sm:min-h-40">
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-[hsl(var(--landing-greek-blue-light))]/10 text-[hsl(var(--landing-greek-blue-light))]">
                   {feature.icon}
                 </div>
-                <h3 className="mb-2 line-clamp-2 text-xl font-bold text-foreground">
+                <h3 className="mb-2 line-clamp-2 text-xl font-bold text-[hsl(var(--landing-greek-blue-light))]">
                   {t(feature.titleKey)}
                 </h3>
-                <p className="text-sm leading-relaxed text-muted-foreground sm:line-clamp-2">
+                <p className="text-sm leading-relaxed text-[hsl(var(--landing-greek-blue-light))]/70 sm:line-clamp-2">
                   {t(feature.descriptionKey)}
                 </p>
               </div>

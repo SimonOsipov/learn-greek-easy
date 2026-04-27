@@ -12,11 +12,9 @@ export interface ChipData {
 }
 
 export const chipColorClasses: Record<ChipColor, string> = {
-  green:
-    'border-green-600/50 bg-green-50 text-green-700 dark:border-green-500/50 dark:bg-green-950/30 dark:text-green-400',
-  yellow:
-    'border-yellow-600/50 bg-yellow-50 text-yellow-700 dark:border-yellow-500/50 dark:bg-yellow-950/30 dark:text-yellow-400',
-  gray: 'border-muted-foreground/30 bg-muted/50 text-muted-foreground',
+  green: 'badge b-green',
+  yellow: 'badge b-amber',
+  gray: 'badge b-gray',
 };
 
 export function computeChipsFromCard(card: AdminVocabularyCard): ChipData[] {

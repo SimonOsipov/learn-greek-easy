@@ -1,9 +1,7 @@
 import React from 'react';
 
-import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { computeChipsFromCard, chipColorClasses } from '@/lib/completeness';
-import { cn } from '@/lib/utils';
 import type { AdminVocabularyCard } from '@/services/adminAPI';
 
 interface ChipProps {
@@ -17,13 +15,9 @@ function EnrichmentChip({ label, color, tooltip, testId }: ChipProps) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <Badge
-          variant="outline"
-          className={cn('cursor-default px-1.5 py-0 text-[10px]', chipColorClasses[color])}
-          data-testid={testId}
-        >
+        <span className={`cursor-default ${chipColorClasses[color]}`} data-testid={testId}>
           {label}
-        </Badge>
+        </span>
       </TooltipTrigger>
       <TooltipContent>
         <p className="text-xs">{tooltip}</p>

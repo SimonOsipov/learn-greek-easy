@@ -56,7 +56,7 @@ export function ExerciseItemPayload({
                 className={cn(
                   'rounded-md border px-3 py-2',
                   isCorrect
-                    ? 'border-green-600 bg-green-50 font-semibold text-green-700'
+                    ? 'border-success/50 bg-success/10 font-semibold text-success'
                     : 'border-border text-muted-foreground'
                 )}
               >

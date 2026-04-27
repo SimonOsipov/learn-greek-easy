@@ -33,7 +33,9 @@ export function TourCompletionDialog({
           <Button variant="outline" onClick={onDismiss}>
             {t('tour.complete.maybeLater')}
           </Button>
-          <Button onClick={onStartLearning}>{t('tour.complete.startLearning')}</Button>
+          <Button className="btn-primary" onClick={onStartLearning}>
+            {t('tour.complete.startLearning')}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

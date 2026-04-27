@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, Layers, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -128,9 +127,9 @@ export function SituationsTab() {
             title={t(`situations.stats.status.${status}`)}
             value={statusCounts[status] ?? 0}
             icon={
-              <Badge variant="outline" className={`h-5 ${SITUATION_STATUS_BADGE_CLASSES[status]}`}>
+              <span className={SITUATION_STATUS_BADGE_CLASSES[status]}>
                 {t(`situations.status.${status}`)}
-              </Badge>
+              </span>
             }
             testId={`situation-status-${status}-card`}
           />
@@ -231,57 +230,40 @@ export function SituationsTab() {
                   <div className="min-w-0 flex-1">
                     <p className="line-clamp-2 font-medium">{getLocalizedScenario(situation)}</p>
                     <div className="mt-1 flex flex-wrap gap-2">
-                      <Badge
-                        variant="outline"
+                      <span
                         className={SITUATION_STATUS_BADGE_CLASSES[situation.status]}
                         data-testid={`situation-status-badge-${situation.id}`}
                       >
                         {t(`situations.status.${situation.status}`)}
-                      </Badge>
-                      <Badge
-                        variant="outline"
-                        className={
-                          situation.has_dialog_audio
-                            ? 'border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-400'
-                            : 'border-gray-300/30 bg-gray-100/10 text-gray-400 dark:text-gray-600'
-                        }
+                      </span>
+                      <span
+                        className={situation.has_dialog_audio ? 'badge b-green' : 'badge b-gray'}
                       >
                         {t('situations.media.dialogAudio')}
-                      </Badge>
-                      <Badge
-                        variant="outline"
+                      </span>
+                      <span
                         className={
-                          situation.has_description_audio
-                            ? 'border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-400'
-                            : 'border-gray-300/30 bg-gray-100/10 text-gray-400 dark:text-gray-600'
+                          situation.has_description_audio ? 'badge b-green' : 'badge b-gray'
                         }
                       >
                         {t('situations.media.descriptionAudio')}
-                      </Badge>
-                      <Badge
-                        variant="outline"
+                      </span>
+                      <span
                         className={
                           situation.description_timestamps_count === 2
-                            ? 'border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-400'
+                            ? 'badge b-green'
                             : situation.description_timestamps_count === 1
-                              ? 'border-yellow-500/30 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400'
-                              : 'border-gray-300/30 bg-gray-100/10 text-gray-400 dark:text-gray-600'
+                              ? 'badge b-amber'
+                              : 'badge b-gray'
                         }
                       >
                         {t('situations.media.timestamps', {
                           count: situation.description_timestamps_count,
                         })}
-                      </Badge>
-                      <Badge
-                        variant="outline"
-                        className={
-                          situation.has_picture
-                            ? 'border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-400'
-                            : 'border-gray-300/30 bg-gray-100/10 text-gray-400 dark:text-gray-600'
-                        }
-                      >
+                      </span>
+                      <span className={situation.has_picture ? 'badge b-green' : 'badge b-gray'}>
                         {t('situations.media.picture')}
-                      </Badge>
+                      </span>
                     </div>
                   </div>
                   <div className="ml-4 flex shrink-0 items-center gap-3">

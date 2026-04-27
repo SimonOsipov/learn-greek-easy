@@ -109,7 +109,7 @@ export const SecuritySection: React.FC = () => {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <Key className="h-5 w-5 text-blue-600" />
+              <Key className="h-5 w-5 text-primary" />
               {t('security.changePassword.title')}
             </CardTitle>
             <CardDescription>{t('security.changePassword.description')}</CardDescription>
@@ -140,31 +140,31 @@ export const SecuritySection: React.FC = () => {
         </Card>
 
         {/* Danger Zone */}
-        <Card className="border-red-200 dark:border-red-900">
+        <Card className="border-destructive/40">
           <CardHeader>
             <div className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-red-600" />
-              <CardTitle className="text-red-600">{t('security.dangerZone.title')}</CardTitle>
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              <CardTitle className="text-destructive">{t('security.dangerZone.title')}</CardTitle>
             </div>
             <CardDescription>{t('security.dangerZone.description')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Reset Progress */}
-            <div className="flex items-center justify-between rounded-lg border border-red-100 bg-red-50 p-4 dark:border-red-900 dark:bg-red-950">
+            <div className="flex items-center justify-between rounded-lg border border-destructive/40 bg-destructive/10 p-4">
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <RotateCcw className="h-4 w-4 text-red-600" />
-                  <h3 className="font-medium text-red-900 dark:text-red-100">
+                  <RotateCcw className="h-4 w-4 text-destructive" />
+                  <h3 className="font-medium text-destructive">
                     {t('security.dangerZone.resetProgress.title')}
                   </h3>
                 </div>
-                <p className="mt-1 text-sm text-red-700 dark:text-red-300">
+                <p className="mt-1 text-sm text-destructive/80">
                   {t('security.dangerZone.resetProgress.description')}
                 </p>
               </div>
               <Button
                 variant="outline"
-                className="ml-4 border-red-300 text-red-700 hover:bg-red-100 hover:text-red-800 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900"
+                className="ml-4 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
                 onClick={() => setShowResetDialog(true)}
                 data-testid="reset-progress-button"
               >
@@ -173,15 +173,15 @@ export const SecuritySection: React.FC = () => {
             </div>
 
             {/* Delete Account */}
-            <div className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900 dark:bg-red-950">
+            <div className="flex items-center justify-between rounded-lg border border-destructive/40 bg-destructive/10 p-4">
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <Trash2 className="h-4 w-4 text-red-600" />
-                  <h3 className="font-medium text-red-900 dark:text-red-100">
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                  <h3 className="font-medium text-destructive">
                     {t('security.dangerZone.deleteAccount.title')}
                   </h3>
                 </div>
-                <p className="mt-1 text-sm text-red-700 dark:text-red-300">
+                <p className="mt-1 text-sm text-destructive/80">
                   {t('security.dangerZone.deleteAccount.description')}
                 </p>
               </div>
@@ -246,11 +246,11 @@ export const SecuritySection: React.FC = () => {
               />
 
               {/* Password Requirements */}
-              <div className="rounded-lg bg-blue-50 p-4 dark:bg-blue-950">
-                <p className="mb-2 text-sm font-medium text-blue-900 dark:text-blue-100">
+              <div className="rounded-lg bg-[hsl(var(--primary)/.08)] p-4">
+                <p className="mb-2 text-sm font-medium text-primary">
                   {t('security.changePassword.requirements')}
                 </p>
-                <ul className="space-y-1 text-sm text-blue-700 dark:text-blue-300">
+                <ul className="space-y-1 text-sm text-primary/70">
                   <li>• {t('security.changePassword.requirementLength')}</li>
                   <li>• {t('security.changePassword.requirementCase')}</li>
                   <li>• {t('security.changePassword.requirementNumber')}</li>

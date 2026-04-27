@@ -85,12 +85,12 @@ describe('AchievementCard', () => {
       expect(screen.getByText('Locked')).toBeInTheDocument();
     });
 
-    it('should apply purple styling for unlocked achievements', () => {
+    it('should apply success token styling for unlocked achievements', () => {
       const { container } = render(
         <AchievementCard achievement={createMockAchievement({ unlocked: true, progress: 100 })} />
       );
       const card = container.querySelector('[role="article"]');
-      expect(card?.className).toContain('border-purple-300');
+      expect(card?.className).toContain('border-[hsl(var(--success)/.3)]');
     });
 
     it('should apply muted styling for locked achievements', () => {

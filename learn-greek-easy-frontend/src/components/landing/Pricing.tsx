@@ -84,21 +84,25 @@ const Pricing = () => {
   ];
 
   return (
-    <section data-testid="pricing-section" id="pricing" className="bg-background py-16 md:py-24">
+    <section
+      data-testid="pricing-section"
+      id="pricing"
+      className="bg-[hsl(var(--landing-navy))]/5 py-16 md:py-24"
+    >
       <div className="container mx-auto px-6">
         {/* Section header */}
         <div className="mx-auto mb-12 max-w-2xl text-center">
-          <p className="mb-3 text-sm font-medium text-primary motion-safe:animate-fade-up">
+          <p className="mb-3 text-sm font-medium text-[hsl(var(--landing-navy))] motion-safe:animate-fade-up">
             {t('pricing.label')}
           </p>
           <h2
-            className="mb-3 text-2xl font-bold text-foreground motion-safe:animate-fade-up md:text-4xl"
+            className="mb-3 text-2xl font-bold text-[hsl(var(--landing-navy))] motion-safe:animate-fade-up md:text-4xl"
             style={{ animationDelay: '0.1s' }}
           >
             {t('pricing.title')}
           </h2>
           <p
-            className="text-lg text-muted-foreground motion-safe:animate-fade-up"
+            className="text-lg text-[hsl(var(--landing-navy))]/80 motion-safe:animate-fade-up"
             style={{ animationDelay: '0.2s' }}
           >
             {t('pricing.subtitle')}
@@ -116,17 +120,17 @@ const Pricing = () => {
                 className={`relative flex flex-col rounded-2xl border p-6 transition-all duration-300 motion-safe:animate-fade-up ${
                   plan.popular
                     ? // scale-[1.02]: arbitrary Tailwind value — subtle scale lift on the most-popular card (lg only to avoid overlap in 2-col)
-                      'border-primary bg-primary/5 shadow-lg lg:scale-[1.02]'
+                      'border-[hsl(var(--landing-greek-blue))] bg-[hsl(var(--landing-greek-blue))]/5 shadow-landing-card hover:shadow-landing-card-hover lg:scale-[1.02]'
                     : plan.highlight
                       ? FOUNDERS_COLORS.card
-                      : 'border-border bg-card hover:border-primary/50'
+                      : 'border-[hsl(var(--landing-navy))]/15 bg-[hsl(var(--landing-navy))]/5 shadow-landing-card hover:border-[hsl(var(--landing-greek-blue))]/50 hover:shadow-landing-card-hover dark:border-[hsl(var(--landing-navy))]/25'
                 }`}
                 style={{ animationDelay: `${0.1 * (index + 1)}s` }}
               >
                 {/* Popular badge */}
                 {plan.popular && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <span className="rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
+                    <span className="rounded-full bg-[hsl(var(--landing-gold))] px-3 py-1 text-xs font-semibold text-[hsl(var(--landing-navy))]">
                       {t('pricing.badges.mostPopular')}
                     </span>
                   </div>
@@ -148,19 +152,27 @@ const Pricing = () => {
                 <div className="mb-6">
                   <div
                     className={`mb-4 flex h-12 w-12 items-center justify-center rounded-xl ${
-                      plan.highlight ? FOUNDERS_COLORS.iconBg : 'bg-primary/10 text-primary'
+                      plan.highlight
+                        ? FOUNDERS_COLORS.iconBg
+                        : 'bg-[hsl(var(--landing-greek-blue-light))]/10 text-[hsl(var(--landing-navy))]'
                     }`}
                   >
                     {plan.icon}
                   </div>
-                  <h3 className="mb-1 text-xl font-bold text-foreground">{t(plan.nameKey)}</h3>
-                  <p className="text-sm text-muted-foreground">{t(plan.descriptionKey)}</p>
+                  <h3 className="mb-1 text-xl font-bold text-[hsl(var(--landing-navy))]">
+                    {t(plan.nameKey)}
+                  </h3>
+                  <p className="text-sm text-[hsl(var(--landing-navy))]/70">
+                    {t(plan.descriptionKey)}
+                  </p>
                 </div>
 
                 {/* Price */}
                 <div className="mb-6 flex items-baseline gap-1.5">
-                  <span className="text-4xl font-bold text-foreground">{t(plan.priceKey)}</span>
-                  <span className="text-muted-foreground">{t(plan.periodKey)}</span>
+                  <span className="text-4xl font-bold text-[hsl(var(--landing-navy))]">
+                    {t(plan.priceKey)}
+                  </span>
+                  <span className="text-[hsl(var(--landing-navy))]/70">{t(plan.periodKey)}</span>
                 </div>
 
                 {/* Features */}
@@ -168,11 +180,13 @@ const Pricing = () => {
                   {features.map((feature, featureIndex) => (
                     <li
                       key={featureIndex}
-                      className="flex items-start gap-2 text-sm text-foreground"
+                      className="flex items-start gap-2 text-sm text-[hsl(var(--landing-navy))]"
                     >
                       <Check
                         className={`mt-0.5 h-4 w-4 flex-shrink-0 ${
-                          plan.highlight ? FOUNDERS_COLORS.check : 'text-primary'
+                          plan.highlight
+                            ? FOUNDERS_COLORS.check
+                            : 'text-[hsl(var(--landing-greek-blue))]'
                         }`}
                       />
                       {feature}
@@ -198,7 +212,7 @@ const Pricing = () => {
 
         {/* Trust note */}
         <p
-          className="mt-10 text-center text-sm text-muted-foreground motion-safe:animate-fade-up"
+          className="mt-10 text-center text-sm text-[hsl(var(--landing-navy))]/70 motion-safe:animate-fade-up"
           style={{ animationDelay: '0.6s' }}
         >
           {t('pricing.guarantee')}

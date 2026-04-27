@@ -83,28 +83,38 @@ export const ExplanationCard: FC<ExplanationCardProps> = ({
           // Base layout
           'rounded-2xl border-[1px] px-5 py-4',
           // Correct state
-          isCorrect && 'bg-[var(--practice-correct-soft)]',
+          isCorrect && 'bg-[hsl(var(--practice-correct-soft))]',
           // Incorrect state
-          !isCorrect && 'bg-[var(--practice-incorrect-soft)]',
+          !isCorrect && 'bg-[hsl(var(--practice-incorrect-soft))]',
           // Parent positioning
           className
         )}
         style={{
-          borderColor: `color-mix(in srgb, var(${isCorrect ? '--practice-correct' : '--practice-incorrect'}) 20%, transparent)`,
+          borderColor: `color-mix(in srgb, hsl(var(${isCorrect ? '--practice-correct' : '--practice-incorrect'})) 20%, transparent)`,
         }}
         data-testid="explanation-card"
       >
         {/* Result header */}
         <div className="flex items-center gap-2">
           {isCorrect ? (
-            <Check className="h-4 w-4 text-emerald-600" strokeWidth={2.5} aria-hidden="true" />
+            <Check
+              className="h-4 w-4 text-[hsl(var(--practice-correct))]"
+              strokeWidth={2.5}
+              aria-hidden="true"
+            />
           ) : (
-            <X className="h-4 w-4 text-red-600" strokeWidth={2.5} aria-hidden="true" />
+            <X
+              className="h-4 w-4 text-[hsl(var(--practice-incorrect))]"
+              strokeWidth={2.5}
+              aria-hidden="true"
+            />
           )}
           <span
             className={cn(
               'font-practice-mono text-[13px] font-semibold uppercase tracking-wide',
-              isCorrect ? 'text-emerald-600' : 'text-red-600'
+              isCorrect
+                ? 'text-[hsl(var(--practice-correct))]'
+                : 'text-[hsl(var(--practice-incorrect))]'
             )}
           >
             {isCorrect ? t('explanation.correct') : t('explanation.incorrect')}
@@ -125,7 +135,7 @@ export const ExplanationCard: FC<ExplanationCardProps> = ({
         {/* Explanation body text */}
         {explanationText && (
           <p
-            className="mt-2 font-practice-serif text-sm leading-[1.7] text-slate-500"
+            className="mt-2 font-practice-serif text-sm leading-[1.7] text-[hsl(var(--practice-text-muted))]"
             data-testid="explanation-text"
           >
             {explanationText}

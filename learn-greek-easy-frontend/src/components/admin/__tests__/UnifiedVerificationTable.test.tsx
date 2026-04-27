@@ -183,14 +183,14 @@ describe('UnifiedVerificationTable', () => {
     const local = makeLocalResult([makeLocalField('lemma', 'fail', 'bad value')]);
     renderComponent(local, null);
     const row = screen.getByTestId('unified-row-lemma');
-    expect(row.querySelector('.bg-red-500')).toBeTruthy();
+    expect(row.querySelector('.bg-danger')).toBeTruthy();
   });
 
   it('shows severity dot with correct color for warn row', () => {
     const local = makeLocalResult([makeLocalField('lemma', 'warn', 'weak match')]);
     renderComponent(local, null);
     const row = screen.getByTestId('unified-row-lemma');
-    expect(row.querySelector('.bg-yellow-500')).toBeTruthy();
+    expect(row.querySelector('.bg-warning')).toBeTruthy();
   });
 
   it('shows primary and secondary values in separate columns', () => {
@@ -480,7 +480,7 @@ describe('L2 Wiktionary column', () => {
     renderComponent(null, null, undefined, undefined, false, wiktionaryLocal);
 
     const row = screen.getByTestId('unified-row-lemma');
-    expect(row.querySelector('.bg-red-500')).toBeTruthy();
+    expect(row.querySelector('.bg-danger')).toBeTruthy();
   });
 
   it('shows "No Wiktionary data" in L2 header when wiktionaryLocal is null', () => {

@@ -78,7 +78,11 @@ const WaitlistForm = ({ variant }: WaitlistFormProps) => {
         disabled={isSubmitting}
         variant={isDark ? 'default' : 'hero'}
         size="xl"
-        className={isDark ? 'bg-white text-gray-900 hover:bg-white/90' : ''}
+        className="border-0 text-white hover:brightness-95 focus-visible:ring-2 focus-visible:ring-[hsl(var(--landing-gold))]"
+        style={{
+          background:
+            'linear-gradient(135deg, var(--gradient-brand-from), var(--gradient-brand-to))',
+        }}
         data-testid="waitlist-submit-button"
       >
         {isSubmitting ? (

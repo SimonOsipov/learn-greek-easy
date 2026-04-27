@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ScrollableTable } from '@/components/ui/scrollable-table';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import type {
@@ -136,9 +137,9 @@ function getRowSeverity(row: UnifiedRow): 'red' | 'yellow' | 'green' | 'neutral'
 }
 
 const SEVERITY_COLORS = {
-  red: 'bg-red-500',
-  yellow: 'bg-yellow-500',
-  green: 'bg-green-500',
+  red: 'bg-danger',
+  yellow: 'bg-warning',
+  green: 'bg-success',
   neutral: 'bg-muted-foreground',
 };
 
@@ -378,17 +379,17 @@ function DecisionPill({ fieldPath, pillState, isEditable, onEdit }: DecisionPill
   let iconClass: string;
 
   if (pillState.status === 'agreed') {
-    borderClass = 'border-green-500';
+    borderClass = 'border-success';
     IconComponent = Pencil;
-    iconClass = 'h-3 w-3 text-green-500';
+    iconClass = 'h-3 w-3 text-success';
   } else if (pillState.status === 'resolved') {
-    borderClass = 'border-blue-500';
+    borderClass = 'border-primary';
     IconComponent = Pencil;
-    iconClass = 'h-3 w-3 text-blue-500';
+    iconClass = 'h-3 w-3 text-primary';
   } else if (pillState.status === 'unresolved') {
-    borderClass = 'border-red-500';
+    borderClass = 'border-danger';
     IconComponent = Pencil;
-    iconClass = 'h-3 w-3 text-red-500';
+    iconClass = 'h-3 w-3 text-danger';
   } else {
     // editable
     borderClass = 'border-muted-foreground';
@@ -488,124 +489,129 @@ function RowsTable({
   const isInteractive = interactive ?? false;
 
   return (
-    <table className="w-full table-auto text-sm">
-      <colgroup>
-        <col style={{ width: '3%' }} />
-        <col style={{ width: '12%' }} />
-        <col style={{ width: '11%' }} />
-        <col style={{ width: '11%' }} />
-        <col style={{ width: '17%' }} />
-        <col style={{ width: '17%' }} />
-        <col style={{ width: '29%' }} />
-      </colgroup>
-      <thead>
-        <tr className="border-b text-xs font-medium">
-          <th className="py-1" />
-          <th className="py-1 text-left font-medium">
-            {t('generateNoun.verification.comparisonHeaders.field')}
-          </th>
-          <th className="py-1 text-left font-medium">
-            {t('generateNoun.verification.headers.local')}
-          </th>
-          <th className="py-1 text-left font-medium">
-            {wiktionarySkipped ? (
-              <span className="text-xs text-muted-foreground">
-                {t('generateNoun.verification.wiktionary.noData')}
-              </span>
-            ) : (
-              t('generateNoun.verification.headers.wiktionary')
-            )}
-          </th>
-          <th className="py-1 text-left font-medium">
-            {t('generateNoun.verification.comparisonHeaders.primary')}
-          </th>
-          <th className="py-1 text-left font-medium">
-            {t('generateNoun.verification.comparisonHeaders.secondary')}
-          </th>
-          <th className="py-1 text-left font-medium">
-            {t('generateNoun.verification.comparisonHeaders.decision')}
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((row) => {
-          const severity = getRowSeverity(row);
-          const selectedSource = selections?.get(row.field_path);
-          const isAdminSelected = selectedSource != null;
+    <ScrollableTable>
+      <table className="w-full table-auto text-sm">
+        <colgroup>
+          <col style={{ width: '3%' }} />
+          <col style={{ width: '12%' }} />
+          <col style={{ width: '11%' }} />
+          <col style={{ width: '11%' }} />
+          <col style={{ width: '17%' }} />
+          <col style={{ width: '17%' }} />
+          <col style={{ width: '29%' }} />
+        </colgroup>
+        <thead>
+          <tr className="border-b text-xs font-medium">
+            <th className="py-1" />
+            <th className="py-1 text-left font-medium">
+              {t('generateNoun.verification.comparisonHeaders.field')}
+            </th>
+            <th className="py-1 text-left font-medium">
+              {t('generateNoun.verification.headers.local')}
+            </th>
+            <th className="py-1 text-left font-medium">
+              {wiktionarySkipped ? (
+                <span className="text-xs text-muted-foreground">
+                  {t('generateNoun.verification.wiktionary.noData')}
+                </span>
+              ) : (
+                t('generateNoun.verification.headers.wiktionary')
+              )}
+            </th>
+            <th className="py-1 text-left font-medium">
+              {t('generateNoun.verification.comparisonHeaders.primary')}
+            </th>
+            <th className="py-1 text-left font-medium">
+              {t('generateNoun.verification.comparisonHeaders.secondary')}
+            </th>
+            <th className="py-1 text-left font-medium">
+              {t('generateNoun.verification.comparisonHeaders.decision')}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => {
+            const severity = getRowSeverity(row);
+            const selectedSource = selections?.get(row.field_path);
+            const isAdminSelected = selectedSource != null;
 
-          return (
-            <tr
-              key={row.field_path}
-              data-testid={`unified-row-${row.field_path}`}
-              className="border-b last:border-0"
-            >
-              <td className="py-1 pr-1 align-middle">
-                <SeverityDot severity={severity} />
-              </td>
-              <td className="py-1 pr-1 align-middle">
-                <FieldCell path={row.field_path} />
-              </td>
-              <td className="py-1 align-middle">
-                <LocalCell
-                  row={row}
-                  hasLocalData={hasLocalData}
-                  interactive={isInteractive}
-                  isSelected={selectedSource === 'local'}
-                  isOtherSelected={isAdminSelected && selectedSource !== 'local'}
-                  onSelect={onSelect}
-                  onResolvedValueChange={onResolvedValueChange}
-                />
-              </td>
-              <td className="py-1 align-middle">
-                <LocalCell
-                  row={row}
-                  hasLocalData={hasLocal2Data}
-                  interactive={isInteractive}
-                  isSelected={selectedSource === 'wiktionary'}
-                  isOtherSelected={isAdminSelected && selectedSource !== 'wiktionary'}
-                  onSelect={onSelect}
-                  onResolvedValueChange={onResolvedValueChange}
-                  localField="local2"
-                  selectionSource="wiktionary"
-                />
-              </td>
-              <td className="py-1 pr-1 align-middle">
-                <PrimaryValueCell
-                  row={row}
-                  interactive={isInteractive}
-                  isSelected={selectedSource === 'primary'}
-                  isOtherSelected={isAdminSelected && selectedSource !== 'primary'}
-                  onSelect={onSelect}
-                  onResolvedValueChange={onResolvedValueChange}
-                />
-              </td>
-              <td className="py-1 pl-2 pr-1 align-middle">
-                <SecondaryValueCell
-                  row={row}
-                  interactive={isInteractive}
-                  isSelected={selectedSource === 'secondary'}
-                  isOtherSelected={isAdminSelected && selectedSource !== 'secondary'}
-                  onSelect={onSelect}
-                  onResolvedValueChange={onResolvedValueChange}
-                />
-              </td>
-              <td className="py-1 align-middle">
-                {resolvedValues?.has(row.field_path) ? (
-                  <DecisionPill
-                    fieldPath={row.field_path}
-                    pillState={resolvedValues.get(row.field_path)!}
-                    isEditable={true}
-                    onEdit={(fp, val) => onResolvedValueChange?.(fp, val)}
+            return (
+              <tr
+                key={row.field_path}
+                data-testid={`unified-row-${row.field_path}`}
+                className="border-b last:border-0"
+              >
+                <td className="py-1 pr-1 align-middle">
+                  <SeverityDot severity={severity} />
+                </td>
+                <td className="py-1 pr-1 align-middle">
+                  <FieldCell path={row.field_path} />
+                </td>
+                <td className="py-1 align-middle">
+                  <LocalCell
+                    row={row}
+                    hasLocalData={hasLocalData}
+                    interactive={isInteractive}
+                    isSelected={selectedSource === 'local'}
+                    isOtherSelected={isAdminSelected && selectedSource !== 'local'}
+                    onSelect={onSelect}
+                    onResolvedValueChange={onResolvedValueChange}
                   />
-                ) : (
-                  <span>—</span>
-                )}
-              </td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
+                </td>
+                <td className="py-1 align-middle">
+                  <LocalCell
+                    row={row}
+                    hasLocalData={hasLocal2Data}
+                    interactive={isInteractive}
+                    isSelected={selectedSource === 'wiktionary'}
+                    isOtherSelected={isAdminSelected && selectedSource !== 'wiktionary'}
+                    onSelect={onSelect}
+                    onResolvedValueChange={onResolvedValueChange}
+                    localField="local2"
+                    selectionSource="wiktionary"
+                  />
+                </td>
+                <td className="py-1 pr-1 align-middle">
+                  <PrimaryValueCell
+                    row={row}
+                    interactive={isInteractive}
+                    isSelected={selectedSource === 'primary'}
+                    isOtherSelected={isAdminSelected && selectedSource !== 'primary'}
+                    onSelect={onSelect}
+                    onResolvedValueChange={onResolvedValueChange}
+                  />
+                </td>
+                <td className="py-1 pl-2 pr-1 align-middle">
+                  <SecondaryValueCell
+                    row={row}
+                    interactive={isInteractive}
+                    isSelected={selectedSource === 'secondary'}
+                    isOtherSelected={isAdminSelected && selectedSource !== 'secondary'}
+                    onSelect={onSelect}
+                    onResolvedValueChange={onResolvedValueChange}
+                  />
+                </td>
+                <td className="py-1 align-middle">
+                  {(() => {
+                    const pillState = resolvedValues?.get(row.field_path);
+                    return pillState ? (
+                      <DecisionPill
+                        fieldPath={row.field_path}
+                        pillState={pillState}
+                        isEditable={true}
+                        onEdit={(fp, val) => onResolvedValueChange?.(fp, val)}
+                      />
+                    ) : (
+                      <span>—</span>
+                    );
+                  })()}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </ScrollableTable>
   );
 }
 

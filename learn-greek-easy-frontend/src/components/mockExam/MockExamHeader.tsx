@@ -50,17 +50,17 @@ export const MockExamHeader: React.FC<MockExamHeaderProps> = ({
   // Timer color based on warning level
   const timerColorClass =
     warningLevel === 'warning_1min'
-      ? 'text-red-500 dark:text-red-400'
+      ? 'text-[hsl(var(--danger))]'
       : warningLevel === 'warning_5min'
-        ? 'text-amber-500 dark:text-amber-400'
+        ? 'text-[hsl(var(--warning))]'
         : 'text-foreground';
 
   // Timer icon color
   const iconColorClass =
     warningLevel === 'warning_1min'
-      ? 'text-red-500 dark:text-red-400'
+      ? 'text-[hsl(var(--danger))]'
       : warningLevel === 'warning_5min'
-        ? 'text-amber-500 dark:text-amber-400'
+        ? 'text-[hsl(var(--warning))]'
         : 'text-muted-foreground';
 
   return (
@@ -85,8 +85,8 @@ export const MockExamHeader: React.FC<MockExamHeaderProps> = ({
         <div
           className={cn(
             'flex items-center gap-2 rounded-lg px-3 py-1.5 font-practice-mono text-lg font-semibold transition-colors',
-            warningLevel === 'warning_1min' && 'animate-pulse bg-red-100 dark:bg-red-950/50',
-            warningLevel === 'warning_5min' && 'bg-amber-100 dark:bg-amber-950/50'
+            warningLevel === 'warning_1min' && 'animate-pulse bg-[hsl(var(--danger)/.12)]',
+            warningLevel === 'warning_5min' && 'bg-[hsl(var(--warning)/.12)]'
           )}
           data-testid="mock-exam-timer"
         >

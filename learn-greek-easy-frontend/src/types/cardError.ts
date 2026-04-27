@@ -79,8 +79,7 @@ export interface CardErrorResponse {
  */
 export interface CardErrorStatusConfig {
   label: string;
-  color: string;
-  bgColor: string;
+  badgeClass: string;
 }
 
 /**
@@ -89,23 +88,19 @@ export interface CardErrorStatusConfig {
 export const CARD_ERROR_STATUS_CONFIG: Record<CardErrorStatus, CardErrorStatusConfig> = {
   PENDING: {
     label: 'Pending',
-    color: 'text-yellow-700 dark:text-yellow-300',
-    bgColor: 'bg-yellow-100 dark:bg-yellow-900/50',
+    badgeClass: 'badge b-amber',
   },
   REVIEWED: {
     label: 'Reviewed',
-    color: 'text-blue-700 dark:text-blue-300',
-    bgColor: 'bg-blue-100 dark:bg-blue-900/50',
+    badgeClass: 'badge b-blue',
   },
   FIXED: {
     label: 'Fixed',
-    color: 'text-green-700 dark:text-green-300',
-    bgColor: 'bg-green-100 dark:bg-green-900/50',
+    badgeClass: 'badge b-green',
   },
   DISMISSED: {
     label: 'Dismissed',
-    color: 'text-gray-700 dark:text-gray-300',
-    bgColor: 'bg-gray-100 dark:bg-gray-800',
+    badgeClass: 'badge b-gray',
   },
 };
 

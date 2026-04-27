@@ -2,7 +2,7 @@
  * CultureBadge Component Tests
  *
  * Tests for the CultureBadge component, verifying:
- * - Correct color classes for each category
+ * - Correct .b-* modifier classes for each category (v2.4 badge system)
  * - Localized text for each category
  * - Custom className support
  * - showLabel prop behavior
@@ -40,18 +40,21 @@ describe('CultureBadge', () => {
       expect(dot).toBeInTheDocument();
       expect(dot).toHaveClass('rounded-full');
     });
-  });
 
-  describe('Default badge (no category)', () => {
-    it('should render with default slate colors', () => {
+    it('should have badge base class', () => {
       render(<CultureBadge />);
 
       const badge = screen.getByTestId('culture-badge');
-      expect(badge).toHaveClass('bg-slate-500');
-      expect(badge).toHaveClass('border-slate-600');
+      expect(badge).toHaveClass('badge');
+    });
+  });
 
-      const dot = badge.querySelector('[aria-hidden="true"]');
-      expect(dot).toHaveClass('bg-slate-400');
+  describe('Default badge (no category)', () => {
+    it('should render with b-gray modifier', () => {
+      render(<CultureBadge />);
+
+      const badge = screen.getByTestId('culture-badge');
+      expect(badge).toHaveClass('b-gray');
     });
 
     it('should display "Culture" text', () => {
@@ -90,74 +93,56 @@ describe('CultureBadge', () => {
       const badge = screen.getByTestId('culture-badge');
       const dot = badge.querySelector('[aria-hidden="true"]');
       expect(dot).toBeInTheDocument();
-      expect(dot).toHaveClass('bg-amber-500');
     });
   });
 
-  describe('Category colors', () => {
+  describe('Category badge modifier classes (v2.4 badge system)', () => {
     const categories: Array<{
       category: CultureCategory;
-      expectedDotColor: string;
-      expectedBgColor: string;
-      expectedBorderColor: string;
+      expectedModifier: string;
       expectedText: string;
     }> = [
       {
         category: 'politics',
-        expectedDotColor: 'bg-indigo-500',
-        expectedBgColor: 'bg-indigo-600',
-        expectedBorderColor: 'border-indigo-700',
+        expectedModifier: 'b-blue',
         expectedText: 'Politics',
       },
       {
         category: 'history',
-        expectedDotColor: 'bg-amber-500',
-        expectedBgColor: 'bg-amber-600',
-        expectedBorderColor: 'border-amber-700',
+        expectedModifier: 'b-amber',
         expectedText: 'History',
       },
       {
         category: 'traditions',
-        expectedDotColor: 'bg-purple-500',
-        expectedBgColor: 'bg-purple-600',
-        expectedBorderColor: 'border-purple-700',
+        expectedModifier: 'b-violet',
         expectedText: 'Traditions',
       },
       {
         category: 'practical',
-        expectedDotColor: 'bg-rose-500',
-        expectedBgColor: 'bg-rose-600',
-        expectedBorderColor: 'border-rose-700',
+        expectedModifier: 'b-red',
         expectedText: 'Practical',
       },
       {
         category: 'culture',
-        expectedDotColor: 'bg-emerald-500',
-        expectedBgColor: 'bg-emerald-600',
-        expectedBorderColor: 'border-emerald-700',
+        expectedModifier: 'b-violet',
         expectedText: 'Culture',
       },
       {
         category: 'geography',
-        expectedDotColor: 'bg-teal-500',
-        expectedBgColor: 'bg-teal-600',
-        expectedBorderColor: 'border-teal-700',
+        expectedModifier: 'b-green',
         expectedText: 'Geography',
       },
     ];
 
     it.each(categories)(
-      'should render $category with correct dot color and background',
-      ({ category, expectedDotColor, expectedBgColor, expectedBorderColor, expectedText }) => {
+      'should render $category with $expectedModifier modifier and correct text',
+      ({ category, expectedModifier, expectedText }) => {
         render(<CultureBadge category={category} />);
 
         const badge = screen.getByTestId('culture-badge');
-        expect(badge).toHaveClass(expectedBgColor);
-        expect(badge).toHaveClass(expectedBorderColor);
+        expect(badge).toHaveClass('badge');
+        expect(badge).toHaveClass(expectedModifier);
         expect(badge).toHaveTextContent(expectedText);
-
-        const dot = badge.querySelector('[aria-hidden="true"]');
-        expect(dot).toHaveClass(expectedDotColor);
       }
     );
   });
@@ -166,64 +151,52 @@ describe('CultureBadge', () => {
     it('should return default color for undefined', () => {
       const colors = getCategoryColor();
 
-      expect(colors.dot).toBe('bg-slate-400');
+      expect(colors.modifier).toBe('b-gray');
       expect(colors.text).toBe('text-white');
-      expect(colors.bg).toBe('bg-slate-500');
-      expect(colors.border).toBe('border-slate-600');
     });
 
-    it('should return correct color for politics', () => {
+    it('should return correct modifier for politics', () => {
       const colors = getCategoryColor('politics');
 
-      expect(colors.dot).toBe('bg-indigo-500');
-      expect(colors.text).toBe('text-white');
-      expect(colors.bg).toBe('bg-indigo-600');
-      expect(colors.border).toBe('border-indigo-700');
+      expect(colors.modifier).toBe('b-blue');
     });
 
-    it('should return correct color for history', () => {
+    it('should return correct modifier for history', () => {
       const colors = getCategoryColor('history');
 
-      expect(colors.dot).toBe('bg-amber-500');
-      expect(colors.text).toBe('text-white');
-      expect(colors.bg).toBe('bg-amber-600');
-      expect(colors.border).toBe('border-amber-700');
+      expect(colors.modifier).toBe('b-amber');
     });
 
-    it('should return correct color for traditions', () => {
+    it('should return correct modifier for traditions', () => {
       const colors = getCategoryColor('traditions');
 
-      expect(colors.dot).toBe('bg-purple-500');
-      expect(colors.text).toBe('text-white');
-      expect(colors.bg).toBe('bg-purple-600');
-      expect(colors.border).toBe('border-purple-700');
+      expect(colors.modifier).toBe('b-violet');
     });
 
-    it('should return correct color for practical', () => {
+    it('should return correct modifier for practical', () => {
       const colors = getCategoryColor('practical');
 
-      expect(colors.dot).toBe('bg-rose-500');
-      expect(colors.text).toBe('text-white');
-      expect(colors.bg).toBe('bg-rose-600');
-      expect(colors.border).toBe('border-rose-700');
+      expect(colors.modifier).toBe('b-red');
     });
 
-    it('should return correct color for culture', () => {
+    it('should return correct modifier for culture', () => {
       const colors = getCategoryColor('culture');
 
-      expect(colors.dot).toBe('bg-emerald-500');
-      expect(colors.text).toBe('text-white');
-      expect(colors.bg).toBe('bg-emerald-600');
-      expect(colors.border).toBe('border-emerald-700');
+      expect(colors.modifier).toBe('b-violet');
     });
 
-    it('should return correct color for geography', () => {
+    it('should return correct modifier for geography', () => {
       const colors = getCategoryColor('geography');
 
-      expect(colors.dot).toBe('bg-teal-500');
-      expect(colors.text).toBe('text-white');
-      expect(colors.bg).toBe('bg-teal-600');
-      expect(colors.border).toBe('border-teal-700');
+      expect(colors.modifier).toBe('b-green');
+    });
+
+    it('should preserve bg and border fields for API compatibility', () => {
+      const colors = getCategoryColor('history');
+
+      // These fields still exist for getCategoryColor API consumers
+      expect(colors.bg).toBeDefined();
+      expect(colors.border).toBeDefined();
     });
   });
 });

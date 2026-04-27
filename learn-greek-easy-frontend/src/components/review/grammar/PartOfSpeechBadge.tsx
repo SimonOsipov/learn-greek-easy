@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next';
 
-import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type { PartOfSpeech } from '@/types/grammar';
 
@@ -9,23 +8,21 @@ export interface PartOfSpeechBadgeProps {
   className?: string;
 }
 
-const PART_OF_SPEECH_CONFIG: Record<PartOfSpeech, { bgClass: string; textClass: string }> = {
-  noun: { bgClass: 'bg-amber-700', textClass: 'text-white' },
-  verb: { bgClass: 'bg-green-500', textClass: 'text-white' },
-  adjective: { bgClass: 'bg-purple-500', textClass: 'text-white' },
-  adverb: { bgClass: 'bg-orange-500', textClass: 'text-white' },
+// Semantic color mapping: noun=amber, verb=green, adjective=violet, adverb=blue
+const PART_OF_SPEECH_CONFIG: Record<PartOfSpeech, string> = {
+  noun: 'b-amber',
+  verb: 'b-green',
+  adjective: 'b-violet',
+  adverb: 'b-blue',
 };
 
 export function PartOfSpeechBadge({ partOfSpeech, className }: PartOfSpeechBadgeProps) {
   const { t } = useTranslation('review');
-  const config = PART_OF_SPEECH_CONFIG[partOfSpeech];
+  const badgeVariant = PART_OF_SPEECH_CONFIG[partOfSpeech];
 
   return (
-    <Badge
-      className={cn(config.bgClass, config.textClass, 'pointer-events-none', className)}
-      data-testid="part-of-speech-badge"
-    >
+    <span className={cn('badge', badgeVariant, className)} data-testid="part-of-speech-badge">
       {t(`grammar.partOfSpeech.${partOfSpeech}`)}
-    </Badge>
+    </span>
   );
 }

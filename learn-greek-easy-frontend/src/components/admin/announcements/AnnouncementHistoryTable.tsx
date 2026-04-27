@@ -18,6 +18,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ScrollableTable } from '@/components/ui/scrollable-table';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
@@ -162,77 +163,79 @@ export const AnnouncementHistoryTable: React.FC<AnnouncementHistoryTableProps> =
         ) : (
           <>
             {/* Table */}
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[150px]">{t('news.table.created')}</TableHead>
-                  <TableHead>{t('announcements.create.titleLabel')}</TableHead>
-                  <TableHead className="w-[80px] text-right">
-                    {t('announcements.detail.sent')}
-                  </TableHead>
-                  <TableHead className="w-[120px] text-right">
-                    {t('announcements.detail.read')}
-                  </TableHead>
-                  <TableHead className="w-[100px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              {isLoading ? (
-                <TableSkeleton />
-              ) : (
-                <TableBody>
-                  {announcements.map((announcement) => {
-                    const readPercentage = calculateReadPercentage(
-                      announcement.read_count,
-                      announcement.total_recipients
-                    );
-                    return (
-                      <TableRow
-                        key={announcement.id}
-                        data-testid={`announcement-row-${announcement.id}`}
-                      >
-                        <TableCell className="text-sm text-muted-foreground">
-                          {formatDate(announcement.created_at, i18n.language)}
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          {truncateText(announcement.title, 50)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {announcement.total_recipients}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <span className="tabular-nums">
-                            {announcement.read_count} ({readPercentage}%)
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => onViewDetail(announcement.id)}
-                              title={t('announcements.history.viewDetail')}
-                              data-testid={`view-detail-${announcement.id}`}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => onDelete?.(announcement.id)}
-                              disabled={isDeleting}
-                              title={t('announcements.delete.button')}
-                              data-testid={`delete-announcement-${announcement.id}`}
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              )}
-            </Table>
+            <ScrollableTable>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[150px]">{t('news.table.created')}</TableHead>
+                    <TableHead>{t('announcements.create.titleLabel')}</TableHead>
+                    <TableHead className="w-[80px] text-right">
+                      {t('announcements.detail.sent')}
+                    </TableHead>
+                    <TableHead className="w-[120px] text-right">
+                      {t('announcements.detail.read')}
+                    </TableHead>
+                    <TableHead className="w-[100px]"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                {isLoading ? (
+                  <TableSkeleton />
+                ) : (
+                  <TableBody>
+                    {announcements.map((announcement) => {
+                      const readPercentage = calculateReadPercentage(
+                        announcement.read_count,
+                        announcement.total_recipients
+                      );
+                      return (
+                        <TableRow
+                          key={announcement.id}
+                          data-testid={`announcement-row-${announcement.id}`}
+                        >
+                          <TableCell className="text-sm text-muted-foreground">
+                            {formatDate(announcement.created_at, i18n.language)}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {truncateText(announcement.title, 50)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {announcement.total_recipients}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <span className="tabular-nums">
+                              {announcement.read_count} ({readPercentage}%)
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => onViewDetail(announcement.id)}
+                                title={t('announcements.history.viewDetail')}
+                                data-testid={`view-detail-${announcement.id}`}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => onDelete?.(announcement.id)}
+                                disabled={isDeleting}
+                                title={t('announcements.delete.button')}
+                                data-testid={`delete-announcement-${announcement.id}`}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                )}
+              </Table>
+            </ScrollableTable>
 
             {/* Pagination */}
             {totalPages > 1 && (

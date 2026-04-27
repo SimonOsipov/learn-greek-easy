@@ -68,9 +68,7 @@ export const DeckDeleteDialog: React.FC<DeckDeleteDialogProps> = ({
                 <li>{t('deckDelete.impact.progressPreserved')}</li>
                 <li>{t('deckDelete.impact.canReactivate')}</li>
               </ul>
-              <p className="text-sm font-medium text-amber-600 dark:text-amber-500">
-                {t('deckDelete.warning')}
-              </p>
+              <p className="text-sm font-medium text-warning">{t('deckDelete.warning')}</p>
             </div>
           </DialogDescription>
         </DialogHeader>

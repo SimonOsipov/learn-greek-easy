@@ -225,6 +225,7 @@ export const Dashboard: React.FC = () => {
 
       {/* Metrics Grid */}
       <section data-testid="metrics-section">
+        <p className="kicker mb-2">{t('dashboard.progress.kicker', 'Progress')}</p>
         <h2 className="mb-4 text-lg font-semibold text-foreground">
           {t('dashboard.progress.title')}
         </h2>
@@ -245,7 +246,7 @@ export const Dashboard: React.FC = () => {
             ))}
           </div>
         ) : (
-          <div className="rounded-lg border border-muted p-4 text-center text-muted-foreground">
+          <div className="hairline rounded-lg border p-4 text-center text-muted-foreground">
             {t('dashboard.progress.empty')}
           </div>
         )}
@@ -258,6 +259,7 @@ export const Dashboard: React.FC = () => {
 
       {/* Active Decks Section */}
       <section>
+        <p className="kicker mb-2">{t('dashboard.activeDecks.kicker', 'Active Decks')}</p>
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-foreground">
             {t('dashboard.activeDecks.title')}
@@ -279,7 +281,7 @@ export const Dashboard: React.FC = () => {
             ))}
           </div>
         ) : (
-          <div className="rounded-lg border border-muted p-8 text-center">
+          <div className="hairline rounded-lg border p-8 text-center">
             <p className="text-muted-foreground">{t('dashboard.activeDecks.empty')}</p>
             <button
               className="mt-4 text-sm text-primary hover:underline"

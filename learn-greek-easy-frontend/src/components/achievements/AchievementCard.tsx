@@ -22,7 +22,7 @@ export interface AchievementCardProps {
  * AchievementCard Component
  *
  * Displays an individual achievement with its progress, unlock status, and XP reward.
- * Uses purple color scheme for unlocked achievements.
+ * Unlocked state uses --success tokens; locked state uses muted/fg-3/bg-2 tokens.
  */
 export const AchievementCard: React.FC<AchievementCardProps> = ({ achievement, className }) => {
   const { t, i18n } = useTranslation('achievements');
@@ -55,8 +55,8 @@ export const AchievementCard: React.FC<AchievementCardProps> = ({ achievement, c
       className={cn(
         'relative overflow-hidden transition-all hover:scale-[1.02] hover:shadow-md active:scale-[0.98]',
         unlocked
-          ? 'border-purple-300 bg-purple-50 dark:border-purple-700 dark:bg-purple-900/30'
-          : 'border-border bg-muted/30 opacity-75',
+          ? 'border-[hsl(var(--success)/.3)] bg-[hsl(var(--success)/.1)]'
+          : 'border-line bg-muted/30 opacity-75',
         className
       )}
       role="article"
@@ -71,8 +71,8 @@ export const AchievementCard: React.FC<AchievementCardProps> = ({ achievement, c
               className={cn(
                 'flex h-10 w-10 items-center justify-center rounded-lg sm:h-12 sm:w-12',
                 unlocked
-                  ? 'bg-purple-100 text-purple-600 dark:bg-purple-800/50 dark:text-purple-300'
-                  : 'bg-muted text-muted-foreground grayscale'
+                  ? 'bg-[hsl(var(--success)/.15)] text-[hsl(var(--success))]'
+                  : 'bg-[hsl(var(--bg-2))] text-fg3 grayscale'
               )}
               aria-hidden="true"
             >
@@ -114,17 +114,17 @@ export const AchievementCard: React.FC<AchievementCardProps> = ({ achievement, c
 
         {/* XP Reward Badge */}
         <div className="mt-3 flex items-center justify-between">
-          <Badge
-            variant="secondary"
-            className={cn(
-              unlocked
-                ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300'
-                : ''
-            )}
-          >
-            <Star className="mr-1 h-3 w-3" aria-hidden="true" />
-            {xp_reward} XP
-          </Badge>
+          {unlocked ? (
+            <span className="badge b-green">
+              <Star className="h-3 w-3" aria-hidden="true" />
+              {xp_reward} XP
+            </span>
+          ) : (
+            <Badge variant="secondary">
+              <Star className="mr-1 h-3 w-3" aria-hidden="true" />
+              {xp_reward} XP
+            </Badge>
+          )}
 
           {/* Unlocked date or status */}
           {unlocked && formattedDate ? (

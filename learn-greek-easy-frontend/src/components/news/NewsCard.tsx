@@ -170,6 +170,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({
         />
 
         {/* Semi-transparent Overlay */}
+        {/* image-overlay gradient — black opacity is correct over a photo; not a tokenizable surface. */}
         <div
           className={cn(
             'absolute inset-0 bg-gradient-to-t',
@@ -180,6 +181,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({
         />
 
         {/* Country Flag Pill */}
+        {/* bg-black/60 text-white: sits over a photo — not a tokenizable surface. */}
         {article.country && COUNTRY_CONFIG[article.country as NewsCountry] && (
           <span className="absolute left-2 top-2 z-10 rounded-full bg-black/60 px-2 py-0.5 text-xs text-white">
             {COUNTRY_CONFIG[article.country as NewsCountry].flag}{' '}
@@ -194,22 +196,25 @@ export const NewsCard: React.FC<NewsCardProps> = ({
             hasAudio && (variant === 'compact' ? 'pb-20' : 'pb-16')
           )}
         >
+          {/* text-white: Greek study text over photo overlay — white is correct here. */}
           <h3
             className={cn(
-              'line-clamp-2 font-semibold text-white',
+              'line-clamp-2 font-serif font-semibold text-white',
               variant === 'compact' ? 'text-sm' : 'mb-1 text-lg'
             )}
           >
             {title}
           </h3>
           {variant !== 'compact' && (
-            <p className="line-clamp-2 text-sm text-gray-200">{description}</p>
+            /* text-white/80: soft white over hero image — not tokenizable. */
+            <p className="line-clamp-2 font-serif text-sm text-white/80">{description}</p>
           )}
           <ExternalLink className="absolute right-3 top-3 h-4 w-4 text-white/70 group-hover:text-white" />
         </div>
       </a>
 
       {/* Audio player overlay */}
+      {/* from-black/90 via-black/60: audio chrome sits over a photo — black overlay is correct here. */}
       {hasAudio && (
         <div className="absolute bottom-0 left-0 right-0 z-20 flex flex-col gap-2 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-3 pt-8 sm:flex-row sm:items-stretch">
           <div

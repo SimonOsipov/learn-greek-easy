@@ -28,14 +28,14 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user, onAvatarClic
     switch (user.role) {
       case 'admin':
         return (
-          <Badge variant="destructive" className="flex items-center gap-1">
+          <Badge className="flex items-center gap-1 border-transparent bg-accent text-accent-foreground hover:bg-accent/90">
             <Shield className="h-3 w-3" />
             {t('header.roles.admin')}
           </Badge>
         );
       case 'premium':
         return (
-          <Badge className="flex items-center gap-1 bg-purple-600 hover:bg-purple-700">
+          <Badge className="flex items-center gap-1 bg-primary hover:bg-primary/90">
             <Crown className="h-3 w-3" />
             {t('header.roles.premium')}
           </Badge>
@@ -64,11 +64,11 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user, onAvatarClic
           >
             <Avatar className="h-24 w-24 border-4 border-background shadow-lg">
               <AvatarImage src={user.avatar} alt={user.name} />
-              <AvatarFallback className="bg-gradient-to-br from-blue-500 to-blue-600 text-2xl font-bold text-white">
+              <AvatarFallback className="bg-primary text-2xl font-bold text-primary-foreground">
                 {initials}
               </AvatarFallback>
             </Avatar>
-            <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+            <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/60 opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100">
               <span className="text-xs font-medium text-white">{t('header.change')}</span>
             </div>
           </button>
@@ -76,7 +76,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user, onAvatarClic
           <div className="relative mb-4">
             <Avatar className="h-24 w-24 border-4 border-background shadow-lg">
               <AvatarImage src={user.avatar} alt={user.name} />
-              <AvatarFallback className="bg-gradient-to-br from-blue-500 to-blue-600 text-2xl font-bold text-white">
+              <AvatarFallback className="bg-primary text-2xl font-bold text-primary-foreground">
                 {initials}
               </AvatarFallback>
             </Avatar>

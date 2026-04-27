@@ -79,15 +79,15 @@ describe('DecisionPill (via UnifiedVerificationTable)', () => {
     it('renders agreed state with green border', () => {
       renderPill('translation_en', makePillState('house', 'agreed'));
       const pill = screen.getByTestId('decision-pill-translation_en');
-      // The inner border span should contain border-green-500
-      const borderSpan = pill.querySelector('.border-green-500');
+      // The inner border span should contain border-success
+      const borderSpan = pill.querySelector('.border-success');
       expect(borderSpan).toBeTruthy();
     });
 
     it('renders resolved state with blue border', () => {
       renderPill('translation_en', makePillState('house', 'resolved'));
       const pill = screen.getByTestId('decision-pill-translation_en');
-      const borderSpan = pill.querySelector('.border-blue-500');
+      const borderSpan = pill.querySelector('.border-primary');
       expect(borderSpan).toBeTruthy();
     });
 
@@ -95,7 +95,7 @@ describe('DecisionPill (via UnifiedVerificationTable)', () => {
       // grammar_data.gender IS now editable — pill shows pencil and is clickable
       renderPill('grammar_data.gender', makePillState('masculine', 'unresolved'));
       const pill = screen.getByTestId('decision-pill-grammar_data.gender');
-      const borderSpan = pill.querySelector('.border-red-500');
+      const borderSpan = pill.querySelector('.border-danger');
       expect(borderSpan).toBeTruthy();
     });
 
@@ -103,7 +103,7 @@ describe('DecisionPill (via UnifiedVerificationTable)', () => {
       // translation_en IS in EDITABLE_FIELDS — pill shows pencil and is clickable
       renderPill('translation_en', makePillState('house', 'unresolved'));
       const pill = screen.getByTestId('decision-pill-translation_en');
-      const borderSpan = pill.querySelector('.border-red-500');
+      const borderSpan = pill.querySelector('.border-danger');
       expect(borderSpan).toBeTruthy();
     });
 

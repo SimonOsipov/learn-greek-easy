@@ -2,9 +2,14 @@
  * PartOfSpeechBadge Component Tests
  *
  * Tests for the PartOfSpeechBadge component, verifying:
- * - Correct color classes for each part of speech
+ * - Correct badge variant class for each part of speech
  * - Localized text for each part of speech
  * - Custom className support
+ *
+ * REBASELINE (RESKIN-01-06): color assertions updated from raw Tailwind palette
+ * (bg-amber-700, bg-green-500, bg-purple-500, bg-orange-500) to v2.4 badge
+ * utility classes (badge b-amber, badge b-green, badge b-violet, badge b-blue).
+ * Semantic mapping is preserved — noun=amber, verb=green, adjective=violet, adverb=blue.
  */
 
 import { render, screen } from '@testing-library/react';
@@ -31,12 +36,12 @@ describe('PartOfSpeechBadge', () => {
   });
 
   describe('Noun Badge', () => {
-    it('should render with brown background', () => {
+    it('should render with amber badge variant', () => {
       render(<PartOfSpeechBadge partOfSpeech="noun" />);
 
       const badge = screen.getByTestId('part-of-speech-badge');
-      expect(badge).toHaveClass('bg-amber-700');
-      expect(badge).toHaveClass('text-white');
+      expect(badge).toHaveClass('badge');
+      expect(badge).toHaveClass('b-amber');
     });
 
     it('should display localized text for noun', () => {
@@ -48,12 +53,12 @@ describe('PartOfSpeechBadge', () => {
   });
 
   describe('Verb Badge', () => {
-    it('should render with green background', () => {
+    it('should render with green badge variant', () => {
       render(<PartOfSpeechBadge partOfSpeech="verb" />);
 
       const badge = screen.getByTestId('part-of-speech-badge');
-      expect(badge).toHaveClass('bg-green-500');
-      expect(badge).toHaveClass('text-white');
+      expect(badge).toHaveClass('badge');
+      expect(badge).toHaveClass('b-green');
     });
 
     it('should display localized text for verb', () => {
@@ -65,12 +70,12 @@ describe('PartOfSpeechBadge', () => {
   });
 
   describe('Adjective Badge', () => {
-    it('should render with purple background', () => {
+    it('should render with violet badge variant', () => {
       render(<PartOfSpeechBadge partOfSpeech="adjective" />);
 
       const badge = screen.getByTestId('part-of-speech-badge');
-      expect(badge).toHaveClass('bg-purple-500');
-      expect(badge).toHaveClass('text-white');
+      expect(badge).toHaveClass('badge');
+      expect(badge).toHaveClass('b-violet');
     });
 
     it('should display localized text for adjective', () => {
@@ -82,12 +87,12 @@ describe('PartOfSpeechBadge', () => {
   });
 
   describe('Adverb Badge', () => {
-    it('should render with orange background', () => {
+    it('should render with blue badge variant', () => {
       render(<PartOfSpeechBadge partOfSpeech="adverb" />);
 
       const badge = screen.getByTestId('part-of-speech-badge');
-      expect(badge).toHaveClass('bg-orange-500');
-      expect(badge).toHaveClass('text-white');
+      expect(badge).toHaveClass('badge');
+      expect(badge).toHaveClass('b-blue');
     });
 
     it('should display localized text for adverb', () => {
@@ -101,22 +106,23 @@ describe('PartOfSpeechBadge', () => {
   describe('All Parts of Speech', () => {
     const partsOfSpeech: Array<{
       type: PartOfSpeech;
-      expectedColor: string;
+      expectedVariant: string;
       expectedText: string;
     }> = [
-      { type: 'noun', expectedColor: 'bg-amber-700', expectedText: 'Noun' },
-      { type: 'verb', expectedColor: 'bg-green-500', expectedText: 'Verb' },
-      { type: 'adjective', expectedColor: 'bg-purple-500', expectedText: 'Adjective' },
-      { type: 'adverb', expectedColor: 'bg-orange-500', expectedText: 'Adverb' },
+      { type: 'noun', expectedVariant: 'b-amber', expectedText: 'Noun' },
+      { type: 'verb', expectedVariant: 'b-green', expectedText: 'Verb' },
+      { type: 'adjective', expectedVariant: 'b-violet', expectedText: 'Adjective' },
+      { type: 'adverb', expectedVariant: 'b-blue', expectedText: 'Adverb' },
     ];
 
     it.each(partsOfSpeech)(
-      'should render $type with correct color ($expectedColor) and text ($expectedText)',
-      ({ type, expectedColor, expectedText }) => {
+      'should render $type with correct badge variant ($expectedVariant) and text ($expectedText)',
+      ({ type, expectedVariant, expectedText }) => {
         render(<PartOfSpeechBadge partOfSpeech={type} />);
 
         const badge = screen.getByTestId('part-of-speech-badge');
-        expect(badge).toHaveClass(expectedColor);
+        expect(badge).toHaveClass('badge');
+        expect(badge).toHaveClass(expectedVariant);
         expect(badge).toHaveTextContent(expectedText);
       }
     );

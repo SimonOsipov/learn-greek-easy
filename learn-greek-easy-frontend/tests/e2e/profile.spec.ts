@@ -64,15 +64,17 @@ test.describe('Daily Goal Slider', () => {
   });
 
   test('E2E-PROFILE-03: Daily goal slider renders with initial value', async ({ page }) => {
-    // Verify slider is visible
-    const slider = page.getByTestId('daily-goal-slider');
-    await expect(slider).toBeVisible();
+    // Verify slider container is visible
+    const sliderRoot = page.getByTestId('daily-goal-slider');
+    await expect(sliderRoot).toBeVisible();
 
-    // Verify slider has correct attributes
-    await expect(slider).toHaveAttribute('type', 'range');
-    await expect(slider).toHaveAttribute('min', '5');
-    await expect(slider).toHaveAttribute('max', '120');
-    await expect(slider).toHaveAttribute('step', '5');
+    // Radix Slider renders a thumb with role="slider" inside the root
+    const sliderThumb = sliderRoot.getByRole('slider');
+    await expect(sliderThumb).toBeVisible();
+
+    // Verify Radix ARIA attributes on the thumb
+    await expect(sliderThumb).toHaveAttribute('aria-valuemin', '5');
+    await expect(sliderThumb).toHaveAttribute('aria-valuemax', '120');
 
     // Verify value label is visible
     await expect(page.getByTestId('daily-goal-value')).toBeVisible();
@@ -82,45 +84,71 @@ test.describe('Daily Goal Slider', () => {
   });
 
   test('E2E-PROFILE-04: Slider value change updates label', async ({ page }) => {
-    const slider = page.getByTestId('daily-goal-slider');
+    const sliderRoot = page.getByTestId('daily-goal-slider');
+    const sliderThumb = sliderRoot.getByRole('slider');
     const valueLabel = page.getByTestId('daily-goal-value');
 
-    // Get initial value
-    const initialValue = await slider.inputValue();
+    // Get initial value from aria-valuenow
+    const initialValueStr = await sliderThumb.getAttribute('aria-valuenow');
+    const initialValue = parseInt(initialValueStr ?? '20', 10);
 
-    // Change slider value to 45 minutes
-    await slider.fill('45');
+    // Move slider to 45 minutes using keyboard (step=5, so delta must be multiple of 5)
+    await sliderThumb.focus();
+    const target = 45;
+    const delta = target - initialValue;
+    const key = delta > 0 ? 'ArrowRight' : 'ArrowLeft';
+    for (let i = 0; i < Math.abs(delta) / 5; i++) {
+      await page.keyboard.press(key);
+    }
 
     // Wait for label to update
     await expect(valueLabel).toContainText('45');
   });
 
   test('E2E-PROFILE-05: Intensity label changes based on value', async ({ page }) => {
-    const slider = page.getByTestId('daily-goal-slider');
+    const sliderRoot = page.getByTestId('daily-goal-slider');
+    const sliderThumb = sliderRoot.getByRole('slider');
     const intensityLabel = page.getByTestId('daily-goal-intensity');
 
-    // Set to light intensity (< 15 min)
-    await slider.fill('10');
+    // Helper: move slider to a target value via keyboard
+    const moveToValue = async (target: number) => {
+      await sliderThumb.focus();
+      const current = parseInt((await sliderThumb.getAttribute('aria-valuenow')) ?? '20', 10);
+      const delta = target - current;
+      if (delta === 0) return;
+      const key = delta > 0 ? 'ArrowRight' : 'ArrowLeft';
+      for (let i = 0; i < Math.abs(delta) / 5; i++) {
+        await page.keyboard.press(key);
+      }
+    };
+
+    // Set to light intensity (< 15 min) — use Home to reach min (5), then step up to 10
+    await sliderThumb.focus();
+    await page.keyboard.press('Home');
+    await page.keyboard.press('ArrowRight'); // 5 -> 10
     await expect(intensityLabel).toContainText(/light/i);
 
     // Set to moderate intensity (15-29 min)
-    await slider.fill('20');
+    await moveToValue(20);
     await expect(intensityLabel).toContainText(/moderate/i);
 
     // Set to regular intensity (30-59 min)
-    await slider.fill('45');
+    await moveToValue(45);
     await expect(intensityLabel).toContainText(/regular/i);
 
     // Set to intensive (>= 60 min)
-    await slider.fill('90');
+    await moveToValue(60);
     await expect(intensityLabel).toContainText(/intensive/i);
   });
 
   test('E2E-PROFILE-06: Auto-save with toast notification', async ({ page }) => {
-    const slider = page.getByTestId('daily-goal-slider');
+    const sliderRoot = page.getByTestId('daily-goal-slider');
+    const sliderThumb = sliderRoot.getByRole('slider');
 
-    // Change slider value
-    await slider.fill('30');
+    // Move slider by a few steps to trigger save
+    await sliderThumb.focus();
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
 
     // Wait for debounced save (1000ms debounce + API call)
     // Look for saving indicator first
@@ -140,17 +168,17 @@ test.describe('Daily Goal Slider', () => {
   });
 
   test('E2E-PROFILE-07: Slider value persists after reload', async ({ page }) => {
-    const slider = page.getByTestId('daily-goal-slider');
+    const sliderRoot = page.getByTestId('daily-goal-slider');
+    const sliderThumb = sliderRoot.getByRole('slider');
 
-    // Get initial value
-    const initialValue = await slider.inputValue();
+    // Move slider to a specific value (55 min): use Home then step up 10 times (5*10=50, +5=55 from min 5)
+    await sliderThumb.focus();
+    await page.keyboard.press('Home'); // go to min (5)
+    for (let i = 0; i < 10; i++) {
+      await page.keyboard.press('ArrowRight'); // 5 + 10*5 = 55
+    }
 
-    // Set a specific value
-    await slider.fill('55');
-
-    // Wait for save to complete - saving indicator should appear then disappear
-    const savingIndicator = page.getByTestId('preferences-saving');
-    // Wait for any save operation to complete - either indicator disappears or network settles
+    // Wait for any save operation to complete
     await page.waitForLoadState('networkidle');
 
     // Reload the page
@@ -165,67 +193,75 @@ test.describe('Daily Goal Slider', () => {
     // Note: Current implementation does local-only updates (backend doesn't support profile updates yet)
     // The value may or may not persist depending on localStorage state
     // We verify the slider is accessible and has a valid value
-    const newSlider = page.getByTestId('daily-goal-slider');
-    const newValue = await newSlider.inputValue();
+    const newSliderRoot = page.getByTestId('daily-goal-slider');
+    const newSliderThumb = newSliderRoot.getByRole('slider');
+    const newValueStr = await newSliderThumb.getAttribute('aria-valuenow');
+    const numValue = parseInt(newValueStr ?? '20', 10);
 
     // Value should be a valid number between min and max
-    const numValue = parseInt(newValue);
     expect(numValue).toBeGreaterThanOrEqual(5);
     expect(numValue).toBeLessThanOrEqual(120);
   });
 
   test('E2E-PROFILE-08: Slider keyboard accessibility', async ({ page }) => {
-    const slider = page.getByTestId('daily-goal-slider');
+    const sliderRoot = page.getByTestId('daily-goal-slider');
+    const sliderThumb = sliderRoot.getByRole('slider');
 
-    // Focus the slider
-    await slider.focus();
+    // Focus the thumb
+    await sliderThumb.focus();
 
-    // Get initial value
-    const initialValue = parseInt(await slider.inputValue());
+    // Get initial value via Radix ARIA attribute
+    const initialValue = parseInt((await sliderThumb.getAttribute('aria-valuenow')) ?? '20', 10);
 
     // Press ArrowRight to increase value
     await page.keyboard.press('ArrowRight');
 
     // Value should increase by step (5)
-    const newValue = parseInt(await slider.inputValue());
+    const newValue = parseInt((await sliderThumb.getAttribute('aria-valuenow')) ?? '20', 10);
     expect(newValue).toBe(initialValue + 5);
 
     // Press ArrowLeft to decrease value
     await page.keyboard.press('ArrowLeft');
 
     // Value should be back to initial
-    const finalValue = parseInt(await slider.inputValue());
+    const finalValue = parseInt((await sliderThumb.getAttribute('aria-valuenow')) ?? '20', 10);
     expect(finalValue).toBe(initialValue);
   });
 
   test('E2E-PROFILE-09: Slider respects minimum value', async ({ page }) => {
-    const slider = page.getByTestId('daily-goal-slider');
+    const sliderRoot = page.getByTestId('daily-goal-slider');
+    const sliderThumb = sliderRoot.getByRole('slider');
 
-    // Set to minimum value
-    await slider.fill('5');
-    await expect(slider).toHaveValue('5');
+    // Navigate to minimum value via Home key
+    await sliderThumb.focus();
+    await page.keyboard.press('Home');
 
-    // Focus and try to go below minimum
-    await slider.focus();
+    // Verify we are at minimum
+    await expect(sliderThumb).toHaveAttribute('aria-valuenow', '5');
+
+    // Try to go below minimum
     await page.keyboard.press('ArrowLeft');
 
     // Value should still be at minimum
-    await expect(slider).toHaveValue('5');
+    await expect(sliderThumb).toHaveAttribute('aria-valuenow', '5');
   });
 
   test('E2E-PROFILE-10: Slider respects maximum value', async ({ page }) => {
-    const slider = page.getByTestId('daily-goal-slider');
+    const sliderRoot = page.getByTestId('daily-goal-slider');
+    const sliderThumb = sliderRoot.getByRole('slider');
 
-    // Set to maximum value
-    await slider.fill('120');
-    await expect(slider).toHaveValue('120');
+    // Navigate to maximum value via End key
+    await sliderThumb.focus();
+    await page.keyboard.press('End');
 
-    // Focus and try to go above maximum
-    await slider.focus();
+    // Verify we are at maximum
+    await expect(sliderThumb).toHaveAttribute('aria-valuenow', '120');
+
+    // Try to go above maximum
     await page.keyboard.press('ArrowRight');
 
     // Value should still be at maximum
-    await expect(slider).toHaveValue('120');
+    await expect(sliderThumb).toHaveAttribute('aria-valuenow', '120');
   });
 });
 
@@ -245,9 +281,10 @@ test.describe('Profile Preferences - Different Users', () => {
 
     // Verify slider exists and has a valid value
     // SEED_USERS.LEARNER has dailyGoal: 20 (Moderate intensity)
-    const slider = page.getByTestId('daily-goal-slider');
-    const value = await slider.inputValue();
-    const numValue = parseInt(value);
+    const sliderRoot = page.getByTestId('daily-goal-slider');
+    const sliderThumb = sliderRoot.getByRole('slider');
+    const value = await sliderThumb.getAttribute('aria-valuenow');
+    const numValue = parseInt(value ?? '20', 10);
 
     // Verify value is within valid range
     expect(numValue).toBeGreaterThanOrEqual(5);

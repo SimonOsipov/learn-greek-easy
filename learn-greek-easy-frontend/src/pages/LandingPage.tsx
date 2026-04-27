@@ -67,7 +67,7 @@ export default function LandingPage() {
         <meta name="author" content="Greeklish" />
       </Helmet>
 
-      <div className="min-h-screen bg-background" data-testid="landing-page">
+      <div className="min-h-screen bg-[hsl(var(--landing-navy))]" data-testid="landing-page">
         <Header />
         <main>
           <Hero />

@@ -38,7 +38,12 @@ export const WelcomeSection = React.memo<WelcomeSectionProps>(
             {getEncouragement()}
           </p>
         </div>
-        <Button variant="hero" size="lg" className="mt-4 md:mt-0" onClick={onStartReview}>
+        <Button
+          variant="default"
+          size="lg"
+          className="btn-primary mt-4 md:mt-0"
+          onClick={onStartReview}
+        >
           {t('welcome.startReview')}
         </Button>
       </div>

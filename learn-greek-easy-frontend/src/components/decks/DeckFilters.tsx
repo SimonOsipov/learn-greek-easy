@@ -183,20 +183,21 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
             </Button>
           ))}
           <div className="h-6 w-px bg-border" aria-hidden="true" />
-          {CEFR_LEVEL_OPTIONS.map(({ value, color }) => (
+          {CEFR_LEVEL_OPTIONS.map(({ value, badgeClass }) => (
             <Button
               key={value}
               variant={filters.levels.includes(value) ? 'default' : 'outline'}
               size="sm"
               onClick={() => handleLevelToggle(value)}
               disabled={isLevelFilterDisabled}
-              className={
-                filters.levels.includes(value) ? `${color} text-white hover:opacity-90` : ''
-              }
               aria-pressed={filters.levels.includes(value)}
               title={isLevelFilterDisabled ? t('filters.levelDisabledForCulture') : undefined}
             >
-              {value}
+              {filters.levels.includes(value) ? (
+                <span className={`badge ${badgeClass}`}>{value}</span>
+              ) : (
+                value
+              )}
             </Button>
           ))}
           <div className="h-6 w-px bg-border" aria-hidden="true" />
