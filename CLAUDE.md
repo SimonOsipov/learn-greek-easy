@@ -49,6 +49,51 @@ cd /Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-backend && /User
 
 5. **Log investigation**: Use **Sentry MCP** `search_events` tool to query production logs (not Railway MCP). Sentry Logs indexes all loguru output with severity, trace IDs, and structured attributes. Railway log filter cannot search inside loguru's serialized JSON output.
 
+## Design System
+
+**Source of truth:** [docs/design-system.md](docs/design-system.md).
+Visual snapshot: [Design-System-v2.4.html](docs/design-system/Design-System-v2.4.html).
+
+**Read it first** before any task involving color, spacing, radius, shadow, font, animation, or new visual component. The doc is ~290 lines and grep-friendly.
+
+### Drift rules (forbidden in `src/**/*.{ts,tsx,css}` outside `index.css` / `tailwind.config.js`)
+
+- Raw hex colors → use HSL tokens via `hsl(var(--token))`.
+- Inline `style={{ color: '#...' }}` or hardcoded `rgba(...)` → use tokens or utility classes.
+- Arbitrary Tailwind values (`bg-[#3b82f6]`, `text-[hsl(...)]`) → use named utilities (`bg-primary`).
+- New `@keyframes` in component files → add to `index.css` + `tailwind.config.js` `animation` map.
+
+```tsx
+// ❌ Don't
+<div className="bg-[#3b82f6]" style={{ color: '#0f172a' }}>
+// ✓ Do
+<div className="bg-primary text-fg">
+```
+
+### Adding a new token / class / animation
+
+If you need a value that isn't in the doc:
+
+1. Define it in `src/index.css` (with light + dark) or `tailwind.config.js`.
+2. Update [docs/design-system.md](docs/design-system.md) in the same PR.
+3. Call it out in the PR description under **Design system delta**.
+
+### Reuse primitives
+
+Don't re-implement `Dialog`, `Popover`, `Tooltip`, `Select`, `DropdownMenu`, `Sheet`, `Toast`, `Accordion`, etc. Use the existing primitive in `src/components/ui/*`. Compose, don't reinvent.
+
+### Three distinct palettes — don't cross them
+
+- **App** (behind login): glassy, `--bg / --card / --primary / --accent`.
+- **Landing** (greeklish.eu marketing): editorial, `--landing-navy / --landing-greek-blue / --landing-gold`.
+- **Practice** (flashcards, culture, mock exam): slate-based, `--practice-*`.
+
+### Legacy drift
+
+Existing code may use raw hex (notably the `--practice-*` palette in `src/index.css`). When touching adjacent code:
+- **Don't mass-migrate legacy drift** — that's a separate track (the token migration in §3).
+- **Don't introduce new drift** — use tokens for what you're adding.
+
 ## Testing
 
 ```bash
