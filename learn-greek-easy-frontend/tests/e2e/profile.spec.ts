@@ -204,57 +204,64 @@ test.describe('Daily Goal Slider', () => {
   });
 
   test('E2E-PROFILE-08: Slider keyboard accessibility', async ({ page }) => {
-    const slider = page.getByTestId('daily-goal-slider');
+    const sliderRoot = page.getByTestId('daily-goal-slider');
+    const sliderThumb = sliderRoot.getByRole('slider');
 
-    // Focus the slider
-    await slider.focus();
+    // Focus the thumb
+    await sliderThumb.focus();
 
-    // Get initial value
-    const initialValue = parseInt(await slider.inputValue());
+    // Get initial value via Radix ARIA attribute
+    const initialValue = parseInt((await sliderThumb.getAttribute('aria-valuenow')) ?? '20');
 
     // Press ArrowRight to increase value
     await page.keyboard.press('ArrowRight');
 
     // Value should increase by step (5)
-    const newValue = parseInt(await slider.inputValue());
+    const newValue = parseInt((await sliderThumb.getAttribute('aria-valuenow')) ?? '20');
     expect(newValue).toBe(initialValue + 5);
 
     // Press ArrowLeft to decrease value
     await page.keyboard.press('ArrowLeft');
 
     // Value should be back to initial
-    const finalValue = parseInt(await slider.inputValue());
+    const finalValue = parseInt((await sliderThumb.getAttribute('aria-valuenow')) ?? '20');
     expect(finalValue).toBe(initialValue);
   });
 
   test('E2E-PROFILE-09: Slider respects minimum value', async ({ page }) => {
-    const slider = page.getByTestId('daily-goal-slider');
+    const sliderRoot = page.getByTestId('daily-goal-slider');
+    const sliderThumb = sliderRoot.getByRole('slider');
 
-    // Set to minimum value
-    await slider.fill('5');
-    await expect(slider).toHaveValue('5');
+    // Navigate to minimum value via Home key
+    await sliderThumb.focus();
+    await page.keyboard.press('Home');
 
-    // Focus and try to go below minimum
-    await slider.focus();
+    // Verify we are at minimum
+    await expect(sliderThumb).toHaveAttribute('aria-valuenow', '5');
+
+    // Try to go below minimum
     await page.keyboard.press('ArrowLeft');
 
     // Value should still be at minimum
-    await expect(slider).toHaveValue('5');
+    await expect(sliderThumb).toHaveAttribute('aria-valuenow', '5');
   });
 
   test('E2E-PROFILE-10: Slider respects maximum value', async ({ page }) => {
-    const slider = page.getByTestId('daily-goal-slider');
+    const sliderRoot = page.getByTestId('daily-goal-slider');
+    const sliderThumb = sliderRoot.getByRole('slider');
 
-    // Set to maximum value
-    await slider.fill('120');
-    await expect(slider).toHaveValue('120');
+    // Navigate to maximum value via End key
+    await sliderThumb.focus();
+    await page.keyboard.press('End');
 
-    // Focus and try to go above maximum
-    await slider.focus();
+    // Verify we are at maximum
+    await expect(sliderThumb).toHaveAttribute('aria-valuenow', '120');
+
+    // Try to go above maximum
     await page.keyboard.press('ArrowRight');
 
     // Value should still be at maximum
-    await expect(slider).toHaveValue('120');
+    await expect(sliderThumb).toHaveAttribute('aria-valuenow', '120');
   });
 });
 
@@ -274,9 +281,10 @@ test.describe('Profile Preferences - Different Users', () => {
 
     // Verify slider exists and has a valid value
     // SEED_USERS.LEARNER has dailyGoal: 20 (Moderate intensity)
-    const slider = page.getByTestId('daily-goal-slider');
-    const value = await slider.inputValue();
-    const numValue = parseInt(value);
+    const sliderRoot = page.getByTestId('daily-goal-slider');
+    const sliderThumb = sliderRoot.getByRole('slider');
+    const value = await sliderThumb.getAttribute('aria-valuenow');
+    const numValue = parseInt(value ?? '20');
 
     // Verify value is within valid range
     expect(numValue).toBeGreaterThanOrEqual(5);
