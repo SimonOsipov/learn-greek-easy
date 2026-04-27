@@ -46,7 +46,8 @@ export function KaraokeText({
             className={cn(
               'transition-all duration-150',
               state === 'spoken' && 'text-foreground',
-              state === 'speaking' && 'rounded bg-primary/20 px-0.5 font-medium',
+              state === 'speaking' &&
+                'rounded-md bg-primary/20 px-2 py-0.5 font-medium text-foreground ring-1 ring-primary/30',
               state === 'pending' && 'text-muted-foreground'
             )}
           >
