@@ -104,15 +104,15 @@ function DuplicateCheckSection({
 }
 
 const CONFIDENCE_BADGE_CLASSES: Record<ConfidenceTier, string> = {
-  high: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-  medium: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
-  low: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+  high: 'badge b-green',
+  medium: 'badge b-amber',
+  low: 'badge b-red',
 };
 
 const TIER_BADGE_CLASSES: Record<CombinedTier, string> = {
-  auto_approve: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-  quick_review: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
-  manual_review: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+  auto_approve: 'badge b-green',
+  quick_review: 'badge b-amber',
+  manual_review: 'badge b-red',
 };
 
 function VerificationTierBadge({ tier }: { tier: CombinedTier }) {
@@ -123,9 +123,9 @@ function VerificationTierBadge({ tier }: { tier: CombinedTier }) {
     manual_review: t('generateNoun.verification.tierManualReview'),
   }[tier];
   return (
-    <Badge data-testid="verification-tier-badge" className={TIER_BADGE_CLASSES[tier]}>
+    <span data-testid="verification-tier-badge" className={TIER_BADGE_CLASSES[tier]}>
       {tierLabel}
-    </Badge>
+    </span>
   );
 }
 
@@ -557,9 +557,9 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                     {displayPrimary.corrected_from && displayPrimary.corrected_to && (
                       <div
                         data-testid="correction-note"
-                        className="flex items-start gap-2 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm dark:border-blue-800 dark:bg-blue-950"
+                        className="flex items-start gap-2 rounded-md border border-primary/20 bg-primary/5 p-3 text-sm"
                       >
-                        <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
+                        <Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                         <span>
                           {t('generateNoun.accentCorrected', {
                             from: displayPrimary.corrected_from,
@@ -595,13 +595,13 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                       <div>
                         <span className="font-medium">{t('generateNoun.confidenceLabel')}</span>
                         <p>
-                          <Badge
+                          <span
                             data-testid="result-confidence-badge"
                             className={CONFIDENCE_BADGE_CLASSES[displayPrimary.confidence_tier]}
                           >
                             {displayPrimary.confidence.toFixed(2)} —{' '}
                             {t(`generateNoun.confidence.${displayPrimary.confidence_tier}`)}
-                          </Badge>
+                          </span>
                         </p>
                       </div>
                     </div>
@@ -679,9 +679,9 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                             <div className="space-y-2">
                               <div
                                 data-testid="duplicate-found-warning"
-                                className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm dark:border-amber-800 dark:bg-amber-950"
+                                className="flex items-start gap-2 rounded-md border border-warning/30 bg-warning/10 p-3 text-sm"
                               >
-                                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
                                 <div>
                                   <p className="font-medium">
                                     {t('generateNoun.duplicateFound', {
@@ -704,9 +704,9 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                           ) : (
                             <div
                               data-testid="no-duplicate-banner"
-                              className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 p-3 text-sm dark:border-green-800 dark:bg-green-950"
+                              className="flex items-center gap-2 rounded-md border border-success/30 bg-success/10 p-3 text-sm"
                             >
-                              <Info className="h-4 w-4 shrink-0 text-green-600 dark:text-green-400" />
+                              <Info className="h-4 w-4 shrink-0 text-success" />
                               <span>{t('generateNoun.noDuplicates')}</span>
                             </div>
                           )}
@@ -1018,12 +1018,9 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                                           </Badge>
                                         )}
                                         {item.score === maxScore && (
-                                          <Badge
-                                            variant="outline"
-                                            className="border-green-200 bg-green-50 text-xs text-green-700"
-                                          >
+                                          <span className="badge b-green">
                                             {t('generateNoun.reverseLookup.bestMatch')}
-                                          </Badge>
+                                          </span>
                                         )}
                                       </div>
                                       <p className="mt-0.5 text-sm text-muted-foreground">

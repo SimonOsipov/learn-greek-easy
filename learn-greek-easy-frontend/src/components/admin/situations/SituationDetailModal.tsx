@@ -80,7 +80,7 @@ function AudioPlaceholder() {
   const { t } = useTranslation('admin');
   return (
     <div
-      className="flex items-center justify-center rounded-md border-2 border-dashed border-gray-200 p-4 text-sm text-gray-400 dark:border-gray-700"
+      className="flex items-center justify-center rounded-md border-2 border-dashed border-border p-4 text-sm text-muted-foreground"
       data-testid="situation-audio-placeholder"
     >
       {t('situations.detail.audioNotGenerated')}
@@ -394,12 +394,9 @@ export function SituationDetailModal({
               <DialogTitle>{localizedScenario}</DialogTitle>
               <DialogDescription>{selectedSituation.scenario_el}</DialogDescription>
               <div className="flex flex-wrap gap-2 pt-2">
-                <Badge
-                  variant="outline"
-                  className={SITUATION_STATUS_BADGE_CLASSES[selectedSituation.status]}
-                >
+                <span className={SITUATION_STATUS_BADGE_CLASSES[selectedSituation.status]}>
                   {t(`situations.status.${selectedSituation.status}`)}
-                </Badge>
+                </span>
               </div>
             </>
           )}

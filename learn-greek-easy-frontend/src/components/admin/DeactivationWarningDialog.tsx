@@ -43,7 +43,7 @@ export const DeactivationWarningDialog: React.FC<DeactivationWarningDialogProps>
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onCancel()}>
       <DialogContent className="sm:max-w-md" data-testid="deactivation-warning-dialog">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-amber-600">
+          <DialogTitle className="flex items-center gap-2 text-warning">
             <AlertTriangle className="h-5 w-5" />
             {t('deckEdit.deactivateWarning.title', 'Deactivate Deck?')}
           </DialogTitle>
@@ -89,7 +89,7 @@ export const DeactivationWarningDialog: React.FC<DeactivationWarningDialogProps>
             {t('deckEdit.deactivateWarning.cancel', 'Keep Active')}
           </Button>
           <Button
-            className="bg-amber-600 hover:bg-amber-700"
+            className="bg-warning hover:bg-warning/90"
             onClick={onConfirm}
             data-testid="deactivation-confirm"
           >

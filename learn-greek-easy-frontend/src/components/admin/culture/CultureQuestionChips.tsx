@@ -1,8 +1,6 @@
-import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { chipColorClasses } from '@/lib/completeness';
 import { computeCultureChips } from '@/lib/cultureCompleteness';
-import { cn } from '@/lib/utils';
 import type { AdminCultureQuestion } from '@/services/adminAPI';
 
 interface Props {
@@ -19,13 +17,12 @@ export function CultureQuestionChips({ question }: Props) {
       {chips.map((chip) => (
         <Tooltip key={chip.name}>
           <TooltipTrigger asChild>
-            <Badge
-              variant="outline"
-              className={cn('cursor-default px-1.5 py-0 text-[10px]', chipColorClasses[chip.color])}
+            <span
+              className={`cursor-default ${chipColorClasses[chip.color]}`}
               data-testid={`culture-chip-${chip.name}-${question.id}`}
             >
               {chip.label}
-            </Badge>
+            </span>
           </TooltipTrigger>
           <TooltipContent>
             <p>{chip.tooltip}</p>

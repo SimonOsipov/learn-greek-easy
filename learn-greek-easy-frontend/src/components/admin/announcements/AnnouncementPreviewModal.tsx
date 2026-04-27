@@ -97,17 +97,12 @@ export const AnnouncementPreviewModal: React.FC<AnnouncementPreviewModalProps> =
           </Card>
 
           {/* Warning Alert */}
-          <Alert
-            variant="destructive"
-            className="border-amber-500/50 bg-amber-50 text-amber-900 dark:bg-amber-950/20 dark:text-amber-200"
-          >
-            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-500" />
-            <AlertTitle className="text-amber-900 dark:text-amber-200">
+          <Alert className="border-warning/50 bg-warning/10">
+            <AlertTriangle className="h-4 w-4 text-warning" />
+            <AlertTitle className="text-warning">
               {t('announcements.preview.warningTitle')}
             </AlertTitle>
-            <AlertDescription className="text-amber-800 dark:text-amber-300">
-              {t('announcements.preview.warningMessage')}
-            </AlertDescription>
+            <AlertDescription>{t('announcements.preview.warningMessage')}</AlertDescription>
           </Alert>
         </div>
 

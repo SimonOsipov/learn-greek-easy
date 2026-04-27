@@ -1,30 +1,12 @@
 import { useTranslation } from 'react-i18next';
 
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
 import type { AudioStatus } from '@/services/wordEntryAPI';
 
-const statusConfig: Record<
-  AudioStatus,
-  { variant: 'secondary' | 'destructive' | 'outline'; className: string }
-> = {
-  ready: {
-    variant: 'outline',
-    className: 'border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-400',
-  },
-  missing: {
-    variant: 'outline',
-    className: 'border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400',
-  },
-  generating: {
-    variant: 'outline',
-    className:
-      'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400 motion-safe:animate-pulse',
-  },
-  failed: {
-    variant: 'destructive',
-    className: '',
-  },
+const STATUS_CLASS: Record<AudioStatus, string> = {
+  ready: 'badge b-green',
+  missing: 'badge b-red',
+  generating: 'badge b-amber motion-safe:animate-pulse',
+  failed: 'badge b-red',
 };
 
 interface AudioStatusBadgeProps {
@@ -34,10 +16,9 @@ interface AudioStatusBadgeProps {
 
 export function AudioStatusBadge({ status, 'data-testid': testId }: AudioStatusBadgeProps) {
   const { t } = useTranslation('admin');
-  const config = statusConfig[status];
   return (
-    <Badge variant={config.variant} className={cn(config.className)} data-testid={testId}>
+    <span className={STATUS_CLASS[status]} data-testid={testId}>
       <span data-testid={`audio-status-${status}`}>{t(`audioStatus.${status}`)}</span>
-    </Badge>
+    </span>
   );
 }

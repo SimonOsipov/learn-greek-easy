@@ -453,7 +453,7 @@ describe('GenerateNounDialog', () => {
 
     await waitFor(() => {
       const badge = screen.getByTestId('result-confidence-badge');
-      expect(badge.className).toContain('bg-green-100');
+      expect(badge.className).toContain('b-green');
     });
   });
 
@@ -467,7 +467,7 @@ describe('GenerateNounDialog', () => {
 
     await waitFor(() => {
       const badge = screen.getByTestId('result-confidence-badge');
-      expect(badge.className).toContain('bg-amber-100');
+      expect(badge.className).toContain('b-amber');
     });
   });
 
@@ -481,7 +481,7 @@ describe('GenerateNounDialog', () => {
 
     await waitFor(() => {
       const badge = screen.getByTestId('result-confidence-badge');
-      expect(badge.className).toContain('bg-red-100');
+      expect(badge.className).toContain('b-red');
     });
   });
 

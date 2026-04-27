@@ -8,10 +8,8 @@ import { ru } from 'date-fns/locale/ru';
 import { BookOpen, Globe, MessageSquare, User } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
 import type { AdminCardErrorResponse } from '@/types/cardError';
 import { CARD_ERROR_STATUS_CONFIG } from '@/types/cardError';
 
@@ -60,20 +58,13 @@ export const AdminCardErrorCard: React.FC<AdminCardErrorCardProps> = ({
           <div className="flex-1 space-y-2">
             {/* Status and Card Type badges */}
             <div className="flex flex-wrap items-center gap-2">
-              <Badge
-                className={cn(statusConfig.bgColor, statusConfig.color)}
-                data-testid="card-error-status-badge"
-              >
+              <span className={statusConfig.badgeClass} data-testid="card-error-status-badge">
                 {t(`cardErrors.statuses.${errorReport.status.toLowerCase()}`)}
-              </Badge>
-              <Badge
-                variant="outline"
-                className="gap-1 bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
-                data-testid="card-error-type-badge"
-              >
+              </span>
+              <span className="badge b-gray gap-1" data-testid="card-error-type-badge">
                 <CardTypeIcon className="h-3 w-3" />
                 {t(`cardErrors.cardTypes.${errorReport.card_type.toLowerCase()}`)}
-              </Badge>
+              </span>
             </div>
 
             {/* Reporter and timestamp */}

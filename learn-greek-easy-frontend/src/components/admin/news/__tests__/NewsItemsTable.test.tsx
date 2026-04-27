@@ -453,7 +453,7 @@ describe('NewsItemsTable — Country badge', () => {
     render(<NewsItemsTable {...defaultTableProps} newsItems={[item]} />);
     const badge = screen
       .getByText((content) => content.includes('CY'))
-      .closest('[class*="bg-blue"]');
+      .closest('[class*="b-blue"]');
     expect(badge).not.toBeNull();
   });
 });
@@ -471,7 +471,7 @@ describe('NewsItemsTable — B2 Text badge', () => {
     const badge = screen.getByTestId('b2-text-badge-item-b2');
     expect(badge).toBeInTheDocument();
     expect(badge.textContent).toBe('B2 Text');
-    expect(badge.className).toContain('bg-purple-500');
+    expect(badge.className).toContain('b-violet');
   });
 
   it('shows muted B2 Text badge when Greek text is missing', () => {
@@ -482,7 +482,7 @@ describe('NewsItemsTable — B2 Text badge', () => {
     expect(badge).toBeInTheDocument();
     expect(badge.textContent).toBe('B2 Text');
     expect(badge.className).toContain('opacity-50');
-    expect(badge.className).not.toContain('bg-purple-500');
+    expect(badge.className).not.toContain('b-violet');
   });
 });
 
@@ -499,7 +499,7 @@ describe('NewsItemsTable — A2 Text badge', () => {
     const badge = screen.getByTestId('a2-text-badge-item-a2');
     expect(badge).toBeInTheDocument();
     expect(badge.textContent).toBe('A2 Text');
-    expect(badge.className).toContain('bg-purple-500');
+    expect(badge.className).toContain('b-violet');
   });
 
   it('shows muted A2 Text badge when has_a2_content is false', () => {
@@ -510,7 +510,7 @@ describe('NewsItemsTable — A2 Text badge', () => {
     expect(badge).toBeInTheDocument();
     expect(badge.textContent).toBe('A2 Text');
     expect(badge.className).toContain('opacity-50');
-    expect(badge.className).not.toContain('bg-purple-500');
+    expect(badge.className).not.toContain('b-violet');
   });
 
   it('A2 Text badge is present for every row', () => {

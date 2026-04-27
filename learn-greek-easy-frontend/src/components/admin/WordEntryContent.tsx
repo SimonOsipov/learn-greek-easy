@@ -420,7 +420,7 @@ function ExamplesSection({ examples }: { examples: WordEntryExampleSentence[] | 
 function CompletionDot({ filled }: { filled: boolean }) {
   return (
     <span
-      className={`inline-block h-2 w-2 flex-shrink-0 rounded-full ${filled ? 'bg-green-500' : 'bg-muted-foreground/30'}`}
+      className={`inline-block h-2 w-2 flex-shrink-0 rounded-full ${filled ? 'bg-success' : 'bg-muted-foreground/30'}`}
     />
   );
 }

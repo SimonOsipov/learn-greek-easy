@@ -19,7 +19,6 @@ import { ru } from 'date-fns/locale/ru';
 import { ChevronLeft, ChevronRight, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -193,48 +192,29 @@ const NewsItemRow: React.FC<NewsItemRowProps> = ({ item, onEdit, onDelete, t, la
           </div>
           <div className="mt-1 flex gap-1">
             {item.country && COUNTRY_FLAG_EMOJI[item.country] && (
-              <Badge
-                variant="outline"
-                className="border-blue-500/30 bg-blue-500/10 px-1.5 py-0 text-[10px] text-blue-700 dark:text-blue-400"
-              >
+              <span className="badge b-blue">
                 {COUNTRY_FLAG_EMOJI[item.country]}{' '}
                 {COUNTRY_SHORT_LABELS[item.country] ?? item.country}
-              </Badge>
+              </span>
             )}
 
             {isElComplete ? (
-              <Badge
-                variant="outline"
-                className="border-purple-500/30 bg-purple-500/10 px-1.5 py-0 text-[10px] text-purple-700 dark:text-purple-400"
-                data-testid={`b2-text-badge-${item.id}`}
-              >
+              <span className="badge b-violet" data-testid={`b2-text-badge-${item.id}`}>
                 B2 Text
-              </Badge>
+              </span>
             ) : (
-              <Badge
-                variant="secondary"
-                className="px-1.5 py-0 text-[10px] opacity-50"
-                data-testid={`b2-text-badge-${item.id}`}
-              >
+              <span className="badge b-gray opacity-50" data-testid={`b2-text-badge-${item.id}`}>
                 B2 Text
-              </Badge>
+              </span>
             )}
             {item.has_a2_content ? (
-              <Badge
-                variant="outline"
-                className="border-purple-500/30 bg-purple-500/10 px-1.5 py-0 text-[10px] text-purple-700 dark:text-purple-400"
-                data-testid={`a2-text-badge-${item.id}`}
-              >
+              <span className="badge b-violet" data-testid={`a2-text-badge-${item.id}`}>
                 A2 Text
-              </Badge>
+              </span>
             ) : (
-              <Badge
-                variant="secondary"
-                className="px-1.5 py-0 text-[10px] opacity-50"
-                data-testid={`a2-text-badge-${item.id}`}
-              >
+              <span className="badge b-gray opacity-50" data-testid={`a2-text-badge-${item.id}`}>
                 A2 Text
-              </Badge>
+              </span>
             )}
           </div>
         </div>
@@ -246,22 +226,8 @@ const NewsItemRow: React.FC<NewsItemRowProps> = ({ item, onEdit, onDelete, t, la
         <div className="flex items-center gap-1.5 text-sm" data-testid={`audio-status-${item.id}`}>
           {item.audio_url || item.audio_a2_url ? (
             <>
-              {item.audio_url && (
-                <Badge
-                  variant="outline"
-                  className="border-purple-500/30 bg-purple-500/10 px-1.5 py-0 text-[10px] text-purple-700 dark:text-purple-400"
-                >
-                  B2
-                </Badge>
-              )}
-              {item.audio_a2_url && (
-                <Badge
-                  variant="outline"
-                  className="border-purple-500/30 bg-purple-500/10 px-1.5 py-0 text-[10px] text-purple-700 dark:text-purple-400"
-                >
-                  A2
-                </Badge>
-              )}
+              {item.audio_url && <span className="badge b-violet">B2</span>}
+              {item.audio_a2_url && <span className="badge b-violet">A2</span>}
               <span className="text-muted-foreground">
                 {item.audio_url && item.audio_duration_seconds != null
                   ? formatAudioDuration(item.audio_duration_seconds)
