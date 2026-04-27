@@ -54,8 +54,8 @@ interface RecentUnlockCardProps {
 
 function RecentUnlockCard({ achievement: a, tAch, language }: RecentUnlockCardProps) {
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-purple-200 bg-purple-50 p-3 dark:border-purple-800 dark:bg-purple-900/30 sm:flex-1">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-purple-100 text-purple-600 dark:bg-purple-800/50 dark:text-purple-300">
+    <div className="flex items-center gap-3 rounded-lg border border-[hsl(var(--success)/.3)] bg-[hsl(var(--success)/.1)] p-3 sm:flex-1">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[hsl(var(--success)/.15)] text-[hsl(var(--success))]">
         <AchievementIcon icon={a.icon} size={20} />
       </div>
       <div className="min-w-0 flex-1">
@@ -64,13 +64,10 @@ function RecentUnlockCard({ achievement: a, tAch, language }: RecentUnlockCardPr
         </p>
         <p className="text-xs text-muted-foreground">{getRelativeTime(a.unlocked_at, language)}</p>
       </div>
-      <Badge
-        variant="secondary"
-        className="shrink-0 bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300"
-      >
-        <Star className="mr-1 h-3 w-3" />
+      <span className="badge b-green shrink-0">
+        <Star className="h-3 w-3" />
         {a.xp_reward} XP
-      </Badge>
+      </span>
     </div>
   );
 }
@@ -127,7 +124,7 @@ export const AchievementsGrid: React.FC<AchievementsGridProps> = ({ className })
       <Card className={cn(className)}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Award className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+            <Award className="h-5 w-5 text-primary" />
             {t('achievements.title')}
           </CardTitle>
         </CardHeader>
@@ -149,7 +146,7 @@ export const AchievementsGrid: React.FC<AchievementsGridProps> = ({ className })
     <Card className={cn(className)}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Award className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+          <Award className="h-5 w-5 text-primary" />
           {t('achievements.title')}
         </CardTitle>
       </CardHeader>
@@ -171,10 +168,7 @@ export const AchievementsGrid: React.FC<AchievementsGridProps> = ({ className })
 
         {/* Empty State 1: 0 unlocked but some progress toward achievements */}
         {isEmptyWithProgress && (
-          <div
-            role="status"
-            className="mt-4 rounded-lg border bg-purple-50/80 p-4 dark:bg-purple-950/20"
-          >
+          <div role="status" className="mt-4 rounded-lg border bg-[hsl(var(--success)/.08)] p-4">
             <p className="text-center text-sm text-muted-foreground">
               {t('achievements.emptyState.someProgress')}
             </p>
@@ -250,7 +244,7 @@ export const AchievementsGrid: React.FC<AchievementsGridProps> = ({ className })
         {/* CTA */}
         <Link
           to="/achievements"
-          className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300"
+          className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/80"
         >
           {t('achievements.summary.viewAll')}
           <ArrowRight className="h-4 w-4" />

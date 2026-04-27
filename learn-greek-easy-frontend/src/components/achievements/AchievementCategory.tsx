@@ -36,62 +36,53 @@ const categoryIcons: Record<string, React.ComponentType<{ className?: string }>>
 };
 
 interface CategoryColorConfig {
+  // Arbitrary Tailwind classes using CSS var tokens — no raw palette classes
   icon: string;
-  iconDark: string;
   border: string;
-  borderDark: string;
 }
 
+// Category → token mapping (canonical order for --chart-1..7).
+// streak uses --practice-gold (gold-tier earning, not chart palette).
+// learning  → --chart-1 (blue)
+// session   → --chart-2 (green)
+// accuracy  → --chart-6 (cyan)
+// cefr      → --chart-4 (violet)
+// special   → --chart-5 (rose)
+// culture   → --chart-7 (orange)
 const CATEGORY_COLORS: Record<string, CategoryColorConfig> = {
   streak: {
-    icon: 'text-orange-600',
-    iconDark: 'dark:text-orange-400',
-    border: 'border-l-orange-500',
-    borderDark: 'dark:border-l-orange-400',
+    icon: 'text-practice-gold',
+    border: 'border-l-practice-gold',
   },
   learning: {
-    icon: 'text-blue-600',
-    iconDark: 'dark:text-blue-400',
-    border: 'border-l-blue-500',
-    borderDark: 'dark:border-l-blue-400',
+    icon: 'text-[hsl(var(--chart-1))]',
+    border: 'border-l-[hsl(var(--chart-1))]',
   },
   session: {
-    icon: 'text-green-600',
-    iconDark: 'dark:text-green-400',
-    border: 'border-l-green-500',
-    borderDark: 'dark:border-l-green-400',
+    icon: 'text-[hsl(var(--chart-2))]',
+    border: 'border-l-[hsl(var(--chart-2))]',
   },
   accuracy: {
-    icon: 'text-teal-600',
-    iconDark: 'dark:text-teal-400',
-    border: 'border-l-teal-500',
-    borderDark: 'dark:border-l-teal-400',
+    icon: 'text-[hsl(var(--chart-6))]',
+    border: 'border-l-[hsl(var(--chart-6))]',
   },
   cefr: {
-    icon: 'text-indigo-600',
-    iconDark: 'dark:text-indigo-400',
-    border: 'border-l-indigo-500',
-    borderDark: 'dark:border-l-indigo-400',
+    icon: 'text-[hsl(var(--chart-4))]',
+    border: 'border-l-[hsl(var(--chart-4))]',
   },
   special: {
-    icon: 'text-purple-600',
-    iconDark: 'dark:text-purple-400',
-    border: 'border-l-purple-500',
-    borderDark: 'dark:border-l-purple-400',
+    icon: 'text-[hsl(var(--chart-5))]',
+    border: 'border-l-[hsl(var(--chart-5))]',
   },
   culture: {
-    icon: 'text-rose-600',
-    iconDark: 'dark:text-rose-400',
-    border: 'border-l-rose-500',
-    borderDark: 'dark:border-l-rose-400',
+    icon: 'text-[hsl(var(--chart-7))]',
+    border: 'border-l-[hsl(var(--chart-7))]',
   },
 };
 
 const DEFAULT_COLORS: CategoryColorConfig = {
-  icon: 'text-gray-600',
-  iconDark: 'dark:text-gray-400',
-  border: 'border-l-gray-500',
-  borderDark: 'dark:border-l-gray-400',
+  icon: 'text-fg2',
+  border: 'border-l-line-2',
 };
 
 /**
@@ -140,13 +131,13 @@ export const AchievementCategory: React.FC<AchievementCategoryProps> = ({
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <section
-        className={cn('space-y-4 border-l-4 pl-4', colors.border, colors.borderDark, className)}
+        className={cn('space-y-4 border-l-4 pl-4', colors.border, className)}
         aria-labelledby={headingId}
       >
         {/* Category Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <IconComponent className={cn('h-5 w-5', colors.icon, colors.iconDark)} />
+            <IconComponent className={cn('h-5 w-5', colors.icon)} />
             <h2 id={headingId} className="text-lg font-semibold text-foreground">
               {translatedCategory}
             </h2>
@@ -158,7 +149,7 @@ export const AchievementCategory: React.FC<AchievementCategoryProps> = ({
               {t('category.unlocked', { count: unlockedCount, total: totalCount })}
             </Badge>
             {totalXP > 0 && (
-              <Badge variant="secondary" className={cn(colors.icon, colors.iconDark)}>
+              <Badge variant="secondary" className={cn(colors.icon)}>
                 {t('category.xpEarned', { xp: totalXP })}
               </Badge>
             )}
