@@ -112,32 +112,32 @@ const StatsGrid: React.FC<StatsGridProps> = ({ stats }) => {
       label: t('stats.totalExams'),
       value: stats?.total_exams ?? 0,
       icon: GraduationCap,
-      color: 'text-blue-600 dark:text-blue-400',
-      bgColor: 'bg-blue-100 dark:bg-blue-900/50',
+      color: 'text-[hsl(var(--chart-1))]',
+      bgColor: 'bg-[hsl(var(--chart-1)/.12)]',
     },
     {
       key: 'passRate',
       label: t('stats.passRate'),
       value: stats?.total_exams ? `${Math.round(stats.pass_rate)}%` : t('stats.notAvailable'),
       icon: Target,
-      color: 'text-green-600 dark:text-green-400',
-      bgColor: 'bg-green-100 dark:bg-green-900/50',
+      color: 'text-[hsl(var(--success))]',
+      bgColor: 'bg-[hsl(var(--success)/.14)]',
     },
     {
       key: 'averageScore',
       label: t('stats.averageScore'),
       value: stats?.total_exams ? `${Math.round(stats.average_score)}%` : t('stats.notAvailable'),
       icon: TrendingUp,
-      color: 'text-purple-600 dark:text-purple-400',
-      bgColor: 'bg-purple-100 dark:bg-purple-900/50',
+      color: 'text-[hsl(var(--practice-accent))]',
+      bgColor: 'bg-[hsl(var(--practice-accent)/.12)]',
     },
     {
       key: 'bestScore',
       label: t('stats.bestScore'),
       value: stats?.total_exams ? `${Math.round(stats.best_score)}%` : t('stats.notAvailable'),
       icon: Award,
-      color: 'text-amber-600 dark:text-amber-400',
-      bgColor: 'bg-amber-100 dark:bg-amber-900/50',
+      color: 'text-[hsl(var(--practice-gold))]',
+      bgColor: 'bg-[hsl(var(--practice-gold)/.16)]',
     },
   ];
 
@@ -178,13 +178,13 @@ const HistoryItemCard: React.FC<HistoryItemProps> = ({ exam }) => {
         <div className="flex items-center gap-4">
           <div
             className={`flex h-10 w-10 items-center justify-center rounded-full ${
-              exam.passed ? 'bg-green-100 dark:bg-green-900/50' : 'bg-red-100 dark:bg-red-900/50'
+              exam.passed ? 'bg-[hsl(var(--success)/.14)]' : 'bg-[hsl(var(--danger)/.14)]'
             }`}
           >
             {exam.passed ? (
-              <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+              <CheckCircle2 className="h-5 w-5 text-[hsl(var(--success))]" />
             ) : (
-              <XCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+              <XCircle className="h-5 w-5 text-[hsl(var(--danger))]" />
             )}
           </div>
           <div>
@@ -208,8 +208,8 @@ const HistoryItemCard: React.FC<HistoryItemProps> = ({ exam }) => {
         <span
           className={`rounded-full px-3 py-1 text-sm font-medium ${
             exam.passed
-              ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300'
-              : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300'
+              ? 'bg-[hsl(var(--success)/.14)] text-[hsl(var(--success))]'
+              : 'bg-[hsl(var(--danger)/.14)] text-[hsl(var(--danger))]'
           }`}
         >
           {exam.passed ? t('history.passed') : t('history.failed')}
@@ -336,17 +336,17 @@ export const MockExamPage: React.FC = () => {
 
       {/* Error State */}
       {error && (
-        <Card className="border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950">
+        <Card className="border-[hsl(var(--danger)/.4)] bg-[hsl(var(--danger)/.08)]">
           <CardContent className="flex items-start gap-3 pt-6">
-            <AlertCircle className="h-5 w-5 flex-shrink-0 text-red-600 dark:text-red-400" />
+            <AlertCircle className="h-5 w-5 flex-shrink-0 text-[hsl(var(--danger))]" />
             <div className="flex-1">
-              <h3 className="font-medium text-red-900 dark:text-red-100">{t('states.error')}</h3>
-              <p className="mt-1 text-sm text-red-700 dark:text-red-300">{error}</p>
+              <h3 className="font-medium text-[hsl(var(--danger))]">{t('states.error')}</h3>
+              <p className="mt-1 text-sm text-[hsl(var(--danger))]">{error}</p>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={loadData}
-                className="mt-3 border-red-300 text-red-700 hover:bg-red-100 dark:border-red-700 dark:text-red-300"
+                className="mt-3 border-[hsl(var(--danger)/.4)] text-[hsl(var(--danger))] hover:bg-[hsl(var(--danger)/.08)]"
               >
                 {t('states.retry')}
               </Button>
@@ -404,10 +404,10 @@ export const MockExamPage: React.FC = () => {
 
           {/* Not enough questions warning */}
           {!canStartExam && queueInfo && (
-            <Card className="border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950">
+            <Card className="border-[hsl(var(--warning)/.4)] bg-[hsl(var(--warning)/.08)]">
               <CardContent className="flex items-start gap-3 pt-6">
-                <AlertCircle className="h-5 w-5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
-                <p className="text-sm text-amber-700 dark:text-amber-300">
+                <AlertCircle className="h-5 w-5 flex-shrink-0 text-[hsl(var(--warning))]" />
+                <p className="text-sm text-[hsl(var(--warning))]">
                   {t('states.notEnoughQuestions')}
                 </p>
               </CardContent>

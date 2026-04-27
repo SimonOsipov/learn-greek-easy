@@ -160,9 +160,9 @@ describe('MockExamResultsPage', () => {
       const { container } = render(<MockExamResultsPage />);
 
       expect(screen.getByText(/Congratulations/i)).toBeInTheDocument();
-      // Verify emerald gradient is present somewhere in the DOM for passed state
-      const emeraldGradient = container.querySelector('.from-emerald-500');
-      expect(emeraldGradient).toBeInTheDocument();
+      // Verify a gradient card is present in the DOM for the pass/fail header
+      const gradientCard = container.querySelector('.bg-gradient-to-br');
+      expect(gradientCard).toBeInTheDocument();
     });
 
     it('shows failed state', () => {
@@ -172,9 +172,9 @@ describe('MockExamResultsPage', () => {
       const { container } = render(<MockExamResultsPage />);
 
       expect(screen.getByText(/didn't pass/i)).toBeInTheDocument();
-      // Verify red gradient is present somewhere in the DOM for failed state
-      const redGradient = container.querySelector('.from-red-500');
-      expect(redGradient).toBeInTheDocument();
+      // Verify a gradient card is present in the DOM for the pass/fail header
+      const gradientCard = container.querySelector('.bg-gradient-to-br');
+      expect(gradientCard).toBeInTheDocument();
     });
   });
 

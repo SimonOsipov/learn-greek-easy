@@ -183,19 +183,19 @@ export function MockExamResultsPage() {
         {/* Header Card - Pass/Fail Status */}
         <Card
           className={cn(
-            'relative overflow-hidden border-0 text-white',
+            'relative overflow-hidden border-0 text-[hsl(var(--destructive-foreground))]',
             summary.passed
-              ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
-              : 'bg-gradient-to-br from-red-500 to-rose-600'
+              ? 'bg-gradient-to-br from-[hsl(var(--success))] to-[hsl(var(--success)/.8)]'
+              : 'bg-gradient-to-br from-[hsl(var(--danger))] to-[hsl(var(--danger)/.85)]'
           )}
         >
           <CardContent className="p-6 md:p-8">
             {/* Status Icon and Text */}
             <div className="flex items-center gap-4">
               {summary.passed ? (
-                <Trophy className="h-12 w-12 text-amber-300" />
+                <Trophy className="h-12 w-12 text-[hsl(var(--practice-gold))]" />
               ) : (
-                <XCircle className="h-12 w-12 text-white/80" />
+                <XCircle className="h-12 w-12 text-[hsl(var(--destructive-foreground)/.8)]" />
               )}
               <div>
                 <h1 className="text-2xl font-bold md:text-3xl">
@@ -203,13 +203,15 @@ export function MockExamResultsPage() {
                     ? t('results.passed', 'Congratulations! You passed!')
                     : t('results.failed', "You didn't pass this time")}
                 </h1>
-                <p className="mt-1 text-white/80">{t('results.title', 'Exam Complete')}</p>
+                <p className="mt-1 text-[hsl(var(--destructive-foreground)/.8)]">
+                  {t('results.title', 'Exam Complete')}
+                </p>
               </div>
             </div>
 
             {/* Decorative circles */}
-            <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10" />
-            <div className="pointer-events-none absolute -bottom-5 -left-5 h-24 w-24 rounded-full bg-white/10" />
+            <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-[hsl(var(--destructive-foreground)/.1)]" />
+            <div className="pointer-events-none absolute -bottom-5 -left-5 h-24 w-24 rounded-full bg-[hsl(var(--destructive-foreground)/.1)]" />
           </CardContent>
         </Card>
 
@@ -218,7 +220,7 @@ export function MockExamResultsPage() {
           {/* Correct Answers */}
           <Card>
             <CardContent className="flex flex-col items-center p-4">
-              <CheckCircle className="mb-2 h-8 w-8" style={{ color: 'var(--practice-correct)' }} />
+              <CheckCircle className="mb-2 h-8 w-8 text-[hsl(var(--practice-correct))]" />
               <p className="font-practice-mono text-2xl font-bold text-foreground">
                 {summary.score}
               </p>
@@ -231,7 +233,7 @@ export function MockExamResultsPage() {
           {/* Percentage */}
           <Card>
             <CardContent className="flex flex-col items-center p-4">
-              <Percent className="mb-2 h-8 w-8" style={{ color: 'var(--practice-accent)' }} />
+              <Percent className="mb-2 h-8 w-8 text-[hsl(var(--practice-accent))]" />
               <p className="font-practice-mono text-2xl font-bold text-foreground">
                 {summary.percentage}%
               </p>
@@ -244,7 +246,7 @@ export function MockExamResultsPage() {
           {/* Time Taken */}
           <Card>
             <CardContent className="flex flex-col items-center p-4">
-              <Clock className="mb-2 h-8 w-8 text-blue-600 dark:text-blue-400" />
+              <Clock className="mb-2 h-8 w-8 text-[hsl(var(--chart-1))]" />
               <p className="font-practice-mono text-2xl font-bold text-foreground">
                 {summary.timerExpired
                   ? t('results.timeExpired', 'Time Expired')
@@ -259,7 +261,7 @@ export function MockExamResultsPage() {
           {/* Pass Threshold */}
           <Card>
             <CardContent className="flex flex-col items-center p-4">
-              <Target className="mb-2 h-8 w-8 text-orange-600 dark:text-orange-400" />
+              <Target className="mb-2 h-8 w-8 text-[hsl(var(--practice-gold))]" />
               <p className="font-practice-mono text-2xl font-bold text-foreground">
                 {summary.passThreshold}%
               </p>
@@ -283,7 +285,7 @@ export function MockExamResultsPage() {
             <AccordionItem value="incorrect-answers" className="border-0">
               <AccordionTrigger className="px-6 hover:no-underline">
                 <div className="flex items-center gap-2">
-                  <XCircle className="h-5 w-5 text-red-500" />
+                  <XCircle className="h-5 w-5 text-[hsl(var(--practice-incorrect))]" />
                   <span className="font-semibold">
                     {t('results.incorrectAnswers', 'Review Incorrect Answers')} (
                     {incorrectQuestions.length})
@@ -293,7 +295,7 @@ export function MockExamResultsPage() {
               <AccordionContent className="px-6">
                 {incorrectQuestions.length === 0 ? (
                   <div className="flex items-center justify-center py-8 text-muted-foreground">
-                    <CheckCircle className="mr-2 h-5 w-5 text-emerald-500" />
+                    <CheckCircle className="mr-2 h-5 w-5 text-[hsl(var(--practice-correct))]" />
                     {t('results.perfectScore', 'Perfect! No incorrect answers.')}
                   </div>
                 ) : (
@@ -338,11 +340,7 @@ export function MockExamResultsPage() {
                       return (
                         <div
                           key={result.question.id}
-                          className="rounded-lg border p-4"
-                          style={{
-                            borderColor: 'var(--practice-incorrect-glow)',
-                            backgroundColor: 'var(--practice-incorrect-soft)',
-                          }}
+                          className="rounded-lg border border-[hsl(var(--practice-incorrect-glow))] bg-[hsl(var(--practice-incorrect-soft))] p-4"
                         >
                           <p className="mb-3 font-medium text-foreground">
                             {t('results.questionNumber', 'Question {{number}}', {
@@ -351,27 +349,27 @@ export function MockExamResultsPage() {
                             : {questionText}
                           </p>
 
-                          {/* User's answer (red) */}
+                          {/* User's answer (incorrect) */}
                           <div className="mb-2 flex items-start gap-2">
-                            <XCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-red-500" />
+                            <XCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-[hsl(var(--practice-incorrect))]" />
                             <div>
                               <span className="text-sm text-muted-foreground">
                                 {t('results.yourAnswer', 'Your answer')}:
                               </span>{' '}
-                              <span className="font-medium text-red-600 dark:text-red-400">
+                              <span className="font-medium text-[hsl(var(--practice-incorrect))]">
                                 {OPTION_LETTERS[selectedOptionIndex]}: {selectedText}
                               </span>
                             </div>
                           </div>
 
-                          {/* Correct answer (green) */}
+                          {/* Correct answer (correct) */}
                           <div className="flex items-start gap-2">
-                            <CheckCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-500" />
+                            <CheckCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-[hsl(var(--practice-correct))]" />
                             <div>
                               <span className="text-sm text-muted-foreground">
                                 {t('results.correctAnswer', 'Correct answer')}:
                               </span>{' '}
-                              <span className="font-medium text-emerald-600 dark:text-emerald-400">
+                              <span className="font-medium text-[hsl(var(--practice-correct))]">
                                 {OPTION_LETTERS[correctOptionIndex]}: {correctText}
                               </span>
                             </div>
