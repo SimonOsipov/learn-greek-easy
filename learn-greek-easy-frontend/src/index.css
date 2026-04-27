@@ -111,8 +111,6 @@
       0 0 0 1px hsl(var(--landing-greek-blue) / 0.2), 0 8px 24px hsl(240 27% 14% / 0.08);
 
     /* ── Gradient tokens (hex literals intentional — doc-canonical) ── */
-    --gradient-brand-from: #667eea;
-    --gradient-brand-to: #764ba2;
     --gradient-primary-from: #3b82f6;
     --gradient-primary-to: #1d4ed8;
     --gradient-success-from: #10b981;

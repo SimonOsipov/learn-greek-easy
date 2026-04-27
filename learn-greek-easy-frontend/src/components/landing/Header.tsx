@@ -92,6 +92,7 @@ const Header = () => {
               <Separator className="my-4" />
               <div className="flex flex-col gap-3">
                 <Button
+                  variant="landing-primary"
                   className="justify-start"
                   data-testid="landing-get-started-button-mobile"
                   onClick={() => {
@@ -105,6 +106,7 @@ const Header = () => {
             </SheetContent>
           </Sheet>
           <Button
+            variant="landing-primary"
             className="hidden text-lg md:inline-flex"
             data-testid="landing-get-started-button"
             onClick={() => {

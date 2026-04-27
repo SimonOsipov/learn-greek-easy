@@ -18,6 +18,8 @@ const buttonVariants = cva(
         ghost: 'text-foreground hover:bg-accent hover:text-accent-foreground',
         'landing-chrome':
           'text-landing-header-fg hover:bg-landing-header-fg/10 hover:text-landing-header-fg',
+        'landing-primary':
+          'bg-landing-greek-blue text-landing-header-fg hover:bg-landing-greek-blue/90',
         link: 'text-primary underline-offset-4 hover:underline',
         success:
           'bg-gradient-success text-success-foreground hover:brightness-110 transition-[filter]',

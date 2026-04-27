@@ -139,6 +139,8 @@ Tailwind namespace: `tense-{1..6}`. For `MediaBadge` solid badges: `bg-tense-N t
 
 Warmer / editorial. Don't mix with the glassy app palette.
 
+Forms and CTAs placed on top of the dark hero / final-CTA photography use the **theme-invariant** `landing-header-*` tokens (glass input: `bg-landing-header-fg/10` with `placeholder:text-landing-header-fg/60`; primary CTA: the `landing-primary` button variant). Do not use the app `--background` / `--primary` defaults there — those flip with theme and produce a stark white panel in light mode over the dark photo.
+
 | Token | Light | Dark |
 |---|---|---|
 | `--landing-navy` | `240 27% 14%` | `240 27% 85%` |
@@ -156,7 +158,6 @@ Decorative — no dark variants needed.
 
 | Token pair | Hex | Use |
 |---|---|---|
-| `--gradient-brand-from / -to` | `#667eea → #764ba2` | Hero, primary CTA, achievement card. Brand identity. |
 | `--gradient-primary-from / -to` | `#3b82f6 → #1d4ed8` | Active Tabs state. Saturated blue CTAs. |
 | `--gradient-success-from / -to` | `#10b981 → #16a34a` | Success button (`button` variant `success` → `bg-gradient-success`). |
 | `--gradient-accent-from / -to` | `#fef3c7 → #fde68a` | **No consumer in `src/` today — candidate for removal, not canonization.** |
@@ -243,7 +244,7 @@ All shadcn-based, all token-aware. Don't re-implement these inline.
 
 **Buttons & inputs:** `button`, `input`, `textarea`, `label`, `checkbox`, `switch`, `slider`, `select`, `form` (RHF wrapper)
 
-`button` variants: `default` · `destructive` · `outline` · `secondary` · `ghost` · `link` · `success` (`bg-gradient-success text-success-foreground`, emerald→green gradient) · `hero` · `hero-outline` · `landing-chrome` (icon button on the landing dark-navy chrome bar — uses `text-landing-header-fg` resting + `hover:bg-landing-header-fg/10`; do not use `ghost` on the landing header, the app `--accent` hover collides with the dark-navy surface).
+`button` variants: `default` · `destructive` · `outline` · `secondary` · `ghost` · `link` · `success` (`bg-gradient-success text-success-foreground`, emerald→green gradient) · `hero` · `hero-outline` · `landing-chrome` (icon button on the landing dark-navy chrome bar — uses `text-landing-header-fg` resting + `hover:bg-landing-header-fg/10`; do not use `ghost` on the landing header, the app `--accent` hover collides with the dark-navy surface) · `landing-primary` (primary CTA on the landing chrome bar and over the hero/final-CTA dark photography — `bg-landing-greek-blue text-landing-header-fg`, theme-invariant; matches the G-logo brand color so chrome and CTAs stay visually unified).
 **Overlays:** `popover`, `tooltip`, `dialog`, `alert-dialog`, `alert`, `sheet`, `toast` + `toaster`, `dropdown-menu`
 **Disclosure:** `accordion`, `collapsible`, `tabs`, `navigation-menu`
 **Layout / data:** `card`, `avatar`, `skeleton`, `separator`, `scroll-area`, `table`, `scrollable-table` (sticky-header for wide tables — used in Conjugation / Declension), `chart` (Recharts wrapper, pulls from `--chart-1..8`), `progress`, `badge`

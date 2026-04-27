@@ -9,11 +9,7 @@ import { Input } from '@/components/ui/input';
 import { APIRequestError } from '@/services/api';
 import { waitlistAPI } from '@/services/waitlistAPI';
 
-interface WaitlistFormProps {
-  variant: 'hero' | 'dark';
-}
-
-const WaitlistForm = ({ variant }: WaitlistFormProps) => {
+const WaitlistForm = () => {
   const { t } = useTranslation('landing');
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
@@ -45,12 +41,6 @@ const WaitlistForm = ({ variant }: WaitlistFormProps) => {
     }
   };
 
-  const isDark = variant === 'dark';
-  const inputClasses = isDark
-    ? 'h-14 rounded-xl bg-landing-header-fg/10 border-landing-header-fg/30 text-landing-header-fg placeholder:text-landing-header-fg/60 focus:border-landing-header-fg'
-    : 'h-14 rounded-xl';
-  const errorClasses = isDark ? 'text-red-300' : 'text-destructive';
-
   return (
     <form
       onSubmit={handleSubmit}
@@ -63,12 +53,12 @@ const WaitlistForm = ({ variant }: WaitlistFormProps) => {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder={t('waitlistForm.emailPlaceholder')}
-          className={inputClasses}
+          className="h-14 rounded-xl border-landing-header-fg/30 bg-landing-header-fg/10 text-landing-header-fg placeholder:text-landing-header-fg/60 focus:border-landing-header-fg"
           disabled={isSubmitting}
           data-testid="waitlist-email-input"
         />
         {error && (
-          <p className={`mt-1 text-sm ${errorClasses}`} data-testid="waitlist-error">
+          <p className="mt-1 text-sm text-red-300" data-testid="waitlist-error">
             {error}
           </p>
         )}
@@ -76,13 +66,9 @@ const WaitlistForm = ({ variant }: WaitlistFormProps) => {
       <Button
         type="submit"
         disabled={isSubmitting}
-        variant={isDark ? 'default' : 'hero'}
+        variant="landing-primary"
         size="xl"
-        className="border-0 text-landing-header-fg hover:brightness-95 focus-visible:ring-2 focus-visible:ring-landing-gold"
-        style={{
-          background:
-            'linear-gradient(135deg, var(--gradient-brand-from), var(--gradient-brand-to))',
-        }}
+        className="focus-visible:ring-landing-gold"
         data-testid="waitlist-submit-button"
       >
         {isSubmitting ? (

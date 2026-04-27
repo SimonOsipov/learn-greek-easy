@@ -42,7 +42,7 @@ const FinalCTA = () => {
           </p>
 
           <div className="motion-safe:animate-fade-up" style={{ animationDelay: '0.3s' }}>
-            <WaitlistForm variant="dark" />
+            <WaitlistForm />
           </div>
         </div>
       </div>

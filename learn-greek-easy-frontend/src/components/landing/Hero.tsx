@@ -55,7 +55,7 @@ const Hero = () => {
 
           {/* Waitlist Form */}
           <div className="flex flex-col items-center justify-center [animation-delay:0.4s] motion-safe:animate-fade-up">
-            <WaitlistForm variant="hero" />
+            <WaitlistForm />
           </div>
 
           {/* Social proof hint */}
