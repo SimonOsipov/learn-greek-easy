@@ -4,25 +4,29 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
+    /* ── Surfaces & foreground ── */
+    --bg: 220 30% 98%;
+    --bg-2: 220 25% 96%;
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
+    --glass: 0 0% 100% / 0.55;
+    --fg: 222 32% 12%;
+    --fg-2: 222 18% 38%;
+    --fg-3: 222 14% 56%;
+    --line: 222 20% 90%;
+    --line-2: 222 25% 84%;
+
+    /* ── Brand & status ── */
     --primary: 221 83% 53%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-    --destructive: 0 72.2% 50.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 240 5.9% 10%;
+    --primary-2: 221 83% 65%;
+    --accent: 280 92% 62%; /* electric violet */
+    --accent-2: 188 95% 50%; /* cyan */
+    --accent-3: 32 100% 60%; /* burnt orange */
+    --success: 160 84% 39%;
+    --warning: 38 92% 50%;
+    --danger: 0 78% 58%;
+    --info: 217 91% 60%; /* matches live blue-500; not in doc token table — flagged for RESKIN-01-02 audit */
+
+    /* ── Charts ── */
     --chart-1: 221 83% 53%;
     --chart-2: 160 84% 39%;
     --chart-3: 38 92% 50%;
@@ -31,76 +35,109 @@
     --chart-6: 190 90% 50%;
     --chart-7: 25 95% 53%;
     --chart-8: 142 72% 29%;
-    --radius: 0.625rem;
 
-    /* Font family tokens */
+    /* ── Shadcn semantic aliases ── */
+    --popover: var(--card);
+    --popover-foreground: var(--fg);
+    --secondary: var(--bg-2);
+    --secondary-foreground: var(--fg);
+    --muted: var(--bg-2);
+    --muted-foreground: var(--fg-2);
+    --input: 222 18% 80%; /* stronger form border per doc — APP-WIDE change, verified at RESKIN-01-13 */
+    --ring: var(
+      --primary
+    ); /* was 240 5.9% 10% near-black — APP-WIDE focus-ring color shift, verified at RESKIN-01-13 */
+    --destructive-foreground: 0 0% 100%;
+    --border-strong: var(--line-2);
+
+    /* Shims so shadcn primitives keep compiling without renaming (diff stays in two files) */
+    --background: var(--bg);
+    --foreground: var(--fg);
+    --card-foreground: var(--fg);
+    --accent-foreground: var(--fg);
+    --primary-foreground: 0 0% 100%;
+    --destructive: var(--danger);
+    --border: var(--line);
+
+    /* ── Practice palette (HSL channels; glow/soft as channel-with-alpha) ── */
+    --practice-accent: 239 84% 67%;
+    --practice-accent-glow: 239 84% 67% / 0.15;
+    --practice-accent-soft: 239 84% 67% / 0.08;
+    --practice-correct: 160 84% 39%;
+    --practice-correct-glow: 160 84% 39% / 0.15;
+    --practice-correct-soft: 160 84% 39% / 0.08;
+    --practice-incorrect: 0 84% 60%;
+    --practice-incorrect-glow: 0 84% 60% / 0.15;
+    --practice-incorrect-soft: 0 84% 60% / 0.08;
+    --practice-gold: 38 92% 50%;
+    --practice-purple: 258 90% 66%;
+    --practice-bg: 210 40% 96%;
+    --practice-card: 0 0% 100%;
+    --practice-border: 214 32% 91%;
+    --practice-text: 222 47% 11%;
+    --practice-text-muted: 215 16% 47%;
+    --practice-text-dim: 215 20% 65%;
+
+    /* ── Landing palette ── */
+    --landing-navy: 240 27% 14%;
+    --landing-greek-blue: 212 85% 37%;
+    --landing-greek-blue-light: 212 85% 95%;
+    --landing-gold: 45 93% 58%;
+    --landing-shadow-card: 0 0 0 1px hsl(var(--line)), 0 4px 12px hsl(240 27% 14% / 0.04);
+    --landing-shadow-card-hover:
+      0 0 0 1px hsl(var(--landing-greek-blue) / 0.2), 0 8px 24px hsl(240 27% 14% / 0.08);
+
+    /* ── Gradient tokens (hex literals intentional — doc-canonical) ── */
+    --gradient-brand-from: #667eea;
+    --gradient-brand-to: #764ba2;
+    --gradient-primary-from: #3b82f6;
+    --gradient-primary-to: #1d4ed8;
+    /* --gradient-accent-from / -to: intentionally omitted — zero consumers in src/, not canonized */
+
+    /* ── Radii ── */
+    --radius: 14px;
+    --radius-lg: 22px;
+    --radius-xl: 28px;
+
+    /* ── Shadows ── */
+    --shadow-1: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 1px rgba(15, 23, 42, 0.04);
+    --shadow-2: 0 6px 24px -6px rgba(15, 23, 42, 0.1), 0 2px 6px rgba(15, 23, 42, 0.05);
+    --shadow-3: 0 24px 48px -12px rgba(15, 23, 42, 0.18), 0 8px 16px -8px rgba(15, 23, 42, 0.08);
+    --shadow-glow:
+      0 10px 40px -8px hsl(var(--primary) / 0.35), 0 0 0 1px hsl(var(--primary) / 0.12);
+    --shadow-nav: 0 -2px 10px rgba(0, 0, 0, 0.05);
+    --shadow-card-hover: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --shadow-button-primary: 0 4px 8px rgba(102, 126, 234, 0.3);
+
+    /* ── Motion easing ── */
+    --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* ── Font family tokens ── */
     --practice-font-sans:
       'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
       sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
     --practice-font-serif: Georgia, 'Times New Roman', Times, serif;
     --practice-font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
-
-    /* Semantic status colors */
-    --success: 160 84% 39%; /* emerald-600: #059669 */
-    --success-foreground: 0 0% 100%; /* white */
-    --warning: 38 92% 50%; /* amber-500: #f59e0b */
-    --warning-foreground: 0 0% 100%; /* white */
-
-    /* Landing page custom tokens */
-    --landing-navy: 240 27% 14%;
-    --landing-greek-blue: 212 85% 37%;
-    --landing-greek-blue-light: 212 85% 95%;
-    --landing-gold: 45 93% 58%;
-
-    /* Landing page shadows */
-    --landing-shadow-card: 0 0 0 1px hsl(var(--border)), 0 4px 12px hsl(240 27% 14% / 0.04);
-    --landing-shadow-card-hover:
-      0 0 0 1px hsl(var(--landing-greek-blue) / 0.2), 0 8px 24px hsl(240 27% 14% / 0.08);
-
-    /* Culture card design tokens */
-    --practice-accent: #6366f1; /* indigo-500 */
-    --practice-accent-glow: rgba(99, 102, 241, 0.15); /* indigo-500 @ 15% */
-    --practice-accent-soft: rgba(99, 102, 241, 0.08); /* indigo-500 @ 8% */
-
-    --practice-correct: #10b981; /* emerald-500 */
-    --practice-correct-glow: rgba(16, 185, 129, 0.15); /* emerald-500 @ 15% */
-    --practice-correct-soft: rgba(16, 185, 129, 0.08); /* emerald-500 @ 8% */
-
-    --practice-incorrect: #ef4444; /* red-500 */
-    --practice-incorrect-glow: rgba(239, 68, 68, 0.15); /* red-500 @ 15% */
-    --practice-incorrect-soft: rgba(239, 68, 68, 0.08); /* red-500 @ 8% */
-
-    --practice-gold: #f59e0b; /* amber-500 */
-    --practice-purple: #8b5cf6; /* violet-500 */
-
-    --practice-bg: #f1f5f9; /* slate-100 */
-    --practice-card: #ffffff; /* white */
-    --practice-border: #e2e8f0; /* slate-200 */
-    --practice-text: #0f172a; /* slate-900 */
-    --practice-text-muted: #64748b; /* slate-500 */
-    --practice-text-dim: #94a3b8; /* slate-400 */
   }
 
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 221 83% 60%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 240 4% 22%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 4% 22%;
-    --muted-foreground: 240 5% 75%;
-    --accent: 240 4% 22%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 4% 22%;
-    --input: 240 5% 30%;
-    --ring: 240 4.9% 83.9%;
+    /* ── Surfaces & foreground (dark) ── */
+    --bg: 224 35% 6%;
+    --bg-2: 224 30% 9%;
+    --card: 224 30% 11%;
+    --glass: 224 30% 14% / 0.55;
+    --fg: 210 30% 96%;
+    --fg-2: 220 12% 70%;
+    --fg-3: 220 10% 50%;
+    --line: 224 18% 18%;
+    --line-2: 224 18% 24%;
+
+    /* ── Brand (dark) ── */
+    --primary: 221 90% 65%;
+    --primary-2: 221 90% 75%;
+    /* --accent / --accent-2 / --accent-3 / --success / --warning / --danger: doc-marked (same) */
+
+    /* ── Charts (dark) ── */
     --chart-1: 217 91% 60%;
     --chart-2: 160 84% 45%;
     --chart-3: 43 96% 56%;
@@ -110,44 +147,48 @@
     --chart-7: 27 96% 61%;
     --chart-8: 142 72% 40%;
 
-    --success: 160 84% 39%;
-    --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 100%;
+    /* ── Shadcn aliases (dark) ── */
+    --input: 224 18% 30%;
+    --destructive-foreground: 0 0% 100%;
+    /* --ring inherits as var(--primary) via cascade; alias shims auto-flip via --bg/--fg/--line/--danger referents */
 
-    /* Landing page custom tokens (dark) */
+    /* ── Practice palette (dark) — glow/soft redeclared with dark channels.
+         Deviation from doc's "(same)" wording: CSS cannot extract channels from a var(),
+         so without redeclaration the glow renders at light-accent channels in dark mode.
+         Redeclaration matches doc intent ("shifts a step lighter to maintain contrast"). ── */
+    --practice-accent: 234 89% 74%;
+    --practice-accent-glow: 234 89% 74% / 0.15;
+    --practice-accent-soft: 234 89% 74% / 0.08;
+    --practice-correct: 158 64% 52%;
+    --practice-correct-glow: 158 64% 52% / 0.15;
+    --practice-correct-soft: 158 64% 52% / 0.08;
+    --practice-incorrect: 0 91% 71%;
+    --practice-incorrect-glow: 0 91% 71% / 0.15;
+    --practice-incorrect-soft: 0 91% 71% / 0.08;
+    --practice-gold: 43 96% 56%;
+    --practice-purple: 250 95% 76%;
+    --practice-bg: 222 47% 11%;
+    --practice-card: 215 28% 17%;
+    --practice-border: 217 19% 27%;
+    --practice-text: 210 40% 96%;
+    --practice-text-muted: 215 20% 65%;
+    --practice-text-dim: 215 16% 47%;
+
+    /* ── Landing palette (dark) ── */
     --landing-navy: 240 27% 85%;
     --landing-greek-blue: 212 85% 60%;
     --landing-greek-blue-light: 212 50% 20%;
     --landing-gold: 45 93% 68%;
-
-    /* Landing page shadows (dark) */
-    --landing-shadow-card: 0 0 0 1px hsl(var(--border)), 0 4px 12px hsl(0 0% 0% / 0.3);
+    --landing-shadow-card: 0 0 0 1px hsl(var(--line)), 0 4px 12px hsl(0 0% 0% / 0.3);
     --landing-shadow-card-hover:
       0 0 0 1px hsl(var(--landing-greek-blue) / 0.3), 0 8px 24px hsl(0 0% 0% / 0.4);
 
-    /* Culture card design tokens (dark) */
-    --practice-accent: #818cf8; /* indigo-400 */
-    --practice-accent-glow: rgba(129, 140, 248, 0.15); /* indigo-400 @ 15% */
-    --practice-accent-soft: rgba(129, 140, 248, 0.08); /* indigo-400 @ 8% */
-
-    --practice-correct: #34d399; /* emerald-400 */
-    --practice-correct-glow: rgba(52, 211, 153, 0.15); /* emerald-400 @ 15% */
-    --practice-correct-soft: rgba(52, 211, 153, 0.08); /* emerald-400 @ 8% */
-
-    --practice-incorrect: #f87171; /* red-400 */
-    --practice-incorrect-glow: rgba(248, 113, 113, 0.15); /* red-400 @ 15% */
-    --practice-incorrect-soft: rgba(248, 113, 113, 0.08); /* red-400 @ 8% */
-
-    --practice-gold: #fbbf24; /* amber-400 */
-    --practice-purple: #a78bfa; /* violet-400 */
-
-    --practice-bg: #0f172a; /* slate-900 */
-    --practice-card: #1e293b; /* slate-800 */
-    --practice-border: #334155; /* slate-700 */
-    --practice-text: #f1f5f9; /* slate-100 */
-    --practice-text-muted: #94a3b8; /* slate-400 */
-    --practice-text-dim: #64748b; /* slate-500 */
+    /* ── Shadows (dark — scaled-up alphas) ── */
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-2: 0 8px 28px -8px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.4);
+    --shadow-3: 0 30px 60px -16px rgba(0, 0, 0, 0.7), 0 12px 24px -10px rgba(0, 0, 0, 0.5);
+    --shadow-glow:
+      0 10px 50px -8px hsl(var(--primary) / 0.55), 0 0 0 1px hsl(var(--primary) / 0.25);
   }
 }
 
@@ -157,9 +198,7 @@
     background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
   }
 
-  .bg-gradient-accent {
-    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-  }
+  /* .bg-gradient-accent removed — zero call sites in src/; not canonized per RESKIN-01-01 */
 
   .text-gradient {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);

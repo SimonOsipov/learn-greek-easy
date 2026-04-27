@@ -10,6 +10,16 @@ export default {
   		colors: {
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
+  			// New surface tokens
+  			'bg': 'hsl(var(--bg))',
+  			'bg-2': 'hsl(var(--bg-2))',
+  			glass: 'hsl(var(--glass))',
+  			fg: 'hsl(var(--fg))',
+  			fg2: 'hsl(var(--fg-2))',
+  			fg3: 'hsl(var(--fg-3))',
+  			line: 'hsl(var(--line))',
+  			'line-2': 'hsl(var(--line-2))',
+  			'border-strong': 'hsl(var(--border-strong))',
   			card: {
   				DEFAULT: 'hsl(var(--card))',
   				foreground: 'hsl(var(--card-foreground))'
@@ -18,20 +28,23 @@ export default {
   				DEFAULT: 'hsl(var(--popover))',
   				foreground: 'hsl(var(--popover-foreground))'
   			},
+  			primary: {
+  				DEFAULT: 'hsl(var(--primary))',
+  				foreground: 'hsl(var(--primary-foreground))'
+  			},
+  			'primary-2': 'hsl(var(--primary-2))',
   			accent: {
   				DEFAULT: 'hsl(var(--accent))',
   				foreground: 'hsl(var(--accent-foreground))'
   			},
+  			'accent-2': 'hsl(var(--accent-2))',
+  			'accent-3': 'hsl(var(--accent-3))',
   			destructive: {
   				DEFAULT: 'hsl(var(--destructive))',
   				foreground: 'hsl(var(--destructive-foreground))'
   			},
   			input: 'hsl(var(--input))',
   			ring: 'hsl(var(--ring))',
-  			primary: {
-  				DEFAULT: 'hsl(var(--primary))',
-  				foreground: 'hsl(var(--primary-foreground))'
-  			},
   			gradient: {
   				from: '#667eea',
   				to: '#764ba2'
@@ -48,8 +61,8 @@ export default {
   				DEFAULT: 'hsl(var(--warning))',
   				foreground: 'hsl(var(--warning-foreground))'
   			},
-  			info: '#3b82f6',
-  			danger: '#ef4444',
+  			info: 'hsl(var(--info))',
+  			danger: 'hsl(var(--danger))',
   			border: 'hsl(var(--border))',
   			muted: {
   				DEFAULT: 'hsl(var(--muted))',
@@ -74,6 +87,25 @@ export default {
   				"greek-blue": "hsl(var(--landing-greek-blue))",
   				"greek-blue-light": "hsl(var(--landing-greek-blue-light))",
   				gold: "hsl(var(--landing-gold))",
+  			},
+  			practice: {
+  				accent: 'hsl(var(--practice-accent))',
+  				'accent-glow': 'hsl(var(--practice-accent-glow))',
+  				'accent-soft': 'hsl(var(--practice-accent-soft))',
+  				correct: 'hsl(var(--practice-correct))',
+  				'correct-glow': 'hsl(var(--practice-correct-glow))',
+  				'correct-soft': 'hsl(var(--practice-correct-soft))',
+  				incorrect: 'hsl(var(--practice-incorrect))',
+  				'incorrect-glow': 'hsl(var(--practice-incorrect-glow))',
+  				'incorrect-soft': 'hsl(var(--practice-incorrect-soft))',
+  				gold: 'hsl(var(--practice-gold))',
+  				purple: 'hsl(var(--practice-purple))',
+  				bg: 'hsl(var(--practice-bg))',
+  				card: 'hsl(var(--practice-card))',
+  				border: 'hsl(var(--practice-border))',
+  				text: 'hsl(var(--practice-text))',
+  				'text-muted': 'hsl(var(--practice-text-muted))',
+  				'text-dim': 'hsl(var(--practice-text-dim))',
   			}
   		},
   		fontFamily: {
@@ -200,18 +232,24 @@ export default {
   			full: '9999px'
   		},
   		boxShadow: {
+  			// Token-backed named shadows (new)
+  			'1': 'var(--shadow-1)',
+  			'2': 'var(--shadow-2)',
+  			'3': 'var(--shadow-3)',
+  			glow: 'var(--shadow-glow)',
+  			nav: 'var(--shadow-nav)',
+  			'card-hover': 'var(--shadow-card-hover)',
+  			'button-primary': 'var(--shadow-button-primary)',
+  			'landing-card': 'var(--landing-shadow-card)',
+  			'landing-card-hover': 'var(--landing-shadow-card-hover)',
+  			none: 'none',
+  			// Legacy Tailwind default shadows — kept for existing consumers; RESKIN-01-02 audits
   			sm: '0 1px 3px rgba(0, 0, 0, 0.05)',
   			DEFAULT: '0 4px 6px rgba(0, 0, 0, 0.05)',
   			md: '0 4px 6px rgba(0, 0, 0, 0.1)',
   			lg: '0 4px 8px rgba(102, 126, 234, 0.3)',
   			xl: '0 10px 15px rgba(0, 0, 0, 0.1)',
   			'2xl': '0 20px 25px rgba(0, 0, 0, 0.15)',
-  			nav: '0 -2px 10px rgba(0, 0, 0, 0.05)',
-  			'card-hover': '0 4px 6px rgba(0, 0, 0, 0.1)',
-  			'button-primary': '0 4px 8px rgba(102, 126, 234, 0.3)',
-  			none: 'none',
-  			'landing-card': 'var(--landing-shadow-card)',
-  			'landing-card-hover': 'var(--landing-shadow-card-hover)'
   		},
   		transitionDuration: {
   			'200': '200ms',
