@@ -116,7 +116,7 @@
     --practice-font-sans:
       'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
       sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
-    --practice-font-serif: Georgia, 'Times New Roman', Times, serif;
+    --practice-font-serif: 'Noto Serif', Georgia, 'Times New Roman', Times, serif;
     --practice-font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
   }
 
@@ -316,19 +316,6 @@
     @apply hover:-translate-y-0.5 hover:border-primary hover:shadow-md;
   }
 
-  /* Button base styles */
-  .btn {
-    @apply rounded-lg px-4 py-2 font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2;
-  }
-
-  .btn-primary {
-    @apply bg-gradient-to-br from-gradient-from to-gradient-to text-white hover:-translate-y-0.5 hover:shadow-button-primary;
-  }
-
-  .btn-secondary {
-    @apply bg-secondary text-secondary-foreground hover:bg-muted;
-  }
-
   /* Metric card styles */
   .metric-card {
     @apply card cursor-pointer hover:border-primary hover:shadow-card-hover;
@@ -344,6 +331,253 @@
 
   .metric-sublabel {
     @apply text-xs text-muted-foreground;
+  }
+
+  /* ── Glass surfaces (v2.4) ── */
+  .glass {
+    background: hsl(var(--glass));
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    border: 1px solid hsl(var(--line));
+    border-radius: var(--radius-lg);
+  }
+  .glass-strong {
+    background: hsl(var(--card));
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    border: 1px solid hsl(var(--line));
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-2);
+  }
+  .glass-fine {
+    background: linear-gradient(180deg, hsl(var(--card)) 0%, hsl(var(--bg-2)) 100%);
+    border: 1px solid hsl(var(--line));
+    border-radius: var(--radius);
+  }
+
+  /* ── Text & border helpers (v2.4) ── */
+  .hairline {
+    border-color: hsl(var(--line));
+  }
+  .text-fg2 {
+    color: hsl(var(--fg-2));
+  }
+  .text-fg3 {
+    color: hsl(var(--fg-3));
+  }
+
+  /* ── Kicker (v2.4) ── */
+  .kicker {
+    font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: hsl(var(--fg-3));
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .kicker::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: hsl(var(--primary));
+    box-shadow: 0 0 0 4px hsl(var(--primary) / 0.18);
+  }
+
+  /* ── Pill nav (v2.4) ── */
+  .pill-nav {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px;
+    background: hsl(var(--glass));
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    border: 1px solid hsl(var(--line));
+    border-radius: 9999px;
+  }
+  .pill-nav button {
+    height: 34px;
+    padding: 0 14px;
+    border-radius: 9999px;
+    font-size: 13px;
+    font-weight: 500;
+    color: hsl(var(--fg-2));
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    border: 0;
+    background: transparent;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .pill-nav button:hover {
+    color: hsl(var(--fg));
+  }
+  .pill-nav button.active {
+    color: hsl(var(--fg));
+    background: hsl(var(--card));
+    box-shadow:
+      var(--shadow-1),
+      0 0 0 1px hsl(var(--line));
+  }
+
+  /* ── Button system (v2.4) — replaces legacy .btn / .btn-primary / .btn-secondary ── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    height: 40px;
+    padding: 0 16px;
+    border-radius: 12px;
+    font-size: 13.5px;
+    font-weight: 500;
+    transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid transparent;
+    cursor: pointer;
+    white-space: nowrap;
+    letter-spacing: -0.005em;
+  }
+  .btn-primary {
+    background: linear-gradient(180deg, hsl(var(--primary-2)), hsl(var(--primary)));
+    color: white;
+    box-shadow:
+      0 1px 0 0 hsl(0 0% 100% / 0.15) inset,
+      0 -1px 0 0 hsl(var(--primary) / 0.35) inset,
+      0 8px 20px -6px hsl(var(--primary) / 0.55),
+      0 0 0 1px hsl(var(--primary) / 0.8);
+  }
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow:
+      0 1px 0 0 hsl(0 0% 100% / 0.2) inset,
+      0 -1px 0 0 hsl(var(--primary) / 0.45) inset,
+      0 14px 30px -6px hsl(var(--primary) / 0.65),
+      0 0 0 1px hsl(var(--primary) / 0.9);
+  }
+  .btn-glass {
+    background: hsl(var(--glass));
+    backdrop-filter: blur(16px);
+    border-color: hsl(var(--line-2));
+    color: hsl(var(--fg));
+  }
+  .btn-glass:hover {
+    background: hsl(var(--card));
+    transform: translateY(-1px);
+  }
+  .btn-ghost {
+    color: hsl(var(--fg-2));
+  }
+  .btn-ghost:hover {
+    color: hsl(var(--fg));
+    background: hsl(var(--line) / 0.6);
+  }
+  .btn-sm {
+    height: 32px;
+    padding: 0 12px;
+    font-size: 12.5px;
+    border-radius: 10px;
+  }
+  .btn-lg {
+    height: 48px;
+    padding: 0 22px;
+    font-size: 14.5px;
+    border-radius: 14px;
+  }
+
+  /* ── Chips (v2.4) ── */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    height: 24px;
+    padding: 0 10px;
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--line));
+    border-radius: 9999px;
+    font-size: 11.5px;
+    font-weight: 500;
+    color: hsl(var(--fg-2));
+  }
+  .chip-tinted {
+    background: linear-gradient(135deg, hsl(var(--primary) / 0.12), hsl(var(--accent) / 0.12));
+    border-color: hsl(var(--primary) / 0.25);
+    color: hsl(var(--primary));
+    font-weight: 600;
+  }
+
+  /* ── Progress track (v2.4) ── */
+  .track {
+    height: 6px;
+    border-radius: 9999px;
+    background: hsl(var(--line));
+    overflow: hidden;
+  }
+  .track > span {
+    display: block;
+    height: 100%;
+    border-radius: 9999px;
+    background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--accent)));
+  }
+
+  /* ── Badge system (v2.4) — replaces legacy tailwind colors.badge.{blue,green,gray} hex map ── */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: 9999px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .b-blue {
+    background: hsl(var(--primary) / 0.12);
+    color: hsl(var(--primary));
+  }
+  .b-green {
+    background: hsl(var(--success) / 0.14);
+    color: hsl(160 84% 30%);
+  }
+  .b-amber {
+    background: hsl(var(--warning) / 0.16);
+    color: hsl(38 80% 38%);
+  }
+  .b-red {
+    background: hsl(var(--danger) / 0.14);
+    color: hsl(0 78% 50%);
+  }
+  .b-violet {
+    background: hsl(var(--accent) / 0.14);
+    color: hsl(280 70% 52%);
+  }
+  .b-gray {
+    background: hsl(var(--line));
+    color: hsl(var(--fg-2));
+  }
+  html.dark .b-green {
+    color: hsl(160 80% 60%);
+  }
+  html.dark .b-amber {
+    color: hsl(38 90% 70%);
+  }
+  html.dark .b-red {
+    color: hsl(0 80% 70%);
+  }
+  html.dark .b-violet {
+    color: hsl(280 80% 78%);
+  }
+
+  /* ── Display headline (v2.4) ── */
+  .section-h {
+    font-family: 'Inter Tight', sans-serif;
+    font-weight: 700;
+    font-size: clamp(36px, 4.4vw, 56px);
+    letter-spacing: -0.04em;
+    line-height: 1.02;
   }
 }
 

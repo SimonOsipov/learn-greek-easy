@@ -68,20 +68,7 @@ export default {
   				DEFAULT: 'hsl(var(--muted))',
   				foreground: 'hsl(var(--muted-foreground))'
   			},
-  			badge: {
-  				blue: {
-  					bg: '#dbeafe',
-  					text: '#1e40af'
-  				},
-  				green: {
-  					bg: '#d1fae5',
-  					text: '#065f46'
-  				},
-  				gray: {
-  					bg: '#f3f4f6',
-  					text: '#6b7280'
-  				}
-  			},
+
   			landing: {
   				navy: "hsl(var(--landing-navy))",
   				"greek-blue": "hsl(var(--landing-greek-blue))",
@@ -122,7 +109,11 @@ export default {
   				'"Segoe UI Emoji"',
   				'"Segoe UI Symbol"'
   			],
-  			'practice-serif': ['Georgia', '"Times New Roman"', 'Times', 'serif'],
+  			display: ['"Inter Tight"', 'Inter', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'sans-serif'],
+  			serif: ['"Noto Serif"', 'Georgia', '"Times New Roman"', 'Times', 'serif'],
+  			mono: ['ui-monospace', 'SFMono-Regular', '"SF Mono"', 'Menlo', 'Consolas', 'monospace'],
+  			// Back-compat aliases — keep until per-surface reskins migrate call sites
+  			'practice-serif': ['"Noto Serif"', 'Georgia', '"Times New Roman"', 'Times', 'serif'],
   			'practice-mono': ['ui-monospace', 'SFMono-Regular', '"SF Mono"', 'Menlo', 'Consolas', 'monospace']
   		},
   		fontSize: {
