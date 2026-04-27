@@ -581,7 +581,7 @@ describe('WaveformPlayer', () => {
       render(<WaveformPlayer />);
 
       const container = screen.getByTestId('waveform-player');
-      expect(container.className).toContain('bg-slate-100');
+      expect(container.className).toContain('bg-[hsl(var(--practice-bg))]');
       expect(container.className).not.toContain('bg-muted');
     });
 

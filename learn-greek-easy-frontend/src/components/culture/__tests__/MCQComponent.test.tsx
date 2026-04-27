@@ -602,7 +602,7 @@ describe('MCQComponent', () => {
       const hint = screen.getByTestId('mcq-keyboard-hint');
       expect(hint).toBeInTheDocument();
       expect(hint).toHaveClass('font-mono', 'text-xs', 'text-center');
-      expect(hint.className).toContain('text-[var(--practice-text-dim)]');
+      expect(hint.className).toContain('text-[hsl(var(--practice-text-dim))]');
     });
 
     it('should hide keyboard hint when answer is submitted', async () => {
@@ -1275,9 +1275,9 @@ describe('MCQComponent - Redesign Features', () => {
       const cardShell = mcqComponent.firstElementChild as HTMLElement;
 
       expect(cardShell.className).toContain('rounded-[20px]');
-      expect(cardShell.className).toContain('bg-[var(--practice-card)]');
+      expect(cardShell.className).toContain('bg-[hsl(var(--practice-card))]');
       expect(cardShell.className).toContain('border-[1.5px]');
-      expect(cardShell.className).toContain('border-[var(--practice-border)]');
+      expect(cardShell.className).toContain('border-[hsl(var(--practice-border))]');
     });
 
     it('should render card shell with correct shadow', () => {
@@ -1326,7 +1326,7 @@ describe('MCQComponent - Redesign Features', () => {
 
       expect(questionText.className).toContain('tracking-[-0.01em]');
       expect(questionText.className).toContain('leading-[1.5]');
-      expect(questionText.className).toContain('text-[var(--practice-text)]');
+      expect(questionText.className).toContain('text-[hsl(var(--practice-text))]');
       expect(questionText.className).toContain('font-semibold');
     });
   });
@@ -1368,8 +1368,10 @@ describe('MCQComponent - Redesign Features', () => {
 
       const submitButton = screen.getByTestId('mcq-submit-button');
 
-      expect(submitButton.className).toContain('bg-[var(--practice-accent)]');
-      expect(submitButton.className).toContain('shadow-[0_0_0_3px_var(--practice-accent-glow)]');
+      expect(submitButton.className).toContain('bg-[hsl(var(--practice-accent))]');
+      expect(submitButton.className).toContain(
+        'shadow-[0_0_0_3px_hsl(var(--practice-accent-glow))]'
+      );
     });
 
     it('should have slate disabled styling when no option selected', () => {
@@ -1379,8 +1381,8 @@ describe('MCQComponent - Redesign Features', () => {
 
       const submitButton = screen.getByTestId('mcq-submit-button');
 
-      expect(submitButton.className).toContain('bg-[var(--practice-border)]');
-      expect(submitButton.className).toContain('text-[var(--practice-text-dim)]');
+      expect(submitButton.className).toContain('bg-[hsl(var(--practice-border))]');
+      expect(submitButton.className).toContain('text-[hsl(var(--practice-text-dim))]');
     });
   });
 

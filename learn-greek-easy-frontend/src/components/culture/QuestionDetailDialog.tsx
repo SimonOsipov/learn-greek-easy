@@ -214,7 +214,7 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
                         className={cn(
                           'flex items-center gap-2 rounded-lg border p-3 text-sm',
                           isCorrect
-                            ? 'border-green-500/50 bg-green-50 dark:bg-green-950/20'
+                            ? 'border-[hsl(var(--practice-correct))] bg-[hsl(var(--practice-correct-soft))]'
                             : 'border-border'
                         )}
                       >
@@ -223,7 +223,7 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
                         </span>
                         <span className="flex-1">{getLocalizedText(option, lang)}</span>
                         {isCorrect && (
-                          <Check className="h-4 w-4 flex-shrink-0 text-green-600 dark:text-green-400" />
+                          <Check className="h-4 w-4 flex-shrink-0 text-[hsl(var(--practice-correct))]" />
                         )}
                       </div>
                     );

@@ -297,7 +297,7 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
             ? 'border bg-muted p-[14px]'
             : isNewsMini
               ? 'rounded-lg bg-white/10 p-2'
-              : 'border border-slate-200 bg-slate-100 p-[14px] dark:border-slate-700 dark:bg-slate-800',
+              : 'border border-[hsl(var(--practice-border))] bg-[hsl(var(--practice-bg))] p-[14px]',
           disabled && (isNewsMini ? 'opacity-40' : 'opacity-50'),
           className
         )}
@@ -320,16 +320,15 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
                 : isNewsMini
                   ? 'bg-white/20 text-white hover:bg-white/30 focus:ring-white/50'
                   : [
-                      'bg-indigo-500 text-white',
-                      'hover:bg-indigo-600 focus:ring-indigo-500',
-                      'dark:bg-indigo-400 dark:hover:bg-indigo-500 dark:focus:ring-offset-slate-800',
+                      'bg-[hsl(var(--practice-accent))] text-white',
+                      'hover:opacity-90 focus:ring-[hsl(var(--practice-accent))]',
                     ]),
             disabled &&
               (isAdmin
                 ? 'bg-primary text-primary-foreground'
                 : isNewsMini
                   ? 'bg-white/20 text-white'
-                  : 'bg-indigo-500 text-white dark:bg-indigo-400')
+                  : 'bg-[hsl(var(--practice-accent))] text-white')
           )}
           aria-label={isPlaying ? 'Pause audio' : 'Play audio'}
         >
@@ -379,7 +378,7 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
                       ? 'bg-muted-foreground/30'
                       : isNewsMini
                         ? 'bg-white/25'
-                        : 'bg-slate-300 dark:bg-slate-600')
+                        : 'bg-[hsl(var(--fg-3)/0.35)]')
                 )}
                 style={{
                   height: `${height * 100}%`,
@@ -389,7 +388,7 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
                           ? 'hsl(var(--primary))'
                           : isNewsMini
                             ? 'rgba(255,255,255,0.8)'
-                            : 'var(--practice-accent)',
+                            : 'hsl(var(--practice-accent))',
                       }
                     : undefined),
                 }}
@@ -418,8 +417,8 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
                       ? 'rgba(255,255,255,1)'
                       : 'rgba(255,255,255,0.6)'
                     : isPlaying && !disabled
-                      ? 'var(--practice-accent)'
-                      : 'var(--practice-text-muted)',
+                      ? 'hsl(var(--practice-accent))'
+                      : 'hsl(var(--practice-text-muted))',
               }}
             >
               {formatTime(disabled ? 0 : currentTime)}
@@ -430,7 +429,7 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
                   ? 'hsl(var(--muted-foreground))'
                   : isNewsMini
                     ? 'rgba(255,255,255,0.5)'
-                    : 'var(--practice-text-muted)',
+                    : 'hsl(var(--practice-text-muted))',
               }}
             >
               {' / '}
@@ -442,7 +441,7 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
                   ? 'hsl(var(--muted-foreground))'
                   : isNewsMini
                     ? 'rgba(255,255,255,0.5)'
-                    : 'var(--practice-text-muted)',
+                    : 'hsl(var(--practice-text-muted))',
               }}
             >
               {formatTime(disabled ? 0 : effectiveDuration)}
@@ -482,16 +481,16 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
                             ? 'text-muted-foreground hover:bg-muted'
                             : isNewsMini
                               ? 'text-white/60 hover:bg-white/15'
-                              : 'text-[var(--practice-text-muted)] hover:bg-[var(--practice-accent-soft)]'
+                              : 'text-[hsl(var(--practice-text-muted))] hover:bg-[hsl(var(--practice-accent-soft))]'
                           : isAdmin
                             ? 'text-muted-foreground'
                             : isNewsMini
                               ? 'text-white/40'
-                              : 'text-[var(--practice-text-muted)]'
+                              : 'text-[hsl(var(--practice-text-muted))]'
                     )}
                     style={
                       isSelected && !isAdmin && !isNewsMini
-                        ? { backgroundColor: 'var(--practice-accent)' }
+                        ? { backgroundColor: 'hsl(var(--practice-accent))' }
                         : undefined
                     }
                   >

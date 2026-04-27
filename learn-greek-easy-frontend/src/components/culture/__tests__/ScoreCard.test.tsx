@@ -127,18 +127,18 @@ describe('ScoreCard', () => {
       expect(progressCircle).toHaveAttribute('stroke-dasharray', expectedDash);
     });
 
-    it('uses emerald stroke color for passing scores', () => {
+    it('uses practice-correct stroke color for passing scores', () => {
       render(<ScoreCard correct={15} incorrect={5} total={20} onTryAgain={vi.fn()} />);
 
       const progressCircle = screen.getByTestId('score-ring-progress');
-      expect(progressCircle).toHaveAttribute('stroke', '#10b981');
+      expect(progressCircle).toHaveAttribute('stroke', 'hsl(var(--practice-correct))');
     });
 
-    it('uses amber stroke color for failing scores', () => {
+    it('uses practice-gold stroke color for failing scores', () => {
       render(<ScoreCard correct={5} incorrect={15} total={20} onTryAgain={vi.fn()} />);
 
       const progressCircle = screen.getByTestId('score-ring-progress');
-      expect(progressCircle).toHaveAttribute('stroke', '#f59e0b');
+      expect(progressCircle).toHaveAttribute('stroke', 'hsl(var(--practice-gold))');
     });
   });
 

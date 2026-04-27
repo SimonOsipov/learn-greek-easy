@@ -140,7 +140,7 @@ describe('QuestionDetailDialog', () => {
 
       await waitFor(() => {
         const correctOption = screen.getByTestId('option-0');
-        expect(correctOption.className).toContain('border-green');
+        expect(correctOption.className).toContain('border-[hsl(var(--practice-correct))]');
       });
     });
   });

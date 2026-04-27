@@ -113,31 +113,31 @@ export const AnswerOption: React.FC<AnswerOptionProps> = ({
 
         // Default state
         resolvedState === 'default' && [
-          'border-[var(--practice-border)] bg-[var(--practice-card)]',
-          'hover:border-slate-300 hover:bg-slate-50/60 dark:hover:border-slate-600 dark:hover:bg-slate-700/60',
+          'border-[hsl(var(--practice-border))] bg-[hsl(var(--practice-card))]',
+          'hover:border-[hsl(var(--practice-border)/0.7)] hover:bg-[hsl(var(--practice-bg))]',
         ],
 
         // Selected state (before submit)
         resolvedState === 'selected' && [
-          'border-[var(--practice-accent)] bg-[var(--practice-accent-soft)]',
-          'shadow-[0_0_0_3px_var(--practice-accent-glow)]',
+          'border-[hsl(var(--practice-accent))] bg-[hsl(var(--practice-accent-soft))]',
+          'shadow-[0_0_0_3px_hsl(var(--practice-accent-glow))]',
         ],
 
         // Correct state (after submit)
         resolvedState === 'correct' && [
-          'border-[var(--practice-correct)] bg-[var(--practice-correct-soft)]',
-          'shadow-[0_0_0_3px_var(--practice-correct-glow)]',
+          'border-[hsl(var(--practice-correct))] bg-[hsl(var(--practice-correct-soft))]',
+          'shadow-[0_0_0_3px_hsl(var(--practice-correct-glow))]',
         ],
 
         // Incorrect state (after submit, selected + wrong)
         resolvedState === 'incorrect' && [
-          'border-[var(--practice-incorrect)] bg-[var(--practice-incorrect-soft)]',
-          'shadow-[0_0_0_3px_var(--practice-incorrect-glow)]',
+          'border-[hsl(var(--practice-incorrect))] bg-[hsl(var(--practice-incorrect-soft))]',
+          'shadow-[0_0_0_3px_hsl(var(--practice-incorrect-glow))]',
         ],
 
         // Dimmed state (non-selected, non-correct after submit)
         resolvedState === 'dimmed' &&
-          'border-[var(--practice-border)] bg-[var(--practice-card)] opacity-[0.35]',
+          'border-[hsl(var(--practice-border))] bg-[hsl(var(--practice-card))] opacity-[0.35]',
 
         // Disabled (pointer-events-none after submit)
         disabled && 'pointer-events-none'
@@ -149,9 +149,9 @@ export const AnswerOption: React.FC<AnswerOptionProps> = ({
           'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-sm font-bold transition-colors duration-200',
           (resolvedState === 'default' || resolvedState === 'dimmed') &&
             'bg-muted text-muted-foreground',
-          resolvedState === 'selected' && 'bg-indigo-500 text-white',
-          resolvedState === 'correct' && 'bg-emerald-500 text-white',
-          resolvedState === 'incorrect' && 'bg-red-500 text-white'
+          resolvedState === 'selected' && 'bg-[hsl(var(--practice-accent))] text-white',
+          resolvedState === 'correct' && 'bg-[hsl(var(--practice-correct))] text-white',
+          resolvedState === 'incorrect' && 'bg-[hsl(var(--practice-incorrect))] text-white'
         )}
       >
         {keyboardHintNumber != null ? keyboardHintNumber : letter}
@@ -163,14 +163,14 @@ export const AnswerOption: React.FC<AnswerOptionProps> = ({
       {/* Result icons (post-submit) */}
       {resolvedState === 'correct' && (
         <Check
-          className="h-5 w-5 flex-shrink-0 animate-practice-pop-in text-emerald-500"
+          className="h-5 w-5 flex-shrink-0 animate-practice-pop-in text-[hsl(var(--practice-correct))]"
           aria-hidden="true"
           data-testid="result-icon-correct"
         />
       )}
       {resolvedState === 'incorrect' && (
         <X
-          className="h-5 w-5 flex-shrink-0 animate-practice-pop-in text-red-500"
+          className="h-5 w-5 flex-shrink-0 animate-practice-pop-in text-[hsl(var(--practice-incorrect))]"
           aria-hidden="true"
           data-testid="result-icon-incorrect"
         />
