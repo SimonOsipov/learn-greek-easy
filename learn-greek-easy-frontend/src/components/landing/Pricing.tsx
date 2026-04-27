@@ -92,17 +92,17 @@ const Pricing = () => {
       <div className="container mx-auto px-6">
         {/* Section header */}
         <div className="mx-auto mb-12 max-w-2xl text-center">
-          <p className="mb-3 text-sm font-medium text-[hsl(var(--landing-greek-blue))] motion-safe:animate-fade-up">
+          <p className="mb-3 text-sm font-medium text-[hsl(var(--landing-greek-blue-light))] motion-safe:animate-fade-up">
             {t('pricing.label')}
           </p>
           <h2
-            className="mb-3 text-2xl font-bold text-foreground motion-safe:animate-fade-up md:text-4xl"
+            className="mb-3 text-2xl font-bold text-[hsl(var(--landing-greek-blue-light))] motion-safe:animate-fade-up md:text-4xl"
             style={{ animationDelay: '0.1s' }}
           >
             {t('pricing.title')}
           </h2>
           <p
-            className="text-lg text-muted-foreground motion-safe:animate-fade-up"
+            className="text-lg text-[hsl(var(--landing-greek-blue-light))]/80 motion-safe:animate-fade-up"
             style={{ animationDelay: '0.2s' }}
           >
             {t('pricing.subtitle')}
@@ -154,19 +154,27 @@ const Pricing = () => {
                     className={`mb-4 flex h-12 w-12 items-center justify-center rounded-xl ${
                       plan.highlight
                         ? FOUNDERS_COLORS.iconBg
-                        : 'bg-[hsl(var(--landing-greek-blue))]/10 text-[hsl(var(--landing-greek-blue))]'
+                        : 'bg-[hsl(var(--landing-greek-blue-light))]/10 text-[hsl(var(--landing-greek-blue-light))]'
                     }`}
                   >
                     {plan.icon}
                   </div>
-                  <h3 className="mb-1 text-xl font-bold text-foreground">{t(plan.nameKey)}</h3>
-                  <p className="text-sm text-muted-foreground">{t(plan.descriptionKey)}</p>
+                  <h3 className="mb-1 text-xl font-bold text-[hsl(var(--landing-greek-blue-light))]">
+                    {t(plan.nameKey)}
+                  </h3>
+                  <p className="text-sm text-[hsl(var(--landing-greek-blue-light))]/70">
+                    {t(plan.descriptionKey)}
+                  </p>
                 </div>
 
                 {/* Price */}
                 <div className="mb-6 flex items-baseline gap-1.5">
-                  <span className="text-4xl font-bold text-foreground">{t(plan.priceKey)}</span>
-                  <span className="text-muted-foreground">{t(plan.periodKey)}</span>
+                  <span className="text-4xl font-bold text-[hsl(var(--landing-greek-blue-light))]">
+                    {t(plan.priceKey)}
+                  </span>
+                  <span className="text-[hsl(var(--landing-greek-blue-light))]/70">
+                    {t(plan.periodKey)}
+                  </span>
                 </div>
 
                 {/* Features */}
@@ -174,7 +182,7 @@ const Pricing = () => {
                   {features.map((feature, featureIndex) => (
                     <li
                       key={featureIndex}
-                      className="flex items-start gap-2 text-sm text-foreground"
+                      className="flex items-start gap-2 text-sm text-[hsl(var(--landing-greek-blue-light))]"
                     >
                       <Check
                         className={`mt-0.5 h-4 w-4 flex-shrink-0 ${
@@ -206,7 +214,7 @@ const Pricing = () => {
 
         {/* Trust note */}
         <p
-          className="mt-10 text-center text-sm text-muted-foreground motion-safe:animate-fade-up"
+          className="mt-10 text-center text-sm text-[hsl(var(--landing-greek-blue-light))]/70 motion-safe:animate-fade-up"
           style={{ animationDelay: '0.6s' }}
         >
           {t('pricing.guarantee')}

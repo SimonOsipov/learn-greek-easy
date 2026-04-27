@@ -681,17 +681,17 @@ const Features = () => {
       <div className="container mx-auto px-6">
         {/* Section header */}
         <div className="mx-auto mb-10 max-w-2xl text-center">
-          <p className="mb-3 text-sm font-medium text-[hsl(var(--landing-greek-blue))] motion-safe:animate-fade-up">
+          <p className="mb-3 text-sm font-medium text-[hsl(var(--landing-greek-blue-light))] motion-safe:animate-fade-up">
             {t('features.label')}
           </p>
           <h2
-            className="mb-3 text-2xl font-bold text-foreground motion-safe:animate-fade-up md:text-4xl"
+            className="mb-3 text-2xl font-bold text-[hsl(var(--landing-greek-blue-light))] motion-safe:animate-fade-up md:text-4xl"
             style={{ animationDelay: '0.1s' }}
           >
             {t('features.title')}
           </h2>
           <p
-            className="text-lg text-muted-foreground motion-safe:animate-fade-up"
+            className="text-lg text-[hsl(var(--landing-greek-blue-light))]/80 motion-safe:animate-fade-up"
             style={{ animationDelay: '0.2s' }}
           >
             {t('features.subtitle')}
@@ -704,13 +704,13 @@ const Features = () => {
             <div key={index} className="flex flex-col" data-testid="feature-card">
               {/* Feature content */}
               <div className="mb-4 sm:min-h-40">
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-[hsl(var(--landing-greek-blue))]/10 text-[hsl(var(--landing-greek-blue))]">
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-[hsl(var(--landing-greek-blue-light))]/10 text-[hsl(var(--landing-greek-blue-light))]">
                   {feature.icon}
                 </div>
-                <h3 className="mb-2 line-clamp-2 text-xl font-bold text-foreground">
+                <h3 className="mb-2 line-clamp-2 text-xl font-bold text-[hsl(var(--landing-greek-blue-light))]">
                   {t(feature.titleKey)}
                 </h3>
-                <p className="text-sm leading-relaxed text-muted-foreground sm:line-clamp-2">
+                <p className="text-sm leading-relaxed text-[hsl(var(--landing-greek-blue-light))]/70 sm:line-clamp-2">
                   {t(feature.descriptionKey)}
                 </p>
               </div>

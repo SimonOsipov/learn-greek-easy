@@ -36,7 +36,9 @@ const Header = () => {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[hsl(var(--landing-greek-blue))]">
             <span className="text-sm font-bold text-white">G</span>
           </div>
-          <span className="text-lg font-semibold text-foreground">{t('header.brandName')}</span>
+          <span className="text-lg font-semibold text-[hsl(var(--landing-greek-blue-light))]">
+            {t('header.brandName')}
+          </span>
         </a>
 
         <nav
@@ -47,7 +49,7 @@ const Header = () => {
             <a
               key={link.href}
               href={link.href}
-              className="text-lg text-muted-foreground transition-colors hover:text-foreground"
+              className="text-lg text-[hsl(var(--landing-greek-blue-light))]/80 transition-colors hover:text-[hsl(var(--landing-greek-blue-light))]"
             >
               {t(link.labelKey)}
             </a>
@@ -77,7 +79,7 @@ const Header = () => {
                     key={link.href}
                     href={link.href}
                     onClick={() => setOpen(false)}
-                    className="text-lg text-muted-foreground transition-colors hover:text-foreground"
+                    className="text-lg text-[hsl(var(--landing-greek-blue-light))]/80 transition-colors hover:text-[hsl(var(--landing-greek-blue-light))]"
                   >
                     {t(link.labelKey)}
                   </a>
