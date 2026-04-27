@@ -15,6 +15,7 @@ Forbidden in `src/**/*.{ts,tsx,css}` (allowed only in `src/index.css` and `tailw
 - Raw hex colors — use HSL tokens (`hsl(var(--primary))`).
 - `style={{ color: '#...' }}`, hardcoded `rgba(...)` — use tokens or utility classes.
 - Arbitrary Tailwind values like `bg-[#3b82f6]`, `text-[hsl(...)]` — use named utilities.
+- Raw CSS color keywords (`text-white`, `bg-black`, `border-white`, `style={{ color: 'white' }}`) — use a token (e.g. `text-landing-header-fg`, `text-primary-foreground`). `transparent` and `currentColor` remain allowed because they carry semantic, not chromatic, meaning.
 - New `@keyframes` — add to `src/index.css` and `tailwind.config.js` `animation` map.
 
 If you need a value that isn't here, add it to `src/index.css` + `tailwind.config.js` AND update this doc in the same PR.

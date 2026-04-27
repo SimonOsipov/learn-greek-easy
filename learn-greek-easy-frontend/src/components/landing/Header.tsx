@@ -34,7 +34,7 @@ const Header = () => {
           aria-label={t('header.logoAriaLabel')}
         >
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-landing-greek-blue">
-            <span className="text-sm font-bold text-white">G</span>
+            <span className="text-sm font-bold text-landing-header-fg">G</span>
           </div>
           <span className="text-lg font-semibold text-landing-header-fg">
             {t('header.brandName')}
