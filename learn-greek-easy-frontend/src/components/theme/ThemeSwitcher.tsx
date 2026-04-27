@@ -3,12 +3,13 @@ import React from 'react';
 import { Sun, Moon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Button } from '@/components/ui/button';
+import { Button, type ButtonProps } from '@/components/ui/button';
 import { useTheme } from '@/contexts/ThemeContext';
 import { cn } from '@/lib/utils';
 
 interface ThemeSwitcherProps {
   className?: string;
+  variant?: ButtonProps['variant'];
 }
 
 /**
@@ -18,7 +19,7 @@ interface ThemeSwitcherProps {
  * Uses Sun icon for light mode, Moon icon for dark mode.
  * Matches the LanguageSwitcher ghost button pattern.
  */
-export const ThemeSwitcher: React.FC<ThemeSwitcherProps> = ({ className }) => {
+export const ThemeSwitcher: React.FC<ThemeSwitcherProps> = ({ className, variant = 'ghost' }) => {
   const { t } = useTranslation('common');
   const { currentTheme, toggleTheme, isChanging } = useTheme();
 
@@ -28,7 +29,7 @@ export const ThemeSwitcher: React.FC<ThemeSwitcherProps> = ({ className }) => {
 
   return (
     <Button
-      variant="ghost"
+      variant={variant}
       size="icon"
       className={cn('relative', className)}
       onClick={handleClick}

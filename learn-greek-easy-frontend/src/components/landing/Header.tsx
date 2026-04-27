@@ -57,19 +57,16 @@ const Header = () => {
         </nav>
 
         <div className="flex items-center gap-3">
-          <ThemeSwitcher
-            data-testid="landing-theme-switcher"
-            className="text-landing-header-fg hover:bg-landing-header-fg/10 hover:text-landing-header-fg"
-          />
+          <ThemeSwitcher data-testid="landing-theme-switcher" variant="landing-chrome" />
           <LanguageSwitcher
             variant="icon"
+            buttonVariant="landing-chrome"
             data-testid="landing-language-switcher"
-            className="text-landing-header-fg hover:bg-landing-header-fg/10 hover:text-landing-header-fg"
           />
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
               <Button
-                variant="ghost"
+                variant="landing-chrome"
                 size="icon"
                 className="md:hidden"
                 aria-label={t('header.nav.menuLabel')}

@@ -3,7 +3,7 @@ import React from 'react';
 import { Globe, Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Button } from '@/components/ui/button';
+import { Button, type ButtonProps } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,6 +18,8 @@ import { cn } from '@/lib/utils';
 interface LanguageSwitcherProps {
   /** Display variant: 'icon' shows only globe, 'full' shows globe + current language name */
   variant?: 'icon' | 'full';
+  /** Button visual variant — passed through to the underlying <Button> (defaults to 'ghost') */
+  buttonVariant?: ButtonProps['variant'];
   /** Additional CSS classes */
   className?: string;
 }
@@ -46,6 +48,7 @@ interface LanguageSwitcherProps {
  */
 export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
   variant = 'icon',
+  buttonVariant = 'ghost',
   className,
 }) => {
   const { t } = useTranslation('common');
@@ -66,7 +69,7 @@ export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
-          variant="ghost"
+          variant={buttonVariant}
           size={variant === 'icon' ? 'icon' : 'default'}
           className={cn('relative', className)}
           disabled={isChanging}
