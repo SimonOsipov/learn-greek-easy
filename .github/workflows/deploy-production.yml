@@ -49,6 +49,50 @@ jobs:
           fi
 
   # =============================================================================
+  # JOB 1b: Frontend tsc -b on main — ALLOW-FAIL until TSCI-01-11
+  # Mirrors the `tsc-build` job in test.yml so we get the error-count signal
+  # on every push to main, not just on PRs. Not wired into any downstream
+  # `needs:` — production deploy is independent of this job's result.
+  # TSCI-01-10 will remove `continue-on-error` and gate deploys on it.
+  # =============================================================================
+  tsc-build:
+    name: Frontend tsc -b (allow-fail)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    env:
+      VITE_ENVIRONMENT: test
+      ENVIRONMENT: test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: learn-greek-easy-frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: learn-greek-easy-frontend
+        run: npm ci
+
+      - name: Run tsc -b and report error count
+        working-directory: learn-greek-easy-frontend
+        run: |
+          set +e
+          npm run typecheck:ci 2>&1 | tee tsc.log
+          TSC_EXIT=${PIPESTATUS[0]}
+          ERROR_COUNT=$(grep -c "error TS" tsc.log || true)
+          echo "## tsc -b results (main)" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Exit code: \`$TSC_EXIT\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Error count: **$ERROR_COUNT**" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "_Allow-fail until TSCI-01-11 (cleanup) lands._" >> "$GITHUB_STEP_SUMMARY"
+          exit $TSC_EXIT
+
+  # =============================================================================
   # JOB 2: Deploy Backend
   # Purpose: Deploy backend service and wait for health check
   # =============================================================================

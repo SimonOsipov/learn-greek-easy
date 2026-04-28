@@ -41,6 +41,51 @@ jobs:
         working-directory: learn-greek-easy-frontend
         run: npm run format:check
 
+  # Job 1b: Frontend tsc -b (project references) — ALLOW-FAIL until TSCI-01-11
+  # Runs `tsc -b` against the full project-references graph. The codebase has
+  # ~82 errors today; gating immediately would block all unrelated PRs until
+  # TSCI-01-11 ships. We surface the count in the step summary so reviewers can
+  # watch it trend down PR-by-PR as TSCI-01-03 through TSCI-01-09 land.
+  # TSCI-01-10 will remove `continue-on-error` and add this to required checks.
+  tsc-build:
+    name: Frontend tsc -b (allow-fail)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    env:
+      VITE_ENVIRONMENT: test
+      ENVIRONMENT: test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: learn-greek-easy-frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: learn-greek-easy-frontend
+        run: npm ci
+
+      - name: Run tsc -b and report error count
+        working-directory: learn-greek-easy-frontend
+        run: |
+          set +e
+          npm run typecheck:ci 2>&1 | tee tsc.log
+          TSC_EXIT=${PIPESTATUS[0]}
+          ERROR_COUNT=$(grep -c "error TS" tsc.log || true)
+          echo "## tsc -b results" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Exit code: \`$TSC_EXIT\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Error count: **$ERROR_COUNT**" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "_Allow-fail until TSCI-01-11 (cleanup) lands._" >> "$GITHUB_STEP_SUMMARY"
+          # Exit with tsc's actual code so the step shows red when there are errors,
+          # but `continue-on-error: true` on the job keeps the workflow green.
+          exit $TSC_EXIT
+
   # Job 2: Backend Lint & Format
   backend-lint:
     name: Backend Lint & Format
