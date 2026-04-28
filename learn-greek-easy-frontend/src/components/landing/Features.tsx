@@ -18,7 +18,7 @@ import {
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
-import { getCEFRColor, getCEFRTextColor } from '@/lib/cefrColors';
+import { getCEFRBadgeClass } from '@/lib/cefrColors';
 
 interface Feature {
   icon: ReactNode;
@@ -27,15 +27,10 @@ interface Feature {
   mockup: string;
 }
 
-const MOCKUP_BADGE = {
-  green: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100',
-  blue: 'bg-blue-100 text-blue-900 dark:bg-blue-900 dark:text-blue-100',
-  indigo: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-100',
-  purple: 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-100',
-  orange: 'bg-orange-100 text-orange-900 dark:bg-orange-900 dark:text-orange-100',
-  teal: 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-100',
-  red: 'bg-red-100 text-red-900 dark:bg-red-900 dark:text-red-100',
-} as const;
+// Unified pill style for mock-UI category labels — uses the landing accent
+// (greek-blue) so the demo cards stay within the landing palette instead of
+// pulling in raw Tailwind color ramps.
+const MOCKUP_BADGE = 'bg-[hsl(var(--landing-greek-blue))]/15 text-[hsl(var(--landing-greek-blue))]';
 
 const Features = () => {
   const { t } = useTranslation('landing');
@@ -128,7 +123,7 @@ const Features = () => {
   const VocabularyMockup = () => (
     <MockupWrapper>
       <div className="mb-4 flex items-center justify-between">
-        <span className={`rounded-full px-3 py-1.5 text-xs font-semibold ${MOCKUP_BADGE.blue}`}>
+        <span className={`rounded-full px-3 py-1.5 text-xs font-semibold ${MOCKUP_BADGE}`}>
           {t('features.mockups.finance')}
         </span>
         <span className="text-xs text-muted-foreground dark:text-foreground/70">
@@ -143,18 +138,10 @@ const Features = () => {
         <span className="rounded bg-secondary px-2 py-1 text-xs text-secondary-foreground">
           {t('features.mockups.taxAuthority')}
         </span>
-        <span
-          className={`rounded px-2 py-1 text-xs font-semibold ${getCEFRColor('A2')} ${getCEFRTextColor('A2')}`}
-        >
-          A2
-        </span>
+        <span className={`badge ${getCEFRBadgeClass('A2')}`}>A2</span>
       </div>
       <div className="mt-auto flex gap-3">
-        <Button
-          variant="secondary"
-          tabIndex={-1}
-          className={`h-11 flex-1 rounded-lg font-semibold ${MOCKUP_BADGE.red}`}
-        >
+        <Button variant="secondary" tabIndex={-1} className="h-11 flex-1 rounded-lg font-semibold">
           {t('features.mockups.again')}
         </Button>
         <Button tabIndex={-1} className="h-11 flex-1 rounded-lg font-semibold">
@@ -235,7 +222,7 @@ const Features = () => {
     <MockupWrapper>
       {/* Header */}
       <div className="mb-3 flex items-center justify-between">
-        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${MOCKUP_BADGE.blue}`}>
+        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${MOCKUP_BADGE}`}>
           {t('features.mockups.listening')}
         </span>
         <span className="text-xs text-muted-foreground dark:text-foreground/70">
@@ -278,14 +265,10 @@ const Features = () => {
     <MockupWrapper>
       {/* Header: badge + CEFR level */}
       <div className="mb-2 flex items-center gap-2">
-        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${MOCKUP_BADGE.indigo}`}>
+        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${MOCKUP_BADGE}`}>
           Ellinomatheia
         </span>
-        <span
-          className={`rounded px-2 py-0.5 text-xs font-semibold ${getCEFRColor('B1')} ${getCEFRTextColor('B1')}`}
-        >
-          B1
-        </span>
+        <span className={`badge ${getCEFRBadgeClass('B1')}`}>B1</span>
       </div>
       {/* Section label + timer */}
       <div className="mb-2 flex items-center justify-between">
@@ -335,7 +318,7 @@ const Features = () => {
     <MockupWrapper>
       {/* Header */}
       <div className="mb-3 flex items-center justify-between">
-        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${MOCKUP_BADGE.green}`}>
+        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${MOCKUP_BADGE}`}>
           {t('features.mockups.reading')}
         </span>
         <span className="text-xs text-muted-foreground dark:text-foreground/70">
@@ -345,11 +328,7 @@ const Features = () => {
       {/* Story title + level */}
       <div className="mb-2 flex items-center justify-between">
         <p className="text-base font-bold text-foreground">Στο Ταχυδρομείο</p>
-        <span
-          className={`rounded px-2 py-0.5 text-xs font-semibold ${getCEFRColor('B1')} ${getCEFRTextColor('B1')}`}
-        >
-          B1
-        </span>
+        <span className={`badge ${getCEFRBadgeClass('B1')}`}>B1</span>
       </div>
       {/* Story excerpt */}
       <div className="mb-2 rounded-xl bg-secondary/50 p-3">
@@ -384,7 +363,7 @@ const Features = () => {
   const QuizMockup = () => (
     <MockupWrapper>
       <div className="mb-3 flex items-center justify-between">
-        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${MOCKUP_BADGE.blue}`}>
+        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${MOCKUP_BADGE}`}>
           {t('features.mockups.history')}
         </span>
         <span className="text-xs text-muted-foreground dark:text-foreground/70">
@@ -410,7 +389,7 @@ const Features = () => {
   const BasicVocabularyMockup = () => (
     <MockupWrapper>
       <div className="mb-4 flex items-center justify-between">
-        <span className={`rounded-full px-3 py-1.5 text-xs font-semibold ${MOCKUP_BADGE.green}`}>
+        <span className={`rounded-full px-3 py-1.5 text-xs font-semibold ${MOCKUP_BADGE}`}>
           {t('features.mockups.basics')}
         </span>
         <span className="text-xs text-muted-foreground dark:text-foreground/70">
@@ -425,18 +404,10 @@ const Features = () => {
         <span className="rounded bg-secondary px-2 py-1 text-xs text-secondary-foreground">
           {t('features.mockups.greetings')}
         </span>
-        <span
-          className={`rounded px-2 py-1 text-xs font-semibold ${getCEFRColor('A1')} ${getCEFRTextColor('A1')}`}
-        >
-          A1
-        </span>
+        <span className={`badge ${getCEFRBadgeClass('A1')}`}>A1</span>
       </div>
       <div className="mt-auto flex gap-3">
-        <Button
-          variant="secondary"
-          tabIndex={-1}
-          className={`h-11 flex-1 rounded-lg font-semibold ${MOCKUP_BADGE.red}`}
-        >
+        <Button variant="secondary" tabIndex={-1} className="h-11 flex-1 rounded-lg font-semibold">
           {t('features.mockups.again')}
         </Button>
         <Button tabIndex={-1} className="h-11 flex-1 rounded-lg font-semibold">
@@ -449,7 +420,7 @@ const Features = () => {
   const NounGrammarMockup = () => (
     <MockupWrapper>
       <div className="mb-3 flex items-center justify-between">
-        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${MOCKUP_BADGE.purple}`}>
+        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${MOCKUP_BADGE}`}>
           {t('features.mockups.nouns')}
         </span>
         <span className="text-xs text-muted-foreground dark:text-foreground/70">
@@ -487,7 +458,7 @@ const Features = () => {
   const VerbGrammarMockup = () => (
     <MockupWrapper>
       <div className="mb-3 flex items-center justify-between">
-        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${MOCKUP_BADGE.orange}`}>
+        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${MOCKUP_BADGE}`}>
           {t('features.mockups.verbs')}
         </span>
         <span className="text-xs text-muted-foreground dark:text-foreground/70">
@@ -525,7 +496,7 @@ const Features = () => {
   const VerbTensesMockup = () => (
     <MockupWrapper>
       <div className="mb-3 flex items-center justify-between">
-        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${MOCKUP_BADGE.teal}`}>
+        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${MOCKUP_BADGE}`}>
           {t('features.mockups.tenses')}
         </span>
         <span className="text-xs text-muted-foreground dark:text-foreground/70">γράφω</span>
@@ -598,7 +569,7 @@ const Features = () => {
   const CustomCardsMockup = () => (
     <MockupWrapper>
       <div className="mb-4 flex items-center justify-between">
-        <span className={`rounded-full px-3 py-1.5 text-xs font-semibold ${MOCKUP_BADGE.indigo}`}>
+        <span className={`rounded-full px-3 py-1.5 text-xs font-semibold ${MOCKUP_BADGE}`}>
           {t('features.mockups.myDecks')}
         </span>
         <span className="text-xs text-muted-foreground dark:text-foreground/70">
