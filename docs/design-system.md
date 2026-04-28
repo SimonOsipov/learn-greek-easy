@@ -139,13 +139,19 @@ Tailwind namespace: `tense-{1..6}`. For `MediaBadge` solid badges: `bg-tense-N t
 
 Warmer / editorial. Don't mix with the glassy app palette.
 
-Forms and CTAs placed on top of the dark hero / final-CTA photography use the **theme-invariant** `landing-header-*` tokens (glass input: `bg-landing-header-bg/40` with `placeholder:text-landing-header-fg/80` and `border-landing-header-fg/30`; primary CTA: the `landing-primary` button variant). The glass pill uses the dark `header-bg` tint (not `header-fg`) so the near-white placeholder always sits on a darker fill — light-on-light blends out when the underlying photo or gradient stop is bright. Do not use the app `--background` / `--primary` defaults there — those flip with theme and produce a stark white panel in light mode over the dark photo.
+The landing page **follows the app theme** (light theme = light page, dark theme = dark page). The page wrapper uses `bg-background`, and the `--landing-navy` / `--landing-greek-blue-light` tokens are mapped so that `landing-navy` is dark text on light bg / light text on dark bg, and `landing-greek-blue-light` is dark heading text on light bg / near-white heading text on dark bg.
+
+Two surfaces are **theme-invariant** because they sit over the dark hero / final-CTA photography in both themes — the photo overlay must always stay dark and text on top must always stay near-white:
+- **Photo overlays** (Hero gradient, FinalCTA overlay, Hero badge bg): use `--landing-header-bg` (always `240 27% 14%`).
+- **Text & icons over the photo** (Hero title/subtitle/badge, Hero waitlist input, FinalCTA copy): use `--landing-header-fg` (always `212 85% 95%`).
+
+Forms and CTAs over the photo use the glass-input recipe (`bg-landing-header-bg/40` with `placeholder:text-landing-header-fg/80` and `border-landing-header-fg/30`; primary CTA: the `landing-primary` button variant). The glass pill uses the dark `header-bg` tint (not `header-fg`) so the near-white placeholder always sits on a darker fill — light-on-light blends out when the underlying photo or gradient stop is bright. Do not use the app `--background` / `--primary` defaults inside the photo overlays — those flip with theme and produce a stark white panel in light mode over the dark photo.
 
 | Token | Light | Dark |
 |---|---|---|
 | `--landing-navy` | `240 27% 14%` | `240 27% 85%` |
 | `--landing-greek-blue` | `212 85% 37%` | `212 85% 60%` |
-| `--landing-greek-blue-light` | `212 85% 95%` | `212 50% 20%` |
+| `--landing-greek-blue-light` | `212 50% 20%` | `212 85% 95%` |
 | `--landing-gold` | `34 100% 42%` | `34 100% 52%` (Cyprus-flag copper, Pantone 1385 / `#D57800` in light mode; +10% lightness in dark mode) |
 | `--landing-header-bg` | `240 27% 14%` | `240 27% 14%` (same — header is always dark-navy chrome) |
 | `--landing-header-fg` | `212 85% 95%` | `212 85% 95%` (same — near-white, theme-invariant) |

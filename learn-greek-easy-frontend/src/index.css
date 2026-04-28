@@ -101,7 +101,7 @@
     /* ── Landing palette ── */
     --landing-navy: 240 27% 14%;
     --landing-greek-blue: 212 85% 37%;
-    --landing-greek-blue-light: 212 85% 95%;
+    --landing-greek-blue-light: 212 50% 20%;
     --landing-gold: 34 100% 42%;
     /* Header-specific tokens — do NOT flip in dark mode (header is always dark-navy chrome) */
     --landing-header-bg: 240 27% 14%;
@@ -220,7 +220,7 @@
     /* ── Landing palette (dark) ── */
     --landing-navy: 240 27% 85%;
     --landing-greek-blue: 212 85% 60%;
-    --landing-greek-blue-light: 212 50% 20%;
+    --landing-greek-blue-light: 212 85% 95%;
     --landing-gold: 34 100% 52%;
     /* Header-specific tokens — same as light; header does not invert */
     --landing-header-bg: 240 27% 14%;
