@@ -249,9 +249,15 @@ const Features = () => {
           <span className="text-sm font-semibold text-foreground">καφέ</span>
           <CheckCircle className="h-4 w-4 text-[hsl(var(--landing-greek-blue))]" />
         </div>
-        <div className="rounded-lg border border-border p-2.5 text-sm text-foreground">νερό</div>
-        <div className="rounded-lg border border-border p-2.5 text-sm text-foreground">ψωμί</div>
-        <div className="rounded-lg border border-border p-2.5 text-sm text-foreground">τσάι</div>
+        <div className="flex items-center rounded-lg border border-border p-2.5 text-sm text-foreground">
+          νερό
+        </div>
+        <div className="flex items-center rounded-lg border border-border p-2.5 text-sm text-foreground">
+          ψωμί
+        </div>
+        <div className="flex items-center rounded-lg border border-border p-2.5 text-sm text-foreground">
+          τσάι
+        </div>
       </div>
       {/* CTA */}
       <Button tabIndex={-1} className="mt-auto h-11 w-full rounded-lg font-semibold">
@@ -292,17 +298,17 @@ const Features = () => {
       </div>
       {/* 2x2 answer grid */}
       <div className="mb-3 grid grid-cols-2 gap-2">
-        <div className="rounded-lg border border-border p-2 text-xs text-foreground">
+        <div className="flex items-center rounded-lg border border-border p-2 text-xs text-foreground">
           Να πάει στο γραφείο
         </div>
         <div className="flex items-center justify-between rounded-lg border-2 border-[hsl(var(--landing-greek-blue))] bg-[hsl(var(--landing-greek-blue))]/5 p-2">
           <span className="text-xs font-semibold text-foreground">Να στείλει τα έγγραφα</span>
           <CheckCircle className="h-3.5 w-3.5 text-[hsl(var(--landing-greek-blue))]" />
         </div>
-        <div className="rounded-lg border border-border p-2 text-xs text-foreground">
+        <div className="flex items-center rounded-lg border border-border p-2 text-xs text-foreground">
           Να πάρει τηλέφωνο
         </div>
-        <div className="rounded-lg border border-border p-2 text-xs text-foreground">
+        <div className="flex items-center rounded-lg border border-border p-2 text-xs text-foreground">
           Να καλέσει τον γιατρό
         </div>
       </div>
@@ -338,17 +344,17 @@ const Features = () => {
       {/* Question + answers (all Greek) */}
       <p className="mb-2 text-sm font-medium text-foreground">Πού πήγε ο Γιάννης;</p>
       <div className="mb-3 grid grid-cols-2 gap-2">
-        <div className="rounded-lg border border-border p-2.5 text-sm text-foreground">
+        <div className="flex items-center rounded-lg border border-border p-2.5 text-sm text-foreground">
           Στην τράπεζα
         </div>
         <div className="flex items-center justify-between rounded-lg border-2 border-[hsl(var(--landing-greek-blue))] bg-[hsl(var(--landing-greek-blue))]/5 p-2.5">
           <span className="text-sm font-semibold text-foreground">Στο ταχυδρομείο</span>
           <CheckCircle className="h-4 w-4 text-[hsl(var(--landing-greek-blue))]" />
         </div>
-        <div className="rounded-lg border border-border p-2.5 text-sm text-foreground">
+        <div className="flex items-center rounded-lg border border-border p-2.5 text-sm text-foreground">
           Στο νοσοκομείο
         </div>
-        <div className="rounded-lg border border-border p-2.5 text-sm text-foreground">
+        <div className="flex items-center rounded-lg border border-border p-2.5 text-sm text-foreground">
           Στο σχολείο
         </div>
       </div>
@@ -371,13 +377,19 @@ const Features = () => {
       </div>
       <p className="mb-3 text-sm font-bold text-foreground">Πότε η Κύπρος έγινε ανεξάρτητη;</p>
       <div className="mb-3 grid grid-cols-2 gap-2">
-        <div className="rounded-lg border border-border p-2.5 text-sm text-foreground">1950</div>
+        <div className="flex items-center rounded-lg border border-border p-2.5 text-sm text-foreground">
+          1950
+        </div>
         <div className="flex items-center justify-between rounded-lg border-2 border-[hsl(var(--landing-greek-blue))] bg-[hsl(var(--landing-greek-blue))]/5 p-2.5">
           <span className="text-sm font-semibold text-foreground">1960</span>
           <CheckCircle className="h-4 w-4 text-[hsl(var(--landing-greek-blue))]" />
         </div>
-        <div className="rounded-lg border border-border p-2.5 text-sm text-foreground">1974</div>
-        <div className="rounded-lg border border-border p-2.5 text-sm text-foreground">1955</div>
+        <div className="flex items-center rounded-lg border border-border p-2.5 text-sm text-foreground">
+          1974
+        </div>
+        <div className="flex items-center rounded-lg border border-border p-2.5 text-sm text-foreground">
+          1955
+        </div>
       </div>
       <Button tabIndex={-1} className="mt-auto h-11 w-full rounded-lg font-semibold">
         {t('features.mockups.nextQuestion')}
@@ -431,19 +443,19 @@ const Features = () => {
         <p className="mt-1 text-xs text-muted-foreground">{t('features.mockups.theFriendMasc')}</p>
       </div>
       <div className="grid flex-1 grid-cols-2 gap-2">
-        <div className="rounded-lg bg-secondary/30 p-2 text-center">
+        <div className="rounded-lg bg-secondary p-2 text-center">
           <p className="text-xs text-muted-foreground">{t('features.mockups.singular')}</p>
           <p className="text-sm font-medium text-foreground">ο φίλος</p>
         </div>
-        <div className="rounded-lg bg-secondary/30 p-2 text-center">
+        <div className="rounded-lg bg-secondary p-2 text-center">
           <p className="text-xs text-muted-foreground">{t('features.mockups.plural')}</p>
           <p className="text-sm font-medium text-foreground">οι φίλοι</p>
         </div>
-        <div className="rounded-lg bg-secondary/30 p-2 text-center">
+        <div className="rounded-lg bg-secondary p-2 text-center">
           <p className="text-xs text-muted-foreground">{t('features.mockups.accusative')}</p>
           <p className="text-sm font-medium text-foreground">τον φίλο</p>
         </div>
-        <div className="rounded-lg bg-secondary/30 p-2 text-center">
+        <div className="rounded-lg bg-secondary p-2 text-center">
           <p className="text-xs text-muted-foreground">{t('features.mockups.genitive')}</p>
           <p className="text-sm font-medium text-foreground">του φίλου</p>
         </div>
@@ -469,19 +481,19 @@ const Features = () => {
         <p className="mt-1 text-xs text-muted-foreground">{t('features.mockups.toSpeak')}</p>
       </div>
       <div className="grid flex-1 grid-cols-2 gap-2">
-        <div className="rounded-lg bg-secondary/30 p-2 text-center">
+        <div className="rounded-lg bg-secondary p-2 text-center">
           <p className="text-xs text-muted-foreground">{t('features.mockups.iSpeak')}</p>
           <p className="text-sm font-medium text-foreground">μιλάω</p>
         </div>
-        <div className="rounded-lg bg-secondary/30 p-2 text-center">
+        <div className="rounded-lg bg-secondary p-2 text-center">
           <p className="text-xs text-muted-foreground">{t('features.mockups.youSpeak')}</p>
           <p className="text-sm font-medium text-foreground">μιλάς</p>
         </div>
-        <div className="rounded-lg bg-secondary/30 p-2 text-center">
+        <div className="rounded-lg bg-secondary p-2 text-center">
           <p className="text-xs text-muted-foreground">{t('features.mockups.heSheSpeak')}</p>
           <p className="text-sm font-medium text-foreground">μιλάει</p>
         </div>
-        <div className="rounded-lg bg-secondary/30 p-2 text-center">
+        <div className="rounded-lg bg-secondary p-2 text-center">
           <p className="text-xs text-muted-foreground">{t('features.mockups.weSpeak')}</p>
           <p className="text-sm font-medium text-foreground">μιλάμε</p>
         </div>
@@ -505,15 +517,15 @@ const Features = () => {
         <p className="mt-1 text-xs text-muted-foreground">{t('features.mockups.toWrite')}</p>
       </div>
       <div className="flex-1 space-y-2">
-        <div className="flex items-center justify-between rounded-lg bg-secondary/30 p-2">
+        <div className="flex items-center justify-between rounded-lg bg-secondary p-2">
           <span className="text-xs text-muted-foreground">{t('features.mockups.present')}</span>
           <span className="text-sm font-medium text-foreground">γράφω</span>
         </div>
-        <div className="flex items-center justify-between rounded-lg bg-secondary/30 p-2">
+        <div className="flex items-center justify-between rounded-lg bg-secondary p-2">
           <span className="text-xs text-muted-foreground">{t('features.mockups.pastSimple')}</span>
           <span className="text-sm font-medium text-foreground">έγραψα</span>
         </div>
-        <div className="flex items-center justify-between rounded-lg bg-secondary/30 p-2">
+        <div className="flex items-center justify-between rounded-lg bg-secondary p-2">
           <span className="text-xs text-muted-foreground">{t('features.mockups.future')}</span>
           <span className="text-sm font-medium text-foreground">θα γράψω</span>
         </div>
