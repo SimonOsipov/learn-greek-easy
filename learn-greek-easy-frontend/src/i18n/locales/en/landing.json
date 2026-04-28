@@ -19,7 +19,7 @@
     "title": "Your Greek Practice",
     "titleHighlight": "Companion",
     "subtitle": "One place to practice reading, listening, speaking and build an active vocabulary - the perfect support alongside your books and lessons.",
-    "cta": "Join the Waitlist",
+    "cta": "Join Waitlist",
     "socialProof": "Join 500+ learners on the waitlist for the Greek Language Learning Platform, which will help you to learn Greek and prepare for different exams, including Cyprus Culture Exam and Ellinomatheia",
     "heroImageAlt": "Ancient Greek ruins overlooking the Mediterranean Sea in Cyprus"
   },
@@ -238,12 +238,12 @@
   "finalCta": {
     "title": "Your Greek journey starts with the right foundation",
     "subtitle": "Stop wasting time with scattered resources. Get a structured path to Greek fluency.",
-    "primaryCta": "Join the Waitlist",
+    "primaryCta": "Join Waitlist",
     "imageAlt": "Limassol cityscape with Mediterranean Sea"
   },
   "waitlistForm": {
     "emailPlaceholder": "Enter your email address",
-    "submitButton": "Join the Waitlist",
+    "submitButton": "Join Waitlist",
     "submitting": "Joining...",
     "alreadyOnWaitlist": "You're already on the waitlist!",
     "validationError": "Please enter a valid email address",
