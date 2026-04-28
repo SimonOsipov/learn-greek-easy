@@ -1,5 +1,3 @@
-import React from 'react';
-
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { computeChipsFromCard, chipColorClasses } from '@/lib/completeness';
 import type { AdminVocabularyCard } from '@/services/adminAPI';

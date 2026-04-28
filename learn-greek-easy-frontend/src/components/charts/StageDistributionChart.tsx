@@ -216,7 +216,7 @@ export const StageDistributionChart = React.forwardRef<HTMLDivElement, StageDist
               <ChartTooltip
                 content={
                   <ChartTooltipContent
-                    formatter={(value, name, item) => {
+                    formatter={(_value, name, item) => {
                       const pieItem = item.payload as PieDataItem;
                       return [
                         `${pieItem.value} ${t('charts.stageDistribution.cardsUnit')} (${Math.round(pieItem.percent * 100)}%)`,
