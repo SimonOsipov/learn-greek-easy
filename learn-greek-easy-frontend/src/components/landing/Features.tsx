@@ -18,7 +18,6 @@ import {
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
-import { getCEFRBadgeClass } from '@/lib/cefrColors';
 
 interface Feature {
   icon: ReactNode;
@@ -114,7 +113,7 @@ const Features = () => {
     /* h-[360px]: fixed height ensures uniform card sizing across the 3-column grid */
     <div
       aria-hidden="true"
-      className="flex h-[360px] w-full flex-col rounded-2xl border border-line-2 bg-landing-navy/5 p-5 shadow-landing-card transition-shadow duration-300 hover:shadow-landing-card-hover"
+      className="flex h-[360px] w-full flex-col rounded-2xl border border-line-2 bg-card p-5 shadow-landing-card transition-shadow duration-300 hover:shadow-landing-card-hover"
     >
       {children}
     </div>
@@ -135,13 +134,13 @@ const Features = () => {
         <p className="text-sm text-muted-foreground">{t('features.mockups.tapToReveal')}</p>
       </div>
       <div className="my-3 flex flex-wrap gap-2">
-        <span className="rounded bg-secondary px-2 py-1 text-xs text-secondary-foreground">
+        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${MOCKUP_BADGE}`}>
           {t('features.mockups.taxAuthority')}
         </span>
-        <span className={`badge ${getCEFRBadgeClass('A2')}`}>A2</span>
+        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${MOCKUP_BADGE}`}>A2</span>
       </div>
       <div className="mt-auto flex gap-3">
-        <Button variant="secondary" tabIndex={-1} className="h-11 flex-1 rounded-lg font-semibold">
+        <Button variant="outline" tabIndex={-1} className="h-11 flex-1 rounded-lg font-semibold">
           {t('features.mockups.again')}
         </Button>
         <Button tabIndex={-1} className="h-11 flex-1 rounded-lg font-semibold">
@@ -268,7 +267,7 @@ const Features = () => {
         <span className={`rounded-full px-3 py-1 text-xs font-semibold ${MOCKUP_BADGE}`}>
           Ellinomatheia
         </span>
-        <span className={`badge ${getCEFRBadgeClass('B1')}`}>B1</span>
+        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${MOCKUP_BADGE}`}>B1</span>
       </div>
       {/* Section label + timer */}
       <div className="mb-2 flex items-center justify-between">
@@ -328,7 +327,7 @@ const Features = () => {
       {/* Story title + level */}
       <div className="mb-2 flex items-center justify-between">
         <p className="text-base font-bold text-foreground">Στο Ταχυδρομείο</p>
-        <span className={`badge ${getCEFRBadgeClass('B1')}`}>B1</span>
+        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${MOCKUP_BADGE}`}>B1</span>
       </div>
       {/* Story excerpt */}
       <div className="mb-2 rounded-xl bg-secondary/50 p-3">
@@ -401,13 +400,13 @@ const Features = () => {
         <p className="text-sm text-muted-foreground">{t('features.mockups.tapToReveal')}</p>
       </div>
       <div className="my-3 flex flex-wrap gap-2">
-        <span className="rounded bg-secondary px-2 py-1 text-xs text-secondary-foreground">
+        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${MOCKUP_BADGE}`}>
           {t('features.mockups.greetings')}
         </span>
-        <span className={`badge ${getCEFRBadgeClass('A1')}`}>A1</span>
+        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${MOCKUP_BADGE}`}>A1</span>
       </div>
       <div className="mt-auto flex gap-3">
-        <Button variant="secondary" tabIndex={-1} className="h-11 flex-1 rounded-lg font-semibold">
+        <Button variant="outline" tabIndex={-1} className="h-11 flex-1 rounded-lg font-semibold">
           {t('features.mockups.again')}
         </Button>
         <Button tabIndex={-1} className="h-11 flex-1 rounded-lg font-semibold">
