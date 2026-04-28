@@ -47,16 +47,19 @@ const FAQ = () => {
         </div>
 
         {/* FAQ Accordion */}
-        <div className="motion-safe:animate-fade-up" style={{ animationDelay: '0.3s' }}>
+        <div
+          className="mx-auto max-w-3xl motion-safe:animate-fade-up"
+          style={{ animationDelay: '0.3s' }}
+        >
           <Accordion type="single" collapsible className="space-y-4">
             {faqKeys.map((key, index) => (
               <AccordionItem
                 key={index}
                 value={`item-${index}`}
-                className="rounded-xl border border-[hsl(var(--landing-greek-blue-light))]/15 bg-[hsl(var(--landing-navy))]/5 px-6 transition-shadow data-[state=open]:shadow-md dark:border-[hsl(var(--landing-navy))]/25"
+                className="rounded-2xl border border-line-2 bg-card px-6 shadow-landing-card transition-shadow data-[state=open]:shadow-landing-card-hover"
                 data-testid="faq-item"
               >
-                <AccordionTrigger className="py-5 text-left font-semibold text-[hsl(var(--landing-greek-blue-light))] hover:no-underline">
+                <AccordionTrigger className="py-5 text-left font-semibold text-[hsl(var(--landing-greek-blue-light))] hover:no-underline [&>svg]:opacity-60">
                   {t(`faq.items.${key}.question`)}
                 </AccordionTrigger>
                 <AccordionContent className="pb-5 leading-relaxed text-[hsl(var(--landing-greek-blue-light))]/80">
