@@ -13,7 +13,7 @@
  * 6. ExampleSentences - Single and multiple examples
  * 7. Mobile responsive layouts
  *
- * Note: Grammar components are rendered inside FlashcardContainer during review.
+ * Note: Grammar components are rendered inside the flashcard review view.
  * Tests mock the review API to display specific card types.
  */
 

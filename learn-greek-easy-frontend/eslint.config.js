@@ -27,6 +27,7 @@ export default [
       'node_modules/**',
       'tests/**',
       'src/**/__tests__/**',
+      'src/lib/test-setup.ts', // Vitest setup file — excluded from tsconfig.app.json
       'scripts/**', // Node.js scripts - not browser code
       'lighthouserc*.cjs', // Lighthouse CI configs - Node.js
       '*.config.js',

@@ -91,7 +91,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     // Check if user has a preferred_language in settings (from backend)
     // Note: This will be populated after I18N-04 backend implementation
-    const userPreferredLang = (user as Record<string, unknown>).settings as
+    const userPreferredLang = (user as unknown as Record<string, unknown>).settings as
       | { preferred_language?: SupportedLanguage }
       | undefined;
 

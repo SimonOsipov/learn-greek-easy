@@ -592,7 +592,7 @@ export interface DuplicateCheckMatchedDeck {
 
 export interface DuplicateCheckStageResult {
   is_duplicate: boolean;
-  word_entry_id: string | null;
+  existing_entry: WordEntrySnapshot | null;
   matched_decks: DuplicateCheckMatchedDeck[];
 }
 

@@ -287,6 +287,31 @@ describe('versionCheck', () => {
     });
   });
 
+  describe('Bug fix: typeof caches !== "undefined" guard (TSCI-01-12)', () => {
+    // Regression tests for the fix in versionCheck.ts that replaced
+    // `'caches' in window` (which narrowed window to never in TS 5.9 else branch)
+    // with `typeof caches !== 'undefined'`, which works at runtime in browsers
+    // without service-worker support (private mode, older browsers).
+
+    it('triggerVersionRefresh does not throw when caches global is undefined', () => {
+      vi.stubGlobal('caches', undefined);
+
+      expect(() => triggerVersionRefresh()).not.toThrow();
+
+      vi.unstubAllGlobals();
+    });
+
+    it('triggerVersionRefresh calls window.location.reload when caches is undefined', () => {
+      vi.stubGlobal('caches', undefined);
+
+      triggerVersionRefresh();
+
+      expect(mockReload).toHaveBeenCalledTimes(1);
+
+      vi.unstubAllGlobals();
+    });
+  });
+
   describe('Integration scenarios', () => {
     beforeEach(() => {
       vi.useFakeTimers();

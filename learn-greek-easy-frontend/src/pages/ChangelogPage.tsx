@@ -2,7 +2,7 @@
  * User-facing changelog page showing app updates and announcements.
  */
 
-import React, { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 import { Flag, History, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';

@@ -208,7 +208,10 @@ export async function initSentryAsync(): Promise<void> {
           },
         });
       } else if (item.type === 'message') {
-        Sentry.captureMessage(item.data as string, item.level);
+        Sentry.captureMessage(
+          item.data as string,
+          item.level as SentryType.SeverityLevel | undefined
+        );
       } else if (item.type === 'breadcrumb') {
         const breadcrumb = item.data as {
           category: string;

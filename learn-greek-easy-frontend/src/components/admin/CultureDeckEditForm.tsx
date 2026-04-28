@@ -199,7 +199,7 @@ export const CultureDeckEditForm: React.FC<CultureDeckEditFormProps> = ({
     mode: 'onChange',
     defaultValues: {
       name_en:
-        ((deck as Record<string, unknown>).name_en as string) ||
+        deck.name_en ||
         (typeof deck.name === 'object' && deck.name !== null
           ? deck.name.en
           : typeof deck.name === 'string'
@@ -207,11 +207,11 @@ export const CultureDeckEditForm: React.FC<CultureDeckEditFormProps> = ({
             : '') ||
         '',
       name_ru:
-        ((deck as Record<string, unknown>).name_ru as string) ||
+        deck.name_ru ||
         (typeof deck.name === 'object' && deck.name !== null ? deck.name.ru : '') ||
         '',
-      description_en: ((deck as Record<string, unknown>).description_en as string) || '',
-      description_ru: ((deck as Record<string, unknown>).description_ru as string) || '',
+      description_en: deck.description_en || '',
+      description_ru: deck.description_ru || '',
       category: (deck.category as CultureCategory) || 'culture',
       is_active: deck.is_active,
       is_premium: deck.is_premium ?? false,

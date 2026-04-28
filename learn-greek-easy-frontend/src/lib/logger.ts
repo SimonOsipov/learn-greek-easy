@@ -48,7 +48,7 @@ log.methodFactory = function (
   logLevel: log.LogLevelNumbers,
   loggerName: string | symbol
 ) {
-  const rawMethod = originalFactory(methodName, logLevel, loggerName);
+  const rawMethod = originalFactory(methodName as log.LogLevelNames, logLevel, loggerName);
 
   return function (...args: unknown[]) {
     const timestamp = new Date().toISOString();

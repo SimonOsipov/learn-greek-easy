@@ -4,7 +4,7 @@
  * Validates news item JSON input for the admin interface.
  */
 
-import type { NewsItemCreate } from '@/services/adminAPI';
+import type { NewsCountry, NewsItemCreate } from '@/services/adminAPI';
 
 /** JSON placeholder template for textarea */
 export const JSON_PLACEHOLDER = `{
@@ -139,8 +139,9 @@ export function validateNewsItemJson(jsonString: string): ValidationResult {
   }
 
   // Validate country
-  const VALID_COUNTRIES = ['cyprus', 'greece', 'world'];
-  if (!VALID_COUNTRIES.includes(parsed.country as string)) {
+  const VALID_COUNTRIES: NewsCountry[] = ['cyprus', 'greece', 'world'];
+  const countryValue = parsed.country;
+  if (typeof countryValue !== 'string' || !VALID_COUNTRIES.includes(countryValue as NewsCountry)) {
     return {
       valid: false,
       error: {
@@ -149,6 +150,7 @@ export function validateNewsItemJson(jsonString: string): ValidationResult {
       },
     };
   }
+  const country = countryValue as NewsCountry;
 
   // Validate A2 fields pairing
   const scenarioA2 =
@@ -172,7 +174,7 @@ export function validateNewsItemJson(jsonString: string): ValidationResult {
 
   // Build the data object
   const data: NewsItemCreate = {
-    country: parsed.country as string,
+    country,
     scenario_el: parsed.scenario_el as string,
     scenario_en: parsed.scenario_en as string,
     scenario_ru: parsed.scenario_ru as string,

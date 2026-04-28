@@ -1,5 +1,3 @@
-import React from 'react';
-
 import { computeChipsFromCard, chipColorClasses } from '@/lib/completeness';
 import type { ChipData } from '@/lib/completeness';
 import type { AdminVocabularyCard } from '@/services/adminAPI';

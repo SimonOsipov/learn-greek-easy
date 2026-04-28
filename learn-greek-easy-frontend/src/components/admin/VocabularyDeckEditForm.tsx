@@ -292,6 +292,7 @@ export const VocabularyDeckEditForm: React.FC<VocabularyDeckEditFormProps> = ({
                             placeholder={t('deckEdit.namePlaceholder')}
                             data-testid={`deck-edit-name-${lang}`}
                             {...field}
+                            value={field.value as string}
                           />
                         </FormControl>
                         <FormMessage />
@@ -313,6 +314,7 @@ export const VocabularyDeckEditForm: React.FC<VocabularyDeckEditFormProps> = ({
                             className="min-h-[100px]"
                             data-testid={`deck-edit-description-${lang}`}
                             {...field}
+                            value={field.value as string}
                           />
                         </FormControl>
                         <FormMessage />

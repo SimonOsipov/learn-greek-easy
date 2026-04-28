@@ -48,7 +48,7 @@ export function PricingCard({
       {isCurrentPlan && (
         <div className="absolute -top-3 left-1/2 -translate-x-1/2">
           <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
-            {t('subscription.labels.currentPlan', 'Current Plan')}
+            {t('subscription.labels.currentPlan')}
           </span>
         </div>
       )}

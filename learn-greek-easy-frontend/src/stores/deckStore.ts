@@ -541,7 +541,7 @@ export const useDeckStore = create<DeckState>()(
  * using cached culture decks and progress data.
  */
 async function _refetchVocabOnly(
-  get: () => DeckState,
+  _get: () => DeckState,
   set: (state: Partial<DeckState>) => void,
   filters: DeckStoreFilters
 ): Promise<void> {

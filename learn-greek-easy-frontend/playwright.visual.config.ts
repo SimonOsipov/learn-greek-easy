@@ -31,10 +31,7 @@ export default defineConfig({
   workers: process.env.CI ? 2 : undefined,
 
   // Reporter configuration
-  reporter: [
-    ['list'],
-    ['html', { outputFolder: 'visual-report' }],
-  ],
+  reporter: [['list'], ['html', { outputFolder: 'visual-report' }]],
 
   // Output directory for Chromatic archives
   // Chromatic looks for test-results/ to find snapshots
@@ -45,10 +42,6 @@ export default defineConfig({
     // Base URL: use deployed environment URL
     // In CI, this will be the Railway preview URL
     baseURL: process.env.VISUAL_TEST_URL || 'http://localhost:5173',
-
-    // Disable Chromatic's automatic end-of-test snapshots
-    // We use manual takeSnapshot() calls with explicit names instead
-    disableAutoSnapshot: true,
 
     // Collect trace on first retry for debugging
     trace: 'on-first-retry',

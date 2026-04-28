@@ -264,13 +264,13 @@ export function WordReferencePage() {
 
     switch (partOfSpeech) {
       case 'verb':
-        return <ConjugationTable grammarData={grammarData as VerbData} />;
+        return <ConjugationTable grammarData={grammarData as unknown as VerbData} />;
       case 'noun':
-        return <NounDeclensionTable grammarData={grammarData as NounDataAny} />;
+        return <NounDeclensionTable grammarData={grammarData as unknown as NounDataAny} />;
       case 'adjective':
-        return <AdjectiveDeclensionTable grammarData={grammarData as AdjectiveData} />;
+        return <AdjectiveDeclensionTable grammarData={grammarData as unknown as AdjectiveData} />;
       case 'adverb':
-        return <AdverbFormsCard grammarData={grammarData as AdverbData} />;
+        return <AdverbFormsCard grammarData={grammarData as unknown as AdverbData} />;
       default:
         return null;
     }

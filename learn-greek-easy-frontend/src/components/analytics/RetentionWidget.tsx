@@ -111,7 +111,7 @@ export const RetentionWidget: React.FC<RetentionWidgetProps> = ({ isLoading: pro
     );
   }
 
-  const retentionRate = calculateRetentionRate(data);
+  const retentionRate = calculateRetentionRate(data ?? null);
   const hasData = retentionRate !== null && retentionRate !== undefined;
   const displayValue = hasData ? `${Math.round(retentionRate)}%` : 'N/A';
 
