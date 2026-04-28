@@ -41,16 +41,13 @@ jobs:
         working-directory: learn-greek-easy-frontend
         run: npm run format:check
 
-  # Job 1b: Frontend tsc -b (project references) — ALLOW-FAIL until TSCI-01-11
-  # Runs `tsc -b` against the full project-references graph. The codebase has
-  # ~82 errors today; gating immediately would block all unrelated PRs until
-  # TSCI-01-11 ships. We surface the count in the step summary so reviewers can
-  # watch it trend down PR-by-PR as TSCI-01-03 through TSCI-01-09 land.
-  # TSCI-01-10 will remove `continue-on-error` and add this to required checks.
+  # Job 1b: Frontend tsc -b (project references) — REQUIRED gate (TSCI-01-10)
+  # Runs `tsc -b` against the full project-references graph. All TS errors were
+  # resolved in TSCI-01-11/12/13; this job is now a required status check.
+  # There is no skip mechanic — TS errors must be 0 to merge.
   tsc-build:
-    name: Frontend tsc -b (allow-fail)
+    name: Frontend tsc -b
     runs-on: ubuntu-latest
-    continue-on-error: true
     env:
       VITE_ENVIRONMENT: test
       ENVIRONMENT: test
@@ -81,9 +78,8 @@ jobs:
           echo "- Exit code: \`$TSC_EXIT\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- Error count: **$ERROR_COUNT**" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "_Allow-fail until TSCI-01-11 (cleanup) lands._" >> "$GITHUB_STEP_SUMMARY"
-          # Exit with tsc's actual code so the step shows red when there are errors,
-          # but `continue-on-error: true` on the job keeps the workflow green.
+          echo "_Required gate: 0 errors to pass._" >> "$GITHUB_STEP_SUMMARY"
+          # Exit with tsc's actual code — job is required, non-zero blocks merge.
           exit $TSC_EXIT
 
   # Job 2: Backend Lint & Format

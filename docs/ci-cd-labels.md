@@ -2,6 +2,16 @@
 
 Use labels on Pull Requests to control which CI/CD tests run. Adding or removing a label re-triggers the workflow.
 
+## Required Status Checks
+
+The following checks are required on `main` and must pass before merging:
+
+| Check name | Workflow | Skip mechanic |
+|------------|----------|---------------|
+| `Frontend tsc -b` | `test.yml` (`tsc-build` job) | None — TS errors must be 0 to merge |
+
+Add `Frontend tsc -b` under **Settings → Branches → Branch protection rules → Require status checks** in GitHub to enforce this gate.
+
 ## Available Labels
 
 | Label | Effect |

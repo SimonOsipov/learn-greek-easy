@@ -49,16 +49,15 @@ jobs:
           fi
 
   # =============================================================================
-  # JOB 1b: Frontend tsc -b on main — ALLOW-FAIL until TSCI-01-11
-  # Mirrors the `tsc-build` job in test.yml so we get the error-count signal
-  # on every push to main, not just on PRs. Not wired into any downstream
-  # `needs:` — production deploy is independent of this job's result.
-  # TSCI-01-10 will remove `continue-on-error` and gate deploys on it.
+  # JOB 1b: Frontend tsc -b on main — REQUIRED gate (TSCI-01-10)
+  # Mirrors the `tsc-build` job in test.yml. Runs on every push to main.
+  # Not wired into downstream `needs:` — production deploy is independent of
+  # this job's result in the DAG, but branch protection requires it to pass.
+  # There is no skip mechanic — TS errors must be 0 to merge to main.
   # =============================================================================
   tsc-build:
-    name: Frontend tsc -b (allow-fail)
+    name: Frontend tsc -b
     runs-on: ubuntu-latest
-    continue-on-error: true
     env:
       VITE_ENVIRONMENT: test
       ENVIRONMENT: test
@@ -89,7 +88,7 @@ jobs:
           echo "- Exit code: \`$TSC_EXIT\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- Error count: **$ERROR_COUNT**" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "_Allow-fail until TSCI-01-11 (cleanup) lands._" >> "$GITHUB_STEP_SUMMARY"
+          echo "_Required gate: 0 errors to pass._" >> "$GITHUB_STEP_SUMMARY"
           exit $TSC_EXIT
 
   # =============================================================================
