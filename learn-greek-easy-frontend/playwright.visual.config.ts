@@ -31,10 +31,7 @@ export default defineConfig({
   workers: process.env.CI ? 2 : undefined,
 
   // Reporter configuration
-  reporter: [
-    ['list'],
-    ['html', { outputFolder: 'visual-report' }],
-  ],
+  reporter: [['list'], ['html', { outputFolder: 'visual-report' }]],
 
   // Output directory for Chromatic archives
   // Chromatic looks for test-results/ to find snapshots
