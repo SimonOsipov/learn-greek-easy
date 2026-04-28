@@ -173,7 +173,9 @@ export const QuestionBrowser: React.FC<QuestionBrowserProps> = ({
       const lowerQuery = searchQuery.toLowerCase().trim();
       result = result.filter((q) => {
         const text =
-          (q.question_text as Record<string, string>)[questionLanguage] || q.question_text.en || '';
+          (q.question_text as unknown as Record<string, string>)[questionLanguage] ||
+          q.question_text.en ||
+          '';
         return text.toLowerCase().includes(lowerQuery);
       });
     }

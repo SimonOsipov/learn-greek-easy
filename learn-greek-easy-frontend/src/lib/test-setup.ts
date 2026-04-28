@@ -242,7 +242,7 @@ beforeAll(() => {
     }
     // Pass through other errors to original handler
     if (originalHandler) {
-      originalHandler.call(globalThis, event);
+      originalHandler.call(window, event);
     }
   };
   // Mock window.matchMedia (for responsive hooks)

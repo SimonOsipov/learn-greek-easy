@@ -163,13 +163,13 @@ export const SituationDetailPage: React.FC = () => {
   }, [situation]);
 
   // B1 description audio container ref
-  const [descB1ContainerEl, setDescB1ContainerEl] = useState<HTMLDivElement | null>(null);
+  const [descB1ContainerEl, setDescB1ContainerEl] = useState<HTMLElement | null>(null);
   const descB1Enabled =
     !!situation?.description?.audio_url && !!situation?.description?.word_timestamps?.length;
   const descB1TimeMs = useAudioTimeMs(descB1ContainerEl, descB1Enabled);
 
   // A2 description audio container ref
-  const [descA2ContainerEl, setDescA2ContainerEl] = useState<HTMLDivElement | null>(null);
+  const [descA2ContainerEl, setDescA2ContainerEl] = useState<HTMLElement | null>(null);
   const descA2Enabled =
     !!situation?.description?.audio_a2_url && !!situation?.description?.word_timestamps_a2?.length;
   const descA2TimeMs = useAudioTimeMs(descA2ContainerEl, descA2Enabled);

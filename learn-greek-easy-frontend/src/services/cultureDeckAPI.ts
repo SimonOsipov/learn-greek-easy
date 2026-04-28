@@ -8,7 +8,11 @@
  * - Getting culture deck details
  */
 
-import type { CultureQuestionBrowseResponse, CultureQuestionDetailResponse } from '@/types/culture';
+import type {
+  CultureCategory,
+  CultureQuestionBrowseResponse,
+  CultureQuestionDetailResponse,
+} from '@/types/culture';
 
 import { api } from './api';
 
@@ -46,7 +50,7 @@ export interface CultureDeckResponse {
   name_ru?: string;
   description_en?: string | null;
   description_ru?: string | null;
-  category: string; // "history", "geography", "politics", "culture", "traditions"
+  category: CultureCategory; // "history", "geography", "politics", "culture", "traditions"
   question_count: number;
   is_premium?: boolean;
   cover_image_url?: string | null;
@@ -88,6 +92,7 @@ export interface CultureQuestionQueueItem {
   option_count: number; // Number of answer options (2, 3, or 4)
   image_url: string | null;
   audio_url: string | null;
+  audio_a2_url: string | null;
   order_index: number;
   correct_option: number;
   is_new: boolean;
@@ -102,8 +107,8 @@ export interface CultureQuestionQueueItem {
  */
 export interface CultureQuestionQueue {
   deck_id: string;
-  deck_name: string;
-  category: string;
+  deck_name: LocalizedText;
+  category: CultureCategory;
   total_due: number;
   total_new: number;
   total_in_queue: number;

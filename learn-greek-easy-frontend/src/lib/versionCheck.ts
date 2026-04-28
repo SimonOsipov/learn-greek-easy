@@ -117,7 +117,7 @@ export function triggerVersionRefresh(): void {
   sessionStorage.setItem(LAST_REFRESH_KEY, Date.now().toString());
 
   // Clear service worker caches if available
-  if ('caches' in window) {
+  if (typeof caches !== 'undefined') {
     caches
       .keys()
       .then((names) => {

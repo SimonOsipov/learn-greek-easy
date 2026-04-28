@@ -122,10 +122,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     if (!isAuthenticated || !user) return;
 
-    const userSettings = (user as Record<string, unknown>).settings as
+    const userSettings = (user as unknown as Record<string, unknown>).settings as
       | { theme?: Theme }
       | undefined;
-    const userPreferences = (user as Record<string, unknown>).preferences as
+    const userPreferences = (user as unknown as Record<string, unknown>).preferences as
       | { theme?: Theme }
       | undefined;
 

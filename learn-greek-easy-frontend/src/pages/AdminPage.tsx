@@ -175,7 +175,14 @@ const UnifiedDeckListItem: React.FC<UnifiedDeckListItemProps> = ({
   onDelete,
   onViewDetail,
 }) => {
-  const displayName = getLocalizedDeckName(deck, locale);
+  const displayName = getLocalizedDeckName(
+    {
+      name_en: deck.name_en,
+      name_ru: deck.name_ru,
+      name: typeof deck.name === 'string' ? deck.name : undefined,
+    },
+    locale
+  );
   const itemCountKey = deck.type === 'culture' ? 'deck.questionCount' : 'deck.wordCount';
 
   const handleRowClick = (e: React.MouseEvent) => {

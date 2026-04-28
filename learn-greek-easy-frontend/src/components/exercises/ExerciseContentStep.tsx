@@ -30,7 +30,7 @@ export function ExerciseContentStep({
 }: ExerciseContentStepProps) {
   const { t } = useTranslation('common');
 
-  const [containerEl, setContainerEl] = useState<HTMLDivElement | null>(null);
+  const [containerEl, setContainerEl] = useState<HTMLElement | null>(null);
   const karaokeEnabled =
     modality === 'listening' && !!descriptionAudioUrl && !!wordTimestamps?.length;
   const currentTimeMs = useAudioTimeMs(containerEl, karaokeEnabled);

@@ -56,7 +56,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({
 
   const [resetKey, setResetKey] = useState(0);
   const [showError, setShowError] = useState(false);
-  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const stopFn = useCallback(() => {
     setResetKey((k) => k + 1);
   }, []);

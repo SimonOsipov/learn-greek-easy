@@ -52,7 +52,12 @@ export type AnalyticsEventName =
   // SSE analytics events
   | 'analytics_sse_connected'
   | 'analytics_sse_fallback_polling'
-  | 'analytics_sse_update_received';
+  | 'analytics_sse_update_received'
+  // News events
+  | 'news_level_toggled'
+  | 'news_source_link_clicked'
+  | 'news_audio_play_started'
+  | 'news_page_see_all_clicked';
 
 // Base properties included with all events
 interface BaseEventProperties {

@@ -386,6 +386,11 @@ export const MockExamSessionPage: React.FC = () => {
     option_count: currentQuestion.question.option_count,
     image_url: currentQuestion.question.image_url,
     order_index: currentQuestion.question.order_index,
+    audio_url: null,
+    audio_a2_url: null,
+    correct_option: 0, // Not used in mock exam display
+    original_article_url: null,
+    also_in_decks: [],
   };
 
   const progressPercent = (progress.current / progress.total) * 100;
