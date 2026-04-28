@@ -176,11 +176,7 @@ const UnifiedDeckListItem: React.FC<UnifiedDeckListItemProps> = ({
   onViewDetail,
 }) => {
   const displayName = getLocalizedDeckName(
-    {
-      name_en: deck.name_en,
-      name_ru: deck.name_ru,
-      name: typeof deck.name === 'string' ? deck.name : undefined,
-    },
+    { ...deck, name: typeof deck.name === 'string' ? deck.name : undefined },
     locale
   );
   const itemCountKey = deck.type === 'culture' ? 'deck.questionCount' : 'deck.wordCount';

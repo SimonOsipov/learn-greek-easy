@@ -125,7 +125,7 @@ export const StageDistributionChart = React.forwardRef<HTMLDivElement, StageDist
                 />
                 <span className="text-muted-foreground">
                   {String(entry.value)}
-                  {item ? ` (${Math.round(item.percent * 100)}%)` : ''}
+                  {item ? ` (${Math.round((Number(item.percent) || 0) * 100)}%)` : ''}
                 </span>
               </div>
             );
@@ -215,7 +215,7 @@ export const StageDistributionChart = React.forwardRef<HTMLDivElement, StageDist
                     formatter={(_value, name, item) => {
                       const pieItem = item.payload as PieDataItem;
                       return [
-                        `${pieItem.value} ${t('charts.stageDistribution.cardsUnit')} (${Math.round(pieItem.percent * 100)}%)`,
+                        `${pieItem.value} ${t('charts.stageDistribution.cardsUnit')} (${Math.round((Number(pieItem.percent) || 0) * 100)}%)`,
                         name,
                       ];
                     }}
