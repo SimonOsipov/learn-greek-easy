@@ -15,6 +15,8 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAnalytics } from '@/hooks/useAnalytics';
 
+import type { DefaultLegendContentProps, PieLabelRenderProps } from 'recharts';
+
 interface StageDistributionChartProps {
   height?: number;
   className?: string;
@@ -25,16 +27,6 @@ interface PieDataItem {
   value: number;
   percent: number;
   original: string;
-}
-
-interface LabelProps {
-  percent: number;
-}
-
-interface LegendPayloadItem {
-  value: string;
-  color?: string;
-  payload?: PieDataItem;
 }
 
 /**
@@ -116,24 +108,28 @@ export const StageDistributionChart = React.forwardRef<HTMLDivElement, StageDist
       relearning: 'var(--color-relearning)',
     };
 
-    const renderLabel = ({ percent }: LabelProps): string => `${Math.round((percent ?? 0) * 100)}%`;
+    const renderLabel = ({ percent }: PieLabelRenderProps): string =>
+      `${Math.round((Number(percent) || 0) * 100)}%`;
 
-    const renderLegend = ({ payload }: { payload?: LegendPayloadItem[] }) => {
+    const renderLegend = ({ payload }: DefaultLegendContentProps) => {
       if (!payload || payload.length === 0) return null;
       return (
         <div className="flex flex-wrap items-center justify-center gap-4 pt-3 text-xs">
-          {payload.map((entry, index) => (
-            <div key={`legend-${index}`} className="flex items-center gap-1.5">
-              <div
-                className="h-2 w-2 shrink-0 rounded-[2px]"
-                style={{ backgroundColor: entry.color }}
-              />
-              <span className="text-muted-foreground">
-                {entry.value}
-                {entry.payload ? ` (${Math.round(entry.payload.percent * 100)}%)` : ''}
-              </span>
-            </div>
-          ))}
+          {payload.map((entry, index) => {
+            const item = entry.payload as PieDataItem | undefined;
+            return (
+              <div key={`legend-${index}`} className="flex items-center gap-1.5">
+                <div
+                  className="h-2 w-2 shrink-0 rounded-[2px]"
+                  style={{ backgroundColor: entry.color }}
+                />
+                <span className="text-muted-foreground">
+                  {String(entry.value)}
+                  {item ? ` (${Math.round(item.percent * 100)}%)` : ''}
+                </span>
+              </div>
+            );
+          })}
         </div>
       );
     };
