@@ -53,7 +53,7 @@ const WaitlistForm = () => {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder={t('waitlistForm.emailPlaceholder')}
-          className="h-14 rounded-xl border-landing-header-fg/30 bg-landing-header-fg/10 text-landing-header-fg placeholder:text-landing-header-fg/60 focus:border-landing-header-fg"
+          className="h-14 rounded-xl border-landing-header-fg/40 bg-landing-header-bg/60 text-landing-header-fg backdrop-blur-sm placeholder:text-landing-header-fg/70 focus:border-landing-header-fg"
           disabled={isSubmitting}
           data-testid="waitlist-email-input"
         />
