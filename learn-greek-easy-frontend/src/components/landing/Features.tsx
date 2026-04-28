@@ -114,7 +114,7 @@ const Features = () => {
     /* h-[360px]: fixed height ensures uniform card sizing across the 3-column grid */
     <div
       aria-hidden="true"
-      className="flex h-[360px] w-full flex-col rounded-2xl border border-[hsl(var(--landing-navy))]/15 bg-[hsl(var(--landing-navy))]/5 p-5 shadow-landing-card transition-shadow duration-300 hover:shadow-landing-card-hover dark:border-[hsl(var(--landing-navy))]/25"
+      className="flex h-[360px] w-full flex-col rounded-2xl border border-line-2 bg-landing-navy/5 p-5 shadow-landing-card transition-shadow duration-300 hover:shadow-landing-card-hover"
     >
       {children}
     </div>
@@ -449,7 +449,7 @@ const Features = () => {
           <p className="text-sm font-medium text-foreground">του φίλου</p>
         </div>
       </div>
-      <Button tabIndex={-1} className="mt-auto h-11 w-full rounded-lg font-semibold">
+      <Button tabIndex={-1} className="mt-3 h-11 w-full rounded-lg font-semibold">
         {t('features.mockups.nextNoun')}
       </Button>
     </MockupWrapper>
@@ -487,7 +487,7 @@ const Features = () => {
           <p className="text-sm font-medium text-foreground">μιλάμε</p>
         </div>
       </div>
-      <Button tabIndex={-1} className="mt-auto h-11 w-full rounded-lg font-semibold">
+      <Button tabIndex={-1} className="mt-3 h-11 w-full rounded-lg font-semibold">
         {t('features.mockups.showPastTense')}
       </Button>
     </MockupWrapper>
@@ -519,7 +519,7 @@ const Features = () => {
           <span className="text-sm font-medium text-foreground">θα γράψω</span>
         </div>
       </div>
-      <Button tabIndex={-1} className="mt-auto h-11 w-full rounded-lg font-semibold">
+      <Button tabIndex={-1} className="mt-3 h-11 w-full rounded-lg font-semibold">
         {t('features.mockups.nextVerb')}
       </Button>
     </MockupWrapper>
@@ -606,7 +606,7 @@ const Features = () => {
           </div>
         </div>
       </div>
-      <Button tabIndex={-1} className="mt-auto h-11 w-full rounded-lg font-semibold">
+      <Button tabIndex={-1} className="mt-3 h-11 w-full rounded-lg font-semibold">
         {t('features.mockups.addNewCard')}
       </Button>
     </MockupWrapper>
