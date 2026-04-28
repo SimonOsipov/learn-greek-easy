@@ -13,7 +13,7 @@
 /**
  * Part of speech classification for vocabulary words.
  */
-export type PartOfSpeech = 'noun' | 'verb' | 'adjective' | 'adverb';
+export type PartOfSpeech = 'noun' | 'verb' | 'adjective' | 'adverb' | 'phrase';
 
 // ============================================================================
 // CEFR Levels

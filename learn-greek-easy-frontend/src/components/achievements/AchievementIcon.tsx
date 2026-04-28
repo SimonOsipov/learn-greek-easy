@@ -20,6 +20,7 @@ import {
   Timer,
   Trophy,
   Zap,
+  type LucideIcon,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -27,7 +28,7 @@ import { cn } from '@/lib/utils';
 /**
  * Map of backend icon identifiers to Lucide React icons
  */
-const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+const ICON_MAP: Record<string, LucideIcon> = {
   // Fire variants
   fire: Flame,
   fire_double: Flame,
@@ -119,7 +120,5 @@ export interface AchievementIconProps {
 export const AchievementIcon: React.FC<AchievementIconProps> = ({ icon, className, size = 24 }) => {
   const IconComponent = ICON_MAP[icon] || Award;
 
-  return (
-    <IconComponent className={cn('shrink-0', className)} style={{ width: size, height: size }} />
-  );
+  return <IconComponent className={cn('shrink-0', className)} size={size} />;
 };

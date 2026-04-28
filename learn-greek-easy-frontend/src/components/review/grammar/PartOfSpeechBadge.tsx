@@ -8,12 +8,13 @@ export interface PartOfSpeechBadgeProps {
   className?: string;
 }
 
-// Semantic color mapping: noun=amber, verb=green, adjective=violet, adverb=blue
+// Semantic color mapping: noun=amber, verb=green, adjective=violet, adverb=blue, phrase=gray
 const PART_OF_SPEECH_CONFIG: Record<PartOfSpeech, string> = {
   noun: 'b-amber',
   verb: 'b-green',
   adjective: 'b-violet',
   adverb: 'b-blue',
+  phrase: 'b-gray',
 };
 
 export function PartOfSpeechBadge({ partOfSpeech, className }: PartOfSpeechBadgeProps) {
