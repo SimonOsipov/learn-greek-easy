@@ -22,7 +22,7 @@ const Hero = () => {
           className="h-full w-full object-cover"
         />
         {/* Dark overlay for text readability */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[hsl(var(--landing-navy))]/80 via-[hsl(var(--landing-navy))]/60 to-[hsl(var(--landing-navy))]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[hsl(var(--landing-navy))]/85 via-[hsl(var(--landing-navy))]/80 to-[hsl(var(--landing-navy))]" />
       </div>
 
       {/* Content */}
