@@ -255,8 +255,8 @@ export function CultureCardForm({
 
       // If we're deleting C and D exists, shift D to C
       if (deletedKey === 'C' && answerCount === 4) {
-        const optionD = watchedValues.option_d;
-        setValue('option_c', optionD, { shouldDirty: true });
+        const optionD = watchedValues.option_d as FormData['option_c'];
+        setValue('option_c', optionD ?? null, { shouldDirty: true });
         setValue('option_d', null, { shouldDirty: true });
 
         // Adjust correct option if needed

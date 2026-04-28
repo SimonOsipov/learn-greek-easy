@@ -170,6 +170,7 @@ export const CultureDeckCreateForm: React.FC<CultureDeckCreateFormProps> = ({
                         placeholder={t('deckCreate.namePlaceholder')}
                         data-testid={`deck-create-name-${lang}`}
                         {...field}
+                        value={field.value as string}
                       />
                     </FormControl>
                     <FormMessage />
@@ -191,6 +192,7 @@ export const CultureDeckCreateForm: React.FC<CultureDeckCreateFormProps> = ({
                         className="min-h-[100px]"
                         data-testid={`deck-create-description-${lang}`}
                         {...field}
+                        value={field.value as string}
                       />
                     </FormControl>
                     <FormMessage />

@@ -658,7 +658,7 @@ export const GenerateNounDialog: React.FC<GenerateNounDialogProps> = ({
                       duplicateCheck={displayDuplicate}
                       currentDeckId={deckId}
                       onLinkToDeck={() => {
-                        const wordEntryId = displayDuplicate.word_entry_id;
+                        const wordEntryId = displayDuplicate.existing_entry?.id;
                         if (wordEntryId) {
                           linkMutation.mutate({ wordEntryId });
                         }
