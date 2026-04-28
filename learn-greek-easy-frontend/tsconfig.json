@@ -1,4 +1,10 @@
 {
+  // Solution file — `tsc -b` from this directory walks all referenced projects.
+  // - tsconfig.app.json: production sources under src/ (no test files)
+  // - tsconfig.test.json: vitest unit tests (src/**/*.test.*) + playwright (tests/**)
+  // - tsconfig.node.json: vite/vitest/playwright config files
+  // The `type-check` npm script and the pre-commit `frontend-typecheck` hook
+  // must invoke `tsc -b` so they cover the SAME files as `npm run build`.
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
@@ -8,6 +14,7 @@
   "files": [],
   "references": [
     { "path": "./tsconfig.app.json" },
+    { "path": "./tsconfig.test.json" },
     { "path": "./tsconfig.node.json" }
   ]
 }
