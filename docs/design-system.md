@@ -139,7 +139,7 @@ Tailwind namespace: `tense-{1..6}`. For `MediaBadge` solid badges: `bg-tense-N t
 
 Warmer / editorial. Don't mix with the glassy app palette.
 
-Forms and CTAs placed on top of the dark hero / final-CTA photography use the **theme-invariant** `landing-header-*` tokens (glass input: `bg-landing-header-fg/10` with `placeholder:text-landing-header-fg/60`; primary CTA: the `landing-primary` button variant). Do not use the app `--background` / `--primary` defaults there — those flip with theme and produce a stark white panel in light mode over the dark photo.
+Forms and CTAs placed on top of the dark hero / final-CTA photography use the **theme-invariant** `landing-header-*` tokens (glass input: `bg-landing-header-fg/15` with `placeholder:text-landing-header-fg/80`; primary CTA: the `landing-primary` button variant). Do not use the app `--background` / `--primary` defaults there — those flip with theme and produce a stark white panel in light mode over the dark photo.
 
 | Token | Light | Dark |
 |---|---|---|
