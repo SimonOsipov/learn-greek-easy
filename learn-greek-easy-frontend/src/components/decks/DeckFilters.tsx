@@ -118,7 +118,7 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
             placeholder={t('filters.searchPlaceholder')}
             value={searchInput}
             onChange={handleSearchChange}
-            className="pl-10 pr-10"
+            className="bg-card pl-10 pr-10"
             aria-label={t('filters.searchPlaceholder')}
           />
           {searchInput.length > 0 && (
@@ -152,15 +152,15 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
             )}
           </Button>
         )}
-        {!isMobile && (
+        {!isMobile && filteredDecks !== totalDecks && (
           <span className="shrink-0 whitespace-nowrap text-sm text-muted-foreground">
             {t('filters.showing', { count: filteredDecks, total: totalDecks })}
           </span>
         )}
       </div>
 
-      {/* Row 2: Counter on mobile (below search) */}
-      {isMobile && (
+      {/* Row 2: Counter on mobile (below search), only when filtered */}
+      {isMobile && filteredDecks !== totalDecks && (
         <span className="block text-sm text-muted-foreground">
           {t('filters.showing', { count: filteredDecks, total: totalDecks })}
         </span>
@@ -175,7 +175,7 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
               variant={deckType === optValue ? 'default' : 'outline'}
               size="sm"
               onClick={() => handleTypeChange(optValue)}
-              className="gap-1.5"
+              className="gap-1.5 rounded-full"
               aria-pressed={deckType === optValue}
             >
               <Icon className="h-4 w-4" />
@@ -183,21 +183,18 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
             </Button>
           ))}
           <div className="h-6 w-px bg-border" aria-hidden="true" />
-          {CEFR_LEVEL_OPTIONS.map(({ value, badgeClass }) => (
+          {CEFR_LEVEL_OPTIONS.map(({ value }) => (
             <Button
               key={value}
               variant={filters.levels.includes(value) ? 'default' : 'outline'}
               size="sm"
               onClick={() => handleLevelToggle(value)}
               disabled={isLevelFilterDisabled}
+              className="rounded-full"
               aria-pressed={filters.levels.includes(value)}
               title={isLevelFilterDisabled ? t('filters.levelDisabledForCulture') : undefined}
             >
-              {filters.levels.includes(value) ? (
-                <span className={`badge ${badgeClass}`}>{value}</span>
-              ) : (
-                value
-              )}
+              {value}
             </Button>
           ))}
           <div className="h-6 w-px bg-border" aria-hidden="true" />
@@ -207,6 +204,7 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
               variant={filters.status.includes(value) ? 'default' : 'outline'}
               size="sm"
               onClick={() => handleStatusToggle(value)}
+              className="rounded-full"
               aria-pressed={filters.status.includes(value)}
             >
               {t(labelKey)}

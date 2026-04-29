@@ -170,15 +170,17 @@ export const DeckCard: React.FC<DeckCardProps> = ({
         className={`relative z-20 flex flex-wrap items-center gap-2 px-6 pb-4 ${isLocked ? 'blur-sm' : ''}`}
         data-testid="deck-card-badges"
       >
-        {isCultureDeck && <CultureBadge category={cultureCategory} showLabel={true} />}
-
-        {!isCultureDeck && category !== 'culture' && (
-          <DeckBadge type="category" category={category} />
+        {isCultureDeck && (
+          <CultureBadge category={cultureCategory} showLabel={true} className="on-photo" />
         )}
 
-        {!isCultureDeck && <DeckBadge type="level" level={level} />}
+        {!isCultureDeck && category !== 'culture' && (
+          <DeckBadge type="category" category={category} className="on-photo" />
+        )}
 
-        {isPremium && <span className="badge b-violet">{t('card.premium')}</span>}
+        {!isCultureDeck && <DeckBadge type="level" level={level} className="on-photo" />}
+
+        {isPremium && <span className="badge b-violet on-photo">{t('card.premium')}</span>}
       </div>
 
       {/* Locked state overlay - indicates premium content */}

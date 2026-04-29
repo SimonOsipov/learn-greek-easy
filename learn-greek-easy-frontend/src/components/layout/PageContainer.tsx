@@ -8,5 +8,5 @@ interface PageContainerProps {
 }
 
 export const PageContainer: React.FC<PageContainerProps> = ({ children, className }) => {
-  return <div className={cn('mx-auto w-full max-w-[1440px] px-4', className)}>{children}</div>;
+  return <div className={cn('mx-auto w-full max-w-screen-2xl px-4', className)}>{children}</div>;
 };
