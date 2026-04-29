@@ -25,9 +25,12 @@ export const WelcomeSection = React.memo<WelcomeSectionProps>(
     return (
       <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="mb-2 text-xl font-semibold text-foreground md:text-2xl">
+          <h1
+            className="mb-2 text-2xl font-semibold text-foreground md:text-3xl"
+            data-testid="dashboard-title"
+          >
             {t('welcome.greeting', { name: userName })} 👋
-          </h2>
+          </h1>
           <p className="text-muted-foreground">
             <Trans
               i18nKey="welcome.cardsToReview"

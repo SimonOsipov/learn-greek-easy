@@ -55,7 +55,7 @@ export const DeckCard = React.memo<DeckCardProps>(({ deck, onContinue }) => {
       <CardContent className="space-y-4">
         {/* Action Button */}
         <Button
-          variant="outline"
+          variant="secondary"
           className="px-6 transition-colors group-hover:bg-primary group-hover:text-primary-foreground"
           onClick={onContinue}
         >

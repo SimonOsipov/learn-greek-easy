@@ -169,21 +169,19 @@ export const NewsCard: React.FC<NewsCardProps> = ({
           style={{ backgroundImage: article.image_url ? `url(${article.image_url})` : undefined }}
         />
 
-        {/* Semi-transparent Overlay */}
-        {/* image-overlay gradient — black opacity is correct over a photo; not a tokenizable surface. */}
+        {/* Photo overlay gradient — uses theme-invariant landing-header-bg per design doc. */}
         <div
           className={cn(
             'absolute inset-0 bg-gradient-to-t',
             variant === 'compact'
-              ? 'from-black/90 via-black/60 to-black/30'
-              : 'from-black/80 via-black/50 to-black/30'
+              ? 'from-landing-header-bg/90 via-landing-header-bg/60 to-landing-header-bg/30'
+              : 'from-landing-header-bg/80 via-landing-header-bg/50 to-landing-header-bg/30'
           )}
         />
 
         {/* Country Flag Pill */}
-        {/* bg-black/60 text-white: sits over a photo — not a tokenizable surface. */}
         {article.country && COUNTRY_CONFIG[article.country as NewsCountry] && (
-          <span className="absolute left-2 top-2 z-10 rounded-full bg-black/60 px-2 py-0.5 text-xs text-white">
+          <span className="absolute left-2 top-2 z-10 rounded-full bg-landing-header-bg/60 px-2 py-0.5 text-xs text-landing-header-fg">
             {COUNTRY_CONFIG[article.country as NewsCountry].flag}{' '}
             {t(COUNTRY_CONFIG[article.country as NewsCountry].labelKey)}
           </span>
@@ -196,27 +194,26 @@ export const NewsCard: React.FC<NewsCardProps> = ({
             hasAudio && (variant === 'compact' ? 'pb-20' : 'pb-16')
           )}
         >
-          {/* text-white: Greek study text over photo overlay — white is correct here. */}
           <h3
             className={cn(
-              'line-clamp-2 font-serif font-semibold text-white',
+              'line-clamp-2 font-serif font-semibold text-landing-header-fg',
               variant === 'compact' ? 'text-sm' : 'mb-1 text-lg'
             )}
           >
             {title}
           </h3>
           {variant !== 'compact' && (
-            /* text-white/80: soft white over hero image — not tokenizable. */
-            <p className="line-clamp-2 font-serif text-sm text-white/80">{description}</p>
+            <p className="line-clamp-2 font-serif text-sm text-landing-header-fg/80">
+              {description}
+            </p>
           )}
-          <ExternalLink className="absolute right-3 top-3 h-4 w-4 text-white/70 group-hover:text-white" />
+          <ExternalLink className="absolute right-3 top-3 h-4 w-4 text-landing-header-fg/70 group-hover:text-landing-header-fg" />
         </div>
       </a>
 
-      {/* Audio player overlay */}
-      {/* from-black/90 via-black/60: audio chrome sits over a photo — black overlay is correct here. */}
+      {/* Audio player overlay — landing-header-bg is theme-invariant for photo overlays. */}
       {hasAudio && (
-        <div className="absolute bottom-0 left-0 right-0 z-20 flex flex-col gap-2 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-3 pt-8 sm:flex-row sm:items-stretch">
+        <div className="absolute bottom-0 left-0 right-0 z-20 flex flex-col gap-2 bg-gradient-to-t from-landing-header-bg/90 via-landing-header-bg/60 to-transparent p-3 pt-8 sm:flex-row sm:items-stretch">
           <div
             className={cn(
               'relative min-w-0 flex-1 transition-opacity duration-300',

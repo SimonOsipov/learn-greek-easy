@@ -37,7 +37,7 @@ export function NewsFilters({
           variant={countryFilter === 'all' ? 'default' : 'outline'}
           size="sm"
           onClick={() => onCountryChange('all')}
-          className="gap-1.5"
+          className="gap-1.5 rounded-full"
           aria-pressed={countryFilter === 'all'}
         >
           {t('news.country.all')}
@@ -53,7 +53,7 @@ export function NewsFilters({
             variant={countryFilter === country ? 'default' : 'outline'}
             size="sm"
             onClick={() => onCountryChange(country)}
-            className="gap-1.5"
+            className="gap-1.5 rounded-full"
             aria-pressed={countryFilter === country}
           >
             {COUNTRY_CONFIG[country].flag} {t(COUNTRY_CONFIG[country].labelKey)}
@@ -78,6 +78,7 @@ export function NewsFilters({
           variant={newsLevel === 'a2' ? 'default' : 'outline'}
           size="sm"
           onClick={() => onLevelChange('a2')}
+          className="rounded-full"
           aria-pressed={newsLevel === 'a2'}
         >
           {t('news.level.a2')}
@@ -86,6 +87,7 @@ export function NewsFilters({
           variant={newsLevel === 'b2' ? 'default' : 'outline'}
           size="sm"
           onClick={() => onLevelChange('b2')}
+          className="rounded-full"
           aria-pressed={newsLevel === 'b2'}
         >
           {t('news.level.b2')}

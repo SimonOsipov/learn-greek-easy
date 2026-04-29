@@ -356,6 +356,7 @@
   /* Card component base styles */
   .card {
     @apply rounded-lg border border-border bg-card p-6 transition-all duration-200;
+    box-shadow: var(--shadow-1);
   }
 
   .card-hover {

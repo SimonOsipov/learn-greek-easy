@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo } from 'react';
 
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 import { NewsSection } from '@/components/dashboard/NewsSection';
 import { DeckCard } from '@/components/display/DeckCard';
@@ -52,11 +52,6 @@ export const Dashboard: React.FC = () => {
   }, [fetchDecks]);
 
   useTourAutoTrigger();
-
-  // Memoized navigation handler for decks page
-  const handleNavigateToDecks = useCallback(() => {
-    navigate('/decks');
-  }, [navigate]);
 
   // Navigate to review session
   const handleStartReview = () => {
@@ -206,16 +201,8 @@ export const Dashboard: React.FC = () => {
   const currentStreak = analyticsData?.streak.currentStreak || 0;
 
   return (
-    <div className="space-y-6 pb-8" data-testid="dashboard">
-      {/* Page Title - visible for accessibility and E2E tests */}
-      <h1
-        className="text-2xl font-semibold text-foreground md:text-3xl"
-        data-testid="dashboard-title"
-      >
-        {t('dashboard.title')}
-      </h1>
-
-      {/* Welcome Section */}
+    <div className="mx-auto max-w-7xl space-y-6 pb-8" data-testid="dashboard">
+      {/* Welcome Section (carries the page h1) */}
       <WelcomeSection
         userName={userName}
         dueCount={dueCount}
@@ -264,9 +251,9 @@ export const Dashboard: React.FC = () => {
           <h2 className="text-lg font-semibold text-foreground">
             {t('dashboard.activeDecks.title')}
           </h2>
-          <button className="text-sm text-primary hover:underline" onClick={handleNavigateToDecks}>
+          <Link to="/decks" className="text-sm text-primary hover:underline">
             {t('dashboard.activeDecks.viewAll')} →
-          </button>
+          </Link>
         </div>
         {decksLoading ? (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -283,12 +270,9 @@ export const Dashboard: React.FC = () => {
         ) : (
           <div className="hairline rounded-lg border p-8 text-center">
             <p className="text-muted-foreground">{t('dashboard.activeDecks.empty')}</p>
-            <button
-              className="mt-4 text-sm text-primary hover:underline"
-              onClick={handleNavigateToDecks}
-            >
+            <Link to="/decks" className="mt-4 inline-block text-sm text-primary hover:underline">
               {t('dashboard.activeDecks.browseDecks')} →
-            </button>
+            </Link>
           </div>
         )}
       </section>
