@@ -19,19 +19,11 @@ export interface CultureBadgeProps {
 
 /**
  * Color configuration for a category badge using the v2.4 badge system.
- * dot: Tailwind bg class for the status dot indicator.
+ * dot: Tailwind bg class for the status dot indicator (token-based).
  * modifier: CSS class modifier for `.b-*` badge coloring (e.g. 'b-violet').
  */
 interface CategoryColorConfig {
-  /** Dot color using .b-* modifier convention (CSS var based) */
   dot: string;
-  /** Text color class with dark mode variant — kept for getCategoryColor API compat */
-  text: string;
-  /** Background — kept for getCategoryColor API compat; visual now driven by .b-* */
-  bg: string;
-  /** Border — kept for getCategoryColor API compat; visual now driven by .b-* */
-  border: string;
-  /** The .b-* modifier class from the v2.4 badge system */
   modifier: string;
 }
 
@@ -45,62 +37,17 @@ interface CategoryColorConfig {
  *   practical            → b-red
  */
 const CATEGORY_COLORS: Record<CultureCategory, CategoryColorConfig> = {
-  politics: {
-    dot: 'bg-[hsl(var(--primary))]',
-    text: 'text-white',
-    bg: '',
-    border: '',
-    modifier: 'b-blue',
-  },
-  history: {
-    dot: 'bg-[hsl(var(--warning))]',
-    text: 'text-white',
-    bg: '',
-    border: '',
-    modifier: 'b-amber',
-  },
-  traditions: {
-    dot: 'bg-[hsl(var(--practice-purple))]',
-    text: 'text-white',
-    bg: '',
-    border: '',
-    modifier: 'b-violet',
-  },
-  practical: {
-    dot: 'bg-[hsl(var(--danger))]',
-    text: 'text-white',
-    bg: '',
-    border: '',
-    modifier: 'b-red',
-  },
-  culture: {
-    dot: 'bg-[hsl(var(--practice-purple))]',
-    text: 'text-white',
-    bg: '',
-    border: '',
-    modifier: 'b-violet',
-  },
-  geography: {
-    dot: 'bg-[hsl(var(--success))]',
-    text: 'text-white',
-    bg: '',
-    border: '',
-    modifier: 'b-green',
-  },
-  news: {
-    dot: 'bg-[hsl(var(--primary))]',
-    text: 'text-white',
-    bg: '',
-    border: '',
-    modifier: 'b-blue',
-  },
+  politics: { dot: 'bg-primary', modifier: 'b-blue' },
+  history: { dot: 'bg-warning', modifier: 'b-amber' },
+  traditions: { dot: 'bg-practice-purple', modifier: 'b-violet' },
+  practical: { dot: 'bg-danger', modifier: 'b-red' },
+  culture: { dot: 'bg-practice-purple', modifier: 'b-violet' },
+  geography: { dot: 'bg-success', modifier: 'b-green' },
+  news: { dot: 'bg-primary', modifier: 'b-blue' },
 };
 
 const DEFAULT_COLOR: CategoryColorConfig = {
-  dot: 'bg-[hsl(var(--fg-3))]',
-  text: 'text-white',
-  bg: '',
-  border: '',
+  dot: 'bg-fg3',
   modifier: 'b-gray',
 };
 

@@ -152,7 +152,7 @@ describe('CultureBadge', () => {
       const colors = getCategoryColor();
 
       expect(colors.modifier).toBe('b-gray');
-      expect(colors.text).toBe('text-white');
+      expect(colors.dot).toBe('bg-fg3');
     });
 
     it('should return correct modifier for politics', () => {
@@ -191,12 +191,12 @@ describe('CultureBadge', () => {
       expect(colors.modifier).toBe('b-green');
     });
 
-    it('should preserve bg and border fields for API compatibility', () => {
+    it('should expose token-based dot and modifier classes', () => {
       const colors = getCategoryColor('history');
 
-      // These fields still exist for getCategoryColor API consumers
-      expect(colors.bg).toBeDefined();
-      expect(colors.border).toBeDefined();
+      // Named utilities, not arbitrary hsl(var(--…)) values
+      expect(colors.dot).toBe('bg-warning');
+      expect(colors.modifier).toBe('b-amber');
     });
   });
 });
