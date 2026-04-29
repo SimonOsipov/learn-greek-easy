@@ -236,6 +236,7 @@ Reach for these *before* composing new ones.
 | `.btn` / `.btn-primary` / `.btn-glass` / `.btn-ghost` / `.btn-sm` / `.btn-lg` | Button system |
 | `.chip` / `.chip-tinted` | Inline pills (filters, meta) |
 | `.badge` + `.b-blue / -green / -amber / -red / -violet / -gray` | Translucent status badges (auto-flip in dark) |
+| `.badge.on-photo` | Modifier for badges placed over photographs (e.g. deck cards). Replaces the translucent `b-*` bg with an opaque card-tinted frosted-glass surface (`hsl(--card)/0.85` + 8px backdrop-blur + `--line` border) so the badge stays readable regardless of the photo. Compose: `badge b-blue on-photo`. |
 | `.track > span` | Progress bar (primary→accent gradient by default) |
 | `.practice-card` | Flashcard / culture card with radial gradient backdrop |
 | `.metric-card` / `.metric-label` / `.metric-value` / `.metric-sublabel` | Dashboard metric tile anatomy |

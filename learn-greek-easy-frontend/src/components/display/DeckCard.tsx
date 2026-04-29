@@ -46,7 +46,7 @@ export const DeckCard = React.memo<DeckCardProps>(({ deck, onContinue }) => {
             <CardDescription className="text-foreground">{deck.description}</CardDescription>
           </div>
           <span
-            className={`${statusBadgeClass[status] ?? 'badge b-gray'} flex-shrink-0 whitespace-nowrap`}
+            className={`${statusBadgeClass[status] ?? 'badge b-gray'} on-photo flex-shrink-0 whitespace-nowrap`}
           >
             {getStatusLabel(status)}
           </span>
