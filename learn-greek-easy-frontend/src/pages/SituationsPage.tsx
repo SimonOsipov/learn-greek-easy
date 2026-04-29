@@ -69,11 +69,14 @@ function getCompletionStatus(
   return 'in-progress';
 }
 
+// Token-based accent stripe — mirrors the deck-card recipe to avoid raw
+// Tailwind palette classes. completed → success (emerald), in-progress →
+// primary (brand blue), not-started → fg3 (slate, the documented neutral).
 function getAccentStripeColor(item: LearnerSituationListItem): string {
   if (item.exercise_total > 0 && item.exercise_completed === item.exercise_total)
-    return 'bg-green-500';
-  if (item.exercise_completed > 0) return 'bg-blue-500';
-  return 'bg-gray-300';
+    return 'bg-success';
+  if (item.exercise_completed > 0) return 'bg-primary';
+  return 'bg-fg3';
 }
 
 export const SituationsPage: React.FC = () => {
@@ -163,7 +166,7 @@ export const SituationsPage: React.FC = () => {
               onChange={handleSearchChange}
               placeholder={t('situations.search.placeholder')}
               aria-label={t('situations.search.placeholder')}
-              className="pl-10 pr-10"
+              className="bg-card pl-10 pr-10"
               data-testid="situations-search"
             />
             {search.length > 0 && (
@@ -197,7 +200,7 @@ export const SituationsPage: React.FC = () => {
               )}
             </Button>
           )}
-          {!isMobile && data && (
+          {!isMobile && data && filteredItems.length !== data.total && (
             <span className="shrink-0 whitespace-nowrap text-sm text-muted-foreground">
               {t('situations.filter.showing', {
                 count: filteredItems.length,
@@ -207,8 +210,8 @@ export const SituationsPage: React.FC = () => {
           )}
         </div>
 
-        {/* Row 2: Counter on mobile (below search) */}
-        {isMobile && data && (
+        {/* Row 2: Counter on mobile (below search), only when filtered */}
+        {isMobile && data && filteredItems.length !== data.total && (
           <span className="block text-sm text-muted-foreground">
             {t('situations.filter.showing', {
               count: filteredItems.length,
@@ -224,6 +227,7 @@ export const SituationsPage: React.FC = () => {
               variant={hasAudioFilter ? 'default' : 'outline'}
               size="sm"
               onClick={handleAudioFilterToggle}
+              className="rounded-full"
               aria-pressed={hasAudioFilter}
               data-testid="situations-audio-filter"
             >
@@ -234,6 +238,7 @@ export const SituationsPage: React.FC = () => {
               variant={completionFilter === 'not-started' ? 'default' : 'outline'}
               size="sm"
               onClick={() => handleCompletionFilterToggle('not-started')}
+              className="rounded-full"
               aria-pressed={completionFilter === 'not-started'}
             >
               {t('situations.filter.notStarted')}
@@ -242,6 +247,7 @@ export const SituationsPage: React.FC = () => {
               variant={completionFilter === 'in-progress' ? 'default' : 'outline'}
               size="sm"
               onClick={() => handleCompletionFilterToggle('in-progress')}
+              className="rounded-full"
               aria-pressed={completionFilter === 'in-progress'}
             >
               {t('situations.filter.inProgress')}
@@ -250,10 +256,26 @@ export const SituationsPage: React.FC = () => {
               variant={completionFilter === 'completed' ? 'default' : 'outline'}
               size="sm"
               onClick={() => handleCompletionFilterToggle('completed')}
+              className="rounded-full"
               aria-pressed={completionFilter === 'completed'}
             >
               {t('situations.filter.completed')}
             </Button>
+            {activeFilterCount > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setHasAudioFilter(false);
+                  setCompletionFilter('all');
+                  setPage(1);
+                }}
+                className="ml-auto text-muted-foreground hover:text-foreground"
+              >
+                <X className="mr-1 h-4 w-4" />
+                {t('situations.filter.clearAll', 'Clear all')} ({activeFilterCount})
+              </Button>
+            )}
           </div>
         )}
       </div>
@@ -310,8 +332,12 @@ export const SituationsPage: React.FC = () => {
                 >
                   <div className={`h-1 w-full ${getAccentStripeColor(item)}`} />
                   <CardContent className="flex h-full flex-col gap-2 p-4">
-                    <p className="text-sm font-medium text-foreground">{item.scenario_el}</p>
-                    <p className="text-xs text-muted-foreground">{getScenario(item)}</p>
+                    <p className="line-clamp-2 text-lg font-semibold text-foreground">
+                      {item.scenario_el}
+                    </p>
+                    <p className="line-clamp-2 text-sm text-muted-foreground">
+                      {getScenario(item)}
+                    </p>
                     <div className="mt-auto flex items-center gap-2 pt-2">
                       {item.has_audio && (
                         <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground">

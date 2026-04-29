@@ -267,7 +267,8 @@
       "inProgress": "В процессе",
       "completed": "Завершено",
       "showing": "Показано {{count}} из {{total}} ситуаций",
-      "filters": "Фильтры"
+      "filters": "Фильтры",
+      "clearAll": "Сбросить"
     },
     "skeleton": {
       "loadingCard": "Загрузка карточки ситуации"
