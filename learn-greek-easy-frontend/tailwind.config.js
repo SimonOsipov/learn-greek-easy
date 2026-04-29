@@ -233,6 +233,9 @@ export default {
   			xl: '1280px',
   			'2xl': '1440px'
   		},
+  		borderColor: {
+  			DEFAULT: 'hsl(var(--border))',
+  		},
   		borderRadius: {
   			none: '0px',
   			sm: 'calc(var(--radius) - 4px)',

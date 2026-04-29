@@ -16,6 +16,7 @@ const buttonVariants = cva(
           'border border-input bg-background text-foreground hover:bg-accent hover:text-accent-foreground',
         secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
         ghost: 'text-foreground hover:bg-accent hover:text-accent-foreground',
+        'chrome-ghost': 'text-foreground hover:bg-muted hover:text-foreground',
         'landing-chrome':
           'text-landing-header-fg hover:bg-landing-header-fg/10 hover:text-landing-header-fg',
         'landing-primary':
