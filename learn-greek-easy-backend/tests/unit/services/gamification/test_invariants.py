@@ -40,7 +40,7 @@ from src.db.models import (
     UserAchievement,
     WordEntry,
 )
-from src.services.achievement_definitions import AchievementMetric
+from src.services.achievement_definitions import ACHIEVEMENTS, AchievementMetric
 from src.services.gamification.projection import GamificationProjection
 from src.services.gamification.reconciler import GamificationReconciler
 from src.services.gamification.types import MetricValues, ReconcileMode
@@ -68,6 +68,30 @@ async def _ensure_achievement(db: AsyncSession, ach_id: str, xp_reward: int = 10
         )
         db.add(ach)
         await db.flush()
+
+
+async def _ensure_all_achievements(db: AsyncSession) -> None:
+    """Pre-seed all 45 AchievementDef rows so the reconciler's pg_insert never
+    hits a FK violation regardless of which achievements the projection unlocks.
+
+    Idempotent — uses _ensure_achievement which checks existence first.
+    """
+    for ach_def in ACHIEVEMENTS:
+        existing = await db.execute(select(Achievement).where(Achievement.id == ach_def.id))
+        if existing.scalar_one_or_none() is None:
+            db.add(
+                Achievement(
+                    id=ach_def.id,
+                    name=ach_def.name,
+                    description=ach_def.description,
+                    category=ach_def.category,
+                    icon=ach_def.icon,
+                    threshold=ach_def.threshold,
+                    xp_reward=ach_def.xp_reward,
+                    sort_order=0,
+                )
+            )
+    await db.flush()
 
 
 async def _make_user(db: AsyncSession) -> User:
@@ -337,6 +361,7 @@ async def test_idempotency_property(activity: dict, db_session: AsyncSession) ->
     # savepoint releases it and breaks Hypothesis re-entry (concurrent
     # operations on the same connection across examples). flush() is enough
     # for in-transaction visibility, which is what reconcile + projection need.
+    await _ensure_all_achievements(db_session)
     user = await seed_user_with_activity(db_session, activity)
     await db_session.flush()
 
@@ -370,6 +395,7 @@ async def test_exhaustiveness_every_metric_in_snapshot(db_session: AsyncSession)
 @pytest.mark.unit
 async def test_unlocked_equality_after_reconcile(db_session: AsyncSession) -> None:
     """projection.unlocked == {a.achievement_id for a in UserAchievement} after reconcile+commit."""
+    await _ensure_all_achievements(db_session)
     user = await seed_user_with_lots_of_activity(db_session)
     await db_session.flush()
 
