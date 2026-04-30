@@ -332,11 +332,16 @@ async def test_idempotency_property(activity: dict, db_session: AsyncSession) ->
     Calling reconcile twice with no intervening activity must produce an empty
     diff on the second call. Tested against 20 random activity profiles.
     """
+    # NOTE: do not commit between phases. The db_session fixture wraps every
+    # test in a savepoint that rolls back on teardown; commit() inside the
+    # savepoint releases it and breaks Hypothesis re-entry (concurrent
+    # operations on the same connection across examples). flush() is enough
+    # for in-transaction visibility, which is what reconcile + projection need.
     user = await seed_user_with_activity(db_session, activity)
-    await db_session.commit()
+    await db_session.flush()
 
     await GamificationReconciler.reconcile(db_session, user.id, ReconcileMode.QUIET)
-    await db_session.commit()
+    await db_session.flush()
 
     r2 = await GamificationReconciler.reconcile(db_session, user.id, ReconcileMode.QUIET)
 
@@ -354,7 +359,7 @@ async def test_exhaustiveness_every_metric_in_snapshot(db_session: AsyncSession)
     protecting against the silent-zero pattern.
     """
     user = await seed_minimal_user(db_session)
-    await db_session.commit()
+    await db_session.flush()
 
     snap = await GamificationProjection.compute(db_session, user.id)
 
@@ -366,10 +371,10 @@ async def test_exhaustiveness_every_metric_in_snapshot(db_session: AsyncSession)
 async def test_unlocked_equality_after_reconcile(db_session: AsyncSession) -> None:
     """projection.unlocked == {a.achievement_id for a in UserAchievement} after reconcile+commit."""
     user = await seed_user_with_lots_of_activity(db_session)
-    await db_session.commit()
+    await db_session.flush()
 
     await GamificationReconciler.reconcile(db_session, user.id, ReconcileMode.QUIET)
-    await db_session.commit()
+    await db_session.flush()
 
     snap = await GamificationProjection.compute(db_session, user.id)
     stored = await read_user_achievements(db_session, user.id)

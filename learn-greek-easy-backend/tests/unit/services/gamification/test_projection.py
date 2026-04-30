@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from datetime import date, datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -35,7 +35,9 @@ from src.db.models import (
     CultureQuestion,
     Deck,
     DeckLevel,
+    PartOfSpeech,
     User,
+    WordEntry,
 )
 from src.services.achievement_definitions import AchievementMetric
 from src.services.gamification.projection import GamificationProjection
@@ -102,13 +104,27 @@ async def _make_deck(db_session: AsyncSession, level: DeckLevel = DeckLevel.A1) 
     return deck
 
 
-async def _make_card(db_session: AsyncSession, deck_id, word_entry_id=None) -> CardRecord:
+async def _make_card(
+    db_session: AsyncSession, deck_id: UUID, word_entry_id: UUID | None = None
+) -> CardRecord:
+    if word_entry_id is None:
+        word = WordEntry(
+            owner_id=None,
+            lemma=f"test_{uuid4().hex[:8]}",
+            part_of_speech=PartOfSpeech.NOUN,
+            translation_en="test",
+            is_active=True,
+        )
+        db_session.add(word)
+        await db_session.flush()
+        word_entry_id = word.id
     card = CardRecord(
         deck_id=deck_id,
-        word_entry_id=word_entry_id or uuid4(),
-        card_type=CardType.RECOGNITION,
-        front={"el": "word"},
-        back={"en": "meaning"},
+        word_entry_id=word_entry_id,
+        card_type=CardType.MEANING_EL_TO_EN,
+        variant_key=f"v_{uuid4().hex[:8]}",
+        front_content={"el": "word"},
+        back_content={"en": "meaning"},
         is_active=True,
     )
     db_session.add(card)
@@ -119,8 +135,8 @@ async def _make_card(db_session: AsyncSession, deck_id, word_entry_id=None) -> C
 
 async def _make_card_stats(
     db_session: AsyncSession,
-    user_id,
-    card_record_id,
+    user_id: UUID,
+    card_record_id: UUID,
     status: CardStatus = CardStatus.MASTERED,
 ) -> CardRecordStatistics:
     stats = CardRecordStatistics(
@@ -139,8 +155,8 @@ async def _make_card_stats(
 
 async def _make_review(
     db_session: AsyncSession,
-    user_id,
-    card_record_id,
+    user_id: UUID,
+    card_record_id: UUID,
     *,
     reviewed_at: datetime,
     quality: int = 4,
@@ -159,8 +175,8 @@ async def _make_review(
 
 
 def _culture_answer(
-    user_id,
-    question_id,
+    user_id: UUID,
+    question_id: UUID,
     *,
     created_at: datetime,
     is_correct: bool = True,

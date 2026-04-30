@@ -6,6 +6,8 @@ Covers:
 - inactive deck/card exclusion
 """
 
+from uuid import uuid4
+
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -58,7 +60,7 @@ async def _make_card(
 ) -> CardRecord:
     word = WordEntry(
         owner_id=None,
-        lemma="test",
+        lemma=f"test_{uuid4().hex[:8]}",
         part_of_speech=PartOfSpeech.NOUN,
         translation_en="test",
         is_active=True,
