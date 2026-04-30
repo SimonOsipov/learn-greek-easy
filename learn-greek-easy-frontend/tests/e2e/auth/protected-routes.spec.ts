@@ -63,7 +63,7 @@ test.describe('Protected Routes', () => {
 
       await expect(page).not.toHaveURL(/\/login/);
 
-      await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible({
+      await expect(page.getByTestId('dashboard-title')).toBeVisible({
         timeout: 15000,
       });
     });
@@ -75,7 +75,7 @@ test.describe('Protected Routes', () => {
       await page.reload();
 
       await expect(page).not.toHaveURL(/\/login/);
-      await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible({
+      await expect(page.getByTestId('dashboard-title')).toBeVisible({
         timeout: 15000,
       });
     });

@@ -130,7 +130,7 @@ test.describe('Dark Mode - Authenticated Theme Persistence', () => {
     await verifyAuthSucceeded(page, '/dashboard');
 
     // Wait for dashboard to load
-    await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible({
+    await expect(page.getByTestId('dashboard-title')).toBeVisible({
       timeout: 15000,
     });
 
@@ -155,7 +155,7 @@ test.describe('Dark Mode - Authenticated Theme Persistence', () => {
     await verifyAuthSucceeded(page, '/dashboard');
 
     // Wait for dashboard to load
-    await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible({
+    await expect(page.getByTestId('dashboard-title')).toBeVisible({
       timeout: 15000,
     });
 
@@ -168,7 +168,7 @@ test.describe('Dark Mode - Authenticated Theme Persistence', () => {
 
     // Verify auth and wait for dashboard
     await verifyAuthSucceeded(page, '/dashboard');
-    await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible({
+    await expect(page.getByTestId('dashboard-title')).toBeVisible({
       timeout: 15000,
     });
 
@@ -319,7 +319,7 @@ test.describe('Dark Mode - Theme Persists on Logout', () => {
     await verifyAuthSucceeded(page, '/dashboard');
 
     // Wait for dashboard to load
-    await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible({
+    await expect(page.getByTestId('dashboard-title')).toBeVisible({
       timeout: 15000,
     });
 
@@ -350,7 +350,7 @@ test.describe('Dark Mode - Theme Persists on Logout', () => {
     await verifyAuthSucceeded(page, '/dashboard');
 
     // Wait for dashboard to load
-    await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible({
+    await expect(page.getByTestId('dashboard-title')).toBeVisible({
       timeout: 15000,
     });
 

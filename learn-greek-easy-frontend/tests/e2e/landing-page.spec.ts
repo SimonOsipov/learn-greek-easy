@@ -174,7 +174,7 @@ test.describe('Landing Page - Authenticated Redirect', () => {
     await page.waitForURL('/dashboard', { timeout: 15000 });
 
     // Wait for dashboard content
-    await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible({
+    await expect(page.getByTestId('dashboard-title')).toBeVisible({
       timeout: 15000,
     });
 

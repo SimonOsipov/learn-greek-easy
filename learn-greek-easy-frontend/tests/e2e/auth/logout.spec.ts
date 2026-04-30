@@ -38,7 +38,7 @@ test.describe('Logout', () => {
       await page.goto('/dashboard');
       await page.waitForLoadState('networkidle');
 
-      await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible({
+      await expect(page.getByTestId('dashboard-title')).toBeVisible({
         timeout: 15000,
       });
 
@@ -87,7 +87,7 @@ test.describe('Logout', () => {
       await page.goto('/dashboard');
       await page.waitForLoadState('domcontentloaded');
 
-      await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible({
+      await expect(page.getByTestId('dashboard-title')).toBeVisible({
         timeout: 15000,
       });
 
@@ -103,7 +103,7 @@ test.describe('Logout', () => {
       await expect(dialog).not.toBeVisible({ timeout: 3000 });
 
       await expect(page).toHaveURL(/\/dashboard/);
-      await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible();
+      await expect(page.getByTestId('dashboard-title')).toBeVisible();
     });
 
     test('should close dialog by clicking outside (if supported)', async ({ page }) => {
