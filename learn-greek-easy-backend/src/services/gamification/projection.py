@@ -8,7 +8,7 @@ Zero DB writes — this module never calls add(), flush(), commit(), or delete()
 """
 
 import asyncio
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from uuid import UUID
 
 from sqlalchemy import select
@@ -96,7 +96,7 @@ def _compute_daily_goal_streak(
     if not combined:
         return 0
 
-    today = date.today()
+    today = datetime.now(timezone.utc).date()
     # Grace: allow yesterday to anchor if today has no activity
     most_recent = max(combined)
     start = today if most_recent == today else today - timedelta(days=1)
@@ -220,12 +220,6 @@ def _compute_action_xp(
     xp += streak_days * XP_STREAK_MULTIPLIER  # streak day bonus
 
     return xp
-
-
-# ---------------------------------------------------------------------------
-# Import timedelta locally to avoid shadowing
-# ---------------------------------------------------------------------------
-from datetime import timedelta  # noqa: E402 — after helpers to keep file readable
 
 
 class GamificationProjection:

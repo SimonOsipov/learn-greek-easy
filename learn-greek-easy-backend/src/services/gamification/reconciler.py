@@ -152,7 +152,7 @@ class GamificationReconciler:
         1. Compute the read-only projection snapshot.
         2. Read existing UserAchievement set from DB.
         3. Get-or-create the UserXP row; capture old values.
-        4. Diff: new_ids = projection.unlocked − existing_unlocks (sorted).
+        4. Diff: new_ids = projection.unlocked - existing_unlocks (sorted).
         5. pg_insert each missing achievement with on_conflict_do_nothing.
         6. Set UserXP.total_xp and current_level absolutely (convergent).
         7. db.flush() — never db.commit().

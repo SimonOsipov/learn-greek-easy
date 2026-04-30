@@ -35,8 +35,10 @@ from src.db.models import (
     CultureQuestion,
     Deck,
     DeckLevel,
+    PartOfSpeech,
     User,
     UserAchievement,
+    WordEntry,
 )
 from src.services.achievement_definitions import AchievementMetric
 from src.services.gamification.projection import GamificationProjection
@@ -94,12 +96,22 @@ async def _make_deck(db: AsyncSession) -> Deck:
 
 
 async def _make_card(db: AsyncSession, deck_id: object) -> CardRecord:
+    word = WordEntry(
+        owner_id=None,
+        lemma=f"test_{uuid4().hex[:8]}",
+        part_of_speech=PartOfSpeech.NOUN,
+        translation_en="test",
+        is_active=True,
+    )
+    db.add(word)
+    await db.flush()
     card = CardRecord(
         deck_id=deck_id,
-        word_entry_id=uuid4(),
+        word_entry_id=word.id,
         card_type=CardType.MEANING_EL_TO_EN,
-        front={"el": "word"},
-        back={"en": "meaning"},
+        variant_key="default",
+        front_content={"el": "word"},
+        back_content={"en": "meaning"},
         is_active=True,
     )
     db.add(card)
