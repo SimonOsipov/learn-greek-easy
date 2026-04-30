@@ -7,7 +7,13 @@ from uuid import UUID
 from sqlalchemy import Date, cast, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import CardStatus, CultureAnswerHistory, CultureQuestion, CultureQuestionStats
+from src.db.models import (
+    CardStatus,
+    CultureAnswerHistory,
+    CultureDeck,
+    CultureQuestion,
+    CultureQuestionStats,
+)
 from src.repositories.base import BaseRepository
 
 
@@ -515,6 +521,69 @@ class CultureQuestionStatsRepository(BaseRepository[CultureQuestionStats]):
                 "accuracy": (row.correct / row.total * 100) if row.total > 0 else 0.0,
             }
             for row in rows
+        }
+
+    async def get_category_mastery_counts(self, user_id: UUID) -> dict[str, tuple[int, int]]:
+        """Return (mastered_count, total_count) per culture category.
+
+        Categories are discovered dynamically via ``SELECT DISTINCT
+        CultureDeck.category`` — they are NOT hardcoded.  The projection layer
+        in the next subtask decides which categories matter for achievements.
+
+        - ``mastered_count``: number of CultureQuestion rows in that category
+          where the user's CultureQuestionStats.status == CardStatus.MASTERED.
+        - ``total_count``: total number of CultureQuestion rows in that
+          category, regardless of whether the user has any stats rows.
+
+        Args:
+            user_id: User UUID.
+
+        Returns:
+            Dict mapping category string to (mastered, total) tuple.
+            Returns all categories present in the database.  Empty dict if
+            there are no culture decks.
+        """
+        # Discover all distinct categories in DB (dynamic — not hardcoded)
+        categories_query = select(CultureDeck.category).distinct()
+        categories_result = await self.db.execute(categories_query)
+        all_categories: list[str] = [row.category for row in categories_result.all()]
+
+        if not all_categories:
+            return {}
+
+        # Total questions per category (join CultureQuestion → CultureDeck)
+        total_query = (
+            select(
+                CultureDeck.category.label("category"),
+                func.count(CultureQuestion.id).label("total"),
+            )
+            .join(CultureDeck, CultureQuestion.deck_id == CultureDeck.id)
+            .group_by(CultureDeck.category)
+        )
+        total_result = await self.db.execute(total_query)
+        total_by_cat: dict[str, int] = {row.category: row.total for row in total_result.all()}
+
+        # Mastered questions per category for this user
+        mastered_query = (
+            select(
+                CultureDeck.category.label("category"),
+                func.count(CultureQuestionStats.id).label("mastered"),
+            )
+            .join(CultureQuestion, CultureQuestionStats.question_id == CultureQuestion.id)
+            .join(CultureDeck, CultureQuestion.deck_id == CultureDeck.id)
+            .where(
+                CultureQuestionStats.user_id == user_id,
+                CultureQuestionStats.status == CardStatus.MASTERED,
+            )
+            .group_by(CultureDeck.category)
+        )
+        mastered_result = await self.db.execute(mastered_query)
+        mastered_by_cat: dict[str, int] = {
+            row.category: row.mastered for row in mastered_result.all()
+        }
+
+        return {
+            cat: (mastered_by_cat.get(cat, 0), total_by_cat.get(cat, 0)) for cat in all_categories
         }
 
     async def delete_all_by_user_id(self, user_id: UUID) -> int:

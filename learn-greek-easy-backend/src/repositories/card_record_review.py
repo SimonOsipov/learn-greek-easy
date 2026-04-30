@@ -1,6 +1,7 @@
 """CardRecordReview repository for V2 card system analytics."""
 
-from datetime import date, datetime, timedelta
+from dataclasses import dataclass
+from datetime import date, datetime, timedelta, timezone
 from uuid import UUID
 
 from sqlalchemy import case, delete, func, select
@@ -8,6 +9,32 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.models import CardRecord, CardRecordReview
 from src.repositories.base import BaseRepository
+
+
+@dataclass(frozen=True)
+class SessionAgg:
+    """Aggregated statistics for a single study session.
+
+    A session is a maximal run of reviews where each review is within
+    30 minutes of the previous one (idle-gap boundary).
+
+    Attributes:
+        start_at: Timestamp of the first review in the session (UTC-aware).
+        card_count: Total number of cards reviewed in the session.
+        correct_count: Number of reviews with quality >= 3.
+        total_time_seconds: Sum of per-card ``time_taken`` values (NOT
+            wall-clock session length).  Individual answers can exceed the
+            30-minute window; this is intentional.
+        min_hour_utc: Earliest UTC hour (0-23) of any review in the session.
+        max_hour_utc: Latest UTC hour (0-23) of any review in the session.
+    """
+
+    start_at: datetime
+    card_count: int
+    correct_count: int
+    total_time_seconds: int
+    min_hour_utc: int
+    max_hour_utc: int
 
 
 class CardRecordReviewRepository(BaseRepository[CardRecordReview]):
@@ -39,6 +66,8 @@ class CardRecordReviewRepository(BaseRepository[CardRecordReview]):
         result = await self.db.execute(query)
         return result.scalar_one()
 
+    # DEPRECATED: replaced by progress_service._get_aggregated_streak.
+    # Removal target: GAMIF-06-04. Do NOT delete in this story.
     async def get_streak(self, user_id: UUID) -> int:
         """Calculate current consecutive study streak in days.
 
@@ -376,3 +405,213 @@ class CardRecordReviewRepository(BaseRepository[CardRecordReview]):
             "first_reviewed_at": row.first_reviewed_at,
             "last_reviewed_at": row.last_reviewed_at,
         }
+
+    async def get_session_aggregates(self, user_id: UUID) -> list[SessionAgg]:
+        """Return per-session aggregates for all reviews by a user.
+
+        A session is a maximal run of reviews where consecutive reviews are
+        separated by at most 30 minutes (idle gap).  If the gap between two
+        consecutive reviews exceeds 30 minutes, a new session begins.
+
+        The boundary check is **strict greater-than**: a gap of exactly 30
+        minutes keeps the reviews in the *same* session; a gap of 30 minutes
+        and 1 second starts a new one.
+
+        ``total_time_seconds`` is the sum of per-card ``time_taken`` values,
+        NOT the wall-clock duration of the session window.
+
+        All hour values are in UTC.
+
+        Args:
+            user_id: User UUID.
+
+        Returns:
+            List of SessionAgg, one per detected session, ordered chronologically.
+            Empty list if the user has no reviews.
+        """
+        query = (
+            select(
+                CardRecordReview.reviewed_at,
+                CardRecordReview.quality,
+                CardRecordReview.time_taken,
+            )
+            .where(CardRecordReview.user_id == user_id)
+            .order_by(CardRecordReview.reviewed_at)
+        )
+        result = await self.db.execute(query)
+        rows = result.all()
+
+        if not rows:
+            return []
+
+        session_gap = timedelta(minutes=30)
+        sessions: list[SessionAgg] = []
+
+        # Accumulators for current session
+        session_start: datetime = rows[0].reviewed_at
+        card_count = 0
+        correct_count = 0
+        total_time = 0
+        min_hour = 24
+        max_hour = -1
+        prev_ts: datetime = rows[0].reviewed_at
+
+        for row in rows:
+            ts: datetime = row.reviewed_at
+            # Normalise to UTC-aware for hour extraction
+            ts_utc = ts.astimezone(timezone.utc)
+            hour = ts_utc.hour
+
+            if card_count > 0 and (ts - prev_ts) > session_gap:
+                # Flush current session
+                sessions.append(
+                    SessionAgg(
+                        start_at=session_start,
+                        card_count=card_count,
+                        correct_count=correct_count,
+                        total_time_seconds=total_time,
+                        min_hour_utc=min_hour,
+                        max_hour_utc=max_hour,
+                    )
+                )
+                # Start new session
+                session_start = ts
+                card_count = 0
+                correct_count = 0
+                total_time = 0
+                min_hour = 24
+                max_hour = -1
+
+            card_count += 1
+            correct_count += 1 if row.quality >= 3 else 0
+            total_time += row.time_taken
+            min_hour = min(min_hour, hour)
+            max_hour = max(max_hour, hour)
+            prev_ts = ts
+
+        # Flush final session
+        sessions.append(
+            SessionAgg(
+                start_at=session_start,
+                card_count=card_count,
+                correct_count=correct_count,
+                total_time_seconds=total_time,
+                min_hour_utc=min_hour,
+                max_hour_utc=max_hour,
+            )
+        )
+
+        return sessions
+
+    async def get_max_inactive_gap_days(self, user_id: UUID) -> int:
+        """Return the longest gap in days between consecutive review dates.
+
+        Considers only *internal* gaps — the trailing gap from the last review
+        date to today is excluded.  A "comeback" requires both a gap AND a
+        return, so the trailing period is not counted.
+
+        Args:
+            user_id: User UUID.
+
+        Returns:
+            Maximum gap in days between consecutive review dates (0 if the
+            user has zero or one review dates, or all reviews are on the same
+            day).
+        """
+        query = (
+            select(func.date(CardRecordReview.reviewed_at).label("review_date"))
+            .where(CardRecordReview.user_id == user_id)
+            .group_by(func.date(CardRecordReview.reviewed_at))
+            .order_by(func.date(CardRecordReview.reviewed_at).asc())
+        )
+        result = await self.db.execute(query)
+        dates: list[date] = [row.review_date for row in result.all()]
+
+        if len(dates) < 2:
+            return 0
+
+        max_gap = 0
+        # Only iterate up to the second-to-last date to exclude trailing gap
+        for i in range(len(dates) - 1):
+            gap = (dates[i + 1] - dates[i]).days
+            if gap > max_gap:
+                max_gap = gap
+
+        return max_gap
+
+    async def get_consecutive_correct_streak(self, user_id: UUID) -> int:
+        """Count the current run of correct reviews from the most recent.
+
+        Walks reviews in descending ``reviewed_at`` order and counts until the
+        first review with ``quality < 3``.  A review with ``quality >= 3`` is
+        considered correct.
+
+        Args:
+            user_id: User UUID.
+
+        Returns:
+            Number of consecutive correct reviews ending with the most recent
+            review (0 if no reviews or the most recent review is incorrect).
+        """
+        query = (
+            select(CardRecordReview.quality)
+            .where(CardRecordReview.user_id == user_id)
+            .order_by(CardRecordReview.reviewed_at.desc())
+        )
+        result = await self.db.execute(query)
+        streak = 0
+        for (quality,) in result.all():
+            if quality >= 3:
+                streak += 1
+            else:
+                break
+        return streak
+
+    async def get_weekly_accuracy(self, user_id: UUID) -> tuple[int, int]:
+        """Return (correct_count, total_count) for reviews in the last 7 days.
+
+        Correct is defined as ``quality >= 3``.  All timestamps are compared
+        in UTC.
+
+        Args:
+            user_id: User UUID.
+
+        Returns:
+            Tuple of (correct_count, total_count).  Both are 0 if the user
+            has no reviews in the past 7 days.
+        """
+        cutoff = datetime.combine(date.today() - timedelta(days=7), datetime.min.time())
+        query = select(
+            func.count().label("total"),
+            func.sum(case((CardRecordReview.quality >= 3, 1), else_=0)).label("correct"),
+        ).where(
+            CardRecordReview.user_id == user_id,
+            CardRecordReview.reviewed_at >= cutoff,
+        )
+        result = await self.db.execute(query)
+        row = result.one()
+        return (int(row.correct or 0), int(row.total or 0))
+
+    async def get_daily_review_counts(self, user_id: UUID) -> list[tuple[date, int]]:
+        """Return per-day review counts across all time for a user.
+
+        Used for daily-goal-streak metrics.
+
+        Args:
+            user_id: User UUID.
+
+        Returns:
+            List of (date, count) tuples ordered chronologically (ascending).
+            Empty list if the user has no reviews.
+        """
+        query = (
+            select(
+                func.date(CardRecordReview.reviewed_at).label("review_date"),
+                func.count().label("cnt"),
+            )
+            .where(CardRecordReview.user_id == user_id)
+            .group_by(func.date(CardRecordReview.reviewed_at))
+            .order_by(func.date(CardRecordReview.reviewed_at).asc())
+        )
+        result = await self.db.execute(query)
+        return [(row.review_date, int(row.cnt)) for row in result.all()]

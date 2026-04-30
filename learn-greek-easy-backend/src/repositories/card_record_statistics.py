@@ -7,7 +7,7 @@ from sqlalchemy import Date, cast, delete, func, not_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.db.models import CardRecord, CardRecordStatistics, CardStatus, CardType, Deck
+from src.db.models import CardRecord, CardRecordStatistics, CardStatus, CardType, Deck, DeckLevel
 from src.repositories.base import BaseRepository
 
 
@@ -438,6 +438,64 @@ class CardRecordStatisticsRepository(BaseRepository[CardRecordStatistics]):
         result = await self.db.execute(query)
         val = result.scalar_one()
         return float(val) if val is not None else 2.5
+
+    async def get_cefr_completion(self, user_id: UUID) -> dict[DeckLevel, tuple[int, int]]:
+        """Return (mastered_count, total_active_count) per CEFR level.
+
+        Only A1, A2, B1, B2 levels are included (the full DeckLevel enum).
+        Both ``CardRecord.is_active`` and ``Deck.is_active`` must be True for
+        a card to count toward the total.  A card is mastered when the user's
+        ``CardRecordStatistics.status == CardStatus.MASTERED``.
+
+        If a level has no active cards, it is represented as ``(0, 0)``.
+
+        Args:
+            user_id: User UUID.
+
+        Returns:
+            Dict mapping each DeckLevel to a (mastered, total) tuple.
+        """
+        # Mastered counts per level (only for cards with stats)
+        mastered_query = (
+            select(
+                Deck.level.label("level"),
+                func.count(CardRecordStatistics.id).label("mastered"),
+            )
+            .join(CardRecord, CardRecordStatistics.card_record_id == CardRecord.id)
+            .join(Deck, CardRecord.deck_id == Deck.id)
+            .where(
+                CardRecordStatistics.user_id == user_id,
+                CardRecordStatistics.status == CardStatus.MASTERED,
+                CardRecord.is_active == True,  # noqa: E712
+                Deck.is_active == True,  # noqa: E712
+            )
+            .group_by(Deck.level)
+        )
+        mastered_result = await self.db.execute(mastered_query)
+        mastered_by_level: dict[DeckLevel, int] = {
+            row.level: row.mastered for row in mastered_result.all()
+        }
+
+        # Total active card counts per level (no user filter — all active cards)
+        total_query = (
+            select(
+                Deck.level.label("level"),
+                func.count(CardRecord.id).label("total"),
+            )
+            .join(Deck, CardRecord.deck_id == Deck.id)
+            .where(
+                CardRecord.is_active == True,  # noqa: E712
+                Deck.is_active == True,  # noqa: E712
+            )
+            .group_by(Deck.level)
+        )
+        total_result = await self.db.execute(total_query)
+        total_by_level: dict[DeckLevel, int] = {row.level: row.total for row in total_result.all()}
+
+        return {
+            level: (mastered_by_level.get(level, 0), total_by_level.get(level, 0))
+            for level in DeckLevel
+        }
 
     async def get_average_interval(
         self,

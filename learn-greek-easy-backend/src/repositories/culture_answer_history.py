@@ -228,6 +228,30 @@ class CultureAnswerHistoryRepository(BaseRepository[CultureAnswerHistory]):
             for row in result.all()
         ]
 
+    async def get_daily_answer_counts(self, user_id: UUID) -> list[tuple[date, int]]:
+        """Return per-day culture-answer counts across all time for a user.
+
+        Used for daily-goal-streak metrics.
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            List of (date, count) tuples ordered chronologically (ascending).
+            Empty list if the user has no answers.
+        """
+        query = (
+            select(
+                func.date(CultureAnswerHistory.created_at).label("answer_date"),
+                func.count().label("cnt"),
+            )
+            .where(CultureAnswerHistory.user_id == user_id)
+            .group_by(func.date(CultureAnswerHistory.created_at))
+            .order_by(func.date(CultureAnswerHistory.created_at).asc())
+        )
+        result = await self.db.execute(query)
+        return [(row.answer_date, int(row.cnt)) for row in result.all()]
+
     async def delete_all_by_user_id(self, user_id: UUID) -> int:
         """Delete all culture answer history for a user.
 
