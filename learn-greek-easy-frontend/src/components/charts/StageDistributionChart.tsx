@@ -108,8 +108,11 @@ export const StageDistributionChart = React.forwardRef<HTMLDivElement, StageDist
       relearning: 'var(--color-relearning)',
     };
 
+    // Note: data items carry their own `percent` field (already 0-100, e.g. 60.84),
+    // which Recharts merges into the label callback's prop bag and shadows its
+    // own computed 0-1 percent. So treat the value as a percentage, no *100.
     const renderLabel = ({ percent }: PieLabelRenderProps): string =>
-      `${Math.round((Number(percent) || 0) * 100)}%`;
+      `${Math.round(Number(percent) || 0)}%`;
 
     const renderLegend = ({ payload }: DefaultLegendContentProps) => {
       if (!payload || payload.length === 0) return null;
