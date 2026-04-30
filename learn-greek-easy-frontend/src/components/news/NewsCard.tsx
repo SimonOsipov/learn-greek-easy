@@ -179,9 +179,9 @@ export const NewsCard: React.FC<NewsCardProps> = ({
           )}
         />
 
-        {/* Country Flag Pill */}
+        {/* Country Flag Pill — v2.4 badge system, on-photo modifier for readability over images. */}
         {article.country && COUNTRY_CONFIG[article.country as NewsCountry] && (
-          <span className="absolute left-2 top-2 z-10 rounded-full bg-landing-header-bg/60 px-2 py-0.5 text-xs text-landing-header-fg">
+          <span className="badge b-blue on-photo absolute left-2 top-2 z-10">
             {COUNTRY_CONFIG[article.country as NewsCountry].flag}{' '}
             {t(COUNTRY_CONFIG[article.country as NewsCountry].labelKey)}
           </span>
@@ -222,7 +222,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({
           >
             {showError && (
               <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
-                <span className="text-xs text-red-300" aria-live="polite">
+                <span className="text-xs text-danger" aria-live="polite">
                   {t('dashboard.news.buttons.audioError')}
                 </span>
               </div>
