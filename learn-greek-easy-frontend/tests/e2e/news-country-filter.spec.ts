@@ -71,8 +71,9 @@ test.describe('MCNEWS - Country Pills Display', () => {
     await expect(newsCards.first()).toBeVisible({ timeout: 10000 });
 
     // Country pills should be present on cards (MCNEWS-06 adds them)
-    // Check for any country pill element
-    const countryPills = page.locator('.rounded-full.bg-black\\/60');
+    // Pill markup migrated from `rounded-full bg-black/60` to the v2.4 badge
+    // utility (`badge b-blue on-photo`) by the news drift-cleanup fix.
+    const countryPills = page.locator('span.badge.b-blue.on-photo');
     const pillCount = await countryPills.count();
     expect(pillCount).toBeGreaterThan(0);
   });
