@@ -254,19 +254,19 @@ const AchievementsPage: React.FC = () => {
 
       {/* Error State */}
       {error && (
-        <Card className="border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950">
+        <Card className="border-danger/40 bg-danger/10 text-danger">
           <CardContent className="flex items-start gap-3 pt-6">
-            <AlertCircle className="h-5 w-5 flex-shrink-0 text-red-600 dark:text-red-400" />
+            <AlertCircle className="h-5 w-5 flex-shrink-0" />
             <div className="flex-1">
-              <h3 className="font-medium text-red-900 dark:text-red-100">
+              <h3 className="font-medium">
                 {t('error.loadFailed', 'Failed to load achievements')}
               </h3>
-              <p className="mt-1 text-sm text-red-700 dark:text-red-300">{error}</p>
+              <p className="mt-1 text-sm">{error}</p>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => loadAchievements(true)}
-                className="mt-3 border-red-300 text-red-700 hover:bg-red-100 dark:border-red-700 dark:text-red-300"
+                className="mt-3 border-danger/40 text-danger hover:bg-danger/15"
               >
                 {t('error.retry', 'Try Again')}
               </Button>
@@ -301,14 +301,14 @@ const AchievementsPage: React.FC = () => {
                   </p>
                 </div>
                 <div className="flex flex-col items-center text-center">
-                  <div className="rounded-full bg-[hsl(var(--success)/.1)] p-1.5">
-                    <Trophy className="h-4 w-4 text-[hsl(var(--success))]" />
+                  <div className="rounded-full bg-success/10 p-1.5">
+                    <Trophy className="h-4 w-4 text-success" />
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">{t('stats.progress')}</p>
                   <p className="text-lg font-bold text-foreground">{progressPercent}%</p>
                 </div>
                 <div className="flex flex-col items-center text-center">
-                  <div className="rounded-full bg-[hsl(var(--practice-gold)/.12)] p-1.5">
+                  <div className="rounded-full bg-practice-gold/15 p-1.5">
                     <Star className="h-4 w-4 text-practice-gold" />
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">{t('stats.xpEarned')}</p>
@@ -339,8 +339,8 @@ const AchievementsPage: React.FC = () => {
               </Card>
               <Card>
                 <CardHeader className="flex flex-row items-center gap-3 pb-2">
-                  <div className="rounded-full bg-[hsl(var(--success)/.1)] p-3">
-                    <Trophy className="h-5 w-5 text-[hsl(var(--success))]" />
+                  <div className="rounded-full bg-success/10 p-3">
+                    <Trophy className="h-5 w-5 text-success" />
                   </div>
                   <div>
                     <CardDescription>{t('stats.progress')}</CardDescription>
@@ -350,7 +350,7 @@ const AchievementsPage: React.FC = () => {
               </Card>
               <Card>
                 <CardHeader className="flex flex-row items-center gap-3 pb-2">
-                  <div className="rounded-full bg-[hsl(var(--practice-gold)/.12)] p-3">
+                  <div className="rounded-full bg-practice-gold/15 p-3">
                     <Star className="h-5 w-5 text-practice-gold" />
                   </div>
                   <div>
@@ -381,14 +381,14 @@ const AchievementsPage: React.FC = () => {
           {/* Almost There Section */}
           {showAlmostThere && (
             <section
-              className="rounded-lg border-l-4 border-[hsl(var(--practice-gold))] bg-[hsl(var(--practice-gold)/.08)] p-4"
+              className="rounded-lg border-l-4 border-practice-gold bg-practice-gold/10 p-4"
               aria-labelledby="almost-there-heading"
               data-testid="almost-there-section"
             >
               <div className="mb-3">
                 <h2
                   id="almost-there-heading"
-                  className="text-base font-semibold text-[hsl(var(--practice-gold))]"
+                  className="text-base font-semibold text-practice-gold"
                 >
                   {t('section.almostThereTitle', 'Almost There!')}
                 </h2>
@@ -401,7 +401,7 @@ const AchievementsPage: React.FC = () => {
                   <AchievementCard
                     key={achievement.id}
                     achievement={achievement}
-                    className="border-[hsl(var(--practice-gold)/.4)] opacity-100"
+                    className="border-practice-gold/40 opacity-100"
                   />
                 ))}
               </div>

@@ -53,10 +53,8 @@ export const AchievementCard: React.FC<AchievementCardProps> = ({ achievement, c
   return (
     <Card
       className={cn(
-        'relative overflow-hidden transition-all hover:scale-[1.02] hover:shadow-md active:scale-[0.98]',
-        unlocked
-          ? 'border-[hsl(var(--success)/.3)] bg-[hsl(var(--success)/.1)]'
-          : 'border-line bg-muted/30 opacity-75',
+        'relative overflow-hidden',
+        unlocked ? 'border-success/30 bg-success/10' : 'border-line bg-muted/30 opacity-75',
         className
       )}
       role="article"
@@ -70,9 +68,7 @@ export const AchievementCard: React.FC<AchievementCardProps> = ({ achievement, c
             <div
               className={cn(
                 'flex h-10 w-10 items-center justify-center rounded-lg sm:h-12 sm:w-12',
-                unlocked
-                  ? 'bg-[hsl(var(--success)/.15)] text-[hsl(var(--success))]'
-                  : 'bg-[hsl(var(--bg-2))] text-fg3 grayscale'
+                unlocked ? 'bg-success/15 text-success' : 'bg-bg-2 text-fg3 grayscale'
               )}
               aria-hidden="true"
             >

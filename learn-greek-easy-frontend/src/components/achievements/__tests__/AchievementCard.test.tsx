@@ -90,7 +90,7 @@ describe('AchievementCard', () => {
         <AchievementCard achievement={createMockAchievement({ unlocked: true, progress: 100 })} />
       );
       const card = container.querySelector('[role="article"]');
-      expect(card?.className).toContain('border-[hsl(var(--success)/.3)]');
+      expect(card?.className).toContain('border-success/30');
     });
 
     it('should apply muted styling for locked achievements', () => {
