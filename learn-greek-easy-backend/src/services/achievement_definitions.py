@@ -34,8 +34,11 @@ class AchievementMetric(str, Enum):
     # Session metrics
     SESSION_CARDS = "session_cards"
     SESSION_ACCURACY = "session_accuracy"
-    SESSION_SPEED = "session_speed"
-    SESSION_TIME = "session_time"  # Hour of day
+    SESSION_SPEED_CPM = "session_speed_cpm"
+    SESSION_HOUR_LATEST = "session_hour_latest"
+    # Stored as 24 - actual_hour so that earlier hours produce larger values,
+    # allowing the standard >= comparator to work. E.g. 7 AM → stored as 17.
+    SESSION_HOUR_EARLIEST = "session_hour_earliest"
 
     # Accuracy metrics
     WEEKLY_ACCURACY = "weekly_accuracy"
@@ -290,11 +293,11 @@ ACHIEVEMENTS: list[AchievementDef] = [
     AchievementDef(
         "session_speed_demon",
         "Speed Demon",
-        "Average < 3s per card (20+ cards)",
+        "20+ cards per minute (20+ card session)",
         AchievementCategory.SESSION,
         "lightning_double",
-        AchievementMetric.SESSION_SPEED,
-        3,
+        AchievementMetric.SESSION_SPEED_CPM,
+        20,
         150,
         "Answer quickly with high accuracy",
     ),
@@ -304,7 +307,7 @@ ACHIEVEMENTS: list[AchievementDef] = [
         "Study after 10 PM",
         AchievementCategory.SESSION,
         "owl",
-        AchievementMetric.SESSION_TIME,
+        AchievementMetric.SESSION_HOUR_LATEST,
         22,
         50,
         "Study late at night",
@@ -315,8 +318,8 @@ ACHIEVEMENTS: list[AchievementDef] = [
         "Study before 7 AM",
         AchievementCategory.SESSION,
         "bird",
-        AchievementMetric.SESSION_TIME,
-        7,
+        AchievementMetric.SESSION_HOUR_EARLIEST,
+        17,  # Inverted: projection stores 24 - actual_hour; 7 AM → 24 - 7 = 17
         50,
         "Study early in the morning",
     ),
