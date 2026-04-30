@@ -130,7 +130,7 @@ describe('NewsPage Component', () => {
       render(<NewsPage />);
 
       expect(screen.getByTestId('news-page-title')).toBeInTheDocument();
-      expect(screen.getByText('Cyprus News')).toBeInTheDocument();
+      expect(screen.getByText('Greek News')).toBeInTheDocument();
       expect(screen.getByText('Practice reading with real news articles')).toBeInTheDocument();
     });
 

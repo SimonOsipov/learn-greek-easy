@@ -382,8 +382,8 @@ describe('DeckCard', () => {
         />
       );
       const stripe = screen.getByTestId('deck-card-accent-stripe');
-      // history category maps to --warning token (migrated from bg-amber-500 in RESKIN-01-07)
-      expect(stripe.className).toContain('bg-[hsl(var(--warning))]');
+      // history category maps to --warning token (named utility per design-system drift rule)
+      expect(stripe.className).toContain('bg-warning');
     });
 
     it('should have aria-hidden on accent stripe', () => {
