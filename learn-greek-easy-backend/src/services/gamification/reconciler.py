@@ -63,6 +63,13 @@ async def _get_or_create_user_xp(db: AsyncSession, user_id: UUID) -> UserXP:
     Does NOT reuse XPService.get_or_create_user_xp because that method
     maintains a request-scoped cache that would be polluted by the reconciler
     calling it from background or admin contexts.
+
+    TODO(GAMIF-04): the read-then-insert path has a small race window when two
+    concurrent reconciles both find no UserXP and both insert. The
+    ``UserXP.user_id UNIQUE`` constraint will surface the second insert as an
+    IntegrityError. Once Phase 4 wires reconcile into traffic, switch to
+    ``pg_insert(UserXP).on_conflict_do_nothing(index_elements=["user_id"])``
+    + re-select for atomic creation.
     """
     result = await db.execute(select(UserXP).where(UserXP.user_id == user_id))
     user_xp = result.scalar_one_or_none()
@@ -138,6 +145,19 @@ class GamificationReconciler:
         result = await GamificationReconciler.reconcile(db, user_id, mode)
 
     The caller is responsible for committing the enclosing transaction.
+
+    Known caveats (acceptable in Phase 1, addressed in later phases):
+
+    * Notifications are emitted before the caller commits — if the outer
+      transaction rolls back, the user still received the notification.
+      Phase 4 will move dispatch behind a ``after_commit`` SQLAlchemy event
+      or return the unlock list so the caller can dispatch post-commit.
+    * Two concurrent reconciles for the same user can both compute the same
+      ``new_ids``; ``pg_insert.on_conflict_do_nothing`` correctly skips
+      duplicates at the DB layer, but both calls will emit IMMEDIATE
+      notifications for the same achievements. Phase 4 will switch the
+      pg_insert to ``RETURNING`` so we notify only for rows actually inserted
+      by this call.
     """
 
     @staticmethod
