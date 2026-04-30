@@ -159,3 +159,160 @@ class TestGetDailyAnswerCounts:
 
         assert len(result) == 1
         assert result[0][1] == 1
+
+
+class TestGetConsecutiveCorrectStreak:
+    @pytest.mark.asyncio
+    async def test_empty_user_returns_zero(
+        self,
+        db_session: AsyncSession,
+        sample_user: User,
+    ) -> None:
+        repo = CultureAnswerHistoryRepository(db_session)
+        result = await repo.get_consecutive_correct_streak(sample_user.id)
+        assert result == 0
+
+    @pytest.mark.asyncio
+    async def test_all_correct_returns_count(
+        self,
+        db_session: AsyncSession,
+        sample_user: User,
+    ) -> None:
+        _, question = await _make_culture_context(db_session)
+        base = datetime(2024, 8, 1, 10, 0, 0, tzinfo=timezone.utc)
+        for i in range(5):
+            db_session.add(
+                _answer(
+                    sample_user.id,
+                    question.id,
+                    created_at=base + timedelta(seconds=i),
+                    is_correct=True,
+                )
+            )
+        await db_session.flush()
+
+        repo = CultureAnswerHistoryRepository(db_session)
+        result = await repo.get_consecutive_correct_streak(sample_user.id)
+        assert result == 5
+
+    @pytest.mark.asyncio
+    async def test_streak_broken_by_wrong(
+        self,
+        db_session: AsyncSession,
+        sample_user: User,
+    ) -> None:
+        """3 correct then 1 wrong then 2 correct → streak = 3 (from most recent)."""
+        _, question = await _make_culture_context(db_session)
+        base = datetime(2024, 8, 2, 10, 0, 0, tzinfo=timezone.utc)
+        # Oldest first: wrong, correct, correct, correct, correct, correct
+        correctness = [False, True, True, True, True, True]
+        for i, is_correct in enumerate(correctness):
+            db_session.add(
+                _answer(
+                    sample_user.id,
+                    question.id,
+                    created_at=base + timedelta(seconds=i),
+                    is_correct=is_correct,
+                )
+            )
+        await db_session.flush()
+
+        repo = CultureAnswerHistoryRepository(db_session)
+        result = await repo.get_consecutive_correct_streak(sample_user.id)
+        # Most recent 5 are correct, 6th (oldest) is wrong → streak = 5
+        assert result == 5
+
+
+class TestCountByLanguage:
+    @pytest.mark.asyncio
+    async def test_empty_user_returns_zero(
+        self,
+        db_session: AsyncSession,
+        sample_user: User,
+    ) -> None:
+        repo = CultureAnswerHistoryRepository(db_session)
+        result = await repo.count_by_language(sample_user.id, "el")
+        assert result == 0
+
+    @pytest.mark.asyncio
+    async def test_counts_only_matching_language(
+        self,
+        db_session: AsyncSession,
+        sample_user: User,
+    ) -> None:
+        _, question = await _make_culture_context(db_session)
+        base = datetime(2024, 9, 1, 10, 0, 0, tzinfo=timezone.utc)
+
+        # 3 Greek, 2 English answers
+        for i in range(3):
+            db_session.add(
+                CultureAnswerHistory(
+                    user_id=sample_user.id,
+                    question_id=question.id,
+                    language="el",
+                    is_correct=True,
+                    selected_option=1,
+                    time_taken_seconds=5,
+                    deck_category="history",
+                    created_at=base + timedelta(seconds=i),
+                )
+            )
+        for i in range(2):
+            db_session.add(
+                CultureAnswerHistory(
+                    user_id=sample_user.id,
+                    question_id=question.id,
+                    language="en",
+                    is_correct=True,
+                    selected_option=1,
+                    time_taken_seconds=5,
+                    deck_category="history",
+                    created_at=base + timedelta(seconds=10 + i),
+                )
+            )
+        await db_session.flush()
+
+        repo = CultureAnswerHistoryRepository(db_session)
+        assert await repo.count_by_language(sample_user.id, "el") == 3
+        assert await repo.count_by_language(sample_user.id, "en") == 2
+        assert await repo.count_by_language(sample_user.id, "ru") == 0
+
+
+class TestCountDistinctLanguages:
+    @pytest.mark.asyncio
+    async def test_empty_user_returns_zero(
+        self,
+        db_session: AsyncSession,
+        sample_user: User,
+    ) -> None:
+        repo = CultureAnswerHistoryRepository(db_session)
+        result = await repo.count_distinct_languages(sample_user.id)
+        assert result == 0
+
+    @pytest.mark.asyncio
+    async def test_counts_distinct_languages(
+        self,
+        db_session: AsyncSession,
+        sample_user: User,
+    ) -> None:
+        _, question = await _make_culture_context(db_session)
+        base = datetime(2024, 10, 1, 10, 0, 0, tzinfo=timezone.utc)
+
+        for i, lang in enumerate(["el", "en", "ru", "el", "en"]):
+            db_session.add(
+                CultureAnswerHistory(
+                    user_id=sample_user.id,
+                    question_id=question.id,
+                    language=lang,
+                    is_correct=True,
+                    selected_option=1,
+                    time_taken_seconds=5,
+                    deck_category="history",
+                    created_at=base + timedelta(seconds=i),
+                )
+            )
+        await db_session.flush()
+
+        repo = CultureAnswerHistoryRepository(db_session)
+        result = await repo.count_distinct_languages(sample_user.id)
+        assert result == 3
