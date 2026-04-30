@@ -11,17 +11,16 @@ import { cn } from '@/lib/utils';
 import type { CategoryReadiness } from '@/services/cultureDeckAPI';
 
 function getReadinessColor(percentage: number): string {
-  if (percentage >= 85) return 'bg-emerald-500 dark:bg-emerald-400';
-  if (percentage >= 60) return 'bg-green-500 dark:bg-green-400';
-  if (percentage >= 40) return 'bg-orange-500 dark:bg-orange-400';
-  return 'bg-red-500 dark:bg-red-400';
+  if (percentage >= 60) return 'bg-success';
+  if (percentage >= 40) return 'bg-warning';
+  return 'bg-danger';
 }
 
 function getAccuracyColor(accuracy: number | null): string {
   if (accuracy === null) return 'text-muted-foreground';
-  if (accuracy >= 70) return 'text-green-600 dark:text-green-400';
-  if (accuracy >= 50) return 'text-orange-500 dark:text-orange-400';
-  return 'text-red-500 dark:text-red-400';
+  if (accuracy >= 70) return 'text-success';
+  if (accuracy >= 50) return 'text-warning';
+  return 'text-danger';
 }
 
 export interface CategoryBreakdownProps {
@@ -108,12 +107,12 @@ export function CategoryBreakdown({ categories, isLoading }: CategoryBreakdownPr
               style={{ width: `${Math.max(cat.readiness_percentage, 2)}%` }}
             />
           </div>
-          <div className="flex w-16 shrink-0 flex-col items-end">
+          <div className="flex w-32 shrink-0 flex-col items-end">
             <span className="text-right text-sm text-muted-foreground">
               {Math.round(cat.readiness_percentage)}%
             </span>
             {/* Accuracy label */}
-            <p className={cn('text-xs', getAccuracyColor(cat.accuracy_percentage))}>
+            <p className={cn('text-right text-xs', getAccuracyColor(cat.accuracy_percentage))}>
               {cat.accuracy_percentage !== null
                 ? t('cultureReadiness.categoryBreakdown.accuracy', {
                     value: cat.accuracy_percentage,
@@ -126,7 +125,7 @@ export function CategoryBreakdown({ categories, isLoading }: CategoryBreakdownPr
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span
-                      className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-600 dark:bg-amber-950/30 dark:text-amber-400"
+                      className="badge b-amber"
                       aria-label={t('cultureReadiness.categoryBreakdown.needsReinforcementTooltip')}
                     >
                       <AlertTriangle size={10} />

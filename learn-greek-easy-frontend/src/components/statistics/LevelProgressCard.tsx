@@ -86,9 +86,9 @@ export const LevelProgressCard: React.FC<LevelProgressCardProps> = ({ className 
           <div>
             <CardTitle className="flex items-center gap-2">
               {isMaxLevel ? (
-                <Trophy className="h-5 w-5 text-yellow-500" />
+                <Trophy className="h-5 w-5 text-practice-gold" />
               ) : (
-                <Star className="h-5 w-5 text-yellow-500" />
+                <Star className="h-5 w-5 text-practice-gold" />
               )}
               {t('level.title', { level })}
               {levelName && (

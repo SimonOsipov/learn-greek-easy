@@ -63,7 +63,7 @@ export const StatsGrid: React.FC<StatsGridProps> = ({
             <CardTitle className="text-sm font-medium text-muted-foreground">
               {t('stats.currentStreak')}
             </CardTitle>
-            <Flame className="h-5 w-5 text-orange-500" />
+            <Flame className="h-5 w-5 text-warning" />
           </div>
         </CardHeader>
         <CardContent>
@@ -84,7 +84,7 @@ export const StatsGrid: React.FC<StatsGridProps> = ({
             <CardTitle className="text-sm font-medium text-muted-foreground">
               {t('stats.wordsLearned')}
             </CardTitle>
-            <BookOpen className="h-5 w-5 text-blue-500" />
+            <BookOpen className="h-5 w-5 text-primary" />
           </div>
         </CardHeader>
         <CardContent>
@@ -102,7 +102,7 @@ export const StatsGrid: React.FC<StatsGridProps> = ({
             <CardTitle className="text-sm font-medium text-muted-foreground">
               {t('stats.cultureQuestionsMastered')}
             </CardTitle>
-            <Landmark className="h-5 w-5 text-purple-500" />
+            <Landmark className="h-5 w-5 text-practice-purple" />
           </div>
         </CardHeader>
         <CardContent>
@@ -120,7 +120,7 @@ export const StatsGrid: React.FC<StatsGridProps> = ({
             <CardTitle className="text-sm font-medium text-muted-foreground">
               {t('stats.totalXP')}
             </CardTitle>
-            <Trophy className="h-5 w-5 text-yellow-500" />
+            <Trophy className="h-5 w-5 text-practice-gold" />
           </div>
         </CardHeader>
         <CardContent>

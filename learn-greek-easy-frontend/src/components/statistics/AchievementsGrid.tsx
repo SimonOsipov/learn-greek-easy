@@ -53,8 +53,8 @@ interface RecentUnlockCardProps {
 
 function RecentUnlockCard({ achievement: a, tAch, language }: RecentUnlockCardProps) {
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-[hsl(var(--success)/.3)] bg-[hsl(var(--success)/.1)] p-3 sm:flex-1">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[hsl(var(--success)/.15)] text-[hsl(var(--success))]">
+    <div className="flex items-center gap-3 rounded-lg border border-success/30 bg-success/10 p-3 sm:flex-1">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-success/15 text-success">
         <AchievementIcon icon={a.icon} size={20} />
       </div>
       <div className="min-w-0 flex-1">
@@ -167,7 +167,7 @@ export const AchievementsGrid: React.FC<AchievementsGridProps> = ({ className })
 
         {/* Empty State 1: 0 unlocked but some progress toward achievements */}
         {isEmptyWithProgress && (
-          <div role="status" className="mt-4 rounded-lg border bg-[hsl(var(--success)/.08)] p-4">
+          <div role="status" className="mt-4 rounded-lg border bg-success/10 p-4">
             <p className="text-center text-sm text-muted-foreground">
               {t('achievements.emptyState.someProgress')}
             </p>

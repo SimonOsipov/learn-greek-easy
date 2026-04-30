@@ -75,16 +75,15 @@ describe('CategoryBreakdown', () => {
 
   it('applies correct progress bar color classes based on readiness percentage', () => {
     const categories = [
-      makeCategory('history', 90), // >= 85 → emerald
-      makeCategory('geography', 65), // >= 60 → green
-      makeCategory('politics', 45), // >= 40 → orange
-      makeCategory('culture', 20), // < 40 → red
+      makeCategory('history', 90), // >= 60 → success
+      makeCategory('geography', 65), // >= 60 → success
+      makeCategory('politics', 45), // >= 40 → warning
+      makeCategory('culture', 20), // < 40 → danger
     ];
     const { container } = renderComponent({ categories });
-    expect(container.querySelector('.bg-emerald-500')).not.toBeNull();
-    expect(container.querySelector('.bg-green-500')).not.toBeNull();
-    expect(container.querySelector('.bg-orange-500')).not.toBeNull();
-    expect(container.querySelector('.bg-red-500')).not.toBeNull();
+    expect(container.querySelectorAll('.bg-success').length).toBeGreaterThanOrEqual(2);
+    expect(container.querySelector('.bg-warning')).not.toBeNull();
+    expect(container.querySelector('.bg-danger')).not.toBeNull();
   });
 
   it('preserves the order of categories as provided', () => {
@@ -165,24 +164,24 @@ describe('CategoryBreakdown', () => {
       expect(screen.queryByText('Needs Review')).not.toBeInTheDocument();
     });
 
-    it('applies green color class for accuracy >= 70', () => {
+    it('applies success color class for accuracy >= 70', () => {
       const categories = [makeCategory('history', 60, 10, 20, ['deck-1'], 75)];
       const { container } = renderComponent({ categories });
-      const accuracyEl = container.querySelector('.text-green-600');
+      const accuracyEl = container.querySelector('.text-success');
       expect(accuracyEl).not.toBeNull();
     });
 
-    it('applies orange color class for accuracy between 50 and 69', () => {
+    it('applies warning color class for accuracy between 50 and 69', () => {
       const categories = [makeCategory('history', 60, 10, 20, ['deck-1'], 55)];
       const { container } = renderComponent({ categories });
-      const accuracyEl = container.querySelector('.text-orange-500');
+      const accuracyEl = container.querySelector('.text-warning');
       expect(accuracyEl).not.toBeNull();
     });
 
-    it('applies red color class for accuracy below 50', () => {
+    it('applies danger color class for accuracy below 50', () => {
       const categories = [makeCategory('history', 60, 10, 20, ['deck-1'], 30)];
       const { container } = renderComponent({ categories });
-      const accuracyEl = container.querySelector('.text-red-500');
+      const accuracyEl = container.querySelector('.text-danger');
       expect(accuracyEl).not.toBeNull();
     });
 

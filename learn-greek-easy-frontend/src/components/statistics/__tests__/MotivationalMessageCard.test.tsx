@@ -115,15 +115,15 @@ describe('MotivationalMessageCard', () => {
     expect(statusEl).toHaveAttribute('aria-live', 'polite');
   });
 
-  it('renders with amber background class', () => {
+  it('renders with warning background class', () => {
     mockUseCultureReadiness.mockReturnValue({
       data: baseData,
       isLoading: false,
       isError: false,
     });
     const { container } = render(<MotivationalMessageCard />);
-    const amberEl = container.querySelector('[class*="bg-amber"]');
-    expect(amberEl).not.toBeNull();
+    const warnEl = container.querySelector('[class*="bg-warning"]');
+    expect(warnEl).not.toBeNull();
   });
 
   it('renders new_user motivation message correctly', () => {
@@ -140,14 +140,15 @@ describe('MotivationalMessageCard', () => {
     expect(statusEl.textContent).toContain('culture');
   });
 
-  it('renders within dark mode compatible container (dark class present in className)', () => {
+  it('renders with token-based bg/border (theme-flips via token, no dark: variants needed)', () => {
     mockUseCultureReadiness.mockReturnValue({
       data: baseData,
       isLoading: false,
       isError: false,
     });
     const { container } = render(<MotivationalMessageCard />);
-    const card = container.querySelector('[class*="dark:bg"]');
+    const card = container.querySelector('[class*="bg-warning"]');
     expect(card).not.toBeNull();
+    expect(card?.className).toMatch(/border-warning/);
   });
 });
