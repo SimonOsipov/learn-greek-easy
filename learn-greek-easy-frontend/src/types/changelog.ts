@@ -71,15 +71,15 @@ export const CHANGELOG_TAG_CONFIG: Record<
 > = {
   new_feature: {
     labelKey: 'changelog:tag.newFeature',
-    colorClass: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+    colorClass: 'b-green',
   },
   bug_fix: {
     labelKey: 'changelog:tag.bugFix',
-    colorClass: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300',
+    colorClass: 'b-amber',
   },
   announcement: {
     labelKey: 'changelog:tag.announcement',
-    colorClass: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+    colorClass: 'b-blue',
   },
 };
 

@@ -18,6 +18,7 @@ export function TagFilter({ activeTag, onTagChange }: TagFilterProps) {
         variant={activeTag === null ? 'default' : 'outline'}
         size="sm"
         onClick={() => onTagChange(null)}
+        aria-pressed={activeTag === null}
         data-testid="tag-filter-all"
       >
         {t('filter.all')}
@@ -28,6 +29,7 @@ export function TagFilter({ activeTag, onTagChange }: TagFilterProps) {
           variant={activeTag === tag ? 'default' : 'outline'}
           size="sm"
           onClick={() => onTagChange(tag)}
+          aria-pressed={activeTag === tag}
           data-testid={`tag-filter-${tag}`}
         >
           {t(CHANGELOG_TAG_CONFIG[tag].labelKey)}

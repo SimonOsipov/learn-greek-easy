@@ -88,7 +88,7 @@ describe('ChangelogCard', () => {
       render(<ChangelogCard entry={entry} />);
 
       const badge = screen.getByText('New Feature');
-      expect(badge).toHaveClass('bg-green-100');
+      expect(badge).toHaveClass('b-green');
     });
 
     it('should apply correct color class for bug_fix tag', () => {
@@ -96,7 +96,7 @@ describe('ChangelogCard', () => {
       render(<ChangelogCard entry={entry} />);
 
       const badge = screen.getByText('Bug Fix');
-      expect(badge).toHaveClass('bg-amber-100');
+      expect(badge).toHaveClass('b-amber');
     });
 
     it('should apply correct color class for announcement tag', () => {
@@ -104,7 +104,7 @@ describe('ChangelogCard', () => {
       render(<ChangelogCard entry={entry} />);
 
       const badge = screen.getByText('Announcement');
-      expect(badge).toHaveClass('bg-blue-100');
+      expect(badge).toHaveClass('b-blue');
     });
   });
 
@@ -237,23 +237,23 @@ describe('ChangelogCard', () => {
       expect(document.getElementById('entry-test-entry-123')).toBeInTheDocument();
     });
 
-    it('should apply border-l-green-500 for new_feature tag', () => {
+    it('should apply border-l-success for new_feature tag', () => {
       const entry = createMockEntry({ tag: 'new_feature' });
       render(<ChangelogCard entry={entry} />);
       const card = screen.getByTestId('changelog-card');
-      expect(card).toHaveClass('border-l-green-500');
+      expect(card).toHaveClass('border-l-success');
     });
 
-    it('should apply border-l-amber-500 for bug_fix tag', () => {
+    it('should apply border-l-warning for bug_fix tag', () => {
       const entry = createMockEntry({ tag: 'bug_fix' });
       render(<ChangelogCard entry={entry} />);
-      expect(screen.getByTestId('changelog-card')).toHaveClass('border-l-amber-500');
+      expect(screen.getByTestId('changelog-card')).toHaveClass('border-l-warning');
     });
 
-    it('should apply border-l-blue-500 for announcement tag', () => {
+    it('should apply border-l-primary for announcement tag', () => {
       const entry = createMockEntry({ tag: 'announcement' });
       render(<ChangelogCard entry={entry} />);
-      expect(screen.getByTestId('changelog-card')).toHaveClass('border-l-blue-500');
+      expect(screen.getByTestId('changelog-card')).toHaveClass('border-l-primary');
     });
 
     it('should have border-l-4 class on card', () => {

@@ -6,7 +6,6 @@ import { Link2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
 
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -18,22 +17,19 @@ interface ChangelogCardProps {
 }
 
 const TAG_BORDER_COLORS: Record<ChangelogTag, string> = {
-  new_feature: 'border-l-green-500',
-  bug_fix: 'border-l-amber-500',
-  announcement: 'border-l-blue-500',
+  new_feature: 'border-l-success',
+  bug_fix: 'border-l-warning',
+  announcement: 'border-l-primary',
 };
 
-/**
- * Tag badge with appropriate color styling.
- */
 function TagBadge({ tag }: { tag: ChangelogTag }) {
   const { t } = useTranslation();
   const config = CHANGELOG_TAG_CONFIG[tag];
 
   return (
-    <Badge variant="secondary" className={config.colorClass} data-testid="tag-badge">
+    <span className={`badge ${config.colorClass}`} data-testid="tag-badge">
       {t(config.labelKey)}
-    </Badge>
+    </span>
   );
 }
 
@@ -65,7 +61,7 @@ export function ChangelogCard({ entry }: ChangelogCardProps) {
   return (
     <Card
       id={`entry-${entry.id}`}
-      className={`group w-full border-l-4 ${TAG_BORDER_COLORS[entry.tag]}`}
+      className={`glass-strong group w-full border-l-4 ${TAG_BORDER_COLORS[entry.tag]}`}
       data-testid="changelog-card"
     >
       <CardHeader className="pb-3">
@@ -77,13 +73,13 @@ export function ChangelogCard({ entry }: ChangelogCardProps) {
                 {formattedDate}
               </time>
               <Button
-                variant="ghost"
+                variant="chrome-ghost"
                 size="icon"
-                className="h-6 w-6 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100"
+                className="h-9 w-9 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100"
                 onClick={handleCopyLink}
                 aria-label={t('copyLink')}
               >
-                <Link2 className="h-3.5 w-3.5" />
+                <Link2 className="h-4 w-4" />
               </Button>
             </div>
           </div>
