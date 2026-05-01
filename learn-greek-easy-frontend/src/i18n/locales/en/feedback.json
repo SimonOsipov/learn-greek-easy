@@ -3,7 +3,8 @@
     "title": "Feedback & Ideas",
     "subtitle": "Share your ideas, report bugs, and vote on suggestions",
     "submitButton": "Submit Feedback",
-    "count": "{{count}}"
+    "count": "{{count}}",
+    "countA11y": "{{count}} feedback items"
   },
   "categories": {
     "feature_request": "Feature Request",

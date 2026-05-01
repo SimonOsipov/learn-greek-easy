@@ -31,7 +31,7 @@ export const FeedbackFilters: React.FC = () => {
 
   return (
     <div
-      className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center"
+      className="hairline flex flex-col gap-3 rounded-xl bg-muted/40 p-3 sm:flex-row sm:flex-wrap sm:items-center"
       data-testid="feedback-filters"
     >
       <Select
