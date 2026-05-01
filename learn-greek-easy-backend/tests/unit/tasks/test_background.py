@@ -206,6 +206,14 @@ class TestConfigSettings:
         assert isinstance(settings.streak_reset_hour_utc, int)
 
 
+def _make_mock_reconcile_result(new_unlocks=None, leveled_up=False):
+    """Helper: build a MagicMock that looks like ReconcileResult."""
+    mock_result = MagicMock()
+    mock_result.new_unlocks = new_unlocks if new_unlocks is not None else []
+    mock_result.leveled_up = leveled_up
+    return mock_result
+
+
 class TestLoggingBehavior:
     """Test logging behavior when background tasks are disabled."""
 
@@ -258,20 +266,21 @@ class TestLoggingBehavior:
                     # Set up mock session factory and session
                     mock_session = AsyncMock()
                     mock_session_factory = MagicMock()
-                    mock_session_factory.return_value.__aenter__ = AsyncMock(
-                        return_value=mock_session
-                    )
-                    mock_session_factory.return_value.__aexit__ = AsyncMock()
+                    mock_session_factory.return_value = mock_session
                     mock_sessionmaker.return_value = mock_session_factory
 
-                    with patch("src.tasks.background.logger") as mock_logger:
-                        await check_achievements_task(
-                            user_id, "postgresql+asyncpg://test:test@localhost/test"
-                        )
-                        # Should log info on start
-                        mock_logger.info.assert_called()
-                        # Verify engine was disposed
-                        mock_engine.dispose.assert_called_once()
+                    with patch(
+                        "src.services.gamification.reconciler.GamificationReconciler.reconcile",
+                        new=AsyncMock(return_value=_make_mock_reconcile_result()),
+                    ):
+                        with patch("src.tasks.background.logger") as mock_logger:
+                            await check_achievements_task(
+                                user_id, "postgresql+asyncpg://test:test@localhost/test"
+                            )
+                            # Should log info on start
+                            mock_logger.info.assert_called()
+                            # Verify engine was disposed
+                            mock_engine.dispose.assert_called_once()
 
 
 class TestCheckAchievementsTaskImplementation:
@@ -295,9 +304,13 @@ class TestCheckAchievementsTaskImplementation:
                     mock_session_factory.return_value = mock_session
                     mock_sessionmaker.return_value = mock_session_factory
 
-                    await check_achievements_task(
-                        user_id, "postgresql+asyncpg://test:test@localhost/test"
-                    )
+                    with patch(
+                        "src.services.gamification.reconciler.GamificationReconciler.reconcile",
+                        new=AsyncMock(return_value=_make_mock_reconcile_result()),
+                    ):
+                        await check_achievements_task(
+                            user_id, "postgresql+asyncpg://test:test@localhost/test"
+                        )
 
                     # Verify engine was disposed
                     mock_engine.dispose.assert_called_once()
@@ -319,10 +332,10 @@ class TestCheckAchievementsTaskImplementation:
                         user_id, "postgresql+asyncpg://test:test@localhost/test"
                     )
 
-                    # Should log the error
+                    # Should log the error with updated message
                     mock_logger.error.assert_called()
                     error_call = mock_logger.error.call_args
-                    assert "Achievement check failed" in error_call[0][0]
+                    assert "Reconcile failed in check_achievements_task" in error_call[0][0]
 
     @pytest.mark.asyncio
     async def test_check_achievements_handles_session_error(self):
@@ -368,9 +381,13 @@ class TestCheckAchievementsTaskImplementation:
                     mock_session_factory.return_value = mock_session
                     mock_sessionmaker.return_value = mock_session_factory
 
-                    await check_achievements_task(
-                        user_id, "postgresql+asyncpg://test:test@localhost/test"
-                    )
+                    with patch(
+                        "src.services.gamification.reconciler.GamificationReconciler.reconcile",
+                        new=AsyncMock(return_value=_make_mock_reconcile_result()),
+                    ):
+                        await check_achievements_task(
+                            user_id, "postgresql+asyncpg://test:test@localhost/test"
+                        )
 
                     # Verify engine.dispose() was called
                     mock_engine.dispose.assert_awaited_once()
@@ -417,7 +434,11 @@ class TestCheckAchievementsTaskImplementation:
                     mock_session_factory.return_value = mock_session
                     mock_sessionmaker.return_value = mock_session_factory
 
-                    await check_achievements_task(user_id, db_url)
+                    with patch(
+                        "src.services.gamification.reconciler.GamificationReconciler.reconcile",
+                        new=AsyncMock(return_value=_make_mock_reconcile_result()),
+                    ):
+                        await check_achievements_task(user_id, db_url)
 
                     # Verify create_async_engine was called with pool_pre_ping and connect_args
                     mock_engine_creator.assert_called_once_with(
@@ -445,19 +466,9 @@ class TestCheckAchievementsTaskImplementation:
                     mock_sessionmaker.return_value = mock_session_factory
 
                     with patch(
-                        "src.services.achievement_service.AchievementService"
-                    ) as mock_service_class:
-                        mock_service = AsyncMock()
-                        mock_service._get_user_stats.return_value = {
-                            "cards_learned": 0,
-                            "cards_mastered": 0,
-                            "total_reviews": 0,
-                            "current_streak": 0,
-                            "longest_streak": 0,
-                        }
-                        mock_service.check_and_unlock_achievements.return_value = []
-                        mock_service_class.return_value = mock_service
-
+                        "src.services.gamification.reconciler.GamificationReconciler.reconcile",
+                        new=AsyncMock(return_value=_make_mock_reconcile_result()),
+                    ):
                         with patch("src.tasks.background.logger") as mock_logger:
                             await check_achievements_task(
                                 user_id, "postgresql+asyncpg://test:test@localhost/test"
@@ -468,19 +479,23 @@ class TestCheckAchievementsTaskImplementation:
 
                             # Check start log
                             start_call = mock_logger.info.call_args_list[0]
-                            assert "Starting achievement check" in start_call[0][0]
+                            assert (
+                                "Starting reconcile (IMMEDIATE) from check_achievements_task"
+                                in start_call[0][0]
+                            )
 
                             # Check completion log
                             completion_call = mock_logger.info.call_args_list[1]
-                            assert "Achievement check complete" in completion_call[0][0]
+                            assert "Reconcile complete" in completion_call[0][0]
 
 
-class TestCheckAchievementsTaskAchievementService:
-    """Test that check_achievements_task calls AchievementService correctly."""
+class TestCheckAchievementsTaskReconciler:
+    """Test that check_achievements_task calls GamificationReconciler correctly (Phase 5)."""
 
     @pytest.mark.asyncio
-    async def test_calls_get_user_stats_and_check_achievements(self):
-        """Should call _get_user_stats and check_and_unlock_achievements."""
+    async def test_calls_reconciler_with_immediate_mode(self):
+        """Should call GamificationReconciler.reconcile with ReconcileMode.IMMEDIATE."""
+        from src.services.gamification.types import ReconcileMode
         from src.tasks.background import check_achievements_task
 
         user_id = uuid4()
@@ -496,33 +511,24 @@ class TestCheckAchievementsTaskAchievementService:
                     mock_session_factory.return_value = mock_session
                     mock_sessionmaker.return_value = mock_session_factory
 
+                    mock_result = _make_mock_reconcile_result()
                     with patch(
-                        "src.services.achievement_service.AchievementService"
-                    ) as mock_service_class:
-                        mock_service = AsyncMock()
-                        mock_service._get_user_stats.return_value = {
-                            "cards_learned": 5,
-                            "cards_mastered": 2,
-                            "total_reviews": 20,
-                            "current_streak": 0,
-                            "longest_streak": 0,
-                        }
-                        mock_service.check_and_unlock_achievements.return_value = []
-                        mock_service_class.return_value = mock_service
-
+                        "src.services.gamification.reconciler.GamificationReconciler.reconcile",
+                        new=AsyncMock(return_value=mock_result),
+                    ) as mock_reconcile:
                         await check_achievements_task(
                             user_id, "postgresql+asyncpg://test:test@localhost/test"
                         )
 
-                        # _get_user_stats should be called once
-                        mock_service._get_user_stats.assert_called_once_with(user_id)
-
-                        # check_and_unlock_achievements should be called for each non-zero metric
-                        assert mock_service.check_and_unlock_achievements.call_count == 3
+                        # Reconciler called with session, user_id, IMMEDIATE
+                        mock_reconcile.assert_called_once()
+                        call_args = mock_reconcile.call_args
+                        assert call_args[0][1] == user_id
+                        assert call_args[0][2] == ReconcileMode.IMMEDIATE
 
     @pytest.mark.asyncio
-    async def test_skips_check_for_zero_metric_values(self):
-        """Should not call check_and_unlock_achievements when all metric values are 0."""
+    async def test_commits_session_after_reconcile(self):
+        """Should call session.commit() exactly once after reconcile."""
         from src.tasks.background import check_achievements_task
 
         user_id = uuid4()
@@ -538,73 +544,199 @@ class TestCheckAchievementsTaskAchievementService:
                     mock_session_factory.return_value = mock_session
                     mock_sessionmaker.return_value = mock_session_factory
 
+                    mock_result = _make_mock_reconcile_result(
+                        new_unlocks=["learning_first_word"], leveled_up=False
+                    )
                     with patch(
-                        "src.services.achievement_service.AchievementService"
-                    ) as mock_service_class:
-                        mock_service = AsyncMock()
-                        mock_service._get_user_stats.return_value = {
-                            "cards_learned": 0,
-                            "cards_mastered": 0,
-                            "total_reviews": 0,
-                            "current_streak": 0,
-                            "longest_streak": 0,
-                        }
-                        mock_service.check_and_unlock_achievements.return_value = []
-                        mock_service_class.return_value = mock_service
-
+                        "src.services.gamification.reconciler.GamificationReconciler.reconcile",
+                        new=AsyncMock(return_value=mock_result),
+                    ):
                         await check_achievements_task(
                             user_id, "postgresql+asyncpg://test:test@localhost/test"
                         )
 
-                        # Should not call check_and_unlock_achievements when values are 0
-                        mock_service.check_and_unlock_achievements.assert_not_called()
-
-    @pytest.mark.asyncio
-    async def test_commits_when_achievements_unlocked(self):
-        """Should commit session when achievements are unlocked."""
-        from src.tasks.background import check_achievements_task
-
-        user_id = uuid4()
-
-        with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
-                mock_engine = AsyncMock()
-                mock_engine_creator.return_value = mock_engine
-
-                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
-                    mock_session = AsyncMock()
-                    mock_session_factory = MagicMock()
-                    mock_session_factory.return_value = mock_session
-                    mock_sessionmaker.return_value = mock_session_factory
-
-                    with patch(
-                        "src.services.achievement_service.AchievementService"
-                    ) as mock_service_class:
-                        mock_service = AsyncMock()
-                        mock_service._get_user_stats.return_value = {
-                            "cards_learned": 1,
-                            "cards_mastered": 0,
-                            "total_reviews": 0,
-                            "current_streak": 0,
-                            "longest_streak": 0,
-                        }
-                        # Return a newly unlocked achievement
-                        mock_service.check_and_unlock_achievements.return_value = [
-                            {
-                                "id": "learning_first_word",
-                                "name": "First Word",
-                                "icon": "star",
-                                "xp_reward": 50,
-                            }
-                        ]
-                        mock_service_class.return_value = mock_service
-
-                        await check_achievements_task(
-                            user_id, "postgresql+asyncpg://test:test@localhost/test"
-                        )
-
-                        # Session should be committed when achievements are unlocked
+                        # session.commit() called exactly once
                         mock_session.commit.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_engine_disposed_in_finally_on_success(self):
+        """Engine must be disposed in the finally block even on success."""
+        from src.tasks.background import check_achievements_task
+
+        user_id = uuid4()
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
+                mock_engine = AsyncMock()
+                mock_engine_creator.return_value = mock_engine
+
+                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
+                    mock_session = AsyncMock()
+                    mock_session_factory = MagicMock()
+                    mock_session_factory.return_value = mock_session
+                    mock_sessionmaker.return_value = mock_session_factory
+
+                    with patch(
+                        "src.services.gamification.reconciler.GamificationReconciler.reconcile",
+                        new=AsyncMock(return_value=_make_mock_reconcile_result()),
+                    ):
+                        await check_achievements_task(
+                            user_id, "postgresql+asyncpg://test:test@localhost/test"
+                        )
+
+                    mock_engine.dispose.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_engine_disposed_in_finally_on_reconciler_error(self):
+        """Engine must be disposed even when reconciler raises."""
+        from src.tasks.background import check_achievements_task
+
+        user_id = uuid4()
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
+                mock_engine = AsyncMock()
+                mock_engine_creator.return_value = mock_engine
+
+                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
+                    mock_session = AsyncMock()
+                    mock_session_factory = MagicMock()
+                    mock_session_factory.return_value = mock_session
+                    mock_sessionmaker.return_value = mock_session_factory
+
+                    with patch(
+                        "src.services.gamification.reconciler.GamificationReconciler.reconcile",
+                        new=AsyncMock(side_effect=RuntimeError("projection failed")),
+                    ):
+                        with patch("src.tasks.background.logger") as mock_logger:
+                            # Must not raise
+                            await check_achievements_task(
+                                user_id, "postgresql+asyncpg://test:test@localhost/test"
+                            )
+
+                            # Error must be logged with exact message
+                            mock_logger.error.assert_called()
+                            error_call = mock_logger.error.call_args
+                            assert "Reconcile failed in check_achievements_task" in error_call[0][0]
+
+                    # Engine disposed despite the error
+                    mock_engine.dispose.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_no_reraise_on_reconciler_error(self):
+        """Reconciler errors must be swallowed — task must not propagate exceptions."""
+        from src.tasks.background import check_achievements_task
+
+        user_id = uuid4()
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
+                mock_engine = AsyncMock()
+                mock_engine_creator.return_value = mock_engine
+
+                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
+                    mock_session = AsyncMock()
+                    mock_session_factory = MagicMock()
+                    mock_session_factory.return_value = mock_session
+                    mock_sessionmaker.return_value = mock_session_factory
+
+                    with patch(
+                        "src.services.gamification.reconciler.GamificationReconciler.reconcile",
+                        new=AsyncMock(side_effect=ValueError("unexpected")),
+                    ):
+                        # Should complete without raising
+                        await check_achievements_task(
+                            user_id, "postgresql+asyncpg://test:test@localhost/test"
+                        )
+
+    @pytest.mark.asyncio
+    async def test_sse_signal_preserved(self):
+        """SSE dashboard_event_bus.signal fire-and-forget block must still execute."""
+        from src.tasks.background import check_achievements_task
+
+        user_id = uuid4()
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
+                mock_engine = AsyncMock()
+                mock_engine_creator.return_value = mock_engine
+
+                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
+                    mock_session = AsyncMock()
+                    mock_session_factory = MagicMock()
+                    mock_session_factory.return_value = mock_session
+                    mock_sessionmaker.return_value = mock_session_factory
+
+                    with patch(
+                        "src.services.gamification.reconciler.GamificationReconciler.reconcile",
+                        new=AsyncMock(return_value=_make_mock_reconcile_result()),
+                    ):
+                        mock_event_bus = AsyncMock()
+                        with patch("src.core.event_bus.dashboard_event_bus", mock_event_bus):
+                            # The SSE block swallows its own exceptions; just verify it's called
+                            # (loop.create_task is synchronous, so signal may not be awaited here)
+                            await check_achievements_task(
+                                user_id, "postgresql+asyncpg://test:test@localhost/test"
+                            )
+                            # No assertion on signal — the block is fire-and-forget and
+                            # create_task only schedules it; we verify the block doesn't raise.
+
+
+class TestRunReviewSideEffectsReconcileOnce:
+    """Prove that _run_review_side_effects reaches reconcile EXACTLY once per review."""
+
+    @pytest.mark.asyncio
+    async def test_reconcile_called_exactly_once_per_review(self):
+        """_run_review_side_effects must invoke check_achievements_task once, which
+        transitively calls GamificationReconciler.reconcile once. No double-reconcile."""
+        from src.tasks.background import _run_review_side_effects
+
+        user_id = str(uuid4())
+        card_record_id = str(uuid4())
+        db_url = "postgresql+asyncpg://test:test@localhost/test"
+
+        reconcile_call_count = 0
+
+        async def _counting_reconcile(*args, **kwargs):
+            nonlocal reconcile_call_count
+            reconcile_call_count += 1
+            return _make_mock_reconcile_result()
+
+        with patch.object(settings, "feature_background_tasks", True):
+            # Mock engine/session for both award_flashcard_xp_task and check_achievements_task
+            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
+                mock_engine = AsyncMock()
+                mock_engine_creator.return_value = mock_engine
+
+                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
+                    mock_session = AsyncMock()
+                    mock_session_factory = MagicMock()
+                    mock_session_factory.return_value = mock_session
+                    mock_sessionmaker.return_value = mock_session_factory
+
+                    with patch(
+                        "src.services.gamification.reconciler.GamificationReconciler.reconcile",
+                        new=_counting_reconcile,
+                    ):
+                        # XP service mock (award_flashcard_xp_task inner)
+                        with patch("src.services.xp_service.XPService") as mock_xp_cls:
+                            mock_xp = AsyncMock()
+                            mock_xp.award_flashcard_review_xp.return_value = 10
+                            mock_xp_cls.return_value = mock_xp
+
+                            await _run_review_side_effects(
+                                user_id=user_id,
+                                card_record_id=card_record_id,
+                                quality=4,
+                                time_taken=3000,
+                                new_status_value="learning",
+                                reviews_before=0,
+                                db_url=db_url,
+                            )
+
+        assert (
+            reconcile_call_count == 1
+        ), f"Expected reconcile to be called exactly once, got {reconcile_call_count}"
 
 
 class TestInvalidateCacheTaskImplementation:

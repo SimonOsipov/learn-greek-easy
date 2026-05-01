@@ -121,6 +121,7 @@ async def award_flashcard_xp_task(
             await engine.dispose()
 
 
+# DEPRECATED in Phase 5 (GAMIF-05): superseded by GamificationReconciler
 async def _run_achievement_checks(session: Any, user_id: UUID) -> int:
     """Run achievement checks for a user and commit any unlocks. Returns unlock count."""
     from src.services.achievement_definitions import AchievementMetric
@@ -151,7 +152,8 @@ async def check_achievements_task(user_id: UUID, db_url: str) -> None:
     """Check if user has earned new achievements after a review.
 
     This task runs asynchronously after the review response is sent.
-    It checks all achievement thresholds and logs any new unlocks.
+    It delegates to GamificationReconciler.reconcile(IMMEDIATE) to compute
+    the full projection and write convergent gamification state.
 
     The task creates its own database connection to avoid issues with
     connection sharing across async contexts.
@@ -165,13 +167,16 @@ async def check_achievements_task(user_id: UUID, db_url: str) -> None:
         return
 
     logger.info(
-        "Starting achievement check",
-        extra={"user_id": str(user_id), "task": "check_achievements"},
+        "Starting reconcile (IMMEDIATE) from check_achievements_task",
+        extra={
+            "user_id": str(user_id),
+            "task": "check_achievements",
+            "mode": "IMMEDIATE",
+        },
     )
 
     engine = None
     try:
-        # Create dedicated engine for this background task
         engine = create_async_engine(
             db_url,
             pool_pre_ping=True,
@@ -183,10 +188,20 @@ async def check_achievements_task(user_id: UUID, db_url: str) -> None:
 
         session = async_session_factory()
         try:
-            unlocked_count = await _run_achievement_checks(session, user_id)
+            from src.services.gamification.reconciler import GamificationReconciler
+            from src.services.gamification.types import ReconcileMode
+
+            result = await GamificationReconciler.reconcile(
+                session, user_id, ReconcileMode.IMMEDIATE
+            )
+            await session.commit()
             logger.info(
-                "Achievement check complete",
-                extra={"user_id": str(user_id), "unlocked_count": unlocked_count},
+                "Reconcile complete",
+                extra={
+                    "user_id": str(user_id),
+                    "new_unlocks": result.new_unlocks,
+                    "leveled_up": result.leveled_up,
+                },
             )
         finally:
             await session.close()
@@ -210,7 +225,7 @@ async def check_achievements_task(user_id: UUID, db_url: str) -> None:
 
     except Exception as e:
         logger.error(
-            "Achievement check failed",
+            "Reconcile failed in check_achievements_task",
             extra={"user_id": str(user_id), "error": str(e)},
             exc_info=True,
         )
@@ -502,7 +517,7 @@ async def _run_review_side_effects(
     reviews_before: int,
     db_url: str,
 ) -> None:
-    """Run non-critical side effects (XP, daily goal, achievements, analytics)."""
+    """Run non-critical side effects (XP, daily goal, reconcile, analytics)."""
     from datetime import datetime, timezone
 
     # Award XP
@@ -545,7 +560,7 @@ async def _run_review_side_effects(
         if engine2 is not None:
             await engine2.dispose()
 
-    # Check achievements
+    # Calls GamificationReconciler via the wrapper (Phase 6 will inline this).
     try:
         await check_achievements_task(user_id=UUID(user_id), db_url=db_url)
     except Exception as e:
