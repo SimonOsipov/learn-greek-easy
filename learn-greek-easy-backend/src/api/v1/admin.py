@@ -69,6 +69,7 @@ from src.db.models import (
     SituationPicture,
     SituationStatus,
     User,
+    UserXP,
     WiktionaryMorphology,
     WordEntry,
 )
@@ -97,6 +98,7 @@ from src.schemas.admin import (
     PendingQuestionsResponse,
     QuestionApproveRequest,
     QuestionApproveResponse,
+    ReconcileDiffResponse,
     ReverseLookupItem,
     ReverseLookupResponse,
     SuggestionItem,
@@ -165,6 +167,8 @@ from src.services.changelog_service import ChangelogService
 from src.services.cross_ai_verification_service import get_cross_ai_verification_service
 from src.services.duplicate_detection_service import DuplicateDetectionService
 from src.services.feedback_admin_service import FeedbackAdminService
+from src.services.gamification import ReconcileMode
+from src.services.gamification.reconciler import GamificationReconciler
 from src.services.lemma_normalization_service import detect_article, get_lemma_normalization_service
 from src.services.lexicon_service import LexiconEntry, LexiconService
 from src.services.local_verification_service import get_local_verification_service
@@ -4780,3 +4784,77 @@ async def list_admin_exercises(
         page=page,
         page_size=page_size,
     )
+
+
+# ============================================================================
+# Gamification Admin Endpoints
+# ============================================================================
+
+
+@router.post(
+    "/users/{user_id}/recompute-gamification",
+    response_model=ReconcileDiffResponse,
+    summary="Force-recompute gamification state for a user (ops self-heal)",
+    description=(
+        "Runs GamificationReconciler in QUIET mode (no notifications) for the "
+        "target user and returns the resulting diff (XP delta, level delta, "
+        "newly-unlocked achievements). Use when a user reports stuck "
+        "achievements or incorrect XP. Idempotent: running twice on a "
+        "converged user returns an empty diff."
+    ),
+    responses={
+        200: {"description": "Reconcile completed; diff payload returned (may be empty)."},
+        404: {"description": "User not found."},
+    },
+)
+async def recompute_user_gamification(
+    user_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> ReconcileDiffResponse:
+    # 1. Confirm user exists (404 otherwise)
+    user_exists = await db.scalar(select(User.id).where(User.id == user_id))
+    if user_exists is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"User {user_id} not found",
+        )
+
+    # 2. Capture pre-state level (reconciler returns total_xp_before but NOT level_before)
+    level_before: int = (
+        await db.scalar(select(UserXP.current_level).where(UserXP.user_id == user_id))
+    ) or 1
+
+    # 3. Run reconciler (QUIET = zero notifications). Reconciler flushes; we own commit.
+    result = await GamificationReconciler.reconcile(db, user_id, mode=ReconcileMode.QUIET)
+    await db.commit()
+
+    # 4. Build diff payload
+    diff = ReconcileDiffResponse(
+        user_id=user_id,
+        xp_before=result.total_xp_before,
+        xp_after=result.total_xp_after,
+        xp_delta=result.total_xp_after - result.total_xp_before,
+        level_before=level_before,
+        level_after=result.snapshot.current_level,
+        level_delta=result.snapshot.current_level - level_before,
+        leveled_up=result.leveled_up,
+        newly_unlocked_ids=result.new_unlocks,
+        newly_locked_ids=[],  # QUIET mode never locks; reserved for symmetry
+        projection_version=result.snapshot.projection_version,
+        computed_at=result.snapshot.computed_at,
+    )
+
+    # 5. Audit log (UUIDs only — never emails or PII per CLAUDE.md)
+    logger.info(
+        "admin_recompute_gamification",
+        admin_user_id=str(current_user.id),
+        target_user_id=str(user_id),
+        xp_delta=diff.xp_delta,
+        level_delta=diff.level_delta,
+        leveled_up=diff.leveled_up,
+        newly_unlocked_count=len(diff.newly_unlocked_ids),
+        newly_unlocked_ids=diff.newly_unlocked_ids,
+    )
+
+    return diff

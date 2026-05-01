@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from time import perf_counter
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Header
+from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, EmailStr
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -787,4 +787,69 @@ async def seed_situations(
         timestamp=datetime.now(timezone.utc),
         duration_ms=duration_ms,
         results=result,
+    )
+
+
+class GamificationResetStuckStateRequest(BaseModel):
+    """Request body for resetting a user to the gamification stuck state."""
+
+    email: EmailStr
+    achievement_id: str
+
+
+class GamificationResetStuckStateResponse(BaseModel):
+    """Response for gamification stuck-state reset."""
+
+    success: bool
+    deleted_rows: int
+    projection_version_reset: bool
+
+
+@router.post(
+    "/gamification-reset-stuck-state",
+    response_model=GamificationResetStuckStateResponse,
+    summary="Reset user to gamification stuck state",
+    description=(
+        "Idempotent test-only endpoint. "
+        "Deletes the UserAchievement row for the given (email, achievement_id) pair "
+        "and resets UserXP.projection_version to 0, reproducing the pre-GAMIF-04 "
+        "'stuck user' shape for E2E self-heal testing."
+    ),
+    dependencies=[Depends(verify_seed_access)],
+)
+async def gamification_reset_stuck_state(
+    body: GamificationResetStuckStateRequest,
+    db: AsyncSession = Depends(get_db),
+) -> GamificationResetStuckStateResponse:
+    """Reset a user to the stuck gamification state for E2E self-heal testing.
+
+    Args:
+        body: email + achievement_id to reset
+        db: Database session
+
+    Returns:
+        GamificationResetStuckStateResponse with operation details
+
+    Raises:
+        404: If no user found with the given email
+    """
+    user_repo = UserRepository(db)
+    user = await user_repo.get_by_email(body.email)
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail=f"User not found: {body.email}",
+        )
+
+    service = SeedService(db)
+    result = await service.reset_gamification_stuck_state(
+        user_id=user.id,
+        achievement_id=body.achievement_id,
+    )
+    await db.commit()
+
+    return GamificationResetStuckStateResponse(
+        success=result["success"],
+        deleted_rows=result["deleted_rows"],
+        projection_version_reset=result["projection_version_reset"],
     )

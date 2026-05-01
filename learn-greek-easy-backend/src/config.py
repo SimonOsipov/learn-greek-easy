@@ -4,7 +4,7 @@ import json
 from functools import lru_cache
 from typing import List, Optional
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -333,6 +333,19 @@ class Settings(BaseSettings):
         default=False,
         description="Enable shadow-mode gamification diff logging (no writes, observability only)",
     )
+    gamification_reconcile_on_read: bool = Field(
+        default=False,
+        description="Master switch: enable GamificationReconciler.reconcile(QUIET) on XP read endpoints",
+    )
+    gamification_reconcile_rollout_percent: int = Field(
+        default=0,
+        description="User-id-hash gated rollout percent for reconcile-on-read (0-100)",
+    )
+
+    @field_validator("gamification_reconcile_rollout_percent")
+    @classmethod
+    def _clamp_rollout_percent(cls, v: int) -> int:
+        return max(0, min(100, v))
 
     # =========================================================================
     # E2E Test Seeding

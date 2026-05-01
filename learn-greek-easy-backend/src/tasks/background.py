@@ -146,6 +146,7 @@ async def _run_achievement_checks(session: Any, user_id: UUID) -> int:
     return len(any_unlocked)
 
 
+# DEPRECATED in Phase 5 (GAMIF-05): replaced by GamificationReconciler
 async def check_achievements_task(user_id: UUID, db_url: str) -> None:
     """Check if user has earned new achievements after a review.
 
@@ -893,6 +894,7 @@ async def _check_and_notify_daily_goal(
         return False
 
 
+# DEPRECATED in Phase 5 (GAMIF-05): replaced by GamificationReconciler
 async def persist_culture_answer_task(
     user_id: UUID,
     question_id: UUID,

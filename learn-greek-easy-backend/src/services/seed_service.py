@@ -3112,6 +3112,58 @@ class SeedService:
             "achievements_created": len(created),
         }
 
+    async def reset_gamification_stuck_state(
+        self,
+        user_id: UUID,
+        achievement_id: str,
+    ) -> dict[str, Any]:
+        """Reset a user to the "stuck" state for E2E self-heal testing.
+
+        Idempotent: safe to call multiple times.
+        1. DELETE UserAchievement row for (user_id, achievement_id)
+        2. UPDATE UserXP.projection_version = 0 for the user
+
+        Args:
+            user_id: User whose gamification state to reset
+            achievement_id: Achievement to un-unlock
+
+        Returns:
+            dict with deleted_rows and projection_version_reset
+
+        Raises:
+            RuntimeError: If seeding not allowed
+        """
+        self._check_can_seed()
+
+        # Count existing row before delete (for reporting)
+        existing = await self.db.execute(
+            select(UserAchievement).where(
+                UserAchievement.user_id == user_id,
+                UserAchievement.achievement_id == achievement_id,
+            )
+        )
+        deleted_rows = 1 if existing.scalar_one_or_none() is not None else 0
+
+        await self.db.execute(
+            delete(UserAchievement).where(
+                UserAchievement.user_id == user_id,
+                UserAchievement.achievement_id == achievement_id,
+            )
+        )
+
+        xp_result = await self.db.execute(select(UserXP).where(UserXP.user_id == user_id))
+        user_xp = xp_result.scalar_one_or_none()
+        projection_version_reset = False
+        if user_xp is not None:
+            user_xp.projection_version = 0
+            projection_version_reset = True
+
+        return {
+            "success": True,
+            "deleted_rows": deleted_rows,
+            "projection_version_reset": projection_version_reset,
+        }
+
     async def seed_user_xp(
         self,
         user_id: UUID,

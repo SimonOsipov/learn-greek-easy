@@ -135,6 +135,25 @@ describe('AchievementCard', () => {
       );
       expect(screen.getByText('30 / 100')).toBeInTheDocument();
     });
+
+    it('should clamp display when current_value exceeds threshold (rollout race defense)', () => {
+      render(
+        <AchievementCard
+          achievement={createMockAchievement({
+            unlocked: false,
+            progress: 4400,
+            current_value: 44,
+            threshold: 1,
+          })}
+        />
+      );
+      expect(screen.getByText('1 / 1')).toBeInTheDocument();
+      expect(screen.getByText('100%')).toBeInTheDocument();
+      expect(screen.queryByText('44 / 1')).not.toBeInTheDocument();
+      expect(screen.queryByText('4400%')).not.toBeInTheDocument();
+      // Still locked — clamp is purely visual
+      expect(screen.getByText('Locked')).toBeInTheDocument();
+    });
   });
 
   describe('Edge Cases', () => {

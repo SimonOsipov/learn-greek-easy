@@ -459,6 +459,7 @@ class V2SM2Service:
 
         await self._run_persist_review_side_effects(context)
 
+    # DEPRECATED in Phase 5 (GAMIF-05): replaced by GamificationReconciler
     async def _run_persist_review_side_effects(self, context: dict[str, Any]) -> None:
         """Run non-critical side effects (XP, daily goal, achievements, analytics)."""
         user_id_uuid = UUID(context["user_id"])
