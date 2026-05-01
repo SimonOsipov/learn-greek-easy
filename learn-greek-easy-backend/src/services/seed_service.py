@@ -3231,7 +3231,9 @@ class SeedService:
         # next_review_date values updated by a previous test run don't push cards into the
         # future and cause the practice queue to show the "all caught up" empty state.
         await self.db.execute(
-            delete(CardRecordStatistics).where(CardRecordStatistics.user_id == user_id)
+            delete(CardRecordStatistics)
+            .where(CardRecordStatistics.user_id == user_id)
+            .execution_options(synchronize_session=False)
         )
 
         # 4. Reset UserXP.projection_version to 0 — reconciler will recompute full projection

@@ -356,14 +356,17 @@ class TestRunPersistReviewSideEffects:
         # Daily goal still called after reconciler failure
         mock_daily_goal.assert_called_once_with(UUID(context["user_id"]), context["user_id"])
 
-        # Warning with structured fields was emitted
+        # Warning with structured fields was emitted.
+        # CR fix A3 moved bare kwargs into extra={...} dict to match the rest of the file.
+        # So warning_kwargs == {"extra": {"event": "...", "endpoint": "...", ...}}
         mock_logger.warning.assert_called_once()
         warning_args, warning_kwargs = mock_logger.warning.call_args
+        extra = warning_kwargs.get("extra", {})
         assert warning_args[0] == "gamification.reconcile.error"
-        assert warning_kwargs.get("event") == "gamification.reconcile.error"
-        assert warning_kwargs.get("endpoint") == "v2_sm2_service.persist_review"
-        assert warning_kwargs.get("error_type") == "RuntimeError"
-        assert "DB exploded" in warning_kwargs.get("error_message", "")
+        assert extra.get("event") == "gamification.reconcile.error"
+        assert extra.get("endpoint") == "v2_sm2_service.persist_review"
+        assert extra.get("error_type") == "RuntimeError"
+        assert "DB exploded" in extra.get("error_message", "")
 
     @pytest.mark.asyncio
     async def test_daily_goal_still_called_after_successful_reconcile(self, mock_db_session):

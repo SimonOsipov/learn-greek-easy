@@ -25,11 +25,14 @@ from src.core.exceptions import (
     SeedForbiddenException,
     SeedUnauthorizedException,
 )
+from src.core.logging import get_logger
 from src.db.dependencies import get_db
 from src.db.models import NewsItem
 from src.repositories.user import UserRepository
 from src.schemas.seed import SeedRequest, SeedResultResponse, SeedStatusResponse
 from src.services.seed_service import SeedService
+
+logger = get_logger(__name__)
 
 
 class TestCreateUserRequest(BaseModel):
@@ -916,6 +919,19 @@ async def gamification_near_threshold(
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        # Log the full traceback so CI logs reveal the root cause of any 500.
+        logger.exception(
+            "gamification-near-threshold seed failed unexpectedly",
+            extra={
+                "event": "seed.near_threshold.error",
+                "user_id": str(user.id),
+                "achievement_id": body.achievement_id,
+                "error_type": type(exc).__name__,
+                "error_message": str(exc),
+            },
+        )
+        raise
     await db.commit()
 
     return GamificationNearThresholdResponse(
