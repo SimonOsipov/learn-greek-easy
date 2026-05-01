@@ -168,6 +168,7 @@ Update this file when features are merged, phases change, or key decisions are m
 - [Railway Backend Privacy](docs/railway-backend-privacy.md) - Production setup
 - [PR Preview Deployments](docs/pr-preview-deployments.md) - Preview environments
 - [Logging](docs/logging.md) - Logging architecture and best practices
+- [Gamification Shadow Rollout](learn-greek-easy-backend/docs/gamification-shadow-rollout.md) - Phase 2 ops guide: enable flag, query diffs in Sentry, triage diff classes
 - [PreCompact Hook Setup](docs/precompact-hook-setup.md) - Session continuity configuration
 - [Supabase Database](docs/supabase-database.md) - Database credentials, connectivity, and migration guide
 - [Analytics Events](docs/analytics-events.md) - PostHog event naming, when to create, and implementation patterns
