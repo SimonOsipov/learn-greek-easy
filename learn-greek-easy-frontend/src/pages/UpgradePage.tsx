@@ -6,6 +6,7 @@ import { useSearchParams } from 'react-router-dom';
 
 import { PricingCard } from '@/components/billing/PricingCard';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { COMPARISON_FEATURES } from '@/constants/premiumFeatures';
 import { useCheckout } from '@/hooks/useCheckout';
 import { useTrackEvent } from '@/hooks/useTrackEvent';
@@ -86,7 +87,7 @@ export function UpgradePage() {
   if (error) {
     return (
       <div className="flex min-h-[400px] items-center justify-center px-4">
-        <div className="w-full max-w-sm rounded-xl border border-line bg-card p-8 text-center shadow-sm">
+        <Card className="glass-strong w-full max-w-sm p-8 text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-danger/15">
             <AlertTriangle className="h-6 w-6 text-danger" />
           </div>
@@ -99,7 +100,7 @@ export function UpgradePage() {
           >
             {t('error.retry')}
           </Button>
-        </div>
+        </Card>
       </div>
     );
   }
@@ -107,13 +108,13 @@ export function UpgradePage() {
   if (billingStatus?.is_premium && billingStatus.subscription_status === 'active') {
     return (
       <div className="flex min-h-[400px] items-center justify-center px-4">
-        <div className="w-full max-w-sm rounded-xl border border-line bg-card p-8 text-center shadow-sm">
+        <Card className="glass-strong w-full max-w-sm p-8 text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-warning/15">
             <Crown className="h-6 w-6 text-warning" />
           </div>
           <h2 className="mb-2 text-xl font-semibold text-fg">{t('alreadyPremium.title')}</h2>
           <p className="text-fg3">{t('alreadyPremium.description')}</p>
-        </div>
+        </Card>
       </div>
     );
   }
@@ -230,7 +231,7 @@ export function UpgradePage() {
       {banner}
 
       {pricingSection}
-      <h2 className="mb-6 text-center text-2xl font-bold text-fg">{t('comparison.heading')}</h2>
+      <h2 className="mb-6 text-center text-3xl font-bold text-fg">{t('comparison.heading')}</h2>
       {comparisonTable}
     </div>
   );

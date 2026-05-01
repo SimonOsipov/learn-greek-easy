@@ -80,7 +80,8 @@
       "message": "No feedback matches your current filters.",
       "clearFilters": "Clear Filters"
     },
-    "by": "by"
+    "by": "by",
+    "endMessage": "That's all the feedback so far. Got more ideas?"
   },
   "pagination": {
     "previous": "Previous",

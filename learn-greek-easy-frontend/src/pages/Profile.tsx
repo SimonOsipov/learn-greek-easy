@@ -75,7 +75,7 @@ export const Profile: React.FC = () => {
 
         {/* Mobile section indicator — hidden on lg+ where sidebar is visible */}
         <div className="mb-4 lg:hidden">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
+          <span className="chip chip-tinted">
             {(() => {
               const active = navigationItems.find((item) => item.id === activeSection);
               if (!active) return null;
