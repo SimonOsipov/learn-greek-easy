@@ -93,19 +93,27 @@ export const AchievementCard: React.FC<AchievementCardProps> = ({ achievement, c
             </Badge>
           </div>
         ) : progress > 0 ? (
-          <div className="mt-3 sm:mt-4">
-            <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
-              <span>
-                {current_value} / {threshold}
-              </span>
-              <span>{Math.round(progress)}%</span>
-            </div>
-            <Progress
-              value={progress}
-              className="h-2 [&>div]:bg-muted-foreground"
-              aria-label={`Progress: ${Math.round(progress)}%`}
-            />
-          </div>
+          // Clamp display values to handle read-before-reconcile race during GAMIF-04 rollout
+          // (server may return current_value > threshold while unlocked: false)
+          (() => {
+            const displayValue = Math.min(current_value, threshold);
+            const displayPercent = Math.min(100, Math.round(progress));
+            return (
+              <div className="mt-3 sm:mt-4">
+                <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
+                  <span>
+                    {displayValue} / {threshold}
+                  </span>
+                  <span>{displayPercent}%</span>
+                </div>
+                <Progress
+                  value={displayPercent}
+                  className="h-2 [&>div]:bg-muted-foreground"
+                  aria-label={`Progress: ${displayPercent}%`}
+                />
+              </div>
+            );
+          })()
         ) : null}
 
         {/* XP Reward Badge */}
