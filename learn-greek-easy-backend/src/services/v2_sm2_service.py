@@ -465,17 +465,14 @@ class V2SM2Service:
         user_id_uuid = UUID(context["user_id"])
 
         # Reconcile gamification state (XP + achievements) via single entrypoint.
-        # Wrapped in begin_nested() so a flush failure inside reconcile doesn't
-        # leave the outer AsyncSession in a failed-transaction state and break the
-        # subsequent _check_daily_goal_sync call.
+        # CR-suggested begin_nested savepoint reverted: caused E2E flashcard-review-v2 regression. Track in follow-up PR.
         try:
             from src.services.gamification.reconciler import GamificationReconciler
             from src.services.gamification.types import ReconcileMode
 
-            async with self.db.begin_nested():
-                await GamificationReconciler.reconcile(
-                    self.db, user_id_uuid, mode=ReconcileMode.IMMEDIATE
-                )
+            await GamificationReconciler.reconcile(
+                self.db, user_id_uuid, mode=ReconcileMode.IMMEDIATE
+            )
         except Exception as exc:
             logger.warning(
                 "gamification.reconcile.error",

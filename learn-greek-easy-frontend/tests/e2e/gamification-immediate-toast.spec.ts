@@ -92,6 +92,10 @@ test.describe('Gamification — IMMEDIATE-mode toast on review unlock (GAMIF-05)
   test.use({ storageState: LEARNER_AUTH });
 
   test.beforeEach(async ({ request }) => {
+    // Restore baseline state first (creates V2 deck stats with NEW cards due today)
+    const apiBaseUrl = getApiBaseUrl();
+    await request.post(`${apiBaseUrl}/api/v1/test/seed/all`);
+    // Then knock the user back to "0 cards learned" so the first review crosses learning_first_word threshold
     await resetToNearThreshold(request);
   });
 

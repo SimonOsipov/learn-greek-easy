@@ -3169,23 +3169,15 @@ class SeedService:
         user_id: UUID,
         achievement_id: str,
     ) -> dict[str, Any]:
-        """Reset a user to the state where they are one event short of unlocking an achievement.
+        """Reset user state so a single review will cross the achievement threshold.
 
-        Designed for GAMIF-05-06 IMMEDIATE-mode E2E testing: ensures that submitting
-        exactly one card review will cross the achievement threshold and fire the toast.
+        For the e2e_learner + learning_first_word case (threshold=1):
+        - Delete UserAchievement row (so it's not unlocked)
+        - Delete CardRecordReview rows (so cards_learned == 0)
+        - Reset UserXP.projection_version = 0 (so reconcile re-runs full projection)
 
-        For `learning_first_word` (threshold=1, metric=CARDS_LEARNED):
-        1. DELETE UserAchievement row for (user_id, achievement_id) — so it is not already unlocked.
-        2. DELETE all CardRecordReview rows for the user — cleans up total_reviews counter.
-        3. DELETE all CardRecordStatistics rows for the user — so cards_learned == 0 before
-           the review, and all cards appear as "new" in get_new_cards (no stats row).
-           After the user submits one review the backend creates a LEARNING row, making
-           cards_learned == 1 == threshold → achievement unlocks → toast fires.
-           Deleting stats also prevents stale next_review_date values (from a previous
-           test run's review submission) from hiding cards behind "due tomorrow" dates.
-        4. Reset UserXP.projection_version to 0 — forces reconciler to recompute from scratch.
-
-        Idempotent: safe to call in beforeEach and afterEach.
+        Does NOT touch CardRecordStatistics — those are restored by the test's afterEach
+        via /api/v1/test/seed/all.
 
         Args:
             user_id: User whose gamification state to reset.
@@ -3196,11 +3188,11 @@ class SeedService:
 
         Raises:
             RuntimeError: If seeding not allowed.
+            ValueError: If achievement_id is not a known achievement.
         """
         self._check_can_seed()
 
-        # Find the achievement definition to get threshold — reject unknown IDs early
-        # so callers get a clear 400 error rather than silently returning threshold=0.
+        # Reject unknown IDs early so callers get a clear 400 error.
         ach_def = next(
             (a for a in ACHIEVEMENT_DEFS if a.id == achievement_id),
             None,
@@ -3217,36 +3209,18 @@ class SeedService:
             )
         )
 
-        # 2. Delete all CardRecordReview rows for the user
+        # 2. Delete all CardRecordReview rows for the user (so cards_learned == 0)
         reviews_result = await self.db.execute(
             delete(CardRecordReview).where(CardRecordReview.user_id == user_id)
         )
         reviews_truncated = int(reviews_result.rowcount) if reviews_result.rowcount else 0  # type: ignore[attr-defined]
 
-        # 3. Delete all CardRecordStatistics for the user.
-        # This puts every card back into "no stats" state, making them visible via
-        # get_new_cards (which finds cards without a statistics row). Submitting a single
-        # review will create one LEARNING row, raising cards_learned from 0 to 1 and
-        # crossing the learning_first_word threshold. Deleting stats also ensures that
-        # next_review_date values updated by a previous test run don't push cards into the
-        # future and cause the practice queue to show the "all caught up" empty state.
-        await self.db.execute(
-            delete(CardRecordStatistics)
-            .where(CardRecordStatistics.user_id == user_id)
-            .execution_options(synchronize_session=False)
-        )
-
-        # 4. Reset UserXP.projection_version to 0 — reconciler will recompute full projection
+        # 3. Reset UserXP.projection_version to 0 — reconciler will recompute full projection
         xp_result = await self.db.execute(select(UserXP).where(UserXP.user_id == user_id))
         user_xp = xp_result.scalar_one_or_none()
         if user_xp is not None:
             user_xp.projection_version = 0
 
-        # NOTE: No advisory lock / serialisation is added here against concurrent resets.
-        # This seeder is used exclusively by Playwright E2E tests which run serially within
-        # each shard; a concurrent-reset race is therefore theoretical and not actionable.
-        # If this seeder is ever called from a parallel-test harness, add a
-        # SELECT ... FOR UPDATE on the UserXP row before the truncate operations.
         return {
             "ok": True,
             "achievement_id": achievement_id,
