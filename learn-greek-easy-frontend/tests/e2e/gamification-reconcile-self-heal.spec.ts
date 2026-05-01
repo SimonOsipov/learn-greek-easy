@@ -118,8 +118,8 @@ test.describe('Gamification — reconcile-on-read self-heal (GAMIF-04)', () => {
       // "Completed" badge is visible
       await expect(card.getByText('Completed')).toBeVisible({ timeout: 10000 });
 
-      // "Locked" badge is NOT visible
-      await expect(card.getByText('Locked')).not.toBeVisible();
+      // "Locked" badge is NOT visible (exact match — "Unlocked 5/1/2026" contains "Locked" as substring)
+      await expect(card.getByText('Locked', { exact: true })).not.toBeVisible();
 
       // ── PROVE DB write happened (not a UI lie) ──────────────────────────────
       const postResp = await request.get(`${apiBaseUrl}/api/v1/xp/achievements`, {

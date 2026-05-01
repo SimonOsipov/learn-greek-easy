@@ -190,7 +190,6 @@ class TestReconcileSelfHeal:
         ), "learning_first_word should be unlocked after self-heal"
 
         # Verify DB row was created
-        db_session.expire_all()
         result = await db_session.execute(
             select(UserAchievement).where(
                 UserAchievement.user_id == test_user.id,
@@ -204,7 +203,6 @@ class TestReconcileSelfHeal:
         response2 = await client.get("/api/v1/xp/achievements", headers=auth_headers)
         assert response2.status_code == 200
 
-        db_session.expire_all()
         result2 = await db_session.execute(
             select(UserAchievement).where(
                 UserAchievement.user_id == test_user.id,

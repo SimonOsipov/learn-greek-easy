@@ -184,7 +184,6 @@ class TestAdminRecomputeGamification:
         assert body["newly_locked_ids"] == []
 
         # Verify the UserAchievement row is persisted in DB
-        db_session.expire_all()
         post_count = await db_session.scalar(
             select(func.count()).where(
                 UserAchievement.user_id == test_user.id,
@@ -235,7 +234,6 @@ class TestAdminRecomputeGamification:
         assert r2.json()["newly_unlocked_ids"] == []
 
         # No duplicate rows in DB
-        db_session.expire_all()
         row_count = await db_session.scalar(
             select(func.count()).where(
                 UserAchievement.user_id == test_user.id,
