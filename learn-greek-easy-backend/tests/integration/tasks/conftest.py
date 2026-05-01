@@ -9,7 +9,7 @@ from collections.abc import Generator
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from tests.factories.base import BaseFactory
+from tests.factories.base import set_factory_session
 
 
 @pytest.fixture(autouse=True)
@@ -27,6 +27,6 @@ def bind_factory_session(db_session: AsyncSession) -> Generator[None, None, None
     Yields:
         None: Allows the test to run.
     """
-    BaseFactory._session = db_session
+    set_factory_session(db_session)
     yield
-    BaseFactory._session = None
+    set_factory_session(None)

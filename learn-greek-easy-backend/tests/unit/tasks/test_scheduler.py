@@ -96,15 +96,27 @@ class TestSchedulerSetup:
 
             setup_scheduler()
 
-            # Should have 4 add_job calls
-            assert mock_scheduler_instance.add_job.call_count == 4
+            # Should have 5 add_job calls (4 original + gamification reconcile)
+            assert mock_scheduler_instance.add_job.call_count == 5
 
-            # Verify job IDs
+            # Verify all job IDs are registered
             job_ids = [call[1]["id"] for call in mock_scheduler_instance.add_job.call_args_list]
             assert "streak_reset" in job_ids
             assert "session_cleanup" in job_ids
             assert "stats_aggregate" in job_ids
             assert "trial_expiration" in job_ids
+            assert "gamification_reconcile_active_users" in job_ids
+
+            # Verify the new gamification job uses CronTrigger(hour=3, minute=0)
+            from apscheduler.triggers.cron import CronTrigger
+
+            gamif_call = next(
+                call
+                for call in mock_scheduler_instance.add_job.call_args_list
+                if call[1]["id"] == "gamification_reconcile_active_users"
+            )
+            trigger_arg = gamif_call[0][1]  # second positional arg is the trigger
+            assert isinstance(trigger_arg, CronTrigger)
 
     def test_scheduler_configuration(self):
         """Test that scheduler is configured with correct defaults."""

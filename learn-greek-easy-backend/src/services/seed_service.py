@@ -3176,9 +3176,13 @@ class SeedService:
 
         For `learning_first_word` (threshold=1, metric=CARDS_LEARNED):
         1. DELETE UserAchievement row for (user_id, achievement_id) — so it is not already unlocked.
-        2. Reset all CardRecordStatistics.status to NEW for the user — so cards_learned == 0.
-        3. DELETE all CardRecordReview rows for the user — cleans up total_reviews counter.
-        4. Reset UserXP.projection_version to 0 — forces reconciler to recompute from scratch.
+        2. DELETE all CardRecordReview rows for the user — cleans up projection_version trigger.
+        3. Reset UserXP.projection_version to 0 — forces reconciler to recompute from scratch.
+
+        CardRecordStatistics rows are intentionally left untouched so the V2 deck still has
+        due cards for the practice session. The reconciler will see cards_learned >= 1
+        (from existing LEARNING/MASTERED stats) on the next review submission and unlock
+        the achievement, firing the IMMEDIATE-mode toast.
 
         Idempotent: safe to call in beforeEach and afterEach.
 
@@ -3209,20 +3213,14 @@ class SeedService:
             )
         )
 
-        # 2. Reset all CardRecordStatistics.status to NEW (so cards_learned == 0)
-        await self.db.execute(
-            update(CardRecordStatistics)
-            .where(CardRecordStatistics.user_id == user_id)
-            .values(status=CardStatus.NEW)
-        )
-
-        # 3. Delete all CardRecordReview rows for the user
+        # 2. Delete all CardRecordReview rows for the user
+        # (CardRecordStatistics.status is left untouched so the deck has due cards)
         reviews_result = await self.db.execute(
             delete(CardRecordReview).where(CardRecordReview.user_id == user_id)
         )
         reviews_truncated = int(reviews_result.rowcount) if reviews_result.rowcount else 0  # type: ignore[attr-defined]
 
-        # 4. Reset UserXP.projection_version to 0
+        # 3. Reset UserXP.projection_version to 0 — reconciler will recompute full projection
         xp_result = await self.db.execute(select(UserXP).where(UserXP.user_id == user_id))
         user_xp = xp_result.scalar_one_or_none()
         if user_xp is not None:
