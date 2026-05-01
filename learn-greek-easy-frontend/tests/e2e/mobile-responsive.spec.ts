@@ -105,7 +105,7 @@ test.describe('Mobile Responsive (375px)', () => {
     }
 
     // Wait for Dashboard heading specifically (ensures page is fully rendered)
-    await expect(page.getByRole('heading', { name: /dashboard/i }))
+    await expect(page.getByTestId('dashboard-title'))
       .toBeVisible({ timeout: 15000 });
 
     // Check for any navigation elements or buttons

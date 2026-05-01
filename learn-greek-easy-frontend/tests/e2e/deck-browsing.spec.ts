@@ -38,7 +38,7 @@ test.describe('Deck Browsing', () => {
     await page.goto('/');
 
     // Verify dashboard heading
-    await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible();
+    await expect(page.getByTestId('dashboard-title')).toBeVisible();
 
     // Verify user greeting or welcome message exists
     const greeting = page.getByText(/welcome|hello|hi/i);

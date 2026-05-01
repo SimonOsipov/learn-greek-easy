@@ -228,6 +228,91 @@ class CultureAnswerHistoryRepository(BaseRepository[CultureAnswerHistory]):
             for row in result.all()
         ]
 
+    async def get_daily_answer_counts(self, user_id: UUID) -> list[tuple[date, int]]:
+        """Return per-day culture-answer counts across all time for a user.
+
+        Used for daily-goal-streak metrics.
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            List of (date, count) tuples ordered chronologically (ascending).
+            Empty list if the user has no answers.
+        """
+        query = (
+            select(
+                func.date(CultureAnswerHistory.created_at).label("answer_date"),
+                func.count().label("cnt"),
+            )
+            .where(CultureAnswerHistory.user_id == user_id)
+            .group_by(func.date(CultureAnswerHistory.created_at))
+            .order_by(func.date(CultureAnswerHistory.created_at).asc())
+        )
+        result = await self.db.execute(query)
+        return [(row.answer_date, int(row.cnt)) for row in result.all()]
+
+    async def get_consecutive_correct_streak(self, user_id: UUID) -> int:
+        """Count the current run of correct culture answers from the most recent.
+
+        Walks answers in descending ``created_at`` order and counts until the
+        first answer with ``is_correct == False``.
+
+        Args:
+            user_id: User UUID.
+
+        Returns:
+            Number of consecutive correct answers ending with the most recent
+            answer (0 if no answers or the most recent answer is incorrect).
+        """
+        query = (
+            select(CultureAnswerHistory.is_correct)
+            .where(CultureAnswerHistory.user_id == user_id)
+            .order_by(CultureAnswerHistory.created_at.desc())
+        )
+        result = await self.db.execute(query)
+        streak = 0
+        for (is_correct,) in result.all():
+            if is_correct:
+                streak += 1
+            else:
+                break
+        return streak
+
+    async def count_by_language(self, user_id: UUID, language: str) -> int:
+        """Count culture answers for a specific language.
+
+        Args:
+            user_id: User UUID.
+            language: Language code to filter by (e.g. 'el', 'en').
+
+        Returns:
+            Number of answers in the specified language.
+        """
+        query = (
+            select(func.count())
+            .select_from(CultureAnswerHistory)
+            .where(CultureAnswerHistory.user_id == user_id)
+            .where(CultureAnswerHistory.language == language)
+        )
+        result = await self.db.execute(query)
+        return result.scalar_one()
+
+    async def count_distinct_languages(self, user_id: UUID) -> int:
+        """Count distinct languages used in culture answers.
+
+        Args:
+            user_id: User UUID.
+
+        Returns:
+            Number of distinct language codes used by the user.
+        """
+        query = select(func.count(func.distinct(CultureAnswerHistory.language))).where(
+            CultureAnswerHistory.user_id == user_id
+        )
+        result = await self.db.execute(query)
+        return result.scalar_one()
+
     async def delete_all_by_user_id(self, user_id: UUID) -> int:
         """Delete all culture answer history for a user.
 

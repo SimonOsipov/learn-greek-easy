@@ -13,7 +13,7 @@ test.describe('Analytics Dashboard', () => {
     await page.goto('/');
 
     // Wait for Dashboard heading to be visible (explicit wait instead of fixed timeout)
-    await expect(page.getByRole('heading', { name: /dashboard/i }))
+    await expect(page.getByTestId('dashboard-title'))
       .toBeVisible({ timeout: 15000 });
   });
 
@@ -21,7 +21,7 @@ test.describe('Analytics Dashboard', () => {
   // Charts are only available on /charts-test page. Re-enable when charts are integrated.
   test.skip('E2E-05.1: Charts render correctly', async ({ page }) => {
     // Verify dashboard loaded
-    await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible();
+    await expect(page.getByTestId('dashboard-title')).toBeVisible();
 
     // Look for chart sections (might have different text variations)
     const chartTexts = [
@@ -55,7 +55,7 @@ test.describe('Analytics Dashboard', () => {
 
   test('E2E-05.2: Widgets display metrics', async ({ page }) => {
     // Verify dashboard loaded
-    await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible();
+    await expect(page.getByTestId('dashboard-title')).toBeVisible();
 
     // Wait for "Your Progress" section to be visible
     const progressSection = page.getByRole('heading', { name: /your progress/i });
@@ -140,7 +140,7 @@ test.describe('Analytics Dashboard', () => {
       expect(activityCount).toBeGreaterThanOrEqual(0);
     } else {
       // Activity feed might not be on dashboard, just verify dashboard loads
-      await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible();
+      await expect(page.getByTestId('dashboard-title')).toBeVisible();
     }
   });
 
@@ -150,7 +150,7 @@ test.describe('Analytics Dashboard', () => {
     const startTime = Date.now();
 
     // Wait for dashboard heading to be visible (15s for CI environment)
-    await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible({
+    await expect(page.getByTestId('dashboard-title')).toBeVisible({
       timeout: 15000,
     });
 
@@ -246,7 +246,7 @@ test.describe('Analytics Dashboard', () => {
     } else {
       // No charts rendered - might be no data yet
       // Just verify dashboard is functional
-      await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible();
+      await expect(page.getByTestId('dashboard-title')).toBeVisible();
     }
   });
 });

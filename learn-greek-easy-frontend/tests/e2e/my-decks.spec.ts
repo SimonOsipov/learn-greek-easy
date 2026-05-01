@@ -47,7 +47,7 @@ test.describe('My Decks - Desktop Navigation', () => {
     await page.goto('/dashboard');
 
     // Wait for page to load
-    await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible({
+    await expect(page.getByTestId('dashboard-title')).toBeVisible({
       timeout: 15000,
     });
 
@@ -112,7 +112,7 @@ test.describe('My Decks - Mobile Navigation', () => {
     await page.goto('/dashboard');
 
     // Wait for mobile layout to render
-    await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible({
+    await expect(page.getByTestId('dashboard-title')).toBeVisible({
       timeout: 15000,
     });
 

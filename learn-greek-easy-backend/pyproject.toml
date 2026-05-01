@@ -77,6 +77,7 @@ pytest-xdist = "^3.8.0"
 freezegun = "^1.5.5"
 boto3-stubs = {extras = ["s3"], version = "^1.42.15"}
 python-jose = {extras = ["cryptography"], version = "^3.3.0"}
+hypothesis = "^6.152.4"
 
 [build-system]
 requires = ["poetry-core"]

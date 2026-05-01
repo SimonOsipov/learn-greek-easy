@@ -176,7 +176,7 @@ test.describe('Keyboard Navigation - Protected Pages', () => {
     }
 
     // Wait for Dashboard heading specifically (ensures page is fully rendered)
-    await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId('dashboard-title')).toBeVisible({ timeout: 15000 });
 
     // Count focusable interactive elements (excluding those intentionally removed from tab order)
     const focusableSelector =
