@@ -27,6 +27,9 @@ gamification.shadow.diff / gamification.shadow.match (INFO):
     per_metric_mismatches (list[dict] — always [] in this PR),
     projection_version (int), cache_hit (bool)
 
+    Fields not comparable from the calling endpoint are emitted as 0/[] and
+    do not contribute to the diff vs match decision.
+
 gamification.shadow.error (WARNING):
     event (str), endpoint (str), user_id (str),
     error_type (str), error_message (str)
@@ -108,12 +111,16 @@ async def _run_shadow(
     db: AsyncSession,
     user_id: UUID,
     *,
-    legacy_total_xp: int,
-    legacy_current_level: int,
-    legacy_unlocked_ids: set[str],
+    legacy_total_xp: int | None,
+    legacy_current_level: int | None,
+    legacy_unlocked_ids: set[str] | None,
     endpoint: str,
 ) -> None:
     """Compute projection, diff, emit one log event.
+
+    Each legacy_* parameter is Optional.  When None the corresponding field
+    does not contribute to the has_diff decision; the emitted log field is
+    always present (0 / []) so the schema stays stable for Sentry queries.
 
     Wrapped in a broad try/except so any failure (including logger failures)
     can be caught by the calling public helper.
@@ -126,14 +133,33 @@ async def _run_shadow(
             snapshot = await GamificationProjection.compute(db, user_id)
             _cache_put(user_id, snapshot)
 
-        # Compute diff
+        # Compute diff — only include field in has_diff when caller provided a value
         proj_unlocked: set[str] = set(snapshot.unlocked)
-        legacy_only = sorted(legacy_unlocked_ids - proj_unlocked)
-        projection_only = sorted(proj_unlocked - legacy_unlocked_ids)
-        xp_delta = snapshot.total_xp - legacy_total_xp
-        level_delta = snapshot.current_level - legacy_current_level
 
-        has_diff = bool(legacy_only or projection_only or xp_delta or level_delta)
+        if legacy_unlocked_ids is None:
+            legacy_only: list[str] = []
+            projection_only: list[str] = []
+            achievements_diff = False
+        else:
+            legacy_only = sorted(legacy_unlocked_ids - proj_unlocked)
+            projection_only = sorted(proj_unlocked - legacy_unlocked_ids)
+            achievements_diff = bool(legacy_only or projection_only)
+
+        if legacy_total_xp is None:
+            xp_delta = 0
+            xp_diff = False
+        else:
+            xp_delta = snapshot.total_xp - legacy_total_xp
+            xp_diff = xp_delta != 0
+
+        if legacy_current_level is None:
+            level_delta = 0
+            level_diff = False
+        else:
+            level_delta = snapshot.current_level - legacy_current_level
+            level_diff = level_delta != 0
+
+        has_diff = achievements_diff or xp_diff or level_diff
 
         if has_diff:
             event_name = "gamification.shadow.diff"
@@ -217,11 +243,15 @@ async def shadow_compare_xp_stats(
             user_id,
             legacy_total_xp=legacy_total_xp,
             legacy_current_level=legacy_current_level,
-            legacy_unlocked_ids=set(),
+            legacy_unlocked_ids=None,
             endpoint=endpoint,
         )
     except Exception as exc:
-        _emit_shadow_error(user_id=user_id, endpoint=endpoint, exc=exc)
+        # AC #5: 3-layer isolation — guard against logger reentry in _emit_shadow_error
+        try:
+            _emit_shadow_error(user_id=user_id, endpoint=endpoint, exc=exc)
+        except Exception:
+            pass  # Logger itself failed — swallow to honor "never escape"
 
 
 async def shadow_compare_achievements(
@@ -250,13 +280,17 @@ async def shadow_compare_achievements(
         await _run_shadow(
             db,
             user_id,
-            legacy_total_xp=0,
-            legacy_current_level=0,
+            legacy_total_xp=None,
+            legacy_current_level=None,
             legacy_unlocked_ids=legacy_unlocked_ids,
             endpoint=endpoint,
         )
     except Exception as exc:
-        _emit_shadow_error(user_id=user_id, endpoint=endpoint, exc=exc)
+        # AC #5: 3-layer isolation — guard against logger reentry in _emit_shadow_error
+        try:
+            _emit_shadow_error(user_id=user_id, endpoint=endpoint, exc=exc)
+        except Exception:
+            pass  # Logger itself failed — swallow to honor "never escape"
 
 
 __all__ = [

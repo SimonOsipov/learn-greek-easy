@@ -84,13 +84,13 @@ async def get_xp_stats(
             current_user.id,
             legacy_total_xp=stats["total_xp"],
             legacy_current_level=stats["current_level"],
-            endpoint="/xp/stats",
+            endpoint="/api/v1/xp/stats",
         )
     except Exception as exc:
         logger.warning(
             "gamification.shadow.error",
             event="gamification.shadow.error",
-            endpoint="/xp/stats",
+            endpoint="/api/v1/xp/stats",
             user_id=str(current_user.id),
             error_type=type(exc).__name__,
             error_message=str(exc),
@@ -191,13 +191,13 @@ async def get_achievements(
             db,
             current_user.id,
             legacy_unlocked_ids={a["id"] for a in achievements if a["unlocked"]},
-            endpoint="/xp/achievements",
+            endpoint="/api/v1/xp/achievements",
         )
     except Exception as exc:
         logger.warning(
             "gamification.shadow.error",
             event="gamification.shadow.error",
-            endpoint="/xp/achievements",
+            endpoint="/api/v1/xp/achievements",
             user_id=str(current_user.id),
             error_type=type(exc).__name__,
             error_message=str(exc),

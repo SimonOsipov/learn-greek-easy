@@ -234,9 +234,56 @@ class TestDiffPresent:
         assert call["msg"] == "gamification.shadow.diff"
         assert call["legacy_only"] == ["ach_a"]  # sorted
         assert call["projection_only"] == ["ach_c"]  # sorted
-        assert call["xp_delta"] == 0  # achievements path passes legacy_total_xp=0
+        assert call["xp_delta"] == 0  # achievements path: legacy_total_xp=None → emits 0
         assert call["cache_hit"] is False
         assert call["per_metric_mismatches"] == []
+
+    async def test_achievements_match_with_non_zero_projection_xp(self) -> None:
+        """Regression: achievements path must not false-diff when snapshot has non-zero XP.
+
+        Guards Issue 1: _run_shadow with legacy_total_xp=None means xp_delta never
+        contributes to has_diff, so identical unlock sets → match even with XP>0.
+        """
+        user_id = uuid4()
+        # Non-zero XP and level in projection; legacy unlocked set matches exactly.
+        snapshot = _make_snapshot(
+            user_id,
+            unlocked=frozenset({"ach_a", "ach_b"}),
+            total_xp=1500,
+            current_level=5,
+        )
+
+        logged_calls: list[dict] = []
+
+        class _FakeLogger:
+            def info(self, msg: str, **kwargs: Any) -> None:
+                logged_calls.append({"msg": msg, **kwargs})
+
+            def warning(self, msg: str, **kwargs: Any) -> None:
+                logged_calls.append({"msg": msg, **kwargs})
+
+        with (
+            patch(
+                "src.services.gamification.shadow.settings",
+                gamification_shadow_mode=True,
+            ),
+            patch(
+                "src.services.gamification.shadow.GamificationProjection.compute",
+                new=AsyncMock(return_value=snapshot),
+            ),
+            patch("src.services.gamification.shadow.logger", _FakeLogger()),
+        ):
+            await shadow_compare_achievements(
+                _DUMMY_DB,
+                user_id,
+                legacy_unlocked_ids={"ach_a", "ach_b"},  # identical to projection
+                endpoint="/api/v1/xp/achievements",
+            )
+
+        assert len(logged_calls) == 1
+        call = logged_calls[0]
+        # Must emit match (not diff) even though snapshot.total_xp=1500, current_level=5
+        assert call["msg"] == "gamification.shadow.match"
 
 
 # ---------------------------------------------------------------------------
@@ -304,12 +351,23 @@ class TestCacheExpiry:
         user_id = uuid4()
         snapshot = _make_snapshot(user_id, total_xp=0, current_level=1)
 
-        # Simulate time progressing past TTL between calls
-        fake_times = iter([0.0, 0.0, 31.0, 31.0])
+        # Stepped callable: starts at 0.0, increments by 0.1 each call except
+        # after the 2nd call where it jumps past TTL.  Using a callable instead
+        # of iter([...]) avoids StopIteration if _cache_get/_cache_put consume
+        # more monotonic() calls than expected (e.g. on slow CI paths).
+        _call_count: list[int] = [0]
+
+        def _fake_monotonic() -> float:
+            _call_count[0] += 1
+            # First two calls (cache miss + cache put) return 0.0.
+            # All subsequent calls (second get + put) return 31.0.
+            if _call_count[0] <= 2:
+                return 0.0
+            return 31.0
 
         monkeypatch.setattr(
             "src.services.gamification.shadow.time.monotonic",
-            lambda: next(fake_times),
+            _fake_monotonic,
         )
 
         with (
