@@ -502,3 +502,29 @@ class ReverseLookupResponse(BaseModel):
     query: str
     language: str
     results: list[ReverseLookupItem]
+
+
+# ============================================================================
+# Gamification Admin Schemas
+# ============================================================================
+
+
+class ReconcileDiffResponse(BaseModel):
+    """Diff between pre- and post-reconcile gamification state for a user.
+
+    Returned by POST /admin/users/{user_id}/recompute-gamification so ops
+    can confirm what actually changed when manually self-healing a stuck user.
+    """
+
+    user_id: UUID
+    xp_before: int = Field(..., ge=0)
+    xp_after: int = Field(..., ge=0)
+    xp_delta: int  # signed; can be 0
+    level_before: int = Field(..., ge=1)
+    level_after: int = Field(..., ge=1)
+    level_delta: int  # signed; non-negative in practice
+    leveled_up: bool
+    newly_unlocked_ids: list[str]
+    newly_locked_ids: list[str]  # always [] in QUIET; reserved for symmetry
+    projection_version: int
+    computed_at: datetime
