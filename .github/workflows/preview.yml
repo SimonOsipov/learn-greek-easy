@@ -885,8 +885,8 @@ jobs:
           LHR_FILE=$(ls .lighthouseci/lhr-*.json 2>/dev/null | head -1)
           if [ -n "$LHR_FILE" ]; then
             echo "=== Desktop Results (from $LHR_FILE) ==="
-            PERF_SCORE=$(cat "$LHR_FILE" | jq -r '.categories.performance.score * 100 | floor')
-            A11Y_SCORE=$(cat "$LHR_FILE" | jq -r '.categories.accessibility.score * 100 | floor')
+            PERF_SCORE=$(cat "$LHR_FILE" | jq -r '(.categories.performance.score // 0) * 100 | floor')
+            A11Y_SCORE=$(cat "$LHR_FILE" | jq -r '(.categories.accessibility.score // 0) * 100 | floor')
             echo "Performance: $PERF_SCORE"
             echo "Accessibility: $A11Y_SCORE"
             echo "desktop_score=$PERF_SCORE" >> $GITHUB_OUTPUT
@@ -934,8 +934,8 @@ jobs:
           LHR_FILE=$(ls .lighthouseci/lhr-*.json 2>/dev/null | head -1)
           if [ -n "$LHR_FILE" ]; then
             echo "=== Mobile Results (from $LHR_FILE) ==="
-            PERF_SCORE=$(cat "$LHR_FILE" | jq -r '.categories.performance.score * 100 | floor')
-            A11Y_SCORE=$(cat "$LHR_FILE" | jq -r '.categories.accessibility.score * 100 | floor')
+            PERF_SCORE=$(cat "$LHR_FILE" | jq -r '(.categories.performance.score // 0) * 100 | floor')
+            A11Y_SCORE=$(cat "$LHR_FILE" | jq -r '(.categories.accessibility.score // 0) * 100 | floor')
             echo "Performance: $PERF_SCORE"
             echo "Accessibility: $A11Y_SCORE"
             echo "mobile_score=$PERF_SCORE" >> $GITHUB_OUTPUT
