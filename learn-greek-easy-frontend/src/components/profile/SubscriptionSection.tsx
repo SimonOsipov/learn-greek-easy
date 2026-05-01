@@ -178,7 +178,7 @@ export const SubscriptionSection: React.FC = () => {
       {state === 'trialing' &&
         billingStatus.trial_days_remaining !== null &&
         billingStatus.trial_days_remaining > 0 && (
-          <div className="mb-4 flex items-center gap-2 rounded-lg border border-primary/30 bg-[hsl(var(--primary)/.08)] px-4 py-3 text-sm text-primary">
+          <div className="mb-4 flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-primary">
             <Crown className="h-4 w-4 shrink-0" />
             <p>{t('subscription.trialDaysLeft', { count: billingStatus.trial_days_remaining })}</p>
           </div>

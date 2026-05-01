@@ -95,6 +95,7 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={() => handlePreferenceChange('language', 'en')}
+                aria-pressed={preferences.language === 'en'}
                 className={`flex items-center justify-between rounded-lg border-2 p-4 transition-all ${
                   preferences.language === 'en'
                     ? 'border-primary bg-primary/10'
@@ -111,6 +112,7 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
               </button>
               <button
                 onClick={() => handlePreferenceChange('language', 'ru')}
+                aria-pressed={preferences.language === 'ru'}
                 className={`flex items-center justify-between rounded-lg border-2 p-4 transition-all ${
                   preferences.language === 'ru'
                     ? 'border-primary bg-primary/10'
@@ -215,7 +217,7 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
               />
             </div>
             {preferences.notifications && (
-              <div className="mt-4 rounded-lg bg-[hsl(var(--primary)/.08)] p-4">
+              <div className="mt-4 rounded-lg bg-primary/10 p-4">
                 <p className="text-sm font-medium text-primary">
                   {t('preferences.notifications.enabled')}
                 </p>
@@ -240,6 +242,7 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={() => setTheme('light', 'settings')}
+                aria-pressed={currentTheme === 'light'}
                 className={cn(
                   'flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-all',
                   currentTheme === 'light'
@@ -249,7 +252,7 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
                 data-testid="theme-option-light"
               >
                 <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-card shadow-sm">
-                  <Sun className="h-6 w-6 text-yellow-500" />
+                  <Sun className="h-6 w-6 text-warning" />
                 </div>
                 <span className="text-sm font-medium text-foreground">
                   {t('preferences.theme.light')}
@@ -258,6 +261,7 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
               </button>
               <button
                 onClick={() => setTheme('dark', 'settings')}
+                aria-pressed={currentTheme === 'dark'}
                 className={cn(
                   'flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-all',
                   currentTheme === 'dark'

@@ -115,27 +115,20 @@ export const SecuritySection: React.FC = () => {
             <CardDescription>{t('security.changePassword.description')}</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="rounded-lg bg-muted/50 p-4">
-              {canChangePassword ? (
-                <>
-                  <p className="mb-3 text-sm text-muted-foreground">
-                    {t('security.changePassword.description')}
-                  </p>
-                  <Button
-                    data-testid="change-password-button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPasswordDialogOpen(true)}
-                  >
-                    {t('security.changePassword.update')}
-                  </Button>
-                </>
-              ) : (
-                <p className="text-sm text-muted-foreground" data-testid="social-login-message">
-                  {t('security.changePassword.socialLoginMessage')}
-                </p>
-              )}
-            </div>
+            {canChangePassword ? (
+              <Button
+                data-testid="change-password-button"
+                variant="outline"
+                size="sm"
+                onClick={() => setPasswordDialogOpen(true)}
+              >
+                {t('security.changePassword.update')}
+              </Button>
+            ) : (
+              <p className="text-sm text-muted-foreground" data-testid="social-login-message">
+                {t('security.changePassword.socialLoginMessage')}
+              </p>
+            )}
           </CardContent>
         </Card>
 
@@ -246,7 +239,7 @@ export const SecuritySection: React.FC = () => {
               />
 
               {/* Password Requirements */}
-              <div className="rounded-lg bg-[hsl(var(--primary)/.08)] p-4">
+              <div className="rounded-lg bg-primary/10 p-4">
                 <p className="mb-2 text-sm font-medium text-primary">
                   {t('security.changePassword.requirements')}
                 </p>
