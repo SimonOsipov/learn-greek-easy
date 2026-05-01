@@ -329,6 +329,10 @@ class Settings(BaseSettings):
     )
     feature_rate_limiting: bool = Field(default=True, description="Enable rate limiting")
     feature_background_tasks: bool = Field(default=False, description="Enable background tasks")
+    gamification_shadow_mode: bool = Field(
+        default=False,
+        description="Enable shadow-mode gamification diff logging (no writes, observability only)",
+    )
 
     # =========================================================================
     # E2E Test Seeding
