@@ -3176,13 +3176,14 @@ class SeedService:
 
         For `learning_first_word` (threshold=1, metric=CARDS_LEARNED):
         1. DELETE UserAchievement row for (user_id, achievement_id) — so it is not already unlocked.
-        2. DELETE all CardRecordReview rows for the user — cleans up projection_version trigger.
-        3. Reset UserXP.projection_version to 0 — forces reconciler to recompute from scratch.
-
-        CardRecordStatistics rows are intentionally left untouched so the V2 deck still has
-        due cards for the practice session. The reconciler will see cards_learned >= 1
-        (from existing LEARNING/MASTERED stats) on the next review submission and unlock
-        the achievement, firing the IMMEDIATE-mode toast.
+        2. DELETE all CardRecordReview rows for the user — cleans up total_reviews counter.
+        3. DELETE all CardRecordStatistics rows for the user — so cards_learned == 0 before
+           the review, and all cards appear as "new" in get_new_cards (no stats row).
+           After the user submits one review the backend creates a LEARNING row, making
+           cards_learned == 1 == threshold → achievement unlocks → toast fires.
+           Deleting stats also prevents stale next_review_date values (from a previous
+           test run's review submission) from hiding cards behind "due tomorrow" dates.
+        4. Reset UserXP.projection_version to 0 — forces reconciler to recompute from scratch.
 
         Idempotent: safe to call in beforeEach and afterEach.
 
@@ -3214,13 +3215,23 @@ class SeedService:
         )
 
         # 2. Delete all CardRecordReview rows for the user
-        # (CardRecordStatistics.status is left untouched so the deck has due cards)
         reviews_result = await self.db.execute(
             delete(CardRecordReview).where(CardRecordReview.user_id == user_id)
         )
         reviews_truncated = int(reviews_result.rowcount) if reviews_result.rowcount else 0  # type: ignore[attr-defined]
 
-        # 3. Reset UserXP.projection_version to 0 — reconciler will recompute full projection
+        # 3. Delete all CardRecordStatistics for the user.
+        # This puts every card back into "no stats" state, making them visible via
+        # get_new_cards (which finds cards without a statistics row). Submitting a single
+        # review will create one LEARNING row, raising cards_learned from 0 to 1 and
+        # crossing the learning_first_word threshold. Deleting stats also ensures that
+        # next_review_date values updated by a previous test run don't push cards into the
+        # future and cause the practice queue to show the "all caught up" empty state.
+        await self.db.execute(
+            delete(CardRecordStatistics).where(CardRecordStatistics.user_id == user_id)
+        )
+
+        # 4. Reset UserXP.projection_version to 0 — reconciler will recompute full projection
         xp_result = await self.db.execute(select(UserXP).where(UserXP.user_id == user_id))
         user_xp = xp_result.scalar_one_or_none()
         if user_xp is not None:

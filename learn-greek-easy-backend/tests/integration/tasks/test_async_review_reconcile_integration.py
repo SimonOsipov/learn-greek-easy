@@ -192,7 +192,7 @@ class TestAsyncReviewPathCreatesAchievement:
         from src.config import settings as real_settings
 
         with patch.object(real_settings, "feature_background_tasks", True):
-            with patch.object(real_settings, "is_production", False):
+            with patch.object(real_settings, "app_env", "development"):
                 from src.tasks.background import check_achievements_task
 
                 await check_achievements_task(
@@ -250,7 +250,7 @@ class TestAsyncReviewPathIdempotency:
         from src.config import settings as real_settings
 
         with patch.object(real_settings, "feature_background_tasks", True):
-            with patch.object(real_settings, "is_production", False):
+            with patch.object(real_settings, "app_env", "development"):
                 from src.tasks.background import check_achievements_task
 
                 # First invocation

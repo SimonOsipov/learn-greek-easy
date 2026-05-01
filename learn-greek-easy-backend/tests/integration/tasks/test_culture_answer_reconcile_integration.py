@@ -231,7 +231,7 @@ class TestCultureAnswerCreatesAchievement:
                 real_settings, "feature_background_tasks", True
             ),
             __import__("unittest.mock", fromlist=["patch"]).patch.object(
-                real_settings, "is_production", False
+                real_settings, "app_env", "development"
             ),
         ):
             from src.tasks.background import persist_culture_answer_task
@@ -295,7 +295,7 @@ class TestCultureAnswerIdempotency:
 
         with (
             patch.object(real_settings, "feature_background_tasks", True),
-            patch.object(real_settings, "is_production", False),
+            patch.object(real_settings, "app_env", "development"),
         ):
             from src.tasks.background import persist_culture_answer_task
 
@@ -369,7 +369,7 @@ class TestCultureAnswerTwoThresholds:
 
         with (
             patch.object(real_settings, "feature_background_tasks", True),
-            patch.object(real_settings, "is_production", False),
+            patch.object(real_settings, "app_env", "development"),
         ):
             from src.tasks.background import persist_culture_answer_task
 

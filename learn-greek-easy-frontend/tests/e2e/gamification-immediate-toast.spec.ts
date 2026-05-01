@@ -3,7 +3,7 @@
  *
  * Proves the IMMEDIATE-mode achievement unlock contract end-to-end:
  * 1. Seed e2e_learner to "near-threshold" state:
- *    - CardRecordStatistics.status reset to NEW (cards_learned == 0)
+ *    - CardRecordStatistics rows deleted (cards_learned == 0; all cards appear as "new")
  *    - CardRecordReview rows deleted
  *    - UserAchievement row for `learning_first_word` deleted
  *    - UserXP.projection_version reset to 0
@@ -129,12 +129,14 @@ test.describe('Gamification — IMMEDIATE-mode toast on review unlock (GAMIF-05)
       const emptyState = page.getByText(/all caught up/i);
       await expect(practiceCard.or(emptyState)).toBeVisible({ timeout: 15000 });
 
-      // If no cards due, seed may not have seeded V2 cards — fail with a clear message
+      // If no new/due cards, V2 deck may not exist — fail with a clear message.
+      // After reset_user_to_near_threshold all CardRecordStatistics are deleted, so
+      // every card in the deck should appear as "new" via get_new_cards.
       const isEmpty = await emptyState.isVisible().catch(() => false);
       if (isEmpty) {
         throw new Error(
-          '[GAMIF-05-06] No due cards found after seed. ' +
-            'Ensure /seed/all created V2 card statistics with next_review_date <= today.',
+          '[GAMIF-05-06] No new/due cards found after near-threshold reset. ' +
+            'Ensure /seed/all created the V2 Greek A1 Vocabulary deck with active cards.',
         );
       }
 
