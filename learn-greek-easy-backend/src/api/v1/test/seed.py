@@ -853,3 +853,72 @@ async def gamification_reset_stuck_state(
         deleted_rows=result["deleted_rows"],
         projection_version_reset=result["projection_version_reset"],
     )
+
+
+class GamificationNearThresholdRequest(BaseModel):
+    """Request body for resetting a user to the near-threshold gamification state."""
+
+    email: EmailStr
+    achievement_id: str
+
+
+class GamificationNearThresholdResponse(BaseModel):
+    """Response for gamification near-threshold reset."""
+
+    ok: bool
+    achievement_id: str
+    current_value: int
+    threshold: int
+    reviews_truncated: int
+
+
+@router.post(
+    "/gamification-near-threshold",
+    response_model=GamificationNearThresholdResponse,
+    summary="Reset user to gamification near-threshold state",
+    description=(
+        "Idempotent test-only endpoint for GAMIF-05-06 IMMEDIATE-mode E2E testing. "
+        "Resets the learner so that cards_learned == 0 (one review away from unlocking "
+        "the given achievement), allowing a single card review to cross the threshold "
+        "and fire the achievement toast via the IMMEDIATE reconcile path."
+    ),
+    dependencies=[Depends(verify_seed_access)],
+)
+async def gamification_near_threshold(
+    body: GamificationNearThresholdRequest,
+    db: AsyncSession = Depends(get_db),
+) -> GamificationNearThresholdResponse:
+    """Reset a user to the near-threshold gamification state for IMMEDIATE-mode E2E testing.
+
+    Args:
+        body: email + achievement_id to target
+        db: Database session
+
+    Returns:
+        GamificationNearThresholdResponse with operation details
+
+    Raises:
+        404: If no user found with the given email
+    """
+    user_repo = UserRepository(db)
+    user = await user_repo.get_by_email(body.email)
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail=f"User not found: {body.email}",
+        )
+
+    service = SeedService(db)
+    result = await service.reset_user_to_near_threshold(
+        user_id=user.id,
+        achievement_id=body.achievement_id,
+    )
+    await db.commit()
+
+    return GamificationNearThresholdResponse(
+        ok=result["ok"],
+        achievement_id=result["achievement_id"],
+        current_value=result["current_value"],
+        threshold=result["threshold"],
+        reviews_truncated=result["reviews_truncated"],
+    )

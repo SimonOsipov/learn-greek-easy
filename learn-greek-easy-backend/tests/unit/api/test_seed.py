@@ -498,6 +498,97 @@ class TestSeedChangelogEndpoint:
                 assert data["results"]["by_tag"]["announcement"] == 4
 
 
+# ============================================================================
+# POST /test/seed/gamification-near-threshold Endpoint Tests
+# ============================================================================
+
+
+class TestGamificationNearThresholdEndpoint:
+    """Tests for POST /test/seed/gamification-near-threshold."""
+
+    def test_returns_403_when_disabled(self, client: TestClient):
+        """Should return 403 when seeding is disabled."""
+        with patch("src.api.v1.test.seed.settings") as mock_settings:
+            mock_settings.is_production = False
+            mock_settings.test_seed_enabled = False
+
+            response = client.post(
+                "/test/seed/gamification-near-threshold",
+                json={"email": "e2e_learner@test.com", "achievement_id": "learning_first_word"},
+            )
+
+            assert response.status_code == 403
+
+    def test_returns_404_when_user_not_found(self, client: TestClient):
+        """Should return 404 when the given email does not exist."""
+        with patch("src.api.v1.test.seed.settings") as mock_settings:
+            mock_settings.is_production = False
+            mock_settings.test_seed_enabled = True
+            mock_settings.seed_requires_secret = False
+
+            with patch("src.api.v1.test.seed.UserRepository") as mock_repo_class:
+                mock_repo = AsyncMock()
+                mock_repo.get_by_email.return_value = None
+                mock_repo_class.return_value = mock_repo
+
+                response = client.post(
+                    "/test/seed/gamification-near-threshold",
+                    json={
+                        "email": "nobody@test.com",
+                        "achievement_id": "learning_first_word",
+                    },
+                )
+
+                assert response.status_code == 404
+
+    def test_resets_to_near_threshold_successfully(self, client: TestClient):
+        """Should reset user state and return near-threshold response."""
+        from unittest.mock import MagicMock
+
+        mock_user = MagicMock()
+        mock_user.id = "00000000-0000-0000-0000-000000000001"
+
+        mock_result = {
+            "ok": True,
+            "achievement_id": "learning_first_word",
+            "current_value": 0,
+            "threshold": 1,
+            "reviews_truncated": 5,
+        }
+
+        with patch("src.api.v1.test.seed.settings") as mock_settings:
+            mock_settings.is_production = False
+            mock_settings.test_seed_enabled = True
+            mock_settings.seed_requires_secret = False
+
+            with patch("src.api.v1.test.seed.UserRepository") as mock_repo_class:
+                mock_repo = AsyncMock()
+                mock_repo.get_by_email.return_value = mock_user
+                mock_repo_class.return_value = mock_repo
+
+                with patch("src.api.v1.test.seed.SeedService") as mock_service_class:
+                    mock_service = AsyncMock()
+                    mock_service.reset_user_to_near_threshold.return_value = mock_result
+                    mock_service_class.return_value = mock_service
+
+                    response = client.post(
+                        "/test/seed/gamification-near-threshold",
+                        json={
+                            "email": "e2e_learner@test.com",
+                            "achievement_id": "learning_first_word",
+                        },
+                    )
+
+                    assert response.status_code == 200
+                    data = response.json()
+                    assert data["ok"] is True
+                    assert data["achievement_id"] == "learning_first_word"
+                    assert data["current_value"] == 0
+                    assert data["threshold"] == 1
+                    assert data["reviews_truncated"] == 5
+                    mock_service.reset_user_to_near_threshold.assert_called_once()
+
+
 class TestHeaderValidation:
     """Tests for X-Test-Seed-Secret header handling."""
 

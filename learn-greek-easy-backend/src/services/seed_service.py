@@ -3164,6 +3164,78 @@ class SeedService:
             "projection_version_reset": projection_version_reset,
         }
 
+    async def reset_user_to_near_threshold(
+        self,
+        user_id: UUID,
+        achievement_id: str,
+    ) -> dict[str, Any]:
+        """Reset a user to the state where they are one event short of unlocking an achievement.
+
+        Designed for GAMIF-05-06 IMMEDIATE-mode E2E testing: ensures that submitting
+        exactly one card review will cross the achievement threshold and fire the toast.
+
+        For `learning_first_word` (threshold=1, metric=CARDS_LEARNED):
+        1. DELETE UserAchievement row for (user_id, achievement_id) — so it is not already unlocked.
+        2. Reset all CardRecordStatistics.status to NEW for the user — so cards_learned == 0.
+        3. DELETE all CardRecordReview rows for the user — cleans up total_reviews counter.
+        4. Reset UserXP.projection_version to 0 — forces reconciler to recompute from scratch.
+
+        Idempotent: safe to call in beforeEach and afterEach.
+
+        Args:
+            user_id: User whose gamification state to reset.
+            achievement_id: Achievement to un-unlock.
+
+        Returns:
+            dict with ok, achievement_id, current_value, threshold, reviews_truncated.
+
+        Raises:
+            RuntimeError: If seeding not allowed.
+        """
+        self._check_can_seed()
+
+        # Find the achievement definition to get threshold
+        ach_def = next(
+            (a for a in ACHIEVEMENT_DEFS if a.id == achievement_id),
+            None,
+        )
+        threshold = ach_def.threshold if ach_def else 0
+
+        # 1. Delete UserAchievement row
+        await self.db.execute(
+            delete(UserAchievement).where(
+                UserAchievement.user_id == user_id,
+                UserAchievement.achievement_id == achievement_id,
+            )
+        )
+
+        # 2. Reset all CardRecordStatistics.status to NEW (so cards_learned == 0)
+        await self.db.execute(
+            update(CardRecordStatistics)
+            .where(CardRecordStatistics.user_id == user_id)
+            .values(status=CardStatus.NEW)
+        )
+
+        # 3. Delete all CardRecordReview rows for the user
+        reviews_result = await self.db.execute(
+            delete(CardRecordReview).where(CardRecordReview.user_id == user_id)
+        )
+        reviews_truncated = int(reviews_result.rowcount) if reviews_result.rowcount else 0  # type: ignore[attr-defined]
+
+        # 4. Reset UserXP.projection_version to 0
+        xp_result = await self.db.execute(select(UserXP).where(UserXP.user_id == user_id))
+        user_xp = xp_result.scalar_one_or_none()
+        if user_xp is not None:
+            user_xp.projection_version = 0
+
+        return {
+            "ok": True,
+            "achievement_id": achievement_id,
+            "current_value": 0,
+            "threshold": threshold,
+            "reviews_truncated": reviews_truncated,
+        }
+
     async def seed_user_xp(
         self,
         user_id: UUID,
