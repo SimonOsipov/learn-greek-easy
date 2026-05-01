@@ -9,11 +9,15 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.dependencies import get_current_user
+from src.core.logging import get_logger
 from src.db.dependencies import get_db
 from src.db.models import User
 from src.schemas.xp import AchievementResponse, AchievementsListResponse, XPStatsResponse
 from src.services.achievement_service import AchievementService
+from src.services.gamification.shadow import shadow_compare_achievements, shadow_compare_xp_stats
 from src.services.xp_service import XPService
+
+logger = get_logger(__name__)
 
 router = APIRouter(
     tags=["XP & Achievements"],
@@ -64,7 +68,7 @@ async def get_xp_stats(
     service = XPService(db)
     stats = await service.get_user_xp_stats(current_user.id)
 
-    return XPStatsResponse(
+    response = XPStatsResponse(
         total_xp=stats["total_xp"],
         current_level=stats["current_level"],
         level_name_greek=stats["level_name_greek"],
@@ -73,6 +77,26 @@ async def get_xp_stats(
         xp_for_next_level=stats["xp_for_next_level"],
         progress_percentage=stats["progress_percentage"],
     )
+
+    try:
+        await shadow_compare_xp_stats(
+            db,
+            current_user.id,
+            legacy_total_xp=stats["total_xp"],
+            legacy_current_level=stats["current_level"],
+            endpoint="/xp/stats",
+        )
+    except Exception as exc:
+        logger.warning(
+            "gamification.shadow.error",
+            event="gamification.shadow.error",
+            endpoint="/xp/stats",
+            user_id=str(current_user.id),
+            error_type=type(exc).__name__,
+            error_message=str(exc),
+        )
+
+    return response
 
 
 @router.get(
@@ -139,7 +163,7 @@ async def get_achievements(
     unlocked = [a for a in achievements if a["unlocked"]]
     total_xp = sum(a["xp_reward"] for a in unlocked)
 
-    return AchievementsListResponse(
+    response = AchievementsListResponse(
         achievements=[
             AchievementResponse(
                 id=a["id"],
@@ -161,3 +185,22 @@ async def get_achievements(
         unlocked_count=len(unlocked),
         total_xp_earned=total_xp,
     )
+
+    try:
+        await shadow_compare_achievements(
+            db,
+            current_user.id,
+            legacy_unlocked_ids={a["id"] for a in achievements if a["unlocked"]},
+            endpoint="/xp/achievements",
+        )
+    except Exception as exc:
+        logger.warning(
+            "gamification.shadow.error",
+            event="gamification.shadow.error",
+            endpoint="/xp/achievements",
+            user_id=str(current_user.id),
+            error_type=type(exc).__name__,
+            error_message=str(exc),
+        )
+
+    return response
