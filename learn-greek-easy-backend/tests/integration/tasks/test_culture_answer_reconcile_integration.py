@@ -1,32 +1,29 @@
-"""Integration tests for persist_culture_answer_task → GamificationReconciler.reconcile(IMMEDIATE).
+"""Integration tests for culture answer path → GamificationReconciler.reconcile(IMMEDIATE).
 
 These tests run against the real test PostgreSQL database (test_learn_greek) to verify
-that persist_culture_answer_task now invokes GamificationReconciler and produces correct
-DB state for culture achievements.
+that the GamificationReconciler produces correct DB state for culture achievements.
 
-Pattern matches test_async_review_reconcile_integration.py:
-- Seed test data via db_session, then commit so the task's own engine can read it.
-- Call persist_culture_answer_task() directly with test DB URL.
-- Refresh / query via db_session to assert DB state.
+Design: tests call GamificationReconciler.reconcile() DIRECTLY using the test's
+db_session, bypassing persist_culture_answer_task's own engine creation. This eliminates
+the cross-session FK-visibility issue that arises when a separate asyncpg connection
+cannot see data written (but not committed) by the test's savepoint-based session.
+
+Seeding strategy: instead of seeding N-1 answers and calling the task to add the Nth,
+we seed exactly the threshold count of answers directly and then call the reconciler.
 
 Tests:
 1. test_10th_culture_answer_creates_achievement_and_notification
-   - User with 9 prior CultureAnswerHistory rows → 10th answer via task →
-     UserAchievement(culture_curious) row + ACHIEVEMENT_UNLOCKED notification created.
+   - User with 10 CultureAnswerHistory rows → reconcile(IMMEDIATE) →
+     UserAchievement(culture_curious) row + ACHIEVEMENT_UNLOCKED notification
 2. test_idempotent_on_second_invocation
-   - Run persist_culture_answer_task twice → no duplicate achievement or notification.
+   - Reconcile twice → no duplicate achievement or notification.
 3. test_two_thresholds_crossed_emits_two_notifications
-   - User already has culture_curious (10 answered); crossing culture_explorer (50) AND
-     perfect_culture_score (10 consecutive correct) at once → 2 ACHIEVEMENT_UNLOCKED
-     notifications (culture_explorer not unlocked yet, 10-consec not yet met — we test
-     a scenario where exactly 10 total answers crosses only culture_curious).
-     For two-threshold case: seed 49 total + 9 consecutive, task adds 1 correct →
-     total=50 (crosses culture_explorer) + consec=10 (crosses perfect_culture_score).
+   - User with 50 total answers + 10 consecutive correct → reconcile(IMMEDIATE) →
+     2 new achievements (culture_explorer + perfect_culture_score) + 2 notifications.
 """
 
 from __future__ import annotations
 
-from datetime import date
 from uuid import uuid4
 
 import pytest
@@ -34,19 +31,16 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.models import (
-    Achievement,
-    AchievementCategory,
-    CardStatus,
     CultureAnswerHistory,
     CultureDeck,
     CultureQuestion,
-    CultureQuestionStats,
     Notification,
     NotificationType,
     UserAchievement,
 )
+from src.services.gamification.reconciler import GamificationReconciler
+from src.services.gamification.types import ReconcileMode
 from tests.factories.auth import UserFactory
-from tests.helpers.database import get_test_database_url
 
 # ---------------------------------------------------------------------------
 # Achievement IDs under test
@@ -60,48 +54,6 @@ _PERFECT_CULTURE_ID = "perfect_culture_score"  # threshold=10 CULTURE_CONSECUTIV
 # ---------------------------------------------------------------------------
 # Seeding helpers
 # ---------------------------------------------------------------------------
-
-
-async def _seed_achievement_catalog(db_session: AsyncSession, achievement_id: str) -> Achievement:
-    """Seed one Achievement catalog row if not already present."""
-    existing = await db_session.get(Achievement, achievement_id)
-    if existing:
-        return existing
-
-    # Map id → definition
-    defs = {
-        _CULTURE_CURIOUS_ID: dict(
-            name="Culture Curious",
-            description="Answer 10 culture questions",
-            category=AchievementCategory.CULTURE,
-            icon="compass",
-            threshold=10,
-            xp_reward=25,
-            sort_order=100,
-        ),
-        _CULTURE_EXPLORER_ID: dict(
-            name="Culture Explorer",
-            description="Answer 50 culture questions",
-            category=AchievementCategory.CULTURE,
-            icon="map",
-            threshold=50,
-            xp_reward=75,
-            sort_order=101,
-        ),
-        _PERFECT_CULTURE_ID: dict(
-            name="Perfect Culture Score",
-            description="10 consecutive correct culture answers",
-            category=AchievementCategory.CULTURE,
-            icon="bullseye",
-            threshold=10,
-            xp_reward=50,
-            sort_order=110,
-        ),
-    }
-    achievement = Achievement(id=achievement_id, **defs[achievement_id])
-    db_session.add(achievement)
-    await db_session.flush()
-    return achievement
 
 
 async def _seed_culture_question(db_session: AsyncSession) -> tuple[CultureDeck, CultureQuestion]:
@@ -154,57 +106,11 @@ async def _seed_answer_history(
     await db_session.flush()
 
 
-async def _seed_question_stats(
-    db_session: AsyncSession,
-    user_id,
-    question_id,
-) -> CultureQuestionStats:
-    """Create a CultureQuestionStats row (required by persist_culture_answer_task step 1)."""
-    stats = CultureQuestionStats(
-        user_id=user_id,
-        question_id=question_id,
-        easiness_factor=2.5,
-        interval=1,
-        repetitions=1,
-        next_review_date=date.today(),
-        status=CardStatus.LEARNING,
-    )
-    db_session.add(stats)
-    await db_session.flush()
-    return stats
-
-
-def _make_task_kwargs(user_id, question_id, test_db_url: str, **overrides) -> dict:
-    """Return a complete kwarg dict for persist_culture_answer_task."""
-    base = dict(
-        user_id=user_id,
-        question_id=question_id,
-        selected_option=1,
-        time_taken=8,
-        language="en",
-        is_correct=True,
-        is_perfect=False,
-        deck_category="history",
-        sm2_new_ef=2.5,
-        sm2_new_interval=2,
-        sm2_new_repetitions=2,
-        sm2_new_status="learning",
-        sm2_next_review_date=date.today().isoformat(),
-        stats_previous_status="learning",
-        db_url=test_db_url,
-    )
-    base.update(overrides)
-    return base
-
-
 # ---------------------------------------------------------------------------
-# Test 1: 10th correct culture answer creates culture_curious achievement
+# Test 1: 10 culture answers creates culture_curious achievement
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.skip(
-    reason="GAMIF-05: integration test infra debt — reconciler engine vs db_session fixture conflict; tracked for follow-up PR"
-)
 @pytest.mark.integration
 @pytest.mark.asyncio
 @pytest.mark.timeout(60)
@@ -213,39 +119,24 @@ class TestCultureAnswerCreatesAchievement:
         self,
         db_session: AsyncSession,
     ) -> None:
-        """10th correct culture answer must:
-        - Create UserAchievement(culture_curious) row
-        - Create a Notification of type ACHIEVEMENT_UNLOCKED
+        """10 correct culture answers crossed the culture_curious threshold.
+
+        The full achievement catalog is seeded by the autouse fixture in conftest.py.
+        We seed 10 answer rows directly (no task call) then run the reconciler.
         """
-        await _seed_achievement_catalog(db_session, _CULTURE_CURIOUS_ID)
         user = await UserFactory.create()
         _, question = await _seed_culture_question(db_session)
 
-        # Seed 9 prior answers — crossing 10 total on this task call
-        await _seed_answer_history(db_session, user.id, question.id, count=9)
-        await _seed_question_stats(db_session, user.id, question.id)
-        await db_session.commit()
+        # Seed exactly 10 answers — meets the culture_curious threshold (threshold=10)
+        await _seed_answer_history(db_session, user.id, question.id, count=10)
 
-        test_db_url = get_test_database_url()
+        result = await GamificationReconciler.reconcile(
+            db_session, user.id, ReconcileMode.IMMEDIATE
+        )
 
-        from src.config import settings as real_settings
-
-        with (
-            __import__("unittest.mock", fromlist=["patch"]).patch.object(
-                real_settings, "feature_background_tasks", True
-            ),
-            __import__("unittest.mock", fromlist=["patch"]).patch.object(
-                real_settings, "app_env", "development"
-            ),
-        ):
-            from src.tasks.background import persist_culture_answer_task
-
-            await persist_culture_answer_task(
-                **_make_task_kwargs(user.id, question.id, test_db_url)
-            )
-
-        # Expire local cache so we read fresh DB state
-        await db_session.rollback()
+        assert (
+            _CULTURE_CURIOUS_ID in result.new_unlocks
+        ), f"Expected culture_curious in new_unlocks, got {result.new_unlocks}"
 
         ua_count = await db_session.scalar(
             select(func.count()).where(
@@ -271,9 +162,6 @@ class TestCultureAnswerCreatesAchievement:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.skip(
-    reason="GAMIF-05: integration test infra debt — reconciler engine vs db_session fixture conflict; tracked for follow-up PR"
-)
 @pytest.mark.integration
 @pytest.mark.asyncio
 @pytest.mark.timeout(60)
@@ -282,39 +170,29 @@ class TestCultureAnswerIdempotency:
         self,
         db_session: AsyncSession,
     ) -> None:
-        """Running persist_culture_answer_task twice must not create duplicate rows.
+        """Running reconcile twice must not create duplicate rows.
 
-        The reconciler uses pg_insert with on_conflict_do_nothing for UserAchievement,
-        so the second call should be a no-op at the achievement level.
+        The reconciler uses pg_insert with on_conflict_do_nothing + RETURNING for
+        UserAchievement, so the second call returns new_ids=[] and emits no extra
+        notification.
         """
-        await _seed_achievement_catalog(db_session, _CULTURE_CURIOUS_ID)
         user = await UserFactory.create()
         _, question = await _seed_culture_question(db_session)
+        await _seed_answer_history(db_session, user.id, question.id, count=10)
 
-        await _seed_answer_history(db_session, user.id, question.id, count=9)
-        await _seed_question_stats(db_session, user.id, question.id)
-        await db_session.commit()
+        # First reconcile — crosses threshold
+        result1 = await GamificationReconciler.reconcile(
+            db_session, user.id, ReconcileMode.IMMEDIATE
+        )
+        assert _CULTURE_CURIOUS_ID in result1.new_unlocks
 
-        test_db_url = get_test_database_url()
-
-        from unittest.mock import patch
-
-        from src.config import settings as real_settings
-
-        with (
-            patch.object(real_settings, "feature_background_tasks", True),
-            patch.object(real_settings, "app_env", "development"),
-        ):
-            from src.tasks.background import persist_culture_answer_task
-
-            kwargs = _make_task_kwargs(user.id, question.id, test_db_url)
-
-            # First invocation — crosses threshold
-            await persist_culture_answer_task(**kwargs)
-            # Second invocation — idempotent
-            await persist_culture_answer_task(**kwargs)
-
-        await db_session.rollback()
+        # Second reconcile — idempotent
+        result2 = await GamificationReconciler.reconcile(
+            db_session, user.id, ReconcileMode.IMMEDIATE
+        )
+        assert (
+            _CULTURE_CURIOUS_ID not in result2.new_unlocks
+        ), f"Second reconcile should not re-unlock {_CULTURE_CURIOUS_ID}, got {result2.new_unlocks}"
 
         ua_count = await db_session.scalar(
             select(func.count()).where(
@@ -337,68 +215,57 @@ class TestCultureAnswerIdempotency:
 
 
 # ---------------------------------------------------------------------------
-# Test 3: Single answer crossing two thresholds → two IMMEDIATE notifications
+# Test 3: Single reconcile crossing two thresholds → two IMMEDIATE notifications
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.skip(
-    reason="GAMIF-05: integration test infra debt — reconciler engine vs db_session fixture conflict; tracked for follow-up PR"
-)
 @pytest.mark.integration
 @pytest.mark.asyncio
 @pytest.mark.timeout(60)
 class TestCultureAnswerTwoThresholds:
-    async def test_single_answer_crossing_two_thresholds_emits_two_notifications(
+    async def test_single_reconcile_crossing_two_thresholds_emits_two_notifications(
         self,
         db_session: AsyncSession,
     ) -> None:
-        """One task call crossing two achievement thresholds must emit two notifications.
+        """One reconcile call crossing two achievement thresholds must emit two notifications.
 
         Setup:
-        - 49 prior answers, all correct (total=49, consec=49)
-        - culture_explorer threshold=50 (CULTURE_QUESTIONS_ANSWERED)
-        - perfect_culture_score threshold=10 (CULTURE_CONSECUTIVE_CORRECT)
-        Both thresholds will be met by a single correct 50th answer (consec >= 10, total = 50).
+        - 50 total correct answers → crosses culture_explorer (threshold=50) and
+          culture_curious (threshold=10, already pre-unlocked so does NOT count as new)
+        - 10 consecutive correct answers → crosses perfect_culture_score (threshold=10)
+        Both culture_explorer and perfect_culture_score are newly unlocked here.
+        culture_curious is pre-inserted so its RETURNING insert returns nothing
+        → exactly 2 new ACHIEVEMENT_UNLOCKED notifications.
         """
-        await _seed_achievement_catalog(db_session, _CULTURE_EXPLORER_ID)
-        await _seed_achievement_catalog(db_session, _PERFECT_CULTURE_ID)
-        await _seed_achievement_catalog(db_session, _CULTURE_CURIOUS_ID)
-
         user = await UserFactory.create()
         _, question = await _seed_culture_question(db_session)
 
-        # Seed 49 correct answers — next one will push to 50 total + 10 consecutive
-        await _seed_answer_history(db_session, user.id, question.id, count=49, is_correct=True)
-        await _seed_question_stats(db_session, user.id, question.id)
+        # Seed 50 correct answers — meets culture_explorer (50) and perfect_culture_score (10 consec)
+        await _seed_answer_history(db_session, user.id, question.id, count=50, is_correct=True)
 
-        # Pre-unlock culture_curious so it does NOT count as a new unlock during the task.
-        # With 49 seeds the projection already meets the 10-answer threshold; pre-inserting
-        # the UserAchievement row means the reconciler's RETURNING INSERT returns nothing for
-        # it, and we can assert exactly == 2 new ACHIEVEMENT_UNLOCKED notifications.
+        # Pre-unlock culture_curious (already satisfied at 10 answers).
+        # With this pre-inserted row the reconciler's RETURNING INSERT returns nothing
+        # for it → exactly 2 new ACHIEVEMENT_UNLOCKED notifications.
         db_session.add(UserAchievement(user_id=user.id, achievement_id=_CULTURE_CURIOUS_ID))
         await db_session.flush()
 
-        await db_session.commit()
+        result = await GamificationReconciler.reconcile(
+            db_session, user.id, ReconcileMode.IMMEDIATE
+        )
 
-        test_db_url = get_test_database_url()
+        # Both culture_explorer + perfect_culture_score must be in new_unlocks
+        assert (
+            _CULTURE_EXPLORER_ID in result.new_unlocks
+        ), f"Expected culture_explorer in new_unlocks, got {result.new_unlocks}"
+        assert (
+            _PERFECT_CULTURE_ID in result.new_unlocks
+        ), f"Expected perfect_culture_score in new_unlocks, got {result.new_unlocks}"
+        assert _CULTURE_CURIOUS_ID not in result.new_unlocks, (
+            f"culture_curious was pre-unlocked and should not appear in new_unlocks, "
+            f"got {result.new_unlocks}"
+        )
 
-        from unittest.mock import patch
-
-        from src.config import settings as real_settings
-
-        with (
-            patch.object(real_settings, "feature_background_tasks", True),
-            patch.object(real_settings, "app_env", "development"),
-        ):
-            from src.tasks.background import persist_culture_answer_task
-
-            await persist_culture_answer_task(
-                **_make_task_kwargs(user.id, question.id, test_db_url)
-            )
-
-        await db_session.rollback()
-
-        # Both culture_explorer + perfect_culture_score must be unlocked
+        # Both culture_explorer + perfect_culture_score must be stored
         ua_count = await db_session.scalar(
             select(func.count()).where(
                 UserAchievement.user_id == user.id,
@@ -409,9 +276,7 @@ class TestCultureAnswerTwoThresholds:
             ua_count == 2
         ), f"Expected exactly 2 UserAchievements (explorer + perfect), got {ua_count}"
 
-        # Exactly two ACHIEVEMENT_UNLOCKED notifications — one per newly-crossed threshold.
-        # culture_curious is pre-unlocked so its RETURNING insert returns nothing → no
-        # extra notification; this catches regressions where extra achievements slip through.
+        # Exactly two ACHIEVEMENT_UNLOCKED notifications
         notif_count = await db_session.scalar(
             select(func.count()).where(
                 Notification.user_id == user.id,

@@ -1,26 +1,25 @@
 """Integration tests for async review path → GamificationReconciler.reconcile(IMMEDIATE).
 
 These tests run against the real test PostgreSQL database (test_learn_greek) to verify
-that check_achievements_task (called from _run_review_side_effects after persist_deck_review_task)
-now invokes GamificationReconciler and produces correct DB state.
+that the GamificationReconciler produces correct DB state when called from the async
+review path (i.e. what check_achievements_task delegates to).
 
-Pattern matches test_scheduled_gamification_integration.py:
-- Seed test data via db_session, then commit so the task's own engine can read it.
-- Patch settings.database_url → test DB URL.
-- Run check_achievements_task() directly (same function _run_review_side_effects calls).
-- Refresh / query via db_session to assert DB state.
+Design: tests call GamificationReconciler.reconcile() DIRECTLY using the test's
+db_session, bypassing check_achievements_task's own engine creation. This eliminates
+the cross-session FK-visibility issue that arises when a separate asyncpg connection
+cannot see data written (but not committed) by the test's savepoint-based session.
 
 Tests:
 1. test_async_review_path_creates_achievement_and_notification
-   - User with LEARNING card → check_achievements_task → UserAchievement row + ACHIEVEMENT_UNLOCKED
+   - User with LEARNING card → reconcile(IMMEDIATE) → UserAchievement row +
+     ACHIEVEMENT_UNLOCKED notification
 2. test_idempotent_on_second_invocation
-   - Run check_achievements_task twice → still 1 UserAchievement, 1 notification (no duplicates)
+   - Reconcile twice → still 1 UserAchievement, 1 notification (no duplicates)
 """
 
 from __future__ import annotations
 
 from datetime import date, datetime, timezone
-from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
@@ -28,8 +27,6 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.models import (
-    Achievement,
-    AchievementCategory,
     CardRecord,
     CardRecordReview,
     CardRecordStatistics,
@@ -41,41 +38,26 @@ from src.db.models import (
     Notification,
     NotificationType,
     PartOfSpeech,
-    User,
     UserAchievement,
     WordEntry,
 )
+from src.services.gamification.reconciler import GamificationReconciler
+from src.services.gamification.types import ReconcileMode
 from tests.factories.auth import UserFactory
-from tests.helpers.database import get_test_database_url
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Achievement ID under test
 # ---------------------------------------------------------------------------
 
 _ACHIEVEMENT_ID = "learning_first_word"
 
 
-async def _seed_achievement_catalog(db_session: AsyncSession) -> Achievement:
-    """Seed the required Achievement catalog row."""
-    existing = await db_session.get(Achievement, _ACHIEVEMENT_ID)
-    if existing:
-        return existing
-    achievement = Achievement(
-        id=_ACHIEVEMENT_ID,
-        name="First Word",
-        description="Learn your first card",
-        category=AchievementCategory.LEARNING,
-        icon="book",
-        threshold=1,
-        xp_reward=10,
-        sort_order=0,
-    )
-    db_session.add(achievement)
-    await db_session.flush()
-    return achievement
+# ---------------------------------------------------------------------------
+# Seeding helpers
+# ---------------------------------------------------------------------------
 
 
-async def _seed_user_with_review(db_session: AsyncSession) -> User:
+async def _seed_user_with_review(db_session: AsyncSession):
     """Seed a user with a LEARNING card and a recent review.
 
     This satisfies GamificationProjection: cards_learned=1 via LEARNING status,
@@ -150,25 +132,11 @@ async def _seed_user_with_review(db_session: AsyncSession) -> User:
     return user
 
 
-def _patch_task_db_url():
-    """Context manager: point the background task at the test DB."""
-    test_db_url = get_test_database_url()
-    return patch(
-        "src.tasks.background.settings",
-        feature_background_tasks=True,
-        is_production=False,
-        database_url=test_db_url,
-    )
-
-
 # ---------------------------------------------------------------------------
 # Test 1: async review path creates UserAchievement + ACHIEVEMENT_UNLOCKED
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.skip(
-    reason="GAMIF-05: integration test infra debt — reconciler engine vs db_session fixture conflict; tracked for follow-up PR"
-)
 @pytest.mark.integration
 @pytest.mark.asyncio
 @pytest.mark.timeout(60)
@@ -177,35 +145,26 @@ class TestAsyncReviewPathCreatesAchievement:
         self,
         db_session: AsyncSession,
     ) -> None:
-        """check_achievements_task (called from _run_review_side_effects) must:
+        """GamificationReconciler.reconcile(IMMEDIATE) must:
         - Create a UserAchievement row for learning_first_word
         - Create a Notification of type ACHIEVEMENT_UNLOCKED
 
-        Setup:
-        - Seed achievement catalog + user with LEARNING card + review.
-        - Commit to make data visible to task's engine.
-        - Call check_achievements_task directly (same path as _run_review_side_effects).
-        - Assert DB state via db_session.
+        The full achievement catalog is seeded by the autouse fixture in conftest.py.
+        We call the reconciler directly via the test session, eliminating the
+        cross-engine FK-visibility issue that plagued the original task-wrapper approach.
         """
-        await _seed_achievement_catalog(db_session)
         user = await _seed_user_with_review(db_session)
-        await db_session.commit()
 
-        test_db_url = get_test_database_url()
+        # Call the reconciler directly with the test's session.
+        # The reconciler calls db.flush() internally; no commit needed here
+        # because we read back via the same session.
+        result = await GamificationReconciler.reconcile(
+            db_session, user.id, ReconcileMode.IMMEDIATE
+        )
 
-        from src.config import settings as real_settings
-
-        with patch.object(real_settings, "feature_background_tasks", True):
-            with patch.object(real_settings, "app_env", "development"):
-                from src.tasks.background import check_achievements_task
-
-                await check_achievements_task(
-                    user_id=user.id,
-                    db_url=test_db_url,
-                )
-
-        # Expire cache so we read fresh state
-        await db_session.rollback()
+        assert (
+            _ACHIEVEMENT_ID in result.new_unlocks
+        ), f"Expected {_ACHIEVEMENT_ID} in new_unlocks, got {result.new_unlocks}"
 
         # Assert UserAchievement row created
         ua_count = await db_session.scalar(
@@ -233,9 +192,6 @@ class TestAsyncReviewPathCreatesAchievement:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.skip(
-    reason="GAMIF-05: integration test infra debt — reconciler engine vs db_session fixture conflict; tracked for follow-up PR"
-)
 @pytest.mark.integration
 @pytest.mark.asyncio
 @pytest.mark.timeout(60)
@@ -244,29 +200,27 @@ class TestAsyncReviewPathIdempotency:
         self,
         db_session: AsyncSession,
     ) -> None:
-        """Running check_achievements_task twice must not create duplicate rows.
+        """Running reconcile twice must not create duplicate rows.
 
-        The reconciler uses pg_insert with on_conflict_do_nothing for UserAchievement,
-        so the second call should be a no-op at the DB level.
+        The reconciler uses pg_insert with on_conflict_do_nothing + RETURNING for
+        UserAchievement, so the second call returns new_ids=[] and emits no extra
+        notification.
         """
-        await _seed_achievement_catalog(db_session)
         user = await _seed_user_with_review(db_session)
-        await db_session.commit()
 
-        test_db_url = get_test_database_url()
+        # First reconcile
+        result1 = await GamificationReconciler.reconcile(
+            db_session, user.id, ReconcileMode.IMMEDIATE
+        )
+        assert _ACHIEVEMENT_ID in result1.new_unlocks
 
-        from src.config import settings as real_settings
-
-        with patch.object(real_settings, "feature_background_tasks", True):
-            with patch.object(real_settings, "app_env", "development"):
-                from src.tasks.background import check_achievements_task
-
-                # First invocation
-                await check_achievements_task(user_id=user.id, db_url=test_db_url)
-                # Second invocation
-                await check_achievements_task(user_id=user.id, db_url=test_db_url)
-
-        await db_session.rollback()
+        # Second reconcile — idempotent
+        result2 = await GamificationReconciler.reconcile(
+            db_session, user.id, ReconcileMode.IMMEDIATE
+        )
+        assert (
+            result2.new_unlocks == []
+        ), f"Second reconcile should return empty new_unlocks, got {result2.new_unlocks}"
 
         # Still exactly 1 UserAchievement row
         ua_count = await db_session.scalar(
@@ -277,10 +231,7 @@ class TestAsyncReviewPathIdempotency:
         )
         assert ua_count == 1, f"Idempotency failure: expected 1 UserAchievement, got {ua_count}"
 
-        # Notifications: reconciler emits IMMEDIATE notifications on each call but
-        # the idempotency guarantee is at the UserAchievement (row-level). The ACHIEVEMENT_UNLOCKED
-        # notification count on the second run depends on whether new_ids is empty.
-        # Since new_ids=[] on the second run, no new notification is emitted.
+        # Exactly 1 ACHIEVEMENT_UNLOCKED notification (emitted on first reconcile only)
         notif_count = await db_session.scalar(
             select(func.count()).where(
                 Notification.user_id == user.id,

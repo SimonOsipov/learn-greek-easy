@@ -1,14 +1,16 @@
-"""Integration tests for reconcile_active_users_task.
+"""Integration tests for reconcile_active_users_task logic.
 
 These tests run against the real test PostgreSQL database (test_learn_greek)
 to verify end-to-end correctness of the scheduled gamification job.
 
-Pattern (same as TestTrialExpirationTask in test_trial_lifecycle.py):
-- Seed test data via db_session, then commit to make it visible to the task's
-  own engine/connection.
-- Patch settings.database_url → test DB URL so the task opens a real connection.
-- Run reconcile_active_users_task().
-- Refresh / query via db_session to assert DB state.
+Design: tests call _fetch_active_user_ids() and GamificationReconciler.reconcile()
+DIRECTLY via the test's db_session, bypassing reconcile_active_users_task's own engine
+creation. This eliminates the cross-session FK-visibility issue: the task's dedicated
+asyncpg connection cannot see data that the test's savepoint-based session has written
+but not committed to the real transaction log.
+
+_fetch_active_user_ids() is a private module function; importing it in tests is
+intentional (we own this codebase and it is the unit-of-work under test).
 
 Tests:
 1. test_three_users_with_backlog_get_one_summary_each
@@ -17,26 +19,24 @@ Tests:
    - Checks extra_data["count"] >= 1
 
 2. test_running_twice_produces_no_duplicate_notifications
-   - Same setup, run task twice
+   - Same setup, reconcile twice for each user
    - Still exactly 1 ACHIEVEMENTS_SUMMARY per user after second run
 
 3. test_user_with_no_new_unlocks_gets_no_notification
-   - Pre-reconcile the user (already converged) then run job → 0 new notifications
+   - Pre-reconcile the user (QUIET mode, already converged) then reconcile again
+     in SUMMARY mode → 0 ACHIEVEMENTS_SUMMARY notifications
 """
 
 from __future__ import annotations
 
 from datetime import date, datetime, timezone
-from unittest.mock import patch
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.models import (
-    Achievement,
-    AchievementCategory,
     CardRecord,
     CardRecordReview,
     CardRecordStatistics,
@@ -48,13 +48,12 @@ from src.db.models import (
     Notification,
     NotificationType,
     PartOfSpeech,
-    User,
     WordEntry,
 )
 from src.services.gamification.reconciler import GamificationReconciler
 from src.services.gamification.types import ReconcileMode
+from src.tasks.scheduled_gamification import _fetch_active_user_ids
 from tests.factories.auth import UserFactory
-from tests.helpers.database import get_test_database_url
 
 # ---------------------------------------------------------------------------
 # Module-level helpers
@@ -63,27 +62,7 @@ from tests.helpers.database import get_test_database_url
 _ACHIEVEMENT_ID = "learning_first_word"
 
 
-async def _seed_achievement_catalog(db_session: AsyncSession) -> Achievement:
-    """Seed the required FK parent row in the achievements catalog."""
-    existing = await db_session.get(Achievement, _ACHIEVEMENT_ID)
-    if existing:
-        return existing
-    achievement = Achievement(
-        id=_ACHIEVEMENT_ID,
-        name="First Word",
-        description="Learn your first card",
-        category=AchievementCategory.LEARNING,
-        icon="book",
-        threshold=1,
-        xp_reward=10,
-        sort_order=0,
-    )
-    db_session.add(achievement)
-    await db_session.flush()
-    return achievement
-
-
-async def _seed_user_with_review(db_session: AsyncSession) -> User:
+async def _seed_user_with_review(db_session: AsyncSession):
     """Seed a user with the minimal graph to satisfy:
     - _fetch_active_user_ids (CardRecordReview in last 30 days)
     - GamificationProjection (cards_learned=1 via LEARNING CardRecordStatistics)
@@ -160,41 +139,18 @@ async def _seed_user_with_review(db_session: AsyncSession) -> User:
     return user
 
 
-def _patch_task_settings():
-    """Return a context manager that points the task at the test DB.
+async def _reconcile_active_users(db_session: AsyncSession, mode: ReconcileMode) -> list[UUID]:
+    """Fetch active user IDs and reconcile each one using the test's db_session.
 
-    Also patches create_async_engine to use pool_size=1, max_overflow=0 so
-    connections are released immediately after each session.  Without this,
-    the task's dedicated engine can hold an idle asyncpg connection that
-    conflicts with the db_session fixture's rollback-based teardown and causes
-    the CI runner to hang waiting for that connection to be freed.
+    This replaces calling reconcile_active_users_task() directly. The reconciler
+    uses the test session so seeded data is immediately visible (same transaction).
+
+    Returns the list of user IDs that were reconciled.
     """
-    from sqlalchemy.ext.asyncio import create_async_engine as _real_cae
-
-    test_db_url = get_test_database_url()
-
-    def _test_engine(url, **kwargs):
-        # Minimal pool so connections are returned and closed immediately.
-        kwargs["pool_size"] = 1
-        kwargs["max_overflow"] = 0
-        return _real_cae(url, **kwargs)
-
-    settings_patch = patch(
-        "src.tasks.scheduled_gamification.settings",
-        gamification_reconcile_on_read=True,
-        database_url=test_db_url,
-        is_production=False,
-    )
-    engine_patch = patch(
-        "src.tasks.scheduled_gamification.create_async_engine",
-        side_effect=_test_engine,
-    )
-    from contextlib import ExitStack
-
-    stack = ExitStack()
-    stack.enter_context(settings_patch)
-    stack.enter_context(engine_patch)
-    return stack
+    user_ids = await _fetch_active_user_ids(db_session)
+    for user_id in user_ids:
+        await GamificationReconciler.reconcile(db_session, user_id, mode)
+    return user_ids
 
 
 # ---------------------------------------------------------------------------
@@ -202,9 +158,6 @@ def _patch_task_settings():
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.skip(
-    reason="GAMIF-05: integration test infra debt — reconciler engine vs db_session fixture conflict; tracked for follow-up PR"
-)
 @pytest.mark.integration
 @pytest.mark.asyncio
 @pytest.mark.timeout(60)
@@ -216,29 +169,25 @@ class TestThreeUsersGetOneSummaryEach:
         """3 users with no prior reconcile each receive exactly 1 ACHIEVEMENTS_SUMMARY.
 
         Setup:
-        - Seed achievement catalog (learning_first_word).
+        - The autouse fixture seeds the full achievement catalog.
         - Create 3 users, each with a LEARNING card + recent CardRecordReview.
-        - Commit to make data visible to task's engine.
-        - Run reconcile_active_users_task().
+        - _fetch_active_user_ids sees all 3 via the same session.
+        - Reconcile each user with SUMMARY mode.
         - Assert each user has exactly 1 ACHIEVEMENTS_SUMMARY notification.
         """
-        await _seed_achievement_catalog(db_session)
-
         users = []
         for _ in range(3):
             user = await _seed_user_with_review(db_session)
             users.append(user)
 
-        # Commit so the task's separate connection can read the data
-        await db_session.commit()
+        # Reconcile active users (SUMMARY mode matches the scheduled task's mode)
+        reconciled_ids = await _reconcile_active_users(db_session, ReconcileMode.SUMMARY)
 
-        with _patch_task_settings():
-            from src.tasks.scheduled_gamification import reconcile_active_users_task
-
-            await reconcile_active_users_task()
-
-        # Expire cache and re-query
-        await db_session.rollback()
+        # Verify all 3 seeded users appear in active set
+        for user in users:
+            assert user.id in reconciled_ids, (
+                f"User {user.id} not found in active user IDs. " f"Reconciled: {reconciled_ids}"
+            )
 
         for user in users:
             count = await db_session.scalar(
@@ -260,7 +209,9 @@ class TestThreeUsersGetOneSummaryEach:
             )
             assert notif is not None
             assert isinstance(notif.extra_data, dict)
-            assert notif.extra_data.get("count", 0) >= 1
+            assert (
+                notif.extra_data.get("count", 0) >= 1
+            ), f"expected extra_data.count >= 1, got {notif.extra_data}"
 
 
 # ---------------------------------------------------------------------------
@@ -268,9 +219,6 @@ class TestThreeUsersGetOneSummaryEach:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.skip(
-    reason="GAMIF-05: integration test infra debt — reconciler engine vs db_session fixture conflict; tracked for follow-up PR"
-)
 @pytest.mark.integration
 @pytest.mark.asyncio
 @pytest.mark.timeout(60)
@@ -279,27 +227,20 @@ class TestIdempotency:
         self,
         db_session: AsyncSession,
     ) -> None:
-        """Running the task twice → still exactly 1 ACHIEVEMENTS_SUMMARY per user.
+        """Running reconcile twice → still exactly 1 ACHIEVEMENTS_SUMMARY per user.
 
         The reconciler is convergent: second run finds new_ids=[] and emits
         no ACHIEVEMENTS_SUMMARY notification.
         """
-        await _seed_achievement_catalog(db_session)
-
         users = []
         for _ in range(2):
             user = await _seed_user_with_review(db_session)
             users.append(user)
 
-        await db_session.commit()
-
-        from src.tasks.scheduled_gamification import reconcile_active_users_task
-
-        with _patch_task_settings():
-            await reconcile_active_users_task()
-            await reconcile_active_users_task()
-
-        await db_session.rollback()
+        # First reconcile pass (SUMMARY mode)
+        await _reconcile_active_users(db_session, ReconcileMode.SUMMARY)
+        # Second reconcile pass — should be idempotent
+        await _reconcile_active_users(db_session, ReconcileMode.SUMMARY)
 
         for user in users:
             count = await db_session.scalar(
@@ -310,18 +251,15 @@ class TestIdempotency:
             )
             assert count == 1, (
                 f"Idempotency failure: user {user.id} has {count} ACHIEVEMENTS_SUMMARY "
-                f"notifications after 2 runs (expected 1)"
+                f"notifications after 2 reconcile runs (expected 1)"
             )
 
 
 # ---------------------------------------------------------------------------
-# Test 3: Pre-reconciled user gets no notification on task run
+# Test 3: Pre-reconciled user gets no notification on subsequent reconcile
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.skip(
-    reason="GAMIF-05: integration test infra debt — reconciler engine vs db_session fixture conflict; tracked for follow-up PR"
-)
 @pytest.mark.integration
 @pytest.mark.asyncio
 @pytest.mark.timeout(60)
@@ -335,23 +273,19 @@ class TestNoNotificationForConvergedUser:
         Steps:
         1. Seed user + full graph.
         2. Pre-reconcile via GamificationReconciler.reconcile(QUIET) directly.
-        3. Commit.
-        4. Run reconcile_active_users_task().
-        5. Assert zero ACHIEVEMENTS_SUMMARY notifications for this user.
+        3. Reconcile again with SUMMARY mode.
+        4. Assert zero ACHIEVEMENTS_SUMMARY notifications for this user.
         """
-        await _seed_achievement_catalog(db_session)
         user = await _seed_user_with_review(db_session)
 
-        # Pre-reconcile using QUIET mode so no notification is emitted but state converges
+        # Pre-reconcile using QUIET mode: state converges, no notification emitted
         await GamificationReconciler.reconcile(db_session, user.id, ReconcileMode.QUIET)
-        await db_session.commit()
 
-        from src.tasks.scheduled_gamification import reconcile_active_users_task
-
-        with _patch_task_settings():
-            await reconcile_active_users_task()
-
-        await db_session.rollback()
+        # Reconcile again with SUMMARY mode — new_ids=[] so no ACHIEVEMENTS_SUMMARY
+        result = await GamificationReconciler.reconcile(db_session, user.id, ReconcileMode.SUMMARY)
+        assert (
+            result.new_unlocks == []
+        ), f"Expected empty new_unlocks on second pass, got {result.new_unlocks}"
 
         count = await db_session.scalar(
             select(func.count()).where(
