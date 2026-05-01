@@ -112,24 +112,13 @@ async def _emit_level_up(db: AsyncSession, user_id: UUID, new_level: int) -> Non
     )
 
 
-async def _emit_summary_stub(
+async def _emit_achievements_summary(
     db: AsyncSession,
     user_id: UUID,
     new_ids: list[str],
 ) -> None:
-    """STUB for SUMMARY mode achievement batching.
-
-    Full implementation deferred to GAMIF-05-01 (notification renderer +
-    summary enum value).  For now, log a warning so callers know the mode
-    was requested but not fully handled.
-    """
-    logger.warning(
-        "SUMMARY mode requested with {count} unlocks but full implementation "
-        "deferred to GAMIF-05-01",
-        count=len(new_ids),
-        user_id=str(user_id),
-        achievement_ids=new_ids,
-    )
+    """Emit a single ACHIEVEMENTS_SUMMARY notification for N unlocks (SUMMARY mode)."""
+    await NotificationService(db).notify_achievements_summary(user_id, new_ids)
 
 
 # ---------------------------------------------------------------------------
@@ -235,10 +224,8 @@ class GamificationReconciler:
                 await _emit_level_up(db, user_id, snapshot.current_level)
 
         elif mode == ReconcileMode.SUMMARY:
-            # Achievement notifications are batched (stub logs warning, GAMIF-05-01 completes)
             if new_ids:
-                await _emit_summary_stub(db, user_id, new_ids)
-            # Level-up is still emitted individually in SUMMARY mode
+                await _emit_achievements_summary(db, user_id, new_ids)
             if leveled_up:
                 await _emit_level_up(db, user_id, snapshot.current_level)
 

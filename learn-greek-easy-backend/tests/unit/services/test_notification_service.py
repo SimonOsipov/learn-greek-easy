@@ -8,7 +8,7 @@ Tests cover:
 - Notification trigger helpers (achievement, level up, etc.)
 """
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
@@ -366,6 +366,182 @@ class TestNotificationTriggerHelpers:
         )
 
         assert "Completed" in notification.message
+
+
+@pytest.mark.unit
+class TestNotifyAchievementsSummary:
+    """Tests for notify_achievements_summary — SUMMARY mode batch renderer."""
+
+    @pytest.mark.asyncio
+    async def test_empty_list_is_noop(self, mock_db_session):
+        """Empty achievement_ids list returns None and creates no notification row."""
+        service = NotificationService(mock_db_session)
+        user_id = uuid4()
+
+        result = await service.notify_achievements_summary(user_id=user_id, achievement_ids=[])
+
+        assert result is None
+        mock_db_session.add.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_single_achievement_renders_singular_copy(self, mock_db_session):
+        """Single known achievement renders singular title and correct type."""
+        from src.services.achievement_definitions import (
+            AchievementCategory,
+            AchievementDef,
+            AchievementMetric,
+        )
+
+        fake_def = AchievementDef(
+            id="streak_first_flame",
+            name="First Flame",
+            description="Log a streak",
+            category=AchievementCategory.STREAK,
+            icon="fire",
+            metric=AchievementMetric.STREAK_DAYS,
+            threshold=1,
+            xp_reward=50,
+            hint="",
+        )
+
+        service = NotificationService(mock_db_session)
+        user_id = uuid4()
+
+        with patch(
+            "src.services.achievement_definitions.get_achievement_by_id",
+            return_value=fake_def,
+        ):
+            notification = await service.notify_achievements_summary(
+                user_id=user_id,
+                achievement_ids=["streak_first_flame"],
+            )
+
+        assert notification is not None
+        assert notification.type == NotificationType.ACHIEVEMENTS_SUMMARY
+        assert "Achievement Unlocked: First Flame" == notification.title
+        assert "50 XP" in notification.message
+        assert "while you were away" in notification.message
+        assert notification.action_url == "/achievements"
+        assert notification.icon == "trophy"
+        assert notification.extra_data["count"] == 1
+        assert notification.extra_data["total_xp"] == 50
+        assert notification.extra_data["achievement_ids"] == ["streak_first_flame"]
+        mock_db_session.add.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_multiple_achievements_aggregated(self, mock_db_session):
+        """Multiple known achievements produce ONE notification with aggregate copy."""
+        from src.services.achievement_definitions import (
+            AchievementCategory,
+            AchievementDef,
+            AchievementMetric,
+        )
+
+        def make_def(aid, name, xp):
+            return AchievementDef(
+                id=aid,
+                name=name,
+                description="",
+                category=AchievementCategory.STREAK,
+                icon="fire",
+                metric=AchievementMetric.STREAK_DAYS,
+                threshold=1,
+                xp_reward=xp,
+                hint="",
+            )
+
+        defs = {
+            "ach_a": make_def("ach_a", "Ach A", 50),
+            "ach_b": make_def("ach_b", "Ach B", 75),
+            "ach_c": make_def("ach_c", "Ach C", 100),
+        }
+
+        service = NotificationService(mock_db_session)
+        user_id = uuid4()
+
+        with patch(
+            "src.services.achievement_definitions.get_achievement_by_id",
+            side_effect=lambda aid: defs.get(aid),
+        ):
+            notification = await service.notify_achievements_summary(
+                user_id=user_id,
+                achievement_ids=["ach_a", "ach_b", "ach_c"],
+            )
+
+        assert notification is not None
+        assert notification.type == NotificationType.ACHIEVEMENTS_SUMMARY
+        assert "3 Achievements Unlocked!" == notification.title
+        assert "3 achievements" in notification.message
+        assert "225 XP" in notification.message
+        assert notification.extra_data["count"] == 3
+        assert notification.extra_data["total_xp"] == 225
+        assert notification.extra_data["achievement_ids"] == ["ach_a", "ach_b", "ach_c"]
+        # Exactly ONE db.add call (one notification row)
+        mock_db_session.add.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_unknown_achievement_ids_returns_none(self, mock_db_session):
+        """All-unknown achievement IDs returns None and logs a warning."""
+        service = NotificationService(mock_db_session)
+        user_id = uuid4()
+
+        with patch(
+            "src.services.achievement_definitions.get_achievement_by_id",
+            return_value=None,
+        ):
+            result = await service.notify_achievements_summary(
+                user_id=user_id,
+                achievement_ids=["nonexistent_id"],
+            )
+
+        assert result is None
+        mock_db_session.add.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_mixed_known_and_unknown(self, mock_db_session):
+        """Mixed known/unknown IDs: only known defs counted, unknown skipped."""
+        from src.services.achievement_definitions import (
+            AchievementCategory,
+            AchievementDef,
+            AchievementMetric,
+        )
+
+        def make_def(aid, name, xp):
+            return AchievementDef(
+                id=aid,
+                name=name,
+                description="",
+                category=AchievementCategory.STREAK,
+                icon="fire",
+                metric=AchievementMetric.STREAK_DAYS,
+                threshold=1,
+                xp_reward=xp,
+                hint="",
+            )
+
+        known_defs = {
+            "ach_known_1": make_def("ach_known_1", "Known One", 50),
+            "ach_known_2": make_def("ach_known_2", "Known Two", 75),
+        }
+
+        service = NotificationService(mock_db_session)
+        user_id = uuid4()
+
+        with patch(
+            "src.services.achievement_definitions.get_achievement_by_id",
+            side_effect=lambda aid: known_defs.get(aid),
+        ):
+            notification = await service.notify_achievements_summary(
+                user_id=user_id,
+                achievement_ids=["ach_known_1", "ach_unknown", "ach_known_2"],
+            )
+
+        assert notification is not None
+        # Only 2 known defs counted
+        assert notification.extra_data["count"] == 2
+        assert notification.extra_data["total_xp"] == 125
+        assert notification.extra_data["achievement_ids"] == ["ach_known_1", "ach_known_2"]
+        mock_db_session.add.assert_called_once()
 
 
 @pytest.mark.unit

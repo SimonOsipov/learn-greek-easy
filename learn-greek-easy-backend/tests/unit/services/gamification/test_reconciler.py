@@ -283,11 +283,9 @@ class TestQuietMode:
 
 @pytest.mark.unit
 class TestSummaryMode:
-    """SUMMARY mode logs stub warning; level-up still emits."""
+    """SUMMARY mode calls notify_achievements_summary; level-up still emits."""
 
-    async def test_summary_mode_logs_stub_warning(
-        self, db_session: AsyncSession, caplog_loguru: Any
-    ) -> None:
+    async def test_summary_mode_calls_achievements_summary(self, db_session: AsyncSession) -> None:
         user = await _make_user(db_session)
         await _seed_achievement(db_session, "streak_first_flame", xp_reward=50)
 
@@ -309,30 +307,23 @@ class TestSummaryMode:
         ):
             mock_ns_instance = AsyncMock()
             mock_ns_cls.return_value = mock_ns_instance
+            mock_ns_instance.notify_achievements_summary = AsyncMock()
             mock_ns_instance.notify_achievement_unlocked = AsyncMock()
             mock_ns_instance.notify_level_up = AsyncMock()
 
-            import logging
-
-            with caplog_loguru.at_level(logging.WARNING):
-                result = await GamificationReconciler.reconcile(
-                    db_session, user.id, ReconcileMode.SUMMARY
-                )
+            result = await GamificationReconciler.reconcile(
+                db_session, user.id, ReconcileMode.SUMMARY
+            )
 
         assert result.new_unlocks == ["streak_first_flame"]
-        # SUMMARY stub: no per-unlock notification, but warning logged
+        # SUMMARY mode: batched via notify_achievements_summary, not per-unlock
+        mock_ns_instance.notify_achievements_summary.assert_awaited_once_with(
+            user.id, ["streak_first_flame"]
+        )
         mock_ns_instance.notify_achievement_unlocked.assert_not_called()
         # Level did not change (level stayed at 1) so no level-up notification
         assert result.leveled_up is False
-
-        # Check that the warning log references SUMMARY mode and GAMIF-05-01
-        warning_records = [r for r in caplog_loguru.records if r.levelno >= logging.WARNING]
-        assert any(
-            "SUMMARY mode" in r.getMessage() for r in warning_records
-        ), f"Expected 'SUMMARY mode' in warning. Records: {[r.getMessage() for r in warning_records]}"
-        assert any(
-            "GAMIF-05-01" in r.getMessage() for r in warning_records
-        ), f"Expected 'GAMIF-05-01' in warning. Records: {[r.getMessage() for r in warning_records]}"
+        mock_ns_instance.notify_level_up.assert_not_called()
 
 
 @pytest.mark.unit
@@ -361,6 +352,7 @@ class TestSummaryModeWithLevelUp:
         ):
             mock_ns_instance = AsyncMock()
             mock_ns_cls.return_value = mock_ns_instance
+            mock_ns_instance.notify_achievements_summary = AsyncMock()
             mock_ns_instance.notify_achievement_unlocked = AsyncMock()
             mock_ns_instance.notify_level_up = AsyncMock()
 
@@ -369,7 +361,10 @@ class TestSummaryModeWithLevelUp:
             )
 
         assert result.leveled_up is True
-        # Achievement notification NOT called (batched in SUMMARY stub)
+        # Achievement notification batched via notify_achievements_summary (not per-unlock)
+        mock_ns_instance.notify_achievements_summary.assert_awaited_once_with(
+            user.id, ["streak_first_flame"]
+        )
         mock_ns_instance.notify_achievement_unlocked.assert_not_called()
         # Level-up IS called in SUMMARY mode
         mock_ns_instance.notify_level_up.assert_awaited_once()
