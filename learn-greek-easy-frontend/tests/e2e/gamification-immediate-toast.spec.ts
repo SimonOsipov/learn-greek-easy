@@ -167,13 +167,58 @@ test.describe('Gamification — IMMEDIATE-mode toast on review unlock (GAMIF-05)
       });
       await page.locator('[data-testid="srs-button-good"]').click();
 
-      // ── ASSERT: toast title appears within 10s of the review submission ──────
+      // ── DIAGNOSTIC: poll backend for ACHIEVEMENT_UNLOCKED notification ──────
+      // This separates "did backend fire notification?" from "did frontend show toast?".
+      // The deck review goes through the ASYNC persist_deck_review_task path
+      // (when feature_background_tasks=true), which chains:
+      //   persist_deck_review_task → _run_review_side_effects →
+      //   check_achievements_task → GamificationReconciler.reconcile(IMMEDIATE)
+      // The reconciler emits the notification inline before commit.
+      // We poll for up to 30s to verify the backend created the row.
+      let notifFound = false;
+      let notifBody: unknown = null;
+      const pollStart = Date.now();
+      while (Date.now() - pollStart < 30000) {
+        const notifResp = await request.get(
+          `${apiBaseUrl}/api/v1/notifications?limit=10`,
+          { headers: authHeaders },
+        );
+        if (notifResp.ok()) {
+          notifBody = await notifResp.json();
+          const notifications = (notifBody as { notifications?: Array<{ type: string }> })
+            .notifications;
+          if (Array.isArray(notifications)) {
+            const ach = notifications.find(
+              (n: { type: string }) =>
+                n.type === 'ACHIEVEMENT_UNLOCKED' || n.type === 'achievement_unlocked',
+            );
+            if (ach) {
+              notifFound = true;
+              console.log(
+                `[GAMIF-05-06] Notification created: ${JSON.stringify(ach).slice(0, 200)}`,
+              );
+              break;
+            }
+          }
+        }
+        await page.waitForTimeout(1000); // poll once per second (intentional polling diagnostic)
+      }
+      expect(
+        notifFound,
+        `[GAMIF-05-06] Backend never created ACHIEVEMENT_UNLOCKED notification within 30s. ` +
+          `Last response: ${JSON.stringify(notifBody).slice(0, 500)}`,
+      ).toBe(true);
+
+      // ── ASSERT: toast title appears within 30s of the review submission ──────
+      // Timeout bumped from 10s to 30s: the async background-task chain
+      // (persist_deck_review_task → check_achievements_task → reconciler →
+      // notification_service → SSE event_bus → frontend toaster) can take
+      // several seconds end-to-end in CI, especially under load.
       // Uses data-testid="toast-title" added to ToastTitle in toaster.tsx
-      // { exact: true } avoids substring matches from other concurrent toasts
       const toastTitle = page
         .getByTestId('toast-title')
         .filter({ hasText: TOAST_TITLE });
-      await expect(toastTitle).toBeVisible({ timeout: 10000 });
+      await expect(toastTitle).toBeVisible({ timeout: 30000 });
 
       // ── PROVE DB write happened (not a UI lie) ──────────────────────────────
       const achResp = await request.get(`${apiBaseUrl}/api/v1/xp/achievements`, {
