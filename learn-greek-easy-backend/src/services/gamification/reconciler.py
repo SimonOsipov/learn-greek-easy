@@ -187,10 +187,14 @@ class GamificationReconciler:
         old_level: int = user_xp.current_level
 
         # 3. Diff: achievements present in projection but absent from DB
-        new_ids: list[str] = sorted(snapshot.unlocked - existing_unlocks)
+        candidate_ids: list[str] = sorted(snapshot.unlocked - existing_unlocks)
 
-        # 4. Write achievements — idempotent via on_conflict_do_nothing
-        for ach_id in new_ids:
+        # 4. Write achievements — RETURNING limits notifications to rows actually inserted.
+        # Two concurrent reconciles can both compute the same candidate_ids; using RETURNING
+        # ensures only the reconcile that won the INSERT emits notifications (the loser gets
+        # an empty returned set from on_conflict_do_nothing).
+        actually_inserted: list[str] = []
+        for ach_id in candidate_ids:
             stmt = (
                 pg_insert(UserAchievement)
                 .values(
@@ -201,8 +205,14 @@ class GamificationReconciler:
                     # into the pg_insert values here.
                 )
                 .on_conflict_do_nothing(index_elements=["user_id", "achievement_id"])
+                .returning(UserAchievement.achievement_id)
             )
-            await db.execute(stmt)
+            result = await db.execute(stmt)
+            returned_id = result.scalar_one_or_none()
+            if returned_id is not None:
+                actually_inserted.append(returned_id)
+
+        new_ids: list[str] = actually_inserted
 
         # 5. Write XP absolutely (convergent: running twice yields the same value)
         user_xp.total_xp = snapshot.total_xp
@@ -216,7 +226,7 @@ class GamificationReconciler:
         # 6. Detect level-up
         leveled_up: bool = snapshot.current_level > old_level
 
-        # 7. Dispatch notifications by mode
+        # 7. Dispatch notifications by mode — driven by actually-inserted IDs only.
         if mode == ReconcileMode.IMMEDIATE:
             for ach_id in new_ids:
                 await _emit_achievement_notification(db, user_id, ach_id)

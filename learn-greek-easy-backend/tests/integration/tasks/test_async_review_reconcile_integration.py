@@ -168,6 +168,7 @@ def _patch_task_db_url():
 
 @pytest.mark.integration
 @pytest.mark.asyncio
+@pytest.mark.timeout(60)
 class TestAsyncReviewPathCreatesAchievement:
     async def test_async_review_path_creates_achievement_and_notification(
         self,
@@ -231,6 +232,7 @@ class TestAsyncReviewPathCreatesAchievement:
 
 @pytest.mark.integration
 @pytest.mark.asyncio
+@pytest.mark.timeout(60)
 class TestAsyncReviewPathIdempotency:
     async def test_idempotent_on_second_invocation(
         self,

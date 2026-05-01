@@ -117,6 +117,11 @@ class TestSchedulerSetup:
             )
             trigger_arg = gamif_call[0][1]  # second positional arg is the trigger
             assert isinstance(trigger_arg, CronTrigger)
+            trigger_repr = str(trigger_arg)
+            assert "hour='3'" in trigger_repr, f"Expected hour='3' in trigger repr: {trigger_repr}"
+            assert (
+                "minute='0'" in trigger_repr
+            ), f"Expected minute='0' in trigger repr: {trigger_repr}"
 
     def test_scheduler_configuration(self):
         """Test that scheduler is configured with correct defaults."""

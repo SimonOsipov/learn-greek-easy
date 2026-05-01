@@ -3199,12 +3199,15 @@ class SeedService:
         """
         self._check_can_seed()
 
-        # Find the achievement definition to get threshold
+        # Find the achievement definition to get threshold — reject unknown IDs early
+        # so callers get a clear 400 error rather than silently returning threshold=0.
         ach_def = next(
             (a for a in ACHIEVEMENT_DEFS if a.id == achievement_id),
             None,
         )
-        threshold = ach_def.threshold if ach_def else 0
+        if ach_def is None:
+            raise ValueError(f"Unknown achievement_id: {achievement_id!r}")
+        threshold = ach_def.threshold
 
         # 1. Delete UserAchievement row
         await self.db.execute(
@@ -3237,6 +3240,11 @@ class SeedService:
         if user_xp is not None:
             user_xp.projection_version = 0
 
+        # NOTE: No advisory lock / serialisation is added here against concurrent resets.
+        # This seeder is used exclusively by Playwright E2E tests which run serially within
+        # each shard; a concurrent-reset race is therefore theoretical and not actionable.
+        # If this seeder is ever called from a parallel-test harness, add a
+        # SELECT ... FOR UPDATE on the UserXP row before the truncate operations.
         return {
             "ok": True,
             "achievement_id": achievement_id,

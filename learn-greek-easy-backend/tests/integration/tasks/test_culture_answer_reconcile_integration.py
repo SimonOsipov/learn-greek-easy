@@ -204,6 +204,7 @@ def _make_task_kwargs(user_id, question_id, test_db_url: str, **overrides) -> di
 
 @pytest.mark.integration
 @pytest.mark.asyncio
+@pytest.mark.timeout(60)
 class TestCultureAnswerCreatesAchievement:
     async def test_10th_culture_answer_creates_achievement_and_notification(
         self,
@@ -269,6 +270,7 @@ class TestCultureAnswerCreatesAchievement:
 
 @pytest.mark.integration
 @pytest.mark.asyncio
+@pytest.mark.timeout(60)
 class TestCultureAnswerIdempotency:
     async def test_idempotent_on_second_invocation(
         self,
@@ -335,6 +337,7 @@ class TestCultureAnswerIdempotency:
 
 @pytest.mark.integration
 @pytest.mark.asyncio
+@pytest.mark.timeout(60)
 class TestCultureAnswerTwoThresholds:
     async def test_single_answer_crossing_two_thresholds_emits_two_notifications(
         self,
@@ -350,7 +353,6 @@ class TestCultureAnswerTwoThresholds:
         """
         await _seed_achievement_catalog(db_session, _CULTURE_EXPLORER_ID)
         await _seed_achievement_catalog(db_session, _PERFECT_CULTURE_ID)
-        # Also seed culture_curious so it doesn't interfere (already past 10)
         await _seed_achievement_catalog(db_session, _CULTURE_CURIOUS_ID)
 
         user = await UserFactory.create()
@@ -359,6 +361,14 @@ class TestCultureAnswerTwoThresholds:
         # Seed 49 correct answers — next one will push to 50 total + 10 consecutive
         await _seed_answer_history(db_session, user.id, question.id, count=49, is_correct=True)
         await _seed_question_stats(db_session, user.id, question.id)
+
+        # Pre-unlock culture_curious so it does NOT count as a new unlock during the task.
+        # With 49 seeds the projection already meets the 10-answer threshold; pre-inserting
+        # the UserAchievement row means the reconciler's RETURNING INSERT returns nothing for
+        # it, and we can assert exactly == 2 new ACHIEVEMENT_UNLOCKED notifications.
+        db_session.add(UserAchievement(user_id=user.id, achievement_id=_CULTURE_CURIOUS_ID))
+        await db_session.flush()
+
         await db_session.commit()
 
         test_db_url = get_test_database_url()
@@ -386,17 +396,19 @@ class TestCultureAnswerTwoThresholds:
                 UserAchievement.achievement_id.in_([_CULTURE_EXPLORER_ID, _PERFECT_CULTURE_ID]),
             )
         )
-        assert ua_count >= 2, f"Expected 2 UserAchievements (explorer + perfect), got {ua_count}"
+        assert (
+            ua_count == 2
+        ), f"Expected exactly 2 UserAchievements (explorer + perfect), got {ua_count}"
 
-        # Two ACHIEVEMENT_UNLOCKED notifications (one per new achievement)
+        # Exactly two ACHIEVEMENT_UNLOCKED notifications — one per newly-crossed threshold.
+        # culture_curious is pre-unlocked so its RETURNING insert returns nothing → no
+        # extra notification; this catches regressions where extra achievements slip through.
         notif_count = await db_session.scalar(
             select(func.count()).where(
                 Notification.user_id == user.id,
                 Notification.type == NotificationType.ACHIEVEMENT_UNLOCKED,
             )
         )
-        # culture_curious also crossed at count=10 from the 49 seeds (was already above threshold),
-        # so count >= 2 for the two target achievements.
         assert (
-            notif_count >= 2
-        ), f"Expected >= 2 ACHIEVEMENT_UNLOCKED notifications for two thresholds, got {notif_count}"
+            notif_count == 2
+        ), f"Expected exactly 2 ACHIEVEMENT_UNLOCKED notifications for two thresholds, got {notif_count}"

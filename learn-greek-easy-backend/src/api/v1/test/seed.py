@@ -909,10 +909,13 @@ async def gamification_near_threshold(
         )
 
     service = SeedService(db)
-    result = await service.reset_user_to_near_threshold(
-        user_id=user.id,
-        achievement_id=body.achievement_id,
-    )
+    try:
+        result = await service.reset_user_to_near_threshold(
+            user_id=user.id,
+            achievement_id=body.achievement_id,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     await db.commit()
 
     return GamificationNearThresholdResponse(

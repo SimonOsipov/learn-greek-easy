@@ -464,22 +464,28 @@ class V2SM2Service:
         """Run non-critical side effects (reconcile gamification, daily goal, analytics)."""
         user_id_uuid = UUID(context["user_id"])
 
-        # Reconcile gamification state (XP + achievements) via single entrypoint
+        # Reconcile gamification state (XP + achievements) via single entrypoint.
+        # Wrapped in begin_nested() so a flush failure inside reconcile doesn't
+        # leave the outer AsyncSession in a failed-transaction state and break the
+        # subsequent _check_daily_goal_sync call.
         try:
             from src.services.gamification.reconciler import GamificationReconciler
             from src.services.gamification.types import ReconcileMode
 
-            await GamificationReconciler.reconcile(
-                self.db, user_id_uuid, mode=ReconcileMode.IMMEDIATE
-            )
+            async with self.db.begin_nested():
+                await GamificationReconciler.reconcile(
+                    self.db, user_id_uuid, mode=ReconcileMode.IMMEDIATE
+                )
         except Exception as exc:
             logger.warning(
                 "gamification.reconcile.error",
-                event="gamification.reconcile.error",
-                endpoint="v2_sm2_service.persist_review",
-                user_id=context["user_id"],
-                error_type=type(exc).__name__,
-                error_message=str(exc),
+                extra={
+                    "event": "gamification.reconcile.error",
+                    "endpoint": "v2_sm2_service.persist_review",
+                    "user_id": context["user_id"],
+                    "error_type": type(exc).__name__,
+                    "error_message": str(exc),
+                },
             )
 
         # Check daily goal (unchanged — not in reconciler scope)

@@ -161,14 +161,40 @@ async def _seed_user_with_review(db_session: AsyncSession) -> User:
 
 
 def _patch_task_settings():
-    """Return a context manager that points the task at the test DB."""
+    """Return a context manager that points the task at the test DB.
+
+    Also patches create_async_engine to use pool_size=1, max_overflow=0 so
+    connections are released immediately after each session.  Without this,
+    the task's dedicated engine can hold an idle asyncpg connection that
+    conflicts with the db_session fixture's rollback-based teardown and causes
+    the CI runner to hang waiting for that connection to be freed.
+    """
+    from sqlalchemy.ext.asyncio import create_async_engine as _real_cae
+
     test_db_url = get_test_database_url()
-    return patch(
+
+    def _test_engine(url, **kwargs):
+        # Minimal pool so connections are returned and closed immediately.
+        kwargs["pool_size"] = 1
+        kwargs["max_overflow"] = 0
+        return _real_cae(url, **kwargs)
+
+    settings_patch = patch(
         "src.tasks.scheduled_gamification.settings",
         gamification_reconcile_on_read=True,
         database_url=test_db_url,
         is_production=False,
     )
+    engine_patch = patch(
+        "src.tasks.scheduled_gamification.create_async_engine",
+        side_effect=_test_engine,
+    )
+    from contextlib import ExitStack
+
+    stack = ExitStack()
+    stack.enter_context(settings_patch)
+    stack.enter_context(engine_patch)
+    return stack
 
 
 # ---------------------------------------------------------------------------
@@ -178,6 +204,7 @@ def _patch_task_settings():
 
 @pytest.mark.integration
 @pytest.mark.asyncio
+@pytest.mark.timeout(60)
 class TestThreeUsersGetOneSummaryEach:
     async def test_three_users_with_backlog_get_one_summary_each(
         self,
@@ -240,6 +267,7 @@ class TestThreeUsersGetOneSummaryEach:
 
 @pytest.mark.integration
 @pytest.mark.asyncio
+@pytest.mark.timeout(60)
 class TestIdempotency:
     async def test_running_twice_produces_no_duplicate_notifications(
         self,
@@ -287,6 +315,7 @@ class TestIdempotency:
 
 @pytest.mark.integration
 @pytest.mark.asyncio
+@pytest.mark.timeout(60)
 class TestNoNotificationForConvergedUser:
     async def test_user_with_no_new_unlocks_gets_no_notification(
         self,

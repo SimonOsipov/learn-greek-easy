@@ -2,6 +2,13 @@
 
 This module imports the factory binding fixture from the parent conftest
 to ensure factories work correctly in task tests.
+
+TODO: The spaCy mock is duplicated across tests/integration/services/conftest.py,
+tests/unit/services/conftest.py, and tests/unit/tasks/conftest.py (and anywhere
+else that transitively imports src.services.morphology_service). Centralizing it
+into tests/conftest.py (or a shared helper) was suggested by CodeRabbit but deferred
+to a follow-up PR because refactoring across multiple conftest files risks breaking
+other suites. Track as tech-debt alongside the token-migration track.
 """
 
 from collections.abc import Generator
