@@ -461,53 +461,31 @@ class V2SM2Service:
 
     # DEPRECATED in Phase 5 (GAMIF-05): replaced by GamificationReconciler
     async def _run_persist_review_side_effects(self, context: dict[str, Any]) -> None:
-        """Run non-critical side effects (XP, daily goal, achievements, analytics)."""
+        """Run non-critical side effects (reconcile gamification, daily goal, analytics)."""
         user_id_uuid = UUID(context["user_id"])
-        card_record_id_uuid = UUID(context["card_record_id"])
 
-        # Award flashcard XP
+        # Reconcile gamification state (XP + achievements) via single entrypoint
         try:
-            from src.services.xp_service import XPService
+            from src.services.gamification.reconciler import GamificationReconciler
+            from src.services.gamification.types import ReconcileMode
 
-            xp_service = XPService(self.db)
-            await xp_service.award_flashcard_review_xp(
-                user_id=user_id_uuid,
-                quality=context["quality"],
-                card_record_id=card_record_id_uuid,
+            await GamificationReconciler.reconcile(
+                self.db, user_id_uuid, mode=ReconcileMode.IMMEDIATE
             )
-        except Exception as e:
+        except Exception as exc:
             logger.warning(
-                "XP award failed in persist_review",
-                extra={"user_id": context["user_id"], "error": str(e)},
+                "gamification.reconcile.error",
+                event="gamification.reconcile.error",
+                endpoint="v2_sm2_service.persist_review",
+                user_id=context["user_id"],
+                error_type=type(exc).__name__,
+                error_message=str(exc),
             )
 
-        # Check daily goal
+        # Check daily goal (unchanged — not in reconciler scope)
         await self._check_daily_goal_sync(user_id_uuid, context["user_id"])
 
-        # Check achievements
-        try:
-            from src.services.achievement_definitions import AchievementMetric
-            from src.services.achievement_service import AchievementService
-
-            achievement_service = AchievementService(self.db)
-            stats = await achievement_service._get_user_stats(user_id_uuid)
-            for metric, stat_key in [
-                (AchievementMetric.CARDS_LEARNED, "cards_learned"),
-                (AchievementMetric.CARDS_MASTERED, "cards_mastered"),
-                (AchievementMetric.TOTAL_REVIEWS, "total_reviews"),
-            ]:
-                value = int(stats.get(stat_key, 0))
-                if value > 0:
-                    await achievement_service.check_and_unlock_achievements(
-                        user_id_uuid, metric, value
-                    )
-        except Exception as e:
-            logger.warning(
-                "Achievement check failed in persist_review",
-                extra={"user_id": context["user_id"], "error": str(e)},
-            )
-
-        # Log analytics
+        # Log analytics (unchanged)
         logger.info(
             "ANALYTICS: review_completed",
             extra={
