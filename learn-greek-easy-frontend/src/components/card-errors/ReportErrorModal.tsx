@@ -129,7 +129,11 @@ export function ReportErrorModal({ isOpen, onClose, cardId, cardType }: ReportEr
   return (
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 z-50 bg-black/50" onClick={handleClose} aria-hidden="true" />
+      <div
+        className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm"
+        onClick={handleClose}
+        aria-hidden="true"
+      />
 
       {/* Modal */}
       <div
