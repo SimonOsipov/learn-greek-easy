@@ -138,12 +138,8 @@ export function ChangelogPage() {
     <div className="space-y-6 pb-20 lg:pb-8" data-testid="changelog-page">
       {/* Page Header */}
       <div>
-        <h1 className="text-2xl font-semibold text-foreground md:text-3xl">
-          {t('changelog.page.title')}
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground md:text-base">
-          {t('changelog.page.subtitle')}
-        </p>
+        <h1 className="text-3xl font-bold text-foreground">{t('changelog.page.title')}</h1>
+        <p className="mt-2 text-muted-foreground">{t('changelog.page.subtitle')}</p>
       </div>
 
       <TagFilter activeTag={activeTag} onTagChange={setTag} />
