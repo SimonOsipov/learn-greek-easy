@@ -51,7 +51,7 @@ export const DeckProgressBar: React.FC<DeckProgressBarProps> = ({
         {/* Learning Cards Segment */}
         {learningPercent > 0 && (
           <div
-            className="bg-blue-500"
+            className="bg-primary"
             style={{ width: `${learningPercent}%` }}
             aria-label={`${cardsLearning} learning cards`}
           />
@@ -60,7 +60,7 @@ export const DeckProgressBar: React.FC<DeckProgressBarProps> = ({
         {/* Mastered Cards Segment */}
         {masteredPercent > 0 && (
           <div
-            className="bg-green-500"
+            className="bg-success"
             style={{ width: `${masteredPercent}%` }}
             aria-label={`${cardsMastered} mastered cards`}
           />
@@ -77,13 +77,13 @@ export const DeckProgressBar: React.FC<DeckProgressBarProps> = ({
             </span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="h-3 w-3 rounded-full bg-blue-500" />
+            <div className="h-3 w-3 rounded-full bg-primary" />
             <span>
               {cardsLearning} {t('detail.learning')}
             </span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="h-3 w-3 rounded-full bg-green-500" />
+            <div className="h-3 w-3 rounded-full bg-success" />
             <span>
               {cardsMastered} {t('detail.masteredLabel')}
             </span>

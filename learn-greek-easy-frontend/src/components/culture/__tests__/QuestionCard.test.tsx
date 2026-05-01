@@ -79,22 +79,22 @@ describe('QuestionCard', () => {
       expect(dot.className).toContain('bg-muted-foreground/30');
     });
 
-    it('status "learning" shows blue dot', () => {
+    it('status "learning" shows primary dot', () => {
       renderWithProviders(<QuestionCard question={makeQuestion({ status: 'learning' })} />);
       const dot = screen.getByTestId('question-card-status-dot');
-      expect(dot.className).toContain('bg-blue-500');
+      expect(dot.className).toContain('bg-primary');
     });
 
-    it('status "review" shows blue dot', () => {
+    it('status "review" shows primary dot', () => {
       renderWithProviders(<QuestionCard question={makeQuestion({ status: 'review' })} />);
       const dot = screen.getByTestId('question-card-status-dot');
-      expect(dot.className).toContain('bg-blue-500');
+      expect(dot.className).toContain('bg-primary');
     });
 
-    it('status "mastered" shows green dot', () => {
+    it('status "mastered" shows success dot', () => {
       renderWithProviders(<QuestionCard question={makeQuestion({ status: 'mastered' })} />);
       const dot = screen.getByTestId('question-card-status-dot');
-      expect(dot.className).toContain('bg-green-500');
+      expect(dot.className).toContain('bg-success');
     });
   });
 

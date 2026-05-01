@@ -213,8 +213,8 @@ export const PersonalInfoSection: React.FC<PersonalInfoSectionProps> = ({ user }
                 </AvatarFallback>
               </Avatar>
               {(isUploadingAvatar || isRemovingAvatar) && (
-                <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/60 backdrop-blur-sm">
-                  <Loader2 className="h-6 w-6 animate-spin text-white" />
+                <div className="absolute inset-0 flex items-center justify-center rounded-full bg-landing-header-bg/60 backdrop-blur-sm">
+                  <Loader2 className="h-6 w-6 animate-spin text-landing-header-fg" />
                 </div>
               )}
             </div>
@@ -241,11 +241,11 @@ export const PersonalInfoSection: React.FC<PersonalInfoSectionProps> = ({ user }
               {user.avatar && (
                 <Button
                   type="button"
-                  variant="ghost"
+                  variant="chrome-ghost"
                   size="sm"
                   onClick={handleRemoveAvatar}
                   disabled={isUploadingAvatar || isRemovingAvatar}
-                  className="flex items-center gap-2 text-destructive hover:text-destructive"
+                  className="flex items-center gap-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
                 >
                   <Trash2 className="h-4 w-4" />
                   {t('personalInfo.removePhoto')}

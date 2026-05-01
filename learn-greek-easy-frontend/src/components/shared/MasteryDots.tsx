@@ -25,8 +25,8 @@ export interface MasteryDotsProps {
 
 const DOT_COLORS: Record<DotStatus, string> = {
   none: 'bg-muted-foreground/30',
-  studied: 'bg-blue-500',
-  mastered: 'bg-green-500',
+  studied: 'bg-primary',
+  mastered: 'bg-success',
 };
 
 export const MasteryDots: React.FC<MasteryDotsProps> = ({

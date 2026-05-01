@@ -60,7 +60,7 @@ export const Profile: React.FC = () => {
       <div className="container mx-auto max-w-7xl px-4 py-6">
         {/* Page Header - Always visible */}
         <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-foreground lg:text-3xl">{t('page.title')}</h1>
+          <h1 className="text-3xl font-bold text-foreground">{t('page.title')}</h1>
           {/* Mobile menu toggle */}
           <Button
             variant="outline"
@@ -75,7 +75,7 @@ export const Profile: React.FC = () => {
 
         {/* Mobile section indicator — hidden on lg+ where sidebar is visible */}
         <div className="mb-4 lg:hidden">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
+          <span className="chip chip-tinted">
             {(() => {
               const active = navigationItems.find((item) => item.id === activeSection);
               if (!active) return null;
@@ -94,7 +94,7 @@ export const Profile: React.FC = () => {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* Sidebar */}
           <aside className={cn('lg:col-span-1', isSidebarOpen ? 'block' : 'hidden lg:block')}>
-            <Card className="overflow-hidden">
+            <Card className="glass-strong overflow-hidden">
               {/* Profile Header */}
               <ProfileHeader user={user} />
 
@@ -103,6 +103,7 @@ export const Profile: React.FC = () => {
                 <ul className="space-y-1">
                   {navigationItems.map((item) => {
                     const Icon = item.icon;
+                    const isActive = activeSection === item.id;
                     return (
                       <li key={item.id}>
                         <button
@@ -110,9 +111,10 @@ export const Profile: React.FC = () => {
                             setActiveSection(item.id);
                             setIsSidebarOpen(false);
                           }}
+                          aria-current={isActive ? 'page' : undefined}
                           className={cn(
                             'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                            activeSection === item.id
+                            isActive
                               ? 'bg-primary/10 text-primary'
                               : 'text-muted-foreground hover:bg-muted'
                           )}
@@ -130,7 +132,7 @@ export const Profile: React.FC = () => {
 
           {/* Main Content */}
           <main className="lg:col-span-2">
-            <Card className="overflow-hidden">{renderSection()}</Card>
+            <Card className="glass-strong overflow-hidden">{renderSection()}</Card>
           </main>
         </div>
       </div>

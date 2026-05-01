@@ -1,4 +1,6 @@
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 import type { PricingPlan } from '@/services/billingAPI';
 
 function getPeriodKey(billingCycle: string): string {
@@ -30,16 +32,15 @@ export function PricingCard({
   const symbol = CURRENCY_SYMBOLS[plan.currency] ?? plan.currency.toUpperCase();
 
   return (
-    <div
-      className={`relative flex flex-col overflow-visible rounded-xl border bg-white p-6 shadow-sm dark:bg-gray-800 ${
-        isFeatured
-          ? 'border-founders-accent ring-2 ring-founders-accent'
-          : 'border-gray-200 dark:border-gray-700'
-      }`}
+    <Card
+      className={cn(
+        'glass-strong relative flex flex-col overflow-visible p-6',
+        isFeatured && 'ring-2 ring-founders-accent'
+      )}
     >
       {isFeatured && (
         <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-          <span className="whitespace-nowrap rounded-full bg-founders-accent px-3 py-1 text-xs font-semibold text-white">
+          <span className="whitespace-nowrap rounded-full bg-founders-accent px-3 py-1 text-xs font-semibold text-primary-foreground">
             {t('pricing.mostPopular')}
           </span>
         </div>
@@ -54,22 +55,20 @@ export function PricingCard({
       )}
 
       <div className="mb-4 flex items-baseline gap-1">
-        <span className="text-3xl font-bold text-gray-900 dark:text-white">
+        <span className="text-3xl font-bold text-fg">
           {symbol}
           {plan.price_formatted}
         </span>
-        <span className="text-sm text-gray-500 dark:text-gray-400">
-          {t(getPeriodKey(plan.billing_cycle))}
-        </span>
+        <span className="text-sm text-fg3">{t(getPeriodKey(plan.billing_cycle))}</span>
       </div>
 
-      {plan.savings_percent !== null && (
-        <div className="mb-4">
-          <span className="rounded-full bg-green-100 px-2 py-1 text-xs font-semibold text-green-700 dark:bg-green-900/50 dark:text-green-400">
+      <div className="mb-4 min-h-[28px]">
+        {plan.savings_percent !== null && (
+          <span className="badge b-green">
             {t('pricing.save', { percent: plan.savings_percent })}
           </span>
-        </div>
-      )}
+        )}
+      </div>
 
       <Button
         className="mt-auto w-full"
@@ -79,6 +78,6 @@ export function PricingCard({
       >
         {isLoading ? t('pricing.subscribing') : (buttonLabel ?? t('pricing.subscribe'))}
       </Button>
-    </div>
+    </Card>
   );
 }

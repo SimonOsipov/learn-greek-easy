@@ -4,9 +4,9 @@ export type CardStatus = 'new' | 'learning' | 'review' | 'mastered';
 
 export const STATUS_DOT_CLASS: Record<CardStatus, string> = {
   new: 'bg-muted-foreground/30',
-  learning: 'bg-blue-500',
-  review: 'bg-blue-500',
-  mastered: 'bg-green-500',
+  learning: 'bg-primary',
+  review: 'bg-primary',
+  mastered: 'bg-success',
 };
 
 export const STATUS_TO_MASTERY: Record<CardStatus, number> = {

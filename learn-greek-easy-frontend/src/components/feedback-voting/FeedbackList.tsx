@@ -73,6 +73,8 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({ onOpenSubmitDialog }
     );
   }
 
+  const isLastPage = page >= totalPages;
+
   return (
     <div className="space-y-4" data-testid="feedback-list">
       {feedbackList.map((feedback) => (
@@ -111,6 +113,24 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({ onOpenSubmitDialog }
           >
             {t('pagination.next')}
             <ChevronRight className="ml-1 h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
+      {isLastPage && onOpenSubmitDialog && (
+        <div
+          className="flex flex-col items-center gap-2 py-6 text-center text-sm text-muted-foreground"
+          data-testid="feedback-end-message"
+        >
+          <MessageSquarePlus className="h-5 w-5" />
+          <p>{t('list.endMessage')}</p>
+          <Button
+            variant="link"
+            size="sm"
+            onClick={onOpenSubmitDialog}
+            data-testid="end-message-submit-button"
+          >
+            {t('list.emptyState.cta')}
           </Button>
         </div>
       )}

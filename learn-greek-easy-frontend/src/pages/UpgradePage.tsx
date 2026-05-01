@@ -6,6 +6,7 @@ import { useSearchParams } from 'react-router-dom';
 
 import { PricingCard } from '@/components/billing/PricingCard';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { COMPARISON_FEATURES } from '@/constants/premiumFeatures';
 import { useCheckout } from '@/hooks/useCheckout';
 import { useTrackEvent } from '@/hooks/useTrackEvent';
@@ -86,7 +87,7 @@ export function UpgradePage() {
   if (error) {
     return (
       <div className="flex min-h-[400px] items-center justify-center px-4">
-        <div className="w-full max-w-sm rounded-xl border border-line bg-card p-8 text-center shadow-sm">
+        <Card className="glass-strong w-full max-w-sm p-8 text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-danger/15">
             <AlertTriangle className="h-6 w-6 text-danger" />
           </div>
@@ -99,7 +100,7 @@ export function UpgradePage() {
           >
             {t('error.retry')}
           </Button>
-        </div>
+        </Card>
       </div>
     );
   }
@@ -107,13 +108,13 @@ export function UpgradePage() {
   if (billingStatus?.is_premium && billingStatus.subscription_status === 'active') {
     return (
       <div className="flex min-h-[400px] items-center justify-center px-4">
-        <div className="w-full max-w-sm rounded-xl border border-line bg-card p-8 text-center shadow-sm">
+        <Card className="glass-strong w-full max-w-sm p-8 text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-warning/15">
-            <Crown className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+            <Crown className="h-6 w-6 text-warning" />
           </div>
           <h2 className="mb-2 text-xl font-semibold text-fg">{t('alreadyPremium.title')}</h2>
           <p className="text-fg3">{t('alreadyPremium.description')}</p>
-        </div>
+        </Card>
       </div>
     );
   }
@@ -172,9 +173,25 @@ export function UpgradePage() {
     );
   })();
 
+  const renderCell = (value: string | boolean) => {
+    if (typeof value === 'string') {
+      return <span className="text-xs font-medium text-fg3">{t(value)}</span>;
+    }
+    return value ? (
+      <Check
+        className="mx-auto h-4 w-4 text-success"
+        aria-label={t('comparison.included')}
+        role="img"
+      />
+    ) : (
+      <X className="mx-auto h-4 w-4 text-fg3" aria-label={t('comparison.notIncluded')} role="img" />
+    );
+  };
+
   const comparisonTable = (
     <div className="overflow-hidden rounded-xl border border-line">
       <table className="w-full text-sm">
+        <caption className="sr-only">{t('comparison.heading')}</caption>
         <thead>
           <tr className="border-b border-line bg-bg-2">
             <th className="px-4 py-3 text-left font-medium text-fg2">
@@ -195,24 +212,8 @@ export function UpgradePage() {
               className={`border-b border-line ${index % 2 === 0 ? 'bg-card' : 'bg-bg-2'}`}
             >
               <td className="px-4 py-3 text-fg2">{t(feature.labelKey)}</td>
-              <td className="px-4 py-3 text-center">
-                {typeof feature.free === 'string' ? (
-                  <span className="text-xs font-medium text-fg3">{t(feature.free)}</span>
-                ) : feature.free ? (
-                  <Check className="mx-auto h-4 w-4 text-success" />
-                ) : (
-                  <X className="mx-auto h-4 w-4 text-fg3" />
-                )}
-              </td>
-              <td className="px-4 py-3 text-center">
-                {typeof feature.premium === 'string' ? (
-                  <span className="text-xs font-medium text-fg3">{t(feature.premium)}</span>
-                ) : feature.premium ? (
-                  <Check className="mx-auto h-4 w-4 text-success" />
-                ) : (
-                  <X className="mx-auto h-4 w-4 text-fg3" />
-                )}
-              </td>
+              <td className="px-4 py-3 text-center">{renderCell(feature.free)}</td>
+              <td className="px-4 py-3 text-center">{renderCell(feature.premium)}</td>
             </tr>
           ))}
         </tbody>
@@ -221,7 +222,7 @@ export function UpgradePage() {
   );
 
   return (
-    <div className="mx-auto px-4 py-8">
+    <div className="mx-auto max-w-6xl px-4 py-8">
       <div className="mb-8 text-center">
         <h1 className="text-3xl font-bold text-fg">{t('page.title')}</h1>
         <p className="mt-2 text-fg3">{t('page.subtitle')}</p>
@@ -230,7 +231,7 @@ export function UpgradePage() {
       {banner}
 
       {pricingSection}
-      <h2 className="mb-6 text-center text-2xl font-bold text-fg">{t('comparison.heading')}</h2>
+      <h2 className="mb-6 text-center text-3xl font-bold text-fg">{t('comparison.heading')}</h2>
       {comparisonTable}
     </div>
   );

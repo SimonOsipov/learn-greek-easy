@@ -4,7 +4,6 @@ import { Crown, Shield } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import type { User } from '@/types/auth';
 
 interface ProfileHeaderProps {
@@ -28,21 +27,21 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user, onAvatarClic
     switch (user.role) {
       case 'admin':
         return (
-          <Badge className="flex items-center gap-1 border-transparent bg-accent text-accent-foreground hover:bg-accent/90">
+          <span className="badge b-violet">
             <Shield className="h-3 w-3" />
             {t('header.roles.admin')}
-          </Badge>
+          </span>
         );
       case 'premium':
         return (
-          <Badge className="flex items-center gap-1 bg-primary hover:bg-primary/90">
+          <span className="badge b-amber">
             <Crown className="h-3 w-3" />
             {t('header.roles.premium')}
-          </Badge>
+          </span>
         );
       case 'free':
       default:
-        return <Badge variant="secondary">{t('header.roles.free')}</Badge>;
+        return <span className="badge b-gray">{t('header.roles.free')}</span>;
     }
   };
 
@@ -68,8 +67,10 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user, onAvatarClic
                 {initials}
               </AvatarFallback>
             </Avatar>
-            <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/60 opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100">
-              <span className="text-xs font-medium text-white">{t('header.change')}</span>
+            <div className="absolute inset-0 flex items-center justify-center rounded-full bg-landing-header-bg/60 opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100">
+              <span className="text-xs font-medium text-landing-header-fg">
+                {t('header.change')}
+              </span>
             </div>
           </button>
         ) : (
