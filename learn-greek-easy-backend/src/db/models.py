@@ -1332,6 +1332,14 @@ class UserXP(Base, TimestampMixin):
         nullable=True,
     )
 
+    # Projection version (0 = legacy, never reconciled; stamped by Phase 4 reconciler)
+    projection_version: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        server_default=text("0"),
+        default=0,
+    )
+
     # Relationship
     user: Mapped["User"] = relationship(
         back_populates="xp",
@@ -1482,6 +1490,14 @@ class UserAchievement(Base, TimestampMixin):
         DateTime(timezone=True),
         nullable=False,
         server_default=func.now(),
+    )
+
+    # Projection version (0 = legacy, never reconciled; stamped by Phase 4 reconciler)
+    projection_version: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        server_default=text("0"),
+        default=0,
     )
 
     # Relationships
