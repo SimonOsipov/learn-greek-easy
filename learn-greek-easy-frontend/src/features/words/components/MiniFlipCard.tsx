@@ -11,7 +11,7 @@ export interface MiniFlipCardProps {
 
 const MASTERY_DOT_COLOR: Record<MasteryStatus, string> = {
   none: 'bg-muted-foreground/30',
-  studied: 'bg-blue-500',
+  studied: 'bg-primary',
   mastered: 'bg-practice-correct',
 };
 

@@ -16,7 +16,7 @@ export function CardsSummaryBar({ mastered, total }: CardsSummaryBarProps) {
       <p className="text-sm text-muted-foreground">
         {t('wordReference.cardsMasterySummary', { mastered, total })}
       </p>
-      <Progress value={progressValue} className="h-2 [&>div]:bg-green-500" />
+      <Progress value={progressValue} className="h-2 [&>div]:bg-success" />
     </div>
   );
 }

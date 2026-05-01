@@ -320,7 +320,11 @@ export function WordReferencePage() {
         {/* Greek word (lemma) */}
         <div className="flex items-center gap-3">
           <h1 className="text-4xl font-bold text-foreground sm:text-5xl">
-            {article && <span className="mr-2 font-normal text-muted-foreground">{article}</span>}
+            {article && (
+              <>
+                <span className="mr-2 font-normal text-muted-foreground">{article}</span>{' '}
+              </>
+            )}
             {wordEntry.lemma}
           </h1>
           {wordEntry.audio_url && (
