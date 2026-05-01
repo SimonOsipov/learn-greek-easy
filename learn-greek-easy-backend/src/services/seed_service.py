@@ -3173,11 +3173,14 @@ class SeedService:
 
         For the e2e_learner + learning_first_word case (threshold=1):
         - Delete UserAchievement row (so it's not unlocked)
+        - Delete CardRecordStatistics rows (so all V2-deck cards appear as "new")
         - Delete CardRecordReview rows (so cards_learned == 0)
         - Reset UserXP.projection_version = 0 (so reconcile re-runs full projection)
 
-        Does NOT touch CardRecordStatistics — those are restored by the test's afterEach
-        via /api/v1/test/seed/all.
+        Deleting CardRecordStatistics is essential: get_new_cards returns only cards
+        with NO statistics row. Without this step, cards that have a future
+        next_review_date from prior seed reviews won't be due, leaving the practice
+        queue empty and causing E2E tests to fail with "No new/due cards found".
 
         Args:
             user_id: User whose gamification state to reset.
@@ -3207,6 +3210,13 @@ class SeedService:
                 UserAchievement.user_id == user_id,
                 UserAchievement.achievement_id == achievement_id,
             )
+        )
+
+        # 1.5. Delete CardRecordStatistics rows so all cards in the V2 deck appear as "new"
+        #      (get_new_cards returns cards with NO statistics row; without this, cards
+        #      stuck in LEARNING/MASTERED state with future next_review_date won't be due).
+        await self.db.execute(
+            delete(CardRecordStatistics).where(CardRecordStatistics.user_id == user_id)
         )
 
         # 2. Delete all CardRecordReview rows for the user (so cards_learned == 0)
