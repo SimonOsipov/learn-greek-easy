@@ -96,8 +96,17 @@ test.describe('Gamification — IMMEDIATE-mode toast on review unlock (GAMIF-05)
   });
 
   test.afterEach(async ({ request }) => {
-    // Re-run the reset so the spec is idempotent across CI reruns on the same DB.
-    await resetToNearThreshold(request);
+    // Restore the e2e_learner's full baseline so subsequent specs in this shard
+    // (notably gamification-reconcile-self-heal.spec.ts which expects review history
+    // for `learning_first_word`) get a clean state. /seed/all truncates and re-seeds
+    // users/decks/cards/stats/reviews.
+    const apiBaseUrl = getApiBaseUrl();
+    const resp = await request.post(`${apiBaseUrl}/api/v1/test/seed/all`, {
+      headers: { 'Content-Type': 'application/json' },
+    });
+    if (!resp.ok()) {
+      console.error(`[GAMIF-05-06] /seed/all restore failed: ${resp.status()} ${await resp.text()}`);
+    }
   });
 
   test(
