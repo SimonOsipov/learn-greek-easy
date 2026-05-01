@@ -331,19 +331,27 @@ export function V2FlashcardPracticePage() {
                 </p>
                 <div className="grid grid-cols-4 gap-2 text-center text-sm">
                   <div>
-                    <div className="font-bold">{sessionSummary.ratingBreakdown.again}</div>
+                    <div className="font-bold text-practice-incorrect">
+                      {sessionSummary.ratingBreakdown.again}
+                    </div>
                     <div className="text-muted-foreground">{t('v2Practice.again', 'Again')}</div>
                   </div>
                   <div>
-                    <div className="font-bold">{sessionSummary.ratingBreakdown.hard}</div>
+                    <div className="font-bold text-practice-hard">
+                      {sessionSummary.ratingBreakdown.hard}
+                    </div>
                     <div className="text-muted-foreground">{t('v2Practice.hard', 'Hard')}</div>
                   </div>
                   <div>
-                    <div className="font-bold">{sessionSummary.ratingBreakdown.good}</div>
+                    <div className="font-bold text-practice-correct">
+                      {sessionSummary.ratingBreakdown.good}
+                    </div>
                     <div className="text-muted-foreground">{t('v2Practice.good', 'Good')}</div>
                   </div>
                   <div>
-                    <div className="font-bold">{sessionSummary.ratingBreakdown.easy}</div>
+                    <div className="font-bold text-practice-accent">
+                      {sessionSummary.ratingBreakdown.easy}
+                    </div>
                     <div className="text-muted-foreground">{t('v2Practice.easy', 'Easy')}</div>
                   </div>
                 </div>
