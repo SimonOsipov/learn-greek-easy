@@ -51,7 +51,7 @@ export const FeedbackCard: React.FC<FeedbackCardProps> = ({ feedback }) => {
       <Card
         id={`feedback-${feedback.id}`}
         data-testid="feedback-card"
-        className="transition-shadow hover:shadow-md"
+        className="glass-strong transition-shadow hover:shadow-md"
       >
         <CardHeader className="flex flex-row items-start gap-4 space-y-0">
           <FeedbackVoteButton
@@ -80,7 +80,7 @@ export const FeedbackCard: React.FC<FeedbackCardProps> = ({ feedback }) => {
               {isOwner && (
                 <div className="flex items-center gap-1">
                   <Button
-                    variant="ghost"
+                    variant="chrome-ghost"
                     size="icon"
                     className="h-8 w-8"
                     onClick={() => setIsEditDialogOpen(true)}
@@ -91,9 +91,9 @@ export const FeedbackCard: React.FC<FeedbackCardProps> = ({ feedback }) => {
                     <span className="sr-only">{t('edit.button')}</span>
                   </Button>
                   <Button
-                    variant="ghost"
+                    variant="chrome-ghost"
                     size="icon"
-                    className="h-8 w-8 text-destructive hover:text-destructive"
+                    className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
                     onClick={() => setIsDeleteDialogOpen(true)}
                     title={t('delete.button')}
                     data-testid="feedback-delete-button"

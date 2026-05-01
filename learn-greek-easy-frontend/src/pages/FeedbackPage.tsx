@@ -54,7 +54,11 @@ export const FeedbackPage: React.FC = () => {
               {t('page.title')}
             </h1>
             {total > 0 && (
-              <Badge variant="secondary" data-testid="feedback-count-badge">
+              <Badge
+                variant="secondary"
+                data-testid="feedback-count-badge"
+                aria-label={t('page.countA11y', { count: total })}
+              >
                 {t('page.count', { count: total })}
               </Badge>
             )}
