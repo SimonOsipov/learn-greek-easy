@@ -150,6 +150,13 @@ jobs:
     services:
       postgres:
         image: pgvector/pgvector:pg17
+        # Silence constraint-violation ERROR/STATEMENT noise from passing pytest.raises(IntegrityError)
+        # tests. Python receives the exception via the PG wire protocol independently. Do NOT use this
+        # config in production — it hides genuine error conditions.
+        command: >-
+          postgres
+          -c log_min_messages=FATAL
+          -c log_min_error_statement=FATAL
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -220,6 +227,13 @@ jobs:
     services:
       postgres:
         image: pgvector/pgvector:pg17
+        # Silence constraint-violation ERROR/STATEMENT noise from passing pytest.raises(IntegrityError)
+        # tests. Python receives the exception via the PG wire protocol independently. Do NOT use this
+        # config in production — it hides genuine error conditions.
+        command: >-
+          postgres
+          -c log_min_messages=FATAL
+          -c log_min_error_statement=FATAL
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -382,6 +396,13 @@ jobs:
     services:
       postgres:
         image: pgvector/pgvector:pg17
+        # Silence constraint-violation ERROR/STATEMENT noise from passing pytest.raises(IntegrityError)
+        # tests. Python receives the exception via the PG wire protocol independently. Do NOT use this
+        # config in production — it hides genuine error conditions.
+        command: >-
+          postgres
+          -c log_min_messages=FATAL
+          -c log_min_error_statement=FATAL
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -637,6 +658,13 @@ jobs:
     services:
       postgres:
         image: pgvector/pgvector:pg17
+        # Silence constraint-violation ERROR/STATEMENT noise from passing pytest.raises(IntegrityError)
+        # tests. Python receives the exception via the PG wire protocol independently. Do NOT use this
+        # config in production — it hides genuine error conditions.
+        command: >-
+          postgres
+          -c log_min_messages=FATAL
+          -c log_min_error_statement=FATAL
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -761,6 +789,13 @@ jobs:
     services:
       postgres:
         image: pgvector/pgvector:pg17
+        # Silence constraint-violation ERROR/STATEMENT noise from passing pytest.raises(IntegrityError)
+        # tests. Python receives the exception via the PG wire protocol independently. Do NOT use this
+        # config in production — it hides genuine error conditions.
+        command: >-
+          postgres
+          -c log_min_messages=FATAL
+          -c log_min_error_statement=FATAL
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
