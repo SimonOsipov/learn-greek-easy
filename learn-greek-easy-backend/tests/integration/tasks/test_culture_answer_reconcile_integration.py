@@ -186,6 +186,18 @@ class TestCultureAnswerIdempotency:
         )
         assert _CULTURE_CURIOUS_ID in result1.new_unlocks
 
+        # Capture notification count after first reconcile (may be > 1 because multiple
+        # achievements can unlock simultaneously — e.g. culture_curious + perfect_culture_score).
+        notif_count_after_first = await db_session.scalar(
+            select(func.count()).where(
+                Notification.user_id == user.id,
+                Notification.type == NotificationType.ACHIEVEMENT_UNLOCKED,
+            )
+        )
+        assert (
+            notif_count_after_first >= 1
+        ), f"Expected at least 1 ACHIEVEMENT_UNLOCKED notification after first reconcile, got {notif_count_after_first}"
+
         # Second reconcile — idempotent
         result2 = await GamificationReconciler.reconcile(
             db_session, user.id, ReconcileMode.IMMEDIATE
@@ -202,16 +214,20 @@ class TestCultureAnswerIdempotency:
         )
         assert ua_count == 1, f"Idempotency failure: expected 1 UserAchievement, got {ua_count}"
 
-        # Second reconcile sees new_unlocks=[] → no second notification
-        notif_count = await db_session.scalar(
+        # Second reconcile sees new_unlocks=[] → no new notifications.
+        # We compare counts before/after rather than asserting an absolute value,
+        # because multiple achievements may unlock in the first call.
+        notif_count_after_second = await db_session.scalar(
             select(func.count()).where(
                 Notification.user_id == user.id,
                 Notification.type == NotificationType.ACHIEVEMENT_UNLOCKED,
             )
         )
-        assert (
-            notif_count == 1
-        ), f"Idempotency failure: expected 1 ACHIEVEMENT_UNLOCKED notification, got {notif_count}"
+        assert notif_count_after_first == notif_count_after_second, (
+            f"Idempotency failure: second reconcile emitted "
+            f"{notif_count_after_second - notif_count_after_first} new ACHIEVEMENT_UNLOCKED "
+            f"notification(s) (before={notif_count_after_first}, after={notif_count_after_second})"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -233,9 +249,14 @@ class TestCultureAnswerTwoThresholds:
         - 50 total correct answers → crosses culture_explorer (threshold=50) and
           culture_curious (threshold=10, already pre-unlocked so does NOT count as new)
         - 10 consecutive correct answers → crosses perfect_culture_score (threshold=10)
-        Both culture_explorer and perfect_culture_score are newly unlocked here.
-        culture_curious is pre-inserted so its RETURNING insert returns nothing
-        → exactly 2 new ACHIEVEMENT_UNLOCKED notifications.
+        Both culture_explorer and perfect_culture_score are the TARGET newly unlocked achievements.
+
+        50 correct answers also satisfy bystander achievements:
+        - culture_curious (threshold=10, pre-inserted — counts as already unlocked)
+        - culture_sharp_mind (90% accuracy; 50/50=100% ≥ 90%, and total ≥ 20)
+        - special_overachiever (DAILY_GOAL_EXCEEDED: 50 answers / daily_goal=20 * 100 = 250 ≥ 200)
+        All three bystanders are pre-inserted so their pg_insert RETURNING returns nothing
+        → exactly 2 new ACHIEVEMENT_UNLOCKED notifications (explorer + perfect).
         """
         user = await UserFactory.create()
         _, question = await _seed_culture_question(db_session)
@@ -243,10 +264,15 @@ class TestCultureAnswerTwoThresholds:
         # Seed 50 correct answers — meets culture_explorer (50) and perfect_culture_score (10 consec)
         await _seed_answer_history(db_session, user.id, question.id, count=50, is_correct=True)
 
-        # Pre-unlock culture_curious (already satisfied at 10 answers).
-        # With this pre-inserted row the reconciler's RETURNING INSERT returns nothing
-        # for it → exactly 2 new ACHIEVEMENT_UNLOCKED notifications.
-        db_session.add(UserAchievement(user_id=user.id, achievement_id=_CULTURE_CURIOUS_ID))
+        # Pre-unlock all bystander achievements that 50 correct answers also satisfy.
+        # This isolates the two TARGET achievements (culture_explorer + perfect_culture_score)
+        # so the reconciler's RETURNING INSERT returns nothing for the bystanders.
+        for bystander_id in [
+            _CULTURE_CURIOUS_ID,  # threshold=10 CULTURE_QUESTIONS_ANSWERED
+            "culture_sharp_mind",  # threshold=90 CULTURE_ACCURACY (100% with 50 answers)
+            "special_overachiever",  # threshold=200 DAILY_GOAL_EXCEEDED (250 with 50 answers)
+        ]:
+            db_session.add(UserAchievement(user_id=user.id, achievement_id=bystander_id))
         await db_session.flush()
 
         result = await GamificationReconciler.reconcile(

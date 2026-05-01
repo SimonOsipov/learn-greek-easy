@@ -214,6 +214,18 @@ class TestAsyncReviewPathIdempotency:
         )
         assert _ACHIEVEMENT_ID in result1.new_unlocks
 
+        # Capture notification count after first reconcile (may be > 1 because multiple
+        # achievements can unlock simultaneously — e.g. learning_first_word + special_first_review).
+        notif_count_after_first = await db_session.scalar(
+            select(func.count()).where(
+                Notification.user_id == user.id,
+                Notification.type == NotificationType.ACHIEVEMENT_UNLOCKED,
+            )
+        )
+        assert (
+            notif_count_after_first >= 1
+        ), f"Expected at least 1 ACHIEVEMENT_UNLOCKED notification after first reconcile, got {notif_count_after_first}"
+
         # Second reconcile — idempotent
         result2 = await GamificationReconciler.reconcile(
             db_session, user.id, ReconcileMode.IMMEDIATE
@@ -222,7 +234,7 @@ class TestAsyncReviewPathIdempotency:
             result2.new_unlocks == []
         ), f"Second reconcile should return empty new_unlocks, got {result2.new_unlocks}"
 
-        # Still exactly 1 UserAchievement row
+        # Still exactly 1 UserAchievement row for the target achievement
         ua_count = await db_session.scalar(
             select(func.count()).where(
                 UserAchievement.user_id == user.id,
@@ -231,13 +243,17 @@ class TestAsyncReviewPathIdempotency:
         )
         assert ua_count == 1, f"Idempotency failure: expected 1 UserAchievement, got {ua_count}"
 
-        # Exactly 1 ACHIEVEMENT_UNLOCKED notification (emitted on first reconcile only)
-        notif_count = await db_session.scalar(
+        # Second reconcile must NOT emit any new notifications (idempotency property).
+        # We compare the count before and after the second reconcile rather than asserting
+        # an absolute value, because multiple achievements may be unlocked in the first call.
+        notif_count_after_second = await db_session.scalar(
             select(func.count()).where(
                 Notification.user_id == user.id,
                 Notification.type == NotificationType.ACHIEVEMENT_UNLOCKED,
             )
         )
-        assert (
-            notif_count == 1
-        ), f"Idempotency failure: expected 1 ACHIEVEMENT_UNLOCKED notification, got {notif_count}"
+        assert notif_count_after_first == notif_count_after_second, (
+            f"Idempotency failure: second reconcile emitted "
+            f"{notif_count_after_second - notif_count_after_first} new ACHIEVEMENT_UNLOCKED "
+            f"notification(s) (before={notif_count_after_first}, after={notif_count_after_second})"
+        )

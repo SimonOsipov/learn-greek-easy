@@ -92,10 +92,11 @@ test.describe('Gamification — IMMEDIATE-mode toast on review unlock (GAMIF-05)
   test.use({ storageState: LEARNER_AUTH });
 
   test.beforeEach(async ({ request }) => {
-    // Restore baseline state first (creates V2 deck stats with NEW cards due today)
-    const apiBaseUrl = getApiBaseUrl();
-    await request.post(`${apiBaseUrl}/api/v1/test/seed/all`);
-    // Then knock the user back to "0 cards learned" so the first review crosses learning_first_word threshold
+    // The afterEach of the previous test (or the CI "Seed database" step before the first test)
+    // already ran /seed/all to restore the full baseline. We only need to delete the
+    // learning-specific rows so the first review crosses the learning_first_word threshold.
+    // Calling /seed/all here would duplicate the expensive truncate+reseed and causes a
+    // 60 s timeout in CI.
     await resetToNearThreshold(request);
   });
 
