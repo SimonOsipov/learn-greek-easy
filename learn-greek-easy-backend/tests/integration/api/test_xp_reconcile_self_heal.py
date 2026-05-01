@@ -22,6 +22,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
 from src.db.models import (
+    Achievement,
+    AchievementCategory,
     CardRecord,
     CardRecordStatistics,
     CardStatus,
@@ -37,6 +39,29 @@ from src.db.models import (
 # ---------------------------------------------------------------------------
 # Local fixtures — create a full CardRecord graph for this test only
 # ---------------------------------------------------------------------------
+
+
+@pytest_asyncio.fixture
+async def achievement_catalog_learning_first_word(db_session: AsyncSession) -> Achievement:
+    """Seed the achievements catalog row for learning_first_word.
+
+    The reconciler uses pg_insert(UserAchievement) which requires the parent
+    achievements.id row to exist (FK constraint). Integration tests start with
+    an empty DB, so this fixture creates the required catalog entry.
+    """
+    achievement = Achievement(
+        id="learning_first_word",
+        name="First Word",
+        description="Learn your first card",
+        category=AchievementCategory.LEARNING,
+        icon="book",
+        threshold=1,
+        xp_reward=10,
+        sort_order=0,
+    )
+    db_session.add(achievement)
+    await db_session.flush()
+    return achievement
 
 
 @pytest_asyncio.fixture
@@ -113,6 +138,7 @@ class TestReconcileSelfHeal:
         db_session: AsyncSession,
         monkeypatch: pytest.MonkeyPatch,
         card_record_for_heal: CardRecord,
+        achievement_catalog_learning_first_word: Achievement,
     ) -> None:
         """Stuck achievement is created by GET /xp/achievements when flags are on.
 

@@ -102,19 +102,13 @@ test.describe('Gamification — reconcile-on-read self-heal (GAMIF-04)', () => {
       const apiBaseUrl = getApiBaseUrl();
       const authHeaders = { Authorization: `Bearer ${getLearnerAccessToken()}` };
 
-      // ── Sanity: pre-state confirms achievement is locked ────────────────────
-      const preResp = await request.get(`${apiBaseUrl}/api/v1/xp/achievements`, {
-        headers: authHeaders,
-      });
-      expect(preResp.ok()).toBeTruthy();
-      const preBody = await preResp.json();
-      const preAch = (preBody.achievements as Array<{ id: string; unlocked: boolean }>).find(
-        (a) => a.id === ACHIEVEMENT_ID,
-      );
-      expect(preAch).toBeDefined();
-      expect(preAch!.unlocked).toBe(false);
-
       // ── ACT: navigate to /achievements — triggers reconcile on read ─────────
+      // NOTE: We intentionally skip a pre-state API check here. Calling
+      // GET /xp/achievements would itself trigger reconcile-on-read (flags are
+      // on at 100% in CI), which would immediately re-unlock the achievement
+      // and make the "pre-locked" assertion false. The beforeEach reset
+      // (gamification-reset-stuck-state) is the authoritative source that the
+      // stuck state is set; the test only needs to verify the AFTER state.
       await page.goto('/achievements');
 
       // ── ASSERT: card visibly shows Unlocked ─────────────────────────────────
