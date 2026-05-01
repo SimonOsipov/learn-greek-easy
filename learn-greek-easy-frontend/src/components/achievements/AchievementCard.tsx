@@ -132,10 +132,12 @@ export const AchievementCard: React.FC<AchievementCardProps> = ({ achievement, c
           )}
 
           {/* Unlocked date or status */}
-          {unlocked && formattedDate ? (
-            <span className="text-xs text-muted-foreground">
-              {t('card.unlockedOn', { date: formattedDate })}
-            </span>
+          {unlocked ? (
+            formattedDate ? (
+              <span className="text-xs text-muted-foreground">
+                {t('card.unlockedOn', { date: formattedDate })}
+              </span>
+            ) : null
           ) : (
             <Badge variant="outline" className="text-muted-foreground">
               {t('card.locked')}
