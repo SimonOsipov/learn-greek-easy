@@ -59,6 +59,7 @@ export const AchievementCard: React.FC<AchievementCardProps> = ({ achievement, c
       )}
       role="article"
       aria-label={`Achievement: ${translatedName}`}
+      data-testid={`achievement-card-${id}`}
     >
       <CardContent className="p-3 sm:p-4">
         {/* Icon and Status */}

@@ -322,6 +322,10 @@ jobs:
           TESTING: "true"
           JWT_SECRET_KEY: "test-secret-key-for-ci-must-be-32-characters-long"
           CORS_ORIGINS: '["http://localhost:5173","http://localhost:3000"]'
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          GAMIFICATION_RECONCILE_ON_READ: "true"
+          GAMIFICATION_RECONCILE_ROLLOUT_PERCENT: "100"
         run: |
           poetry run uvicorn src.main:app --host 0.0.0.0 --port 8000 &
           echo "Backend server started in background"
@@ -533,6 +537,8 @@ jobs:
           CORS_ORIGINS: '["http://localhost:5173","http://localhost:3000"]'
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          GAMIFICATION_RECONCILE_ON_READ: "true"
+          GAMIFICATION_RECONCILE_ROLLOUT_PERCENT: "100"
         run: |
           poetry run uvicorn src.main:app --host 0.0.0.0 --port 8000 &
           echo "Backend server started in background"
