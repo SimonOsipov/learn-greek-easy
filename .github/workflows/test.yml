@@ -150,13 +150,6 @@ jobs:
     services:
       postgres:
         image: pgvector/pgvector:pg17
-        # Silence constraint-violation ERROR/STATEMENT noise from passing pytest.raises(IntegrityError)
-        # tests. Python receives the exception via the PG wire protocol independently. Do NOT use this
-        # config in production — it hides genuine error conditions.
-        command: >-
-          postgres
-          -c log_min_messages=FATAL
-          -c log_min_error_statement=FATAL
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -203,6 +196,19 @@ jobs:
         working-directory: learn-greek-easy-backend
         run: poetry install --no-interaction
 
+      - name: Silence Postgres ERROR/STATEMENT log noise
+        # Constraint-validation tests use pytest.raises(IntegrityError) which produces
+        # ERROR + STATEMENT lines in the postgres container log. These are unavoidable
+        # by-products of constraint coverage. Silencing them at the server level keeps
+        # the CI log readable. Python receives the IntegrityError exception via the
+        # PG wire protocol independently. Do NOT replicate this config in production.
+        run: |
+          PGPASSWORD=postgres psql -h localhost -p 5433 -U postgres -d test_learn_greek -v ON_ERROR_STOP=1 <<'SQL'
+          ALTER SYSTEM SET log_min_messages = 'FATAL';
+          ALTER SYSTEM SET log_min_error_statement = 'FATAL';
+          SELECT pg_reload_conf();
+          SQL
+
       - name: Apply migrations to fresh database
         working-directory: learn-greek-easy-backend
         env:
@@ -227,13 +233,6 @@ jobs:
     services:
       postgres:
         image: pgvector/pgvector:pg17
-        # Silence constraint-violation ERROR/STATEMENT noise from passing pytest.raises(IntegrityError)
-        # tests. Python receives the exception via the PG wire protocol independently. Do NOT use this
-        # config in production — it hides genuine error conditions.
-        command: >-
-          postgres
-          -c log_min_messages=FATAL
-          -c log_min_error_statement=FATAL
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -294,6 +293,19 @@ jobs:
       - name: Create test database extensions
         run: |
           PGPASSWORD=postgres psql -h localhost -p 5433 -U postgres -d test_learn_greek -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
+
+      - name: Silence Postgres ERROR/STATEMENT log noise
+        # Constraint-validation tests use pytest.raises(IntegrityError) which produces
+        # ERROR + STATEMENT lines in the postgres container log. These are unavoidable
+        # by-products of constraint coverage. Silencing them at the server level keeps
+        # the CI log readable. Python receives the IntegrityError exception via the
+        # PG wire protocol independently. Do NOT replicate this config in production.
+        run: |
+          PGPASSWORD=postgres psql -h localhost -p 5433 -U postgres -d test_learn_greek -v ON_ERROR_STOP=1 <<'SQL'
+          ALTER SYSTEM SET log_min_messages = 'FATAL';
+          ALTER SYSTEM SET log_min_error_statement = 'FATAL';
+          SELECT pg_reload_conf();
+          SQL
 
       - name: Run Alembic migrations
         working-directory: learn-greek-easy-backend
@@ -396,13 +408,6 @@ jobs:
     services:
       postgres:
         image: pgvector/pgvector:pg17
-        # Silence constraint-violation ERROR/STATEMENT noise from passing pytest.raises(IntegrityError)
-        # tests. Python receives the exception via the PG wire protocol independently. Do NOT use this
-        # config in production — it hides genuine error conditions.
-        command: >-
-          postgres
-          -c log_min_messages=FATAL
-          -c log_min_error_statement=FATAL
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -497,6 +502,19 @@ jobs:
       - name: Create test database extensions
         run: |
           PGPASSWORD=postgres psql -h localhost -p 5433 -U postgres -d test_learn_greek -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
+
+      - name: Silence Postgres ERROR/STATEMENT log noise
+        # Constraint-validation tests use pytest.raises(IntegrityError) which produces
+        # ERROR + STATEMENT lines in the postgres container log. These are unavoidable
+        # by-products of constraint coverage. Silencing them at the server level keeps
+        # the CI log readable. Python receives the IntegrityError exception via the
+        # PG wire protocol independently. Do NOT replicate this config in production.
+        run: |
+          PGPASSWORD=postgres psql -h localhost -p 5433 -U postgres -d test_learn_greek -v ON_ERROR_STOP=1 <<'SQL'
+          ALTER SYSTEM SET log_min_messages = 'FATAL';
+          ALTER SYSTEM SET log_min_error_statement = 'FATAL';
+          SELECT pg_reload_conf();
+          SQL
 
       - name: Run Alembic migrations
         working-directory: learn-greek-easy-backend
@@ -658,13 +676,6 @@ jobs:
     services:
       postgres:
         image: pgvector/pgvector:pg17
-        # Silence constraint-violation ERROR/STATEMENT noise from passing pytest.raises(IntegrityError)
-        # tests. Python receives the exception via the PG wire protocol independently. Do NOT use this
-        # config in production — it hides genuine error conditions.
-        command: >-
-          postgres
-          -c log_min_messages=FATAL
-          -c log_min_error_statement=FATAL
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -726,6 +737,19 @@ jobs:
       - name: Create test database extensions
         run: |
           PGPASSWORD=postgres psql -h localhost -p 5433 -U postgres -d test_learn_greek -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
+
+      - name: Silence Postgres ERROR/STATEMENT log noise
+        # Constraint-validation tests use pytest.raises(IntegrityError) which produces
+        # ERROR + STATEMENT lines in the postgres container log. These are unavoidable
+        # by-products of constraint coverage. Silencing them at the server level keeps
+        # the CI log readable. Python receives the IntegrityError exception via the
+        # PG wire protocol independently. Do NOT replicate this config in production.
+        run: |
+          PGPASSWORD=postgres psql -h localhost -p 5433 -U postgres -d test_learn_greek -v ON_ERROR_STOP=1 <<'SQL'
+          ALTER SYSTEM SET log_min_messages = 'FATAL';
+          ALTER SYSTEM SET log_min_error_statement = 'FATAL';
+          SELECT pg_reload_conf();
+          SQL
 
       - name: Run tests with coverage
         working-directory: learn-greek-easy-backend
@@ -789,13 +813,6 @@ jobs:
     services:
       postgres:
         image: pgvector/pgvector:pg17
-        # Silence constraint-violation ERROR/STATEMENT noise from passing pytest.raises(IntegrityError)
-        # tests. Python receives the exception via the PG wire protocol independently. Do NOT use this
-        # config in production — it hides genuine error conditions.
-        command: >-
-          postgres
-          -c log_min_messages=FATAL
-          -c log_min_error_statement=FATAL
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -853,6 +870,19 @@ jobs:
       - name: Create test database extensions
         run: |
           PGPASSWORD=postgres psql -h localhost -p 5433 -U postgres -d test_learn_greek -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
+
+      - name: Silence Postgres ERROR/STATEMENT log noise
+        # Constraint-validation tests use pytest.raises(IntegrityError) which produces
+        # ERROR + STATEMENT lines in the postgres container log. These are unavoidable
+        # by-products of constraint coverage. Silencing them at the server level keeps
+        # the CI log readable. Python receives the IntegrityError exception via the
+        # PG wire protocol independently. Do NOT replicate this config in production.
+        run: |
+          PGPASSWORD=postgres psql -h localhost -p 5433 -U postgres -d test_learn_greek -v ON_ERROR_STOP=1 <<'SQL'
+          ALTER SYSTEM SET log_min_messages = 'FATAL';
+          ALTER SYSTEM SET log_min_error_statement = 'FATAL';
+          SELECT pg_reload_conf();
+          SQL
 
       - name: Validate Seed API
         working-directory: learn-greek-easy-backend
