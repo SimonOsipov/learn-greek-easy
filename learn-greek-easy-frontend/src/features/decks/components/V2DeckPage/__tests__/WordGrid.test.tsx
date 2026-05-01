@@ -104,7 +104,7 @@ describe('WordGrid Component', () => {
 
       // Check for responsive grid template
       expect(grid).toHaveStyle({
-        gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))',
       });
     });
 
@@ -346,7 +346,7 @@ describe('WordGridSkeleton Component', () => {
     expect(skeleton).toHaveClass('grid');
     expect(skeleton).toHaveClass('gap-4');
     expect(skeleton).toHaveStyle({
-      gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+      gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))',
     });
   });
 

@@ -92,9 +92,17 @@ export const V2DeckHeader: React.FC<V2DeckHeaderProps> = ({ deck }) => {
             {/* Badges */}
             <div className="flex flex-shrink-0 items-center gap-2">
               {deck.category !== 'culture' && (
-                <DeckBadge type="category" category={deck.category} />
+                <DeckBadge
+                  type="category"
+                  category={deck.category}
+                  className={deck.coverImageUrl ? 'on-photo' : ''}
+                />
               )}
-              <DeckBadge type="level" level={deck.level} />
+              <DeckBadge
+                type="level"
+                level={deck.level}
+                className={deck.coverImageUrl ? 'on-photo' : ''}
+              />
             </div>
           </div>
 

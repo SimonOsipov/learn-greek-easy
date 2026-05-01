@@ -61,7 +61,7 @@ export function WordGrid({ entries, masteryMap }: WordGridProps) {
     <div
       className="grid gap-4"
       style={{
-        gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))',
         gridAutoFlow: 'dense',
       }}
       data-testid="word-grid"
@@ -109,7 +109,7 @@ export function WordGridSkeleton({ count = 12 }: WordGridSkeletonProps) {
     <div
       className="grid gap-4"
       style={{
-        gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))',
       }}
       data-testid="word-grid-skeleton"
     >

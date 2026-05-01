@@ -138,14 +138,14 @@ const MasteryIndicator: React.FC<MasteryIndicatorProps> = ({ status = 'new' }) =
 export const WordCardSkeleton: React.FC = () => {
   return (
     <Card data-testid="word-card-skeleton" className="relative overflow-hidden">
-      <CardContent className="p-4">
+      <CardContent className="px-4 pb-4 pt-10">
         <div className="absolute left-3 top-3">
           <Skeleton className="h-3 w-8" />
         </div>
         <div className="absolute right-3 top-3">
           <Skeleton className="h-2.5 w-2.5 rounded-full" />
         </div>
-        <div className="flex flex-col items-center space-y-2 pt-2 text-center">
+        <div className="flex flex-col items-center space-y-2 text-center">
           <Skeleton className="h-6 w-20" />
           <Skeleton className="h-4 w-16" />
           <Skeleton className="h-4 w-24" />
@@ -216,7 +216,7 @@ export const WordCard: React.FC<WordCardProps> = ({
       onKeyDown={isClickable ? handleKeyDown : undefined}
       aria-label={`${lemma} - ${displayTranslation}`}
     >
-      <CardContent className="p-4">
+      <CardContent className="px-4 pb-4 pt-10">
         {/* Top-left POS badge */}
         <span
           data-testid="word-card-pos"
@@ -231,7 +231,7 @@ export const WordCard: React.FC<WordCardProps> = ({
         </div>
 
         {/* Main content - centered */}
-        <div className="flex flex-col items-center space-y-2 pt-2 text-center">
+        <div className="flex flex-col items-center space-y-2 text-center">
           {/* Greek lemma */}
           <h3 data-testid="word-card-lemma" className="text-xl font-semibold text-foreground">
             {lemma}
