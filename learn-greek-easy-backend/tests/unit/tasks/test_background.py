@@ -1685,12 +1685,10 @@ class TestPersistCultureAnswerTask:
                             new_callable=AsyncMock,
                         ):
                             with patch(
-                                "src.services.achievement_service.AchievementService"
-                            ) as mock_ach_cls:
-                                mock_ach = AsyncMock()
-                                mock_ach.check_culture_achievements = AsyncMock(return_value=[])
-                                mock_ach_cls.return_value = mock_ach
-
+                                "src.services.gamification.reconciler.GamificationReconciler.reconcile",
+                                new_callable=AsyncMock,
+                                return_value=MagicMock(new_unlocks=[], leveled_up=False),
+                            ):
                                 with patch(
                                     "src.repositories.culture_question_stats.CultureQuestionStatsRepository"
                                 ) as mock_stats_cls:
@@ -1738,12 +1736,10 @@ class TestPersistCultureAnswerTask:
                             new_callable=AsyncMock,
                         ):
                             with patch(
-                                "src.services.achievement_service.AchievementService"
-                            ) as mock_ach_cls:
-                                mock_ach = AsyncMock()
-                                mock_ach.check_culture_achievements = AsyncMock(return_value=[])
-                                mock_ach_cls.return_value = mock_ach
-
+                                "src.services.gamification.reconciler.GamificationReconciler.reconcile",
+                                new_callable=AsyncMock,
+                                return_value=MagicMock(new_unlocks=[], leveled_up=False),
+                            ):
                                 with patch(
                                     "src.repositories.culture_question_stats.CultureQuestionStatsRepository"
                                 ) as mock_stats_cls:
@@ -1810,12 +1806,10 @@ class TestPersistCultureAnswerTask:
                             new_callable=AsyncMock,
                         ):
                             with patch(
-                                "src.services.achievement_service.AchievementService"
-                            ) as mock_ach_cls:
-                                mock_ach = AsyncMock()
-                                mock_ach.check_culture_achievements = AsyncMock(return_value=[])
-                                mock_ach_cls.return_value = mock_ach
-
+                                "src.services.gamification.reconciler.GamificationReconciler.reconcile",
+                                new_callable=AsyncMock,
+                                return_value=MagicMock(new_unlocks=[], leveled_up=False),
+                            ):
                                 with patch(
                                     "src.repositories.culture_question_stats.CultureQuestionStatsRepository"
                                 ) as mock_stats_cls:
@@ -1847,3 +1841,276 @@ class TestPersistCultureAnswerTask:
                     await persist_culture_answer_task(**kwargs)
 
         mock_engine.dispose.assert_awaited_once()
+
+    # ------------------------------------------------------------------
+    # New tests: reconciler cutover (GAMIF-05-05)
+    # ------------------------------------------------------------------
+
+    def _make_full_culture_session_mock(self):
+        """Return a configured mock session for persist_culture_answer_task tests."""
+        mock_session = AsyncMock()
+        mock_stats_obj = MagicMock()
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = mock_stats_obj
+        mock_session.execute = AsyncMock(return_value=mock_result)
+        return mock_session, mock_stats_obj
+
+    def _make_culture_engine_sessionmaker(self, mock_session):
+        """Return configured engine/sessionmaker mocks for persist_culture_answer_task."""
+        mock_engine = AsyncMock()
+        mock_session_factory = MagicMock(return_value=mock_session)
+        return mock_engine, mock_session_factory
+
+    @pytest.mark.asyncio
+    async def test_reconciler_called_with_correct_args(self):
+        """GamificationReconciler.reconcile must be called once with (session, user_id, IMMEDIATE)."""
+        from src.services.gamification.types import ReconcileMode
+        from src.tasks.background import persist_culture_answer_task
+
+        kwargs = _make_persist_culture_answer_kwargs()
+        user_id = kwargs["user_id"]
+
+        mock_session, _ = self._make_full_culture_session_mock()
+        mock_engine, mock_session_factory = self._make_culture_engine_sessionmaker(mock_session)
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.create_async_engine", return_value=mock_engine):
+                with patch(
+                    "src.tasks.background.async_sessionmaker",
+                    return_value=mock_session_factory,
+                ):
+                    with patch("src.services.xp_service.XPService") as mock_xp_cls:
+                        mock_xp = AsyncMock()
+                        mock_xp.award_culture_answer_xp = AsyncMock(return_value=10)
+                        mock_xp.award_first_review_bonus = AsyncMock(return_value=0)
+                        mock_xp_cls.return_value = mock_xp
+
+                        with patch(
+                            "src.tasks.background._check_and_notify_daily_goal",
+                            new_callable=AsyncMock,
+                        ):
+                            with patch(
+                                "src.services.gamification.reconciler.GamificationReconciler.reconcile",
+                                new_callable=AsyncMock,
+                                return_value=MagicMock(new_unlocks=[], leveled_up=False),
+                            ) as mock_reconcile:
+                                with patch(
+                                    "src.repositories.culture_question_stats.CultureQuestionStatsRepository"
+                                ) as mock_stats_cls:
+                                    mock_stats_repo = AsyncMock()
+                                    mock_stats_repo.count_answers_today = AsyncMock(return_value=1)
+                                    mock_stats_cls.return_value = mock_stats_repo
+
+                                    await persist_culture_answer_task(**kwargs)
+
+        mock_reconcile.assert_awaited_once()
+        call_args = mock_reconcile.call_args
+        # First positional arg is the session, second is user_id, third is mode
+        assert call_args[0][1] == user_id
+        assert call_args[0][2] == ReconcileMode.IMMEDIATE
+
+    @pytest.mark.asyncio
+    async def test_legacy_check_culture_achievements_not_called(self):
+        """AchievementService.check_culture_achievements must NOT be called after cutover."""
+        from src.tasks.background import persist_culture_answer_task
+
+        kwargs = _make_persist_culture_answer_kwargs()
+        mock_session, _ = self._make_full_culture_session_mock()
+        mock_engine, mock_session_factory = self._make_culture_engine_sessionmaker(mock_session)
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.create_async_engine", return_value=mock_engine):
+                with patch(
+                    "src.tasks.background.async_sessionmaker",
+                    return_value=mock_session_factory,
+                ):
+                    with patch("src.services.xp_service.XPService") as mock_xp_cls:
+                        mock_xp = AsyncMock()
+                        mock_xp.award_culture_answer_xp = AsyncMock(return_value=10)
+                        mock_xp.award_first_review_bonus = AsyncMock(return_value=0)
+                        mock_xp_cls.return_value = mock_xp
+
+                        with patch(
+                            "src.tasks.background._check_and_notify_daily_goal",
+                            new_callable=AsyncMock,
+                        ):
+                            with patch(
+                                "src.services.gamification.reconciler.GamificationReconciler.reconcile",
+                                new_callable=AsyncMock,
+                                return_value=MagicMock(new_unlocks=[], leveled_up=False),
+                            ):
+                                with patch(
+                                    "src.repositories.culture_question_stats.CultureQuestionStatsRepository"
+                                ) as mock_stats_cls:
+                                    mock_stats_repo = AsyncMock()
+                                    mock_stats_repo.count_answers_today = AsyncMock(return_value=1)
+                                    mock_stats_cls.return_value = mock_stats_repo
+
+                                    with patch(
+                                        "src.services.achievement_service.AchievementService"
+                                    ) as mock_ach_cls:
+                                        await persist_culture_answer_task(**kwargs)
+
+        # AchievementService must not be instantiated at all
+        mock_ach_cls.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_reconciler_exception_caught_and_not_reraised(self):
+        """Reconciler errors must be caught + logged; task must NOT raise (preserves answer + XP)."""
+        from src.tasks.background import persist_culture_answer_task
+
+        kwargs = _make_persist_culture_answer_kwargs()
+        mock_session, _ = self._make_full_culture_session_mock()
+        mock_engine, mock_session_factory = self._make_culture_engine_sessionmaker(mock_session)
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.create_async_engine", return_value=mock_engine):
+                with patch(
+                    "src.tasks.background.async_sessionmaker",
+                    return_value=mock_session_factory,
+                ):
+                    with patch("src.services.xp_service.XPService") as mock_xp_cls:
+                        mock_xp = AsyncMock()
+                        mock_xp.award_culture_answer_xp = AsyncMock(return_value=10)
+                        mock_xp.award_first_review_bonus = AsyncMock(return_value=0)
+                        mock_xp_cls.return_value = mock_xp
+
+                        with patch(
+                            "src.tasks.background._check_and_notify_daily_goal",
+                            new_callable=AsyncMock,
+                        ):
+                            with patch(
+                                "src.services.gamification.reconciler.GamificationReconciler.reconcile",
+                                new_callable=AsyncMock,
+                                side_effect=RuntimeError("reconciler boom"),
+                            ):
+                                with patch(
+                                    "src.repositories.culture_question_stats.CultureQuestionStatsRepository"
+                                ) as mock_stats_cls:
+                                    mock_stats_repo = AsyncMock()
+                                    mock_stats_repo.count_answers_today = AsyncMock(return_value=1)
+                                    mock_stats_cls.return_value = mock_stats_repo
+
+                                    # Must not raise — reconciler errors are isolated
+                                    await persist_culture_answer_task(**kwargs)
+
+        # commit must still have been called (answer + XP persisted)
+        mock_session.commit.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_unlocked_achievements_logged_with_count_and_ids(self):
+        """When reconciler returns new_unlocks, log must include unlocked_count + achievement_ids."""
+        from src.tasks.background import persist_culture_answer_task
+
+        kwargs = _make_persist_culture_answer_kwargs()
+        mock_session, _ = self._make_full_culture_session_mock()
+        mock_engine, mock_session_factory = self._make_culture_engine_sessionmaker(mock_session)
+
+        unlocked_ids = ["culture_curious", "perfect_culture_score"]
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.create_async_engine", return_value=mock_engine):
+                with patch(
+                    "src.tasks.background.async_sessionmaker",
+                    return_value=mock_session_factory,
+                ):
+                    with patch("src.services.xp_service.XPService") as mock_xp_cls:
+                        mock_xp = AsyncMock()
+                        mock_xp.award_culture_answer_xp = AsyncMock(return_value=10)
+                        mock_xp.award_first_review_bonus = AsyncMock(return_value=0)
+                        mock_xp_cls.return_value = mock_xp
+
+                        with patch(
+                            "src.tasks.background._check_and_notify_daily_goal",
+                            new_callable=AsyncMock,
+                        ):
+                            with patch(
+                                "src.services.gamification.reconciler.GamificationReconciler.reconcile",
+                                new_callable=AsyncMock,
+                                return_value=MagicMock(new_unlocks=unlocked_ids, leveled_up=True),
+                            ):
+                                with patch(
+                                    "src.repositories.culture_question_stats.CultureQuestionStatsRepository"
+                                ) as mock_stats_cls:
+                                    mock_stats_repo = AsyncMock()
+                                    mock_stats_repo.count_answers_today = AsyncMock(return_value=1)
+                                    mock_stats_cls.return_value = mock_stats_repo
+
+                                    with patch("src.tasks.background.logger") as mock_logger:
+                                        await persist_culture_answer_task(**kwargs)
+
+        # Verify logger.info was called with the achievement details
+        info_calls = mock_logger.info.call_args_list
+        achievement_log = next(
+            (c for c in info_calls if "Achievements unlocked via reconciler" in str(c)),
+            None,
+        )
+        assert achievement_log is not None, "Expected achievement unlock log call not found"
+        extra = (
+            achievement_log[1].get("extra", {}) or achievement_log[0][1].get("extra", {})
+            if len(achievement_log[0]) > 1
+            else {}
+        )
+        # Reconstruct extra from kwargs
+        all_kwargs = achievement_log[1]
+        if "extra" in all_kwargs:
+            extra = all_kwargs["extra"]
+        else:
+            # extra may be positional or in args
+            extra = {}
+        assert extra.get("unlocked_count") == 2
+        assert extra.get("achievement_ids") == unlocked_ids
+
+    @pytest.mark.asyncio
+    async def test_regression_xp_services_still_called(self):
+        """Regression: award_culture_answer_xp + award_first_review_bonus still called after cutover."""
+        from src.tasks.background import persist_culture_answer_task
+
+        kwargs = _make_persist_culture_answer_kwargs()
+        mock_session, _ = self._make_full_culture_session_mock()
+        mock_engine, mock_session_factory = self._make_culture_engine_sessionmaker(mock_session)
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.create_async_engine", return_value=mock_engine):
+                with patch(
+                    "src.tasks.background.async_sessionmaker",
+                    return_value=mock_session_factory,
+                ):
+                    with patch("src.services.xp_service.XPService") as mock_xp_cls:
+                        mock_xp = AsyncMock()
+                        mock_xp_culture = AsyncMock(return_value=10)
+                        mock_xp_bonus = AsyncMock(return_value=5)
+                        mock_xp.award_culture_answer_xp = mock_xp_culture
+                        mock_xp.award_first_review_bonus = mock_xp_bonus
+                        mock_xp_cls.return_value = mock_xp
+
+                        with patch(
+                            "src.tasks.background._check_and_notify_daily_goal",
+                            new_callable=AsyncMock,
+                        ) as mock_daily_goal:
+                            with patch(
+                                "src.services.gamification.reconciler.GamificationReconciler.reconcile",
+                                new_callable=AsyncMock,
+                                return_value=MagicMock(new_unlocks=[], leveled_up=False),
+                            ):
+                                with patch(
+                                    "src.repositories.culture_question_stats.CultureQuestionStatsRepository"
+                                ) as mock_stats_cls:
+                                    mock_stats_repo = AsyncMock()
+                                    mock_stats_repo.count_answers_today = AsyncMock(return_value=1)
+                                    mock_stats_cls.return_value = mock_stats_repo
+
+                                    await persist_culture_answer_task(**kwargs)
+
+        mock_xp_culture.assert_awaited_once()
+        call_kwargs = mock_xp_culture.call_args[1]
+        assert call_kwargs["user_id"] == kwargs["user_id"]
+        assert call_kwargs["is_correct"] == kwargs["is_correct"]
+        assert call_kwargs["is_perfect"] == kwargs["is_perfect"]
+        assert call_kwargs["source_id"] == kwargs["question_id"]
+
+        # is_correct=True in fixture, so first_review_bonus must be called
+        mock_xp_bonus.assert_awaited_once_with(kwargs["user_id"])
+
+        # _check_and_notify_daily_goal must still be called
+        mock_daily_goal.assert_awaited_once()

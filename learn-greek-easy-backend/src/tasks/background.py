@@ -910,7 +910,7 @@ async def _check_and_notify_daily_goal(
 
 
 # DEPRECATED in Phase 5 (GAMIF-05): replaced by GamificationReconciler
-async def persist_culture_answer_task(
+async def persist_culture_answer_task(  # noqa: C901
     user_id: UUID,
     question_id: UUID,
     selected_option: int,
@@ -938,7 +938,7 @@ async def persist_culture_answer_task(
     4. Award XP via XPService.award_culture_answer_xp()
     5. Award first review bonus via XPService.award_first_review_bonus()
     6. Check daily goal via _check_and_notify_daily_goal()
-    7. Check achievements via AchievementService.check_culture_achievements()
+    7. Reconcile gamification state via GamificationReconciler.reconcile(IMMEDIATE)
 
     The task creates its own database connection to avoid issues with
     connection sharing across async contexts.
@@ -996,7 +996,8 @@ async def persist_culture_answer_task(
 
             from src.db.models import CardStatus, CultureAnswerHistory, CultureQuestionStats
             from src.repositories.culture_question_stats import CultureQuestionStatsRepository
-            from src.services.achievement_service import AchievementService
+            from src.services.gamification.reconciler import GamificationReconciler
+            from src.services.gamification.types import ReconcileMode
             from src.services.xp_service import XPService
 
             # Step 1: Get or create stats
@@ -1091,24 +1092,34 @@ async def persist_culture_answer_task(
                 culture_answers_before=culture_answers_before,
             )
 
-            # Step 7: Check achievements
-            achievement_service = AchievementService(session)
-            unlocked = await achievement_service.check_culture_achievements(
-                user_id=user_id,
-                question_id=question_id,
-                is_correct=is_correct,
-                language=language,
-                deck_category=deck_category,
-            )
-
-            if unlocked:
-                logger.info(
-                    "Achievements unlocked in persistence task",
+            # Step 7: Reconcile gamification state (IMMEDIATE emits per-achievement
+            # notifications inline). Replaces legacy check_culture_achievements;
+            # legacy method removed in Phase 6 (GAMIF-06).
+            try:
+                reconcile_result = await GamificationReconciler.reconcile(
+                    session, user_id, ReconcileMode.IMMEDIATE
+                )
+                if reconcile_result.new_unlocks:
+                    logger.info(
+                        "Achievements unlocked via reconciler in culture persistence",
+                        extra={
+                            "user_id": str(user_id),
+                            "unlocked_count": len(reconcile_result.new_unlocks),
+                            "achievement_ids": reconcile_result.new_unlocks,
+                            "leveled_up": reconcile_result.leveled_up,
+                        },
+                    )
+            except Exception as reconcile_err:
+                # Isolate reconciler failures: persistence + XP + daily goal already
+                # ran. Re-raising would lose the answer record. Log + continue.
+                logger.error(
+                    "Reconciler failed in culture persistence task",
                     extra={
                         "user_id": str(user_id),
-                        "unlocked_count": len(unlocked),
-                        "achievement_ids": [a["id"] for a in unlocked],
+                        "question_id": str(question_id),
+                        "error": str(reconcile_err),
                     },
+                    exc_info=True,
                 )
 
             # Commit all changes
