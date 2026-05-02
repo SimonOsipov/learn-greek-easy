@@ -52,7 +52,7 @@ function ExerciseAccordionItem({
             variant={exercise.status === 'approved' ? 'default' : 'secondary'}
             className={
               exercise.status === 'approved'
-                ? 'bg-success text-white hover:bg-success/90'
+                ? 'bg-success text-success-foreground hover:bg-success/90'
                 : undefined
             }
           >
