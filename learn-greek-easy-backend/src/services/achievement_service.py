@@ -18,8 +18,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.logging import get_logger
 from src.db.models import (
     Achievement,
-    CardRecordReview,
-    CardRecordStatistics,
     CardStatus,
     CultureAnswerHistory,
     CultureDeck,
@@ -80,31 +78,34 @@ class AchievementService:
     async def get_user_achievements(self, user_id: UUID) -> list[AchievementProgress]:
         """Get all achievements with user's unlock status and progress.
 
-        Args:
-            user_id: The user's UUID
-
-        Returns:
-            List of all achievements with progress information
+        Progress and current_value are derived from GamificationProjection,
+        the single source of truth for gamification state.
         """
-        # Get user's unlocked achievements
-        result = await self.db.execute(
-            select(UserAchievement).where(UserAchievement.user_id == user_id)
-        )
-        unlocked = {ua.achievement_id: ua for ua in result.scalars().all()}
+        # Late import to avoid circular dependency
+        from src.services.gamification.projection import GamificationProjection
 
-        # Get user stats for progress calculation
-        stats = await self._get_user_stats(user_id)
+        # Fetch unlocked rows + projection snapshot in parallel
+        unlocked_result, snapshot = await asyncio.gather(
+            self.db.execute(select(UserAchievement).where(UserAchievement.user_id == user_id)),
+            GamificationProjection.compute(self.db, user_id),
+        )
+        unlocked = {ua.achievement_id: ua for ua in unlocked_result.scalars().all()}
 
         achievements: list[AchievementProgress] = []
         for ach_def in ACHIEVEMENTS:
             is_unlocked = ach_def.id in unlocked
             user_ach = unlocked.get(ach_def.id)
 
-            # Calculate progress
-            current_value = self._get_metric_value(ach_def.metric, stats)
+            # Read current metric value directly from snapshot
+            current_value = snapshot.metrics[ach_def.metric]
+
             progress = 0.0
             if ach_def.threshold > 0:
                 progress = min((current_value / ach_def.threshold) * 100, 100.0)
+
+            # Preserve unlocked => progress=100 invariant (GAMIF-06-06)
+            if is_unlocked:
+                progress = 100.0
 
             achievements.append(
                 AchievementProgress(
@@ -270,62 +271,6 @@ class AchievementService:
             )
             self.db.add(achievement)
             await self.db.flush()
-
-    async def _get_user_stats(self, user_id: UUID) -> dict[str, int | float]:
-        """Get user statistics for progress calculation.
-
-        Args:
-            user_id: The user's UUID
-
-        Returns:
-            Dictionary of user stats
-        """
-        cards_learned_result, cards_mastered_result, total_reviews_result = await asyncio.gather(
-            self.db.execute(
-                select(func.count(CardRecordStatistics.id)).where(
-                    CardRecordStatistics.user_id == user_id,
-                    CardRecordStatistics.status != CardStatus.NEW,
-                )
-            ),
-            self.db.execute(
-                select(func.count(CardRecordStatistics.id)).where(
-                    CardRecordStatistics.user_id == user_id,
-                    CardRecordStatistics.status == CardStatus.MASTERED,
-                )
-            ),
-            self.db.execute(
-                select(func.count(CardRecordReview.id)).where(
-                    CardRecordReview.user_id == user_id,
-                )
-            ),
-        )
-        return {
-            "cards_learned": cards_learned_result.scalar_one(),
-            "cards_mastered": cards_mastered_result.scalar_one(),
-            "total_reviews": total_reviews_result.scalar_one(),
-            "current_streak": 0,
-            "longest_streak": 0,
-        }
-
-    def _get_metric_value(self, metric: AchievementMetric, stats: dict) -> int:
-        """Get current value for a metric from stats.
-
-        Args:
-            metric: The achievement metric
-            stats: Dictionary of user stats
-
-        Returns:
-            Current value for the metric (0 if not found)
-        """
-        metric_map: dict[AchievementMetric, str] = {
-            AchievementMetric.STREAK_DAYS: "current_streak",
-            AchievementMetric.CARDS_LEARNED: "cards_learned",
-            AchievementMetric.CARDS_MASTERED: "cards_mastered",
-            AchievementMetric.TOTAL_REVIEWS: "total_reviews",
-        }
-        stat_key = metric_map.get(metric, "")
-        value: int = stats.get(stat_key, 0)
-        return value
 
     async def unlock_achievement_by_id(
         self, user_id: UUID, achievement_id: str
