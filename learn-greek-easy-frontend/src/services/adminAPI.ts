@@ -87,7 +87,6 @@ export interface UnifiedDeckItem {
   is_active: boolean;
   is_premium: boolean;
   is_system_deck: boolean | null; // true for system decks (vocabulary only), null for culture decks
-  card_system?: string | null; // V1 or V2 (vocabulary decks only)
   created_at: string;
   owner_id: string | null;
   owner_name: string | null;
