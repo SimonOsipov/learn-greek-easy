@@ -37,7 +37,7 @@ class SituationDescriptionFactory(BaseFactory):
     @classmethod
     async def create(cls, session=None, **kwargs):
         if kwargs.get("situation_id") is None:
-            situation = await SituationFactory.create(session=session)
+            situation = await SituationFactory.create(session=session, ready=True)
             kwargs["situation_id"] = situation.id
         return await super().create(session=session, **kwargs)
 
@@ -63,7 +63,9 @@ class DescriptionExerciseFactory(BaseFactory):
     @classmethod
     async def create(cls, session=None, **kwargs):
         if kwargs.get("description_id") is None:
-            description = await SituationDescriptionFactory.create(session=session)
+            description = await SituationDescriptionFactory.create(
+                session=session, audio_ready=True
+            )
             kwargs["description_id"] = description.id
         return await super().create(session=session, **kwargs)
 
