@@ -15,8 +15,6 @@ from src.db.models import User
 from src.schemas.xp import AchievementResponse, AchievementsListResponse, XPStatsResponse
 from src.services.achievement_service import AchievementService
 from src.services.gamification.reconciler import GamificationReconciler
-from src.services.gamification.rollout import is_user_in_reconcile_rollout
-from src.services.gamification.shadow import shadow_compare_achievements, shadow_compare_xp_stats
 from src.services.gamification.types import ReconcileMode
 from src.services.xp_service import XPService
 
@@ -68,18 +66,17 @@ async def get_xp_stats(
     current_user: User = Depends(get_current_user),
 ) -> XPStatsResponse:
     """Get XP statistics for the current user."""
-    if is_user_in_reconcile_rollout(current_user.id):
-        try:
-            await GamificationReconciler.reconcile(db, current_user.id, mode=ReconcileMode.QUIET)
-        except Exception as exc:
-            logger.warning(
-                "gamification.reconcile.error",
-                event="gamification.reconcile.error",
-                endpoint="/api/v1/xp/stats",
-                user_id=str(current_user.id),
-                error_type=type(exc).__name__,
-                error_message=str(exc),
-            )
+    try:
+        await GamificationReconciler.reconcile(db, current_user.id, mode=ReconcileMode.QUIET)
+    except Exception as exc:
+        logger.warning(
+            "gamification.reconcile.error",
+            event="gamification.reconcile.error",
+            endpoint="/api/v1/xp/stats",
+            user_id=str(current_user.id),
+            error_type=type(exc).__name__,
+            error_message=str(exc),
+        )
 
     service = XPService(db)
     stats = await service.get_user_xp_stats(current_user.id)
@@ -93,24 +90,6 @@ async def get_xp_stats(
         xp_for_next_level=stats["xp_for_next_level"],
         progress_percentage=stats["progress_percentage"],
     )
-
-    try:
-        await shadow_compare_xp_stats(
-            db,
-            current_user.id,
-            legacy_total_xp=stats["total_xp"],
-            legacy_current_level=stats["current_level"],
-            endpoint="/api/v1/xp/stats",
-        )
-    except Exception as exc:
-        logger.warning(
-            "gamification.shadow.error",
-            event="gamification.shadow.error",
-            endpoint="/api/v1/xp/stats",
-            user_id=str(current_user.id),
-            error_type=type(exc).__name__,
-            error_message=str(exc),
-        )
 
     return response
 
@@ -172,18 +151,17 @@ async def get_achievements(
     current_user: User = Depends(get_current_user),
 ) -> AchievementsListResponse:
     """Get all achievements with user's progress."""
-    if is_user_in_reconcile_rollout(current_user.id):
-        try:
-            await GamificationReconciler.reconcile(db, current_user.id, mode=ReconcileMode.QUIET)
-        except Exception as exc:
-            logger.warning(
-                "gamification.reconcile.error",
-                event="gamification.reconcile.error",
-                endpoint="/api/v1/xp/achievements",
-                user_id=str(current_user.id),
-                error_type=type(exc).__name__,
-                error_message=str(exc),
-            )
+    try:
+        await GamificationReconciler.reconcile(db, current_user.id, mode=ReconcileMode.QUIET)
+    except Exception as exc:
+        logger.warning(
+            "gamification.reconcile.error",
+            event="gamification.reconcile.error",
+            endpoint="/api/v1/xp/achievements",
+            user_id=str(current_user.id),
+            error_type=type(exc).__name__,
+            error_message=str(exc),
+        )
 
     service = AchievementService(db)
     achievements = await service.get_user_achievements(current_user.id)
@@ -214,22 +192,5 @@ async def get_achievements(
         unlocked_count=len(unlocked),
         total_xp_earned=total_xp,
     )
-
-    try:
-        await shadow_compare_achievements(
-            db,
-            current_user.id,
-            legacy_unlocked_ids={a["id"] for a in achievements if a["unlocked"]},
-            endpoint="/api/v1/xp/achievements",
-        )
-    except Exception as exc:
-        logger.warning(
-            "gamification.shadow.error",
-            event="gamification.shadow.error",
-            endpoint="/api/v1/xp/achievements",
-            user_id=str(current_user.id),
-            error_type=type(exc).__name__,
-            error_message=str(exc),
-        )
 
     return response

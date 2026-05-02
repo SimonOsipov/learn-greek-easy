@@ -11,7 +11,6 @@ Architecture:
     - One fetch session to collect active user IDs.
     - One AsyncSession per batch of 100 users; per-user commit inside the batch.
     - Per-user errors isolated: rollback + Sentry capture + continue loop.
-    - Kill-switch: settings.gamification_reconcile_on_read = False skips the run.
 
 Idempotency:
     The reconciler writes convergently (on_conflict_do_nothing for
@@ -68,15 +67,7 @@ async def reconcile_active_users_task() -> None:
     Called daily at 03:00 UTC by APScheduler. Ships backlogged achievement
     unlocks as a single ACHIEVEMENTS_SUMMARY notification per user. Idempotent:
     second run in the same day produces no new notifications.
-
-    Kill-switch: if settings.gamification_reconcile_on_read is False, the task
-    logs and returns immediately. APScheduler still fires the cron — the task
-    body just no-ops.
     """
-    if not settings.gamification_reconcile_on_read:
-        logger.info("scheduled_gamification: kill-switch off, skipping run")
-        return
-
     started_at = datetime.now(timezone.utc)
     engine = None
     total_users = 0

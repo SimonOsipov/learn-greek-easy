@@ -9,7 +9,7 @@ import { describe, it, expect } from 'vitest';
 
 import type { AchievementResponse } from '@/services/xpAPI';
 
-import { normaliseAchievement, sortAchievements, STATUS_FILTERS } from '../AchievementsPage';
+import { sortAchievements, STATUS_FILTERS } from '../AchievementsPage';
 
 const createMockAchievement = (
   overrides: Partial<AchievementResponse> = {}
@@ -109,28 +109,8 @@ describe('Sorting Utility', () => {
   });
 });
 
-describe('Data Integrity — Progress Normalisation', () => {
-  it('should normalise progress to 100 when unlocked is true and progress < 100', () => {
-    const achievement = createMockAchievement({ unlocked: true, progress: 85 });
-    const normalised = normaliseAchievement(achievement);
-    expect(normalised.progress).toBe(100);
-  });
-
-  it('should keep progress at 100 when unlocked is true and progress is already 100', () => {
-    const achievement = createMockAchievement({ unlocked: true, progress: 100 });
-    const normalised = normaliseAchievement(achievement);
-    expect(normalised.progress).toBe(100);
-  });
-
-  it('should not change progress when unlocked is false', () => {
-    const achievement = createMockAchievement({ unlocked: false, progress: 42 });
-    const normalised = normaliseAchievement(achievement);
-    expect(normalised.progress).toBe(42);
-  });
-});
-
 describe('Filter Logic', () => {
-  const normalised = testAchievements.map(normaliseAchievement);
+  const normalised = testAchievements;
 
   describe('Counts', () => {
     it('should return correct count for "All" tab', () => {
@@ -172,9 +152,7 @@ describe('Filter Logic', () => {
     });
 
     it('should handle empty result sets gracefully', () => {
-      const allUnlocked = [createMockAchievement({ id: 'u1', unlocked: true, progress: 100 })].map(
-        normaliseAchievement
-      );
+      const allUnlocked = [createMockAchievement({ id: 'u1', unlocked: true, progress: 100 })];
       expect(allUnlocked.filter(STATUS_FILTERS.locked)).toHaveLength(0);
     });
   });
@@ -184,7 +162,6 @@ describe('"Almost There" Selection', () => {
   // Replicate the page's almostThereAchievements logic
   const selectAlmostThere = (achievements: AchievementResponse[]) =>
     achievements
-      .map(normaliseAchievement)
       .filter((a) => !a.unlocked && a.progress > 0)
       .sort((a, b) => b.progress - a.progress)
       .slice(0, 3);

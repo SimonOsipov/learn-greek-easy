@@ -17,8 +17,6 @@ from src.services.xp_constants import (
     XP_FLASHCARD_CORRECT,
     XP_FLASHCARD_WRONG,
     XP_PERFECT_ANSWER,
-    XP_SESSION_COMPLETE,
-    XP_STREAK_MULTIPLIER,
     get_level_definition,
     get_level_from_xp,
     get_xp_progress_in_level,
@@ -250,38 +248,6 @@ class XPService:
         await self.db.flush()
 
         return XP_FIRST_REVIEW
-
-    async def award_session_complete_xp(self, user_id: UUID) -> int:
-        """Award XP for completing a review session.
-
-        Args:
-            user_id: The user's UUID
-
-        Returns:
-            XP amount awarded
-        """
-        await self.award_xp(user_id, XP_SESSION_COMPLETE, "session_complete")
-        return XP_SESSION_COMPLETE
-
-    async def award_streak_bonus(self, user_id: UUID, streak_days: int) -> int:
-        """Award streak bonus XP.
-
-        Args:
-            user_id: The user's UUID
-            streak_days: Number of consecutive days (must be > 0)
-
-        Returns:
-            XP awarded
-
-        Raises:
-            ValueError: If streak_days <= 0
-        """
-        if streak_days <= 0:
-            raise ValueError("Streak days must be greater than 0")
-
-        amount = XP_STREAK_MULTIPLIER * streak_days
-        await self.award_xp(user_id, amount, "streak_bonus")
-        return amount
 
     async def get_user_xp_stats(self, user_id: UUID) -> UserXPStats:
         """Get comprehensive XP stats for user.

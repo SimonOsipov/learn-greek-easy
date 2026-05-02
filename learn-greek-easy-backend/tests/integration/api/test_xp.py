@@ -1,5 +1,7 @@
 """Integration tests for XP and Achievements API endpoints."""
 
+from unittest.mock import AsyncMock, patch
+
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -60,10 +62,16 @@ class TestXPStatsEndpoint:
         )
         await db_session.commit()
 
-        response = await client.get(
-            "/api/v1/xp/stats",
-            headers=auth_headers,
-        )
+        # Mock reconcile so it doesn't recompute from underlying activity
+        # (which would yield total_xp=0 and overwrite the seeded 500 on read).
+        with patch(
+            "src.api.v1.xp.GamificationReconciler.reconcile",
+            new=AsyncMock(return_value=None),
+        ):
+            response = await client.get(
+                "/api/v1/xp/stats",
+                headers=auth_headers,
+            )
         assert response.status_code == 200
         data = response.json()
 

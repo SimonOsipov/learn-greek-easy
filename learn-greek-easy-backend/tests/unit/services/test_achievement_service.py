@@ -9,13 +9,33 @@ Tests cover:
 
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 
 from src.db.models import UserAchievement
 from src.services.achievement_definitions import AchievementMetric
 from src.services.achievement_service import AchievementService
+from src.services.gamification.types import GamificationSnapshot, MetricValues
+from src.services.gamification.version import GAMIFICATION_PROJECTION_VERSION
+
+
+def make_snapshot(
+    user_id: UUID, metric_overrides: dict[AchievementMetric, int] | None = None
+) -> GamificationSnapshot:
+    """Build a GamificationSnapshot stub with all metrics zeroed out by default."""
+    base: dict[AchievementMetric, int] = {m: 0 for m in AchievementMetric}
+    if metric_overrides:
+        base.update(metric_overrides)
+    return GamificationSnapshot(
+        user_id=user_id,
+        metrics=MetricValues(base),
+        unlocked=frozenset(),
+        total_xp=0,
+        current_level=1,
+        projection_version=GAMIFICATION_PROJECTION_VERSION,
+        computed_at=datetime.now(timezone.utc),
+    )
 
 
 @pytest.fixture
@@ -235,18 +255,23 @@ class TestProgressCalculation:
     async def test_progress_calculation_zero(self, mock_db_session):
         """Should calculate 0% progress when no activity."""
         service = AchievementService(mock_db_session)
+        user_id = uuid4()
 
-        # Mock: no unlocked achievements, no stats
+        # Mock: no unlocked achievements
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = []
-        mock_result.scalar.return_value = 0
-        mock_result.scalar_one.return_value = 0
         mock_db_session.execute.return_value = mock_result
 
-        user_id = uuid4()
-        achievements = await service.get_user_achievements(user_id)
+        stub_snapshot = make_snapshot(user_id)
 
-        # All achievements should have 0% progress
+        with patch(
+            "src.services.gamification.projection.GamificationProjection.compute",
+            new_callable=AsyncMock,
+            return_value=stub_snapshot,
+        ):
+            achievements = await service.get_user_achievements(user_id)
+
+        # All achievements should have 0% progress when all metrics are zero
         for ach in achievements:
             if ach["threshold"] > 0:
                 assert ach["progress"] == 0.0 or ach["current_value"] == 0
@@ -371,448 +396,91 @@ class TestLearningAchievements:
 
 
 # ============================================================================
-# Culture Achievement Tests
+# get_user_achievements projection integration tests
 # ============================================================================
 
 
 @pytest.mark.unit
-class TestCultureAchievements:
-    """Tests for culture-specific achievement checking."""
-
-    @pytest.fixture
-    def mock_culture_stats(self):
-        """Mock culture statistics for testing."""
-        return {
-            "total_answered": 10,
-            "total_correct": 8,
-            "accuracy_percent": 80.0,
-            "current_streak": 5,
-            "history_mastered": False,
-            "geography_mastered": False,
-            "politics_mastered": False,
-            "culture_mastered": False,
-            "traditions_mastered": False,
-            "all_mastered": False,
-            "questions_in_greek": 3,
-            "questions_in_english": 5,
-            "questions_in_russian": 2,
-            "languages_used": {"el", "en"},
-        }
+class TestGetUserAchievementsProjection:
+    """Tests for get_user_achievements() reading from GamificationProjection."""
 
     @pytest.mark.asyncio
-    async def test_native_speaker_achievement_at_50_greek(
-        self, mock_db_session, mock_culture_stats
-    ):
-        """Should unlock 'culture_native_speaker' at 50 questions in Greek."""
-        mock_culture_stats["questions_in_greek"] = 50
+    async def test_progress_reflects_snapshot_metrics(self, mock_db_session):
+        """Should compute progress from snapshot metrics, not legacy stats queries."""
         service = AchievementService(mock_db_session)
-
-        # Mock _get_culture_stats to return our test data
-        with patch.object(service, "_get_culture_stats", new_callable=AsyncMock) as mock_stats:
-            mock_stats.return_value = mock_culture_stats
-
-            # Mock _try_unlock_achievement to return an unlocked achievement
-            with patch.object(
-                service, "_try_unlock_achievement", new_callable=AsyncMock
-            ) as mock_unlock:
-                mock_unlock.return_value = True
-
-                await service.check_culture_achievements(
-                    user_id=uuid4(),
-                    question_id=uuid4(),
-                    is_correct=True,
-                    language="el",
-                    deck_category="history",
-                )
-
-                # Should have tried to unlock native_speaker
-                unlock_calls = mock_unlock.call_args_list
-                called_achievement_ids = [call[0][1].id for call in unlock_calls]
-                assert "culture_native_speaker" in called_achievement_ids
-
-    @pytest.mark.asyncio
-    async def test_native_speaker_not_unlocked_under_50_greek(
-        self, mock_db_session, mock_culture_stats
-    ):
-        """Should NOT unlock 'culture_native_speaker' with less than 50 Greek questions."""
-        mock_culture_stats["questions_in_greek"] = 49
-        service = AchievementService(mock_db_session)
-
-        with patch.object(service, "_get_culture_stats", new_callable=AsyncMock) as mock_stats:
-            mock_stats.return_value = mock_culture_stats
-
-            with patch.object(
-                service, "_try_unlock_achievement", new_callable=AsyncMock
-            ) as mock_unlock:
-                mock_unlock.return_value = True
-
-                await service.check_culture_achievements(
-                    user_id=uuid4(),
-                    question_id=uuid4(),
-                    is_correct=True,
-                    language="el",
-                    deck_category="history",
-                )
-
-                # Should NOT have tried to unlock native_speaker
-                unlock_calls = mock_unlock.call_args_list
-                called_achievement_ids = [call[0][1].id for call in unlock_calls]
-                assert "culture_native_speaker" not in called_achievement_ids
-
-    @pytest.mark.asyncio
-    async def test_polyglot_achievement_all_3_languages(self, mock_db_session, mock_culture_stats):
-        """Should unlock 'culture_polyglot_learner' when all 3 languages used."""
-        mock_culture_stats["languages_used"] = {"el", "en", "ru"}
-        service = AchievementService(mock_db_session)
-
-        with patch.object(service, "_get_culture_stats", new_callable=AsyncMock) as mock_stats:
-            mock_stats.return_value = mock_culture_stats
-
-            with patch.object(
-                service, "_try_unlock_achievement", new_callable=AsyncMock
-            ) as mock_unlock:
-                mock_unlock.return_value = True
-
-                await service.check_culture_achievements(
-                    user_id=uuid4(),
-                    question_id=uuid4(),
-                    is_correct=True,
-                    language="ru",
-                    deck_category="history",
-                )
-
-                unlock_calls = mock_unlock.call_args_list
-                called_achievement_ids = [call[0][1].id for call in unlock_calls]
-                assert "culture_polyglot_learner" in called_achievement_ids
-
-    @pytest.mark.asyncio
-    async def test_polyglot_not_unlocked_with_2_languages(
-        self, mock_db_session, mock_culture_stats
-    ):
-        """Should NOT unlock 'culture_polyglot_learner' with only 2 languages."""
-        mock_culture_stats["languages_used"] = {"el", "en"}  # Missing "ru"
-        service = AchievementService(mock_db_session)
-
-        with patch.object(service, "_get_culture_stats", new_callable=AsyncMock) as mock_stats:
-            mock_stats.return_value = mock_culture_stats
-
-            with patch.object(
-                service, "_try_unlock_achievement", new_callable=AsyncMock
-            ) as mock_unlock:
-                mock_unlock.return_value = True
-
-                await service.check_culture_achievements(
-                    user_id=uuid4(),
-                    question_id=uuid4(),
-                    is_correct=True,
-                    language="en",
-                    deck_category="history",
-                )
-
-                unlock_calls = mock_unlock.call_args_list
-                called_achievement_ids = [call[0][1].id for call in unlock_calls]
-                assert "culture_polyglot_learner" not in called_achievement_ids
-
-    @pytest.mark.asyncio
-    async def test_perfect_culture_score_at_10_streak(self, mock_db_session, mock_culture_stats):
-        """Should unlock 'perfect_culture_score' at 10 consecutive correct from history."""
-        mock_culture_stats["current_streak"] = 10
-        service = AchievementService(mock_db_session)
-
-        with patch.object(service, "_get_culture_stats", new_callable=AsyncMock) as mock_stats:
-            mock_stats.return_value = mock_culture_stats
-
-            with patch.object(
-                service, "_try_unlock_achievement", new_callable=AsyncMock
-            ) as mock_unlock:
-                mock_unlock.return_value = True
-
-                await service.check_culture_achievements(
-                    user_id=uuid4(),
-                    question_id=uuid4(),
-                    is_correct=True,
-                    language="en",
-                    deck_category="history",
-                )
-
-                unlock_calls = mock_unlock.call_args_list
-                called_achievement_ids = [call[0][1].id for call in unlock_calls]
-                assert "perfect_culture_score" in called_achievement_ids
-
-    @pytest.mark.asyncio
-    async def test_streak_not_unlocked_under_10(self, mock_db_session, mock_culture_stats):
-        """Should NOT unlock 'perfect_culture_score' with less than 10 streak."""
-        mock_culture_stats["current_streak"] = 9
-        service = AchievementService(mock_db_session)
-
-        with patch.object(service, "_get_culture_stats", new_callable=AsyncMock) as mock_stats:
-            mock_stats.return_value = mock_culture_stats
-
-            with patch.object(
-                service, "_try_unlock_achievement", new_callable=AsyncMock
-            ) as mock_unlock:
-                mock_unlock.return_value = True
-
-                await service.check_culture_achievements(
-                    user_id=uuid4(),
-                    question_id=uuid4(),
-                    is_correct=True,
-                    language="en",
-                    deck_category="history",
-                )
-
-                unlock_calls = mock_unlock.call_args_list
-                called_achievement_ids = [call[0][1].id for call in unlock_calls]
-                assert "perfect_culture_score" not in called_achievement_ids
-
-    @pytest.mark.asyncio
-    async def test_culture_curious_at_10_questions(self, mock_db_session, mock_culture_stats):
-        """Should unlock 'culture_curious' at 10 questions answered."""
-        mock_culture_stats["total_answered"] = 10
-        service = AchievementService(mock_db_session)
-
-        with patch.object(service, "_get_culture_stats", new_callable=AsyncMock) as mock_stats:
-            mock_stats.return_value = mock_culture_stats
-
-            with patch.object(
-                service, "_try_unlock_achievement", new_callable=AsyncMock
-            ) as mock_unlock:
-                mock_unlock.return_value = True
-
-                await service.check_culture_achievements(
-                    user_id=uuid4(),
-                    question_id=uuid4(),
-                    is_correct=True,
-                    language="en",
-                    deck_category="history",
-                )
-
-                unlock_calls = mock_unlock.call_args_list
-                called_achievement_ids = [call[0][1].id for call in unlock_calls]
-                assert "culture_curious" in called_achievement_ids
-
-    @pytest.mark.asyncio
-    async def test_culture_explorer_at_50_questions(self, mock_db_session, mock_culture_stats):
-        """Should unlock 'culture_explorer' at 50 questions answered."""
-        mock_culture_stats["total_answered"] = 50
-        service = AchievementService(mock_db_session)
-
-        with patch.object(service, "_get_culture_stats", new_callable=AsyncMock) as mock_stats:
-            mock_stats.return_value = mock_culture_stats
-
-            with patch.object(
-                service, "_try_unlock_achievement", new_callable=AsyncMock
-            ) as mock_unlock:
-                mock_unlock.return_value = True
-
-                await service.check_culture_achievements(
-                    user_id=uuid4(),
-                    question_id=uuid4(),
-                    is_correct=True,
-                    language="en",
-                    deck_category="history",
-                )
-
-                unlock_calls = mock_unlock.call_args_list
-                called_achievement_ids = [call[0][1].id for call in unlock_calls]
-                assert "culture_explorer" in called_achievement_ids
-
-    @pytest.mark.asyncio
-    async def test_sharp_mind_at_90_percent_accuracy(self, mock_db_session, mock_culture_stats):
-        """Should unlock 'culture_sharp_mind' at 90% accuracy with 20+ answers."""
-        mock_culture_stats["total_answered"] = 20
-        mock_culture_stats["accuracy_percent"] = 90.0
-        service = AchievementService(mock_db_session)
-
-        with patch.object(service, "_get_culture_stats", new_callable=AsyncMock) as mock_stats:
-            mock_stats.return_value = mock_culture_stats
-
-            with patch.object(
-                service, "_try_unlock_achievement", new_callable=AsyncMock
-            ) as mock_unlock:
-                mock_unlock.return_value = True
-
-                await service.check_culture_achievements(
-                    user_id=uuid4(),
-                    question_id=uuid4(),
-                    is_correct=True,
-                    language="en",
-                    deck_category="history",
-                )
-
-                unlock_calls = mock_unlock.call_args_list
-                called_achievement_ids = [call[0][1].id for call in unlock_calls]
-                assert "culture_sharp_mind" in called_achievement_ids
-
-    @pytest.mark.asyncio
-    async def test_sharp_mind_not_unlocked_low_answers(self, mock_db_session, mock_culture_stats):
-        """Should NOT unlock 'culture_sharp_mind' with less than 20 answers."""
-        mock_culture_stats["total_answered"] = 19
-        mock_culture_stats["accuracy_percent"] = 95.0  # High accuracy but low count
-        service = AchievementService(mock_db_session)
-
-        with patch.object(service, "_get_culture_stats", new_callable=AsyncMock) as mock_stats:
-            mock_stats.return_value = mock_culture_stats
-
-            with patch.object(
-                service, "_try_unlock_achievement", new_callable=AsyncMock
-            ) as mock_unlock:
-                mock_unlock.return_value = True
-
-                await service.check_culture_achievements(
-                    user_id=uuid4(),
-                    question_id=uuid4(),
-                    is_correct=True,
-                    language="en",
-                    deck_category="history",
-                )
-
-                unlock_calls = mock_unlock.call_args_list
-                called_achievement_ids = [call[0][1].id for call in unlock_calls]
-                assert "culture_sharp_mind" not in called_achievement_ids
-
-    @pytest.mark.asyncio
-    async def test_historian_when_history_mastered(self, mock_db_session, mock_culture_stats):
-        """Should unlock 'culture_historian' when history category is mastered."""
-        mock_culture_stats["history_mastered"] = True
-        service = AchievementService(mock_db_session)
-
-        with patch.object(service, "_get_culture_stats", new_callable=AsyncMock) as mock_stats:
-            mock_stats.return_value = mock_culture_stats
-
-            with patch.object(
-                service, "_try_unlock_achievement", new_callable=AsyncMock
-            ) as mock_unlock:
-                mock_unlock.return_value = True
-
-                await service.check_culture_achievements(
-                    user_id=uuid4(),
-                    question_id=uuid4(),
-                    is_correct=True,
-                    language="en",
-                    deck_category="history",
-                )
-
-                unlock_calls = mock_unlock.call_args_list
-                called_achievement_ids = [call[0][1].id for call in unlock_calls]
-                assert "culture_historian" in called_achievement_ids
-
-    @pytest.mark.asyncio
-    async def test_culture_champion_when_all_mastered(self, mock_db_session, mock_culture_stats):
-        """Should unlock 'culture_champion' when all categories mastered."""
-        mock_culture_stats["history_mastered"] = True
-        mock_culture_stats["geography_mastered"] = True
-        mock_culture_stats["politics_mastered"] = True
-        mock_culture_stats["culture_mastered"] = True
-        mock_culture_stats["traditions_mastered"] = True
-        mock_culture_stats["all_mastered"] = True
-        service = AchievementService(mock_db_session)
-
-        with patch.object(service, "_get_culture_stats", new_callable=AsyncMock) as mock_stats:
-            mock_stats.return_value = mock_culture_stats
-
-            with patch.object(
-                service, "_try_unlock_achievement", new_callable=AsyncMock
-            ) as mock_unlock:
-                mock_unlock.return_value = True
-
-                await service.check_culture_achievements(
-                    user_id=uuid4(),
-                    question_id=uuid4(),
-                    is_correct=True,
-                    language="en",
-                    deck_category="history",
-                )
-
-                unlock_calls = mock_unlock.call_args_list
-                called_achievement_ids = [call[0][1].id for call in unlock_calls]
-                assert "culture_champion" in called_achievement_ids
-
-    @pytest.mark.asyncio
-    async def test_no_duplicates_already_unlocked(self, mock_db_session, mock_culture_stats):
-        """Should not unlock already unlocked achievements."""
-        mock_culture_stats["total_answered"] = 10
-        service = AchievementService(mock_db_session)
-
-        with patch.object(service, "_get_culture_stats", new_callable=AsyncMock) as mock_stats:
-            mock_stats.return_value = mock_culture_stats
-
-            # Mock _try_unlock_achievement to return False (already unlocked)
-            with patch.object(
-                service, "_try_unlock_achievement", new_callable=AsyncMock
-            ) as mock_unlock:
-                mock_unlock.return_value = False
-
-                unlocked = await service.check_culture_achievements(
-                    user_id=uuid4(),
-                    question_id=uuid4(),
-                    is_correct=True,
-                    language="en",
-                    deck_category="history",
-                )
-
-                # Should return empty list when already unlocked
-                assert len(unlocked) == 0
-
-
-# ============================================================================
-# _get_user_stats V2 Tests
-# ============================================================================
-
-
-@pytest.mark.unit
-class TestGetUserStatsV2:
-    """Tests for _get_user_stats() querying V2 tables."""
-
-    @pytest.mark.asyncio
-    async def test_get_user_stats_returns_correct_keys(self, mock_db_session):
-        """Should return dict with expected keys."""
-        service = AchievementService(mock_db_session)
+        user_id = uuid4()
 
         mock_result = MagicMock()
-        mock_result.scalar_one.return_value = 0
+        mock_result.scalars.return_value.all.return_value = []
         mock_db_session.execute.return_value = mock_result
 
-        user_id = uuid4()
-        stats = await service._get_user_stats(user_id)
+        stub_snapshot = make_snapshot(
+            user_id,
+            {AchievementMetric.CARDS_LEARNED: 50},
+        )
 
-        assert "cards_learned" in stats
-        assert "cards_mastered" in stats
-        assert "total_reviews" in stats
-        assert "current_streak" in stats
-        assert "longest_streak" in stats
+        with patch(
+            "src.services.gamification.projection.GamificationProjection.compute",
+            new_callable=AsyncMock,
+            return_value=stub_snapshot,
+        ):
+            achievements = await service.get_user_achievements(user_id)
 
-    @pytest.mark.asyncio
-    async def test_get_user_stats_returns_counts_from_db(self, mock_db_session):
-        """Should return correct counts from V2 table queries."""
-        service = AchievementService(mock_db_session)
-
-        # Set up three sequential return values for the three execute calls
-        results = [MagicMock(), MagicMock(), MagicMock()]
-        results[0].scalar_one.return_value = 10  # cards_learned
-        results[1].scalar_one.return_value = 3  # cards_mastered
-        results[2].scalar_one.return_value = 42  # total_reviews
-        mock_db_session.execute.side_effect = results
-
-        user_id = uuid4()
-        stats = await service._get_user_stats(user_id)
-
-        assert stats["cards_learned"] == 10
-        assert stats["cards_mastered"] == 3
-        assert stats["total_reviews"] == 42
-        assert stats["current_streak"] == 0
-        assert stats["longest_streak"] == 0
+        # Find a CARDS_LEARNED achievement and verify progress is non-zero
+        cards_learned_achs = [a for a in achievements if a["current_value"] == 50]
+        assert len(cards_learned_achs) > 0
 
     @pytest.mark.asyncio
-    async def test_get_user_stats_queries_db_three_times(self, mock_db_session):
-        """Should execute exactly 3 DB queries (cards_learned, cards_mastered, total_reviews)."""
+    async def test_unlocked_achievement_has_progress_100(self, mock_db_session):
+        """Should set progress=100 for unlocked achievements regardless of metric value."""
         service = AchievementService(mock_db_session)
+        user_id = uuid4()
+
+        # Mock an unlocked achievement row
+        mock_ua = MagicMock(spec=UserAchievement)
+        mock_ua.achievement_id = "streak_first_flame"
+        mock_ua.unlocked_at = datetime.now(timezone.utc)
 
         mock_result = MagicMock()
-        mock_result.scalar_one.return_value = 0
+        mock_result.scalars.return_value.all.return_value = [mock_ua]
         mock_db_session.execute.return_value = mock_result
 
-        user_id = uuid4()
-        await service._get_user_stats(user_id)
+        # Snapshot shows streak=0 (shouldn't matter since it's unlocked)
+        stub_snapshot = make_snapshot(user_id)
 
-        assert mock_db_session.execute.call_count == 3
+        with patch(
+            "src.services.gamification.projection.GamificationProjection.compute",
+            new_callable=AsyncMock,
+            return_value=stub_snapshot,
+        ):
+            achievements = await service.get_user_achievements(user_id)
+
+        unlocked_ach = next(a for a in achievements if a["id"] == "streak_first_flame")
+        assert unlocked_ach["unlocked"] is True
+        assert unlocked_ach["progress"] == 100.0
+
+    @pytest.mark.asyncio
+    async def test_streak_progress_from_snapshot(self, mock_db_session):
+        """Should read real streak value from snapshot (was always 0 in legacy)."""
+        service = AchievementService(mock_db_session)
+        user_id = uuid4()
+
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = []
+        mock_db_session.execute.return_value = mock_result
+
+        stub_snapshot = make_snapshot(
+            user_id,
+            {AchievementMetric.STREAK_DAYS: 3},
+        )
+
+        with patch(
+            "src.services.gamification.projection.GamificationProjection.compute",
+            new_callable=AsyncMock,
+            return_value=stub_snapshot,
+        ):
+            achievements = await service.get_user_achievements(user_id)
+
+        streak_ach = next(a for a in achievements if a["id"] == "streak_first_flame")
+        assert streak_ach["current_value"] == 3
+        assert streak_ach["progress"] == 100.0  # threshold=3, value=3 → 100%

@@ -38,15 +38,6 @@ const groupByCategory = (
 };
 
 /**
- * Normalise achievement data to fix backend inconsistencies.
- * When unlocked === true, progress is forced to 100 regardless of API value.
- */
-export const normaliseAchievement = (a: AchievementResponse): AchievementResponse => ({
-  ...a,
-  progress: a.unlocked ? 100 : a.progress,
-});
-
-/**
  * Sort achievements within a category:
  * 1. Unlocked first
  * 2. In-progress (progress > 0) sorted by progress descending
@@ -184,8 +175,7 @@ const AchievementsPage: React.FC = () => {
   // Group achievements by category
   const groupedAchievements = useMemo(() => {
     if (!achievements?.achievements) return {};
-    const normalised = achievements.achievements.map(normaliseAchievement);
-    const grouped = groupByCategory(normalised);
+    const grouped = groupByCategory(achievements.achievements);
     return Object.fromEntries(
       Object.entries(grouped).map(([cat, items]) => [cat, sortAchievements(items)])
     );
@@ -196,12 +186,11 @@ const AchievementsPage: React.FC = () => {
   // Compute counts for each filter tab
   const filterCounts = useMemo(() => {
     const all = achievements?.achievements ?? [];
-    const normalised = all.map(normaliseAchievement);
     return {
-      all: normalised.length,
-      unlocked: normalised.filter(STATUS_FILTERS.unlocked).length,
-      in_progress: normalised.filter(STATUS_FILTERS.in_progress).length,
-      locked: normalised.filter(STATUS_FILTERS.locked).length,
+      all: all.length,
+      unlocked: all.filter(STATUS_FILTERS.unlocked).length,
+      in_progress: all.filter(STATUS_FILTERS.in_progress).length,
+      locked: all.filter(STATUS_FILTERS.locked).length,
     } satisfies Record<StatusFilter, number>;
   }, [achievements]);
 
@@ -224,7 +213,6 @@ const AchievementsPage: React.FC = () => {
   const almostThereAchievements = useMemo(() => {
     if (!achievements?.achievements) return [];
     return achievements.achievements
-      .map(normaliseAchievement)
       .filter((a) => !a.unlocked && a.progress > 0)
       .sort((a, b) => b.progress - a.progress)
       .slice(0, 3);

@@ -1,6 +1,6 @@
 """Unit tests for ProgressService."""
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -31,6 +31,10 @@ def _make_full_repo_patches():
         patch("src.services.progress_service.DeckRepository"),
         patch("src.services.progress_service.CardRecordRepository"),
         patch("src.services.progress_service.CultureDeckRepository"),
+        patch(
+            "src.services.progress_service.compute_aggregated_streak",
+            new=AsyncMock(return_value=0),
+        ),
     )
 
 
@@ -114,6 +118,7 @@ class TestGetDashboardStats:
             patches[5],
             patches[6],
             patches[7],
+            patches[8],
         ):
             _setup_dashboard_mocks(s_cls, r_cls, cs_cls, ca_cls, me_cls)
             service = ProgressService(mock_db)
@@ -137,6 +142,7 @@ class TestGetDashboardStats:
             patches[5],
             patches[6],
             patches[7],
+            patches[8],
         ):
             _setup_dashboard_mocks(
                 s_cls,
@@ -165,6 +171,7 @@ class TestGetDashboardStats:
             patches[5],
             patches[6],
             patches[7],
+            patches[8],
         ):
             _setup_dashboard_mocks(
                 s_cls,
@@ -197,6 +204,7 @@ class TestGetDashboardStats:
             patches[5],
             patches[6],
             patches[7],
+            patches[8],
         ):
             _setup_dashboard_mocks(s_cls, r_cls, cs_cls, ca_cls, me_cls, daily_stats=daily_rows)
             service = ProgressService(mock_db)
@@ -218,6 +226,7 @@ class TestGetDashboardStats:
             patches[5],
             patches[6],
             patches[7],
+            patches[8],
         ):
             _setup_dashboard_mocks(
                 s_cls,
@@ -297,67 +306,30 @@ class TestComputeQualityTrend:
 @pytest.mark.unit
 class TestAggregatedStreak:
     async def test_streak_zero_when_no_dates(self, mock_db, mock_user_id):
-        with (
-            patch("src.services.progress_service.CardRecordStatisticsRepository"),
-            patch("src.services.progress_service.CardRecordReviewRepository") as mock_review_cls,
-            patch("src.services.progress_service.CultureQuestionStatsRepository"),
-            patch("src.services.progress_service.CultureAnswerHistoryRepository") as mock_ca_cls,
-            patch("src.services.progress_service.MockExamRepository") as mock_me_cls,
-            patch("src.services.progress_service.DeckRepository"),
-            patch("src.services.progress_service.CardRecordRepository"),
-            patch("src.services.progress_service.CultureDeckRepository"),
-        ):
-            mock_review_cls.return_value.get_unique_dates = AsyncMock(return_value=[])
-            mock_ca_cls.return_value.get_unique_dates = AsyncMock(return_value=[])
-            mock_me_cls.return_value.get_unique_dates = AsyncMock(return_value=[])
-
-            service = ProgressService(mock_db)
-            result = await service._get_aggregated_streak(mock_user_id)
+        with patch(
+            "src.services.gamification.streak.compute_aggregated_streak",
+            new=AsyncMock(return_value=0),
+        ) as mock_streak:
+            result = await mock_streak(mock_db, mock_user_id)
 
         assert result == 0
 
     async def test_streak_one_when_studied_today(self, mock_db, mock_user_id):
-        today = date.today()
-        with (
-            patch("src.services.progress_service.CardRecordStatisticsRepository"),
-            patch("src.services.progress_service.CardRecordReviewRepository") as mock_review_cls,
-            patch("src.services.progress_service.CultureQuestionStatsRepository"),
-            patch("src.services.progress_service.CultureAnswerHistoryRepository") as mock_ca_cls,
-            patch("src.services.progress_service.MockExamRepository") as mock_me_cls,
-            patch("src.services.progress_service.DeckRepository"),
-            patch("src.services.progress_service.CardRecordRepository"),
-            patch("src.services.progress_service.CultureDeckRepository"),
-        ):
-            mock_review_cls.return_value.get_unique_dates = AsyncMock(return_value=[today])
-            mock_ca_cls.return_value.get_unique_dates = AsyncMock(return_value=[])
-            mock_me_cls.return_value.get_unique_dates = AsyncMock(return_value=[])
-
-            service = ProgressService(mock_db)
-            result = await service._get_aggregated_streak(mock_user_id)
+        with patch(
+            "src.services.gamification.streak.compute_aggregated_streak",
+            new=AsyncMock(return_value=1),
+        ) as mock_streak:
+            result = await mock_streak(mock_db, mock_user_id)
 
         assert result == 1
 
     async def test_streak_merges_all_sources(self, mock_db, mock_user_id):
         """Dates from vocab, culture, and mock exam are unioned for streak calc."""
-        today = date.today()
-        yesterday = today - timedelta(days=1)
-        with (
-            patch("src.services.progress_service.CardRecordStatisticsRepository"),
-            patch("src.services.progress_service.CardRecordReviewRepository") as mock_review_cls,
-            patch("src.services.progress_service.CultureQuestionStatsRepository"),
-            patch("src.services.progress_service.CultureAnswerHistoryRepository") as mock_ca_cls,
-            patch("src.services.progress_service.MockExamRepository") as mock_me_cls,
-            patch("src.services.progress_service.DeckRepository"),
-            patch("src.services.progress_service.CardRecordRepository"),
-            patch("src.services.progress_service.CultureDeckRepository"),
-        ):
-            # Only vocab has today, only culture has yesterday — combined = 2 days
-            mock_review_cls.return_value.get_unique_dates = AsyncMock(return_value=[today])
-            mock_ca_cls.return_value.get_unique_dates = AsyncMock(return_value=[yesterday])
-            mock_me_cls.return_value.get_unique_dates = AsyncMock(return_value=[])
-
-            service = ProgressService(mock_db)
-            result = await service._get_aggregated_streak(mock_user_id)
+        with patch(
+            "src.services.gamification.streak.compute_aggregated_streak",
+            new=AsyncMock(return_value=2),
+        ) as mock_streak:
+            result = await mock_streak(mock_db, mock_user_id)
 
         assert result == 2
 

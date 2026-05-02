@@ -4,7 +4,7 @@ Scenario:
 - User has one card with status=LEARNING (cards_learned=1 in projection).
 - The `learning_first_word` achievement should be unlocked but no UserAchievement
   row exists (simulating a stuck / missed write).
-- GET /api/v1/xp/achievements with flags on + percent=100 must:
+- GET /api/v1/xp/achievements must:
   1. Return `learning_first_word` with unlocked=True.
   2. Create the UserAchievement row in the DB.
   3. Be idempotent on a second call (no duplicate row).
@@ -20,7 +20,6 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.config import settings
 from src.db.models import (
     Achievement,
     AchievementCategory,
@@ -136,11 +135,10 @@ class TestReconcileSelfHeal:
         auth_headers: dict,
         test_user,
         db_session: AsyncSession,
-        monkeypatch: pytest.MonkeyPatch,
         card_record_for_heal: CardRecord,
         achievement_catalog_learning_first_word: Achievement,
     ) -> None:
-        """Stuck achievement is created by GET /xp/achievements when flags are on.
+        """Stuck achievement is created by GET /xp/achievements via unconditional reconcile.
 
         Setup: user has cards_learned=1 (one LEARNING card) but no
         UserAchievement row for learning_first_word (stuck state).
@@ -171,10 +169,6 @@ class TestReconcileSelfHeal:
         assert (
             result.scalar_one_or_none() is None
         ), "Pre-condition failed: UserAchievement should not exist before test"
-
-        # Enable flags
-        monkeypatch.setattr(settings, "gamification_reconcile_on_read", True)
-        monkeypatch.setattr(settings, "gamification_reconcile_rollout_percent", 100)
 
         # Call the endpoint — reconcile should fire and self-heal
         response = await client.get("/api/v1/xp/achievements", headers=auth_headers)
