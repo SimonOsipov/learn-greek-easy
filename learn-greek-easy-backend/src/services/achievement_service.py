@@ -7,7 +7,6 @@ This service handles:
 - Notification tracking for celebration UI
 """
 
-import asyncio
 from typing import Optional, TypedDict
 from uuid import UUID
 
@@ -75,11 +74,12 @@ class AchievementService:
         # Late import to avoid circular dependency
         from src.services.gamification.projection import GamificationProjection
 
-        # Fetch unlocked rows + projection snapshot in parallel
-        unlocked_result, snapshot = await asyncio.gather(
-            self.db.execute(select(UserAchievement).where(UserAchievement.user_id == user_id)),
-            GamificationProjection.compute(self.db, user_id),
+        # Fetch unlocked rows then projection snapshot (sequential — AsyncSession is not
+        # safe to share across concurrent coroutines; gather would raise IllegalStateChangeError)
+        unlocked_result = await self.db.execute(
+            select(UserAchievement).where(UserAchievement.user_id == user_id)
         )
+        snapshot = await GamificationProjection.compute(self.db, user_id)
         unlocked = {ua.achievement_id: ua for ua in unlocked_result.scalars().all()}
 
         achievements: list[AchievementProgress] = []

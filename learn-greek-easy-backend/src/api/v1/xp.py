@@ -69,6 +69,7 @@ async def get_xp_stats(
     try:
         await GamificationReconciler.reconcile(db, current_user.id, mode=ReconcileMode.QUIET)
     except Exception as exc:
+        await db.rollback()
         logger.warning(
             "gamification.reconcile.error",
             event="gamification.reconcile.error",
@@ -154,6 +155,7 @@ async def get_achievements(
     try:
         await GamificationReconciler.reconcile(db, current_user.id, mode=ReconcileMode.QUIET)
     except Exception as exc:
+        await db.rollback()
         logger.warning(
             "gamification.reconcile.error",
             event="gamification.reconcile.error",
