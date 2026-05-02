@@ -139,6 +139,7 @@ class NotificationType(str, enum.Enum):
     """Types of in-app notifications."""
 
     ACHIEVEMENT_UNLOCKED = "achievement_unlocked"
+    ACHIEVEMENTS_SUMMARY = "achievements_summary"
     ADMIN_ANNOUNCEMENT = "admin_announcement"
     DAILY_GOAL_COMPLETE = "daily_goal_complete"
     LEVEL_UP = "level_up"

@@ -78,6 +78,7 @@ freezegun = "^1.5.5"
 boto3-stubs = {extras = ["s3"], version = "^1.42.15"}
 python-jose = {extras = ["cryptography"], version = "^3.3.0"}
 hypothesis = "^6.152.4"
+pytest-timeout = "^2.4.0"
 
 [build-system]
 requires = ["poetry-core"]

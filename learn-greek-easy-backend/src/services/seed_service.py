@@ -3164,6 +3164,81 @@ class SeedService:
             "projection_version_reset": projection_version_reset,
         }
 
+    async def reset_user_to_near_threshold(
+        self,
+        user_id: UUID,
+        achievement_id: str,
+    ) -> dict[str, Any]:
+        """Reset user state so a single review will cross the achievement threshold.
+
+        For the e2e_learner + learning_first_word case (threshold=1):
+        - Delete UserAchievement row (so it's not unlocked)
+        - Delete CardRecordStatistics rows (so all V2-deck cards appear as "new")
+        - Delete CardRecordReview rows (so cards_learned == 0)
+        - Reset UserXP.projection_version = 0 (so reconcile re-runs full projection)
+
+        Deleting CardRecordStatistics is essential: get_new_cards returns only cards
+        with NO statistics row. Without this step, cards that have a future
+        next_review_date from prior seed reviews won't be due, leaving the practice
+        queue empty and causing E2E tests to fail with "No new/due cards found".
+
+        Args:
+            user_id: User whose gamification state to reset.
+            achievement_id: Achievement to un-unlock.
+
+        Returns:
+            dict with ok, achievement_id, current_value, threshold, reviews_truncated.
+
+        Raises:
+            RuntimeError: If seeding not allowed.
+            ValueError: If achievement_id is not a known achievement.
+        """
+        self._check_can_seed()
+
+        # Reject unknown IDs early so callers get a clear 400 error.
+        ach_def = next(
+            (a for a in ACHIEVEMENT_DEFS if a.id == achievement_id),
+            None,
+        )
+        if ach_def is None:
+            raise ValueError(f"Unknown achievement_id: {achievement_id!r}")
+        threshold = ach_def.threshold
+
+        # 1. Delete UserAchievement row
+        await self.db.execute(
+            delete(UserAchievement).where(
+                UserAchievement.user_id == user_id,
+                UserAchievement.achievement_id == achievement_id,
+            )
+        )
+
+        # 1.5. Delete CardRecordStatistics rows so all cards in the V2 deck appear as "new"
+        #      (get_new_cards returns cards with NO statistics row; without this, cards
+        #      stuck in LEARNING/MASTERED state with future next_review_date won't be due).
+        await self.db.execute(
+            delete(CardRecordStatistics).where(CardRecordStatistics.user_id == user_id)
+        )
+
+        # 2. Delete all CardRecordReview rows for the user (so cards_learned == 0)
+        reviews_result = await self.db.execute(
+            delete(CardRecordReview).where(CardRecordReview.user_id == user_id)
+        )
+        reviews_truncated = int(reviews_result.rowcount) if reviews_result.rowcount else 0  # type: ignore[attr-defined]
+
+        # 3. Reset UserXP.projection_version to 0 — reconciler will recompute full projection
+        xp_result = await self.db.execute(select(UserXP).where(UserXP.user_id == user_id))
+        user_xp = xp_result.scalar_one_or_none()
+        if user_xp is not None:
+            user_xp.projection_version = 0
+
+        return {
+            "ok": True,
+            "achievement_id": achievement_id,
+            "current_value": 0,
+            "threshold": threshold,
+            "reviews_truncated": reviews_truncated,
+        }
+
     async def seed_user_xp(
         self,
         user_id: UUID,

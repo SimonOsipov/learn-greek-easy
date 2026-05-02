@@ -112,24 +112,13 @@ async def _emit_level_up(db: AsyncSession, user_id: UUID, new_level: int) -> Non
     )
 
 
-async def _emit_summary_stub(
+async def _emit_achievements_summary(
     db: AsyncSession,
     user_id: UUID,
     new_ids: list[str],
 ) -> None:
-    """STUB for SUMMARY mode achievement batching.
-
-    Full implementation deferred to GAMIF-05-01 (notification renderer +
-    summary enum value).  For now, log a warning so callers know the mode
-    was requested but not fully handled.
-    """
-    logger.warning(
-        "SUMMARY mode requested with {count} unlocks but full implementation "
-        "deferred to GAMIF-05-01",
-        count=len(new_ids),
-        user_id=str(user_id),
-        achievement_ids=new_ids,
-    )
+    """Emit a single ACHIEVEMENTS_SUMMARY notification for N unlocks (SUMMARY mode)."""
+    await NotificationService(db).notify_achievements_summary(user_id, new_ids)
 
 
 # ---------------------------------------------------------------------------
@@ -198,10 +187,14 @@ class GamificationReconciler:
         old_level: int = user_xp.current_level
 
         # 3. Diff: achievements present in projection but absent from DB
-        new_ids: list[str] = sorted(snapshot.unlocked - existing_unlocks)
+        candidate_ids: list[str] = sorted(snapshot.unlocked - existing_unlocks)
 
-        # 4. Write achievements — idempotent via on_conflict_do_nothing
-        for ach_id in new_ids:
+        # 4. Write achievements — RETURNING limits notifications to rows actually inserted.
+        # Two concurrent reconciles can both compute the same candidate_ids; using RETURNING
+        # ensures only the reconcile that won the INSERT emits notifications (the loser gets
+        # an empty returned set from on_conflict_do_nothing).
+        actually_inserted: list[str] = []
+        for ach_id in candidate_ids:
             stmt = (
                 pg_insert(UserAchievement)
                 .values(
@@ -212,8 +205,14 @@ class GamificationReconciler:
                     # into the pg_insert values here.
                 )
                 .on_conflict_do_nothing(index_elements=["user_id", "achievement_id"])
+                .returning(UserAchievement.achievement_id)
             )
-            await db.execute(stmt)
+            result = await db.execute(stmt)
+            returned_id = result.scalar_one_or_none()
+            if returned_id is not None:
+                actually_inserted.append(returned_id)
+
+        new_ids: list[str] = actually_inserted
 
         # 5. Write XP absolutely (convergent: running twice yields the same value)
         user_xp.total_xp = snapshot.total_xp
@@ -227,7 +226,7 @@ class GamificationReconciler:
         # 6. Detect level-up
         leveled_up: bool = snapshot.current_level > old_level
 
-        # 7. Dispatch notifications by mode
+        # 7. Dispatch notifications by mode — driven by actually-inserted IDs only.
         if mode == ReconcileMode.IMMEDIATE:
             for ach_id in new_ids:
                 await _emit_achievement_notification(db, user_id, ach_id)
@@ -235,10 +234,8 @@ class GamificationReconciler:
                 await _emit_level_up(db, user_id, snapshot.current_level)
 
         elif mode == ReconcileMode.SUMMARY:
-            # Achievement notifications are batched (stub logs warning, GAMIF-05-01 completes)
             if new_ids:
-                await _emit_summary_stub(db, user_id, new_ids)
-            # Level-up is still emitted individually in SUMMARY mode
+                await _emit_achievements_summary(db, user_id, new_ids)
             if leveled_up:
                 await _emit_level_up(db, user_id, snapshot.current_level)
 

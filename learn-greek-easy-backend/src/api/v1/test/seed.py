@@ -25,11 +25,14 @@ from src.core.exceptions import (
     SeedForbiddenException,
     SeedUnauthorizedException,
 )
+from src.core.logging import get_logger
 from src.db.dependencies import get_db
 from src.db.models import NewsItem
 from src.repositories.user import UserRepository
 from src.schemas.seed import SeedRequest, SeedResultResponse, SeedStatusResponse
 from src.services.seed_service import SeedService
+
+logger = get_logger(__name__)
 
 
 class TestCreateUserRequest(BaseModel):
@@ -852,4 +855,89 @@ async def gamification_reset_stuck_state(
         success=result["success"],
         deleted_rows=result["deleted_rows"],
         projection_version_reset=result["projection_version_reset"],
+    )
+
+
+class GamificationNearThresholdRequest(BaseModel):
+    """Request body for resetting a user to the near-threshold gamification state."""
+
+    email: EmailStr
+    achievement_id: str
+
+
+class GamificationNearThresholdResponse(BaseModel):
+    """Response for gamification near-threshold reset."""
+
+    ok: bool
+    achievement_id: str
+    current_value: int
+    threshold: int
+    reviews_truncated: int
+
+
+@router.post(
+    "/gamification-near-threshold",
+    response_model=GamificationNearThresholdResponse,
+    summary="Reset user to gamification near-threshold state",
+    description=(
+        "Idempotent test-only endpoint for GAMIF-05-06 IMMEDIATE-mode E2E testing. "
+        "Resets the learner so that cards_learned == 0 (one review away from unlocking "
+        "the given achievement), allowing a single card review to cross the threshold "
+        "and fire the achievement toast via the IMMEDIATE reconcile path."
+    ),
+    dependencies=[Depends(verify_seed_access)],
+)
+async def gamification_near_threshold(
+    body: GamificationNearThresholdRequest,
+    db: AsyncSession = Depends(get_db),
+) -> GamificationNearThresholdResponse:
+    """Reset a user to the near-threshold gamification state for IMMEDIATE-mode E2E testing.
+
+    Args:
+        body: email + achievement_id to target
+        db: Database session
+
+    Returns:
+        GamificationNearThresholdResponse with operation details
+
+    Raises:
+        404: If no user found with the given email
+    """
+    user_repo = UserRepository(db)
+    user = await user_repo.get_by_email(body.email)
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail=f"User not found: {body.email}",
+        )
+
+    service = SeedService(db)
+    try:
+        result = await service.reset_user_to_near_threshold(
+            user_id=user.id,
+            achievement_id=body.achievement_id,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        # Log the full traceback so CI logs reveal the root cause of any 500.
+        logger.exception(
+            "gamification-near-threshold seed failed unexpectedly",
+            extra={
+                "event": "seed.near_threshold.error",
+                "user_id": str(user.id),
+                "achievement_id": body.achievement_id,
+                "error_type": type(exc).__name__,
+                "error_message": str(exc),
+            },
+        )
+        raise
+    await db.commit()
+
+    return GamificationNearThresholdResponse(
+        ok=result["ok"],
+        achievement_id=result["achievement_id"],
+        current_value=result["current_value"],
+        threshold=result["threshold"],
+        reviews_truncated=result["reviews_truncated"],
     )

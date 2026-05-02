@@ -1,10 +1,11 @@
 from datetime import date
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 
 from src.db.models import CardRecord, CardRecordStatistics, CardStatus, CardType
+from src.services.gamification.types import ReconcileMode
 from src.services.v2_sm2_service import V2SM2Service
 
 
@@ -283,3 +284,151 @@ class TestV2SM2ServiceGetReviewMessage:
             quality=3, is_first_review=False, was_mastered=False, is_now_mastered=False
         )
         assert result is None
+
+
+def _make_side_effects_context(user_id: UUID) -> dict:
+    """Build a minimal context dict for _run_persist_review_side_effects."""
+    return {
+        "user_id": str(user_id),
+        "card_record_id": str(uuid4()),
+        "quality": 4,
+        "time_taken": 5,
+        "new_status_value": "learning",
+        "deck_id": str(uuid4()),
+        "card_type_value": "meaning_el_to_en",
+        "new_repetitions": 1,
+    }
+
+
+@pytest.mark.unit
+@pytest.mark.sm2
+class TestRunPersistReviewSideEffects:
+    """Tests for _run_persist_review_side_effects after GAMIF-05-03 cutover."""
+
+    @pytest.mark.asyncio
+    async def test_reconcile_called_once_with_immediate_mode(self, mock_db_session):
+        """Verify that GamificationReconciler.reconcile is called exactly once
+        with IMMEDIATE mode during a review persist.
+
+        The reconciler is imported lazily inside _run_persist_review_side_effects,
+        so we patch at the source module level to intercept the lazy import.
+        """
+        user_id = uuid4()
+        context = _make_side_effects_context(user_id)
+        service = V2SM2Service(mock_db_session)
+
+        mock_reconcile = AsyncMock()
+
+        with (
+            patch(
+                "src.services.gamification.reconciler.GamificationReconciler.reconcile",
+                mock_reconcile,
+            ),
+            patch.object(service, "_check_daily_goal_sync", new=AsyncMock()),
+        ):
+            await service._run_persist_review_side_effects(context)
+
+        mock_reconcile.assert_called_once_with(
+            mock_db_session, UUID(context["user_id"]), mode=ReconcileMode.IMMEDIATE
+        )
+
+    @pytest.mark.asyncio
+    async def test_reconcile_failure_does_not_break_side_effects(self, mock_db_session):
+        """When reconcile raises, the error must be swallowed and a warning logged.
+        The _check_daily_goal_sync and analytics logger must still execute."""
+        user_id = uuid4()
+        context = _make_side_effects_context(user_id)
+        service = V2SM2Service(mock_db_session)
+
+        mock_daily_goal = AsyncMock()
+
+        with (
+            patch(
+                "src.services.gamification.reconciler.GamificationReconciler.reconcile",
+                side_effect=RuntimeError("DB exploded"),
+            ),
+            patch.object(service, "_check_daily_goal_sync", new=mock_daily_goal),
+            patch("src.services.v2_sm2_service.logger") as mock_logger,
+        ):
+            # Must not raise
+            await service._run_persist_review_side_effects(context)
+
+        # Daily goal still called after reconciler failure
+        mock_daily_goal.assert_called_once_with(UUID(context["user_id"]), context["user_id"])
+
+        # Warning with structured fields was emitted.
+        # CR fix A3 moved bare kwargs into extra={...} dict to match the rest of the file.
+        # So warning_kwargs == {"extra": {"event": "...", "endpoint": "...", ...}}
+        mock_logger.warning.assert_called_once()
+        warning_args, warning_kwargs = mock_logger.warning.call_args
+        extra = warning_kwargs.get("extra", {})
+        assert warning_args[0] == "gamification.reconcile.error"
+        assert extra.get("event") == "gamification.reconcile.error"
+        assert extra.get("endpoint") == "v2_sm2_service.persist_review"
+        assert extra.get("error_type") == "RuntimeError"
+        assert "DB exploded" in extra.get("error_message", "")
+
+    @pytest.mark.asyncio
+    async def test_daily_goal_still_called_after_successful_reconcile(self, mock_db_session):
+        """_check_daily_goal_sync must be called with correct args even on success."""
+        user_id = uuid4()
+        context = _make_side_effects_context(user_id)
+        service = V2SM2Service(mock_db_session)
+
+        mock_daily_goal = AsyncMock()
+
+        with (
+            patch(
+                "src.services.gamification.reconciler.GamificationReconciler.reconcile",
+                new=AsyncMock(),
+            ),
+            patch.object(service, "_check_daily_goal_sync", new=mock_daily_goal),
+        ):
+            await service._run_persist_review_side_effects(context)
+
+        mock_daily_goal.assert_called_once_with(UUID(context["user_id"]), context["user_id"])
+
+    @pytest.mark.asyncio
+    async def test_analytics_still_emitted(self, mock_db_session):
+        """ANALYTICS: review_completed logger.info must still fire."""
+        user_id = uuid4()
+        context = _make_side_effects_context(user_id)
+        service = V2SM2Service(mock_db_session)
+
+        with (
+            patch(
+                "src.services.gamification.reconciler.GamificationReconciler.reconcile",
+                new=AsyncMock(),
+            ),
+            patch.object(service, "_check_daily_goal_sync", new=AsyncMock()),
+            patch("src.services.v2_sm2_service.logger") as mock_logger,
+        ):
+            await service._run_persist_review_side_effects(context)
+
+        mock_logger.info.assert_called_once()
+        info_args, info_kwargs = mock_logger.info.call_args
+        assert info_args[0] == "ANALYTICS: review_completed"
+        extra = info_kwargs.get("extra", {})
+        assert extra.get("event_type") == "review_completed"
+
+    @pytest.mark.asyncio
+    async def test_achievement_service_not_called(self, mock_db_session):
+        """AchievementService.check_and_unlock_achievements must never be called
+        from this path (achievement loop has been deleted)."""
+        user_id = uuid4()
+        context = _make_side_effects_context(user_id)
+        service = V2SM2Service(mock_db_session)
+
+        with (
+            patch(
+                "src.services.gamification.reconciler.GamificationReconciler.reconcile",
+                new=AsyncMock(),
+            ),
+            patch.object(service, "_check_daily_goal_sync", new=AsyncMock()),
+            patch(
+                "src.services.achievement_service.AchievementService.check_and_unlock_achievements"
+            ) as mock_achievements,
+        ):
+            await service._run_persist_review_side_effects(context)
+
+        mock_achievements.assert_not_called()

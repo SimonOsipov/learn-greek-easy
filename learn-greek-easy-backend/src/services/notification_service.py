@@ -190,6 +190,55 @@ class NotificationService:
             extra_data={"achievement_id": achievement_id, "xp_reward": xp_reward},
         )
 
+    async def notify_achievements_summary(
+        self,
+        user_id: UUID,
+        achievement_ids: list[str],
+    ) -> Notification | None:
+        """Single summary notification for N unlocks. Used by SUMMARY-mode reconciles.
+
+        Returns None if achievement_ids is empty (no-op) or all IDs are unknown.
+        """
+        if not achievement_ids:
+            return None
+
+        # Local import to avoid module-level dep on gamification package
+        from src.services.achievement_definitions import get_achievement_by_id
+
+        defs = [get_achievement_by_id(aid) for aid in achievement_ids]
+        known = [(aid, d) for aid, d in zip(achievement_ids, defs) if d is not None]
+        if not known:
+            logger.warning(
+                "notify_achievements_summary: no known defs",
+                extra={"user_id": str(user_id), "achievement_ids": achievement_ids},
+            )
+            return None
+
+        count = len(known)
+        total_xp = sum(d.xp_reward for _, d in known)
+
+        if count == 1:
+            _, d = known[0]
+            title = f"Achievement Unlocked: {d.name}"
+            message = f"You earned {d.xp_reward} XP while you were away."
+        else:
+            title = f"{count} Achievements Unlocked!"
+            message = f"You unlocked {count} achievements and earned {total_xp} XP."
+
+        return await self.create_notification(
+            user_id=user_id,
+            type=NotificationType.ACHIEVEMENTS_SUMMARY,
+            title=title,
+            message=message,
+            icon="trophy",
+            action_url="/achievements",
+            extra_data={
+                "achievement_ids": [aid for aid, _ in known],
+                "count": count,
+                "total_xp": total_xp,
+            },
+        )
+
     async def notify_daily_goal_complete(
         self,
         user_id: UUID,

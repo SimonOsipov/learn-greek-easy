@@ -121,6 +121,7 @@ async def award_flashcard_xp_task(
             await engine.dispose()
 
 
+# DEPRECATED in Phase 5 (GAMIF-05): superseded by GamificationReconciler
 async def _run_achievement_checks(session: Any, user_id: UUID) -> int:
     """Run achievement checks for a user and commit any unlocks. Returns unlock count."""
     from src.services.achievement_definitions import AchievementMetric
@@ -151,7 +152,8 @@ async def check_achievements_task(user_id: UUID, db_url: str) -> None:
     """Check if user has earned new achievements after a review.
 
     This task runs asynchronously after the review response is sent.
-    It checks all achievement thresholds and logs any new unlocks.
+    It delegates to GamificationReconciler.reconcile(IMMEDIATE) to compute
+    the full projection and write convergent gamification state.
 
     The task creates its own database connection to avoid issues with
     connection sharing across async contexts.
@@ -165,13 +167,16 @@ async def check_achievements_task(user_id: UUID, db_url: str) -> None:
         return
 
     logger.info(
-        "Starting achievement check",
-        extra={"user_id": str(user_id), "task": "check_achievements"},
+        "Starting reconcile (IMMEDIATE) from check_achievements_task",
+        extra={
+            "user_id": str(user_id),
+            "task": "check_achievements",
+            "mode": "IMMEDIATE",
+        },
     )
 
     engine = None
     try:
-        # Create dedicated engine for this background task
         engine = create_async_engine(
             db_url,
             pool_pre_ping=True,
@@ -183,10 +188,20 @@ async def check_achievements_task(user_id: UUID, db_url: str) -> None:
 
         session = async_session_factory()
         try:
-            unlocked_count = await _run_achievement_checks(session, user_id)
+            from src.services.gamification.reconciler import GamificationReconciler
+            from src.services.gamification.types import ReconcileMode
+
+            result = await GamificationReconciler.reconcile(
+                session, user_id, ReconcileMode.IMMEDIATE
+            )
+            await session.commit()
             logger.info(
-                "Achievement check complete",
-                extra={"user_id": str(user_id), "unlocked_count": unlocked_count},
+                "Reconcile complete",
+                extra={
+                    "user_id": str(user_id),
+                    "new_unlocks": result.new_unlocks,
+                    "leveled_up": result.leveled_up,
+                },
             )
         finally:
             await session.close()
@@ -210,7 +225,7 @@ async def check_achievements_task(user_id: UUID, db_url: str) -> None:
 
     except Exception as e:
         logger.error(
-            "Achievement check failed",
+            "Reconcile failed in check_achievements_task",
             extra={"user_id": str(user_id), "error": str(e)},
             exc_info=True,
         )
@@ -502,7 +517,7 @@ async def _run_review_side_effects(
     reviews_before: int,
     db_url: str,
 ) -> None:
-    """Run non-critical side effects (XP, daily goal, achievements, analytics)."""
+    """Run non-critical side effects (XP, daily goal, reconcile, analytics)."""
     from datetime import datetime, timezone
 
     # Award XP
@@ -545,7 +560,7 @@ async def _run_review_side_effects(
         if engine2 is not None:
             await engine2.dispose()
 
-    # Check achievements
+    # Calls GamificationReconciler via the wrapper (Phase 6 will inline this).
     try:
         await check_achievements_task(user_id=UUID(user_id), db_url=db_url)
     except Exception as e:
@@ -895,7 +910,7 @@ async def _check_and_notify_daily_goal(
 
 
 # DEPRECATED in Phase 5 (GAMIF-05): replaced by GamificationReconciler
-async def persist_culture_answer_task(
+async def persist_culture_answer_task(  # noqa: C901
     user_id: UUID,
     question_id: UUID,
     selected_option: int,
@@ -923,7 +938,7 @@ async def persist_culture_answer_task(
     4. Award XP via XPService.award_culture_answer_xp()
     5. Award first review bonus via XPService.award_first_review_bonus()
     6. Check daily goal via _check_and_notify_daily_goal()
-    7. Check achievements via AchievementService.check_culture_achievements()
+    7. Reconcile gamification state via GamificationReconciler.reconcile(IMMEDIATE)
 
     The task creates its own database connection to avoid issues with
     connection sharing across async contexts.
@@ -981,7 +996,8 @@ async def persist_culture_answer_task(
 
             from src.db.models import CardStatus, CultureAnswerHistory, CultureQuestionStats
             from src.repositories.culture_question_stats import CultureQuestionStatsRepository
-            from src.services.achievement_service import AchievementService
+            from src.services.gamification.reconciler import GamificationReconciler
+            from src.services.gamification.types import ReconcileMode
             from src.services.xp_service import XPService
 
             # Step 1: Get or create stats
@@ -1076,24 +1092,34 @@ async def persist_culture_answer_task(
                 culture_answers_before=culture_answers_before,
             )
 
-            # Step 7: Check achievements
-            achievement_service = AchievementService(session)
-            unlocked = await achievement_service.check_culture_achievements(
-                user_id=user_id,
-                question_id=question_id,
-                is_correct=is_correct,
-                language=language,
-                deck_category=deck_category,
-            )
-
-            if unlocked:
-                logger.info(
-                    "Achievements unlocked in persistence task",
+            # Step 7: Reconcile gamification state (IMMEDIATE emits per-achievement
+            # notifications inline). Replaces legacy check_culture_achievements;
+            # legacy method removed in Phase 6 (GAMIF-06).
+            try:
+                reconcile_result = await GamificationReconciler.reconcile(
+                    session, user_id, ReconcileMode.IMMEDIATE
+                )
+                if reconcile_result.new_unlocks:
+                    logger.info(
+                        "Achievements unlocked via reconciler in culture persistence",
+                        extra={
+                            "user_id": str(user_id),
+                            "unlocked_count": len(reconcile_result.new_unlocks),
+                            "achievement_ids": reconcile_result.new_unlocks,
+                            "leveled_up": reconcile_result.leveled_up,
+                        },
+                    )
+            except Exception as reconcile_err:
+                # Isolate reconciler failures: persistence + XP + daily goal already
+                # ran. Re-raising would lose the answer record. Log + continue.
+                logger.error(
+                    "Reconciler failed in culture persistence task",
                     extra={
                         "user_id": str(user_id),
-                        "unlocked_count": len(unlocked),
-                        "achievement_ids": [a["id"] for a in unlocked],
+                        "question_id": str(question_id),
+                        "error": str(reconcile_err),
                     },
+                    exc_info=True,
                 )
 
             # Commit all changes

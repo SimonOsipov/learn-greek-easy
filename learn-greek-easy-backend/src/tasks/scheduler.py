@@ -142,6 +142,15 @@ def setup_scheduler() -> None:
         name="Daily Trial Expiration",
     )
 
+    from src.tasks.scheduled_gamification import reconcile_active_users_task
+
+    _scheduler.add_job(
+        reconcile_active_users_task,
+        CronTrigger(hour=3, minute=0),
+        id="gamification_reconcile_active_users",
+        name="Daily Gamification Reconcile (SUMMARY, active users)",
+    )
+
     _scheduler.start()
     logger.info(f"APScheduler started with {len(_scheduler.get_jobs())} jobs")
 
