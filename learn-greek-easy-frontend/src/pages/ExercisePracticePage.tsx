@@ -318,18 +318,20 @@ export const ExercisePracticePage = () => {
         exitTestId="exercise-practice-close-button"
         rightSlot={
           <>
-            <QuestionLanguageSelector
-              value={language}
-              onChange={(lang) => setLanguage(lang, 'exercise')}
-              variant="pill"
-              size="sm"
-            />
             <LanguageSwitcher variant="icon" />
             <ThemeSwitcher />
           </>
         }
       />
       <div className="mx-auto w-full max-w-lg px-4 pt-4">
+        <div className="mb-2 flex justify-end">
+          <QuestionLanguageSelector
+            value={language}
+            onChange={(lang) => setLanguage(lang, 'exercise')}
+            variant="pill"
+            size="sm"
+          />
+        </div>
         <ProgressIndicator
           current={Math.min(currentIndex + 1, queue.length)}
           total={queue.length}
