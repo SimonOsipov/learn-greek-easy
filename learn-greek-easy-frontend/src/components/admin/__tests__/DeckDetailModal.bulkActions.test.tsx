@@ -72,7 +72,6 @@ const createV2Deck = (overrides?: Partial<UnifiedDeckItem>): UnifiedDeckItem => 
   is_active: true,
   is_premium: false,
   is_system_deck: true,
-  card_system: 'V2',
   created_at: '2024-01-01',
   owner_id: null,
   owner_name: null,
