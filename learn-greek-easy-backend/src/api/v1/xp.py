@@ -66,11 +66,8 @@ async def get_xp_stats(
     current_user: User = Depends(get_current_user),
 ) -> XPStatsResponse:
     """Get XP statistics for the current user."""
-    # SAVEPOINT-scoped reconcile so a failure rolls back only reconcile's own
-    # writes (leaving the outer request transaction intact for downstream reads).
     try:
-        async with db.begin_nested():
-            await GamificationReconciler.reconcile(db, current_user.id, mode=ReconcileMode.QUIET)
+        await GamificationReconciler.reconcile(db, current_user.id, mode=ReconcileMode.QUIET)
     except Exception as exc:
         logger.warning(
             "gamification.reconcile.error",
@@ -154,11 +151,8 @@ async def get_achievements(
     current_user: User = Depends(get_current_user),
 ) -> AchievementsListResponse:
     """Get all achievements with user's progress."""
-    # SAVEPOINT-scoped reconcile so a failure rolls back only reconcile's own
-    # writes (leaving the outer request transaction intact for downstream reads).
     try:
-        async with db.begin_nested():
-            await GamificationReconciler.reconcile(db, current_user.id, mode=ReconcileMode.QUIET)
+        await GamificationReconciler.reconcile(db, current_user.id, mode=ReconcileMode.QUIET)
     except Exception as exc:
         logger.warning(
             "gamification.reconcile.error",
