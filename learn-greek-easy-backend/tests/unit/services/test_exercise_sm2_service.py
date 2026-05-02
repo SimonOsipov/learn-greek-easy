@@ -6,7 +6,7 @@ from uuid import uuid4
 
 import pytest
 
-from src.db.models import CardStatus, ExerciseSourceType
+from src.db.models import CardStatus, DeckLevel, ExerciseModality, ExerciseSourceType
 from src.services.exercise_sm2_service import ExerciseSM2Service
 
 
@@ -170,3 +170,142 @@ class TestExerciseSM2ServicePostHogEvents:
             )
 
         mock_capture.assert_not_called()
+
+
+def _make_de_exercise(
+    modality: ExerciseModality,
+    audio_level: DeckLevel,
+    *,
+    text_el: str = "Ο Γιάννης.",
+    text_el_a2: str | None = None,
+    audio_s3_key: str = "b1/audio.mp3",
+    audio_a2_s3_key: str = "a2/audio.mp3",
+    audio_duration_seconds: float = 10.0,
+    audio_a2_duration_seconds: float = 8.0,
+    word_timestamps: list | None = None,
+    word_timestamps_a2: list | None = None,
+) -> MagicMock:
+    desc = MagicMock()
+    desc.text_el = text_el
+    desc.text_el_a2 = text_el_a2
+    desc.audio_s3_key = audio_s3_key
+    desc.audio_a2_s3_key = audio_a2_s3_key
+    desc.audio_duration_seconds = audio_duration_seconds
+    desc.audio_a2_duration_seconds = audio_a2_duration_seconds
+    desc.word_timestamps = word_timestamps if word_timestamps is not None else []
+    desc.word_timestamps_a2 = word_timestamps_a2 if word_timestamps_a2 is not None else []
+    desc.situation = MagicMock()
+    desc.situation.id = uuid4()
+    desc.situation.scenario_el = "scenario"
+    desc.situation.scenario_en = "scenario"
+    desc.situation.scenario_ru = "scenario"
+
+    de = MagicMock()
+    de.modality = modality
+    de.audio_level = audio_level
+    de.description = desc
+    de.items = []
+    de.exercise_type = MagicMock()
+
+    exercise = MagicMock()
+    exercise.id = uuid4()
+    exercise.description_exercise = de
+    return exercise
+
+
+def _mock_db_for_enrichment(mock_db_session, exercises: list) -> None:
+    mock_result = MagicMock()
+    mock_result.scalars.return_value.all.return_value = exercises
+    mock_db_session.execute = AsyncMock(return_value=mock_result)
+
+
+@pytest.mark.unit
+class TestLoadDescriptionEnrichment:
+    """Tests for per-row A2/B1 and modality-aware content branching."""
+
+    @pytest.mark.asyncio
+    async def test_a2_listening_returns_a2_audio_no_text(self, mock_db_session):
+        exercise = _make_de_exercise(ExerciseModality.LISTENING, DeckLevel.A2)
+        _mock_db_for_enrichment(mock_db_session, [exercise])
+
+        service = ExerciseSM2Service(mock_db_session)
+        with patch("src.services.exercise_sm2_service.get_s3_service") as mock_s3:
+            mock_s3.return_value.generate_presigned_url.side_effect = lambda k: f"https://cdn/{k}"
+            result = await service._load_description_enrichment([exercise.id])
+
+        data = result[exercise.id]
+        assert data["description_audio_url"] is not None
+        assert "a2" in data["description_audio_url"]
+        assert data["description_text_el"] is None
+        assert data["word_timestamps"] is None
+
+    @pytest.mark.asyncio
+    async def test_b1_listening_returns_b1_audio_no_text(self, mock_db_session):
+        exercise = _make_de_exercise(ExerciseModality.LISTENING, DeckLevel.B1)
+        _mock_db_for_enrichment(mock_db_session, [exercise])
+
+        service = ExerciseSM2Service(mock_db_session)
+        with patch("src.services.exercise_sm2_service.get_s3_service") as mock_s3:
+            mock_s3.return_value.generate_presigned_url.side_effect = lambda k: f"https://cdn/{k}"
+            result = await service._load_description_enrichment([exercise.id])
+
+        data = result[exercise.id]
+        assert data["description_audio_url"] is not None
+        assert "b1" in data["description_audio_url"]
+        assert data["description_text_el"] is None
+        assert data["word_timestamps"] is None
+
+    @pytest.mark.asyncio
+    async def test_a2_reading_returns_a2_text_no_audio(self, mock_db_session):
+        exercise = _make_de_exercise(
+            ExerciseModality.READING,
+            DeckLevel.A2,
+            text_el_a2="A2 text",
+        )
+        _mock_db_for_enrichment(mock_db_session, [exercise])
+
+        service = ExerciseSM2Service(mock_db_session)
+        with patch("src.services.exercise_sm2_service.get_s3_service") as mock_s3:
+            mock_s3.return_value.generate_presigned_url.side_effect = lambda k: f"https://cdn/{k}"
+            result = await service._load_description_enrichment([exercise.id])
+
+        data = result[exercise.id]
+        assert data["description_text_el"] == "A2 text"
+        assert data["description_audio_url"] is None
+        assert data["description_audio_duration"] is None
+        assert data["word_timestamps"] is None
+
+    @pytest.mark.asyncio
+    async def test_b1_reading_returns_b1_text_no_audio(self, mock_db_session):
+        exercise = _make_de_exercise(ExerciseModality.READING, DeckLevel.B1)
+        _mock_db_for_enrichment(mock_db_session, [exercise])
+
+        service = ExerciseSM2Service(mock_db_session)
+        with patch("src.services.exercise_sm2_service.get_s3_service") as mock_s3:
+            mock_s3.return_value.generate_presigned_url.side_effect = lambda k: f"https://cdn/{k}"
+            result = await service._load_description_enrichment([exercise.id])
+
+        data = result[exercise.id]
+        assert data["description_text_el"] == "Ο Γιάννης."
+        assert data["description_audio_url"] is None
+        assert data["description_audio_duration"] is None
+        assert data["word_timestamps"] is None
+
+    @pytest.mark.asyncio
+    async def test_a2_falls_back_to_b1_text_when_a2_text_null(self, mock_db_session):
+        exercise = _make_de_exercise(
+            ExerciseModality.READING,
+            DeckLevel.A2,
+            text_el="B1 fallback text",
+            text_el_a2=None,
+        )
+        _mock_db_for_enrichment(mock_db_session, [exercise])
+
+        service = ExerciseSM2Service(mock_db_session)
+        with patch("src.services.exercise_sm2_service.get_s3_service") as mock_s3:
+            mock_s3.return_value.generate_presigned_url.side_effect = lambda k: f"https://cdn/{k}"
+            result = await service._load_description_enrichment([exercise.id])
+
+        data = result[exercise.id]
+        assert data["description_text_el"] == "B1 fallback text"
+        assert data["description_audio_url"] is None

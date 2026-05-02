@@ -333,7 +333,6 @@ export const ExercisePracticePage = () => {
               descriptionTextEl={currentExercise.description_text_el}
               descriptionAudioUrl={currentExercise.description_audio_url}
               descriptionAudioDuration={currentExercise.description_audio_duration}
-              wordTimestamps={currentExercise.word_timestamps}
               onAudioPlay={handleAudioPlay}
             />
             <SelectCorrectAnswerRenderer
