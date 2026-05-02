@@ -3,7 +3,6 @@
 Tests use mock-everything approach (no real DB) to validate:
 - Batching logic for large user populations
 - Per-user error isolation (rollback + Sentry capture + continue)
-- Kill-switch behaviour (settings.gamification_reconcile_on_read = False)
 - Empty active-user list no-op
 - Fatal engine/fetch failure: re-raise + Sentry capture
 
@@ -52,10 +51,9 @@ def _make_sessionmaker(sessions: list[AsyncMock]):
     return _sm
 
 
-def _mock_settings(*, reconcile_on_read: bool = True) -> MagicMock:
+def _mock_settings() -> MagicMock:
     """Build a settings mock with the fields the task reads."""
     m = MagicMock()
-    m.gamification_reconcile_on_read = reconcile_on_read
     m.database_url = "postgresql+asyncpg://test/test"
     m.is_production = False
     return m
@@ -191,41 +189,14 @@ async def test_per_user_error_isolation():
 
 
 # ---------------------------------------------------------------------------
-# Test 4: kill-switch off → returns early
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.unit
-@pytest.mark.asyncio
-async def test_kill_switch_off_returns_early():
-    """When gamification_reconcile_on_read is False, fetch and reconcile are NOT called."""
-    from src.tasks.scheduled_gamification import reconcile_active_users_task
-
-    mock_fetch = AsyncMock()
-    mock_reconcile = AsyncMock()
-
-    with (
-        patch("src.tasks.scheduled_gamification.settings", _mock_settings(reconcile_on_read=False)),
-        patch("src.tasks.scheduled_gamification._fetch_active_user_ids", mock_fetch),
-        patch("src.tasks.scheduled_gamification.GamificationReconciler.reconcile", mock_reconcile),
-        patch("src.tasks.scheduled_gamification.create_async_engine") as mock_engine_fn,
-    ):
-        await reconcile_active_users_task()
-
-    mock_fetch.assert_not_called()
-    mock_reconcile.assert_not_called()
-    mock_engine_fn.assert_not_called()
-
-
-# ---------------------------------------------------------------------------
-# Test 5: empty active-user list → no batches, task completes cleanly
+# Test 4: empty active-user list → no batches, task completes cleanly
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.unit
 @pytest.mark.asyncio
 async def test_no_active_users_is_noop():
-    """Empty user list: no reconcile calls, task logs and exits cleanly."""
+    """Empty user list: no reconcile calls, task completes cleanly."""
     from src.tasks.scheduled_gamification import reconcile_active_users_task
 
     fetch_session = AsyncMock()
@@ -254,7 +225,7 @@ async def test_no_active_users_is_noop():
 
 
 # ---------------------------------------------------------------------------
-# Test 6: fatal engine-creation failure → Sentry capture + re-raise
+# Test 5: fatal engine-creation failure → Sentry capture + re-raise
 # ---------------------------------------------------------------------------
 
 
