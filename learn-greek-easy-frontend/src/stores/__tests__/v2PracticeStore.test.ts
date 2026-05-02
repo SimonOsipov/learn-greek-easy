@@ -3,9 +3,9 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 
 import { reviewAPI } from '@/services/reviewAPI';
-import type { V2ReviewResult } from '@/services/reviewAPI';
+import type { ReviewResult } from '@/services/reviewAPI';
 import { studyAPI } from '@/services/studyAPI';
-import type { V2StudyQueue, V2StudyQueueCard } from '@/services/studyAPI';
+import type { StudyQueue, StudyQueueCard } from '@/services/studyAPI';
 import { useAuthStore } from '@/stores/authStore';
 
 import {
@@ -21,13 +21,13 @@ import {
 
 vi.mock('@/services/studyAPI', () => ({
   studyAPI: {
-    getV2Queue: vi.fn(),
+    getQueue: vi.fn(),
   },
 }));
 
 vi.mock('@/services/reviewAPI', () => ({
   reviewAPI: {
-    submitV2: vi.fn(),
+    submit: vi.fn(),
   },
 }));
 
@@ -37,7 +37,7 @@ vi.mock('@/stores/authStore');
 // Helpers
 // ============================================
 
-function makeMockCard(overrides: Partial<V2StudyQueueCard> = {}): V2StudyQueueCard {
+function makeMockCard(overrides: Partial<StudyQueueCard> = {}): StudyQueueCard {
   return {
     card_record_id: 'cr-1',
     word_entry_id: 'we-1',
@@ -62,7 +62,7 @@ function makeMockCard(overrides: Partial<V2StudyQueueCard> = {}): V2StudyQueueCa
   };
 }
 
-function makeMockQueue(cards: V2StudyQueueCard[]): V2StudyQueue {
+function makeMockQueue(cards: StudyQueueCard[]): StudyQueue {
   return {
     total_due: 0,
     total_new: cards.length,
@@ -72,7 +72,7 @@ function makeMockQueue(cards: V2StudyQueueCard[]): V2StudyQueue {
   };
 }
 
-function makeMockReviewResult(overrides: Partial<V2ReviewResult> = {}): V2ReviewResult {
+function makeMockReviewResult(overrides: Partial<ReviewResult> = {}): ReviewResult {
   return {
     card_record_id: 'cr-1',
     quality: 4,
@@ -135,7 +135,7 @@ describe('v2PracticeStore', () => {
   it('startSession loads queue and sets state', async () => {
     const card = makeMockCard();
     const queue = makeMockQueue([card]);
-    vi.mocked(studyAPI.getV2Queue).mockResolvedValue(queue);
+    vi.mocked(studyAPI.getQueue).mockResolvedValue(queue);
 
     await useV2PracticeStore.getState().startSession('deck-1');
 
@@ -146,9 +146,7 @@ describe('v2PracticeStore', () => {
     expect(state.isLoading).toBe(false);
     expect(state.sessionId).not.toBeNull();
     expect(state.deckId).toBe('deck-1');
-    expect(studyAPI.getV2Queue).toHaveBeenCalledWith(
-      expect.objectContaining({ deck_id: 'deck-1' })
-    );
+    expect(studyAPI.getQueue).toHaveBeenCalledWith(expect.objectContaining({ deck_id: 'deck-1' }));
   });
 
   // ============================================
@@ -163,7 +161,7 @@ describe('v2PracticeStore', () => {
     });
     const otherCard = makeMockCard({ card_record_id: 'cr-3', card_type: 'plural_form' });
     const queue = makeMockQueue([meaningCard, sentenceCard, otherCard]);
-    vi.mocked(studyAPI.getV2Queue).mockResolvedValue(queue);
+    vi.mocked(studyAPI.getQueue).mockResolvedValue(queue);
 
     await useV2PracticeStore
       .getState()
@@ -179,11 +177,11 @@ describe('v2PracticeStore', () => {
     expect(state.queue[1].card_type).toBe('sentence_translation');
 
     // Should NOT have card_type in the API call
-    expect(studyAPI.getV2Queue).toHaveBeenCalledWith(
+    expect(studyAPI.getQueue).toHaveBeenCalledWith(
       expect.not.objectContaining({ card_type: expect.anything() })
     );
     // Should have limit=50
-    expect(studyAPI.getV2Queue).toHaveBeenCalledWith(expect.objectContaining({ limit: 50 }));
+    expect(studyAPI.getQueue).toHaveBeenCalledWith(expect.objectContaining({ limit: 50 }));
   });
 
   // ============================================
@@ -193,8 +191,8 @@ describe('v2PracticeStore', () => {
   it('rateCard advances currentIndex and maps quality correctly', async () => {
     const card1 = makeMockCard({ card_record_id: 'cr-1' });
     const card2 = makeMockCard({ card_record_id: 'cr-2' });
-    vi.mocked(studyAPI.getV2Queue).mockResolvedValue(makeMockQueue([card1, card2]));
-    vi.mocked(reviewAPI.submitV2).mockResolvedValue(makeMockReviewResult());
+    vi.mocked(studyAPI.getQueue).mockResolvedValue(makeMockQueue([card1, card2]));
+    vi.mocked(reviewAPI.submit).mockResolvedValue(makeMockReviewResult());
 
     await useV2PracticeStore.getState().startSession('deck-1');
 
@@ -203,7 +201,7 @@ describe('v2PracticeStore', () => {
     expect(useV2PracticeStore.getState().currentIndex).toBe(1);
     expect(useV2PracticeStore.getState().isFlipped).toBe(false);
 
-    expect(reviewAPI.submitV2).toHaveBeenCalledWith(
+    expect(reviewAPI.submit).toHaveBeenCalledWith(
       expect.objectContaining({
         card_record_id: 'cr-1',
         quality: 4, // good maps to 4
@@ -212,13 +210,13 @@ describe('v2PracticeStore', () => {
   });
 
   // ============================================
-  // Test 4: stats accumulation from V2ReviewResult
+  // Test 4: stats accumulation from ReviewResult
   // ============================================
 
-  it('stats accumulate from V2ReviewResult on background submission', async () => {
+  it('stats accumulate from ReviewResult on background submission', async () => {
     const card = makeMockCard();
-    vi.mocked(studyAPI.getV2Queue).mockResolvedValue(makeMockQueue([card]));
-    vi.mocked(reviewAPI.submitV2).mockResolvedValue(
+    vi.mocked(studyAPI.getQueue).mockResolvedValue(makeMockQueue([card]));
+    vi.mocked(reviewAPI.submit).mockResolvedValue(
       makeMockReviewResult({
         previous_status: 'review',
         new_status: 'mastered',
@@ -248,8 +246,8 @@ describe('v2PracticeStore', () => {
 
   it('sessionSummary is set after last card rated and all pending reviews resolved', async () => {
     const card = makeMockCard();
-    vi.mocked(studyAPI.getV2Queue).mockResolvedValue(makeMockQueue([card]));
-    vi.mocked(reviewAPI.submitV2).mockResolvedValue(makeMockReviewResult());
+    vi.mocked(studyAPI.getQueue).mockResolvedValue(makeMockQueue([card]));
+    vi.mocked(reviewAPI.submit).mockResolvedValue(makeMockReviewResult());
 
     await useV2PracticeStore.getState().startSession('deck-1');
 
@@ -283,7 +281,7 @@ describe('v2PracticeStore', () => {
   // Test 7: v2QueueCardToCardRecord mapping
   // ============================================
 
-  it('v2QueueCardToCardRecord maps V2StudyQueueCard to CardRecordResponse shape', () => {
+  it('v2QueueCardToCardRecord maps StudyQueueCard to CardRecordResponse shape', () => {
     const card = makeMockCard();
     const result = v2QueueCardToCardRecord(card);
 
@@ -339,11 +337,11 @@ describe('v2PracticeStore', () => {
   it('startSession with wordEntryId passes word_entry_id to API', async () => {
     const card = makeMockCard();
     const queue = makeMockQueue([card]);
-    vi.mocked(studyAPI.getV2Queue).mockResolvedValue(queue);
+    vi.mocked(studyAPI.getQueue).mockResolvedValue(queue);
 
     await useV2PracticeStore.getState().startSession('deck-1', undefined, 'word-entry-1');
 
-    expect(vi.mocked(studyAPI.getV2Queue)).toHaveBeenCalledWith(
+    expect(vi.mocked(studyAPI.getQueue)).toHaveBeenCalledWith(
       expect.objectContaining({ word_entry_id: 'word-entry-1' })
     );
     expect(useV2PracticeStore.getState().wordEntryId).toBe('word-entry-1');

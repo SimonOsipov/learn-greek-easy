@@ -17,9 +17,9 @@ import { devtools } from 'zustand/middleware';
 
 import { MAX_ANSWER_TIME_SECONDS } from '@/lib/timeFormatUtils';
 import { reviewAPI } from '@/services/reviewAPI';
-import type { V2ReviewResult } from '@/services/reviewAPI';
+import type { ReviewResult } from '@/services/reviewAPI';
 import { studyAPI } from '@/services/studyAPI';
-import type { V2StudyQueue, V2StudyQueueCard } from '@/services/studyAPI';
+import type { StudyQueue, StudyQueueCard } from '@/services/studyAPI';
 import type { CardRecordResponse, CardRecordType } from '@/services/wordEntryAPI';
 import { useAuthStore } from '@/stores/authStore';
 import { generateSessionId } from '@/utils/analytics';
@@ -56,9 +56,9 @@ export function mapPracticeRatingToQuality(rating: 1 | 2 | 3 | 4): number {
 }
 
 /**
- * Adapts a V2StudyQueueCard to a CardRecordResponse-compatible shape for PracticeCard
+ * Adapts a StudyQueueCard to a CardRecordResponse-compatible shape for PracticeCard
  */
-export function v2QueueCardToCardRecord(card: V2StudyQueueCard): CardRecordResponse {
+export function v2QueueCardToCardRecord(card: StudyQueueCard): CardRecordResponse {
   return {
     id: card.card_record_id,
     word_entry_id: card.word_entry_id,
@@ -79,7 +79,7 @@ export function v2QueueCardToCardRecord(card: V2StudyQueueCard): CardRecordRespo
  * Sentence and cloze types use example_audio_url (falling back to audio_url).
  * Word types use audio_url.
  */
-export function resolveV2CardAudioUrl(card: V2StudyQueueCard): string | null {
+export function resolveV2CardAudioUrl(card: StudyQueueCard): string | null {
   const cardType = card.card_type;
   if (cardType === 'sentence_translation' || cardType === 'cloze') {
     return card.example_audio_url ?? card.audio_url;
@@ -131,7 +131,7 @@ const DEFAULT_SESSION_STATS: V2SessionStats = {
 
 interface V2PracticeState {
   // Session data
-  queue: V2StudyQueueCard[];
+  queue: StudyQueueCard[];
   currentIndex: number;
   isFlipped: boolean;
   sessionId: string | null;
@@ -206,11 +206,11 @@ export const useV2PracticeStore = create<V2PracticeState>()(
             throw new Error('You must be logged in to start a practice session');
           }
 
-          let queueData: V2StudyQueue;
+          let queueData: StudyQueue;
 
           if (cardType === ('meaning' as string)) {
             // Meaning mode: fetch broad, filter client-side
-            queueData = await studyAPI.getV2Queue({
+            queueData = await studyAPI.getQueue({
               deck_id: deckId ?? undefined,
               limit: 50,
               include_new: true,
@@ -224,7 +224,7 @@ export const useV2PracticeStore = create<V2PracticeState>()(
               ),
             };
           } else {
-            queueData = await studyAPI.getV2Queue({
+            queueData = await studyAPI.getQueue({
               deck_id: deckId ?? undefined,
               card_type: cardType,
               limit: 20,
@@ -269,7 +269,7 @@ export const useV2PracticeStore = create<V2PracticeState>()(
       /**
        * Rate the current card and optimistically advance to the next.
        *
-       * Fires submitV2 in the background. On success, accumulates stats.
+       * Fires submit in the background. On success, accumulates stats.
        * On failure, sets error without reverting the optimistic advance.
        * When the last card is rated and all background submissions return,
        * computes V2SessionSummary.
@@ -308,12 +308,12 @@ export const useV2PracticeStore = create<V2PracticeState>()(
 
         // Background submission
         reviewAPI
-          .submitV2({
+          .submit({
             card_record_id: card.card_record_id,
             quality,
             time_taken: timeTaken,
           })
-          .then((result: V2ReviewResult) => {
+          .then((result: ReviewResult) => {
             const s = get();
             const newPending = s._pendingReviews - 1;
 

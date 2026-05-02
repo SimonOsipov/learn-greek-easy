@@ -34,16 +34,16 @@ export const V2DeckPage: React.FC<V2DeckPageProps> = ({ deckId }) => {
   const { t, i18n } = useTranslation('deck');
   const { selectedDeck, isLoading, error, selectDeck } = useDeckStore();
 
-  // V2DeckPage is rendered by DeckDetailPage when the deck has cardSystem='V2'.
+  // V2DeckPage is the deck detail page for vocabulary decks.
   // At this point, the deck is already loaded in the store.
   // Note: We intentionally do NOT clear the selection here because:
   // 1. React StrictMode double-invokes effects and their cleanups
   // 2. If we clear selection in cleanup, StrictMode will clear it before the component fully mounts
   // 3. Instead, we rely on route changes to naturally trigger new deck selections
 
-  // Loading state - also show loading if deck isn't loaded yet
-  // (V2DeckPage is only rendered when DeckDetailPage has confirmed the deck is V2,
-  // so selectedDeck should always be available, but handle the edge case)
+  // Loading state - also show loading if deck isn't loaded yet.
+  // selectedDeck is normally populated by DeckDetailPage before this renders,
+  // but we handle the edge case where it isn't yet.
   if (isLoading || !selectedDeck) {
     return <LoadingSkeleton />;
   }
