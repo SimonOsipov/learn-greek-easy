@@ -452,7 +452,7 @@ describe('CulturePracticePage', () => {
           userId: 'test-user',
         },
         savedAt: new Date().toISOString(),
-        version: 1,
+        version: 2,
       };
       sessionStorage.setItem('learn-greek-easy:culture-session', JSON.stringify(recoveryData));
 

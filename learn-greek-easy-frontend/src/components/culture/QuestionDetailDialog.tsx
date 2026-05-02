@@ -5,6 +5,7 @@ import { Check, ExternalLink, AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
+import { QuestionLanguageSelector } from '@/components/shared/QuestionLanguageSelector';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -21,7 +22,6 @@ import type { CultureLanguage } from '@/types/culture';
 import { getPersistedNewsLevel, setPersistedNewsLevel, type NewsLevel } from '@/utils/newsLevel';
 
 import { CultureBadge } from './CultureBadge';
-import { LanguageSelector } from './LanguageSelector';
 import { SourceImage } from './SourceImage';
 import { WaveformPlayer } from './WaveformPlayer';
 
@@ -176,7 +176,12 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
                       <div className="h-6 w-px bg-border" />
                     </>
                   )}
-                  <LanguageSelector value={lang} onChange={setLang} variant="pill" size="sm" />
+                  <QuestionLanguageSelector
+                    value={lang}
+                    onChange={setLang}
+                    variant="pill"
+                    size="sm"
+                  />
                 </div>
 
                 {/* Question Text */}

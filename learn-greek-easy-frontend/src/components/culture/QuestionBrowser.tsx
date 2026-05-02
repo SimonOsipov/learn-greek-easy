@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { MasteryDotsLegend } from '@/components/shared/MasteryDotsLegend';
+import { QuestionLanguageSelector } from '@/components/shared/QuestionLanguageSelector';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useQuestionLanguage } from '@/hooks/useQuestionLanguage';
@@ -15,7 +16,6 @@ import { debounce } from '@/lib/utils';
 import { cultureDeckAPI } from '@/services/cultureDeckAPI';
 import type { CultureQuestionBrowseItem, CultureQuestionStatus } from '@/types/culture';
 
-import { LanguageSelector } from './LanguageSelector';
 import { QuestionCard, QuestionCardSkeleton } from './QuestionCard';
 import { QuestionDetailDialog } from './QuestionDetailDialog';
 
@@ -237,7 +237,7 @@ export const QuestionBrowser: React.FC<QuestionBrowserProps> = ({
             counts={filterCounts}
             onFilterChange={setActiveFilter}
           />
-          <LanguageSelector
+          <QuestionLanguageSelector
             value={questionLanguage}
             onChange={setQuestionLanguage}
             variant="pill"

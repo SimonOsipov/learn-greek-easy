@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { LanguageSelector } from '@/components/culture/LanguageSelector';
+import { QuestionLanguageSelector as LanguageSelector } from '@/components/shared/QuestionLanguageSelector';
 import { cn } from '@/lib/utils';
 import type { CultureLanguage } from '@/types/culture';
 

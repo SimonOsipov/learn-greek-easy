@@ -7,9 +7,6 @@ export type { CultureBadgeProps, CultureCategory } from './CultureBadge';
 export { ExplanationCard } from './ExplanationCard';
 export type { ExplanationCardProps } from './ExplanationCard';
 
-export { LanguageSelector } from './LanguageSelector';
-export type { LanguageSelectorProps } from './LanguageSelector';
-
 export { MCQComponent } from './MCQComponent';
 export type { MCQComponentProps } from './MCQComponent';
 

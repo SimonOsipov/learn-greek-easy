@@ -28,7 +28,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
-import { LanguageSelector } from '@/components/culture';
+import { QuestionLanguageSelector } from '@/components/shared';
 import {
   Accordion,
   AccordionContent,
@@ -300,9 +300,9 @@ export function MockExamResultsPage() {
                   <div className="space-y-4">
                     {/* Language Selector */}
                     <div className="flex items-center justify-end">
-                      <LanguageSelector
+                      <QuestionLanguageSelector
                         value={questionLanguage}
-                        onChange={setQuestionLanguage}
+                        onChange={(lang) => setQuestionLanguage(lang, 'mock_exam')}
                         size="sm"
                       />
                     </div>

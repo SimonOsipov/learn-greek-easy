@@ -4,21 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { renderWithProviders, screen } from '@/lib/test-utils';
 
-import { LanguageSelector } from '../LanguageSelector';
-
-vi.mock('@/lib/analytics', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/analytics')>();
-  return {
-    ...actual,
-    track: vi.fn(),
-  };
-});
-
-vi.mock('@/lib/logger', () => ({
-  default: { warn: vi.fn() },
-}));
-
-import { track } from '@/lib/analytics';
+import { QuestionLanguageSelector as LanguageSelector } from '@/components/shared/QuestionLanguageSelector';
 
 describe('LanguageSelector — pill variant', () => {
   const defaultProps = {
@@ -128,49 +114,6 @@ describe('LanguageSelector — pill variant', () => {
       const buttons = within(group).getAllByRole('button');
       await user.click(buttons[2]); // click RU
       expect(defaultProps.onChange).toHaveBeenCalledWith('ru');
-    });
-  });
-
-  describe('Analytics', () => {
-    it('should track language change', async () => {
-      const user = userEvent.setup();
-      renderWithProviders(<LanguageSelector {...defaultProps} value="en" />);
-      const group = screen.getByRole('group');
-      const buttons = within(group).getAllByRole('button');
-      await user.click(buttons[0]); // click EL
-      expect(track).toHaveBeenCalledWith('culture_language_changed', {
-        from_lang: 'en',
-        to_lang: 'el',
-      });
-    });
-
-    it('should not track when clicking same language', async () => {
-      const user = userEvent.setup();
-      renderWithProviders(<LanguageSelector {...defaultProps} value="en" />);
-      const group = screen.getByRole('group');
-      const buttons = within(group).getAllByRole('button');
-      await user.click(buttons[1]); // click EN (same)
-      expect(track).not.toHaveBeenCalledWith('culture_language_changed', expect.anything());
-    });
-  });
-
-  describe('localStorage', () => {
-    it('should persist language change to localStorage', async () => {
-      const user = userEvent.setup();
-      renderWithProviders(<LanguageSelector {...defaultProps} value="en" />);
-      const group = screen.getByRole('group');
-      const buttons = within(group).getAllByRole('button');
-      await user.click(buttons[0]); // click EL
-      expect(localStorage.getItem('culture_question_language')).toBe('el');
-    });
-
-    it('should not write to localStorage when clicking same language', async () => {
-      const user = userEvent.setup();
-      renderWithProviders(<LanguageSelector {...defaultProps} value="en" />);
-      const group = screen.getByRole('group');
-      const buttons = within(group).getAllByRole('button');
-      await user.click(buttons[1]); // click EN (same)
-      expect(localStorage.getItem('culture_question_language')).toBeNull();
     });
   });
 
@@ -349,27 +292,6 @@ describe('LanguageSelector — buttons variant (regression)', () => {
       const buttons = within(group).getAllByRole('button');
       await user.click(buttons[1]); // click EN (same)
       expect(onChange).not.toHaveBeenCalled();
-    });
-
-    it('should persist to localStorage on change', async () => {
-      const user = userEvent.setup();
-      renderWithProviders(<LanguageSelector {...defaultProps} />);
-      const group = screen.getByRole('group');
-      const buttons = within(group).getAllByRole('button');
-      await user.click(buttons[2]); // click RU
-      expect(localStorage.getItem('culture_question_language')).toBe('ru');
-    });
-
-    it('should track analytics on change', async () => {
-      const user = userEvent.setup();
-      renderWithProviders(<LanguageSelector {...defaultProps} />);
-      const group = screen.getByRole('group');
-      const buttons = within(group).getAllByRole('button');
-      await user.click(buttons[0]); // click EL
-      expect(track).toHaveBeenCalledWith('culture_language_changed', {
-        from_lang: 'en',
-        to_lang: 'el',
-      });
     });
   });
 

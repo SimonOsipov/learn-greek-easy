@@ -13,7 +13,6 @@ import { useAuthStore } from '@/stores/authStore';
 import type {
   CultureQuestionResponse,
   CultureAnswerResponse,
-  CultureLanguage,
   CultureCategory,
 } from '@/types/culture';
 import type {
@@ -570,25 +569,6 @@ export const useCultureSessionStore = create<CultureSessionState>()(
       dismissRecovery: () => {
         clearSessionStorage();
         set({ hasRecoverableSession: false });
-      },
-
-      /**
-       * Change the display language for questions
-       */
-      setLanguage: (language: CultureLanguage) => {
-        const { session } = get();
-        if (!session) return;
-
-        const updatedSession: CultureSession = {
-          ...session,
-          config: {
-            ...session.config,
-            language,
-          },
-        };
-
-        set({ session: updatedSession });
-        saveToSessionStorage(updatedSession);
       },
     }),
     { name: 'cultureSessionStore' }

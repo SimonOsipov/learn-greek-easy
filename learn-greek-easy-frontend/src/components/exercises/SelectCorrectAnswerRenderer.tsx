@@ -1,7 +1,6 @@
-import { useTranslation } from 'react-i18next';
-
 import { cn } from '@/lib/utils';
 import type { ExerciseItemPayload } from '@/services/exerciseAPI';
+import type { CultureLanguage } from '@/types/culture';
 
 interface MultilingualField {
   el: string;
@@ -20,11 +19,7 @@ interface SelectCorrectAnswerRendererProps {
   onAnswer: (selectedIndex: number, correctIndex: number) => void;
   feedbackState: { selectedIndex: number; correctIndex: number } | null;
   disabled: boolean;
-}
-
-function getLocalizedText(field: MultilingualField, lang: string): string {
-  if (lang === 'ru') return field.ru;
-  return field.en;
+  language: CultureLanguage;
 }
 
 export function SelectCorrectAnswerRenderer({
@@ -32,9 +27,9 @@ export function SelectCorrectAnswerRenderer({
   onAnswer,
   feedbackState,
   disabled,
+  language,
 }: SelectCorrectAnswerRendererProps) {
-  const { i18n } = useTranslation();
-  const lang = i18n.language === 'ru' ? 'ru' : 'en';
+  const lang = language;
 
   const rawPayload = items[0]?.payload;
   if (!rawPayload) return null;
@@ -76,7 +71,7 @@ export function SelectCorrectAnswerRenderer({
   return (
     <div data-testid="sca-renderer">
       <p data-testid="sca-prompt" className="mb-6 text-center text-lg font-medium">
-        {getLocalizedText(prompt, lang)}
+        {prompt[lang] || prompt.en}
       </p>
       {feedbackState !== null && <div data-testid="sca-feedback" className="hidden" />}
       <div
@@ -97,7 +92,7 @@ export function SelectCorrectAnswerRenderer({
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold">
               {index + 1}
             </span>
-            <span>{getLocalizedText(option, lang)}</span>
+            <span>{option[lang] || option.en}</span>
           </button>
         ))}
       </div>

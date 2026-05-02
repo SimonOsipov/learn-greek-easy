@@ -207,7 +207,6 @@ export interface CultureSessionState {
   checkRecoverableSession: () => boolean;
   recoverSession: () => boolean;
   dismissRecovery: () => void;
-  setLanguage: (language: CultureLanguage) => void;
 }
 
 /**
@@ -242,4 +241,4 @@ export const CULTURE_SESSION_STORAGE_KEY = 'learn-greek-easy:culture-session';
 /**
  * Current version of recovery data format
  */
-export const CULTURE_SESSION_RECOVERY_VERSION = 1;
+export const CULTURE_SESSION_RECOVERY_VERSION = 2;

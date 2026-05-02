@@ -20,9 +20,10 @@ import { AlertCircle, CheckCircle, ChevronLeft, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
 
-import { MCQComponent, LanguageSelector, ScoreCard } from '@/components/culture';
+import { MCQComponent, ScoreCard } from '@/components/culture';
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
 import { PracticeHeader } from '@/components/practice';
+import { QuestionLanguageSelector } from '@/components/shared';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -43,12 +44,9 @@ import log from '@/lib/logger';
 import { MAX_ANSWER_TIME_SECONDS } from '@/lib/timeFormatUtils';
 import { cultureDeckAPI, type LocalizedText } from '@/services/cultureDeckAPI';
 import { useCultureSessionStore } from '@/stores/cultureSessionStore';
+import { useQuestionLanguageStore } from '@/stores/questionLanguageStore';
 import { useXPStore } from '@/stores/xpStore';
-import type {
-  CultureQuestionResponse,
-  CultureAnswerResponse,
-  CultureLanguage,
-} from '@/types/culture';
+import type { CultureQuestionResponse, CultureAnswerResponse } from '@/types/culture';
 import type { CultureSessionConfig } from '@/types/cultureSession';
 import { DEFAULT_SESSION_CONFIG } from '@/types/cultureSession';
 import { getPersistedNewsLevel, setPersistedNewsLevel, type NewsLevel } from '@/utils/newsLevel';
@@ -105,9 +103,10 @@ export function CulturePracticePage() {
     checkRecoverableSession,
     recoverSession,
     dismissRecovery,
-    setLanguage,
     resetSession,
   } = useCultureSessionStore();
+
+  const { language: currentLanguage, setLanguage } = useQuestionLanguageStore();
 
   // XP store - for refreshing XP after answer submission
   const loadXPStats = useXPStore((state) => state.loadXPStats);
@@ -146,9 +145,9 @@ export function CulturePracticePage() {
         deck_id: session.deckId,
         session_id: session.sessionId,
         question_count: session.questions.length,
-        language: session.config.language,
+        language: currentLanguage,
       };
-    }, [session]),
+    }, [session, currentLanguage]),
     getCompleteProps: useCallback(
       (_durationSec: number) => {
         if (!summary) return null;
@@ -302,7 +301,7 @@ export function CulturePracticePage() {
         .submitAnswer(currentQuestion.question.id, {
           selected_option: selectedOption,
           time_taken: timeTakenSeconds,
-          language: session.config.language,
+          language: useQuestionLanguageStore.getState().language,
         })
         .catch((err) => {
           reportAPIError(err, {
@@ -386,16 +385,6 @@ export function CulturePracticePage() {
       initializeSession();
     }
   }, [dismissRecovery, deckId, initializeSession]);
-
-  /**
-   * Handle language change
-   */
-  const handleLanguageChange = useCallback(
-    (language: CultureLanguage) => {
-      setLanguage(language);
-    },
-    [setLanguage]
-  );
 
   /**
    * Handle A2/B2 level toggle
@@ -638,8 +627,6 @@ export function CulturePracticePage() {
     );
   }
 
-  const currentLanguage = session.config.language;
-
   return (
     <div className="min-h-screen bg-practice-bg px-4 py-6 md:px-6 md:py-8">
       <div className="mx-auto max-w-[520px]">
@@ -678,9 +665,9 @@ export function CulturePracticePage() {
                 </div>
               )}
               {showLevelToggle && <div className="h-6 w-px bg-border" aria-hidden="true" />}
-              <LanguageSelector
+              <QuestionLanguageSelector
                 value={currentLanguage}
-                onChange={handleLanguageChange}
+                onChange={(lang) => setLanguage(lang, 'culture')}
                 variant="pill"
                 size="sm"
               />

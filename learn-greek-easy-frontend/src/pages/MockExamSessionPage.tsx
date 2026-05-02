@@ -22,9 +22,10 @@ import { AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
-import { MCQComponent, LanguageSelector } from '@/components/culture';
+import { MCQComponent } from '@/components/culture';
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
 import { MockExamHeader, TimerWarningBanner } from '@/components/mockExam';
+import { QuestionLanguageSelector } from '@/components/shared';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -415,9 +416,9 @@ export const MockExamSessionPage: React.FC = () => {
         <div className="mx-auto">
           {/* Language selector */}
           <div className="mb-4 flex justify-end">
-            <LanguageSelector
+            <QuestionLanguageSelector
               value={questionLanguage}
-              onChange={setQuestionLanguage}
+              onChange={(lang) => setQuestionLanguage(lang, 'mock_exam')}
               variant="pill"
               size="sm"
             />

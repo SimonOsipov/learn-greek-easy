@@ -19,6 +19,7 @@ import { ExerciseContentStep } from '@/components/exercises/ExerciseContentStep'
 import { SelectCorrectAnswerRenderer } from '@/components/exercises/SelectCorrectAnswerRenderer';
 import { LanguageSwitcher } from '@/components/i18n';
 import { PracticeHeader, ProgressIndicator, SessionSummary } from '@/components/practice';
+import { QuestionLanguageSelector } from '@/components/shared';
 import { ThemeSwitcher } from '@/components/theme';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -29,6 +30,7 @@ import { track } from '@/lib/analytics/track';
 import { formatDuration } from '@/lib/timeFormatUtils';
 import type { ExerciseModality } from '@/services/exerciseAPI';
 import { useExercisePracticeStore } from '@/stores/exercisePracticeStore';
+import { useQuestionLanguageStore } from '@/stores/questionLanguageStore';
 
 // ============================================
 // Main Component
@@ -61,6 +63,8 @@ export const ExercisePracticePage = () => {
     resetSession,
     clearError,
   } = useExercisePracticeStore();
+
+  const { language, setLanguage } = useQuestionLanguageStore();
 
   const currentExercise = queue[currentIndex] ?? null;
   const sessionComplete = sessionSummary !== null;
@@ -314,6 +318,12 @@ export const ExercisePracticePage = () => {
         exitTestId="exercise-practice-close-button"
         rightSlot={
           <>
+            <QuestionLanguageSelector
+              value={language}
+              onChange={(lang) => setLanguage(lang, 'exercise')}
+              variant="pill"
+              size="sm"
+            />
             <LanguageSwitcher variant="icon" />
             <ThemeSwitcher />
           </>
@@ -340,6 +350,7 @@ export const ExercisePracticePage = () => {
               onAnswer={handleAnswer}
               feedbackState={rendererFeedbackState}
               disabled={isLoading}
+              language={language}
             />
           </div>
         )}

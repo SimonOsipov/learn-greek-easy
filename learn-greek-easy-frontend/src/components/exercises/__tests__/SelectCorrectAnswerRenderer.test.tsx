@@ -2,9 +2,9 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import i18n from '@/i18n';
 import { renderWithProviders, screen } from '@/lib/test-utils';
 import type { ExerciseItemPayload } from '@/services/exerciseAPI';
+import type { CultureLanguage } from '@/types/culture';
 
 import { SelectCorrectAnswerRenderer } from '../SelectCorrectAnswerRenderer';
 
@@ -34,11 +34,13 @@ function renderRenderer({
   onAnswer = vi.fn(),
   feedbackState = null,
   disabled = false,
+  language = 'en' as CultureLanguage,
 }: {
   items?: ExerciseItemPayload[];
   onAnswer?: ReturnType<typeof vi.fn>;
   feedbackState?: { selectedIndex: number; correctIndex: number } | null;
   disabled?: boolean;
+  language?: CultureLanguage;
 } = {}) {
   return renderWithProviders(
     <SelectCorrectAnswerRenderer
@@ -46,6 +48,7 @@ function renderRenderer({
       onAnswer={onAnswer}
       feedbackState={feedbackState}
       disabled={disabled}
+      language={language}
     />
   );
 }
@@ -55,8 +58,7 @@ function renderRenderer({
 // ============================================
 
 describe('SelectCorrectAnswerRenderer', () => {
-  afterEach(async () => {
-    await i18n.changeLanguage('en');
+  afterEach(() => {
     vi.clearAllMocks();
   });
 
@@ -120,7 +122,6 @@ describe('SelectCorrectAnswerRenderer', () => {
         feedbackState: { selectedIndex: 0, correctIndex: 0 },
       });
 
-      // button is disabled during feedback, so click should not fire
       await screen.getByTestId('sca-option-1').click();
 
       expect(onAnswer).not.toHaveBeenCalled();
@@ -181,20 +182,42 @@ describe('SelectCorrectAnswerRenderer', () => {
   // ============================================
 
   describe('Language selection', () => {
-    it('renders English text by default (EN locale)', async () => {
-      await i18n.changeLanguage('en');
-      renderRenderer({ items: makeItems(2) });
+    it('renders English text when language=en', () => {
+      renderRenderer({ items: makeItems(2), language: 'en' });
 
       expect(screen.getByText('Question prompt')).toBeInTheDocument();
       expect(screen.getByText('Option 1')).toBeInTheDocument();
     });
 
-    it('renders Russian text when locale is RU', async () => {
-      await i18n.changeLanguage('ru');
-      renderRenderer({ items: makeItems(2) });
+    it('renders Russian text when language=ru', () => {
+      renderRenderer({ items: makeItems(2), language: 'ru' });
 
       expect(screen.getByText('Вопрос')).toBeInTheDocument();
       expect(screen.getByText('Вариант 1')).toBeInTheDocument();
+    });
+
+    it('renders Greek text when language=el', () => {
+      renderRenderer({ items: makeItems(2), language: 'el' });
+
+      expect(screen.getByText('Ερώτηση')).toBeInTheDocument();
+      expect(screen.getByText('Επιλογή 1')).toBeInTheDocument();
+    });
+
+    it('falls back to en when target language field is empty', () => {
+      const items: ExerciseItemPayload[] = [
+        {
+          item_index: 0,
+          payload: {
+            prompt: { el: '', en: 'Fallback prompt', ru: '' },
+            options: [{ el: '', en: 'Fallback option', ru: '' }],
+            correct_answer_index: 0,
+          },
+        },
+      ];
+      renderRenderer({ items, language: 'el' });
+
+      expect(screen.getByText('Fallback prompt')).toBeInTheDocument();
+      expect(screen.getByText('Fallback option')).toBeInTheDocument();
     });
   });
 });
