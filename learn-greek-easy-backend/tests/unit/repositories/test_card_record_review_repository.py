@@ -124,65 +124,6 @@ class TestCountReviewsToday:
         assert count == 0
 
 
-class TestGetStreak:
-    @pytest.mark.asyncio
-    async def test_get_streak_consecutive_days(
-        self,
-        db_session: AsyncSession,
-        test_user: User,
-        card_record: CardRecord,
-    ) -> None:
-        now = datetime.now(tz=timezone.utc)
-        for days_ago in range(3):
-            db_session.add(
-                _make_review(
-                    test_user.id,
-                    card_record.id,
-                    reviewed_at=now - timedelta(days=days_ago),
-                )
-            )
-        await db_session.flush()
-
-        repo = CardRecordReviewRepository(db_session)
-        streak = await repo.get_streak(test_user.id)
-
-        assert streak == 3
-
-    @pytest.mark.asyncio
-    async def test_get_streak_broken(
-        self,
-        db_session: AsyncSession,
-        test_user: User,
-        card_record: CardRecord,
-    ) -> None:
-        now = datetime.now(tz=timezone.utc)
-        for days_ago in [2, 3]:
-            db_session.add(
-                _make_review(
-                    test_user.id,
-                    card_record.id,
-                    reviewed_at=now - timedelta(days=days_ago),
-                )
-            )
-        await db_session.flush()
-
-        repo = CardRecordReviewRepository(db_session)
-        streak = await repo.get_streak(test_user.id)
-
-        assert streak == 0
-
-    @pytest.mark.asyncio
-    async def test_get_streak_no_reviews(
-        self,
-        db_session: AsyncSession,
-        test_user: User,
-    ) -> None:
-        repo = CardRecordReviewRepository(db_session)
-        streak = await repo.get_streak(test_user.id)
-
-        assert streak == 0
-
-
 class TestDeleteAllByUserId:
     @pytest.mark.asyncio
     async def test_delete_all_by_user_id(

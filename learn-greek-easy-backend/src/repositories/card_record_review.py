@@ -66,46 +66,6 @@ class CardRecordReviewRepository(BaseRepository[CardRecordReview]):
         result = await self.db.execute(query)
         return result.scalar_one()
 
-    # DEPRECATED: replaced by progress_service._get_aggregated_streak.
-    # Removal target: GAMIF-06-04. Do NOT delete in this story.
-    async def get_streak(self, user_id: UUID) -> int:
-        """Calculate current consecutive study streak in days.
-
-        Counts consecutive days ending today (or yesterday if no review today)
-        that have at least one review. Looks back up to 30 days.
-
-        Args:
-            user_id: User UUID.
-
-        Returns:
-            Streak length in days (0 if no reviews).
-        """
-        thirty_days_ago = date.today() - timedelta(days=30)
-        query = (
-            select(func.date(CardRecordReview.reviewed_at).label("review_date"))
-            .where(CardRecordReview.user_id == user_id)
-            .where(CardRecordReview.reviewed_at >= thirty_days_ago)
-            .group_by(func.date(CardRecordReview.reviewed_at))
-            .order_by(func.date(CardRecordReview.reviewed_at).desc())
-        )
-        result = await self.db.execute(query)
-        review_dates = [row[0] for row in result.all()]
-
-        if not review_dates:
-            return 0
-
-        streak = 0
-        current_date = date.today()
-
-        for review_date in review_dates:
-            if review_date == current_date:
-                streak += 1
-                current_date -= timedelta(days=1)
-            else:
-                break
-
-        return streak
-
     async def delete_all_by_user_id(self, user_id: UUID) -> int:
         """Delete all card record reviews for a user.
 
