@@ -129,28 +129,28 @@ const SRS_BUTTONS = [
     key: 'again',
     rating: 1,
     i18nKey: 'practice.again',
-    color: 'bg-practice-incorrect',
+    color: 'bg-practice-incorrect hover:bg-practice-incorrect/90',
     testId: 'srs-button-again',
   },
   {
     key: 'hard',
     rating: 2,
     i18nKey: 'practice.hard',
-    color: 'bg-practice-gold',
+    color: 'bg-practice-hard hover:bg-practice-hard/90',
     testId: 'srs-button-hard',
   },
   {
     key: 'good',
     rating: 3,
     i18nKey: 'practice.good',
-    color: 'bg-practice-correct',
+    color: 'bg-practice-correct hover:bg-practice-correct/90',
     testId: 'srs-button-good',
   },
   {
     key: 'easy',
     rating: 4,
     i18nKey: 'practice.easy',
-    color: 'bg-practice-accent',
+    color: 'bg-practice-accent hover:bg-practice-accent/90',
     testId: 'srs-button-easy',
   },
 ] as const;
@@ -314,7 +314,7 @@ function SrsButtonRow({
               disabled={!isEnabled}
               data-testid={testId}
               className={cn(
-                'rounded-lg px-4 py-2 text-sm font-semibold text-white',
+                'rounded-lg px-4 py-2 text-sm font-semibold text-primary-foreground',
                 isEnabled ? color : cn(color, 'cursor-not-allowed opacity-50')
               )}
               aria-label={isEnabled ? label : `${label} - ${srsComingSoon}`}

@@ -297,7 +297,7 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
             ? 'border bg-muted p-[14px]'
             : isNewsMini
               ? 'rounded-lg bg-white/10 p-2'
-              : 'border border-[hsl(var(--practice-border))] bg-[hsl(var(--practice-bg))] p-[14px]',
+              : 'border border-practice-border bg-practice-bg p-[14px]',
           disabled && (isNewsMini ? 'opacity-40' : 'opacity-50'),
           className
         )}
@@ -320,15 +320,15 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
                 : isNewsMini
                   ? 'bg-white/20 text-white hover:bg-white/30 focus:ring-white/50'
                   : [
-                      'bg-[hsl(var(--practice-accent))] text-white',
-                      'hover:opacity-90 focus:ring-[hsl(var(--practice-accent))]',
+                      'bg-practice-accent text-primary-foreground',
+                      'hover:opacity-90 focus:ring-practice-accent',
                     ]),
             disabled &&
               (isAdmin
                 ? 'bg-primary text-primary-foreground'
                 : isNewsMini
                   ? 'bg-white/20 text-white'
-                  : 'bg-[hsl(var(--practice-accent))] text-white')
+                  : 'bg-practice-accent text-primary-foreground')
           )}
           aria-label={isPlaying ? 'Pause audio' : 'Play audio'}
         >
@@ -374,11 +374,7 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
                 className={cn(
                   'flex-1 rounded-t-sm',
                   !isFilled &&
-                    (isAdmin
-                      ? 'bg-muted-foreground/30'
-                      : isNewsMini
-                        ? 'bg-white/25'
-                        : 'bg-[hsl(var(--fg-3)/0.35)]'),
+                    (isAdmin ? 'bg-muted-foreground/30' : isNewsMini ? 'bg-white/25' : 'bg-fg3/35'),
                   // news-mini filled bar: white/80 over photo overlay — not a tokenizable surface.
                   isFilled && isNewsMini && 'bg-white/80'
                 )}
@@ -485,24 +481,19 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
                           ? 'bg-primary text-primary-foreground'
                           : isNewsMini
                             ? 'bg-white/30 text-white'
-                            : 'text-white'
+                            : 'bg-practice-accent text-primary-foreground'
                         : !disabled
                           ? isAdmin
                             ? 'text-muted-foreground hover:bg-muted'
                             : isNewsMini
                               ? 'text-white/60 hover:bg-white/15'
-                              : 'text-[hsl(var(--practice-text-muted))] hover:bg-[hsl(var(--practice-accent-soft))]'
+                              : 'text-practice-text-muted hover:bg-practice-accent-soft'
                           : isAdmin
                             ? 'text-muted-foreground'
                             : isNewsMini
                               ? 'text-white/40'
-                              : 'text-[hsl(var(--practice-text-muted))]'
+                              : 'text-practice-text-muted'
                     )}
-                    style={
-                      isSelected && !isAdmin && !isNewsMini
-                        ? { backgroundColor: 'hsl(var(--practice-accent))' }
-                        : undefined
-                    }
                   >
                     {opt}x
                   </button>

@@ -229,7 +229,7 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
       data-testid="mcq-component"
     >
       {/* Card shell - visual container */}
-      <div className="rounded-[20px] border-[1.5px] border-[hsl(var(--practice-border))] bg-[hsl(var(--practice-card))] px-[22px] pb-6 pt-6 shadow-1">
+      <div className="rounded-[20px] border-[1.5px] border-practice-border bg-practice-card px-[22px] pb-6 pt-6 shadow-1">
         {/* Inner content area with vertical spacing */}
         <div className="flex flex-col space-y-4">
           {/* Badge row - category */}
@@ -249,7 +249,7 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
           {/* Question text - KEEP EXACTLY AS-IS */}
           <h2
             id={questionId}
-            className="mb-1 font-practice-serif text-[19px] font-semibold leading-[1.5] tracking-[-0.01em] text-[hsl(var(--practice-text))]"
+            className="mb-1 font-practice-serif text-[19px] font-semibold leading-[1.5] tracking-[-0.01em] text-practice-text"
             data-testid="mcq-question-text"
           >
             {questionText}
@@ -362,7 +362,7 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
         {!isSubmitted && (
           <p
             id={keyboardHintId}
-            className="text-center font-mono text-xs text-[hsl(var(--practice-text-dim))]"
+            className="text-center font-mono text-xs text-practice-text-dim"
             data-testid="mcq-keyboard-hint"
           >
             {t('mcq.keyboardHintDynamic', { max: question.option_count })}
@@ -375,7 +375,7 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
             <button
               type="button"
               onClick={handleNext}
-              className="w-full max-w-[280px] rounded-xl bg-[hsl(var(--practice-accent))] px-6 py-2.5 font-medium text-white shadow-[0_0_0_3px_hsl(var(--practice-accent-glow))] transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="w-full max-w-[280px] rounded-xl bg-practice-accent px-6 py-2.5 font-medium text-primary-foreground shadow-[0_0_0_3px_hsl(var(--practice-accent-glow))] transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               data-testid="mcq-next-button"
             >
               {isLastQuestion ? t('mcq.seeResults') : t('mcq.nextQuestion')}
@@ -390,8 +390,8 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
                 'w-full max-w-[280px] rounded-xl px-6 py-2.5 font-medium transition-colors',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                 selectedOption !== null && !disabled
-                  ? 'cursor-pointer bg-[hsl(var(--practice-accent))] text-white shadow-[0_0_0_3px_hsl(var(--practice-accent-glow))] hover:opacity-90'
-                  : 'cursor-not-allowed bg-[hsl(var(--practice-border))] text-[hsl(var(--practice-text-dim))]'
+                  ? 'cursor-pointer bg-practice-accent text-primary-foreground shadow-[0_0_0_3px_hsl(var(--practice-accent-glow))] hover:opacity-90'
+                  : 'cursor-not-allowed bg-practice-border text-practice-text-dim'
               )}
               data-testid="mcq-submit-button"
             >

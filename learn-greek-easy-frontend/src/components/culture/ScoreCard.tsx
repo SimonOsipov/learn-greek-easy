@@ -20,22 +20,22 @@ export interface ScoreCardProps {
 function StatItem({
   value,
   label,
-  color,
+  valueColorClass,
   testId,
 }: {
   value: number;
   label: string;
-  color: string;
+  valueColorClass: string;
   testId: string;
 }) {
   return (
     <div className="flex flex-col items-center" data-testid={testId}>
-      <span className="font-practice-mono text-[24px] font-bold leading-none" style={{ color }}>
+      <span
+        className={cn('font-practice-mono text-[24px] font-bold leading-none', valueColorClass)}
+      >
         {value}
       </span>
-      <span className="mt-1 text-[12px]" style={{ color: 'hsl(var(--practice-text-muted))' }}>
-        {label}
-      </span>
+      <span className="mt-1 text-[12px] text-practice-text-muted">{label}</span>
     </div>
   );
 }
@@ -103,17 +103,16 @@ export function ScoreCard({ correct, incorrect, total, onTryAgain, className }: 
         {/* Center text overlay */}
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span
-            className="font-bold leading-none"
-            style={{
-              fontSize: '36px',
-              color: isPassing ? 'hsl(var(--practice-correct))' : 'hsl(var(--practice-gold))',
-            }}
+            className={cn(
+              'text-[36px] font-bold leading-none',
+              isPassing ? 'text-practice-correct' : 'text-practice-gold'
+            )}
             data-testid="score-percentage"
           >
             {percentage}%
           </span>
           <span
-            className="mt-1 font-practice-mono text-sm text-[hsl(var(--practice-text-muted))]"
+            className="mt-1 font-practice-mono text-sm text-practice-text-muted"
             data-testid="score-fraction"
           >
             {correct}/{total}
@@ -123,8 +122,7 @@ export function ScoreCard({ correct, incorrect, total, onTryAgain, className }: 
 
       {/* Title */}
       <h2
-        className="mt-4 font-practice-serif text-[22px] font-bold leading-tight"
-        style={{ color: 'hsl(var(--practice-text))' }}
+        className="mt-4 font-practice-serif text-[22px] font-bold leading-tight text-practice-text"
         data-testid="score-card-title"
       >
         {isPassing
@@ -133,11 +131,7 @@ export function ScoreCard({ correct, incorrect, total, onTryAgain, className }: 
       </h2>
 
       {/* Subtitle */}
-      <p
-        className="mt-1 text-[14px]"
-        style={{ color: 'hsl(var(--practice-text-muted))' }}
-        data-testid="score-card-subtitle"
-      >
+      <p className="mt-1 text-[14px] text-practice-text-muted" data-testid="score-card-subtitle">
         {isPassing
           ? t('scoreCard.subtitlePass', {
               defaultValue: 'You crushed it! Your knowledge of Greek culture is growing.',
@@ -149,29 +143,25 @@ export function ScoreCard({ correct, incorrect, total, onTryAgain, className }: 
 
       {/* Stats Row */}
       <div
-        className="mt-5 flex w-full items-center justify-center gap-8 py-4"
-        style={{
-          borderTop: '1px solid hsl(var(--practice-border))',
-          borderBottom: '1px solid hsl(var(--practice-border))',
-        }}
+        className="mt-5 flex w-full items-center justify-center gap-8 border-y border-practice-border py-4"
         data-testid="score-card-stats"
       >
         <StatItem
           value={correct}
           label={t('scoreCard.correct', { defaultValue: 'Correct' })}
-          color="hsl(var(--practice-correct))"
+          valueColorClass="text-practice-correct"
           testId="stat-correct"
         />
         <StatItem
           value={incorrect}
           label={t('scoreCard.incorrect', { defaultValue: 'Incorrect' })}
-          color="hsl(var(--practice-incorrect))"
+          valueColorClass="text-practice-incorrect"
           testId="stat-incorrect"
         />
         <StatItem
           value={total}
           label={t('scoreCard.total', { defaultValue: 'Total' })}
-          color="hsl(var(--practice-accent))"
+          valueColorClass="text-practice-accent"
           testId="stat-total"
         />
       </div>
@@ -182,8 +172,8 @@ export function ScoreCard({ correct, incorrect, total, onTryAgain, className }: 
         onClick={onTryAgain}
         className={cn(
           'mt-5 w-full rounded-xl px-6 py-2.5',
-          'text-[15px] font-semibold text-white',
-          'bg-[hsl(var(--practice-accent))]',
+          'text-[15px] font-semibold text-primary-foreground',
+          'bg-practice-accent',
           'shadow-[0_0_0_3px_hsl(var(--practice-accent-glow))]',
           'transition-colors hover:brightness-110',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
