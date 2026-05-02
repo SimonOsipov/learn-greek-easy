@@ -32,6 +32,7 @@ from src.schemas.progress import (
     TodayStats,
     TrendsSummary,
 )
+from src.services.gamification.streak import compute_aggregated_streak
 
 _DATETIME_MIN_UTC = datetime.min.replace(tzinfo=timezone.utc)
 
@@ -147,7 +148,7 @@ class ProgressService:
         )
 
         # Streak
-        current_streak = await self._get_aggregated_streak(user_id)
+        current_streak = await compute_aggregated_streak(self.db, user_id)
         longest_streak = await self._get_aggregated_longest_streak(user_id)
         streak = StreakStats(
             current_streak=current_streak,
@@ -264,33 +265,6 @@ class ProgressService:
             culture_accuracy=culture_acc_pct,
             combined_accuracy=combined_acc,
         )
-
-    async def _get_aggregated_streak(self, user_id: UUID) -> int:
-        vocab_dates, culture_dates, mock_dates = await asyncio.gather(
-            self.card_review_repo.get_unique_dates(user_id, days=30),
-            self.culture_answer_repo.get_unique_dates(user_id, days=30),
-            self.mock_exam_repo.get_unique_dates(user_id, days=30),
-        )
-        all_dates = sorted(
-            set(vocab_dates) | set(culture_dates) | set(mock_dates),
-            reverse=True,
-        )
-        if not all_dates:
-            return 0
-        today = date.today()
-        # Grace period: start from today or yesterday (whichever has activity)
-        start = today if all_dates[0] == today else today - timedelta(days=1)
-        if all_dates[0] > start:
-            return 0
-        streak = 0
-        expected = start
-        for d in all_dates:
-            if d == expected:
-                streak += 1
-                expected = d - timedelta(days=1)
-            elif d < expected:
-                break
-        return streak
 
     async def _get_aggregated_longest_streak(self, user_id: UUID) -> int:
         vocab_dates, culture_dates, mock_dates = await asyncio.gather(
