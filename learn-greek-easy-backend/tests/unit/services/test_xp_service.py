@@ -23,8 +23,6 @@ from src.services.xp_constants import (
     XP_FLASHCARD_CORRECT,
     XP_FLASHCARD_WRONG,
     XP_PERFECT_ANSWER,
-    XP_SESSION_COMPLETE,
-    XP_STREAK_MULTIPLIER,
 )
 from src.services.xp_service import XPService
 
@@ -321,96 +319,6 @@ class TestAwardFirstReviewBonus:
         amount = await service.award_first_review_bonus(user_id)
 
         assert amount == 0
-
-
-@pytest.mark.unit
-class TestAwardSessionCompleteXP:
-    """Tests for XPService.award_session_complete_xp method."""
-
-    @pytest.mark.asyncio
-    async def test_awards_25_xp(self, mock_db_session, mock_user_xp):
-        """Session complete awards 25 XP."""
-        service = XPService(mock_db_session)
-
-        mock_result = MagicMock()
-        mock_result.scalar_one_or_none.return_value = mock_user_xp
-        mock_db_session.execute.return_value = mock_result
-
-        user_id = uuid4()
-        amount = await service.award_session_complete_xp(user_id)
-
-        assert amount == XP_SESSION_COMPLETE
-        assert amount == 25
-
-
-@pytest.mark.unit
-class TestAwardStreakBonus:
-    """Tests for XPService.award_streak_bonus method."""
-
-    @pytest.mark.asyncio
-    async def test_streak_1_day_awards_10_xp(self, mock_db_session, mock_user_xp):
-        """1 day streak awards 10 XP."""
-        service = XPService(mock_db_session)
-
-        mock_result = MagicMock()
-        mock_result.scalar_one_or_none.return_value = mock_user_xp
-        mock_db_session.execute.return_value = mock_result
-
-        user_id = uuid4()
-        amount = await service.award_streak_bonus(user_id, streak_days=1)
-
-        assert amount == XP_STREAK_MULTIPLIER * 1
-        assert amount == 10
-
-    @pytest.mark.asyncio
-    async def test_streak_7_days_awards_70_xp(self, mock_db_session, mock_user_xp):
-        """7 day streak awards 70 XP."""
-        service = XPService(mock_db_session)
-
-        mock_result = MagicMock()
-        mock_result.scalar_one_or_none.return_value = mock_user_xp
-        mock_db_session.execute.return_value = mock_result
-
-        user_id = uuid4()
-        amount = await service.award_streak_bonus(user_id, streak_days=7)
-
-        assert amount == XP_STREAK_MULTIPLIER * 7
-        assert amount == 70
-
-    @pytest.mark.asyncio
-    async def test_streak_30_days_awards_300_xp(self, mock_db_session, mock_user_xp):
-        """30 day streak awards 300 XP."""
-        service = XPService(mock_db_session)
-
-        mock_result = MagicMock()
-        mock_result.scalar_one_or_none.return_value = mock_user_xp
-        mock_db_session.execute.return_value = mock_result
-
-        user_id = uuid4()
-        amount = await service.award_streak_bonus(user_id, streak_days=30)
-
-        assert amount == XP_STREAK_MULTIPLIER * 30
-        assert amount == 300
-
-    @pytest.mark.asyncio
-    async def test_raises_valueerror_for_zero_streak(self, mock_db_session):
-        """Raises ValueError for streak_days <= 0."""
-        service = XPService(mock_db_session)
-
-        with pytest.raises(ValueError) as exc_info:
-            await service.award_streak_bonus(uuid4(), streak_days=0)
-
-        assert "greater than 0" in str(exc_info.value)
-
-    @pytest.mark.asyncio
-    async def test_raises_valueerror_for_negative_streak(self, mock_db_session):
-        """Raises ValueError for negative streak_days."""
-        service = XPService(mock_db_session)
-
-        with pytest.raises(ValueError) as exc_info:
-            await service.award_streak_bonus(uuid4(), streak_days=-5)
-
-        assert "greater than 0" in str(exc_info.value)
 
 
 @pytest.mark.unit
