@@ -45,7 +45,9 @@ class ExerciseFactory(BaseFactory):
             and kwargs.get("dialog_exercise_id") is None
             and kwargs.get("picture_exercise_id") is None
         ):
-            description_exercise = await DescriptionExerciseFactory.create(session=session)
+            description_exercise = await DescriptionExerciseFactory.create(
+                session=session, approved=True
+            )
             kwargs["description_exercise_id"] = description_exercise.id
             kwargs.setdefault("source_type", ExerciseSourceType.DESCRIPTION)
         return await super().create(session=session, **kwargs)

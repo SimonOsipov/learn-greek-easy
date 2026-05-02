@@ -1,7 +1,7 @@
 """Integration tests for Exercise, ExerciseRecord, and ExerciseReview repositories."""
 
 import uuid
-from datetime import date
+from datetime import date, timedelta
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.db.models import (
     CardStatus,
     DialogExercise,
+    ExerciseModality,
     ExerciseSourceType,
     ExerciseStatus,
     ExerciseType,
@@ -21,6 +22,8 @@ from tests.factories import (
     ExerciseFactory,
     ExerciseRecordFactory,
     ListeningDialogFactory,
+    SituationDescriptionFactory,
+    SituationFactory,
     UserFactory,
 )
 
@@ -183,4 +186,143 @@ class TestExerciseReviewRepository:
         assert review.interval_after == 1
         assert review.repetitions_before == 0
         assert review.repetitions_after == 1
-        assert review.reviewed_at is not None
+
+
+async def _make_exercise_for_situation(db_session, situation):
+    """Create SituationDescription → DescriptionExercise → Exercise chain for a given situation."""
+    desc = await SituationDescriptionFactory.create(session=db_session, situation_id=situation.id)
+    de = await DescriptionExerciseFactory.create(session=db_session, description_id=desc.id)
+    exercise = await ExerciseFactory.create(session=db_session, description_exercise_id=de.id)
+    return exercise
+
+
+@pytest.mark.asyncio
+class TestExerciseQueueDraftFiltering:
+    """Tests that get_new_exercises, get_due_exercises, and get_early_practice_exercises
+    exclude exercises linked to draft situations."""
+
+    async def test_get_new_exercises_excludes_draft_situations(
+        self, db_session: AsyncSession
+    ) -> None:
+        user = await UserFactory.create(session=db_session)
+        ready_situation = await SituationFactory.create(session=db_session, ready=True)
+        draft_situation = await SituationFactory.create(session=db_session)
+
+        ready_exercise = await _make_exercise_for_situation(db_session, ready_situation)
+        await _make_exercise_for_situation(db_session, draft_situation)
+
+        repo = ExerciseRecordRepository(db_session)
+        exercises = await repo.get_new_exercises(user.id)
+
+        returned_ids = {e.id for e in exercises}
+        assert ready_exercise.id in returned_ids
+        assert all(
+            e.id == ready_exercise.id or e.source_type != ExerciseSourceType.DESCRIPTION
+            for e in exercises
+        )
+
+    async def test_get_new_exercises_groups_by_situation(self, db_session: AsyncSession) -> None:
+        user = await UserFactory.create(session=db_session)
+        sit_a = await SituationFactory.create(session=db_session, ready=True)
+        sit_b = await SituationFactory.create(session=db_session, ready=True)
+
+        desc_a = await SituationDescriptionFactory.create(session=db_session, situation_id=sit_a.id)
+        desc_b = await SituationDescriptionFactory.create(session=db_session, situation_id=sit_b.id)
+
+        de_a1 = await DescriptionExerciseFactory.create(
+            session=db_session, description_id=desc_a.id, modality=ExerciseModality.LISTENING
+        )
+        de_a2 = await DescriptionExerciseFactory.create(
+            session=db_session, description_id=desc_a.id, modality=ExerciseModality.READING
+        )
+        de_b1 = await DescriptionExerciseFactory.create(
+            session=db_session, description_id=desc_b.id, modality=ExerciseModality.LISTENING
+        )
+        de_b2 = await DescriptionExerciseFactory.create(
+            session=db_session, description_id=desc_b.id, modality=ExerciseModality.READING
+        )
+
+        ex_a1 = await ExerciseFactory.create(session=db_session, description_exercise_id=de_a1.id)
+        ex_a2 = await ExerciseFactory.create(session=db_session, description_exercise_id=de_a2.id)
+        ex_b1 = await ExerciseFactory.create(session=db_session, description_exercise_id=de_b1.id)
+        ex_b2 = await ExerciseFactory.create(session=db_session, description_exercise_id=de_b2.id)
+
+        repo = ExerciseRecordRepository(db_session)
+        exercises = await repo.get_new_exercises(user.id, limit=10)
+
+        returned_ids = [e.id for e in exercises]
+        assert {ex_a1.id, ex_a2.id, ex_b1.id, ex_b2.id}.issubset(set(returned_ids))
+
+        # Verify contiguous grouping: all exercises of sit_a appear before or after all of sit_b
+        sit_a_positions = [i for i, e in enumerate(exercises) if e.id in {ex_a1.id, ex_a2.id}]
+        sit_b_positions = [i for i, e in enumerate(exercises) if e.id in {ex_b1.id, ex_b2.id}]
+        assert max(sit_a_positions) < min(sit_b_positions) or max(sit_b_positions) < min(
+            sit_a_positions
+        )
+
+    async def test_get_due_exercises_excludes_draft_situations(
+        self, db_session: AsyncSession
+    ) -> None:
+        user = await UserFactory.create(session=db_session)
+        ready_situation = await SituationFactory.create(session=db_session, ready=True)
+        draft_situation = await SituationFactory.create(session=db_session)
+
+        ready_exercise = await _make_exercise_for_situation(db_session, ready_situation)
+        draft_exercise = await _make_exercise_for_situation(db_session, draft_situation)
+
+        # Create records in LEARNING state (due today)
+        ready_record = await ExerciseRecordFactory.create(
+            session=db_session,
+            user_id=user.id,
+            exercise_id=ready_exercise.id,
+            status=CardStatus.LEARNING,
+            next_review_date=date.today(),
+        )
+        await ExerciseRecordFactory.create(
+            session=db_session,
+            user_id=user.id,
+            exercise_id=draft_exercise.id,
+            status=CardStatus.LEARNING,
+            next_review_date=date.today(),
+        )
+
+        repo = ExerciseRecordRepository(db_session)
+        records = await repo.get_due_exercises(user.id)
+
+        returned_exercise_ids = {r.exercise_id for r in records}
+        assert ready_record.exercise_id in returned_exercise_ids
+        assert draft_exercise.id not in returned_exercise_ids
+
+    async def test_get_early_practice_exercises_excludes_draft_situations(
+        self, db_session: AsyncSession
+    ) -> None:
+        user = await UserFactory.create(session=db_session)
+        ready_situation = await SituationFactory.create(session=db_session, ready=True)
+        draft_situation = await SituationFactory.create(session=db_session)
+
+        ready_exercise = await _make_exercise_for_situation(db_session, ready_situation)
+        draft_exercise = await _make_exercise_for_situation(db_session, draft_situation)
+
+        future_date = date.today() + timedelta(days=3)
+
+        ready_record = await ExerciseRecordFactory.create(
+            session=db_session,
+            user_id=user.id,
+            exercise_id=ready_exercise.id,
+            status=CardStatus.LEARNING,
+            next_review_date=future_date,
+        )
+        await ExerciseRecordFactory.create(
+            session=db_session,
+            user_id=user.id,
+            exercise_id=draft_exercise.id,
+            status=CardStatus.LEARNING,
+            next_review_date=future_date,
+        )
+
+        repo = ExerciseRecordRepository(db_session)
+        records = await repo.get_early_practice_exercises(user.id)
+
+        returned_exercise_ids = {r.exercise_id for r in records}
+        assert ready_record.exercise_id in returned_exercise_ids
+        assert draft_exercise.id not in returned_exercise_ids

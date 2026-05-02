@@ -5,7 +5,6 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { ExerciseContentStep } from '@/components/exercises/ExerciseContentStep';
 import { renderWithProviders } from '@/lib/test-utils';
-import type { WordTimestamp } from '@/types/situation';
 
 // Mock WaveformPlayer since it requires audio context
 vi.mock('@/components/culture/WaveformPlayer', () => ({
@@ -19,26 +18,9 @@ vi.mock('@/components/culture/WaveformPlayer', () => ({
   ),
 }));
 
-// Mock KaraokeText
-vi.mock('@/components/shared/KaraokeText', () => ({
-  KaraokeText: ({ fallbackText }: { fallbackText: string }) => (
-    <div data-testid="karaoke-text">{fallbackText}</div>
-  ),
-}));
-
-// Mock useAudioTimeMs
-vi.mock('@/hooks/useAudioTimeMs', () => ({
-  useAudioTimeMs: () => 0,
-}));
-
 // ============================================
 // Fixtures
 // ============================================
-
-const SAMPLE_TIMESTAMPS: WordTimestamp[] = [
-  { word: 'Ο', start_ms: 0, end_ms: 200 },
-  { word: 'Γιάννης', start_ms: 200, end_ms: 600 },
-];
 
 const defaultProps = {
   modality: null as 'listening' | 'reading' | null,
@@ -46,7 +28,6 @@ const defaultProps = {
   descriptionTextEl: null as string | null,
   descriptionAudioUrl: null as string | null,
   descriptionAudioDuration: null as number | null,
-  wordTimestamps: null as WordTimestamp[] | null,
   onAudioPlay: vi.fn(),
 };
 
@@ -157,16 +138,25 @@ describe('ExerciseContentStep', () => {
   });
 
   // ============================================
-  // Karaoke text
+  // Modality-aware content isolation
   // ============================================
 
-  it('renders KaraokeText when listening with timestamps', () => {
+  it('does not render any transcript text for listening exercise', () => {
     renderComponent({
       modality: 'listening',
       descriptionAudioUrl: 'https://example.com/audio.mp3',
       descriptionTextEl: 'Ο Γιάννης',
-      wordTimestamps: SAMPLE_TIMESTAMPS,
     });
-    expect(screen.getByTestId('karaoke-text')).toBeInTheDocument();
+    expect(screen.queryByTestId('exercise-reading-passage')).not.toBeInTheDocument();
+    expect(screen.queryByText('Ο Γιάννης')).not.toBeInTheDocument();
+  });
+
+  it('does not render audio player for reading exercise', () => {
+    renderComponent({
+      modality: 'reading',
+      descriptionTextEl: 'Ο Γιάννης πάει στην αγορά.',
+      descriptionAudioUrl: 'https://example.com/audio.mp3',
+    });
+    expect(screen.queryByTestId('exercise-listening-audio')).not.toBeInTheDocument();
   });
 });

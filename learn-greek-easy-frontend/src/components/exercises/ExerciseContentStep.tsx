@@ -1,13 +1,8 @@
-import { useState } from 'react';
-
 import { useTranslation } from 'react-i18next';
 
 import { WaveformPlayer } from '@/components/culture/WaveformPlayer';
-import { KaraokeText } from '@/components/shared/KaraokeText';
 import { Badge } from '@/components/ui/badge';
-import { useAudioTimeMs } from '@/hooks/useAudioTimeMs';
 import type { DeckLevel, ExerciseModality } from '@/services/exerciseAPI';
-import type { WordTimestamp } from '@/types/situation';
 
 interface ExerciseContentStepProps {
   modality: ExerciseModality | null;
@@ -15,7 +10,6 @@ interface ExerciseContentStepProps {
   descriptionTextEl: string | null;
   descriptionAudioUrl: string | null;
   descriptionAudioDuration: number | null;
-  wordTimestamps: WordTimestamp[] | null;
   onAudioPlay?: (duration: number) => void;
 }
 
@@ -25,15 +19,9 @@ export function ExerciseContentStep({
   descriptionTextEl,
   descriptionAudioUrl,
   descriptionAudioDuration,
-  wordTimestamps,
   onAudioPlay,
 }: ExerciseContentStepProps) {
   const { t } = useTranslation('common');
-
-  const [containerEl, setContainerEl] = useState<HTMLElement | null>(null);
-  const karaokeEnabled =
-    modality === 'listening' && !!descriptionAudioUrl && !!wordTimestamps?.length;
-  const currentTimeMs = useAudioTimeMs(containerEl, karaokeEnabled);
 
   const hasBadges = modality !== null || audioLevel !== null;
   const hasReadingContent = modality === 'reading' && !!descriptionTextEl?.trim();
@@ -65,7 +53,6 @@ export function ExerciseContentStep({
 
       {hasListeningContent && (
         <section
-          ref={setContainerEl}
           aria-label={t('exercises.session.contentStep.listeningAudio')}
           className="mb-4 space-y-3"
           data-testid="exercise-listening-audio"
@@ -76,14 +63,6 @@ export function ExerciseContentStep({
             variant="culture"
             onPlay={onAudioPlay}
           />
-          {karaokeEnabled && (
-            <KaraokeText
-              wordTimestamps={wordTimestamps!}
-              currentTimeMs={currentTimeMs}
-              fallbackText={descriptionTextEl ?? ''}
-              className="text-base leading-relaxed"
-            />
-          )}
         </section>
       )}
     </div>

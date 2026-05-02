@@ -204,7 +204,7 @@ class TestExerciseQueueSituationFilter:
         db_session: AsyncSession,
     ) -> None:
         """Only exercises belonging to the given situation are returned."""
-        situation = await SituationFactory.create(session=db_session)
+        situation = await SituationFactory.create(session=db_session, ready=True)
         description = await SituationDescriptionFactory.create(
             session=db_session, situation_id=situation.id
         )
@@ -216,7 +216,7 @@ class TestExerciseQueueSituationFilter:
         )
 
         # Second situation with its own exercise — must be excluded from first situation's filter
-        situation2 = await SituationFactory.create(session=db_session)
+        situation2 = await SituationFactory.create(session=db_session, ready=True)
         description2 = await SituationDescriptionFactory.create(
             session=db_session, situation_id=situation2.id
         )
@@ -285,7 +285,7 @@ class TestExerciseQueueSituationFilter:
         """situation_id and modality filters both apply simultaneously."""
         from src.db.models import ExerciseModality
 
-        situation = await SituationFactory.create(session=db_session)
+        situation = await SituationFactory.create(session=db_session, ready=True)
         description = await SituationDescriptionFactory.create(
             session=db_session, situation_id=situation.id
         )

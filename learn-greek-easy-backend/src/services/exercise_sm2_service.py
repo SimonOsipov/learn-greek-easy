@@ -124,9 +124,7 @@ class ExerciseSM2Service:
 
         # Enrich description-source items with audio + situation context
         if description_exercise_ids:
-            enrichment_map = await self._load_description_enrichment(
-                description_exercise_ids, audio_level=audio_level
-            )
+            enrichment_map = await self._load_description_enrichment(description_exercise_ids)
             for item in all_items:
                 if item.exercise_id in enrichment_map:
                     enriched = enrichment_map[item.exercise_id]
@@ -191,8 +189,6 @@ class ExerciseSM2Service:
     async def _load_description_enrichment(
         self,
         exercise_ids: list[UUID],
-        *,
-        audio_level: DeckLevel | None = None,
     ) -> dict[UUID, dict]:
         """Batch-load description exercise enrichment data (audio, text, situation, items)."""
         stmt = (
@@ -221,8 +217,7 @@ class ExerciseSM2Service:
             desc = de.description
             situation = desc.situation if desc else None
 
-            # Determine audio/text based on level
-            use_a2 = audio_level == DeckLevel.A2
+            use_a2 = de.audio_level == DeckLevel.A2
             if use_a2:
                 text_el = desc.text_el_a2 or desc.text_el if desc else None
                 audio_key = desc.audio_a2_s3_key if desc else None
@@ -233,6 +228,14 @@ class ExerciseSM2Service:
                 audio_key = desc.audio_s3_key if desc else None
                 duration = desc.audio_duration_seconds if desc else None
                 timestamps = desc.word_timestamps if desc else None
+
+            if de.modality == ExerciseModality.LISTENING:
+                text_el = None
+                timestamps = None
+            elif de.modality == ExerciseModality.READING:
+                audio_key = None
+                duration = None
+                timestamps = None
 
             audio_url = s3_service.generate_presigned_url(audio_key) if audio_key else None
 
