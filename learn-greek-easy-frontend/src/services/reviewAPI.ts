@@ -3,37 +3,34 @@
 /**
  * Review API Service
  *
- * Provides methods for flashcard review operations including:
- * - Getting review history
- * - Submitting single reviews
- * - Submitting bulk reviews
+ * Provides methods for flashcard review submission.
  */
 
 import { api } from './api';
 
-import type { V2CardStatus } from './studyAPI';
+import type { CardStatus } from './studyAPI';
 
 // ============================================
-// V2 Types
+// Types
 // ============================================
 
 /**
- * V2 single review submission
+ * Single review submission
  */
-export interface V2ReviewRequest {
+export interface ReviewRequest {
   card_record_id: string;
   quality: number; // 0-5 SM-2 quality rating
   time_taken: number; // seconds (0-180)
 }
 
 /**
- * V2 review result after processing
+ * Review result after SM-2 processing
  */
-export interface V2ReviewResult {
+export interface ReviewResult {
   card_record_id: string;
   quality: number;
-  previous_status: V2CardStatus;
-  new_status: V2CardStatus;
+  previous_status: CardStatus;
+  new_status: CardStatus;
   easiness_factor: number;
   interval: number;
   repetitions: number;
@@ -47,7 +44,7 @@ export interface V2ReviewResult {
 
 export const reviewAPI = {
   /**
-   * Submit a single V2 card review
+   * Submit a single card review.
    *
    * Quality rating scale:
    * - 0: Complete blackout, no recognition
@@ -57,7 +54,7 @@ export const reviewAPI = {
    * - 4: Correct with some hesitation
    * - 5: Perfect response, no hesitation
    */
-  submitV2: async (review: V2ReviewRequest): Promise<V2ReviewResult> => {
-    return api.post<V2ReviewResult>('/api/v1/reviews/v2', review);
+  submit: async (review: ReviewRequest): Promise<ReviewResult> => {
+    return api.post<ReviewResult>('/api/v1/reviews/v2', review);
   },
 };

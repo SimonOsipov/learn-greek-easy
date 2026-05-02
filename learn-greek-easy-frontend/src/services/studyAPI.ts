@@ -3,7 +3,7 @@
 /**
  * Study API Service
  *
- * Provides methods for V2 study session operations.
+ * Provides methods for SM-2 study session operations.
  */
 
 import { api, buildQueryString } from './api';
@@ -11,21 +11,20 @@ import { api, buildQueryString } from './api';
 import type { CardRecordType } from './wordEntryAPI';
 
 // ============================================
-// V2 Types
+// Types
 // ============================================
 
 /**
- * Card status in the SM-2 V2 system
+ * Card status in the SM-2 system
  */
-export type V2CardStatus = 'new' | 'learning' | 'review' | 'mastered';
+export type CardStatus = 'new' | 'learning' | 'review' | 'mastered';
 
 /**
- * Card in V2 study queue
+ * Card in the study queue.
  *
- * Matches the V2StudyQueueCard schema from the backend.
- * Uses card_record_id instead of card_id; includes card_type and variant_key.
+ * Uses card_record_id (the SM-2 record); includes card_type and variant_key.
  */
-export interface V2StudyQueueCard {
+export interface StudyQueueCard {
   card_record_id: string;
   word_entry_id: string;
   deck_id: string;
@@ -34,7 +33,7 @@ export interface V2StudyQueueCard {
   variant_key: string | null;
   front_content: Record<string, unknown>;
   back_content: Record<string, unknown>;
-  status: V2CardStatus;
+  status: CardStatus;
   is_new: boolean;
   is_early_practice: boolean;
   due_date: string | null;
@@ -48,20 +47,20 @@ export interface V2StudyQueueCard {
 }
 
 /**
- * V2 study queue response
+ * Study queue response
  */
-export interface V2StudyQueue {
+export interface StudyQueue {
   total_due: number;
   total_new: number;
   total_early_practice: number;
   total_in_queue: number;
-  cards: V2StudyQueueCard[];
+  cards: StudyQueueCard[];
 }
 
 /**
- * Parameters for getting V2 study queue
+ * Parameters for getting the study queue
  */
-export interface V2StudyQueueParams {
+export interface StudyQueueParams {
   deck_id?: string;
   card_type?: CardRecordType;
   limit?: number;
@@ -78,9 +77,9 @@ export interface V2StudyQueueParams {
 
 export const studyAPI = {
   /**
-   * Get V2 study queue (card-record based)
+   * Get the study queue (card-record based)
    */
-  getV2Queue: async (params: V2StudyQueueParams = {}): Promise<V2StudyQueue> => {
+  getQueue: async (params: StudyQueueParams = {}): Promise<StudyQueue> => {
     const queryString = buildQueryString({
       deck_id: params.deck_id,
       card_type: params.card_type,
@@ -91,6 +90,6 @@ export const studyAPI = {
       early_practice_limit: params.early_practice_limit,
       word_entry_id: params.word_entry_id,
     });
-    return api.get<V2StudyQueue>(`/api/v1/study/queue/v2${queryString}`);
+    return api.get<StudyQueue>(`/api/v1/study/queue/v2${queryString}`);
   },
 };
