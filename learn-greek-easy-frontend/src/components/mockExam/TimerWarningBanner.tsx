@@ -41,7 +41,7 @@ export const TimerWarningBanner: React.FC<TimerWarningBannerProps> = ({
   return (
     <div
       className={cn(
-        'fixed bottom-0 left-0 right-0 z-50 animate-pulse border-t border-[hsl(var(--danger)/.5)] bg-[hsl(var(--danger))] px-4 py-3 text-[hsl(var(--destructive-foreground))] shadow-lg',
+        'fixed bottom-0 left-0 right-0 z-50 animate-pulse border-t border-danger/50 bg-danger px-4 py-3 text-destructive-foreground shadow-lg',
         className
       )}
       role="alert"
