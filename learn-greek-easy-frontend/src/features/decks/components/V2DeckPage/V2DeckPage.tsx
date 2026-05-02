@@ -41,9 +41,9 @@ export const V2DeckPage: React.FC<V2DeckPageProps> = ({ deckId }) => {
   // 2. If we clear selection in cleanup, StrictMode will clear it before the component fully mounts
   // 3. Instead, we rely on route changes to naturally trigger new deck selections
 
-  // Loading state - also show loading if deck isn't loaded yet
-  // (V2DeckPage is only rendered when DeckDetailPage has confirmed the deck is V2,
-  // so selectedDeck should always be available, but handle the edge case)
+  // Loading state - also show loading if deck isn't loaded yet.
+  // selectedDeck is normally populated by DeckDetailPage before this renders,
+  // but we handle the edge case where it isn't yet.
   if (isLoading || !selectedDeck) {
     return <LoadingSkeleton />;
   }
