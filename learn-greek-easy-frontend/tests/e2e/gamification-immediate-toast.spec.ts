@@ -100,22 +100,17 @@ test.describe('Gamification — IMMEDIATE-mode notification on review unlock (GA
     await resetToNearThreshold(request);
   });
 
-  test.afterEach(async ({ request }) => {
-    // Restore the e2e_learner's full baseline so subsequent specs in this shard
-    // (notably gamification-reconcile-self-heal.spec.ts which expects review history
-    // for `learning_first_word`) get a clean state. /seed/all truncates and re-seeds
-    // users/decks/cards/stats/reviews.
-    const apiBaseUrl = getApiBaseUrl();
-    const resp = await request.post(`${apiBaseUrl}/api/v1/test/seed/all`, {
-      headers: { 'Content-Type': 'application/json' },
-    });
-    if (!resp.ok()) {
-      console.error(`[GAMIF-05-06] /seed/all restore failed: ${resp.status()} ${await resp.text()}`);
-    }
-  });
+  // No afterEach restore: /seed/all is too expensive (1-2s) and intermittently 500s,
+  // pushing the test over its 60s timeout. Subsequent specs in this shard manage
+  // their own state via dedicated beforeEach hooks (e.g. gamification-reconcile-self-heal
+  // has its own gamification-reset-stuck-state seed). Trade-off: we leave the e2e_learner
+  // in a non-baseline state (1 review, 1 CRS row, several auto-unlocked achievements),
+  // but no spec downstream of this one in shard 2 has been observed to depend on the
+  // pre-test state of this user.
 
   test(
     'GAMIF-05-06: IMMEDIATE-mode notification appears within review request lifecycle',
+    { timeout: 90_000 },
     async ({ page, request }) => {
       const apiBaseUrl = getApiBaseUrl();
       const authHeaders = { Authorization: `Bearer ${getLearnerAccessToken()}` };
