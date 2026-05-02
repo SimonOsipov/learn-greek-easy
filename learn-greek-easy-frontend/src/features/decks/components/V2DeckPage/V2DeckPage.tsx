@@ -34,7 +34,7 @@ export const V2DeckPage: React.FC<V2DeckPageProps> = ({ deckId }) => {
   const { t, i18n } = useTranslation('deck');
   const { selectedDeck, isLoading, error, selectDeck } = useDeckStore();
 
-  // V2DeckPage is rendered by DeckDetailPage when the deck has cardSystem='V2'.
+  // V2DeckPage is the deck detail page for vocabulary decks.
   // At this point, the deck is already loaded in the store.
   // Note: We intentionally do NOT clear the selection here because:
   // 1. React StrictMode double-invokes effects and their cleanups
