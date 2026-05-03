@@ -289,6 +289,7 @@ class NewsItemService:
 
         return NewsItemResponse(
             id=news_item.id,
+            situation_id=news_item.situation_id,
             title_el=situation.scenario_el or "",
             title_en=situation.scenario_en or "",
             title_ru=situation.scenario_ru or "",
