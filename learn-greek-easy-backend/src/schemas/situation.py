@@ -59,6 +59,9 @@ class SituationListItem(BaseModel):
     has_dialog_audio: bool
     has_description_audio: bool
     description_timestamps_count: int
+    dialog_exercises_count: int = 0
+    description_exercises_count: int = 0
+    picture_exercises_count: int = 0
 
 
 class SituationListResponse(BaseModel):

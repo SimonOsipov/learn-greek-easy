@@ -1155,7 +1155,10 @@
       "dialogAudio": "Аудио диалога",
       "descriptionAudio": "Аудио описания",
       "timestamps": "Таймстемпы {{count}}/2",
-      "picture": "Картинка"
+      "picture": "Картинка",
+      "dialogExercises": "Упр. диалога {{count}}",
+      "descExercises": "Упр. описания {{count}}",
+      "picExercises": "Упр. картинки {{count}}"
     },
     "empty": {
       "title": "Ситуаций пока нет",

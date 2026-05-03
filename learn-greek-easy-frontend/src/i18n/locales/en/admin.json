@@ -1143,7 +1143,10 @@
       "dialogAudio": "Dialog Audio",
       "descriptionAudio": "Description Audio",
       "timestamps": "Timestamps {{count}}/2",
-      "picture": "Picture"
+      "picture": "Picture",
+      "dialogExercises": "Dialog Ex {{count}}",
+      "descExercises": "Desc Ex {{count}}",
+      "picExercises": "Pic Ex {{count}}"
     },
     "empty": {
       "title": "No situations yet",

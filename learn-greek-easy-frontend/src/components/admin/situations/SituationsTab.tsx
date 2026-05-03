@@ -264,6 +264,38 @@ export function SituationsTab() {
                       <span className={situation.has_picture ? 'badge b-green' : 'badge b-gray'}>
                         {t('situations.media.picture')}
                       </span>
+                      <span
+                        className={
+                          situation.dialog_exercises_count > 0 ? 'badge b-green' : 'badge b-gray'
+                        }
+                        data-testid={`situation-dialog-ex-badge-${situation.id}`}
+                      >
+                        {t('situations.media.dialogExercises', {
+                          count: situation.dialog_exercises_count,
+                        })}
+                      </span>
+                      <span
+                        className={
+                          situation.description_exercises_count > 0
+                            ? 'badge b-green'
+                            : 'badge b-gray'
+                        }
+                        data-testid={`situation-desc-ex-badge-${situation.id}`}
+                      >
+                        {t('situations.media.descExercises', {
+                          count: situation.description_exercises_count,
+                        })}
+                      </span>
+                      <span
+                        className={
+                          situation.picture_exercises_count > 0 ? 'badge b-green' : 'badge b-gray'
+                        }
+                        data-testid={`situation-pic-ex-badge-${situation.id}`}
+                      >
+                        {t('situations.media.picExercises', {
+                          count: situation.picture_exercises_count,
+                        })}
+                      </span>
                     </div>
                   </div>
                   <div className="ml-4 flex shrink-0 items-center gap-3">

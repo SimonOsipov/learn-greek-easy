@@ -79,6 +79,9 @@ export interface SituationListItem {
   has_dialog_audio: boolean;
   has_description_audio: boolean;
   description_timestamps_count: number;
+  dialog_exercises_count: number;
+  description_exercises_count: number;
+  picture_exercises_count: number;
 }
 
 // --- Response (matches SituationResponse) ---

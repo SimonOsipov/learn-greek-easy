@@ -4396,8 +4396,30 @@ async def list_situations(
         count_query = count_query.where(search_filter)
     total = (await db.execute(count_query)).scalar_one()
 
+    dialog_ex_count_sq = (
+        select(func.count(DialogExercise.id))
+        .join(ListeningDialog, DialogExercise.dialog_id == ListeningDialog.id)
+        .where(ListeningDialog.situation_id == Situation.id)
+        .correlate(Situation)
+        .scalar_subquery()
+    )
+    desc_ex_count_sq = (
+        select(func.count(DescriptionExercise.id))
+        .join(SituationDescription, DescriptionExercise.description_id == SituationDescription.id)
+        .where(SituationDescription.situation_id == Situation.id)
+        .correlate(Situation)
+        .scalar_subquery()
+    )
+    pic_ex_count_sq = (
+        select(func.count(PictureExercise.id))
+        .join(SituationPicture, PictureExercise.picture_id == SituationPicture.id)
+        .where(SituationPicture.situation_id == Situation.id)
+        .correlate(Situation)
+        .scalar_subquery()
+    )
+
     data_query = (
-        select(Situation)
+        select(Situation, dialog_ex_count_sq, desc_ex_count_sq, pic_ex_count_sq)
         .options(
             selectinload(Situation.dialog),
             selectinload(Situation.description),
@@ -4413,7 +4435,7 @@ async def list_situations(
         data_query = data_query.where(search_filter)
 
     result = await db.execute(data_query)
-    situations = result.scalars().all()
+    rows = result.all()
 
     items = [
         SituationListItem(
@@ -4435,8 +4457,11 @@ async def list_situations(
                 if s.description is not None
                 else 0
             ),
+            dialog_exercises_count=dlg_count,
+            description_exercises_count=dsc_count,
+            picture_exercises_count=pic_count,
         )
-        for s in situations
+        for s, dlg_count, dsc_count, pic_count in rows
     ]
     return SituationListResponse(
         items=items, total=total, page=page, page_size=page_size, status_counts=status_counts

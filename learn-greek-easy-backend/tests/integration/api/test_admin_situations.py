@@ -15,10 +15,13 @@ from src.db.models import (
     SituationDescription,
     SituationPicture,
 )
-from tests.factories.listening_dialog import ListeningDialogFactory
+from tests.factories.listening_dialog import DialogExerciseFactory, ListeningDialogFactory
 from tests.factories.situation import SituationFactory
-from tests.factories.situation_description import SituationDescriptionFactory
-from tests.factories.situation_picture import SituationPictureFactory
+from tests.factories.situation_description import (
+    DescriptionExerciseFactory,
+    SituationDescriptionFactory,
+)
+from tests.factories.situation_picture import PictureExerciseFactory, SituationPictureFactory
 
 BASE_URL = "/api/v1/admin/situations"
 
@@ -439,6 +442,84 @@ class TestListSituations:
         assert data["status_counts"]["draft"] >= 2
         assert data["status_counts"]["ready"] >= 1
         assert data["status_counts"].get("partial_ready", 0) == 0
+
+    @pytest.mark.asyncio
+    async def test_exercise_counts_zero_when_no_exercises(
+        self, client: AsyncClient, superuser_auth_headers: dict
+    ):
+        """Situation with description but zero exercises returns 0 for all three counts."""
+        situation = await SituationFactory.create()
+        await SituationDescriptionFactory.create(situation_id=situation.id)
+
+        response = await client.get(
+            f"{BASE_URL}?search={situation.scenario_en[:10]}", headers=superuser_auth_headers
+        )
+        assert response.status_code == 200
+        item = next(i for i in response.json()["items"] if i["id"] == str(situation.id))
+        assert item["dialog_exercises_count"] == 0
+        assert item["description_exercises_count"] == 0
+        assert item["picture_exercises_count"] == 0
+
+    @pytest.mark.asyncio
+    async def test_exercise_counts_mixed(self, client: AsyncClient, superuser_auth_headers: dict):
+        """Description-only exercises (4) appear in description count; dialog/picture stay 0."""
+        from src.db.models import ExerciseType
+
+        situation = await SituationFactory.create()
+        description = await SituationDescriptionFactory.create(situation_id=situation.id)
+        for ex_type in (
+            ExerciseType.SELECT_CORRECT_ANSWER,
+            ExerciseType.FILL_GAPS,
+            ExerciseType.SELECT_HEARD,
+            ExerciseType.TRUE_FALSE,
+        ):
+            await DescriptionExerciseFactory.create(
+                description_id=description.id, exercise_type=ex_type
+            )
+
+        response = await client.get(
+            f"{BASE_URL}?search={situation.scenario_en[:10]}", headers=superuser_auth_headers
+        )
+        assert response.status_code == 200
+        item = next(i for i in response.json()["items"] if i["id"] == str(situation.id))
+        assert item["dialog_exercises_count"] == 0
+        assert item["description_exercises_count"] == 4
+        assert item["picture_exercises_count"] == 0
+
+    @pytest.mark.asyncio
+    async def test_exercise_counts_all_three_sources(
+        self, client: AsyncClient, superuser_auth_headers: dict
+    ):
+        """Counts come back per source (2 dialog / 3 desc / 1 picture)."""
+        from src.db.models import ExerciseType
+
+        situation = await SituationFactory.create()
+        dialog = await ListeningDialogFactory.create(situation_id=situation.id)
+        description = await SituationDescriptionFactory.create(situation_id=situation.id)
+        picture = await SituationPictureFactory.create(situation_id=situation.id)
+
+        for ex_type in (ExerciseType.FILL_GAPS, ExerciseType.SELECT_HEARD):
+            await DialogExerciseFactory.create(dialog_id=dialog.id, exercise_type=ex_type)
+        for ex_type in (
+            ExerciseType.SELECT_CORRECT_ANSWER,
+            ExerciseType.FILL_GAPS,
+            ExerciseType.SELECT_HEARD,
+        ):
+            await DescriptionExerciseFactory.create(
+                description_id=description.id, exercise_type=ex_type
+            )
+        await PictureExerciseFactory.create(
+            picture_id=picture.id, exercise_type=ExerciseType.SELECT_CORRECT_ANSWER
+        )
+
+        response = await client.get(
+            f"{BASE_URL}?search={situation.scenario_en[:10]}", headers=superuser_auth_headers
+        )
+        assert response.status_code == 200
+        item = next(i for i in response.json()["items"] if i["id"] == str(situation.id))
+        assert item["dialog_exercises_count"] == 2
+        assert item["description_exercises_count"] == 3
+        assert item["picture_exercises_count"] == 1
 
 
 class TestGetSituationDetail:
