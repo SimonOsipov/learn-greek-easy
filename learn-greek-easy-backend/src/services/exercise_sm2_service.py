@@ -124,7 +124,7 @@ class ExerciseSM2Service:
 
         # Enrich description-source items with audio + situation context
         if description_exercise_ids:
-            enrichment_map = await self._load_description_enrichment(description_exercise_ids)
+            enrichment_map = await self.load_description_enrichment(description_exercise_ids)
             for item in all_items:
                 if item.exercise_id in enrichment_map:
                     enriched = enrichment_map[item.exercise_id]
@@ -186,7 +186,7 @@ class ExerciseSM2Service:
             is_early_practice=False,
         )
 
-    async def _load_description_enrichment(
+    async def load_description_enrichment(
         self,
         exercise_ids: list[UUID],
     ) -> dict[UUID, dict]:

@@ -1,7 +1,8 @@
+from datetime import date
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import func, or_, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -13,12 +14,15 @@ from src.db.models import (
     DescriptionExercise,
     Exercise,
     ExerciseRecord,
+    ExerciseSourceType,
+    ExerciseType,
     ListeningDialog,
     Situation,
     SituationDescription,
     SituationStatus,
     User,
 )
+from src.schemas.exercise_queue import ExerciseQueue, ExerciseQueueItem
 from src.schemas.learner_situation import (
     LearnerDescriptionNested,
     LearnerDialogNested,
@@ -26,6 +30,7 @@ from src.schemas.learner_situation import (
     LearnerSituationListItem,
     LearnerSituationListResponse,
 )
+from src.services.exercise_sm2_service import ExerciseSM2Service
 from src.services.s3_service import get_s3_service
 
 router = APIRouter(
@@ -235,4 +240,107 @@ async def get_situation(
         source_url=situation.source_url,
         source_image_url=source_image_url,
         source_title=situation.source_title_en,
+    )
+
+
+def _apply_enrichment(item: ExerciseQueueItem, enriched: dict) -> None:
+    """Apply a single enrichment dict (from load_description_enrichment) onto a queue item."""
+    item.situation_id = enriched.get("situation_id")
+    item.scenario_el = enriched.get("scenario_el")
+    item.scenario_en = enriched.get("scenario_en")
+    item.scenario_ru = enriched.get("scenario_ru")
+    item.description_text_el = enriched.get("description_text_el")
+    item.description_audio_url = enriched.get("description_audio_url")
+    item.description_audio_duration = enriched.get("description_audio_duration")
+    item.word_timestamps = enriched.get("word_timestamps")
+    item.items = enriched.get("items", [])
+    if (etype := enriched.get("exercise_type")) is not None:
+        item.exercise_type = etype
+    if (mod := enriched.get("modality")) is not None:
+        item.modality = mod
+    if (lvl := enriched.get("audio_level_value")) is not None:
+        item.audio_level = lvl
+
+
+@router.get("/{situation_id}/exercises", response_model=ExerciseQueue)
+async def get_situation_exercises(
+    situation_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> ExerciseQueue:
+    """Return ALL exercises linked to a READY situation, regardless of SM-2 review state.
+
+    Complements the queue endpoint (which returns only what is studyable now).
+    Frontend uses this when it wants to display every exercise in a situation,
+    including those whose next_review_date is in the future.
+    """
+    # Validate situation — collapse missing + non-READY into a single 404 (mirrors get_situation)
+    sit_result = await db.execute(
+        select(Situation).where(
+            Situation.id == situation_id,
+            Situation.status == SituationStatus.READY,
+        )
+    )
+    if sit_result.scalar_one_or_none() is None:
+        raise NotFoundException("Situation not found")
+
+    # Load all exercises for this situation via the description path, with per-user records.
+    # TODO: extend join to cover dialog-source and picture-source when those pipelines exist.
+    stmt = (
+        select(Exercise, ExerciseRecord)
+        .join(DescriptionExercise, Exercise.description_exercise_id == DescriptionExercise.id)
+        .join(SituationDescription, DescriptionExercise.description_id == SituationDescription.id)
+        .outerjoin(
+            ExerciseRecord,
+            and_(
+                ExerciseRecord.exercise_id == Exercise.id,
+                ExerciseRecord.user_id == current_user.id,
+            ),
+        )
+        .where(SituationDescription.situation_id == situation_id)
+        .order_by(Exercise.created_at.asc(), Exercise.id.asc())
+    )
+    rows = (await db.execute(stmt)).all()
+
+    today = date.today()
+    items: list[ExerciseQueueItem] = []
+    description_exercise_ids: list[UUID] = []
+    total_due = 0
+    total_new = 0
+
+    for exercise, record in rows:
+        is_new = record is None
+        item = ExerciseQueueItem(
+            exercise_id=exercise.id,
+            source_type=exercise.source_type,
+            exercise_type=ExerciseType.FILL_GAPS,  # placeholder; enriched below for description-source
+            status=record.status if record else CardStatus.NEW,
+            is_new=is_new,
+            is_early_practice=False,
+            due_date=record.next_review_date if record else None,
+            easiness_factor=record.easiness_factor if record else None,
+            interval=record.interval if record else None,
+        )
+        items.append(item)
+        if exercise.source_type == ExerciseSourceType.DESCRIPTION:
+            description_exercise_ids.append(exercise.id)
+        if is_new:
+            total_new += 1
+        elif record.next_review_date is not None and record.next_review_date <= today:
+            total_due += 1
+
+    # Batch-enrich description-source items (reuses the same helper as get_study_queue)
+    if description_exercise_ids:
+        service = ExerciseSM2Service(db)
+        enrichment_map = await service.load_description_enrichment(description_exercise_ids)
+        for item in items:
+            if item.exercise_id in enrichment_map:
+                _apply_enrichment(item, enrichment_map[item.exercise_id])
+
+    return ExerciseQueue(
+        total_due=total_due,
+        total_new=total_new,
+        total_early_practice=0,
+        total_in_queue=len(items),
+        exercises=items,
     )
