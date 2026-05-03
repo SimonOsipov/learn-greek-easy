@@ -98,11 +98,12 @@ class NewsItemService:
         )
         self.db.add(description)
 
+        # The generated picture (for the future picture-exercise feature) starts
+        # empty; the source news image lives on situation.source_image_s3_key.
         picture = SituationPicture(
             situation_id=situation.id,
-            image_s3_key=s3_key,
             image_prompt=data.scenario_en,
-            status=PictureStatus.GENERATED,
+            status=PictureStatus.DRAFT,
         )
         self.db.add(picture)
 
@@ -191,9 +192,6 @@ class NewsItemService:
         image_bytes, content_type = await self._download_image(image_url)
         new_s3_key = await self._upload_image_to_s3(image_bytes, content_type)
         situation.source_image_s3_key = new_s3_key
-        picture = await self.repo.get_picture_for_situation(situation.id)
-        if picture is not None:
-            picture.image_s3_key = new_s3_key
         if old_s3_key:
             self.s3_service.delete_object(old_s3_key)
 

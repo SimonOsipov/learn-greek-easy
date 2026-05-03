@@ -9,7 +9,7 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import NewsItem, Situation, SituationDescription, SituationPicture
+from src.db.models import NewsItem, PictureStatus, Situation, SituationDescription, SituationPicture
 from tests.factories.news import NewsItemFactory
 
 # =============================================================================
@@ -111,13 +111,15 @@ class TestCreateNewsItemEndpoint:
         assert description is not None
         assert description.text_el == payload["text_el"]
 
-        # Verify SituationPicture exists
+        # Verify SituationPicture exists in DRAFT state — the row is reserved
+        # for the future generated picture, distinct from the source news image.
         pic_result = await db_session.execute(
             select(SituationPicture).where(SituationPicture.situation_id == situation.id)
         )
         picture = pic_result.scalar_one_or_none()
         assert picture is not None
-        assert picture.image_s3_key is not None
+        assert picture.image_s3_key is None
+        assert picture.status == PictureStatus.DRAFT
 
     @pytest.mark.asyncio
     async def test_create_duplicate_url_returns_409(
