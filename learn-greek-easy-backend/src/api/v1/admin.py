@@ -1215,7 +1215,7 @@ async def create_news_item(
         # A2 dispatch ONLY when both A2 fields present.
         # validate_a2_pair (schemas/news_item.py:43-50) guarantees they appear
         # together-or-not-at-all on input; defensively check both at dispatch too.
-        if data.text_el_a2 and data.scenario_el_a2:
+        if data.text_el_a2 is not None and data.scenario_el_a2 is not None:
             background_tasks.add_task(
                 generate_description_audio_task,
                 situation_id=result.situation_id,

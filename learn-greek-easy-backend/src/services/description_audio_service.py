@@ -165,11 +165,17 @@ async def persist_description_audio(
 
     try:
         async with factory.begin() as session:
-            await session.execute(
+            update_result = await session.execute(
                 update(SituationDescription)
                 .where(SituationDescription.id == description_id)
                 .values(**values)
             )
+            if update_result.rowcount == 0:  # type: ignore[attr-defined]
+                raise DescriptionPersistError(
+                    f"No description row matched id={description_id} during update"
+                )
+    except DescriptionPersistError:
+        raise
     except Exception as exc:
         raise DescriptionPersistError(str(exc)) from exc
 
