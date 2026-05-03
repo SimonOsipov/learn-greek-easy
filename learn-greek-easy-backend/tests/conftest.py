@@ -32,6 +32,7 @@ os.environ.setdefault(
         "postgresql+asyncpg://postgres:postgres@localhost:5433/test_learn_greek",
     ),
 )
+os.environ.setdefault("PICTURE_HOUSE_STYLE_DEFAULT", "test_house_style_default")
 
 # flake8: noqa: E402 - imports must come after os.environ is set
 import asyncio

@@ -548,6 +548,18 @@ class Settings(BaseSettings):
     )
 
     # =========================================================================
+    # Picture Generation (SIT-08, SCENE-01)
+    # =========================================================================
+    picture_house_style_default: str = Field(
+        description=(
+            "House style fragment appended to every news picture prompt. Required - "
+            "no default. Set in Railway env vars. Used by news-create to pre-fill "
+            "style_en when admin omits it from the JSON paste, and by the SCENE-01 "
+            "Alembic backfill migration. Settings() raises at startup if unset."
+        ),
+    )
+
+    # =========================================================================
     # Stripe Billing
     # =========================================================================
     stripe_secret_key: Optional[str] = Field(
