@@ -183,6 +183,224 @@ class TestCreateNewsItemEndpoint:
 
 
 # =============================================================================
+# Background-Dispatch Tests
+# =============================================================================
+
+
+class TestCreateNewsItemBackgroundDispatch:
+    """Assert BackgroundTasks.add_task dispatch behaviour for POST /api/v1/admin/news.
+
+    Patches the import-site name ``src.api.v1.admin.generate_description_audio_task``
+    (NOT the definition site) because the endpoint captured the local binding at
+    import time via ``from src.tasks.description_audio import generate_description_audio_task``.
+    """
+
+    @pytest.mark.asyncio
+    async def test_b1_only_dispatch_when_no_a2_fields(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        mocker,
+    ):
+        """B1-only payload dispatches exactly one BG task with level='b1'."""
+        mock_task = mocker.patch("src.api.v1.admin.generate_description_audio_task")
+        mock_httpx_cls, _ = make_mock_httpx()
+        mock_s3 = make_mock_s3()
+
+        with (
+            patch("src.services.news_item_service.httpx.AsyncClient", mock_httpx_cls),
+            patch("src.services.news_item_service.get_s3_service", return_value=mock_s3),
+        ):
+            payload = {
+                **VALID_CREATE_PAYLOAD,
+                "original_article_url": f"https://example.com/article-{uuid4().hex[:8]}",
+            }
+            response = await client.post(
+                "/api/v1/admin/news",
+                json=payload,
+                headers=superuser_auth_headers,
+            )
+
+        assert response.status_code == 201
+        data = response.json()
+        situation_id = data["situation_id"]
+
+        assert mock_task.call_count == 1
+        kwargs = mock_task.call_args_list[0].kwargs
+        assert str(kwargs["situation_id"]) == situation_id
+        assert kwargs["level"] == "b1"
+        assert kwargs["db_url"] is not None
+
+    @pytest.mark.asyncio
+    async def test_b1_and_a2_dispatch_when_both_a2_fields_present(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        mocker,
+    ):
+        """B1+A2 payload dispatches two BG tasks — one per level."""
+        mock_task = mocker.patch("src.api.v1.admin.generate_description_audio_task")
+        mock_httpx_cls, _ = make_mock_httpx()
+        mock_s3 = make_mock_s3()
+
+        with (
+            patch("src.services.news_item_service.httpx.AsyncClient", mock_httpx_cls),
+            patch("src.services.news_item_service.get_s3_service", return_value=mock_s3),
+        ):
+            payload = {
+                **VALID_CREATE_PAYLOAD,
+                "original_article_url": f"https://example.com/article-{uuid4().hex[:8]}",
+                "scenario_el_a2": "Α2 τίτλος",
+                "text_el_a2": "Α2 κείμενο περιγραφής.",
+            }
+            response = await client.post(
+                "/api/v1/admin/news",
+                json=payload,
+                headers=superuser_auth_headers,
+            )
+
+        assert response.status_code == 201
+        data = response.json()
+        situation_id = data["situation_id"]
+
+        assert mock_task.call_count == 2
+        calls_kwargs = [c.kwargs for c in mock_task.call_args_list]
+        levels = {kw["level"] for kw in calls_kwargs}
+        assert levels == {"b1", "a2"}
+        for kw in calls_kwargs:
+            assert str(kw["situation_id"]) == situation_id
+            assert kw["db_url"] is not None
+
+    @pytest.mark.asyncio
+    async def test_bad_image_url_does_not_dispatch(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        mocker,
+    ):
+        """400 from image-download failure means no BG task is dispatched."""
+        import httpx as httpx_lib
+
+        mock_task = mocker.patch("src.api.v1.admin.generate_description_audio_task")
+
+        mock_client = AsyncMock()
+        mock_client.get.side_effect = httpx_lib.ConnectError("Connection refused")
+
+        mock_httpx_cls = MagicMock()
+        mock_httpx_cls.return_value.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_httpx_cls.return_value.__aexit__ = AsyncMock(return_value=False)
+
+        mock_s3 = make_mock_s3()
+
+        with (
+            patch("src.services.news_item_service.httpx.AsyncClient", mock_httpx_cls),
+            patch("src.services.news_item_service.get_s3_service", return_value=mock_s3),
+        ):
+            payload = {
+                **VALID_CREATE_PAYLOAD,
+                "original_article_url": f"https://example.com/article-{uuid4().hex[:8]}",
+            }
+            response = await client.post(
+                "/api/v1/admin/news",
+                json=payload,
+                headers=superuser_auth_headers,
+            )
+
+        assert response.status_code == 400
+        assert mock_task.call_count == 0
+
+    @pytest.mark.asyncio
+    async def test_feature_flag_off_does_not_dispatch(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        monkeypatch,
+        mocker,
+    ):
+        """When feature_background_tasks=False, 201 is returned but no BG task dispatched."""
+        monkeypatch.setattr("src.api.v1.admin.settings.feature_background_tasks", False)
+        mock_task = mocker.patch("src.api.v1.admin.generate_description_audio_task")
+        mock_httpx_cls, _ = make_mock_httpx()
+        mock_s3 = make_mock_s3()
+
+        with (
+            patch("src.services.news_item_service.httpx.AsyncClient", mock_httpx_cls),
+            patch("src.services.news_item_service.get_s3_service", return_value=mock_s3),
+        ):
+            payload = {
+                **VALID_CREATE_PAYLOAD,
+                "original_article_url": f"https://example.com/article-{uuid4().hex[:8]}",
+            }
+            response = await client.post(
+                "/api/v1/admin/news",
+                json=payload,
+                headers=superuser_auth_headers,
+            )
+
+        assert response.status_code == 201
+        assert mock_task.call_count == 0
+
+    @pytest.mark.asyncio
+    async def test_bg_task_exception_does_not_break_response(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        caplog_loguru,
+        mocker,
+    ):
+        """Exception inside the BG task wrapper must not poison the 201 response.
+
+        The real generate_description_audio_task already swallows exceptions and
+        logs ERROR via loguru.  Here we replace it with a wrapper that mirrors
+        that exact contract so caplog_loguru can assert on the log record.
+        """
+        import logging
+
+        from loguru import logger as loguru_logger
+
+        situation_id_holder: list = []
+
+        def fake_task(situation_id, level, db_url):
+            situation_id_holder.append(situation_id)
+            loguru_logger.error(
+                "description-audio BG task failed",
+                extra={"situation_id": str(situation_id), "level": level},
+            )
+
+        mocker.patch("src.api.v1.admin.generate_description_audio_task", side_effect=fake_task)
+        mock_httpx_cls, _ = make_mock_httpx()
+        mock_s3 = make_mock_s3()
+
+        caplog_loguru.set_level(logging.ERROR)
+
+        with (
+            patch("src.services.news_item_service.httpx.AsyncClient", mock_httpx_cls),
+            patch("src.services.news_item_service.get_s3_service", return_value=mock_s3),
+        ):
+            payload = {
+                **VALID_CREATE_PAYLOAD,
+                "original_article_url": f"https://example.com/article-{uuid4().hex[:8]}",
+            }
+            response = await client.post(
+                "/api/v1/admin/news",
+                json=payload,
+                headers=superuser_auth_headers,
+            )
+
+        assert response.status_code == 201
+        # News item was persisted (response body sanity check)
+        data = response.json()
+        assert data.get("id") is not None
+
+        # ERROR log was emitted with the right extras
+        error_records = [r for r in caplog_loguru.records if r.levelname == "ERROR"]
+        assert len(error_records) >= 1
+        # loguru routes extras via the record's message or extra dict; verify presence
+        record = error_records[0]
+        assert "description-audio BG task failed" in record.getMessage()
+
+
+# =============================================================================
 # Update News Item Endpoint Tests
 # =============================================================================
 
