@@ -303,7 +303,7 @@ class TestLearnerSituationExercisesEnrichment:
         mock_s3 = MagicMock()
         mock_s3.generate_presigned_url.side_effect = lambda key: f"https://s3.example.com/{key}"
 
-        with patch("src.api.v1.situations.get_s3_service", return_value=mock_s3):
+        with patch("src.services.exercise_sm2_service.get_s3_service", return_value=mock_s3):
             response = await client.get(_exercises_url(situation.id), headers=auth_headers)
 
         assert response.status_code == 200
