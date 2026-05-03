@@ -200,9 +200,11 @@ class TestCreateNewsItemBackgroundDispatch:
         self,
         client: AsyncClient,
         superuser_auth_headers: dict,
+        monkeypatch,
         mocker,
     ):
         """B1-only payload dispatches exactly one BG task with level='b1'."""
+        monkeypatch.setattr("src.api.v1.admin.settings.feature_background_tasks", True)
         mock_task = mocker.patch("src.api.v1.admin.generate_description_audio_task")
         mock_httpx_cls, _ = make_mock_httpx()
         mock_s3 = make_mock_s3()
@@ -236,9 +238,11 @@ class TestCreateNewsItemBackgroundDispatch:
         self,
         client: AsyncClient,
         superuser_auth_headers: dict,
+        monkeypatch,
         mocker,
     ):
         """B1+A2 payload dispatches two BG tasks — one per level."""
+        monkeypatch.setattr("src.api.v1.admin.settings.feature_background_tasks", True)
         mock_task = mocker.patch("src.api.v1.admin.generate_description_audio_task")
         mock_httpx_cls, _ = make_mock_httpx()
         mock_s3 = make_mock_s3()
@@ -346,6 +350,7 @@ class TestCreateNewsItemBackgroundDispatch:
         client: AsyncClient,
         superuser_auth_headers: dict,
         caplog_loguru,
+        monkeypatch,
         mocker,
     ):
         """Exception inside the BG task wrapper must not poison the 201 response.
@@ -358,6 +363,7 @@ class TestCreateNewsItemBackgroundDispatch:
 
         from loguru import logger as loguru_logger
 
+        monkeypatch.setattr("src.api.v1.admin.settings.feature_background_tasks", True)
         situation_id_holder: list = []
 
         def fake_task(situation_id, level, db_url):
