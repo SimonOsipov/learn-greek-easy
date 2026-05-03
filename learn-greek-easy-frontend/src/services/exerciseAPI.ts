@@ -86,6 +86,10 @@ export const exerciseAPI = {
     return api.get<ExerciseQueue>(`/api/v1/exercises/queue${queryString}`);
   },
 
+  getAllForSituation: async (situationId: string): Promise<ExerciseQueue> => {
+    return api.get<ExerciseQueue>(`/api/v1/situations/${situationId}/exercises`);
+  },
+
   submitReview: async (data: ExerciseReviewRequest): Promise<ExerciseReviewResult> => {
     return api.post<ExerciseReviewResult>('/api/v1/exercises/review', data);
   },
