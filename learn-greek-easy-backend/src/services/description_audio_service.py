@@ -20,7 +20,7 @@ BG-task wrapper (SITAUDO-02):
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from typing import Literal
 from uuid import UUID
 
 from sqlalchemy import select, update
@@ -29,9 +29,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from src.core.logging import get_logger
 from src.db.models import DescriptionStatus, SituationDescription
 from src.services.audio_generation_service import AudioGenerationService, AudioWithTimestampsResult
-
-if TYPE_CHECKING:
-    pass
 
 logger = get_logger(__name__)
 

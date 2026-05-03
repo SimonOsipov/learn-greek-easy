@@ -82,6 +82,7 @@ class NewsItemResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
+    situation_id: UUID
     title_el: str
     title_en: str
     title_ru: str

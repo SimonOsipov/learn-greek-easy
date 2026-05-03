@@ -188,6 +188,7 @@ from src.services.wiktionary_morphology_service import WiktionaryMorphologyServi
 from src.services.wiktionary_verification_service import WiktionaryVerificationService
 from src.services.word_entry_response import word_entry_to_response
 from src.tasks import create_announcement_notifications_task
+from src.tasks.description_audio import generate_description_audio_task
 from src.utils.greek_text import resolve_tts_text
 from src.utils.sse import create_sse_response, format_sse_error, format_sse_event, sse_stream
 
@@ -1167,6 +1168,7 @@ async def list_deck_questions(
 )
 async def create_news_item(
     data: NewsItemCreate,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_superuser),
 ) -> NewsItemResponse:
@@ -1178,6 +1180,7 @@ async def create_news_item(
 
     Args:
         data: News item creation data with optional question
+        background_tasks: FastAPI background tasks runner (injected)
         db: Database session (injected)
         current_user: Authenticated superuser (injected)
 
@@ -1196,6 +1199,30 @@ async def create_news_item(
         if "already exists" in error_msg:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=error_msg)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error_msg)
+
+    # Explicit commit before dispatch (mirrors create_announcement at admin.py:1338).
+    # The BG task opens its own session and reads the situation row;
+    # if the request session hasn't committed, the BG task either races or sees no row.
+    await db.commit()
+
+    if settings.feature_background_tasks:
+        background_tasks.add_task(
+            generate_description_audio_task,
+            situation_id=result.situation_id,
+            level="b1",
+            db_url=settings.database_url,
+        )
+        # A2 dispatch ONLY when both A2 fields present.
+        # validate_a2_pair (schemas/news_item.py:43-50) guarantees they appear
+        # together-or-not-at-all on input; defensively check both at dispatch too.
+        if data.text_el_a2 and data.scenario_el_a2:
+            background_tasks.add_task(
+                generate_description_audio_task,
+                situation_id=result.situation_id,
+                level="a2",
+                db_url=settings.database_url,
+            )
+
     return result
 
 
