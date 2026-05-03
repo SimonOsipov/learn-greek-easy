@@ -326,7 +326,7 @@ class TestListSituations:
         await SituationDescriptionFactory.create(
             situation_id=situation.id, audio_s3_key="d/desc.mp3"
         )
-        await SituationPictureFactory.create(situation_id=situation.id)
+        await SituationPictureFactory.create(situation_id=situation.id, generated=True)
 
         response = await client.get(
             f"{BASE_URL}?search={situation.scenario_en[:10]}", headers=superuser_auth_headers

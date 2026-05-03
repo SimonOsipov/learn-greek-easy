@@ -4434,7 +4434,7 @@ async def list_situations(
             created_at=s.created_at,
             has_dialog=s.dialog is not None,
             has_description=s.description is not None,
-            has_picture=s.picture is not None,
+            has_picture=s.picture is not None and s.picture.image_s3_key is not None,
             has_dialog_audio=s.dialog is not None and s.dialog.audio_s3_key is not None,
             has_description_audio=s.description is not None
             and s.description.audio_s3_key is not None,
