@@ -211,6 +211,83 @@ class TestA2Content:
 
 
 # =============================================================================
+# Test Scene Pair Schema Validation (Pydantic-only, no DB)
+# =============================================================================
+
+_SCENE_BASE = dict(
+    scenario_el="Τίτλος",
+    scenario_en="Title",
+    scenario_ru="Title",
+    text_el="Περιγραφή",
+    publication_date=date.today(),
+    original_article_url="https://example.com/article",
+    source_image_url="https://example.com/image.jpg",
+    country="cyprus",
+)
+
+
+class TestScenePair:
+    """Tests for scene_en/scene_el paired validation and field constraints."""
+
+    def test_scene_pair_en_without_el_raises(self):
+        """scene_en alone should raise ValidationError."""
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError, match="scene_en and scene_el"):
+            NewsItemCreate(**_SCENE_BASE, scene_en="x")
+
+    def test_scene_pair_el_without_en_raises(self):
+        """scene_el alone should raise ValidationError."""
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError, match="scene_en and scene_el"):
+            NewsItemCreate(**_SCENE_BASE, scene_el="y")
+
+    def test_scene_pair_both_present_ok(self):
+        """Both scene_en and scene_el provided should not raise."""
+        NewsItemCreate(**_SCENE_BASE, scene_en="x", scene_el="y")
+
+    def test_scene_pair_both_absent_ok(self):
+        """Neither scene field provided should not raise."""
+        NewsItemCreate(**_SCENE_BASE)
+
+    def test_scene_pair_whitespace_only_treated_as_null(self):
+        """scene_en with only whitespace is treated as absent, so scene_el alone raises."""
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError, match="scene_en and scene_el"):
+            NewsItemCreate(**_SCENE_BASE, scene_en="   ", scene_el="x")
+
+    def test_style_en_independent_ok(self):
+        """style_en alone (no scene pair) should not raise."""
+        NewsItemCreate(**_SCENE_BASE, style_en="z")
+
+    def test_scene_en_max_length_boundary(self):
+        """scene_en of 1000 chars is valid; 1001 raises."""
+        from pydantic import ValidationError
+
+        NewsItemCreate(**_SCENE_BASE, scene_en="a" * 1000, scene_el="b" * 1000)
+        with pytest.raises(ValidationError):
+            NewsItemCreate(**_SCENE_BASE, scene_en="a" * 1001, scene_el="b")
+
+    def test_scene_el_max_length_boundary(self):
+        """scene_el of 1000 chars is valid; 1001 raises."""
+        from pydantic import ValidationError
+
+        NewsItemCreate(**_SCENE_BASE, scene_en="a", scene_el="b" * 1000)
+        with pytest.raises(ValidationError):
+            NewsItemCreate(**_SCENE_BASE, scene_en="a", scene_el="b" * 1001)
+
+    def test_style_en_max_length_boundary(self):
+        """style_en of 1000 chars is valid; 1001 raises."""
+        from pydantic import ValidationError
+
+        NewsItemCreate(**_SCENE_BASE, style_en="z" * 1000)
+        with pytest.raises(ValidationError):
+            NewsItemCreate(**_SCENE_BASE, style_en="z" * 1001)
+
+
+# =============================================================================
 # Test Delete
 # =============================================================================
 
