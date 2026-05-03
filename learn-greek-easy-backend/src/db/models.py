@@ -260,7 +260,6 @@ class SituationStatus(str, enum.Enum):
     """Status of a listening situation (auto-computed from children in later stories)."""
 
     DRAFT = "draft"
-    PARTIAL_READY = "partial_ready"
     READY = "ready"
 
 

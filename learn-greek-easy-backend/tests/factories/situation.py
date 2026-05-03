@@ -19,7 +19,6 @@ class SituationFactory(BaseFactory):
 
     class Params:
         ready = factory.Trait(status=SituationStatus.READY)
-        partial = factory.Trait(status=SituationStatus.PARTIAL_READY)
 
 
 __all__ = ["SituationFactory"]

@@ -57,7 +57,7 @@ const mockSituationsList = {
   total: 2,
   page: 1,
   page_size: 10,
-  status_counts: { draft: 1, partial_ready: 0, ready: 1 },
+  status_counts: { draft: 1, ready: 1 },
 };
 
 const mockStats = {
@@ -69,7 +69,6 @@ const mockStats = {
   total_culture_questions: 0,
   total_situations: 2,
   situations_draft: 1,
-  situations_partial_ready: 0,
   situations_ready: 1,
 };
 

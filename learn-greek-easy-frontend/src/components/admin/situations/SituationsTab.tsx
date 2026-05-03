@@ -51,7 +51,7 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
-const ALL_STATUSES: SituationStatus[] = ['draft', 'partial_ready', 'ready'];
+const ALL_STATUSES: SituationStatus[] = ['draft', 'ready'];
 
 export function SituationsTab() {
   const { t } = useTranslation('admin');

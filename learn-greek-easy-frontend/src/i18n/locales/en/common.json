@@ -302,7 +302,6 @@
       },
       "status": {
         "draft": "Draft",
-        "partialReady": "Partial",
         "ready": "Ready"
       },
       "about": {

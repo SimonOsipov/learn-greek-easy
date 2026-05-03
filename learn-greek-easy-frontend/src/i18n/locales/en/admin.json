@@ -1114,7 +1114,6 @@
       "total": "Total Situations",
       "status": {
         "draft": "Draft",
-        "partial_ready": "Partial Ready",
         "ready": "Ready"
       }
     },
@@ -1136,7 +1135,6 @@
     },
     "status": {
       "draft": "Draft",
-      "partial_ready": "Partial Ready",
       "ready": "Ready"
     },
     "media": {

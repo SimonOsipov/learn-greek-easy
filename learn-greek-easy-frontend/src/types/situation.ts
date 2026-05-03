@@ -1,6 +1,6 @@
 // --- Enums as union types ---
 
-export type SituationStatus = 'draft' | 'partial_ready' | 'ready';
+export type SituationStatus = 'draft' | 'ready';
 export type SituationDialogStatus = 'draft' | 'audio_ready' | 'exercises_ready';
 export type SituationDescriptionStatus = 'draft' | 'audio_ready';
 export type SituationDescriptionSourceType = 'original' | 'news';

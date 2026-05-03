@@ -61,19 +61,6 @@ class TestLearnerSituationExercisesNotFound:
         response = await client.get(_exercises_url(situation.id), headers=auth_headers)
         assert response.status_code == 404
 
-    @pytest.mark.asyncio
-    async def test_partial_ready_situation_returns_404(
-        self,
-        client: AsyncClient,
-        auth_headers: dict,
-        db_session: AsyncSession,
-    ) -> None:
-        situation = await SituationFactory.create(session=db_session, partial=True)
-        await db_session.flush()
-
-        response = await client.get(_exercises_url(situation.id), headers=auth_headers)
-        assert response.status_code == 404
-
 
 @pytest.mark.integration
 class TestLearnerSituationExercisesEmpty:

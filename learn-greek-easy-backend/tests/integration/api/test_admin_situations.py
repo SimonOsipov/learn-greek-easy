@@ -441,7 +441,6 @@ class TestListSituations:
         # status_counts must reflect ALL situations globally, not just filtered ones
         assert data["status_counts"]["draft"] >= 2
         assert data["status_counts"]["ready"] >= 1
-        assert data["status_counts"].get("partial_ready", 0) == 0
 
     @pytest.mark.asyncio
     async def test_exercise_counts_zero_when_no_exercises(

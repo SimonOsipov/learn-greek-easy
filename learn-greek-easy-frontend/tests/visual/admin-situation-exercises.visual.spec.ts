@@ -172,7 +172,6 @@ const mockStats = {
   total_culture_questions: 50,
   total_situations: 1,
   situations_draft: 0,
-  situations_partial_ready: 0,
   situations_ready: 1,
 };
 

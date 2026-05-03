@@ -54,9 +54,8 @@ const SPEAKER_BUBBLE_STYLES = [
   },
 ];
 
-const STATUS_BADGE_VARIANT: Record<SituationStatus, 'default' | 'secondary' | 'outline'> = {
+const STATUS_BADGE_VARIANT: Record<SituationStatus, 'default' | 'outline'> = {
   ready: 'default',
-  partial_ready: 'secondary',
   draft: 'outline',
 };
 
@@ -313,9 +312,7 @@ export const SituationDetailPage: React.FC = () => {
         {/* Badges row */}
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <Badge variant={STATUS_BADGE_VARIANT[situation.status]}>
-            {t(
-              `situations.detail.status.${situation.status === 'partial_ready' ? 'partialReady' : situation.status}`
-            )}
+            {t(`situations.detail.status.${situation.status}`)}
           </Badge>
           <Badge variant="outline" data-testid="situation-hero-progress">
             {t('situations.detail.hero.exerciseProgress', { completed, total })}
