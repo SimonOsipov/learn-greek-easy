@@ -189,10 +189,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({
 
         {/* Content */}
         <div
-          className={cn(
-            'relative z-10 flex h-full flex-col justify-end p-4',
-            hasAudio && (variant === 'compact' ? 'pb-20' : 'pb-16')
-          )}
+          className={cn('relative z-10 flex h-full flex-col justify-end p-4', hasAudio && 'pb-20')}
         >
           <h3
             className={cn(
