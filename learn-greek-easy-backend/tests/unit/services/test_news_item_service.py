@@ -350,7 +350,7 @@ class TestDelete:
 class TestCreate:
     """Tests for create() method."""
 
-    def _make_create_data(self, url: str | None = None) -> NewsItemCreate:
+    def _make_create_data(self, url: str | None = None, **kwargs) -> NewsItemCreate:
         return NewsItemCreate(
             scenario_el="Τίτλος ειδήσεων",
             scenario_en="News Title",
@@ -360,6 +360,7 @@ class TestCreate:
             publication_date=date.today(),
             original_article_url=url or f"https://example.com/article-{uuid4().hex[:8]}",
             source_image_url="https://example.com/image.jpg",
+            **kwargs,
         )
 
     @pytest.mark.asyncio
@@ -406,6 +407,160 @@ class TestCreate:
 
         with pytest.raises(ValueError, match="already exists"):
             await service.create(data)
+
+    # -------------------------------------------------------------------------
+    # Helpers for scene/style tests
+    # -------------------------------------------------------------------------
+
+    @staticmethod
+    def _make_httpx_patch():
+        """Return (mock_httpx_cls, patch context) for faking image download."""
+        from unittest.mock import AsyncMock, MagicMock
+
+        mock_response = MagicMock()
+        mock_response.content = b"fake_image"
+        mock_response.headers = {"content-type": "image/jpeg"}
+        mock_response.raise_for_status = MagicMock()
+
+        mock_client = AsyncMock()
+        mock_client.get.return_value = mock_response
+
+        mock_httpx_cls = MagicMock()
+        mock_httpx_cls.return_value.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_httpx_cls.return_value.__aexit__ = AsyncMock(return_value=False)
+        return mock_httpx_cls
+
+    # -------------------------------------------------------------------------
+    # scene_* / style_en field-resolution tests
+    # -------------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_create_uses_provided_scene_and_style(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+    ):
+        """When scene_en/scene_el/style_en are provided they are written verbatim
+        and image_prompt is composed as f"{scene_en}\\n\\n{style_en}"."""
+        from unittest.mock import patch
+
+        from src.db.models import SituationPicture
+
+        scene_en = "A sunny day in Athens"
+        scene_el = "Μια ηλιόλουστη μέρα στην Αθήνα"
+        style_en = "Oil painting, warm tones"
+        data = self._make_create_data(scene_en=scene_en, scene_el=scene_el, style_en=style_en)
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+        mock_httpx_cls = self._make_httpx_patch()
+
+        with patch("src.services.news_item_service.httpx.AsyncClient", mock_httpx_cls):
+            result = await service.create(data)
+
+        from sqlalchemy import select
+
+        row = (
+            await db_session.execute(
+                select(SituationPicture).where(SituationPicture.situation_id == result.situation_id)
+            )
+        ).scalar_one()
+
+        assert row.scene_en == scene_en
+        assert row.scene_el == scene_el
+        assert row.style_en == style_en
+        assert row.image_prompt == f"{scene_en}\n\n{style_en}"
+
+    @pytest.mark.asyncio
+    async def test_create_falls_back_to_scenario_for_scene_pair(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+    ):
+        """When scene_en/scene_el are omitted, scenario_en/scenario_el are used instead."""
+        from unittest.mock import patch
+
+        from src.db.models import SituationPicture
+
+        style_en = "Watercolour sketch"
+        data = self._make_create_data(style_en=style_en)
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+        mock_httpx_cls = self._make_httpx_patch()
+
+        with patch("src.services.news_item_service.httpx.AsyncClient", mock_httpx_cls):
+            result = await service.create(data)
+
+        from sqlalchemy import select
+
+        row = (
+            await db_session.execute(
+                select(SituationPicture).where(SituationPicture.situation_id == result.situation_id)
+            )
+        ).scalar_one()
+
+        assert row.scene_en == data.scenario_en
+        assert row.scene_el == data.scenario_el
+
+    @pytest.mark.asyncio
+    async def test_create_falls_back_to_env_for_style(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+        monkeypatch,
+    ):
+        """When style_en is omitted, settings.picture_house_style_default is used."""
+        from unittest.mock import patch
+
+        from src.config import settings
+        from src.db.models import SituationPicture
+
+        monkeypatch.setattr(settings, "picture_house_style_default", "TEST_STYLE")
+        data = self._make_create_data(scene_en="A scene", scene_el="Μια σκηνή")
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+        mock_httpx_cls = self._make_httpx_patch()
+
+        with patch("src.services.news_item_service.httpx.AsyncClient", mock_httpx_cls):
+            result = await service.create(data)
+
+        from sqlalchemy import select
+
+        row = (
+            await db_session.execute(
+                select(SituationPicture).where(SituationPicture.situation_id == result.situation_id)
+            )
+        ).scalar_one()
+
+        assert row.style_en == "TEST_STYLE"
+
+    @pytest.mark.asyncio
+    async def test_create_image_prompt_composition_format(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+        monkeypatch,
+    ):
+        """image_prompt is exactly f"{scenario_en}\\n\\nTEST_STYLE" when all optional
+        scene/style fields are omitted (double-newline, no trailing whitespace)."""
+        from unittest.mock import patch
+
+        from src.config import settings
+        from src.db.models import SituationPicture
+
+        monkeypatch.setattr(settings, "picture_house_style_default", "TEST_STYLE")
+        data = self._make_create_data()
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+        mock_httpx_cls = self._make_httpx_patch()
+
+        with patch("src.services.news_item_service.httpx.AsyncClient", mock_httpx_cls):
+            result = await service.create(data)
+
+        from sqlalchemy import select
+
+        row = (
+            await db_session.execute(
+                select(SituationPicture).where(SituationPicture.situation_id == result.situation_id)
+            )
+        ).scalar_one()
+
+        assert row.image_prompt == f"{data.scenario_en}\n\nTEST_STYLE"
 
 
 # =============================================================================
