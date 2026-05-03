@@ -231,7 +231,7 @@ class TestLoadDescriptionEnrichment:
         service = ExerciseSM2Service(mock_db_session)
         with patch("src.services.exercise_sm2_service.get_s3_service") as mock_s3:
             mock_s3.return_value.generate_presigned_url.side_effect = lambda k: f"https://cdn/{k}"
-            result = await service._load_description_enrichment([exercise.id])
+            result = await service.load_description_enrichment([exercise.id])
 
         data = result[exercise.id]
         assert data["description_audio_url"] is not None
@@ -247,7 +247,7 @@ class TestLoadDescriptionEnrichment:
         service = ExerciseSM2Service(mock_db_session)
         with patch("src.services.exercise_sm2_service.get_s3_service") as mock_s3:
             mock_s3.return_value.generate_presigned_url.side_effect = lambda k: f"https://cdn/{k}"
-            result = await service._load_description_enrichment([exercise.id])
+            result = await service.load_description_enrichment([exercise.id])
 
         data = result[exercise.id]
         assert data["description_audio_url"] is not None
@@ -267,7 +267,7 @@ class TestLoadDescriptionEnrichment:
         service = ExerciseSM2Service(mock_db_session)
         with patch("src.services.exercise_sm2_service.get_s3_service") as mock_s3:
             mock_s3.return_value.generate_presigned_url.side_effect = lambda k: f"https://cdn/{k}"
-            result = await service._load_description_enrichment([exercise.id])
+            result = await service.load_description_enrichment([exercise.id])
 
         data = result[exercise.id]
         assert data["description_text_el"] == "A2 text"
@@ -283,7 +283,7 @@ class TestLoadDescriptionEnrichment:
         service = ExerciseSM2Service(mock_db_session)
         with patch("src.services.exercise_sm2_service.get_s3_service") as mock_s3:
             mock_s3.return_value.generate_presigned_url.side_effect = lambda k: f"https://cdn/{k}"
-            result = await service._load_description_enrichment([exercise.id])
+            result = await service.load_description_enrichment([exercise.id])
 
         data = result[exercise.id]
         assert data["description_text_el"] == "Ο Γιάννης."
@@ -304,7 +304,7 @@ class TestLoadDescriptionEnrichment:
         service = ExerciseSM2Service(mock_db_session)
         with patch("src.services.exercise_sm2_service.get_s3_service") as mock_s3:
             mock_s3.return_value.generate_presigned_url.side_effect = lambda k: f"https://cdn/{k}"
-            result = await service._load_description_enrichment([exercise.id])
+            result = await service.load_description_enrichment([exercise.id])
 
         data = result[exercise.id]
         assert data["description_text_el"] == "B1 fallback text"
