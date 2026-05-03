@@ -8,7 +8,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import CardStatus
+from src.db.models import CardStatus, ExerciseModality
 from tests.factories import (
     DescriptionExerciseFactory,
     DescriptionExerciseItemFactory,
@@ -280,7 +280,10 @@ class TestLearnerSituationExercisesEnrichment:
             audio_s3_key="audio/test_situation.mp3",
         )
         de = await DescriptionExerciseFactory.create(
-            session=db_session, description_id=description.id, approved=True
+            session=db_session,
+            description_id=description.id,
+            approved=True,
+            modality=ExerciseModality.READING,
         )
         exercise = await ExerciseFactory.create(session=db_session, description_exercise_id=de.id)
         await DescriptionExerciseItemFactory.create(
@@ -301,7 +304,7 @@ class TestLearnerSituationExercisesEnrichment:
         ex = data["exercises"][0]
         assert ex["exercise_id"] == str(exercise.id)
         assert ex["description_text_el"] == "Ο Γιάννης πήγε στην αγορά."
-        assert ex["description_audio_url"] == "https://s3.example.com/audio/test_situation.mp3"
+        assert ex["description_audio_url"] is None  # READING modality: audio nulled out
         assert ex["scenario_el"] == "Στην αγορά"
         assert ex["scenario_en"] == "At the market"
         assert ex["scenario_ru"] == "На рынке"
