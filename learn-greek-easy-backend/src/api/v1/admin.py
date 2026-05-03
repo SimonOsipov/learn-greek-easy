@@ -49,7 +49,6 @@ from src.db.models import (
     DeckLevel,
     DeckWordEntry,
     DescriptionExercise,
-    DescriptionStatus,
     DialogExercise,
     DialogLine,
     DialogSpeaker,
@@ -156,15 +155,17 @@ from src.schemas.word_entry import (
     WordEntryResponse,
 )
 from src.services.announcement_service import AnnouncementService
-from src.services.audio_generation_service import (
-    AudioWithTimestampsResult,
-    DialogInput,
-    get_audio_generation_service,
-)
+from src.services.audio_generation_service import DialogInput, get_audio_generation_service
 from src.services.card_error_admin_service import CardErrorAdminService
 from src.services.card_generator_service import CardGeneratorService
 from src.services.changelog_service import ChangelogService
 from src.services.cross_ai_verification_service import get_cross_ai_verification_service
+from src.services.description_audio_service import (
+    DescriptionAudioError,
+    generate_description_audio,
+    load_description_text,
+    persist_description_audio,
+)
 from src.services.duplicate_detection_service import DuplicateDetectionService
 from src.services.feedback_admin_service import FeedbackAdminService
 from src.services.gamification import ReconcileMode
@@ -4074,88 +4075,52 @@ async def generate_dialog_audio_stream(
 async def _description_audio_sse_pipeline(
     situation_id: UUID, level: str
 ) -> AsyncGenerator[str, None]:
-    """SSE pipeline for situation description audio generation."""
+    """Thin SSE wrapper around the reusable description-audio pipeline core.
+
+    Resolves factory and audio_service at the wrapper level so that the
+    patch targets ``src.api.v1.admin.get_session_factory`` and
+    ``src.api.v1.admin.get_audio_generation_service`` used by the regression
+    tests remain effective. Sub-functions receive both as injected parameters.
+    """
     yield format_sse_event("", event="connected")
     factory = get_session_factory()
 
-    # Validate level
-    if level not in ("b1", "a2"):
-        yield format_sse_event(
-            {
-                "situation_id": str(situation_id),
-                "stage": "load",
-                "error": f"Invalid level: {level}. Must be 'b1' or 'a2'",
-            },
-            event="description_audio:error",
-        )
-        return
-
-    # Load description
-    async with factory.begin() as session:
-        db_result = await session.execute(
-            select(SituationDescription).where(SituationDescription.situation_id == situation_id)
-        )
-        description = db_result.scalar_one_or_none()
-        if description is None:
-            yield format_sse_event(
-                {
-                    "situation_id": str(situation_id),
-                    "stage": "load",
-                    "error": "No description found for this situation",
-                },
-                event="description_audio:error",
-            )
-            return
-        description_id = description.id
-        text = description.text_el if level == "b1" else description.text_el_a2
-
-    if not text or not text.strip():
-        yield format_sse_event(
-            {
-                "situation_id": str(situation_id),
-                "stage": "load",
-                "error": f"No text for level {level}",
-            },
-            event="description_audio:error",
-        )
-        return
-
-    s3_key = (
-        f"situation-description-audio/{description_id}.mp3"
-        if level == "b1"
-        else f"situation-description-audio/a2/{description_id}.mp3"
-    )
-
-    yield format_sse_event(
-        {"situation_id": str(situation_id), "level": level},
-        event="description_audio:start",
-    )
-
-    current_stage = "tts"
+    current_stage = "load"
     try:
-        audio_service = get_audio_generation_service()
+        description_id, text = await load_description_text(
+            situation_id,
+            level,  # type: ignore[arg-type]
+            factory,
+        )
+        s3_key = (
+            f"situation-description-audio/{description_id}.mp3"
+            if level == "b1"
+            else f"situation-description-audio/a2/{description_id}.mp3"
+        )
 
+        yield format_sse_event(
+            {"situation_id": str(situation_id), "level": level},
+            event="description_audio:start",
+        )
+
+        current_stage = "tts"
+        audio_service = get_audio_generation_service()
         yield format_sse_event(
             {"situation_id": str(situation_id)},
             event="description_audio:tts",
         )
+        audio_result = await generate_description_audio(text, s3_key, audio_service)
 
-        async def _on_progress(stage: str, **kwargs: Any) -> None:
-            nonlocal current_stage
-            current_stage = stage
-
-        audio_result = await audio_service.generate_single(
-            text=text.strip(),
-            s3_key=s3_key,
-            with_timestamps=True,
-            on_progress=_on_progress,
-        )
-
-        word_timestamps = (
-            audio_result.word_timestamps
-            if isinstance(audio_result, AudioWithTimestampsResult)
-            else []
-        )
+        # AC#11: forced_align silent-failure observability
+        if audio_result.word_timestamps == [] and text.strip():
+            logger.error(
+                "forced_align returned empty timestamps despite non-empty text",
+                extra={
+                    "situation_id": str(situation_id),
+                    "level": level,
+                    "text_length": len(text),
+                },
+            )
 
         yield format_sse_event(
             {"situation_id": str(situation_id)},
@@ -4171,27 +4136,13 @@ async def _description_audio_sse_pipeline(
             {"situation_id": str(situation_id)},
             event="description_audio:persist",
         )
-
-        async with factory.begin() as session:
-            if level == "b1":
-                values: dict = {
-                    "audio_s3_key": s3_key,
-                    "audio_duration_seconds": audio_result.duration_seconds,
-                    "word_timestamps": word_timestamps,
-                    "status": DescriptionStatus.AUDIO_READY,
-                }
-            else:
-                values = {
-                    "audio_a2_s3_key": s3_key,
-                    "audio_a2_duration_seconds": audio_result.duration_seconds,
-                    "word_timestamps_a2": word_timestamps,
-                    "status": DescriptionStatus.AUDIO_READY,
-                }
-            await session.execute(
-                update(SituationDescription)
-                .where(SituationDescription.id == description_id)
-                .values(**values)
-            )
+        await persist_description_audio(
+            description_id,
+            level,  # type: ignore[arg-type]
+            s3_key,
+            audio_result,
+            factory,
+        )
 
         audio_url = audio_service.generate_presigned_url(s3_key)
 
@@ -4205,6 +4156,15 @@ async def _description_audio_sse_pipeline(
             event="description_audio:complete",
         )
 
+    except DescriptionAudioError as exc:
+        yield format_sse_event(
+            {
+                "situation_id": str(situation_id),
+                "stage": exc.stage,
+                "error": str(exc),
+            },
+            event="description_audio:error",
+        )
     except Exception as exc:
         yield format_sse_event(
             {
