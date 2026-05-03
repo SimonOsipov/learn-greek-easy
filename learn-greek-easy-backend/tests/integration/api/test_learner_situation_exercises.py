@@ -8,7 +8,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import CardStatus, ExerciseModality
+from src.db.models import CardStatus, ExerciseModality, ExerciseType
 from tests.factories import (
     DescriptionExerciseFactory,
     DescriptionExerciseItemFactory,
@@ -125,17 +125,26 @@ class TestLearnerSituationExercisesMixedState:
         ex_a = await ExerciseFactory.create(session=db_session, description_exercise_id=de_a.id)
 
         de_b = await DescriptionExerciseFactory.create(
-            session=db_session, description_id=description.id, approved=True
+            session=db_session,
+            description_id=description.id,
+            approved=True,
+            exercise_type=ExerciseType.FILL_GAPS,
         )
         ex_b = await ExerciseFactory.create(session=db_session, description_exercise_id=de_b.id)
 
         de_c = await DescriptionExerciseFactory.create(
-            session=db_session, description_id=description.id, approved=True
+            session=db_session,
+            description_id=description.id,
+            approved=True,
+            exercise_type=ExerciseType.SELECT_HEARD,
         )
         ex_c = await ExerciseFactory.create(session=db_session, description_exercise_id=de_c.id)
 
         de_d = await DescriptionExerciseFactory.create(
-            session=db_session, description_id=description.id, approved=True
+            session=db_session,
+            description_id=description.id,
+            approved=True,
+            exercise_type=ExerciseType.TRUE_FALSE,
         )
         ex_d = await ExerciseFactory.create(session=db_session, description_exercise_id=de_d.id)
 
