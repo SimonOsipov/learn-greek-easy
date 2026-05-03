@@ -138,8 +138,8 @@ export const SituationDetailPage: React.FC = () => {
     isError: exercisesError,
     refetch: refetchExercises,
   } = useQuery<ExerciseQueue>({
-    queryKey: ['situationExercises', id],
-    queryFn: () => exerciseAPI.getQueue({ situation_id: id!, limit: 100, include_new: true }),
+    queryKey: ['situationAllExercises', id],
+    queryFn: () => exerciseAPI.getAllForSituation(id!),
     enabled: !!id,
   });
 
