@@ -2726,6 +2726,7 @@ class SituationPicture(Base, TimestampMixin):
     # Structured prompt fields — composed into image_prompt at create time.
     scene_en: Mapped[str | None] = mapped_column(Text, nullable=True)
     scene_el: Mapped[str | None] = mapped_column(Text, nullable=True)
+    scene_ru: Mapped[str | None] = mapped_column(Text, nullable=True)
     style_en: Mapped[str | None] = mapped_column(Text, nullable=True)
     image_s3_key: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[PictureStatus] = mapped_column(
