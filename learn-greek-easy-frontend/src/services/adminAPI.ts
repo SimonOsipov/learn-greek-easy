@@ -491,6 +491,7 @@ export interface NewsItemCreate {
   text_el_a2?: string;
   scene_en?: string; // NEW
   scene_el?: string; // NEW
+  scene_ru?: string; // NEW
   style_en?: string; // NEW
 }
 

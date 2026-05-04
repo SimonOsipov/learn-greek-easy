@@ -20,6 +20,7 @@ export const JSON_PLACEHOLDER = `{
   "source_image_url": "https://example.com/image.jpg",
   "scene_en": "(optional, paired with scene_el) Visual scene description for image generation",
   "scene_el": "(optional, paired with scene_en) Greek scene description for future picture-description exercise",
+  "scene_ru": "(optional, paired with scene_en + scene_el) Russian scene description",
   "style_en": "(optional, independent) Per-news style override; omit to use the house-style default"
 }`;
 
@@ -186,13 +187,19 @@ export function validateNewsItemJson(jsonString: string): ValidationResult {
     typeof parsed.scene_el === 'string' && parsed.scene_el.trim() !== ''
       ? (parsed.scene_el as string)
       : null;
+  const sceneRu =
+    typeof parsed.scene_ru === 'string' && parsed.scene_ru.trim() !== ''
+      ? (parsed.scene_ru as string)
+      : null;
   const styleEn =
     typeof parsed.style_en === 'string' && parsed.style_en.trim() !== ''
       ? (parsed.style_en as string)
       : null;
 
-  // Paired-rule: scene_en and scene_el must both be provided or both omitted.
-  if ((sceneEn !== null) !== (sceneEl !== null)) {
+  // Paired-rule: scene_en, scene_el, and scene_ru must all be provided or all omitted.
+  const sceneAnySet = sceneEn !== null || sceneEl !== null || sceneRu !== null;
+  const sceneAllSet = sceneEn !== null && sceneEl !== null && sceneRu !== null;
+  if (sceneAnySet && !sceneAllSet) {
     return {
       valid: false,
       error: { type: 'scenePaired', messageKey: 'news.validation.scenePaired' },
@@ -203,6 +210,7 @@ export function validateNewsItemJson(jsonString: string): ValidationResult {
   if (
     (sceneEn !== null && sceneEn.length > 1000) ||
     (sceneEl !== null && sceneEl.length > 1000) ||
+    (sceneRu !== null && sceneRu.length > 1000) ||
     (styleEn !== null && styleEn.length > 1000)
   ) {
     return {
@@ -229,10 +237,11 @@ export function validateNewsItemJson(jsonString: string): ValidationResult {
     data.text_el_a2 = textA2;
   }
 
-  // Include scene fields when both present (paired rule already enforced above)
-  if (sceneEn !== null && sceneEl !== null) {
+  // Include scene fields when all three present (paired rule already enforced above)
+  if (sceneEn !== null && sceneEl !== null && sceneRu !== null) {
     data.scene_en = sceneEn;
     data.scene_el = sceneEl;
+    data.scene_ru = sceneRu;
   }
 
   // Include style_en independently when present
