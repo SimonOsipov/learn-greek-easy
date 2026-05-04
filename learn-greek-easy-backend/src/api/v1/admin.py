@@ -235,7 +235,8 @@ def _normalize_optional_str(value: str | None) -> str | None:
 def _recompose_image_prompt(scene_en: str | None, style_en: str | None) -> str | None:
     """Build picture.image_prompt from post-patch scene/style values.
 
-    Returns None when scene_en is missing/empty so we don't persist a bare style block.
+    Returns the composed prompt, or None to indicate no update (caller must skip
+    assignment when None is returned — the column is NOT NULL so None cannot be stored).
     Falls back to the house-style default when style_en is empty/None.
     """
     if not scene_en:
@@ -4363,7 +4364,9 @@ async def update_situation_picture(
         setattr(picture, field, normalized)
 
     if "scene_en" in fields_set or "style_en" in fields_set:
-        picture.image_prompt = _recompose_image_prompt(picture.scene_en, picture.style_en)  # type: ignore[assignment]
+        new_prompt = _recompose_image_prompt(picture.scene_en, picture.style_en)
+        if new_prompt is not None:
+            picture.image_prompt = new_prompt
 
     # Explicitly do NOT touch picture.status or picture.image_s3_key
 
