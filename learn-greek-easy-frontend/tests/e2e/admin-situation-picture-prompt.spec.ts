@@ -95,7 +95,7 @@ test.describe('Admin Situation Picture Prompt - Happy Path', () => {
     await expect(
       page.getByTestId(`situation-row-${coffeeShopId}`)
     ).toBeVisible({ timeout: 10000 });
-    await page.getByTestId(`situation-row-${coffeeShopId}`).click();
+    await page.getByTestId(`situation-edit-btn-${coffeeShopId}`).click();
 
     // Situation detail modal opens
     const modal = page.getByTestId('situation-detail-modal');
@@ -156,7 +156,7 @@ test.describe('Admin Situation Picture Prompt - Happy Path', () => {
     await expect(
       page.getByTestId(`situation-row-${coffeeShopId}`)
     ).toBeVisible({ timeout: 10000 });
-    await page.getByTestId(`situation-row-${coffeeShopId}`).click();
+    await page.getByTestId(`situation-edit-btn-${coffeeShopId}`).click();
 
     await expect(modal).toBeVisible({ timeout: 5000 });
     await page.getByTestId('situation-tab-picture').click();
@@ -214,7 +214,7 @@ test.describe('Admin Situation Picture Prompt - Negative Path', () => {
 
     // Click the bus situation row (no picture row)
     await expect(page.getByTestId(`situation-row-${busId}`)).toBeVisible({ timeout: 10000 });
-    await page.getByTestId(`situation-row-${busId}`).click();
+    await page.getByTestId(`situation-edit-btn-${busId}`).click();
 
     // Situation detail modal opens
     const modal = page.getByTestId('situation-detail-modal');
