@@ -146,7 +146,7 @@ test.describe('Admin Situation Picture Prompt - Happy Path', () => {
     expect(body.image_prompt).toBe(`${NEW_SCENE_EN}\n\n${NEW_STYLE_EN}`);
 
     // Success toast should appear
-    await expect(page.getByText('Picture prompt saved')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Picture prompt saved').first()).toBeVisible({ timeout: 5000 });
 
     // Reload and re-open the same situation to assert persistence
     await page.reload();
