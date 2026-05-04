@@ -86,6 +86,26 @@ describe('validateNewsItemJson — scene/style field validation', () => {
     });
   });
 
+  it('rejects scene_el > 1000 chars', () => {
+    const longScene = 'α'.repeat(1001);
+    const result = validateNewsItemJson(
+      withExtra({ scene_en: 'Visual scene', scene_el: longScene })
+    );
+    expect(result).toEqual({
+      valid: false,
+      error: { type: 'sceneFieldsTooLong', messageKey: 'news.validation.sceneFieldsTooLong' },
+    });
+  });
+
+  it('rejects style_en > 1000 chars', () => {
+    const longStyle = 'a'.repeat(1001);
+    const result = validateNewsItemJson(withExtra({ style_en: longStyle }));
+    expect(result).toEqual({
+      valid: false,
+      error: { type: 'sceneFieldsTooLong', messageKey: 'news.validation.sceneFieldsTooLong' },
+    });
+  });
+
   it('treats empty-string scene_en as null (paired-violation when scene_el is present)', () => {
     // Trimmed scene_en is empty → treated as null; scene_el is set → paired violation
     const result = validateNewsItemJson(withExtra({ scene_en: '   ', scene_el: 'Οπτική σκηνή' }));

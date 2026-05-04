@@ -218,7 +218,7 @@ The following variables must be set on **both** the production backend service a
 
 **Example value (developer reference — do not use as a runtime fallback):**
 
-```
+```text
 Editorial photo-realistic illustration, soft natural lighting, neutral color palette, clean composition, no text or logos.
 ```
 
