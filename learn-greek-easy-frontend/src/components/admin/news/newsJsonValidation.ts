@@ -17,7 +17,10 @@ export const JSON_PLACEHOLDER = `{
   "text_el_a2": "(optional) Simplified A2 text",
   "publication_date": "2024-01-15",
   "original_article_url": "https://example.com/article",
-  "source_image_url": "https://example.com/image.jpg"
+  "source_image_url": "https://example.com/image.jpg",
+  "scene_en": "(optional, paired with scene_el) Visual scene description for image generation",
+  "scene_el": "(optional, paired with scene_en) Greek scene description for future picture-description exercise",
+  "style_en": "(optional, independent) Per-news style override; omit to use the house-style default"
 }`;
 
 /** Required fields for news item creation */
@@ -40,7 +43,9 @@ export type ValidationErrorType =
   | 'invalidImageUrl'
   | 'invalidDate'
   | 'invalidCountry'
-  | 'a2FieldsPaired';
+  | 'a2FieldsPaired'
+  | 'scenePaired'
+  | 'sceneFieldsTooLong';
 
 /** Successful validation result */
 export interface ValidationSuccess {
@@ -172,6 +177,40 @@ export function validateNewsItemJson(jsonString: string): ValidationResult {
     };
   }
 
+  // Validate scene/style fields (all optional, max 1000 chars each)
+  const sceneEn =
+    typeof parsed.scene_en === 'string' && parsed.scene_en.trim() !== ''
+      ? (parsed.scene_en as string)
+      : null;
+  const sceneEl =
+    typeof parsed.scene_el === 'string' && parsed.scene_el.trim() !== ''
+      ? (parsed.scene_el as string)
+      : null;
+  const styleEn =
+    typeof parsed.style_en === 'string' && parsed.style_en.trim() !== ''
+      ? (parsed.style_en as string)
+      : null;
+
+  // Paired-rule: scene_en and scene_el must both be provided or both omitted.
+  if ((sceneEn !== null) !== (sceneEl !== null)) {
+    return {
+      valid: false,
+      error: { type: 'scenePaired', messageKey: 'news.validation.scenePaired' },
+    };
+  }
+
+  // Length check: each new field max 1000 chars.
+  if (
+    (sceneEn !== null && sceneEn.length > 1000) ||
+    (sceneEl !== null && sceneEl.length > 1000) ||
+    (styleEn !== null && styleEn.length > 1000)
+  ) {
+    return {
+      valid: false,
+      error: { type: 'sceneFieldsTooLong', messageKey: 'news.validation.sceneFieldsTooLong' },
+    };
+  }
+
   // Build the data object
   const data: NewsItemCreate = {
     country,
@@ -188,6 +227,17 @@ export function validateNewsItemJson(jsonString: string): ValidationResult {
   if (scenarioA2 !== null && textA2 !== null) {
     data.scenario_el_a2 = scenarioA2;
     data.text_el_a2 = textA2;
+  }
+
+  // Include scene fields when both present (paired rule already enforced above)
+  if (sceneEn !== null && sceneEl !== null) {
+    data.scene_en = sceneEn;
+    data.scene_el = sceneEl;
+  }
+
+  // Include style_en independently when present
+  if (styleEn !== null) {
+    data.style_en = styleEn;
   }
 
   return {
