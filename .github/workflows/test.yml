@@ -213,12 +213,14 @@ jobs:
         working-directory: learn-greek-easy-backend
         env:
           DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5433/test_learn_greek
+          PICTURE_HOUSE_STYLE_DEFAULT: "test_house_style_default"
         run: poetry run alembic upgrade head
 
       - name: Check for pending migrations
         working-directory: learn-greek-easy-backend
         env:
           DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5433/test_learn_greek
+          PICTURE_HOUSE_STYLE_DEFAULT: "test_house_style_default"
         run: poetry run alembic check
 
   # Job 4: Unit & Integration Tests
@@ -311,12 +313,14 @@ jobs:
         working-directory: learn-greek-easy-backend
         env:
           DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5433/test_learn_greek
+          PICTURE_HOUSE_STYLE_DEFAULT: "test_house_style_default"
         run: poetry run alembic upgrade head
 
       - name: Start backend server
         working-directory: learn-greek-easy-backend
         env:
           DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5433/test_learn_greek
+          PICTURE_HOUSE_STYLE_DEFAULT: "test_house_style_default"
           REDIS_URL: redis://localhost:6379/0
           TEST_SEED_ENABLED: "true"
           TESTING: "true"
@@ -523,12 +527,14 @@ jobs:
         working-directory: learn-greek-easy-backend
         env:
           DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5433/test_learn_greek
+          PICTURE_HOUSE_STYLE_DEFAULT: "test_house_style_default"
         run: poetry run alembic upgrade head
 
       - name: Start backend server
         working-directory: learn-greek-easy-backend
         env:
           DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5433/test_learn_greek
+          PICTURE_HOUSE_STYLE_DEFAULT: "test_house_style_default"
           REDIS_URL: redis://localhost:6379/0
           TEST_SEED_ENABLED: "true"
           TESTING: "true"
@@ -892,6 +898,7 @@ jobs:
         working-directory: learn-greek-easy-backend
         env:
           DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5433/test_learn_greek
+          PICTURE_HOUSE_STYLE_DEFAULT: "test_house_style_default"
           REDIS_URL: redis://localhost:6379/0
           TEST_SEED_ENABLED: "true"
         run: |
