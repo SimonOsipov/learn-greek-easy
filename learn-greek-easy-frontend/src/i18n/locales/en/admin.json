@@ -425,7 +425,7 @@
       "noFieldsToUpdate": "No fields to update",
       "invalidCountry": "Invalid country. Must be: cyprus, greece, or world",
       "a2FieldsPaired": "title_el_a2 and description_el_a2 must both be provided or both omitted",
-      "scenePaired": "scene_en and scene_el must both be provided or both omitted",
+      "scenePaired": "scene_en, scene_el and scene_ru must all be provided or all omitted",
       "sceneFieldsTooLong": "scene_en, scene_el, and style_en must each be 1000 characters or fewer"
     },
     "search": {
