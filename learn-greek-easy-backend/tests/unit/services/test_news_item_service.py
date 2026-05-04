@@ -12,6 +12,7 @@ from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
+from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.exceptions import NewsItemNotFoundException
@@ -175,8 +176,6 @@ class TestA2Content:
 
     def test_paired_validation_title_without_description(self):
         """Should raise ValidationError when scenario_el_a2 set but text_el_a2 omitted."""
-        from pydantic import ValidationError
-
         with pytest.raises(ValidationError, match="must both be provided or both omitted"):
             NewsItemCreate(
                 scenario_el="Τίτλος",
@@ -193,8 +192,6 @@ class TestA2Content:
 
     def test_paired_validation_description_without_title(self):
         """Should raise ValidationError when text_el_a2 set but scenario_el_a2 omitted."""
-        from pydantic import ValidationError
-
         with pytest.raises(ValidationError, match="must both be provided or both omitted"):
             NewsItemCreate(
                 scenario_el="Τίτλος",
@@ -227,36 +224,56 @@ _SCENE_BASE = dict(
 
 
 class TestScenePair:
-    """Tests for scene_en/scene_el paired validation and field constraints."""
+    """Tests for scene_en/scene_el/scene_ru trilingual validation and field constraints."""
 
-    def test_scene_pair_en_without_el_raises(self):
-        """scene_en alone should raise ValidationError."""
-        from pydantic import ValidationError
+    # ------------------------------------------------------------------
+    # Parametrized: all 6 incomplete permutations must raise
+    # ------------------------------------------------------------------
 
-        with pytest.raises(ValidationError, match="scene_en and scene_el"):
-            NewsItemCreate(**_SCENE_BASE, scene_en="x")
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            # only one field present
+            {"scene_en": "x"},
+            {"scene_el": "y"},
+            {"scene_ru": "z"},
+            # two out of three
+            {"scene_en": "x", "scene_el": "y"},
+            {"scene_en": "x", "scene_ru": "z"},
+            {"scene_el": "y", "scene_ru": "z"},
+        ],
+    )
+    def test_incomplete_scene_triple_raises(self, kwargs):
+        """Any incomplete subset of scene_en/scene_el/scene_ru must raise ValidationError."""
+        with pytest.raises(
+            ValidationError,
+            match="scene_en, scene_el and scene_ru must all be provided or all omitted",
+        ):
+            NewsItemCreate(**_SCENE_BASE, **kwargs)
 
-    def test_scene_pair_el_without_en_raises(self):
-        """scene_el alone should raise ValidationError."""
-        from pydantic import ValidationError
+    # ------------------------------------------------------------------
+    # Valid states
+    # ------------------------------------------------------------------
 
-        with pytest.raises(ValidationError, match="scene_en and scene_el"):
-            NewsItemCreate(**_SCENE_BASE, scene_el="y")
+    def test_all_three_scene_fields_present_ok(self):
+        """All three scene fields provided should not raise."""
+        NewsItemCreate(**_SCENE_BASE, scene_en="x", scene_el="y", scene_ru="z")
 
-    def test_scene_pair_both_present_ok(self):
-        """Both scene_en and scene_el provided should not raise."""
-        NewsItemCreate(**_SCENE_BASE, scene_en="x", scene_el="y")
-
-    def test_scene_pair_both_absent_ok(self):
-        """Neither scene field provided should not raise."""
+    def test_all_scene_fields_absent_ok(self):
+        """No scene fields provided should not raise."""
         NewsItemCreate(**_SCENE_BASE)
 
-    def test_scene_pair_whitespace_only_treated_as_null(self):
-        """scene_en with only whitespace is treated as absent, so scene_el alone raises."""
-        from pydantic import ValidationError
+    # ------------------------------------------------------------------
+    # Whitespace handling
+    # ------------------------------------------------------------------
 
-        with pytest.raises(ValidationError, match="scene_en and scene_el"):
-            NewsItemCreate(**_SCENE_BASE, scene_en="   ", scene_el="x")
+    def test_whitespace_only_treated_as_absent(self):
+        """scene_en with only whitespace is treated as absent, making the triple incomplete."""
+        with pytest.raises(
+            ValidationError,
+            match="scene_en, scene_el and scene_ru must all be provided or all omitted",
+        ):
+            NewsItemCreate(**_SCENE_BASE, scene_en="   ", scene_el="y", scene_ru="z")
 
     def test_style_en_independent_ok(self):
         """style_en alone (no scene pair) should not raise."""
@@ -264,24 +281,24 @@ class TestScenePair:
 
     def test_scene_en_max_length_boundary(self):
         """scene_en of 1000 chars is valid; 1001 raises."""
-        from pydantic import ValidationError
-
-        NewsItemCreate(**_SCENE_BASE, scene_en="a" * 1000, scene_el="b" * 1000)
+        NewsItemCreate(**_SCENE_BASE, scene_en="a" * 1000, scene_el="b" * 1000, scene_ru="c" * 1000)
         with pytest.raises(ValidationError):
-            NewsItemCreate(**_SCENE_BASE, scene_en="a" * 1001, scene_el="b")
+            NewsItemCreate(**_SCENE_BASE, scene_en="a" * 1001, scene_el="b", scene_ru="c")
 
     def test_scene_el_max_length_boundary(self):
         """scene_el of 1000 chars is valid; 1001 raises."""
-        from pydantic import ValidationError
-
-        NewsItemCreate(**_SCENE_BASE, scene_en="a", scene_el="b" * 1000)
+        NewsItemCreate(**_SCENE_BASE, scene_en="a", scene_el="b" * 1000, scene_ru="c")
         with pytest.raises(ValidationError):
-            NewsItemCreate(**_SCENE_BASE, scene_en="a", scene_el="b" * 1001)
+            NewsItemCreate(**_SCENE_BASE, scene_en="a", scene_el="b" * 1001, scene_ru="c")
+
+    def test_scene_ru_max_length_boundary(self):
+        """scene_ru of 1000 chars is valid; 1001 raises."""
+        NewsItemCreate(**_SCENE_BASE, scene_en="a", scene_el="b", scene_ru="c" * 1000)
+        with pytest.raises(ValidationError):
+            NewsItemCreate(**_SCENE_BASE, scene_en="a", scene_el="b", scene_ru="c" * 1001)
 
     def test_style_en_max_length_boundary(self):
         """style_en of 1000 chars is valid; 1001 raises."""
-        from pydantic import ValidationError
-
         NewsItemCreate(**_SCENE_BASE, style_en="z" * 1000)
         with pytest.raises(ValidationError):
             NewsItemCreate(**_SCENE_BASE, style_en="z" * 1001)
@@ -448,8 +465,11 @@ class TestCreate:
 
         scene_en = "A sunny day in Athens"
         scene_el = "Μια ηλιόλουστη μέρα στην Αθήνα"
+        scene_ru = "Солнечный день в Афинах"
         style_en = "Oil painting, warm tones"
-        data = self._make_create_data(scene_en=scene_en, scene_el=scene_el, style_en=style_en)
+        data = self._make_create_data(
+            scene_en=scene_en, scene_el=scene_el, scene_ru=scene_ru, style_en=style_en
+        )
         service = NewsItemService(db_session, s3_service=mock_s3_service)
         mock_httpx_cls = self._make_httpx_patch()
 
@@ -513,7 +533,7 @@ class TestCreate:
         from src.db.models import SituationPicture
 
         monkeypatch.setattr(settings, "picture_house_style_default", "TEST_STYLE")
-        data = self._make_create_data(scene_en="A scene", scene_el="Μια σκηνή")
+        data = self._make_create_data(scene_en="A scene", scene_el="Μια σκηνή", scene_ru="Сцена")
         service = NewsItemService(db_session, s3_service=mock_s3_service)
         mock_httpx_cls = self._make_httpx_patch()
 
