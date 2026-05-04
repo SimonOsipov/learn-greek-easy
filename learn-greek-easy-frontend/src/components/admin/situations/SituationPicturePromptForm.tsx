@@ -80,11 +80,12 @@ export function PicturePromptForm({ situationId, picture }: PicturePromptFormPro
     };
 
     try {
-      await adminAPI.updateSituationPicture(situationId, payload);
+      const updated = await adminAPI.updateSituationPicture(situationId, payload);
       await useAdminSituationStore.getState().fetchSituationDetail(situationId);
       toast({ title: t('situations.detail.picturePrompt.savedToast') });
-      // Mark form pristine at current values
-      setInitial({ ...form });
+      const saved = hydrateForm(updated);
+      setInitial(saved);
+      setForm(saved);
     } catch (err) {
       const msg = getApiErrorMessage(err);
       setError(msg ?? (err instanceof Error ? err.message : t('situations.detail.fetchError')));
@@ -129,7 +130,7 @@ export function PicturePromptForm({ situationId, picture }: PicturePromptFormPro
           </Label>
           <Textarea
             id={`picture-prompt-${key}`}
-            data-testid={`picture-prompt-${key.replace('_', '-')}`}
+            data-testid={`picture-prompt-${key.replaceAll('_', '-')}`}
             value={form[key]}
             onChange={handleChange(key)}
             onKeyDown={handleKeyDown}

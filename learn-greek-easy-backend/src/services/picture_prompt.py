@@ -28,5 +28,5 @@ def resolve_picture_style_en(provided: str | None) -> str:
                                   else settings.picture_house_style_default
     """
     if provided and provided.strip():
-        return provided
+        return provided.strip()
     return get_default_picture_style_en()

@@ -748,10 +748,15 @@ export function SituationDetailModal({
                   <p className="text-sm">{t('situations.detail.pictureEmpty')}</p>
                 </div>
               )}
-              <AudioPlaceholder />
-              <RegenerateButton />
               {selectedSituation?.picture && situationId && (
-                <PicturePromptForm situationId={situationId} picture={selectedSituation.picture} />
+                <>
+                  <PicturePromptForm
+                    situationId={situationId}
+                    picture={selectedSituation.picture}
+                  />
+                  <AudioPlaceholder />
+                  <RegenerateButton />
+                </>
               )}
             </TabsContent>
 
