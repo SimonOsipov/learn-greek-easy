@@ -37,6 +37,7 @@ class NewsItemCreate(BaseModel):
     text_el_a2: Optional[str] = None
     scene_en: Optional[str] = Field(None, max_length=1000)
     scene_el: Optional[str] = Field(None, max_length=1000)
+    scene_ru: Optional[str] = Field(None, max_length=1000)
     style_en: Optional[str] = Field(None, max_length=1000)
     country: NewsCountry = Field(..., description="Country/region: cyprus, greece, or world")
     publication_date: date
@@ -54,15 +55,16 @@ class NewsItemCreate(BaseModel):
 
     @model_validator(mode="after")
     def validate_scene_pair(self) -> Self:
-        """If one scene_* field is set, the other must also be set.
+        """All three scene_* fields must be provided together or all omitted.
 
         Trimmed-empty strings are treated as null, mirroring the frontend
         convention in newsJsonValidation.ts.
         """
         has_en = bool(self.scene_en and self.scene_en.strip())
         has_el = bool(self.scene_el and self.scene_el.strip())
-        if has_en != has_el:
-            raise ValueError("scene_en and scene_el must both be provided or both omitted")
+        has_ru = bool(self.scene_ru and self.scene_ru.strip())
+        if has_en != has_el or has_en != has_ru:
+            raise ValueError("scene_en, scene_el and scene_ru must all be provided or all omitted")
         return self
 
 
