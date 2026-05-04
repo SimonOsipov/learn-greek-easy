@@ -457,7 +457,7 @@ class TestCreate:
         db_session: AsyncSession,
         mock_s3_service: MagicMock,
     ):
-        """When scene_en/scene_el/style_en are provided they are written verbatim
+        """When scene_en/scene_el/scene_ru/style_en are provided they are written verbatim
         and image_prompt is composed as f"{scene_en}\\n\\n{style_en}"."""
         from unittest.mock import patch
 
@@ -486,6 +486,7 @@ class TestCreate:
 
         assert row.scene_en == scene_en
         assert row.scene_el == scene_el
+        assert row.scene_ru == scene_ru
         assert row.style_en == style_en
         assert row.image_prompt == f"{scene_en}\n\n{style_en}"
 
@@ -624,7 +625,11 @@ class TestCreate:
         from src.db.models import SituationPicture
 
         scene_ru = "Солнечный день в Афинах"
-        data = self._make_create_data(scene_ru=scene_ru)
+        data = self._make_create_data(
+            scene_en="A sunny day in Athens",
+            scene_el="Μια ηλιόλουστη μέρα στην Αθήνα",
+            scene_ru=scene_ru,
+        )
         service = NewsItemService(db_session, s3_service=mock_s3_service)
         mock_httpx_cls = self._make_httpx_patch()
 

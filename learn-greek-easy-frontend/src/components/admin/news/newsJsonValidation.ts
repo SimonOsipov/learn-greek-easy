@@ -18,8 +18,8 @@ export const JSON_PLACEHOLDER = `{
   "publication_date": "2024-01-15",
   "original_article_url": "https://example.com/article",
   "source_image_url": "https://example.com/image.jpg",
-  "scene_en": "(optional, paired with scene_el) Visual scene description for image generation",
-  "scene_el": "(optional, paired with scene_en) Greek scene description for future picture-description exercise",
+  "scene_en": "(optional, paired with scene_el + scene_ru) Visual scene description for image generation",
+  "scene_el": "(optional, paired with scene_en + scene_ru) Greek scene description for future picture-description exercise",
   "scene_ru": "(optional, paired with scene_en + scene_el) Russian scene description",
   "style_en": "(optional, independent) Per-news style override; omit to use the house-style default"
 }`;
