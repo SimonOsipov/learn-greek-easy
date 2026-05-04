@@ -2723,6 +2723,10 @@ class SituationPicture(Base, TimestampMixin):
         ForeignKey("situations.id", ondelete="CASCADE"), unique=True, nullable=False
     )
     image_prompt: Mapped[str] = mapped_column(Text, nullable=False)
+    # Structured prompt fields — composed into image_prompt at create time.
+    scene_en: Mapped[str | None] = mapped_column(Text, nullable=True)
+    scene_el: Mapped[str | None] = mapped_column(Text, nullable=True)
+    style_en: Mapped[str | None] = mapped_column(Text, nullable=True)
     image_s3_key: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[PictureStatus] = mapped_column(
         SAEnum(

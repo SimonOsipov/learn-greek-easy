@@ -192,6 +192,38 @@ If both Railway auto-deploy and GitHub Actions try to deploy:
 | `RAILWAY_PROJECT_ID` | Railway project ID (from project settings) |
 | `RAILWAY_WORKSPACE_ID` | Railway workspace ID (from workspace settings) |
 
+### Required Backend Environment Variables
+
+The following variables must be set on **both** the production backend service and the dev/preview backend service in Railway before deployment. The backend will fail to start (Pydantic `ValidationError`) if any required variable is missing.
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `JWT_SECRET_KEY` | YES | Min 32 chars. Signs/verifies JWTs. |
+| `DATABASE_URL` | YES | Supabase Postgres connection string (Supavisor session mode, port 5432). |
+| `CORS_ORIGINS` | YES | Comma-separated list of allowed frontend origins. |
+| `PICTURE_HOUSE_STYLE_DEFAULT` | YES | House-style fragment appended to every news picture prompt. See below. |
+
+#### `PICTURE_HOUSE_STYLE_DEFAULT`
+
+**Purpose:** A prose fragment describing the visual house style (lighting, palette, composition) that is appended to every AI-generated news picture prompt. It is consumed in two places:
+
+1. `news_item_service.create` — pre-fills the `style_en` column when an admin pastes a scene description (so admins only need to supply the *what*, not the *how*).
+2. The SCENE-01 Alembic backfill migration — populates `style_en` for all existing `news_items` rows that pre-date the structured-prompt feature.
+
+**Required:** YES. No fallback value exists. The backend refuses to start with a Pydantic `ValidationError` if this variable is unset. The SCENE-01 backfill migration aborts with a `RuntimeError` if it is unset at migration time.
+
+**Where to set:** Railway dashboard → both the **production** backend service and the **dev/preview** backend service (the service used by the PR preview workflow).
+
+**When to set:** BEFORE merging the SCENE-01 PR (`feature/scene-01-structured-picture-prompt`). If the variable is missing when the post-merge deploy runs, the backend will fail at boot and the migration step will not complete.
+
+**Example value (developer reference — do not use as a runtime fallback):**
+
+```text
+Editorial photo-realistic illustration, soft natural lighting, neutral color palette, clean composition, no text or logos.
+```
+
+---
+
 ### Railway Auto-Deploy Status
 
 **IMPORTANT**: Auto-deploy must be DISABLED for GitHub Actions sequential deploy to work correctly.

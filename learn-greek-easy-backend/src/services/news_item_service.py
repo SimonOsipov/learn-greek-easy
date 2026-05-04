@@ -11,6 +11,7 @@ from uuid import UUID, uuid4
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.config import settings
 from src.core.exceptions import NewsItemNotFoundException
 from src.core.logging import get_logger
 from src.db.models import (
@@ -98,11 +99,30 @@ class NewsItemService:
         )
         self.db.add(description)
 
-        # The generated picture (for the future picture-exercise feature) starts
-        # empty; the source news image lives on situation.source_image_s3_key.
+        # Resolve scene_* fields: use admin-provided pair, or fall back to scenario_*.
+        # Schema validation has already enforced the paired rule, so if scene_en is
+        # truthy, scene_el is too (and vice versa).
+        scene_en = data.scene_en if (data.scene_en and data.scene_en.strip()) else data.scenario_en
+        scene_el = data.scene_el if (data.scene_el and data.scene_el.strip()) else data.scenario_el
+
+        # Resolve style_en: use admin-provided value, or fall back to env-var default.
+        # settings.picture_house_style_default is guaranteed non-empty (Pydantic
+        # Settings raises at startup if unset).
+        style_en = (
+            data.style_en
+            if (data.style_en and data.style_en.strip())
+            else settings.picture_house_style_default
+        )
+
+        # Compose image_prompt for SIT-08 backwards compatibility.
+        image_prompt = f"{scene_en}\n\n{style_en}"
+
         picture = SituationPicture(
             situation_id=situation.id,
-            image_prompt=data.scenario_en,
+            image_prompt=image_prompt,
+            scene_en=scene_en,
+            scene_el=scene_el,
+            style_en=style_en,
             status=PictureStatus.DRAFT,
         )
         self.db.add(picture)

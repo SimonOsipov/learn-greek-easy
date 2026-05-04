@@ -489,6 +489,9 @@ export interface NewsItemCreate {
   country: NewsCountry;
   scenario_el_a2?: string;
   text_el_a2?: string;
+  scene_en?: string; // NEW
+  scene_el?: string; // NEW
+  style_en?: string; // NEW
 }
 
 /**
