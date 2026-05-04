@@ -436,7 +436,9 @@
       "invalidDate": "Неверный формат даты (используйте YYYY-MM-DD)",
       "noFieldsToUpdate": "Нет полей для обновления",
       "invalidCountry": "Недопустимая страна. Допустимые значения: cyprus, greece, world",
-      "a2FieldsPaired": "title_el_a2 и description_el_a2 должны быть указаны оба или оба пропущены"
+      "a2FieldsPaired": "title_el_a2 и description_el_a2 должны быть указаны оба или оба пропущены",
+      "scenePaired": "scene_en и scene_el должны быть указаны оба или оба пропущены",
+      "sceneFieldsTooLong": "scene_en, scene_el и style_en должны содержать не более 1000 символов"
     },
     "search": {
       "placeholder": "Поиск новостей...",
