@@ -30,6 +30,8 @@ import type {
 import type {
   AdminExerciseListParams,
   AdminExerciseListResponse,
+  PictureNested,
+  PictureUpdatePayload,
   SituationCreatePayload,
   SituationDetailResponse,
   SituationExercisesResponse,
@@ -1623,6 +1625,13 @@ export const adminAPI = {
 
   getSituationExercises: async (id: string): Promise<SituationExercisesResponse> => {
     return api.get<SituationExercisesResponse>(`/api/v1/admin/situations/${id}/exercises`);
+  },
+
+  updateSituationPicture: async (
+    situationId: string,
+    data: PictureUpdatePayload
+  ): Promise<PictureNested> => {
+    return api.patch<PictureNested>(`/api/v1/admin/situations/${situationId}/picture`, data);
   },
 
   getExercises: async (params: AdminExerciseListParams): Promise<AdminExerciseListResponse> => {

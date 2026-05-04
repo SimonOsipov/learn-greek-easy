@@ -1215,6 +1215,25 @@
       "descriptionEmpty": "No description created yet",
       "descriptionA2Empty": "A2 description not available",
       "pictureEmpty": "No picture generated yet",
+      "picturePrompt": {
+        "sectionTitle": "Picture prompt",
+        "labels": {
+          "scene_en": "Scene (EN)",
+          "scene_el": "Scene (EL)",
+          "scene_ru": "Scene (RU)",
+          "style_en": "Style (EN)"
+        },
+        "placeholders": {
+          "scene_en": "English scene description for image generation",
+          "scene_el": "Greek scene description (paired with scene_en)",
+          "scene_ru": "Russian scene description (paired with scene_en + scene_el)",
+          "style_en": "Optional style override (English). Leave blank to use default."
+        },
+        "save": "Save",
+        "cancel": "Cancel",
+        "savedToast": "Picture prompt saved",
+        "trioRuleHint": "Provide all three scene fields (EN/EL/RU) or leave all three empty."
+      },
       "audioNotGenerated": "Audio not generated",
       "regenerate": "Regenerate",
       "backendNotConnected": "Backend not connected",

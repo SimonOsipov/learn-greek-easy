@@ -45,6 +45,7 @@ import type { SSEEvent } from '@/types/sse';
 
 import { SITUATION_STATUS_BADGE_CLASSES } from './situationBadges';
 import { SituationExercisesTab } from './SituationExercisesTab';
+import { PicturePromptForm } from './SituationPicturePromptForm';
 
 // Defined locally — same values as DialogDetailModal but NOT imported from it
 const SPEAKER_BUBBLE_STYLES = [
@@ -738,15 +739,25 @@ export function SituationDetailModal({
 
             {/* Picture Tab */}
             <TabsContent value="picture" className="space-y-4">
-              <div
-                className="flex flex-col items-center gap-3 py-8 text-center text-muted-foreground"
-                data-testid="situation-picture-empty"
-              >
-                <Image className="h-8 w-8 opacity-40" />
-                <p className="text-sm">{t('situations.detail.pictureEmpty')}</p>
-              </div>
-              <AudioPlaceholder />
-              <RegenerateButton />
+              {!selectedSituation?.picture && (
+                <div
+                  className="flex flex-col items-center gap-3 py-8 text-center text-muted-foreground"
+                  data-testid="situation-picture-empty"
+                >
+                  <Image className="h-8 w-8 opacity-40" />
+                  <p className="text-sm">{t('situations.detail.pictureEmpty')}</p>
+                </div>
+              )}
+              {selectedSituation?.picture && situationId && (
+                <>
+                  <PicturePromptForm
+                    situationId={situationId}
+                    picture={selectedSituation.picture}
+                  />
+                  <AudioPlaceholder />
+                  <RegenerateButton />
+                </>
+              )}
             </TabsContent>
 
             {/* Exercises Tab */}

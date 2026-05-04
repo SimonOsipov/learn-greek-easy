@@ -11,7 +11,6 @@ from uuid import UUID, uuid4
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.config import settings
 from src.core.exceptions import NewsItemNotFoundException
 from src.core.logging import get_logger
 from src.db.models import (
@@ -30,6 +29,7 @@ from src.schemas.news_item import (
     NewsItemResponse,
     NewsItemUpdate,
 )
+from src.services.picture_prompt import resolve_picture_style_en
 from src.services.s3_service import S3Service, get_s3_service
 
 logger = get_logger(__name__)
@@ -107,13 +107,7 @@ class NewsItemService:
         scene_ru = data.scene_ru if (data.scene_ru and data.scene_ru.strip()) else data.scenario_ru
 
         # Resolve style_en: use admin-provided value, or fall back to env-var default.
-        # settings.picture_house_style_default is guaranteed non-empty (Pydantic
-        # Settings raises at startup if unset).
-        style_en = (
-            data.style_en
-            if (data.style_en and data.style_en.strip())
-            else settings.picture_house_style_default
-        )
+        style_en = resolve_picture_style_en(data.style_en)
 
         # Compose image_prompt for SIT-08 backwards compatibility.
         image_prompt = f"{scene_en}\n\n{style_en}"

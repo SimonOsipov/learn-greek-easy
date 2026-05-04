@@ -44,6 +44,48 @@ class SituationUpdate(BaseModel):
         return self
 
 
+class PictureUpdate(BaseModel):
+    """Schema for updating a Picture's scene + style fields.
+
+    Body-shape trio rule: the three scene_* fields must arrive together.
+    Either all three are populated (after trim) to set scenes, or all three
+    are explicitly empty/null to clear them. Mixed shapes are rejected so
+    the FE form can rely on a single trio-paired control.
+
+    `style_en` is independent and may be present or omitted on its own.
+    """
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    scene_en: Optional[str] = Field(default=None, max_length=1000)
+    scene_el: Optional[str] = Field(default=None, max_length=1000)
+    scene_ru: Optional[str] = Field(default=None, max_length=1000)
+    style_en: Optional[str] = Field(default=None, max_length=1000)
+
+    @model_validator(mode="after")
+    def check_at_least_one_field(self) -> "PictureUpdate":
+        if not self.model_fields_set:
+            raise ValueError("At least one field must be provided for update")
+        return self
+
+    @model_validator(mode="after")
+    def validate_scene_trio_shape(self) -> "PictureUpdate":
+        scene_keys = {"scene_en", "scene_el", "scene_ru"}
+        present = scene_keys & self.model_fields_set
+        # Partial presence (1 or 2 of 3) is always rejected.
+        if 0 < len(present) < 3:
+            raise ValueError("scene_en, scene_el and scene_ru must all be provided or all omitted")
+        if len(present) == 3:
+            # str_strip_whitespace already trimmed; treat None or "" as empty.
+            populated = [bool(getattr(self, k)) for k in ("scene_en", "scene_el", "scene_ru")]
+            # All three must be uniformly populated OR uniformly empty.
+            if any(populated) and not all(populated):
+                raise ValueError(
+                    "scene_en, scene_el and scene_ru must all be provided or all omitted"
+                )
+        return self
+
+
 class SituationListItem(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -121,6 +163,10 @@ class PictureNested(BaseModel):
     image_prompt: str
     status: PictureStatus
     created_at: datetime
+    scene_en: str | None = None
+    scene_el: str | None = None
+    scene_ru: str | None = None
+    style_en: str | None = None
 
 
 class SituationDetailResponse(SituationResponse):

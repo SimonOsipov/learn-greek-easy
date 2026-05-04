@@ -138,6 +138,8 @@ from src.schemas.nlp import GeneratedNounData, NormalizedLemma, VerificationSumm
 from src.schemas.situation import (
     AdminExerciseListItem,
     AdminExerciseListResponse,
+    PictureNested,
+    PictureUpdate,
     SituationCreate,
     SituationDetailResponse,
     SituationExerciseGroupResponse,
@@ -175,6 +177,7 @@ from src.services.lexicon_service import LexiconEntry, LexiconService
 from src.services.local_verification_service import get_local_verification_service
 from src.services.news_item_service import NewsItemService
 from src.services.noun_data_generation_service import get_noun_data_generation_service
+from src.services.picture_prompt import get_default_picture_style_en
 from src.services.reverse_lookup_service import ReverseLookupService
 from src.services.s3_service import (
     ALLOWED_DECK_IMAGE_CONTENT_TYPES,
@@ -215,6 +218,31 @@ def _sse_single_error(code: str, message: str) -> StreamingResponse:
 
 WORD_AUDIO_S3_PREFIX = "word-audio"
 WORD_AUDIO_VOICE_ID = "n0vzWypeCK1NlWPVwhOc"
+
+
+def _normalize_optional_str(value: str | None) -> str | None:
+    """Normalise a user-supplied string field: pure-whitespace becomes None.
+
+    Mirrors the trim-then-empty convention used by news_item.py:validate_scene_pair
+    and newsJsonValidation.ts.
+    """
+    if value is None:
+        return None
+    stripped = value.strip()
+    return stripped or None
+
+
+def _recompose_image_prompt(scene_en: str | None, style_en: str | None) -> str | None:
+    """Build picture.image_prompt from post-patch scene/style values.
+
+    Returns the composed prompt, or None to indicate no update (caller must skip
+    assignment when None is returned — the column is NOT NULL so None cannot be stored).
+    Falls back to the house-style default when style_en is empty/None.
+    """
+    if not scene_en:
+        return None
+    style = style_en or get_default_picture_style_en()
+    return f"{scene_en}\n\n{style}"
 
 
 @router.get(
@@ -4302,6 +4330,49 @@ async def update_situation(
     await db.commit()
     await db.refresh(situation)
     return SituationResponse.model_validate(situation)
+
+
+@router.patch(
+    "/situations/{situation_id}/picture",
+    response_model=PictureNested,
+    dependencies=[Depends(get_current_superuser)],
+)
+async def update_situation_picture(
+    situation_id: UUID,
+    data: PictureUpdate,
+    db: AsyncSession = Depends(get_db),
+) -> PictureNested:
+    result = await db.execute(
+        select(Situation)
+        .options(selectinload(Situation.picture))
+        .where(Situation.id == situation_id)
+    )
+    situation = result.scalar_one_or_none()
+    if situation is None:
+        raise HTTPException(status_code=404, detail="Situation not found")
+
+    picture = situation.picture
+    if picture is None:
+        raise HTTPException(status_code=404, detail="Picture not found")
+
+    PATCHABLE = {"scene_el", "scene_en", "scene_ru", "style_en"}
+    fields_set = data.model_fields_set & PATCHABLE
+    update_data = data.model_dump(include=fields_set, exclude_unset=True)
+
+    for field, raw in update_data.items():
+        normalized = _normalize_optional_str(raw) if isinstance(raw, str) or raw is None else raw
+        setattr(picture, field, normalized)
+
+    if "scene_en" in fields_set or "style_en" in fields_set:
+        new_prompt = _recompose_image_prompt(picture.scene_en, picture.style_en)
+        if new_prompt is not None:
+            picture.image_prompt = new_prompt
+
+    # Explicitly do NOT touch picture.status or picture.image_s3_key
+
+    await db.commit()
+    await db.refresh(picture)
+    return PictureNested.model_validate(picture)
 
 
 @router.delete(
