@@ -40,7 +40,7 @@ async function seedSituations(
   const apiBaseUrl = process.env.E2E_API_URL || process.env.VITE_API_URL || 'http://localhost:8000';
   const response = await page.request.post(`${apiBaseUrl}/api/v1/test/seed/situations`);
   if (!response.ok()) {
-    console.warn('[TEST] Situations seeding failed:', response.status());
+    throw new Error(`[TEST] Situations seeding failed with status ${response.status()}`);
   }
   const body = await response.json();
   // results.situations is an array of { id, scenario_en, description_id, picture_id }
