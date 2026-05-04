@@ -62,6 +62,18 @@ export interface PictureNested {
   image_prompt: string;
   status: SituationPictureStatus;
   created_at: string;
+  scene_en: string | null;
+  scene_el: string | null;
+  scene_ru: string | null;
+  style_en: string | null;
+}
+
+// Picture update payload (matches PictureUpdate Pydantic schema from PEDIT-02)
+export interface PictureUpdatePayload {
+  scene_en?: string | null;
+  scene_el?: string | null;
+  scene_ru?: string | null;
+  style_en?: string | null;
 }
 
 // --- List item (matches SituationListItem Pydantic schema) ---
