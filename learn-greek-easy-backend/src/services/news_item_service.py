@@ -104,6 +104,7 @@ class NewsItemService:
         # truthy, scene_el is too (and vice versa).
         scene_en = data.scene_en if (data.scene_en and data.scene_en.strip()) else data.scenario_en
         scene_el = data.scene_el if (data.scene_el and data.scene_el.strip()) else data.scenario_el
+        scene_ru = data.scene_ru if (data.scene_ru and data.scene_ru.strip()) else data.scenario_ru
 
         # Resolve style_en: use admin-provided value, or fall back to env-var default.
         # settings.picture_house_style_default is guaranteed non-empty (Pydantic
@@ -122,6 +123,7 @@ class NewsItemService:
             image_prompt=image_prompt,
             scene_en=scene_en,
             scene_el=scene_el,
+            scene_ru=scene_ru,
             style_en=style_en,
             status=PictureStatus.DRAFT,
         )

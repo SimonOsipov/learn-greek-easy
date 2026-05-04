@@ -582,6 +582,65 @@ class TestCreate:
 
         assert row.image_prompt == f"{data.scenario_en}\n\nTEST_STYLE"
 
+    @pytest.mark.asyncio
+    async def test_create_falls_back_to_scenario_for_scene_ru(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+    ):
+        """When scene_ru is omitted, scenario_ru is used instead."""
+        from unittest.mock import patch
+
+        from sqlalchemy import select
+
+        from src.db.models import SituationPicture
+
+        data = self._make_create_data()
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+        mock_httpx_cls = self._make_httpx_patch()
+
+        with patch("src.services.news_item_service.httpx.AsyncClient", mock_httpx_cls):
+            result = await service.create(data)
+
+        row = (
+            await db_session.execute(
+                select(SituationPicture).where(SituationPicture.situation_id == result.situation_id)
+            )
+        ).scalar_one()
+
+        assert row.scene_ru == data.scenario_ru
+
+    @pytest.mark.asyncio
+    async def test_create_persists_scene_ru_verbatim(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+    ):
+        """When scene_ru is provided, it is persisted verbatim (no fallback)."""
+        from unittest.mock import patch
+
+        from sqlalchemy import select
+
+        from src.db.models import SituationPicture
+
+        scene_ru = "Солнечный день в Афинах"
+        data = self._make_create_data(scene_ru=scene_ru)
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+        mock_httpx_cls = self._make_httpx_patch()
+
+        with patch("src.services.news_item_service.httpx.AsyncClient", mock_httpx_cls):
+            result = await service.create(data)
+
+        row = (
+            await db_session.execute(
+                select(SituationPicture).where(SituationPicture.situation_id == result.situation_id)
+            )
+        ).scalar_one()
+
+        assert row.scene_ru == scene_ru
+        # image_prompt must NOT include scene_ru
+        assert scene_ru not in row.image_prompt
+
 
 # =============================================================================
 # Test Update
