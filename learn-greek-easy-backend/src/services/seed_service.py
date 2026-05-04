@@ -56,8 +56,10 @@ from src.db.models import (
     Notification,
     NotificationType,
     PartOfSpeech,
+    PictureStatus,
     Situation,
     SituationDescription,
+    SituationPicture,
     SituationStatus,
     SubscriptionStatus,
     SubscriptionTier,
@@ -4233,11 +4235,39 @@ class SeedService:
                 await self.db.flush()
                 exercise_records_created += 1
 
+            # First situation (coffee shop) gets a SituationPicture row
+            picture_id: str | None = None
+            if sit_index == 0:
+                scene_en = (
+                    "A bustling coffee shop in central Athens, customers chatting at small tables"
+                )
+                scene_el = (
+                    "Ένα γεμάτο καφέ στο κέντρο της Αθήνας, πελάτες συνομιλούν σε μικρά τραπέζια"
+                )
+                scene_ru = (
+                    "Оживлённое кафе в центре Афин, посетители беседуют за маленькими столиками"
+                )
+                style_en = "soft natural lighting, photorealistic"
+                picture = SituationPicture(
+                    situation_id=situation.id,
+                    scene_en=scene_en,
+                    scene_el=scene_el,
+                    scene_ru=scene_ru,
+                    style_en=style_en,
+                    image_prompt=f"{scene_en}\n\n{style_en}",
+                    status=PictureStatus.DRAFT,
+                    image_s3_key=None,
+                )
+                self.db.add(picture)
+                await self.db.flush()
+                picture_id = str(picture.id)
+
             created_situations.append(
                 {
                     "id": str(situation.id),
                     "scenario_en": situation.scenario_en,
                     "description_id": str(description.id),
+                    "picture_id": picture_id,
                 }
             )
 

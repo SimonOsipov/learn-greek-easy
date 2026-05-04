@@ -7,11 +7,13 @@ type AdminTabName =
   | 'changelog'
   | 'cardErrors'
   | 'feedback'
-  | 'listeningDialogs';
+  | 'listeningDialogs'
+  | 'situations';
 
 const TAB_TO_GROUP: Record<AdminTabName, string> = {
   decks: 'content',
   news: 'content',
+  situations: 'content',
   listeningDialogs: 'exercises',
   cardErrors: 'reviews',
   feedback: 'reviews',
