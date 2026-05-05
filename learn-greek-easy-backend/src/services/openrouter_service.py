@@ -15,6 +15,7 @@ Configuration:
 """
 
 import asyncio
+import base64
 import time
 from typing import Any
 
@@ -24,12 +25,13 @@ from src.config import settings
 from src.core.exceptions import (
     OpenRouterAPIError,
     OpenRouterAuthenticationError,
+    OpenRouterNoImageError,
     OpenRouterNotConfiguredError,
     OpenRouterRateLimitError,
     OpenRouterTimeoutError,
 )
 from src.core.logging import get_logger
-from src.schemas.nlp import OpenRouterResponse
+from src.schemas.nlp import OpenRouterImageResult, OpenRouterResponse
 
 logger = get_logger(__name__)
 
@@ -268,6 +270,154 @@ class OpenRouterService:
                 raise OpenRouterAPIError(status_code=0, detail=f"Network error: {e}") from e
 
         raise last_exception  # type: ignore[misc]
+
+    async def generate_image(  # noqa: C901
+        self,
+        prompt: str,
+        *,
+        model: str,
+        aspect_ratio: str,
+        timeout: float = 60.0,
+    ) -> OpenRouterImageResult:
+        """Generate a single image via OpenRouter image-generation models (Gemini Flash Image).
+
+        Single attempt — NO retry loop. Cost guardrail: image generation is paid and
+        non-idempotent.
+        """
+        self._check_configured()
+        url = f"{settings.openrouter_base_url}/chat/completions"
+        headers = self._get_headers()
+        body: dict[str, Any] = {
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}],
+            "modalities": ["image", "text"],
+            "image_config": {"aspect_ratio": aspect_ratio},
+        }
+        log_extra: dict[str, Any] = {"model": model, "aspect_ratio": aspect_ratio}
+        start_time = time.monotonic()
+        try:
+            if self._client is not None:
+                response = await self._client.post(url, headers=headers, json=body, timeout=timeout)
+            else:
+                async with httpx.AsyncClient(timeout=timeout) as client:
+                    response = await client.post(url, headers=headers, json=body)
+        except httpx.TimeoutException as exc:
+            latency_ms = round((time.monotonic() - start_time) * 1000)
+            logger.warning(
+                "OpenRouter image generation timed out",
+                extra={**log_extra, "latency_ms": latency_ms, "success": False},
+            )
+            raise OpenRouterTimeoutError(detail=f"Image generation timeout: {exc}") from exc
+        except httpx.RequestError as exc:
+            latency_ms = round((time.monotonic() - start_time) * 1000)
+            logger.error(
+                "OpenRouter image generation request error",
+                extra={**log_extra, "latency_ms": latency_ms, "success": False},
+            )
+            raise OpenRouterAPIError(
+                status_code=0, detail=f"Image generation request error: {exc}"
+            ) from exc
+
+        latency_ms = round((time.monotonic() - start_time) * 1000)
+
+        if response.status_code == 401:
+            logger.error(
+                "OpenRouter image generation authentication failed",
+                extra={**log_extra, "latency_ms": latency_ms, "success": False},
+            )
+            raise OpenRouterAuthenticationError("OpenRouter authentication failed")
+
+        if response.status_code == 429:
+            logger.warning(
+                "OpenRouter image generation rate limited",
+                extra={**log_extra, "latency_ms": latency_ms, "success": False},
+            )
+            raise OpenRouterRateLimitError(detail="OpenRouter rate limited image generation")
+
+        if response.status_code >= 400:
+            logger.error(
+                "OpenRouter image generation HTTP error",
+                extra={
+                    **log_extra,
+                    "status_code": response.status_code,
+                    "latency_ms": latency_ms,
+                    "success": False,
+                },
+            )
+            raise OpenRouterAPIError(
+                status_code=response.status_code,
+                detail=f"OpenRouter image generation HTTP {response.status_code}: {response.text[:300]}",
+            )
+
+        try:
+            data = response.json()
+        except ValueError as exc:
+            raise OpenRouterAPIError(
+                status_code=response.status_code,
+                detail="Invalid JSON response from OpenRouter image generation",
+            ) from exc
+
+        try:
+            message = data["choices"][0]["message"]
+        except (KeyError, IndexError, TypeError) as exc:
+            logger.error(
+                "OpenRouter image response missing choices/message",
+                extra={**log_extra, "latency_ms": latency_ms, "success": False},
+            )
+            raise OpenRouterAPIError(
+                status_code=response.status_code,
+                detail="Malformed image response (no choices/message)",
+            ) from exc
+
+        images = message.get("images") or []
+        if not images:
+            logger.warning(
+                "OpenRouter returned no image (likely content policy)",
+                extra={**log_extra, "latency_ms": latency_ms, "success": False},
+            )
+            raise OpenRouterNoImageError("Model returned no image (likely content policy)")
+
+        first_image = images[0]
+        data_url = (
+            first_image.get("image_url", {}).get("url") if isinstance(first_image, dict) else None
+        )
+        if not data_url or not isinstance(data_url, str):
+            raise OpenRouterAPIError(
+                status_code=response.status_code,
+                detail="Malformed image response (no image_url.url)",
+            )
+
+        if not data_url.startswith("data:"):
+            raise OpenRouterAPIError(
+                status_code=response.status_code,
+                detail=f"Unexpected image_url format: {data_url[:60]}",
+            )
+
+        try:
+            header, b64 = data_url.split(",", 1)
+            mime_type = header.split(";")[0].removeprefix("data:") or "image/png"
+            image_bytes = base64.b64decode(b64)
+        except Exception as exc:
+            raise OpenRouterAPIError(
+                status_code=response.status_code,
+                detail=f"Failed to decode image data URL: {exc}",
+            ) from exc
+
+        logger.info(
+            "OpenRouter image generation succeeded",
+            extra={
+                **log_extra,
+                "latency_ms": latency_ms,
+                "bytes": len(image_bytes),
+                "success": True,
+            },
+        )
+        return OpenRouterImageResult(
+            image_bytes=image_bytes,
+            mime_type=mime_type,
+            model=model,
+            latency_ms=float(latency_ms),
+        )
 
 
 _openrouter_service: OpenRouterService | None = None

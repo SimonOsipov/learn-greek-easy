@@ -96,6 +96,15 @@ class OpenRouterResponse(BaseModel):
     latency_ms: float = Field(..., description="Request latency in milliseconds")
 
 
+class OpenRouterImageResult(BaseModel):
+    """Result from an OpenRouter image generation API call."""
+
+    image_bytes: bytes = Field(..., description="Decoded PNG image bytes")
+    mime_type: str = Field(..., description="MIME type e.g. image/png")
+    model: str = Field(..., description="Model ID that generated the image")
+    latency_ms: float = Field(..., description="Request latency in milliseconds")
+
+
 # ── Noun Generation Schemas ───────────────────────────────────────────
 
 
