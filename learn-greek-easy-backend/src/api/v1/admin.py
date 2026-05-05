@@ -4485,7 +4485,10 @@ async def update_situation_picture(
 
     await db.commit()
     await db.refresh(picture)
-    return PictureNested.model_validate(picture)
+    nested = PictureNested.model_validate(picture)
+    if picture.image_s3_key:
+        nested.image_url = get_s3_service().generate_presigned_url(picture.image_s3_key)
+    return nested
 
 
 @router.delete(
@@ -4675,6 +4678,9 @@ async def get_situation(
             response.description.audio_a2_url = s3.generate_presigned_url(
                 situation.description.audio_a2_s3_key
             )
+    if response.picture and situation.picture and situation.picture.image_s3_key:
+        s3 = get_s3_service()
+        response.picture.image_url = s3.generate_presigned_url(situation.picture.image_s3_key)
     return response
 
 

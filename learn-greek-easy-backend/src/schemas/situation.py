@@ -167,6 +167,7 @@ class PictureNested(BaseModel):
     scene_el: str | None = None
     scene_ru: str | None = None
     style_en: str | None = None
+    image_url: str | None = None
 
 
 class SituationDetailResponse(SituationResponse):
