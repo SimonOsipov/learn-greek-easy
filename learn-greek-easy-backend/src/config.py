@@ -560,6 +560,14 @@ class Settings(BaseSettings):
             "if unset or empty."
         ),
     )
+    openrouter_image_model: str = Field(
+        default="google/gemini-3.1-flash-image-preview",
+        description="OpenRouter model used for situation picture generation (SIT-08).",
+    )
+    openrouter_image_aspect_ratio: str = Field(
+        default="16:9",
+        description="Aspect ratio passed to OpenRouter image generation (imageConfig.aspectRatio).",
+    )
 
     # =========================================================================
     # Stripe Billing
