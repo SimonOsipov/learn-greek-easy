@@ -18,7 +18,9 @@ import pytest
 
 from src.core.exceptions import (
     OpenRouterAPIError,
+    OpenRouterAuthenticationError,
     OpenRouterNoImageError,
+    OpenRouterNotConfiguredError,
     OpenRouterRateLimitError,
     OpenRouterTimeoutError,
 )
@@ -137,6 +139,8 @@ class TestGeneratePictureBytes:
     @pytest.mark.parametrize(
         "exc_instance",
         [
+            OpenRouterNotConfiguredError("api key not set"),
+            OpenRouterAuthenticationError("invalid key"),
             OpenRouterNoImageError("no image returned"),
             OpenRouterTimeoutError("request timed out"),
             OpenRouterRateLimitError("rate limited"),

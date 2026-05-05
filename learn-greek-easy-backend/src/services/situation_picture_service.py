@@ -14,6 +14,7 @@ SSE wrapper (admin.py):
 
 from __future__ import annotations
 
+import asyncio
 from typing import Literal
 from uuid import UUID
 
@@ -24,7 +25,9 @@ from sqlalchemy.orm import selectinload
 from src.config import settings
 from src.core.exceptions import (
     OpenRouterAPIError,
+    OpenRouterAuthenticationError,
     OpenRouterNoImageError,
+    OpenRouterNotConfiguredError,
     OpenRouterRateLimitError,
     OpenRouterTimeoutError,
 )
@@ -123,6 +126,10 @@ async def generate_picture_bytes(
             model=settings.openrouter_image_model,
             aspect_ratio=settings.openrouter_image_aspect_ratio,
         )
+    except OpenRouterNotConfiguredError as exc:
+        raise PictureGenerateError(f"OpenRouter not configured: {exc}") from exc
+    except OpenRouterAuthenticationError as exc:
+        raise PictureGenerateError(f"OpenRouter authentication failed: {exc}") from exc
     except OpenRouterNoImageError as exc:
         raise PictureGenerateError(str(exc)) from exc
     except OpenRouterTimeoutError as exc:
@@ -147,7 +154,8 @@ async def upload_picture_to_s3(
     Raises :class:`PictureUploadError` when upload returns ``False``.
     """
     s3_key = f"situation-pictures/{picture_id}.png"
-    success = s3_service.upload_object(
+    success = await asyncio.to_thread(
+        s3_service.upload_object,
         s3_key=s3_key,
         data=image_bytes,
         content_type="image/png",
