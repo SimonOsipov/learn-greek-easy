@@ -1234,6 +1234,22 @@
         "savedToast": "Picture prompt saved",
         "trioRuleHint": "Provide all three scene fields (EN/EL/RU) or leave all three empty."
       },
+      "picture": {
+        "generate": "Generate",
+        "regenerate": "Regenerate",
+        "alt": "Generated situation picture",
+        "confirmRegenerateTitle": "Regenerate image?",
+        "confirmRegenerateBody": "This will overwrite the existing image.",
+        "confirmRegenerateConfirm": "Regenerate",
+        "confirmRegenerateCancel": "Cancel",
+        "errorFallback": "Picture generation failed",
+        "progress": {
+          "starting": "Starting…",
+          "generating": "Generating…",
+          "uploading": "Uploading…",
+          "persisting": "Saving…"
+        }
+      },
       "audioNotGenerated": "Audio not generated",
       "regenerate": "Regenerate",
       "backendNotConnected": "Backend not connected",

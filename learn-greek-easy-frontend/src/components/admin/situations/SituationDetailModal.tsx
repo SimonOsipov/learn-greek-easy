@@ -28,7 +28,6 @@ import {
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from '@/hooks/use-toast';
 import { useAudioTimeMs } from '@/hooks/useAudioTimeMs';
 import { useLanguage } from '@/hooks/useLanguage';
@@ -43,6 +42,7 @@ import {
 } from '@/stores/adminSituationStore';
 import type { SSEEvent } from '@/types/sse';
 
+import { PictureGenerationPanel } from './PictureGenerationPanel';
 import { SITUATION_STATUS_BADGE_CLASSES } from './situationBadges';
 import { SituationExercisesTab } from './SituationExercisesTab';
 import { PicturePromptForm } from './SituationPicturePromptForm';
@@ -86,27 +86,6 @@ function AudioPlaceholder() {
     >
       {t('situations.detail.audioNotGenerated')}
     </div>
-  );
-}
-
-function RegenerateButton() {
-  const { t } = useTranslation('admin');
-  return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span>
-            <Button variant="outline" size="sm" disabled>
-              <RefreshCw className="mr-2 h-4 w-4" />
-              {t('situations.detail.regenerate')}
-            </Button>
-          </span>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>{t('situations.detail.backendNotConnected')}</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
   );
 }
 
@@ -754,8 +733,13 @@ export function SituationDetailModal({
                     situationId={situationId}
                     picture={selectedSituation.picture}
                   />
-                  <AudioPlaceholder />
-                  <RegenerateButton />
+                  <PictureGenerationPanel
+                    situationId={situationId}
+                    picture={selectedSituation.picture}
+                    onCompleted={() => {
+                      void fetchSituationDetail(situationId);
+                    }}
+                  />
                 </>
               )}
             </TabsContent>
