@@ -291,7 +291,7 @@ class OpenRouterService:
             "model": model,
             "messages": [{"role": "user", "content": prompt}],
             "modalities": ["image", "text"],
-            "image_config": {"aspect_ratio": aspect_ratio},
+            "imageConfig": {"aspectRatio": aspect_ratio},
         }
         log_extra: dict[str, Any] = {"model": model, "aspect_ratio": aspect_ratio}
         start_time = time.monotonic()

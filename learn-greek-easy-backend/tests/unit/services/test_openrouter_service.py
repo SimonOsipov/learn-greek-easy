@@ -744,6 +744,13 @@ class TestGenerateImage:
         assert result.model == "google/gemini-flash-image"
         assert result.latency_ms >= 0
 
+        # Verify request body uses camelCase keys as required by OpenRouter
+        call_kwargs = mock_client.post.call_args
+        body = call_kwargs.kwargs["json"]
+        assert "imageConfig" in body, "OpenRouter expects camelCase 'imageConfig'"
+        assert body["imageConfig"]["aspectRatio"] == "16:9"
+        assert "image_config" not in body, "snake_case 'image_config' must not be sent"
+
     @pytest.mark.asyncio
     async def test_no_image_raises_openrouter_no_image_error(
         self, mock_settings_configured: None
