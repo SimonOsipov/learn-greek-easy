@@ -686,3 +686,137 @@ class TestUpdate:
 
         with pytest.raises(NewsItemNotFoundException):
             await service.update(uuid4(), update_data)
+
+
+# =============================================================================
+# Test Situation source-field mirroring (LSPIC-01)
+# =============================================================================
+
+
+class TestSourceFieldMirroring:
+    """Tests for Situation source-field mirroring introduced in LSPIC-01."""
+
+    @pytest.mark.asyncio
+    async def test_create_writes_situation_source_url_and_titles(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+    ):
+        """create() persists source_url and source_title_* on the linked Situation."""
+        from unittest.mock import patch
+
+        from sqlalchemy import select
+
+        data = TestCreate()._make_create_data(url="https://example.com/source-fields-create")
+        service = NewsItemService(db=db_session, s3_service=mock_s3_service)
+        mock_httpx_cls = TestCreate._make_httpx_patch()
+
+        with patch("src.services.news_item_service.httpx.AsyncClient", mock_httpx_cls):
+            result = await service.create(data)
+
+        situation = (
+            await db_session.execute(
+                select(SituationModel).where(SituationModel.id == result.situation_id)
+            )
+        ).scalar_one()
+
+        assert situation.source_url == str(data.original_article_url)
+        assert situation.source_title_en == data.scenario_en
+        assert situation.source_title_el == data.scenario_el
+        assert situation.source_title_ru == data.scenario_ru
+
+    @pytest.mark.asyncio
+    async def test_update_propagates_url_to_situation_source_url(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+        sample_news_item,
+    ):
+        """update() mirrors original_article_url change to Situation.source_url."""
+        from sqlalchemy import select
+
+        from src.schemas.news_item import NewsItemUpdate
+
+        update_data = NewsItemUpdate(original_article_url="https://example.com/updated-source")
+        service = NewsItemService(db=db_session, s3_service=mock_s3_service)
+        await service.update(sample_news_item.id, update_data)
+
+        situation = (
+            await db_session.execute(
+                select(SituationModel).where(SituationModel.id == sample_news_item.situation_id)
+            )
+        ).scalar_one()
+
+        assert situation.source_url == "https://example.com/updated-source"
+
+    @pytest.mark.asyncio
+    async def test_update_propagates_scenario_to_source_title_en(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+        sample_news_item,
+    ):
+        """update() mirrors scenario_en change to Situation.source_title_en."""
+        from sqlalchemy import select
+
+        from src.schemas.news_item import NewsItemUpdate
+
+        update_data = NewsItemUpdate(scenario_en="Updated English title")
+        service = NewsItemService(db=db_session, s3_service=mock_s3_service)
+        await service.update(sample_news_item.id, update_data)
+
+        situation = (
+            await db_session.execute(
+                select(SituationModel).where(SituationModel.id == sample_news_item.situation_id)
+            )
+        ).scalar_one()
+
+        assert situation.source_title_en == "Updated English title"
+
+    @pytest.mark.asyncio
+    async def test_update_propagates_scenario_to_source_title_el(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+        sample_news_item,
+    ):
+        """update() mirrors scenario_el change to Situation.source_title_el."""
+        from sqlalchemy import select
+
+        from src.schemas.news_item import NewsItemUpdate
+
+        update_data = NewsItemUpdate(scenario_el="Ενημερωμένος ελληνικός τίτλος")
+        service = NewsItemService(db=db_session, s3_service=mock_s3_service)
+        await service.update(sample_news_item.id, update_data)
+
+        situation = (
+            await db_session.execute(
+                select(SituationModel).where(SituationModel.id == sample_news_item.situation_id)
+            )
+        ).scalar_one()
+
+        assert situation.source_title_el == "Ενημερωμένος ελληνικός τίτλος"
+
+    @pytest.mark.asyncio
+    async def test_update_propagates_scenario_to_source_title_ru(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+        sample_news_item,
+    ):
+        """update() mirrors scenario_ru change to Situation.source_title_ru."""
+        from sqlalchemy import select
+
+        from src.schemas.news_item import NewsItemUpdate
+
+        update_data = NewsItemUpdate(scenario_ru="Обновлённый русский заголовок")
+        service = NewsItemService(db=db_session, s3_service=mock_s3_service)
+        await service.update(sample_news_item.id, update_data)
+
+        situation = (
+            await db_session.execute(
+                select(SituationModel).where(SituationModel.id == sample_news_item.situation_id)
+            )
+        ).scalar_one()
+
+        assert situation.source_title_ru == "Обновлённый русский заголовок"
