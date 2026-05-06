@@ -14,6 +14,7 @@ from tests.factories.situation_description import (
     DescriptionExerciseFactory,
     SituationDescriptionFactory,
 )
+from tests.factories.situation_picture import SituationPictureFactory
 
 LIST_URL = "/api/v1/situations"
 
@@ -468,3 +469,60 @@ class TestLearnerSituationDetailEndpoint:
         assert data["source_url"] == "https://example.com/article"
         assert data["source_title"] == "An interesting article"
         assert data["source_image_url"] is None
+
+
+@pytest.mark.integration
+class TestLearnerSituationDetailPictureUrl:
+    """Tests for picture_url field on GET /api/v1/situations/{situation_id}."""
+
+    @pytest.mark.asyncio
+    async def test_get_situation_includes_picture_url_when_generated(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        db_session: AsyncSession,
+    ) -> None:
+        situation = await SituationFactory.create(session=db_session, ready=True)
+        picture = await SituationPictureFactory.create(
+            session=db_session, situation_id=situation.id, generated=True
+        )
+        await db_session.flush()
+
+        mock_s3 = MagicMock()
+        mock_s3.generate_presigned_url.side_effect = lambda key: f"https://s3.example.com/{key}"
+        with patch("src.api.v1.situations.get_s3_service", return_value=mock_s3):
+            response = await client.get(_detail_url(situation.id), headers=auth_headers)
+
+        assert response.status_code == 200
+        assert response.json()["picture_url"] == f"https://s3.example.com/{picture.image_s3_key}"
+
+    @pytest.mark.asyncio
+    async def test_get_situation_picture_url_null_when_no_picture(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        db_session: AsyncSession,
+    ) -> None:
+        situation = await SituationFactory.create(session=db_session, ready=True)
+        await db_session.flush()
+
+        response = await client.get(_detail_url(situation.id), headers=auth_headers)
+
+        assert response.status_code == 200
+        assert response.json()["picture_url"] is None
+
+    @pytest.mark.asyncio
+    async def test_get_situation_picture_url_null_when_picture_draft(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        db_session: AsyncSession,
+    ) -> None:
+        situation = await SituationFactory.create(session=db_session, ready=True)
+        await SituationPictureFactory.create(session=db_session, situation_id=situation.id)
+        await db_session.flush()
+
+        response = await client.get(_detail_url(situation.id), headers=auth_headers)
+
+        assert response.status_code == 200
+        assert response.json()["picture_url"] is None
