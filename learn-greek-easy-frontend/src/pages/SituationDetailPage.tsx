@@ -415,6 +415,7 @@ export const SituationDetailPage: React.FC = () => {
                   {situation.description.audio_a2_url && (
                     <WaveformPlayer
                       audioUrl={situation.description.audio_a2_url}
+                      duration={situation.description.audio_a2_duration_seconds ?? undefined}
                       variant="culture"
                       onPlay={handleA2Play}
                     />
@@ -446,6 +447,7 @@ export const SituationDetailPage: React.FC = () => {
                   {situation.description.audio_url && (
                     <WaveformPlayer
                       audioUrl={situation.description.audio_url}
+                      duration={situation.description.audio_duration_seconds ?? undefined}
                       variant="culture"
                       onPlay={handleB1Play}
                     />
