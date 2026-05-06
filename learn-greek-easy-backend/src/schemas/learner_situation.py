@@ -64,4 +64,5 @@ class LearnerSituationDetailResponse(BaseModel):
     exercise_completed: int
     source_url: str | None = None
     source_image_url: str | None = None
+    picture_url: str | None = None
     source_title: str | None = None

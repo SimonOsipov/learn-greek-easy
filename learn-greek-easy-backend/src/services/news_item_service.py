@@ -85,6 +85,10 @@ class NewsItemService:
             scenario_ru=data.scenario_ru,
             scenario_el_a2=data.scenario_el_a2,
             source_image_s3_key=s3_key,
+            source_url=url_str,
+            source_title_en=data.scenario_en,
+            source_title_el=data.scenario_el,
+            source_title_ru=data.scenario_ru,
         )
         self.db.add(situation)
         await self.db.flush()
@@ -216,12 +220,17 @@ class NewsItemService:
         """Apply scenario field updates to a Situation."""
         if data.scenario_el is not None:
             situation.scenario_el = data.scenario_el
+            situation.source_title_el = data.scenario_el
         if data.scenario_en is not None:
             situation.scenario_en = data.scenario_en
+            situation.source_title_en = data.scenario_en
         if data.scenario_ru is not None:
             situation.scenario_ru = data.scenario_ru
+            situation.source_title_ru = data.scenario_ru
         if data.scenario_el_a2 is not None:
             situation.scenario_el_a2 = data.scenario_el_a2
+        if data.original_article_url is not None:
+            situation.source_url = str(data.original_article_url)
 
     @staticmethod
     def _patch_description(description: SituationDescription, data: NewsItemUpdate) -> None:
