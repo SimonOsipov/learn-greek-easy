@@ -375,6 +375,7 @@ class TestCreateNewsItemBackgroundDispatch:
                 extra={"situation_id": str(situation_id), "level": level},
             )
 
+        mocker.patch("src.api.v1.admin.generate_picture_task")
         mocker.patch("src.api.v1.admin.generate_description_audio_task", side_effect=fake_task)
         mock_httpx_cls, _ = make_mock_httpx()
         mock_s3 = make_mock_s3()
