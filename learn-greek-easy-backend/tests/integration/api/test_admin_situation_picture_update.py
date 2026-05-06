@@ -11,6 +11,7 @@ Recomposition rule (PEDIT-03):
   level so the endpoint short-circuits; see admin.py::_recompose_image_prompt).
 """
 
+from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
@@ -521,3 +522,68 @@ class TestPictureUpdateInvariants:
         await db_session.refresh(picture)
         assert picture.image_s3_key == pre_key
         assert picture.image_s3_key == "situations/foo.jpg"
+
+
+# ---------------------------------------------------------------------------
+# image_url population
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def mock_s3_service():
+    with patch("src.api.v1.admin.get_s3_service") as mock_get:
+        mock_s3 = MagicMock()
+        mock_s3.delete_object.return_value = True
+        mock_get.return_value = mock_s3
+        yield mock_s3
+
+
+class TestPictureUpdateImageUrl:
+    """PATCH response includes image_url populated from S3 presigned URL."""
+
+    @pytest.mark.asyncio
+    async def test_image_url_null_when_no_s3_key(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+    ):
+        """When picture has no image_s3_key, response image_url is null."""
+        situation = await SituationFactory.create()
+        await SituationPictureFactory.create(situation_id=situation.id)
+
+        response = await client.patch(
+            _url(situation.id),
+            json={"style_en": "test style"},
+            headers=superuser_auth_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["image_url"] is None
+
+    @pytest.mark.asyncio
+    async def test_image_url_presigned_when_s3_key_set(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        mock_s3_service: MagicMock,
+    ):
+        """When picture has image_s3_key, response image_url is the presigned URL."""
+        mock_s3_service.generate_presigned_url.side_effect = (
+            lambda key: f"https://s3.example.com/{key}"
+        )
+
+        situation = await SituationFactory.create()
+        await SituationPictureFactory.create(
+            situation_id=situation.id,
+            image_s3_key="situation-pictures/test-pic.png",
+            status=PictureStatus.GENERATED,
+        )
+
+        response = await client.patch(
+            _url(situation.id),
+            json={"style_en": "test style"},
+            headers=superuser_auth_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["image_url"] == "https://s3.example.com/situation-pictures/test-pic.png"

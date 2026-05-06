@@ -12,6 +12,7 @@ from src.db.models import (
     DialogLine,
     DialogSpeaker,
     ListeningDialog,
+    PictureStatus,
     SituationDescription,
     SituationPicture,
 )
@@ -652,3 +653,45 @@ class TestGetSituationDetail:
         data = response.json()
         assert data["description"]["audio_url"] is None
         assert data["description"]["audio_a2_url"] is None
+
+    @pytest.mark.asyncio
+    async def test_detail_picture_image_url_null_when_no_s3_key(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+    ):
+        """get_situation returns null picture.image_url when image_s3_key is null."""
+        situation = await SituationFactory.create()
+        await SituationPictureFactory.create(situation_id=situation.id)  # no image_s3_key
+
+        response = await client.get(f"{BASE_URL}/{situation.id}", headers=superuser_auth_headers)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["picture"] is not None
+        assert data["picture"]["image_url"] is None
+
+    @pytest.mark.asyncio
+    async def test_detail_picture_image_url_presigned_when_s3_key_set(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        mock_s3_service: MagicMock,
+    ):
+        """get_situation returns presigned image_url when picture has image_s3_key."""
+        mock_s3_service.generate_presigned_url.side_effect = (
+            lambda key: f"https://s3.example.com/{key}"
+        )
+
+        situation = await SituationFactory.create()
+        await SituationPictureFactory.create(
+            situation_id=situation.id,
+            image_s3_key="situation-pictures/test-pic.png",
+            status=PictureStatus.GENERATED,
+        )
+
+        response = await client.get(f"{BASE_URL}/{situation.id}", headers=superuser_auth_headers)
+        assert response.status_code == 200
+        data = response.json()
+        assert (
+            data["picture"]["image_url"] == "https://s3.example.com/situation-pictures/test-pic.png"
+        )

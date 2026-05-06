@@ -66,6 +66,7 @@ export interface PictureNested {
   scene_el: string | null;
   scene_ru: string | null;
   style_en: string | null;
+  image_url?: string | null;
 }
 
 // Picture update payload (matches PictureUpdate Pydantic schema from PEDIT-02)

@@ -1658,3 +1658,7 @@ export function getDialogAudioStreamUrl(dialogId: string): string {
 export function getDescriptionAudioStreamUrl(situationId: string, level: 'b1' | 'a2'): string {
   return `/api/v1/admin/situations/${situationId}/description-audio/stream?level=${level}`;
 }
+
+export function getPictureGenerationStreamUrl(situationId: string): string {
+  return `/api/v1/admin/situations/${situationId}/picture/stream`;
+}

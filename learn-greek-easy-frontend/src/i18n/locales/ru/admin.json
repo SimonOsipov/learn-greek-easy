@@ -1246,6 +1246,22 @@
         "savedToast": "Промпт картинки сохранён",
         "trioRuleHint": "Заполните все три поля сцены (EN/EL/RU) или оставьте все три пустыми."
       },
+      "picture": {
+        "generate": "Сгенерировать",
+        "regenerate": "Пересоздать",
+        "alt": "Сгенерированное изображение ситуации",
+        "confirmRegenerateTitle": "Пересоздать изображение?",
+        "confirmRegenerateBody": "Это заменит существующее изображение.",
+        "confirmRegenerateConfirm": "Пересоздать",
+        "confirmRegenerateCancel": "Отмена",
+        "errorFallback": "Не удалось сгенерировать изображение",
+        "progress": {
+          "starting": "Запуск…",
+          "generating": "Генерация…",
+          "uploading": "Загрузка…",
+          "persisting": "Сохранение…"
+        }
+      },
       "audioNotGenerated": "Аудио не создано",
       "regenerate": "Перегенерировать",
       "backendNotConnected": "Сервер не подключён",

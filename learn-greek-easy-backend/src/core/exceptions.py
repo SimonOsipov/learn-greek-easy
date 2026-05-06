@@ -559,6 +559,14 @@ class OpenRouterTimeoutError(OpenRouterError):
         super().__init__(detail)
 
 
+class OpenRouterNoImageError(OpenRouterError):
+    """Raised when OpenRouter image generation returns no image part (likely content-policy refusal)."""
+
+    def __init__(self, detail: str = "Model returned no image (likely content policy)") -> None:
+        self.detail = detail
+        super().__init__(detail)
+
+
 # ============================================================================
 # Noun Generation Exceptions
 # ============================================================================

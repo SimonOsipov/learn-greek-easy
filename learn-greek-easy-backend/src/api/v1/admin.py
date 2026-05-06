@@ -177,6 +177,7 @@ from src.services.lexicon_service import LexiconEntry, LexiconService
 from src.services.local_verification_service import get_local_verification_service
 from src.services.news_item_service import NewsItemService
 from src.services.noun_data_generation_service import get_noun_data_generation_service
+from src.services.openrouter_service import get_openrouter_service
 from src.services.picture_prompt import get_default_picture_style_en
 from src.services.reverse_lookup_service import ReverseLookupService
 from src.services.s3_service import (
@@ -184,6 +185,13 @@ from src.services.s3_service import (
     MAX_DECK_IMAGE_SIZE_BYTES,
     S3Service,
     get_s3_service,
+)
+from src.services.situation_picture_service import (
+    PictureGenerationError,
+    generate_picture_bytes,
+    load_picture_for_generation,
+    persist_picture_generation,
+    upload_picture_to_s3,
 )
 from src.services.translation_service import TranslationLookupService
 from src.services.verification_tier import compute_combined_tier_v2
@@ -4256,6 +4264,111 @@ async def generate_description_audio_stream(
     )
 
 
+async def _picture_sse_pipeline(situation_id: UUID) -> AsyncGenerator[str, None]:
+    """Thin SSE wrapper around the reusable picture-generation pipeline core.
+
+    Resolves factory, openrouter_service, and s3_service at the wrapper level
+    so that the patch targets ``src.api.v1.admin.get_session_factory``,
+    ``src.api.v1.admin.get_openrouter_service``, and
+    ``src.api.v1.admin.get_s3_service`` used by the regression tests remain
+    effective.
+    """
+    yield format_sse_event("", event="connected")
+    factory = get_session_factory()
+    openrouter_service = get_openrouter_service()
+    s3_service = get_s3_service()
+
+    current_stage: str = "load"
+    try:
+        picture_id, image_prompt = await load_picture_for_generation(situation_id, factory)
+
+        yield format_sse_event(
+            {"situation_id": str(situation_id), "picture_id": str(picture_id)},
+            event="picture:start",
+        )
+
+        current_stage = "generate"
+        yield format_sse_event(
+            {
+                "situation_id": str(situation_id),
+                "picture_id": str(picture_id),
+                "model": settings.openrouter_image_model,
+                "aspect_ratio": settings.openrouter_image_aspect_ratio,
+            },
+            event="picture:generate",
+        )
+        result = await generate_picture_bytes(image_prompt, openrouter_service)
+
+        current_stage = "upload"
+        s3_key = f"situation-pictures/{picture_id}.png"
+        yield format_sse_event(
+            {"situation_id": str(situation_id), "picture_id": str(picture_id), "s3_key": s3_key},
+            event="picture:upload",
+        )
+        await upload_picture_to_s3(picture_id, result.image_bytes, s3_service)
+
+        current_stage = "persist"
+        yield format_sse_event(
+            {"situation_id": str(situation_id), "picture_id": str(picture_id)},
+            event="picture:persist",
+        )
+        await persist_picture_generation(picture_id, s3_key, factory)
+
+        image_url = s3_service.generate_presigned_url(s3_key)
+        yield format_sse_event(
+            {
+                "situation_id": str(situation_id),
+                "picture_id": str(picture_id),
+                "image_url": image_url,
+                "s3_key": s3_key,
+            },
+            event="picture:complete",
+        )
+
+    except PictureGenerationError as exc:
+        yield format_sse_event(
+            {
+                "situation_id": str(situation_id),
+                "stage": exc.stage,
+                "error": str(exc),
+            },
+            event="picture:error",
+        )
+    except Exception as exc:
+        yield format_sse_event(
+            {
+                "situation_id": str(situation_id),
+                "stage": current_stage,
+                "error": str(exc),
+            },
+            event="picture:error",
+        )
+
+
+@router.post(
+    "/situations/{situation_id}/picture/stream",
+    summary="Stream picture generation events via SSE",
+    response_class=StreamingResponse,
+)
+async def generate_picture_stream(
+    situation_id: UUID,
+    sse_auth: SSEAuthResult = Depends(get_sse_auth),
+) -> StreamingResponse:
+    if not sse_auth.is_authenticated:
+        return _sse_single_error(
+            sse_auth.error_code or "auth_required",
+            sse_auth.error_message or "Authentication required",
+        )
+    assert sse_auth.user is not None
+    if not sse_auth.user.is_superuser:
+        return _sse_single_error("forbidden", "Admin access required")
+    if not settings.openrouter_configured:
+        return _sse_single_error("service_unavailable", "OpenRouter is not configured")
+    return create_sse_response(
+        sse_stream(_picture_sse_pipeline(situation_id), heartbeat_interval=15)
+    )
+
+
 @router.get(
     "/reverse-lookup",
     response_model=ReverseLookupResponse,
@@ -4372,7 +4485,10 @@ async def update_situation_picture(
 
     await db.commit()
     await db.refresh(picture)
-    return PictureNested.model_validate(picture)
+    nested = PictureNested.model_validate(picture)
+    if picture.image_s3_key:
+        nested.image_url = get_s3_service().generate_presigned_url(picture.image_s3_key)
+    return nested
 
 
 @router.delete(
@@ -4562,6 +4678,9 @@ async def get_situation(
             response.description.audio_a2_url = s3.generate_presigned_url(
                 situation.description.audio_a2_s3_key
             )
+    if response.picture and situation.picture and situation.picture.image_s3_key:
+        s3 = get_s3_service()
+        response.picture.image_url = s3.generate_presigned_url(situation.picture.image_s3_key)
     return response
 
 

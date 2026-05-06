@@ -10,10 +10,12 @@ Tests cover:
 - Retry with exponential backoff (500, 429, timeout)
 - Backoff timing verification
 - Usage field handling (present and None)
+- generate_image() happy path, no-image refusal, timeout/500 no-retry
 """
 
 from __future__ import annotations
 
+import base64
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -22,11 +24,18 @@ import pytest
 from src.core.exceptions import (
     OpenRouterAPIError,
     OpenRouterAuthenticationError,
+    OpenRouterNoImageError,
     OpenRouterNotConfiguredError,
     OpenRouterRateLimitError,
     OpenRouterTimeoutError,
 )
 from src.services.openrouter_service import OpenRouterService, get_openrouter_service
+
+# 1×1 transparent PNG in base64 (minimal valid PNG fixture)
+_TINY_PNG_B64 = (
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNgAAIAAAUAAen63NgAAAAASUVORK5CYII="
+)
+_TINY_PNG_BYTES = base64.b64decode(_TINY_PNG_B64)
 
 # ============================================================================
 # Test Fixtures
@@ -675,3 +684,145 @@ class TestFinishReasonCheck:
             result = await service.complete([{"role": "user", "content": "test"}])
 
         assert result.content == "full reply"
+
+
+# ============================================================================
+# TestGenerateImage — generate_image() method
+# ============================================================================
+
+
+def _make_image_response(
+    b64: str = _TINY_PNG_B64,
+    mime: str = "image/png",
+    model: str = "google/gemini-flash-image",
+) -> MagicMock:
+    """Build a mock httpx response for a successful OpenRouter image generation call."""
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "choices": [
+            {
+                "message": {
+                    "role": "assistant",
+                    "content": "",
+                    "images": [
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": f"data:{mime};base64,{b64}"},
+                        }
+                    ],
+                }
+            }
+        ],
+        "model": model,
+    }
+    return mock_response
+
+
+class TestGenerateImage:
+    """Tests for OpenRouterService.generate_image() method."""
+
+    @pytest.mark.asyncio
+    async def test_happy_path_returns_decoded_image(self, mock_settings_configured: None) -> None:
+        """Successful call returns OpenRouterImageResult with correctly decoded bytes."""
+        service = OpenRouterService()
+        mock_response = _make_image_response()
+
+        mock_client = AsyncMock()
+        mock_client.post.return_value = mock_response
+
+        with patch("src.services.openrouter_service.httpx.AsyncClient") as mock_cls:
+            mock_cls.return_value.__aenter__.return_value = mock_client
+            result = await service.generate_image(
+                "A scenic Greek landscape",
+                model="google/gemini-flash-image",
+                aspect_ratio="16:9",
+            )
+
+        assert result.image_bytes == _TINY_PNG_BYTES
+        assert result.mime_type == "image/png"
+        assert result.model == "google/gemini-flash-image"
+        assert result.latency_ms >= 0
+
+        # Verify request body uses camelCase keys as required by OpenRouter
+        call_kwargs = mock_client.post.call_args
+        body = call_kwargs.kwargs["json"]
+        assert "imageConfig" in body, "OpenRouter expects camelCase 'imageConfig'"
+        assert body["imageConfig"]["aspectRatio"] == "16:9"
+        assert "image_config" not in body, "snake_case 'image_config' must not be sent"
+
+    @pytest.mark.asyncio
+    async def test_no_image_raises_openrouter_no_image_error(
+        self, mock_settings_configured: None
+    ) -> None:
+        """200 response with missing/empty images raises OpenRouterNoImageError."""
+        service = OpenRouterService()
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "choices": [
+                {
+                    "message": {
+                        "role": "assistant",
+                        "content": "Sorry, I can't do that.",
+                        "images": [],
+                    }
+                }
+            ],
+            "model": "google/gemini-flash-image",
+        }
+
+        mock_client = AsyncMock()
+        mock_client.post.return_value = mock_response
+
+        with patch("src.services.openrouter_service.httpx.AsyncClient") as mock_cls:
+            mock_cls.return_value.__aenter__.return_value = mock_client
+            with pytest.raises(OpenRouterNoImageError):
+                await service.generate_image(
+                    "prompt",
+                    model="google/gemini-flash-image",
+                    aspect_ratio="1:1",
+                )
+
+        mock_client.post.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_timeout_raises_timeout_error_no_retry(
+        self, mock_settings_configured: None
+    ) -> None:
+        """TimeoutException raises OpenRouterTimeoutError and makes exactly one attempt."""
+        service = OpenRouterService()
+
+        mock_client = AsyncMock()
+        mock_client.post.side_effect = httpx.ReadTimeout("read timed out")
+
+        with patch("src.services.openrouter_service.httpx.AsyncClient") as mock_cls:
+            mock_cls.return_value.__aenter__.return_value = mock_client
+            with pytest.raises(OpenRouterTimeoutError):
+                await service.generate_image(
+                    "prompt",
+                    model="google/gemini-flash-image",
+                    aspect_ratio="1:1",
+                )
+
+        mock_client.post.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_http_500_raises_api_error_no_retry(self, mock_settings_configured: None) -> None:
+        """HTTP 500 raises OpenRouterAPIError and makes exactly one attempt (no retry)."""
+        service = OpenRouterService()
+
+        mock_client = AsyncMock()
+        mock_client.post.return_value = _make_error_response(500, "Internal Server Error")
+
+        with patch("src.services.openrouter_service.httpx.AsyncClient") as mock_cls:
+            mock_cls.return_value.__aenter__.return_value = mock_client
+            with pytest.raises(OpenRouterAPIError) as exc_info:
+                await service.generate_image(
+                    "prompt",
+                    model="google/gemini-flash-image",
+                    aspect_ratio="1:1",
+                )
+
+        assert exc_info.value.status_code == 500
+        mock_client.post.assert_called_once()
