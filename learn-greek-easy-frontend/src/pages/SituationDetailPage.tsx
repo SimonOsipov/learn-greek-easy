@@ -24,7 +24,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAudioTimeMs } from '@/hooks/useAudioTimeMs';
 import { useLanguage } from '@/hooks/useLanguage';
 import { track } from '@/lib/analytics';
-import { cn } from '@/lib/utils';
 import { exerciseAPI } from '@/services/exerciseAPI';
 import type { ExerciseModality, ExerciseQueue, ExerciseQueueItem } from '@/services/exerciseAPI';
 import { situationAPI } from '@/services/situationAPI';
@@ -364,16 +363,29 @@ export const SituationDetailPage: React.FC = () => {
 
         {/* About Tab */}
         <TabsContent value="about" className="mt-6 space-y-8">
-          {/* Image row */}
-          <div className={cn('grid grid-cols-1 gap-6', situation.source_url && 'lg:grid-cols-2')}>
-            {situation.source_url && (
+          {/* Image row — always 2-up on lg+, falls back to placeholders */}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {situation.source_url ? (
               <SourceCard
                 sourceUrl={situation.source_url}
                 sourceImageUrl={situation.source_image_url}
                 sourceTitle={situation.source_title}
               />
+            ) : (
+              <ScenePlaceholder variant="source" />
             )}
-            <ScenePlaceholder />
+
+            {situation.picture_url ? (
+              <div className="overflow-hidden rounded-lg border bg-muted/40">
+                <img
+                  src={situation.picture_url}
+                  alt={scenarioTitle}
+                  className="aspect-video w-full object-cover"
+                />
+              </div>
+            ) : (
+              <ScenePlaceholder variant="illustration" />
+            )}
           </div>
 
           {/* Descriptions grid */}

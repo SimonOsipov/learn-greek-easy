@@ -308,7 +308,8 @@
         "a2Section": "A2 Level",
         "b1Section": "B1 Level",
         "dialogSection": "Dialogue",
-        "scenePlaceholder": "Scene illustration coming soon"
+        "sourcePlaceholder": "Source coming soon",
+        "illustrationPlaceholder": "Illustration coming soon"
       },
       "exercises": {
         "empty": {
