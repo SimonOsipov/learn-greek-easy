@@ -407,6 +407,234 @@ class TestCreateNewsItemBackgroundDispatch:
         record = error_records[0]
         assert "description-audio BG task failed" in record.getMessage()
 
+    @pytest.mark.asyncio
+    async def test_picture_task_dispatched_on_create(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        monkeypatch,
+        mocker,
+    ):
+        """B1-only POST dispatches generate_picture_task once and still dispatches description-audio."""
+        monkeypatch.setattr("src.api.v1.admin.settings.feature_background_tasks", True)
+        mock_picture_task = mocker.patch("src.api.v1.admin.generate_picture_task")
+        mock_description_audio_task = mocker.patch(
+            "src.api.v1.admin.generate_description_audio_task"
+        )
+        mock_httpx_cls, _ = make_mock_httpx()
+        mock_s3 = make_mock_s3()
+
+        with (
+            patch("src.services.news_item_service.httpx.AsyncClient", mock_httpx_cls),
+            patch("src.services.news_item_service.get_s3_service", return_value=mock_s3),
+        ):
+            payload = {
+                **VALID_CREATE_PAYLOAD,
+                "original_article_url": f"https://example.com/article-{uuid4().hex[:8]}",
+            }
+            response = await client.post(
+                "/api/v1/admin/news",
+                json=payload,
+                headers=superuser_auth_headers,
+            )
+
+        assert response.status_code == 201
+        situation_id = response.json()["situation_id"]
+
+        assert mock_picture_task.call_count == 1
+        kwargs = mock_picture_task.call_args_list[0].kwargs
+        assert str(kwargs["situation_id"]) == situation_id
+        assert kwargs["db_url"] is not None
+        # Regression guard: description-audio b1 still dispatched
+        assert mock_description_audio_task.call_count >= 1
+
+    @pytest.mark.asyncio
+    async def test_picture_task_dispatched_alongside_b1_and_a2(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        monkeypatch,
+        mocker,
+    ):
+        """B1+A2 payload dispatches picture task once and description-audio task twice."""
+        monkeypatch.setattr("src.api.v1.admin.settings.feature_background_tasks", True)
+        mock_picture_task = mocker.patch("src.api.v1.admin.generate_picture_task")
+        mock_description_audio_task = mocker.patch(
+            "src.api.v1.admin.generate_description_audio_task"
+        )
+        mock_httpx_cls, _ = make_mock_httpx()
+        mock_s3 = make_mock_s3()
+
+        with (
+            patch("src.services.news_item_service.httpx.AsyncClient", mock_httpx_cls),
+            patch("src.services.news_item_service.get_s3_service", return_value=mock_s3),
+        ):
+            payload = {
+                **VALID_CREATE_PAYLOAD,
+                "original_article_url": f"https://example.com/article-{uuid4().hex[:8]}",
+                "text_el_a2": "Απλό κείμενο.",
+                "scenario_el_a2": "Απλός τίτλος.",
+            }
+            response = await client.post(
+                "/api/v1/admin/news",
+                json=payload,
+                headers=superuser_auth_headers,
+            )
+
+        assert response.status_code == 201
+        situation_id = response.json()["situation_id"]
+
+        assert mock_picture_task.call_count == 1
+        assert mock_description_audio_task.call_count == 2
+
+        # All calls reference the same situation_id
+        picture_kwargs = mock_picture_task.call_args_list[0].kwargs
+        assert str(picture_kwargs["situation_id"]) == situation_id
+
+        for call in mock_description_audio_task.call_args_list:
+            assert str(call.kwargs["situation_id"]) == situation_id
+
+    @pytest.mark.asyncio
+    async def test_picture_task_not_dispatched_when_feature_flag_off(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        monkeypatch,
+        mocker,
+    ):
+        """When feature_background_tasks=False, picture task is not dispatched."""
+        monkeypatch.setattr("src.api.v1.admin.settings.feature_background_tasks", False)
+        mock_picture_task = mocker.patch("src.api.v1.admin.generate_picture_task")
+        mock_httpx_cls, _ = make_mock_httpx()
+        mock_s3 = make_mock_s3()
+
+        with (
+            patch("src.services.news_item_service.httpx.AsyncClient", mock_httpx_cls),
+            patch("src.services.news_item_service.get_s3_service", return_value=mock_s3),
+        ):
+            payload = {
+                **VALID_CREATE_PAYLOAD,
+                "original_article_url": f"https://example.com/article-{uuid4().hex[:8]}",
+            }
+            response = await client.post(
+                "/api/v1/admin/news",
+                json=payload,
+                headers=superuser_auth_headers,
+            )
+
+        assert response.status_code == 201
+        assert mock_picture_task.call_count == 0
+
+    @pytest.mark.asyncio
+    async def test_picture_task_exception_does_not_break_response(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+        caplog_loguru,
+        monkeypatch,
+        mocker,
+    ):
+        """Exception inside the picture BG task wrapper must not poison the 201 response.
+
+        Mirrors test_bg_task_exception_does_not_break_response. The picture task
+        emits an ERROR log and the SituationPicture row must remain in DRAFT state.
+        """
+        import logging
+
+        from loguru import logger as loguru_logger
+
+        monkeypatch.setattr("src.api.v1.admin.settings.feature_background_tasks", True)
+
+        def fake_task(situation_id, db_url):
+            loguru_logger.error(
+                "picture-generation BG task failed",
+                extra={"situation_id": str(situation_id)},
+            )
+
+        mocker.patch("src.api.v1.admin.generate_picture_task", side_effect=fake_task)
+        mocker.patch("src.api.v1.admin.generate_description_audio_task")
+        mock_httpx_cls, _ = make_mock_httpx()
+        mock_s3 = make_mock_s3()
+
+        caplog_loguru.set_level(logging.ERROR)
+
+        with (
+            patch("src.services.news_item_service.httpx.AsyncClient", mock_httpx_cls),
+            patch("src.services.news_item_service.get_s3_service", return_value=mock_s3),
+        ):
+            payload = {
+                **VALID_CREATE_PAYLOAD,
+                "original_article_url": f"https://example.com/article-{uuid4().hex[:8]}",
+            }
+            response = await client.post(
+                "/api/v1/admin/news",
+                json=payload,
+                headers=superuser_auth_headers,
+            )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data.get("id") is not None
+
+        # ERROR log was emitted
+        error_records = [r for r in caplog_loguru.records if r.levelname == "ERROR"]
+        assert len(error_records) >= 1
+        record = error_records[0]
+        assert "picture-generation BG task failed" in record.getMessage()
+
+        # DB verification: SituationPicture row remains in DRAFT state
+        situation_id = data["situation_id"]
+        picture_stmt = select(SituationPicture).where(SituationPicture.situation_id == situation_id)
+        picture = (await db_session.execute(picture_stmt)).scalar_one()
+        assert picture.status == PictureStatus.DRAFT
+        assert picture.image_s3_key is None
+
+    @pytest.mark.asyncio
+    async def test_picture_task_not_dispatched_on_update(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        monkeypatch,
+        mocker,
+    ):
+        """Regression guard: PUT /news/{id} must never dispatch the picture task."""
+        monkeypatch.setattr("src.api.v1.admin.settings.feature_background_tasks", True)
+        mock_picture_task = mocker.patch("src.api.v1.admin.generate_picture_task")
+        mocker.patch("src.api.v1.admin.generate_description_audio_task")
+        mock_httpx_cls, _ = make_mock_httpx()
+        mock_s3 = make_mock_s3()
+
+        with (
+            patch("src.services.news_item_service.httpx.AsyncClient", mock_httpx_cls),
+            patch("src.services.news_item_service.get_s3_service", return_value=mock_s3),
+        ):
+            payload = {
+                **VALID_CREATE_PAYLOAD,
+                "original_article_url": f"https://example.com/article-{uuid4().hex[:8]}",
+            }
+            response = await client.post(
+                "/api/v1/admin/news",
+                json=payload,
+                headers=superuser_auth_headers,
+            )
+
+        assert response.status_code == 201
+        news_item_id = response.json()["id"]
+
+        # Clear the dispatch recorded during create so the update assertion is clean
+        mock_picture_task.reset_mock()
+
+        with patch("src.services.news_item_service.get_s3_service", return_value=mock_s3):
+            put_response = await client.put(
+                f"/api/v1/admin/news/{news_item_id}",
+                json={"scenario_en": "updated title"},
+                headers=superuser_auth_headers,
+            )
+
+        assert put_response.status_code == 200
+        assert mock_picture_task.call_count == 0
+
 
 # =============================================================================
 # Update News Item Endpoint Tests
