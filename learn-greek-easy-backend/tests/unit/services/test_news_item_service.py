@@ -733,20 +733,13 @@ class TestSourceFieldMirroring:
         sample_news_item,
     ):
         """update() mirrors original_article_url change to Situation.source_url."""
-        from sqlalchemy import select
-
         from src.schemas.news_item import NewsItemUpdate
 
-        situation_id = sample_news_item.situation_id
-        update_data = NewsItemUpdate(original_article_url="https://example.com/updated-source")
-        service = NewsItemService(db=db_session, s3_service=mock_s3_service)
-        await service.update(sample_news_item.id, update_data)
+        situation = await db_session.get(SituationModel, sample_news_item.situation_id)
 
-        situation = (
-            await db_session.execute(
-                select(SituationModel).where(SituationModel.id == situation_id)
-            )
-        ).scalar_one()
+        update_data = NewsItemUpdate(original_article_url="https://example.com/updated-source")
+        NewsItemService._patch_situation(situation, update_data)
+        await db_session.flush()
 
         assert situation.source_url == "https://example.com/updated-source"
 
