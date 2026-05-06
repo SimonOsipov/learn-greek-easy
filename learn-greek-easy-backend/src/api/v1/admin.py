@@ -200,6 +200,7 @@ from src.services.wiktionary_verification_service import WiktionaryVerificationS
 from src.services.word_entry_response import word_entry_to_response
 from src.tasks import create_announcement_notifications_task
 from src.tasks.description_audio import generate_description_audio_task
+from src.tasks.picture_generation import generate_picture_task
 from src.utils.greek_text import resolve_tts_text
 from src.utils.sse import create_sse_response, format_sse_error, format_sse_event, sse_stream
 
@@ -1242,6 +1243,11 @@ async def create_news_item(
     await db.commit()
 
     if settings.feature_background_tasks:
+        background_tasks.add_task(
+            generate_picture_task,
+            situation_id=result.situation_id,
+            db_url=settings.database_url,
+        )
         background_tasks.add_task(
             generate_description_audio_task,
             situation_id=result.situation_id,

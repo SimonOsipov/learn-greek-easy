@@ -34,6 +34,7 @@ from src.services.situation_picture_service import (
     generate_picture_bytes,
     load_picture_for_generation,
     persist_picture_generation,
+    run_picture_generation_pipeline,
     upload_picture_to_s3,
 )
 
@@ -287,3 +288,187 @@ class TestPersistPictureGeneration:
 
         error_messages = [r.getMessage() for r in caplog_loguru.records if r.levelname == "ERROR"]
         assert any("Orphaned S3 key" in m for m in error_messages)
+
+
+# ---------------------------------------------------------------------------
+# run_picture_generation_pipeline
+# ---------------------------------------------------------------------------
+
+_PIPELINE_PATCH_BASE = "src.services.situation_picture_service"
+
+
+class TestRunPictureGenerationPipeline:
+    async def test_happy_path_calls_all_four_primitives_in_order(self):
+        """All four primitives are awaited once with the correct threaded arguments."""
+        situation_id = uuid4()
+        picture_id = uuid4()
+        image_prompt = "A sunset over Athens"
+        image_bytes = b"\x89PNG"
+        s3_key = f"situation-pictures/{picture_id}.png"
+        image_result = OpenRouterImageResult(
+            image_bytes=image_bytes,
+            mime_type="image/png",
+            model="test/model",
+            latency_ms=123.0,
+        )
+
+        factory = _make_factory(AsyncMock())
+        openrouter = MagicMock()
+        s3 = MagicMock()
+
+        with (
+            patch(
+                f"{_PIPELINE_PATCH_BASE}.load_picture_for_generation", new_callable=AsyncMock
+            ) as mock_load,
+            patch(
+                f"{_PIPELINE_PATCH_BASE}.generate_picture_bytes", new_callable=AsyncMock
+            ) as mock_generate,
+            patch(
+                f"{_PIPELINE_PATCH_BASE}.upload_picture_to_s3", new_callable=AsyncMock
+            ) as mock_upload,
+            patch(
+                f"{_PIPELINE_PATCH_BASE}.persist_picture_generation", new_callable=AsyncMock
+            ) as mock_persist,
+        ):
+            mock_load.return_value = (picture_id, image_prompt)
+            mock_generate.return_value = image_result
+            mock_upload.return_value = s3_key
+            mock_persist.return_value = None
+
+            await run_picture_generation_pipeline(situation_id, factory, openrouter, s3)
+
+            mock_load.assert_awaited_once_with(situation_id, factory)
+            mock_generate.assert_awaited_once_with(image_prompt, openrouter)
+            mock_upload.assert_awaited_once_with(picture_id, image_bytes, s3)
+            mock_persist.assert_awaited_once_with(picture_id, s3_key, factory)
+
+    async def test_load_failure_propagates_and_skips_downstream(self):
+        """PictureLoadError from load bubbles up; generate/upload/persist are never called."""
+        factory = _make_factory(AsyncMock())
+        openrouter = MagicMock()
+        s3 = MagicMock()
+
+        with (
+            patch(
+                f"{_PIPELINE_PATCH_BASE}.load_picture_for_generation", new_callable=AsyncMock
+            ) as mock_load,
+            patch(
+                f"{_PIPELINE_PATCH_BASE}.generate_picture_bytes", new_callable=AsyncMock
+            ) as mock_generate,
+            patch(
+                f"{_PIPELINE_PATCH_BASE}.upload_picture_to_s3", new_callable=AsyncMock
+            ) as mock_upload,
+            patch(
+                f"{_PIPELINE_PATCH_BASE}.persist_picture_generation", new_callable=AsyncMock
+            ) as mock_persist,
+        ):
+            mock_load.side_effect = PictureLoadError("situation not found")
+
+            with pytest.raises(PictureLoadError):
+                await run_picture_generation_pipeline(uuid4(), factory, openrouter, s3)
+
+            mock_generate.assert_not_awaited()
+            mock_upload.assert_not_awaited()
+            mock_persist.assert_not_awaited()
+
+    async def test_generate_failure_propagates_and_skips_upload_and_persist(self):
+        """PictureGenerateError from generate bubbles up; upload/persist are never called."""
+        picture_id = uuid4()
+        factory = _make_factory(AsyncMock())
+        openrouter = MagicMock()
+        s3 = MagicMock()
+
+        with (
+            patch(
+                f"{_PIPELINE_PATCH_BASE}.load_picture_for_generation", new_callable=AsyncMock
+            ) as mock_load,
+            patch(
+                f"{_PIPELINE_PATCH_BASE}.generate_picture_bytes", new_callable=AsyncMock
+            ) as mock_generate,
+            patch(
+                f"{_PIPELINE_PATCH_BASE}.upload_picture_to_s3", new_callable=AsyncMock
+            ) as mock_upload,
+            patch(
+                f"{_PIPELINE_PATCH_BASE}.persist_picture_generation", new_callable=AsyncMock
+            ) as mock_persist,
+        ):
+            mock_load.return_value = (picture_id, "some prompt")
+            mock_generate.side_effect = PictureGenerateError("model refused")
+
+            with pytest.raises(PictureGenerateError):
+                await run_picture_generation_pipeline(uuid4(), factory, openrouter, s3)
+
+            mock_upload.assert_not_awaited()
+            mock_persist.assert_not_awaited()
+
+    async def test_upload_failure_propagates_and_skips_persist(self):
+        """PictureUploadError from upload bubbles up; persist is never called."""
+        picture_id = uuid4()
+        image_result = OpenRouterImageResult(
+            image_bytes=b"\x89PNG",
+            mime_type="image/png",
+            model="test/model",
+            latency_ms=50.0,
+        )
+        factory = _make_factory(AsyncMock())
+        openrouter = MagicMock()
+        s3 = MagicMock()
+
+        with (
+            patch(
+                f"{_PIPELINE_PATCH_BASE}.load_picture_for_generation", new_callable=AsyncMock
+            ) as mock_load,
+            patch(
+                f"{_PIPELINE_PATCH_BASE}.generate_picture_bytes", new_callable=AsyncMock
+            ) as mock_generate,
+            patch(
+                f"{_PIPELINE_PATCH_BASE}.upload_picture_to_s3", new_callable=AsyncMock
+            ) as mock_upload,
+            patch(
+                f"{_PIPELINE_PATCH_BASE}.persist_picture_generation", new_callable=AsyncMock
+            ) as mock_persist,
+        ):
+            mock_load.return_value = (picture_id, "some prompt")
+            mock_generate.return_value = image_result
+            mock_upload.side_effect = PictureUploadError("S3 unreachable")
+
+            with pytest.raises(PictureUploadError):
+                await run_picture_generation_pipeline(uuid4(), factory, openrouter, s3)
+
+            mock_persist.assert_not_awaited()
+
+    async def test_persist_failure_propagates(self):
+        """PicturePersistError from persist bubbles up to the caller."""
+        picture_id = uuid4()
+        s3_key = f"situation-pictures/{picture_id}.png"
+        image_result = OpenRouterImageResult(
+            image_bytes=b"\x89PNG",
+            mime_type="image/png",
+            model="test/model",
+            latency_ms=50.0,
+        )
+        factory = _make_factory(AsyncMock())
+        openrouter = MagicMock()
+        s3 = MagicMock()
+
+        with (
+            patch(
+                f"{_PIPELINE_PATCH_BASE}.load_picture_for_generation", new_callable=AsyncMock
+            ) as mock_load,
+            patch(
+                f"{_PIPELINE_PATCH_BASE}.generate_picture_bytes", new_callable=AsyncMock
+            ) as mock_generate,
+            patch(
+                f"{_PIPELINE_PATCH_BASE}.upload_picture_to_s3", new_callable=AsyncMock
+            ) as mock_upload,
+            patch(
+                f"{_PIPELINE_PATCH_BASE}.persist_picture_generation", new_callable=AsyncMock
+            ) as mock_persist,
+        ):
+            mock_load.return_value = (picture_id, "some prompt")
+            mock_generate.return_value = image_result
+            mock_upload.return_value = s3_key
+            mock_persist.side_effect = PicturePersistError("DB commit failed")
+
+            with pytest.raises(PicturePersistError):
+                await run_picture_generation_pipeline(uuid4(), factory, openrouter, s3)

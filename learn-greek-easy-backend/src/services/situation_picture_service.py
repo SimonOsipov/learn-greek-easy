@@ -1,6 +1,12 @@
-"""Picture generation pipeline primitives.
+"""Picture generation pipeline primitives + orchestrator.
 
-Pure-logic primitives composed by the SSE wrapper in `src/api/v1/admin.py`.
+Pure-logic primitives composed in two ways:
+- The SSE wrapper in ``src/api/v1/admin.py`` calls the 4 sub-functions
+  directly so it can interleave SSE events between steps.
+- ``run_picture_generation_pipeline`` composes them as a single
+  load → generate → upload → persist call for non-SSE callers
+  (e.g. background tasks).
+
 No SSE / FastAPI imports — keeps tests easy.
 
 Usage pattern
@@ -10,6 +16,11 @@ SSE wrapper (admin.py):
       openrouter_service / s3_service at the wrapper level.
     - Calls the 4 sub-functions directly so it can interleave SSE events
       between steps.
+
+Orchestrator (background tasks):
+    - Resolves factory + services at the call site.
+    - Calls ``run_picture_generation_pipeline(...)`` and lets
+      ``PictureGenerationError`` subclasses propagate to its own error sink.
 """
 
 from __future__ import annotations
@@ -191,3 +202,26 @@ async def persist_picture_generation(
             extra={"picture_id": str(picture_id), "s3_key": s3_key, "error": str(exc)},
         )
         raise PicturePersistError(f"Persist failed: {exc}") from exc
+
+
+# ---------------------------------------------------------------------------
+# Orchestrator
+# ---------------------------------------------------------------------------
+
+
+async def run_picture_generation_pipeline(
+    situation_id: UUID,
+    factory: async_sessionmaker[AsyncSession],
+    openrouter_service: OpenRouterService,
+    s3_service: S3Service,
+) -> None:
+    """Full load → generate → upload → persist pipeline.
+
+    RAISES on failure (``PictureGenerationError`` subclasses or unexpected
+    ``Exception``). Callers are responsible for translating exceptions into
+    their own error sinks (e.g. SSE stage events, background-task error logs).
+    """
+    picture_id, image_prompt = await load_picture_for_generation(situation_id, factory)
+    result = await generate_picture_bytes(image_prompt, openrouter_service)
+    s3_key = await upload_picture_to_s3(picture_id, result.image_bytes, s3_service)
+    await persist_picture_generation(picture_id, s3_key, factory)
