@@ -17,6 +17,7 @@ from src.db.models import (
     ExerciseSourceType,
     ExerciseType,
     ListeningDialog,
+    PictureStatus,
     Situation,
     SituationDescription,
     SituationStatus,
@@ -161,6 +162,7 @@ async def get_situation(
             selectinload(Situation.dialog).selectinload(ListeningDialog.speakers),
             selectinload(Situation.dialog).selectinload(ListeningDialog.lines),
             selectinload(Situation.description),
+            selectinload(Situation.picture),
         )
         .where(
             Situation.id == situation_id,
@@ -227,6 +229,15 @@ async def get_situation(
     if situation.source_image_s3_key:
         source_image_url = s3.generate_presigned_url(situation.source_image_s3_key)
 
+    # Picture (presigned only when generated)
+    picture_url: str | None = None
+    if (
+        situation.picture is not None
+        and situation.picture.status == PictureStatus.GENERATED
+        and situation.picture.image_s3_key
+    ):
+        picture_url = s3.generate_presigned_url(situation.picture.image_s3_key)
+
     return LearnerSituationDetailResponse(
         id=situation.id,
         scenario_el=situation.scenario_el,
@@ -239,6 +250,7 @@ async def get_situation(
         exercise_completed=exercise_completed,
         source_url=situation.source_url,
         source_image_url=source_image_url,
+        picture_url=picture_url,
         source_title=situation.source_title_en,
     )
 
