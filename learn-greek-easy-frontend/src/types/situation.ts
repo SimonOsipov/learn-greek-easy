@@ -195,6 +195,7 @@ export interface LearnerSituationDetailResponse {
   exercise_completed: number;
   source_url: string | null;
   source_image_url: string | null;
+  picture_url: string | null;
   source_title: string | null;
 }
 
