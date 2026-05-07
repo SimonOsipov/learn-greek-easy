@@ -1,5 +1,6 @@
 """Integration tests for admin news API endpoints."""
 
+import json
 from datetime import date
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
@@ -9,7 +10,21 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import NewsItem, PictureStatus, Situation, SituationDescription, SituationPicture
+from src.db.models import (
+    DeckLevel,
+    DescriptionExercise,
+    DescriptionExerciseItem,
+    Exercise,
+    ExerciseModality,
+    ExerciseSourceType,
+    ExerciseStatus,
+    ExerciseType,
+    NewsItem,
+    PictureStatus,
+    Situation,
+    SituationDescription,
+    SituationPicture,
+)
 from tests.factories.news import NewsItemFactory
 
 # =============================================================================
@@ -52,6 +67,24 @@ def make_mock_s3():
     mock.generate_presigned_url.return_value = "https://s3.example.com/presigned"
     mock.get_extension_for_content_type = MagicMock(return_value="jpg")
     return mock
+
+
+def _valid_exercise_payload() -> dict:
+    """Canonical 4-option, 3-language exercise payload with correct_answer_index=1."""
+    return {
+        "prompt": {
+            "el": "Πόσοι Κύπριοι έχουν δυσκολία να πληρώσουν τη θέρμανση;",
+            "en": "How many Cypriots struggle to pay for heating?",
+            "ru": "Сколько киприотов с трудом оплачивают отопление?",
+        },
+        "options": [
+            {"el": "1 στους 4", "en": "1 in 4", "ru": "1 из 4"},
+            {"el": "1 στους 6", "en": "1 in 6", "ru": "1 из 6"},
+            {"el": "1 στους 10", "en": "1 in 10", "ru": "1 из 10"},
+            {"el": "1 στους 20", "en": "1 in 20", "ru": "1 из 20"},
+        ],
+        "correct_answer_index": 1,
+    }
 
 
 # =============================================================================
@@ -790,3 +823,428 @@ class TestDeleteNewsItemEndpoint:
             headers=superuser_auth_headers,
         )
         assert response.status_code == 404
+
+
+# =============================================================================
+# Exercise Fan-out Tests
+# =============================================================================
+
+EXPECTED_SLOTS = {
+    (ExerciseModality.READING, DeckLevel.A2),
+    (ExerciseModality.READING, DeckLevel.B1),
+    (ExerciseModality.LISTENING, DeckLevel.A2),
+    (ExerciseModality.LISTENING, DeckLevel.B1),
+}
+
+
+class TestCreateNewsItemExerciseFanout:
+    """Validates POST /api/v1/admin/news exercise fan-out (4 rows per submission)."""
+
+    # -------------------------------------------------------------------------
+    # Test 1: Four DescriptionExercise rows with correct type/status/slots
+    # -------------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_post_with_exercise_creates_four_description_exercises(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+    ):
+        """POST with exercise creates exactly 4 DescriptionExercise rows covering all (modality, level) slots."""
+        mock_httpx_cls, _ = make_mock_httpx()
+        mock_s3 = make_mock_s3()
+
+        payload = {
+            **VALID_CREATE_PAYLOAD,
+            "original_article_url": f"https://example.com/article-{uuid4().hex[:8]}",
+            "exercise": _valid_exercise_payload(),
+        }
+
+        with (
+            patch("src.services.news_item_service.httpx.AsyncClient", mock_httpx_cls),
+            patch("src.services.news_item_service.get_s3_service", return_value=mock_s3),
+        ):
+            response = await client.post(
+                "/api/v1/admin/news", json=payload, headers=superuser_auth_headers
+            )
+
+        assert response.status_code == 201
+        body = response.json()
+        situation_id = body["situation_id"]
+
+        description_id = (
+            await db_session.execute(
+                select(SituationDescription.id).where(
+                    SituationDescription.situation_id == situation_id
+                )
+            )
+        ).scalar_one()
+
+        rows = (
+            (
+                await db_session.execute(
+                    select(DescriptionExercise).where(
+                        DescriptionExercise.description_id == description_id
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+        assert len(rows) == 4
+        for row in rows:
+            assert row.exercise_type == ExerciseType.SELECT_CORRECT_ANSWER
+            assert row.status == ExerciseStatus.APPROVED
+
+        actual = {(r.modality, r.audio_level) for r in rows}
+        assert actual == EXPECTED_SLOTS
+
+    # -------------------------------------------------------------------------
+    # Test 2: Four DescriptionExerciseItem rows with identical payload
+    # -------------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_post_with_exercise_creates_four_items_with_identical_payload(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+    ):
+        """POST with exercise creates 4 DescriptionExerciseItem rows, all item_index=0, all identical payload."""
+        mock_httpx_cls, _ = make_mock_httpx()
+        mock_s3 = make_mock_s3()
+
+        payload = {
+            **VALID_CREATE_PAYLOAD,
+            "original_article_url": f"https://example.com/article-{uuid4().hex[:8]}",
+            "exercise": _valid_exercise_payload(),
+        }
+
+        with (
+            patch("src.services.news_item_service.httpx.AsyncClient", mock_httpx_cls),
+            patch("src.services.news_item_service.get_s3_service", return_value=mock_s3),
+        ):
+            response = await client.post(
+                "/api/v1/admin/news", json=payload, headers=superuser_auth_headers
+            )
+
+        assert response.status_code == 201
+        situation_id = response.json()["situation_id"]
+
+        description_id = (
+            await db_session.execute(
+                select(SituationDescription.id).where(
+                    SituationDescription.situation_id == situation_id
+                )
+            )
+        ).scalar_one()
+
+        rows = (
+            (
+                await db_session.execute(
+                    select(DescriptionExerciseItem)
+                    .join(
+                        DescriptionExercise,
+                        DescriptionExerciseItem.description_exercise_id == DescriptionExercise.id,
+                    )
+                    .where(DescriptionExercise.description_id == description_id)
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+        assert len(rows) == 4
+        assert all(r.item_index == 0 for r in rows)
+
+        serialized = {json.dumps(r.payload, sort_keys=True) for r in rows}
+        assert len(serialized) == 1, "All four items must carry identical payload"
+
+        actual_payload = json.loads(next(iter(serialized)))
+        assert actual_payload == _valid_exercise_payload()
+
+    # -------------------------------------------------------------------------
+    # Test 3: Four supertable Exercise rows linked to DescriptionExercise rows
+    # -------------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_post_with_exercise_creates_four_supertable_exercises(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+    ):
+        """POST with exercise creates 4 Exercise supertable rows with source_type=DESCRIPTION."""
+        mock_httpx_cls, _ = make_mock_httpx()
+        mock_s3 = make_mock_s3()
+
+        payload = {
+            **VALID_CREATE_PAYLOAD,
+            "original_article_url": f"https://example.com/article-{uuid4().hex[:8]}",
+            "exercise": _valid_exercise_payload(),
+        }
+
+        with (
+            patch("src.services.news_item_service.httpx.AsyncClient", mock_httpx_cls),
+            patch("src.services.news_item_service.get_s3_service", return_value=mock_s3),
+        ):
+            response = await client.post(
+                "/api/v1/admin/news", json=payload, headers=superuser_auth_headers
+            )
+
+        assert response.status_code == 201
+        situation_id = response.json()["situation_id"]
+
+        description_id = (
+            await db_session.execute(
+                select(SituationDescription.id).where(
+                    SituationDescription.situation_id == situation_id
+                )
+            )
+        ).scalar_one()
+
+        de_ids = (
+            (
+                await db_session.execute(
+                    select(DescriptionExercise.id).where(
+                        DescriptionExercise.description_id == description_id
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        assert len(de_ids) == 4
+
+        supertable_rows = (
+            (
+                await db_session.execute(
+                    select(Exercise)
+                    .join(
+                        DescriptionExercise,
+                        Exercise.description_exercise_id == DescriptionExercise.id,
+                    )
+                    .where(DescriptionExercise.description_id == description_id)
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+        assert len(supertable_rows) == 4
+        de_id_set = set(de_ids)
+        for row in supertable_rows:
+            assert row.source_type == ExerciseSourceType.DESCRIPTION
+            assert row.dialog_exercise_id is None
+            assert row.picture_exercise_id is None
+            assert row.description_exercise_id is not None
+            assert row.description_exercise_id in de_id_set
+
+    # -------------------------------------------------------------------------
+    # Test 4: No exercise in payload — zero rows in all three tables
+    # -------------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_post_without_exercise_creates_no_exercise_rows(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+    ):
+        """POST without exercise returns 201; zero rows in DescriptionExercise/Item/Exercise for that description."""
+        mock_httpx_cls, _ = make_mock_httpx()
+        mock_s3 = make_mock_s3()
+
+        payload = {
+            **VALID_CREATE_PAYLOAD,
+            "original_article_url": f"https://example.com/article-{uuid4().hex[:8]}",
+        }
+
+        with (
+            patch("src.services.news_item_service.httpx.AsyncClient", mock_httpx_cls),
+            patch("src.services.news_item_service.get_s3_service", return_value=mock_s3),
+        ):
+            response = await client.post(
+                "/api/v1/admin/news", json=payload, headers=superuser_auth_headers
+            )
+
+        assert response.status_code == 201
+        body = response.json()
+        news_item_id = body["id"]
+        situation_id = body["situation_id"]
+
+        # Regression guard: all four parent records created
+        news_item = await db_session.get(NewsItem, news_item_id)
+        assert news_item is not None
+
+        situation = await db_session.get(Situation, situation_id)
+        assert situation is not None
+
+        description_id = (
+            await db_session.execute(
+                select(SituationDescription.id).where(
+                    SituationDescription.situation_id == situation_id
+                )
+            )
+        ).scalar_one()
+        assert description_id is not None
+
+        pic_result = await db_session.execute(
+            select(SituationPicture).where(SituationPicture.situation_id == situation_id)
+        )
+        assert pic_result.scalar_one_or_none() is not None
+
+        # No exercise rows
+        de_rows = (
+            (
+                await db_session.execute(
+                    select(DescriptionExercise).where(
+                        DescriptionExercise.description_id == description_id
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        assert len(de_rows) == 0
+
+        item_rows = (
+            (
+                await db_session.execute(
+                    select(DescriptionExerciseItem)
+                    .join(
+                        DescriptionExercise,
+                        DescriptionExerciseItem.description_exercise_id == DescriptionExercise.id,
+                    )
+                    .where(DescriptionExercise.description_id == description_id)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        assert len(item_rows) == 0
+
+        super_rows = (
+            (
+                await db_session.execute(
+                    select(Exercise)
+                    .join(
+                        DescriptionExercise,
+                        Exercise.description_exercise_id == DescriptionExercise.id,
+                    )
+                    .where(DescriptionExercise.description_id == description_id)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        assert len(super_rows) == 0
+
+    # -------------------------------------------------------------------------
+    # Test 5: Malformed exercise payload → 422 and no DB rows
+    # -------------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "mutator,case_id",
+        [
+            (lambda ex: {**ex, "options": ex["options"][:3]}, "options-3-items"),
+            (lambda ex: {**ex, "correct_answer_index": 4}, "index-out-of-range"),
+            (
+                lambda ex: {
+                    **ex,
+                    "prompt": {k: v for k, v in ex["prompt"].items() if k != "ru"},
+                },
+                "prompt-missing-ru",
+            ),
+            (
+                lambda ex: {
+                    **ex,
+                    "options": [
+                        *ex["options"][:2],
+                        {**ex["options"][2], "en": ""},
+                        *ex["options"][3:],
+                    ],
+                },
+                "option-empty-en",
+            ),
+        ],
+    )
+    async def test_post_with_malformed_exercise_returns_422(
+        self,
+        mutator,
+        case_id,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+    ):
+        """Malformed exercise field returns 422 and creates no NewsItem row."""
+        mock_httpx_cls, _ = make_mock_httpx()
+        mock_s3 = make_mock_s3()
+
+        url = f"https://example.com/article-{uuid4().hex[:8]}"
+        payload = {
+            **VALID_CREATE_PAYLOAD,
+            "original_article_url": url,
+            "exercise": mutator(_valid_exercise_payload()),
+        }
+
+        with (
+            patch("src.services.news_item_service.httpx.AsyncClient", mock_httpx_cls),
+            patch("src.services.news_item_service.get_s3_service", return_value=mock_s3),
+        ):
+            response = await client.post(
+                "/api/v1/admin/news", json=payload, headers=superuser_auth_headers
+            )
+
+        assert response.status_code == 422, case_id
+
+        row = (
+            await db_session.execute(select(NewsItem).where(NewsItem.original_article_url == url))
+        ).scalar_one_or_none()
+        assert row is None, case_id
+
+    # -------------------------------------------------------------------------
+    # Test 6: Exercise present — audio and picture BG tasks still dispatched
+    # -------------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_post_with_exercise_does_not_break_audio_dispatch(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        monkeypatch,
+        mocker,
+    ):
+        """POST with exercise + A2 fields dispatches audio task twice and picture task once."""
+        monkeypatch.setattr("src.api.v1.admin.settings.feature_background_tasks", True)
+        mock_audio_task = mocker.patch("src.api.v1.admin.generate_description_audio_task")
+        mock_picture_task = mocker.patch("src.api.v1.admin.generate_picture_task")
+        mock_httpx_cls, _ = make_mock_httpx()
+        mock_s3 = make_mock_s3()
+
+        payload = {
+            **VALID_CREATE_PAYLOAD,
+            "original_article_url": f"https://example.com/article-{uuid4().hex[:8]}",
+            "scenario_el_a2": "Σενάριο A2",
+            "text_el_a2": "Κείμενο A2",
+            "exercise": _valid_exercise_payload(),
+        }
+
+        with (
+            patch("src.services.news_item_service.httpx.AsyncClient", mock_httpx_cls),
+            patch("src.services.news_item_service.get_s3_service", return_value=mock_s3),
+        ):
+            response = await client.post(
+                "/api/v1/admin/news", json=payload, headers=superuser_auth_headers
+            )
+
+        assert response.status_code == 201
+        assert (
+            mock_audio_task.call_count == 2
+        ), f"Expected 2 audio dispatch calls (b1 + a2), got {mock_audio_task.call_count}"
+        assert (
+            mock_picture_task.call_count == 1
+        ), f"Expected 1 picture dispatch call, got {mock_picture_task.call_count}"
