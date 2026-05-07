@@ -119,7 +119,7 @@ class NewsItemService:
         await self.db.flush()  # populate description.id for exercise fan-out
 
         if data.exercise is not None:
-            exercise_payload = data.exercise.model_dump()
+            exercise_payload = data.exercise.model_dump(mode="json")
             exercise_repo = ExerciseRepository(self.db)
             for modality, audio_level in _EXERCISE_SLOTS:
                 de = DescriptionExercise(
