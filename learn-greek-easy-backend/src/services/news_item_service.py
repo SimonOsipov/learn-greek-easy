@@ -14,7 +14,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.exceptions import NewsItemNotFoundException
 from src.core.logging import get_logger
 from src.db.models import (
+    DeckLevel,
+    DescriptionExercise,
+    DescriptionExerciseItem,
     DescriptionSourceType,
+    ExerciseModality,
+    ExerciseStatus,
+    ExerciseType,
     NewsCountry,
     NewsItem,
     PictureStatus,
@@ -22,6 +28,7 @@ from src.db.models import (
     SituationDescription,
     SituationPicture,
 )
+from src.repositories.exercise import ExerciseRepository
 from src.repositories.news_item import NewsItemRepository
 from src.schemas.news_item import (
     NewsItemCreate,
@@ -33,6 +40,13 @@ from src.services.picture_prompt import resolve_picture_style_en
 from src.services.s3_service import S3Service, get_s3_service
 
 logger = get_logger(__name__)
+
+_EXERCISE_SLOTS: list[tuple[ExerciseModality, DeckLevel]] = [
+    (ExerciseModality.READING, DeckLevel.A2),
+    (ExerciseModality.READING, DeckLevel.B1),
+    (ExerciseModality.LISTENING, DeckLevel.A2),
+    (ExerciseModality.LISTENING, DeckLevel.B1),
+]
 
 
 class NewsItemService:
@@ -102,6 +116,30 @@ class NewsItemService:
             source_url=url_str,
         )
         self.db.add(description)
+        await self.db.flush()  # populate description.id for exercise fan-out
+
+        if data.exercise is not None:
+            exercise_payload = data.exercise.model_dump(mode="json")
+            exercise_repo = ExerciseRepository(self.db)
+            for modality, audio_level in _EXERCISE_SLOTS:
+                de = DescriptionExercise(
+                    description_id=description.id,
+                    exercise_type=ExerciseType.SELECT_CORRECT_ANSWER,
+                    modality=modality,
+                    audio_level=audio_level,
+                    status=ExerciseStatus.APPROVED,
+                )
+                self.db.add(de)
+                await self.db.flush()  # populate de.id
+
+                item = DescriptionExerciseItem(
+                    description_exercise_id=de.id,
+                    item_index=0,
+                    payload=exercise_payload,
+                )
+                self.db.add(item)
+
+                await exercise_repo.create_for_description(de.id)
 
         # Resolve scene_* fields: use admin-provided pair, or fall back to scenario_*.
         # Schema validation has already enforced the paired rule, so if scene_en is

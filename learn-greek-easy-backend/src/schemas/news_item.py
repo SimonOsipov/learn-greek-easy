@@ -10,9 +10,34 @@ from datetime import date, datetime
 from typing import Optional, Self
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, computed_field, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    HttpUrl,
+    computed_field,
+    field_validator,
+    model_validator,
+)
 
 from src.db.models import NewsCountry
+from src.schemas.exercise_payload import MultilingualField, SelectCorrectAnswerPayload
+
+
+class ExerciseDraft(SelectCorrectAnswerPayload):
+    """News-ingest exercise payload.
+
+    Same shape as SelectCorrectAnswerPayload, but options must be EXACTLY 4
+    (matches the SRS fan-out: 4 cards across (reading|listening) x (A2|B1),
+    each rendered with the SelectCorrectAnswerRenderer 2x2 grid).
+    """
+
+    @field_validator("options")
+    @classmethod
+    def options_length(cls, v: list[MultilingualField]) -> list[MultilingualField]:
+        if len(v) != 4:
+            raise ValueError("options must contain exactly 4 entries")
+        return v
 
 
 class CountryCounts(BaseModel):
@@ -40,6 +65,11 @@ class NewsItemCreate(BaseModel):
     scene_ru: Optional[str] = Field(None, max_length=1000)
     style_en: Optional[str] = Field(None, max_length=1000)
     country: NewsCountry = Field(..., description="Country/region: cyprus, greece, or world")
+    exercise: Optional[ExerciseDraft] = Field(
+        None,
+        description="Optional exercise payload. When supplied, the backend fans out 4 SRS rows "
+        "(reading/listening x A2/B1) sharing this payload.",
+    )
     publication_date: date
     original_article_url: HttpUrl = Field(..., max_length=500)
     source_image_url: HttpUrl = Field(..., description="URL to download the image from")
@@ -165,6 +195,7 @@ class NewsItemListResponse(BaseModel):
 
 __all__ = [
     "CountryCounts",
+    "ExerciseDraft",
     "NewsItemCreate",
     "NewsItemUpdate",
     "NewsItemResponse",
