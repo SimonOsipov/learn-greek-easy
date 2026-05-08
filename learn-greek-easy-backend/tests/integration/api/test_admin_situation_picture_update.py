@@ -87,12 +87,12 @@ class TestPictureUpdate404s:
 
 
 # ---------------------------------------------------------------------------
-# Validation — trio shape and field lengths
+# Validation — trio shape
 # ---------------------------------------------------------------------------
 
 
 class TestPictureUpdateValidation:
-    """422 for partial trio and for any field exceeding 1 000 chars."""
+    """422 for partial trio (scene_en/scene_el/scene_ru must be all-or-none)."""
 
     @pytest.mark.asyncio
     async def test_422_partial_trio_scene_en_only(
@@ -123,62 +123,6 @@ class TestPictureUpdateValidation:
         assert response.status_code == 422
         body = response.text
         assert "scene_en, scene_el and scene_ru must all be provided or all omitted" in body
-
-    @pytest.mark.asyncio
-    async def test_422_scene_en_too_long(self, client: AsyncClient, superuser_auth_headers: dict):
-        situation = await SituationFactory.create()
-        await SituationPictureFactory.create(situation_id=situation.id)
-        response = await client.patch(
-            _url(situation.id),
-            json={
-                "scene_en": "a" * 1001,
-                "scene_el": "valid",
-                "scene_ru": "valid",
-            },
-            headers=superuser_auth_headers,
-        )
-        assert response.status_code == 422
-
-    @pytest.mark.asyncio
-    async def test_422_scene_el_too_long(self, client: AsyncClient, superuser_auth_headers: dict):
-        situation = await SituationFactory.create()
-        await SituationPictureFactory.create(situation_id=situation.id)
-        response = await client.patch(
-            _url(situation.id),
-            json={
-                "scene_en": "valid",
-                "scene_el": "a" * 1001,
-                "scene_ru": "valid",
-            },
-            headers=superuser_auth_headers,
-        )
-        assert response.status_code == 422
-
-    @pytest.mark.asyncio
-    async def test_422_scene_ru_too_long(self, client: AsyncClient, superuser_auth_headers: dict):
-        situation = await SituationFactory.create()
-        await SituationPictureFactory.create(situation_id=situation.id)
-        response = await client.patch(
-            _url(situation.id),
-            json={
-                "scene_en": "valid",
-                "scene_el": "valid",
-                "scene_ru": "a" * 1001,
-            },
-            headers=superuser_auth_headers,
-        )
-        assert response.status_code == 422
-
-    @pytest.mark.asyncio
-    async def test_422_style_en_too_long(self, client: AsyncClient, superuser_auth_headers: dict):
-        situation = await SituationFactory.create()
-        await SituationPictureFactory.create(situation_id=situation.id)
-        response = await client.patch(
-            _url(situation.id),
-            json={"style_en": "a" * 1001},
-            headers=superuser_auth_headers,
-        )
-        assert response.status_code == 422
 
 
 # ---------------------------------------------------------------------------

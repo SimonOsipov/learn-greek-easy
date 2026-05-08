@@ -136,14 +136,8 @@ export function PicturePromptForm({ situationId, picture }: PicturePromptFormPro
             onKeyDown={handleKeyDown}
             placeholder={t(`situations.detail.picturePrompt.placeholders.${key}`)}
             rows={rows}
-            maxLength={1000}
             disabled={isSaving}
           />
-          <p
-            className={`text-xs ${form[key].length >= 1000 ? 'text-destructive' : 'text-muted-foreground'}`}
-          >
-            {form[key].length} / 1000
-          </p>
         </div>
       ))}
 

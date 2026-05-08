@@ -65,12 +65,6 @@ def test_picture_update_mixed_populated_empty_in_trio_rejected():
     assert TRIO_ERROR in str(exc_info.value)
 
 
-def test_picture_update_field_length_over_1000_rejected():
-    long_string = "x" * 1001
-    with pytest.raises(ValidationError):
-        PictureUpdate(scene_en=long_string, scene_el="valid", scene_ru="valid")
-
-
 def test_picture_update_empty_body_rejected():
     with pytest.raises(ValidationError) as exc_info:
         PictureUpdate()

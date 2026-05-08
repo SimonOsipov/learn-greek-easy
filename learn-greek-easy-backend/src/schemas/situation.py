@@ -57,10 +57,10 @@ class PictureUpdate(BaseModel):
 
     model_config = ConfigDict(str_strip_whitespace=True)
 
-    scene_en: Optional[str] = Field(default=None, max_length=1000)
-    scene_el: Optional[str] = Field(default=None, max_length=1000)
-    scene_ru: Optional[str] = Field(default=None, max_length=1000)
-    style_en: Optional[str] = Field(default=None, max_length=1000)
+    scene_en: Optional[str] = Field(default=None)
+    scene_el: Optional[str] = Field(default=None)
+    scene_ru: Optional[str] = Field(default=None)
+    style_en: Optional[str] = Field(default=None)
 
     @model_validator(mode="after")
     def check_at_least_one_field(self) -> "PictureUpdate":
