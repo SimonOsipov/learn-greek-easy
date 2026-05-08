@@ -187,3 +187,143 @@ describe('validateNewsItemJson — scene/style field validation', () => {
     });
   });
 });
+
+describe('validateNewsItemJson — exercise field validation', () => {
+  const validExercise = {
+    prompt: { el: 'Ποιο είναι;', en: 'Which one?', ru: 'Какой?' },
+    options: [
+      { el: 'Α', en: 'A', ru: 'А' },
+      { el: 'Β', en: 'B', ru: 'Б' },
+      { el: 'Γ', en: 'C', ru: 'В' },
+      { el: 'Δ', en: 'D', ru: 'Г' },
+    ],
+    correct_answer_index: 0,
+  };
+
+  it('accepts JSON without exercise field', () => {
+    const result = validateNewsItemJson(VALID_BASE);
+    expect(result.valid).toBe(true);
+    if (result.valid) expect(result.data.exercise).toBeUndefined();
+  });
+
+  it('accepts and passes through a valid exercise object', () => {
+    const result = validateNewsItemJson(withExtra({ exercise: validExercise }));
+    expect(result.valid).toBe(true);
+    if (result.valid) expect(result.data.exercise).toEqual(validExercise);
+  });
+
+  it.each([0, 1, 2, 3, 5, 6])('rejects exercise with %i options', (len) => {
+    const options =
+      len <= validExercise.options.length
+        ? validExercise.options.slice(0, len)
+        : [
+            ...validExercise.options,
+            ...Array.from({ length: len - 4 }, (_, i) => ({
+              el: `extra-${i}-el`,
+              en: `extra-${i}-en`,
+              ru: `extra-${i}-ru`,
+            })),
+          ];
+    const result = validateNewsItemJson(withExtra({ exercise: { ...validExercise, options } }));
+    expect(result).toEqual({
+      valid: false,
+      error: expect.objectContaining({ type: 'invalidExercise' }),
+    });
+  });
+
+  it.each(['el', 'en', 'ru'] as const)('rejects exercise with prompt missing %s', (lang) => {
+    const prompt: Record<string, string> = { ...validExercise.prompt };
+    delete prompt[lang];
+    const result = validateNewsItemJson(withExtra({ exercise: { ...validExercise, prompt } }));
+    expect(result).toEqual({
+      valid: false,
+      error: expect.objectContaining({ type: 'invalidExercise' }),
+    });
+  });
+
+  it('rejects exercise where an option is missing a language sub-field', () => {
+    const options = validExercise.options.map((o, i) => {
+      if (i !== 2) return o;
+      const { en: _en, ...rest } = o;
+      return rest;
+    });
+    const result = validateNewsItemJson(withExtra({ exercise: { ...validExercise, options } }));
+    expect(result).toEqual({
+      valid: false,
+      error: expect.objectContaining({ type: 'invalidExercise' }),
+    });
+  });
+
+  it('rejects exercise where an option language value is empty', () => {
+    const options = validExercise.options.map((o, i) => (i === 1 ? { ...o, ru: '' } : o));
+    const result = validateNewsItemJson(withExtra({ exercise: { ...validExercise, options } }));
+    expect(result).toEqual({
+      valid: false,
+      error: expect.objectContaining({ type: 'invalidExercise' }),
+    });
+  });
+
+  it('rejects exercise where prompt.el is whitespace-only', () => {
+    const result = validateNewsItemJson(
+      withExtra({
+        exercise: {
+          ...validExercise,
+          prompt: { ...validExercise.prompt, el: '   ' },
+        },
+      })
+    );
+    expect(result).toEqual({
+      valid: false,
+      error: expect.objectContaining({ type: 'invalidExercise' }),
+    });
+  });
+
+  it.each([
+    ['negative', -1],
+    ['too high (4)', 4],
+    ['too high (5)', 5],
+    ['non-integer', 1.5],
+    ['string "2"', '2'],
+  ] as const)('rejects exercise with correct_answer_index %s', (_label, idx) => {
+    const result = validateNewsItemJson(
+      withExtra({
+        exercise: { ...validExercise, correct_answer_index: idx },
+      })
+    );
+    expect(result).toEqual({
+      valid: false,
+      error: expect.objectContaining({ type: 'invalidExercise' }),
+    });
+  });
+
+  it.each([
+    ['string', 'string'],
+    ['array', []],
+    ['number', 42],
+  ] as const)('rejects exercise that is a %s', (_label, value) => {
+    const result = validateNewsItemJson(withExtra({ exercise: value }));
+    expect(result).toEqual({
+      valid: false,
+      error: expect.objectContaining({ type: 'invalidExercise' }),
+    });
+  });
+
+  it('treats exercise: null as omitted (data.exercise === undefined)', () => {
+    const result = validateNewsItemJson(withExtra({ exercise: null }));
+    expect(result.valid).toBe(true);
+    if (result.valid) expect(result.data.exercise).toBeUndefined();
+  });
+
+  it('reports missing-base-field error before exercise error when both are wrong', () => {
+    const json = JSON.stringify({
+      ...JSON.parse(VALID_BASE),
+      country: undefined, // strip required base field — JSON.stringify drops undefined
+      exercise: { ...validExercise, options: validExercise.options.slice(0, 3) },
+    });
+    const result = validateNewsItemJson(json);
+    expect(result.valid).toBe(false);
+    if (!result.valid) {
+      expect(result.error.type).not.toBe('invalidExercise');
+    }
+  });
+});
