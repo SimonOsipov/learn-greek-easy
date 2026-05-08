@@ -477,6 +477,20 @@ export interface AnnouncementDetailResponse extends AnnouncementItem {
  */
 export type NewsCountry = 'cyprus' | 'greece' | 'world';
 
+export interface MultilingualField {
+  el: string;
+  en: string;
+  ru: string;
+}
+
+export interface ExerciseDraft {
+  prompt: MultilingualField;
+  /** Exactly 4 options. Backend rejects 2-3 even though the parent SelectCorrectAnswerPayload allows 2-4. */
+  options: [MultilingualField, MultilingualField, MultilingualField, MultilingualField];
+  /** 0..3 inclusive (must be in range relative to options.length) */
+  correct_answer_index: number;
+}
+
 /**
  * Payload for creating a news item
  */
@@ -495,6 +509,7 @@ export interface NewsItemCreate {
   scene_el?: string; // NEW
   scene_ru?: string; // NEW
   style_en?: string; // NEW
+  exercise?: ExerciseDraft;
 }
 
 /**
