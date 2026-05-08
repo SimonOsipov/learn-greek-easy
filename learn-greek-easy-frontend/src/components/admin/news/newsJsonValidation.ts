@@ -28,7 +28,6 @@ export const JSON_PLACEHOLDER = `{
   "scene_ru": "(optional, paired with scene_en + scene_el) Russian scene description",
   "style_en": "(optional, independent) Per-news style override; omit to use the house-style default",
   "exercise": {
-    "(optional, paired-internally) prompt": "omit entire exercise block to skip auto-exercise creation",
     "prompt": { "el": "Ελληνική ερώτηση", "en": "Greek question", "ru": "Греческий вопрос" },
     "options": [
       { "el": "Επιλογή Α", "en": "Option A", "ru": "Вариант А" },
