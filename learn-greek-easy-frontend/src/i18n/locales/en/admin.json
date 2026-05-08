@@ -426,7 +426,8 @@
       "invalidCountry": "Invalid country. Must be: cyprus, greece, or world",
       "a2FieldsPaired": "title_el_a2 and description_el_a2 must both be provided or both omitted",
       "scenePaired": "scene_en, scene_el and scene_ru must all be provided or all omitted",
-      "sceneFieldsTooLong": "scene_en, scene_el, scene_ru, and style_en must each be 1000 characters or fewer"
+      "sceneFieldsTooLong": "scene_en, scene_el, scene_ru, and style_en must each be 1000 characters or fewer",
+      "invalidExercise": "Invalid `exercise` block. It must contain `prompt` (el/en/ru), `options` (exactly 4 entries with el/en/ru), and `correct_answer_index` (0-3)."
     },
     "search": {
       "placeholder": "Search news...",
