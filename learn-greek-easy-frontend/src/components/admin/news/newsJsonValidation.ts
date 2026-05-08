@@ -4,7 +4,12 @@
  * Validates news item JSON input for the admin interface.
  */
 
-import type { NewsCountry, NewsItemCreate } from '@/services/adminAPI';
+import type {
+  ExerciseDraft,
+  MultilingualField,
+  NewsCountry,
+  NewsItemCreate,
+} from '@/services/adminAPI';
 
 /** JSON placeholder template for textarea */
 export const JSON_PLACEHOLDER = `{
@@ -21,7 +26,18 @@ export const JSON_PLACEHOLDER = `{
   "scene_en": "(optional, paired with scene_el + scene_ru) Visual scene description for image generation",
   "scene_el": "(optional, paired with scene_en + scene_ru) Greek scene description for future picture-description exercise",
   "scene_ru": "(optional, paired with scene_en + scene_el) Russian scene description",
-  "style_en": "(optional, independent) Per-news style override; omit to use the house-style default"
+  "style_en": "(optional, independent) Per-news style override; omit to use the house-style default",
+  "exercise": {
+    "(optional, paired-internally) prompt": "omit entire exercise block to skip auto-exercise creation",
+    "prompt": { "el": "Ελληνική ερώτηση", "en": "Greek question", "ru": "Греческий вопрос" },
+    "options": [
+      { "el": "Επιλογή Α", "en": "Option A", "ru": "Вариант А" },
+      { "el": "Επιλογή Β", "en": "Option B", "ru": "Вариант Б" },
+      { "el": "Επιλογή Γ", "en": "Option C", "ru": "Вариант В" },
+      { "el": "Επιλογή Δ", "en": "Option D", "ru": "Вариант Г" }
+    ],
+    "correct_answer_index": 0
+  }
 }`;
 
 /** Required fields for news item creation */
@@ -46,7 +62,8 @@ export type ValidationErrorType =
   | 'invalidCountry'
   | 'a2FieldsPaired'
   | 'scenePaired'
-  | 'sceneFieldsTooLong';
+  | 'sceneFieldsTooLong'
+  | 'invalidExercise';
 
 /** Successful validation result */
 export interface ValidationSuccess {
@@ -219,6 +236,17 @@ export function validateNewsItemJson(jsonString: string): ValidationResult {
     };
   }
 
+  let exercise: ExerciseDraft | null = null;
+  if ('exercise' in parsed && parsed.exercise !== null && parsed.exercise !== undefined) {
+    if (!isValidExerciseDraft(parsed.exercise)) {
+      return {
+        valid: false,
+        error: { type: 'invalidExercise', messageKey: 'news.validation.invalidExercise' },
+      };
+    }
+    exercise = parsed.exercise;
+  }
+
   // Build the data object
   const data: NewsItemCreate = {
     country,
@@ -249,8 +277,41 @@ export function validateNewsItemJson(jsonString: string): ValidationResult {
     data.style_en = styleEn;
   }
 
+  if (exercise !== null) {
+    data.exercise = exercise;
+  }
+
   return {
     valid: true,
     data,
   };
+}
+
+function isMultilingualField(value: unknown): value is MultilingualField {
+  if (typeof value !== 'object' || value === null) return false;
+  const v = value as Record<string, unknown>;
+  return (
+    typeof v.el === 'string' &&
+    v.el.trim().length >= 1 &&
+    typeof v.en === 'string' &&
+    v.en.trim().length >= 1 &&
+    typeof v.ru === 'string' &&
+    v.ru.trim().length >= 1
+  );
+}
+
+function isValidExerciseDraft(value: unknown): value is ExerciseDraft {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  const ex = value as Record<string, unknown>;
+  if (!isMultilingualField(ex.prompt)) return false;
+  if (!Array.isArray(ex.options) || ex.options.length !== 4) return false;
+  if (!ex.options.every(isMultilingualField)) return false;
+  if (
+    typeof ex.correct_answer_index !== 'number' ||
+    !Number.isInteger(ex.correct_answer_index) ||
+    ex.correct_answer_index < 0 ||
+    ex.correct_answer_index >= ex.options.length
+  )
+    return false;
+  return true;
 }
