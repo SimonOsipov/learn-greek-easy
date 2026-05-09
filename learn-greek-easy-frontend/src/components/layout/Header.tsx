@@ -30,6 +30,8 @@ import { PageContainer } from './PageContainer';
 interface NavChild {
   path: string;
   labelKey: string;
+  /** When true, treat any pathname starting with `path` (followed by `/` or end) as active. */
+  matchPrefix?: boolean;
 }
 
 interface NavItem {
@@ -98,6 +100,7 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
         { path: '/decks', labelKey: 'nav.decksDropdown.allDecks' },
         { path: '/my-decks', labelKey: 'nav.decksDropdown.myDecks' },
         { path: '/situations', labelKey: 'nav.decksDropdown.situations' },
+        { path: '/culture', labelKey: 'nav.decksDropdown.culture', matchPrefix: true },
       ],
     },
     {
@@ -131,9 +134,17 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
     return location.pathname === path;
   };
 
+  const matchesPrefix = (pathname: string, prefix: string) =>
+    pathname === prefix || pathname.startsWith(prefix + '/');
+
+  const isActiveChild = (child: NavChild) =>
+    child.matchPrefix
+      ? matchesPrefix(location.pathname, child.path)
+      : location.pathname === child.path;
+
   const isActiveParent = (item: NavItem) => {
     if (!item.children) return false;
-    return item.children.some((child) => location.pathname === child.path);
+    return item.children.some(isActiveChild);
   };
 
   return (
@@ -186,10 +197,7 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
                         >
                           <Link
                             to={child.path}
-                            className={cn(
-                              'w-full',
-                              isActiveRoute(child.path) ? 'text-primary' : ''
-                            )}
+                            className={cn('w-full', isActiveChild(child) ? 'text-primary' : '')}
                           >
                             {t(child.labelKey)}
                           </Link>

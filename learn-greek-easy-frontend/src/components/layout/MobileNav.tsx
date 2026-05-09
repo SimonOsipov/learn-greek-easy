@@ -21,6 +21,8 @@ interface MobileNavProps {
 interface NavChild {
   labelKey: string;
   href: string;
+  /** When true, treat any pathname starting with `href` (followed by `/` or end) as active. */
+  matchPrefix?: boolean;
 }
 
 interface NavItem {
@@ -30,6 +32,8 @@ interface NavItem {
   href: string;
   /** Additional paths that should also highlight this nav item */
   additionalActivePaths?: string[];
+  /** Additional path prefixes (prefix match) that should also highlight this nav item */
+  additionalActivePathPrefixes?: string[];
   /** Child menu items for sub-menu */
   children?: NavChild[];
 }
@@ -42,10 +46,12 @@ const navItems: NavItem[] = [
     icon: Layers,
     href: '/decks',
     additionalActivePaths: ['/my-decks', '/situations'],
+    additionalActivePathPrefixes: ['/culture'],
     children: [
       { labelKey: 'nav.decksDropdown.allDecks', href: '/decks' },
       { labelKey: 'nav.decksDropdown.myDecks', href: '/my-decks' },
       { labelKey: 'nav.decksDropdown.situations', href: '/situations' },
+      { labelKey: 'nav.decksDropdown.culture', href: '/culture', matchPrefix: true },
     ],
   },
   {
@@ -91,13 +97,22 @@ export const MobileNav: React.FC<MobileNavProps> = ({ className }) => {
     setOpenSubMenu(null);
   }, [location.pathname]);
 
+  const matchesPrefix = (pathname: string, prefix: string) =>
+    pathname === prefix || pathname.startsWith(prefix + '/');
+
   const isActive = (item: NavItem) => {
     if (location.pathname === item.href) return true;
-    if (item.additionalActivePaths) {
-      return item.additionalActivePaths.includes(location.pathname);
+    if (item.additionalActivePaths?.includes(location.pathname)) return true;
+    if (item.additionalActivePathPrefixes?.some((p) => matchesPrefix(location.pathname, p))) {
+      return true;
     }
     return false;
   };
+
+  const isChildActive = (child: NavChild) =>
+    child.matchPrefix
+      ? matchesPrefix(location.pathname, child.href)
+      : location.pathname === child.href;
 
   const handleNavClick = (item: NavItem, e: React.MouseEvent) => {
     if (item.children) {
@@ -134,7 +149,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({ className }) => {
                   to={child.href}
                   className={cn(
                     'flex items-center px-6 py-3 text-sm font-medium transition-colors',
-                    location.pathname === child.href
+                    isChildActive(child)
                       ? 'bg-primary/10 text-primary'
                       : 'text-foreground hover:bg-secondary'
                   )}

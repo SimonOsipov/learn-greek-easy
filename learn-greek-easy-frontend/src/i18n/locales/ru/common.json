@@ -182,7 +182,8 @@
     "decksDropdown": {
       "allDecks": "Публичные Колоды",
       "myDecks": "Мои Колоды",
-      "situations": "Ситуации"
+      "situations": "Ситуации",
+      "culture": "Культура"
     },
     "practice": "Практика",
     "practiceDropdown": {

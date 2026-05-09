@@ -13,7 +13,7 @@
 import React from 'react';
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -76,6 +76,8 @@ vi.mock('react-i18next', () => ({
         'nav.decks': 'Decks',
         'nav.decksDropdown.allDecks': 'Public Decks',
         'nav.decksDropdown.myDecks': 'My Decks',
+        'nav.decksDropdown.situations': 'Situations',
+        'nav.decksDropdown.culture': 'Culture',
         'nav.statistics': 'Statistics',
         'nav.generalProgress': 'General Progress',
         'nav.achievements': 'Achievements',
@@ -316,6 +318,76 @@ describe('Header', () => {
       expect(premiumIndex).toBeGreaterThanOrEqual(0);
       expect(profileIndex).toBeLessThan(premiumIndex);
     });
+  });
+});
+
+describe('Decks dropdown — Culture entry', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const renderHeaderAt = (path: string) =>
+    render(
+      <MemoryRouter initialEntries={[path]}>
+        <Header />
+      </MemoryRouter>
+    );
+
+  it('should render exactly 4 children in order: Public Decks, My Decks, Situations, Culture', async () => {
+    const user = userEvent.setup();
+    renderHeaderAt('/dashboard');
+
+    const trigger = screen.getByTestId('decks-dropdown-trigger');
+    await user.click(trigger);
+
+    await waitFor(() => {
+      // The DropdownMenuContent renders after click; find it by the trigger's sibling
+      const dropdownContent = screen.getByRole('menu');
+      const items = within(dropdownContent).getAllByRole('menuitem');
+      const texts = items.map((el) => el.textContent);
+      expect(texts).toEqual(['Public Decks', 'My Decks', 'Situations', 'Culture']);
+    });
+  });
+
+  it('should have the Culture item with href /culture', async () => {
+    const user = userEvent.setup();
+    renderHeaderAt('/dashboard');
+
+    const trigger = screen.getByTestId('decks-dropdown-trigger');
+    await user.click(trigger);
+
+    await waitFor(() => {
+      const cultureItem = screen.getByTestId('nav-item-culture');
+      expect(cultureItem.closest('a')).toHaveAttribute('href', '/culture');
+    });
+  });
+
+  it('should apply text-primary to Culture child on /culture/decks/abc', async () => {
+    const user = userEvent.setup();
+    renderHeaderAt('/culture/decks/abc');
+
+    const trigger = screen.getByTestId('decks-dropdown-trigger');
+    await user.click(trigger);
+
+    await waitFor(() => {
+      const cultureItem = screen.getByTestId('nav-item-culture');
+      const link = cultureItem.closest('a');
+      expect(link).toHaveClass('text-primary');
+    });
+  });
+
+  it('should apply text-primary to Decks trigger on /culture/decks/abc (parent active)', async () => {
+    renderHeaderAt('/culture/decks/abc');
+
+    const trigger = screen.getByTestId('decks-dropdown-trigger');
+    expect(trigger).toHaveClass('text-primary');
+  });
+
+  it('should NOT apply text-primary to Decks trigger on /cultural-something', () => {
+    renderHeaderAt('/cultural-something');
+
+    const trigger = screen.getByTestId('decks-dropdown-trigger');
+    expect(trigger).not.toHaveClass('text-primary');
   });
 });
 
