@@ -1,4 +1,15 @@
 {
+  "list": {
+    "title": "Culture",
+    "subtitle": "Explore Greek history, geography, politics, and traditions",
+    "ariaLabel": "Culture decks",
+    "errorLoading": "Error loading culture decks",
+    "tryAgain": "Try again",
+    "empty": {
+      "title": "No culture decks available",
+      "description": "Culture decks will appear here once published."
+    }
+  },
   "deck": {
     "culture": "Culture",
     "questions": "Questions",
