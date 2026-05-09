@@ -2,14 +2,15 @@
 
 import React, { useEffect, useState } from 'react';
 
-import { AlertCircle, BookOpen } from 'lucide-react';
+import { AlertCircle, BookOpen, GraduationCap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 import { DecksGrid } from '@/components/decks/DecksGrid';
 import { EmptyState } from '@/components/feedback';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { transformCultureDeckResponse } from '@/lib/cultureDeckTransform';
 import { reportAPIError } from '@/lib/errorReporting';
@@ -61,6 +62,31 @@ export const CulturePage: React.FC = () => {
         </h1>
         <p className="mt-2 text-sm text-muted-foreground md:text-base">{t('list.subtitle')}</p>
       </div>
+
+      {/* Mock-exam CTA — renders unconditionally above the deck grid */}
+      <Card className="mb-6 sm:mb-8">
+        <CardHeader className="sm:flex-row sm:items-start sm:justify-between sm:gap-6 sm:space-y-0">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
+              <GraduationCap className="h-5 w-5 text-primary" aria-hidden="true" />
+            </div>
+            <div className="space-y-1">
+              <CardTitle className="text-lg sm:text-xl">
+                {t('page.mockExamCta.title', 'Take the mock exam')}
+              </CardTitle>
+              <CardDescription>
+                {t(
+                  'page.mockExamCta.description',
+                  'Test yourself across all culture decks in one timed mock exam.'
+                )}
+              </CardDescription>
+            </div>
+          </div>
+          <Button asChild size="lg" className="w-full sm:w-auto sm:shrink-0">
+            <Link to="/practice/culture-exam">{t('page.mockExamCta.cta', 'Take mock exam')}</Link>
+          </Button>
+        </CardHeader>
+      </Card>
 
       {/* Error State */}
       {error && (

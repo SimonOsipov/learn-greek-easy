@@ -263,3 +263,62 @@ describe('CulturePage', () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Mock-exam CTA
+// ---------------------------------------------------------------------------
+
+describe('Mock-exam CTA', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Use a never-resolving promise so the loading state is active during most CTA tests;
+    // the CTA must render unconditionally regardless of data state.
+    mockGetList.mockReturnValue(new Promise(() => {}));
+  });
+
+  it('renders the CTA link with the correct accessible name', () => {
+    render(<CulturePage />);
+    expect(screen.getByRole('link', { name: /take mock exam/i })).toBeInTheDocument();
+  });
+
+  it('CTA href points to /practice/culture-exam', () => {
+    render(<CulturePage />);
+    const link = screen.getByRole('link', { name: /take mock exam/i });
+    expect(link).toHaveAttribute('href', '/practice/culture-exam');
+  });
+
+  it('CTA appears in the DOM before the deck grid', async () => {
+    mockGetList.mockResolvedValue(mixedPayload);
+
+    render(<CulturePage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('list', { name: /culture decks/i })).toBeInTheDocument();
+    });
+
+    const ctaLink = screen.getByRole('link', { name: /take mock exam/i });
+    const deckList = screen.getByRole('list', { name: /culture decks/i });
+
+    // Node.DOCUMENT_POSITION_FOLLOWING (4) means deckList comes after ctaLink
+    const position = ctaLink.compareDocumentPosition(deckList);
+    expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('CTA is keyboard-focusable via Tab', async () => {
+    const user = userEvent.setup();
+    render(<CulturePage />);
+
+    const ctaLink = screen.getByRole('link', { name: /take mock exam/i });
+
+    // Tab from document body until we reach the CTA link
+    let focused = false;
+    for (let i = 0; i < 10; i++) {
+      await user.tab();
+      if (document.activeElement === ctaLink) {
+        focused = true;
+        break;
+      }
+    }
+    expect(focused).toBe(true);
+  });
+});
