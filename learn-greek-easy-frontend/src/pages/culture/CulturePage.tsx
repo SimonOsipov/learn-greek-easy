@@ -25,30 +25,26 @@ export const CulturePage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    setIsLoading(true);
+  const loadDecks = React.useCallback(() => {
     setError(null);
-
+    setIsLoading(true);
     cultureDeckAPI
       .getList()
       .then((res) => {
-        if (cancelled) return;
         setDecks(res.decks.map(transformCultureDeckResponse));
       })
       .catch((err: unknown) => {
-        if (cancelled) return;
         reportAPIError(err, { operation: 'fetchCultureDecks', endpoint: '/api/v1/culture/decks' });
         setError(err instanceof Error ? err.message : 'Failed to load culture decks.');
       })
       .finally(() => {
-        if (!cancelled) setIsLoading(false);
+        setIsLoading(false);
       });
+  }, []);
 
-    return () => {
-      cancelled = true;
-    };
-  }, [location.key]); // refetch on nav-back, mirroring DecksPage
+  useEffect(() => {
+    loadDecks();
+  }, [location.key, loadDecks]); // refetch on nav-back, mirroring DecksPage
 
   return (
     <div className="space-y-6 pb-20 lg:pb-8">
@@ -95,30 +91,7 @@ export const CulturePage: React.FC = () => {
           <AlertTitle>{t('list.errorLoading')}</AlertTitle>
           <AlertDescription>
             {error}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setError(null);
-                setIsLoading(true);
-                cultureDeckAPI
-                  .getList()
-                  .then((res) => {
-                    setDecks(res.decks.map(transformCultureDeckResponse));
-                  })
-                  .catch((err: unknown) => {
-                    reportAPIError(err, {
-                      operation: 'fetchCultureDecks',
-                      endpoint: '/api/v1/culture/decks',
-                    });
-                    setError(err instanceof Error ? err.message : 'Failed to load culture decks.');
-                  })
-                  .finally(() => {
-                    setIsLoading(false);
-                  });
-              }}
-              className="mt-3 block"
-            >
+            <Button variant="outline" size="sm" onClick={loadDecks} className="mt-3 block">
               {t('list.tryAgain')}
             </Button>
           </AlertDescription>
