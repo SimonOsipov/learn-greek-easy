@@ -29,47 +29,46 @@ test.describe('Premium Badge - Learner View', () => {
   // Use learner auth (free tier) - default for most tests
   test.use({ storageState: LEARNER_AUTH });
 
-  test('should display premium badge on premium vocabulary deck', async ({ page }) => {
-    await page.goto('/decks');
+  test('should display premium badge on premium culture deck', async ({ page }) => {
+    // After IA-01 split, premium decks (History, Traditions) live on /culture.
+    // Vocabulary decks on /decks have no premium content in E2E seed data.
+    await page.goto('/culture');
 
     // Wait for decks to load
     await expect(page.locator('[data-testid="deck-card"]').first()).toBeVisible({
       timeout: 15000,
     });
 
-    // Find deck cards - premium decks should have the "Premium" badge with crown
-    // Premium vocabulary decks are C1 and C2
+    // Premium culture decks (History, Traditions) should have the "Premium" badge
     const premiumBadge = page.locator('text=Premium').first();
     await expect(premiumBadge).toBeVisible({ timeout: 5000 });
   });
 
-  test('should display lock icon on premium vocabulary deck for free user', async ({ page }) => {
-    await page.goto('/decks');
+  test('should display lock icon on premium culture deck for free user', async ({ page }) => {
+    // After IA-01 split, premium decks (History, Traditions) live on /culture.
+    await page.goto('/culture');
 
     // Wait for decks to load
     await expect(page.locator('[data-testid="deck-card"]').first()).toBeVisible({
       timeout: 15000,
     });
 
-    // Premium decks should show lock icon
-    // The lock icon has aria-label="Premium content"
+    // Premium decks should show lock icon with aria-label="Premium content"
     const lockIcon = page.locator('[aria-label="Premium content"]').first();
     await expect(lockIcon).toBeVisible({ timeout: 5000 });
   });
 
-  test('should display premium badge on premium culture deck', async ({ page }) => {
-    await page.goto('/decks');
+  test('should display premium badge on premium culture deck (direct navigation)', async ({
+    page,
+  }) => {
+    // After IA-01 split, /culture is the dedicated home for all culture decks.
+    // Premium culture decks (History, Traditions) are available without any filter.
+    await page.goto('/culture');
 
     // Wait for decks to load
     await expect(page.locator('[data-testid="deck-card"]').first()).toBeVisible({
       timeout: 15000,
     });
-
-    // Click on culture filter to see culture decks
-    await page.getByRole('button', { name: 'Culture', exact: true }).click();
-
-    // Wait for filtered results
-    await page.waitForTimeout(500);
 
     // Premium culture decks (History, Traditions) should have the premium badge
     const premiumBadge = page.locator('text=Premium').first();
@@ -77,7 +76,9 @@ test.describe('Premium Badge - Learner View', () => {
   });
 
   test('should have non-premium decks without premium badge', async ({ page }) => {
-    await page.goto('/decks');
+    // After IA-01 split, /culture has a mix: premium (History, Traditions) and
+    // free (Geography, Politics, Culture) decks.
+    await page.goto('/culture');
 
     // Wait for decks to load
     await expect(page.locator('[data-testid="deck-card"]').first()).toBeVisible({
@@ -92,13 +93,14 @@ test.describe('Premium Badge - Learner View', () => {
     const premiumBadges = page.locator('text=Premium');
     const premiumCount = await premiumBadges.count();
 
-    // Not all decks should be premium (we have A1, A2, B1, B2 as free)
+    // Not all decks should be premium (Geography, Politics, Culture are free)
     expect(premiumCount).toBeLessThan(totalDecks);
     expect(premiumCount).toBeGreaterThan(0);
   });
 
   test('premium deck should not be clickable for free user', async ({ page }) => {
-    await page.goto('/decks');
+    // After IA-01 split, premium (locked) decks live on /culture.
+    await page.goto('/culture');
 
     // Wait for decks to load
     await expect(page.locator('[data-testid="deck-card"]').first()).toBeVisible({

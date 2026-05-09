@@ -20,6 +20,8 @@ export interface DecksGridProps {
   onEditDeck?: (deck: Deck) => void;
   /** Callback when delete button is clicked on a deck */
   onDeleteDeck?: (deck: Deck) => void;
+  /** Override the accessible list label (defaults to t('list.title') from deck namespace) */
+  ariaLabel?: string;
 }
 
 export const DecksGrid: React.FC<DecksGridProps> = ({
@@ -28,6 +30,7 @@ export const DecksGrid: React.FC<DecksGridProps> = ({
   showActions = false,
   onEditDeck,
   onDeleteDeck,
+  ariaLabel,
 }) => {
   const { t } = useTranslation('deck');
   const navigate = useNavigate();
@@ -66,7 +69,7 @@ export const DecksGrid: React.FC<DecksGridProps> = ({
     <div
       className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3"
       role="list"
-      aria-label={t('list.title')}
+      aria-label={ariaLabel ?? t('list.title')}
     >
       {decks.map((deck) => {
         // Check if this is a culture deck

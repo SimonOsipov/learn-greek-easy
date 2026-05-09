@@ -7,7 +7,6 @@ import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 
 import { DeckFilters } from '@/components/decks/DeckFilters';
-import type { DeckType } from '@/components/decks/DeckFilters';
 import { DecksGrid } from '@/components/decks/DecksGrid';
 import { EmptyState } from '@/components/feedback';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -58,8 +57,6 @@ export const DecksPage: React.FC = () => {
         onClear={clearFilters}
         totalDecks={totalDecks}
         filteredDecks={decks.length}
-        deckType={filters.deckType}
-        onDeckTypeChange={(type: DeckType) => setFilters({ deckType: type })}
       />
 
       {/* Error State */}

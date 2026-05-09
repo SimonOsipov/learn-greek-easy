@@ -1,7 +1,7 @@
 {
   "list": {
     "title": "Available Decks",
-    "subtitle": "Choose a deck to study Greek vocabulary, culture, and more",
+    "subtitle": "Choose a deck to study Greek vocabulary",
     "errorLoading": "Error Loading Decks",
     "tryAgain": "Try Again",
     "noDecksFound": "No Decks Found",
@@ -12,10 +12,6 @@
     "searchPlaceholder": "Search decks by name...",
     "level": "Level:",
     "status": "Status:",
-    "deckType": "Type:",
-    "typeAll": "All",
-    "typeVocabulary": "Vocabulary",
-    "typeCulture": "Culture",
     "allLevels": "All Levels",
     "allStatuses": "All Statuses",
     "notStarted": "Not Started",
@@ -23,7 +19,6 @@
     "completed": "Completed",
     "clearAll": "Clear All",
     "showing": "Showing {{count}} of {{total}} decks",
-    "levelDisabledForCulture": "Level filter is not available for Culture decks",
     "clearSearch": "Clear search",
     "filtersToggle": "Filters"
   },

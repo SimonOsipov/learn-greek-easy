@@ -72,6 +72,9 @@ const ChangelogPage = lazyWithRetry(() =>
 );
 
 // Culture deck pages
+const CulturePage = lazyWithRetry(() =>
+  import('@/pages/culture/CulturePage').then((m) => ({ default: m.CulturePage }))
+);
 const CultureDeckDetailPage = lazyWithRetry(() =>
   import('@/pages/culture/CultureDeckDetailPage').then((m) => ({
     default: m.CultureDeckDetailPage,
@@ -254,6 +257,10 @@ function AppContent() {
                 </Route>
                 {/* V2 practice page outside AppLayout for full-screen experience */}
                 <Route path="/decks/:deckId/practice" element={<V2FlashcardPracticePage />} />
+                {/* Culture index page inside AppLayout */}
+                <Route path="/culture" element={<AppLayout />}>
+                  <Route index element={<CulturePage />} />
+                </Route>
                 {/* Culture deck detail page inside AppLayout */}
                 <Route path="/culture/decks/:id" element={<AppLayout />}>
                   <Route index element={<CultureDeckDetailPage />} />

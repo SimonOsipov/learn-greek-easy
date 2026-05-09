@@ -1,8 +1,8 @@
 // /src/components/decks/DeckFilters.tsx
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 
-import { BookOpen, GraduationCap, Layers, Search, SlidersHorizontal, X } from 'lucide-react';
+import { Search, SlidersHorizontal, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
@@ -12,27 +12,13 @@ import { CEFR_LEVEL_OPTIONS } from '@/lib/cefrColors';
 import { debounce } from '@/lib/utils';
 import type { DeckFilters as DeckFiltersType, DeckLevel, DeckStatus } from '@/types/deck';
 
-export type DeckType = 'all' | 'vocabulary' | 'culture';
-
 export interface DeckFiltersProps {
   filters: DeckFiltersType;
   onChange: (filters: Partial<DeckFiltersType>) => void;
   onClear: () => void;
   totalDecks: number;
   filteredDecks: number;
-  deckType: DeckType;
-  onDeckTypeChange: (type: DeckType) => void;
 }
-
-const TYPE_OPTIONS: {
-  value: DeckType;
-  icon: React.ComponentType<{ className?: string }>;
-  labelKey: string;
-}[] = [
-  { value: 'all', icon: Layers, labelKey: 'filters.typeAll' },
-  { value: 'vocabulary', icon: GraduationCap, labelKey: 'filters.typeVocabulary' },
-  { value: 'culture', icon: BookOpen, labelKey: 'filters.typeCulture' },
-];
 
 const STATUS_OPTIONS: { value: DeckStatus; labelKey: string }[] = [
   { value: 'not-started', labelKey: 'filters.notStarted' },
@@ -46,20 +32,10 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
   onClear,
   totalDecks,
   filteredDecks,
-  deckType,
-  onDeckTypeChange,
 }) => {
   const { t } = useTranslation('deck');
   const isMobile = useIsMobile();
   const [filtersOpen, setFiltersOpen] = useState(false);
-
-  const handleTypeChange = useCallback(
-    (newType: DeckType) => {
-      if (newType === deckType) return;
-      onDeckTypeChange(newType);
-    },
-    [deckType, onDeckTypeChange]
-  );
 
   // Local state for search input (debounced before updating store)
   const [searchInput, setSearchInput] = useState(filters.search);
@@ -102,10 +78,6 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
   // Count active filters
   const activeFilterCount =
     filters.levels.length + filters.status.length + (filters.search.length > 0 ? 1 : 0);
-
-  // Level filter is disabled when culture deck type is selected
-  // Culture decks don't have CEFR levels
-  const isLevelFilterDisabled = deckType === 'culture';
 
   return (
     <div className="mb-6 space-y-3" data-testid="deck-filters">
@@ -169,30 +141,14 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
       {/* Row 3: All filters — always visible on desktop, collapsible on mobile */}
       {(!isMobile || filtersOpen) && (
         <div className="flex flex-wrap items-center gap-2">
-          {TYPE_OPTIONS.map(({ value: optValue, icon: Icon, labelKey }) => (
-            <Button
-              key={optValue}
-              variant={deckType === optValue ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => handleTypeChange(optValue)}
-              className="gap-1.5 rounded-full"
-              aria-pressed={deckType === optValue}
-            >
-              <Icon className="h-4 w-4" />
-              {t(labelKey)}
-            </Button>
-          ))}
-          <div className="h-6 w-px bg-border" aria-hidden="true" />
           {CEFR_LEVEL_OPTIONS.map(({ value }) => (
             <Button
               key={value}
               variant={filters.levels.includes(value) ? 'default' : 'outline'}
               size="sm"
               onClick={() => handleLevelToggle(value)}
-              disabled={isLevelFilterDisabled}
               className="rounded-full"
               aria-pressed={filters.levels.includes(value)}
-              title={isLevelFilterDisabled ? t('filters.levelDisabledForCulture') : undefined}
             >
               {value}
             </Button>

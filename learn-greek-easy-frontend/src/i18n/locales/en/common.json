@@ -180,7 +180,8 @@
     "decksDropdown": {
       "allDecks": "Public Decks",
       "myDecks": "My Decks",
-      "situations": "Situations"
+      "situations": "Situations",
+      "culture": "Culture"
     },
     "practice": "Practice",
     "practiceDropdown": {
