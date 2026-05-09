@@ -1,7 +1,7 @@
 {
   "list": {
     "title": "Доступные колоды",
-    "subtitle": "Выберите колоду — лексика, культура и многое другое",
+    "subtitle": "Выберите колоду по словарному запасу",
     "errorLoading": "Ошибка загрузки колод",
     "tryAgain": "Попробовать снова",
     "noDecksFound": "Колоды не найдены",
@@ -13,9 +13,6 @@
     "level": "Уровень:",
     "status": "Статус:",
     "deckType": "Тип:",
-    "typeAll": "Все",
-    "typeVocabulary": "Словарь",
-    "typeCulture": "Культура",
     "allLevels": "Все уровни",
     "allStatuses": "Все статусы",
     "notStarted": "Не начато",
@@ -23,7 +20,6 @@
     "completed": "Завершено",
     "clearAll": "Сбросить всё",
     "showing": "Показано {{count}} из {{total}} колод",
-    "levelDisabledForCulture": "Фильтр по уровню недоступен для колод Культуры",
     "clearSearch": "Очистить поиск",
     "filtersToggle": "Фильтры"
   },
