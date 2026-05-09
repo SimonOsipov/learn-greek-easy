@@ -64,7 +64,7 @@ export const CulturePage: React.FC = () => {
       </div>
 
       {/* Mock-exam CTA — renders unconditionally above the deck grid */}
-      <Card className="mb-6 sm:mb-8">
+      <Card className="mb-6 sm:mb-8" data-testid="culture-mock-exam-cta">
         <CardHeader className="sm:flex-row sm:items-start sm:justify-between sm:gap-6 sm:space-y-0">
           <div className="flex items-start gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
