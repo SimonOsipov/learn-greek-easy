@@ -19,25 +19,14 @@ import { test, expect, Page } from '@playwright/test';
  * @returns The deck ID extracted from the URL
  */
 async function navigateToCulturePractice(page: Page): Promise<string> {
-  // Navigate to decks page
-  await page.goto('/decks');
+  // Navigate to the culture page (post-IA-01: culture decks live at /culture, not /decks)
+  await page.goto('/culture');
 
   // Wait for decks to load
   await expect(page.locator('[data-testid="deck-card"]').first()).toBeVisible({ timeout: 15000 });
 
-  // Filter to culture decks
-  const cultureButton = page.getByRole('button', { name: 'Culture', exact: true });
-  await cultureButton.click();
-
-  // Wait for the filter to be active (button should be in pressed state)
-  await expect(cultureButton).toHaveAttribute('aria-pressed', 'true', { timeout: 5000 });
-
-  // Wait for the deck list to update - find a deck card that contains a culture badge
-  // This ensures we're clicking on an actual culture deck, not a vocabulary deck
-  const cultureDeckCard = page.locator('[data-testid="deck-card"]').filter({
-    has: page.locator('[data-testid="culture-badge"]'),
-  });
-  await expect(cultureDeckCard.first()).toBeVisible({ timeout: 10000 });
+  // All cards on /culture are culture decks — no filter button needed
+  const cultureDeckCard = page.locator('[data-testid="deck-card"]');
 
   // Find a non-premium culture deck to click
   const nonPremiumCultureDeck = cultureDeckCard.filter({
@@ -67,23 +56,12 @@ async function navigateToCulturePractice(page: Page): Promise<string> {
 }
 
 /**
- * Helper function to navigate to decks page and filter to culture decks.
+ * Helper function to navigate to the culture page (post-IA-01: /culture instead of /decks + filter).
  */
 async function navigateToCultureDecks(page: Page): Promise<void> {
-  await page.goto('/decks');
+  // Post-IA-01: culture decks live at /culture, not behind a filter on /decks
+  await page.goto('/culture');
   await expect(page.locator('[data-testid="deck-card"]').first()).toBeVisible({ timeout: 15000 });
-
-  const cultureButton = page.getByRole('button', { name: 'Culture', exact: true });
-  await cultureButton.click();
-
-  // Wait for the filter to be active (button should be in pressed state)
-  await expect(cultureButton).toHaveAttribute('aria-pressed', 'true', { timeout: 5000 });
-
-  // Wait for culture deck cards to be visible (cards with culture badge)
-  const cultureDeckCard = page.locator('[data-testid="deck-card"]').filter({
-    has: page.locator('[data-testid="culture-badge"]'),
-  });
-  await expect(cultureDeckCard.first()).toBeVisible({ timeout: 10000 });
 }
 
 test.describe('Culture Practice Session', () => {
@@ -457,26 +435,12 @@ test.describe('Culture Practice Session - Variable Answer Counts', () => {
 
 test.describe('Culture Practice Session - Full Flow', () => {
   test('CULTURE-10.13: Complete practice session flow (integration)', async ({ page }) => {
-    // Navigate to decks
-    await page.goto('/decks');
+    // Navigate to the culture page (post-IA-01: culture decks live at /culture)
+    await page.goto('/culture');
     await expect(page.locator('[data-testid="deck-card"]').first()).toBeVisible({ timeout: 15000 });
 
-    // Filter to culture decks
-    const cultureTab = page.getByRole('button', { name: 'Culture', exact: true });
-    await expect(cultureTab).toBeVisible();
-    await cultureTab.click();
-
-    // Wait for the filter to be active (button should be in pressed state)
-    await expect(cultureTab).toHaveAttribute('aria-pressed', 'true', { timeout: 5000 });
-
-    // Wait for culture deck cards to be visible (cards with culture badge)
-    const cultureDeckCard = page.locator('[data-testid="deck-card"]').filter({
-      has: page.locator('[data-testid="culture-badge"]'),
-    });
-    await expect(cultureDeckCard.first()).toBeVisible({ timeout: 10000 });
-
-    // Click on a non-premium culture deck
-    const nonPremiumDeck = cultureDeckCard.filter({
+    // All cards on /culture are culture decks — pick a non-premium one
+    const nonPremiumDeck = page.locator('[data-testid="deck-card"]').filter({
       hasNot: page.locator('[aria-label="Premium content"]'),
     }).first();
     await nonPremiumDeck.click();
