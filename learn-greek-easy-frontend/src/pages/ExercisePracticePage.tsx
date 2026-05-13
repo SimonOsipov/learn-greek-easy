@@ -17,6 +17,8 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { AlertDialog } from '@/components/dialogs/AlertDialog';
 import { ExerciseContentStep } from '@/components/exercises/ExerciseContentStep';
 import { SelectCorrectAnswerRenderer } from '@/components/exercises/SelectCorrectAnswerRenderer';
+import { SelectDescriptionFromPictureCard } from '@/components/exercises/SelectDescriptionFromPictureCard';
+import { SelectPictureFromDescriptionCard } from '@/components/exercises/SelectPictureFromDescriptionCard';
 import { LanguageSwitcher } from '@/components/i18n';
 import { PracticeHeader, ProgressIndicator, SessionSummary } from '@/components/practice';
 import { QuestionLanguageSelector } from '@/components/shared';
@@ -168,11 +170,17 @@ export const ExercisePracticePage = () => {
   const handleOptionSelect = useCallback(
     (optionIndex: number) => {
       if (!currentExercise || feedbackState !== null) return;
+      const payload = currentExercise.items[0]?.payload as {
+        correct_answer_index?: number;
+        correct_index?: number;
+        options?: unknown[];
+      };
       const correctAnswerIndex =
-        (currentExercise.items[0]?.payload as { correct_answer_index?: number })
-          ?.correct_answer_index ?? -1;
+        (payload?.correct_answer_index as number | undefined) ??
+        (payload?.correct_index as number | undefined) ??
+        -1;
       if (correctAnswerIndex < 0) return;
-      const options = (currentExercise.items[0]?.payload as { options?: unknown[] })?.options;
+      const options = payload?.options;
       if (!options || optionIndex >= options.length) return;
       handleAnswer(optionIndex, correctAnswerIndex);
     },
@@ -347,13 +355,33 @@ export const ExercisePracticePage = () => {
               descriptionAudioDuration={currentExercise.description_audio_duration}
               onAudioPlay={handleAudioPlay}
             />
-            <SelectCorrectAnswerRenderer
-              items={currentExercise.items}
-              onAnswer={handleAnswer}
-              feedbackState={rendererFeedbackState}
-              disabled={isLoading}
-              language={language}
-            />
+            {/* Picture-match queue items are pre-filtered server-side (PMATCH-06). */}
+            {/* InsufficientDistractorPoolError cannot surface in this flow. */}
+            {currentExercise.exercise_type === 'select_picture_from_description' ? (
+              <SelectPictureFromDescriptionCard
+                items={currentExercise.items}
+                onAnswer={handleAnswer}
+                feedbackState={rendererFeedbackState}
+                disabled={isLoading}
+                exerciseId={currentExercise.exercise_id}
+              />
+            ) : currentExercise.exercise_type === 'select_description_from_picture' ? (
+              <SelectDescriptionFromPictureCard
+                items={currentExercise.items}
+                onAnswer={handleAnswer}
+                feedbackState={rendererFeedbackState}
+                disabled={isLoading}
+                exerciseId={currentExercise.exercise_id}
+              />
+            ) : (
+              <SelectCorrectAnswerRenderer
+                items={currentExercise.items}
+                onAnswer={handleAnswer}
+                feedbackState={rendererFeedbackState}
+                disabled={isLoading}
+                language={language}
+              />
+            )}
           </div>
         )}
       </div>
