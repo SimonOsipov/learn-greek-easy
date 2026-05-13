@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react';
+
 import { CheckCircle2, XCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -56,6 +58,13 @@ export function SelectDescriptionFromPictureCard({
   exerciseId,
 }: SelectDescriptionFromPictureCardProps) {
   const { t } = useTranslation('common');
+  const optionRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const anchorImageId = `sdfp-anchor-${exerciseId}`;
+
+  // Auto-focus first option when exercise changes (must be before any early return)
+  useEffect(() => {
+    optionRefs.current[0]?.focus();
+  }, [exerciseId]);
 
   const rawPayload = items[0]?.payload;
   if (!rawPayload) return null;
@@ -65,6 +74,22 @@ export function SelectDescriptionFromPictureCard({
   const handleOptionClick = (index: number) => {
     if (disabled || feedbackState !== null) return;
     onAnswer(index, correct_index);
+  };
+
+  // Vertical Up/Down arrow-key navigation
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
+    let target = -1;
+
+    if (e.key === 'ArrowDown') {
+      if (index < options.length - 1) target = index + 1;
+    } else if (e.key === 'ArrowUp') {
+      if (index > 0) target = index - 1;
+    }
+
+    if (target >= 0) {
+      e.preventDefault();
+      optionRefs.current[target]?.focus();
+    }
   };
 
   const announcement =
@@ -83,18 +108,30 @@ export function SelectDescriptionFromPictureCard({
           imageUrl={anchor_image_url}
           optionIndex={0}
           exerciseId={exerciseId}
+          alt={t('exercises.session.pictureMatch.anchorAlt')}
           className="mx-auto mb-6 aspect-square w-full max-w-[280px]"
         />
+        {/* Visually hidden anchor label for aria-describedby on option buttons */}
+        <span id={anchorImageId} className="sr-only">
+          {t('exercises.session.pictureMatch.anchorAlt')}
+        </span>
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {options.map((opt: PictureMatchOption, i: number) => (
           <button
             key={i}
+            ref={(el) => {
+              optionRefs.current[i] = el;
+            }}
             data-testid={`sdfp-option-${i}`}
             className={getOptionClasses(i, feedbackState, disabled)}
             disabled={disabled || feedbackState !== null}
             onClick={() => handleOptionClick(i)}
+            onKeyDown={(e) => handleKeyDown(e, i)}
             type="button"
+            aria-pressed={feedbackState !== null ? feedbackState.selectedIndex === i : false}
+            aria-label={t('exercises.session.pictureMatch.optionLabel', { number: i + 1 })}
+            aria-describedby={anchorImageId}
           >
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold">
               {i + 1}

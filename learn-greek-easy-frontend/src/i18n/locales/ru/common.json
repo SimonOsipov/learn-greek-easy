@@ -69,6 +69,12 @@
       "contentStep": {
         "readingPassage": "Текст для чтения",
         "listeningAudio": "Аудиозапись"
+      },
+      "pictureMatch": {
+        "correctAnnouncement": "Правильно!",
+        "incorrectAnnouncement": "Неправильно. Правильный ответ — вариант {{number}}.",
+        "optionLabel": "Вариант с картинкой {{number}}",
+        "anchorAlt": "Опорное изображение для выбора описания"
       }
     }
   },

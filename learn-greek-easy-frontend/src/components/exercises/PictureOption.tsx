@@ -10,7 +10,7 @@ interface PictureOptionProps {
   imageUrl: string | null;
   optionIndex: number;
   exerciseId: string;
-  alt?: string;
+  alt: string;
   className?: string;
 }
 
@@ -20,7 +20,7 @@ export function PictureOption({
   imageUrl,
   optionIndex,
   exerciseId,
-  alt = '',
+  alt,
   className,
 }: PictureOptionProps) {
   const [imgState, setImgState] = useState<ImgState>(imageUrl ? 'loading' : 'error');
