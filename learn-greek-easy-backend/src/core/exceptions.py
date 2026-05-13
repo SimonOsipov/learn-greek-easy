@@ -255,6 +255,17 @@ class ConflictException(BaseAPIException):
         )
 
 
+class InsufficientDistractorPoolException(BaseAPIException):
+    """Not enough distractor candidates to build a 4-option picture-match exercise."""
+
+    def __init__(self, detail: str = "Insufficient distractor pool to generate exercise") -> None:
+        super().__init__(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=detail,
+            error_code="INSUFFICIENT_DISTRACTOR_POOL",
+        )
+
+
 # ============================================================================
 # Rate Limiting
 # ============================================================================
