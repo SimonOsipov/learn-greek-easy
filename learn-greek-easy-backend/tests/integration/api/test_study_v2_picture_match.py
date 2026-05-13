@@ -186,7 +186,7 @@ class TestPictureMatchFullFlow:
         """GET /exercises/{id} returns a payload with 4 options for picture-match."""
         situations = await _create_four_ready_situations(db_session)
         exercises = await _create_picture_exercises_for_situations(db_session, situations)
-        anchor_pic_ex, anchor_exercise = exercises[0]
+        _anchor_pic_ex, anchor_exercise = exercises[0]
         await db_session.commit()
 
         with _mock_s3_presign():

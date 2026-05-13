@@ -137,8 +137,17 @@ export const exerciseAPI = {
     } catch (err) {
       if (err instanceof APIRequestError && err.status === 409) {
         // The backend serialises BaseAPIException as { error: { code, message, ... } }.
-        // api.ts maps `error.message` → err.message, so we detect via the message string.
+        // Prefer the structured `code` field when present; fall back to message-string
+        // matching as a defensive layer for plain-text error shapes.
+        const detailCode =
+          typeof err.detail === 'object' &&
+          err.detail !== null &&
+          !Array.isArray(err.detail) &&
+          'code' in err.detail
+            ? String((err.detail as Record<string, unknown>).code)
+            : undefined;
         const isInsufficientPool =
+          detailCode === 'INSUFFICIENT_DISTRACTOR_POOL' ||
           err.message?.includes('INSUFFICIENT_DISTRACTOR_POOL') ||
           err.message?.toLowerCase().includes('insufficient distractor pool');
         if (isInsufficientPool) {

@@ -30,18 +30,12 @@ function getOptionClasses(
 
   if (feedbackState !== null) {
     if (index === feedbackState.correctIndex) {
-      return cn(
-        base,
-        'cursor-not-allowed border-[hsl(var(--practice-correct))] bg-[hsl(var(--practice-correct-soft))]'
-      );
+      return cn(base, 'cursor-not-allowed border-practice-correct bg-practice-correct-soft');
     }
     if (index === feedbackState.selectedIndex && index !== feedbackState.correctIndex) {
-      return cn(
-        base,
-        'cursor-not-allowed border-[hsl(var(--practice-incorrect))] bg-[hsl(var(--practice-incorrect-soft))]'
-      );
+      return cn(base, 'cursor-not-allowed border-practice-incorrect bg-practice-incorrect-soft');
     }
-    return cn(base, 'cursor-not-allowed border-transparent opacity-[0.35]');
+    return cn(base, 'cursor-not-allowed border-transparent opacity-35');
   }
 
   if (disabled) {
@@ -141,14 +135,14 @@ export function SelectPictureFromDescriptionCard({
             />
             {feedbackState !== null && i === feedbackState.correctIndex && (
               <div className="absolute inset-0 flex items-center justify-center">
-                <CheckCircle2 className="h-10 w-10 text-[hsl(var(--practice-correct))] drop-shadow" />
+                <CheckCircle2 className="h-10 w-10 text-practice-correct drop-shadow" />
               </div>
             )}
             {feedbackState !== null &&
               i === feedbackState.selectedIndex &&
               i !== feedbackState.correctIndex && (
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <XCircle className="h-10 w-10 text-[hsl(var(--practice-incorrect))] drop-shadow" />
+                  <XCircle className="h-10 w-10 text-practice-incorrect drop-shadow" />
                 </div>
               )}
           </button>

@@ -29,18 +29,12 @@ function getOptionClasses(
 
   if (feedbackState !== null) {
     if (index === feedbackState.correctIndex) {
-      return cn(
-        base,
-        'cursor-not-allowed border-[hsl(var(--practice-correct))] bg-[hsl(var(--practice-correct-soft))]'
-      );
+      return cn(base, 'cursor-not-allowed border-practice-correct bg-practice-correct-soft');
     }
     if (index === feedbackState.selectedIndex && index !== feedbackState.correctIndex) {
-      return cn(
-        base,
-        'cursor-not-allowed border-[hsl(var(--practice-incorrect))] bg-[hsl(var(--practice-incorrect-soft))]'
-      );
+      return cn(base, 'cursor-not-allowed border-practice-incorrect bg-practice-incorrect-soft');
     }
-    return cn(base, 'cursor-not-allowed opacity-[0.35]');
+    return cn(base, 'cursor-not-allowed opacity-35');
   }
 
   if (disabled) {
@@ -143,12 +137,12 @@ export function SelectDescriptionFromPictureCard({
             </span>
             <span className="flex-1">{opt.description_text}</span>
             {feedbackState !== null && i === feedbackState.correctIndex && (
-              <CheckCircle2 className="ml-auto h-5 w-5 shrink-0 text-[hsl(var(--practice-correct))]" />
+              <CheckCircle2 className="ml-auto h-5 w-5 shrink-0 text-practice-correct" />
             )}
             {feedbackState !== null &&
               i === feedbackState.selectedIndex &&
               i !== feedbackState.correctIndex && (
-                <XCircle className="ml-auto h-5 w-5 shrink-0 text-[hsl(var(--practice-incorrect))]" />
+                <XCircle className="ml-auto h-5 w-5 shrink-0 text-practice-incorrect" />
               )}
           </button>
         ))}

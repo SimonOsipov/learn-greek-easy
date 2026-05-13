@@ -22,14 +22,14 @@
  * Pre-authenticated as: e2e_learner@test.com (storageState: learner.json)
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 const PRACTICE_SESSION_URL = '/practice/exercises/session';
 
 // ──────────────────────────────────────────────
 // Helper: navigate to the exercise practice page and wait for a card
 // ──────────────────────────────────────────────
-async function navigateToExerciseSession(page: Parameters<typeof test>[1] extends (opts: infer O) => void ? never : ReturnType<typeof test.extend>[1]['page']) {
+async function navigateToExerciseSession(page: Page) {
   await page.goto(PRACTICE_SESSION_URL);
   await page.waitForLoadState('domcontentloaded');
 }
