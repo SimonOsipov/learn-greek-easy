@@ -291,6 +291,8 @@ class ExerciseType(str, enum.Enum):
     SELECT_HEARD = "select_heard"
     TRUE_FALSE = "true_false"
     SELECT_CORRECT_ANSWER = "select_correct_answer"
+    SELECT_PICTURE_FROM_DESCRIPTION = "select_picture_from_description"
+    SELECT_DESCRIPTION_FROM_PICTURE = "select_description_from_picture"
 
 
 class ExerciseSourceType(str, enum.Enum):
