@@ -46,7 +46,9 @@ from src.core.logging import get_logger
 from src.db.models import PictureStatus, Situation, SituationPicture
 from src.schemas.nlp import OpenRouterImageResult
 from src.services.openrouter_service import OpenRouterService
-from src.services.picture_match_exercise_service import ensure_picture_match_exercises_for_situation
+from src.services.picture_match_exercise_service import (
+    reconcile_picture_match_exercises_for_situation,
+)
 from src.services.s3_service import S3Service
 
 logger = get_logger(__name__)
@@ -195,7 +197,7 @@ async def persist_picture_generation(
                 raise PicturePersistError(f"Picture vanished mid-pipeline: {picture_id}")
             picture.image_s3_key = s3_key
             picture.status = PictureStatus.GENERATED
-            await ensure_picture_match_exercises_for_situation(session, picture.situation_id)
+            await reconcile_picture_match_exercises_for_situation(session, picture.situation_id)
     except PicturePersistError:
         raise
     except Exception as exc:
