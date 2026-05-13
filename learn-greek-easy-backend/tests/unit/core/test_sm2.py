@@ -6,6 +6,7 @@ Tests cover:
 - determine_status: Card status transitions
 - calculate_sm2: Full SM-2 calculation orchestration
 - calculate_next_review_date: Date arithmetic
+- derive_exercise_quality: Score-to-quality mapping regression tests
 - Edge cases and error handling
 
 Acceptance Criteria tested:
@@ -14,6 +15,7 @@ Acceptance Criteria tested:
 - AC #3: All status transition paths tested
 - AC #4: Edge cases covered
 - AC #5: Invalid input handling tested
+- SIT-26 PMATCH-13: derive_exercise_quality regression tests
 """
 
 from datetime import date, timedelta
@@ -30,6 +32,7 @@ from src.core.sm2 import (
     calculate_interval,
     calculate_next_review_date,
     calculate_sm2,
+    derive_exercise_quality,
     determine_status,
 )
 from src.db.models import CardStatus
@@ -610,3 +613,22 @@ class TestConstants:
     def test_learning_repetitions_threshold_value(self):
         """LEARNING_REPETITIONS_THRESHOLD should be 3."""
         assert LEARNING_REPETITIONS_THRESHOLD == 3
+
+
+@pytest.mark.unit
+@pytest.mark.sm2
+class TestDeriveExerciseQualityRegression:
+    """SIT-26 PMATCH-13: Regression tests for derive_exercise_quality().
+
+    These are the two canonical contracts mandated by the picture-match
+    story: a perfect picture-match answer must yield quality 5, and a
+    wrong answer (score=0) must yield quality 0.
+    """
+
+    def test_perfect_score_yields_quality_5(self) -> None:
+        """derive_exercise_quality(1, 1) == 5 — ratio == 1.0 → SM-2 quality 5."""
+        assert derive_exercise_quality(1, 1) == 5
+
+    def test_zero_score_yields_quality_0(self) -> None:
+        """derive_exercise_quality(0, 1) == 0 — ratio == 0.0 → SM-2 quality 0."""
+        assert derive_exercise_quality(0, 1) == 0
