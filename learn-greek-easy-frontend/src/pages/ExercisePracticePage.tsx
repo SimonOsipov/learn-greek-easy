@@ -103,8 +103,16 @@ export const ExercisePracticePage = () => {
       if (!currentExercise || feedbackState !== null) return;
       const responseTimeMs = exerciseStartTime ? Date.now() - exerciseStartTime : 0;
       const isCorrect = selectedIndex === correctIndex;
+      const exerciseTypeProperty: string = (() => {
+        if (currentExercise.exercise_type === 'select_picture_from_description')
+          return 'select_picture';
+        if (currentExercise.exercise_type === 'select_description_from_picture')
+          return 'select_description';
+        return currentExercise.exercise_type ?? 'unknown';
+      })();
       track('exercise_answered', {
         exercise_id: currentExercise.exercise_id,
+        exercise_type: exerciseTypeProperty,
         modality: currentExercise.modality ?? 'all',
         is_correct: isCorrect,
         response_time_ms: responseTimeMs,
