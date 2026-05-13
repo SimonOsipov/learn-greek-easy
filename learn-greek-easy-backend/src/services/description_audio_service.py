@@ -29,6 +29,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from src.core.logging import get_logger
 from src.db.models import DescriptionStatus, SituationDescription
 from src.services.audio_generation_service import AudioGenerationService, AudioWithTimestampsResult
+from src.services.picture_match_exercise_service import ensure_picture_match_exercises_for_situation
 
 logger = get_logger(__name__)
 
@@ -169,11 +170,15 @@ async def persist_description_audio(
                 update(SituationDescription)
                 .where(SituationDescription.id == description_id)
                 .values(**values)
+                .returning(SituationDescription.situation_id)
             )
-            if update_result.rowcount == 0:  # type: ignore[attr-defined]
+            row = update_result.fetchone()
+            if row is None:
                 raise DescriptionPersistError(
                     f"No description row matched id={description_id} during update"
                 )
+            situation_id = row[0]
+            await ensure_picture_match_exercises_for_situation(session, situation_id)
     except DescriptionPersistError:
         raise
     except Exception as exc:
