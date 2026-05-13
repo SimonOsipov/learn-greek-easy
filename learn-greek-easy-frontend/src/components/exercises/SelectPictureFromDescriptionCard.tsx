@@ -110,6 +110,9 @@ export function SelectPictureFromDescriptionCard({
 
   return (
     <div data-testid="spfd-renderer">
+      <h2 className="mb-1 text-center text-sm font-medium text-muted-foreground">
+        {t('exercises.session.pictureMatch.pickPicturePrompt')}
+      </h2>
       <p id={promptId} className="mb-6 text-center text-lg font-medium">
         {prompt_description}
       </p>

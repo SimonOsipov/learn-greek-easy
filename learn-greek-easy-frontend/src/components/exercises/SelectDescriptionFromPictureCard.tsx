@@ -103,6 +103,9 @@ export function SelectDescriptionFromPictureCard({
 
   return (
     <div data-testid="sdfp-renderer">
+      <h2 className="mb-3 text-center text-sm font-medium text-muted-foreground">
+        {t('exercises.session.pictureMatch.pickDescriptionPrompt')}
+      </h2>
       <div className="mb-6">
         <PictureOption
           imageUrl={anchor_image_url}
@@ -130,7 +133,9 @@ export function SelectDescriptionFromPictureCard({
             onKeyDown={(e) => handleKeyDown(e, i)}
             type="button"
             aria-pressed={feedbackState !== null ? feedbackState.selectedIndex === i : false}
-            aria-label={t('exercises.session.pictureMatch.optionLabel', { number: i + 1 })}
+            aria-label={t('exercises.session.pictureMatch.descriptionOptionLabel', {
+              number: i + 1,
+            })}
             aria-describedby={anchorImageId}
           >
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold">

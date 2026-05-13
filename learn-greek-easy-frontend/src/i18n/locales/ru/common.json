@@ -71,10 +71,18 @@
         "listeningAudio": "Аудиозапись"
       },
       "pictureMatch": {
+        "pickPicturePrompt": "Выберите подходящую картинку",
+        "pickDescriptionPrompt": "Выберите подходящее описание",
         "correctAnnouncement": "Правильно!",
         "incorrectAnnouncement": "Неправильно. Правильный ответ — вариант {{number}}.",
         "optionLabel": "Вариант с картинкой {{number}}",
-        "anchorAlt": "Опорное изображение для выбора описания"
+        "descriptionOptionLabel": "Описание {{number}}",
+        "anchorAlt": "Опорное изображение для выбора описания",
+        "imageLoadError": "Не удалось загрузить изображение",
+        "selected": "Выбрано",
+        "correctAnswer": "Правильный ответ",
+        "incorrect": "Неправильно",
+        "skipInsufficientPool": "Упражнение пропущено — недостаточно материала"
       }
     }
   },

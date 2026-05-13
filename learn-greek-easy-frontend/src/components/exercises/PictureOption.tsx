@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { ImageOff } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { Skeleton } from '@/components/ui/skeleton';
 import { getSentry, isSentryLoaded, queueMessage } from '@/lib/sentry-queue';
@@ -23,6 +24,7 @@ export function PictureOption({
   alt,
   className,
 }: PictureOptionProps) {
+  const { t } = useTranslation('common');
   const [imgState, setImgState] = useState<ImgState>(imageUrl ? 'loading' : 'error');
   const reportedUrlRef = useRef<string | null>(null);
 
@@ -72,7 +74,9 @@ export function PictureOption({
         aria-hidden="true"
       >
         <ImageOff className="h-8 w-8 text-muted-foreground" />
-        <span className="mt-1 text-xs text-muted-foreground">{optionIndex + 1}</span>
+        <span className="mt-1 text-xs text-muted-foreground">
+          {t('exercises.session.pictureMatch.imageLoadError')}
+        </span>
       </div>
     );
   }

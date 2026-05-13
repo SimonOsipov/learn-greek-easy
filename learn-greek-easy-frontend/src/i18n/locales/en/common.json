@@ -69,10 +69,18 @@
         "listeningAudio": "Listening audio"
       },
       "pictureMatch": {
+        "pickPicturePrompt": "Pick the matching picture",
+        "pickDescriptionPrompt": "Pick the matching description",
         "correctAnnouncement": "Correct!",
         "incorrectAnnouncement": "Incorrect. The correct answer was option {{number}}.",
         "optionLabel": "Picture option {{number}}",
-        "anchorAlt": "Anchor picture for description matching"
+        "descriptionOptionLabel": "Description option {{number}}",
+        "anchorAlt": "Anchor picture for description matching",
+        "imageLoadError": "Image failed to load",
+        "selected": "Selected",
+        "correctAnswer": "Correct answer",
+        "incorrect": "Incorrect",
+        "skipInsufficientPool": "Skipping — not enough material for this exercise yet"
       }
     }
   },
