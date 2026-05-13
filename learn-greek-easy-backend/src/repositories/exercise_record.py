@@ -16,6 +16,8 @@ from src.db.models import (
     ExerciseModality,
     ExerciseRecord,
     ExerciseSourceType,
+    ExerciseStatus,
+    PictureExercise,
     Situation,
     SituationDescription,
     SituationStatus,
@@ -104,12 +106,17 @@ class ExerciseRecordRepository(BaseRepository[ExerciseRecord]):
                 SituationDescription, DescriptionExercise.description_id == SituationDescription.id
             )
             .outerjoin(Situation, SituationDescription.situation_id == Situation.id)
+            .outerjoin(PictureExercise, Exercise.picture_exercise_id == PictureExercise.id)
             .where(ExerciseRecord.user_id == user_id)
             .where(ExerciseRecord.next_review_date <= date.today())
             .where(ExerciseRecord.status != CardStatus.NEW)
             .where(
                 (Exercise.source_type != ExerciseSourceType.DESCRIPTION)
                 | (Situation.status == SituationStatus.READY)
+            )
+            .where(
+                (Exercise.source_type != ExerciseSourceType.PICTURE)
+                | (PictureExercise.status == ExerciseStatus.APPROVED)
             )
             .options(selectinload(ExerciseRecord.exercise))
             .order_by(
@@ -153,10 +160,15 @@ class ExerciseRecordRepository(BaseRepository[ExerciseRecord]):
                 SituationDescription, DescriptionExercise.description_id == SituationDescription.id
             )
             .outerjoin(Situation, SituationDescription.situation_id == Situation.id)
+            .outerjoin(PictureExercise, Exercise.picture_exercise_id == PictureExercise.id)
             .where(not_(Exercise.id.in_(studied_subq)))
             .where(
                 (Exercise.source_type != ExerciseSourceType.DESCRIPTION)
                 | (Situation.status == SituationStatus.READY)
+            )
+            .where(
+                (Exercise.source_type != ExerciseSourceType.PICTURE)
+                | (PictureExercise.status == ExerciseStatus.APPROVED)
             )
             .order_by(SituationDescription.situation_id, Exercise.id)
             .limit(limit)
@@ -193,12 +205,17 @@ class ExerciseRecordRepository(BaseRepository[ExerciseRecord]):
                 SituationDescription, DescriptionExercise.description_id == SituationDescription.id
             )
             .outerjoin(Situation, SituationDescription.situation_id == Situation.id)
+            .outerjoin(PictureExercise, Exercise.picture_exercise_id == PictureExercise.id)
             .where(ExerciseRecord.user_id == user_id)
             .where(ExerciseRecord.next_review_date > date.today())
             .where(ExerciseRecord.status.in_([CardStatus.LEARNING, CardStatus.REVIEW]))
             .where(
                 (Exercise.source_type != ExerciseSourceType.DESCRIPTION)
                 | (Situation.status == SituationStatus.READY)
+            )
+            .where(
+                (Exercise.source_type != ExerciseSourceType.PICTURE)
+                | (PictureExercise.status == ExerciseStatus.APPROVED)
             )
             .options(selectinload(ExerciseRecord.exercise))
             .order_by(
