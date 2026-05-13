@@ -180,7 +180,13 @@ async def persist_description_audio(
                     f"No description row matched id={description_id} during update"
                 )
             situation_id = row[0]
-            await reconcile_picture_match_exercises_for_situation(session, situation_id)
+            try:
+                await reconcile_picture_match_exercises_for_situation(session, situation_id)
+            except Exception as exc:  # broad except: reconcile failure must not block persist
+                logger.error(
+                    "picture_match_reconcile_failed",
+                    extra={"situation_id": str(situation_id), "error": str(exc)},
+                )
     except DescriptionPersistError:
         raise
     except Exception as exc:

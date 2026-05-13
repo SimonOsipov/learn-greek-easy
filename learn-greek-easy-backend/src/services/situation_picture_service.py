@@ -197,7 +197,13 @@ async def persist_picture_generation(
                 raise PicturePersistError(f"Picture vanished mid-pipeline: {picture_id}")
             picture.image_s3_key = s3_key
             picture.status = PictureStatus.GENERATED
-            await reconcile_picture_match_exercises_for_situation(session, picture.situation_id)
+            try:
+                await reconcile_picture_match_exercises_for_situation(session, picture.situation_id)
+            except Exception as exc:  # broad except: reconcile failure must not block persist
+                logger.error(
+                    "picture_match_reconcile_failed",
+                    extra={"situation_id": str(picture.situation_id), "error": str(exc)},
+                )
     except PicturePersistError:
         raise
     except Exception as exc:

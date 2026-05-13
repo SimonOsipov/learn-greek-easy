@@ -160,11 +160,12 @@ class TestPictureMatchFullFlow:
         exercises = await _create_picture_exercises_for_situations(db_session, situations)
         await db_session.commit()
 
-        response = await client.get(
-            QUEUE_URL,
-            params={"source_type": "picture"},
-            headers=auth_headers,
-        )
+        with _mock_s3_presign():
+            response = await client.get(
+                QUEUE_URL,
+                params={"source_type": "picture"},
+                headers=auth_headers,
+            )
         assert response.status_code == 200
         data = response.json()
         assert data["total_in_queue"] >= 1
