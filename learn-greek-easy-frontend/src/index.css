@@ -700,11 +700,11 @@
     border-radius: 16px;
     background: hsl(var(--bg-2));
     border: 1px solid hsl(var(--fg) / 0.06);
-    cursor: pointer;
+    cursor: default;
     transition: all 0.18s;
     position: relative;
   }
-  .stat-card:hover {
+  .stat-card.is-clickable:hover {
     border-color: hsl(var(--primary) / 0.4);
     transform: translateY(-1px);
   }
@@ -992,6 +992,9 @@
     grid-template-columns: 28px 1fr;
     gap: 0;
     padding: 4px 0;
+    cursor: default;
+  }
+  .cl-entry.is-clickable {
     cursor: pointer;
   }
   .cl-entry-rail {

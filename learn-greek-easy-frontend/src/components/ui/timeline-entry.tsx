@@ -60,7 +60,12 @@ const TimelineEntry = React.forwardRef<HTMLElement, TimelineEntryProps>(
       : {};
 
     return (
-      <article ref={ref} className={cn('cl-entry', className)} {...interactiveProps} {...rest}>
+      <article
+        ref={ref}
+        className={cn('cl-entry', onClick && 'is-clickable', className)}
+        {...interactiveProps}
+        {...rest}
+      >
         <div className="cl-entry-rail">
           <span className={cn('cl-entry-dot', `tone-${tone}`)} />
         </div>

@@ -143,4 +143,21 @@ describe('TimelineEntry — interactive aria + keyboard', () => {
     expect(root.getAttribute('role')).toBeNull();
     expect(root.getAttribute('tabindex')).toBeNull();
   });
+
+  it('adds is-clickable class to root article when onClick is set', () => {
+    const spy = vi.fn();
+    const { container } = render(
+      <TimelineEntry tone="violet" title="T" body="body" onClick={spy} />
+    );
+
+    const root = container.firstChild as HTMLElement;
+    expect(root).toHaveClass('is-clickable');
+  });
+
+  it('does not add is-clickable class when onClick is absent', () => {
+    const { container } = render(<TimelineEntry tone="green" title="T" body="body" />);
+
+    const root = container.firstChild as HTMLElement;
+    expect(root).not.toHaveClass('is-clickable');
+  });
 });

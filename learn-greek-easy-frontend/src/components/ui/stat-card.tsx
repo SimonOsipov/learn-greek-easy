@@ -58,12 +58,12 @@ const StatCard = React.forwardRef<HTMLDivElement, StatCardProps>(
     return (
       <div
         ref={ref}
+        {...rest}
         className={cn('stat-card', `tone-${tone}`, onClick && 'is-clickable', className)}
         role={onClick ? 'button' : undefined}
         tabIndex={onClick ? 0 : undefined}
         onClick={onClick}
         onKeyDown={onClick ? handleKeyDown : undefined}
-        {...rest}
       >
         <div className="stat-head">
           <span className="stat-icon" aria-hidden="true">
