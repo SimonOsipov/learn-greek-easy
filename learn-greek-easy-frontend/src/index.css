@@ -1247,6 +1247,12 @@
     pointer-events: none;
     transition: width 0.15s;
   }
+
+  /* Hide shadcn SheetContent's built-in absolutely-positioned close button inside SidePanel;
+     SidePanel.CloseButton is the only close affordance we expose. */
+  [data-side-panel] > button.absolute {
+    display: none;
+  }
 }
 
 /* Theme transition animation */
