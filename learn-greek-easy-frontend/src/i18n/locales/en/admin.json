@@ -278,20 +278,47 @@
     "noDecksFound": "No decks found matching your search"
   },
   "tabs": {
+    "dashboard": "Dashboard",
+    "inbox": "Inbox",
     "decks": "Decks",
     "news": "News",
     "announcements": "Announcements",
     "feedback": "Feedback",
     "changelog": "Changelog",
     "cardErrors": "Card Errors",
+    "errors": "Card errors",
     "situations": "Situations",
+    "exercises": "Exercises",
     "exercisesListening": "Listening",
-    "exercisesReading": "Reading",
-    "groups": {
-      "content": "Content",
-      "exercises": "Exercises",
-      "reviews": "Reviews",
-      "system": "System"
+    "exercisesReading": "Reading"
+  },
+  "shell": {
+    "topBar": {
+      "brand": "Greeklish admin",
+      "search": "Search admin",
+      "theme": "Toggle theme",
+      "language": "Switch language",
+      "notifications": "Notifications",
+      "nav": {
+        "admin": "Admin",
+        "dashboard": "Dashboard",
+        "decks": "Decks",
+        "practice": "Practice",
+        "statistics": "Statistics",
+        "support": "Support"
+      }
+    },
+    "pageHead": {
+      "dashboard": {
+        "title": "Dashboard",
+        "sub": "Overview of content, inbox, and recent activity.",
+        "placeholder": "Stats, inbox preview, content pipeline, and recent activity will land here."
+      },
+      "inbox": {
+        "title": "Inbox",
+        "sub": "Cross-content attention queue — feedback, drafts, audio gaps, and card errors will surface here.",
+        "empty": "No items needing attention. Aggregated inbox coming soon."
+      }
     }
   },
   "announcements": {

@@ -23,11 +23,26 @@ const badgeVariants = cva(
   }
 );
 
+export type BadgeTone = 'blue' | 'violet' | 'amber' | 'green' | 'red' | 'cyan' | 'gray';
+
 export interface BadgeProps
   extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof badgeVariants> {}
+    VariantProps<typeof badgeVariants> {
+  /**
+   * Admin v2.4 tone. When set, renders via the `.badge.b-{tone}` CSS classes
+   * and ignores `variant`. Composes with `onPhoto` for frosted backing.
+   */
+  tone?: BadgeTone;
+  /** Frosted card backing for badges placed over photos. Composes with `tone`. */
+  onPhoto?: boolean;
+}
 
-function Badge({ className, variant, ...props }: BadgeProps) {
+function Badge({ className, variant, tone, onPhoto, ...props }: BadgeProps) {
+  if (tone) {
+    return (
+      <div className={cn('badge', `b-${tone}`, onPhoto && 'on-photo', className)} {...props} />
+    );
+  }
   return <div className={cn(badgeVariants({ variant }), className)} {...props} />;
 }
 

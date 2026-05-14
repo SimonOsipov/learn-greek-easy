@@ -11,7 +11,6 @@ import React, {
 
 import {
   AlertCircle,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Crown,
@@ -24,6 +23,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 
 import {
   AdminCardErrorSection,
@@ -42,18 +42,13 @@ import {
   SituationsTab,
   SummaryCard,
 } from '@/components/admin';
+import { PageHead, SectionTabs, type SectionTabItem, TopBar } from '@/components/admin/shell';
 import { CultureBadge, type CultureCategory } from '@/components/culture';
 import { DeckBadge } from '@/components/decks';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -542,28 +537,39 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
 AllDecksList.displayName = 'AllDecksList';
 
 /**
- * Top-level admin tab type
+ * Top-level admin tab type (ADMIN2 redesign — flat 10-tab strip).
+ * `exercises` is an umbrella for listening + reading via internal sub-toggle.
+ * `errors` URL key replaces v1 `cardErrors` (component/store names unchanged).
  */
-type AdminTabType =
+export type AdminTabType =
+  | 'dashboard'
+  | 'inbox'
   | 'decks'
   | 'news'
-  | 'announcements'
-  | 'changelog'
-  | 'cardErrors'
-  | 'feedback'
   | 'situations'
-  | 'exercisesListening'
-  | 'exercisesReading';
+  | 'exercises'
+  | 'errors'
+  | 'feedback'
+  | 'changelog'
+  | 'announcements';
 
-const ADMIN_TAB_GROUPS: { key: string; tabs: AdminTabType[] }[] = [
-  { key: 'content', tabs: ['decks', 'news', 'situations'] },
-  { key: 'exercises', tabs: ['exercisesListening', 'exercisesReading'] },
-  { key: 'reviews', tabs: ['cardErrors', 'feedback'] },
-  { key: 'system', tabs: ['changelog', 'announcements'] },
+const ADMIN_TAB_KEYS: AdminTabType[] = [
+  'dashboard',
+  'inbox',
+  'decks',
+  'news',
+  'situations',
+  'exercises',
+  'errors',
+  'feedback',
+  'changelog',
+  'announcements',
 ];
 
-const getGroupForTab = (tab: AdminTabType): string | undefined =>
-  ADMIN_TAB_GROUPS.find((g) => g.tabs.includes(tab))?.key;
+const isValidTab = (key: string | null): key is AdminTabType =>
+  key !== null && (ADMIN_TAB_KEYS as string[]).includes(key);
+
+type ExerciseModality = 'listening' | 'reading';
 
 /**
  * Admin Page
@@ -583,8 +589,35 @@ const AdminPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isRetrying, setIsRetrying] = useState(false);
 
-  // Top-level tab state
-  const [activeTab, setActiveTab] = useState<AdminTabType>('decks');
+  // Top-level tab state — synced to ?tab= URL param
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = ((): AdminTabType => {
+    const fromUrl = searchParams.get('tab');
+    return isValidTab(fromUrl) ? fromUrl : 'dashboard';
+  })();
+  const [activeTab, setActiveTab] = useState<AdminTabType>(initialTab);
+
+  // Internal sub-toggle for the umbrella 'exercises' tab (listening vs. reading)
+  const [exerciseModality, setExerciseModality] = useState<ExerciseModality>('listening');
+
+  // URL → state: when the user uses back/forward, mirror the URL into activeTab.
+  useEffect(() => {
+    const fromUrl = searchParams.get('tab');
+    if (isValidTab(fromUrl) && fromUrl !== activeTab) {
+      setActiveTab(fromUrl);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  // State → URL: when the user clicks a tab, replace the URL (no history spam).
+  useEffect(() => {
+    if (searchParams.get('tab') !== activeTab) {
+      const next = new URLSearchParams(searchParams);
+      next.set('tab', activeTab);
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   // Deck edit modal state
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -989,169 +1022,223 @@ const AdminPage: React.FC = () => {
     );
   }
 
+  const sectionTabs: SectionTabItem<AdminTabType>[] = [
+    { key: 'inbox', label: t('tabs.inbox', 'Inbox'), count: 0, tone: 'amber' },
+    { key: 'decks', label: t('tabs.decks'), count: stats.total_decks },
+    { key: 'news', label: t('tabs.news'), count: 0 },
+    { key: 'situations', label: t('tabs.situations'), count: 0 },
+    { key: 'exercises', label: t('tabs.exercises', 'Exercises'), count: 0 },
+    { key: 'errors', label: t('tabs.cardErrors'), count: 0 },
+    { key: 'feedback', label: t('tabs.feedback'), count: 0 },
+    { key: 'changelog', label: t('tabs.changelog'), count: 0 },
+    { key: 'announcements', label: t('tabs.announcements'), count: 0 },
+  ];
+
+  const pageHeadFor = (tab: AdminTabType) => {
+    const titles: Record<AdminTabType, { title: string; sub: string }> = {
+      dashboard: {
+        title: t('shell.pageHead.dashboard.title', 'Dashboard'),
+        sub: t('shell.pageHead.dashboard.sub', 'Overview of content, inbox, and recent activity.'),
+      },
+      inbox: {
+        title: t('shell.pageHead.inbox.title', 'Inbox'),
+        sub: t(
+          'shell.pageHead.inbox.sub',
+          'Cross-content attention queue — feedback, drafts, audio gaps, and card errors will surface here.'
+        ),
+      },
+      decks: { title: t('tabs.decks'), sub: t('page.subtitle') },
+      news: { title: t('tabs.news'), sub: t('page.subtitle') },
+      situations: { title: t('tabs.situations'), sub: t('page.subtitle') },
+      exercises: {
+        title: t('tabs.exercises', 'Exercises'),
+        sub: t('page.subtitle'),
+      },
+      errors: { title: t('tabs.cardErrors'), sub: t('page.subtitle') },
+      feedback: { title: t('tabs.feedback'), sub: t('page.subtitle') },
+      changelog: { title: t('tabs.changelog'), sub: t('page.subtitle') },
+      announcements: { title: t('tabs.announcements'), sub: t('page.subtitle') },
+    };
+    return titles[tab];
+  };
+
+  const pageHead = pageHeadFor(activeTab);
+
   return (
-    <div className="space-y-6 pb-8" data-testid="admin-page">
-      {/* Page Header */}
-      <div>
-        <h1
-          className="text-2xl font-semibold text-foreground md:text-3xl"
-          data-testid="admin-title"
-        >
-          {t('page.title')}
-        </h1>
-        <p className="mt-2 text-muted-foreground" data-testid="admin-subtitle">
-          {t('page.subtitle')}
-        </p>
-      </div>
+    <div data-testid="admin-page">
+      <TopBar hasNotifications={false} />
+      <main className="va-main">
+        <PageHead title={pageHead.title} sub={pageHead.sub} />
+        <SectionTabs<AdminTabType>
+          tabs={sectionTabs}
+          active={activeTab}
+          onTabChange={setActiveTab}
+          data-testid="admin-section-tabs"
+        />
 
-      {/* Top-Level Tab Switcher */}
-      <div className="flex flex-wrap gap-2" data-testid="admin-tab-switcher">
-        {ADMIN_TAB_GROUPS.map((group) => {
-          const activeGroup = getGroupForTab(activeTab);
-          const isActive = activeGroup === group.key;
-          const activeTabInGroup = isActive ? activeTab : undefined;
-          const label = activeTabInGroup
-            ? t(`tabs.${activeTabInGroup}`)
-            : t(`tabs.groups.${group.key}`);
-          return (
-            <DropdownMenu key={group.key}>
-              <DropdownMenuTrigger asChild>
-                <button
-                  data-testid={`admin-group-${group.key}`}
-                  className={cn(
-                    'inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-                    isActive
-                      ? 'bg-primary text-primary-foreground shadow hover:bg-primary/90'
-                      : 'border border-input bg-background hover:bg-accent hover:text-accent-foreground'
+        {/* Dashboard placeholder (ADMIN2-10) */}
+        {activeTab === 'dashboard' && (
+          <div data-testid="admin-dashboard-placeholder" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>{t('shell.pageHead.dashboard.title', 'Dashboard')}</CardTitle>
+                <CardDescription>
+                  {t(
+                    'shell.pageHead.dashboard.placeholder',
+                    'Stats, inbox preview, content pipeline, and recent activity will land here.'
                   )}
-                >
-                  {label}
-                  <ChevronDown className="h-4 w-4 opacity-70" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                {group.tabs.map((tab) => (
-                  <DropdownMenuItem
-                    key={tab}
-                    data-testid={`admin-tab-${tab}`}
-                    onSelect={() => setActiveTab(tab)}
-                    className={cn(activeTab === tab && 'font-medium')}
-                  >
-                    {t(`tabs.${tab}`)}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          );
-        })}
-      </div>
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </div>
+        )}
 
-      {/* Decks Tab Content */}
-      {activeTab === 'decks' && (
-        <>
-          {/* Summary Cards */}
-          <section aria-labelledby="summary-heading">
-            <h2 id="summary-heading" className="sr-only">
-              {t('sections.contentSummary')}
+        {/* Inbox placeholder (ADMIN2-03) */}
+        {activeTab === 'inbox' && (
+          <div data-testid="admin-inbox-placeholder" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>{t('shell.pageHead.inbox.title', 'Inbox')}</CardTitle>
+                <CardDescription>
+                  {t(
+                    'shell.pageHead.inbox.empty',
+                    'No items needing attention. Aggregated inbox coming soon.'
+                  )}
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </div>
+        )}
+
+        {/* Decks Tab Content */}
+        {activeTab === 'decks' && (
+          <>
+            {/* Summary Cards */}
+            <section aria-labelledby="summary-heading">
+              <h2 id="summary-heading" className="sr-only">
+                {t('sections.contentSummary')}
+              </h2>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <SummaryCard
+                  title={t('stats.totalDecks')}
+                  value={stats.total_decks}
+                  icon={<Layers className="h-5 w-5 text-muted-foreground" />}
+                  testId="total-decks-card"
+                />
+                <SummaryCard
+                  title={t('stats.totalCards')}
+                  value={stats.total_cards}
+                  icon={<Database className="h-5 w-5 text-muted-foreground" />}
+                  testId="total-cards-card"
+                />
+              </div>
+            </section>
+
+            {/* All Decks List with Search and Pagination */}
+            <section aria-labelledby="all-decks-heading">
+              <AllDecksList
+                ref={allDecksListRef}
+                t={t}
+                locale={locale}
+                onEditDeck={handleEditDeck}
+                onDeleteDeck={handleDeleteDeck}
+                onViewDeckDetail={handleViewDeckDetail}
+                onCreateDeck={handleOpenCreateModal}
+              />
+            </section>
+          </>
+        )}
+
+        {/* News Tab Content */}
+        {activeTab === 'news' && (
+          <section aria-labelledby="news-heading">
+            <NewsTab />
+          </section>
+        )}
+
+        {/* Announcements Tab Content */}
+        {activeTab === 'announcements' && (
+          <section aria-labelledby="announcements-heading">
+            <AnnouncementsTab />
+          </section>
+        )}
+
+        {/* Changelog Tab Content */}
+        {activeTab === 'changelog' && (
+          <section aria-labelledby="changelog-heading">
+            <h2 id="changelog-heading" className="sr-only">
+              {t('admin:tabs.changelog')}
             </h2>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <SummaryCard
-                title={t('stats.totalDecks')}
-                value={stats.total_decks}
-                icon={<Layers className="h-5 w-5 text-muted-foreground" />}
-                testId="total-decks-card"
-              />
-              <SummaryCard
-                title={t('stats.totalCards')}
-                value={stats.total_cards}
-                icon={<Database className="h-5 w-5 text-muted-foreground" />}
-                testId="total-cards-card"
-              />
+            <ChangelogTab />
+          </section>
+        )}
+
+        {/* Card Errors Tab Content (URL key: 'errors') */}
+        {activeTab === 'errors' && (
+          <section aria-labelledby="card-errors-heading">
+            <h2 id="card-errors-heading" className="sr-only">
+              {t('tabs.cardErrors')}
+            </h2>
+            <AdminCardErrorSection />
+          </section>
+        )}
+
+        {/* Feedback Tab Content */}
+        {activeTab === 'feedback' && (
+          <section aria-labelledby="feedback-heading">
+            <AdminFeedbackSection />
+          </section>
+        )}
+
+        {activeTab === 'situations' && (
+          <section aria-labelledby="situations-heading">
+            <h2 id="situations-heading" className="sr-only">
+              {t('tabs.situations')}
+            </h2>
+            <SituationsTab />
+          </section>
+        )}
+
+        {/* Exercises umbrella — listening + reading sub-toggle (ADMIN2-11 redesigns) */}
+        {activeTab === 'exercises' && (
+          <section aria-labelledby="exercises-heading">
+            <h2 id="exercises-heading" className="sr-only">
+              {t('tabs.exercises', 'Exercises')}
+            </h2>
+            <div className="mb-4 flex gap-2" role="tablist" aria-label="Exercise modality">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={exerciseModality === 'listening'}
+                onClick={() => setExerciseModality('listening')}
+                className={cn(
+                  'rounded-md px-3 py-1.5 text-sm font-medium',
+                  exerciseModality === 'listening'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                )}
+              >
+                {t('tabs.exercisesListening')}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={exerciseModality === 'reading'}
+                onClick={() => setExerciseModality('reading')}
+                className={cn(
+                  'rounded-md px-3 py-1.5 text-sm font-medium',
+                  exerciseModality === 'reading'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                )}
+              >
+                {t('tabs.exercisesReading')}
+              </button>
             </div>
+            <AdminExerciseList modality={exerciseModality} />
           </section>
-
-          {/* All Decks List with Search and Pagination */}
-          <section aria-labelledby="all-decks-heading">
-            <AllDecksList
-              ref={allDecksListRef}
-              t={t}
-              locale={locale}
-              onEditDeck={handleEditDeck}
-              onDeleteDeck={handleDeleteDeck}
-              onViewDeckDetail={handleViewDeckDetail}
-              onCreateDeck={handleOpenCreateModal}
-            />
-          </section>
-        </>
-      )}
-
-      {/* News Tab Content */}
-      {activeTab === 'news' && (
-        <section aria-labelledby="news-heading">
-          <NewsTab />
-        </section>
-      )}
-
-      {/* Announcements Tab Content */}
-      {activeTab === 'announcements' && (
-        <section aria-labelledby="announcements-heading">
-          <AnnouncementsTab />
-        </section>
-      )}
-
-      {/* Changelog Tab Content */}
-      {activeTab === 'changelog' && (
-        <section aria-labelledby="changelog-heading">
-          <h2 id="changelog-heading" className="sr-only">
-            {t('admin:tabs.changelog')}
-          </h2>
-          <ChangelogTab />
-        </section>
-      )}
-
-      {/* Card Errors Tab Content */}
-      {activeTab === 'cardErrors' && (
-        <section aria-labelledby="card-errors-heading">
-          <h2 id="card-errors-heading" className="sr-only">
-            {t('tabs.cardErrors')}
-          </h2>
-          <AdminCardErrorSection />
-        </section>
-      )}
-
-      {/* Feedback Tab Content */}
-      {activeTab === 'feedback' && (
-        <section aria-labelledby="feedback-heading">
-          <AdminFeedbackSection />
-        </section>
-      )}
-
-      {activeTab === 'situations' && (
-        <section aria-labelledby="situations-heading">
-          <h2 id="situations-heading" className="sr-only">
-            {t('tabs.situations')}
-          </h2>
-          <SituationsTab />
-        </section>
-      )}
-
-      {activeTab === 'exercisesListening' && (
-        <section aria-labelledby="exercises-listening-heading">
-          <h2 id="exercises-listening-heading" className="sr-only">
-            {t('tabs.exercisesListening')}
-          </h2>
-          <AdminExerciseList modality="listening" />
-        </section>
-      )}
-
-      {activeTab === 'exercisesReading' && (
-        <section aria-labelledby="exercises-reading-heading">
-          <h2 id="exercises-reading-heading" className="sr-only">
-            {t('tabs.exercisesReading')}
-          </h2>
-          <AdminExerciseList modality="reading" />
-        </section>
-      )}
+        )}
+      </main>
 
       {/* Deck Edit Modal */}
       <DeckEditModal
