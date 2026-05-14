@@ -1,5 +1,8 @@
+import { useTranslation } from 'react-i18next';
+
 import { WaveformPlayer } from '@/components/culture/WaveformPlayer';
 import { cn } from '@/lib/utils';
+import type { ExerciseType } from '@/types/situation';
 
 export function elText(val: unknown): string {
   if (val === null || val === undefined) return '';
@@ -9,15 +12,64 @@ export function elText(val: unknown): string {
   return String(val);
 }
 
+const PICTURE_MATCH_TYPES = new Set<ExerciseType>([
+  'select_picture_from_description',
+  'select_description_from_picture',
+]);
+
+function PictureMatchBody({
+  anchorPictureUrl,
+  anchorDescriptionText,
+}: {
+  anchorPictureUrl?: string;
+  anchorDescriptionText?: string;
+}) {
+  const { t } = useTranslation('admin');
+  return (
+    <div className="space-y-3 text-sm">
+      {anchorPictureUrl && (
+        <img
+          src={anchorPictureUrl}
+          alt={t('adminExercises.pictureMatch.anchorPictureAlt')}
+          className="max-h-48 rounded-md border border-border object-cover"
+        />
+      )}
+      {anchorDescriptionText && (
+        <p className="rounded-md border border-border bg-muted/50 px-3 py-2 leading-relaxed">
+          {anchorDescriptionText}
+        </p>
+      )}
+      <p className="text-xs text-muted-foreground">
+        {t('adminExercises.pictureMatch.runtimeNote')}
+      </p>
+    </div>
+  );
+}
+
 export function ExerciseItemPayload({
+  exerciseType,
   payload,
   audioUrl,
   readingText,
+  anchorPictureUrl,
+  anchorDescriptionText,
 }: {
+  exerciseType?: ExerciseType;
   payload: Record<string, unknown>;
   audioUrl?: string;
   readingText?: string;
+  anchorPictureUrl?: string;
+  anchorDescriptionText?: string;
 }) {
+  if (exerciseType !== undefined && PICTURE_MATCH_TYPES.has(exerciseType)) {
+    return (
+      <PictureMatchBody
+        anchorPictureUrl={anchorPictureUrl}
+        anchorDescriptionText={anchorDescriptionText}
+      />
+    );
+  }
+
   const questionText = elText(
     payload.prompt ?? payload.question_text ?? payload.question ?? payload.text
   );

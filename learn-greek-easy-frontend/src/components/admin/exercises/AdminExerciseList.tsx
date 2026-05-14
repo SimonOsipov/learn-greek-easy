@@ -41,6 +41,8 @@ const EXERCISE_TYPES: ExerciseType[] = [
   'fill_gaps',
   'select_heard',
   'true_false',
+  'select_picture_from_description',
+  'select_description_from_picture',
 ];
 
 export function AdminExerciseList({ modality }: AdminExerciseListProps) {
@@ -281,9 +283,12 @@ export function AdminExerciseList({ modality }: AdminExerciseListProps) {
                         .map((item) => (
                           <ExerciseItemPayload
                             key={item.item_index}
+                            exerciseType={exercise.exercise_type}
                             payload={item.payload as Record<string, unknown>}
                             audioUrl={exercise.audio_url ?? undefined}
                             readingText={exercise.reading_text ?? undefined}
+                            anchorPictureUrl={exercise.anchor_picture_url ?? undefined}
+                            anchorDescriptionText={exercise.anchor_description_text ?? undefined}
                           />
                         ))}
                     </div>

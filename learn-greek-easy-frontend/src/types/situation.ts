@@ -200,7 +200,13 @@ export interface LearnerSituationDetailResponse {
 }
 
 // Exercise types for admin situation detail
-export type ExerciseType = 'fill_gaps' | 'select_heard' | 'true_false' | 'select_correct_answer';
+export type ExerciseType =
+  | 'fill_gaps'
+  | 'select_heard'
+  | 'true_false'
+  | 'select_correct_answer'
+  | 'select_picture_from_description'
+  | 'select_description_from_picture';
 export type ExerciseStatus = 'draft' | 'approved';
 export type DeckLevel = 'A1' | 'A2' | 'B1' | 'B2';
 export type ExerciseModality = 'listening' | 'reading';
@@ -246,6 +252,10 @@ export interface AdminExerciseListItem {
   situation_title_en: string;
   audio_url: string | null;
   reading_text: string | null;
+  /** Picture-match exercises only: presigned anchor picture URL */
+  anchor_picture_url: string | null;
+  /** Picture-match exercises only: anchor description text (Greek) */
+  anchor_description_text: string | null;
   item_count: number;
   items: SituationExerciseItemResponse[];
 }

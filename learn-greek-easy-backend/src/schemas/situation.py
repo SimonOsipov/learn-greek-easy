@@ -221,6 +221,9 @@ class AdminExerciseListItem(BaseModel):
     situation_title_en: str
     audio_url: str | None = None
     reading_text: str | None = None
+    # Picture-match exercises only: presigned anchor picture URL and anchor description text
+    anchor_picture_url: str | None = None
+    anchor_description_text: str | None = None
     item_count: int
     items: list[SituationExerciseItemResponse]
 

@@ -4915,11 +4915,12 @@ async def _query_listening_exercises(
             )
         )
 
-    # Picture exercises
+    # Picture exercises — outer-join to SituationDescription to surface anchor text/URL
     pic_stmt = (
-        select(PictureExercise, SituationPicture, Situation)
+        select(PictureExercise, SituationPicture, Situation, SituationDescription)
         .join(SituationPicture, PictureExercise.picture_id == SituationPicture.id)
         .join(Situation, SituationPicture.situation_id == Situation.id)
+        .outerjoin(SituationDescription, SituationDescription.situation_id == Situation.id)
         .options(selectinload(PictureExercise.items))
     )
     if exercise_type is not None:
@@ -4928,7 +4929,11 @@ async def _query_listening_exercises(
         pic_stmt = pic_stmt.where(PictureExercise.status == status)
     pic_stmt = _apply_exercise_search_filter(pic_stmt, search)
 
-    for ex, _picture, situation in (await db.execute(pic_stmt)).all():
+    for ex, picture, situation, description in (await db.execute(pic_stmt)).all():
+        anchor_picture_url = (
+            s3.generate_presigned_url(picture.image_s3_key) if picture.image_s3_key else None
+        )
+        anchor_description_text = description.text_el if description is not None else None
         items.append(
             AdminExerciseListItem(
                 id=ex.id,
@@ -4942,6 +4947,8 @@ async def _query_listening_exercises(
                 situation_title_en=situation.scenario_en,
                 audio_url=None,
                 reading_text=None,
+                anchor_picture_url=anchor_picture_url,
+                anchor_description_text=anchor_description_text,
                 item_count=len(ex.items),
                 items=[SituationExerciseItemResponse.model_validate(item) for item in ex.items],
             )

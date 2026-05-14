@@ -1302,7 +1302,9 @@
       "select_correct_answer": "Выбрать правильный ответ",
       "fill_gaps": "Заполнить пропуски",
       "select_heard": "Выбрать услышанное",
-      "true_false": "Правда или ложь"
+      "true_false": "Правда или ложь",
+      "select_picture_from_description": "Выберите картинку по описанию",
+      "select_description_from_picture": "Выберите описание по картинке"
     },
     "sourceTypes": {
       "description": "Описание",
@@ -1321,6 +1323,10 @@
     "retry": "Повторить",
     "clearSearch": "Очистить поиск",
     "itemCount": "{{count}} элементов",
-    "showing": "Показаны {{from}}–{{to}} из {{total}}"
+    "showing": "Показаны {{from}}–{{to}} из {{total}}",
+    "pictureMatch": {
+      "anchorPictureAlt": "Опорная картинка",
+      "runtimeNote": "Сетка из 4 вариантов формируется при запросе. Дистракторы выбираются из других Ситуаций."
+    }
   }
 }
