@@ -305,6 +305,28 @@
     "exercisesReading": "Чтение"
   },
   "shell": {
+    "stats": {
+      "errors": {
+        "total": "Всего ошибок",
+        "totalSub": "Сообщения от учеников",
+        "open": "Открыто",
+        "openSub": "Ожидает сортировки",
+        "resolved": "Решено",
+        "resolvedSub": "Закрытые сообщения",
+        "avgTime": "Ср. время решения",
+        "avgTimeSub": "Скоро"
+      },
+      "exercises": {
+        "total": "Всего упражнений",
+        "totalSub": "Аудирование + чтение",
+        "approved": "Одобрено",
+        "approvedSub": "Доступно ученикам",
+        "pending": "На проверке",
+        "pendingSub": "Ожидает рассмотрения",
+        "perSource": "Среднее на источник",
+        "perSourceSub": "Скоро"
+      }
+    },
     "topBar": {
       "brand": "Greeklish admin",
       "search": "Поиск по админке",

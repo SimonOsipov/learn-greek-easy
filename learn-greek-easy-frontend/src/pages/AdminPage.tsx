@@ -11,11 +11,16 @@ import React, {
 
 import {
   AlertCircle,
+  AlertTriangle,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Crown,
   Database,
+  FileQuestion,
+  Hourglass,
   Layers,
+  ListChecks,
   Pencil,
   Plus,
   RefreshCw,
@@ -59,6 +64,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { StatCard } from '@/components/ui/stat-card';
 import { Switch } from '@/components/ui/switch';
 import { toast } from '@/hooks/use-toast';
 import { getLocalizedDeckName } from '@/lib/deckLocale';
@@ -1173,12 +1179,42 @@ const AdminPage: React.FC = () => {
           </section>
         )}
 
-        {/* Card Errors Tab Content (URL key: 'errors') */}
+        {/* Card Errors Tab Content (URL key: 'errors') — ADMIN2-11 reskin */}
         {activeTab === 'errors' && (
           <section aria-labelledby="card-errors-heading">
             <h2 id="card-errors-heading" className="sr-only">
               {t('tabs.cardErrors')}
             </h2>
+            <div className="stat-grid">
+              <StatCard
+                title={t('shell.stats.errors.total', 'Total errors')}
+                sub={t('shell.stats.errors.totalSub', 'Reports filed by learners')}
+                n="—"
+                icon={<AlertTriangle />}
+                tone="red"
+              />
+              <StatCard
+                title={t('shell.stats.errors.open', 'Open')}
+                sub={t('shell.stats.errors.openSub', 'Awaiting triage')}
+                n="—"
+                icon={<Hourglass />}
+                tone="amber"
+              />
+              <StatCard
+                title={t('shell.stats.errors.resolved', 'Resolved')}
+                sub={t('shell.stats.errors.resolvedSub', 'Closed reports')}
+                n="—"
+                icon={<CheckCircle2 />}
+                tone="green"
+              />
+              <StatCard
+                title={t('shell.stats.errors.avgTime', 'Avg time to resolve')}
+                sub={t('shell.stats.errors.avgTimeSub', 'Coming soon')}
+                n="—"
+                icon={<FileQuestion />}
+                tone="cyan"
+              />
+            </div>
             <AdminCardErrorSection />
           </section>
         )}
@@ -1199,9 +1235,39 @@ const AdminPage: React.FC = () => {
           </section>
         )}
 
-        {/* Exercises umbrella — listening + reading sub-toggle (ADMIN2-11 redesigns) */}
+        {/* Exercises umbrella — listening + reading sub-toggle (ADMIN2-11 reskin) */}
         {activeTab === 'exercises' && (
           <section aria-labelledby="exercises-heading">
+            <div className="stat-grid">
+              <StatCard
+                title={t('shell.stats.exercises.total', 'Total exercises')}
+                sub={t('shell.stats.exercises.totalSub', 'Across listening + reading')}
+                n="—"
+                icon={<ListChecks />}
+                tone="blue"
+              />
+              <StatCard
+                title={t('shell.stats.exercises.approved', 'Approved')}
+                sub={t('shell.stats.exercises.approvedSub', 'Live to learners')}
+                n="—"
+                icon={<CheckCircle2 />}
+                tone="green"
+              />
+              <StatCard
+                title={t('shell.stats.exercises.pending', 'Pending')}
+                sub={t('shell.stats.exercises.pendingSub', 'Awaiting review')}
+                n="—"
+                icon={<Hourglass />}
+                tone="amber"
+              />
+              <StatCard
+                title={t('shell.stats.exercises.perSource', 'Avg per source')}
+                sub={t('shell.stats.exercises.perSourceSub', 'Coming soon')}
+                n="—"
+                icon={<FileQuestion />}
+                tone="cyan"
+              />
+            </div>
             <h2 id="exercises-heading" className="sr-only">
               {t('tabs.exercises', 'Exercises')}
             </h2>

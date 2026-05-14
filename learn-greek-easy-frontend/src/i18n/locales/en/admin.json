@@ -293,6 +293,28 @@
     "exercisesReading": "Reading"
   },
   "shell": {
+    "stats": {
+      "errors": {
+        "total": "Total errors",
+        "totalSub": "Reports filed by learners",
+        "open": "Open",
+        "openSub": "Awaiting triage",
+        "resolved": "Resolved",
+        "resolvedSub": "Closed reports",
+        "avgTime": "Avg time to resolve",
+        "avgTimeSub": "Coming soon"
+      },
+      "exercises": {
+        "total": "Total exercises",
+        "totalSub": "Across listening + reading",
+        "approved": "Approved",
+        "approvedSub": "Live to learners",
+        "pending": "Pending",
+        "pendingSub": "Awaiting review",
+        "perSource": "Avg per source",
+        "perSourceSub": "Coming soon"
+      }
+    },
     "topBar": {
       "brand": "Greeklish admin",
       "search": "Search admin",
