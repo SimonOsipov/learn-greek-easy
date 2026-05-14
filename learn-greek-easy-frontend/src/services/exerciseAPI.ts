@@ -1,12 +1,18 @@
 import type { WordTimestamp } from '@/types/situation';
 
-import { api, buildQueryString } from './api';
+import { api, APIRequestError, buildQueryString } from './api';
 
 export type ExerciseModality = 'listening' | 'reading';
 
 export type ExerciseSourceType = 'description' | 'dialog' | 'picture';
 
-export type ExerciseType = 'fill_gaps' | 'select_heard' | 'true_false' | 'select_correct_answer';
+export type ExerciseType =
+  | 'fill_gaps'
+  | 'select_heard'
+  | 'true_false'
+  | 'select_correct_answer'
+  | 'select_picture_from_description'
+  | 'select_description_from_picture';
 
 export type CardStatus = 'new' | 'learning' | 'review' | 'mastered';
 
@@ -68,6 +74,37 @@ export interface ExerciseReviewResult {
   message: string | null;
 }
 
+export interface PictureMatchOption {
+  option_index: number;
+  image_url: string | null;
+  description_text: string | null;
+}
+
+export interface SelectPictureFromDescriptionPayload {
+  prompt_description: string;
+  options: PictureMatchOption[];
+  correct_index: number;
+}
+
+export interface SelectDescriptionFromPicturePayload {
+  anchor_image_url: string;
+  options: PictureMatchOption[];
+  correct_index: number;
+}
+
+export type PictureMatchPayload =
+  | SelectPictureFromDescriptionPayload
+  | SelectDescriptionFromPicturePayload;
+
+/**
+ * Typed error for 409 INSUFFICIENT_DISTRACTOR_POOL responses.
+ * Thrown by fetchExercise when the backend cannot build a 4-option picture-match
+ * exercise due to an insufficient distractor pool.
+ */
+export class InsufficientDistractorPoolError extends APIRequestError {
+  readonly code = 'INSUFFICIENT_DISTRACTOR_POOL' as const;
+}
+
 export interface ExerciseQueueParams {
   situation_id?: string;
   source_type?: ExerciseSourceType;
@@ -92,5 +129,37 @@ export const exerciseAPI = {
 
   submitReview: async (data: ExerciseReviewRequest): Promise<ExerciseReviewResult> => {
     return api.post<ExerciseReviewResult>('/api/v1/exercises/review', data);
+  },
+
+  fetchExercise: async (exerciseId: string): Promise<ExerciseQueueItem> => {
+    try {
+      return await api.get<ExerciseQueueItem>(`/api/v1/exercises/${exerciseId}`);
+    } catch (err) {
+      if (err instanceof APIRequestError && err.status === 409) {
+        // The backend serialises BaseAPIException as { error: { code, message, ... } }.
+        // Prefer the structured `code` field when present; fall back to message-string
+        // matching as a defensive layer for plain-text error shapes.
+        const detailCode =
+          typeof err.detail === 'object' &&
+          err.detail !== null &&
+          !Array.isArray(err.detail) &&
+          'code' in err.detail
+            ? String((err.detail as Record<string, unknown>).code)
+            : undefined;
+        const isInsufficientPool =
+          detailCode === 'INSUFFICIENT_DISTRACTOR_POOL' ||
+          err.message?.includes('INSUFFICIENT_DISTRACTOR_POOL') ||
+          err.message?.toLowerCase().includes('insufficient distractor pool');
+        if (isInsufficientPool) {
+          throw new InsufficientDistractorPoolError({
+            status: err.status,
+            statusText: err.statusText,
+            message: err.message,
+            detail: err.detail,
+          });
+        }
+      }
+      throw err;
+    }
   },
 };

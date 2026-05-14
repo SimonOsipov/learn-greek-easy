@@ -109,3 +109,23 @@ This wrapper handles test user filtering and default property injection.
 |-------|------|---------|
 | Frontend | `src/lib/analytics/track.ts` | Single `track()` function |
 | Backend | `src/core/posthog.py` | `capture_event()` wrapper |
+
+## Exercise Events
+
+### `exercise_answered`
+
+Fired each time a user submits an answer during an exercise practice session.
+
+**Properties:**
+
+- `exercise_id` (string) — UUID of the exercise.
+- `exercise_type` (string) — the task type. Values:
+  - `'select_picture'` — description→picture matching (`SELECT_PICTURE_FROM_DESCRIPTION`, Type A)
+  - `'select_description'` — picture→description matching (`SELECT_DESCRIPTION_FROM_PICTURE`, Type B)
+  - `'fill_gaps'` — fill-in-the-gap exercise
+  - `'select_heard'` — select what you heard (listening comprehension)
+  - `'true_false'` — true/false exercise
+  - `'select_correct_answer'` — general multiple-choice exercise
+- `modality` (string) — audio I/O channel: `'listening'`, `'reading'`, or `'all'`. **Separate from `exercise_type`** — modality describes the audio presentation channel, not the task format.
+- `is_correct` (boolean) — whether the user's answer was correct.
+- `response_time_ms` (number) — milliseconds from exercise render to answer submission.

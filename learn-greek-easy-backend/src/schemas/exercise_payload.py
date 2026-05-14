@@ -112,11 +112,70 @@ class SelectCorrectAnswerPayload(BaseModel):
         return self
 
 
+class PictureMatchOption(BaseModel):
+    """One option in a picture-match exercise (mutually exclusive image_url XOR description_text)."""
+
+    option_index: int = Field(ge=0, le=3)
+    image_url: str | None = None
+    description_text: str | None = None
+
+    @model_validator(mode="after")
+    def exactly_one_of(self) -> "PictureMatchOption":
+        if (self.image_url is None) == (self.description_text is None):
+            raise ValueError("exactly one of image_url or description_text must be set")
+        return self
+
+
+class _PictureMatchBase(BaseModel):
+    options: list[PictureMatchOption]
+    correct_index: int = Field(ge=0, le=3)
+
+    @field_validator("options")
+    @classmethod
+    def _four_options(cls, v: list[PictureMatchOption]) -> list[PictureMatchOption]:
+        if len(v) != 4:
+            raise ValueError("options must have exactly 4 items")
+        return v
+
+    @model_validator(mode="after")
+    def _option_indices_unique_0_to_3(self) -> "_PictureMatchBase":
+        idxs = sorted(o.option_index for o in self.options)
+        if idxs != [0, 1, 2, 3]:
+            raise ValueError("option_index values must be exactly {0,1,2,3}")
+        return self
+
+
+class SelectPictureFromDescriptionPayload(_PictureMatchBase):
+    """Show description text, pick the correct picture from 4."""
+
+    prompt_description: str = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _options_are_pictures(self) -> "SelectPictureFromDescriptionPayload":
+        if any(o.image_url is None for o in self.options):
+            raise ValueError("all options must have image_url")
+        return self
+
+
+class SelectDescriptionFromPicturePayload(_PictureMatchBase):
+    """Show anchor picture, pick the correct description from 4."""
+
+    anchor_image_url: str = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _options_are_descriptions(self) -> "SelectDescriptionFromPicturePayload":
+        if any(o.description_text is None for o in self.options):
+            raise ValueError("all options must have description_text")
+        return self
+
+
 PAYLOAD_SCHEMA_MAP: dict[ExerciseType, type[BaseModel]] = {
     ExerciseType.FILL_GAPS: FillGapsPayload,
     ExerciseType.SELECT_HEARD: SelectHeardPayload,
     ExerciseType.TRUE_FALSE: TrueFalsePayload,
     ExerciseType.SELECT_CORRECT_ANSWER: SelectCorrectAnswerPayload,
+    ExerciseType.SELECT_PICTURE_FROM_DESCRIPTION: SelectPictureFromDescriptionPayload,
+    ExerciseType.SELECT_DESCRIPTION_FROM_PICTURE: SelectDescriptionFromPicturePayload,
 }
 
 

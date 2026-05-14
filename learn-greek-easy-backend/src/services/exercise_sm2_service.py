@@ -21,7 +21,10 @@ from src.db.models import (
     ExerciseRecord,
     ExerciseSourceType,
     ExerciseType,
+    PictureExercise,
+    Situation,
     SituationDescription,
+    SituationPicture,
 )
 from src.repositories.exercise_record import ExerciseRecordRepository
 from src.repositories.exercise_review import ExerciseReviewRepository
@@ -30,6 +33,10 @@ from src.schemas.exercise_queue import (
     ExerciseQueue,
     ExerciseQueueItem,
     ExerciseReviewResult,
+)
+from src.services.picture_match_service import (
+    InsufficientDistractorPoolError,
+    assemble_picture_match_payload,
 )
 from src.services.s3_service import get_s3_service
 
@@ -147,6 +154,11 @@ class ExerciseSM2Service:
                     if audio_level_value is not None:
                         item.audio_level = audio_level_value
 
+        # Enrich picture-source items with distractor payload; drop items that fail assembly
+        to_drop = await self.load_picture_match_enrichment(all_items)
+        if to_drop:
+            all_items = [i for i in all_items if i.exercise_id not in to_drop]
+
         return ExerciseQueue(
             total_due=len(due_records),
             total_new=len(new_exercises),
@@ -260,6 +272,77 @@ class ExerciseSM2Service:
             }
 
         return enrichment
+
+    async def load_picture_match_enrichment(
+        self,
+        queue_items: list[ExerciseQueueItem],
+    ) -> set[UUID]:
+        """Batch-load picture-match enrichment data; return exercise_ids that should be dropped.
+
+        Collects PICTURE-source items, bulk-loads their Exercise rows with the full
+        PictureExercise → SituationPicture → Situation → SituationDescription chain,
+        then calls assemble_picture_match_payload for each item.  Items that raise
+        InsufficientDistractorPoolError are added to the drop set and logged at INFO.
+        Items whose picture_exercise relation is unexpectedly None are added to the drop
+        set and logged at WARNING.
+        """
+        picture_items = [
+            item for item in queue_items if item.source_type == ExerciseSourceType.PICTURE
+        ]
+        if not picture_items:
+            return set()
+
+        picture_exercise_ids = [item.exercise_id for item in picture_items]
+
+        stmt = (
+            select(Exercise)
+            .where(Exercise.id.in_(picture_exercise_ids))
+            .options(
+                selectinload(Exercise.picture_exercise).options(
+                    selectinload(PictureExercise.picture).options(
+                        selectinload(SituationPicture.situation).options(
+                            selectinload(Situation.description)
+                        )
+                    )
+                )
+            )
+        )
+        result = await self.db.execute(stmt)
+        exercises_by_id = {e.id: e for e in result.scalars().all()}
+
+        to_drop: set[UUID] = set()
+
+        for item in picture_items:
+            exercise = exercises_by_id.get(item.exercise_id)
+            if exercise is None or exercise.picture_exercise is None:
+                logger.warning(
+                    "picture_match_item_missing_picture_exercise",
+                    exercise_id=str(item.exercise_id),
+                )
+                to_drop.add(item.exercise_id)
+                continue
+
+            picture_exercise = exercise.picture_exercise
+
+            try:
+                payload = await assemble_picture_match_payload(
+                    self.db, picture_exercise, picture_exercise.exercise_type
+                )
+            except InsufficientDistractorPoolError:
+                logger.info(
+                    "picture_match_item_skipped_insufficient_pool",
+                    exercise_id=str(item.exercise_id),
+                )
+                to_drop.add(item.exercise_id)
+                continue
+
+            item.exercise_type = picture_exercise.exercise_type
+            item.situation_id = picture_exercise.picture.situation_id
+            item.items = [
+                ExerciseItemPayload(item_index=0, payload=payload.model_dump(mode="json"))
+            ]
+
+        return to_drop
 
     async def process_review(
         self,
