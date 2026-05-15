@@ -41,6 +41,14 @@ const DEFAULT_FILTERS: AdminFeedbackFilters = {
 export type FeedbackDrawerInnerTab = 'reply' | 'thread' | 'meta';
 
 /**
+ * Snapshot type for rollback
+ */
+export interface FeedbackSnapshot {
+  status: AdminFeedbackItem['status'];
+  admin_response: string | null;
+}
+
+/**
  * Admin Feedback Store State Interface
  */
 interface AdminFeedbackState {
@@ -75,6 +83,10 @@ interface AdminFeedbackState {
     feedbackId: string,
     data: AdminFeedbackUpdateRequest
   ) => Promise<AdminFeedbackItem>;
+  /** Optimistic in-place merge — no network call. Use for speculative UI updates. */
+  updateFeedbackOptimistic: (id: string, patch: Partial<AdminFeedbackItem>) => void;
+  /** Restore a feedbackList item from a snapshot after a failed optimistic update. */
+  rollbackFeedback: (id: string, snapshot: FeedbackSnapshot) => void;
   deleteFeedback: (id: string) => Promise<void>;
   setFilters: (filters: Partial<AdminFeedbackFilters>) => void;
   clearFilters: () => void;
@@ -160,6 +172,41 @@ export const useAdminFeedbackStore = create<AdminFeedbackState>()(
           set({ isUpdating: false, error: message });
           throw error;
         }
+      },
+
+      /**
+       * Optimistic in-place merge — no network call.
+       * Useful for speculative UI updates before an async action resolves.
+       */
+      updateFeedbackOptimistic: (id: string, patch: Partial<AdminFeedbackItem>) => {
+        set((state) => ({
+          feedbackList: state.feedbackList.map((f) => (f.id === id ? { ...f, ...patch } : f)),
+          selectedFeedback:
+            state.selectedFeedback?.id === id
+              ? { ...state.selectedFeedback, ...patch }
+              : state.selectedFeedback,
+        }));
+      },
+
+      /**
+       * Restore a feedbackList item from a snapshot after a failed optimistic update.
+       */
+      rollbackFeedback: (id: string, snapshot: FeedbackSnapshot) => {
+        set((state) => ({
+          feedbackList: state.feedbackList.map((f) =>
+            f.id === id
+              ? { ...f, status: snapshot.status, admin_response: snapshot.admin_response }
+              : f
+          ),
+          selectedFeedback:
+            state.selectedFeedback?.id === id
+              ? {
+                  ...state.selectedFeedback,
+                  status: snapshot.status,
+                  admin_response: snapshot.admin_response,
+                }
+              : state.selectedFeedback,
+        }));
       },
 
       /**
@@ -254,3 +301,8 @@ export const selectPagination = (state: AdminFeedbackState) => ({
 });
 export const selectOpenFeedbackId = (state: AdminFeedbackState) => state.openFeedbackId;
 export const selectOpenInnerTab = (state: AdminFeedbackState) => state.openInnerTab;
+/** Returns the AdminFeedbackItem that is currently open in the drawer, or null. */
+export const selectOpenFeedback = (state: AdminFeedbackState): AdminFeedbackItem | null =>
+  state.openFeedbackId
+    ? (state.feedbackList.find((f) => f.id === state.openFeedbackId) ?? null)
+    : null;

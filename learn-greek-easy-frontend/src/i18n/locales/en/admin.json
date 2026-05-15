@@ -639,6 +639,21 @@
       "warning": "This will permanently delete this feedback item.",
       "confirm": "Delete",
       "success": "Feedback deleted"
+    },
+    "v2": {
+      "reply": {
+        "status_label": "Status",
+        "status_hint": "What's the disposition of this request?",
+        "response_label": "Admin response",
+        "response_hint": "{{count}}/500 — public, learner will see this verbatim",
+        "save": "Save & notify",
+        "cancel": "Cancel",
+        "save_draft": "Save draft",
+        "coming_soon": "Coming soon",
+        "saved": "Reply saved",
+        "save_error_title": "Failed to save reply",
+        "save_error_desc": "Please try again."
+      }
     }
   },
   "cardErrors": {

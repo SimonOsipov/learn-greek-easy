@@ -199,3 +199,160 @@ describe('adminFeedbackStore — drawer state (FBDR-03)', () => {
     });
   });
 });
+
+// ────────────────────────────────────────────────────────────────────────────────
+// FBDR-04: updateFeedbackOptimistic + rollbackFeedback
+// ────────────────────────────────────────────────────────────────────────────────
+
+import type { AdminFeedbackItem } from '@/types/feedback';
+
+const MOCK_ITEM: AdminFeedbackItem = {
+  id: 'feedback-aaa',
+  title: 'Test feedback',
+  description: 'Some description',
+  category: 'feature_request',
+  status: 'new',
+  vote_count: 3,
+  author: { id: 'user-1', full_name: 'Alice' },
+  created_at: '2024-01-01T00:00:00Z',
+  updated_at: '2024-01-01T00:00:00Z',
+  admin_response: null,
+  admin_response_at: null,
+};
+
+describe('adminFeedbackStore — optimistic update / rollback (FBDR-04)', () => {
+  beforeEach(() => {
+    useAdminFeedbackStore.setState({
+      feedbackList: [{ ...MOCK_ITEM }],
+      selectedFeedback: null,
+    });
+    vi.clearAllMocks();
+  });
+
+  describe('updateFeedbackOptimistic', () => {
+    it('merges patch into matching feedbackList item without network call', () => {
+      act(() => {
+        useAdminFeedbackStore.getState().updateFeedbackOptimistic('feedback-aaa', {
+          status: 'planned',
+          admin_response: 'Coming soon!',
+        });
+      });
+
+      const updated = useAdminFeedbackStore
+        .getState()
+        .feedbackList.find((f) => f.id === 'feedback-aaa');
+      expect(updated?.status).toBe('planned');
+      expect(updated?.admin_response).toBe('Coming soon!');
+    });
+
+    it('preserves unpatched fields on the item', () => {
+      act(() => {
+        useAdminFeedbackStore
+          .getState()
+          .updateFeedbackOptimistic('feedback-aaa', { status: 'in_progress' });
+      });
+
+      const updated = useAdminFeedbackStore
+        .getState()
+        .feedbackList.find((f) => f.id === 'feedback-aaa');
+      expect(updated?.title).toBe('Test feedback');
+      expect(updated?.vote_count).toBe(3);
+    });
+
+    it('also merges patch into selectedFeedback when ids match', () => {
+      useAdminFeedbackStore.setState({ selectedFeedback: { ...MOCK_ITEM } });
+
+      act(() => {
+        useAdminFeedbackStore
+          .getState()
+          .updateFeedbackOptimistic('feedback-aaa', { status: 'completed' });
+      });
+
+      expect(useAdminFeedbackStore.getState().selectedFeedback?.status).toBe('completed');
+    });
+
+    it('does not touch selectedFeedback when ids differ', () => {
+      useAdminFeedbackStore.setState({
+        selectedFeedback: { ...MOCK_ITEM, id: 'feedback-bbb' },
+      });
+
+      act(() => {
+        useAdminFeedbackStore
+          .getState()
+          .updateFeedbackOptimistic('feedback-aaa', { status: 'planned' });
+      });
+
+      expect(useAdminFeedbackStore.getState().selectedFeedback?.id).toBe('feedback-bbb');
+      expect(useAdminFeedbackStore.getState().selectedFeedback?.status).toBe('new');
+    });
+
+    it('is a no-op for an id not in the list', () => {
+      act(() => {
+        useAdminFeedbackStore
+          .getState()
+          .updateFeedbackOptimistic('feedback-zzz', { status: 'planned' });
+      });
+
+      const item = useAdminFeedbackStore
+        .getState()
+        .feedbackList.find((f) => f.id === 'feedback-aaa');
+      expect(item?.status).toBe('new');
+    });
+  });
+
+  describe('rollbackFeedback', () => {
+    it('restores status and admin_response from snapshot', () => {
+      // First apply an optimistic update
+      act(() => {
+        useAdminFeedbackStore.getState().updateFeedbackOptimistic('feedback-aaa', {
+          status: 'planned',
+          admin_response: 'Draft response',
+        });
+      });
+
+      // Then roll back
+      act(() => {
+        useAdminFeedbackStore.getState().rollbackFeedback('feedback-aaa', {
+          status: 'new',
+          admin_response: null,
+        });
+      });
+
+      const item = useAdminFeedbackStore
+        .getState()
+        .feedbackList.find((f) => f.id === 'feedback-aaa');
+      expect(item?.status).toBe('new');
+      expect(item?.admin_response).toBeNull();
+    });
+
+    it('also restores selectedFeedback when ids match', () => {
+      useAdminFeedbackStore.setState({
+        selectedFeedback: { ...MOCK_ITEM, status: 'planned', admin_response: 'Draft' },
+      });
+
+      act(() => {
+        useAdminFeedbackStore.getState().rollbackFeedback('feedback-aaa', {
+          status: 'new',
+          admin_response: null,
+        });
+      });
+
+      expect(useAdminFeedbackStore.getState().selectedFeedback?.status).toBe('new');
+      expect(useAdminFeedbackStore.getState().selectedFeedback?.admin_response).toBeNull();
+    });
+
+    it('is a no-op for an id not in the list', () => {
+      act(() => {
+        useAdminFeedbackStore.getState().rollbackFeedback('feedback-zzz', {
+          status: 'new',
+          admin_response: null,
+        });
+      });
+
+      const item = useAdminFeedbackStore
+        .getState()
+        .feedbackList.find((f) => f.id === 'feedback-aaa');
+      expect(item?.status).toBe('new');
+    });
+  });
+});
