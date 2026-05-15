@@ -375,6 +375,24 @@
     },
     "v2": {
       "comingSoon": "Coming soon",
+      "details": {
+        "sent": "sent",
+        "delivered": "Delivered",
+        "read": "read",
+        "by": "by",
+        "message": "Message",
+        "linkUrl": "Link URL",
+        "reach": "Reach",
+        "sentTo": "Sent to",
+        "recipients": "recipients",
+        "readBy": "Read by",
+        "unread": "unread",
+        "clickThrough": "Click-through",
+        "readProgress": "Read progress",
+        "readTimeline": "Read timeline",
+        "announcementLabel": "Announcement",
+        "resendToUnread": "Resend to unread"
+      },
       "preview": {
         "label": "Notification preview",
         "titlePlaceholder": "Your announcement title",

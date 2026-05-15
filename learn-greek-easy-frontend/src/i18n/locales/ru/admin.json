@@ -387,6 +387,24 @@
     },
     "v2": {
       "comingSoon": "Скоро",
+      "details": {
+        "sent": "отправлено",
+        "delivered": "Доставлено",
+        "read": "прочитано",
+        "by": "от",
+        "message": "Сообщение",
+        "linkUrl": "Ссылка",
+        "reach": "Охват",
+        "sentTo": "Отправлено",
+        "recipients": "получателей",
+        "readBy": "Прочитано",
+        "unread": "непрочитано",
+        "clickThrough": "Переходы",
+        "readProgress": "Прогресс прочтения",
+        "readTimeline": "Хронология прочтения",
+        "announcementLabel": "Объявление",
+        "resendToUnread": "Отправить непрочитавшим"
+      },
       "preview": {
         "label": "Предпросмотр уведомления",
         "titlePlaceholder": "Заголовок вашего объявления",

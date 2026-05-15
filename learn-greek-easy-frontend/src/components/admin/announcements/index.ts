@@ -14,3 +14,5 @@ export { AnnouncementPreviewModal } from './AnnouncementPreviewModal';
 export { AnnouncementsTab } from './AnnouncementsTab';
 export { AnnouncementNotificationPreview } from './AnnouncementNotificationPreview';
 export { AnnouncementComposeDrawer } from './AnnouncementComposeDrawer';
+export { AnnouncementDetailsDrawer } from './AnnouncementDetailsDrawer';
+export type { AnnouncementDetailsDrawerProps } from './AnnouncementDetailsDrawer';

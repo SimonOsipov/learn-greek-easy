@@ -19,6 +19,8 @@ export {
   AnnouncementPreviewModal,
   AnnouncementsTab,
   AnnouncementComposeDrawer,
+  AnnouncementDetailsDrawer,
+  type AnnouncementDetailsDrawerProps,
 } from './announcements';
 export { CardDeleteDialog } from './CardDeleteDialog';
 export * from './changelog';
