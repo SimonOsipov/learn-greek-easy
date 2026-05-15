@@ -639,6 +639,95 @@
       "warning": "This will permanently delete this feedback item.",
       "confirm": "Delete",
       "success": "Feedback deleted"
+    },
+    "v2": {
+      "reply": {
+        "status_label": "Status",
+        "status_hint": "What's the disposition of this request?",
+        "response_label": "Admin response",
+        "response_hint": "{{count}}/500 — public, learner will see this verbatim",
+        "save": "Save & notify",
+        "cancel": "Cancel",
+        "save_draft": "Save draft",
+        "coming_soon": "Coming soon",
+        "saved": "Reply saved",
+        "save_error_title": "Failed to save reply",
+        "save_error_desc": "Please try again."
+      },
+      "card": {
+        "openReply": "Open reply for {{title}}",
+        "adminResponseLabel": "✓ Admin response"
+      },
+      "drawer": {
+        "thread": {
+          "empty": "No reply yet — switch to the Reply tab."
+        },
+        "meta": {
+          "rows": {
+            "user": "User",
+            "type": "Type",
+            "submitted": "Submitted",
+            "likes": "Likes",
+            "status": "Status",
+            "responded": "Responded"
+          }
+        }
+      },
+      "type": {
+        "bug": "Bug",
+        "feature": "Feature request",
+        "anonymous": "Anonymous"
+      },
+      "pageHead": {
+        "breadcrumb": "Feedback",
+        "kicker": "Reviews · Feedback",
+        "title": "User feedback",
+        "sub": "Review, respond, and track community feedback",
+        "exportCsv": "Export CSV",
+        "sendMassUpdate": "Send mass update",
+        "comingSoonTooltip": "Coming soon"
+      },
+      "statCards": {
+        "total": {
+          "label": "Total feedback",
+          "sub": "{{newCount}} new · {{respondedCount}} responded"
+        },
+        "awaiting": {
+          "label": "Awaiting response"
+        },
+        "communityVotes": {
+          "label": "Community votes",
+          "sub": "upvotes on this page"
+        }
+      },
+      "filters": {
+        "status": {
+          "all": "All",
+          "open": "Open",
+          "new": "New",
+          "investigating": "Investigating",
+          "planned": "Planned",
+          "responded": "Responded",
+          "wont_fix": "Won't fix"
+        },
+        "type": {
+          "all": "All",
+          "bug": "Bug",
+          "feature": "Feature",
+          "compliment": "Compliment"
+        },
+        "search": {
+          "placeholder": "Search feedback..."
+        },
+        "clear": "Clear filters"
+      },
+      "emptyStates": {
+        "noMatch": "No feedback matches your filters",
+        "compliments": "No compliments yet — backend support coming"
+      },
+      "toasts": {
+        "deepLinkNotFound": "Feedback item not found on this page"
+      }
     }
   },
   "cardErrors": {
