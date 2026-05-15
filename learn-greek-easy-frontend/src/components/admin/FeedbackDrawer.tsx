@@ -29,7 +29,12 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useAdminFeedbackStore } from '@/stores/adminFeedbackStore';
 
-import { backendToHandoff, handoffToBackend, HANDOFF_STATUSES } from './feedbackStatusMap';
+import {
+  backendToHandoff,
+  handoffToBackend,
+  BACKEND_TO_HANDOFF,
+  HANDOFF_STATUSES,
+} from './feedbackStatusMap';
 
 import type { HandoffStatus } from './feedbackStatusMap';
 
@@ -65,6 +70,29 @@ const STATUS_PICKER: ReadonlyArray<{ key: HandoffStatus; label: string; dotTone:
   { key: 'wont_fix', label: "Won't fix", dotTone: 'gray' },
   { key: 'duplicate', label: 'Duplicate', dotTone: 'gray' },
 ] as const;
+
+// Tone mapping for the Meta tab Status badge (mirrors STATUS_PICKER dot-color column)
+const HANDOFF_TO_TONE: Record<HandoffStatus, BadgeTone> = {
+  new: 'blue',
+  investigating: 'amber',
+  planned: 'violet',
+  in_progress: 'cyan',
+  responded: 'green',
+  shipped: 'green',
+  wont_fix: 'gray',
+  duplicate: 'gray',
+};
+
+const HANDOFF_LABEL: Record<HandoffStatus, string> = {
+  new: 'New',
+  investigating: 'Investigating',
+  planned: 'Planned',
+  in_progress: 'In progress',
+  responded: 'Responded',
+  shipped: 'Shipped',
+  wont_fix: "Won't fix",
+  duplicate: 'Duplicate',
+};
 
 const QUICK_REPLIES: ReadonlyArray<{ label: string; text: string }> = [
   {
@@ -355,6 +383,80 @@ function ThreadTab({ feedbackId }: ThreadTabProps) {
   );
 }
 
+// ── Meta tab component ─────────────────────────────────────────────────────────
+
+interface MetaTabProps {
+  feedbackId: string;
+}
+
+function MetaTab({ feedbackId }: MetaTabProps) {
+  const feedbackList = useAdminFeedbackStore((s) => s.feedbackList);
+  const item = feedbackList.find((f) => f.id === feedbackId) ?? null;
+
+  if (!item) {
+    return <div className="p-4 text-sm text-muted-foreground">Feedback not found.</div>;
+  }
+
+  const handoff = BACKEND_TO_HANDOFF[item.status];
+
+  return (
+    <div className="fb-meta-table" role="list" aria-label="Feedback metadata">
+      {/* Row 1: User */}
+      <div className="fb-meta-row" role="listitem">
+        <span className="fb-meta-l">User</span>
+        <span className="fb-meta-v">{item.author?.full_name || 'Anonymous'}</span>
+      </div>
+
+      {/* Row 2: Type */}
+      <div className="fb-meta-row" role="listitem">
+        <span className="fb-meta-l">Type</span>
+        <span className="fb-meta-v">
+          {item.category === 'bug_incorrect_data' ? 'Bug' : 'Feature request'}
+        </span>
+      </div>
+
+      {/* Row 3: Submitted */}
+      <div className="fb-meta-row" role="listitem">
+        <span className="fb-meta-l">Submitted</span>
+        <span className="fb-meta-v">
+          {formatDistanceToNow(new Date(item.created_at), {
+            addSuffix: true,
+            locale: getDateLocale(),
+          })}
+        </span>
+      </div>
+
+      {/* Row 4: Likes */}
+      <div className="fb-meta-row" role="listitem">
+        <span className="fb-meta-l">Likes</span>
+        <span className="fb-meta-v">{item.vote_count}</span>
+      </div>
+
+      {/* Row 5: Status — Badge via tone API */}
+      <div className="fb-meta-row" role="listitem">
+        <span className="fb-meta-l">Status</span>
+        <span className="fb-meta-v">
+          <Badge tone={HANDOFF_TO_TONE[handoff]}>{HANDOFF_LABEL[handoff]}</Badge>
+        </span>
+      </div>
+
+      {/* Row 6 (conditional): Responded — only when admin_response is present */}
+      {item.admin_response ? (
+        <div className="fb-meta-row" role="listitem">
+          <span className="fb-meta-l">Responded</span>
+          <span className="fb-meta-v">
+            {formatDistanceToNow(new Date(item.admin_response_at ?? item.created_at), {
+              addSuffix: true,
+              locale: getDateLocale(),
+            })}{' '}
+            · Admin
+          </span>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 // ── Component ──────────────────────────────────────────────────────────────────
 
 export function FeedbackDrawer({
@@ -430,8 +532,8 @@ export function FeedbackDrawer({
 
       {innerTab === 'meta' && (
         <>
-          <SidePanel.Body>
-            <div data-testid="drawer-tab-meta">Meta tab — implemented in FBDR-06</div>
+          <SidePanel.Body data-testid="drawer-tab-meta">
+            <MetaTab feedbackId={feedbackId} />
           </SidePanel.Body>
           <SidePanel.Footer>
             <button type="button" onClick={onClose}>
