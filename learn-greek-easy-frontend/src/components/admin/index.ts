@@ -12,6 +12,8 @@ export { AdminFeedbackSection } from './AdminFeedbackSection';
 export { CardCreateModal, type CardCreateModalProps } from './CardCreateModal';
 export {
   AnnouncementCreateForm,
+  useAnnouncementCreateForm,
+  type AnnouncementCreateFormValues,
   type AnnouncementCreateFormData,
   AnnouncementPreviewModal,
   AnnouncementsTab,

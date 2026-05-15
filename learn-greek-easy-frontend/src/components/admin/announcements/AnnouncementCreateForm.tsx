@@ -8,7 +8,10 @@
  * - Message textarea (max 500 chars)
  * - Optional link URL field (max 500 chars)
  * - Character counters that change color as limits approach
- * - Preview button to show confirmation modal
+ *
+ * The form instance is owned by the caller via `useAnnouncementCreateForm()`.
+ * This component is a controlled child — it accepts a `form` prop and renders
+ * only the field inputs. The caller is responsible for submit/preview actions.
  */
 
 import React from 'react';
@@ -18,7 +21,6 @@ import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 
-import { Button } from '@/components/ui/button';
 import {
   Form,
   FormControl,
@@ -31,6 +33,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+
+import type { UseFormReturn } from 'react-hook-form';
 
 /**
  * Character limits for form fields
@@ -65,11 +69,29 @@ const announcementCreateSchema = z.object({
     .or(z.literal('')),
 });
 
-export type AnnouncementCreateFormData = z.infer<typeof announcementCreateSchema>;
+export type AnnouncementCreateFormValues = z.infer<typeof announcementCreateSchema>;
+
+/** @deprecated use AnnouncementCreateFormValues */
+export type AnnouncementCreateFormData = AnnouncementCreateFormValues;
+
+/**
+ * Create and return a form instance for the announcement create form.
+ * Call this in the parent component and pass the result as the `form` prop.
+ */
+export function useAnnouncementCreateForm(): UseFormReturn<AnnouncementCreateFormValues> {
+  return useForm<AnnouncementCreateFormValues>({
+    resolver: zodResolver(announcementCreateSchema),
+    mode: 'onChange',
+    defaultValues: {
+      title: '',
+      message: '',
+      linkUrl: '',
+    },
+  });
+}
 
 interface AnnouncementCreateFormProps {
-  onPreview: (data: AnnouncementCreateFormData) => void;
-  isSubmitting?: boolean;
+  form: UseFormReturn<AnnouncementCreateFormValues>;
 }
 
 /**
@@ -102,38 +124,20 @@ const CharacterCounter: React.FC<CharacterCounterProps> = ({ current, max }) => 
 
 /**
  * Announcement Create Form Component
+ *
+ * Controlled child — renders only the three input fields.
+ * The caller owns the form instance and submit/preview actions.
  */
-export const AnnouncementCreateForm: React.FC<AnnouncementCreateFormProps> = ({
-  onPreview,
-  isSubmitting = false,
-}) => {
+export const AnnouncementCreateForm: React.FC<AnnouncementCreateFormProps> = ({ form }) => {
   const { t } = useTranslation('admin');
-
-  const form = useForm<AnnouncementCreateFormData>({
-    resolver: zodResolver(announcementCreateSchema),
-    mode: 'onChange',
-    defaultValues: {
-      title: '',
-      message: '',
-      linkUrl: '',
-    },
-  });
 
   const titleValue = form.watch('title') || '';
   const messageValue = form.watch('message') || '';
   const linkUrlValue = form.watch('linkUrl') || '';
 
-  const handlePreview = (data: AnnouncementCreateFormData) => {
-    onPreview(data);
-  };
-
   return (
     <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(handlePreview)}
-        className="space-y-4"
-        data-testid="announcement-create-form"
-      >
+      <div className="space-y-4" data-testid="announcement-create-form">
         {/* Title Field */}
         <FormField
           control={form.control}
@@ -206,18 +210,7 @@ export const AnnouncementCreateForm: React.FC<AnnouncementCreateFormProps> = ({
             </FormItem>
           )}
         />
-
-        {/* Preview Button */}
-        <div className="flex justify-end pt-2">
-          <Button
-            type="submit"
-            disabled={isSubmitting || !form.formState.isValid}
-            data-testid="announcement-preview-button"
-          >
-            {t('announcements.create.preview')}
-          </Button>
-        </div>
-      </form>
+      </div>
     </Form>
   );
 };

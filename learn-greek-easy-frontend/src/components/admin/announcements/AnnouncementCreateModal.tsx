@@ -27,7 +27,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import { adminAPI } from '@/services/adminAPI';
 
-import { AnnouncementCreateForm, type AnnouncementCreateFormData } from './AnnouncementCreateForm';
+import {
+  AnnouncementCreateForm,
+  useAnnouncementCreateForm,
+  type AnnouncementCreateFormData,
+} from './AnnouncementCreateForm';
 import { AnnouncementJsonInput } from './AnnouncementJsonInput';
 import { AnnouncementPreviewModal } from './AnnouncementPreviewModal';
 
@@ -43,6 +47,8 @@ export const AnnouncementCreateModal: React.FC<AnnouncementCreateModalProps> = (
   onSuccess,
 }) => {
   const { t } = useTranslation('admin');
+
+  const form = useAnnouncementCreateForm();
 
   // Create mode toggle state
   const [createMode, setCreateMode] = useState<'form' | 'json'>('form');
@@ -198,11 +204,17 @@ export const AnnouncementCreateModal: React.FC<AnnouncementCreateModalProps> = (
                 formDirtyRef.current = true;
               }}
             >
-              <AnnouncementCreateForm
-                key={formKey}
-                onPreview={handlePreview}
-                isSubmitting={isSubmitting}
-              />
+              <AnnouncementCreateForm key={formKey} form={form} />
+              <div className="flex justify-end pt-2">
+                <button
+                  type="button"
+                  disabled={isSubmitting || !form.formState.isValid}
+                  onClick={() => form.handleSubmit(handlePreview)()}
+                  data-testid="announcement-preview-button"
+                >
+                  {t('announcements.create.preview')}
+                </button>
+              </div>
             </div>
           </TabsContent>
           <TabsContent value="json">
