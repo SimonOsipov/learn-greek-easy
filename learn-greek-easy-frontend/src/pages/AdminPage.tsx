@@ -66,6 +66,7 @@ import { Switch } from '@/components/ui/switch';
 import { toast } from '@/hooks/use-toast';
 import { getLocalizedDeckName } from '@/lib/deckLocale';
 import { cn } from '@/lib/utils';
+import InboxView from '@/pages/admin/InboxView';
 import { adminAPI } from '@/services/adminAPI';
 import type {
   ContentStatsResponse,
@@ -1152,7 +1153,7 @@ const AdminPage: React.FC = () => {
       {activeTab === 'exercises' && <ExercisesPlaceholder />}
 
       {activeTab === 'dashboard' && <div data-testid="admin-dashboard-placeholder" />}
-      {activeTab === 'inbox' && <div data-testid="admin-inbox-placeholder" />}
+      {activeTab === 'inbox' && <InboxView />}
 
       {/* Deck Edit Modal */}
       <DeckEditModal
