@@ -33,10 +33,24 @@ export interface PageHeadProps extends Omit<React.HTMLAttributes<HTMLDivElement>
    * Omit to hide the action region.
    */
   actions?: React.ReactNode;
+  /**
+   * Optional data-testid forwarded to the <h1> element.
+   * Used to preserve Playwright e2e selectors (e.g. "admin-title") when
+   * the inline page header is replaced by <PageHead>.
+   */
+  titleTestId?: string;
+  /**
+   * Optional data-testid forwarded to the <p class="va-sub"> element.
+   * Used to preserve Playwright e2e selectors (e.g. "admin-subtitle").
+   */
+  subTestId?: string;
 }
 
 export const PageHead = React.forwardRef<HTMLDivElement, PageHeadProps>(
-  ({ breadcrumb, kicker, title, sub, actions, className, ...rest }, ref) => {
+  (
+    { breadcrumb, kicker, title, sub, actions, titleTestId, subTestId, className, ...rest },
+    ref
+  ) => {
     const hasBreadcrumb = breadcrumb && breadcrumb.length > 0;
     const lastIndex = hasBreadcrumb ? breadcrumb.length - 1 : -1;
 
@@ -75,9 +89,15 @@ export const PageHead = React.forwardRef<HTMLDivElement, PageHeadProps>(
 
           {kicker !== undefined && kicker}
 
-          <h1 className="va-h1">{title}</h1>
+          <h1 className="va-h1" {...(titleTestId ? { 'data-testid': titleTestId } : {})}>
+            {title}
+          </h1>
 
-          {sub !== undefined && <p className="va-sub">{sub}</p>}
+          {sub !== undefined && (
+            <p className="va-sub" {...(subTestId ? { 'data-testid': subTestId } : {})}>
+              {sub}
+            </p>
+          )}
         </div>
 
         {/* Right column */}

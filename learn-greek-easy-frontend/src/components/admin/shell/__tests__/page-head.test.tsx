@@ -1,5 +1,5 @@
 /**
- * PageHead Component Tests (ASHELL-05)
+ * PageHead Component Tests (ASHELL-05, extended by ASHELL-07)
  *
  * Covers:
  * 1. All 5 slots render when provided (breadcrumb, kicker, title, sub, actions)
@@ -10,6 +10,9 @@
  * 6. Final breadcrumb segment is non-clickable + carries aria-current="page"
  * 7. Empty breadcrumb array treated as missing — no .va-bcrumb wrapper
  * 8. Earlier breadcrumb segment fires onClick on click
+ * 9. titleTestId forwarded to h1 as data-testid (ASHELL-07)
+ * 10. subTestId forwarded to .va-sub p as data-testid (ASHELL-07)
+ * 11. No data-testid on h1/sub when props are omitted (ASHELL-07)
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -116,5 +119,38 @@ describe('PageHead', () => {
     await user.click(adminLink);
 
     expect(onClickAdmin).toHaveBeenCalledOnce();
+  });
+
+  // 9. titleTestId forwarded to h1 as data-testid
+  it('forwards titleTestId as data-testid on the h1', () => {
+    renderPageHead({ title: 'Admin Panel', titleTestId: 'admin-title' });
+
+    const h1 = screen.getByRole('heading', { level: 1, name: 'Admin Panel' });
+    expect(h1).toHaveAttribute('data-testid', 'admin-title');
+  });
+
+  // 10. subTestId forwarded to .va-sub p as data-testid
+  it('forwards subTestId as data-testid on the sub paragraph', () => {
+    renderPageHead({
+      title: 'Admin Panel',
+      sub: 'Manage your content',
+      subTestId: 'admin-subtitle',
+    });
+
+    const subEl = document.querySelector('.va-sub');
+    expect(subEl).toBeTruthy();
+    expect(subEl).toHaveAttribute('data-testid', 'admin-subtitle');
+  });
+
+  // 11. No data-testid on h1 or sub when testid props are omitted
+  it('does not add data-testid attributes when titleTestId and subTestId are omitted', () => {
+    renderPageHead({ title: 'Admin Panel', sub: 'Subtitle' });
+
+    const h1 = screen.getByRole('heading', { level: 1, name: 'Admin Panel' });
+    expect(h1).not.toHaveAttribute('data-testid');
+
+    const subEl = document.querySelector('.va-sub');
+    expect(subEl).toBeTruthy();
+    expect(subEl).not.toHaveAttribute('data-testid');
   });
 });
