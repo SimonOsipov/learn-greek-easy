@@ -1322,5 +1322,47 @@
       "anchorPictureAlt": "Anchor picture",
       "runtimeNote": "4-option grid assembled at request time. Distractors are picked from other Situations."
     }
+  },
+  "inbox": {
+    "breadcrumb": {
+      "dashboard": "Admin",
+      "current": "Inbox"
+    },
+    "kicker": "Needs your attention",
+    "title": "Inbox",
+    "sub": "Cross-content attention queue — feedback, drafts, audio gaps, and card errors will surface here.",
+    "stats": {
+      "open": {
+        "title": "Open items",
+        "sub": "Across feedback, drafts & errors"
+      },
+      "feedback": {
+        "title": "User feedback",
+        "sub": "0 new · 0 responded"
+      },
+      "drafts": {
+        "title": "Drafts waiting",
+        "sub": "No drafts in queue"
+      },
+      "errors": {
+        "title": "Card errors",
+        "sub": "0 pending · 0 fixed"
+      }
+    },
+    "filter": {
+      "all": "All",
+      "feedback": "Feedback",
+      "drafts": "Drafts",
+      "audio": "Audio",
+      "errors": "Errors"
+    },
+    "panel": {
+      "title": "All open items",
+      "sub": "0 items · check back as feedback, drafts, audio, and errors come in"
+    },
+    "empty": {
+      "title": "No items needing attention",
+      "sub": "Aggregated inbox coming soon. New feedback, draft warnings, audio regens, and card errors will surface here automatically."
+    }
   }
 }
