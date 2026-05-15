@@ -1875,13 +1875,13 @@
     font-weight: 700;
     color: hsl(var(--fg));
     margin: 4px 0 6px;
-    word-break: break-word;
+    overflow-wrap: break-word;
   }
   .an-preview-msg {
     font-size: 13px;
     line-height: 1.45;
     color: hsl(var(--fg-2));
-    word-break: break-word;
+    overflow-wrap: break-word;
   }
   .an-preview-link {
     font-size: 11px;

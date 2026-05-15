@@ -184,8 +184,13 @@ export function AnnouncementComposeDrawer({ open, onClose }: AnnouncementCompose
         { replace: true }
       );
       resetAndClose();
-    } catch {
-      toast({ title: t('announcements.create.error'), variant: 'destructive' });
+    } catch (e) {
+      const errorMessage = e instanceof Error ? e.message : 'Unknown error';
+      toast({
+        title: t('announcements.create.error'),
+        description: errorMessage,
+        variant: 'destructive',
+      });
     }
   });
 
@@ -324,12 +329,21 @@ export function AnnouncementComposeDrawer({ open, onClose }: AnnouncementCompose
 
                   {/* Schedule section */}
                   <div className="ann-section">
-                    <h3 className="ann-section-h">
+                    <h3 id="ann-schedule-label" className="ann-section-h">
                       {t('announcements.v2.compose.schedule.label')}
                     </h3>
-                    <div className="ann-sched">
+                    <div
+                      className="ann-sched"
+                      role="radiogroup"
+                      aria-labelledby="ann-schedule-label"
+                    >
                       {/* Send now — active */}
-                      <div className="ann-sched-opt is-active" aria-checked="true" role="radio">
+                      <div
+                        className="ann-sched-opt is-active"
+                        aria-checked="true"
+                        role="radio"
+                        tabIndex={0}
+                      >
                         {t('announcements.v2.compose.schedule.sendNow')}
                       </div>
 

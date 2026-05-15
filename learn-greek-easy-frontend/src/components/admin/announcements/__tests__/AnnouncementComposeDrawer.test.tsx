@@ -352,9 +352,11 @@ describe('AnnouncementComposeDrawer', () => {
 
     await user.click(screen.getByTestId('announcement-compose-send-button'));
 
-    // At this point createAnnouncement resolved, but fetchAnnouncements hasn't
-    expect(fetchAnnouncements).toHaveBeenCalled();
-    // onClose should NOT be called yet
+    // Wait until createAnnouncement has been called and fetchAnnouncements kicked off,
+    // but onClose should NOT be called yet (drawer waits for fetch to resolve)
+    await waitFor(() => {
+      expect(fetchAnnouncements).toHaveBeenCalled();
+    });
     expect(onClose).not.toHaveBeenCalled();
 
     // Now resolve the fetch

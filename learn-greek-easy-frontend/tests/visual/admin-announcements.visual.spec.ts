@@ -220,7 +220,7 @@ test.describe('Admin Announcements - Visual Tests', () => {
       const url = route.request().url();
 
       // Check if this is a detail request (has UUID at end)
-      if (url.match(/\/announcements\/[a-f0-9-]+$/)) {
+      if (url.match(/\/announcements\/[^/?#]+$/)) {
         route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -420,7 +420,7 @@ test.describe('Admin Announcements - Visual Tests', () => {
       const url = route.request().url();
 
       // Check if this is a detail request
-      if (url.match(/\/announcements\/[a-f0-9-]+$/)) {
+      if (url.match(/\/announcements\/[^/?#]+$/)) {
         route.fulfill({
           status: 200,
           contentType: 'application/json',
