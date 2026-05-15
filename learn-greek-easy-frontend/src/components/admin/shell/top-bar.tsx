@@ -45,22 +45,25 @@ export const TopBar = React.forwardRef<HTMLElement, TopBarProps>(
           <span className="chip">admin</span>
         </div>
 
-        <nav className="va-nav" aria-label="Primary admin navigation">
-          <a className="active">Admin</a>
-          <a>Dashboard</a>
-          <a>
+        {/* Decorative chrome — real navigation lands in ADMIN2-04..11. */}
+        <div className="va-nav" aria-hidden="true">
+          <span className="active" aria-current="page">
+            Admin
+          </span>
+          <span>Dashboard</span>
+          <span>
             Decks <i className="caret">›</i>
-          </a>
-          <a>
+          </span>
+          <span>
             Practice <i className="caret">›</i>
-          </a>
-          <a>
+          </span>
+          <span>
             Statistics <i className="caret">›</i>
-          </a>
-          <a>
+          </span>
+          <span>
             Support <i className="caret">›</i>
-          </a>
-        </nav>
+          </span>
+        </div>
 
         <div className="va-top-right">
           <button

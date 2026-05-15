@@ -9,7 +9,7 @@
  * 5. Omitted actions produces no .va-page-actions node
  * 6. Final breadcrumb segment is non-clickable + carries aria-current="page"
  * 7. Empty breadcrumb array treated as missing — no .va-bcrumb wrapper
- * 8. Earlier breadcrumb segment fires onClick on click
+ * 8. Earlier breadcrumb segment (button) fires onClick on click
  * 9. titleTestId forwarded to h1 as data-testid (ASHELL-07)
  * 10. subTestId forwarded to .va-sub p as data-testid (ASHELL-07)
  * 11. No data-testid on h1/sub when props are omitted (ASHELL-07)
@@ -115,8 +115,8 @@ describe('PageHead', () => {
       title: 'Current Page',
     });
 
-    const adminLink = screen.getByRole('link', { name: 'Admin' });
-    await user.click(adminLink);
+    const adminBtn = screen.getByRole('button', { name: 'Admin' });
+    await user.click(adminBtn);
 
     expect(onClickAdmin).toHaveBeenCalledOnce();
   });

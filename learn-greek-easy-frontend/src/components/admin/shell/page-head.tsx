@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 export interface PageHeadBreadcrumbItem {
   /** Translated label. */
   label: React.ReactNode;
-  /** When set, the segment renders as a clickable <a> that fires onClick. */
+  /** When set, the segment renders as a clickable <button> that fires onClick. */
   onClick?: () => void;
 }
 
@@ -65,19 +65,9 @@ export const PageHead = React.forwardRef<HTMLDivElement, PageHeadProps>(
                   {i === lastIndex ? (
                     <span aria-current="page">{item.label}</span>
                   ) : item.onClick ? (
-                    <a
-                      onClick={item.onClick}
-                      role="link"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          item.onClick?.();
-                        }
-                      }}
-                    >
+                    <button type="button" onClick={item.onClick}>
                       {item.label}
-                    </a>
+                    </button>
                   ) : (
                     <span>{item.label}</span>
                   )}
