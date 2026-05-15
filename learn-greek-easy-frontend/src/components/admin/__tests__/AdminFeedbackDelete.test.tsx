@@ -107,7 +107,7 @@ describe('AdminFeedbackCard — delete button', () => {
     expect(screen.getByTestId(`delete-feedback-${FEEDBACK_ID}`)).toBeInTheDocument();
   });
 
-  it('calls onDelete with the feedback item when trash button is clicked', async () => {
+  it('calls onDelete with the feedback id when trash button is clicked', async () => {
     const user = userEvent.setup();
     const onDelete = vi.fn();
 
@@ -116,10 +116,10 @@ describe('AdminFeedbackCard — delete button', () => {
     await user.click(screen.getByTestId(`delete-feedback-${FEEDBACK_ID}`));
 
     expect(onDelete).toHaveBeenCalledOnce();
-    expect(onDelete).toHaveBeenCalledWith(sampleFeedback);
+    expect(onDelete).toHaveBeenCalledWith(FEEDBACK_ID);
   });
 
-  it('renders trash button even when onDelete prop is not provided (no crash)', () => {
+  it('does not render trash button when onDelete prop is not provided', () => {
     render(
       <AdminFeedbackCard
         feedback={sampleFeedback}
@@ -128,7 +128,7 @@ describe('AdminFeedbackCard — delete button', () => {
       />
     );
 
-    expect(screen.getByTestId(`delete-feedback-${FEEDBACK_ID}`)).toBeInTheDocument();
+    expect(screen.queryByTestId(`delete-feedback-${FEEDBACK_ID}`)).not.toBeInTheDocument();
   });
 });
 

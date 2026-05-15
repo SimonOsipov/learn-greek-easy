@@ -34,6 +34,7 @@ import {
   handoffToBackend,
   BACKEND_TO_HANDOFF,
   HANDOFF_STATUSES,
+  STATUS_TONE,
 } from './feedbackStatusMap';
 
 import type { HandoffStatus } from './feedbackStatusMap';
@@ -71,17 +72,7 @@ const STATUS_PICKER: ReadonlyArray<{ key: HandoffStatus; label: string; dotTone:
   { key: 'duplicate', label: 'Duplicate', dotTone: 'gray' },
 ] as const;
 
-// Tone mapping for the Meta tab Status badge (mirrors STATUS_PICKER dot-color column)
-const HANDOFF_TO_TONE: Record<HandoffStatus, BadgeTone> = {
-  new: 'blue',
-  investigating: 'amber',
-  planned: 'violet',
-  in_progress: 'cyan',
-  responded: 'green',
-  shipped: 'green',
-  wont_fix: 'gray',
-  duplicate: 'gray',
-};
+// STATUS_TONE is imported from ./feedbackStatusMap (single source of truth)
 
 const HANDOFF_LABEL: Record<HandoffStatus, string> = {
   new: 'New',
@@ -436,7 +427,7 @@ function MetaTab({ feedbackId }: MetaTabProps) {
       <div className="fb-meta-row" role="listitem">
         <span className="fb-meta-l">Status</span>
         <span className="fb-meta-v">
-          <Badge tone={HANDOFF_TO_TONE[handoff]}>{HANDOFF_LABEL[handoff]}</Badge>
+          <Badge tone={STATUS_TONE[handoff]}>{HANDOFF_LABEL[handoff]}</Badge>
         </span>
       </div>
 

@@ -9,7 +9,8 @@
 //   'duplicate'  → 'cancelled'      (no distinct backend bucket)
 // The reverse map picks the canonical handoff label for each backend bucket.
 
-import type { FeedbackStatus } from '@/types/feedback';
+import type { BadgeTone } from '@/components/ui/badge';
+import type { FeedbackCategory, FeedbackStatus } from '@/types/feedback';
 
 // ── Handoff status type ────────────────────────────────────────────────────────
 
@@ -59,6 +60,26 @@ export const BACKEND_TO_HANDOFF: Record<FeedbackStatus, HandoffStatus> = {
   in_progress: 'in_progress',
   completed: 'shipped',
   cancelled: 'wont_fix',
+};
+
+// ── Badge tone maps (admin card + drawer) ──────────────────────────────────────
+
+/** Badge tone for each handoff status (used in AdminFeedbackCard and FeedbackDrawer Meta tab). */
+export const STATUS_TONE: Record<HandoffStatus, BadgeTone> = {
+  new: 'blue',
+  investigating: 'amber',
+  planned: 'violet',
+  in_progress: 'cyan',
+  responded: 'green',
+  shipped: 'green',
+  wont_fix: 'gray',
+  duplicate: 'gray',
+};
+
+/** Badge tone for each feedback category (used in AdminFeedbackCard). */
+export const CATEGORY_TONE: Record<FeedbackCategory, BadgeTone> = {
+  bug_incorrect_data: 'red',
+  feature_request: 'violet',
 };
 
 // ── Exhaustiveness helper ──────────────────────────────────────────────────────

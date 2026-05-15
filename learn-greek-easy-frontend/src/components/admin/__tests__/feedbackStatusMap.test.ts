@@ -2,11 +2,13 @@
 
 import { describe, expect, it } from 'vitest';
 
-import type { FeedbackStatus } from '@/types/feedback';
+import type { FeedbackCategory, FeedbackStatus } from '@/types/feedback';
 import {
   BACKEND_TO_HANDOFF,
+  CATEGORY_TONE,
   HANDOFF_STATUSES,
   HANDOFF_TO_BACKEND,
+  STATUS_TONE,
   backendToHandoff,
   handoffToBackend,
   type HandoffStatus,
@@ -75,5 +77,40 @@ describe('feedbackStatusMap', () => {
     for (const b of BACKEND_STATUSES) {
       expect(BACKEND_TO_HANDOFF).toHaveProperty(b);
     }
+  });
+});
+
+// ── STATUS_TONE exhaustiveness ─────────────────────────────────────────────────
+
+describe('STATUS_TONE', () => {
+  it('every handoff status has a tone entry', () => {
+    for (const h of HANDOFF_STATUSES) {
+      expect(STATUS_TONE).toHaveProperty(h);
+      expect(STATUS_TONE[h]).toBeTruthy();
+    }
+  });
+
+  it('STATUS_TONE has exactly 8 entries (one per HandoffStatus)', () => {
+    expect(Object.keys(STATUS_TONE)).toHaveLength(8);
+  });
+});
+
+// ── CATEGORY_TONE exhaustiveness ───────────────────────────────────────────────
+
+const FEEDBACK_CATEGORIES: readonly FeedbackCategory[] = [
+  'bug_incorrect_data',
+  'feature_request',
+] as const;
+
+describe('CATEGORY_TONE', () => {
+  it('every feedback category has a tone entry', () => {
+    for (const c of FEEDBACK_CATEGORIES) {
+      expect(CATEGORY_TONE).toHaveProperty(c);
+      expect(CATEGORY_TONE[c]).toBeTruthy();
+    }
+  });
+
+  it('CATEGORY_TONE has exactly 2 entries (one per FeedbackCategory)', () => {
+    expect(Object.keys(CATEGORY_TONE)).toHaveLength(2);
   });
 });

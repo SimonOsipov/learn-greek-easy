@@ -99,9 +99,12 @@ export const AdminFeedbackSection: React.FC = () => {
     }
   };
 
-  const handleRespond = (feedback: AdminFeedbackItem) => {
-    setSelectedFeedback(feedback);
-    setIsResponseDialogOpen(true);
+  const handleRespond = (id: string) => {
+    const f = feedbackList.find((x) => x.id === id);
+    if (f) {
+      setSelectedFeedback(f);
+      setIsResponseDialogOpen(true);
+    }
   };
 
   const handleResponseDialogClose = (open: boolean) => {
@@ -287,7 +290,10 @@ export const AdminFeedbackSection: React.FC = () => {
                         key={feedback.id}
                         feedback={feedback}
                         onRespond={handleRespond}
-                        onDelete={(item) => setDeleteTarget(item)}
+                        onDelete={(id) => {
+                          const item = feedbackList.find((x) => x.id === id);
+                          if (item) setDeleteTarget(item);
+                        }}
                       />
                     ))}
                   </div>
