@@ -322,7 +322,7 @@ export const AdminFeedbackSection: React.FC = () => {
   const respondedCount = feedbackList.filter(
     (f) => f.admin_response !== null && f.admin_response !== ''
   ).length;
-  const awaitingCount = Math.max(0, total - respondedCount);
+  const awaitingCount = Math.max(0, feedbackList.length - respondedCount);
   const pageVotesSum = feedbackList.reduce((acc, f) => acc + (f.vote_count ?? 0), 0);
 
   // ── Filter active check ───────────────────────────────────────────────────

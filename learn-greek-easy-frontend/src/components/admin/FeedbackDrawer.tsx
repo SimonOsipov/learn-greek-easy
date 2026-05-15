@@ -26,6 +26,7 @@ import { SidePanel } from '@/components/ui/side-panel';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
+import { initialsOf } from '@/lib/userUtils';
 import { cn } from '@/lib/utils';
 import { useAdminFeedbackStore } from '@/stores/adminFeedbackStore';
 
@@ -74,16 +75,11 @@ const STATUS_PICKER: ReadonlyArray<{ key: HandoffStatus; label: string; dotTone:
 
 // STATUS_TONE is imported from ./feedbackStatusMap (single source of truth)
 
-const HANDOFF_LABEL: Record<HandoffStatus, string> = {
-  new: 'New',
-  investigating: 'Investigating',
-  planned: 'Planned',
-  in_progress: 'In progress',
-  responded: 'Responded',
-  shipped: 'Shipped',
-  wont_fix: "Won't fix",
-  duplicate: 'Duplicate',
-};
+// Derived from STATUS_PICKER — single source of truth for status display labels.
+const HANDOFF_LABEL = Object.fromEntries(STATUS_PICKER.map((s) => [s.key, s.label])) as Record<
+  HandoffStatus,
+  string
+>;
 
 const QUICK_REPLIES: ReadonlyArray<{ label: string; text: string }> = [
   {
@@ -175,7 +171,7 @@ function ReplyTab({ feedbackId, onClose }: ReplyTabProps) {
       setIsSubmitting(true);
       await updateFeedback(feedback.id, {
         ...(statusChanged ? { status: backendStatus } : {}),
-        ...(responseChanged ? { admin_response: trimmed || undefined } : {}),
+        ...(responseChanged ? { admin_response: trimmed } : {}),
       });
       onClose();
       toast({ title: 'Reply saved' });
@@ -308,14 +304,6 @@ function getDateLocale() {
   if (lang === 'el') return el;
   if (lang === 'ru') return ru;
   return undefined;
-}
-
-function initialsOf(name?: string | null): string {
-  if (!name) return 'A'; // Anonymous
-  const parts = name.trim().split(/\s+/);
-  const first = parts[0]?.[0] ?? '';
-  const second = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? '') : '';
-  return (first + second).toUpperCase() || 'A';
 }
 
 // ── Thread tab component ───────────────────────────────────────────────────────

@@ -84,7 +84,7 @@ interface AdminFeedbackState {
     data: AdminFeedbackUpdateRequest
   ) => Promise<AdminFeedbackItem>;
   /** Optimistic in-place merge — no network call. Use for speculative UI updates. */
-  updateFeedbackOptimistic: (id: string, patch: Partial<AdminFeedbackItem>) => void;
+  updateFeedbackOptimistic: (id: string, patch: Partial<FeedbackSnapshot>) => void;
   /** Restore a feedbackList item from a snapshot after a failed optimistic update. */
   rollbackFeedback: (id: string, snapshot: FeedbackSnapshot) => void;
   deleteFeedback: (id: string) => Promise<void>;
@@ -178,7 +178,7 @@ export const useAdminFeedbackStore = create<AdminFeedbackState>()(
        * Optimistic in-place merge — no network call.
        * Useful for speculative UI updates before an async action resolves.
        */
-      updateFeedbackOptimistic: (id: string, patch: Partial<AdminFeedbackItem>) => {
+      updateFeedbackOptimistic: (id: string, patch: Partial<FeedbackSnapshot>) => {
         set((state) => ({
           feedbackList: state.feedbackList.map((f) => (f.id === id ? { ...f, ...patch } : f)),
           selectedFeedback:

@@ -2126,11 +2126,7 @@
     height: 16px;
   }
   .fb-vote-count {
-    font-family:
-      ui-monospace,
-      SF Mono,
-      Menlo,
-      monospace;
+    font-family: ui-monospace, 'SF Mono', Menlo, monospace;
     font-size: 15px;
     font-weight: 600;
     color: hsl(var(--fg));

@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { AdminAvatar } from '@/components/ui/admin-avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { initialsOf } from '@/lib/userUtils';
 import type { AdminFeedbackItem } from '@/types/feedback';
 
 import { BACKEND_TO_HANDOFF, CATEGORY_TONE, STATUS_TONE } from './feedbackStatusMap';
@@ -21,19 +22,11 @@ interface AdminFeedbackCardProps {
   onDelete?: (id: string) => void;
 }
 
-// ── Small helpers (inline — only two consumers would not warrant a shared util) ─
+// ── Small helpers ─────────────────────────────────────────────────────────────
 
 function truncate(text: string, maxLen: number): string {
   if (text.length <= maxLen) return text;
   return text.slice(0, maxLen) + '…';
-}
-
-function initialsOf(name?: string | null): string {
-  if (!name) return 'A';
-  const parts = name.trim().split(/\s+/);
-  const first = parts[0]?.[0] ?? '';
-  const second = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? '') : '';
-  return (first + second).toUpperCase() || 'A';
 }
 
 /**
