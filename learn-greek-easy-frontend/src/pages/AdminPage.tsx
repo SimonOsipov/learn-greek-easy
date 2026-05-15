@@ -1005,6 +1005,7 @@ const AdminPage: React.FC = () => {
       <div className="space-y-6 pb-8" data-testid="admin-page">
         <TopBar hasNotifications={false} />
         <PageHead {...pageHeadPropsFor(activeTab, t)} />
+        <SectionTabs tabs={tabsConfig} active={activeTab} onTabChange={setActiveTab} />
         <AdminLoadingSkeleton />
       </div>
     );
@@ -1016,6 +1017,7 @@ const AdminPage: React.FC = () => {
       <div className="space-y-6 pb-8" data-testid="admin-page">
         <TopBar hasNotifications={false} />
         <PageHead {...pageHeadPropsFor(activeTab, t)} />
+        <SectionTabs tabs={tabsConfig} active={activeTab} onTabChange={setActiveTab} />
         <ErrorState message={error} onRetry={handleRetry} isRetrying={isRetrying} t={t} />
       </div>
     );
@@ -1027,6 +1029,7 @@ const AdminPage: React.FC = () => {
       <div className="space-y-6 pb-8" data-testid="admin-page">
         <TopBar hasNotifications={false} />
         <PageHead {...pageHeadPropsFor(activeTab, t)} />
+        <SectionTabs tabs={tabsConfig} active={activeTab} onTabChange={setActiveTab} />
         <Card>
           <CardContent className="py-8 text-center">
             <p className="text-muted-foreground">{t('states.noStats')}</p>
