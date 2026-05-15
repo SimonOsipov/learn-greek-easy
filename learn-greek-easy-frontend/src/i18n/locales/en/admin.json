@@ -372,6 +372,21 @@
       "warning": "This will permanently delete the announcement. Already-sent notifications will NOT be recalled.",
       "confirm": "Delete",
       "success": "Announcement deleted"
+    },
+    "v2": {
+      "comingSoon": "Coming soon",
+      "preview": {
+        "titlePlaceholder": "Your announcement title",
+        "messagePlaceholder": "The body of your message will appear here. Keep it short and friendly — learners get a lot of notifications.",
+        "notAvailableInJsonMode": "Preview not available in JSON mode"
+      },
+      "timeline": {
+        "comingSoonCaption": "Detailed timeline coming soon"
+      },
+      "ctr": {
+        "trackingComingSoon": "tracking coming soon",
+        "noLink": "no link"
+      }
     }
   },
   "news": {
