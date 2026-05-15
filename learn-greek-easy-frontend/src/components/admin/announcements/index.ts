@@ -13,3 +13,4 @@ export { AnnouncementJsonInput } from './AnnouncementJsonInput';
 export { AnnouncementPreviewModal } from './AnnouncementPreviewModal';
 export { AnnouncementsTab } from './AnnouncementsTab';
 export { AnnouncementNotificationPreview } from './AnnouncementNotificationPreview';
+export { AnnouncementComposeDrawer } from './AnnouncementComposeDrawer';

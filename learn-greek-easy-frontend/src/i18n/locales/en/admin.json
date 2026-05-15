@@ -395,6 +395,36 @@
       "ctr": {
         "trackingComingSoon": "tracking coming soon",
         "noLink": "no link"
+      },
+      "compose": {
+        "breadcrumb": "Announcements · New",
+        "title": "Compose announcement",
+        "draftBadge": "Draft",
+        "helper": "Fill in the details below to create your announcement.",
+        "showPreview": "Show preview",
+        "hidePreview": "Hide preview",
+        "audience": {
+          "label": "Audience",
+          "allLearners": "All learners",
+          "premium": "Premium subscribers",
+          "inactive": "Inactive 30+ days"
+        },
+        "schedule": {
+          "label": "Schedule",
+          "sendNow": "Send now",
+          "scheduleLater": "Schedule for later"
+        },
+        "footer": {
+          "ready": "Ready to send",
+          "needsTitleAndMessage": "Needs title and message",
+          "helperPrefix": "Sending to",
+          "helperBold": "all active learners",
+          "helperSuffix": "· immediate",
+          "cancel": "Cancel",
+          "saveDraft": "Save draft",
+          "sendNow": "Send now",
+          "sending": "Sending..."
+        }
       }
     }
   },

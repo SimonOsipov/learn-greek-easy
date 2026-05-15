@@ -407,6 +407,36 @@
       "ctr": {
         "trackingComingSoon": "отслеживание скоро",
         "noLink": "ссылка не указана"
+      },
+      "compose": {
+        "breadcrumb": "Объявления · Новое",
+        "title": "Создать объявление",
+        "draftBadge": "Черновик",
+        "helper": "Заполните поля ниже, чтобы создать объявление.",
+        "showPreview": "Показать превью",
+        "hidePreview": "Скрыть превью",
+        "audience": {
+          "label": "Аудитория",
+          "allLearners": "Все учащиеся",
+          "premium": "Подписчики Premium",
+          "inactive": "Неактивные 30+ дней"
+        },
+        "schedule": {
+          "label": "Расписание",
+          "sendNow": "Отправить сейчас",
+          "scheduleLater": "Запланировать"
+        },
+        "footer": {
+          "ready": "Готово к отправке",
+          "needsTitleAndMessage": "Нужны заголовок и сообщение",
+          "helperPrefix": "Отправка",
+          "helperBold": "всем активным учащимся",
+          "helperSuffix": "· немедленно",
+          "cancel": "Отмена",
+          "saveDraft": "Сохранить черновик",
+          "sendNow": "Отправить сейчас",
+          "sending": "Отправка..."
+        }
       }
     }
   },
