@@ -16,7 +16,6 @@ export {
   type AnnouncementCreateFormValues,
   type AnnouncementCreateFormData,
   AnnouncementNotificationPreview,
-  AnnouncementPreviewModal,
   AnnouncementsTab,
   AnnouncementComposeDrawer,
   AnnouncementDetailsDrawer,
