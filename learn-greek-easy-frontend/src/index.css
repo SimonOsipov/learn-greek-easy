@@ -353,6 +353,258 @@
 
 /* Custom component styles */
 @layer components {
+  /* ADMIN2-02 — shell chrome (ported verbatim from design_handoff_admin_redesign) */
+  /* Deviation: .va-top gains position:sticky/top:0/z-index:40 (not in handoff source) */
+  /* color:white in .brand-mark replaced with hsl(var(--primary-foreground)) per drift rules */
+
+  /* ----- Icon button --------------------------------------------------------- */
+  .icon-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid transparent;
+    color: hsl(var(--fg-2));
+    transition: all 0.15s;
+    position: relative;
+  }
+  .icon-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+  .icon-btn:hover {
+    background: hsl(var(--fg) / 0.06);
+    color: hsl(var(--fg));
+  }
+  .icon-btn-sm {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+  }
+  .icon-btn-sm svg {
+    width: 14px;
+    height: 14px;
+  }
+  .icon-btn.danger:hover {
+    color: hsl(var(--danger));
+    background: hsl(var(--danger) / 0.1);
+  }
+  .icon-btn .dot {
+    position: absolute;
+    top: 7px;
+    right: 8px;
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: hsl(var(--danger));
+    border: 2px solid hsl(var(--bg));
+  }
+  .icon-btn .dot-amber {
+    background: hsl(var(--warning));
+  }
+  .icon-btn .dot-red {
+    background: hsl(var(--danger));
+  }
+
+  /* ----- Brand mark ---------------------------------------------------------- */
+  .brand-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
+    color: hsl(var(--primary-foreground));
+    font-family: 'Inter Tight', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: -0.02em;
+    box-shadow: 0 1px 0 hsl(255 100% 100% / 0.2) inset;
+  }
+  .brand-mark-glow {
+    box-shadow:
+      0 1px 0 hsl(255 100% 100% / 0.2) inset,
+      0 0 30px hsl(var(--primary) / 0.45);
+  }
+  .brand-text {
+    font-family: 'Inter Tight', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    letter-spacing: -0.01em;
+  }
+  .brand-sub {
+    font-size: 11px;
+    color: hsl(var(--fg-3));
+  }
+
+  /* ----- VA shell (Variation A — Polished v1.1) ------------------------------ */
+  .va-root {
+    min-height: 100%;
+    background: hsl(var(--bg));
+  }
+  .va-top {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    padding: 14px 32px;
+    border-bottom: 1px solid hsl(var(--fg) / 0.06);
+    background: hsl(var(--bg) / 0.7);
+    backdrop-filter: blur(14px);
+    /* intentional deviation from handoff: sticky top bar */
+    position: sticky;
+    top: 0;
+    z-index: 40;
+  }
+  .va-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .va-nav {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 8px;
+  }
+  .va-nav a {
+    padding: 7px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: hsl(var(--fg-2));
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .va-nav a .caret {
+    color: hsl(var(--fg-3));
+    font-size: 10px;
+    transform: translateY(-1px);
+  }
+  .va-nav a:hover {
+    background: hsl(var(--fg) / 0.04);
+    color: hsl(var(--fg));
+  }
+  .va-nav a.active {
+    background: hsl(var(--primary) / 0.12);
+    color: hsl(var(--primary));
+  }
+  .va-top-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .va-main {
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 28px 32px 48px;
+  }
+
+  .va-page-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 24px;
+  }
+  .va-h1 {
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin: 0;
+  }
+  .va-sub {
+    font-size: 14px;
+    color: hsl(var(--fg-3));
+    margin: 6px 0 0;
+    max-width: 560px;
+  }
+  .va-page-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .va-tabs {
+    display: flex;
+    gap: 2px;
+    padding: 4px;
+    border-radius: 12px;
+    background: hsl(var(--fg) / 0.04);
+    border: 1px solid hsl(var(--fg) / 0.06);
+    margin-bottom: 24px;
+    overflow-x: auto;
+  }
+  .va-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    background: transparent;
+    border: none;
+    color: hsl(var(--fg-2));
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+  .va-tab:hover {
+    background: hsl(var(--fg) / 0.05);
+    color: hsl(var(--fg));
+  }
+  .va-tab.is-active {
+    background: hsl(var(--bg-2));
+    color: hsl(var(--fg));
+    box-shadow:
+      0 1px 2px hsl(0 0% 0% / 0.2),
+      0 0 0 1px hsl(var(--fg) / 0.06);
+  }
+  .va-tab-n {
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: hsl(var(--fg) / 0.08);
+    font-size: 11px;
+    font-weight: 600;
+    color: hsl(var(--fg-3));
+  }
+  .va-tab.is-active .va-tab-n {
+    background: hsl(var(--primary) / 0.15);
+    color: hsl(var(--primary));
+  }
+
+  /* ----- Breadcrumb ---------------------------------------------------------- */
+  .va-bcrumb {
+    font-size: 12px;
+    color: hsl(var(--fg-3));
+    margin-bottom: 8px;
+    font-weight: 500;
+  }
+  .va-bcrumb a {
+    color: hsl(var(--primary));
+    cursor: pointer;
+  }
+  .va-bcrumb a:hover {
+    text-decoration: underline;
+  }
+  .va-bcrumb span {
+    margin: 0 6px;
+    color: hsl(var(--fg-3));
+  }
+
+  /* ----- Section tab count colour (static tint, no animation) ---------------- */
+  .va-tab-n.tone-amber.is-attn {
+    background: hsl(var(--warning) / 0.18);
+    color: hsl(var(--warning));
+  }
+
   /* Card component base styles */
   .card {
     @apply rounded-lg border border-border bg-card p-6 transition-all duration-200;
