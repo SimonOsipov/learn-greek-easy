@@ -4,7 +4,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { AnnouncementCreateForm } from '../AnnouncementCreateForm';
+import { AnnouncementCreateForm, useAnnouncementCreateForm } from '../AnnouncementCreateForm';
 
 // Mock i18n
 vi.mock('react-i18next', () => ({
@@ -27,23 +27,25 @@ vi.mock('react-i18next', () => ({
 }));
 
 describe('AnnouncementCreateForm', () => {
-  const mockOnPreview = vi.fn();
+  function Harness() {
+    const form = useAnnouncementCreateForm();
+    return <AnnouncementCreateForm form={form} />;
+  }
 
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('renders all form fields', () => {
-    render(<AnnouncementCreateForm onPreview={mockOnPreview} />);
+    render(<Harness />);
 
     expect(screen.getByTestId('announcement-title-input')).toBeInTheDocument();
     expect(screen.getByTestId('announcement-message-input')).toBeInTheDocument();
     expect(screen.getByTestId('announcement-link-input')).toBeInTheDocument();
-    expect(screen.getByTestId('announcement-preview-button')).toBeInTheDocument();
   });
 
   it('shows character counters for all fields', () => {
-    render(<AnnouncementCreateForm onPreview={mockOnPreview} />);
+    render(<Harness />);
 
     const counters = screen.getAllByTestId('character-counter');
     expect(counters).toHaveLength(3);
@@ -54,7 +56,7 @@ describe('AnnouncementCreateForm', () => {
 
   it('updates character counters in real-time', async () => {
     const user = userEvent.setup();
-    render(<AnnouncementCreateForm onPreview={mockOnPreview} />);
+    render(<Harness />);
 
     const titleInput = screen.getByTestId('announcement-title-input');
     await user.type(titleInput, 'Test title');
@@ -63,51 +65,9 @@ describe('AnnouncementCreateForm', () => {
     expect(counters[0]).toHaveTextContent('10/100');
   });
 
-  it('disables preview button when form is invalid', () => {
-    render(<AnnouncementCreateForm onPreview={mockOnPreview} />);
-
-    const previewButton = screen.getByTestId('announcement-preview-button');
-    expect(previewButton).toBeDisabled();
-  });
-
-  it('enables preview button when required fields are filled', async () => {
-    const user = userEvent.setup();
-    render(<AnnouncementCreateForm onPreview={mockOnPreview} />);
-
-    await user.type(screen.getByTestId('announcement-title-input'), 'Test Title');
-    await user.type(screen.getByTestId('announcement-message-input'), 'Test Message');
-
-    await waitFor(() => {
-      expect(screen.getByTestId('announcement-preview-button')).toBeEnabled();
-    });
-  });
-
-  it('calls onPreview with form data when preview is clicked', async () => {
-    const user = userEvent.setup();
-    render(<AnnouncementCreateForm onPreview={mockOnPreview} />);
-
-    await user.type(screen.getByTestId('announcement-title-input'), 'Test Title');
-    await user.type(screen.getByTestId('announcement-message-input'), 'Test Message');
-    await user.type(screen.getByTestId('announcement-link-input'), 'https://example.com');
-
-    await waitFor(() => {
-      expect(screen.getByTestId('announcement-preview-button')).toBeEnabled();
-    });
-
-    await user.click(screen.getByTestId('announcement-preview-button'));
-
-    await waitFor(() => {
-      expect(mockOnPreview).toHaveBeenCalledWith({
-        title: 'Test Title',
-        message: 'Test Message',
-        linkUrl: 'https://example.com',
-      });
-    });
-  });
-
   it('shows validation error for empty title', async () => {
     const user = userEvent.setup();
-    render(<AnnouncementCreateForm onPreview={mockOnPreview} />);
+    render(<Harness />);
 
     const titleInput = screen.getByTestId('announcement-title-input');
     await user.type(titleInput, 'a');
@@ -123,7 +83,7 @@ describe('AnnouncementCreateForm', () => {
 
   it('shows validation error for title exceeding max length', async () => {
     const user = userEvent.setup();
-    render(<AnnouncementCreateForm onPreview={mockOnPreview} />);
+    render(<Harness />);
 
     const longTitle = 'a'.repeat(101);
     await user.type(screen.getByTestId('announcement-title-input'), longTitle);
@@ -135,7 +95,7 @@ describe('AnnouncementCreateForm', () => {
 
   it('shows validation error for message exceeding max length', async () => {
     const user = userEvent.setup();
-    render(<AnnouncementCreateForm onPreview={mockOnPreview} />);
+    render(<Harness />);
 
     const longMessage = 'a'.repeat(501);
     await user.type(screen.getByTestId('announcement-message-input'), longMessage);
@@ -147,7 +107,7 @@ describe('AnnouncementCreateForm', () => {
 
   it('shows validation error for invalid URL format', async () => {
     const user = userEvent.setup();
-    render(<AnnouncementCreateForm onPreview={mockOnPreview} />);
+    render(<Harness />);
 
     await user.type(screen.getByTestId('announcement-title-input'), 'Test Title');
     await user.type(screen.getByTestId('announcement-message-input'), 'Test Message');
@@ -161,50 +121,34 @@ describe('AnnouncementCreateForm', () => {
 
   it('accepts valid https URL', async () => {
     const user = userEvent.setup();
-    render(<AnnouncementCreateForm onPreview={mockOnPreview} />);
+    render(<Harness />);
 
     await user.type(screen.getByTestId('announcement-title-input'), 'Test Title');
     await user.type(screen.getByTestId('announcement-message-input'), 'Test Message');
     await user.type(screen.getByTestId('announcement-link-input'), 'https://example.com/page');
-
-    await waitFor(() => {
-      expect(screen.getByTestId('announcement-preview-button')).toBeEnabled();
-    });
 
     expect(screen.queryByText(/url must start with http/i)).not.toBeInTheDocument();
   });
 
   it('accepts valid http URL', async () => {
     const user = userEvent.setup();
-    render(<AnnouncementCreateForm onPreview={mockOnPreview} />);
+    render(<Harness />);
 
     await user.type(screen.getByTestId('announcement-title-input'), 'Test Title');
     await user.type(screen.getByTestId('announcement-message-input'), 'Test Message');
     await user.type(screen.getByTestId('announcement-link-input'), 'http://example.com/page');
 
-    await waitFor(() => {
-      expect(screen.getByTestId('announcement-preview-button')).toBeEnabled();
-    });
-
     expect(screen.queryByText(/url must start with http/i)).not.toBeInTheDocument();
   });
 
-  it('allows empty URL field', async () => {
+  it('allows empty URL field without validation error', async () => {
     const user = userEvent.setup();
-    render(<AnnouncementCreateForm onPreview={mockOnPreview} />);
+    render(<Harness />);
 
     await user.type(screen.getByTestId('announcement-title-input'), 'Test Title');
     await user.type(screen.getByTestId('announcement-message-input'), 'Test Message');
     // Leave URL empty
 
-    await waitFor(() => {
-      expect(screen.getByTestId('announcement-preview-button')).toBeEnabled();
-    });
-  });
-
-  it('disables preview button when submitting', () => {
-    render(<AnnouncementCreateForm onPreview={mockOnPreview} isSubmitting={true} />);
-
-    expect(screen.getByTestId('announcement-preview-button')).toBeDisabled();
+    expect(screen.queryByText(/url must start with http/i)).not.toBeInTheDocument();
   });
 });

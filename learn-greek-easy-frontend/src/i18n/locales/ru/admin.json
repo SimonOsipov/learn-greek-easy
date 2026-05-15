@@ -313,9 +313,20 @@
     }
   },
   "announcements": {
+    "title": "Объявления",
+    "kicker": "Система · Объявления",
+    "actions": {
+      "exportCsv": "Экспорт CSV",
+      "new": "Новое объявление"
+    },
     "stats": {
       "total": "Всего объявлений",
-      "avgRead": "Ср. % прочитавших"
+      "avgRead": "Ср. % прочитавших",
+      "peopleReached": "Охват пользователей",
+      "avgReadRate": "Средний процент прочтений",
+      "withLink": "Со ссылкой",
+      "allTime": "За всё время",
+      "acrossAll": "По всем объявлениям"
     },
     "create": {
       "title": "Создать объявление",
@@ -384,6 +395,89 @@
       "warning": "Это навсегда удалит объявление. Уже отправленные уведомления НЕ будут отозваны.",
       "confirm": "Удалить",
       "success": "Объявление удалено"
+    },
+    "v2": {
+      "comingSoon": "Скоро",
+      "tab": {
+        "subtitle": "Средний процент прочтений {{avgRate}}% по {{count}} объявлениям"
+      },
+      "details": {
+        "sent": "отправлено",
+        "delivered": "Доставлено",
+        "read": "прочитано",
+        "by": "от",
+        "message": "Сообщение",
+        "linkUrl": "Ссылка",
+        "reach": "Охват",
+        "sentTo": "Отправлено",
+        "recipients": "получателей",
+        "readBy": "Прочитано",
+        "unread": "непрочитано",
+        "clickThrough": "Переходы",
+        "readProgress": "Прогресс прочтения",
+        "readTimeline": "Хронология прочтения",
+        "announcementLabel": "Объявление",
+        "resendToUnread": "Отправить непрочитавшим"
+      },
+      "preview": {
+        "label": "Предпросмотр уведомления",
+        "titlePlaceholder": "Заголовок вашего объявления",
+        "messagePlaceholder": "Текст вашего сообщения появится здесь. Пишите коротко и дружелюбно — у пользователей много уведомлений.",
+        "notAvailableInJsonMode": "Предпросмотр недоступен в режиме JSON",
+        "meta": {
+          "audienceLabel": "Аудитория",
+          "audienceValue": "Все активные ученики",
+          "deliveryLabel": "Доставка",
+          "deliveryValue": "Немедленно",
+          "channelLabel": "Канал",
+          "channelValue": "В приложении"
+        }
+      },
+      "timeline": {
+        "comingSoonCaption": "Детальная хронология появится позже"
+      },
+      "ctr": {
+        "trackingComingSoon": "отслеживание скоро",
+        "noLink": "ссылка не указана"
+      },
+      "compose": {
+        "breadcrumb": "Объявления · Новое",
+        "title": "Создать объявление",
+        "draftBadge": "Черновик",
+        "helper": "Заполните поля ниже, чтобы создать объявление.",
+        "showPreview": "Показать превью",
+        "hidePreview": "Скрыть превью",
+        "audience": {
+          "label": "Аудитория",
+          "allLearners": "Все учащиеся",
+          "premium": "Подписчики Premium",
+          "inactive": "Неактивные 30+ дней"
+        },
+        "schedule": {
+          "label": "Расписание",
+          "sendNow": "Отправить сейчас",
+          "scheduleLater": "Запланировать"
+        },
+        "footer": {
+          "ready": "Готово к отправке",
+          "needsTitleAndMessage": "Нужны заголовок и сообщение",
+          "helperPrefix": "Отправка",
+          "helperBold": "всем активным учащимся",
+          "helperSuffix": "· немедленно",
+          "cancel": "Отмена",
+          "saveDraft": "Сохранить черновик",
+          "sendNow": "Отправить сейчас",
+          "sending": "Отправка..."
+        }
+      },
+      "history": {
+        "colDate": "Дата",
+        "colTitle": "Заголовок",
+        "colReach": "Охват",
+        "colRead": "Прочитано",
+        "colRate": "Охват, %",
+        "linkAttached": "ссылка прикреплена"
+      }
     }
   },
   "news": {

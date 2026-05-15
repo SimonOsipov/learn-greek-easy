@@ -4,14 +4,18 @@
  * Visual regression tests for the announcement management feature.
  * Uses Chromatic for visual snapshots and comparison.
  *
- * These tests capture 8 scenarios:
- * 1. Create form empty state
+ * Updated in ANND-09 to remove v1 test IDs and point to drawer test IDs from
+ * the ANND-07 rewrite. Obsolete v1-modal cases are wrapped in test.fixme()
+ * with a deferral comment to ADMIN2-12.
+ *
+ * These tests capture:
+ * 1. Compose drawer — empty form state
  * 2. History list empty state
  * 3. History list with data
- * 4. Preview modal
- * 5. Confirmation dialog (same as preview modal - contains warning)
- * 6. Form filled state (alternative to success toast)
- * 7. Detail modal with stats
+ * 4. Compose drawer — filled form state (replaces v1 preview modal)
+ * 5. Confirmation dialog warning (delete confirm path)
+ * 6. Compose drawer — filled state (detailed)
+ * 7. Details drawer with stats
  * 8. Announcement in notification center (learner view)
  */
 
@@ -136,8 +140,10 @@ test.describe('Admin Announcements - Visual Tests', () => {
     });
   });
 
-  // Scenario 1: Create Form - Empty State
-  test('Announcement Create Form - Empty State', async ({ page }, testInfo) => {
+  // Scenario 1: Compose Drawer - Empty State
+  // Updated ANND-09: announcement-create-button → announcements-new-button,
+  //                   announcement-create-modal  → announcement-compose-drawer
+  test('Announcement Compose Drawer - Empty State', async ({ page }, testInfo) => {
     await page.setViewportSize(VIEWPORTS.desktop);
 
     // Mock announcements list API to return data for history section
@@ -163,13 +169,13 @@ test.describe('Admin Announcements - Visual Tests', () => {
     await expect(page.getByTestId('announcements-tab')).toBeVisible();
     await page.waitForTimeout(500);
 
-    // Open create modal to capture empty form state
-    await page.getByTestId('announcement-create-button').click();
-    await expect(page.getByTestId('announcement-create-modal')).toBeVisible();
+    // Open compose drawer using new button testid
+    await page.getByTestId('announcements-new-button').click();
+    await expect(page.getByTestId('announcement-compose-drawer')).toBeVisible();
     await page.waitForTimeout(300);
 
-    // Capture empty form state
-    await takeSnapshot(page, 'Announcement Create Form - Empty State', testInfo);
+    // Capture empty compose drawer state
+    await takeSnapshot(page, 'Announcement Compose Drawer - Empty State', testInfo);
   });
 
   // Scenario 2: History List - Empty State
@@ -199,9 +205,7 @@ test.describe('Admin Announcements - Visual Tests', () => {
     await expect(page.getByTestId('announcements-tab')).toBeVisible();
     await page.waitForTimeout(500);
 
-    // Scroll to history table
-    const historyTable = page.getByTestId('announcement-history-table');
-    await historyTable.scrollIntoViewIfNeeded();
+    // Scroll to history section (v2 uses .an-table rows, not announcement-history-table)
     await page.waitForTimeout(300);
 
     await takeSnapshot(page, 'Announcement History - Empty State', testInfo);
@@ -216,7 +220,7 @@ test.describe('Admin Announcements - Visual Tests', () => {
       const url = route.request().url();
 
       // Check if this is a detail request (has UUID at end)
-      if (url.match(/\/announcements\/[a-f0-9-]+$/)) {
+      if (url.match(/\/announcements\/[^/?#]+$/)) {
         route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -247,16 +251,19 @@ test.describe('Admin Announcements - Visual Tests', () => {
     await expect(page.getByTestId('announcements-tab')).toBeVisible();
     await page.waitForTimeout(500);
 
-    // Scroll to history table
-    const historyTable = page.getByTestId('announcement-history-table');
-    await historyTable.scrollIntoViewIfNeeded();
+    // Scroll to first row (v2: announcement-row-ann-001)
+    const firstRow = page.getByTestId('announcement-row-ann-001');
+    await firstRow.scrollIntoViewIfNeeded();
     await page.waitForTimeout(300);
 
     await takeSnapshot(page, 'Announcement History - Populated', testInfo);
   });
 
-  // Scenario 4: Preview Modal
-  test('Announcement Preview Modal', async ({ page }, testInfo) => {
+  // Scenario 4: Compose Drawer - Filled Form State
+  // Updated ANND-09: v1 preview modal flow replaced by compose drawer filled state.
+  // The v1 announcement-preview-button → announcement-compose-preview-toggle.
+  // V1 announcement-preview-modal cases are deferred (see test.fixme below).
+  test('Announcement Compose Drawer - Filled State', async ({ page }, testInfo) => {
     await page.setViewportSize(VIEWPORTS.desktop);
 
     // Mock API for announcements
@@ -282,9 +289,9 @@ test.describe('Admin Announcements - Visual Tests', () => {
     await expect(page.getByTestId('announcements-tab')).toBeVisible();
     await page.waitForTimeout(300);
 
-    // Open create modal
-    await page.getByTestId('announcement-create-button').click();
-    await expect(page.getByTestId('announcement-create-modal')).toBeVisible();
+    // Open compose drawer
+    await page.getByTestId('announcements-new-button').click();
+    await expect(page.getByTestId('announcement-compose-drawer')).toBeVisible();
     await page.waitForTimeout(300);
 
     // Fill the form
@@ -296,68 +303,25 @@ test.describe('Admin Announcements - Visual Tests', () => {
       );
     await page.getByTestId('announcement-link-input').fill('https://learngreekeasy.com/updates');
 
-    // Click preview button
-    await page.getByTestId('announcement-preview-button').click();
-
-    // Wait for modal to open
-    await expect(page.getByTestId('announcement-preview-modal')).toBeVisible();
     await page.waitForTimeout(300);
 
-    await takeSnapshot(page, 'Announcement Preview Modal', testInfo);
+    await takeSnapshot(page, 'Announcement Compose Drawer - Filled State', testInfo);
   });
 
-  // Scenario 5: Confirmation Dialog (same as preview - it includes warning)
-  test('Announcement Confirmation Dialog', async ({ page }, testInfo) => {
-    await page.setViewportSize(VIEWPORTS.desktop);
+  // Scenario 4b: v1 preview modal — deferred to ADMIN2-12
+  test.fixme(
+    'Announcement Preview Modal (v1 — deferred)',
+    async ({ page }, _testInfo) => {
+      // Obsolete v1 modal — deferred to ADMIN2-12 visual coverage pass
+      // Old flow: announcement-create-button → announcement-create-modal → announcement-preview-button → announcement-preview-modal
+      // New flow: announcements-new-button → announcement-compose-drawer → announcement-compose-preview-toggle (live preview in drawer)
+      void page;
+    }
+  );
 
-    // Mock API for announcements
-    await page.route('**/api/v1/admin/announcements*', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          items: [],
-          total: 0,
-          page: 1,
-          page_size: 10,
-          total_pages: 0,
-        }),
-      });
-    });
-
-    await page.goto('/admin');
-    await waitForPageReady(page, '[data-testid="admin-page"]');
-
-    // Click Announcements tab
-    await navigateToAdminTab(page, 'announcements');
-    await expect(page.getByTestId('announcements-tab')).toBeVisible();
-    await page.waitForTimeout(300);
-
-    // Open create modal
-    await page.getByTestId('announcement-create-button').click();
-    await expect(page.getByTestId('announcement-create-modal')).toBeVisible();
-    await page.waitForTimeout(300);
-
-    // Fill form with different content
-    await page.getByTestId('announcement-title-input').fill('Scheduled Maintenance Notice');
-    await page
-      .getByTestId('announcement-message-input')
-      .fill(
-        'We will be performing scheduled maintenance on February 1st from 02:00 to 04:00 UTC. During this time, the platform may be temporarily unavailable.\n\nWe apologize for any inconvenience.'
-      );
-
-    // Click preview button
-    await page.getByTestId('announcement-preview-button').click();
-
-    // Wait for modal to open
-    await expect(page.getByTestId('announcement-preview-modal')).toBeVisible();
-    await page.waitForTimeout(300);
-
-    await takeSnapshot(page, 'Announcement Confirmation Dialog', testInfo);
-  });
-
-  // Scenario 6: Form Filled State (alternative to capturing transient success toast)
-  test('Announcement Form - Filled State', async ({ page }, testInfo) => {
+  // Scenario 5: Confirmation Dialog (delete warning)
+  // Updated ANND-09: the delete confirm dialog is at tab level, triggered by row trash icon.
+  test('Announcement Delete Confirmation Dialog', async ({ page }, testInfo) => {
     await page.setViewportSize(VIEWPORTS.desktop);
 
     // Mock API for announcements
@@ -383,9 +347,54 @@ test.describe('Admin Announcements - Visual Tests', () => {
     await expect(page.getByTestId('announcements-tab')).toBeVisible();
     await page.waitForTimeout(300);
 
-    // Open create modal
-    await page.getByTestId('announcement-create-button').click();
-    await expect(page.getByTestId('announcement-create-modal')).toBeVisible();
+    // Click the trash icon on the first row to trigger tab-level delete ConfirmDialog
+    await page.getByTestId('announcement-row-trash-ann-001').click();
+
+    // Wait for ConfirmDialog to open
+    await page.waitForTimeout(300);
+
+    await takeSnapshot(page, 'Announcement Delete Confirmation Dialog', testInfo);
+  });
+
+  // Scenario 5b: v1 confirmation via preview modal flow — deferred to ADMIN2-12
+  test.fixme(
+    'Announcement Confirmation Dialog via preview modal (v1 — deferred)',
+    async ({ page }, _testInfo) => {
+      // Obsolete v1 modal — deferred to ADMIN2-12 visual coverage pass
+      void page;
+    }
+  );
+
+  // Scenario 6: Compose Drawer - Detailed Filled State
+  test('Announcement Compose Drawer - Detailed Fill', async ({ page }, testInfo) => {
+    await page.setViewportSize(VIEWPORTS.desktop);
+
+    // Mock API for announcements
+    await page.route('**/api/v1/admin/announcements*', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: mockAnnouncements,
+          total: mockAnnouncements.length,
+          page: 1,
+          page_size: 10,
+          total_pages: 1,
+        }),
+      });
+    });
+
+    await page.goto('/admin');
+    await waitForPageReady(page, '[data-testid="admin-page"]');
+
+    // Click Announcements tab
+    await navigateToAdminTab(page, 'announcements');
+    await expect(page.getByTestId('announcements-tab')).toBeVisible();
+    await page.waitForTimeout(300);
+
+    // Open compose drawer
+    await page.getByTestId('announcements-new-button').click();
+    await expect(page.getByTestId('announcement-compose-drawer')).toBeVisible();
     await page.waitForTimeout(300);
 
     // Fill form completely with various content showing character counters
@@ -397,11 +406,13 @@ test.describe('Admin Announcements - Visual Tests', () => {
 
     await page.waitForTimeout(300);
 
-    await takeSnapshot(page, 'Announcement Form - Filled State', testInfo);
+    await takeSnapshot(page, 'Announcement Compose Drawer - Detailed Fill', testInfo);
   });
 
-  // Scenario 7: Detail Modal
-  test('Announcement Detail Modal', async ({ page }, testInfo) => {
+  // Scenario 7: Details Drawer
+  // Updated ANND-09: view-detail-ann-001 → announcement-row-ann-001 click,
+  //                   announcement-detail-modal → announcement-details-drawer
+  test('Announcement Details Drawer', async ({ page }, testInfo) => {
     await page.setViewportSize(VIEWPORTS.desktop);
 
     // Mock API for announcements
@@ -409,7 +420,7 @@ test.describe('Admin Announcements - Visual Tests', () => {
       const url = route.request().url();
 
       // Check if this is a detail request
-      if (url.match(/\/announcements\/[a-f0-9-]+$/)) {
+      if (url.match(/\/announcements\/[^/?#]+$/)) {
         route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -440,20 +451,25 @@ test.describe('Admin Announcements - Visual Tests', () => {
     await expect(page.getByTestId('announcements-tab')).toBeVisible();
     await page.waitForTimeout(500);
 
-    // Scroll to history table and wait for it to load
-    const historyTable = page.getByTestId('announcement-history-table');
-    await historyTable.scrollIntoViewIfNeeded();
+    // Click the first row to open details drawer (v2: announcement-row-ann-001)
+    await page.getByTestId('announcement-row-ann-001').click();
+
+    // Wait for details drawer to open
+    await expect(page.getByTestId('announcement-details-drawer')).toBeVisible();
     await page.waitForTimeout(300);
 
-    // Click view detail on first row
-    await page.getByTestId('view-detail-ann-001').click();
-
-    // Wait for detail modal to open
-    await expect(page.getByTestId('announcement-detail-modal')).toBeVisible();
-    await page.waitForTimeout(300);
-
-    await takeSnapshot(page, 'Announcement Detail Modal', testInfo);
+    await takeSnapshot(page, 'Announcement Details Drawer', testInfo);
   });
+
+  // Scenario 7b: v1 detail modal close button — deferred to ADMIN2-12
+  test.fixme(
+    'Announcement Detail Modal close button (v1 — deferred)',
+    async ({ page }, _testInfo) => {
+      // Obsolete v1 modal — deferred to ADMIN2-12 visual coverage pass
+      // Old: detail-close-button → New: announcement-details-close-button (in details drawer)
+      void page;
+    }
+  );
 });
 
 // ============================================================================
