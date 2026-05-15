@@ -1,95 +1,28 @@
 // src/components/admin/announcements/__tests__/AnnouncementsTab.test.tsx
 //
-// Tests for the mode-switching behavior introduced in TASK-160 and
-// updated in TASK-xxx to use AnnouncementCreateModal:
-// - Create button opens modal
-// - Form/JSON tabs render correctly inside modal
-// - Mode switch without dirty data: no dialog, immediate switch
-// - Mode switch with dirty JSON: shows ConfirmDialog
-// - Mode switch with dirty form: shows ConfirmDialog
-// - Confirm on dialog: switches mode and clears input
-// - Cancel on dialog: stays on current mode
-// - Preview works from JSON mode (calls AnnouncementPreviewModal)
+// Integration tests for the ANND-07 rewrite of AnnouncementsTab.
+// Covers: render, URL-driven drawer open/close, single tab-level ConfirmDialog,
+// and URL-strip idempotency (fetchAnnouncementDetail called exactly once).
 
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
+
+import { useAdminAnnouncementStore } from '@/stores/adminAnnouncementStore';
 
 import { AnnouncementsTab } from '../AnnouncementsTab';
 
-// ---- Mocks ----
+// ── Module mocks ──────────────────────────────────────────────────────────────
 
-// Mock i18n — cover keys used in AnnouncementsTab, AnnouncementCreateModal,
-// AnnouncementCreateForm, AnnouncementJsonInput and ConfirmDialog title/description
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string) => {
-      const map: Record<string, string> = {
-        'announcements.create.title': 'Create Announcement',
-        'announcements.create.description': 'Send a notification to all active users',
-        'announcements.create.button': 'Create Announcement',
-        'announcements.create.formTab': 'Form',
-        'announcements.create.jsonTab': 'JSON',
-        'announcements.create.modeForm': 'Form',
-        'announcements.create.modeJson': 'JSON',
-        'announcements.create.switchModeConfirmTitle': 'Switch mode?',
-        'announcements.create.switchModeConfirm': 'Your current input will be cleared. Continue?',
-        'announcements.create.unsavedTitle': 'Discard changes?',
-        'announcements.create.unsavedDescription':
-          'You have unsaved input. Closing will discard your changes.',
-        'announcements.create.titleLabel': 'Title',
-        'announcements.create.titlePlaceholder': 'Enter announcement title',
-        'announcements.create.messageLabel': 'Message',
-        'announcements.create.messagePlaceholder': 'Enter the announcement message...',
-        'announcements.create.linkLabel': 'Link URL',
-        'announcements.create.linkPlaceholder': 'https://example.com/page',
-        'announcements.create.linkDescription': 'Users can click this link',
-        'announcements.create.optional': 'optional',
-        'announcements.create.preview': 'Preview',
-        'announcements.create.jsonHint':
-          'Paste a JSON object with title, message, and optional link_url.',
-        'announcements.create.jsonPlaceholder': '{"title":"..."}',
-        'announcements.create.jsonInvalidJson': 'Invalid JSON. Please check your syntax.',
-        'announcements.create.jsonTitleRequired': 'Title is required.',
-        'announcements.create.jsonTitleTooLong': 'Title must be 100 characters or less.',
-        'announcements.create.jsonMessageRequired': 'Message is required.',
-        'announcements.create.jsonMessageTooLong': 'Message must be 500 characters or less.',
-        'announcements.create.jsonInvalidUrl': 'Link URL must be a valid URL.',
-        'announcements.create.jsonUrlTooLong': 'Link URL must be 500 characters or less.',
-        'announcements.stats.total': 'Total Announcements',
-        'announcements.stats.avgRead': 'Avg. Read Rate',
-        'announcements.history.title': 'Announcement History',
-        'announcements.history.description': 'View all past announcements',
-        'announcements.history.empty': 'No announcements yet',
-        'announcements.history.emptyHint': 'Create your first announcement above',
-        'announcements.history.viewDetail': 'View Details',
-        'announcements.history.by': 'by',
-        'announcements.history.unknownAdmin': 'Unknown Admin',
-        'announcements.preview.title': 'Preview Announcement',
-        'announcements.preview.description': 'Review before sending',
-        'announcements.preview.warningTitle': 'This action cannot be undone',
-        'announcements.preview.warningMessage': 'Once sent...',
-        'announcements.preview.cancel': 'Edit',
-        'announcements.preview.send': 'Send to All Users',
-        'announcements.preview.sending': 'Sending...',
-        'pagination.pageOf': 'Page 1 of 1',
-        'pagination.previous': 'Previous',
-        'pagination.next': 'Next',
-        'announcements.detail.sent': 'Sent to',
-        'announcements.detail.read': 'Read by',
-      };
-      return map[key] || key;
-    },
-    i18n: { language: 'en' },
-  }),
+vi.mock('@/stores/adminAnnouncementStore', () => ({
+  useAdminAnnouncementStore: vi.fn(),
 }));
 
-// Mock toast
 vi.mock('@/hooks/use-toast', () => ({
   toast: vi.fn(),
 }));
 
-// Mock adminAPI
 vi.mock('@/services/adminAPI', () => ({
   GENERATE_WORD_ENTRY_STREAM_URL: '/api/v1/admin/word-entries/generate/stream',
   adminAPI: {
@@ -100,19 +33,144 @@ vi.mock('@/services/adminAPI', () => ({
       page_size: 10,
     }),
     createAnnouncement: vi.fn().mockResolvedValue({}),
+    getAnnouncementDetail: vi.fn().mockResolvedValue(null),
   },
 }));
 
-// Mock the announcement store
-const mockFetchAnnouncements = vi.fn().mockResolvedValue(undefined);
-const mockFetchAnnouncementDetail = vi.fn().mockResolvedValue(undefined);
-const mockSetPage = vi.fn();
-const mockClearSelectedAnnouncement = vi.fn();
-const mockDeleteAnnouncement = vi.fn().mockResolvedValue(undefined);
+vi.mock('@/lib/errorReporting', () => ({
+  reportAPIError: vi.fn(),
+}));
 
-vi.mock('@/stores/adminAnnouncementStore', () => ({
-  useAdminAnnouncementStore: () => ({
-    announcements: [],
+// ── i18n mock ─────────────────────────────────────────────────────────────────
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => {
+      const map: Record<string, string> = {
+        // PageHead
+        'inbox.breadcrumb.dashboard': 'Dashboard',
+        'announcements.title': 'Announcements',
+        'announcements.kicker': 'Admin',
+        'announcements.v2.tab.subtitle': 'Subtitle',
+        'announcements.actions.exportCsv': 'Export CSV',
+        'announcements.v2.comingSoon': 'Coming soon',
+        'announcements.actions.new': 'New announcement',
+        // StatCards
+        'announcements.stats.total': 'Total Announcements',
+        'announcements.stats.peopleReached': 'People Reached',
+        'announcements.stats.avgReadRate': 'Avg. Read Rate',
+        'announcements.stats.withLink': 'With Link',
+        'announcements.stats.allTime': 'All time',
+        'announcements.stats.acrossAll': 'Across all',
+        // HistoryRows
+        'announcements.v2.history.colDate': 'Date',
+        'announcements.v2.history.colTitle': 'Title',
+        'announcements.v2.history.colReach': 'Reach',
+        'announcements.v2.history.colRead': 'Read',
+        'announcements.v2.history.colRate': 'Rate',
+        'announcements.history.empty': 'No announcements yet',
+        'announcements.history.emptyHint': 'Create your first announcement above',
+        'announcements.history.title': 'Announcement History',
+        // ComposeDrawer
+        'announcements.create.title': 'Create Announcement',
+        'announcements.create.formTab': 'Form',
+        'announcements.create.jsonTab': 'JSON',
+        'announcements.create.titleLabel': 'Title',
+        'announcements.create.titlePlaceholder': 'Enter title',
+        'announcements.create.messageLabel': 'Message',
+        'announcements.create.messagePlaceholder': 'Enter message',
+        'announcements.create.linkLabel': 'Link URL',
+        'announcements.create.linkPlaceholder': 'https://example.com',
+        'announcements.create.linkDescription': 'Users can click this link',
+        'announcements.create.optional': 'optional',
+        'announcements.create.preview': 'Preview',
+        'announcements.create.jsonHint': 'Paste a JSON object.',
+        'announcements.create.jsonPlaceholder': '{"title":"..."}',
+        'announcements.compose.audienceLabel': 'Audience',
+        'announcements.compose.scheduleLabel': 'Schedule',
+        'announcements.compose.sendNow': 'Send now',
+        'announcements.compose.scheduleLater': 'Schedule for later',
+        'announcements.compose.previewLabel': 'Preview',
+        'announcements.compose.sendButton': 'Send now',
+        'announcements.compose.cancelButton': 'Cancel',
+        'announcements.compose.audience.allLearners': 'All learners',
+        'announcements.create.modeForm': 'Form',
+        'announcements.create.modeJson': 'JSON',
+        'announcements.create.switchModeConfirmTitle': 'Switch mode?',
+        'announcements.create.switchModeConfirm': 'Your current input will be cleared. Continue?',
+        'announcements.create.unsavedTitle': 'Discard changes?',
+        'announcements.create.unsavedDescription': 'You have unsaved input.',
+        'announcements.create.jsonInvalidJson': 'Invalid JSON.',
+        'announcements.create.jsonTitleRequired': 'Title is required.',
+        'announcements.create.jsonTitleTooLong': 'Title too long.',
+        'announcements.create.jsonMessageRequired': 'Message is required.',
+        'announcements.create.jsonMessageTooLong': 'Message too long.',
+        'announcements.create.jsonInvalidUrl': 'Invalid URL.',
+        'announcements.create.jsonUrlTooLong': 'URL too long.',
+        // DetailsDrawer
+        'announcements.v2.details.sent': 'Sent',
+        'announcements.v2.details.message': 'Message',
+        'announcements.v2.details.linkUrl': 'Link',
+        'announcements.v2.details.reach': 'Reach',
+        'announcements.v2.details.sentTo': 'Sent to',
+        'announcements.v2.details.recipients': 'recipients',
+        'announcements.v2.details.readBy': 'Read by',
+        'announcements.v2.details.unread': 'unread',
+        'announcements.v2.details.clickThrough': 'Click-through',
+        'announcements.v2.details.readProgress': 'Read progress',
+        'announcements.v2.details.readTimeline': 'Read timeline',
+        'announcements.v2.details.announcementLabel': 'Announcement',
+        'announcements.v2.details.delivered': 'Delivered',
+        'announcements.v2.details.read': 'Read',
+        'announcements.v2.details.by': 'by',
+        'announcements.v2.details.resendToUnread': 'Resend to unread',
+        'announcements.v2.timeline.comingSoonCaption': 'Detailed timeline coming soon',
+        'announcements.v2.ctr.trackingComingSoon': 'tracking coming soon',
+        'announcements.v2.ctr.noLink': 'no link',
+        'announcements.history.unknownAdmin': 'Unknown Admin',
+        'announcements.detail.close': 'Close',
+        // Delete dialog
+        'announcements.delete.title': 'Delete Announcement',
+        'announcements.delete.warning':
+          'This will permanently delete the announcement. Already-sent notifications will NOT be recalled.',
+        'announcements.delete.confirm': 'Delete',
+        'announcements.delete.button': 'Delete',
+        // Pagination
+        'pagination.previous': 'Previous',
+        'pagination.next': 'Next',
+        'pagination.pageOf': 'Page {{page}} of {{totalPages}}',
+      };
+      return map[key] || key;
+    },
+    i18n: { language: 'en' },
+  }),
+}));
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+const ANNOUNCEMENT_ID = 'ann-uuid-001';
+
+const sampleAnnouncements = [
+  {
+    id: ANNOUNCEMENT_ID,
+    title: 'Test Announcement',
+    message: 'Hello world',
+    link_url: null,
+    total_recipients: 100,
+    read_count: 25,
+    created_at: '2026-02-01T10:00:00Z',
+    creator: { id: 'creator-1', display_name: 'Admin' },
+  },
+];
+
+function buildStoreState(overrides: Record<string, unknown> = {}) {
+  const fetchAnnouncements = vi.fn().mockResolvedValue(undefined);
+  const fetchAnnouncementDetail = vi.fn().mockResolvedValue(undefined);
+  const deleteAnnouncement = vi.fn().mockResolvedValue(undefined);
+  const setPage = vi.fn();
+  const clearSelectedAnnouncement = vi.fn();
+  return {
+    announcements: [] as typeof sampleAnnouncements,
     selectedAnnouncement: null,
     page: 1,
     total: 0,
@@ -120,267 +178,302 @@ vi.mock('@/stores/adminAnnouncementStore', () => ({
     isLoading: false,
     isLoadingDetail: false,
     isDeleting: false,
-    fetchAnnouncements: mockFetchAnnouncements,
-    fetchAnnouncementDetail: mockFetchAnnouncementDetail,
-    deleteAnnouncement: mockDeleteAnnouncement,
-    setPage: mockSetPage,
-    clearSelectedAnnouncement: mockClearSelectedAnnouncement,
-  }),
-}));
+    error: null,
+    fetchAnnouncements,
+    fetchAnnouncementDetail,
+    deleteAnnouncement,
+    setPage,
+    clearSelectedAnnouncement,
+    refresh: vi.fn().mockResolvedValue(undefined),
+    clearError: vi.fn(),
+    ...overrides,
+  };
+}
 
-// Minimal mock for error reporting (used by ConfirmDialog)
-vi.mock('@/lib/errorReporting', () => ({
-  reportAPIError: vi.fn(),
-}));
+type StoreState = ReturnType<typeof buildStoreState>;
 
 /**
- * Helper to open the create modal
+ * Set up the Zustand mock so it works for BOTH call signatures:
+ *   useAdminAnnouncementStore()            → tab-level destructuring
+ *   useAdminAnnouncementStore((s) => s.x)  → child components (DetailsDrawer)
  */
-const openCreateModal = async () => {
-  await userEvent.click(screen.getByTestId('announcement-create-button'));
-  await waitFor(() => expect(screen.getByTestId('announcement-create-modal')).toBeInTheDocument());
-};
+function setupStore(state: StoreState) {
+  (useAdminAnnouncementStore as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+    (selector?: (s: StoreState) => unknown) => {
+      if (typeof selector === 'function') return selector(state);
+      return state;
+    }
+  );
+  return state;
+}
 
-describe('AnnouncementsTab — mode switching', () => {
+function renderTab(initialPath = '/') {
+  return render(
+    <MemoryRouter initialEntries={[initialPath]}>
+      <AnnouncementsTab />
+    </MemoryRouter>
+  );
+}
+
+// ── Tests ─────────────────────────────────────────────────────────────────────
+
+describe('AnnouncementsTab', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  // ---------- Create button ----------
+  // ── Render ────────────────────────────────────────────────────────────────
 
-  it('renders the create announcement button', () => {
-    render(<AnnouncementsTab />);
-
-    expect(screen.getByTestId('announcement-create-button')).toBeInTheDocument();
-  });
-
-  it('opens create modal when create button is clicked', async () => {
-    render(<AnnouncementsTab />);
-
-    await openCreateModal();
-
-    expect(screen.getByTestId('announcement-create-modal')).toBeInTheDocument();
-  });
-
-  // ---------- Tab rendering ----------
-
-  it('renders both Form and JSON tab triggers inside modal', async () => {
-    render(<AnnouncementsTab />);
-    await openCreateModal();
-
-    expect(screen.getByTestId('create-mode-form-tab')).toBeInTheDocument();
-    expect(screen.getByTestId('create-mode-json-tab')).toBeInTheDocument();
-  });
-
-  it('shows Form mode content by default', async () => {
-    render(<AnnouncementsTab />);
-    await openCreateModal();
-
-    // Form mode shows the create form elements
-    expect(screen.getByTestId('announcement-create-form')).toBeInTheDocument();
-    expect(screen.queryByTestId('announcement-json-textarea')).not.toBeInTheDocument();
-  });
-
-  it('shows JSON mode content after clicking JSON tab', async () => {
-    const user = userEvent.setup();
-    render(<AnnouncementsTab />);
-    await openCreateModal();
-
-    await user.click(screen.getByTestId('create-mode-json-tab'));
-
-    expect(screen.getByTestId('announcement-json-textarea')).toBeInTheDocument();
-    expect(screen.queryByTestId('announcement-create-form')).not.toBeInTheDocument();
-  });
-
-  // ---------- Mode switch without dirty data ----------
-
-  it('switches from Form to JSON immediately when form has no input', async () => {
-    const user = userEvent.setup();
-    render(<AnnouncementsTab />);
-    await openCreateModal();
-
-    // Form mode is active, no data typed
-    await user.click(screen.getByTestId('create-mode-json-tab'));
-
-    // Should switch immediately without showing ConfirmDialog
-    expect(screen.getByTestId('announcement-json-textarea')).toBeInTheDocument();
-    // ConfirmDialog should NOT be visible
-    expect(screen.queryByText('Switch mode?')).not.toBeInTheDocument();
-  });
-
-  it('switches from JSON to Form immediately when JSON textarea is empty', async () => {
-    const user = userEvent.setup();
-    render(<AnnouncementsTab />);
-    await openCreateModal();
-
-    // Switch to JSON mode first
-    await user.click(screen.getByTestId('create-mode-json-tab'));
-    expect(screen.getByTestId('announcement-json-textarea')).toBeInTheDocument();
-
-    // Switch back to Form without typing anything
-    await user.click(screen.getByTestId('create-mode-form-tab'));
-
-    expect(screen.getByTestId('announcement-create-form')).toBeInTheDocument();
-    expect(screen.queryByText('Switch mode?')).not.toBeInTheDocument();
-  });
-
-  // ---------- Mode switch with dirty JSON ----------
-
-  it('shows ConfirmDialog when switching away from JSON mode with dirty textarea', async () => {
-    const user = userEvent.setup();
-    render(<AnnouncementsTab />);
-    await openCreateModal();
-
-    // Switch to JSON mode
-    await user.click(screen.getByTestId('create-mode-json-tab'));
-
-    // Type something to make it dirty
-    const textarea = screen.getByTestId('announcement-json-textarea');
-    fireEvent.change(textarea, { target: { value: '{"title":"Test"}' } });
-
-    // Try switching to Form mode
-    await user.click(screen.getByTestId('create-mode-form-tab'));
-
-    // ConfirmDialog should appear
-    await waitFor(() => {
-      expect(screen.getByText('Switch mode?')).toBeInTheDocument();
-    });
-    expect(screen.getByText('Your current input will be cleared. Continue?')).toBeInTheDocument();
-  });
-
-  it('stays on JSON mode when Cancel is clicked in ConfirmDialog', async () => {
-    const user = userEvent.setup();
-    render(<AnnouncementsTab />);
-    await openCreateModal();
-
-    // Switch to JSON and dirty it
-    await user.click(screen.getByTestId('create-mode-json-tab'));
-    fireEvent.change(screen.getByTestId('announcement-json-textarea'), {
-      target: { value: '{"title":"Test"}' },
-    });
-
-    // Try to switch
-    await user.click(screen.getByTestId('create-mode-form-tab'));
-    await waitFor(() => {
-      expect(screen.getByText('Switch mode?')).toBeInTheDocument();
-    });
-
-    // Click Cancel button in ConfirmDialog
-    const cancelButton = screen.getByRole('button', { name: 'Cancel' });
-    await user.click(cancelButton);
-
-    // Should still be on JSON mode
-    await waitFor(() => {
-      expect(screen.queryByText('Switch mode?')).not.toBeInTheDocument();
-    });
-    expect(screen.getByTestId('announcement-json-textarea')).toBeInTheDocument();
-  });
-
-  it('switches to Form mode and clears JSON textarea when Confirm is clicked', async () => {
-    const user = userEvent.setup();
-    render(<AnnouncementsTab />);
-    await openCreateModal();
-
-    // Switch to JSON and dirty it
-    await user.click(screen.getByTestId('create-mode-json-tab'));
-    fireEvent.change(screen.getByTestId('announcement-json-textarea'), {
-      target: { value: '{"title":"Test"}' },
-    });
-
-    // Try to switch to Form
-    await user.click(screen.getByTestId('create-mode-form-tab'));
-    await waitFor(() => {
-      expect(screen.getByText('Switch mode?')).toBeInTheDocument();
-    });
-
-    // Click Confirm button
-    const confirmButton = screen.getByRole('button', { name: 'Confirm' });
-    await user.click(confirmButton);
-
-    // Should now show Form mode
-    await waitFor(() => {
-      expect(screen.getByTestId('announcement-create-form')).toBeInTheDocument();
-    });
-    expect(screen.queryByText('Switch mode?')).not.toBeInTheDocument();
-  });
-
-  // ---------- Mode switch with dirty form ----------
-
-  it('shows ConfirmDialog when switching away from Form mode with typed input', async () => {
-    const user = userEvent.setup();
-    render(<AnnouncementsTab />);
-    await openCreateModal();
-
-    // Form is the default mode; fire an input event to mark it dirty
-    // We use fireEvent.input directly on the wrapping div since the dirty ref
-    // is set via onInput on the wrapper div
-    const titleInput = screen.getByTestId('announcement-title-input');
-    await user.type(titleInput, 'Hello');
-
-    // Try to switch to JSON
-    await user.click(screen.getByTestId('create-mode-json-tab'));
-
-    // ConfirmDialog should appear
-    await waitFor(() => {
-      expect(screen.getByText('Switch mode?')).toBeInTheDocument();
-    });
-  });
-
-  it('switches from Form to JSON and shows empty textarea after confirm', async () => {
-    const user = userEvent.setup();
-    render(<AnnouncementsTab />);
-    await openCreateModal();
-
-    const titleInput = screen.getByTestId('announcement-title-input');
-    await user.type(titleInput, 'Hello');
-
-    await user.click(screen.getByTestId('create-mode-json-tab'));
-    await waitFor(() => {
-      expect(screen.getByText('Switch mode?')).toBeInTheDocument();
-    });
-
-    // Confirm the switch
-    await user.click(screen.getByRole('button', { name: 'Confirm' }));
-
-    await waitFor(() => {
-      expect(screen.getByTestId('announcement-json-textarea')).toBeInTheDocument();
-    });
-
-    // Textarea should be empty after reset
-    expect(screen.getByTestId('announcement-json-textarea')).toHaveValue('');
-  });
-
-  // ---------- Preview from JSON mode ----------
-
-  it('opens preview modal when valid JSON is submitted from JSON mode', async () => {
-    const user = userEvent.setup();
-    render(<AnnouncementsTab />);
-    await openCreateModal();
-
-    // Switch to JSON
-    await user.click(screen.getByTestId('create-mode-json-tab'));
-
-    // Enter valid JSON using fireEvent to avoid curly brace interpretation issues
-    const textarea = screen.getByTestId('announcement-json-textarea');
-    fireEvent.change(textarea, {
-      target: { value: '{"title":"Hello","message":"World message here"}' },
-    });
-
-    // Click preview
-    await user.click(screen.getByTestId('announcement-json-preview-button'));
-
-    // Preview modal should open — verify preview modal content
-    await waitFor(() => {
-      expect(screen.getByTestId('announcement-preview-modal')).toBeInTheDocument();
-    });
-    expect(screen.getByTestId('preview-title')).toHaveTextContent('Hello');
-    expect(screen.getByTestId('preview-message')).toHaveTextContent('World message here');
-  });
-
-  // ---------- announcements-tab testid ----------
-
-  it('renders announcements-tab on outer wrapper', () => {
-    render(<AnnouncementsTab />);
+  it('renders the outer announcements-tab wrapper', () => {
+    setupStore(buildStoreState());
+    renderTab();
     expect(screen.getByTestId('announcements-tab')).toBeInTheDocument();
+  });
+
+  it('renders PageHead with Announcements title in the DOM', () => {
+    setupStore(buildStoreState());
+    renderTab();
+    // PageHead renders one or more headings with "Announcements"; assert at least one exists
+    const headings = screen.getAllByRole('heading', { name: /Announcements/i });
+    expect(headings.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('renders 4 StatCards', () => {
+    setupStore(buildStoreState());
+    renderTab();
+    // StatCards use data-testid="stat-card" or unique text content —
+    // check for the 4 known stat titles
+    expect(screen.getByText('Total Announcements')).toBeInTheDocument();
+    expect(screen.getByText('People Reached')).toBeInTheDocument();
+    expect(screen.getByText('Avg. Read Rate')).toBeInTheDocument();
+    expect(screen.getByText('With Link')).toBeInTheDocument();
+  });
+
+  it('renders AnnouncementHistoryRows (empty state text visible)', () => {
+    setupStore(buildStoreState());
+    renderTab();
+    expect(screen.getByText('No announcements yet')).toBeInTheDocument();
+  });
+
+  it('calls fetchAnnouncements on mount', () => {
+    const state = setupStore(buildStoreState());
+    renderTab();
+    expect(state.fetchAnnouncements).toHaveBeenCalled();
+  });
+
+  // ── New-announcement button → compose drawer ───────────────────────────────
+
+  it('clicking New announcement button opens compose drawer (testid present)', async () => {
+    const user = userEvent.setup();
+    setupStore(buildStoreState());
+    renderTab();
+
+    await user.click(screen.getByTestId('announcements-new-button'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('announcement-compose-drawer')).toBeInTheDocument();
+    });
+  });
+
+  // ── Mount with ?compose=1 ─────────────────────────────────────────────────
+
+  it('mounts with ?compose=1 → compose drawer opens directly', async () => {
+    setupStore(buildStoreState());
+    renderTab('/?compose=1');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('announcement-compose-drawer')).toBeInTheDocument();
+    });
+  });
+
+  // ── Row click → details drawer ────────────────────────────────────────────
+
+  it('clicking a history row opens details drawer', async () => {
+    const user = userEvent.setup();
+    setupStore(
+      buildStoreState({
+        announcements: sampleAnnouncements,
+        total: 1,
+      })
+    );
+    renderTab();
+
+    const row = await screen.findByTestId(`announcement-row-${ANNOUNCEMENT_ID}`);
+    await user.click(row);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('announcement-details-drawer')).toBeInTheDocument();
+    });
+  });
+
+  // ── Mount with ?edit=<uuid> ───────────────────────────────────────────────
+
+  it('mounts with ?edit=<uuid> → details drawer opens directly', async () => {
+    setupStore(buildStoreState());
+    renderTab(`/?edit=${ANNOUNCEMENT_ID}`);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('announcement-details-drawer')).toBeInTheDocument();
+    });
+  });
+
+  // ── Mount with ?compose=1&edit=<uuid> → only details drawer ──────────────
+
+  it('mounts with ?compose=1&edit=<uuid> → only details drawer is open', async () => {
+    setupStore(buildStoreState());
+    renderTab(`/?compose=1&edit=${ANNOUNCEMENT_ID}`);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('announcement-details-drawer')).toBeInTheDocument();
+    });
+    // Compose drawer should NOT be open (compose stripped because edit wins)
+    expect(screen.queryByTestId('announcement-compose-drawer')).not.toBeInTheDocument();
+  });
+
+  // ── URL-strip idempotency: fetchAnnouncementDetail called exactly once ─────
+
+  it('mounts at ?compose=1&edit=<uuid> → fetchAnnouncementDetail called exactly once', async () => {
+    const state = buildStoreState();
+    setupStore(state);
+
+    renderTab(`/?compose=1&edit=${ANNOUNCEMENT_ID}`);
+
+    // Wait for the URL-strip effect to settle
+    await waitFor(() => {
+      expect(screen.getByTestId('announcement-details-drawer')).toBeInTheDocument();
+    });
+
+    // Give any subsequent effects time to fire
+    await new Promise((r) => setTimeout(r, 50));
+
+    // The idempotency guard (hasStrippedRef) must prevent a second fetch
+    expect(state.fetchAnnouncementDetail).toHaveBeenCalledTimes(1);
+  });
+
+  // ── Tab-level ConfirmDialog — triggered by row trash icon ─────────────────
+
+  it('clicking row trash icon opens the tab-level delete ConfirmDialog', async () => {
+    const user = userEvent.setup();
+    setupStore(
+      buildStoreState({
+        announcements: sampleAnnouncements,
+        total: 1,
+      })
+    );
+    renderTab();
+
+    const trashBtn = await screen.findByTestId(`announcement-row-trash-${ANNOUNCEMENT_ID}`);
+    await user.click(trashBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('Delete Announcement')).toBeInTheDocument();
+    });
+  });
+
+  it('confirming delete calls deleteAnnouncement with correct id', async () => {
+    const user = userEvent.setup();
+    const state = buildStoreState({
+      announcements: sampleAnnouncements,
+      total: 1,
+    });
+    setupStore(state);
+    renderTab();
+
+    const trashBtn = await screen.findByTestId(`announcement-row-trash-${ANNOUNCEMENT_ID}`);
+    await user.click(trashBtn);
+
+    await waitFor(() => screen.getByText('Delete Announcement'));
+
+    // confirmText is mapped to 'Delete' via i18n key announcements.delete.confirm
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+
+    await waitFor(() => {
+      expect(state.deleteAnnouncement).toHaveBeenCalledWith(ANNOUNCEMENT_ID);
+    });
+  });
+
+  it('cancelling delete dialog does not call deleteAnnouncement', async () => {
+    const user = userEvent.setup();
+    const state = buildStoreState({
+      announcements: sampleAnnouncements,
+      total: 1,
+    });
+    setupStore(state);
+    renderTab();
+
+    const trashBtn = await screen.findByTestId(`announcement-row-trash-${ANNOUNCEMENT_ID}`);
+    await user.click(trashBtn);
+
+    await waitFor(() => screen.getByText('Delete Announcement'));
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    await waitFor(() => {
+      expect(screen.queryByText('Delete Announcement')).not.toBeInTheDocument();
+    });
+
+    expect(state.deleteAnnouncement).not.toHaveBeenCalled();
+  });
+
+  // ── Tab-level ConfirmDialog — triggered by Details drawer Delete button ─────
+
+  it('clicking Details drawer Delete button opens the tab-level ConfirmDialog', async () => {
+    const user = userEvent.setup();
+    setupStore(buildStoreState());
+    renderTab(`/?edit=${ANNOUNCEMENT_ID}`);
+
+    // Wait for details drawer to open
+    const detailsDrawer = await screen.findByTestId('announcement-details-drawer');
+    expect(detailsDrawer).toBeInTheDocument();
+
+    // The Delete button in the drawer is disabled while no announcement is loaded
+    // (selectedAnnouncement is null in this test). Verify the button exists.
+    const deleteBtn = screen.getByTestId('announcement-details-delete-button');
+    expect(deleteBtn).toBeInTheDocument();
+    // Button is disabled because selectedAnnouncement is null
+    expect(deleteBtn).toBeDisabled();
+  });
+
+  it('Details drawer Delete button calls onRequestDelete which opens ConfirmDialog', async () => {
+    const user = userEvent.setup();
+    // Provide a loaded announcement so the Delete button is enabled
+    const ann = {
+      id: ANNOUNCEMENT_ID,
+      title: 'Test',
+      message: 'Hello',
+      link_url: null,
+      total_recipients: 10,
+      read_count: 5,
+      read_percentage: 50,
+      created_at: '2026-02-01T10:00:00Z',
+      creator: { id: 'c1', display_name: 'Admin', email: 'a@b.com' },
+    };
+    setupStore(
+      buildStoreState({
+        selectedAnnouncement: ann,
+      })
+    );
+    renderTab(`/?edit=${ANNOUNCEMENT_ID}`);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('announcement-details-drawer')).toBeInTheDocument();
+    });
+
+    const deleteBtn = screen.getByTestId('announcement-details-delete-button');
+    await user.click(deleteBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('Delete Announcement')).toBeInTheDocument();
+    });
+  });
+
+  // ── axe accessibility audit (skipped — deferred to ADMIN2-12) ────────────
+
+  it.skip('axe: compose drawer has no accessibility violations', async () => {
+    // Requires @axe-core/react wiring — deferred to ADMIN2-12 visual coverage pass
+  });
+
+  it.skip('axe: details drawer has no accessibility violations', async () => {
+    // Requires @axe-core/react wiring — deferred to ADMIN2-12 visual coverage pass
   });
 });

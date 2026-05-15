@@ -29,11 +29,19 @@ export type SidePanelProps = {
   size?: 'default' | 'wide';
   className?: string;
   children: React.ReactNode;
+  'data-testid'?: string;
 };
 
 // ── Root component ────────────────────────────────────────────────────────────
 
-function SidePanel({ open, onOpenChange, size = 'default', className, children }: SidePanelProps) {
+function SidePanel({
+  open,
+  onOpenChange,
+  size = 'default',
+  className,
+  children,
+  'data-testid': dataTestId,
+}: SidePanelProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SidePanelContext.Provider value={{ onOpenChange }}>
@@ -41,6 +49,7 @@ function SidePanel({ open, onOpenChange, size = 'default', className, children }
           side="right"
           data-side-panel=""
           data-size={size}
+          data-testid={dataTestId}
           className={cn(
             'drawer-wrap flex flex-col gap-0 p-0',
             size === 'wide' && 'w-[95vw] !max-w-[1080px] sm:!max-w-[1080px]',
