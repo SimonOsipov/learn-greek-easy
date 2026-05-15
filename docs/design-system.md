@@ -242,6 +242,7 @@ Reach for these *before* composing new ones.
 | `.metric-card` / `.metric-label` / `.metric-value` / `.metric-sublabel` | Dashboard metric tile anatomy |
 | `.hairline` | `border-color: hsl(var(--line))` |
 | `.text-fg2` / `.text-fg3` | Foreground variants |
+| `.fb-*` family | Admin feedback re-skin chrome (card, vote rail, status grid, canned chips, thread bubbles, meta table). See `src/index.css` under `@layer components`. Token-only — no raw hex. |
 
 ---
 
