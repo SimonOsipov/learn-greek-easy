@@ -1,39 +1,49 @@
 // src/components/admin/AdminFeedbackSection.tsx
+//
+// FBDR-09 re-skin: PageHead chrome + StatCard grid + SegControl filters +
+// FeedbackDrawer mount + URL deep-link via useSearchParams.
+//
+// Removed: SummaryCard, Select dropdowns, AdminFeedbackResponseDialog usage.
+// The AdminFeedbackResponseDialog file stays on disk — deferred to ADMIN2-12.
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import {
   AlertCircle,
+  Bell,
   ChevronLeft,
   ChevronRight,
-  Inbox,
-  MessageCircle,
+  Download,
   MessageSquare,
   RefreshCw,
   Search,
+  Send,
+  ThumbsUp,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 
-import { SummaryCard } from '@/components/admin/SummaryCard';
+import { PageHead } from '@/components/admin/shell/page-head';
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Kicker } from '@/components/ui/kicker';
+import { SegControl } from '@/components/ui/seg-control';
 import { Skeleton } from '@/components/ui/skeleton';
+import { StatCard } from '@/components/ui/stat-card';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useToast } from '@/hooks/use-toast';
 import { useAdminFeedbackStore } from '@/stores/adminFeedbackStore';
-import type { AdminFeedbackItem, FeedbackCategory, FeedbackStatus } from '@/types/feedback';
-import { FEEDBACK_CATEGORIES, FEEDBACK_STATUSES } from '@/types/feedback';
+import type { AdminFeedbackItem } from '@/types/feedback';
 
 import { AdminFeedbackCard } from './AdminFeedbackCard';
-import { AdminFeedbackResponseDialog } from './AdminFeedbackResponseDialog';
+import { FeedbackDrawer } from './FeedbackDrawer';
+
+import type { FeedbackDrawerInnerTab } from './FeedbackDrawer';
+
+// ── useDebounce (local, preserved from v1) ─────────────────────────────────────
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -46,310 +56,531 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
+// ── Seg filter types ───────────────────────────────────────────────────────────
+
+type StatusSeg = 'all' | 'open' | 'new' | 'investigating' | 'planned' | 'responded' | 'wont_fix';
+type TypeSeg = 'all' | 'bug' | 'feature' | 'compliment';
+
+// ── Client-side filter helpers ─────────────────────────────────────────────────
+
+function applyStatusSeg(list: AdminFeedbackItem[], seg: StatusSeg): AdminFeedbackItem[] {
+  switch (seg) {
+    case 'all':
+      return list;
+    case 'open':
+      return list.filter(
+        (f) =>
+          f.status === 'new' ||
+          f.status === 'under_review' ||
+          f.status === 'planned' ||
+          f.status === 'in_progress'
+      );
+    case 'new':
+      return list.filter((f) => f.status === 'new');
+    case 'investigating':
+      return list.filter((f) => f.status === 'under_review');
+    case 'planned':
+      return list.filter((f) => f.status === 'planned');
+    case 'responded':
+      return list.filter((f) => f.admin_response !== null && f.admin_response !== '');
+    case 'wont_fix':
+      return list.filter((f) => f.status === 'cancelled');
+  }
+}
+
+function applyTypeSeg(list: AdminFeedbackItem[], seg: TypeSeg): AdminFeedbackItem[] {
+  switch (seg) {
+    case 'all':
+      return list;
+    case 'bug':
+      return list.filter((f) => f.category === 'bug_incorrect_data');
+    case 'feature':
+      return list.filter((f) => f.category === 'feature_request');
+    case 'compliment':
+      // Backend has no compliment category — always empty
+      return [];
+  }
+}
+
+function matchSearch(item: AdminFeedbackItem, query: string): boolean {
+  const q = query.toLowerCase();
+  const title = item.title?.toLowerCase() ?? '';
+  const desc = item.description?.toLowerCase() ?? '';
+  return title.includes(q) || desc.includes(q);
+}
+
+// ── AdminFeedbackSection ───────────────────────────────────────────────────────
+
 /**
- * Admin Feedback Section Component
+ * Admin Feedback Section — FBDR-09 re-skin.
  *
- * Displays a paginated list of all feedback for admin management.
- * Includes filtering by status and category, and response dialog.
+ * Renders:
+ *  - PageHead with breadcrumb, Kicker, title, sub, decorative action buttons
+ *  - 3-up StatCard grid (Total / Awaiting / Community votes) — page-scoped
+ *  - SegControl × 2 (Status 7-opts, Type 4-opts) + debounced search Input
+ *  - AdminFeedbackCard list with client-side sort (vote_count desc) + filter
+ *  - FeedbackDrawer mount host (URL deep-linked via useSearchParams)
+ *  - ConfirmDialog for delete (preserved from v1)
+ *  - Pagination footer (preserved from v1)
  */
 export const AdminFeedbackSection: React.FC = () => {
   const { t } = useTranslation('admin');
+  const { toast } = useToast();
+
+  // ── Store ─────────────────────────────────────────────────────────────────
   const {
     feedbackList,
     page,
     total,
     totalPages,
-    filters,
     isLoading,
     isDeleting,
     error,
     fetchFeedbackList,
-    setFilters,
-    clearFilters,
     setPage,
     deleteFeedback,
-    selectedFeedback,
-    setSelectedFeedback,
+    openFeedbackId,
+    openInnerTab,
+    openDrawer,
+    closeDrawer,
+    setInnerTab,
   } = useAdminFeedbackStore();
 
-  const [isResponseDialogOpen, setIsResponseDialogOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<AdminFeedbackItem | null>(null);
-  const [searchInput, setSearchInput] = useState('');
+  // ── URL params ────────────────────────────────────────────────────────────
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // ── Refs for deep-link idempotency ────────────────────────────────────────
+  const didMountFromUrlRef = useRef(false);
+  const hasStrippedRef = useRef(false);
+
+  // ── Local filter state (initialised from URL on first render) ─────────────
+  const [statusSeg, setStatusSeg] = useState<StatusSeg>(() => {
+    const v = searchParams.get('status');
+    const valid: StatusSeg[] = [
+      'all',
+      'open',
+      'new',
+      'investigating',
+      'planned',
+      'responded',
+      'wont_fix',
+    ];
+    return valid.includes(v as StatusSeg) ? (v as StatusSeg) : 'all';
+  });
+
+  const [typeSeg, setTypeSeg] = useState<TypeSeg>(() => {
+    const v = searchParams.get('type');
+    const valid: TypeSeg[] = ['all', 'bug', 'feature', 'compliment'];
+    return valid.includes(v as TypeSeg) ? (v as TypeSeg) : 'all';
+  });
+
+  const [searchInput, setSearchInput] = useState(() => searchParams.get('q') ?? '');
   const debouncedSearch = useDebounce(searchInput, 300);
+
   const pageSize = 10;
 
-  // Fetch feedback on mount
+  // ── Fetch on mount ────────────────────────────────────────────────────────
   useEffect(() => {
     fetchFeedbackList();
   }, [fetchFeedbackList]);
 
-  const handleStatusFilterChange = (value: string) => {
-    if (value === 'all') {
-      setFilters({ status: null });
+  // ── Effect 6a: Mount-time URL → store (runs once after first payload) ─────
+  useEffect(() => {
+    if (didMountFromUrlRef.current) return;
+    if (isLoading || feedbackList.length === 0) return;
+
+    const editId = searchParams.get('edit');
+    const innerRaw = searchParams.get('inner');
+    const innerTab: FeedbackDrawerInnerTab | null =
+      innerRaw === 'reply' || innerRaw === 'thread' || innerRaw === 'meta' ? innerRaw : null;
+
+    // Branch A: ?inner without ?edit → silent ignore
+    if (!editId && innerRaw) {
+      didMountFromUrlRef.current = true;
+      return;
+    }
+
+    // Branch B: ?edit present
+    if (editId) {
+      const found = feedbackList.find((f) => f.id === editId);
+      if (found) {
+        openDrawer(editId, innerTab ?? 'reply');
+      } else {
+        // Not found on current page → toast + clear params
+        toast({
+          title: t('feedback.v2.toasts.deepLinkNotFound'),
+          variant: 'destructive',
+        });
+        const next = new URLSearchParams(searchParams);
+        next.delete('edit');
+        next.delete('inner');
+        setSearchParams(next, { replace: true });
+      }
+    }
+
+    didMountFromUrlRef.current = true;
+  }, [isLoading, feedbackList, searchParams, openDrawer, setSearchParams, toast, t]);
+
+  // ── Effect 6b: Store → URL (when drawer state changes) ───────────────────
+  useEffect(() => {
+    if (!didMountFromUrlRef.current) return;
+
+    const current = new URLSearchParams(searchParams);
+    const hadEdit = current.has('edit');
+    const hadInner = current.has('inner');
+
+    if (openFeedbackId) {
+      if (current.get('edit') !== openFeedbackId) current.set('edit', openFeedbackId);
+      if (current.get('inner') !== openInnerTab) current.set('inner', openInnerTab);
+      setSearchParams(current, { replace: true });
+      hasStrippedRef.current = false;
     } else {
-      setFilters({ status: value as FeedbackStatus });
+      if (hasStrippedRef.current) return;
+      if (!hadEdit && !hadInner) {
+        hasStrippedRef.current = true;
+        return;
+      }
+      current.delete('edit');
+      current.delete('inner');
+      setSearchParams(current, { replace: true });
+      hasStrippedRef.current = true;
     }
-  };
+  }, [openFeedbackId, openInnerTab, searchParams, setSearchParams]);
 
-  const handleCategoryFilterChange = (value: string) => {
-    if (value === 'all') {
-      setFilters({ category: null });
+  // ── Effect 6c: Seg/search ↔ URL ──────────────────────────────────────────
+  useEffect(() => {
+    const current = new URLSearchParams(searchParams);
+
+    if (statusSeg === 'all') {
+      current.delete('status');
     } else {
-      setFilters({ category: value as FeedbackCategory });
+      current.set('status', statusSeg);
     }
-  };
 
-  const handleRespond = (id: string) => {
-    const f = feedbackList.find((x) => x.id === id);
-    if (f) {
-      setSelectedFeedback(f);
-      setIsResponseDialogOpen(true);
+    if (typeSeg === 'all') {
+      current.delete('type');
+    } else {
+      current.set('type', typeSeg);
     }
-  };
 
-  const handleResponseDialogClose = (open: boolean) => {
-    setIsResponseDialogOpen(open);
-    if (!open) {
-      setSelectedFeedback(null);
+    if (debouncedSearch === '') {
+      current.delete('q');
+    } else {
+      current.set('q', debouncedSearch);
     }
-  };
 
+    // Only update if params actually changed (avoid infinite loop)
+    if (current.toString() !== searchParams.toString()) {
+      setSearchParams(current, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusSeg, typeSeg, debouncedSearch]);
+  // searchParams intentionally excluded: only react to seg/search changes
+
+  // ── Page handlers ─────────────────────────────────────────────────────────
   const handlePreviousPage = () => {
-    if (page > 1) {
-      setPage(page - 1);
-    }
+    if (page > 1) setPage(page - 1);
   };
 
   const handleNextPage = () => {
-    if (page < totalPages) {
-      setPage(page + 1);
-    }
+    if (page < totalPages) setPage(page + 1);
   };
 
-  const hasActiveFilters =
-    filters.status !== null || filters.category !== null || debouncedSearch !== '';
+  // ── Delete state ──────────────────────────────────────────────────────────
+  const [deleteTarget, setDeleteTarget] = useState<AdminFeedbackItem | null>(null);
 
-  const filteredFeedback = debouncedSearch
-    ? feedbackList.filter((item) => {
-        const title = item.title?.toLowerCase() ?? '';
-        const desc = item.description?.toLowerCase() ?? '';
-        return (
-          title.includes(debouncedSearch.toLowerCase()) ||
-          desc.includes(debouncedSearch.toLowerCase())
-        );
-      })
-    : feedbackList;
+  // ── Card → drawer ─────────────────────────────────────────────────────────
+  const handleCardRespond = (id: string) => {
+    openDrawer(id, 'reply');
+  };
 
+  // ── Sort + filter pipeline ────────────────────────────────────────────────
+
+  // 1. Client-side sort: vote_count desc, tiebreak created_at desc
+  const sorted = [...feedbackList].sort(
+    (a, b) =>
+      b.vote_count - a.vote_count ||
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+
+  // 2. Status seg filter
+  const afterStatus = applyStatusSeg(sorted, statusSeg);
+
+  // 3. Type seg filter
+  const afterType = applyTypeSeg(afterStatus, typeSeg);
+
+  // 4. Debounced search (AND-combined)
+  const visible = debouncedSearch
+    ? afterType.filter((f) => matchSearch(f, debouncedSearch))
+    : afterType;
+
+  // 5. Compliments placeholder branch
+  const showComplimentsPlaceholder = typeSeg === 'compliment' && visible.length === 0;
+
+  // ── Page-scoped stat math ─────────────────────────────────────────────────
   const newCount = feedbackList.filter((f) => f.status === 'new').length;
-  const respondedCount = feedbackList.filter((f) => f.admin_response !== null).length;
+  const respondedCount = feedbackList.filter(
+    (f) => f.admin_response !== null && f.admin_response !== ''
+  ).length;
+  const awaitingCount = Math.max(0, total - respondedCount);
+  const pageVotesSum = feedbackList.reduce((acc, f) => acc + (f.vote_count ?? 0), 0);
 
+  // ── Filter active check ───────────────────────────────────────────────────
+  const hasActiveFilters = statusSeg !== 'all' || typeSeg !== 'all' || debouncedSearch !== '';
+
+  const handleClearFilters = () => {
+    setStatusSeg('all');
+    setTypeSeg('all');
+    setSearchInput('');
+  };
+
+  // ── Seg options ───────────────────────────────────────────────────────────
+  const STATUS_OPTIONS = [
+    { value: 'all' as StatusSeg, label: t('feedback.v2.filters.status.all') },
+    { value: 'open' as StatusSeg, label: t('feedback.v2.filters.status.open') },
+    { value: 'new' as StatusSeg, label: t('feedback.v2.filters.status.new') },
+    { value: 'investigating' as StatusSeg, label: t('feedback.v2.filters.status.investigating') },
+    { value: 'planned' as StatusSeg, label: t('feedback.v2.filters.status.planned') },
+    { value: 'responded' as StatusSeg, label: t('feedback.v2.filters.status.responded') },
+    { value: 'wont_fix' as StatusSeg, label: t('feedback.v2.filters.status.wont_fix') },
+  ];
+
+  const TYPE_OPTIONS = [
+    { value: 'all' as TypeSeg, label: t('feedback.v2.filters.type.all') },
+    { value: 'bug' as TypeSeg, label: t('feedback.v2.filters.type.bug') },
+    { value: 'feature' as TypeSeg, label: t('feedback.v2.filters.type.feature') },
+    { value: 'compliment' as TypeSeg, label: t('feedback.v2.filters.type.compliment') },
+  ];
+
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <SummaryCard
-          title={t('feedback.stats.total')}
-          value={total}
-          icon={<MessageSquare className="h-5 w-5 text-muted-foreground" />}
-          testId="feedback-total-card"
+      {/* ── Page Head ──────────────────────────────────────────────────────── */}
+      <TooltipProvider>
+        <PageHead
+          breadcrumb={[{ label: t('page.title') }, { label: t('feedback.v2.pageHead.breadcrumb') }]}
+          kicker={<Kicker dot="primary">{t('feedback.v2.pageHead.kicker')}</Kicker>}
+          title={t('feedback.v2.pageHead.title')}
+          sub={t('feedback.v2.pageHead.sub')}
+          actions={
+            <div className="flex items-center gap-2">
+              {/* Export CSV — decorative coming soon */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    aria-disabled="true"
+                    onClick={(e) => e.preventDefault()}
+                    className="btn-glass cursor-not-allowed opacity-60"
+                  >
+                    <Download className="size-4" aria-hidden="true" />
+                    {t('feedback.v2.pageHead.exportCsv')}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>{t('feedback.v2.pageHead.comingSoonTooltip')}</TooltipContent>
+              </Tooltip>
+
+              {/* Send mass update — decorative coming soon */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    aria-disabled="true"
+                    onClick={(e) => e.preventDefault()}
+                    className="btn-glass cursor-not-allowed opacity-60"
+                  >
+                    <Send className="size-4" aria-hidden="true" />
+                    {t('feedback.v2.pageHead.sendMassUpdate')}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>{t('feedback.v2.pageHead.comingSoonTooltip')}</TooltipContent>
+              </Tooltip>
+            </div>
+          }
         />
-        <SummaryCard
-          title={t('feedback.stats.new')}
-          value={newCount}
-          icon={<Inbox className="h-5 w-5 text-muted-foreground" />}
-          testId="feedback-new-card"
+      </TooltipProvider>
+
+      {/* ── 3-up StatCard grid ─────────────────────────────────────────────── */}
+      <div className="stat-grid">
+        <StatCard
+          title={t('feedback.v2.statCards.total.label')}
+          n={total}
+          sub={t('feedback.v2.statCards.total.sub', { newCount, respondedCount })}
+          icon={<MessageSquare />}
+          tone="blue"
         />
-        <SummaryCard
-          title={t('feedback.stats.responded')}
-          value={respondedCount}
-          icon={<MessageCircle className="h-5 w-5 text-muted-foreground" />}
-          testId="feedback-responded-card"
+        <StatCard
+          title={t('feedback.v2.statCards.awaiting.label')}
+          n={awaitingCount}
+          icon={<Bell />}
+          tone={awaitingCount > 0 ? 'amber' : 'green'}
+        />
+        <StatCard
+          title={t('feedback.v2.statCards.communityVotes.label')}
+          n={pageVotesSum}
+          sub={t('feedback.v2.statCards.communityVotes.sub')}
+          icon={<ThumbsUp />}
+          tone="violet"
         />
       </div>
-      <Card data-testid="admin-feedback-section">
-        <CardHeader>
-          <CardTitle data-testid="admin-feedback-title">{t('feedback.sectionTitle')}</CardTitle>
-          <CardDescription data-testid="admin-feedback-description">
-            {t('feedback.sectionDescription')}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {/* Filters */}
-          <div className="mb-4 flex flex-col gap-4 sm:flex-row">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder={t('feedback.search.placeholder')}
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                className="pl-9"
-                data-testid="feedback-search-input"
-              />
-            </div>
-            <Select value={filters.status || 'all'} onValueChange={handleStatusFilterChange}>
-              <SelectTrigger className="w-full sm:w-[180px]" data-testid="feedback-status-filter">
-                <SelectValue placeholder={t('feedback.filters.statusPlaceholder')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('feedback.filters.allStatuses')}</SelectItem>
-                {FEEDBACK_STATUSES.map((status) => (
-                  <SelectItem key={status.value} value={status.value}>
-                    {t(`feedback.statuses.${status.value}`)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
 
-            <Select value={filters.category || 'all'} onValueChange={handleCategoryFilterChange}>
-              <SelectTrigger className="w-full sm:w-[180px]" data-testid="feedback-category-filter">
-                <SelectValue placeholder={t('feedback.filters.categoryPlaceholder')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('feedback.filters.allCategories')}</SelectItem>
-                {FEEDBACK_CATEGORIES.map((category) => (
-                  <SelectItem key={category.value} value={category.value}>
-                    {t(`feedback.categories.${category.value}`)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+      {/* ── Filters row ────────────────────────────────────────────────────── */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+        <SegControl
+          options={STATUS_OPTIONS}
+          value={statusSeg}
+          onChange={setStatusSeg}
+          label={t('feedback.v2.filters.status.all')}
+        />
 
-            {hasActiveFilters && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={clearFilters}
-                data-testid="clear-filters-button"
-              >
-                {t('feedback.filters.clear')}
-              </Button>
-            )}
-          </div>
+        <SegControl
+          options={TYPE_OPTIONS}
+          value={typeSeg}
+          onChange={setTypeSeg}
+          label={t('feedback.v2.filters.type.all')}
+        />
 
-          {/* Loading State */}
-          {isLoading && (
+        <div className="relative min-w-[200px] flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder={t('feedback.v2.filters.search.placeholder')}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            className="pl-9"
+            data-testid="feedback-search-input"
+          />
+        </div>
+
+        {hasActiveFilters && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleClearFilters}
+            data-testid="clear-filters-button"
+          >
+            {t('feedback.v2.filters.clear')}
+          </Button>
+        )}
+      </div>
+
+      {/* ── Loading State ──────────────────────────────────────────────────── */}
+      {isLoading && (
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <Card key={i}>
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-2">
+                    <Skeleton className="h-5 w-48" />
+                    <Skeleton className="h-4 w-32" />
+                  </div>
+                  <Skeleton className="h-9 w-24" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-16 w-full" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* ── Error State ────────────────────────────────────────────────────── */}
+      {error && !isLoading && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>{t('feedback.errors.loadingTitle')}</AlertTitle>
+          <AlertDescription className="mt-2">
+            <p className="mb-3">{error}</p>
+            <Button variant="outline" size="sm" onClick={() => fetchFeedbackList()}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              {t('actions.retry')}
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* ── Feedback List ──────────────────────────────────────────────────── */}
+      {!isLoading && !error && (
+        <>
+          {showComplimentsPlaceholder ? (
+            <p className="py-8 text-center text-muted-foreground">
+              {t('feedback.v2.emptyStates.compliments')}
+            </p>
+          ) : visible.length === 0 ? (
+            <p className="py-8 text-center text-muted-foreground">
+              {hasActiveFilters
+                ? t('feedback.v2.emptyStates.noMatch')
+                : t('feedback.states.noFeedback')}
+            </p>
+          ) : (
             <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <Card key={i}>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-2">
-                        <Skeleton className="h-5 w-48" />
-                        <Skeleton className="h-4 w-32" />
-                      </div>
-                      <Skeleton className="h-9 w-24" />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <Skeleton className="h-16 w-full" />
-                  </CardContent>
-                </Card>
+              {visible.map((feedback) => (
+                <AdminFeedbackCard
+                  key={feedback.id}
+                  feedback={feedback}
+                  onRespond={handleCardRespond}
+                  onDelete={(id) => {
+                    const item = feedbackList.find((x) => x.id === id);
+                    if (item) setDeleteTarget(item);
+                  }}
+                />
               ))}
             </div>
           )}
 
-          {/* Error State */}
-          {error && !isLoading && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>{t('feedback.errors.loadingTitle')}</AlertTitle>
-              <AlertDescription className="mt-2">
-                <p className="mb-3">{error}</p>
-                <Button variant="outline" size="sm" onClick={() => fetchFeedbackList()}>
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  {t('actions.retry')}
+          {/* ── Pagination ───────────────────────────────────────────────── */}
+          {total > 0 && (
+            <div className="mt-4 flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                {t('pagination.showing', {
+                  from: (page - 1) * pageSize + 1,
+                  to: Math.min(page * pageSize, total),
+                  total,
+                })}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePreviousPage}
+                  disabled={page === 1}
+                  data-testid="feedback-pagination-prev"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  {t('pagination.previous')}
                 </Button>
-              </AlertDescription>
-            </Alert>
+                <span className="text-sm text-muted-foreground">
+                  {t('pagination.pageOf', { page, totalPages })}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleNextPage}
+                  disabled={page >= totalPages}
+                  data-testid="feedback-pagination-next"
+                >
+                  {t('pagination.next')}
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           )}
+        </>
+      )}
 
-          {/* Feedback List */}
-          {!isLoading && !error && (
-            <>
-              {filteredFeedback.length === 0 ? (
-                <p className="py-8 text-center text-muted-foreground">
-                  {debouncedSearch
-                    ? t('feedback.search.noResults')
-                    : hasActiveFilters
-                      ? t('feedback.states.noFilteredResults')
-                      : t('feedback.states.noFeedback')}
-                </p>
-              ) : (
-                <>
-                  {debouncedSearch && (
-                    <p className="mb-3 text-sm text-muted-foreground">
-                      {t('feedback.search.filteredCount', {
-                        filtered: filteredFeedback.length,
-                        total: feedbackList.length,
-                      })}
-                    </p>
-                  )}
-                  <div className="space-y-4">
-                    {filteredFeedback.map((feedback) => (
-                      <AdminFeedbackCard
-                        key={feedback.id}
-                        feedback={feedback}
-                        onRespond={handleRespond}
-                        onDelete={(id) => {
-                          const item = feedbackList.find((x) => x.id === id);
-                          if (item) setDeleteTarget(item);
-                        }}
-                      />
-                    ))}
-                  </div>
-                </>
-              )}
+      {/* ── FeedbackDrawer mount host ──────────────────────────────────────── */}
+      {openFeedbackId !== null && (
+        <FeedbackDrawer
+          feedbackId={openFeedbackId}
+          innerTab={openInnerTab}
+          onClose={closeDrawer}
+          onInnerTabChange={setInnerTab}
+        />
+      )}
 
-              {/* Pagination */}
-              {total > 0 && (
-                <div className="mt-4 flex items-center justify-between">
-                  <p className="text-sm text-muted-foreground">
-                    {t('pagination.showing', {
-                      from: (page - 1) * pageSize + 1,
-                      to: Math.min(page * pageSize, total),
-                      total,
-                    })}
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handlePreviousPage}
-                      disabled={page === 1}
-                      data-testid="feedback-pagination-prev"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                      {t('pagination.previous')}
-                    </Button>
-                    <span className="text-sm text-muted-foreground">
-                      {t('pagination.pageOf', { page, totalPages })}
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleNextPage}
-                      disabled={page >= totalPages}
-                      data-testid="feedback-pagination-next"
-                    >
-                      {t('pagination.next')}
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Response Dialog */}
-      <AdminFeedbackResponseDialog
-        open={isResponseDialogOpen}
-        onOpenChange={handleResponseDialogClose}
-        feedback={selectedFeedback}
-      />
-
-      {/* Delete Feedback Confirm Dialog */}
+      {/* ── Delete Confirm Dialog (preserved from v1) ─────────────────────── */}
       <ConfirmDialog
         open={deleteTarget !== null}
         onOpenChange={(open) => {

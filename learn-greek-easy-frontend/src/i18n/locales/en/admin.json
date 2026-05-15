@@ -677,6 +677,56 @@
         "bug": "Bug",
         "feature": "Feature request",
         "anonymous": "Anonymous"
+      },
+      "pageHead": {
+        "breadcrumb": "Feedback",
+        "kicker": "Reviews · Feedback",
+        "title": "User feedback",
+        "sub": "Review, respond, and track community feedback",
+        "exportCsv": "Export CSV",
+        "sendMassUpdate": "Send mass update",
+        "comingSoonTooltip": "Coming soon"
+      },
+      "statCards": {
+        "total": {
+          "label": "Total feedback",
+          "sub": "{{newCount}} new · {{respondedCount}} responded"
+        },
+        "awaiting": {
+          "label": "Awaiting response"
+        },
+        "communityVotes": {
+          "label": "Community votes",
+          "sub": "upvotes on this page"
+        }
+      },
+      "filters": {
+        "status": {
+          "all": "All",
+          "open": "Open",
+          "new": "New",
+          "investigating": "Investigating",
+          "planned": "Planned",
+          "responded": "Responded",
+          "wont_fix": "Won't fix"
+        },
+        "type": {
+          "all": "All",
+          "bug": "Bug",
+          "feature": "Feature",
+          "compliment": "Compliment"
+        },
+        "search": {
+          "placeholder": "Search feedback..."
+        },
+        "clear": "Clear filters"
+      },
+      "emptyStates": {
+        "noMatch": "No feedback matches your filters",
+        "compliments": "No compliments yet — backend support coming"
+      },
+      "toasts": {
+        "deepLinkNotFound": "Feedback item not found on this page"
       }
     }
   },

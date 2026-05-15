@@ -6,9 +6,13 @@
 // - AdminFeedbackSection shows ConfirmDialog when trash is clicked
 // - Confirming calls deleteFeedback from the store
 // - ConfirmDialog closes after cancel (no delete called)
+//
+// FBDR-09 update: AdminFeedbackSection now uses useSearchParams (needs
+// MemoryRouter wrapper) and expanded store shape (drawer state fields).
 
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 
 import { AdminFeedbackCard } from '../AdminFeedbackCard';
@@ -19,8 +23,42 @@ import { AdminFeedbackSection } from '../AdminFeedbackSection';
 // ============================================================
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => {
+    t: (key: string, _opts?: unknown) => {
       const map: Record<string, string> = {
+        // v2 page head
+        'feedback.v2.pageHead.breadcrumb': 'Feedback',
+        'feedback.v2.pageHead.kicker': 'Reviews · Feedback',
+        'feedback.v2.pageHead.title': 'User feedback',
+        'feedback.v2.pageHead.sub': 'Review, respond, and track community feedback',
+        'feedback.v2.pageHead.exportCsv': 'Export CSV',
+        'feedback.v2.pageHead.sendMassUpdate': 'Send mass update',
+        'feedback.v2.pageHead.comingSoonTooltip': 'Coming soon',
+        // v2 stat cards
+        'feedback.v2.statCards.total.label': 'Total feedback',
+        'feedback.v2.statCards.total.sub': '0 new · 0 responded',
+        'feedback.v2.statCards.awaiting.label': 'Awaiting response',
+        'feedback.v2.statCards.communityVotes.label': 'Community votes',
+        'feedback.v2.statCards.communityVotes.sub': 'upvotes on this page',
+        // v2 filters
+        'feedback.v2.filters.status.all': 'All',
+        'feedback.v2.filters.status.open': 'Open',
+        'feedback.v2.filters.status.new': 'New',
+        'feedback.v2.filters.status.investigating': 'Investigating',
+        'feedback.v2.filters.status.planned': 'Planned',
+        'feedback.v2.filters.status.responded': 'Responded',
+        'feedback.v2.filters.status.wont_fix': "Won't fix",
+        'feedback.v2.filters.type.all': 'All',
+        'feedback.v2.filters.type.bug': 'Bug',
+        'feedback.v2.filters.type.feature': 'Feature',
+        'feedback.v2.filters.type.compliment': 'Compliment',
+        'feedback.v2.filters.search.placeholder': 'Search feedback...',
+        'feedback.v2.filters.clear': 'Clear filters',
+        // v2 empty states
+        'feedback.v2.emptyStates.noMatch': 'No feedback matches your filters',
+        'feedback.v2.emptyStates.compliments': 'No compliments yet',
+        // v2 toasts
+        'feedback.v2.toasts.deepLinkNotFound': 'Feedback item not found on this page',
+        // v1 keys still referenced
         'feedback.stats.total': 'Total Feedback',
         'feedback.stats.new': 'New',
         'feedback.stats.responded': 'Responded',
@@ -30,23 +68,9 @@ vi.mock('react-i18next', () => ({
         'feedback.respond': 'Respond',
         'feedback.editResponse': 'Edit Response',
         'feedback.adminResponseLabel': 'Admin Response',
-        'feedback.filters.statusPlaceholder': 'Filter by status',
-        'feedback.filters.categoryPlaceholder': 'Filter by category',
-        'feedback.filters.allStatuses': 'All Statuses',
-        'feedback.filters.allCategories': 'All Categories',
         'feedback.filters.clear': 'Clear Filters',
-        'feedback.statuses.new': 'New',
-        'feedback.statuses.under_review': 'Under Review',
-        'feedback.statuses.planned': 'Planned',
-        'feedback.statuses.in_progress': 'In Progress',
-        'feedback.statuses.completed': 'Completed',
-        'feedback.statuses.cancelled': 'Cancelled',
-        'feedback.categories.feature_request': 'Feature Request',
-        'feedback.categories.bug_incorrect_data': 'Bug / Incorrect Data',
         'feedback.errors.loadingTitle': 'Error Loading Feedback',
         'feedback.search.placeholder': 'Search feedback...',
-        'feedback.search.filteredCount': '{{filtered}} of {{total}} items',
-        'feedback.search.noResults': 'No feedback matches your search',
         'feedback.states.noFeedback': 'No feedback submitted yet',
         'feedback.states.noFilteredResults': 'No feedback matches the selected filters',
         'feedback.delete.button': 'Delete',
@@ -54,6 +78,7 @@ vi.mock('react-i18next', () => ({
         'feedback.delete.warning': 'This will permanently delete this feedback item.',
         'feedback.delete.confirm': 'Delete',
         'feedback.delete.success': 'Feedback deleted',
+        'page.title': 'Admin Dashboard',
         'pagination.showing': 'Showing {{from}}-{{to}} of {{total}}',
         'pagination.pageOf': 'Page {{page}} of {{totalPages}}',
         'pagination.previous': 'Previous',
@@ -67,7 +92,7 @@ vi.mock('react-i18next', () => ({
 }));
 
 vi.mock('@/hooks/use-toast', () => ({
-  toast: vi.fn(),
+  useToast: () => ({ toast: vi.fn() }),
 }));
 
 vi.mock('@/lib/errorReporting', () => ({
@@ -144,6 +169,9 @@ const mockSetPage = vi.fn();
 const mockClearError = vi.fn();
 const mockSetSelectedFeedback = vi.fn();
 const mockUpdateFeedback = vi.fn().mockResolvedValue(sampleFeedback);
+const mockOpenDrawer = vi.fn();
+const mockCloseDrawer = vi.fn();
+const mockSetInnerTab = vi.fn();
 
 vi.mock('@/stores/adminFeedbackStore', () => ({
   useAdminFeedbackStore: () => ({
@@ -158,6 +186,8 @@ vi.mock('@/stores/adminFeedbackStore', () => ({
     isUpdating: false,
     isDeleting: false,
     error: null,
+    openFeedbackId: null,
+    openInnerTab: 'reply',
     fetchFeedbackList: mockFetchFeedbackList,
     updateFeedback: mockUpdateFeedback,
     deleteFeedback: mockDeleteFeedback,
@@ -166,6 +196,9 @@ vi.mock('@/stores/adminFeedbackStore', () => ({
     setPage: mockSetPage,
     clearError: mockClearError,
     setSelectedFeedback: mockSetSelectedFeedback,
+    openDrawer: mockOpenDrawer,
+    closeDrawer: mockCloseDrawer,
+    setInnerTab: mockSetInnerTab,
   }),
 }));
 
@@ -179,10 +212,15 @@ vi.mock('@/types/feedback', async (importOriginal) => {
   };
 });
 
-// Mock AdminFeedbackResponseDialog to keep tests focused
-vi.mock('../AdminFeedbackResponseDialog', () => ({
-  AdminFeedbackResponseDialog: () => null,
-}));
+// Helper to render AdminFeedbackSection inside a MemoryRouter
+// (required because the component now uses useSearchParams)
+function renderSection() {
+  return render(
+    <MemoryRouter>
+      <AdminFeedbackSection />
+    </MemoryRouter>
+  );
+}
 
 describe('AdminFeedbackSection — delete ConfirmDialog', () => {
   beforeEach(() => {
@@ -190,14 +228,14 @@ describe('AdminFeedbackSection — delete ConfirmDialog', () => {
   });
 
   it('does not show delete ConfirmDialog on initial render', () => {
-    render(<AdminFeedbackSection />);
+    renderSection();
 
     expect(screen.queryByText('Delete Feedback')).not.toBeInTheDocument();
   });
 
   it('shows delete ConfirmDialog when trash button is clicked on a feedback card', async () => {
     const user = userEvent.setup();
-    render(<AdminFeedbackSection />);
+    renderSection();
 
     await user.click(screen.getByTestId(`delete-feedback-${FEEDBACK_ID}`));
 
@@ -208,7 +246,7 @@ describe('AdminFeedbackSection — delete ConfirmDialog', () => {
 
   it('displays the permanent deletion warning in the dialog', async () => {
     const user = userEvent.setup();
-    render(<AdminFeedbackSection />);
+    renderSection();
 
     await user.click(screen.getByTestId(`delete-feedback-${FEEDBACK_ID}`));
 
@@ -221,7 +259,7 @@ describe('AdminFeedbackSection — delete ConfirmDialog', () => {
 
   it('calls deleteFeedback with the correct id when Confirm is clicked', async () => {
     const user = userEvent.setup();
-    render(<AdminFeedbackSection />);
+    renderSection();
 
     // Open dialog
     await user.click(screen.getByTestId(`delete-feedback-${FEEDBACK_ID}`));
@@ -239,7 +277,7 @@ describe('AdminFeedbackSection — delete ConfirmDialog', () => {
 
   it('closes the ConfirmDialog and does NOT call deleteFeedback when Cancel is clicked', async () => {
     const user = userEvent.setup();
-    render(<AdminFeedbackSection />);
+    renderSection();
 
     // Open dialog
     await user.click(screen.getByTestId(`delete-feedback-${FEEDBACK_ID}`));
