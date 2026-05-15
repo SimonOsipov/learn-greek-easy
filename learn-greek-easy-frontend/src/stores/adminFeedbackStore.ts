@@ -36,6 +36,11 @@ const DEFAULT_FILTERS: AdminFeedbackFilters = {
 };
 
 /**
+ * Tab options inside the feedback drawer
+ */
+export type FeedbackDrawerInnerTab = 'reply' | 'thread' | 'meta';
+
+/**
  * Admin Feedback Store State Interface
  */
 interface AdminFeedbackState {
@@ -60,6 +65,10 @@ interface AdminFeedbackState {
   // Error state
   error: string | null;
 
+  // Drawer state
+  openFeedbackId: string | null;
+  openInnerTab: FeedbackDrawerInnerTab;
+
   // Actions
   fetchFeedbackList: () => Promise<void>;
   updateFeedback: (
@@ -72,6 +81,9 @@ interface AdminFeedbackState {
   setPage: (page: number) => void;
   clearError: () => void;
   setSelectedFeedback: (feedback: AdminFeedbackItem | null) => void;
+  openDrawer: (id: string, tab?: FeedbackDrawerInnerTab) => void;
+  closeDrawer: () => void;
+  setInnerTab: (tab: FeedbackDrawerInnerTab) => void;
 }
 
 /**
@@ -92,6 +104,8 @@ export const useAdminFeedbackStore = create<AdminFeedbackState>()(
       isUpdating: false,
       isDeleting: false,
       error: null,
+      openFeedbackId: null,
+      openInnerTab: 'reply',
 
       /**
        * Fetch paginated feedback list from admin API with current filters
@@ -201,6 +215,22 @@ export const useAdminFeedbackStore = create<AdminFeedbackState>()(
        */
       setSelectedFeedback: (feedback: AdminFeedbackItem | null) =>
         set({ selectedFeedback: feedback }),
+
+      /**
+       * Open the feedback drawer for a given feedback ID, optionally setting the inner tab
+       */
+      openDrawer: (id: string, tab: FeedbackDrawerInnerTab = 'reply') =>
+        set({ openFeedbackId: id, openInnerTab: tab }),
+
+      /**
+       * Close the feedback drawer and reset related state
+       */
+      closeDrawer: () => set({ openFeedbackId: null, openInnerTab: 'reply' }),
+
+      /**
+       * Switch the active inner tab within the feedback drawer
+       */
+      setInnerTab: (tab: FeedbackDrawerInnerTab) => set({ openInnerTab: tab }),
     }),
     { name: 'adminFeedbackStore' }
   )
@@ -222,3 +252,5 @@ export const selectPagination = (state: AdminFeedbackState) => ({
   total: state.total,
   totalPages: state.totalPages,
 });
+export const selectOpenFeedbackId = (state: AdminFeedbackState) => state.openFeedbackId;
+export const selectOpenInnerTab = (state: AdminFeedbackState) => state.openInnerTab;
