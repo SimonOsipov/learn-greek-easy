@@ -630,22 +630,22 @@ const AdminPage: React.FC = () => {
   const announcementsCount = useAdminAnnouncementStore((s) => s.announcements.length);
   const feedbackCount = useAdminFeedbackStore((s) => s.feedbackList.length);
 
-  // Top-level tab state + URL sync (ASHELL-06)
-  const [activeTab, setActiveTab] = useState<AdminTabType>('dashboard');
+  // Top-level tab state — derived from URL (ASHELL-06).
+  // URL is the single source of truth; no useState needed, no dual-effect loop.
   const [searchParams, setSearchParams] = useSearchParams();
-  useEffect(() => {
-    const fromUrl = searchParams.get('tab');
-    if (isValidTab(fromUrl) && fromUrl !== activeTab) {
-      setActiveTab(fromUrl);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
-  useEffect(() => {
-    if (searchParams.get('tab') !== activeTab) {
-      setSearchParams({ tab: activeTab }, { replace: true });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab]);
+  const tabParam = searchParams.get('tab');
+  const activeTab: AdminTabType = isValidTab(tabParam) ? tabParam : 'dashboard';
+
+  const setActiveTab = (tab: AdminTabType) => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set('tab', tab);
+        return next;
+      },
+      { replace: true }
+    );
+  };
 
   // Deck edit modal state
   const [editModalOpen, setEditModalOpen] = useState(false);
