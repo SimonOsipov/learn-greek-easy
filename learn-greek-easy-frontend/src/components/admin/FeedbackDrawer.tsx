@@ -227,9 +227,19 @@ function ReplyTab({ feedbackId, onClose }: ReplyTabProps) {
 
           <Field
             label="Admin response"
-            hint={`${charCount}/500 — public, learner will see this verbatim`}
+            hint={
+              <>
+                <span data-testid="feedback-drawer-char-counter">{charCount}/500</span>
+                {' — public, learner will see this verbatim'}
+              </>
+            }
           >
-            <Textarea rows={6} maxLength={500} {...form.register('admin_response')} />
+            <Textarea
+              rows={6}
+              maxLength={500}
+              data-testid="feedback-drawer-textarea"
+              {...form.register('admin_response')}
+            />
           </Field>
 
           <div className="fb-canned-list" role="group" aria-label="Quick replies">
