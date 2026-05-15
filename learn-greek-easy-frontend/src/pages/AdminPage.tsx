@@ -11,7 +11,6 @@ import React, {
 
 import {
   AlertCircle,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Crown,
@@ -24,10 +23,10 @@ import {
   Trash2,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 
 import {
   AdminCardErrorSection,
-  AdminExerciseList,
   AdminFeedbackSection,
   AnnouncementsTab,
   ChangelogTab,
@@ -42,18 +41,16 @@ import {
   SituationsTab,
   SummaryCard,
 } from '@/components/admin';
+import { AdminExerciseList } from '@/components/admin/exercises';
+import { PageHead } from '@/components/admin/shell/page-head';
+import { SectionTabs, type SectionTabItem } from '@/components/admin/shell/section-tabs';
+import { TopBar } from '@/components/admin/shell/top-bar';
 import { CultureBadge, type CultureCategory } from '@/components/culture';
 import { DeckBadge } from '@/components/decks';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -78,6 +75,14 @@ import type {
   VocabularyDeckCreatePayload,
   VocabularyDeckUpdatePayload,
 } from '@/services/adminAPI';
+import { useAdminAnnouncementStore } from '@/stores/adminAnnouncementStore';
+import { useAdminCardErrorStore } from '@/stores/adminCardErrorStore';
+import { useAdminChangelogStore } from '@/stores/adminChangelogStore';
+import { useAdminFeedbackStore } from '@/stores/adminFeedbackStore';
+import { useAdminNewsStore } from '@/stores/adminNewsStore';
+import { useAdminSituationStore } from '@/stores/adminSituationStore';
+
+import { type AdminTabType, isValidTab } from './admin/types';
 
 /**
  * Loading skeleton for the admin page
@@ -541,29 +546,62 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
 
 AllDecksList.displayName = 'AllDecksList';
 
-/**
- * Top-level admin tab type
- */
-type AdminTabType =
-  | 'decks'
-  | 'news'
-  | 'announcements'
-  | 'changelog'
-  | 'cardErrors'
-  | 'feedback'
-  | 'situations'
-  | 'exercisesListening'
-  | 'exercisesReading';
+// ---------------------------------------------------------------------------
+// Page head helper — returns the minimum { title, sub } for the current tab.
+// Per-section overrides (breadcrumb, kicker, actions) land in ADMIN2-04..11.
+// titleTestId / subTestId preserve Playwright e2e selectors across all branches.
+// ---------------------------------------------------------------------------
+function pageHeadPropsFor(tab: AdminTabType, t: (key: string) => string) {
+  void tab; // per-section overrides come in ADMIN2-04..11
+  return {
+    title: t('page.title'),
+    sub: t('page.subtitle'),
+    titleTestId: 'admin-title' as const,
+    subTestId: 'admin-subtitle' as const,
+  };
+}
 
-const ADMIN_TAB_GROUPS: { key: string; tabs: AdminTabType[] }[] = [
-  { key: 'content', tabs: ['decks', 'news', 'situations'] },
-  { key: 'exercises', tabs: ['exercisesListening', 'exercisesReading'] },
-  { key: 'reviews', tabs: ['cardErrors', 'feedback'] },
-  { key: 'system', tabs: ['changelog', 'announcements'] },
-];
+// ---------------------------------------------------------------------------
+// ExercisesPlaceholder — local 2-button sub-toggle wrapping AdminExerciseList.
+// No router change; state is ephemeral per mount.
+// ---------------------------------------------------------------------------
+function ExercisesPlaceholder() {
+  const { t } = useTranslation('admin');
+  const [subTab, setSubTab] = useState<'listening' | 'reading'>('listening');
 
-const getGroupForTab = (tab: AdminTabType): string | undefined =>
-  ADMIN_TAB_GROUPS.find((g) => g.tabs.includes(tab))?.key;
+  return (
+    <div>
+      <div className="mb-4 flex gap-2">
+        <button
+          type="button"
+          className={cn(
+            'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+            subTab === 'listening'
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-muted text-muted-foreground hover:bg-muted/80'
+          )}
+          onClick={() => setSubTab('listening')}
+        >
+          {t('tabs.exercisesListening')}
+        </button>
+        <button
+          type="button"
+          className={cn(
+            'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+            subTab === 'reading'
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-muted text-muted-foreground hover:bg-muted/80'
+          )}
+          onClick={() => setSubTab('reading')}
+        >
+          {t('tabs.exercisesReading')}
+        </button>
+      </div>
+      {subTab === 'listening' && <AdminExerciseList modality="listening" />}
+      {subTab === 'reading' && <AdminExerciseList modality="reading" />}
+    </div>
+  );
+}
 
 /**
  * Admin Page
@@ -583,8 +621,31 @@ const AdminPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isRetrying, setIsRetrying] = useState(false);
 
-  // Top-level tab state
-  const [activeTab, setActiveTab] = useState<AdminTabType>('decks');
+  // Store selectors for tab counts (paginated — page-local counts only).
+  // TODO(ADMIN2-03): wire real totals from a stats endpoint.
+  const newsCount = useAdminNewsStore((s) => s.newsItems.length);
+  const situationsCount = useAdminSituationStore((s) => s.situations.length);
+  const cardErrorsCount = useAdminCardErrorStore((s) => s.errorList.length);
+  const changelogCount = useAdminChangelogStore((s) => s.items.length);
+  const announcementsCount = useAdminAnnouncementStore((s) => s.announcements.length);
+  const feedbackCount = useAdminFeedbackStore((s) => s.feedbackList.length);
+
+  // Top-level tab state — derived from URL (ASHELL-06).
+  // URL is the single source of truth; no useState needed, no dual-effect loop.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const activeTab: AdminTabType = isValidTab(tabParam) ? tabParam : 'dashboard';
+
+  const setActiveTab = (tab: AdminTabType) => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set('tab', tab);
+        return next;
+      },
+      { replace: true }
+    );
+  };
 
   // Deck edit modal state
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -608,6 +669,22 @@ const AdminPage: React.FC = () => {
   const allDecksListRef = useRef<AllDecksListHandle>(null);
 
   const locale = i18n.language;
+
+  // Tab configuration for SectionTabs.
+  // Counts reflect the currently-loaded page (paginated stores).
+  // TODO(ADMIN2-03): replace with totals from a stats endpoint.
+  const tabsConfig: SectionTabItem[] = [
+    { key: 'dashboard', label: t('tabs.dashboard'), count: 0 },
+    { key: 'inbox', label: t('tabs.inbox'), count: 0, tone: 'amber' },
+    { key: 'decks', label: t('tabs.decks'), count: stats?.total_decks ?? 0 },
+    { key: 'news', label: t('tabs.news'), count: newsCount },
+    { key: 'situations', label: t('tabs.situations'), count: situationsCount },
+    { key: 'exercises', label: t('tabs.exercises'), count: 0 },
+    { key: 'errors', label: t('tabs.errors'), count: cardErrorsCount },
+    { key: 'feedback', label: t('tabs.feedback'), count: feedbackCount },
+    { key: 'changelog', label: t('tabs.changelog'), count: changelogCount },
+    { key: 'announcements', label: t('tabs.announcements'), count: announcementsCount },
+  ];
 
   const fetchStats = async () => {
     try {
@@ -926,18 +1003,9 @@ const AdminPage: React.FC = () => {
   if (isLoading) {
     return (
       <div className="space-y-6 pb-8" data-testid="admin-page">
-        {/* Page Header */}
-        <div>
-          <h1
-            className="text-2xl font-semibold text-foreground md:text-3xl"
-            data-testid="admin-title"
-          >
-            {t('page.title')}
-          </h1>
-          <p className="mt-2 text-muted-foreground" data-testid="admin-subtitle">
-            {t('page.subtitle')}
-          </p>
-        </div>
+        <TopBar hasNotifications={false} />
+        <PageHead {...pageHeadPropsFor(activeTab, t)} />
+        <SectionTabs tabs={tabsConfig} active={activeTab} onTabChange={setActiveTab} />
         <AdminLoadingSkeleton />
       </div>
     );
@@ -947,18 +1015,9 @@ const AdminPage: React.FC = () => {
   if (error) {
     return (
       <div className="space-y-6 pb-8" data-testid="admin-page">
-        {/* Page Header */}
-        <div>
-          <h1
-            className="text-2xl font-semibold text-foreground md:text-3xl"
-            data-testid="admin-title"
-          >
-            {t('page.title')}
-          </h1>
-          <p className="mt-2 text-muted-foreground" data-testid="admin-subtitle">
-            {t('page.subtitle')}
-          </p>
-        </div>
+        <TopBar hasNotifications={false} />
+        <PageHead {...pageHeadPropsFor(activeTab, t)} />
+        <SectionTabs tabs={tabsConfig} active={activeTab} onTabChange={setActiveTab} />
         <ErrorState message={error} onRetry={handleRetry} isRetrying={isRetrying} t={t} />
       </div>
     );
@@ -968,18 +1027,9 @@ const AdminPage: React.FC = () => {
   if (!stats) {
     return (
       <div className="space-y-6 pb-8" data-testid="admin-page">
-        {/* Page Header */}
-        <div>
-          <h1
-            className="text-2xl font-semibold text-foreground md:text-3xl"
-            data-testid="admin-title"
-          >
-            {t('page.title')}
-          </h1>
-          <p className="mt-2 text-muted-foreground" data-testid="admin-subtitle">
-            {t('page.subtitle')}
-          </p>
-        </div>
+        <TopBar hasNotifications={false} />
+        <PageHead {...pageHeadPropsFor(activeTab, t)} />
+        <SectionTabs tabs={tabsConfig} active={activeTab} onTabChange={setActiveTab} />
         <Card>
           <CardContent className="py-8 text-center">
             <p className="text-muted-foreground">{t('states.noStats')}</p>
@@ -991,60 +1041,9 @@ const AdminPage: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-8" data-testid="admin-page">
-      {/* Page Header */}
-      <div>
-        <h1
-          className="text-2xl font-semibold text-foreground md:text-3xl"
-          data-testid="admin-title"
-        >
-          {t('page.title')}
-        </h1>
-        <p className="mt-2 text-muted-foreground" data-testid="admin-subtitle">
-          {t('page.subtitle')}
-        </p>
-      </div>
-
-      {/* Top-Level Tab Switcher */}
-      <div className="flex flex-wrap gap-2" data-testid="admin-tab-switcher">
-        {ADMIN_TAB_GROUPS.map((group) => {
-          const activeGroup = getGroupForTab(activeTab);
-          const isActive = activeGroup === group.key;
-          const activeTabInGroup = isActive ? activeTab : undefined;
-          const label = activeTabInGroup
-            ? t(`tabs.${activeTabInGroup}`)
-            : t(`tabs.groups.${group.key}`);
-          return (
-            <DropdownMenu key={group.key}>
-              <DropdownMenuTrigger asChild>
-                <button
-                  data-testid={`admin-group-${group.key}`}
-                  className={cn(
-                    'inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-                    isActive
-                      ? 'bg-primary text-primary-foreground shadow hover:bg-primary/90'
-                      : 'border border-input bg-background hover:bg-accent hover:text-accent-foreground'
-                  )}
-                >
-                  {label}
-                  <ChevronDown className="h-4 w-4 opacity-70" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                {group.tabs.map((tab) => (
-                  <DropdownMenuItem
-                    key={tab}
-                    data-testid={`admin-tab-${tab}`}
-                    onSelect={() => setActiveTab(tab)}
-                    className={cn(activeTab === tab && 'font-medium')}
-                  >
-                    {t(`tabs.${tab}`)}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          );
-        })}
-      </div>
+      <TopBar hasNotifications={false} />
+      <PageHead {...pageHeadPropsFor(activeTab, t)} />
+      <SectionTabs tabs={tabsConfig} active={activeTab} onTabChange={setActiveTab} />
 
       {/* Decks Tab Content */}
       {activeTab === 'decks' && (
@@ -1110,10 +1109,10 @@ const AdminPage: React.FC = () => {
       )}
 
       {/* Card Errors Tab Content */}
-      {activeTab === 'cardErrors' && (
+      {activeTab === 'errors' && (
         <section aria-labelledby="card-errors-heading">
           <h2 id="card-errors-heading" className="sr-only">
-            {t('tabs.cardErrors')}
+            {t('tabs.errors')}
           </h2>
           <AdminCardErrorSection />
         </section>
@@ -1135,23 +1134,10 @@ const AdminPage: React.FC = () => {
         </section>
       )}
 
-      {activeTab === 'exercisesListening' && (
-        <section aria-labelledby="exercises-listening-heading">
-          <h2 id="exercises-listening-heading" className="sr-only">
-            {t('tabs.exercisesListening')}
-          </h2>
-          <AdminExerciseList modality="listening" />
-        </section>
-      )}
+      {activeTab === 'exercises' && <ExercisesPlaceholder />}
 
-      {activeTab === 'exercisesReading' && (
-        <section aria-labelledby="exercises-reading-heading">
-          <h2 id="exercises-reading-heading" className="sr-only">
-            {t('tabs.exercisesReading')}
-          </h2>
-          <AdminExerciseList modality="reading" />
-        </section>
-      )}
+      {activeTab === 'dashboard' && <div data-testid="admin-dashboard-placeholder" />}
+      {activeTab === 'inbox' && <div data-testid="admin-inbox-placeholder" />}
 
       {/* Deck Edit Modal */}
       <DeckEditModal

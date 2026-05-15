@@ -299,11 +299,17 @@
     "situations": "Ситуации",
     "exercisesListening": "Аудирование",
     "exercisesReading": "Чтение",
-    "groups": {
-      "content": "Контент",
-      "exercises": "Упражнения",
-      "reviews": "Проверки",
-      "system": "Система"
+    "dashboard": "Панель",
+    "inbox": "Входящие",
+    "exercises": "Упражнения",
+    "errors": "Ошибки карточек"
+  },
+  "shell": {
+    "topBar": {
+      "search": "Поиск в админке",
+      "theme": "Переключить тему",
+      "language": "Переключить язык",
+      "notifications": "Уведомления"
     }
   },
   "announcements": {

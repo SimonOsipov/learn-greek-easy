@@ -287,11 +287,17 @@
     "situations": "Situations",
     "exercisesListening": "Listening",
     "exercisesReading": "Reading",
-    "groups": {
-      "content": "Content",
-      "exercises": "Exercises",
-      "reviews": "Reviews",
-      "system": "System"
+    "dashboard": "Dashboard",
+    "inbox": "Inbox",
+    "exercises": "Exercises",
+    "errors": "Card errors"
+  },
+  "shell": {
+    "topBar": {
+      "search": "Search admin",
+      "theme": "Toggle theme",
+      "language": "Switch language",
+      "notifications": "Notifications"
     }
   },
   "announcements": {

@@ -686,7 +686,7 @@ test.describe('My Decks - Admin Flows', () => {
 
   test('Flow 11: admin panel shows all decks (system + user-created)', async ({ page }) => {
     // Navigate to Admin page
-    await page.goto('/admin');
+    await page.goto('/admin?tab=decks');
 
     // Wait for admin page to load
     await expect(page.locator('[data-testid="admin-title"]')).toBeVisible({
