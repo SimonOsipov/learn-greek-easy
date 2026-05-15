@@ -368,7 +368,7 @@ function ThreadTab({ feedbackId }: ThreadTabProps) {
           <p className="text-sm">{item.admin_response}</p>
         </article>
       ) : (
-        <div className="fb-thread-empty">No reply yet — switch to the Reply tab.</div>
+        <div className="fb-thread-empty">{t('feedback.v2.drawer.thread.empty')}</div>
       )}
     </div>
   );
@@ -381,6 +381,7 @@ interface MetaTabProps {
 }
 
 function MetaTab({ feedbackId }: MetaTabProps) {
+  const { t } = useTranslation('admin');
   const feedbackList = useAdminFeedbackStore((s) => s.feedbackList);
   const item = feedbackList.find((f) => f.id === feedbackId) ?? null;
 
@@ -394,21 +395,25 @@ function MetaTab({ feedbackId }: MetaTabProps) {
     <div className="fb-meta-table" role="list" aria-label="Feedback metadata">
       {/* Row 1: User */}
       <div className="fb-meta-row" role="listitem">
-        <span className="fb-meta-l">User</span>
-        <span className="fb-meta-v">{item.author?.full_name || 'Anonymous'}</span>
+        <span className="fb-meta-l">{t('feedback.v2.drawer.meta.rows.user')}</span>
+        <span className="fb-meta-v">
+          {item.author?.full_name || t('feedback.v2.type.anonymous')}
+        </span>
       </div>
 
       {/* Row 2: Type */}
       <div className="fb-meta-row" role="listitem">
-        <span className="fb-meta-l">Type</span>
+        <span className="fb-meta-l">{t('feedback.v2.drawer.meta.rows.type')}</span>
         <span className="fb-meta-v">
-          {item.category === 'bug_incorrect_data' ? 'Bug' : 'Feature request'}
+          {item.category === 'bug_incorrect_data'
+            ? t('feedback.v2.type.bug')
+            : t('feedback.v2.type.feature')}
         </span>
       </div>
 
       {/* Row 3: Submitted */}
       <div className="fb-meta-row" role="listitem">
-        <span className="fb-meta-l">Submitted</span>
+        <span className="fb-meta-l">{t('feedback.v2.drawer.meta.rows.submitted')}</span>
         <span className="fb-meta-v">
           {formatDistanceToNow(new Date(item.created_at), {
             addSuffix: true,
@@ -419,13 +424,13 @@ function MetaTab({ feedbackId }: MetaTabProps) {
 
       {/* Row 4: Likes */}
       <div className="fb-meta-row" role="listitem">
-        <span className="fb-meta-l">Likes</span>
+        <span className="fb-meta-l">{t('feedback.v2.drawer.meta.rows.likes')}</span>
         <span className="fb-meta-v">{item.vote_count}</span>
       </div>
 
       {/* Row 5: Status — Badge via tone API */}
       <div className="fb-meta-row" role="listitem">
-        <span className="fb-meta-l">Status</span>
+        <span className="fb-meta-l">{t('feedback.v2.drawer.meta.rows.status')}</span>
         <span className="fb-meta-v">
           <Badge tone={STATUS_TONE[handoff]}>{HANDOFF_LABEL[handoff]}</Badge>
         </span>
@@ -434,7 +439,7 @@ function MetaTab({ feedbackId }: MetaTabProps) {
       {/* Row 6 (conditional): Responded — only when admin_response is present */}
       {item.admin_response ? (
         <div className="fb-meta-row" role="listitem">
-          <span className="fb-meta-l">Responded</span>
+          <span className="fb-meta-l">{t('feedback.v2.drawer.meta.rows.responded')}</span>
           <span className="fb-meta-v">
             {formatDistanceToNow(new Date(item.admin_response_at ?? item.created_at), {
               addSuffix: true,

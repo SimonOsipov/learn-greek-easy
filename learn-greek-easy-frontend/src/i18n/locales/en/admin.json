@@ -653,6 +653,30 @@
         "saved": "Reply saved",
         "save_error_title": "Failed to save reply",
         "save_error_desc": "Please try again."
+      },
+      "card": {
+        "openReply": "Open reply for {{title}}",
+        "adminResponseLabel": "✓ Admin response"
+      },
+      "drawer": {
+        "thread": {
+          "empty": "No reply yet — switch to the Reply tab."
+        },
+        "meta": {
+          "rows": {
+            "user": "User",
+            "type": "Type",
+            "submitted": "Submitted",
+            "likes": "Likes",
+            "status": "Status",
+            "responded": "Responded"
+          }
+        }
+      },
+      "type": {
+        "bug": "Bug",
+        "feature": "Feature request",
+        "anonymous": "Anonymous"
       }
     }
   },

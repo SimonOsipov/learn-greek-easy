@@ -127,7 +127,7 @@ export const AdminFeedbackCard: React.FC<AdminFeedbackCardProps> = ({
           {feedback.admin_response ? (
             <blockquote className="fb-card-reply" data-testid="admin-feedback-response">
               <span className="fb-card-reply-label">
-                ✓ Admin response ·{' '}
+                {t('feedback.v2.card.adminResponseLabel')} ·{' '}
                 {formatDistanceToNow(new Date(feedback.admin_response_at ?? feedback.created_at), {
                   addSuffix: true,
                   locale: getDateLocale(),
