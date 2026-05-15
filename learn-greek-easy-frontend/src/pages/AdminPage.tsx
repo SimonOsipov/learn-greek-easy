@@ -52,6 +52,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Kicker } from '@/components/ui/kicker';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -550,9 +551,23 @@ AllDecksList.displayName = 'AllDecksList';
 // Page head helper — returns the minimum { title, sub } for the current tab.
 // Per-section overrides (breadcrumb, kicker, actions) land in ADMIN2-04..11.
 // titleTestId / subTestId preserve Playwright e2e selectors across all branches.
+// Exported so [INBPH-06] can unit-test the helper without mounting AdminPage.
 // ---------------------------------------------------------------------------
-function pageHeadPropsFor(tab: AdminTabType, t: (key: string) => string) {
-  void tab; // per-section overrides come in ADMIN2-04..11
+export function pageHeadPropsFor(tab: AdminTabType, t: (key: string) => string) {
+  if (tab === 'inbox') {
+    return {
+      breadcrumb: [
+        { label: t('inbox.breadcrumb.dashboard') },
+        { label: t('inbox.breadcrumb.current') },
+      ],
+      kicker: <Kicker dot="amber">{t('inbox.kicker')}</Kicker>,
+      title: t('inbox.title'),
+      sub: t('inbox.sub'),
+      titleTestId: 'admin-title' as const,
+      subTestId: 'admin-subtitle' as const,
+    };
+  }
+  // per-section overrides come in ADMIN2-04..11
   return {
     title: t('page.title'),
     sub: t('page.subtitle'),
