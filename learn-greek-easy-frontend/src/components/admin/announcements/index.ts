@@ -12,3 +12,4 @@ export { AnnouncementHistoryTable } from './AnnouncementHistoryTable';
 export { AnnouncementJsonInput } from './AnnouncementJsonInput';
 export { AnnouncementPreviewModal } from './AnnouncementPreviewModal';
 export { AnnouncementsTab } from './AnnouncementsTab';
+export { AnnouncementNotificationPreview } from './AnnouncementNotificationPreview';

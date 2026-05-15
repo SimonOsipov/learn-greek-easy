@@ -388,9 +388,18 @@
     "v2": {
       "comingSoon": "Скоро",
       "preview": {
+        "label": "Предпросмотр уведомления",
         "titlePlaceholder": "Заголовок вашего объявления",
         "messagePlaceholder": "Текст вашего сообщения появится здесь. Пишите коротко и дружелюбно — у пользователей много уведомлений.",
-        "notAvailableInJsonMode": "Предпросмотр недоступен в режиме JSON"
+        "notAvailableInJsonMode": "Предпросмотр недоступен в режиме JSON",
+        "meta": {
+          "audienceLabel": "Аудитория",
+          "audienceValue": "Все активные ученики",
+          "deliveryLabel": "Доставка",
+          "deliveryValue": "Немедленно",
+          "channelLabel": "Канал",
+          "channelValue": "В приложении"
+        }
       },
       "timeline": {
         "comingSoonCaption": "Детальная хронология появится позже"
