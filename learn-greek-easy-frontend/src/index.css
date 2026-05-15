@@ -1081,6 +1081,35 @@
     cursor: pointer;
   }
 
+  /* ── Attention card / inbox panel (ADMIN2) ── */
+  .attention-card {
+    background: hsl(var(--bg-2));
+    border: 1px solid hsl(var(--fg) / 0.06);
+    border-radius: 18px;
+    padding: 22px;
+    margin-bottom: 28px;
+  }
+  .attention-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .attention-h {
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: -0.015em;
+  }
+  .attention-sub {
+    font-size: 13px;
+    color: hsl(var(--fg-3));
+    margin: 6px 0 0;
+  }
+
   /* ── News segment control + count badge (ADMIN2) ── */
   .news-seg {
     display: flex;
