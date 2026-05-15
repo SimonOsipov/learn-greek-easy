@@ -455,6 +455,14 @@
           "sendNow": "Отправить сейчас",
           "sending": "Отправка..."
         }
+      },
+      "history": {
+        "colDate": "Дата",
+        "colTitle": "Заголовок",
+        "colReach": "Охват",
+        "colRead": "Прочитано",
+        "colRate": "Охват, %",
+        "linkAttached": "ссылка прикреплена"
       }
     }
   },

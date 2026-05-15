@@ -9,6 +9,11 @@ export {
 export { AnnouncementCreateModal } from './AnnouncementCreateModal';
 export { AnnouncementDetailModal } from './AnnouncementDetailModal';
 export { AnnouncementHistoryTable } from './AnnouncementHistoryTable';
+export {
+  AnnouncementHistoryRows,
+  truncateMessage,
+  type AnnouncementHistoryRowsProps,
+} from './AnnouncementHistoryRows';
 export { AnnouncementJsonInput } from './AnnouncementJsonInput';
 export { AnnouncementPreviewModal } from './AnnouncementPreviewModal';
 export { AnnouncementsTab } from './AnnouncementsTab';

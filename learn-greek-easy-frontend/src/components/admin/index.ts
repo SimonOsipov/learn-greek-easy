@@ -21,6 +21,9 @@ export {
   AnnouncementComposeDrawer,
   AnnouncementDetailsDrawer,
   type AnnouncementDetailsDrawerProps,
+  AnnouncementHistoryRows,
+  truncateMessage,
+  type AnnouncementHistoryRowsProps,
 } from './announcements';
 export { CardDeleteDialog } from './CardDeleteDialog';
 export * from './changelog';

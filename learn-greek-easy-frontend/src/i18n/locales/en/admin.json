@@ -443,6 +443,14 @@
           "sendNow": "Send now",
           "sending": "Sending..."
         }
+      },
+      "history": {
+        "colDate": "Date",
+        "colTitle": "Title",
+        "colReach": "Reach",
+        "colRead": "Read",
+        "colRate": "Rate",
+        "linkAttached": "link attached"
       }
     }
   },
