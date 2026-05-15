@@ -301,9 +301,20 @@
     }
   },
   "announcements": {
+    "title": "Announcements",
+    "kicker": "System · Announcements",
+    "actions": {
+      "exportCsv": "Export CSV",
+      "new": "New announcement"
+    },
     "stats": {
       "total": "Total Announcements",
-      "avgRead": "Avg. Read Rate"
+      "avgRead": "Avg. Read Rate",
+      "peopleReached": "People reached",
+      "avgReadRate": "Avg read rate",
+      "withLink": "With link",
+      "allTime": "All time",
+      "acrossAll": "Across all announcements"
     },
     "create": {
       "title": "Create Announcement",
@@ -375,6 +386,9 @@
     },
     "v2": {
       "comingSoon": "Coming soon",
+      "tab": {
+        "subtitle": "Avg read rate {{avgRate}}% across {{count}} announcements"
+      },
       "details": {
         "sent": "sent",
         "delivered": "Delivered",
