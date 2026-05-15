@@ -385,6 +385,47 @@ class TestCreate:
 
         assert result.tag == ChangelogTag.ANNOUNCEMENT
 
+    @pytest.mark.asyncio
+    async def test_creates_with_version(
+        self,
+        db_session: AsyncSession,
+    ):
+        """Should persist version field when provided on create."""
+        service = ChangelogService(db_session)
+
+        create_data = ChangelogEntryCreate(
+            title_en="Versioned Feature",
+            title_ru="Версионная функция",
+            content_en="Description in English.",
+            content_ru="Описание на русском.",
+            tag=ChangelogTag.NEW_FEATURE,
+            version="v1.2.0",
+        )
+
+        result = await service.create(create_data)
+
+        assert result.version == "v1.2.0"
+
+    @pytest.mark.asyncio
+    async def test_creates_without_version_defaults_to_null(
+        self,
+        db_session: AsyncSession,
+    ):
+        """Should default version to NULL when not provided on create."""
+        service = ChangelogService(db_session)
+
+        create_data = ChangelogEntryCreate(
+            title_en="No Version Feature",
+            title_ru="Без версии",
+            content_en="Description.",
+            content_ru="Описание.",
+            tag=ChangelogTag.BUG_FIX,
+        )
+
+        result = await service.create(create_data)
+
+        assert result.version is None
+
 
 # =============================================================================
 # Test update
@@ -464,6 +505,25 @@ class TestUpdate:
             await service.update(uuid4(), update_data)
 
         assert "not found" in str(exc_info.value.detail).lower()
+
+    @pytest.mark.asyncio
+    async def test_updates_version_field(
+        self,
+        db_session: AsyncSession,
+        single_changelog_entry: ChangelogEntry,
+    ):
+        """Should update version field from None to a string value."""
+        service = ChangelogService(db_session)
+
+        # Confirm initial version is None
+        assert single_changelog_entry.version is None
+
+        update_data = ChangelogEntryUpdate(version="v1.5.0")
+        result = await service.update(single_changelog_entry.id, update_data)
+
+        assert result.version == "v1.5.0"
+        # Other fields should remain unchanged
+        assert result.title_en == single_changelog_entry.title_en
 
 
 # =============================================================================

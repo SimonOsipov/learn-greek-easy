@@ -99,6 +99,7 @@ class ChangelogService:
             title=title,
             content=content,
             tag=entry.tag,
+            version=entry.version,
             created_at=entry.created_at,
             updated_at=entry.updated_at,
         )
@@ -189,6 +190,7 @@ class ChangelogService:
             "content_en": data.content_en,
             "content_ru": data.content_ru,
             "tag": data.tag,
+            "version": data.version,
         }
         entry = await self.repo.create(entry_dict)
         await self.db.commit()

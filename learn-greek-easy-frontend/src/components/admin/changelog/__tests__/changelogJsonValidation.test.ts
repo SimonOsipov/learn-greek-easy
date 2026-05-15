@@ -13,6 +13,7 @@ import {
   JSON_PLACEHOLDER,
   REQUIRED_FIELDS,
   VALID_TAGS,
+  OPTIONAL_FIELDS,
 } from '../changelogJsonValidation';
 
 describe('changelogJsonValidation', () => {
@@ -37,6 +38,7 @@ describe('changelogJsonValidation', () => {
           title_ru: 'Russian Title',
           content_en: 'English content',
           content_ru: 'Russian content',
+          version: null,
         });
       }
     });
@@ -132,8 +134,9 @@ describe('changelogJsonValidation', () => {
           title_ru: 'Исправление ошибки',
           content_en: 'Fixed the bug',
           content_ru: 'Ошибка исправлена',
+          version: null,
         });
-        // Extra fields should not be in result
+        // Unknown extra fields should not be in result
         expect(result.data).not.toHaveProperty('extra_field');
         expect(result.data).not.toHaveProperty('another_extra');
       }
@@ -414,6 +417,10 @@ describe('changelogJsonValidation', () => {
     it('VALID_TAGS is immutable (readonly)', () => {
       expect(VALID_TAGS.length).toBe(3);
     });
+
+    it('exports OPTIONAL_FIELDS containing version', () => {
+      expect(OPTIONAL_FIELDS).toContain('version');
+    });
   });
 
   describe('sanitizeJsonInput', () => {
@@ -464,6 +471,66 @@ describe('changelogJsonValidation', () => {
       const input = '{\r\n  "content": "line1\r\nline2"\r\n}';
       const expected = '{\n  "content": "line1\\nline2"\n}';
       expect(sanitizeJsonInput(input)).toBe(expected);
+    });
+  });
+
+  describe('version field (optional)', () => {
+    const baseFields = {
+      tag: 'new_feature',
+      title_en: 'Title',
+      title_ru: 'Заголовок',
+      content_en: 'Content',
+      content_ru: 'Содержимое',
+    };
+
+    it('accepts JSON with a version field and returns it in data', () => {
+      const json = JSON.stringify({ ...baseFields, version: 'v1.2.0' });
+      const result = validateChangelogJson(json);
+
+      expect(result.valid).toBe(true);
+      if (result.valid) {
+        expect(result.data.version).toBe('v1.2.0');
+      }
+    });
+
+    it('returns version as null when version field is absent', () => {
+      const json = JSON.stringify(baseFields);
+      const result = validateChangelogJson(json);
+
+      expect(result.valid).toBe(true);
+      if (result.valid) {
+        expect(result.data.version).toBeNull();
+      }
+    });
+
+    it('returns invalidJson error for non-string version value', () => {
+      const json = JSON.stringify({ ...baseFields, version: 42 });
+      const result = validateChangelogJson(json);
+
+      expect(result.valid).toBe(false);
+      if (!result.valid) {
+        expect(result.error.type).toBe('invalidJson');
+      }
+    });
+
+    it('treats whitespace-only version as null', () => {
+      const json = JSON.stringify({ ...baseFields, version: '   ' });
+      const result = validateChangelogJson(json);
+
+      expect(result.valid).toBe(true);
+      if (result.valid) {
+        expect(result.data.version).toBeNull();
+      }
+    });
+
+    it('trims whitespace from version string', () => {
+      const json = JSON.stringify({ ...baseFields, version: '  v1.0.0  ' });
+      const result = validateChangelogJson(json);
+
+      expect(result.valid).toBe(true);
+      if (result.valid) {
+        expect(result.data.version).toBe('v1.0.0');
+      }
     });
   });
 

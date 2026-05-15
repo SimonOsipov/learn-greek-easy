@@ -28,6 +28,7 @@ class ChangelogItemResponse(BaseModel):
     title: str
     content: str
     tag: ChangelogTag
+    version: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -54,6 +55,7 @@ class ChangelogEntryCreate(BaseModel):
     content_en: str = Field(..., min_length=1)
     content_ru: str = Field(..., min_length=1)
     tag: ChangelogTag
+    version: str | None = Field(default=None, max_length=50)
 
 
 class ChangelogEntryUpdate(BaseModel):
@@ -64,6 +66,7 @@ class ChangelogEntryUpdate(BaseModel):
     content_en: Optional[str] = Field(None, min_length=1)
     content_ru: Optional[str] = Field(None, min_length=1)
     tag: Optional[ChangelogTag] = None
+    version: Optional[str] = Field(default=None, max_length=50)
 
 
 class ChangelogEntryAdminResponse(BaseModel):
@@ -77,6 +80,7 @@ class ChangelogEntryAdminResponse(BaseModel):
     content_en: str
     content_ru: str
     tag: ChangelogTag
+    version: str | None = None
     created_at: datetime
     updated_at: datetime
 

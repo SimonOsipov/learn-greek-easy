@@ -394,6 +394,48 @@ class TestAdminCreateChangelog:
 
         assert response.status_code == 422
 
+    @pytest.mark.asyncio
+    async def test_creates_entry_with_version_returns_201(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict[str, str],
+    ):
+        """Should create entry with version field and return it in the response."""
+        response = await client.post(
+            "/api/v1/admin/changelog",
+            headers=superuser_auth_headers,
+            json={
+                "title_en": "Versioned Feature",
+                "title_ru": "Версионная функция",
+                "content_en": "Description",
+                "content_ru": "Описание",
+                "tag": "new_feature",
+                "version": "v1.2.0",
+            },
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["version"] == "v1.2.0"
+
+    @pytest.mark.asyncio
+    async def test_existing_entries_have_null_version(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict[str, str],
+        single_entry: ChangelogEntry,
+    ):
+        """Rows created without version should have null version in the response."""
+        response = await client.get(
+            "/api/v1/admin/changelog",
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["items"]) == 1
+        assert data["items"][0]["version"] is None
+
 
 # =============================================================================
 # Test PUT /admin/changelog/{id} (Update)

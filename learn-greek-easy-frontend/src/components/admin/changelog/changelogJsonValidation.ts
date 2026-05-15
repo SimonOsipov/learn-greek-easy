@@ -16,6 +16,10 @@ export const VALID_TAGS: readonly ChangelogTag[] = CHANGELOG_TAG_OPTIONS;
 export const REQUIRED_FIELDS = ['tag', 'title_en', 'title_ru', 'content_en', 'content_ru'] as const;
 export type RequiredField = (typeof REQUIRED_FIELDS)[number];
 
+/** Optional fields recognised by the validator and forwarded to the API */
+export const OPTIONAL_FIELDS = ['version'] as const;
+export type OptionalField = (typeof OPTIONAL_FIELDS)[number];
+
 /** Validation error types - matches i18n keys in admin:changelog.validation */
 export type ValidationErrorType = 'invalidJson' | 'missingFields' | 'invalidTag';
 
@@ -49,7 +53,8 @@ export const JSON_PLACEHOLDER = `{
   "title_en": "Title in English",
   "title_ru": "Заголовок на русском",
   "content_en": "Content in English",
-  "content_ru": "Содержимое на русском"
+  "content_ru": "Содержимое на русском",
+  "version": "v1.2.0"
 }`;
 
 /**
@@ -148,6 +153,23 @@ export function validateChangelogJson(json: string): ValidationResult {
     };
   }
 
+  // Optional: version (string, max 50 chars). Ignore if absent or null;
+  // reject if present but not a string.
+  let version: string | null = null;
+  if ('version' in obj && obj['version'] !== undefined && obj['version'] !== null) {
+    if (typeof obj['version'] !== 'string') {
+      return {
+        valid: false,
+        error: {
+          type: 'invalidJson',
+          messageKey: 'admin:changelog.validation.invalidJson',
+        },
+      };
+    }
+    const trimmed = obj['version'].trim();
+    version = trimmed === '' ? null : trimmed;
+  }
+
   // All validations passed - return typed data
   const data: ChangelogCreateRequest = {
     tag: tag as ChangelogTag,
@@ -155,6 +177,7 @@ export function validateChangelogJson(json: string): ValidationResult {
     title_ru: (obj['title_ru'] as string).trim(),
     content_en: (obj['content_en'] as string).trim(),
     content_ru: (obj['content_ru'] as string).trim(),
+    version,
   };
 
   return {

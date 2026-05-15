@@ -385,6 +385,7 @@ describe('ChangelogTab', () => {
           title_ru: 'Заголовок новой функции',
           content_en: 'Feature description',
           content_ru: 'Описание функции',
+          version: null,
         });
       });
     });

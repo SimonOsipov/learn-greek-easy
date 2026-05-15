@@ -393,6 +393,127 @@ class TestChangelogEntryAdminResponse:
         assert "updated_at" in fields
 
 
+class TestVersionField:
+    """Tests for the optional `version` field across schemas."""
+
+    def test_create_version_defaults_to_none(self):
+        """ChangelogEntryCreate without version should default to None."""
+        entry = ChangelogEntryCreate(
+            title_en="Title",
+            title_ru="Заголовок",
+            content_en="Content",
+            content_ru="Содержимое",
+            tag=ChangelogTag.NEW_FEATURE,
+        )
+        assert entry.version is None
+
+    def test_create_accepts_version_string(self):
+        """ChangelogEntryCreate with version='v1.2.0' should accept it."""
+        entry = ChangelogEntryCreate(
+            title_en="Title",
+            title_ru="Заголовок",
+            content_en="Content",
+            content_ru="Содержимое",
+            tag=ChangelogTag.NEW_FEATURE,
+            version="v1.2.0",
+        )
+        assert entry.version == "v1.2.0"
+
+    def test_create_version_max_length_50_valid(self):
+        """ChangelogEntryCreate with version of exactly 50 chars should be valid."""
+        entry = ChangelogEntryCreate(
+            title_en="Title",
+            title_ru="Заголовок",
+            content_en="Content",
+            content_ru="Содержимое",
+            tag=ChangelogTag.NEW_FEATURE,
+            version="A" * 50,
+        )
+        assert len(entry.version) == 50
+
+    def test_create_version_max_length_51_invalid(self):
+        """ChangelogEntryCreate with version of 51 chars should raise ValidationError."""
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError):
+            ChangelogEntryCreate(
+                title_en="Title",
+                title_ru="Заголовок",
+                content_en="Content",
+                content_ru="Содержимое",
+                tag=ChangelogTag.NEW_FEATURE,
+                version="A" * 51,
+            )
+
+    def test_update_version_can_be_set(self):
+        """ChangelogEntryUpdate with version should propagate the value."""
+        update = ChangelogEntryUpdate(version="v2.0.0")
+        assert update.version == "v2.0.0"
+
+    def test_update_version_defaults_to_none(self):
+        """ChangelogEntryUpdate without version should default to None."""
+        update = ChangelogEntryUpdate()
+        assert update.version is None
+
+    def test_admin_response_includes_version(self):
+        """ChangelogEntryAdminResponse should round-trip the version field."""
+        now = datetime.now()
+        response = ChangelogEntryAdminResponse(
+            id=uuid4(),
+            title_en="Title",
+            title_ru="Заголовок",
+            content_en="Content",
+            content_ru="Содержимое",
+            tag=ChangelogTag.NEW_FEATURE,
+            version="v1.0.0",
+            created_at=now,
+            updated_at=now,
+        )
+        assert response.version == "v1.0.0"
+
+    def test_admin_response_version_defaults_to_none(self):
+        """ChangelogEntryAdminResponse without version should default to None."""
+        now = datetime.now()
+        response = ChangelogEntryAdminResponse(
+            id=uuid4(),
+            title_en="Title",
+            title_ru="Заголовок",
+            content_en="Content",
+            content_ru="Содержимое",
+            tag=ChangelogTag.NEW_FEATURE,
+            created_at=now,
+            updated_at=now,
+        )
+        assert response.version is None
+
+    def test_public_response_includes_version(self):
+        """ChangelogItemResponse should round-trip the version field."""
+        now = datetime.now()
+        response = ChangelogItemResponse(
+            id=uuid4(),
+            title="Title",
+            content="Content",
+            tag=ChangelogTag.NEW_FEATURE,
+            version="v1.0.0",
+            created_at=now,
+            updated_at=now,
+        )
+        assert response.version == "v1.0.0"
+
+    def test_public_response_version_defaults_to_none(self):
+        """ChangelogItemResponse without version should default to None."""
+        now = datetime.now()
+        response = ChangelogItemResponse(
+            id=uuid4(),
+            title="Title",
+            content="Content",
+            tag=ChangelogTag.NEW_FEATURE,
+            created_at=now,
+            updated_at=now,
+        )
+        assert response.version is None
+
+
 class TestChangelogAdminListResponse:
     """Test ChangelogAdminListResponse schema (admin, paginated)."""
 

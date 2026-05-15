@@ -2321,6 +2321,13 @@ class ChangelogEntry(Base, TimestampMixin):
         comment="Entry type: new_feature, bug_fix, announcement",
     )
 
+    # Optional release version label (e.g. "v1.2.0", "1.4.0-beta")
+    version: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True,
+        comment="Optional release version label, e.g. v1.2.0",
+    )
+
     def __repr__(self) -> str:
         return f"<ChangelogEntry(id={self.id}, tag={self.tag}, title_en={self.title_en[:30] if self.title_en else ''})>"
 

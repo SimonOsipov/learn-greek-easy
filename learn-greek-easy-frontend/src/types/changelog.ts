@@ -11,6 +11,7 @@ export interface ChangelogItem {
   title: string;
   content: string;
   tag: ChangelogTag;
+  version: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -31,6 +32,7 @@ export interface ChangelogEntryAdmin {
   content_en: string;
   content_ru: string;
   tag: ChangelogTag;
+  version: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -42,6 +44,7 @@ export interface ChangelogCreateRequest {
   content_en: string;
   content_ru: string;
   tag: ChangelogTag;
+  version?: string | null;
 }
 
 /** Request body for updating a changelog entry (all fields optional) */
@@ -51,6 +54,7 @@ export interface ChangelogUpdateRequest {
   content_en?: string;
   content_ru?: string;
   tag?: ChangelogTag;
+  version?: string | null;
 }
 
 /** Paginated response for admin changelog list */
