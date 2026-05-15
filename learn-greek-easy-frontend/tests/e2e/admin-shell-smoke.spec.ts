@@ -145,13 +145,16 @@ test('ASHELL-SMOKE-05: no console errors during 3-step smoke', async ({ page }) 
   await page.locator('.va-top button[aria-label*="theme" i]').click();
   await page.waitForTimeout(100);
 
-  // Filter out known noisy third-party errors (PostHog, analytics in test mode)
+  // Filter out known noisy third-party errors (analytics/observability blocked in CI sandbox)
   const appErrors = errors.filter(
     (e) =>
       !e.includes('posthog') &&
       !e.includes('PostHog') &&
       !e.includes('Failed to load resource') &&
-      !e.includes('ERR_BLOCKED_BY_CLIENT')
+      !e.includes('ERR_BLOCKED_BY_CLIENT') &&
+      !e.includes('Failed to preconnect') &&
+      !e.includes('sentry.io') &&
+      !e.includes('ingest.us.sentry.io')
   );
 
   expect(appErrors).toHaveLength(0);
