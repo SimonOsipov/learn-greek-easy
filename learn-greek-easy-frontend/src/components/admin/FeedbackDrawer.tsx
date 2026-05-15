@@ -10,9 +10,14 @@
 import { useState } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
+import { formatDistanceToNow } from 'date-fns';
+import { el } from 'date-fns/locale/el';
+import { ru } from 'date-fns/locale/ru';
 import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 
+import { AdminAvatar } from '@/components/ui/admin-avatar';
 import { Badge } from '@/components/ui/badge';
 import type { BadgeTone } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -265,6 +270,91 @@ function ReplyTab({ feedbackId, onClose }: ReplyTabProps) {
   );
 }
 
+// ── Thread tab helpers ─────────────────────────────────────────────────────────
+
+function getDateLocale() {
+  // Read language from document to avoid coupling to a hook at module scope.
+  // Full locale wiring (i18n.language) lands in FBDR-08.
+  const lang = document.documentElement.lang ?? '';
+  if (lang === 'el') return el;
+  if (lang === 'ru') return ru;
+  return undefined;
+}
+
+function initialsOf(name?: string | null): string {
+  if (!name) return 'A'; // Anonymous
+  const parts = name.trim().split(/\s+/);
+  const first = parts[0]?.[0] ?? '';
+  const second = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? '') : '';
+  return (first + second).toUpperCase() || 'A';
+}
+
+// ── Thread tab component ───────────────────────────────────────────────────────
+
+interface ThreadTabProps {
+  feedbackId: string;
+}
+
+function ThreadTab({ feedbackId }: ThreadTabProps) {
+  const { t } = useTranslation('admin');
+
+  const feedbackList = useAdminFeedbackStore((s) => s.feedbackList);
+  const item = feedbackList.find((f) => f.id === feedbackId) ?? null;
+
+  if (!item) {
+    return <div className="p-4 text-sm text-muted-foreground">Feedback not found.</div>;
+  }
+
+  const hasAdminResponse = Boolean(item.admin_response && item.admin_response.trim());
+
+  return (
+    <div className="flex flex-col gap-4 p-4">
+      {/* User bubble — always rendered */}
+      <article className="fb-thread-bubble fb-thread-bubble--user">
+        <header className="mb-2 flex items-center gap-2">
+          <AdminAvatar initials={initialsOf(item.author?.full_name)} size="sm" />
+          <span className="text-sm font-medium">
+            {item.author?.full_name || t('feedback.anonymousUser')}
+          </span>
+          <time className="ml-auto text-xs text-muted-foreground" dateTime={item.created_at}>
+            {formatDistanceToNow(new Date(item.created_at), {
+              addSuffix: true,
+              locale: getDateLocale(),
+            })}
+          </time>
+        </header>
+        <p className="text-sm">{item.description}</p>
+      </article>
+
+      {/* Admin bubble — only when admin_response is present */}
+      {hasAdminResponse ? (
+        <article className="fb-thread-bubble fb-thread-bubble--admin">
+          <header className="mb-2 flex items-center gap-2">
+            {/* Hardcoded per ADMIN2-05 Design Decision: backend does not track admin_response_by_user_id. */}
+            <AdminAvatar initials="A" tone="primary" size="sm" />
+            <span className="text-sm font-medium">Admin</span>
+            <Badge tone="blue">Admin</Badge>
+            {item.admin_response_at ? (
+              <time
+                className="ml-auto text-xs text-muted-foreground"
+                dateTime={item.admin_response_at}
+              >
+                {formatDistanceToNow(new Date(item.admin_response_at), {
+                  addSuffix: true,
+                  locale: getDateLocale(),
+                })}
+              </time>
+            ) : null}
+          </header>
+          <p className="text-sm">{item.admin_response}</p>
+        </article>
+      ) : (
+        <div className="fb-thread-empty">No reply yet — switch to the Reply tab.</div>
+      )}
+    </div>
+  );
+}
+
 // ── Component ──────────────────────────────────────────────────────────────────
 
 export function FeedbackDrawer({
@@ -327,12 +417,12 @@ export function FeedbackDrawer({
 
       {innerTab === 'thread' && (
         <>
-          <SidePanel.Body>
-            <div data-testid="drawer-tab-thread">Thread tab — implemented in FBDR-05</div>
+          <SidePanel.Body data-testid="drawer-tab-thread">
+            <ThreadTab feedbackId={feedbackId} />
           </SidePanel.Body>
           <SidePanel.Footer>
             <button type="button" onClick={onClose}>
-              Cancel
+              Close
             </button>
           </SidePanel.Footer>
         </>
