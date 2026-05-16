@@ -1674,6 +1674,14 @@
           "title": "No exercises yet",
           "cta": "Generate exercises"
         }
+      },
+      "linkedNews": {
+        "header": "Linked news",
+        "help": "Each situation can be linked to a source news article. The link surfaces to learners as background context.",
+        "empty": "This situation is not linked to a news article.",
+        "linkCta": "Link to article",
+        "unlink": "Unlink",
+        "reDerive": "Re-derive from article"
       }
     }
   },
