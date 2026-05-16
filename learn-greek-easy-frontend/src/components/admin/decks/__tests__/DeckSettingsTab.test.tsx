@@ -388,7 +388,65 @@ describe('DeckSettingsTab', () => {
     expect(adminAPI.deleteVocabularyDeck).not.toHaveBeenCalled();
   });
 
-  // ── 11. onSaved callback fires after successful save ─────────────────────
+  // ── 11. Culture deck: save payload preserves original category (AC #5) ──────
+
+  it('updateCultureDeck payload preserves original category when category input is hidden', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    (adminAPI.updateCultureDeck as Mock).mockResolvedValue({});
+
+    // Deck with category 'Mythology' — note: must be a valid CultureCategory enum value.
+    // CultureDeckEditForm accepts deck.category as the initial form value.
+    // Use 'history' as a valid enum value (mapped from deck.category).
+    const cultureDeck = makeCultureDeck({
+      category: 'history',
+      name_en: 'Old title',
+      name_ru: 'Old RU',
+    });
+    renderTab(cultureDeck);
+
+    // Category select trigger must NOT be visible (it is inside a .hidden div due to hideCategory=true)
+    const categoryTrigger = screen.queryByTestId('deck-edit-category');
+    if (categoryTrigger) {
+      // It exists in the DOM but must be inside the hidden wrapper
+      expect(categoryTrigger.closest('.hidden')).not.toBeNull();
+    } else {
+      expect(categoryTrigger).toBeNull();
+    }
+
+    // Dirty the form by editing the name (English tab is default)
+    const nameInput = screen.getByTestId('culture-deck-edit-name-en');
+    await user.clear(nameInput);
+    await user.type(nameInput, 'New title');
+
+    // Submit the form
+    const form = screen.getByTestId('culture-deck-edit-form');
+    await act(async () => {
+      form.dispatchEvent(new Event('submit', { bubbles: true }));
+    });
+
+    await waitFor(() => {
+      expect(adminAPI.updateCultureDeck).toHaveBeenCalledTimes(1);
+    });
+
+    // Critical: the submitted payload must include the original category — NOT undefined/null/empty.
+    // This guards Product Decision #3: hiding the category input must not null the field.
+    expect(adminAPI.updateCultureDeck).toHaveBeenCalledWith(
+      'deck-culture-1',
+      expect.objectContaining({ category: 'history', name_en: 'New title' })
+    );
+
+    // Belt-and-suspenders: explicit non-null/non-undefined check
+    const call = (adminAPI.updateCultureDeck as ReturnType<typeof vi.fn>).mock
+      .calls[0][1] as Record<string, unknown>;
+    expect(call['category']).toBe('history');
+    expect(call['category']).not.toBeNull();
+    expect(call['category']).not.toBeUndefined();
+
+    // Regression guard: vocab API must NOT have been called
+    expect(adminAPI.updateVocabularyDeck).not.toHaveBeenCalled();
+  });
+
+  // ── 12. onSaved callback fires after successful save ─────────────────────
 
   it('calls onSaved callback after successful vocab deck save', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });

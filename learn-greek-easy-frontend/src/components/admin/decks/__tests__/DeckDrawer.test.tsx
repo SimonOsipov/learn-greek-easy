@@ -23,6 +23,10 @@ vi.mock('@/services/adminAPI', () => ({
       .fn()
       .mockResolvedValue({ total: 0, page: 1, page_size: 20, deck_id: 'deck-vocab-1', cards: [] }),
     deleteWordEntry: vi.fn(),
+    updateVocabularyDeck: vi.fn(),
+    updateCultureDeck: vi.fn(),
+    deleteVocabularyDeck: vi.fn(),
+    deleteCultureDeck: vi.fn(),
   },
 }));
 
@@ -367,5 +371,67 @@ describe('DeckDrawer', () => {
     const skeleton = screen.getByTestId('deck-drawer-skeleton');
     expect(skeleton).toBeInTheDocument();
     expect(skeleton).toHaveAttribute('data-variant', 'list');
+  });
+
+  // ── 9. Dirty-cancel → discard dialog; "Keep editing" preserves dirty state ──
+  // Regression guard for PM Decision #9: dirty-cancel must show discard dialog;
+  // "Keep editing" must dismiss dialog without resetting the form.
+
+  it('dirty-cancel triggers discard dialog; Keep editing dismisses it and preserves dirty state', async () => {
+    const user = userEvent.setup();
+
+    (adminAPI.listDecks as Mock).mockResolvedValue({
+      decks: [makeVocabDeck({ name_en: 'Original Name', name_ru: 'Original RU' })],
+      total: 1,
+      page: 1,
+      page_size: 200,
+    });
+
+    // Start on settings subtab so DeckSettingsTab renders immediately
+    renderDrawer('/admin?edit=deck-vocab-1&subtab=settings');
+
+    // Wait for the settings tab content to appear
+    await waitFor(() => {
+      expect(screen.getByTestId('vocabulary-deck-edit-form')).toBeInTheDocument();
+    });
+
+    // Wait for footer buttons (injected by DeckSettingsTab via setFooter context)
+    await waitFor(() => {
+      expect(screen.getByTestId('deck-settings-footer')).toBeInTheDocument();
+    });
+
+    // Dirty the form by editing the name field
+    const nameInput = screen.getByTestId('deck-edit-name-en');
+    await user.clear(nameInput);
+    await user.type(nameInput, 'Edited Name');
+
+    // Verify form is now dirty (Save button should be enabled)
+    await waitFor(() => {
+      const saveBtn = screen.getByTestId('deck-settings-save');
+      expect(saveBtn).not.toBeDisabled();
+    });
+
+    // Click Cancel — since form is dirty, discard dialog should appear
+    const cancelBtn = screen.getByTestId('deck-settings-cancel');
+    await user.click(cancelBtn);
+
+    // Discard dialog must appear
+    await waitFor(() => {
+      expect(screen.getByTestId('deck-settings-discard-dialog')).toBeInTheDocument();
+    });
+
+    // Click "Keep editing" button (deck-settings-discard-cancel)
+    await user.click(screen.getByTestId('deck-settings-discard-cancel'));
+
+    // Dialog should be dismissed
+    await waitFor(() => {
+      expect(screen.queryByTestId('deck-settings-discard-dialog')).not.toBeInTheDocument();
+    });
+
+    // The field must still show the edited value (form was NOT reset)
+    expect(screen.getByTestId('deck-edit-name-en')).toHaveValue('Edited Name');
+
+    // Save button must still be enabled (form is still dirty)
+    expect(screen.getByTestId('deck-settings-save')).not.toBeDisabled();
   });
 });
