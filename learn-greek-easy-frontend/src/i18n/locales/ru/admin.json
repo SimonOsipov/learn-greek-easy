@@ -481,6 +481,7 @@
     }
   },
   "news": {
+    "comingSoon": "Скоро",
     "stats": {
       "total": "Всего новостей",
       "withAudio": "С аудио"

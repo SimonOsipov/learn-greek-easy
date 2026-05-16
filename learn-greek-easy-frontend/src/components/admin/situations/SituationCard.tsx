@@ -49,6 +49,10 @@ export const SituationCard: React.FC<SituationCardProps> = ({ item, onRequestDel
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLElement>) {
+    // Only handle keydowns that originate on the article itself; ignore bubbled
+    // events from inner buttons (Edit/Delete) so Enter/Space on those buttons
+    // does not also open the drawer.
+    if (e.target !== e.currentTarget) return;
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       openViaUrl();
