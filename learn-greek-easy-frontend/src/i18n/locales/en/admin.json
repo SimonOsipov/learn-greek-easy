@@ -1641,6 +1641,14 @@
       "save": {
         "success": "Situation updated",
         "error": "Failed to update situation"
+      },
+      "dialog": {
+        "addLine": "Add line",
+        "regen": "Regenerate line",
+        "edit": "Edit line",
+        "timestampsMissing": "Timestamps not generated yet",
+        "playAria": "Play line",
+        "pauseAria": "Pause line"
       }
     }
   },
