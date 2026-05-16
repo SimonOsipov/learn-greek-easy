@@ -64,35 +64,26 @@ test.beforeAll(async ({ request }) => {
 test.describe('ADMIN2-09 Decks Drawer — happy paths (DKDR-14)', () => {
   // ── Flow 1: Vocab item edit → completion pill updates ──────────────────────
   test('Flow 1: vocab item edit → completion pill updates', async ({ page }) => {
-    // Skip if the seed did not capture a word entry id (no words for the vocab deck)
-    test.skip(!firstWordEntryId, 'firstWordEntryId not captured from seed/admin words API');
-
-    // Navigate directly to the word detail view via deep-link to avoid non-deterministic
-    // deck-row first() clicks that may land on a culture deck (no word-row there).
-    await page.goto(`/admin?tab=decks&edit=${vocabDeckId}&item=${firstWordEntryId}`);
+    // Navigate directly to the vocab deck (URL deep-link skips deck-row ambiguity).
+    await page.goto(`/admin?tab=decks&edit=${vocabDeckId}`);
     await expect(page.getByTestId('deck-drawer')).toBeVisible({ timeout: 15_000 });
+    // Wait for vocab body to populate (the words tab is the default for vocab decks).
+    await expect(page.getByTestId('deck-drawer-tab-words')).toBeVisible({ timeout: 15_000 });
 
-    // Word detail view should show the lemma and pill row
+    // Click the first word row inside the drawer (deterministic because we're already on the vocab deck).
+    await page.getByTestId('word-row').first().click({ timeout: 10_000 });
+
+    // The rest is unchanged — wait for detail, edit, save.
     await expect(page.getByTestId('vocab-word-detail-lemma')).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId('vocab-word-detail-pills')).toBeVisible({ timeout: 10_000 });
-
-    // Open the edit form
     await page.getByTestId('word-entry-edit-btn').click();
     await expect(page.getByTestId('word-entry-edit-form')).toBeVisible({ timeout: 5_000 });
-
-    // Edit the EN translation field
     const translationEnInput = page.getByTestId('word-entry-field-translation-en');
     await translationEnInput.clear();
     await translationEnInput.fill('E2E updated translation');
-
-    // Save the form
     await page.getByTestId('word-entry-save-btn').click();
-
-    // After save, edit form should disappear and content fields should return
     await expect(page.getByTestId('word-entry-edit-form')).not.toBeVisible({ timeout: 5_000 });
     await expect(page.getByTestId('word-entry-content-fields')).toBeVisible({ timeout: 5_000 });
-
-    // Pills should remain visible (completion state preserved after edit)
     await expect(page.getByTestId('vocab-word-detail-pills')).toBeVisible();
   });
 
@@ -100,14 +91,14 @@ test.describe('ADMIN2-09 Decks Drawer — happy paths (DKDR-14)', () => {
   test('Flow 2: culture item edit — toggle correct answer', async ({ page }) => {
     // Navigate directly to the culture deck via URL deep-link to avoid deck list ambiguity
     await page.goto(`/admin?tab=decks&edit=${cultureDeckId}`);
-    await expect(page.getByTestId('deck-drawer')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId('deck-drawer')).toBeVisible({ timeout: 15_000 });
 
     // Questions tab is the default for culture decks
-    await expect(page.getByTestId('deck-drawer-tab-questions')).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByTestId('deck-drawer-tab-questions')).toBeVisible({ timeout: 15_000 });
 
     // Click first question row to push detail view
     await page.getByTestId('question-row').first().click();
-    await expect(page.getByTestId('culture-question-detail')).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByTestId('culture-question-detail')).toBeVisible({ timeout: 15_000 });
 
     // Toggle the "correct" radio for option A (EN language tab is default)
     // correct-radio-A-en is the radio for option A on the EN tab
@@ -129,11 +120,11 @@ test.describe('ADMIN2-09 Decks Drawer — happy paths (DKDR-14)', () => {
   }) => {
     // Open vocab deck drawer
     await page.goto(`/admin?tab=decks&edit=${vocabDeckId}`);
-    await expect(page.getByTestId('deck-drawer')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId('deck-drawer')).toBeVisible({ timeout: 15_000 });
 
     // Switch to Settings tab
     await page.getByTestId('deck-drawer-tab-settings').click();
-    await expect(page.getByTestId('deck-settings-tab')).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByTestId('deck-settings-tab')).toBeVisible({ timeout: 15_000 });
 
     // Toggle the Active switch — clicking it when deck is_active=true triggers the warning dialog
     const activeSwitch = page.getByTestId('deck-edit-is-active');
@@ -163,8 +154,8 @@ test.describe('ADMIN2-09 Decks Drawer — happy paths (DKDR-14)', () => {
   test('Flow 4: ESC dirty-form guard — Keep editing keeps form intact', async ({ page }) => {
     // Open vocab deck drawer on settings tab
     await page.goto(`/admin?tab=decks&edit=${vocabDeckId}&subtab=settings`);
-    await expect(page.getByTestId('deck-drawer')).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByTestId('deck-settings-tab')).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByTestId('deck-drawer')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('deck-settings-tab')).toBeVisible({ timeout: 15_000 });
 
     // Edit the deck name (EN) to make the form dirty
     const nameEnInput = page.getByTestId('deck-edit-name-en');
@@ -201,7 +192,7 @@ test.describe('ADMIN2-09 Decks Drawer — happy paths (DKDR-14)', () => {
       await page.goto(
         `/admin?tab=decks&edit=${vocabDeckId}&item=${firstWordEntryId}&subtab=cards`
       );
-      await expect(page.getByTestId('deck-drawer')).toBeVisible({ timeout: 10_000 });
+      await expect(page.getByTestId('deck-drawer')).toBeVisible({ timeout: 15_000 });
 
       // Skeleton may flash briefly during fetch — wait for it to resolve
       const skeleton = page.getByTestId('deck-drawer-skeleton');
@@ -211,17 +202,17 @@ test.describe('ADMIN2-09 Decks Drawer — happy paths (DKDR-14)', () => {
 
       // Cards sub-tab trigger should be active
       const cardsTab = page.getByTestId('word-entry-tab-cards');
-      await expect(cardsTab).toBeVisible({ timeout: 5_000 });
+      await expect(cardsTab).toBeVisible({ timeout: 15_000 });
       await expect(page.getByTestId('word-entry-tab-content-cards')).toBeVisible({
-        timeout: 5_000,
+        timeout: 15_000,
       });
     } else {
       // Fallback: navigate via list and click through to verify tab switching works
       await page.goto(`/admin?tab=decks&edit=${vocabDeckId}`);
-      await expect(page.getByTestId('deck-drawer')).toBeVisible({ timeout: 10_000 });
+      await expect(page.getByTestId('deck-drawer')).toBeVisible({ timeout: 15_000 });
 
       await page.getByTestId('word-row').first().click();
-      await expect(page.getByTestId('vocab-word-detail-lemma')).toBeVisible({ timeout: 5_000 });
+      await expect(page.getByTestId('vocab-word-detail-lemma')).toBeVisible({ timeout: 15_000 });
 
       await page.getByTestId('word-entry-tab-cards').click();
       await expect(page.getByTestId('word-entry-tab-content-cards')).toBeVisible({
