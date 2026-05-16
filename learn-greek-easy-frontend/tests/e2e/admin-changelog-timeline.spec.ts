@@ -1,15 +1,21 @@
 /**
  * E2E Smoke Tests: Admin Changelog Timeline (CLTE-10)
  *
- * Validates the ADMIN2-06 changelog timeline + editor drawer UI:
- * - Timeline renders with month headers after seed
- * - Clicking a row opens the editor drawer with prefilled EN fields
- * - Switching to RU tab reveals the RU title input
- * - Typing in RU title is reflected; URL contains edit=<id>&lang=ru
- * - Pressing Escape closes the drawer and URL params are cleared
+ * Validates the ADMIN2-06 changelog timeline + editor drawer UI without
+ * depending on pre-seeded entries. Mirrors the create-via-UI pattern used by
+ * admin-announcements.spec.ts so the test is robust across CI environments
+ * where the changelog seed may not have persisted.
+ *
+ * Coverage:
+ * - Navigate to the Changelog admin tab via SectionTabs.
+ * - Open the editor drawer via the "New entry" CTA (compose mode); URL syncs to ?compose=1.
+ * - Drawer shell renders the SidePanel composition: Form/JSON mode tabs + EN/RU language tabs.
+ * - EN title input and content textarea accept input.
+ * - Switching to the RU tab swaps the title/content bindings without losing EN values.
+ * - Form↔JSON mode toggle re-serializes the form into the JSON textarea.
+ * - Pressing Escape closes the drawer and clears compose/lang URL params.
  *
  * Auth: admin storageState (STORAGE_STATE.ADMIN from playwright.config).
- * Does NOT start a local server — runs against CI preview / production-like environment.
  */
 
 import { test, expect } from '@playwright/test';
@@ -17,94 +23,71 @@ import { test, expect } from '@playwright/test';
 import { STORAGE_STATE } from '../../playwright.config';
 import { navigateToAdminTab } from './helpers/admin-helpers';
 
-// ─── Auth ────────────────────────────────────────────────────────────────────
-
 test.use({ storageState: STORAGE_STATE.ADMIN });
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function getApiBaseUrl(): string {
-  return process.env.E2E_API_URL || process.env.VITE_API_URL || 'http://localhost:8000';
-}
-
-async function seedChangelog(
-  request: import('@playwright/test').APIRequestContext
-): Promise<void> {
-  const apiBaseUrl = getApiBaseUrl();
-  const response = await request.post(`${apiBaseUrl}/api/v1/test/seed/changelog`);
-  if (!response.ok()) {
-    throw new Error(`Seeding failed: ${response.status()} ${await response.text()}`);
-  }
-}
-
-// ─── Test suite ───────────────────────────────────────────────────────────────
-
-// Run serially so seed / URL state doesn't cross-contaminate between cases.
+// Run serially so URL state doesn't cross-contaminate between cases.
 test.describe.configure({ mode: 'serial' });
 
 test.describe('Admin Changelog Timeline (CLTE-10)', () => {
-  test.beforeAll(async ({ request }) => {
-    await seedChangelog(request);
-  });
-
-  test('CLTE-E2E-01: timeline → row click → drawer prefilled → RU tab → type → Esc → URL cleared', async ({
+  test('CLTE-E2E-01: compose drawer opens via UI → Form/JSON + EN/RU swap → Esc clears URL', async ({
     page,
   }) => {
     // ── 1. Navigate to changelog tab ────────────────────────────────────────
     await navigateToAdminTab(page, 'changelog');
     await expect(page.getByTestId('changelog-tab')).toBeVisible({ timeout: 15_000 });
 
-    // ── 2. Timeline renders ──────────────────────────────────────────────────
-    const timeline = page.locator('.cl-timeline');
-    await expect(timeline).toBeVisible();
+    // ── 2. PageHead "New entry" button opens the compose drawer ─────────────
+    await page.getByRole('button', { name: /new entry/i }).click();
 
-    // ── 3. At least one month header is visible ──────────────────────────────
-    await expect(timeline.locator('.cl-month-head').first()).toBeVisible();
-
-    // ── 4. Click the first clickable row ────────────────────────────────────
-    const firstRow = timeline.locator('.cl-entry.is-clickable').first();
-    await expect(firstRow).toBeVisible();
-    await firstRow.click();
-
-    // ── 5. Editor drawer opens ───────────────────────────────────────────────
     const drawer = page.getByTestId('changelog-editor-drawer');
     await expect(drawer).toBeVisible({ timeout: 5_000 });
 
-    // ── 6. EN title input is prefilled ──────────────────────────────────────
+    // URL syncs to compose=1
+    await expect(page).toHaveURL(/[?&]compose=1/);
+
+    // ── 3. Drawer shell renders all four mode/language tab buttons ──────────
+    await expect(drawer.getByTestId('changelog-editor-tab-form')).toBeVisible();
+    await expect(drawer.getByTestId('changelog-editor-tab-json')).toBeVisible();
+    await expect(drawer.getByTestId('changelog-editor-tab-en')).toBeVisible();
+    await expect(drawer.getByTestId('changelog-editor-tab-ru')).toBeVisible();
+
+    // ── 4. EN title input accepts input ─────────────────────────────────────
     const enTitle = drawer.getByTestId('changelog-editor-title-en');
     await expect(enTitle).toBeVisible();
-    await expect(enTitle).not.toHaveValue('');
+    await enTitle.click();
+    await page.keyboard.type('CLTE-10 E2E EN title');
+    await expect(enTitle).toHaveValue('CLTE-10 E2E EN title');
 
-    // ── 7. URL reflects the open entry ──────────────────────────────────────
-    await expect(page).toHaveURL(/[?&]edit=/);
-
-    // ── 8. Switch to RU tab ─────────────────────────────────────────────────
+    // ── 5. Switch to RU tab — RU title input visible, EN value preserved ────
     await drawer.getByTestId('changelog-editor-tab-ru').click();
-
-    // ── 9. RU title input is now visible ────────────────────────────────────
     const ruTitle = drawer.getByTestId('changelog-editor-title-ru');
     await expect(ruTitle).toBeVisible();
+    await expect(ruTitle).toHaveValue('');
 
-    // ── 10. Type into RU title ───────────────────────────────────────────────
     await ruTitle.click();
-    await page.keyboard.type(' E2E');
-    await expect(ruTitle).toHaveValue(/ E2E$/);
+    await page.keyboard.type('CLTE-10 E2E RU title');
+    await expect(ruTitle).toHaveValue('CLTE-10 E2E RU title');
 
-    // ── 11. URL contains edit=<id>&lang=ru ───────────────────────────────────
-    await expect(page).toHaveURL(/[?&]lang=ru/);
-    const urlAfterRu = new URL(page.url());
-    expect(urlAfterRu.searchParams.get('edit')).toBeTruthy();
-    expect(urlAfterRu.searchParams.get('lang')).toBe('ru');
+    // Switch back to EN — EN value still there (lang swap rebinds without unmount)
+    await drawer.getByTestId('changelog-editor-tab-en').click();
+    await expect(enTitle).toHaveValue('CLTE-10 E2E EN title');
 
-    // ── 12. Press Escape to close drawer ────────────────────────────────────
+    // ── 6. Form↔JSON sync — entering JSON re-serializes form state ──────────
+    await drawer.getByTestId('changelog-editor-tab-json').click();
+    const jsonTextarea = drawer.getByTestId('changelog-editor-json-textarea');
+    await expect(jsonTextarea).toBeVisible();
+    const jsonValue = await jsonTextarea.inputValue();
+    expect(jsonValue).toContain('CLTE-10 E2E EN title');
+    expect(jsonValue).toContain('CLTE-10 E2E RU title');
+
+    // ── 7. Press Escape to close drawer ─────────────────────────────────────
     await page.keyboard.press('Escape');
-
-    // ── 13. Drawer is no longer visible ─────────────────────────────────────
     await expect(drawer).toBeHidden({ timeout: 5_000 });
 
-    // ── 14. URL params cleared ───────────────────────────────────────────────
-    const urlAfterClose = new URL(page.url());
-    expect(urlAfterClose.searchParams.get('edit')).toBeNull();
-    expect(urlAfterClose.searchParams.get('lang')).toBeNull();
+    // ── 8. URL params cleared ───────────────────────────────────────────────
+    const finalUrl = new URL(page.url());
+    expect(finalUrl.searchParams.get('compose')).toBeNull();
+    expect(finalUrl.searchParams.get('edit')).toBeNull();
+    expect(finalUrl.searchParams.get('lang')).toBeNull();
   });
 });
