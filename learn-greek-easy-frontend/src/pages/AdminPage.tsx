@@ -13,14 +13,11 @@ import {
   AlertCircle,
   ChevronLeft,
   ChevronRight,
-  Crown,
   Database,
   Layers,
-  Pencil,
   Plus,
   RefreshCw,
   Search,
-  Trash2,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
@@ -41,14 +38,12 @@ import {
   SituationsTab,
   SummaryCard,
 } from '@/components/admin';
+import { DeckList } from '@/components/admin/decks/DeckList';
 import { AdminExerciseList } from '@/components/admin/exercises';
 import { PageHead } from '@/components/admin/shell/page-head';
 import { SectionTabs, type SectionTabItem } from '@/components/admin/shell/section-tabs';
 import { TopBar } from '@/components/admin/shell/top-bar';
-import { CultureBadge, type CultureCategory } from '@/components/culture';
-import { DeckBadge } from '@/components/decks';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -64,7 +59,6 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { toast } from '@/hooks/use-toast';
-import { getLocalizedDeckName } from '@/lib/deckLocale';
 import { cn } from '@/lib/utils';
 import InboxView from '@/pages/admin/InboxView';
 import { adminAPI } from '@/services/adminAPI';
@@ -163,115 +157,6 @@ const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry, isRetrying, t
 );
 
 /**
- * Unified deck list item for All Decks section
- */
-interface UnifiedDeckListItemProps {
-  deck: UnifiedDeckItem;
-  locale: string;
-  t: (key: string, options?: Record<string, unknown>) => string;
-  onEdit: (deck: UnifiedDeckItem) => void;
-  onDelete: (deck: UnifiedDeckItem) => void;
-  onViewDetail: (deck: UnifiedDeckItem) => void;
-}
-
-const UnifiedDeckListItem: React.FC<UnifiedDeckListItemProps> = ({
-  deck,
-  locale,
-  t,
-  onEdit,
-  onDelete,
-  onViewDetail,
-}) => {
-  const displayName = getLocalizedDeckName(
-    { ...deck, name: typeof deck.name === 'string' ? deck.name : undefined },
-    locale
-  );
-  const itemCountKey = deck.type === 'culture' ? 'deck.questionCount' : 'deck.wordCount';
-
-  const handleRowClick = (e: React.MouseEvent) => {
-    // Don't trigger view detail if clicking on action buttons
-    const target = e.target as HTMLElement;
-    if (target.closest('button')) return;
-    onViewDetail(deck);
-  };
-
-  return (
-    <div
-      className={cn(
-        'flex cursor-pointer items-center justify-between rounded-lg border p-4 transition-colors',
-        deck.is_active ? 'hover:bg-muted/50' : 'border-danger/30 bg-danger/5 hover:bg-danger/10'
-      )}
-      onClick={handleRowClick}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onViewDetail(deck);
-        }
-      }}
-      data-testid={`deck-row-${deck.id}`}
-    >
-      <div className="flex items-center gap-3">
-        {deck.type === 'vocabulary' && deck.level && <DeckBadge type="level" level={deck.level} />}
-        {deck.type === 'culture' && deck.category && (
-          <CultureBadge category={deck.category as CultureCategory} />
-        )}
-        <div className="flex flex-col">
-          <span className="font-medium">{displayName}</span>
-          {deck.owner_name && (
-            <span className="text-xs text-muted-foreground">
-              {t('deck.byOwner', { owner: deck.owner_name })}
-            </span>
-          )}
-        </div>
-        {deck.is_premium && (
-          <Crown
-            className="h-4 w-4 text-warning"
-            aria-label="Premium deck"
-            data-testid={`premium-indicator-${deck.id}`}
-          />
-        )}
-        {!deck.is_active && <span className="badge b-red">{t('deck.deactivated')}</span>}
-        <Badge variant="outline" className="text-xs">
-          {t(`deckTypes.${deck.type}`)}
-        </Badge>
-      </div>
-      <div className="flex items-center gap-2">
-        <span className="mr-1 text-sm text-muted-foreground">
-          {t(itemCountKey, { count: deck.item_count })}
-        </span>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            onEdit(deck);
-          }}
-          data-testid={`edit-deck-${deck.id}`}
-        >
-          <Pencil className="h-4 w-4" />
-          <span className="sr-only">{t('actions.edit')}</span>
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete(deck);
-          }}
-          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-          data-testid={`delete-deck-${deck.id}`}
-        >
-          <Trash2 className="h-4 w-4" />
-          <span className="sr-only">{t('actions.delete')}</span>
-        </Button>
-      </div>
-    </div>
-  );
-};
-
-/**
  * Debounce hook for search input
  */
 function useDebounce<T>(value: T, delay: number): T {
@@ -307,7 +192,20 @@ export interface AllDecksListHandle {
 }
 
 const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
-  ({ t, locale, onEditDeck, onDeleteDeck, onViewDeckDetail, onCreateDeck }, ref) => {
+  // onEditDeck + onViewDeckDetail kept for call-site compatibility; used in DKDR-06+
+
+  (
+    {
+      t,
+      locale,
+      onEditDeck: _onEditDeck,
+      onDeleteDeck,
+      onViewDeckDetail: _onViewDeckDetail,
+      onCreateDeck,
+    },
+    ref
+  ) => {
+    const [, setSearchParams] = useSearchParams();
     const [deckList, setDeckList] = useState<DeckListResponse | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -325,6 +223,19 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
       setHideDeactivated(checked);
       localStorage.setItem('admin.deckList.hideDeactivated', checked.toString());
     };
+
+    // Seam for DKDR-06: writes ?edit=<id> to URL so the drawer can mount.
+    const onOpenDrawer = (deck: UnifiedDeckItem) => {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.set('edit', deck.id);
+        return next;
+      });
+    };
+
+    const [deckToDelete, setDeckToDelete] = useState<UnifiedDeckItem | null>(null);
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const fetchDecks = useCallback(async () => {
       setIsLoading(true);
@@ -356,6 +267,27 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
         setIsLoading(false);
       }
     }, [page, debouncedSearch, typeFilter, t]);
+
+    const handleDeleteConfirm = async () => {
+      if (!deckToDelete) return;
+      setIsDeleting(true);
+      try {
+        if (deckToDelete.type === 'vocabulary') {
+          await adminAPI.deleteVocabularyDeck(deckToDelete.id);
+        } else {
+          await adminAPI.deleteCultureDeck(deckToDelete.id);
+        }
+        setDeleteModalOpen(false);
+        setDeckToDelete(null);
+        // Notify parent for side-effects (stats refresh etc.)
+        onDeleteDeck(deckToDelete);
+        fetchDecks();
+      } catch (_err) {
+        // Error handling minimal here; toast patterns will land in a later subtask.
+      } finally {
+        setIsDeleting(false);
+      }
+    };
 
     useEffect(() => {
       fetchDecks();
@@ -456,21 +388,6 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
             </div>
           </div>
 
-          {/* Loading State */}
-          {isLoading && (
-            <div className="space-y-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="flex items-center justify-between rounded-lg border p-4">
-                  <div className="flex items-center gap-3">
-                    <Skeleton className="h-6 w-12" />
-                    <Skeleton className="h-5 w-32" />
-                  </div>
-                  <Skeleton className="h-5 w-16" />
-                </div>
-              ))}
-            </div>
-          )}
-
           {/* Error State */}
           {error && !isLoading && (
             <Alert variant="destructive">
@@ -480,66 +397,66 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
             </Alert>
           )}
 
-          {/* Deck List */}
-          {!isLoading && !error && deckList && (
-            <>
-              {displayDecks.length === 0 ? (
-                <p className="py-4 text-center text-muted-foreground">{t('states.noDecksFound')}</p>
-              ) : (
-                <div className="space-y-3">
-                  {displayDecks.map((deck) => (
-                    <UnifiedDeckListItem
-                      key={deck.id}
-                      deck={deck}
-                      locale={locale}
-                      t={t}
-                      onEdit={onEditDeck}
-                      onDelete={onDeleteDeck}
-                      onViewDetail={onViewDeckDetail}
-                    />
-                  ))}
-                </div>
-              )}
-
-              {/* Pagination */}
-              {deckList.total > 0 && (
-                <div className="mt-4 flex items-center justify-between">
-                  <p className="text-sm text-muted-foreground">
-                    {t('pagination.showing', {
-                      from: (page - 1) * pageSize + 1,
-                      to: Math.min(page * pageSize, deckList.total),
-                      total: deckList.total,
-                    })}
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handlePreviousPage}
-                      disabled={page === 1}
-                      data-testid="pagination-prev"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                      {t('pagination.previous')}
-                    </Button>
-                    <span className="text-sm text-muted-foreground">
-                      {t('pagination.pageOf', { page, totalPages })}
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleNextPage}
-                      disabled={page >= totalPages}
-                      data-testid="pagination-next"
-                    >
-                      {t('pagination.next')}
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </>
+          {/* Deck List — loading + empty states owned by DeckList */}
+          {!error && (
+            <DeckList
+              decks={displayDecks}
+              isLoading={isLoading}
+              locale={locale}
+              onOpenDrawer={onOpenDrawer}
+              onDelete={(d) => {
+                setDeckToDelete(d);
+                setDeleteModalOpen(true);
+              }}
+            />
           )}
+
+          {/* Pagination */}
+          {!isLoading && !error && deckList && deckList.total > 0 && (
+            <div className="mt-4 flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                {t('pagination.showing', {
+                  from: (page - 1) * pageSize + 1,
+                  to: Math.min(page * pageSize, deckList.total),
+                  total: deckList.total,
+                })}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePreviousPage}
+                  disabled={page === 1}
+                  data-testid="pagination-prev"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  {t('pagination.previous')}
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  {t('pagination.pageOf', { page, totalPages })}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleNextPage}
+                  disabled={page >= totalPages}
+                  data-testid="pagination-next"
+                >
+                  {t('pagination.next')}
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Delete confirmation dialog — mounted here so DeckList can stay presentational */}
+          <DeckDeleteDialog
+            open={deleteModalOpen}
+            onOpenChange={setDeleteModalOpen}
+            deck={deckToDelete}
+            onConfirm={handleDeleteConfirm}
+            isDeleting={isDeleting}
+          />
         </CardContent>
       </Card>
     );
