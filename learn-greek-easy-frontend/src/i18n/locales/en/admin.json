@@ -1649,6 +1649,19 @@
         "timestampsMissing": "Timestamps not generated yet",
         "playAria": "Play line",
         "pauseAria": "Pause line"
+      },
+      "description": {
+        "kicker": "Description",
+        "hint": "Narrative the learner reads before the dialog — generated alongside the audio.",
+        "b1Label": "Description — B1 (Greek)",
+        "a2Label": "Description — A2 (Greek)",
+        "b1Narration": "B1 narration",
+        "a2Narration": "A2 narration",
+        "generatedElevenLabs": "Generated · ElevenLabs",
+        "notGeneratedYet": "Not generated yet",
+        "regenerate": "Regenerate",
+        "playAria": "Play {{level}} narration",
+        "pauseAria": "Pause {{level}} narration"
       }
     }
   },

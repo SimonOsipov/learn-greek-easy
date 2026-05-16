@@ -1577,6 +1577,19 @@
         "timestampsMissing": "Таймкоды ещё не созданы",
         "playAria": "Воспроизвести реплику",
         "pauseAria": "Пауза"
+      },
+      "description": {
+        "kicker": "Описание",
+        "hint": "Нарратив, который учащийся читает перед диалогом — генерируется вместе с аудио.",
+        "b1Label": "Описание — B1 (греческий)",
+        "a2Label": "Описание — A2 (греческий)",
+        "b1Narration": "Нарратив B1",
+        "a2Narration": "Нарратив A2",
+        "generatedElevenLabs": "Создано · ElevenLabs",
+        "notGeneratedYet": "Ещё не создано",
+        "regenerate": "Перегенерировать",
+        "playAria": "Воспроизвести нарратив {{level}}",
+        "pauseAria": "Пауза нарратива {{level}}"
       }
     }
   },
