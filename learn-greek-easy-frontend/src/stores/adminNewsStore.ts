@@ -43,8 +43,14 @@ interface AdminNewsState {
   // Error state
   error: string | null;
 
-  // Filter
+  // Filters
   countryFilter: NewsCountry | 'all';
+  levelFilter: 'all' | 'B2' | 'A2' | 'B1';
+  searchQuery: string;
+  sortMode: 'newest' | 'oldest' | 'updated';
+
+  // Drawer state
+  drawerItemId: string | null;
 
   // Actions
   fetchNewsItems: () => Promise<void>;
@@ -54,6 +60,11 @@ interface AdminNewsState {
   setPage: (page: number) => void;
   setSelectedItem: (item: NewsItemResponse | null) => void;
   setCountryFilter: (filter: NewsCountry | 'all') => void;
+  setLevelFilter: (level: 'all' | 'B2' | 'A2' | 'B1') => void;
+  setSearchQuery: (q: string) => void;
+  setSortMode: (mode: 'newest' | 'oldest' | 'updated') => void;
+  openDrawer: (id: string) => void;
+  closeDrawer: () => void;
   clearError: () => void;
 }
 
@@ -77,6 +88,10 @@ export const useAdminNewsStore = create<AdminNewsState>()(
       isDeleting: false,
       error: null,
       countryFilter: 'all' as NewsCountry | 'all',
+      levelFilter: 'all' as 'all' | 'B2' | 'A2' | 'B1',
+      searchQuery: '',
+      sortMode: 'newest' as 'newest' | 'oldest' | 'updated',
+      drawerItemId: null,
 
       /**
        * Fetch paginated news items list from admin API
@@ -195,6 +210,41 @@ export const useAdminNewsStore = create<AdminNewsState>()(
       },
 
       /**
+       * Set level filter and reset to page 1 (client-side filter, no auto-fetch)
+       */
+      setLevelFilter: (level: 'all' | 'B2' | 'A2' | 'B1') => {
+        set({ levelFilter: level, page: 1 });
+      },
+
+      /**
+       * Set search query and reset to page 1 (client-side filter, no auto-fetch)
+       */
+      setSearchQuery: (q: string) => {
+        set({ searchQuery: q, page: 1 });
+      },
+
+      /**
+       * Set sort mode and reset to page 1 (client-side sort, no auto-fetch)
+       */
+      setSortMode: (mode: 'newest' | 'oldest' | 'updated') => {
+        set({ sortMode: mode, page: 1 });
+      },
+
+      /**
+       * Open drawer for a specific news item by id
+       */
+      openDrawer: (id: string) => {
+        set({ drawerItemId: id });
+      },
+
+      /**
+       * Close drawer
+       */
+      closeDrawer: () => {
+        set({ drawerItemId: null });
+      },
+
+      /**
        * Set the selected news item for edit/delete dialogs
        */
       setSelectedItem: (item: NewsItemResponse | null) => set({ selectedItem: item }),
@@ -226,3 +276,57 @@ export const selectPagination = (state: AdminNewsState) => ({
   totalPages: state.totalPages,
 });
 export const selectCountryFilter = (state: AdminNewsState) => state.countryFilter;
+export const selectFilterState = (state: AdminNewsState) => ({
+  countryFilter: state.countryFilter,
+  levelFilter: state.levelFilter,
+  searchQuery: state.searchQuery,
+  sortMode: state.sortMode,
+});
+export const selectDrawerState = (state: AdminNewsState) => ({
+  drawerItemId: state.drawerItemId,
+});
+export const selectFilteredNewsItems = (state: AdminNewsState): NewsItemResponse[] => {
+  let items = state.newsItems;
+
+  // 1. Country filter (server-managed field, but also available client-side)
+  if (state.countryFilter !== 'all') {
+    items = items.filter((item) => item.country === state.countryFilter);
+  }
+
+  // 2. Level filter
+  if (state.levelFilter !== 'all') {
+    if (state.levelFilter === 'B2') {
+      items = items.filter((item) => item.description_el != null && item.description_el !== '');
+    } else if (state.levelFilter === 'A2') {
+      items = items.filter(
+        (item) => item.description_el_a2 != null && item.description_el_a2 !== ''
+      );
+    } else if (state.levelFilter === 'B1') {
+      // B1 never matches in MVP
+      return [];
+    }
+  }
+
+  // 3. Search filter (case-insensitive substring across EL/EN/RU titles)
+  if (state.searchQuery !== '') {
+    const q = state.searchQuery.toLowerCase();
+    items = items.filter(
+      (item) =>
+        (item.title_el ?? '').toLowerCase().includes(q) ||
+        (item.title_en ?? '').toLowerCase().includes(q) ||
+        (item.title_ru ?? '').toLowerCase().includes(q)
+    );
+  }
+
+  // 4. Sort (ISO strings sort lexically for dates, so string comparison is sufficient)
+  const sorted = [...items];
+  if (state.sortMode === 'newest') {
+    sorted.sort((a, b) => (a.publication_date < b.publication_date ? 1 : -1));
+  } else if (state.sortMode === 'oldest') {
+    sorted.sort((a, b) => (a.publication_date > b.publication_date ? 1 : -1));
+  } else if (state.sortMode === 'updated') {
+    sorted.sort((a, b) => (a.updated_at < b.updated_at ? 1 : -1));
+  }
+
+  return sorted;
+};
