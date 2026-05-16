@@ -69,8 +69,14 @@ async function captureSeed(request: APIRequestContext): Promise<void> {
   }
 }
 
-test.beforeAll(async ({ request }) => {
-  await captureSeed(request);
+test.beforeAll(async ({ browser }) => {
+  // Use admin storage state so /api/v1/admin/* calls authenticate.
+  const ctx = await browser.newContext({ storageState: STORAGE_STATE.ADMIN });
+  try {
+    await captureSeed(ctx.request);
+  } finally {
+    await ctx.close();
+  }
 });
 
 // ── Flows ─────────────────────────────────────────────────────────────────────
