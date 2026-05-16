@@ -27,31 +27,45 @@ let firstWordEntryId: string;
 
 async function captureSeed(request: APIRequestContext): Promise<void> {
   const apiBaseUrl = getApiBaseUrl();
-  const res = await request.post(`${apiBaseUrl}/api/v1/test/seed/all`);
-  expect(res.ok()).toBeTruthy();
-  const body = await res.json();
 
-  // v2_decks[0] is the Nouns vocab deck (Greek A1 Vocabulary (Nouns))
-  const v2Decks: Array<{ id: string; name: string }> = body?.results?.v2_decks?.v2_decks ?? [];
-  expect(v2Decks.length).toBeGreaterThan(0);
-  vocabDeckId = v2Decks[0].id;
+  // Idempotent seed
+  const seedRes = await request.post(`${apiBaseUrl}/api/v1/test/seed/all`);
+  expect(seedRes.ok()).toBeTruthy();
 
-  // culture.decks[0] is the first culture deck
-  const cultureDecks: Array<{ id: string; name: string; category: string }> =
-    body?.results?.culture?.decks ?? [];
-  expect(cultureDecks.length).toBeGreaterThan(0);
-  cultureDeckId = cultureDecks[0].id;
-
-  // Fetch word entries for the vocab deck to get the first word entry id
-  const wordsRes = await request.get(
-    `${apiBaseUrl}/api/v1/admin/decks/${vocabDeckId}/words?page=1&page_size=1`
+  // Capture vocab + culture deck ids from the same admin endpoint that useDeck uses
+  // (adminAPI.listDecks → GET /api/v1/admin/decks), so ids are guaranteed to match
+  // the drawer's lookup and the drawer won't enter not-found state.
+  const decksRes = await request.get(
+    `${apiBaseUrl}/api/v1/admin/decks?page=1&page_size=200`
   );
-  if (wordsRes.ok()) {
-    const wordsBody = await wordsRes.json();
-    const cards: Array<{ id: string }> = wordsBody?.cards ?? [];
-    if (cards.length > 0) {
-      firstWordEntryId = cards[0].id;
+  expect(decksRes.ok()).toBeTruthy();
+  const decksBody = await decksRes.json();
+  const decks: Array<{ id: string; type: 'vocabulary' | 'culture' }> = decksBody?.decks ?? [];
+
+  const vocab = decks.find((d) => d.type === 'vocabulary');
+  expect(vocab, 'No vocabulary deck in admin list').toBeDefined();
+  vocabDeckId = vocab!.id;
+
+  const culture = decks.find((d) => d.type === 'culture');
+  expect(culture, 'No culture deck in admin list').toBeDefined();
+  cultureDeckId = culture!.id;
+
+  // Optionally capture the first word entry id for Flow 5's deep-link.
+  // Uses the same endpoint as adminAPI.listWordEntries (GET /api/v1/decks/:id/word-entries).
+  // Not gating Flow 1 on this — Flow 1 clicks word-row.first() inside the drawer.
+  try {
+    const wordsRes = await request.get(
+      `${apiBaseUrl}/api/v1/decks/${vocabDeckId}/word-entries?page=1&page_size=1`
+    );
+    if (wordsRes.ok()) {
+      const wordsBody = await wordsRes.json();
+      const items: Array<{ id: string }> = wordsBody?.word_entries ?? [];
+      if (items.length > 0) {
+        firstWordEntryId = items[0].id;
+      }
     }
+  } catch {
+    // Optional — Flow 5 has a fallback path when firstWordEntryId is unset
   }
 }
 
@@ -67,6 +81,9 @@ test.describe('ADMIN2-09 Decks Drawer — happy paths (DKDR-14)', () => {
     // Navigate directly to the vocab deck (URL deep-link skips deck-row ambiguity).
     await page.goto(`/admin?tab=decks&edit=${vocabDeckId}`);
     await expect(page.getByTestId('deck-drawer')).toBeVisible({ timeout: 15_000 });
+    // Guard: if the drawer enters not-found state, fail fast with a clear message
+    // rather than timing out on deck-drawer-tab-words.
+    await expect(page.getByTestId('deck-drawer-not-found')).toHaveCount(0, { timeout: 5_000 });
     // Wait for vocab body to populate (the words tab is the default for vocab decks).
     await expect(page.getByTestId('deck-drawer-tab-words')).toBeVisible({ timeout: 15_000 });
 
