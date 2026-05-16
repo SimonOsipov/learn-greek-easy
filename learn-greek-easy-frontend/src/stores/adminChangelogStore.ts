@@ -219,3 +219,5 @@ export const selectAdminChangelogPage = (state: AdminChangelogState) => state.pa
 export const selectAdminChangelogPageSize = (state: AdminChangelogState) => state.pageSize;
 export const selectAdminChangelogTotal = (state: AdminChangelogState) => state.total;
 export const selectAdminChangelogTotalPages = (state: AdminChangelogState) => state.totalPages;
+export const selectAdminChangelogLang = (state: AdminChangelogState) => state.lang;
+export const selectAdminChangelogPanelMode = (state: AdminChangelogState) => state.panelMode;
