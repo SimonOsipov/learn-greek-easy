@@ -827,8 +827,18 @@ describe('ChangelogEditorDrawer', () => {
     // Toast should have been called with the discard message
     expect(mockToast).toHaveBeenCalledWith({ title: 'Your JSON changes were discarded' });
 
-    // Form state should be unchanged
+    // Form state should be unchanged (both title and content)
     expect(screen.getByTestId('changelog-editor-title-en')).toHaveValue('Original title');
+    expect(screen.getByTestId('changelog-editor-content-en')).toHaveValue('Original content');
+
+    // Switch back to JSON mode — textarea must re-serialize from form state (not from the corrupted buffer)
+    mockStoreState.panelMode = 'json';
+    rerender(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+
+    const jsonTextarea = screen.getByTestId('changelog-editor-json-textarea');
+    const parsed = JSON.parse(jsonTextarea.value as string);
+    expect(parsed.title_en).toBe('Original title');
+    expect(parsed.content_en).toBe('Original content');
   });
 
   // ── CLTE-06: Submit (create) ──────────────────────────────────────────────

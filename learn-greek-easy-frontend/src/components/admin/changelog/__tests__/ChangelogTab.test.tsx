@@ -501,20 +501,26 @@ describe('ChangelogTab', () => {
   // ── Deep-link malformed values (AC #9) ──────────────────────────────────────
   describe('Deep-link malformed values', () => {
     it('ignores ?edit=<missing-id> silently', async () => {
+      const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       mockItems = [makeEntry({ id: 'real-id' })];
       mockIsLoading = false;
       renderWithRouter('?edit=not-a-real-id');
       await act(async () => {});
       expect(mockOpenEdit).not.toHaveBeenCalled();
+      expect(errSpy).not.toHaveBeenCalled();
+      errSpy.mockRestore();
     });
 
     it('ignores ?lang=foo (does not call setLang with invalid value)', async () => {
+      const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       mockItems = [makeEntry({ id: 'abc-123' })];
       mockIsLoading = false;
       renderWithRouter('?edit=abc-123&lang=foo');
       await act(async () => {});
       // openEdit is called but setLang should not be called with 'foo'
       expect(mockSetLang).not.toHaveBeenCalledWith('foo');
+      expect(errSpy).not.toHaveBeenCalled();
+      errSpy.mockRestore();
     });
   });
 
