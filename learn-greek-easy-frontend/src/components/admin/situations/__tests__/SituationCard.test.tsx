@@ -12,6 +12,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
+import { MemoryRouter, useSearchParams } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { SituationListItem } from '@/types/situation';
@@ -24,18 +25,22 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
-// ── Mock store ─────────────────────────────────────────────────────────────
-const mockOpenDrawer = vi.fn();
-
-vi.mock('@/stores/adminSituationStore', () => ({
-  useAdminSituationStore: vi.fn((selector?: (s: unknown) => unknown) => {
-    const state = { openDrawer: mockOpenDrawer };
-    if (typeof selector === 'function') return selector(state);
-    return state;
-  }),
-}));
-
 import { SituationCard, pickSitTone } from '../SituationCard';
+
+// Sentinel that surfaces the current `edit` URL param so tests can assert.
+function EditParamSentinel() {
+  const [params] = useSearchParams();
+  return <div data-testid="edit-param">{params.get('edit') ?? ''}</div>;
+}
+
+function renderWithRouter(ui: React.ReactElement) {
+  return render(
+    <MemoryRouter initialEntries={['/admin?tab=situations']}>
+      {ui}
+      <EditParamSentinel />
+    </MemoryRouter>
+  );
+}
 
 // ── Factory ────────────────────────────────────────────────────────────────
 function makeItem(overrides: Partial<SituationListItem> = {}): SituationListItem {
@@ -64,9 +69,11 @@ describe('SituationCard', () => {
     vi.clearAllMocks();
   });
 
+  // Note: URL writes are asserted via the EditParamSentinel rendered by renderWithRouter.
+
   // ── Test 1: renders all fields ────────────────────────────────────────────
   it('renders scenario_el, scenario_en, status badge, and all 8 completion pill labels', () => {
-    render(<SituationCard item={makeItem()} onRequestDelete={vi.fn()} />);
+    renderWithRouter(<SituationCard item={makeItem()} onRequestDelete={vi.fn()} />);
 
     // Titles
     expect(screen.getByText('Στο εστιατόριο')).toBeInTheDocument();
@@ -107,7 +114,7 @@ describe('SituationCard', () => {
   it('applies the correct sit-thumb-{tone} class to the thumb element', () => {
     const id = 'my-situation-123';
     const expectedTone = pickSitTone(id);
-    const { container } = render(
+    const { container } = renderWithRouter(
       <SituationCard item={makeItem({ id })} onRequestDelete={vi.fn()} />
     );
     const thumb = container.querySelector(`.sit-thumb-${expectedTone}`);
@@ -116,33 +123,33 @@ describe('SituationCard', () => {
 
   // ── Test 3: keyboard activation ───────────────────────────────────────────
   it('calls openDrawer on Enter keydown', () => {
-    render(<SituationCard item={makeItem({ id: 'sit-1' })} onRequestDelete={vi.fn()} />);
+    renderWithRouter(<SituationCard item={makeItem({ id: 'sit-1' })} onRequestDelete={vi.fn()} />);
     const card = screen.getByTestId('sit-card-sit-1');
     fireEvent.keyDown(card, { key: 'Enter' });
-    expect(mockOpenDrawer).toHaveBeenCalledWith('sit-1');
+    expect(screen.getByTestId('edit-param').textContent).toBe('sit-1');
   });
 
   it('calls openDrawer on Space keydown', () => {
-    render(<SituationCard item={makeItem({ id: 'sit-1' })} onRequestDelete={vi.fn()} />);
+    renderWithRouter(<SituationCard item={makeItem({ id: 'sit-1' })} onRequestDelete={vi.fn()} />);
     const card = screen.getByTestId('sit-card-sit-1');
     fireEvent.keyDown(card, { key: ' ' });
-    expect(mockOpenDrawer).toHaveBeenCalledWith('sit-1');
+    expect(screen.getByTestId('edit-param').textContent).toBe('sit-1');
   });
 
   // ── Test 4: click activation ──────────────────────────────────────────────
   it('calls openDrawer on card click', async () => {
     const user = userEvent.setup();
-    render(<SituationCard item={makeItem({ id: 'sit-1' })} onRequestDelete={vi.fn()} />);
+    renderWithRouter(<SituationCard item={makeItem({ id: 'sit-1' })} onRequestDelete={vi.fn()} />);
     const card = screen.getByTestId('sit-card-sit-1');
     await user.click(card);
-    expect(mockOpenDrawer).toHaveBeenCalledWith('sit-1');
+    expect(screen.getByTestId('edit-param').textContent).toBe('sit-1');
   });
 
   // ── Test 5: delete stopPropagation ────────────────────────────────────────
   it('Delete button calls onRequestDelete and does NOT call openDrawer', async () => {
     const user = userEvent.setup();
     const onRequestDelete = vi.fn();
-    render(
+    renderWithRouter(
       <SituationCard
         item={makeItem({ id: 'sit-1', scenario_el: 'Στο εστιατόριο' })}
         onRequestDelete={onRequestDelete}
@@ -151,21 +158,23 @@ describe('SituationCard', () => {
     const deleteBtn = screen.getByRole('button', { name: 'situations.actions.delete' });
     await user.click(deleteBtn);
     expect(onRequestDelete).toHaveBeenCalledWith({ id: 'sit-1', scenario_el: 'Στο εστιατόριο' });
-    expect(mockOpenDrawer).not.toHaveBeenCalled();
+    expect(screen.getByTestId('edit-param').textContent).toBe('');
   });
 
   // ── Test 6: edit propagation ──────────────────────────────────────────────
   it('Edit button calls openDrawer(item.id)', async () => {
     const user = userEvent.setup();
-    render(<SituationCard item={makeItem({ id: 'sit-1' })} onRequestDelete={vi.fn()} />);
+    renderWithRouter(<SituationCard item={makeItem({ id: 'sit-1' })} onRequestDelete={vi.fn()} />);
     const editBtn = screen.getByRole('button', { name: 'situations.actions.edit' });
     await user.click(editBtn);
-    expect(mockOpenDrawer).toHaveBeenCalledWith('sit-1');
+    expect(screen.getByTestId('edit-param').textContent).toBe('sit-1');
   });
 
   // ── Test 7: completion strip — none done ──────────────────────────────────
   it('all pills have is-todo class when all booleans false and all counts 0', () => {
-    const { container } = render(<SituationCard item={makeItem()} onRequestDelete={vi.fn()} />);
+    const { container } = renderWithRouter(
+      <SituationCard item={makeItem()} onRequestDelete={vi.fn()} />
+    );
     const pills = container.querySelectorAll('.dk-pill');
     expect(pills.length).toBe(8);
     pills.forEach((pill) => {
@@ -176,7 +185,7 @@ describe('SituationCard', () => {
 
   // ── Test 8: completion strip — partial ────────────────────────────────────
   it('has_dialog=true + dialog_exercises_count=3 → first and sixth pill are is-done', () => {
-    const { container } = render(
+    const { container } = renderWithRouter(
       <SituationCard
         item={makeItem({ has_dialog: true, dialog_exercises_count: 3 })}
         onRequestDelete={vi.fn()}
@@ -196,7 +205,7 @@ describe('SituationCard', () => {
 
   // ── Test 9: completion strip — all done ───────────────────────────────────
   it('all pills are is-done when all booleans true and all counts > 0', () => {
-    const { container } = render(
+    const { container } = renderWithRouter(
       <SituationCard
         item={makeItem({
           has_dialog: true,
@@ -225,7 +234,7 @@ describe('SituationCard', () => {
 
   // ── Test 10: tabIndex + role ──────────────────────────────────────────────
   it('has role="button" and tabIndex=0', () => {
-    render(<SituationCard item={makeItem()} onRequestDelete={vi.fn()} />);
+    renderWithRouter(<SituationCard item={makeItem()} onRequestDelete={vi.fn()} />);
     const card = screen.getByTestId('sit-card-sit-1');
     expect(card).toHaveAttribute('role', 'button');
     expect(card).toHaveAttribute('tabindex', '0');

@@ -4,9 +4,9 @@ import React from 'react';
 
 import { Edit, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 
 import { CompletionPill } from '@/components/ui/completion-pill';
-import { useAdminSituationStore } from '@/stores/adminSituationStore';
 import type { SituationListItem } from '@/types/situation';
 
 import { SITUATION_STATUS_BADGE_CLASSES } from './situationBadges';
@@ -28,24 +28,36 @@ export function pickSitTone(id: string): SitTone {
 
 export const SituationCard: React.FC<SituationCardProps> = ({ item, onRequestDelete }) => {
   const { t } = useTranslation('admin');
-  const openDrawer = useAdminSituationStore((s) => s.openDrawer);
+  const [, setSearchParams] = useSearchParams();
 
   const tone = pickSitTone(item.id);
 
+  // Single source of truth: write to URL; SituationsTab's URL→store effect opens the drawer.
+  function openViaUrl() {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set('edit', item.id);
+        return next;
+      },
+      { replace: false }
+    );
+  }
+
   function handleClick() {
-    openDrawer(item.id);
+    openViaUrl();
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLElement>) {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      openDrawer(item.id);
+      openViaUrl();
     }
   }
 
   function handleEdit(e: React.MouseEvent) {
     e.stopPropagation();
-    openDrawer(item.id);
+    openViaUrl();
   }
 
   function handleDelete(e: React.MouseEvent) {

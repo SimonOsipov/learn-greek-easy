@@ -12,9 +12,14 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
+import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { SituationListItem } from '@/types/situation';
+
+function renderWithRouter(ui: React.ReactElement) {
+  return render(<MemoryRouter initialEntries={['/admin?tab=situations']}>{ui}</MemoryRouter>);
+}
 
 // ── Mock i18n ──────────────────────────────────────────────────────────────
 vi.mock('react-i18next', () => ({
@@ -98,7 +103,7 @@ describe('SituationGrid', () => {
   // ── Test 1: empty state ────────────────────────────────────────────────────
   it('shows empty state when filtered items list is empty', () => {
     storeState.situations = [];
-    render(<SituationGrid />);
+    renderWithRouter(<SituationGrid />);
     // Kicker content
     expect(screen.getByText('situations.grid.noResults')).toBeInTheDocument();
     // Empty text
@@ -115,7 +120,7 @@ describe('SituationGrid', () => {
   it('Clear filters button calls setSearchQuery, setStatusFilter, setSortMode', async () => {
     storeState.situations = [];
     const user = userEvent.setup();
-    render(<SituationGrid />);
+    renderWithRouter(<SituationGrid />);
     await user.click(screen.getByRole('button', { name: 'situations.grid.clearFilters' }));
     expect(mockSetSearchQuery).toHaveBeenCalledWith('');
     expect(mockSetStatusFilter).toHaveBeenCalledWith(null);
@@ -126,7 +131,7 @@ describe('SituationGrid', () => {
   it('renders one SituationCard per item using data-testid', () => {
     storeState.situations = [makeItem('s1'), makeItem('s2'), makeItem('s3')];
     storeState.total = 3;
-    render(<SituationGrid />);
+    renderWithRouter(<SituationGrid />);
     expect(screen.getByTestId('sit-card-s1')).toBeInTheDocument();
     expect(screen.getByTestId('sit-card-s2')).toBeInTheDocument();
     expect(screen.getByTestId('sit-card-s3')).toBeInTheDocument();
@@ -135,7 +140,7 @@ describe('SituationGrid', () => {
   // ── Test 4: pagination hidden when totalPages <= 1 ─────────────────────────
   it('hides pagination footer when totalPages <= 1', () => {
     storeState.totalPages = 1;
-    render(<SituationGrid />);
+    renderWithRouter(<SituationGrid />);
     expect(screen.queryByTestId('sit-grid-pagination')).not.toBeInTheDocument();
   });
 
@@ -145,7 +150,7 @@ describe('SituationGrid', () => {
     storeState.page = 1;
     storeState.total = 30;
     storeState.situations = [];
-    render(<SituationGrid />);
+    renderWithRouter(<SituationGrid />);
     expect(screen.getByTestId('sit-grid-pagination')).toBeInTheDocument();
     const prevBtn = screen.getByTestId('sit-grid-prev');
     const nextBtn = screen.getByTestId('sit-grid-next');
@@ -159,7 +164,7 @@ describe('SituationGrid', () => {
     storeState.page = 3;
     storeState.total = 30;
     storeState.situations = [];
-    render(<SituationGrid />);
+    renderWithRouter(<SituationGrid />);
     const nextBtn = screen.getByTestId('sit-grid-next');
     expect(nextBtn).toBeDisabled();
   });
@@ -171,7 +176,7 @@ describe('SituationGrid', () => {
     storeState.total = 30;
     storeState.situations = [];
     const user = userEvent.setup();
-    render(<SituationGrid />);
+    renderWithRouter(<SituationGrid />);
     await user.click(screen.getByTestId('sit-grid-next'));
     expect(mockSetPage).toHaveBeenCalledWith(3);
   });
