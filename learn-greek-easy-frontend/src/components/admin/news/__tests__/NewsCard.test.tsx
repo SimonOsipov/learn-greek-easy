@@ -1,15 +1,18 @@
 /**
  * NewsCard Component Tests
  *
- * Covers NEWS-04 acceptance criteria:
+ * Covers NEWS-04 + NEWS-10-fix acceptance criteria:
  * - Renders thumb (image or gradient fallback), flag, date, title, level chips, audio chip,
  *   publication date, hover-revealed Edit + Delete IconButtons.
- * - Card is keyboard-focusable; Enter and Space call openDrawer(id).
- * - Delete IconButton stopPropagation — does not also open drawer.
+ * - Card is keyboard-focusable; Enter and Space write `?edit=<id>` to URL
+ *   (NewsTab's URL→store effect opens the drawer reactively).
+ * - Delete IconButton stopPropagation — does not also write `?edit=`.
  */
 
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import React from 'react';
+import { MemoryRouter, useSearchParams } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { NewsItemResponse } from '@/services/adminAPI';
@@ -23,15 +26,22 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
-// ── Mock store ─────────────────────────────────────────────────────────
-const mockOpenDrawer = vi.fn();
-vi.mock('@/stores/adminNewsStore', () => ({
-  useAdminNewsStore: {
-    getState: () => ({ openDrawer: mockOpenDrawer }),
-  },
-}));
-
 import { NewsCard } from '../NewsCard';
+
+// Sentinel that surfaces the current `edit` URL param so tests can assert.
+function EditParamSentinel() {
+  const [params] = useSearchParams();
+  return <div data-testid="edit-param">{params.get('edit') ?? ''}</div>;
+}
+
+function renderWithRouter(ui: React.ReactElement) {
+  return render(
+    <MemoryRouter initialEntries={['/admin?tab=news']}>
+      {ui}
+      <EditParamSentinel />
+    </MemoryRouter>
+  );
+}
 
 // ── Factory ────────────────────────────────────────────────────────────
 function makeItem(overrides: Partial<NewsItemResponse> = {}): NewsItemResponse {
@@ -73,13 +83,13 @@ describe('NewsCard', () => {
   });
 
   it('renders image thumb when image_url is provided', () => {
-    render(<NewsCard item={makeItem()} onRequestDelete={mockOnRequestDelete} />);
+    renderWithRouter(<NewsCard item={makeItem()} onRequestDelete={mockOnRequestDelete} />);
     const img = screen.getByRole('img');
     expect(img).toHaveAttribute('src', 'https://example.com/img.jpg');
   });
 
   it('renders gradient fallback div when image_url is null', () => {
-    const { container } = render(
+    const { container } = renderWithRouter(
       <NewsCard item={makeItem({ image_url: null })} onRequestDelete={mockOnRequestDelete} />
     );
     const fallback = container.querySelector('.news-thumb-fallback');
@@ -88,7 +98,7 @@ describe('NewsCard', () => {
   });
 
   it('renders country flag for greece', () => {
-    const { container } = render(
+    const { container } = renderWithRouter(
       <NewsCard item={makeItem({ country: 'greece' })} onRequestDelete={mockOnRequestDelete} />
     );
     const flag = container.querySelector('.news-thumb-flag');
@@ -96,7 +106,7 @@ describe('NewsCard', () => {
   });
 
   it('renders country flag for cyprus', () => {
-    const { container } = render(
+    const { container } = renderWithRouter(
       <NewsCard item={makeItem({ country: 'cyprus' })} onRequestDelete={mockOnRequestDelete} />
     );
     const flag = container.querySelector('.news-thumb-flag');
@@ -104,7 +114,7 @@ describe('NewsCard', () => {
   });
 
   it('renders country flag for world', () => {
-    const { container } = render(
+    const { container } = renderWithRouter(
       <NewsCard item={makeItem({ country: 'world' })} onRequestDelete={mockOnRequestDelete} />
     );
     const flag = container.querySelector('.news-thumb-flag');
@@ -112,7 +122,7 @@ describe('NewsCard', () => {
   });
 
   it('renders date overlay in dd MMM yyyy format', () => {
-    const { container } = render(
+    const { container } = renderWithRouter(
       <NewsCard
         item={makeItem({ publication_date: '2025-03-15' })}
         onRequestDelete={mockOnRequestDelete}
@@ -123,24 +133,24 @@ describe('NewsCard', () => {
   });
 
   it('renders English title when i18n language is en', () => {
-    render(<NewsCard item={makeItem()} onRequestDelete={mockOnRequestDelete} />);
+    renderWithRouter(<NewsCard item={makeItem()} onRequestDelete={mockOnRequestDelete} />);
     expect(screen.getByText('English Title')).toBeInTheDocument();
   });
 
   it('renders Greek title when i18n language is el', () => {
     mockLanguage.value = 'el';
-    render(<NewsCard item={makeItem()} onRequestDelete={mockOnRequestDelete} />);
+    renderWithRouter(<NewsCard item={makeItem()} onRequestDelete={mockOnRequestDelete} />);
     expect(screen.getByText('Ελληνικός τίτλος')).toBeInTheDocument();
   });
 
   it('renders Russian title when i18n language is ru', () => {
     mockLanguage.value = 'ru';
-    render(<NewsCard item={makeItem()} onRequestDelete={mockOnRequestDelete} />);
+    renderWithRouter(<NewsCard item={makeItem()} onRequestDelete={mockOnRequestDelete} />);
     expect(screen.getByText('Русский заголовок')).toBeInTheDocument();
   });
 
   it('renders B2 badge when description_el is non-empty', () => {
-    render(
+    renderWithRouter(
       <NewsCard
         item={makeItem({ description_el: 'Some text' })}
         onRequestDelete={mockOnRequestDelete}
@@ -150,7 +160,7 @@ describe('NewsCard', () => {
   });
 
   it('renders A2 badge when description_el_a2 is non-empty', () => {
-    render(
+    renderWithRouter(
       <NewsCard
         item={makeItem({ description_el_a2: 'A2 text', audio_a2_duration_seconds: 60 })}
         onRequestDelete={mockOnRequestDelete}
@@ -160,7 +170,7 @@ describe('NewsCard', () => {
   });
 
   it('renders both B2 and A2 badges when both are present', () => {
-    render(
+    renderWithRouter(
       <NewsCard
         item={makeItem({ description_el: 'B2', description_el_a2: 'A2' })}
         onRequestDelete={mockOnRequestDelete}
@@ -171,7 +181,7 @@ describe('NewsCard', () => {
   });
 
   it('renders audio chip with combined duration when audio is present', () => {
-    render(
+    renderWithRouter(
       <NewsCard
         item={makeItem({ audio_duration_seconds: 120, audio_a2_duration_seconds: 60 })}
         onRequestDelete={mockOnRequestDelete}
@@ -182,7 +192,7 @@ describe('NewsCard', () => {
   });
 
   it('omits audio chip when both audio durations are null', () => {
-    const { container } = render(
+    const { container } = renderWithRouter(
       <NewsCard
         item={makeItem({ audio_duration_seconds: null, audio_a2_duration_seconds: null })}
         onRequestDelete={mockOnRequestDelete}
@@ -192,51 +202,62 @@ describe('NewsCard', () => {
   });
 
   it('renders Edit and Delete icon buttons', () => {
-    render(<NewsCard item={makeItem()} onRequestDelete={mockOnRequestDelete} />);
+    renderWithRouter(<NewsCard item={makeItem()} onRequestDelete={mockOnRequestDelete} />);
     expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument();
   });
 
-  it('calls openDrawer on card click', async () => {
+  it('writes ?edit=<id> on card click', async () => {
     const user = userEvent.setup();
-    render(<NewsCard item={makeItem({ id: 'news-1' })} onRequestDelete={mockOnRequestDelete} />);
+    renderWithRouter(
+      <NewsCard item={makeItem({ id: 'news-1' })} onRequestDelete={mockOnRequestDelete} />
+    );
+    expect(screen.getByTestId('edit-param').textContent).toBe('');
     const card = screen.getByRole('button', { name: /Edit/ }).closest('article')!;
     await user.click(card);
-    expect(mockOpenDrawer).toHaveBeenCalledWith('news-1');
+    expect(screen.getByTestId('edit-param').textContent).toBe('news-1');
   });
 
-  it('calls openDrawer on Enter key', async () => {
+  it('writes ?edit=<id> on Enter key', async () => {
     const user = userEvent.setup();
-    render(<NewsCard item={makeItem({ id: 'news-1' })} onRequestDelete={mockOnRequestDelete} />);
+    renderWithRouter(
+      <NewsCard item={makeItem({ id: 'news-1' })} onRequestDelete={mockOnRequestDelete} />
+    );
     const article = screen.getByRole('button', { name: /Edit/ }).closest('article')!;
     article.focus();
     await user.keyboard('{Enter}');
-    expect(mockOpenDrawer).toHaveBeenCalledWith('news-1');
+    expect(screen.getByTestId('edit-param').textContent).toBe('news-1');
   });
 
-  it('calls openDrawer on Space key', async () => {
+  it('writes ?edit=<id> on Space key', async () => {
     const user = userEvent.setup();
-    render(<NewsCard item={makeItem({ id: 'news-1' })} onRequestDelete={mockOnRequestDelete} />);
+    renderWithRouter(
+      <NewsCard item={makeItem({ id: 'news-1' })} onRequestDelete={mockOnRequestDelete} />
+    );
     const article = screen.getByRole('button', { name: /Edit/ }).closest('article')!;
     article.focus();
     await user.keyboard(' ');
-    expect(mockOpenDrawer).toHaveBeenCalledWith('news-1');
+    expect(screen.getByTestId('edit-param').textContent).toBe('news-1');
   });
 
-  it('Delete button calls onRequestDelete and does NOT call openDrawer', async () => {
+  it('Delete button calls onRequestDelete and does NOT write ?edit=', async () => {
     const user = userEvent.setup();
-    render(<NewsCard item={makeItem({ id: 'news-1' })} onRequestDelete={mockOnRequestDelete} />);
+    renderWithRouter(
+      <NewsCard item={makeItem({ id: 'news-1' })} onRequestDelete={mockOnRequestDelete} />
+    );
     const deleteBtn = screen.getByRole('button', { name: 'Delete' });
     await user.click(deleteBtn);
     expect(mockOnRequestDelete).toHaveBeenCalledWith('news-1');
-    expect(mockOpenDrawer).not.toHaveBeenCalled();
+    expect(screen.getByTestId('edit-param').textContent).toBe('');
   });
 
-  it('Edit button calls openDrawer', async () => {
+  it('Edit button writes ?edit=<id>', async () => {
     const user = userEvent.setup();
-    render(<NewsCard item={makeItem({ id: 'news-1' })} onRequestDelete={mockOnRequestDelete} />);
+    renderWithRouter(
+      <NewsCard item={makeItem({ id: 'news-1' })} onRequestDelete={mockOnRequestDelete} />
+    );
     const editBtn = screen.getByRole('button', { name: 'Edit' });
     await user.click(editBtn);
-    expect(mockOpenDrawer).toHaveBeenCalledWith('news-1');
+    expect(screen.getByTestId('edit-param').textContent).toBe('news-1');
   });
 });

@@ -5,10 +5,10 @@ import React from 'react';
 import { format } from 'date-fns';
 import { Edit, Play, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 
 import { Badge } from '@/components/ui/badge';
 import type { NewsItemResponse } from '@/services/adminAPI';
-import { useAdminNewsStore } from '@/stores/adminNewsStore';
 
 const COUNTRY_FLAG: Record<string, string> = {
   cyprus: '🇨🇾',
@@ -29,6 +29,7 @@ export interface NewsCardProps {
 
 export const NewsCard: React.FC<NewsCardProps> = ({ item, onRequestDelete }) => {
   const { i18n } = useTranslation();
+  const [, setSearchParams] = useSearchParams();
 
   const lang = i18n.language;
   const title =
@@ -47,20 +48,32 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, onRequestDelete }) => 
   const totalAudio = (item.audio_duration_seconds ?? 0) + (item.audio_a2_duration_seconds ?? 0);
   const hasAudio = item.audio_duration_seconds != null || item.audio_a2_duration_seconds != null;
 
+  // Single source of truth: write to URL; NewsTab's URL→store effect opens the drawer.
+  function openViaUrl() {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set('edit', item.id);
+        return next;
+      },
+      { replace: false }
+    );
+  }
+
   function handleClick() {
-    useAdminNewsStore.getState().openDrawer(item.id);
+    openViaUrl();
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLElement>) {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      useAdminNewsStore.getState().openDrawer(item.id);
+      openViaUrl();
     }
   }
 
   function handleEdit(e: React.MouseEvent) {
     e.stopPropagation();
-    useAdminNewsStore.getState().openDrawer(item.id);
+    openViaUrl();
   }
 
   function handleDelete(e: React.MouseEvent) {
