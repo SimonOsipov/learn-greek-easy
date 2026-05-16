@@ -17,13 +17,16 @@
 
 import { useCallback, useState } from 'react';
 
+import { format } from 'date-fns';
 import { Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { SidePanel } from '@/components/ui/side-panel';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { renderInlineMarkdown } from '@/lib/markdown-inline';
 import { cn } from '@/lib/utils';
 import {
   useAdminChangelogStore,
@@ -258,7 +261,47 @@ export function ChangelogEditorDrawer({ open, onClose, entry }: ChangelogEditorD
               </div>
 
               {/* ── Right column: Preview (CLTE-05) ──────────────────── */}
-              <div data-testid="changelog-drawer-preview" />
+              {panelMode === 'form' && (
+                <aside className="cl-preview" data-testid="changelog-drawer-preview">
+                  <div className="cl-preview-l">Preview ({lang.toUpperCase()})</div>
+                  <div className="cl-preview-card">
+                    <div className="cl-preview-head">
+                      <Badge tone={TAG_TONE[form.tag]}>
+                        {t(
+                          CHANGELOG_TAG_CONFIG[form.tag].labelKey.replace(
+                            'changelog:',
+                            ''
+                          ) as Parameters<typeof t>[0]
+                        )}
+                      </Badge>
+                      {form.version && (
+                        <span className="cl-preview-v" data-testid="changelog-preview-version">
+                          {form.version}
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="cl-preview-title" data-testid="changelog-preview-title">
+                      {titleValue || (lang === 'en' ? 'Your headline' : 'Ваш заголовок')}
+                    </h3>
+                    <p className="cl-preview-body" data-testid="changelog-preview-body">
+                      {contentValue ? (
+                        renderInlineMarkdown(contentValue)
+                      ) : (
+                        <span className="va-dim">
+                          {lang === 'en'
+                            ? 'Body text will appear here as you type.'
+                            : 'Текст появится здесь по мере набора.'}
+                        </span>
+                      )}
+                    </p>
+                    <div className="cl-preview-foot va-dim" data-testid="changelog-preview-foot">
+                      {entry
+                        ? `Posted ${format(new Date(entry.created_at), 'MMM d, yyyy')}`
+                        : 'Today'}
+                    </div>
+                  </div>
+                </aside>
+              )}
             </div>
           </div>
         </SidePanel.Body>

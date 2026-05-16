@@ -397,4 +397,158 @@ describe('ChangelogEditorDrawer', () => {
 
     expect(onClose).toHaveBeenCalled();
   });
+
+  // ── Preview pane (CLTE-05) ────────────────────────────────────────────────
+
+  it('renders the preview pane when panelMode=form', () => {
+    mockStoreState.panelMode = 'form';
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+
+    expect(screen.getByTestId('changelog-drawer-preview')).toBeInTheDocument();
+  });
+
+  it('hides the preview pane when panelMode=json', () => {
+    mockStoreState.panelMode = 'json';
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+
+    expect(screen.queryByTestId('changelog-drawer-preview')).not.toBeInTheDocument();
+  });
+
+  it('preview headline updates live as user types in title input', async () => {
+    const user = userEvent.setup();
+    mockStoreState.lang = 'en';
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+
+    const titleInput = screen.getByTestId('changelog-editor-title-en');
+    await user.type(titleInput, 'My New Feature');
+
+    expect(screen.getByTestId('changelog-preview-title')).toHaveTextContent('My New Feature');
+  });
+
+  it('switching EN→RU swaps the preview headline and body to the RU fields', async () => {
+    const user = userEvent.setup();
+    mockStoreState.lang = 'en';
+    const { rerender } = render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+
+    // Type EN title + content
+    await user.type(screen.getByTestId('changelog-editor-title-en'), 'English Title');
+    await user.type(screen.getByTestId('changelog-editor-content-en'), 'English body');
+
+    // Simulate switching to RU
+    mockStoreState.lang = 'ru';
+    rerender(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+
+    // Type RU title + content
+    await user.type(screen.getByTestId('changelog-editor-title-ru'), 'Русский заголовок');
+    await user.type(screen.getByTestId('changelog-editor-content-ru'), 'Русское тело');
+
+    // Preview should show RU content
+    expect(screen.getByTestId('changelog-preview-title')).toHaveTextContent('Русский заголовок');
+    expect(screen.getByTestId('changelog-preview-body')).toHaveTextContent('Русское тело');
+  });
+
+  it('switching back RU→EN shows the EN preview content', async () => {
+    const user = userEvent.setup();
+    mockStoreState.lang = 'en';
+    const { rerender } = render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+
+    await user.type(screen.getByTestId('changelog-editor-title-en'), 'English Title');
+
+    // Switch to RU
+    mockStoreState.lang = 'ru';
+    rerender(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+
+    // Switch back to EN
+    mockStoreState.lang = 'en';
+    rerender(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+
+    expect(screen.getByTestId('changelog-preview-title')).toHaveTextContent('English Title');
+  });
+
+  it('hides version pill when form.version is empty', () => {
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+
+    expect(screen.queryByTestId('changelog-preview-version')).not.toBeInTheDocument();
+  });
+
+  it('shows version pill when form.version is set', async () => {
+    const user = userEvent.setup();
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+
+    await user.type(screen.getByTestId('changelog-editor-version'), '1.0');
+
+    expect(screen.getByTestId('changelog-preview-version')).toHaveTextContent('1.0');
+  });
+
+  it('renders <b> for **bold** and <i> for *italic* in preview body', async () => {
+    const user = userEvent.setup();
+    mockStoreState.lang = 'en';
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+
+    await user.type(
+      screen.getByTestId('changelog-editor-content-en'),
+      'Hello **bold** and *italic*'
+    );
+
+    const body = screen.getByTestId('changelog-preview-body');
+    expect(body.querySelector('b')).toBeInTheDocument();
+    expect(body.querySelector('i')).toBeInTheDocument();
+    expect(body.querySelector('b')).toHaveTextContent('bold');
+    expect(body.querySelector('i')).toHaveTextContent('italic');
+  });
+
+  it('shows formatted date in edit mode (MMM d, yyyy)', () => {
+    const entry = {
+      id: 'e1',
+      title_en: 'Hello',
+      title_ru: 'Привет',
+      content_en: 'Content',
+      content_ru: 'Содержание',
+      tag: 'new_feature' as const,
+      version: null,
+      created_at: '2026-01-15T00:00:00Z',
+      updated_at: '2026-01-15T00:00:00Z',
+    };
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} entry={entry} />);
+
+    expect(screen.getByTestId('changelog-preview-foot')).toHaveTextContent('Posted Jan 15, 2026');
+  });
+
+  it('shows "Today" in the footer in compose mode (no entry)', () => {
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+
+    expect(screen.getByTestId('changelog-preview-foot')).toHaveTextContent('Today');
+  });
+
+  it('shows EN empty placeholder headline when title_en is blank', () => {
+    mockStoreState.lang = 'en';
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+
+    expect(screen.getByTestId('changelog-preview-title')).toHaveTextContent('Your headline');
+  });
+
+  it('shows RU empty placeholder headline when title_ru is blank', () => {
+    mockStoreState.lang = 'ru';
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+
+    expect(screen.getByTestId('changelog-preview-title')).toHaveTextContent('Ваш заголовок');
+  });
+
+  it('shows EN body placeholder when content_en is blank', () => {
+    mockStoreState.lang = 'en';
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+
+    expect(screen.getByTestId('changelog-preview-body')).toHaveTextContent(
+      'Body text will appear here as you type.'
+    );
+  });
+
+  it('shows RU body placeholder when content_ru is blank', () => {
+    mockStoreState.lang = 'ru';
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+
+    expect(screen.getByTestId('changelog-preview-body')).toHaveTextContent(
+      'Текст появится здесь по мере набора.'
+    );
+  });
 });
