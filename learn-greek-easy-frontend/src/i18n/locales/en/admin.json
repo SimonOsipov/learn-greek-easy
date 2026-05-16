@@ -612,6 +612,14 @@
         "cyprus": "Cyprus",
         "greece": "Greece",
         "world": "World"
+      },
+      "translations": {
+        "titleEn": "Title — English",
+        "titleEl": "Τίτλος — Ελληνικά",
+        "titleRu": "Заголовок — Русский",
+        "hintEn": "Source language",
+        "hintEl": "Greek translation · used in the app",
+        "hintRu": "Russian translation · for fallback explanations"
       }
     }
   },
