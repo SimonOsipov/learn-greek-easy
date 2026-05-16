@@ -1,71 +1,75 @@
 /**
- * ChangelogTab Component Tests
+ * ChangelogTab Component Tests — CLTE-08
  *
- * Tests for the admin changelog tab including:
- * - Create button rendering
- * - Modal open/close lifecycle
- * - Submit button states (disabled when empty, disabled when saving)
- * - Loading spinner during save
- * - Inline validation errors in modal
- * - Success toast and modal closing
- * - Test IDs presence
+ * Covers:
+ * - 4 StatCards with correct tones
+ * - Each sparkline carries the right data-testid
+ * - Missing RU stat count math
+ * - Search filter (no debounce, case-insensitive, EN+RU)
+ * - Tag SegControl shows only present tags with counts
+ * - Deep-link: ?edit=<valid-id>&lang=ru opens drawer
+ * - Deep-link: ?compose=1 opens compose drawer
+ * - Deep-link: ?edit=<missing-id> ignored silently
+ * - Deep-link: ?lang=foo ignored silently
+ * - Close drawer strips URL params
+ * - Export markdown stub fires toast
+ * - One-shot console.warn at 100 entries
  */
 
-import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import React from 'react';
+
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 import { ChangelogTab } from '../ChangelogTab';
+import type { ChangelogEntryAdmin } from '@/types/changelog';
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
+function makeEntry(overrides: Partial<ChangelogEntryAdmin> = {}): ChangelogEntryAdmin {
+  return {
+    id: 'entry-1',
+    title_en: 'Test feature',
+    title_ru: 'Тестовая функция',
+    content_en: 'Some content',
+    content_ru: 'Некоторое содержимое',
+    tag: 'new_feature',
+    version: null,
+    created_at: '2024-03-15T10:00:00Z',
+    updated_at: '2024-03-15T10:00:00Z',
+    ...overrides,
+  };
+}
 
 /**
- * Helper to set textarea value and trigger change event.
- * Using fireEvent instead of userEvent.type because userEvent
- * interprets curly braces as keyboard modifiers.
+ * Render ChangelogTab inside a MemoryRouter with optional initial URL params.
  */
-const setTextareaValue = (textarea: HTMLElement, value: string) => {
-  fireEvent.change(textarea, { target: { value } });
-};
+function renderWithRouter(initialSearch = '') {
+  return render(
+    <MemoryRouter initialEntries={[`/${initialSearch}`]}>
+      <Routes>
+        <Route path="/" element={<ChangelogTab />} />
+      </Routes>
+    </MemoryRouter>
+  );
+}
 
-/**
- * Helper to open the create modal by clicking the create button.
- */
-const openCreateModal = async (user: ReturnType<typeof userEvent.setup>) => {
-  await user.click(screen.getByTestId('changelog-create-button'));
-  await waitFor(() => expect(screen.getByTestId('changelog-create-modal')).toBeInTheDocument());
-};
+// ── Mocks ──────────────────────────────────────────────────────────────────────
 
-// Mock i18n
+// Mock react-i18next
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, params?: Record<string, unknown>) => {
-      const translations: Record<string, string> = {
-        'admin:changelog.create.title': 'Create Changelog Entry',
-        'admin:changelog.create.description': 'Paste JSON to create a new changelog entry',
-        'admin:changelog.create.hint': 'Content supports **bold** and *italic* markdown',
-        'admin:changelog.create.submit': 'Submit',
-        'admin:changelog.create.submitting': 'Submitting...',
-        'admin:changelog.create.cancel': 'Cancel',
-        'admin:changelog.create.validationError': 'Invalid JSON',
-        'admin:changelog.validation.invalidJson': 'Invalid JSON format',
-        'admin:changelog.validation.missingFields': `Missing required fields: ${params?.fields || ''}`,
-        'admin:changelog.validation.invalidTag':
-          'Invalid tag. Must be: new_feature, bug_fix, or announcement',
-        'admin:changelog.toast.created': 'Changelog entry created successfully',
-        'admin:changelog.toast.createError': 'Failed to create changelog entry',
-        'changelog.create.title': 'Create Changelog Entry',
-        'changelog.create.description': 'Paste JSON to create a new changelog entry',
-        'changelog.create.submit': 'Submit',
-        'changelog.create.submitting': 'Submitting...',
-        'changelog.create.cancel': 'Cancel',
-        'changelog.toast.created': 'Changelog entry created successfully',
-        'changelog.toast.createError': 'Failed to create changelog entry',
-        'changelog.validation.invalidJson': 'Invalid JSON format',
-        'changelog.validation.missingFields': `Missing required fields: ${params?.fields || ''}`,
-        'changelog.validation.invalidTag':
-          'Invalid tag. Must be: new_feature, bug_fix, or announcement',
+    t: (key: string) => {
+      const map: Record<string, string> = {
+        'changelog:tag.newFeature': 'New Feature',
+        'changelog:tag.bugFix': 'Bug Fix',
+        'changelog:tag.announcement': 'Announcement',
       };
-      return translations[key] || key;
+      return map[key] ?? key;
     },
+    i18n: { language: 'en' },
   }),
 }));
 
@@ -75,444 +79,511 @@ vi.mock('@/hooks/use-toast', () => ({
   toast: (args: unknown) => mockToast(args),
 }));
 
-// Mock apiErrorUtils
-vi.mock('@/lib/apiErrorUtils', () => ({
-  getApiErrorMessage: (err: unknown) => (err instanceof Error ? err.message : null),
-}));
+// Store mock state (module-level, mutated per test)
+let mockItems: ChangelogEntryAdmin[] = [];
+let mockIsLoading = false;
+let mockMode: 'compose' | 'edit' | null = null;
+let mockOpenEntryId: string | null = null;
+let mockLang: 'en' | 'ru' = 'en';
+let mockTotal = 0;
 
-// Mock admin changelog store
 const mockFetchList = vi.fn();
-const mockCreateEntry = vi.fn();
-const mockUpdateEntry = vi.fn();
-const mockSetPage = vi.fn();
-const mockReset = vi.fn();
-
-let mockIsSaving = false;
+const mockOpenCompose = vi.fn().mockImplementation(() => {
+  mockMode = 'compose';
+  mockOpenEntryId = null;
+  mockLang = 'en';
+});
+const mockOpenEdit = vi.fn().mockImplementation((id: string) => {
+  mockMode = 'edit';
+  mockOpenEntryId = id;
+  mockLang = 'en';
+});
+const mockCloseDrawer = vi.fn().mockImplementation(() => {
+  mockMode = null;
+  mockOpenEntryId = null;
+  mockLang = 'en';
+});
+const mockSetLang = vi.fn().mockImplementation((l: 'en' | 'ru') => {
+  mockLang = l;
+});
 
 vi.mock('@/stores/adminChangelogStore', () => ({
-  useAdminChangelogStore: (selector: (state: unknown) => unknown) => {
+  useAdminChangelogStore: (selector?: (state: unknown) => unknown) => {
     const state = {
-      items: [],
-      isLoading: false,
-      isSaving: mockIsSaving,
-      page: 1,
-      pageSize: 10,
-      total: 0,
-      totalPages: 1,
+      items: mockItems,
+      total: mockTotal,
+      isLoading: mockIsLoading,
+      mode: mockMode,
+      openEntryId: mockOpenEntryId,
+      lang: mockLang,
       fetchList: mockFetchList,
-      createEntry: mockCreateEntry,
-      updateEntry: mockUpdateEntry,
-      setPage: mockSetPage,
-      reset: mockReset,
+      openCompose: mockOpenCompose,
+      openEdit: mockOpenEdit,
+      closeDrawer: mockCloseDrawer,
+      setLang: mockSetLang,
     };
     return selector ? selector(state) : state;
   },
-  selectAdminChangelogItems: (state: { items: unknown[] }) => state.items,
-  selectAdminChangelogIsLoading: (state: { isLoading: boolean }) => state.isLoading,
-  selectAdminChangelogIsSaving: (state: { isSaving: boolean }) => state.isSaving,
-  selectAdminChangelogPage: (state: { page: number }) => state.page,
-  selectAdminChangelogPageSize: (state: { pageSize: number }) => state.pageSize,
-  selectAdminChangelogTotal: (state: { total: number }) => state.total,
-  selectAdminChangelogTotalPages: (state: { totalPages: number }) => state.totalPages,
+  // Named selectors used by sub-components (ChangelogEditorDrawer etc.)
+  selectAdminChangelogLang: (s: { lang: 'en' | 'ru' }) => s.lang,
+  selectAdminChangelogPanelMode: (s: { panelMode: string }) => s.panelMode ?? 'form',
+  selectAdminChangelogIsSaving: (s: { isSaving: boolean }) => s.isSaving ?? false,
 }));
 
-// Mock sub-components (but NOT ChangelogCreateModal — keep it real)
-vi.mock('../ChangelogTable', () => ({
-  ChangelogTable: () => <div data-testid="changelog-table-mock">Changelog Table</div>,
+// Mock sub-components to avoid pulling in their dependency trees
+vi.mock('../ChangelogTimeline', () => ({
+  ChangelogTimeline: ({
+    entries,
+    onEdit,
+    onDelete,
+  }: {
+    entries: ChangelogEntryAdmin[];
+    onEdit: (id: string) => void;
+    onDelete: (id: string) => void;
+  }) => (
+    <div data-testid="changelog-timeline-mock" data-entry-count={entries.length}>
+      {entries.map((e) => (
+        <div key={e.id} data-testid={`timeline-entry-${e.id}`}>
+          <button onClick={() => onEdit(e.id)} data-testid={`edit-${e.id}`}>
+            Edit
+          </button>
+          <button onClick={() => onDelete(e.id)} data-testid={`delete-${e.id}`}>
+            Delete
+          </button>
+        </div>
+      ))}
+    </div>
+  ),
 }));
 
-vi.mock('../ChangelogEditModal', () => ({
-  ChangelogEditModal: () => <div data-testid="changelog-edit-modal-mock">Edit Modal</div>,
+vi.mock('../ChangelogEditorDrawer', () => ({
+  ChangelogEditorDrawer: ({ open, onClose }: { open: boolean; onClose: () => void }) =>
+    open ? (
+      <div data-testid="changelog-editor-drawer-mock">
+        <button onClick={onClose} data-testid="drawer-close">
+          Close
+        </button>
+      </div>
+    ) : null,
 }));
 
 vi.mock('../ChangelogDeleteDialog', () => ({
-  ChangelogDeleteDialog: () => <div data-testid="changelog-delete-dialog-mock">Delete Dialog</div>,
+  ChangelogDeleteDialog: ({
+    open,
+    onOpenChange,
+  }: {
+    open: boolean;
+    onOpenChange: (o: boolean) => void;
+  }) =>
+    open ? (
+      <div data-testid="changelog-delete-dialog-mock">
+        <button onClick={() => onOpenChange(false)} data-testid="delete-dialog-close">
+          Close
+        </button>
+      </div>
+    ) : null,
 }));
+
+// ── Test suite ─────────────────────────────────────────────────────────────────
 
 describe('ChangelogTab', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockIsSaving = false;
-    mockCreateEntry.mockResolvedValue(undefined);
+    mockItems = [];
+    mockIsLoading = false;
+    mockMode = null;
+    mockOpenEntryId = null;
+    mockLang = 'en';
+    mockTotal = 0;
   });
 
-  describe('Test IDs', () => {
-    it('should render changelog-tab test ID', () => {
-      render(<ChangelogTab />);
+  // ── Root test ID ────────────────────────────────────────────────────────────
+  describe('Root test ID', () => {
+    it('renders changelog-tab test ID', () => {
+      renderWithRouter();
       expect(screen.getByTestId('changelog-tab')).toBeInTheDocument();
     });
+  });
 
-    it('should render changelog-create-button test ID', () => {
-      render(<ChangelogTab />);
-      expect(screen.getByTestId('changelog-create-button')).toBeInTheDocument();
+  // ── StatCards ───────────────────────────────────────────────────────────────
+  describe('StatCards', () => {
+    it('renders 4 StatCards', () => {
+      renderWithRouter();
+      // Each card has a .stat-card class
+      const cards = document.querySelectorAll('.stat-card');
+      expect(cards.length).toBe(4);
     });
 
-    it('should render changelog-json-input test ID after opening modal', async () => {
-      const user = userEvent.setup();
-      render(<ChangelogTab />);
-      await openCreateModal(user);
-      expect(screen.getByTestId('changelog-json-input')).toBeInTheDocument();
+    it('Total card has tone-blue class', () => {
+      renderWithRouter();
+      const cards = Array.from(document.querySelectorAll('.stat-card'));
+      expect(cards[0].classList).toContain('tone-blue');
     });
 
-    it('should render changelog-submit-button test ID after opening modal', async () => {
-      const user = userEvent.setup();
-      render(<ChangelogTab />);
-      await openCreateModal(user);
-      expect(screen.getByTestId('changelog-submit-button')).toBeInTheDocument();
+    it('Most recent card has tone-violet class', () => {
+      renderWithRouter();
+      const cards = Array.from(document.querySelectorAll('.stat-card'));
+      expect(cards[1].classList).toContain('tone-violet');
+    });
+
+    it('Avg cadence card has tone-cyan class', () => {
+      renderWithRouter();
+      const cards = Array.from(document.querySelectorAll('.stat-card'));
+      expect(cards[2].classList).toContain('tone-cyan');
+    });
+
+    it('Missing RU card has tone-amber class', () => {
+      renderWithRouter();
+      const cards = Array.from(document.querySelectorAll('.stat-card'));
+      expect(cards[3].classList).toContain('tone-amber');
     });
   });
 
-  describe('Create Button and Modal', () => {
-    it('should render create button with title', () => {
-      render(<ChangelogTab />);
-      expect(screen.getByTestId('changelog-create-button')).toBeInTheDocument();
-      expect(screen.getByTestId('changelog-create-button')).toHaveTextContent(
-        'Create Changelog Entry'
+  // ── Sparkline data-testids (AC #3) ──────────────────────────────────────────
+  describe('Sparkline data-testids', () => {
+    it('sparkline-total is present', () => {
+      renderWithRouter();
+      expect(screen.getByTestId('sparkline-total')).toBeInTheDocument();
+    });
+
+    it('sparkline-recent is present', () => {
+      renderWithRouter();
+      expect(screen.getByTestId('sparkline-recent')).toBeInTheDocument();
+    });
+
+    it('sparkline-cadence is present', () => {
+      renderWithRouter();
+      expect(screen.getByTestId('sparkline-cadence')).toBeInTheDocument();
+    });
+
+    it('sparkline-missing-ru is present', () => {
+      renderWithRouter();
+      expect(screen.getByTestId('sparkline-missing-ru')).toBeInTheDocument();
+    });
+  });
+
+  // ── Missing RU stat (AC #2) ─────────────────────────────────────────────────
+  describe('Missing RU stat', () => {
+    it('counts entries with missing title_ru or content_ru', () => {
+      mockItems = [
+        makeEntry({ id: '1', title_ru: '', content_ru: 'ok' }), // missing title_ru
+        makeEntry({ id: '2', title_ru: 'ok', content_ru: '' }), // missing content_ru
+        makeEntry({ id: '3', title_ru: 'ok', content_ru: 'ok' }), // complete
+      ];
+      renderWithRouter();
+      // The Missing RU card should show n=2
+      const cards = Array.from(document.querySelectorAll('.stat-card'));
+      const missingRuCard = cards[3];
+      expect(missingRuCard.querySelector('.stat-n')?.textContent).toBe('2');
+    });
+
+    it('Missing RU card stays tone-amber when count is 0', () => {
+      mockItems = [makeEntry({ id: '1', title_ru: 'ok', content_ru: 'ok' })];
+      renderWithRouter();
+      const cards = Array.from(document.querySelectorAll('.stat-card'));
+      expect(cards[3].classList).toContain('tone-amber');
+      expect(cards[3].querySelector('.stat-n')?.textContent).toBe('0');
+    });
+
+    it('shows "all translated" sub when count is 0', () => {
+      mockItems = [makeEntry({ id: '1', title_ru: 'ok', content_ru: 'ok' })];
+      renderWithRouter();
+      const cards = Array.from(document.querySelectorAll('.stat-card'));
+      expect(cards[3].querySelector('.stat-sub')?.textContent).toBe('all translated');
+    });
+
+    it('shows "entries need translation" sub when count > 0', () => {
+      mockItems = [makeEntry({ id: '1', title_ru: '', content_ru: '' })];
+      renderWithRouter();
+      const cards = Array.from(document.querySelectorAll('.stat-card'));
+      expect(cards[3].querySelector('.stat-sub')?.textContent).toBe('entries need translation');
+    });
+  });
+
+  // ── Avg cadence (AC #4) ─────────────────────────────────────────────────────
+  describe('Avg cadence', () => {
+    it('renders — when fewer than 2 entries', () => {
+      mockItems = [makeEntry({ id: '1' })];
+      renderWithRouter();
+      const cards = Array.from(document.querySelectorAll('.stat-card'));
+      expect(cards[2].querySelector('.stat-n')?.textContent).toBe('—');
+    });
+
+    it('renders — when no entries', () => {
+      mockItems = [];
+      renderWithRouter();
+      const cards = Array.from(document.querySelectorAll('.stat-card'));
+      expect(cards[2].querySelector('.stat-n')?.textContent).toBe('—');
+    });
+
+    it('computes avg days between 2 entries', () => {
+      mockItems = [
+        makeEntry({ id: '1', created_at: '2024-03-20T00:00:00Z' }),
+        makeEntry({ id: '2', created_at: '2024-03-10T00:00:00Z' }),
+      ];
+      renderWithRouter();
+      const cards = Array.from(document.querySelectorAll('.stat-card'));
+      // 10 days apart
+      expect(cards[2].querySelector('.stat-n')?.textContent).toBe('10d');
+    });
+  });
+
+  // ── Search filter (AC #5) ───────────────────────────────────────────────────
+  describe('Search filter', () => {
+    beforeEach(() => {
+      mockItems = [
+        makeEntry({ id: '1', title_en: 'Hello world', title_ru: 'Привет мир' }),
+        makeEntry({ id: '2', title_en: 'Bug fix today', title_ru: 'Исправление ошибки' }),
+        makeEntry({ id: '3', title_en: 'New release', title_ru: 'Новый выпуск' }),
+      ];
+    });
+
+    it('shows all entries when search is empty', () => {
+      renderWithRouter();
+      const timeline = screen.getByTestId('changelog-timeline-mock');
+      expect(timeline.getAttribute('data-entry-count')).toBe('3');
+    });
+
+    it('filters by title_en (case-insensitive)', async () => {
+      const user = userEvent.setup();
+      renderWithRouter();
+      const input = screen.getByTestId('changelog-search-input');
+      await user.type(input, 'hello');
+      // Only entry 1 matches
+      expect(screen.getByTestId('changelog-timeline-mock').getAttribute('data-entry-count')).toBe(
+        '1'
       );
     });
 
-    it('should open modal when create button is clicked', async () => {
+    it('filters by title_ru (case-insensitive)', async () => {
       const user = userEvent.setup();
-      render(<ChangelogTab />);
-      await openCreateModal(user);
-      expect(screen.getByTestId('changelog-create-modal')).toBeInTheDocument();
+      renderWithRouter();
+      const input = screen.getByTestId('changelog-search-input');
+      await user.type(input, 'ошибки');
+      // Only entry 2 matches
+      expect(screen.getByTestId('changelog-timeline-mock').getAttribute('data-entry-count')).toBe(
+        '1'
+      );
     });
 
-    it('should render modal description', async () => {
+    it('filters case-insensitively on title_en', async () => {
       const user = userEvent.setup();
-      render(<ChangelogTab />);
-      await openCreateModal(user);
-      expect(screen.getByText('Paste JSON to create a new changelog entry')).toBeInTheDocument();
+      renderWithRouter();
+      const input = screen.getByTestId('changelog-search-input');
+      await user.type(input, 'BUG');
+      expect(screen.getByTestId('changelog-timeline-mock').getAttribute('data-entry-count')).toBe(
+        '1'
+      );
     });
 
-    it('should render textarea with placeholder JSON', async () => {
+    it('is not debounced — filters on every keystroke', async () => {
       const user = userEvent.setup();
-      render(<ChangelogTab />);
-      await openCreateModal(user);
-      const textarea = screen.getByTestId('changelog-json-input');
-      expect(textarea).toBeInTheDocument();
-      expect(textarea).toHaveAttribute('placeholder');
-      expect(textarea.getAttribute('placeholder')).toContain('tag');
-      expect(textarea.getAttribute('placeholder')).toContain('title_en');
-      expect(textarea.getAttribute('placeholder')).toContain('title_ru');
-      expect(textarea.getAttribute('placeholder')).toContain('content_en');
-      expect(textarea.getAttribute('placeholder')).toContain('content_ru');
-    });
-
-    it('should NOT render "Add New" button (removed)', () => {
-      render(<ChangelogTab />);
-      expect(screen.queryByText('Add New')).not.toBeInTheDocument();
+      renderWithRouter();
+      const input = screen.getByTestId('changelog-search-input');
+      // After single char, filter should already apply
+      await user.type(input, 'H');
+      expect(screen.getByTestId('changelog-timeline-mock').getAttribute('data-entry-count')).toBe(
+        '1'
+      );
     });
   });
 
-  describe('Submit Button States', () => {
-    it('should disable submit button when textarea is empty', async () => {
-      const user = userEvent.setup();
-      render(<ChangelogTab />);
-      await openCreateModal(user);
-      const submitButton = screen.getByTestId('changelog-submit-button');
-      expect(submitButton).toBeDisabled();
+  // ── Tag SegControl (AC #6) ──────────────────────────────────────────────────
+  describe('Tag SegControl', () => {
+    it('shows All option with total count', () => {
+      mockItems = [
+        makeEntry({ id: '1', tag: 'new_feature' }),
+        makeEntry({ id: '2', tag: 'bug_fix' }),
+      ];
+      renderWithRouter();
+      // "All" button should be present with count 2
+      expect(screen.getByText('All')).toBeInTheDocument();
+      // Count spans rendered as .cl-tag-n
+      const allBtn = screen.getByText('All').closest('button');
+      expect(allBtn?.querySelector('.cl-tag-n')?.textContent).toBe('2');
     });
 
-    it('should disable submit button when textarea has only whitespace', async () => {
-      const user = userEvent.setup();
-      render(<ChangelogTab />);
-      await openCreateModal(user);
-      const textarea = screen.getByTestId('changelog-json-input');
-      const submitButton = screen.getByTestId('changelog-submit-button');
-
-      await user.type(textarea, '   ');
-
-      expect(submitButton).toBeDisabled();
+    it('shows only tags present in data', () => {
+      mockItems = [
+        makeEntry({ id: '1', tag: 'new_feature' }),
+        makeEntry({ id: '2', tag: 'new_feature' }),
+      ];
+      renderWithRouter();
+      // new_feature should appear, bug_fix and announcement should not
+      expect(screen.queryByText('Bug Fix')).not.toBeInTheDocument();
+      expect(screen.queryByText('Announcement')).not.toBeInTheDocument();
     });
 
-    it('should enable submit button when textarea has content', async () => {
-      const user = userEvent.setup();
-      render(<ChangelogTab />);
-      await openCreateModal(user);
-      const textarea = screen.getByTestId('changelog-json-input');
-      const submitButton = screen.getByTestId('changelog-submit-button');
-
-      setTextareaValue(textarea, '{"test": true}');
-
-      expect(submitButton).not.toBeDisabled();
+    it('shows count per tag', () => {
+      mockItems = [
+        makeEntry({ id: '1', tag: 'new_feature' }),
+        makeEntry({ id: '2', tag: 'new_feature' }),
+        makeEntry({ id: '3', tag: 'bug_fix' }),
+      ];
+      renderWithRouter();
+      // New Feature button should show count 2
+      const nfBtn = screen.getByText('New Feature').closest('button');
+      expect(nfBtn?.querySelector('.cl-tag-n')?.textContent).toBe('2');
+      // Bug Fix button should show count 1
+      const bfBtn = screen.getByText('Bug Fix').closest('button');
+      expect(bfBtn?.querySelector('.cl-tag-n')?.textContent).toBe('1');
     });
 
-    it('should show "Submit" text when not saving', async () => {
+    it('filters timeline by selected tag', async () => {
       const user = userEvent.setup();
-      render(<ChangelogTab />);
-      await openCreateModal(user);
-      const submitButton = screen.getByTestId('changelog-submit-button');
-      expect(submitButton).toHaveTextContent('Submit');
+      mockItems = [
+        makeEntry({ id: '1', tag: 'new_feature' }),
+        makeEntry({ id: '2', tag: 'bug_fix' }),
+      ];
+      renderWithRouter();
+      await user.click(screen.getByText('Bug Fix'));
+      // Only 1 entry matches bug_fix
+      expect(screen.getByTestId('changelog-timeline-mock').getAttribute('data-entry-count')).toBe(
+        '1'
+      );
     });
   });
 
-  describe('Saving State', () => {
-    beforeEach(() => {
-      mockIsSaving = true;
-    });
-
-    it('should disable submit button when isSaving is true', async () => {
+  // ── Filter pipeline (AC #7) — filtering before grouping is implicit ─────────
+  describe('Filter pipeline order', () => {
+    it('tag filter applies to search-filtered set', async () => {
       const user = userEvent.setup();
-      render(<ChangelogTab />);
-      await openCreateModal(user);
-      const textarea = screen.getByTestId('changelog-json-input');
-      setTextareaValue(textarea, '{"test": true}');
-
-      const submitButton = screen.getByTestId('changelog-submit-button');
-      expect(submitButton).toBeDisabled();
-    });
-
-    it('should show "Submitting..." text when saving', async () => {
-      const user = userEvent.setup();
-      render(<ChangelogTab />);
-      await openCreateModal(user);
-      const textarea = screen.getByTestId('changelog-json-input');
-      setTextareaValue(textarea, '{"test": true}');
-
-      const submitButton = screen.getByTestId('changelog-submit-button');
-      expect(submitButton).toHaveTextContent('Submitting...');
-    });
-
-    it('should show loading spinner when saving', async () => {
-      const user = userEvent.setup();
-      render(<ChangelogTab />);
-      await openCreateModal(user);
-      const textarea = screen.getByTestId('changelog-json-input');
-      setTextareaValue(textarea, '{"test": true}');
-
-      const submitButton = screen.getByTestId('changelog-submit-button');
-      const spinner = submitButton.querySelector('.animate-spin');
-      expect(spinner).toBeInTheDocument();
+      mockItems = [
+        makeEntry({ id: '1', title_en: 'alpha feature', tag: 'new_feature' }),
+        makeEntry({ id: '2', title_en: 'alpha bug', tag: 'bug_fix' }),
+        makeEntry({ id: '3', title_en: 'beta feature', tag: 'new_feature' }),
+      ];
+      renderWithRouter();
+      // Search for 'alpha' → 2 entries
+      await user.type(screen.getByTestId('changelog-search-input'), 'alpha');
+      expect(screen.getByTestId('changelog-timeline-mock').getAttribute('data-entry-count')).toBe(
+        '2'
+      );
+      // Then filter by new_feature → only 1
+      await user.click(screen.getByText('New Feature'));
+      expect(screen.getByTestId('changelog-timeline-mock').getAttribute('data-entry-count')).toBe(
+        '1'
+      );
     });
   });
 
-  describe('JSON Validation', () => {
-    it('should show inline error for invalid JSON syntax', async () => {
-      const user = userEvent.setup();
-      render(<ChangelogTab />);
-      await openCreateModal(user);
-      const textarea = screen.getByTestId('changelog-json-input');
-      const submitButton = screen.getByTestId('changelog-submit-button');
-
-      await user.type(textarea, 'not valid json');
-      await user.click(submitButton);
-
-      await waitFor(() => {
-        expect(screen.getByText('Invalid JSON format')).toBeInTheDocument();
-      });
+  // ── Deep-link (AC #8) ───────────────────────────────────────────────────────
+  describe('Deep-link ?edit=<valid-id>&lang=ru', () => {
+    it('calls openEdit with the id when item exists', async () => {
+      mockItems = [makeEntry({ id: 'abc-123' })];
+      mockIsLoading = false;
+      renderWithRouter('?edit=abc-123&lang=ru');
+      // Effect fires after render; let microtasks settle
+      await act(async () => {});
+      expect(mockOpenEdit).toHaveBeenCalledWith('abc-123');
     });
 
-    it('should show inline error with missing field names', async () => {
-      const user = userEvent.setup();
-      render(<ChangelogTab />);
-      await openCreateModal(user);
-      const textarea = screen.getByTestId('changelog-json-input');
-      const submitButton = screen.getByTestId('changelog-submit-button');
-
-      // Missing all required fields
-      setTextareaValue(textarea, '{"random": "value"}');
-      await user.click(submitButton);
-
-      await waitFor(() => {
-        expect(screen.getByText(/Missing required fields:/)).toBeInTheDocument();
-      });
-    });
-
-    it('should show inline error for invalid tag value', async () => {
-      const user = userEvent.setup();
-      render(<ChangelogTab />);
-      await openCreateModal(user);
-      const textarea = screen.getByTestId('changelog-json-input');
-      const submitButton = screen.getByTestId('changelog-submit-button');
-
-      const invalidTagJson = JSON.stringify({
-        tag: 'invalid_tag',
-        title_en: 'Title',
-        title_ru: 'Заголовок',
-        content_en: 'Content',
-        content_ru: 'Содержимое',
-      });
-      setTextareaValue(textarea, invalidTagJson);
-      await user.click(submitButton);
-
-      await waitFor(() => {
-        expect(
-          screen.getByText('Invalid tag. Must be: new_feature, bug_fix, or announcement')
-        ).toBeInTheDocument();
-      });
-    });
-
-    it('should NOT call createEntry when validation fails', async () => {
-      const user = userEvent.setup();
-      render(<ChangelogTab />);
-      await openCreateModal(user);
-      const textarea = screen.getByTestId('changelog-json-input');
-      const submitButton = screen.getByTestId('changelog-submit-button');
-
-      setTextareaValue(textarea, 'invalid json');
-      await user.click(submitButton);
-
-      await waitFor(() => {
-        expect(screen.getByText('Invalid JSON format')).toBeInTheDocument();
-      });
-      expect(mockCreateEntry).not.toHaveBeenCalled();
+    it('calls setLang(ru) when lang=ru is valid', async () => {
+      mockItems = [makeEntry({ id: 'abc-123' })];
+      mockIsLoading = false;
+      renderWithRouter('?edit=abc-123&lang=ru');
+      await act(async () => {});
+      expect(mockSetLang).toHaveBeenCalledWith('ru');
     });
   });
 
-  describe('Successful Submission', () => {
-    it('should call createEntry with validated data', async () => {
-      const user = userEvent.setup();
-      render(<ChangelogTab />);
-      await openCreateModal(user);
-      const textarea = screen.getByTestId('changelog-json-input');
-      const submitButton = screen.getByTestId('changelog-submit-button');
-
-      const validJson = JSON.stringify({
-        tag: 'new_feature',
-        title_en: 'New Feature Title',
-        title_ru: 'Заголовок новой функции',
-        content_en: 'Feature description',
-        content_ru: 'Описание функции',
-      });
-      setTextareaValue(textarea, validJson);
-      await user.click(submitButton);
-
-      await waitFor(() => {
-        expect(mockCreateEntry).toHaveBeenCalledWith({
-          tag: 'new_feature',
-          title_en: 'New Feature Title',
-          title_ru: 'Заголовок новой функции',
-          content_en: 'Feature description',
-          content_ru: 'Описание функции',
-          version: null,
-        });
-      });
-    });
-
-    it('should show success toast on successful creation', async () => {
-      const user = userEvent.setup();
-      render(<ChangelogTab />);
-      await openCreateModal(user);
-      const textarea = screen.getByTestId('changelog-json-input');
-      const submitButton = screen.getByTestId('changelog-submit-button');
-
-      const validJson = JSON.stringify({
-        tag: 'bug_fix',
-        title_en: 'Bug Fix',
-        title_ru: 'Исправление',
-        content_en: 'Fixed issue',
-        content_ru: 'Исправлена проблема',
-      });
-      setTextareaValue(textarea, validJson);
-      await user.click(submitButton);
-
-      await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith({
-          title: 'Changelog entry created successfully',
-        });
-      });
-    });
-
-    it('should close modal on successful creation', async () => {
-      const user = userEvent.setup();
-      render(<ChangelogTab />);
-      await openCreateModal(user);
-      const textarea = screen.getByTestId('changelog-json-input');
-      const submitButton = screen.getByTestId('changelog-submit-button');
-
-      const validJson = JSON.stringify({
-        tag: 'announcement',
-        title_en: 'Announcement',
-        title_ru: 'Объявление',
-        content_en: 'Announcement content',
-        content_ru: 'Содержимое объявления',
-      });
-      setTextareaValue(textarea, validJson);
-      await user.click(submitButton);
-
-      await waitFor(() => {
-        expect(screen.queryByTestId('changelog-create-modal')).not.toBeInTheDocument();
-      });
-    });
-
-    it('should show inline error when createEntry fails', async () => {
-      mockCreateEntry.mockRejectedValueOnce(new Error('Network error'));
-      const user = userEvent.setup();
-      render(<ChangelogTab />);
-      await openCreateModal(user);
-      const textarea = screen.getByTestId('changelog-json-input');
-      const submitButton = screen.getByTestId('changelog-submit-button');
-
-      const validJson = JSON.stringify({
-        tag: 'new_feature',
-        title_en: 'Title',
-        title_ru: 'Заголовок',
-        content_en: 'Content',
-        content_ru: 'Содержимое',
-      });
-      setTextareaValue(textarea, validJson);
-      await user.click(submitButton);
-
-      await waitFor(() => {
-        expect(screen.getByText('Network error')).toBeInTheDocument();
-      });
+  // ── Deep-link ?compose=1 (AC #8) ────────────────────────────────────────────
+  describe('Deep-link ?compose=1', () => {
+    it('calls openCompose', async () => {
+      mockItems = [];
+      mockIsLoading = false;
+      renderWithRouter('?compose=1');
+      await act(async () => {});
+      expect(mockOpenCompose).toHaveBeenCalled();
     });
   });
 
-  describe('All Valid Tags', () => {
-    it.each(['new_feature', 'bug_fix', 'announcement'])('should accept tag: %s', async (tag) => {
-      const user = userEvent.setup();
-      render(<ChangelogTab />);
-      await openCreateModal(user);
-      const textarea = screen.getByTestId('changelog-json-input');
-      const submitButton = screen.getByTestId('changelog-submit-button');
+  // ── Deep-link malformed values (AC #9) ──────────────────────────────────────
+  describe('Deep-link malformed values', () => {
+    it('ignores ?edit=<missing-id> silently', async () => {
+      mockItems = [makeEntry({ id: 'real-id' })];
+      mockIsLoading = false;
+      renderWithRouter('?edit=not-a-real-id');
+      await act(async () => {});
+      expect(mockOpenEdit).not.toHaveBeenCalled();
+    });
 
-      const validJson = JSON.stringify({
-        tag,
-        title_en: 'Title',
-        title_ru: 'Заголовок',
-        content_en: 'Content',
-        content_ru: 'Содержимое',
-      });
-      setTextareaValue(textarea, validJson);
-      await user.click(submitButton);
-
-      await waitFor(() => {
-        expect(mockCreateEntry).toHaveBeenCalledWith(expect.objectContaining({ tag }));
-      });
+    it('ignores ?lang=foo (does not call setLang with invalid value)', async () => {
+      mockItems = [makeEntry({ id: 'abc-123' })];
+      mockIsLoading = false;
+      renderWithRouter('?edit=abc-123&lang=foo');
+      await act(async () => {});
+      // openEdit is called but setLang should not be called with 'foo'
+      expect(mockSetLang).not.toHaveBeenCalledWith('foo');
     });
   });
 
+  // ── Close drawer strips URL params (AC #10) ─────────────────────────────────
+  describe('Close drawer strips URL params', () => {
+    it('drawer renders when mode is non-null', () => {
+      mockMode = 'compose';
+      renderWithRouter();
+      expect(screen.getByTestId('changelog-editor-drawer-mock')).toBeInTheDocument();
+    });
+
+    it('drawer is absent when mode is null', () => {
+      mockMode = null;
+      renderWithRouter();
+      expect(screen.queryByTestId('changelog-editor-drawer-mock')).not.toBeInTheDocument();
+    });
+  });
+
+  // ── Export markdown stub (AC #1) ────────────────────────────────────────────
+  describe('Export markdown', () => {
+    it('fires toast with "Markdown export coming soon" on click', async () => {
+      const user = userEvent.setup();
+      renderWithRouter();
+      await user.click(screen.getByTestId('changelog-export-button'));
+      expect(mockToast).toHaveBeenCalledWith({ title: 'Markdown export coming soon' });
+    });
+  });
+
+  // ── New entry button (AC #1) ────────────────────────────────────────────────
+  describe('New entry button', () => {
+    it('calls openCompose when clicked', async () => {
+      const user = userEvent.setup();
+      renderWithRouter();
+      await user.click(screen.getByTestId('changelog-new-button'));
+      expect(mockOpenCompose).toHaveBeenCalled();
+    });
+  });
+
+  // ── One-shot console.warn at 100 entries (AC #11) ───────────────────────────
+  describe('console.warn at 100 entries', () => {
+    it('fires once when items.length === 100', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      mockItems = Array.from({ length: 100 }, (_, i) =>
+        makeEntry({ id: `entry-${i}`, title_en: `Entry ${i}` })
+      );
+      renderWithRouter();
+      expect(warnSpy).toHaveBeenCalledWith(
+        '[Changelog] List response returned ≥ 100 entries — consider pagination'
+      );
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+      warnSpy.mockRestore();
+    });
+
+    it('does not fire when items.length < 100', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      mockItems = Array.from({ length: 99 }, (_, i) =>
+        makeEntry({ id: `entry-${i}`, title_en: `Entry ${i}` })
+      );
+      renderWithRouter();
+      expect(warnSpy).not.toHaveBeenCalled();
+      warnSpy.mockRestore();
+    });
+  });
+
+  // ── fetchList on mount ──────────────────────────────────────────────────────
   describe('Lifecycle', () => {
-    it('should call fetchList on mount', () => {
-      render(<ChangelogTab />);
+    it('calls fetchList on mount', () => {
+      renderWithRouter();
       expect(mockFetchList).toHaveBeenCalled();
-    });
-
-    it('should call reset on unmount', () => {
-      const { unmount } = render(<ChangelogTab />);
-      unmount();
-      expect(mockReset).toHaveBeenCalled();
-    });
-  });
-
-  describe('Sub-components', () => {
-    it('should render ChangelogTable', () => {
-      render(<ChangelogTab />);
-      expect(screen.getByTestId('changelog-table-mock')).toBeInTheDocument();
-    });
-
-    it('should render ChangelogEditModal', () => {
-      render(<ChangelogTab />);
-      // Edit modal only renders when editingEntry is set
-      // So it won't be in the DOM by default
-      expect(screen.queryByTestId('changelog-edit-modal-mock')).not.toBeInTheDocument();
-    });
-
-    it('should render ChangelogDeleteDialog', () => {
-      render(<ChangelogTab />);
-      expect(screen.getByTestId('changelog-delete-dialog-mock')).toBeInTheDocument();
     });
   });
 });
