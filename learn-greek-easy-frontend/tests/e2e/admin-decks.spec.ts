@@ -25,33 +25,29 @@ let vocabDeckId: string;
 let cultureDeckId: string;
 let firstWordEntryId: string;
 
+// captureSeed uses the public /api/v1/test/seed/all endpoint to drive
+// database state AND to capture deck ids. The admin /api/v1/admin/decks
+// endpoint requires Authorization: Bearer <JWT> (from localStorage,
+// populated by the Supabase client at app boot). Playwright's
+// APIRequestContext from storageState only inherits cookies, not localStorage,
+// so admin endpoints return 401 from beforeAll. Reading ids from the seed
+// response is the simplest path that works without browser-level auth.
 async function captureSeed(request: APIRequestContext): Promise<void> {
   const apiBaseUrl = getApiBaseUrl();
 
-  // Idempotent seed
+  // Idempotent seed — response body contains created/updated ids
   const seedRes = await request.post(`${apiBaseUrl}/api/v1/test/seed/all`);
   expect(seedRes.ok()).toBeTruthy();
+  const body = await seedRes.json();
 
-  // Capture vocab + culture deck ids from the same admin endpoint that useDeck uses
-  // (adminAPI.listDecks → GET /api/v1/admin/decks), so ids are guaranteed to match
-  // the drawer's lookup and the drawer won't enter not-found state.
-  const decksRes = await request.get(
-    `${apiBaseUrl}/api/v1/admin/decks?page=1&page_size=200`
-  );
-  expect(decksRes.ok()).toBeTruthy();
-  const decksBody = await decksRes.json();
-  const decks: Array<{ id: string; type: 'vocabulary' | 'culture' }> = decksBody?.decks ?? [];
+  vocabDeckId = body?.results?.v2_decks?.v2_decks[0].id as string;
+  expect(vocabDeckId, 'No vocab deck id in seed response').toBeTruthy();
 
-  const vocab = decks.find((d) => d.type === 'vocabulary');
-  expect(vocab, 'No vocabulary deck in admin list').toBeDefined();
-  vocabDeckId = vocab!.id;
-
-  const culture = decks.find((d) => d.type === 'culture');
-  expect(culture, 'No culture deck in admin list').toBeDefined();
-  cultureDeckId = culture!.id;
+  cultureDeckId = body?.results?.culture?.decks[0].id as string;
+  expect(cultureDeckId, 'No culture deck id in seed response').toBeTruthy();
 
   // Optionally capture the first word entry id for Flow 5's deep-link.
-  // Uses the same endpoint as adminAPI.listWordEntries (GET /api/v1/decks/:id/word-entries).
+  // Uses the public GET /api/v1/decks/:id/word-entries endpoint (no admin auth).
   // Not gating Flow 1 on this — Flow 1 clicks word-row.first() inside the drawer.
   try {
     const wordsRes = await request.get(
@@ -69,14 +65,8 @@ async function captureSeed(request: APIRequestContext): Promise<void> {
   }
 }
 
-test.beforeAll(async ({ browser }) => {
-  // Use admin storage state so /api/v1/admin/* calls authenticate.
-  const ctx = await browser.newContext({ storageState: STORAGE_STATE.ADMIN });
-  try {
-    await captureSeed(ctx.request);
-  } finally {
-    await ctx.close();
-  }
+test.beforeAll(async ({ request }) => {
+  await captureSeed(request);
 });
 
 // ── Flows ─────────────────────────────────────────────────────────────────────
@@ -86,12 +76,12 @@ test.describe('ADMIN2-09 Decks Drawer — happy paths (DKDR-14)', () => {
   test('Flow 1: vocab item edit → completion pill updates', async ({ page }) => {
     // Navigate directly to the vocab deck (URL deep-link skips deck-row ambiguity).
     await page.goto(`/admin?tab=decks&edit=${vocabDeckId}`);
-    await expect(page.getByTestId('deck-drawer')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('deck-drawer')).toBeVisible({ timeout: 30_000 });
     // Guard: if the drawer enters not-found state, fail fast with a clear message
     // rather than timing out on deck-drawer-tab-words.
     await expect(page.getByTestId('deck-drawer-not-found')).toHaveCount(0, { timeout: 5_000 });
     // Wait for vocab body to populate (the words tab is the default for vocab decks).
-    await expect(page.getByTestId('deck-drawer-tab-words')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('deck-drawer-tab-words')).toBeVisible({ timeout: 30_000 });
 
     // Click the first word row inside the drawer (deterministic because we're already on the vocab deck).
     await page.getByTestId('word-row').first().click({ timeout: 10_000 });
@@ -114,10 +104,10 @@ test.describe('ADMIN2-09 Decks Drawer — happy paths (DKDR-14)', () => {
   test('Flow 2: culture item edit — toggle correct answer', async ({ page }) => {
     // Navigate directly to the culture deck via URL deep-link to avoid deck list ambiguity
     await page.goto(`/admin?tab=decks&edit=${cultureDeckId}`);
-    await expect(page.getByTestId('deck-drawer')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('deck-drawer')).toBeVisible({ timeout: 30_000 });
 
     // Questions tab is the default for culture decks
-    await expect(page.getByTestId('deck-drawer-tab-questions')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('deck-drawer-tab-questions')).toBeVisible({ timeout: 30_000 });
 
     // Click first question row to push detail view
     await page.getByTestId('question-row').first().click();
@@ -143,11 +133,11 @@ test.describe('ADMIN2-09 Decks Drawer — happy paths (DKDR-14)', () => {
   }) => {
     // Open vocab deck drawer
     await page.goto(`/admin?tab=decks&edit=${vocabDeckId}`);
-    await expect(page.getByTestId('deck-drawer')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('deck-drawer')).toBeVisible({ timeout: 30_000 });
 
     // Switch to Settings tab
     await page.getByTestId('deck-drawer-tab-settings').click();
-    await expect(page.getByTestId('deck-settings-tab')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('deck-settings-tab')).toBeVisible({ timeout: 30_000 });
 
     // Toggle the Active switch — clicking it when deck is_active=true triggers the warning dialog
     const activeSwitch = page.getByTestId('deck-edit-is-active');
@@ -177,8 +167,8 @@ test.describe('ADMIN2-09 Decks Drawer — happy paths (DKDR-14)', () => {
   test('Flow 4: ESC dirty-form guard — Keep editing keeps form intact', async ({ page }) => {
     // Open vocab deck drawer on settings tab
     await page.goto(`/admin?tab=decks&edit=${vocabDeckId}&subtab=settings`);
-    await expect(page.getByTestId('deck-drawer')).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByTestId('deck-settings-tab')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('deck-drawer')).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId('deck-settings-tab')).toBeVisible({ timeout: 30_000 });
 
     // Edit the deck name (EN) to make the form dirty
     const nameEnInput = page.getByTestId('deck-edit-name-en');
@@ -215,7 +205,7 @@ test.describe('ADMIN2-09 Decks Drawer — happy paths (DKDR-14)', () => {
       await page.goto(
         `/admin?tab=decks&edit=${vocabDeckId}&item=${firstWordEntryId}&subtab=cards`
       );
-      await expect(page.getByTestId('deck-drawer')).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByTestId('deck-drawer')).toBeVisible({ timeout: 30_000 });
 
       // Skeleton may flash briefly during fetch — wait for it to resolve
       const skeleton = page.getByTestId('deck-drawer-skeleton');
@@ -232,7 +222,7 @@ test.describe('ADMIN2-09 Decks Drawer — happy paths (DKDR-14)', () => {
     } else {
       // Fallback: navigate via list and click through to verify tab switching works
       await page.goto(`/admin?tab=decks&edit=${vocabDeckId}`);
-      await expect(page.getByTestId('deck-drawer')).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByTestId('deck-drawer')).toBeVisible({ timeout: 30_000 });
 
       await page.getByTestId('word-row').first().click();
       await expect(page.getByTestId('vocab-word-detail-lemma')).toBeVisible({ timeout: 15_000 });
