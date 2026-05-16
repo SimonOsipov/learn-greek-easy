@@ -1662,6 +1662,18 @@
         "regenerate": "Regenerate",
         "playAria": "Play {{level}} narration",
         "pauseAria": "Pause {{level}} narration"
+      },
+      "exercises": {
+        "source": {
+          "dialog": "From dialog",
+          "description": "From description",
+          "picture": "From picture"
+        },
+        "generateFrom": "Generate from {{source}}",
+        "empty": {
+          "title": "No exercises yet",
+          "cta": "Generate exercises"
+        }
       }
     }
   },

@@ -1590,6 +1590,18 @@
         "regenerate": "Перегенерировать",
         "playAria": "Воспроизвести нарратив {{level}}",
         "pauseAria": "Пауза нарратива {{level}}"
+      },
+      "exercises": {
+        "source": {
+          "dialog": "Из диалога",
+          "description": "Из описания",
+          "picture": "Из картинки"
+        },
+        "generateFrom": "Генерировать из {{source}}",
+        "empty": {
+          "title": "Упражнений пока нет",
+          "cta": "Генерировать упражнения"
+        }
       }
     }
   },
