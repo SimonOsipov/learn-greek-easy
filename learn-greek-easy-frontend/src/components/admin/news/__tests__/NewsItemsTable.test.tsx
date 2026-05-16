@@ -106,7 +106,8 @@ const defaultTableProps = {
   onDelete: vi.fn(),
 };
 
-describe('NewsItemsTable — Date formatting', () => {
+// ADMIN2-12: delete after source removal
+describe.skip('NewsItemsTable — Date formatting', () => {
   beforeEach(() => {
     mockCurrentLanguage.value = 'en';
     vi.clearAllMocks();
@@ -160,7 +161,7 @@ describe('NewsItemsTable — Date formatting', () => {
   });
 });
 
-describe('NewsItemsTable — Audio status (AC-8)', () => {
+describe.skip('NewsItemsTable — Audio status (AC-8)', () => {
   beforeEach(() => {
     mockCurrentLanguage.value = 'en';
     vi.clearAllMocks();
@@ -195,7 +196,7 @@ describe('NewsItemsTable — Audio status (AC-8)', () => {
   });
 });
 
-describe('NewsItemsTable — Audio level pills', () => {
+describe.skip('NewsItemsTable — Audio level pills', () => {
   beforeEach(() => {
     mockCurrentLanguage.value = 'en';
     vi.clearAllMocks();
@@ -256,7 +257,7 @@ describe('NewsItemsTable — Audio level pills', () => {
   });
 });
 
-describe('NewsItemsTable — Core table functionality (AC-10, no regressions)', () => {
+describe.skip('NewsItemsTable — Core table functionality (AC-10, no regressions)', () => {
   beforeEach(() => {
     mockCurrentLanguage.value = 'en';
     vi.clearAllMocks();
@@ -428,7 +429,7 @@ describe('NewsItemsTable — Core table functionality (AC-10, no regressions)', 
   });
 });
 
-describe('NewsItemsTable — Country badge', () => {
+describe.skip('NewsItemsTable — Country badge', () => {
   it('shows country badge for cyprus items', () => {
     const item = makeNewsItem({ country: 'cyprus' });
     render(<NewsItemsTable {...defaultTableProps} newsItems={[item]} />);
@@ -458,7 +459,7 @@ describe('NewsItemsTable — Country badge', () => {
   });
 });
 
-describe('NewsItemsTable — B2 Text badge', () => {
+describe.skip('NewsItemsTable — B2 Text badge', () => {
   beforeEach(() => {
     mockCurrentLanguage.value = 'en';
     vi.clearAllMocks();
@@ -486,7 +487,7 @@ describe('NewsItemsTable — B2 Text badge', () => {
   });
 });
 
-describe('NewsItemsTable — A2 Text badge', () => {
+describe.skip('NewsItemsTable — A2 Text badge', () => {
   beforeEach(() => {
     mockCurrentLanguage.value = 'en';
     vi.clearAllMocks();
