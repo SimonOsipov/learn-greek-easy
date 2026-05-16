@@ -63,7 +63,12 @@ async function navigateToAdminNewsTab(page: Page): Promise<void> {
 // Admin Tests
 // =====================
 
-test.describe('News Feed - Admin Tests', () => {
+// ADMIN2-12: delete after V1 source removal
+// These tests target the V1 admin News UI (NewsItemsTable + NewsItemEditModal +
+// NewsItemCreateModal JSON entry). NEWS-05 replaced that UI with a card grid
+// + drawer. ADMIN2-12 will delete the V1 source files; this describe gets
+// removed then. The new admin-news.spec.ts (NEWS-10) covers the v2 surface.
+test.describe.skip('News Feed - Admin Tests', () => {
   // Use admin authentication
   test.use({ storageState: 'playwright/.auth/admin.json' });
 

@@ -469,9 +469,21 @@
     }
   },
   "news": {
+    "title": "News",
+    "kicker": "Admin · News",
+    "subtitle": "{{total}} articles · {{audio}}/{{total}} with B2+A2 audio · {{pending}} awaiting B1",
+    "comingSoon": "Coming soon",
     "stats": {
       "total": "Total News",
-      "withAudio": "With Audio"
+      "withAudio": "With Audio",
+      "b1Coverage": "B1 coverage",
+      "countries": "Countries",
+      "allTime": "All time",
+      "recentThisWeek": "+{{count}} this week"
+    },
+    "actions": {
+      "importRss": "Import RSS",
+      "new": "+ New article"
     },
     "create": {
       "title": "Create News Item",
@@ -570,6 +582,78 @@
     "sections": {
       "newsItems": "News Items",
       "newsItemsDescription": "Manage existing news items"
+    },
+    "drawer": {
+      "title": "Edit article",
+      "tabs": {
+        "translations": "Translations",
+        "body": "Body",
+        "audio": "Audio · 3 levels",
+        "image": "Image",
+        "linkedSituation": "Linked situation"
+      },
+      "save": "Save & close",
+      "saving": "Saving…",
+      "cancel": "Cancel",
+      "regenerateTranslations": "Regenerate translations",
+      "allChecksPassed": "All checks passed",
+      "updatedRelative": "Updated {{relative}}",
+      "published": "Published",
+      "publishedOn": "Published {{date}}",
+      "linkedSituationLabel": "Linked situation",
+      "dirty": {
+        "title": "Unsaved changes",
+        "body": "You have unsaved changes. Save before leaving?",
+        "saveAndContinue": "Save & continue",
+        "discardAndContinue": "Discard & continue",
+        "cancel": "Cancel"
+      },
+      "country": {
+        "cyprus": "Cyprus",
+        "greece": "Greece",
+        "world": "World"
+      },
+      "audio": {
+        "b2Narration": "B2 narration",
+        "a2Narration": "A2 narration",
+        "b1Narration": "B1 narration",
+        "generatedFrom": "Generated · ElevenLabs · Greek female voice — last {{date}}",
+        "notGeneratedYet": "Not generated yet",
+        "b1NotShipping": "Not generated yet — B1 audio shipping with NLVL-B1",
+        "regenerate": "Regenerate",
+        "playLabel": "Play {{level}} narration",
+        "pauseLabel": "Pause {{level}} narration"
+      },
+      "translations": {
+        "titleEn": "Title — English",
+        "titleEl": "Τίτλος — Ελληνικά",
+        "titleRu": "Заголовок — Русский",
+        "hintEn": "Source language",
+        "hintEl": "Greek translation · used in the app",
+        "hintRu": "Russian translation · for fallback explanations"
+      },
+      "body": {
+        "greekBody": "Greek body",
+        "titleB2": "Title — B2 (Greek)",
+        "titleB2Hint": "This title doubles as the B2 scenario summary today. A dedicated scenario field is on the roadmap.",
+        "scenarioA2": "Scenario — A2 (Greek)"
+      },
+      "image": {
+        "kicker": "Source image",
+        "helper": "Enter a URL to replace the current image. The original source URL is not stored after upload.",
+        "sourceUrl": "Source image URL",
+        "altText": "Alt text — English",
+        "photoCredit": "Photo credit",
+        "invalidUrl": "Image URL is not valid"
+      },
+      "linkedSituation": {
+        "kicker": "Linked situation",
+        "helper": "Every news item can spawn one scenario-based dialog. Learners practice the vocabulary in context after reading.",
+        "emptyText": "No situation linked to this article yet.",
+        "generate": "Generate situation from this article",
+        "unlink": "Unlink",
+        "regenerate": "Regenerate from this article"
+      }
     }
   },
   "feedback": {

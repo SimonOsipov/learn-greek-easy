@@ -200,7 +200,12 @@ test.describe('MCNEWS - Dashboard Shows Pills Without Filter', () => {
 // Admin: Create/Edit with Country
 // ============================================================================
 
-test.describe('MCNEWS - Admin Country Management', () => {
+// ADMIN2-12: delete after V1 source removal
+// These tests target the V1 admin News UI (table + create modal + country
+// dropdown). NEWS-03/04/05 replaced those with SegControl + card grid; the
+// new flow is covered by admin-news.spec.ts (NEWS-10). Public Pills tests
+// above stay live since the learner surface didn't change.
+test.describe.skip('MCNEWS - Admin Country Management', () => {
   test.use({ storageState: 'playwright/.auth/admin.json' });
 
   let e2eDeckId: string;

@@ -84,6 +84,20 @@ export interface ValidationFailure {
 export type ValidationResult = ValidationSuccess | ValidationFailure;
 
 /**
+ * Validates that the A2 fields (scenario_el_a2 and text_el_a2) are either
+ * both present or both absent — they must be paired.
+ */
+export function validateA2Pair(args: {
+  scenarioA2: string | null;
+  textA2: string | null;
+}): { valid: true } | { valid: false; messageKey: 'news.validation.a2FieldsPaired' } {
+  if ((args.scenarioA2 !== null) !== (args.textA2 !== null)) {
+    return { valid: false, messageKey: 'news.validation.a2FieldsPaired' };
+  }
+  return { valid: true };
+}
+
+/**
  * Validates JSON input for news item creation.
  */
 export function validateNewsItemJson(jsonString: string): ValidationResult {
@@ -184,12 +198,13 @@ export function validateNewsItemJson(jsonString: string): ValidationResult {
       ? (parsed.text_el_a2 as string)
       : null;
 
-  if ((scenarioA2 !== null) !== (textA2 !== null)) {
+  const a2Result = validateA2Pair({ scenarioA2, textA2 });
+  if (!a2Result.valid) {
     return {
       valid: false,
       error: {
         type: 'a2FieldsPaired',
-        messageKey: 'news.validation.a2FieldsPaired',
+        messageKey: a2Result.messageKey,
       },
     };
   }

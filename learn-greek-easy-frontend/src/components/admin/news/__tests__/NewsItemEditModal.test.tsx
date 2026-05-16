@@ -98,7 +98,8 @@ function makeNewsItem(overrides: Partial<NewsItemResponse> = {}): NewsItemRespon
   };
 }
 
-describe('NewsItemEditModal — Core rendering', () => {
+// ADMIN2-12: delete after source removal
+describe.skip('NewsItemEditModal — Core rendering', () => {
   beforeEach(() => {
     mockCurrentLanguage.value = 'en';
     vi.clearAllMocks();
@@ -160,7 +161,7 @@ describe('NewsItemEditModal — Core rendering', () => {
   });
 });
 
-describe('NewsItemEditModal — Country field in JSON', () => {
+describe.skip('NewsItemEditModal — Country field in JSON', () => {
   it('JSON textarea includes country field pre-filled', async () => {
     const item = makeNewsItem({ country: 'greece' });
     render(<NewsItemEditModal open={true} onOpenChange={vi.fn()} item={item} />);
