@@ -24,6 +24,7 @@ import { CultureDrawerBody } from './CultureDrawerBody';
 import { DeckDrawerSkeleton } from './DeckDrawerSkeleton';
 import { DeckSettingsTab } from './DeckSettingsTab';
 import { VocabDrawerBody } from './VocabDrawerBody';
+import { VocabWordDetail } from './VocabWordDetail';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -239,27 +240,29 @@ export function DeckDrawer() {
               </div>
             </SidePanel.Header>
 
-            {/* Tab triggers */}
-            <SidePanel.Tabs>
-              <TabsList className="w-full justify-start">
-                {!isCulture && (
-                  <TabsTrigger value="words" data-testid="deck-drawer-tab-words">
-                    {t('decks.drawer.tabs.words')}
+            {/* Tab triggers — hidden while a word/question detail is pushed */}
+            {!itemId && (
+              <SidePanel.Tabs>
+                <TabsList className="w-full justify-start">
+                  {!isCulture && (
+                    <TabsTrigger value="words" data-testid="deck-drawer-tab-words">
+                      {t('decks.drawer.tabs.words')}
+                    </TabsTrigger>
+                  )}
+                  {isCulture && (
+                    <TabsTrigger value="questions" data-testid="deck-drawer-tab-questions">
+                      {t('decks.drawer.tabs.questions')}
+                    </TabsTrigger>
+                  )}
+                  <TabsTrigger value="settings" data-testid="deck-drawer-tab-settings">
+                    {t('decks.drawer.tabs.settings')}
                   </TabsTrigger>
-                )}
-                {isCulture && (
-                  <TabsTrigger value="questions" data-testid="deck-drawer-tab-questions">
-                    {t('decks.drawer.tabs.questions')}
+                  <TabsTrigger value="activity" data-testid="deck-drawer-tab-activity">
+                    {t('decks.drawer.tabs.activity')}
                   </TabsTrigger>
-                )}
-                <TabsTrigger value="settings" data-testid="deck-drawer-tab-settings">
-                  {t('decks.drawer.tabs.settings')}
-                </TabsTrigger>
-                <TabsTrigger value="activity" data-testid="deck-drawer-tab-activity">
-                  {t('decks.drawer.tabs.activity')}
-                </TabsTrigger>
-              </TabsList>
-            </SidePanel.Tabs>
+                </TabsList>
+              </SidePanel.Tabs>
+            )}
 
             {/* Tab content — inside SidePanel.Body for scrolling */}
             <SidePanel.Body>
@@ -267,9 +270,7 @@ export function DeckDrawer() {
               {!isCulture && (
                 <TabsContent value="words">
                   {itemId ? (
-                    <div data-testid="deck-drawer-item-detail-placeholder">
-                      Item detail will be implemented in DKDR-11/13
-                    </div>
+                    <VocabWordDetail deck={deck} itemId={itemId} />
                   ) : (
                     <VocabDrawerBody deck={deck} />
                   )}
@@ -302,8 +303,9 @@ export function DeckDrawer() {
               </TabsContent>
             </SidePanel.Body>
 
-            {/* Footer slot — populated by DeckSettingsTab via context */}
-            {footer && (
+            {/* Footer slot — populated by DeckSettingsTab via context.
+                Hidden while a word/question detail is pushed (?item= present). */}
+            {footer && !itemId && (
               <div data-testid="deck-drawer-footer" className="flex-none">
                 {footer}
               </div>
