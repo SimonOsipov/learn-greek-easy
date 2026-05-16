@@ -645,6 +645,14 @@
         "altText": "Alt text — English",
         "photoCredit": "Photo credit",
         "invalidUrl": "Image URL is not valid"
+      },
+      "linkedSituation": {
+        "kicker": "Linked situation",
+        "helper": "Every news item can spawn one scenario-based dialog. Learners practice the vocabulary in context after reading.",
+        "emptyText": "No situation linked to this article yet.",
+        "generate": "Generate situation from this article",
+        "unlink": "Unlink",
+        "regenerate": "Regenerate from this article"
       }
     }
   },

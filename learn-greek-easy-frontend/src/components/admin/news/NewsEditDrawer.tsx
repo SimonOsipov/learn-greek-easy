@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/ui/side-panel';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from '@/hooks/use-toast';
+import { useAdminTabNav } from '@/hooks/useAdminTabNav';
 import { adminAPI, type NewsItemResponse, type NewsItemUpdate } from '@/services/adminAPI';
 import { useAdminNewsStore } from '@/stores/adminNewsStore';
 
@@ -36,12 +37,16 @@ export const NewsEditDrawer: React.FC = () => {
   const { t, i18n } = useTranslation('admin');
   const [, setSearchParams] = useSearchParams();
   const { drawerItemId, closeDrawer, newsItems } = useAdminNewsStore();
+  const tabNav = useAdminTabNav();
   const item: NewsItemResponse | null = drawerItemId
     ? (newsItems.find((i) => i.id === drawerItemId) ?? null)
     : null;
 
   const [activeTab, setActiveTab] = useState<NewsDrawerTab>('translations');
   const [dirtyDialogOpen, setDirtyDialogOpen] = useState<null | 'close' | 'cancel'>(null);
+  const [pendingQuickJumpSituationId, setPendingQuickJumpSituationId] = useState<string | null>(
+    null
+  );
 
   const form = useForm<NewsDrawerFormData>({ mode: 'onBlur', defaultValues: toDefaults(item) });
 
@@ -120,6 +125,25 @@ export const NewsEditDrawer: React.FC = () => {
     closeAndClearUrl();
   }, [closeAndClearUrl]);
 
+  const performQuickJump = useCallback(
+    (situationId: string) => {
+      closeDrawer();
+      tabNav.openIn('situations', { edit: situationId });
+    },
+    [closeDrawer, tabNav]
+  );
+
+  const requestQuickJump = useCallback(
+    (situationId: string) => {
+      if (form.formState.isDirty) {
+        setPendingQuickJumpSituationId(situationId);
+      } else {
+        performQuickJump(situationId);
+      }
+    },
+    [form.formState.isDirty, performQuickJump]
+  );
+
   if (!item) return null;
 
   const titleInLang = pickByLang(item, i18n.language);
@@ -186,7 +210,9 @@ export const NewsEditDrawer: React.FC = () => {
             {activeTab === 'body' && <NewsEditDrawerBody item={item} />}
             {activeTab === 'audio' && <NewsEditDrawerAudio item={item} />}
             {activeTab === 'image' && <NewsEditDrawerImage item={item} />}
-            {activeTab === 'linkedSituation' && <NewsEditDrawerLinkedSituation item={item} />}
+            {activeTab === 'linkedSituation' && (
+              <NewsEditDrawerLinkedSituation item={item} onRequestQuickJump={requestQuickJump} />
+            )}
           </FormProvider>
         </SidePanel.Body>
 
@@ -230,6 +256,30 @@ export const NewsEditDrawer: React.FC = () => {
         cancelText={t('news.drawer.dirty.discardAndContinue')}
         onConfirm={handleDirtyConfirm}
         onCancel={handleDirtyDiscard}
+      />
+
+      <ConfirmDialog
+        open={pendingQuickJumpSituationId !== null}
+        onOpenChange={(o) => {
+          if (!o) setPendingQuickJumpSituationId(null);
+        }}
+        title={t('news.drawer.dirty.title')}
+        description={t('news.drawer.dirty.body')}
+        confirmText={t('news.drawer.dirty.saveAndContinue')}
+        cancelText={t('news.drawer.dirty.discardAndContinue')}
+        onConfirm={async () => {
+          if (pendingQuickJumpSituationId) {
+            await handleSave();
+            performQuickJump(pendingQuickJumpSituationId);
+          }
+        }}
+        onCancel={() => {
+          if (pendingQuickJumpSituationId) {
+            const id = pendingQuickJumpSituationId;
+            setPendingQuickJumpSituationId(null);
+            performQuickJump(id);
+          }
+        }}
       />
     </TooltipProvider>
   );
