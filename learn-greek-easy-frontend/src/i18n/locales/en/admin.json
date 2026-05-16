@@ -1615,6 +1615,33 @@
       "delete": "Delete situation",
       "generateFromNews": "Generate from news",
       "newSituation": "+ New situation"
+    },
+    "drawer": {
+      "loading": "Loading…",
+      "breadcrumb": {
+        "fallback": "Situations"
+      },
+      "exercisesCount": "{{n}} exercises",
+      "regenerateScenario": "Regenerate scenario",
+      "closeAria": "Close drawer",
+      "tabs": {
+        "dialog": "Dialog · {{count}} lines",
+        "description": "Description",
+        "picture": "Picture",
+        "exercises": "Exercises · {{count}}",
+        "linkedNews": "Linked news"
+      },
+      "footer": {
+        "allChecksPassed": "All checks passed",
+        "updatedRelative": "Updated {{relative}}",
+        "cancel": "Cancel",
+        "saveAndClose": "Save & close",
+        "saving": "Saving…"
+      },
+      "save": {
+        "success": "Situation updated",
+        "error": "Failed to update situation"
+      }
     }
   },
   "adminExercises": {
