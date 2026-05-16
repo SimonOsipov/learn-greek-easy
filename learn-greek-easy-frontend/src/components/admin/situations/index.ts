@@ -7,3 +7,4 @@ export { SituationCard, pickSitTone } from './SituationCard';
 export type { SituationCardProps, SitTone } from './SituationCard';
 export { SituationGrid } from './SituationGrid';
 export type { SituationGridProps } from './SituationGrid';
+export { SituationDrawer } from './SituationDrawer';

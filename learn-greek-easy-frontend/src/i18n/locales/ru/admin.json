@@ -1314,11 +1314,34 @@
   "situations": {
     "title": "Ситуации",
     "description": "Управление разговорными ситуациями для упражнений",
+    "pageHead": {
+      "breadcrumb": "Ситуации",
+      "kicker": "Админ · Ситуации",
+      "title": "Разговорные ситуации",
+      "subtitle": "{{total}} сценариев · {{draft}} черновик · {{ready}} готово"
+    },
     "stats": {
       "total": "Всего ситуаций",
       "status": {
         "draft": "Черновик",
         "ready": "Готово"
+      },
+      "totalSituations": {
+        "title": "Всего ситуаций",
+        "sub": "{{total}} сценариев"
+      },
+      "readyToShip": {
+        "title": "Готово к выпуску",
+        "sub": "{{percent}}% каталога · {{ready}} / {{total}}"
+      },
+      "draftsToFinish": {
+        "title": "Черновики",
+        "subPending": "{{draft}} ожидают завершения",
+        "subDone": "Все сценарии готовы"
+      },
+      "exercisesGenerated": {
+        "title": "Упражнений создано",
+        "sub": "по всем источникам"
       }
     },
     "search": {
@@ -1517,7 +1540,9 @@
     },
     "actions": {
       "edit": "Edit situation",
-      "delete": "Delete situation"
+      "delete": "Delete situation",
+      "generateFromNews": "Сгенерировать из новостей",
+      "newSituation": "+ Новая ситуация"
     }
   },
   "adminExercises": {

@@ -1386,11 +1386,34 @@
   "situations": {
     "title": "Situations",
     "description": "Manage conversation situations for practice exercises",
+    "pageHead": {
+      "breadcrumb": "Situations",
+      "kicker": "Admin · Situations",
+      "title": "Conversation situations",
+      "subtitle": "{{total}} scenarios · {{draft}} draft · {{ready}} ready"
+    },
     "stats": {
       "total": "Total Situations",
       "status": {
         "draft": "Draft",
         "ready": "Ready"
+      },
+      "totalSituations": {
+        "title": "Total situations",
+        "sub": "{{total}} scenarios"
+      },
+      "readyToShip": {
+        "title": "Ready to ship",
+        "sub": "{{percent}}% of catalog · {{ready}} / {{total}}"
+      },
+      "draftsToFinish": {
+        "title": "Drafts to finish",
+        "subPending": "{{draft}} awaiting completion",
+        "subDone": "All scenarios ready"
+      },
+      "exercisesGenerated": {
+        "title": "Exercises generated",
+        "sub": "across all sources"
       }
     },
     "search": {
@@ -1589,7 +1612,9 @@
     },
     "actions": {
       "edit": "Edit situation",
-      "delete": "Delete situation"
+      "delete": "Delete situation",
+      "generateFromNews": "Generate from news",
+      "newSituation": "+ New situation"
     }
   },
   "adminExercises": {
