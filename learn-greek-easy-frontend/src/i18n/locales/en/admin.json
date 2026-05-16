@@ -1568,6 +1568,28 @@
     },
     "fetch": {
       "error": "Failed to load situations"
+    },
+    "completion": {
+      "dialog": "Dialog",
+      "dialogAudio": "Dialog audio",
+      "description": "Desc",
+      "descAudio": "Desc audio",
+      "picture": "Picture",
+      "dialogEx": "Dialog Ex",
+      "descEx": "Desc Ex",
+      "picEx": "Pic Ex"
+    },
+    "card": {
+      "linesCount": "{{count}} lines"
+    },
+    "grid": {
+      "noResults": "No results",
+      "empty": "No situations match these filters.",
+      "clearFilters": "Clear filters"
+    },
+    "actions": {
+      "edit": "Edit situation",
+      "delete": "Delete situation"
     }
   },
   "adminExercises": {
