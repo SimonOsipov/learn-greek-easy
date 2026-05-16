@@ -1590,6 +1590,35 @@
       "runtimeNote": "4-option grid assembled at request time. Distractors are picked from other Situations."
     }
   },
+  "decks": {
+    "drawer": {
+      "tabs": {
+        "words": "Words",
+        "questions": "Questions",
+        "settings": "Settings",
+        "activity": "Activity"
+      }
+    },
+    "settings": {
+      "identity": "Identity",
+      "access": "Access",
+      "danger": "Danger zone",
+      "activeHint": "Currently active.",
+      "premiumHint": "Premium-only deck."
+    },
+    "emptyDecks": "No decks yet.",
+    "emptyWordsFilter": "No words match your filters.",
+    "emptyQuestionsFilter": "No questions match your filters.",
+    "addWord": "Add word",
+    "addQuestion": "Add question",
+    "deckNotFound": "Deck not found",
+    "discardTitle": "Discard changes?",
+    "discardBody": "You have unsaved changes. Closing will discard them.",
+    "discardConfirm": "Discard",
+    "discardCancel": "Keep editing",
+    "activityPlaceholder": "Recent edits, last reviewed time, and learner stats will live here.",
+    "autoSavedJustNow": "Auto-saved · just now"
+  },
   "inbox": {
     "breadcrumb": {
       "dashboard": "Admin",
