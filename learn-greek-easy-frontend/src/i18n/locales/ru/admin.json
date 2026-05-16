@@ -1545,7 +1545,14 @@
     "discardConfirm": "Отменить",
     "discardCancel": "Продолжить редактирование",
     "activityPlaceholder": "Здесь появятся последние правки, время последнего повтора и статистика учеников.",
-    "autoSavedJustNow": "Сохранено · только что"
+    "autoSavedJustNow": "Сохранено · только что",
+    "backToAllQuestions": "К списку вопросов",
+    "editQuestion": "Редактировать вопрос",
+    "statusReady": "Готово",
+    "statusDraft": "Черновик",
+    "regenerateTranslations": "Перегенерировать переводы",
+    "sourcePrefix": "Источник",
+    "openInNews": "Открыть в Новостях"
   },
   "inbox": {
     "breadcrumb": {

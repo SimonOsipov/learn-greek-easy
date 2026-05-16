@@ -21,6 +21,7 @@ import { useDeck } from '@/hooks/useDeck';
 import { getLocalizedDeckName } from '@/lib/deckLocale';
 
 import { CultureDrawerBody } from './CultureDrawerBody';
+import { CultureQuestionDetail } from './CultureQuestionDetail';
 import { DeckDrawerSkeleton } from './DeckDrawerSkeleton';
 import { DeckSettingsTab } from './DeckSettingsTab';
 import { VocabDrawerBody } from './VocabDrawerBody';
@@ -281,9 +282,7 @@ export function DeckDrawer() {
               {isCulture && (
                 <TabsContent value="questions">
                   {itemId ? (
-                    <div data-testid="deck-drawer-item-detail-placeholder">
-                      Item detail will be implemented in DKDR-11/13
-                    </div>
+                    <CultureQuestionDetail deck={deck} itemId={itemId} />
                   ) : (
                     <CultureDrawerBody deck={deck} />
                   )}

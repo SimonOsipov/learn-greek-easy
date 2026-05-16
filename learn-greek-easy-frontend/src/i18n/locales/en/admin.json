@@ -1617,7 +1617,14 @@
     "discardConfirm": "Discard",
     "discardCancel": "Keep editing",
     "activityPlaceholder": "Recent edits, last reviewed time, and learner stats will live here.",
-    "autoSavedJustNow": "Auto-saved · just now"
+    "autoSavedJustNow": "Auto-saved · just now",
+    "backToAllQuestions": "Back to all questions",
+    "editQuestion": "Edit question",
+    "statusReady": "Ready",
+    "statusDraft": "Draft",
+    "regenerateTranslations": "Regenerate translations",
+    "sourcePrefix": "Source",
+    "openInNews": "Open in News"
   },
   "inbox": {
     "breadcrumb": {
