@@ -637,6 +637,14 @@
         "titleB2": "Title — B2 (Greek)",
         "titleB2Hint": "This title doubles as the B2 scenario summary today. A dedicated scenario field is on the roadmap.",
         "scenarioA2": "Scenario — A2 (Greek)"
+      },
+      "image": {
+        "kicker": "Source image",
+        "helper": "Enter a URL to replace the current image. The original source URL is not stored after upload.",
+        "sourceUrl": "Source image URL",
+        "altText": "Alt text — English",
+        "photoCredit": "Photo credit",
+        "invalidUrl": "Image URL is not valid"
       }
     }
   },
