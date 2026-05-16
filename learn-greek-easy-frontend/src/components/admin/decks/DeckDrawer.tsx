@@ -22,6 +22,7 @@ import { getLocalizedDeckName } from '@/lib/deckLocale';
 
 import { DeckDrawerSkeleton } from './DeckDrawerSkeleton';
 import { DeckSettingsTab } from './DeckSettingsTab';
+import { VocabDrawerBody } from './VocabDrawerBody';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -269,9 +270,7 @@ export function DeckDrawer() {
                       Item detail will be implemented in DKDR-11/13
                     </div>
                   ) : (
-                    <div data-testid="deck-drawer-flavor-body-placeholder">
-                      Flavor body (DKDR-10/12)
-                    </div>
+                    <VocabDrawerBody deck={deck} />
                   )}
                 </TabsContent>
               )}

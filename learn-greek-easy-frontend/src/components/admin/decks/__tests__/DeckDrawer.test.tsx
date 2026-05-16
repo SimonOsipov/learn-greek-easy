@@ -19,7 +19,16 @@ import { DeckDrawer } from '../DeckDrawer';
 vi.mock('@/services/adminAPI', () => ({
   adminAPI: {
     listDecks: vi.fn(),
+    listWordEntries: vi
+      .fn()
+      .mockResolvedValue({ total: 0, page: 1, page_size: 20, deck_id: 'deck-vocab-1', cards: [] }),
+    deleteWordEntry: vi.fn(),
   },
+}));
+
+// Mock VocabDrawerBody to avoid its deep dependency tree in DeckDrawer tests
+vi.mock('../VocabDrawerBody', () => ({
+  VocabDrawerBody: () => <div data-testid="vocab-drawer-body-mock" />,
 }));
 
 // Import after vi.mock so we get the mocked version.
