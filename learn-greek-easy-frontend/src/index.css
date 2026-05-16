@@ -2612,6 +2612,79 @@
   .news-card:focus-within .news-actions {
     opacity: 1;
   }
+
+  /* ── Audio tab rows (NEWS-07c) ─────────────────────────────────────────── */
+  .audio-row {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 12px;
+    align-items: center;
+    padding: 10px;
+    border-radius: 12px;
+    background: hsl(var(--bg-2));
+  }
+  .audio-row + .audio-row {
+    margin-top: 8px;
+  }
+  .audio-l {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 220px;
+  }
+  .audio-name {
+    font-weight: 600;
+    font-size: 14px;
+    color: hsl(var(--fg));
+  }
+  .audio-sub {
+    font-size: 12px;
+    color: hsl(var(--fg-3));
+    display: block;
+    margin-top: 2px;
+  }
+  .audio-player {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+  }
+  .audio-track {
+    position: relative;
+    flex: 1;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    gap: 1px;
+    overflow: hidden;
+  }
+  .audio-progress {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    background: hsl(var(--accent-2) / 0.18);
+    pointer-events: none;
+  }
+  .audio-wave {
+    display: inline-block;
+    width: 2px;
+    background: hsl(var(--accent-2));
+    border-radius: 1px;
+    flex-shrink: 0;
+  }
+  .audio-time {
+    font-size: 12px;
+    color: hsl(var(--fg-3));
+    font-variant-numeric: tabular-nums;
+    min-width: 56px;
+    text-align: right;
+  }
+  .audio-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
 }
 
 /* Theme transition animation */

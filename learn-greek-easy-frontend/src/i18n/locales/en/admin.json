@@ -613,6 +613,17 @@
         "greece": "Greece",
         "world": "World"
       },
+      "audio": {
+        "b2Narration": "B2 narration",
+        "a2Narration": "A2 narration",
+        "b1Narration": "B1 narration",
+        "generatedFrom": "Generated · ElevenLabs · Greek female voice — last {{date}}",
+        "notGeneratedYet": "Not generated yet",
+        "b1NotShipping": "Not generated yet — B1 audio shipping with NLVL-B1",
+        "regenerate": "Regenerate",
+        "playLabel": "Play {{level}} narration",
+        "pauseLabel": "Pause {{level}} narration"
+      },
       "translations": {
         "titleEn": "Title — English",
         "titleEl": "Τίτλος — Ελληνικά",
