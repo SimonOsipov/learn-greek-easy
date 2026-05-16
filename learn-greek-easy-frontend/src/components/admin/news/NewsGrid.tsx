@@ -3,6 +3,7 @@
 import React from 'react';
 
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 
 import { Button } from '@/components/ui/button';
 import { Kicker } from '@/components/ui/kicker';
@@ -15,7 +16,9 @@ export interface NewsGridProps {
 }
 
 export const NewsGrid: React.FC<NewsGridProps> = ({ onRequestDelete }) => {
-  const items = useAdminNewsStore(selectFilteredNewsItems);
+  // useShallow prevents infinite re-renders caused by selectFilteredNewsItems
+  // returning a new array reference (.filter().sort()) on every call.
+  const items = useAdminNewsStore(useShallow(selectFilteredNewsItems));
   const {
     page,
     pageSize,
