@@ -692,6 +692,69 @@ describe('VocabularyDeckEditForm', () => {
     });
   });
 
+  describe('onDirtyChange prop', () => {
+    it('fires true after a field is edited', async () => {
+      const user = userEvent.setup();
+      const deck = createMockDeck({ name_en: 'Original' });
+      const onDirtyChange = vi.fn();
+
+      renderWithI18n(
+        <VocabularyDeckEditForm
+          deck={deck}
+          onSave={mockOnSave}
+          onCancel={mockOnCancel}
+          onDirtyChange={onDirtyChange}
+        />
+      );
+
+      const nameInput = screen.getByTestId('deck-edit-name-en');
+      await user.clear(nameInput);
+      await user.type(nameInput, 'Updated');
+
+      await waitFor(() => {
+        expect(onDirtyChange).toHaveBeenCalledWith(true);
+      });
+    });
+
+    it('fires false after form.reset() is called via onReady handle', async () => {
+      const user = userEvent.setup();
+      const deck = createMockDeck({ name_en: 'Original' });
+      const onDirtyChange = vi.fn();
+      let resetFn: (() => void) | null = null;
+
+      renderWithI18n(
+        <VocabularyDeckEditForm
+          deck={deck}
+          onSave={mockOnSave}
+          onCancel={mockOnCancel}
+          onDirtyChange={onDirtyChange}
+          onReady={(api) => {
+            resetFn = api.reset;
+          }}
+        />
+      );
+
+      // Dirty the form
+      const nameInput = screen.getByTestId('deck-edit-name-en');
+      await user.clear(nameInput);
+      await user.type(nameInput, 'Changed');
+
+      await waitFor(() => {
+        expect(onDirtyChange).toHaveBeenCalledWith(true);
+      });
+
+      // Reset via the handle
+      expect(resetFn).not.toBeNull();
+      resetFn!();
+
+      await waitFor(() => {
+        // After reset, the last call should be false
+        const calls = onDirtyChange.mock.calls.map((c: [boolean]) => c[0]);
+        expect(calls[calls.length - 1]).toBe(false);
+      });
+    });
+  });
+
   describe('Remove Image', () => {
     it('should render Remove Image button when cover_image_url is present and onRemoveCoverImage is provided', () => {
       const deck = createMockDeck({ cover_image_url: 'https://example.com/cover.jpg' });

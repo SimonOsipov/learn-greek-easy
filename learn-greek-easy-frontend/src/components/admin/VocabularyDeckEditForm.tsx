@@ -100,6 +100,12 @@ interface VocabularyDeckEditFormProps {
   onUploadCoverImage?: (file: File) => Promise<void>;
   onRemoveCoverImage?: () => Promise<void>;
   renderFooter?: boolean;
+  /** Called whenever the form dirty state changes. */
+  onDirtyChange?: (isDirty: boolean) => void;
+  /** Called once on mount with a `{ reset }` handle so the parent can programmatically reset the form. */
+  onReady?: (api: { reset: () => void }) => void;
+  /** If provided, sets the `id` attribute on the `<form>` element so external submit buttons can trigger it. */
+  formId?: string;
 }
 
 /**
@@ -122,6 +128,9 @@ export const VocabularyDeckEditForm: React.FC<VocabularyDeckEditFormProps> = ({
   onUploadCoverImage,
   onRemoveCoverImage,
   renderFooter = true,
+  onDirtyChange,
+  onReady,
+  formId,
 }) => {
   const { t } = useTranslation('admin');
   const [showDeactivationWarning, setShowDeactivationWarning] = useState(false);
@@ -210,6 +219,21 @@ export const VocabularyDeckEditForm: React.FC<VocabularyDeckEditFormProps> = ({
     },
   });
 
+  // Notify parent when dirty state changes
+  const isDirty = form.formState.isDirty;
+  useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
+
+  // Provide reset handle to parent on mount
+  useEffect(() => {
+    if (onReady) {
+      onReady({ reset: () => form.reset() });
+    }
+    // onReady is intentionally not in deps — only call once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   /**
    * Check if a language tab has validation errors
    */
@@ -249,6 +273,7 @@ export const VocabularyDeckEditForm: React.FC<VocabularyDeckEditFormProps> = ({
   return (
     <Form {...form}>
       <form
+        id={formId}
         onSubmit={form.handleSubmit(onSubmit)}
         className="space-y-4"
         data-testid="vocabulary-deck-edit-form"
