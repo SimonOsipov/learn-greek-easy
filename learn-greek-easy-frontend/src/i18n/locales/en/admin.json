@@ -469,9 +469,21 @@
     }
   },
   "news": {
+    "title": "News",
+    "kicker": "Admin · News",
+    "subtitle": "{{total}} articles · {{audio}}/{{total}} with B2+A2 audio · {{pending}} awaiting B1",
+    "comingSoon": "Coming soon",
     "stats": {
       "total": "Total News",
-      "withAudio": "With Audio"
+      "withAudio": "With Audio",
+      "b1Coverage": "B1 coverage",
+      "countries": "Countries",
+      "allTime": "All time",
+      "recentThisWeek": "+{{count}} this week"
+    },
+    "actions": {
+      "importRss": "Import RSS",
+      "new": "+ New article"
     },
     "create": {
       "title": "Create News Item",

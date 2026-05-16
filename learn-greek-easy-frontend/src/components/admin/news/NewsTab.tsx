@@ -1,152 +1,178 @@
 // src/components/admin/news/NewsTab.tsx
 
 /**
- * Admin News Tab Component
+ * NewsTab — NEWS-05 rewrite
  *
- * Main container for managing news items in the admin panel.
- * Features:
- * - Modal dialog for creating new news items
- * - News items table with pagination
- * - Edit and delete functionality
+ * Integration shell for ADMIN2-07.
+ * Renders PageHead + 4-up StatCard grid + NewsToolbar + NewsGrid +
+ * NewsItemCreateModal + NewsItemDeleteDialog + NewsEditDrawer (stub).
+ *
+ * V1 imports (SummaryCard, NewsItemsTable, NewsItemEditModal) are dropped here.
+ * V1 source files stay on disk — quarantined by NEWS-09, deleted by ADMIN2-12.
+ *
+ * URL deep-link plumbing: ?edit=<id> opens the edit drawer via store.
+ * NEWS-06: NewsEditDrawer reads drawerItemId from store and clears ?edit= on close.
  */
 
 import React, { useEffect, useState } from 'react';
 
-import { Newspaper, Volume2 } from 'lucide-react';
+import { Globe, Newspaper, Play, Plus, RefreshCcw, Rss } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 
-import { SummaryCard } from '@/components/admin/SummaryCard';
+import { PageHead } from '@/components/admin/shell/page-head';
+import { Button } from '@/components/ui/button';
+import { Kicker } from '@/components/ui/kicker';
+import { StatCard } from '@/components/ui/stat-card';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAdminNewsStore } from '@/stores/adminNewsStore';
 
+import { NewsEditDrawer } from './NewsEditDrawer';
+import { NewsGrid } from './NewsGrid';
 import { NewsItemCreateModal } from './NewsItemCreateModal';
 import { NewsItemDeleteDialog } from './NewsItemDeleteDialog';
-import { NewsItemEditModal } from './NewsItemEditModal';
-import { NewsItemsTable } from './NewsItemsTable';
+import { NewsToolbar } from './NewsToolbar';
 
 /**
- * NewsTab component
+ * NewsTab component — ADMIN2-07 shell rewrite
  */
 export const NewsTab: React.FC = () => {
   const { t } = useTranslation('admin');
-  const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  const {
-    newsItems,
-    selectedItem,
-    page,
-    pageSize,
-    total,
-    totalPages,
-    isLoading,
-    fetchNewsItems,
-    setPage,
-    setSelectedItem,
-    setCountryFilter,
-    countryFilter,
-    audioCount,
-  } = useAdminNewsStore();
+  // ── Store ─────────────────────────────────────────────────────────────────
+  const { newsItems, total, audioCount, fetchNewsItems, openDrawer, closeDrawer } =
+    useAdminNewsStore();
 
-  // Fetch news items on mount
+  // ── Fetch on mount ────────────────────────────────────────────────────────
   useEffect(() => {
     fetchNewsItems();
   }, [fetchNewsItems]);
 
-  /**
-   * Handle edit button click
-   */
-  const handleEdit = (item: typeof selectedItem) => {
-    if (item) {
-      setSelectedItem(item);
-      setIsEditModalOpen(true);
-    }
-  };
+  // ── URL deep-link plumbing ────────────────────────────────────────────────
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get('edit');
 
-  /**
-   * Handle delete button click
-   */
-  const handleDelete = (item: typeof selectedItem) => {
-    if (item) {
-      setSelectedItem(item);
-      setIsDeleteDialogOpen(true);
-    }
-  };
+  useEffect(() => {
+    if (editId) openDrawer(editId);
+    else closeDrawer();
+  }, [editId, openDrawer, closeDrawer]);
 
-  /**
-   * Handle edit modal close
-   */
-  const handleEditModalClose = (open: boolean) => {
-    setIsEditModalOpen(open);
-    if (!open) {
-      setSelectedItem(null);
-    }
-  };
+  // ── Local state ───────────────────────────────────────────────────────────
+  const [createOpen, setCreateOpen] = useState(false);
+  const [deleteItemId, setDeleteItemId] = useState<string | null>(null);
 
-  /**
-   * Handle delete dialog close
-   */
-  const handleDeleteDialogClose = (open: boolean) => {
-    setIsDeleteDialogOpen(open);
-    if (!open) {
-      setSelectedItem(null);
-    }
-  };
+  // ── Derived stats ─────────────────────────────────────────────────────────
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const recentCount = newsItems.filter((i) => new Date(i.publication_date) >= sevenDaysAgo).length;
 
+  const audioPercent = total > 0 ? Math.round((audioCount / total) * 100) : 0;
+
+  const countryFlagsLine = (
+    [
+      { flag: '🇨🇾', country: 'cyprus' },
+      { flag: '🇬🇷', country: 'greece' },
+      { flag: '🌍', country: 'world' },
+    ] as const
+  )
+    .map(({ flag, country }) => {
+      const n = newsItems.filter((it) => it.country === country).length;
+      return `${flag} ${n}`;
+    })
+    .join('  ');
+
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <>
-      <div className="space-y-6">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <SummaryCard
-            title={t('news.stats.total')}
-            value={total}
-            icon={<Newspaper className="h-5 w-5 text-muted-foreground" />}
-            testId="news-total-card"
-          />
-          <SummaryCard
-            title={t('news.stats.withAudio')}
-            value={audioCount}
-            icon={<Volume2 className="h-5 w-5 text-muted-foreground" />}
-            testId="news-with-audio-card"
-          />
-        </div>
+    <div className="space-y-6" data-testid="news-tab">
+      {/* ── Page Head ────────────────────────────────────────────────────── */}
+      <PageHead
+        breadcrumb={[{ label: t('inbox.breadcrumb.dashboard') }, { label: t('news.title') }]}
+        kicker={<Kicker dot="primary">{t('news.kicker')}</Kicker>}
+        title={t('news.title')}
+        sub={t('news.subtitle', {
+          total,
+          audio: audioCount,
+          pending: total - audioCount,
+        })}
+        actions={
+          <TooltipProvider>
+            <div className="flex items-center gap-2">
+              {/* Import RSS — gated Coming-soon */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    aria-disabled="true"
+                    className="btn-glass cursor-not-allowed opacity-60"
+                    onClick={(e) => e.preventDefault()}
+                  >
+                    <Rss className="size-4" aria-hidden="true" />
+                    {t('news.actions.importRss')}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>{t('news.comingSoon')}</TooltipContent>
+              </Tooltip>
 
-        {/* News Items Table Section */}
-        <NewsItemsTable
-          newsItems={newsItems}
-          isLoading={isLoading}
-          page={page}
-          pageSize={pageSize}
-          total={total}
-          totalPages={totalPages}
-          onPageChange={setPage}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          countryFilter={countryFilter}
-          onCountryFilterChange={(v) =>
-            setCountryFilter(v === null ? 'all' : (v as 'cyprus' | 'greece' | 'world'))
-          }
-          onCreateClick={() => setCreateModalOpen(true)}
+              {/* New article — primary, fully enabled */}
+              <Button
+                variant="default"
+                onClick={() => setCreateOpen(true)}
+                data-testid="news-new-button"
+              >
+                <Plus className="size-4" aria-hidden="true" />
+                {t('news.actions.new')}
+              </Button>
+            </div>
+          </TooltipProvider>
+        }
+      />
+
+      {/* ── 4-up StatCard grid ───────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title={t('news.stats.total')}
+          n={total}
+          icon={<Newspaper />}
+          tone="blue"
+          footerLabel={t('news.stats.recentThisWeek', { count: recentCount })}
+        />
+        <StatCard
+          title={t('news.stats.withAudio')}
+          n={audioCount}
+          icon={<Play />}
+          tone="violet"
+          footerLabel={`${audioPercent}% · ${audioCount}/${total}`}
+        />
+        <StatCard
+          title={t('news.stats.b1Coverage')}
+          n="—"
+          icon={<RefreshCcw />}
+          tone="amber"
+          footerLabel={t('news.comingSoon')}
+        />
+        <StatCard
+          title={t('news.stats.countries')}
+          n={countryFlagsLine}
+          icon={<Globe />}
+          tone="cyan"
+          footerLabel={t('news.stats.allTime')}
         />
       </div>
 
-      {/* Create Modal */}
-      <NewsItemCreateModal open={createModalOpen} onOpenChange={setCreateModalOpen} />
+      {/* ── Toolbar + Grid ────────────────────────────────────────────────── */}
+      <NewsToolbar />
+      <NewsGrid onRequestDelete={(id) => setDeleteItemId(id)} />
 
-      {/* Edit Modal */}
-      <NewsItemEditModal
-        open={isEditModalOpen}
-        onOpenChange={handleEditModalClose}
-        item={selectedItem}
-      />
-
-      {/* Delete Dialog */}
+      {/* ── Modals / Drawers ─────────────────────────────────────────────── */}
+      <NewsItemCreateModal open={createOpen} onOpenChange={setCreateOpen} />
       <NewsItemDeleteDialog
-        open={isDeleteDialogOpen}
-        onOpenChange={handleDeleteDialogClose}
-        item={selectedItem}
+        open={deleteItemId !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteItemId(null);
+        }}
+        item={newsItems.find((i) => i.id === deleteItemId) ?? null}
       />
-    </>
+      {/* NEWS-06: NewsEditDrawer reads drawerItemId from store and clears ?edit= on close. */}
+      <NewsEditDrawer />
+    </div>
   );
 };
