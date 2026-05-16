@@ -243,6 +243,7 @@ Reach for these *before* composing new ones.
 | `.hairline` | `border-color: hsl(var(--line))` |
 | `.text-fg2` / `.text-fg3` | Foreground variants |
 | `.fb-*` family | Admin feedback re-skin chrome (card, vote rail, status grid, canned chips, thread bubbles, meta table). See `src/index.css` under `@layer components`. Token-only — no raw hex. |
+| `.cl-*` family | Admin changelog timeline + editor chrome (timeline rail/dot, month head, entry card, tag-button tones, translation pills, preview card). Tones via `data-tone` on `.cl-tag-btn` / `.cl-entry-dot`: green=`--success`, amber=`--warning`, blue=`--primary`, cyan=`--accent-2`, violet=`--accent`, red=`--danger`. Token-only; no new tokens introduced. |
 
 ---
 

@@ -1,174 +1,319 @@
+// src/components/admin/changelog/ChangelogTab.tsx
+
 /**
- * Main admin tab for changelog management.
+ * ChangelogTab — CLTE-08 rewrite
  *
- * Integrates table, edit modal, and delete dialog.
- * Features:
- * - Button to open create modal for adding changelog entries
- * - Table with edit/delete actions
- * - JSON-based edit modal for editing existing entries
- * - Delete confirmation dialog
- * - Pagination support
+ * Integration choke point for ADMIN2-06.
+ * Renders PageHead + 4-up StatCard grid + ChangelogTimeline +
+ * ChangelogEditorDrawer + ChangelogDeleteDialog.
+ *
+ * V1 modal imports (SummaryCard, ChangelogCreateModal, ChangelogEditModal,
+ * ChangelogTable) are dropped. V1 source files stay on disk — deferred.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
-import { Calendar, FileText, Plus } from 'lucide-react';
+import { format } from 'date-fns';
+import { Calendar, Clock, Download, FileText, Languages, Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 
-import { SummaryCard } from '@/components/admin/SummaryCard';
+import { PageHead } from '@/components/admin/shell/page-head';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  useAdminChangelogStore,
-  selectAdminChangelogItems,
-  selectAdminChangelogIsLoading,
-  selectAdminChangelogPage,
-  selectAdminChangelogPageSize,
-  selectAdminChangelogTotal,
-  selectAdminChangelogTotalPages,
-} from '@/stores/adminChangelogStore';
-import type { ChangelogEntryAdmin } from '@/types/changelog';
+import { Input } from '@/components/ui/input';
+import { Kicker } from '@/components/ui/kicker';
+import { SegControl, type SegOption } from '@/components/ui/seg-control';
+import { StatCard } from '@/components/ui/stat-card';
+import { toast } from '@/hooks/use-toast';
+import { useAdminChangelogStore } from '@/stores/adminChangelogStore';
+import { CHANGELOG_TAG_CONFIG, CHANGELOG_TAG_OPTIONS } from '@/types/changelog';
+import type { ChangelogEntryAdmin, ChangelogTag } from '@/types/changelog';
 
-import { ChangelogCreateModal } from './ChangelogCreateModal';
 import { ChangelogDeleteDialog } from './ChangelogDeleteDialog';
-import { ChangelogEditModal } from './ChangelogEditModal';
-import { ChangelogTable } from './ChangelogTable';
+import { ChangelogEditorDrawer } from './ChangelogEditorDrawer';
+import { ChangelogTimeline } from './ChangelogTimeline';
+
+// Placeholder sparkline bars (9-bar, conventional shape)
+const SPARKLINE_BARS = [8, 12, 6, 14, 10, 16, 9, 13, 11];
 
 /**
- * ChangelogTab component
+ * Compute average days between consecutive entries in the last 10 (sorted desc).
+ * Returns null when there are fewer than 2 entries.
+ */
+function computeAvgCadenceDays(items: ChangelogEntryAdmin[]): number | null {
+  if (items.length < 2) return null;
+  const sorted = [...items].sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 10);
+  if (sorted.length < 2) return null;
+  let totalMs = 0;
+  for (let i = 0; i < sorted.length - 1; i++) {
+    totalMs +=
+      new Date(sorted[i].created_at).getTime() - new Date(sorted[i + 1].created_at).getTime();
+  }
+  const avgMs = totalMs / (sorted.length - 1);
+  return Math.round(avgMs / (1000 * 60 * 60 * 24));
+}
+
+/**
+ * ChangelogTab
  */
 export function ChangelogTab() {
-  const { t } = useTranslation(['admin']);
+  const { t } = useTranslation(['admin', 'changelog']);
 
-  // Store state using selectors
-  const items = useAdminChangelogStore(selectAdminChangelogItems);
-  const isLoading = useAdminChangelogStore(selectAdminChangelogIsLoading);
-  const page = useAdminChangelogStore(selectAdminChangelogPage);
-  const pageSize = useAdminChangelogStore(selectAdminChangelogPageSize);
-  const total = useAdminChangelogStore(selectAdminChangelogTotal);
-  const totalPages = useAdminChangelogStore(selectAdminChangelogTotalPages);
+  // ── Store ─────────────────────────────────────────────────────────────────
+  const {
+    items,
+    total,
+    isLoading,
+    fetchList,
+    openCompose,
+    openEdit,
+    closeDrawer,
+    setLang,
+    mode,
+    openEntryId,
+    lang,
+  } = useAdminChangelogStore();
 
-  // Store actions
-  const { fetchList, setPage, reset } = useAdminChangelogStore();
-
-  // Local UI state
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [editingEntry, setEditingEntry] = useState<ChangelogEntryAdmin | null>(null);
-  const [deletingEntry, setDeletingEntry] = useState<ChangelogEntryAdmin | null>(null);
-
-  // Fetch on mount
+  // ── Fetch on mount ────────────────────────────────────────────────────────
   useEffect(() => {
     fetchList();
-    return () => reset();
-  }, [fetchList, reset]);
+  }, [fetchList]);
 
-  // Handlers
-
-  const handleEdit = (entry: ChangelogEntryAdmin) => {
-    setEditingEntry(entry);
-    setIsEditOpen(true);
-  };
-
-  const handleDelete = (entry: ChangelogEntryAdmin) => {
-    setDeletingEntry(entry);
-    setIsDeleteOpen(true);
-  };
-
-  const handleDeleteDialogClose = (open: boolean) => {
-    setIsDeleteOpen(open);
-    if (!open) {
-      setDeletingEntry(null);
+  // ── One-shot console.warn for ≥ 100 entries ───────────────────────────────
+  const warnedRef = useRef(false);
+  useEffect(() => {
+    if (items.length >= 100 && !warnedRef.current) {
+      // eslint-disable-next-line no-console
+      console.warn('[Changelog] List response returned ≥ 100 entries — consider pagination');
+      warnedRef.current = true;
     }
-  };
+  }, [items.length]);
 
-  const handlePageChange = (newPage: number) => {
-    if (newPage >= 1 && newPage <= totalPages) {
-      setPage(newPage);
+  // ── Local state ───────────────────────────────────────────────────────────
+  const [search, setSearch] = useState('');
+  const [selectedTag, setSelectedTag] = useState<'all' | ChangelogTag>('all');
+  const [deleteCandidate, setDeleteCandidate] = useState<ChangelogEntryAdmin | null>(null);
+
+  // ── URL deep-link ─────────────────────────────────────────────────────────
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Effect 1 — URL → store (deep-link in)
+  // Fires once per mount (idempotency guard). Waits until isLoading is false —
+  // i.e. the initial fetch has settled — before applying the deep-link. This
+  // fixes the race where isLoading=false AND items=[] simultaneously on mount
+  // caused the old guard (`if (isLoading && items.length === 0) return`) to
+  // pass and mark the deep-link applied against empty data (Fix #3).
+  const appliedDeepLinkRef = useRef(false);
+  useEffect(() => {
+    if (appliedDeepLinkRef.current) return;
+    // Gate: wait for initial fetch to settle
+    if (isLoading) return;
+
+    const editId = searchParams.get('edit');
+    const langParam = searchParams.get('lang');
+    const composeFlag = searchParams.get('compose');
+
+    if (editId) {
+      if (items.some((e) => e.id === editId)) {
+        appliedDeepLinkRef.current = true;
+        openEdit(editId);
+        if (langParam === 'en' || langParam === 'ru') {
+          setLang(langParam);
+        }
+      } else {
+        // id not found — silent no-op, mark applied so we don't retry
+        appliedDeepLinkRef.current = true;
+      }
+    } else if (composeFlag === '1') {
+      appliedDeepLinkRef.current = true;
+      openCompose();
+    } else {
+      // No relevant params — mark applied
+      appliedDeepLinkRef.current = true;
     }
-  };
+    // Malformed values: no URL rewrite, no toast, no console.error
+  }, [searchParams, items, isLoading, openEdit, openCompose, setLang]);
 
-  const mostRecentDate =
-    items.length > 0
-      ? new Date(
-          items.reduce(
-            (latest, item) => (item.created_at > latest ? item.created_at : latest),
-            items[0].created_at
-          )
-        ).toLocaleDateString()
-      : '—';
+  // Effect 2 — store → URL (sync out)
+  // Watches mode, openEntryId, lang; keeps URL in sync with drawer state.
+  useEffect(() => {
+    if (mode === 'compose') {
+      setSearchParams(
+        (prev) => {
+          prev.set('compose', '1');
+          prev.delete('edit');
+          prev.delete('lang');
+          return prev;
+        },
+        { replace: true }
+      );
+    } else if (mode === 'edit' && openEntryId) {
+      setSearchParams(
+        (prev) => {
+          prev.set('edit', openEntryId);
+          prev.set('lang', lang);
+          prev.delete('compose');
+          return prev;
+        },
+        { replace: true }
+      );
+    } else if (mode === null) {
+      setSearchParams(
+        (prev) => {
+          prev.delete('edit');
+          prev.delete('compose');
+          prev.delete('lang');
+          return prev;
+        },
+        { replace: true }
+      );
+    }
+  }, [mode, openEntryId, lang, setSearchParams]);
 
+  // ── Derived stats ─────────────────────────────────────────────────────────
+  const sortedDesc = [...items].sort((a, b) => b.created_at.localeCompare(a.created_at));
+  const mostRecent = sortedDesc[0] ?? null;
+
+  const cadenceDays = computeAvgCadenceDays(items);
+
+  const missingRuCount = items.filter((e) => !e.title_ru || !e.content_ru).length;
+
+  // ── Filter pipeline ───────────────────────────────────────────────────────
+  const filteredBySearch = items.filter(
+    (e) =>
+      !search ||
+      e.title_en.toLowerCase().includes(search.toLowerCase()) ||
+      (e.title_ru ?? '').toLowerCase().includes(search.toLowerCase())
+  );
+
+  const filtered =
+    selectedTag === 'all'
+      ? filteredBySearch
+      : filteredBySearch.filter((e) => e.tag === selectedTag);
+
+  // ── Tag SegControl options ────────────────────────────────────────────────
+  const tagOptions: SegOption<'all' | ChangelogTag>[] = [
+    { value: 'all', label: 'All', count: filteredBySearch.length },
+    ...CHANGELOG_TAG_OPTIONS.filter((tag) => filteredBySearch.some((e) => e.tag === tag)).map(
+      (tag) => ({
+        value: tag as 'all' | ChangelogTag,
+        label: t(CHANGELOG_TAG_CONFIG[tag].labelKey),
+        count: filteredBySearch.filter((e) => e.tag === tag).length,
+      })
+    ),
+  ];
+
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <>
-      <div className="space-y-6" data-testid="changelog-tab">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <SummaryCard
-            title={t('admin:changelog.stats.total')}
-            value={total}
-            icon={<FileText className="h-5 w-5 text-muted-foreground" />}
-            testId="changelog-total-card"
-          />
-          <SummaryCard
-            title={t('admin:changelog.stats.mostRecent')}
-            value={mostRecentDate}
-            icon={<Calendar className="h-5 w-5 text-muted-foreground" />}
-            testId="changelog-most-recent-card"
-          />
-        </div>
-
-        {/* Table Card */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-start justify-between">
-              <div>
-                <CardTitle>{t('admin:changelog.table.title')}</CardTitle>
-                <CardDescription>{t('admin:changelog.table.description')}</CardDescription>
-              </div>
-              <Button onClick={() => setIsCreateOpen(true)} data-testid="changelog-create-button">
-                <Plus className="mr-2 h-4 w-4" />
-                {t('admin:changelog.create.title')}
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <ChangelogTable
-              items={items}
-              isLoading={isLoading}
-              page={page}
-              pageSize={pageSize}
-              total={total}
-              totalPages={totalPages}
-              onPageChange={handlePageChange}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-            />
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Edit Modal - JSON-based editing */}
-      {editingEntry && (
-        <ChangelogEditModal
-          open={isEditOpen}
-          onOpenChange={(open) => {
-            setIsEditOpen(open);
-            if (!open) setEditingEntry(null);
-          }}
-          entry={editingEntry}
-        />
-      )}
-
-      {/* Delete Dialog - handles deletion internally */}
-      <ChangelogDeleteDialog
-        open={isDeleteOpen}
-        onOpenChange={handleDeleteDialogClose}
-        entry={deletingEntry}
+    <div className="space-y-6" data-testid="changelog-tab">
+      {/* ── Page Head ────────────────────────────────────────────────────── */}
+      <PageHead
+        breadcrumb={[{ label: 'Dashboard' }, { label: 'Changelog' }]}
+        kicker={<Kicker dot="primary">Changelog</Kicker>}
+        title="Changelog"
+        sub="Manage and publish product updates for your users."
+        actions={
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="btn-glass"
+              onClick={() => toast({ title: 'Markdown export coming soon' })}
+              data-testid="changelog-export-button"
+            >
+              <Download className="size-4" aria-hidden="true" />
+              Export markdown
+            </button>
+            <Button variant="default" onClick={openCompose} data-testid="changelog-new-button">
+              <Plus className="size-4" aria-hidden="true" />
+              New entry
+            </Button>
+          </div>
+        }
       />
 
-      {/* Create Modal */}
-      <ChangelogCreateModal open={isCreateOpen} onOpenChange={setIsCreateOpen} />
-    </>
+      {/* ── 4-up StatCard grid ───────────────────────────────────────────── */}
+      <div className="stat-grid grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Total entries"
+          n={total || items.length}
+          icon={<FileText />}
+          tone="blue"
+          bars={SPARKLINE_BARS}
+          barsTestId="sparkline-total"
+          footerLabel="all-time"
+        />
+        <StatCard
+          title="Most recent"
+          n={mostRecent ? format(new Date(mostRecent.created_at), 'MMM d') : '—'}
+          sub={
+            mostRecent
+              ? mostRecent.title_en.length > 32
+                ? mostRecent.title_en.slice(0, 32) + '…'
+                : mostRecent.title_en
+              : ''
+          }
+          icon={<Calendar />}
+          tone="violet"
+          bars={SPARKLINE_BARS}
+          barsTestId="sparkline-recent"
+          footerLabel="last published"
+        />
+        <StatCard
+          title="Avg cadence"
+          n={cadenceDays !== null ? `${cadenceDays}d` : '—'}
+          sub={cadenceDays !== null ? 'between entries' : 'need ≥ 2 entries'}
+          icon={<Clock />}
+          tone="cyan"
+          bars={SPARKLINE_BARS}
+          barsTestId="sparkline-cadence"
+          footerLabel="last 10 entries"
+        />
+        <StatCard
+          title="Missing RU"
+          n={missingRuCount}
+          sub={missingRuCount > 0 ? 'entries need translation' : 'all translated'}
+          icon={<Languages />}
+          tone="amber"
+          bars={SPARKLINE_BARS}
+          barsTestId="sparkline-missing-ru"
+          footerLabel="needs attention"
+        />
+      </div>
+
+      {/* ── Toolbar: search + tag filter ─────────────────────────────────── */}
+      <div className="flex flex-wrap items-center gap-3">
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search entries…"
+          className="w-64"
+          data-testid="changelog-search-input"
+        />
+        <SegControl options={tagOptions} value={selectedTag} onChange={setSelectedTag} />
+      </div>
+
+      {/* ── Timeline ─────────────────────────────────────────────────────── */}
+      <ChangelogTimeline
+        entries={filtered}
+        onEdit={(id) => openEdit(id)}
+        onDelete={(id) => setDeleteCandidate(items.find((e) => e.id === id) ?? null)}
+      />
+
+      {/* ── Editor Drawer ────────────────────────────────────────────────── */}
+      <ChangelogEditorDrawer
+        open={mode !== null}
+        onClose={closeDrawer}
+        entry={items.find((e) => e.id === openEntryId) ?? undefined}
+      />
+
+      {/* ── Delete Dialog ────────────────────────────────────────────────── */}
+      <ChangelogDeleteDialog
+        open={deleteCandidate !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteCandidate(null);
+        }}
+        entry={deleteCandidate}
+      />
+    </div>
   );
 }

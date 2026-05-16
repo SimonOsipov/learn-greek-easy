@@ -2278,6 +2278,210 @@
     color: hsl(var(--fg));
     font-weight: 500;
   }
+
+  /* ── Changelog timeline wrapper + month groups (ADMIN2 / CLTE-02) ── */
+  .cl-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-top: 8px;
+  }
+  .cl-month {
+    display: flex;
+    flex-direction: column;
+  }
+  .cl-month-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 0 8px;
+  }
+  .cl-month-line {
+    flex: 1;
+    height: 1px;
+    background: hsl(var(--fg) / 0.08);
+  }
+  .cl-month-label {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: hsl(var(--fg-3));
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ── Changelog editor (ADMIN2 / CLTE-02) ── */
+  .cl-edit-body {
+    padding-bottom: 80px;
+  }
+  .cl-edit-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    gap: 24px;
+  }
+  .cl-edit-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+  }
+  .cl-langtabs {
+    display: flex;
+    gap: 3px;
+    padding: 3px;
+    background: hsl(var(--fg) / 0.06);
+    border-radius: 8px;
+    margin-right: 8px;
+  }
+
+  /* ── Changelog tag buttons (ADMIN2 / CLTE-02) ── */
+  .cl-tag-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+  .cl-tag-btn {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: hsl(var(--bg-2));
+    border: 1px solid hsl(var(--fg) / 0.06);
+    color: hsl(var(--fg));
+    font-size: 12.5px;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: left;
+  }
+  .cl-tag-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: hsl(var(--fg-3));
+    flex-shrink: 0;
+  }
+  .cl-tag-btn[data-tone='green'] .cl-tag-dot {
+    background: hsl(var(--success));
+  }
+  .cl-tag-btn[data-tone='blue'] .cl-tag-dot {
+    background: hsl(var(--primary));
+  }
+  .cl-tag-btn[data-tone='amber'] .cl-tag-dot {
+    background: hsl(var(--warning));
+  }
+  .cl-tag-btn[data-tone='cyan'] .cl-tag-dot {
+    background: hsl(var(--accent-2));
+  }
+  .cl-tag-btn[data-tone='violet'] .cl-tag-dot {
+    background: hsl(var(--accent));
+  }
+  .cl-tag-btn[data-tone='red'] .cl-tag-dot {
+    background: hsl(var(--danger));
+  }
+  .cl-tag-btn.is-active {
+    background: hsl(var(--primary) / 0.1);
+    border-color: hsl(var(--primary) / 0.45);
+    color: hsl(var(--primary));
+  }
+
+  /* ── Changelog translation status (ADMIN2 / CLTE-02) ── */
+  .cl-translation-status {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 4px;
+    padding-top: 12px;
+    border-top: 1px dashed hsl(var(--fg) / 0.08);
+  }
+  .cl-trans-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: hsl(var(--fg) / 0.05);
+    color: hsl(var(--fg-3));
+    font-size: 11.5px;
+    font-weight: 600;
+  }
+  .cl-trans-pill.is-done {
+    background: hsl(var(--success) / 0.14);
+    color: hsl(var(--success));
+  }
+  .cl-trans-pill svg {
+    width: 11px;
+    height: 11px;
+  }
+  .cl-trans-l {
+    letter-spacing: 0.04em;
+  }
+
+  /* ── Changelog preview panel (ADMIN2 / CLTE-02) ── */
+  .cl-preview {
+    position: sticky;
+    top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-self: flex-start;
+  }
+  .cl-preview-l {
+    font-size: 11px;
+    font-weight: 600;
+    color: hsl(var(--fg-3));
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .cl-preview-card {
+    padding: 16px 18px;
+    background: hsl(var(--bg-2));
+    border: 1px solid hsl(var(--fg) / 0.08);
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .cl-preview-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .cl-preview-v {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: hsl(var(--fg-3));
+    font-weight: 600;
+  }
+  .cl-preview-title {
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: 2px 0 4px;
+    line-height: 1.3;
+  }
+  .cl-preview-body {
+    font-size: 13px;
+    line-height: 1.55;
+    color: hsl(var(--fg-2));
+    margin: 0;
+  }
+  .cl-preview-body b {
+    color: hsl(var(--fg));
+    font-weight: 600;
+  }
+  .cl-preview-body i {
+    color: hsl(var(--fg));
+    font-style: italic;
+  }
+  .cl-preview-foot {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed hsl(var(--fg) / 0.08);
+    font-size: 11px;
+  }
 }
 
 /* Theme transition animation */

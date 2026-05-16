@@ -36,6 +36,11 @@ export interface StatCardProps
    */
   bars?: number[];
   /**
+   * Optional data-testid forwarded to the `.stat-bars` div.
+   * Allows tests (and QA selectors) to target the sparkline row per card.
+   */
+  barsTestId?: string;
+  /**
    * When provided, the card becomes clickable: applies `.is-clickable`,
    * sets `role="button"` + `tabIndex={0}`, handles Enter/Space keyboard,
    * and renders the "Open →" arrow link in the footer right slot.
@@ -47,7 +52,10 @@ export interface StatCardProps
 }
 
 const StatCard = React.forwardRef<HTMLDivElement, StatCardProps>(
-  ({ title, sub, n, icon, tone, bars, onClick, footerLabel, className, ...rest }, ref) => {
+  (
+    { title, sub, n, icon, tone, bars, barsTestId, onClick, footerLabel, className, ...rest },
+    ref
+  ) => {
     const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
@@ -76,7 +84,7 @@ const StatCard = React.forwardRef<HTMLDivElement, StatCardProps>(
         </div>
         <div className="stat-n">{n}</div>
         {bars && bars.length > 0 && (
-          <div className="stat-bars">
+          <div className="stat-bars" {...(barsTestId ? { 'data-testid': barsTestId } : {})}>
             {bars.map((h, i) => (
               <span key={i} style={{ height: `${h * 1.6 + 6}px` }} />
             ))}

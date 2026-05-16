@@ -33,6 +33,12 @@ interface AdminChangelogState {
   // Error state
   error: string | null;
 
+  // Drawer state
+  openEntryId: string | null;
+  mode: 'compose' | 'edit' | null;
+  lang: 'en' | 'ru';
+  panelMode: 'form' | 'json';
+
   // Actions
   fetchList: () => Promise<void>;
   fetchById: (id: string) => Promise<ChangelogEntryAdmin | null>;
@@ -43,19 +49,28 @@ interface AdminChangelogState {
   setPage: (page: number) => void;
   clearError: () => void;
   reset: () => void;
+  openCompose: () => void;
+  openEdit: (id: string) => void;
+  closeDrawer: () => void;
+  setLang: (l: 'en' | 'ru') => void;
+  setPanelMode: (m: 'form' | 'json') => void;
 }
 
 const INITIAL_STATE = {
   items: [] as ChangelogEntryAdmin[],
   selectedEntry: null,
   page: 1,
-  pageSize: 10,
+  pageSize: 100,
   total: 0,
   totalPages: 0,
   isLoading: false,
   isSaving: false,
   isDeleting: false,
   error: null,
+  openEntryId: null as string | null,
+  mode: null as 'compose' | 'edit' | null,
+  lang: 'en' as 'en' | 'ru',
+  panelMode: 'form' as 'form' | 'json',
 };
 
 export const useAdminChangelogStore = create<AdminChangelogState>()(
@@ -164,6 +179,26 @@ export const useAdminChangelogStore = create<AdminChangelogState>()(
       reset: () => {
         set(INITIAL_STATE);
       },
+
+      openCompose: () => {
+        set({ mode: 'compose', openEntryId: null, lang: 'en', panelMode: 'form' });
+      },
+
+      openEdit: (id: string) => {
+        set({ mode: 'edit', openEntryId: id, lang: 'en', panelMode: 'form' });
+      },
+
+      closeDrawer: () => {
+        set({ mode: null, openEntryId: null, lang: 'en', panelMode: 'form' });
+      },
+
+      setLang: (l: 'en' | 'ru') => {
+        set({ lang: l });
+      },
+
+      setPanelMode: (m: 'form' | 'json') => {
+        set({ panelMode: m });
+      },
     }),
     { name: 'adminChangelogStore' }
   )
@@ -184,3 +219,5 @@ export const selectAdminChangelogPage = (state: AdminChangelogState) => state.pa
 export const selectAdminChangelogPageSize = (state: AdminChangelogState) => state.pageSize;
 export const selectAdminChangelogTotal = (state: AdminChangelogState) => state.total;
 export const selectAdminChangelogTotalPages = (state: AdminChangelogState) => state.totalPages;
+export const selectAdminChangelogLang = (state: AdminChangelogState) => state.lang;
+export const selectAdminChangelogPanelMode = (state: AdminChangelogState) => state.panelMode;

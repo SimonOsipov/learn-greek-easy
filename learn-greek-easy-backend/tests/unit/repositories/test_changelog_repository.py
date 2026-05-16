@@ -264,6 +264,49 @@ class TestCreate:
 
             assert result.tag == tag
 
+    @pytest.mark.asyncio
+    async def test_creates_entry_with_version(
+        self,
+        db_session: AsyncSession,
+    ):
+        """Should persist the version column when provided."""
+        repo = ChangelogRepository(db_session)
+
+        entry_data = {
+            "title_en": "Versioned Feature",
+            "title_ru": "Версионная функция",
+            "content_en": "Content",
+            "content_ru": "Содержимое",
+            "tag": ChangelogTag.NEW_FEATURE,
+            "version": "v1.0.0",
+        }
+
+        result = await repo.create(entry_data)
+        await db_session.refresh(result)
+
+        assert result.version == "v1.0.0"
+
+    @pytest.mark.asyncio
+    async def test_creates_entry_without_version_is_null(
+        self,
+        db_session: AsyncSession,
+    ):
+        """Should have NULL version when not provided on create."""
+        repo = ChangelogRepository(db_session)
+
+        entry_data = {
+            "title_en": "No Version",
+            "title_ru": "Без версии",
+            "content_en": "Content",
+            "content_ru": "Содержимое",
+            "tag": ChangelogTag.BUG_FIX,
+        }
+
+        result = await repo.create(entry_data)
+        await db_session.refresh(result)
+
+        assert result.version is None
+
 
 # =============================================================================
 # Test update (inherited from BaseRepository)
