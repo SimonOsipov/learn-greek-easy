@@ -946,6 +946,38 @@ describe('ChangelogEditorDrawer', () => {
     expect(screen.getByTestId('changelog-editor-footer-submit')).toHaveTextContent('Publish entry');
   });
 
+  // ── Fix #1: Form resets when entry changes (drawer stays mounted) ─────────
+
+  it('resets form to new entry values when entry prop changes (same mounted instance)', () => {
+    const entryA = makeEntry({
+      id: 'entry-a',
+      title_en: 'Entry A title',
+      title_ru: 'Заголовок A',
+      content_en: 'Entry A content',
+      content_ru: 'Содержание A',
+    });
+    const entryB = makeEntry({
+      id: 'entry-b',
+      title_en: 'Entry B title',
+      title_ru: 'Заголовок B',
+      content_en: 'Entry B content',
+      content_ru: 'Содержание B',
+    });
+
+    const { rerender } = render(
+      <ChangelogEditorDrawer open={true} onClose={vi.fn()} entry={entryA} />
+    );
+
+    // Form is prefilled with A's values
+    expect(screen.getByTestId('changelog-editor-title-en')).toHaveValue('Entry A title');
+
+    // Rerender with entry B (same mounted instance, different entry id)
+    rerender(<ChangelogEditorDrawer open={true} onClose={vi.fn()} entry={entryB} />);
+
+    // Form now shows B's values
+    expect(screen.getByTestId('changelog-editor-title-en')).toHaveValue('Entry B title');
+  });
+
   // ── CLTE-06: Submit in JSON mode ──────────────────────────────────────────
 
   it('Submit in JSON mode: surfaces inline error without calling createEntry when JSON is invalid', async () => {

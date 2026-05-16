@@ -12,6 +12,9 @@ import { CHANGELOG_TAG_OPTIONS } from '@/types/changelog';
 /** Valid tag values - re-exported from changelog types for consistency */
 export const VALID_TAGS: readonly ChangelogTag[] = CHANGELOG_TAG_OPTIONS;
 
+/** Maximum allowed length for the optional version string */
+const VERSION_MAX_LENGTH = 50;
+
 /** Required fields for changelog JSON input */
 export const REQUIRED_FIELDS = ['tag', 'title_en', 'title_ru', 'content_en', 'content_ru'] as const;
 export type RequiredField = (typeof REQUIRED_FIELDS)[number];
@@ -167,6 +170,15 @@ export function validateChangelogJson(json: string): ValidationResult {
       };
     }
     const trimmed = obj['version'].trim();
+    if (trimmed.length > VERSION_MAX_LENGTH) {
+      return {
+        valid: false,
+        error: {
+          type: 'invalidJson',
+          messageKey: 'admin:changelog.validation.invalidJson',
+        },
+      };
+    }
     version = trimmed === '' ? null : trimmed;
   }
 

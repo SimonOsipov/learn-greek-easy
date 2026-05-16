@@ -532,6 +532,28 @@ describe('changelogJsonValidation', () => {
         expect(result.data.version).toBe('v1.0.0');
       }
     });
+
+    it('rejects version longer than 50 chars', () => {
+      const longVersion = 'v' + '1'.repeat(50); // 51 chars
+      const json = JSON.stringify({ ...baseFields, version: longVersion });
+      const result = validateChangelogJson(json);
+
+      expect(result.valid).toBe(false);
+      if (!result.valid) {
+        expect(result.error.type).toBe('invalidJson');
+      }
+    });
+
+    it('accepts version of exactly 50 chars', () => {
+      const exactVersion = 'v' + '1'.repeat(49); // 50 chars
+      const json = JSON.stringify({ ...baseFields, version: exactVersion });
+      const result = validateChangelogJson(json);
+
+      expect(result.valid).toBe(true);
+      if (result.valid) {
+        expect(result.data.version).toBe(exactVersion);
+      }
+    });
   });
 
   describe('validateChangelogJson with sanitization', () => {

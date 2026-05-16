@@ -98,13 +98,16 @@ export function ChangelogTab() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Effect 1 — URL → store (deep-link in)
-  // Fires once per mount (idempotency guard), after items are loaded or
-  // definitively empty (isLoading=false and items=[]).
+  // Fires once per mount (idempotency guard). Waits until isLoading is false —
+  // i.e. the initial fetch has settled — before applying the deep-link. This
+  // fixes the race where isLoading=false AND items=[] simultaneously on mount
+  // caused the old guard (`if (isLoading && items.length === 0) return`) to
+  // pass and mark the deep-link applied against empty data (Fix #3).
   const appliedDeepLinkRef = useRef(false);
   useEffect(() => {
     if (appliedDeepLinkRef.current) return;
-    // Wait for at least one data resolution (loading done OR items present)
-    if (isLoading && items.length === 0) return;
+    // Gate: wait for initial fetch to settle
+    if (isLoading) return;
 
     const editId = searchParams.get('edit');
     const langParam = searchParams.get('lang');

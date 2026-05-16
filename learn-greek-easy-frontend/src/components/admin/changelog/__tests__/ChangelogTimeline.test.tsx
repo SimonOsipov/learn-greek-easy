@@ -142,6 +142,14 @@ describe('ChangelogTimeline — version pill', () => {
     expect(pill).toBeInTheDocument();
     expect(pill.textContent).toContain('2.3.0');
   });
+
+  it('renders version as-is without adding a v prefix (no double-prefix for v1.2.0)', () => {
+    renderTimeline([makeEntry({ id: 'v-prefix', version: 'v1.2.0' })]);
+
+    const pill = screen.getByTestId('version-pill');
+    expect(pill.textContent).toBe('v1.2.0');
+    expect(pill.textContent).not.toBe('vv1.2.0');
+  });
 });
 
 describe('ChangelogTimeline — Missing RU badge', () => {
@@ -167,6 +175,18 @@ describe('ChangelogTimeline — Missing RU badge', () => {
     renderTimeline([makeEntry({ id: 'mru-4', title_ru: 'RU title', content_ru: 'RU content' })]);
 
     expect(screen.queryByTestId('missing-ru-badge')).not.toBeInTheDocument();
+  });
+
+  it('shows Missing RU badge when title_ru is whitespace-only', () => {
+    renderTimeline([makeEntry({ id: 'mru-5', title_ru: '   ', content_ru: 'RU content' })]);
+
+    expect(screen.getByTestId('missing-ru-badge')).toBeInTheDocument();
+  });
+
+  it('shows Missing RU badge when content_ru is whitespace-only', () => {
+    renderTimeline([makeEntry({ id: 'mru-6', title_ru: 'RU title', content_ru: '   ' })]);
+
+    expect(screen.getByTestId('missing-ru-badge')).toBeInTheDocument();
   });
 });
 

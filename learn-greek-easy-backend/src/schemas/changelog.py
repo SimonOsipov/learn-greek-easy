@@ -55,7 +55,7 @@ class ChangelogEntryCreate(BaseModel):
     content_en: str = Field(..., min_length=1)
     content_ru: str = Field(..., min_length=1)
     tag: ChangelogTag
-    version: str | None = Field(default=None, max_length=50)
+    version: Optional[str] = Field(default=None, max_length=50)
 
 
 class ChangelogEntryUpdate(BaseModel):

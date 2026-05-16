@@ -33,7 +33,7 @@ async function seedChangelog(
   const apiBaseUrl = getApiBaseUrl();
   const response = await request.post(`${apiBaseUrl}/api/v1/test/seed/changelog`);
   if (!response.ok()) {
-    console.warn(`[CLTE-10] Changelog seeding returned ${response.status()} — tests may use existing data`);
+    throw new Error(`Seeding failed: ${response.status()} ${await response.text()}`);
   }
 }
 

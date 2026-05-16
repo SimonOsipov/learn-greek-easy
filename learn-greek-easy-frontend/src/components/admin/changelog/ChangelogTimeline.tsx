@@ -44,7 +44,7 @@ interface HeaderSlotProps {
 function HeaderSlot({ entry }: HeaderSlotProps) {
   const { t } = useTranslation(['admin', 'changelog']);
   const tagConfig = CHANGELOG_TAG_CONFIG[entry.tag];
-  const isMissingRu = !entry.title_ru || !entry.content_ru;
+  const isMissingRu = !entry.title_ru.trim() || !entry.content_ru.trim();
   const postedDate = format(new Date(entry.created_at), 'MMM d, yyyy');
 
   return (
@@ -52,7 +52,7 @@ function HeaderSlot({ entry }: HeaderSlotProps) {
       <Badge tone={TONE_BY_TAG[entry.tag]}>{t(tagConfig.labelKey)}</Badge>
       {entry.version ? (
         <span className="cl-version-pill" data-testid="version-pill">
-          v{entry.version}
+          {entry.version}
         </span>
       ) : null}
       <span className="cl-posted-date">{postedDate}</span>

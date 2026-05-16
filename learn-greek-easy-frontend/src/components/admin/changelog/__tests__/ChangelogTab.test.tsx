@@ -468,6 +468,9 @@ describe('ChangelogTab', () => {
   });
 
   // ── Deep-link (AC #8) ───────────────────────────────────────────────────────
+  // Fix #3: guard is now `if (isLoading) return` instead of the broken
+  // `if (isLoading && items.length === 0) return`. With mockIsLoading=false
+  // the effect fires immediately as before.
   describe('Deep-link ?edit=<valid-id>&lang=ru', () => {
     it('calls openEdit with the id when item exists', async () => {
       mockItems = [makeEntry({ id: 'abc-123' })];
@@ -590,6 +593,31 @@ describe('ChangelogTab', () => {
     it('calls fetchList on mount', () => {
       renderWithRouter();
       expect(mockFetchList).toHaveBeenCalled();
+    });
+  });
+
+  // ── Deep-link race fix (Fix #3) ────────────────────────────────────────────
+  // The race: when isLoading=false AND items=[] simultaneously on mount, the old
+  // guard `if (isLoading && items.length === 0) return` did NOT block. The fixed
+  // guard `if (isLoading) return` correctly blocks until loading completes.
+  describe('Deep-link race: deep-link blocked while isLoading=true', () => {
+    it('does not call openEdit while isLoading=true', async () => {
+      // Simulate: store says loading is in progress
+      mockIsLoading = true;
+      mockItems = [makeEntry({ id: 'loading-id' })];
+      renderWithRouter('?edit=loading-id');
+      await act(async () => {});
+      // Should NOT have called openEdit because isLoading was true
+      expect(mockOpenEdit).not.toHaveBeenCalled();
+    });
+
+    it('calls openEdit after isLoading transitions to false', async () => {
+      // Start with loading complete
+      mockIsLoading = false;
+      mockItems = [makeEntry({ id: 'resolved-id' })];
+      renderWithRouter('?edit=resolved-id');
+      await act(async () => {});
+      expect(mockOpenEdit).toHaveBeenCalledWith('resolved-id');
     });
   });
 });

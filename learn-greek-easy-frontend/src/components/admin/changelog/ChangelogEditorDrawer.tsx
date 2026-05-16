@@ -59,6 +59,19 @@ const TAG_TONE: Record<ChangelogTag, 'green' | 'amber' | 'blue'> = {
 
 // ── Component ──────────────────────────────────────────────────────────────────
 
+// ── Form initializer ─────────────────────────────────────────────────────────
+// Shared by useState initial value AND the reset effect (Fix #1).
+function toInitialForm(entry?: ChangelogEntryAdmin) {
+  return {
+    tag: (entry?.tag ?? 'new_feature') as ChangelogTag,
+    version: entry?.version ?? '',
+    title_en: entry?.title_en ?? '',
+    title_ru: entry?.title_ru ?? '',
+    content_en: entry?.content_en ?? '',
+    content_ru: entry?.content_ru ?? '',
+  };
+}
+
 export function ChangelogEditorDrawer({ open, onClose, entry }: ChangelogEditorDrawerProps) {
   const { t } = useTranslation('changelog');
 
@@ -69,36 +82,53 @@ export function ChangelogEditorDrawer({ open, onClose, entry }: ChangelogEditorD
   const { setLang, setPanelMode, createEntry, updateEntry } = useAdminChangelogStore();
 
   // ── Local form state (plain useState — see file-level comment) ────────────
-  const [form, setForm] = useState({
-    tag: (entry?.tag ?? 'new_feature') as ChangelogTag,
-    version: entry?.version ?? '',
-    title_en: entry?.title_en ?? '',
-    title_ru: entry?.title_ru ?? '',
-    content_en: entry?.content_en ?? '',
-    content_ru: entry?.content_ru ?? '',
-  });
+  const [form, setForm] = useState(() => toInitialForm(entry));
 
   // ── JSON mode state ───────────────────────────────────────────────────────
-  const [jsonText, setJsonText] = useState(() =>
-    JSON.stringify(
+  const [jsonText, setJsonText] = useState(() => {
+    const initial = toInitialForm(entry);
+    return JSON.stringify(
       {
-        tag: form.tag,
-        version: form.version || null,
-        title_en: form.title_en,
-        title_ru: form.title_ru,
-        content_en: form.content_en,
-        content_ru: form.content_ru,
+        tag: initial.tag,
+        version: initial.version || null,
+        title_en: initial.title_en,
+        title_ru: initial.title_ru,
+        content_en: initial.content_en,
+        content_ru: initial.content_ru,
       },
       null,
       2
-    )
-  );
+    );
+  });
 
   // ── Delete dialog state ───────────────────────────────────────────────────
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   // ── Submit error state ────────────────────────────────────────────────────
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // ── Reset form/JSON when entry or open changes (Fix #1) ───────────────────
+  // Handles: drawer stays mounted while entry switches, or closes+reopens.
+  useEffect(() => {
+    const initial = toInitialForm(entry);
+    setForm(initial);
+    setJsonText(
+      JSON.stringify(
+        {
+          tag: initial.tag,
+          version: initial.version || null,
+          title_en: initial.title_en,
+          title_ru: initial.title_ru,
+          content_en: initial.content_en,
+          content_ru: initial.content_ru,
+        },
+        null,
+        2
+      )
+    );
+    setSubmitError(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entry?.id, open]);
 
   // ── JSON validation (live, on every keystroke in JSON mode) ───────────────
   const validation = useMemo(() => validateChangelogJson(jsonText), [jsonText]);
