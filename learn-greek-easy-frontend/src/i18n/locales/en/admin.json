@@ -620,6 +620,12 @@
         "hintEn": "Source language",
         "hintEl": "Greek translation · used in the app",
         "hintRu": "Russian translation · for fallback explanations"
+      },
+      "body": {
+        "greekBody": "Greek body",
+        "titleB2": "Title — B2 (Greek)",
+        "titleB2Hint": "This title doubles as the B2 scenario summary today. A dedicated scenario field is on the roadmap.",
+        "scenarioA2": "Scenario — A2 (Greek)"
       }
     }
   },

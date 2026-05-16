@@ -196,7 +196,9 @@ export const NewsEditDrawer: React.FC = () => {
               <Button
                 variant="default"
                 onClick={handleSave}
-                disabled={form.formState.isSubmitting}
+                disabled={
+                  form.formState.isSubmitting || Object.keys(form.formState.errors).length > 0
+                }
                 data-testid="news-drawer-save"
               >
                 {form.formState.isSubmitting ? t('news.drawer.saving') : t('news.drawer.save')}
