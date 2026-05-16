@@ -1,0 +1,237 @@
+// src/components/admin/decks/DeckDrawer.tsx
+//
+// Controlled drawer for a single deck. Open/closed state is driven by the
+// `?edit=<deckId>` URL search param (same pattern as NewsEditDrawer).
+// Tab state is driven by `?subtab=<words|questions|settings|activity>`.
+// Item detail state is driven by `?item=<itemId>`.
+//
+// Mounted unconditionally — DKDR-06 will mount it on AdminPage.
+
+import { ChevronLeft } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
+
+import { Badge } from '@/components/ui/badge';
+import { SidePanel } from '@/components/ui/side-panel';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useDeck } from '@/hooks/useDeck';
+import { getLocalizedDeckName } from '@/lib/deckLocale';
+
+import { DeckDrawerSkeleton } from './DeckDrawerSkeleton';
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+type DeckTab = 'words' | 'questions' | 'settings' | 'activity';
+
+// ── Component ─────────────────────────────────────────────────────────────────
+
+export function DeckDrawer() {
+  const { t, i18n } = useTranslation('admin');
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const editId = searchParams.get('edit');
+  const itemId = searchParams.get('item');
+  const subtabParam = searchParams.get('subtab') as DeckTab | null;
+
+  const open = !!editId;
+
+  const { deck, isLoading, isError } = useDeck(editId);
+
+  const handleOpenChange = (next: boolean) => {
+    if (!next) {
+      setSearchParams((prev) => {
+        const params = new URLSearchParams(prev);
+        params.delete('edit');
+        params.delete('item');
+        params.delete('subtab');
+        return params;
+      });
+    }
+  };
+
+  const handleTabChange = (value: string) => {
+    setSearchParams((prev) => {
+      const params = new URLSearchParams(prev);
+      params.set('subtab', value);
+      return params;
+    });
+  };
+
+  // ── Derived state ──────────────────────────────────────────────────────────
+
+  const isCulture = deck?.type === 'culture';
+
+  // Resolve the active tab — default depends on deck type.
+  const resolvedTab: DeckTab = subtabParam ?? (isCulture ? 'questions' : 'words');
+
+  // Normalize `name` to flat string fields so getLocalizedDeckName can accept it.
+  // UnifiedDeckItem.name may be string | MultilingualName; prefer the flat fields.
+  const deckNameNormalized = deck
+    ? {
+        name_en: deck.name_en ?? (typeof deck.name === 'string' ? deck.name : ''),
+        name_ru: deck.name_ru ?? '',
+      }
+    : null;
+  const deckName = deckNameNormalized
+    ? getLocalizedDeckName(deckNameNormalized, i18n.language)
+    : '';
+  const itemCount = deck?.item_count ?? 0;
+
+  // Loading: editId is set but query hasn't resolved yet.
+  const showSkeleton = !!(editId && (isLoading || (!deck && !isError)));
+  // Not-found: query resolved with no match (null data) or errored.
+  const showNotFound =
+    !!(editId && isError) || !!(editId && !isLoading && !isError && deck === null);
+  // Show populated drawer.
+  const showContent = !showSkeleton && !showNotFound && !!deck;
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+
+  return (
+    <SidePanel
+      open={open}
+      onOpenChange={handleOpenChange}
+      size="wide"
+      data-testid="deck-drawer"
+      className="w-screen max-w-none md:w-[calc(100vw-2rem)] md:max-w-none xl:w-[1080px]"
+    >
+      <SidePanel.CloseButton />
+
+      {/* ── Loading skeleton ── */}
+      {showSkeleton && (
+        <SidePanel.Body>
+          <DeckDrawerSkeleton variant={itemId ? 'detail' : 'list'} />
+        </SidePanel.Body>
+      )}
+
+      {/* ── Not-found empty state (keeps ?edit= in URL per AC #3) ── */}
+      {showNotFound && (
+        <SidePanel.Body>
+          <div
+            data-testid="deck-drawer-not-found"
+            className="flex h-full items-center justify-center p-8 text-muted-foreground"
+          >
+            {t('decks.deckNotFound')}
+          </div>
+        </SidePanel.Body>
+      )}
+
+      {/* ── Populated drawer ── */}
+      {showContent && (
+        <Tabs
+          value={resolvedTab}
+          onValueChange={handleTabChange}
+          data-testid="deck-drawer-tabs"
+          className="flex min-h-0 flex-1 flex-col"
+        >
+          {/* Header */}
+          <SidePanel.Header>
+            {/* Breadcrumb back button */}
+            <button
+              type="button"
+              onClick={() => handleOpenChange(false)}
+              className="drawer-breadcrumb mb-1 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+            >
+              <ChevronLeft className="size-4" aria-hidden="true" />
+              {t('decks.allDecks', { defaultValue: 'All decks' })}
+            </button>
+
+            {/* Deck title */}
+            <h2 className="drawer-title">{deckName}</h2>
+
+            {/* Meta row */}
+            <div className="drawer-meta flex flex-wrap items-center gap-2">
+              <Badge tone={isCulture ? 'violet' : 'blue'}>
+                {isCulture
+                  ? t('decks.typeCulture', { defaultValue: 'Culture' })
+                  : t('decks.typeVocabulary', { defaultValue: 'Vocabulary' })}
+              </Badge>
+
+              {deck.level && <Badge tone="gray">{deck.level}</Badge>}
+
+              <Badge tone={deck.is_active ? 'green' : 'red'}>
+                {deck.is_active
+                  ? t('decks.statusActive', { defaultValue: 'Active' })
+                  : t('decks.statusInactive', { defaultValue: 'Inactive' })}
+              </Badge>
+
+              <span className="text-sm text-muted-foreground">
+                {itemCount}{' '}
+                {isCulture
+                  ? t('decks.questions', { defaultValue: 'questions' })
+                  : t('decks.words', { defaultValue: 'words' })}
+              </span>
+            </div>
+          </SidePanel.Header>
+
+          {/* Tab triggers */}
+          <SidePanel.Tabs>
+            <TabsList className="w-full justify-start">
+              {!isCulture && (
+                <TabsTrigger value="words" data-testid="deck-drawer-tab-words">
+                  {t('decks.drawer.tabs.words')}
+                </TabsTrigger>
+              )}
+              {isCulture && (
+                <TabsTrigger value="questions" data-testid="deck-drawer-tab-questions">
+                  {t('decks.drawer.tabs.questions')}
+                </TabsTrigger>
+              )}
+              <TabsTrigger value="settings" data-testid="deck-drawer-tab-settings">
+                {t('decks.drawer.tabs.settings')}
+              </TabsTrigger>
+              <TabsTrigger value="activity" data-testid="deck-drawer-tab-activity">
+                {t('decks.drawer.tabs.activity')}
+              </TabsTrigger>
+            </TabsList>
+          </SidePanel.Tabs>
+
+          {/* Tab content — inside SidePanel.Body for scrolling */}
+          <SidePanel.Body>
+            {/* Words tab (vocabulary decks only) */}
+            {!isCulture && (
+              <TabsContent value="words">
+                {itemId ? (
+                  <div data-testid="deck-drawer-item-detail-placeholder">
+                    Item detail will be implemented in DKDR-11/13
+                  </div>
+                ) : (
+                  <div data-testid="deck-drawer-flavor-body-placeholder">
+                    Flavor body (DKDR-10/12)
+                  </div>
+                )}
+              </TabsContent>
+            )}
+
+            {/* Questions tab (culture decks only) */}
+            {isCulture && (
+              <TabsContent value="questions">
+                {itemId ? (
+                  <div data-testid="deck-drawer-item-detail-placeholder">
+                    Item detail will be implemented in DKDR-11/13
+                  </div>
+                ) : (
+                  <div data-testid="deck-drawer-flavor-body-placeholder">
+                    Flavor body (DKDR-10/12)
+                  </div>
+                )}
+              </TabsContent>
+            )}
+
+            {/* Settings tab */}
+            <TabsContent value="settings">
+              <div data-testid="deck-drawer-settings-placeholder">Settings (DKDR-08)</div>
+            </TabsContent>
+
+            {/* Activity tab — fully implemented */}
+            <TabsContent value="activity">
+              <div className="placeholder-box" data-testid="deck-drawer-activity">
+                {t('decks.activityPlaceholder')}
+              </div>
+            </TabsContent>
+          </SidePanel.Body>
+        </Tabs>
+      )}
+    </SidePanel>
+  );
+}
