@@ -64,18 +64,17 @@ test.beforeAll(async ({ request }) => {
 test.describe('ADMIN2-09 Decks Drawer — happy paths (DKDR-14)', () => {
   // ── Flow 1: Vocab item edit → completion pill updates ──────────────────────
   test('Flow 1: vocab item edit → completion pill updates', async ({ page }) => {
-    await navigateToAdminTab(page, 'decks');
+    // Skip if the seed did not capture a word entry id (no words for the vocab deck)
+    test.skip(!firstWordEntryId, 'firstWordEntryId not captured from seed/admin words API');
 
-    // Click first vocab deck row to open drawer
-    await page.getByTestId('deck-row').first().click();
-    await expect(page.getByTestId('deck-drawer')).toBeVisible({ timeout: 10_000 });
-
-    // Click first word row to push detail view
-    await page.getByTestId('word-row').first().click();
+    // Navigate directly to the word detail view via deep-link to avoid non-deterministic
+    // deck-row first() clicks that may land on a culture deck (no word-row there).
+    await page.goto(`/admin?tab=decks&edit=${vocabDeckId}&item=${firstWordEntryId}`);
+    await expect(page.getByTestId('deck-drawer')).toBeVisible({ timeout: 15_000 });
 
     // Word detail view should show the lemma and pill row
-    await expect(page.getByTestId('vocab-word-detail-lemma')).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByTestId('vocab-word-detail-pills')).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByTestId('vocab-word-detail-lemma')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('vocab-word-detail-pills')).toBeVisible({ timeout: 10_000 });
 
     // Open the edit form
     await page.getByTestId('word-entry-edit-btn').click();

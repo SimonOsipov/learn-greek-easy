@@ -242,7 +242,11 @@ test.describe('Admin Culture Deck Create - Multilingual', () => {
 // VOCABULARY DECK EDIT - MULTILINGUAL
 // ============================================================================
 
-test.describe('Admin Vocabulary Deck Edit - Multilingual', () => {
+// Quarantined: ADMIN2-09 (DKDR-06) retired the v1 DeckEditModal/DeckDetailModal that hosted these flows.
+// These specs target v1 deck edit/detail modal experience which no longer mounts on AdminPage.
+// Equivalent v2 (drawer-based) coverage lives in admin-decks.spec.ts (ADMIN2-09 / DKDR-14).
+// Full cleanup tracked in ADMIN2-12.
+test.describe.skip('Admin Vocabulary Deck Edit - Multilingual', () => {
   test.use({ storageState: ADMIN_AUTH });
 
   test.beforeEach(async ({ page }) => {
@@ -544,7 +548,11 @@ test.describe('Admin Deck - Language Tab Behavior', () => {
 // DECK DETAIL MODAL TESTS
 // ============================================================================
 
-test.describe('Admin Deck - Deck Detail Modal', () => {
+// Quarantined: ADMIN2-09 (DKDR-06) retired the v1 DeckDetailModal that hosted these flows.
+// These specs target v1 deck detail modal experience which no longer mounts on AdminPage.
+// Equivalent v2 (drawer-based) coverage lives in admin-decks.spec.ts (ADMIN2-09 / DKDR-14).
+// Full cleanup tracked in ADMIN2-12.
+test.describe.skip('Admin Deck - Deck Detail Modal', () => {
   test.use({ storageState: ADMIN_AUTH });
 
   test.beforeEach(async ({ page }) => {

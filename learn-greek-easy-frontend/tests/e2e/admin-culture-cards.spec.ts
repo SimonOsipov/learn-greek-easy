@@ -17,6 +17,11 @@ import { test, expect } from '@playwright/test';
 
 import { navigateToAdminTab } from './helpers/admin-helpers';
 
+// Quarantined: ADMIN2-09 (DKDR-06) retired the v1 DeckDetailModal that hosted these flows.
+// These specs target the v1 culture-card create/edit experience inside DeckDetailModal,
+// which no longer mounts on AdminPage. Equivalent v2 (drawer-based) coverage lives in
+// admin-decks.spec.ts (ADMIN2-09 / DKDR-14). Full cleanup tracked in ADMIN2-12.
+
 // Storage state paths
 const ADMIN_AUTH = 'playwright/.auth/admin.json';
 
@@ -86,7 +91,7 @@ async function seedCultureContent(page: import('@playwright/test').Page): Promis
 // CREATE FROM DECK DETAIL (full flow)
 // ============================================================================
 
-test.describe('Admin Culture Cards - Create from Action Bar', () => {
+test.describe.skip('Admin Culture Cards - Create from Action Bar', () => {
   test.use({ storageState: ADMIN_AUTH });
 
   test.beforeEach(async ({ page }) => {
@@ -180,7 +185,7 @@ test.describe('Admin Culture Cards - Create from Action Bar', () => {
 // CREATE FROM DECK DETAIL MODAL
 // ============================================================================
 
-test.describe('Admin Culture Cards - Create from Deck Detail', () => {
+test.describe.skip('Admin Culture Cards - Create from Deck Detail', () => {
   test.use({ storageState: ADMIN_AUTH });
 
   test.beforeEach(async ({ page }) => {
@@ -283,7 +288,7 @@ test.describe('Admin Culture Cards - Create from Deck Detail', () => {
 // EDIT EXISTING CULTURE CARD
 // ============================================================================
 
-test.describe('Admin Culture Cards - Edit Card', () => {
+test.describe.skip('Admin Culture Cards - Edit Card', () => {
   test.use({ storageState: ADMIN_AUTH });
 
   test.beforeEach(async ({ page }) => {
@@ -382,7 +387,7 @@ test.describe('Admin Culture Cards - Edit Card', () => {
 // VALIDATION ERRORS
 // ============================================================================
 
-test.describe('Admin Culture Cards - Validation', () => {
+test.describe.skip('Admin Culture Cards - Validation', () => {
   test.use({ storageState: ADMIN_AUTH });
 
   test.beforeEach(async ({ page }) => {
@@ -475,7 +480,7 @@ test.describe('Admin Culture Cards - Validation', () => {
 // CANCEL WITH UNSAVED CHANGES
 // ============================================================================
 
-test.describe('Admin Culture Cards - Cancel Confirmation', () => {
+test.describe.skip('Admin Culture Cards - Cancel Confirmation', () => {
   test.use({ storageState: ADMIN_AUTH });
 
   test.beforeEach(async ({ page }) => {
@@ -564,7 +569,7 @@ test.describe('Admin Culture Cards - Cancel Confirmation', () => {
 // DELETE ANSWER OPTION
 // ============================================================================
 
-test.describe('Admin Culture Cards - Delete Answer', () => {
+test.describe.skip('Admin Culture Cards - Delete Answer', () => {
   test.use({ storageState: ADMIN_AUTH });
 
   test.beforeEach(async ({ page }) => {
