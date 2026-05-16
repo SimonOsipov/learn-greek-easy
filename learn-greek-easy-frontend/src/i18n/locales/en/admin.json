@@ -1402,6 +1402,23 @@
       "allLevels": "All Levels",
       "allStatuses": "All Statuses"
     },
+    "filters": {
+      "status": {
+        "label": "Status",
+        "all": "All",
+        "draft": "Draft",
+        "ready": "Ready"
+      },
+      "search": {
+        "placeholder": "Search situations...",
+        "clear": "Clear search"
+      },
+      "sort": {
+        "newest": "Newest first",
+        "oldest": "Oldest first",
+        "draftsFirst": "Drafts first"
+      }
+    },
     "columns": {
       "scenario": "Scenario",
       "status": "Status",
