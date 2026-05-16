@@ -10,7 +10,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { validateNewsItemJson } from '../newsJsonValidation';
+import { validateA2Pair, validateNewsItemJson } from '../newsJsonValidation';
 
 /** Minimal valid JSON string for baseline tests */
 const VALID_BASE = JSON.stringify({
@@ -27,6 +27,32 @@ const VALID_BASE = JSON.stringify({
 function withExtra(extra: Record<string, unknown>): string {
   return JSON.stringify({ ...JSON.parse(VALID_BASE), ...extra });
 }
+
+describe('validateA2Pair', () => {
+  it('returns valid when both scenarioA2 and textA2 are null', () => {
+    expect(validateA2Pair({ scenarioA2: null, textA2: null })).toEqual({ valid: true });
+  });
+
+  it('returns valid when both scenarioA2 and textA2 are non-null', () => {
+    expect(
+      validateA2Pair({ scenarioA2: 'Simplified scenario', textA2: 'Simplified text' })
+    ).toEqual({ valid: true });
+  });
+
+  it('returns invalid when scenarioA2 is set and textA2 is null', () => {
+    expect(validateA2Pair({ scenarioA2: 'Simplified scenario', textA2: null })).toEqual({
+      valid: false,
+      messageKey: 'news.validation.a2FieldsPaired',
+    });
+  });
+
+  it('returns invalid when textA2 is set and scenarioA2 is null', () => {
+    expect(validateA2Pair({ scenarioA2: null, textA2: 'Simplified text' })).toEqual({
+      valid: false,
+      messageKey: 'news.validation.a2FieldsPaired',
+    });
+  });
+});
 
 describe('validateNewsItemJson — scene/style field validation', () => {
   // --- Single-field rejections ---
