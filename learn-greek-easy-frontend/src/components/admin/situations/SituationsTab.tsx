@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { CheckCircle2, Clock, MessageSquare, Newspaper, Plus, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
+import { useShallow } from 'zustand/react/shallow';
 
 import { PageHead } from '@/components/admin/shell/page-head';
 import { Button } from '@/components/ui/button';
@@ -23,7 +24,9 @@ export function SituationsTab() {
   const fetchSituations = useAdminSituationStore((s) => s.fetchSituations);
   const openDrawer = useAdminSituationStore((s) => s.openDrawer);
   const closeDrawer = useAdminSituationStore((s) => s.closeDrawer);
-  const { total, ready, draft, exercisesGenerated } = useAdminSituationStore(selectStatsTotals);
+  const { total, ready, draft, exercisesGenerated } = useAdminSituationStore(
+    useShallow(selectStatsTotals)
+  );
 
   // ── Fetch on mount ────────────────────────────────────────────────────────
   useEffect(() => {
