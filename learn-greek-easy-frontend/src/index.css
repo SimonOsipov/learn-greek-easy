@@ -1166,6 +1166,35 @@
     color: hsl(var(--primary-foreground));
   }
 
+  /* ── Deck mark (ADMIN2) ── */
+  .deck-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    font-family: 'Inter Tight', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    background: hsl(var(--primary) / 0.14);
+    color: hsl(var(--primary));
+    flex-shrink: 0;
+  }
+  .deck-mark.mk-violet {
+    background: hsl(var(--accent) / 0.14);
+    color: hsl(var(--accent));
+  }
+  .deck-mark.mk-cyan {
+    background: hsl(var(--accent-2) / 0.14);
+    color: hsl(var(--accent-2));
+  }
+  .deck-mark.mk-amber {
+    background: hsl(var(--warning) / 0.16);
+    color: hsl(var(--warning));
+  }
+
   /* ── Deck completion pills (ADMIN2) ── */
   .dk-pills {
     display: flex;
