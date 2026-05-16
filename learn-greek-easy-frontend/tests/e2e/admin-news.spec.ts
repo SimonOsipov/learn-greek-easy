@@ -129,7 +129,9 @@ test.describe('Admin News — drawer happy paths (NEWS-10)', () => {
     // Click Cancel
     await page.locator('[data-testid="news-drawer-cancel"]').click();
     // Dirty ConfirmDialog opens — title is "Unsaved changes"
-    await expect(page.getByText('Unsaved changes')).toBeVisible();
+    // Use the heading role to disambiguate from the description body which
+    // also contains the substring "unsaved changes".
+    await expect(page.getByRole('heading', { name: 'Unsaved changes' })).toBeVisible();
     // Click "Discard & continue" (cancel button on ConfirmDialog = onCancel = discard)
     await page.getByRole('button', { name: 'Discard & continue' }).click();
     await expect(page.locator('[data-testid="news-edit-drawer"]')).not.toBeVisible({
