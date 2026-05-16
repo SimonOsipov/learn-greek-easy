@@ -21,6 +21,21 @@
     --accent: 280 92% 62%; /* electric violet */
     --accent-2: 188 95% 50%; /* cyan */
     --accent-3: 32 100% 60%; /* burnt orange */
+
+    /* ── Situations thumbnail palette (6 tones × {from,to}, 135° gradients) ── */
+    --sit-thumb-blue-from: 221 85% 62%;
+    --sit-thumb-blue-to: 205 88% 52%;
+    --sit-thumb-amber-from: 38 92% 60%;
+    --sit-thumb-amber-to: 24 90% 54%;
+    --sit-thumb-violet-from: 280 82% 64%;
+    --sit-thumb-violet-to: 262 70% 56%;
+    --sit-thumb-cyan-from: 188 85% 56%;
+    --sit-thumb-cyan-to: 200 88% 48%;
+    --sit-thumb-green-from: 160 70% 48%;
+    --sit-thumb-green-to: 145 72% 40%;
+    --sit-thumb-red-from: 0 78% 62%;
+    --sit-thumb-red-to: 350 75% 54%;
+
     --success: 160 84% 39%;
     --warning: 38 92% 50%;
     --danger: 0 78% 58%;
@@ -159,6 +174,20 @@
     --primary: 221 90% 65%;
     --primary-2: 221 90% 75%;
     /* --accent / --accent-2 / --accent-3 / --success / --warning / --danger: doc-marked (same) */
+
+    /* ── Situations thumbnail palette (6 tones × {from,to}, 135° gradients) ── */
+    --sit-thumb-blue-from: 221 75% 50%;
+    --sit-thumb-blue-to: 205 80% 42%;
+    --sit-thumb-amber-from: 38 80% 50%;
+    --sit-thumb-amber-to: 24 78% 44%;
+    --sit-thumb-violet-from: 280 70% 52%;
+    --sit-thumb-violet-to: 262 62% 46%;
+    --sit-thumb-cyan-from: 188 75% 46%;
+    --sit-thumb-cyan-to: 200 78% 40%;
+    --sit-thumb-green-from: 160 62% 40%;
+    --sit-thumb-green-to: 145 64% 34%;
+    --sit-thumb-red-from: 0 68% 52%;
+    --sit-thumb-red-to: 350 66% 46%;
 
     /* ── Charts (dark) ── */
     --chart-1: 217 91% 60%;
