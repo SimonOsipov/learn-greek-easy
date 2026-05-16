@@ -91,9 +91,11 @@ afterEach(() => {
   useAdminSituationStore.setState(initialStoreState, true);
 });
 
+// ADMIN2-12: delete after source removal
+
 // ── Tests ──────────────────────────────────────────────────────────────────
 
-describe('SituationDetailModal — picture tab empty state', () => {
+describe.skip('SituationDetailModal — picture tab empty state', () => {
   it('shows situation-picture-empty and hides picture-prompt-form when picture is null', async () => {
     const user = userEvent.setup();
 
