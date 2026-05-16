@@ -1,10 +1,33 @@
 // src/components/admin/changelog/__tests__/ChangelogEditorDrawer.test.tsx
 
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 import { ChangelogEditorDrawer } from '../ChangelogEditorDrawer';
+
+// ── Toast mock ─────────────────────────────────────────────────────────────────
+const mockToast = vi.fn();
+vi.mock('@/hooks/use-toast', () => ({
+  toast: (...args: unknown[]) => mockToast(...args),
+}));
+
+// ── Delete Dialog mock ─────────────────────────────────────────────────────────
+// We mock ChangelogDeleteDialog to isolate drawer behaviour from dialog internals.
+vi.mock('../ChangelogDeleteDialog', () => ({
+  ChangelogDeleteDialog: ({
+    open,
+    onOpenChange: _onOpenChange,
+    entry,
+  }: {
+    open: boolean;
+    onOpenChange: (v: boolean) => void;
+    entry: { id: string } | null;
+  }) =>
+    open ? (
+      <div data-testid="changelog-delete-dialog-mock">Deleting {entry?.id ?? 'null'}</div>
+    ) : null,
+}));
 
 // ── Store mock ─────────────────────────────────────────────────────────────────
 // Mirrors the selector-based pattern from ChangelogTab.test.tsx.
@@ -16,12 +39,17 @@ const mockSetLang = vi.fn((l: 'en' | 'ru') => {
 const mockSetPanelMode = vi.fn((m: 'form' | 'json') => {
   mockStoreState.panelMode = m;
 });
+const mockCreateEntry = vi.fn();
+const mockUpdateEntry = vi.fn();
 
 const mockStoreState = {
   lang: 'en' as 'en' | 'ru',
   panelMode: 'form' as 'form' | 'json',
+  isSaving: false,
   setLang: mockSetLang,
   setPanelMode: mockSetPanelMode,
+  createEntry: mockCreateEntry,
+  updateEntry: mockUpdateEntry,
 };
 
 vi.mock('@/stores/adminChangelogStore', () => ({
@@ -29,7 +57,37 @@ vi.mock('@/stores/adminChangelogStore', () => ({
     selector ? selector(mockStoreState) : mockStoreState,
   selectAdminChangelogLang: (state: typeof mockStoreState) => state.lang,
   selectAdminChangelogPanelMode: (state: typeof mockStoreState) => state.panelMode,
+  selectAdminChangelogIsSaving: (state: typeof mockStoreState) => state.isSaving,
 }));
+
+// ── Test helpers ───────────────────────────────────────────────────────────────
+
+function makeEntry(
+  overrides: Partial<{
+    id: string;
+    title_en: string;
+    title_ru: string;
+    content_en: string;
+    content_ru: string;
+    tag: 'new_feature' | 'bug_fix' | 'announcement';
+    version: string | null;
+    created_at: string;
+    updated_at: string;
+  }> = {}
+) {
+  return {
+    id: 'entry-1',
+    title_en: 'Hello',
+    title_ru: 'Привет',
+    content_en: 'Content EN',
+    content_ru: 'Content RU',
+    tag: 'new_feature' as const,
+    version: null,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+    ...overrides,
+  };
+}
 
 // ── Tests ──────────────────────────────────────────────────────────────────────
 
@@ -39,6 +97,7 @@ describe('ChangelogEditorDrawer', () => {
     // Reset store state to defaults before each test
     mockStoreState.lang = 'en';
     mockStoreState.panelMode = 'form';
+    mockStoreState.isSaving = false;
   });
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -56,18 +115,7 @@ describe('ChangelogEditorDrawer', () => {
   });
 
   it('shows "Edit entry" title when an entry prop is provided', () => {
-    const entry = {
-      id: 'entry-1',
-      title_en: 'Hello',
-      title_ru: 'Привет',
-      content_en: 'Content EN',
-      content_ru: 'Content RU',
-      tag: 'new_feature' as const,
-      version: null,
-      created_at: '2026-01-01T00:00:00Z',
-      updated_at: '2026-01-01T00:00:00Z',
-    };
-    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} entry={entry} />);
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} entry={makeEntry()} />);
 
     expect(screen.getByText('Edit entry')).toBeInTheDocument();
   });
@@ -302,21 +350,10 @@ describe('ChangelogEditorDrawer', () => {
   });
 
   it('EN pill is done when entry has title_en and content_en', () => {
-    const entry = {
-      id: 'e1',
-      title_en: 'Hello',
-      title_ru: '',
-      content_en: 'World',
-      content_ru: '',
-      tag: 'new_feature' as const,
-      version: null,
-      created_at: '2026-01-01T00:00:00Z',
-      updated_at: '2026-01-01T00:00:00Z',
-    };
-    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} entry={entry} />);
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} entry={makeEntry()} />);
 
     expect(screen.getByTestId('changelog-trans-pill-en')).toHaveClass('is-done');
-    expect(screen.getByTestId('changelog-trans-pill-ru')).not.toHaveClass('is-done');
+    expect(screen.getByTestId('changelog-trans-pill-ru')).toHaveClass('is-done');
   });
 
   it('RU pill becomes done after typing title and content in RU', async () => {
@@ -498,18 +535,16 @@ describe('ChangelogEditorDrawer', () => {
   });
 
   it('shows formatted date in edit mode (MMM d, yyyy)', () => {
-    const entry = {
-      id: 'e1',
-      title_en: 'Hello',
-      title_ru: 'Привет',
-      content_en: 'Content',
-      content_ru: 'Содержание',
-      tag: 'new_feature' as const,
-      version: null,
-      created_at: '2026-01-15T00:00:00Z',
-      updated_at: '2026-01-15T00:00:00Z',
-    };
-    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} entry={entry} />);
+    render(
+      <ChangelogEditorDrawer
+        open={true}
+        onClose={vi.fn()}
+        entry={makeEntry({
+          created_at: '2026-01-15T00:00:00Z',
+          updated_at: '2026-01-15T00:00:00Z',
+        })}
+      />
+    );
 
     expect(screen.getByTestId('changelog-preview-foot')).toHaveTextContent('Posted Jan 15, 2026');
   });
@@ -550,5 +585,376 @@ describe('ChangelogEditorDrawer', () => {
     expect(screen.getByTestId('changelog-preview-body')).toHaveTextContent(
       'Текст появится здесь по мере набора.'
     );
+  });
+
+  // ── CLTE-06: Footer badge states ──────────────────────────────────────────
+
+  it('shows "Needs EN title + content" badge when form is empty', () => {
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+
+    expect(screen.getByTestId('changelog-editor-badge-needs-en')).toBeInTheDocument();
+    expect(screen.queryByTestId('changelog-editor-badge-ready')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('changelog-editor-badge-needs-ru')).not.toBeInTheDocument();
+  });
+
+  it('shows "Ready" badge when EN title and content are non-empty', async () => {
+    const user = userEvent.setup();
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+
+    await user.type(screen.getByTestId('changelog-editor-title-en'), 'Title');
+    await user.type(screen.getByTestId('changelog-editor-content-en'), 'Content');
+
+    expect(screen.getByTestId('changelog-editor-badge-ready')).toBeInTheDocument();
+    expect(screen.queryByTestId('changelog-editor-badge-needs-en')).not.toBeInTheDocument();
+  });
+
+  it('shows "Missing RU translation" badge when EN is ready but RU is empty', async () => {
+    const user = userEvent.setup();
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+
+    await user.type(screen.getByTestId('changelog-editor-title-en'), 'Title');
+    await user.type(screen.getByTestId('changelog-editor-content-en'), 'Content');
+
+    expect(screen.getByTestId('changelog-editor-badge-needs-ru')).toBeInTheDocument();
+  });
+
+  it('hides "Missing RU translation" badge when both EN and RU are complete', () => {
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} entry={makeEntry()} />);
+
+    // makeEntry() has title_en, content_en, title_ru, content_ru all set
+    expect(screen.getByTestId('changelog-editor-badge-ready')).toBeInTheDocument();
+    expect(screen.queryByTestId('changelog-editor-badge-needs-ru')).not.toBeInTheDocument();
+  });
+
+  // ── CLTE-06: Publish button disabled state ────────────────────────────────
+
+  it('Publish button is disabled when form is empty', () => {
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+
+    expect(screen.getByTestId('changelog-editor-footer-submit')).toBeDisabled();
+  });
+
+  it('Publish button is enabled when EN title and content are non-empty', async () => {
+    const user = userEvent.setup();
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+
+    await user.type(screen.getByTestId('changelog-editor-title-en'), 'Title');
+    await user.type(screen.getByTestId('changelog-editor-content-en'), 'Content');
+
+    expect(screen.getByTestId('changelog-editor-footer-submit')).not.toBeDisabled();
+  });
+
+  it('Publish button is disabled when only title is filled', async () => {
+    const user = userEvent.setup();
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+
+    await user.type(screen.getByTestId('changelog-editor-title-en'), 'Title only');
+
+    expect(screen.getByTestId('changelog-editor-footer-submit')).toBeDisabled();
+  });
+
+  // ── CLTE-06: No Save draft button ─────────────────────────────────────────
+
+  it('never renders a Save draft button', () => {
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+
+    expect(screen.queryByRole('button', { name: /save draft/i })).not.toBeInTheDocument();
+  });
+
+  it('never renders a Save draft button in edit mode', () => {
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} entry={makeEntry()} />);
+
+    expect(screen.queryByRole('button', { name: /save draft/i })).not.toBeInTheDocument();
+  });
+
+  // ── CLTE-06: Cancel button ────────────────────────────────────────────────
+
+  it('Cancel button calls onClose', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(<ChangelogEditorDrawer open={true} onClose={onClose} />);
+
+    await user.click(screen.getByTestId('changelog-editor-footer-cancel'));
+
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  // ── CLTE-06: Delete button (edit mode only) ───────────────────────────────
+
+  it('does not render Delete button in compose mode', () => {
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+
+    expect(screen.queryByTestId('changelog-editor-footer-delete')).not.toBeInTheDocument();
+  });
+
+  it('renders Delete button in edit mode', () => {
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} entry={makeEntry()} />);
+
+    expect(screen.getByTestId('changelog-editor-footer-delete')).toBeInTheDocument();
+  });
+
+  it('clicking Delete button opens ChangelogDeleteDialog', async () => {
+    const user = userEvent.setup();
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} entry={makeEntry()} />);
+
+    expect(screen.queryByTestId('changelog-delete-dialog-mock')).not.toBeInTheDocument();
+
+    await user.click(screen.getByTestId('changelog-editor-footer-delete'));
+
+    expect(screen.getByTestId('changelog-delete-dialog-mock')).toBeInTheDocument();
+  });
+
+  // ── CLTE-06: JSON mode textarea ───────────────────────────────────────────
+
+  it('renders JSON textarea when panelMode=json', () => {
+    mockStoreState.panelMode = 'json';
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+
+    expect(screen.getByTestId('changelog-editor-json-textarea')).toBeInTheDocument();
+  });
+
+  it('does not render JSON textarea when panelMode=form', () => {
+    mockStoreState.panelMode = 'form';
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+
+    expect(screen.queryByTestId('changelog-editor-json-textarea')).not.toBeInTheDocument();
+  });
+
+  it('JSON textarea has font-mono class', () => {
+    mockStoreState.panelMode = 'json';
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+
+    expect(screen.getByTestId('changelog-editor-json-textarea')).toHaveClass('font-mono');
+  });
+
+  it('JSON textarea shows validation error when JSON is invalid', async () => {
+    const user = userEvent.setup();
+    mockStoreState.panelMode = 'json';
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+
+    const textarea = screen.getByTestId('changelog-editor-json-textarea');
+    await user.clear(textarea);
+    await user.type(textarea, 'not valid json');
+
+    expect(screen.getByTestId('changelog-editor-json-error')).toBeInTheDocument();
+  });
+
+  it('JSON validation error region is absent when JSON is valid', () => {
+    // Initially the textarea contains valid serialized form state
+    mockStoreState.panelMode = 'json';
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} entry={makeEntry()} />);
+
+    // Valid entry form → valid JSON serialized on mount
+    expect(screen.queryByTestId('changelog-editor-json-error')).not.toBeInTheDocument();
+  });
+
+  // ── CLTE-06: Form→JSON sync (AC #1) ──────────────────────────────────────
+
+  it('Form→JSON: switching to JSON mode re-serializes current form state into textarea', async () => {
+    const user = userEvent.setup();
+    mockStoreState.panelMode = 'form';
+    const { rerender } = render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+
+    // Type something into the EN title field
+    await user.type(screen.getByTestId('changelog-editor-title-en'), 'My Title');
+
+    // Switch to JSON mode (simulate store change)
+    mockStoreState.panelMode = 'json';
+    rerender(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+
+    const textarea = screen.getByTestId('changelog-editor-json-textarea') as HTMLTextAreaElement;
+    const parsed = JSON.parse(textarea.value);
+    expect(parsed.title_en).toBe('My Title');
+  });
+
+  // ── CLTE-06: JSON→Form sync with valid JSON (AC #2) ──────────────────────
+
+  it('JSON→Form: valid JSON merges parsed values into form state', () => {
+    mockStoreState.panelMode = 'json';
+    const { rerender } = render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+
+    // Use fireEvent.change to set raw JSON without userEvent interpreting { } as key descriptors
+    const textarea = screen.getByTestId('changelog-editor-json-textarea');
+    fireEvent.change(textarea, {
+      target: {
+        value: JSON.stringify(
+          {
+            tag: 'bug_fix',
+            title_en: 'Bug fixed title',
+            title_ru: 'Русский заголовок',
+            content_en: 'Fixed content',
+            content_ru: 'Содержание',
+            version: null,
+          },
+          null,
+          2
+        ),
+      },
+    });
+
+    // Switch back to form mode
+    mockStoreState.panelMode = 'form';
+    rerender(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+
+    // The form title input should now have the parsed value
+    expect(screen.getByTestId('changelog-editor-title-en')).toHaveValue('Bug fixed title');
+  });
+
+  // ── CLTE-06: JSON→Form with invalid JSON fires discard toast (AC #3) ──────
+
+  it('JSON→Form: invalid JSON fires discard toast and leaves form unchanged', async () => {
+    const user = userEvent.setup();
+    mockStoreState.lang = 'en';
+    mockStoreState.panelMode = 'form';
+    const { rerender } = render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+
+    // Type something into form
+    await user.type(screen.getByTestId('changelog-editor-title-en'), 'Original title');
+    await user.type(screen.getByTestId('changelog-editor-content-en'), 'Original content');
+
+    // Switch to JSON mode
+    mockStoreState.panelMode = 'json';
+    rerender(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+
+    // Corrupt the JSON textarea using fireEvent.change to avoid userEvent key parsing
+    const textarea = screen.getByTestId('changelog-editor-json-textarea');
+    fireEvent.change(textarea, { target: { value: 'this is not valid json at all' } });
+
+    // Switch back to form mode
+    mockStoreState.panelMode = 'form';
+    rerender(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+
+    // Toast should have been called with the discard message
+    expect(mockToast).toHaveBeenCalledWith({ title: 'Your JSON changes were discarded' });
+
+    // Form state should be unchanged
+    expect(screen.getByTestId('changelog-editor-title-en')).toHaveValue('Original title');
+  });
+
+  // ── CLTE-06: Submit (create) ──────────────────────────────────────────────
+
+  it('Submit (create): calls createEntry with normalized payload and closes drawer on success', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    mockCreateEntry.mockResolvedValueOnce({ id: 'new-1' });
+
+    render(<ChangelogEditorDrawer open={true} onClose={onClose} />);
+
+    await user.type(screen.getByTestId('changelog-editor-title-en'), 'New Title');
+    await user.type(screen.getByTestId('changelog-editor-content-en'), 'New content');
+    await user.click(screen.getByTestId('changelog-editor-footer-submit'));
+
+    await waitFor(() => {
+      expect(mockCreateEntry).toHaveBeenCalledWith(
+        expect.objectContaining({ title_en: 'New Title', content_en: 'New content' })
+      );
+      expect(onClose).toHaveBeenCalled();
+    });
+  });
+
+  it('Submit (create): version is normalized to null when empty', async () => {
+    const user = userEvent.setup();
+    mockCreateEntry.mockResolvedValueOnce({ id: 'new-1' });
+
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+
+    await user.type(screen.getByTestId('changelog-editor-title-en'), 'Title');
+    await user.type(screen.getByTestId('changelog-editor-content-en'), 'Content');
+    await user.click(screen.getByTestId('changelog-editor-footer-submit'));
+
+    await waitFor(() => {
+      expect(mockCreateEntry).toHaveBeenCalledWith(expect.objectContaining({ version: null }));
+    });
+  });
+
+  it('Submit (create): shows inline error and keeps drawer open on failure', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    mockCreateEntry.mockRejectedValueOnce(new Error('Server error'));
+
+    render(<ChangelogEditorDrawer open={true} onClose={onClose} />);
+
+    await user.type(screen.getByTestId('changelog-editor-title-en'), 'Title');
+    await user.type(screen.getByTestId('changelog-editor-content-en'), 'Content');
+    await user.click(screen.getByTestId('changelog-editor-footer-submit'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('changelog-editor-submit-error')).toBeInTheDocument();
+      expect(screen.getByTestId('changelog-editor-submit-error')).toHaveTextContent('Server error');
+      expect(onClose).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── CLTE-06: Submit (update) ──────────────────────────────────────────────
+
+  it('Submit (update): calls updateEntry with entry id and closes drawer on success', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    const entry = makeEntry();
+    mockUpdateEntry.mockResolvedValueOnce({ ...entry, title_en: 'Updated' });
+
+    render(<ChangelogEditorDrawer open={true} onClose={onClose} entry={entry} />);
+
+    await user.click(screen.getByTestId('changelog-editor-footer-submit'));
+
+    await waitFor(() => {
+      expect(mockUpdateEntry).toHaveBeenCalledWith(
+        entry.id,
+        expect.objectContaining({ title_en: entry.title_en })
+      );
+      expect(onClose).toHaveBeenCalled();
+    });
+  });
+
+  it('Submit (update): shows inline error and keeps drawer open on failure', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    const entry = makeEntry();
+    mockUpdateEntry.mockRejectedValueOnce(new Error('Update failed'));
+
+    render(<ChangelogEditorDrawer open={true} onClose={onClose} entry={entry} />);
+
+    await user.click(screen.getByTestId('changelog-editor-footer-submit'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('changelog-editor-submit-error')).toHaveTextContent(
+        'Update failed'
+      );
+      expect(onClose).not.toHaveBeenCalled();
+    });
+  });
+
+  it('Submit (update): button shows "Save changes" in edit mode', () => {
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} entry={makeEntry()} />);
+
+    expect(screen.getByTestId('changelog-editor-footer-submit')).toHaveTextContent('Save changes');
+  });
+
+  it('Submit (create): button shows "Publish entry" in compose mode', () => {
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+
+    expect(screen.getByTestId('changelog-editor-footer-submit')).toHaveTextContent('Publish entry');
+  });
+
+  // ── CLTE-06: Submit in JSON mode ──────────────────────────────────────────
+
+  it('Submit in JSON mode: surfaces inline error without calling createEntry when JSON is invalid', async () => {
+    const user = userEvent.setup();
+    // Use an entry so form.title_en/content_en are pre-filled → enReady=true → button enabled
+    const entry = makeEntry();
+    mockStoreState.panelMode = 'json';
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} entry={entry} />);
+
+    // Corrupt the JSON textarea using fireEvent.change (avoids { } key parsing issues)
+    const textarea = screen.getByTestId('changelog-editor-json-textarea');
+    fireEvent.change(textarea, { target: { value: 'bad json not parseable' } });
+
+    await user.click(screen.getByTestId('changelog-editor-footer-submit'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('changelog-editor-submit-error')).toBeInTheDocument();
+      expect(mockCreateEntry).not.toHaveBeenCalled();
+      expect(mockUpdateEntry).not.toHaveBeenCalled();
+    });
   });
 });
