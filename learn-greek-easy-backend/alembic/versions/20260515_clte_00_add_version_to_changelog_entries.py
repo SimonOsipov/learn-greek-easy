@@ -24,7 +24,12 @@ depends_on = None
 def upgrade() -> None:
     op.add_column(
         "changelog_entries",
-        sa.Column("version", sa.String(length=50), nullable=True),
+        sa.Column(
+            "version",
+            sa.String(length=50),
+            nullable=True,
+            comment="Optional release version label, e.g. v1.2.0",
+        ),
     )
 
 
