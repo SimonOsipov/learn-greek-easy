@@ -653,6 +653,45 @@ describe('VocabularyDeckEditForm', () => {
     });
   });
 
+  describe('renderFooter prop', () => {
+    it('should render Cancel and Save buttons by default (renderFooter not passed)', () => {
+      const deck = createMockDeck();
+      renderWithI18n(
+        <VocabularyDeckEditForm deck={deck} onSave={mockOnSave} onCancel={mockOnCancel} />
+      );
+      expect(screen.getByTestId('deck-edit-cancel')).toBeInTheDocument();
+      expect(screen.getByTestId('deck-edit-save')).toBeInTheDocument();
+    });
+
+    it('should render Cancel and Save buttons when renderFooter={true}', () => {
+      const deck = createMockDeck();
+      renderWithI18n(
+        <VocabularyDeckEditForm
+          deck={deck}
+          onSave={mockOnSave}
+          onCancel={mockOnCancel}
+          renderFooter={true}
+        />
+      );
+      expect(screen.getByTestId('deck-edit-cancel')).toBeInTheDocument();
+      expect(screen.getByTestId('deck-edit-save')).toBeInTheDocument();
+    });
+
+    it('should hide Cancel and Save buttons when renderFooter={false}', () => {
+      const deck = createMockDeck();
+      renderWithI18n(
+        <VocabularyDeckEditForm
+          deck={deck}
+          onSave={mockOnSave}
+          onCancel={mockOnCancel}
+          renderFooter={false}
+        />
+      );
+      expect(screen.queryByTestId('deck-edit-cancel')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('deck-edit-save')).not.toBeInTheDocument();
+    });
+  });
+
   describe('Remove Image', () => {
     it('should render Remove Image button when cover_image_url is present and onRemoveCoverImage is provided', () => {
       const deck = createMockDeck({ cover_image_url: 'https://example.com/cover.jpg' });

@@ -99,6 +99,7 @@ interface VocabularyDeckEditFormProps {
   createdAt?: string;
   onUploadCoverImage?: (file: File) => Promise<void>;
   onRemoveCoverImage?: () => Promise<void>;
+  renderFooter?: boolean;
 }
 
 /**
@@ -120,6 +121,7 @@ export const VocabularyDeckEditForm: React.FC<VocabularyDeckEditFormProps> = ({
   createdAt,
   onUploadCoverImage,
   onRemoveCoverImage,
+  renderFooter = true,
 }) => {
   const { t } = useTranslation('admin');
   const [showDeactivationWarning, setShowDeactivationWarning] = useState(false);
@@ -484,18 +486,25 @@ export const VocabularyDeckEditForm: React.FC<VocabularyDeckEditFormProps> = ({
           </Card>
         )}
 
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={onCancel} data-testid="deck-edit-cancel">
-            {t('deckEdit.cancel')}
-          </Button>
-          <Button
-            type="submit"
-            disabled={isLoading || !form.formState.isValid}
-            data-testid="deck-edit-save"
-          >
-            {isLoading ? t('deckEdit.saving') : t('deckEdit.save')}
-          </Button>
-        </DialogFooter>
+        {renderFooter && (
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onCancel}
+              data-testid="deck-edit-cancel"
+            >
+              {t('deckEdit.cancel')}
+            </Button>
+            <Button
+              type="submit"
+              disabled={isLoading || !form.formState.isValid}
+              data-testid="deck-edit-save"
+            >
+              {isLoading ? t('deckEdit.saving') : t('deckEdit.save')}
+            </Button>
+          </DialogFooter>
+        )}
 
         <DeactivationWarningDialog
           open={showDeactivationWarning}
