@@ -582,6 +582,37 @@
     "sections": {
       "newsItems": "News Items",
       "newsItemsDescription": "Manage existing news items"
+    },
+    "drawer": {
+      "title": "Edit article",
+      "tabs": {
+        "translations": "Translations",
+        "body": "Body",
+        "audio": "Audio · 3 levels",
+        "image": "Image",
+        "linkedSituation": "Linked situation"
+      },
+      "save": "Save & close",
+      "saving": "Saving…",
+      "cancel": "Cancel",
+      "regenerateTranslations": "Regenerate translations",
+      "allChecksPassed": "All checks passed",
+      "updatedRelative": "Updated {{relative}}",
+      "published": "Published",
+      "publishedOn": "Published {{date}}",
+      "linkedSituationLabel": "Linked situation",
+      "dirty": {
+        "title": "Unsaved changes",
+        "body": "You have unsaved changes. Save before leaving?",
+        "saveAndContinue": "Save & continue",
+        "discardAndContinue": "Discard & continue",
+        "cancel": "Cancel"
+      },
+      "country": {
+        "cyprus": "Cyprus",
+        "greece": "Greece",
+        "world": "World"
+      }
     }
   },
   "feedback": {
