@@ -63,9 +63,32 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) => {
       const map: Record<string, string> = {
+        // Existing tag keys — keep.
         'changelog:tag.newFeature': 'New Feature',
         'changelog:tag.bugFix': 'Bug Fix',
         'changelog:tag.announcement': 'Announcement',
+        // I18N-04 admin-namespace keys read by ChangelogTab.tsx.
+        'admin:changelog.filter.all': 'All',
+        'admin:changelog.kicker': 'Changelog',
+        'admin:changelog.title': 'Changelog',
+        'admin:changelog.subtitle': 'Manage and publish product updates for your users.',
+        'admin:changelog.toast.exportComingSoon': 'Markdown export coming soon',
+        'admin:changelog.actions.export': 'Export markdown',
+        'admin:changelog.actions.newEntry': 'New entry',
+        'admin:changelog.stats.total': 'Total entries',
+        'admin:changelog.stats.mostRecent': 'Most recent',
+        'admin:changelog.stats.cadence': 'Avg cadence',
+        'admin:changelog.stats.cadenceSub': 'between entries',
+        'admin:changelog.stats.cadenceSubMinimal': 'need ≥ 2 entries',
+        'admin:changelog.stats.missingRu': 'Missing RU',
+        'admin:changelog.stats.missingRuNeed': 'entries need translation',
+        'admin:changelog.stats.missingRuDone': 'all translated',
+        'admin:changelog.stats.footer.allTime': 'all-time',
+        'admin:changelog.stats.footer.lastPublished': 'last published',
+        'admin:changelog.stats.footer.lastTenEntries': 'last 10 entries',
+        'admin:changelog.stats.footer.needsAttention': 'needs attention',
+        'admin:changelog.search.entriesPlaceholder': 'Search entries…',
+        'admin:shell.breadcrumb.dashboard': 'Dashboard',
       };
       return map[key] ?? key;
     },
