@@ -21,7 +21,13 @@ import type { NewsItemResponse } from '@/services/adminAPI';
 const mockLanguage = { value: 'en' };
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => key,
+    t: (key: string) => {
+      const map: Record<string, string> = {
+        'news.card.editLabel': 'Edit',
+        'news.card.deleteLabel': 'Delete',
+      };
+      return map[key] ?? key;
+    },
     i18n: { language: mockLanguage.value },
   }),
 }));

@@ -27,6 +27,16 @@ vi.mock('react-i18next', () => ({
         'feedback.v2.card.openReply': opts?.title ? `Open reply for ${opts.title}` : 'Open reply',
         'feedback.v2.card.adminResponseLabel': '✓ Admin response',
         'feedback.delete': 'Delete',
+        'feedback.category.bug': 'Bug',
+        'feedback.category.featureRequest': 'Feature request',
+        'feedback.status.new': 'New',
+        'feedback.status.investigating': 'Investigating',
+        'feedback.status.planned': 'Planned',
+        'feedback.status.inProgress': 'In progress',
+        'feedback.status.responded': 'Responded',
+        'feedback.status.shipped': 'Shipped',
+        'feedback.status.wontFix': "Won't fix",
+        'feedback.status.duplicate': 'Duplicate',
       };
       return map[key] ?? key;
     },
