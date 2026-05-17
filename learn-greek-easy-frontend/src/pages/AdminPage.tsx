@@ -466,6 +466,15 @@ export function pageHeadPropsFor(tab: AdminTabType, t: (key: string) => string) 
       subTestId: 'admin-subtitle' as const,
     };
   }
+  if (tab === 'dashboard') {
+    return {
+      kicker: <Kicker dot="primary">{t('dashboard.kicker')}</Kicker>,
+      title: t('dashboard.title'),
+      sub: t('dashboard.sub'),
+      titleTestId: 'admin-title' as const,
+      subTestId: 'admin-subtitle' as const,
+    };
+  }
   // per-section overrides come in ADMIN2-04..11
   return {
     title: t('page.title'),
