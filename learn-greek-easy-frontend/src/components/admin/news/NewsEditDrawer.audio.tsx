@@ -58,7 +58,7 @@ interface Props {
 }
 
 export const NewsEditDrawerAudio: React.FC<Props> = ({ item }) => {
-  const { t } = useTranslation('admin');
+  const { t, i18n } = useTranslation('admin');
 
   // Which row is actively playing.
   const [playing, setPlaying] = useState<AudioLevel | null>(null);
@@ -182,7 +182,7 @@ export const NewsEditDrawerAudio: React.FC<Props> = ({ item }) => {
 
     if (!url) return t('news.drawer.audio.notGeneratedYet');
 
-    const dateStr = generatedAt ? new Date(generatedAt).toLocaleDateString() : '';
+    const dateStr = generatedAt ? new Date(generatedAt).toLocaleDateString(i18n.language) : '';
     return t('news.drawer.audio.generatedFrom', { date: dateStr });
   }
 
