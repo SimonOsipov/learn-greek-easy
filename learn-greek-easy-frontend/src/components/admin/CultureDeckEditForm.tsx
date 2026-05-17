@@ -96,6 +96,14 @@ interface CultureDeckEditFormProps {
   isLoading?: boolean;
   onUploadCoverImage?: (file: File) => Promise<void>;
   onRemoveCoverImage?: () => Promise<void>;
+  renderFooter?: boolean;
+  hideCategory?: boolean;
+  /** Called whenever the form dirty state changes. */
+  onDirtyChange?: (isDirty: boolean) => void;
+  /** Called once on mount with a `{ reset }` handle so the parent can programmatically reset the form. */
+  onReady?: (api: { reset: () => void }) => void;
+  /** If provided, sets the `id` attribute on the `<form>` element so external submit buttons can trigger it. */
+  formId?: string;
 }
 
 /**
@@ -115,6 +123,11 @@ export const CultureDeckEditForm: React.FC<CultureDeckEditFormProps> = ({
   isLoading = false,
   onUploadCoverImage,
   onRemoveCoverImage,
+  renderFooter = true,
+  hideCategory = false,
+  onDirtyChange,
+  onReady,
+  formId,
 }) => {
   const { t } = useTranslation('admin');
   const [showDeactivationWarning, setShowDeactivationWarning] = useState(false);
@@ -218,6 +231,21 @@ export const CultureDeckEditForm: React.FC<CultureDeckEditFormProps> = ({
     },
   });
 
+  // Notify parent when dirty state changes
+  const isDirty = form.formState.isDirty;
+  useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
+
+  // Provide reset handle to parent on mount
+  useEffect(() => {
+    if (onReady) {
+      onReady({ reset: () => form.reset() });
+    }
+    // onReady is intentionally not in deps — only call once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   /**
    * Check if a language tab has validation errors
    */
@@ -257,6 +285,7 @@ export const CultureDeckEditForm: React.FC<CultureDeckEditFormProps> = ({
   return (
     <Form {...form}>
       <form
+        id={formId}
         onSubmit={form.handleSubmit(onSubmit)}
         className="space-y-4"
         data-testid="culture-deck-edit-form"
@@ -326,30 +355,32 @@ export const CultureDeckEditForm: React.FC<CultureDeckEditFormProps> = ({
           ))}
         </div>
 
-        <FormField
-          control={form.control}
-          name="category"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t('deckEdit.category')}</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
-                <FormControl>
-                  <SelectTrigger data-testid="deck-edit-category">
-                    <SelectValue placeholder={t('deckEdit.categoryPlaceholder')} />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {CULTURE_CATEGORIES.map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {t(`categories.${category}`)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className={hideCategory ? 'hidden' : undefined}>
+          <FormField
+            control={form.control}
+            name="category"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t('deckEdit.category')}</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger data-testid="deck-edit-category">
+                      <SelectValue placeholder={t('deckEdit.categoryPlaceholder')} />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {CULTURE_CATEGORIES.map((category) => (
+                      <SelectItem key={category} value={category}>
+                        {t(`categories.${category}`)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         <FormField
           control={form.control}
@@ -452,18 +483,25 @@ export const CultureDeckEditForm: React.FC<CultureDeckEditFormProps> = ({
           </CardContent>
         </Card>
 
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={onCancel} data-testid="deck-edit-cancel">
-            {t('deckEdit.cancel')}
-          </Button>
-          <Button
-            type="submit"
-            disabled={isLoading || !form.formState.isValid}
-            data-testid="deck-edit-save"
-          >
-            {isLoading ? t('deckEdit.saving') : t('deckEdit.save')}
-          </Button>
-        </DialogFooter>
+        {renderFooter && (
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onCancel}
+              data-testid="deck-edit-cancel"
+            >
+              {t('deckEdit.cancel')}
+            </Button>
+            <Button
+              type="submit"
+              disabled={isLoading || !form.formState.isValid}
+              data-testid="deck-edit-save"
+            >
+              {isLoading ? t('deckEdit.saving') : t('deckEdit.save')}
+            </Button>
+          </DialogFooter>
+        )}
 
         <DeactivationWarningDialog
           open={showDeactivationWarning}

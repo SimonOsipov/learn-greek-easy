@@ -467,6 +467,68 @@ describe('CultureDeckEditForm', () => {
     });
   });
 
+  describe('onDirtyChange prop', () => {
+    it('fires true after a field is edited', async () => {
+      const user = userEvent.setup();
+      const deck = createMockDeck({ name_en: 'Original' });
+      const onDirtyChange = vi.fn();
+
+      renderWithI18n(
+        <CultureDeckEditForm
+          deck={deck}
+          onSave={mockOnSave}
+          onCancel={mockOnCancel}
+          onDirtyChange={onDirtyChange}
+        />
+      );
+
+      const nameInput = screen.getByTestId('culture-deck-edit-name-en');
+      await user.clear(nameInput);
+      await user.type(nameInput, 'Updated');
+
+      await waitFor(() => {
+        expect(onDirtyChange).toHaveBeenCalledWith(true);
+      });
+    });
+
+    it('fires false after form.reset() is called via onReady handle', async () => {
+      const user = userEvent.setup();
+      const deck = createMockDeck({ name_en: 'Original' });
+      const onDirtyChange = vi.fn();
+      let resetFn: (() => void) | null = null;
+
+      renderWithI18n(
+        <CultureDeckEditForm
+          deck={deck}
+          onSave={mockOnSave}
+          onCancel={mockOnCancel}
+          onDirtyChange={onDirtyChange}
+          onReady={(api) => {
+            resetFn = api.reset;
+          }}
+        />
+      );
+
+      // Dirty the form
+      const nameInput = screen.getByTestId('culture-deck-edit-name-en');
+      await user.clear(nameInput);
+      await user.type(nameInput, 'Changed');
+
+      await waitFor(() => {
+        expect(onDirtyChange).toHaveBeenCalledWith(true);
+      });
+
+      // Reset via the handle
+      expect(resetFn).not.toBeNull();
+      resetFn!();
+
+      await waitFor(() => {
+        const calls = onDirtyChange.mock.calls.map((c: [boolean]) => c[0]);
+        expect(calls[calls.length - 1]).toBe(false);
+      });
+    });
+  });
+
   describe('Remove Image', () => {
     it('should render Remove Image button when cover_image_url is present and onRemoveCoverImage is provided', () => {
       const deck = createMockDeck({ cover_image_url: 'https://example.com/cover.jpg' });
@@ -552,6 +614,150 @@ describe('CultureDeckEditForm', () => {
       expect(screen.getByTestId('deck-edit-image-error')).toHaveTextContent(
         'Failed to remove image. Please try again.'
       );
+    });
+  });
+
+  describe('renderFooter prop', () => {
+    it('should render Cancel and Save buttons by default (renderFooter not passed)', () => {
+      const deck = createMockDeck();
+      renderWithI18n(
+        <CultureDeckEditForm deck={deck} onSave={mockOnSave} onCancel={mockOnCancel} />
+      );
+      expect(screen.getByTestId('deck-edit-cancel')).toBeInTheDocument();
+      expect(screen.getByTestId('deck-edit-save')).toBeInTheDocument();
+    });
+
+    it('should render Cancel and Save buttons when renderFooter={true}', () => {
+      const deck = createMockDeck();
+      renderWithI18n(
+        <CultureDeckEditForm
+          deck={deck}
+          onSave={mockOnSave}
+          onCancel={mockOnCancel}
+          renderFooter={true}
+        />
+      );
+      expect(screen.getByTestId('deck-edit-cancel')).toBeInTheDocument();
+      expect(screen.getByTestId('deck-edit-save')).toBeInTheDocument();
+    });
+
+    it('should hide Cancel and Save buttons when renderFooter={false}', () => {
+      const deck = createMockDeck();
+      renderWithI18n(
+        <CultureDeckEditForm
+          deck={deck}
+          onSave={mockOnSave}
+          onCancel={mockOnCancel}
+          renderFooter={false}
+        />
+      );
+      expect(screen.queryByTestId('deck-edit-cancel')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('deck-edit-save')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('hideCategory prop', () => {
+    it('should show category select by default (hideCategory not passed)', () => {
+      const deck = createMockDeck({ category: 'history' });
+      renderWithI18n(
+        <CultureDeckEditForm deck={deck} onSave={mockOnSave} onCancel={mockOnCancel} />
+      );
+      expect(screen.getByTestId('deck-edit-category')).toBeInTheDocument();
+    });
+
+    it('should show category select when hideCategory={false}', () => {
+      const deck = createMockDeck({ category: 'history' });
+      renderWithI18n(
+        <CultureDeckEditForm
+          deck={deck}
+          onSave={mockOnSave}
+          onCancel={mockOnCancel}
+          hideCategory={false}
+        />
+      );
+      expect(screen.getByTestId('deck-edit-category')).toBeInTheDocument();
+    });
+
+    it('should hide the category select trigger when hideCategory={true}', () => {
+      const deck = createMockDeck({ category: 'traditions' });
+      renderWithI18n(
+        <CultureDeckEditForm
+          deck={deck}
+          onSave={mockOnSave}
+          onCancel={mockOnCancel}
+          hideCategory={true}
+        />
+      );
+      // The trigger is in the DOM but inside a hidden wrapper — not visible to the user
+      const trigger = screen.queryByTestId('deck-edit-category');
+      if (trigger) {
+        expect(trigger.closest('.hidden')).not.toBeNull();
+      }
+    });
+
+    it('should preserve the original category value in onSave payload when hideCategory={true}', async () => {
+      const user = userEvent.setup();
+      const deck = createMockDeck({
+        category: 'traditions',
+        name_en: 'Traditions Deck',
+        name_ru: 'Traditions Deck RU',
+      });
+
+      renderWithI18n(
+        <CultureDeckEditForm
+          deck={deck}
+          onSave={mockOnSave}
+          onCancel={mockOnCancel}
+          hideCategory={true}
+        />
+      );
+
+      // Submit the form directly (save button still rendered with default renderFooter=true)
+      const saveButton = screen.getByTestId('deck-edit-save');
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockOnSave).toHaveBeenCalledTimes(1);
+      });
+
+      expect(mockOnSave).toHaveBeenCalledWith(expect.objectContaining({ category: 'traditions' }));
+    });
+
+    it('should preserve category even when user edits title while hideCategory={true}', async () => {
+      const user = userEvent.setup();
+      const deck = createMockDeck({
+        category: 'history',
+        name_en: 'Original Title',
+        name_ru: 'Original Title RU',
+      });
+
+      renderWithI18n(
+        <CultureDeckEditForm
+          deck={deck}
+          onSave={mockOnSave}
+          onCancel={mockOnCancel}
+          hideCategory={true}
+        />
+      );
+
+      // Edit the English title
+      const nameInput = screen.getByTestId('culture-deck-edit-name-en');
+      await user.clear(nameInput);
+      await user.type(nameInput, 'Updated Title');
+
+      const saveButton = screen.getByTestId('deck-edit-save');
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockOnSave).toHaveBeenCalledTimes(1);
+      });
+
+      const savedData = mockOnSave.mock.calls[0][0] as CultureDeckFormData;
+      expect(savedData.name_en).toBe('Updated Title');
+      // Category must NOT be null/undefined/empty — must equal original deck value
+      expect(savedData.category).toBe('history');
+      expect(savedData.category).not.toBeNull();
+      expect(savedData.category).not.toBe('');
     });
   });
 });

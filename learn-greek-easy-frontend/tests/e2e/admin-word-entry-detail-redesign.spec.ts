@@ -27,6 +27,11 @@ import { test, expect, type Page } from '@playwright/test';
 
 import { navigateToAdminTab } from './helpers/admin-helpers';
 
+// Quarantined: ADMIN2-09 (DKDR-06) retired the v1 DeckDetailModal that hosted these flows.
+// These specs target the v1 word-entry detail experience inside DeckDetailModal,
+// which no longer mounts on AdminPage. Equivalent v2 (drawer-based) coverage lives in
+// admin-decks.spec.ts (ADMIN2-09 / DKDR-14). Full cleanup tracked in ADMIN2-12.
+
 // Storage state path
 const ADMIN_AUTH = 'playwright/.auth/admin.json';
 
@@ -98,7 +103,7 @@ async function openFirstWordEntryDetail(page: Page): Promise<void> {
 // NAVIGATION TESTS
 // ============================================================================
 
-test.describe('Admin Word Entry Detail Redesign - Navigation', () => {
+test.describe.skip('Admin Word Entry Detail Redesign - Navigation', () => {
   test.use({ storageState: ADMIN_AUTH });
 
   test.beforeAll(async ({ browser }) => {
@@ -123,7 +128,7 @@ test.describe('Admin Word Entry Detail Redesign - Navigation', () => {
 // WORD ENTRY TAB SECTIONS TESTS
 // ============================================================================
 
-test.describe('Admin Word Entry Detail Redesign - Word Entry Tab Sections', () => {
+test.describe.skip('Admin Word Entry Detail Redesign - Word Entry Tab Sections', () => {
   test.use({ storageState: ADMIN_AUTH });
 
   test.beforeAll(async ({ browser }) => {
@@ -185,7 +190,7 @@ test.describe('Admin Word Entry Detail Redesign - Word Entry Tab Sections', () =
 // COMPLETENESS CHIPS TESTS
 // ============================================================================
 
-test.describe('Admin Word Entry Detail Redesign - Completeness Chips', () => {
+test.describe.skip('Admin Word Entry Detail Redesign - Completeness Chips', () => {
   test.use({ storageState: ADMIN_AUTH });
 
   test.beforeAll(async ({ browser }) => {
@@ -236,7 +241,7 @@ test.describe('Admin Word Entry Detail Redesign - Completeness Chips', () => {
 // CARDS TAB TESTS
 // ============================================================================
 
-test.describe('Admin Word Entry Detail Redesign - Cards Tab', () => {
+test.describe.skip('Admin Word Entry Detail Redesign - Cards Tab', () => {
   test.use({ storageState: ADMIN_AUTH });
 
   test.beforeAll(async ({ browser }) => {
@@ -342,7 +347,7 @@ test.describe('Admin Word Entry Detail Redesign - Cards Tab', () => {
 // BACK NAVIGATION TESTS
 // ============================================================================
 
-test.describe('Admin Word Entry Detail Redesign - Back Navigation', () => {
+test.describe.skip('Admin Word Entry Detail Redesign - Back Navigation', () => {
   test.use({ storageState: ADMIN_AUTH });
 
   test.beforeAll(async ({ browser }) => {
