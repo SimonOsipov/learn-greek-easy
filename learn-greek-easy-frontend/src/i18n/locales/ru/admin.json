@@ -1734,7 +1734,7 @@
     "title": "Admin Dashboard",
     "sub": "Manage content and view statistics across every learning surface.",
     "stats": {
-      "decks":      { "title": "Decks",      "sub": "{{count}} cards" },
+      "decks":      { "title": "Decks",      "sub_one": "{{count}} card", "sub_few": "{{count}} cards", "sub_many": "{{count}} cards" },
       "news":       { "title": "News",       "sub": "Counts coming soon" },
       "situations": { "title": "Situations", "sub": "Counts coming soon" },
       "exercises":  { "title": "Exercises",  "sub": "Counts coming soon" }
