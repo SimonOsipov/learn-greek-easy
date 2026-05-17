@@ -18,7 +18,7 @@ import { SituationDrawerDescription } from '../SituationDrawer.description';
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, unknown>) => {
-      if (key === 'news.comingSoon') return 'Coming soon';
+      if (key === 'comingSoon') return 'Coming soon';
       if (key === 'situations.drawer.description.kicker') return 'Description';
       if (key === 'situations.drawer.description.hint') {
         return 'Narrative the learner reads before the dialog — generated alongside the audio.';

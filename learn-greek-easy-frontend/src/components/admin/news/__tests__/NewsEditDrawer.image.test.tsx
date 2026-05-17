@@ -213,7 +213,7 @@ describe('NewsEditDrawerImage — disabled fields', () => {
   it('shows "Coming soon" tooltip content for disabled fields', () => {
     render(<Wrapper item={makeItem()} />);
     const tooltips = screen.getAllByTestId('tooltip-content');
-    const comingSoonTooltips = tooltips.filter((el) => el.textContent?.includes('news.comingSoon'));
+    const comingSoonTooltips = tooltips.filter((el) => el.textContent?.includes('comingSoon'));
     expect(comingSoonTooltips.length).toBeGreaterThanOrEqual(2);
   });
 });

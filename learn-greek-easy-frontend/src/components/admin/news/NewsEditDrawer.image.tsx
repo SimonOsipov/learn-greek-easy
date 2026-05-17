@@ -64,7 +64,7 @@ export const NewsEditDrawerImage: React.FC<Props> = ({ item }) => {
               className="cursor-not-allowed opacity-60"
             />
           </TooltipTrigger>
-          <TooltipContent>{t('news.comingSoon')}</TooltipContent>
+          <TooltipContent>{t('comingSoon')}</TooltipContent>
         </Tooltip>
       </div>
 
@@ -83,7 +83,7 @@ export const NewsEditDrawerImage: React.FC<Props> = ({ item }) => {
               className="cursor-not-allowed opacity-60"
             />
           </TooltipTrigger>
-          <TooltipContent>{t('news.comingSoon')}</TooltipContent>
+          <TooltipContent>{t('comingSoon')}</TooltipContent>
         </Tooltip>
       </div>
     </div>

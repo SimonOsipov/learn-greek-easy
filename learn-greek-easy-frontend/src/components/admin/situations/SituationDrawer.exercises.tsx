@@ -59,7 +59,7 @@ function GenerateButton({ source }: { source: ExerciseSourceType }) {
           </Button>
         </span>
       </TooltipTrigger>
-      <TooltipContent>{t('news.comingSoon')}</TooltipContent>
+      <TooltipContent>{t('comingSoon')}</TooltipContent>
     </Tooltip>
   );
 }
@@ -82,7 +82,7 @@ function EmptyState({ source }: { source: ExerciseSourceType }) {
             </Button>
           </span>
         </TooltipTrigger>
-        <TooltipContent>{t('news.comingSoon')}</TooltipContent>
+        <TooltipContent>{t('comingSoon')}</TooltipContent>
       </Tooltip>
       {/* Suppress unused-var for source — reserved for future endpoint wiring */}
       <span className="sr-only">{source}</span>

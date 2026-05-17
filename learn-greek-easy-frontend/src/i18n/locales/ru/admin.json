@@ -594,6 +594,9 @@
     "card": {
       "editLabel": "Редактировать новость",
       "deleteLabel": "Удалить новость"
+    },
+    "toolbar": {
+      "searchPlaceholder": "Поиск новостей..."
     }
   },
   "feedback": {
@@ -885,7 +888,13 @@
       "cadenceSubMinimal": "нужно ≥ 2 записей",
       "missingRu": "Без перевода RU",
       "missingRuNeed": "записей ждут перевода",
-      "missingRuDone": "все переведены"
+      "missingRuDone": "все переведены",
+      "footer": {
+        "allTime": "за всё время",
+        "lastPublished": "последняя публикация",
+        "lastTenEntries": "последние 10 записей",
+        "needsAttention": "требует внимания"
+      }
     },
     "title": "История изменений",
     "addNew": "Добавить",
@@ -893,11 +902,13 @@
     "search": {
       "placeholder": "Поиск изменений...",
       "filteredCount": "{{filtered}} из {{total}} записей",
-      "noResults": "Записи изменений не найдены"
+      "noResults": "Записи изменений не найдены",
+      "entriesPlaceholder": "Поиск записей…"
     },
     "filter": {
       "allTags": "Все теги",
-      "tagPlaceholder": "Фильтр по тегу"
+      "tagPlaceholder": "Фильтр по тегу",
+      "all": "Все"
     },
     "table": {
       "title": "Записи изменений",
@@ -948,7 +959,12 @@
       "deleted": "Запись успешно удалена",
       "createError": "Не удалось создать запись",
       "updateError": "Не удалось обновить запись",
-      "deleteError": "Не удалось удалить запись"
+      "deleteError": "Не удалось удалить запись",
+      "exportComingSoon": "Экспорт в Markdown скоро"
+    },
+    "actions": {
+      "export": "Экспорт в Markdown",
+      "newEntry": "Новая запись"
     }
   },
   "vocabularyCard": {
@@ -1780,24 +1796,38 @@
     "title": "Admin Dashboard",
     "sub": "Manage content and view statistics across every learning surface.",
     "stats": {
-      "decks":      { "title": "Decks",      "sub_one": "{{count}} card", "sub_few": "{{count}} cards", "sub_many": "{{count}} cards" },
-      "news":       { "title": "News",       "sub": "Counts coming soon" },
-      "situations": { "title": "Situations", "sub": "Counts coming soon" },
-      "exercises":  { "title": "Exercises",  "sub": "Counts coming soon" }
+      "decks": {
+        "title": "Decks",
+        "sub_one": "{{count}} card",
+        "sub_few": "{{count}} cards",
+        "sub_many": "{{count}} cards"
+      },
+      "news": {
+        "title": "News",
+        "sub": "Counts coming soon"
+      },
+      "situations": {
+        "title": "Situations",
+        "sub": "Counts coming soon"
+      },
+      "exercises": {
+        "title": "Exercises",
+        "sub": "Counts coming soon"
+      }
     },
     "inbox": {
-      "kicker":  "Needs your attention",
-      "title":   "Today's inbox",
-      "sub":     "Aggregated inbox coming soon. We'll surface drafts, audio gaps, feedback, and card errors here.",
+      "kicker": "Needs your attention",
+      "title": "Today's inbox",
+      "sub": "Aggregated inbox coming soon. We'll surface drafts, audio gaps, feedback, and card errors here.",
       "viewAll": "View all →"
     },
     "activity": {
       "title": "Recent activity",
-      "sub":   "Activity feed coming soon. Recent edits, publishes, and reviews will appear here."
+      "sub": "Activity feed coming soon. Recent edits, publishes, and reviews will appear here."
     },
     "pipeline": {
       "title": "Content pipeline",
-      "sub":   "Pipeline summary coming soon. Track ready vs. draft counts across decks, news, situations, and exercises."
+      "sub": "Pipeline summary coming soon. Track ready vs. draft counts across decks, news, situations, and exercises."
     }
   }
 }

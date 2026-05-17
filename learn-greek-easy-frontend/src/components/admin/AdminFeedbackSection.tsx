@@ -377,7 +377,7 @@ export const AdminFeedbackSection: React.FC = () => {
                     {t('feedback.v2.pageHead.exportCsv')}
                   </button>
                 </TooltipTrigger>
-                <TooltipContent>{t('feedback.v2.pageHead.comingSoonTooltip')}</TooltipContent>
+                <TooltipContent>{t('comingSoon')}</TooltipContent>
               </Tooltip>
 
               {/* Send mass update — decorative coming soon */}
@@ -393,7 +393,7 @@ export const AdminFeedbackSection: React.FC = () => {
                     {t('feedback.v2.pageHead.sendMassUpdate')}
                   </button>
                 </TooltipTrigger>
-                <TooltipContent>{t('feedback.v2.pageHead.comingSoonTooltip')}</TooltipContent>
+                <TooltipContent>{t('comingSoon')}</TooltipContent>
               </Tooltip>
             </div>
           }

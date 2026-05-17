@@ -17,6 +17,7 @@
 import { useEffect, useState } from 'react';
 
 import { ChevronDown, Search, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
@@ -77,6 +78,7 @@ const SORT_LABELS: Record<SortValue, string> = {
 // ---------------------------------------------------------------------------
 
 export function NewsToolbar() {
+  const { t } = useTranslation('admin');
   const [searchParams, setSearchParams] = useSearchParams();
 
   const {
@@ -223,7 +225,7 @@ export function NewsToolbar() {
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           className="pl-9 pr-8"
-          placeholder="Search news..."
+          placeholder={t('news.toolbar.searchPlaceholder')}
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
           data-testid="news-toolbar-search"

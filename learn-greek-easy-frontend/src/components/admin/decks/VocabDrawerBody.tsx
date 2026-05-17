@@ -260,7 +260,7 @@ export function VocabDrawerBody({ deck }: VocabDrawerBodyProps) {
                 >
                   <button
                     type="button"
-                    aria-label="Edit word"
+                    aria-label={t('decks.vocab.editWordLabel')}
                     data-testid="word-row-edit"
                     className="rounded p-1 hover:bg-muted"
                     onClick={(e) => {
@@ -272,7 +272,7 @@ export function VocabDrawerBody({ deck }: VocabDrawerBodyProps) {
                   </button>
                   <button
                     type="button"
-                    aria-label="Delete word"
+                    aria-label={t('decks.vocab.deleteWordLabel')}
                     data-testid="word-row-delete"
                     className="rounded p-1 hover:bg-destructive/10"
                     onClick={(e) => {

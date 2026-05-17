@@ -193,7 +193,7 @@ export function ChangelogTab() {
 
   // ── Tag SegControl options ────────────────────────────────────────────────
   const tagOptions: SegOption<'all' | ChangelogTag>[] = [
-    { value: 'all', label: 'All', count: filteredBySearch.length },
+    { value: 'all', label: t('admin:changelog.filter.all'), count: filteredBySearch.length },
     ...CHANGELOG_TAG_OPTIONS.filter((tag) => filteredBySearch.some((e) => e.tag === tag)).map(
       (tag) => ({
         value: tag as 'all' | ChangelogTag,
@@ -208,24 +208,27 @@ export function ChangelogTab() {
     <div className="space-y-6" data-testid="changelog-tab">
       {/* ── Page Head ────────────────────────────────────────────────────── */}
       <PageHead
-        breadcrumb={[{ label: 'Dashboard' }, { label: 'Changelog' }]}
-        kicker={<Kicker dot="primary">Changelog</Kicker>}
-        title="Changelog"
-        sub="Manage and publish product updates for your users."
+        breadcrumb={[
+          { label: t('admin:shell.breadcrumb.dashboard') },
+          { label: t('admin:changelog.title') },
+        ]}
+        kicker={<Kicker dot="primary">{t('admin:changelog.kicker')}</Kicker>}
+        title={t('admin:changelog.title')}
+        sub={t('admin:changelog.subtitle')}
         actions={
           <div className="flex items-center gap-2">
             <button
               type="button"
               className="btn-glass"
-              onClick={() => toast({ title: 'Markdown export coming soon' })}
+              onClick={() => toast({ title: t('admin:changelog.toast.exportComingSoon') })}
               data-testid="changelog-export-button"
             >
               <Download className="size-4" aria-hidden="true" />
-              Export markdown
+              {t('admin:changelog.actions.export')}
             </button>
             <Button variant="default" onClick={openCompose} data-testid="changelog-new-button">
               <Plus className="size-4" aria-hidden="true" />
-              New entry
+              {t('admin:changelog.actions.newEntry')}
             </Button>
           </div>
         }
@@ -234,16 +237,16 @@ export function ChangelogTab() {
       {/* ── 4-up StatCard grid ───────────────────────────────────────────── */}
       <div className="stat-grid grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          title="Total entries"
+          title={t('admin:changelog.stats.total')}
           n={total || items.length}
           icon={<FileText />}
           tone="blue"
           bars={SPARKLINE_BARS}
           barsTestId="sparkline-total"
-          footerLabel="all-time"
+          footerLabel={t('admin:changelog.stats.footer.allTime')}
         />
         <StatCard
-          title="Most recent"
+          title={t('admin:changelog.stats.mostRecent')}
           n={mostRecent ? format(new Date(mostRecent.created_at), 'MMM d') : '—'}
           sub={
             mostRecent
@@ -256,27 +259,35 @@ export function ChangelogTab() {
           tone="violet"
           bars={SPARKLINE_BARS}
           barsTestId="sparkline-recent"
-          footerLabel="last published"
+          footerLabel={t('admin:changelog.stats.footer.lastPublished')}
         />
         <StatCard
-          title="Avg cadence"
+          title={t('admin:changelog.stats.cadence')}
           n={cadenceDays !== null ? `${cadenceDays}d` : '—'}
-          sub={cadenceDays !== null ? 'between entries' : 'need ≥ 2 entries'}
+          sub={
+            cadenceDays !== null
+              ? t('admin:changelog.stats.cadenceSub')
+              : t('admin:changelog.stats.cadenceSubMinimal')
+          }
           icon={<Clock />}
           tone="cyan"
           bars={SPARKLINE_BARS}
           barsTestId="sparkline-cadence"
-          footerLabel="last 10 entries"
+          footerLabel={t('admin:changelog.stats.footer.lastTenEntries')}
         />
         <StatCard
-          title="Missing RU"
+          title={t('admin:changelog.stats.missingRu')}
           n={missingRuCount}
-          sub={missingRuCount > 0 ? 'entries need translation' : 'all translated'}
+          sub={
+            missingRuCount > 0
+              ? t('admin:changelog.stats.missingRuNeed')
+              : t('admin:changelog.stats.missingRuDone')
+          }
           icon={<Languages />}
           tone="amber"
           bars={SPARKLINE_BARS}
           barsTestId="sparkline-missing-ru"
-          footerLabel="needs attention"
+          footerLabel={t('admin:changelog.stats.footer.needsAttention')}
         />
       </div>
 
@@ -285,7 +296,7 @@ export function ChangelogTab() {
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search entries…"
+          placeholder={t('admin:changelog.search.entriesPlaceholder')}
           className="w-64"
           data-testid="changelog-search-input"
         />

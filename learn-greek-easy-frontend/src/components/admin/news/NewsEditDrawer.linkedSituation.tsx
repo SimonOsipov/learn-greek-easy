@@ -58,7 +58,7 @@ export const NewsEditDrawerLinkedSituation: React.FC<Props> = ({
                 {t('news.drawer.linkedSituation.generate')}
               </Button>
             </TooltipTrigger>
-            <TooltipContent>{t('news.comingSoon')}</TooltipContent>
+            <TooltipContent>{t('comingSoon')}</TooltipContent>
           </Tooltip>
         </div>
       ) : (
@@ -106,7 +106,7 @@ export const NewsEditDrawerLinkedSituation: React.FC<Props> = ({
               {t('news.drawer.linkedSituation.unlink')}
             </Button>
           </TooltipTrigger>
-          <TooltipContent>{t('news.comingSoon')}</TooltipContent>
+          <TooltipContent>{t('comingSoon')}</TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -119,7 +119,7 @@ export const NewsEditDrawerLinkedSituation: React.FC<Props> = ({
               {t('news.drawer.linkedSituation.regenerate')}
             </Button>
           </TooltipTrigger>
-          <TooltipContent>{t('news.comingSoon')}</TooltipContent>
+          <TooltipContent>{t('comingSoon')}</TooltipContent>
         </Tooltip>
       </div>
     </div>

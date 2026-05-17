@@ -5,6 +5,8 @@
 // the fetch). The hideDeactivated filter is applied upstream in AllDecksList;
 // this component receives the already-filtered slice.
 
+import { useTranslation } from 'react-i18next';
+
 import { Skeleton } from '@/components/ui/skeleton';
 import type { UnifiedDeckItem } from '@/services/adminAPI';
 
@@ -19,8 +21,9 @@ export interface DeckListProps {
 }
 
 function SkeletonList() {
+  const { t } = useTranslation('admin');
   return (
-    <div className="space-y-2" aria-label="Loading decks">
+    <div className="space-y-2" aria-label={t('decks.loadingLabel')}>
       {[1, 2, 3, 4, 5].map((i) => (
         <Skeleton key={i} className="h-14 w-full" />
       ))}

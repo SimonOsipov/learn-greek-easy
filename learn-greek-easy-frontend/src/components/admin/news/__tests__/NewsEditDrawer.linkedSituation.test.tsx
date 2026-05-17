@@ -232,7 +232,7 @@ describe('NewsEditDrawerLinkedSituation — empty state', () => {
       </MemoryRouter>
     );
     const tooltips = screen.getAllByTestId('tooltip-content');
-    const comingSoon = tooltips.filter((el) => el.textContent?.includes('news.comingSoon'));
+    const comingSoon = tooltips.filter((el) => el.textContent?.includes('comingSoon'));
     expect(comingSoon.length).toBeGreaterThanOrEqual(1);
   });
 });
@@ -374,7 +374,7 @@ describe('NewsEditDrawerLinkedSituation — footer buttons disabled', () => {
       </MemoryRouter>
     );
     const tooltips = screen.getAllByTestId('tooltip-content');
-    const comingSoon = tooltips.filter((el) => el.textContent?.includes('news.comingSoon'));
+    const comingSoon = tooltips.filter((el) => el.textContent?.includes('comingSoon'));
     // Unlink + Regenerate = 2 at minimum
     expect(comingSoon.length).toBeGreaterThanOrEqual(2);
   });

@@ -665,6 +665,9 @@
     "card": {
       "editLabel": "Edit",
       "deleteLabel": "Delete"
+    },
+    "toolbar": {
+      "searchPlaceholder": "Search news..."
     }
   },
   "feedback": {
@@ -956,7 +959,13 @@
       "cadenceSubMinimal": "need ≥ 2 entries",
       "missingRu": "Missing RU",
       "missingRuNeed": "entries need translation",
-      "missingRuDone": "all translated"
+      "missingRuDone": "all translated",
+      "footer": {
+        "allTime": "all-time",
+        "lastPublished": "last published",
+        "lastTenEntries": "last 10 entries",
+        "needsAttention": "needs attention"
+      }
     },
     "title": "Changelog",
     "addNew": "Add New",
@@ -964,11 +973,13 @@
     "search": {
       "placeholder": "Search changelog...",
       "filteredCount": "{{filtered}} of {{total}} entries",
-      "noResults": "No changelog entries match your search"
+      "noResults": "No changelog entries match your search",
+      "entriesPlaceholder": "Search entries…"
     },
     "filter": {
       "allTags": "All Tags",
-      "tagPlaceholder": "Filter by tag"
+      "tagPlaceholder": "Filter by tag",
+      "all": "All"
     },
     "table": {
       "title": "Changelog Entries",
@@ -1019,7 +1030,12 @@
       "deleted": "Changelog entry deleted successfully",
       "createError": "Failed to create changelog entry",
       "updateError": "Failed to update changelog entry",
-      "deleteError": "Failed to delete changelog entry"
+      "deleteError": "Failed to delete changelog entry",
+      "exportComingSoon": "Markdown export coming soon"
+    },
+    "actions": {
+      "export": "Export markdown",
+      "newEntry": "New entry"
     }
   },
   "vocabularyCard": {
@@ -1851,24 +1867,37 @@
     "title": "Admin Dashboard",
     "sub": "Manage content and view statistics across every learning surface.",
     "stats": {
-      "decks":      { "title": "Decks",      "sub_one": "{{count}} card", "sub_other": "{{count}} cards" },
-      "news":       { "title": "News",       "sub": "Counts coming soon" },
-      "situations": { "title": "Situations", "sub": "Counts coming soon" },
-      "exercises":  { "title": "Exercises",  "sub": "Counts coming soon" }
+      "decks": {
+        "title": "Decks",
+        "sub_one": "{{count}} card",
+        "sub_other": "{{count}} cards"
+      },
+      "news": {
+        "title": "News",
+        "sub": "Counts coming soon"
+      },
+      "situations": {
+        "title": "Situations",
+        "sub": "Counts coming soon"
+      },
+      "exercises": {
+        "title": "Exercises",
+        "sub": "Counts coming soon"
+      }
     },
     "inbox": {
-      "kicker":  "Needs your attention",
-      "title":   "Today's inbox",
-      "sub":     "Aggregated inbox coming soon. We'll surface drafts, audio gaps, feedback, and card errors here.",
+      "kicker": "Needs your attention",
+      "title": "Today's inbox",
+      "sub": "Aggregated inbox coming soon. We'll surface drafts, audio gaps, feedback, and card errors here.",
       "viewAll": "View all →"
     },
     "activity": {
       "title": "Recent activity",
-      "sub":   "Activity feed coming soon. Recent edits, publishes, and reviews will appear here."
+      "sub": "Activity feed coming soon. Recent edits, publishes, and reviews will appear here."
     },
     "pipeline": {
       "title": "Content pipeline",
-      "sub":   "Pipeline summary coming soon. Track ready vs. draft counts across decks, news, situations, and exercises."
+      "sub": "Pipeline summary coming soon. Track ready vs. draft counts across decks, news, situations, and exercises."
     }
   }
 }

@@ -150,7 +150,7 @@ export function SituationDrawerDescription({ situation }: Props) {
               <Play size={16} />
             </button>
           </TooltipTrigger>
-          <TooltipContent>{t('news.comingSoon')}</TooltipContent>
+          <TooltipContent>{t('comingSoon')}</TooltipContent>
         </Tooltip>
       );
     }
@@ -215,7 +215,7 @@ export function SituationDrawerDescription({ situation }: Props) {
                 {t('situations.drawer.description.regenerate')}
               </button>
             </TooltipTrigger>
-            <TooltipContent>{t('news.comingSoon')}</TooltipContent>
+            <TooltipContent>{t('comingSoon')}</TooltipContent>
           </Tooltip>
         </div>
       </div>

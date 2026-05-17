@@ -134,7 +134,7 @@ describe('SituationDrawerLinkedNews — empty state body', () => {
   it('shows Coming soon tooltip for Link to article button', async () => {
     await renderComponent();
     const tooltips = screen.getAllByTestId('tooltip-content');
-    const comingSoon = tooltips.filter((el) => el.textContent?.includes('news.comingSoon'));
+    const comingSoon = tooltips.filter((el) => el.textContent?.includes('comingSoon'));
     expect(comingSoon.length).toBeGreaterThanOrEqual(1);
   });
 });
@@ -159,7 +159,7 @@ describe('SituationDrawerLinkedNews — footer disabled actions', () => {
   it('shows Coming soon tooltip for footer buttons', async () => {
     await renderComponent();
     const tooltips = screen.getAllByTestId('tooltip-content');
-    const comingSoon = tooltips.filter((el) => el.textContent?.includes('news.comingSoon'));
+    const comingSoon = tooltips.filter((el) => el.textContent?.includes('comingSoon'));
     // linkCta + Unlink + Re-derive = 3 tooltips
     expect(comingSoon.length).toBeGreaterThanOrEqual(3);
   });

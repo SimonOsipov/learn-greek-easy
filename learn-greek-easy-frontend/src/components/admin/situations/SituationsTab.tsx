@@ -75,7 +75,7 @@ export function SituationsTab() {
                     {t('situations.actions.generateFromNews')}
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>{t('news.comingSoon')}</TooltipContent>
+                <TooltipContent>{t('comingSoon')}</TooltipContent>
               </Tooltip>
 
               <Button

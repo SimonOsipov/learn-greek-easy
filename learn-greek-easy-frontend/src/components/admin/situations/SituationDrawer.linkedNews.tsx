@@ -39,7 +39,7 @@ export function SituationDrawerLinkedNews({ situation: _situation }: Props) {
               </Button>
             </span>
           </TooltipTrigger>
-          <TooltipContent>{t('news.comingSoon')}</TooltipContent>
+          <TooltipContent>{t('comingSoon')}</TooltipContent>
         </Tooltip>
       </div>
 
@@ -58,7 +58,7 @@ export function SituationDrawerLinkedNews({ situation: _situation }: Props) {
               </Button>
             </span>
           </TooltipTrigger>
-          <TooltipContent>{t('news.comingSoon')}</TooltipContent>
+          <TooltipContent>{t('comingSoon')}</TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -73,7 +73,7 @@ export function SituationDrawerLinkedNews({ situation: _situation }: Props) {
               </Button>
             </span>
           </TooltipTrigger>
-          <TooltipContent>{t('news.comingSoon')}</TooltipContent>
+          <TooltipContent>{t('comingSoon')}</TooltipContent>
         </Tooltip>
       </div>
     </div>

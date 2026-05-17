@@ -241,7 +241,7 @@ export function CultureDrawerBody({ deck }: CultureDrawerBodyProps) {
                 >
                   <button
                     type="button"
-                    aria-label="Edit question"
+                    aria-label={t('decks.culture.editQuestionLabel')}
                     data-testid="question-row-edit"
                     className="rounded p-1 hover:bg-muted"
                     onClick={(e) => {
@@ -253,7 +253,7 @@ export function CultureDrawerBody({ deck }: CultureDrawerBodyProps) {
                   </button>
                   <button
                     type="button"
-                    aria-label="Delete question"
+                    aria-label={t('decks.culture.deleteQuestionLabel')}
                     data-testid="question-row-delete"
                     className="rounded p-1 hover:bg-destructive/10"
                     onClick={(e) => {

@@ -19,7 +19,7 @@ import { NewsEditDrawerAudio } from '../NewsEditDrawer.audio';
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, unknown>) => {
-      if (key === 'news.comingSoon') return 'Coming soon';
+      if (key === 'comingSoon') return 'Coming soon';
       if (key === 'news.drawer.audio.playLabel' && opts?.level) {
         return `Play ${opts.level} narration`;
       }
