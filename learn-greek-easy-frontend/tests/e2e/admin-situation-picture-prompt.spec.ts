@@ -53,7 +53,11 @@ async function seedSituations(
 // HAPPY PATH: edit scene_en + style_en, persist, recompose image_prompt
 // ============================================================================
 
-test.describe('Admin Situation Picture Prompt - Happy Path', () => {
+// ADMIN2-08: SituationDetailModal removed; this spec asserts on situation-row-* test-ids
+// that no longer exist (replaced by SituationCard.sit-card-* via SIT-04/05). Re-skinning to
+// the new drawer flow is covered by admin-situations.spec.ts (SIT-08). Quarantine until
+// the old modal source file is deleted in ADMIN2-12 or a dedicated rewrite lands.
+test.describe.skip('Admin Situation Picture Prompt - Happy Path', () => {
   test.use({ storageState: ADMIN_AUTH });
 
   let coffeeShopId: string;
@@ -176,7 +180,7 @@ test.describe('Admin Situation Picture Prompt - Happy Path', () => {
 // NEGATIVE PATH: situation without picture row hides the form
 // ============================================================================
 
-test.describe('Admin Situation Picture Prompt - Negative Path', () => {
+test.describe.skip('Admin Situation Picture Prompt - Negative Path', () => {
   test.use({ storageState: ADMIN_AUTH });
 
   let busId: string;

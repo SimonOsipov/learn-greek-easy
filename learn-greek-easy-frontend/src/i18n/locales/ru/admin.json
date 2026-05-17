@@ -481,6 +481,7 @@
     }
   },
   "news": {
+    "comingSoon": "Скоро",
     "stats": {
       "total": "Всего новостей",
       "withAudio": "С аудио"
@@ -1314,11 +1315,34 @@
   "situations": {
     "title": "Ситуации",
     "description": "Управление разговорными ситуациями для упражнений",
+    "pageHead": {
+      "breadcrumb": "Ситуации",
+      "kicker": "Админ · Ситуации",
+      "title": "Разговорные ситуации",
+      "subtitle": "{{total}} сценариев · {{draft}} черновик · {{ready}} готово"
+    },
     "stats": {
       "total": "Всего ситуаций",
       "status": {
         "draft": "Черновик",
         "ready": "Готово"
+      },
+      "totalSituations": {
+        "title": "Всего ситуаций",
+        "sub": "{{total}} сценариев"
+      },
+      "readyToShip": {
+        "title": "Готово к выпуску",
+        "sub": "{{percent}}% каталога · {{ready}} / {{total}}"
+      },
+      "draftsToFinish": {
+        "title": "Черновики",
+        "subPending": "{{draft}} ожидают завершения",
+        "subDone": "Все сценарии готовы"
+      },
+      "exercisesGenerated": {
+        "title": "Упражнений создано",
+        "sub": "по всем источникам"
       }
     },
     "search": {
@@ -1329,6 +1353,23 @@
     "filter": {
       "allLevels": "Все уровни",
       "allStatuses": "Все статусы"
+    },
+    "filters": {
+      "status": {
+        "label": "Status",
+        "all": "All",
+        "draft": "Draft",
+        "ready": "Ready"
+      },
+      "search": {
+        "placeholder": "Search situations...",
+        "clear": "Clear search"
+      },
+      "sort": {
+        "newest": "Newest first",
+        "oldest": "Oldest first",
+        "draftsFirst": "Drafts first"
+      }
     },
     "columns": {
       "scenario": "Сценарий",
@@ -1479,6 +1520,98 @@
     },
     "fetch": {
       "error": "Не удалось загрузить ситуации"
+    },
+    "completion": {
+      "dialog": "Dialog",
+      "dialogAudio": "Dialog audio",
+      "description": "Desc",
+      "descAudio": "Desc audio",
+      "picture": "Picture",
+      "dialogEx": "Dialog Ex",
+      "descEx": "Desc Ex",
+      "picEx": "Pic Ex"
+    },
+    "card": {
+      "linesCount": "{{count}} lines"
+    },
+    "grid": {
+      "noResults": "No results",
+      "empty": "No situations match these filters.",
+      "clearFilters": "Clear filters"
+    },
+    "actions": {
+      "edit": "Edit situation",
+      "delete": "Delete situation",
+      "generateFromNews": "Сгенерировать из новостей",
+      "newSituation": "+ Новая ситуация"
+    },
+    "drawer": {
+      "loading": "Загрузка…",
+      "breadcrumb": {
+        "fallback": "Ситуации"
+      },
+      "exercisesCount": "{{n}} упражнений",
+      "regenerateScenario": "Перегенерировать сценарий",
+      "closeAria": "Закрыть панель",
+      "tabs": {
+        "dialog": "Диалог · {{count}} реплик",
+        "description": "Описание",
+        "picture": "Картинка",
+        "exercises": "Упражнения · {{count}}",
+        "linkedNews": "Связанные новости"
+      },
+      "footer": {
+        "allChecksPassed": "Все проверки пройдены",
+        "updatedRelative": "Обновлено {{relative}}",
+        "cancel": "Отмена",
+        "saveAndClose": "Сохранить и закрыть",
+        "saving": "Сохранение…"
+      },
+      "save": {
+        "success": "Ситуация обновлена",
+        "error": "Не удалось обновить ситуацию"
+      },
+      "dialog": {
+        "addLine": "Добавить реплику",
+        "regen": "Перегенерировать реплику",
+        "edit": "Редактировать реплику",
+        "timestampsMissing": "Таймкоды ещё не созданы",
+        "playAria": "Воспроизвести реплику",
+        "pauseAria": "Пауза"
+      },
+      "description": {
+        "kicker": "Описание",
+        "hint": "Нарратив, который учащийся читает перед диалогом — генерируется вместе с аудио.",
+        "b1Label": "Описание — B1 (греческий)",
+        "a2Label": "Описание — A2 (греческий)",
+        "b1Narration": "Нарратив B1",
+        "a2Narration": "Нарратив A2",
+        "generatedElevenLabs": "Создано · ElevenLabs",
+        "notGeneratedYet": "Ещё не создано",
+        "regenerate": "Перегенерировать",
+        "playAria": "Воспроизвести нарратив {{level}}",
+        "pauseAria": "Пауза нарратива {{level}}"
+      },
+      "exercises": {
+        "source": {
+          "dialog": "Из диалога",
+          "description": "Из описания",
+          "picture": "Из картинки"
+        },
+        "generateFrom": "Генерировать из {{source}}",
+        "empty": {
+          "title": "Упражнений пока нет",
+          "cta": "Генерировать упражнения"
+        }
+      },
+      "linkedNews": {
+        "header": "Связанная новость",
+        "help": "Каждую ситуацию можно связать с исходной новостной статьёй. Связь показывается ученикам как фоновый контекст.",
+        "empty": "Эта ситуация не связана с новостной статьёй.",
+        "linkCta": "Связать со статьёй",
+        "unlink": "Отвязать",
+        "reDerive": "Перегенерировать из статьи"
+      }
     }
   },
   "adminExercises": {
