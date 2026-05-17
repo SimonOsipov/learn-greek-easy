@@ -565,25 +565,9 @@ describe('ChangelogTab', () => {
     });
   });
 
-  // ── Export markdown stub (AC #1) ────────────────────────────────────────────
-  describe('Export markdown', () => {
-    it('fires toast with "Markdown export coming soon" on click', async () => {
-      const user = userEvent.setup();
-      renderWithRouter();
-      await user.click(screen.getByTestId('changelog-export-button'));
-      expect(mockToast).toHaveBeenCalledWith({ title: 'Markdown export coming soon' });
-    });
-  });
-
-  // ── New entry button (AC #1) ────────────────────────────────────────────────
-  describe('New entry button', () => {
-    it('calls openCompose when clicked', async () => {
-      const user = userEvent.setup();
-      renderWithRouter();
-      await user.click(screen.getByTestId('changelog-new-button'));
-      expect(mockOpenCompose).toHaveBeenCalled();
-    });
-  });
+  // Note: "Export markdown" and "New entry" buttons are now in AdminPage's
+  // pageHeadPropsFor (ADMIN2-HEAD). These buttons are covered by e2e smoke tests.
+  // The ?compose=1 URL deep-link (below) still exercises openCompose indirectly.
 
   // ── One-shot console.warn at 100 entries (AC #11) ───────────────────────────
   describe('console.warn at 100 entries', () => {

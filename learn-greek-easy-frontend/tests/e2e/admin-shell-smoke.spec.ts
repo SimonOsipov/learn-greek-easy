@@ -164,3 +164,30 @@ test('ASHELL-SMOKE-05: no console errors during 3-step smoke', async ({ page }) 
 
   expect(appErrors).toHaveLength(0);
 });
+
+// ---------------------------------------------------------------------------
+// ADMIN2-HEAD: exactly one h1.va-h1 on every admin tab
+// ---------------------------------------------------------------------------
+
+const ADMIN_TABS = [
+  'dashboard',
+  'inbox',
+  'decks',
+  'news',
+  'situations',
+  'exercises',
+  'errors',
+  'feedback',
+  'changelog',
+  'announcements',
+] as const;
+
+for (const tab of ADMIN_TABS) {
+  test(`PageHead H1 — exactly one h1.va-h1 on /admin?tab=${tab}`, async ({ page }) => {
+    await page.goto(`/admin?tab=${tab}`);
+    await expect(page.getByTestId('admin-page')).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('h1.va-h1')).toHaveCount(1);
+    await expect(page.getByTestId('admin-title')).toBeVisible();
+    await expect(page.getByTestId('admin-subtitle')).toBeVisible();
+  });
+}

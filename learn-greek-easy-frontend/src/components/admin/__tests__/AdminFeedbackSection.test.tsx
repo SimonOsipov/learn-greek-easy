@@ -590,37 +590,6 @@ describe('AdminFeedbackSection', () => {
 
   // ── Decorative "Coming soon" buttons ───────────────────────────────────────
 
-  describe('Decorative header buttons', () => {
-    it('Export CSV button has aria-disabled="true"', () => {
-      buildMockState([]);
-
-      renderSection();
-
-      const exportBtn = screen.getByRole('button', { name: /Export CSV/i });
-      expect(exportBtn).toHaveAttribute('aria-disabled', 'true');
-    });
-
-    it('Send mass update button has aria-disabled="true"', () => {
-      buildMockState([]);
-
-      renderSection();
-
-      const massUpdateBtn = screen.getByRole('button', { name: /Send mass update/i });
-      expect(massUpdateBtn).toHaveAttribute('aria-disabled', 'true');
-    });
-
-    it('clicking Export CSV does not navigate or call any handler', async () => {
-      const user = userEvent.setup();
-      buildMockState([]);
-
-      renderSection();
-
-      const exportBtn = screen.getByRole('button', { name: /Export CSV/i });
-      // Should not throw; clicking should be a no-op
-      await user.click(exportBtn);
-
-      // No toast, no store calls related to export
-      expect(mockToast).not.toHaveBeenCalled();
-    });
-  });
+  // Note: Decorative header buttons (Export CSV, Send mass update) are now
+  // in AdminPage's pageHeadPropsFor (ADMIN2-HEAD), not in AdminFeedbackSection.
 });

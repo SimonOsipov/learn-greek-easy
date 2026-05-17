@@ -1,8 +1,4 @@
 {
-  "page": {
-    "title": "Admin Dashboard",
-    "subtitle": "Manage content and view statistics"
-  },
   "comingSoon": "Coming soon",
   "deckEdit": {
     "title": "Edit Deck",
@@ -295,9 +291,7 @@
   },
   "shell": {
     "breadcrumbLabel": "Breadcrumb",
-    "breadcrumb": {
-      "dashboard": "Dashboard"
-    },
+    "breadcrumb": {},
     "pagination": {
       "previousLabel": "Previous page",
       "nextLabel": "Next page"
@@ -305,7 +299,12 @@
   },
   "announcements": {
     "title": "Announcements",
-    "kicker": "System · Announcements",
+    "kicker": "Admin · Announcements",
+    "sub": "Send notifications and updates to active learners.",
+    "breadcrumb": {
+      "dashboard": "Admin",
+      "current": "Announcements"
+    },
     "actions": {
       "new": "New announcement"
     },
@@ -469,7 +468,11 @@
   "news": {
     "title": "News",
     "kicker": "Admin · News",
-    "subtitle": "{{total}} articles · {{audio}}/{{total}} with B2+A2 audio · {{pending}} awaiting B1",
+    "sub": "{{total}} articles · {{audio}}/{{total}} with B2+A2 audio · {{pending}} awaiting B1",
+    "breadcrumb": {
+      "dashboard": "Admin",
+      "current": "News"
+    },
     "stats": {
       "total": "Total News",
       "withAudio": "With Audio",
@@ -661,6 +664,17 @@
     }
   },
   "feedback": {
+    "breadcrumb": {
+      "dashboard": "Admin",
+      "current": "Feedback"
+    },
+    "kicker": "Admin · Feedback",
+    "title": "Feedback",
+    "sub": "Review, respond, and track community feedback.",
+    "actions": {
+      "exportCsv": "Export CSV",
+      "sendMassUpdate": "Send mass update"
+    },
     "stats": {
       "total": "Total Feedback",
       "new": "New",
@@ -779,14 +793,6 @@
         "feature": "Feature request",
         "anonymous": "Anonymous"
       },
-      "pageHead": {
-        "breadcrumb": "Feedback",
-        "kicker": "Reviews · Feedback",
-        "title": "User feedback",
-        "sub": "Review, respond, and track community feedback",
-        "exportCsv": "Export CSV",
-        "sendMassUpdate": "Send mass update"
-      },
       "statCards": {
         "total": {
           "label": "Total feedback",
@@ -831,6 +837,13 @@
     }
   },
   "cardErrors": {
+    "breadcrumb": {
+      "dashboard": "Admin",
+      "current": "Card errors"
+    },
+    "kicker": "Admin · Card errors",
+    "title": "Card errors",
+    "sub": "User-reported issues on word and culture cards.",
     "stats": {
       "total": "Total Reports",
       "pending": "Pending",
@@ -893,12 +906,6 @@
       "updateErrorMessage": "Failed to update the error report"
     },
     "v2": {
-      "pageHead": {
-        "kicker": "Quality",
-        "title": "Card errors",
-        "breadcrumb": "Card errors",
-        "sub": "User-reported issues on word and culture cards."
-      },
       "statCards": {
         "total": {
           "label": "Total errors",
@@ -966,7 +973,11 @@
   },
   "changelog": {
     "kicker": "Changelog",
-    "subtitle": "Manage and publish product updates for your users.",
+    "sub": "Manage and publish product updates for your users.",
+    "breadcrumb": {
+      "dashboard": "Admin",
+      "current": "Changelog"
+    },
     "stats": {
       "total": "Total entries",
       "mostRecent": "Most recent",
@@ -1453,12 +1464,12 @@
   "situations": {
     "title": "Situations",
     "description": "Manage conversation situations for practice exercises",
-    "pageHead": {
-      "breadcrumb": "Situations",
-      "kicker": "Admin · Situations",
-      "title": "Conversation situations",
-      "subtitle": "{{total}} scenarios · {{draft}} draft · {{ready}} ready"
+    "breadcrumb": {
+      "dashboard": "Admin",
+      "current": "Situations"
     },
+    "kicker": "Admin · Situations",
+    "sub": "{{total}} scenarios · {{draft}} draft · {{ready}} ready",
     "stats": {
       "total": "Total Situations",
       "status": {
@@ -1790,13 +1801,14 @@
     }
   },
   "exercises": {
+    "breadcrumb": {
+      "dashboard": "Admin",
+      "current": "Exercises"
+    },
+    "kicker": "Admin · Exercises",
+    "title": "Exercises",
+    "sub": "Approve and review listening + reading exercises across all situations.",
     "v2": {
-      "pageHead": {
-        "kicker": "Content",
-        "title": "Exercises",
-        "breadcrumb": "Exercises",
-        "sub": "Approve and review listening + reading exercises across all situations."
-      },
       "modality": {
         "listening": "Listening",
         "reading": "Reading"
@@ -1822,6 +1834,16 @@
     }
   },
   "decks": {
+    "breadcrumb": {
+      "dashboard": "Admin",
+      "current": "Decks"
+    },
+    "kicker": "Admin · Decks",
+    "title": "Decks",
+    "sub": "Vocabulary and culture decks — search, create, and manage.",
+    "actions": {
+      "createDeck": "Create Deck"
+    },
     "drawer": {
       "tabs": {
         "words": "Words",
@@ -1873,7 +1895,7 @@
       "dashboard": "Admin",
       "current": "Inbox"
     },
-    "kicker": "Needs your attention",
+    "kicker": "Admin · Inbox",
     "title": "Inbox",
     "sub": "Cross-content attention queue — feedback, drafts, audio gaps, and card errors will surface here.",
     "stats": {
@@ -1911,7 +1933,11 @@
     }
   },
   "dashboard": {
-    "kicker": "Content operations",
+    "breadcrumb": {
+      "dashboard": "Admin",
+      "current": "Dashboard"
+    },
+    "kicker": "Admin · Dashboard",
     "title": "Admin Dashboard",
     "sub": "Manage content and view statistics across every learning surface.",
     "stats": {

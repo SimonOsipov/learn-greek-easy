@@ -16,14 +16,11 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 
-import { Link, Megaphone, Plus, Users } from 'lucide-react';
+import { Link, Megaphone, Users } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 
-import { PageHead } from '@/components/admin/shell/page-head';
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
-import { Button } from '@/components/ui/button';
-import { Kicker } from '@/components/ui/kicker';
 import { StatCard } from '@/components/ui/stat-card';
 import { useAdminAnnouncementStore } from '@/stores/adminAnnouncementStore';
 
@@ -97,31 +94,6 @@ export const AnnouncementsTab: React.FC = () => {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6" data-testid="announcements-tab">
-      {/* ── Page Head ────────────────────────────────────────────────────── */}
-      <PageHead
-        breadcrumb={[
-          { label: t('inbox.breadcrumb.dashboard') },
-          { label: t('announcements.title') },
-        ]}
-        kicker={<Kicker dot="primary">{t('announcements.kicker')}</Kicker>}
-        title={t('announcements.title')}
-        actions={
-          <Button
-            variant="default"
-            onClick={() =>
-              setSearchParams((prev) => {
-                prev.set('compose', '1');
-                return prev;
-              })
-            }
-            data-testid="announcements-new-button"
-          >
-            <Plus className="size-4" aria-hidden="true" />
-            {t('announcements.actions.new')}
-          </Button>
-        }
-      />
-
       {/* ── 4-up StatCard grid ───────────────────────────────────────────── */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard

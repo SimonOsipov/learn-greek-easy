@@ -4,9 +4,11 @@
  * NewsTab — NEWS-05 rewrite
  *
  * Integration shell for ADMIN2-07.
- * Renders PageHead + 4-up StatCard grid + NewsToolbar + NewsGrid +
- * NewsItemCreateModal + NewsItemDeleteDialog + NewsEditDrawer (stub).
+ * Renders 4-up StatCard grid + NewsToolbar + NewsGrid +
+ * NewsItemCreateModal + NewsItemDeleteDialog + NewsEditDrawer.
  *
+ * PageHead is owned by AdminPage (ADMIN2-HEAD).
+ * createOpen/onCreateOpenChange are controlled props lifted to AdminPage.
  *
  * URL deep-link plumbing: ?edit=<id> opens the edit drawer via store.
  * NEWS-06: NewsEditDrawer reads drawerItemId from store and clears ?edit= on close.
@@ -14,15 +16,11 @@
 
 import React, { useEffect, useState } from 'react';
 
-import { Globe, Newspaper, Play, Plus, RefreshCcw, Rss } from 'lucide-react';
+import { Globe, Newspaper, Play, RefreshCcw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 
-import { PageHead } from '@/components/admin/shell/page-head';
-import { Button } from '@/components/ui/button';
-import { Kicker } from '@/components/ui/kicker';
 import { StatCard } from '@/components/ui/stat-card';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAdminNewsStore } from '@/stores/adminNewsStore';
 
 import { NewsEditDrawer } from './NewsEditDrawer';
@@ -31,10 +29,15 @@ import { NewsItemCreateModal } from './NewsItemCreateModal';
 import { NewsItemDeleteDialog } from './NewsItemDeleteDialog';
 import { NewsToolbar } from './NewsToolbar';
 
+interface NewsTabProps {
+  createOpen: boolean;
+  onCreateOpenChange: (open: boolean) => void;
+}
+
 /**
  * NewsTab component — ADMIN2-07 shell rewrite
  */
-export const NewsTab: React.FC = () => {
+export const NewsTab: React.FC<NewsTabProps> = ({ createOpen, onCreateOpenChange }) => {
   const { t } = useTranslation('admin');
 
   // ── Store ─────────────────────────────────────────────────────────────────
@@ -56,7 +59,6 @@ export const NewsTab: React.FC = () => {
   }, [editId, openDrawer, closeDrawer]);
 
   // ── Local state ───────────────────────────────────────────────────────────
-  const [createOpen, setCreateOpen] = useState(false);
   const [deleteItemId, setDeleteItemId] = useState<string | null>(null);
 
   // ── Derived stats ─────────────────────────────────────────────────────────
@@ -81,49 +83,6 @@ export const NewsTab: React.FC = () => {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6" data-testid="news-tab">
-      {/* ── Page Head ────────────────────────────────────────────────────── */}
-      <PageHead
-        breadcrumb={[{ label: t('inbox.breadcrumb.dashboard') }, { label: t('news.title') }]}
-        kicker={<Kicker dot="primary">{t('news.kicker')}</Kicker>}
-        title={t('news.title')}
-        sub={t('news.subtitle', {
-          total,
-          audio: audioCount,
-          pending: total - audioCount,
-        })}
-        actions={
-          <TooltipProvider>
-            <div className="flex items-center gap-2">
-              {/* Import RSS — gated Coming-soon */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    aria-disabled="true"
-                    className="btn-glass cursor-not-allowed opacity-60"
-                    onClick={(e) => e.preventDefault()}
-                  >
-                    <Rss className="size-4" aria-hidden="true" />
-                    {t('news.actions.importRss')}
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>{t('comingSoon')}</TooltipContent>
-              </Tooltip>
-
-              {/* New article — primary, fully enabled */}
-              <Button
-                variant="default"
-                onClick={() => setCreateOpen(true)}
-                data-testid="news-new-button"
-              >
-                <Plus className="size-4" aria-hidden="true" />
-                {t('news.actions.new')}
-              </Button>
-            </div>
-          </TooltipProvider>
-        }
-      />
-
       {/* ── 4-up StatCard grid ───────────────────────────────────────────── */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
@@ -161,7 +120,7 @@ export const NewsTab: React.FC = () => {
       <NewsGrid onRequestDelete={(id) => setDeleteItemId(id)} />
 
       {/* ── Modals / Drawers ─────────────────────────────────────────────── */}
-      <NewsItemCreateModal open={createOpen} onOpenChange={setCreateOpen} />
+      <NewsItemCreateModal open={createOpen} onOpenChange={onCreateOpenChange} />
       <NewsItemDeleteDialog
         open={deleteItemId !== null}
         onOpenChange={(open) => {

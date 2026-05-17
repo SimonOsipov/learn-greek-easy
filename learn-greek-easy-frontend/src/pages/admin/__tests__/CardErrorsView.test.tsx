@@ -1,5 +1,8 @@
 /**
- * CardErrorsView Component Tests (ADMIN2-11 / EXERR-03)
+ * CardErrorsView Component Tests (ADMIN2-11 / EXERR-03 / ADMIN2-HEAD)
+ *
+ * Note: PageHead (H1, breadcrumb, kicker) is now owned by AdminPage.
+ * CardErrorsView renders stat cards + AdminCardErrorSection.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -13,11 +16,6 @@ vi.mock('@/components/admin/AdminCardErrorSection', () => ({
 describe('CardErrorsView', () => {
   it('renders without throwing', () => {
     expect(() => render(<CardErrorsView />)).not.toThrow();
-  });
-
-  it('renders the H1 with text "Card errors"', () => {
-    render(<CardErrorsView />);
-    expect(screen.getByRole('heading', { level: 1, name: /Card errors/i })).toBeTruthy();
   });
 
   it('renders all four StatCard titles', () => {
@@ -36,13 +34,5 @@ describe('CardErrorsView', () => {
   it('mounts AdminCardErrorSection sentinel', () => {
     render(<CardErrorsView />);
     expect(screen.getByTestId('admin-card-error-section')).toBeTruthy();
-  });
-
-  it('renders aria-labelledby landmark and sr-only h2', () => {
-    const { container } = render(<CardErrorsView />);
-    expect(
-      container.querySelector('section[aria-labelledby="card-errors-heading"]')
-    ).not.toBeNull();
-    expect(container.querySelector('h2#card-errors-heading.sr-only')).not.toBeNull();
   });
 });

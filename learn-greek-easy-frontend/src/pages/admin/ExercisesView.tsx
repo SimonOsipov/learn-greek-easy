@@ -4,8 +4,6 @@ import { CheckCircle, Clock, Flag, Layers } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { AdminExerciseList } from '@/components/admin/exercises/AdminExerciseList';
-import { PageHead } from '@/components/admin/shell/page-head';
-import { Kicker } from '@/components/ui/kicker';
 import { SegControl } from '@/components/ui/seg-control';
 import { StatCard } from '@/components/ui/stat-card';
 
@@ -15,13 +13,6 @@ export default function ExercisesView() {
 
   return (
     <div>
-      <PageHead
-        breadcrumb={[{ label: t('page.title') }, { label: t('exercises.v2.pageHead.breadcrumb') }]}
-        kicker={<Kicker dot="cyan">{t('exercises.v2.pageHead.kicker')}</Kicker>}
-        title={t('exercises.v2.pageHead.title')}
-        sub={t('exercises.v2.pageHead.sub')}
-      />
-
       <section className="stat-grid">
         <StatCard
           title={t('exercises.v2.statCards.total.label')}

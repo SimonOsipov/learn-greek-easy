@@ -1,15 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 
-import { CheckCircle2, Clock, MessageSquare, Newspaper, Plus, Sparkles } from 'lucide-react';
+import { CheckCircle2, Clock, MessageSquare, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 
-import { PageHead } from '@/components/admin/shell/page-head';
-import { Button } from '@/components/ui/button';
-import { Kicker } from '@/components/ui/kicker';
 import { StatCard } from '@/components/ui/stat-card';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAdminSituationStore, selectStatsTotals } from '@/stores/adminSituationStore';
 
 import { SituationCreateModal } from './SituationCreateModal';
@@ -17,7 +13,12 @@ import { SituationDrawer } from './SituationDrawer';
 import { SituationGrid } from './SituationGrid';
 import { SituationsToolbar } from './SituationsToolbar';
 
-export function SituationsTab() {
+interface SituationsTabProps {
+  createOpen: boolean;
+  onCreateOpenChange: (open: boolean) => void;
+}
+
+export function SituationsTab({ createOpen, onCreateOpenChange }: SituationsTabProps) {
   const { t } = useTranslation('admin');
 
   // ── Store ─────────────────────────────────────────────────────────────────
@@ -42,55 +43,12 @@ export function SituationsTab() {
     else closeDrawer();
   }, [editId, openDrawer, closeDrawer]);
 
-  // ── Local state ───────────────────────────────────────────────────────────
-  const [createOpen, setCreateOpen] = useState(false);
-
   // ── Derived stats ─────────────────────────────────────────────────────────
   const readyPercent = total > 0 ? Math.round((ready / total) * 100) : 0;
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6" data-testid="situations-tab">
-      {/* ── Page Head ────────────────────────────────────────────────────── */}
-      <PageHead
-        breadcrumb={[
-          { label: t('inbox.breadcrumb.dashboard') },
-          { label: t('situations.pageHead.breadcrumb') },
-        ]}
-        kicker={<Kicker dot="primary">{t('situations.pageHead.kicker')}</Kicker>}
-        title={t('situations.pageHead.title')}
-        sub={t('situations.pageHead.subtitle', { total, draft, ready })}
-        actions={
-          <TooltipProvider>
-            <div className="flex items-center gap-2">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    disabled
-                    aria-disabled="true"
-                    data-testid="situations-generate-from-news-btn"
-                  >
-                    <Newspaper className="size-4" aria-hidden="true" />
-                    {t('situations.actions.generateFromNews')}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{t('comingSoon')}</TooltipContent>
-              </Tooltip>
-
-              <Button
-                variant="default"
-                onClick={() => setCreateOpen(true)}
-                data-testid="situations-new-btn"
-              >
-                <Plus className="size-4" aria-hidden="true" />
-                {t('situations.actions.newSituation')}
-              </Button>
-            </div>
-          </TooltipProvider>
-        }
-      />
-
       {/* ── 4-up StatCard grid ───────────────────────────────────────────── */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
@@ -132,7 +90,7 @@ export function SituationsTab() {
       <SituationGrid />
 
       {/* ── Modals / Drawers ─────────────────────────────────────────────── */}
-      <SituationCreateModal open={createOpen} onOpenChange={setCreateOpen} />
+      <SituationCreateModal open={createOpen} onOpenChange={onCreateOpenChange} />
       <SituationDrawer />
     </div>
   );

@@ -9,9 +9,21 @@ import React, {
   useState,
 } from 'react';
 
-import { AlertCircle, ChevronLeft, ChevronRight, Plus, RefreshCw, Search } from 'lucide-react';
+import {
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Newspaper,
+  Plus,
+  RefreshCw,
+  Rss,
+  Search,
+  Send,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
+import { useShallow } from 'zustand/react/shallow';
 
 import {
   AdminFeedbackSection,
@@ -27,7 +39,7 @@ import {
 import { DeckDrawer } from '@/components/admin/decks/DeckDrawer';
 import { DeckList } from '@/components/admin/decks/DeckList';
 import { DeckStats } from '@/components/admin/decks/DeckStats';
-import { PageHead } from '@/components/admin/shell/page-head';
+import { PageHead, type PageHeadProps } from '@/components/admin/shell/page-head';
 import { SectionTabs, type SectionTabItem } from '@/components/admin/shell/section-tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -44,6 +56,7 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from '@/hooks/use-toast';
 import CardErrorsView from '@/pages/admin/CardErrorsView';
 import DashboardView from '@/pages/admin/DashboardView';
@@ -62,9 +75,11 @@ import { useAdminCardErrorStore } from '@/stores/adminCardErrorStore';
 import { useAdminChangelogStore } from '@/stores/adminChangelogStore';
 import { useAdminFeedbackStore } from '@/stores/adminFeedbackStore';
 import { useAdminNewsStore } from '@/stores/adminNewsStore';
-import { useAdminSituationStore } from '@/stores/adminSituationStore';
+import { useAdminSituationStore, selectStatsTotals } from '@/stores/adminSituationStore';
 
 import { type AdminTabType, isValidTab } from './admin/types';
+
+import type { TFunction } from 'i18next';
 
 /**
  * Loading skeleton for the admin page
@@ -167,320 +182,588 @@ function useDebounce<T>(value: T, delay: number): T {
 interface AllDecksListProps {
   t: (key: string, options?: Record<string, unknown>) => string;
   locale: string;
-  onCreateDeck?: () => void;
 }
 
 export interface AllDecksListHandle {
   refresh: () => void;
 }
 
-const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
-  ({ t, locale, onCreateDeck }, ref) => {
-    const [, setSearchParams] = useSearchParams();
-    const [deckList, setDeckList] = useState<DeckListResponse | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [searchInput, setSearchInput] = useState('');
-    const [typeFilter, setTypeFilter] = useState<'all' | 'vocabulary' | 'culture'>('all');
-    const [hideDeactivated, setHideDeactivated] = useState<boolean>(
-      () => localStorage.getItem('admin.deckList.hideDeactivated') === 'true'
-    );
-    const [page, setPage] = useState(1);
-    const pageSize = 10;
+const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(({ t, locale }, ref) => {
+  const [, setSearchParams] = useSearchParams();
+  const [deckList, setDeckList] = useState<DeckListResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchInput, setSearchInput] = useState('');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'vocabulary' | 'culture'>('all');
+  const [hideDeactivated, setHideDeactivated] = useState<boolean>(
+    () => localStorage.getItem('admin.deckList.hideDeactivated') === 'true'
+  );
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
-    const debouncedSearch = useDebounce(searchInput, 300);
+  const debouncedSearch = useDebounce(searchInput, 300);
 
-    const handleHideDeactivatedChange = (checked: boolean) => {
-      setHideDeactivated(checked);
-      localStorage.setItem('admin.deckList.hideDeactivated', checked.toString());
-    };
+  const handleHideDeactivatedChange = (checked: boolean) => {
+    setHideDeactivated(checked);
+    localStorage.setItem('admin.deckList.hideDeactivated', checked.toString());
+  };
 
-    // Seam for DKDR-06: writes ?edit=<id> to URL so the drawer can mount.
-    const onOpenDrawer = (deck: UnifiedDeckItem) => {
-      setSearchParams((prev) => {
-        const next = new URLSearchParams(prev);
-        next.set('edit', deck.id);
-        return next;
-      });
-    };
+  // Seam for DKDR-06: writes ?edit=<id> to URL so the drawer can mount.
+  const onOpenDrawer = (deck: UnifiedDeckItem) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('edit', deck.id);
+      return next;
+    });
+  };
 
-    const [deckToDelete, setDeckToDelete] = useState<UnifiedDeckItem | null>(null);
-    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-    const [isDeleting, setIsDeleting] = useState(false);
+  const [deckToDelete, setDeckToDelete] = useState<UnifiedDeckItem | null>(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-    const fetchDecks = useCallback(async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const params: {
-          page: number;
-          page_size: number;
-          search?: string;
-          type?: 'vocabulary' | 'culture';
-        } = {
-          page,
-          page_size: pageSize,
-        };
+  const fetchDecks = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const params: {
+        page: number;
+        page_size: number;
+        search?: string;
+        type?: 'vocabulary' | 'culture';
+      } = {
+        page,
+        page_size: pageSize,
+      };
 
-        if (debouncedSearch) {
-          params.search = debouncedSearch;
-        }
-        if (typeFilter !== 'all') {
-          params.type = typeFilter;
-        }
-
-        const data = await adminAPI.listDecks(params);
-        setDeckList(data);
-      } catch (err) {
-        const message = err instanceof Error ? err.message : t('errors.failed');
-        setError(message);
-      } finally {
-        setIsLoading(false);
+      if (debouncedSearch) {
+        params.search = debouncedSearch;
       }
-    }, [page, debouncedSearch, typeFilter, t]);
-
-    const handleDeleteConfirm = async () => {
-      if (!deckToDelete) return;
-      setIsDeleting(true);
-      try {
-        if (deckToDelete.type === 'vocabulary') {
-          await adminAPI.deleteVocabularyDeck(deckToDelete.id);
-        } else {
-          await adminAPI.deleteCultureDeck(deckToDelete.id);
-        }
-        setDeleteModalOpen(false);
-        setDeckToDelete(null);
-        fetchDecks();
-      } catch (_err) {
-        // Error handling minimal here; toast patterns will land in a later subtask.
-      } finally {
-        setIsDeleting(false);
+      if (typeFilter !== 'all') {
+        params.type = typeFilter;
       }
-    };
 
-    useEffect(() => {
+      const data = await adminAPI.listDecks(params);
+      setDeckList(data);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : t('errors.failed');
+      setError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [page, debouncedSearch, typeFilter, t]);
+
+  const handleDeleteConfirm = async () => {
+    if (!deckToDelete) return;
+    setIsDeleting(true);
+    try {
+      if (deckToDelete.type === 'vocabulary') {
+        await adminAPI.deleteVocabularyDeck(deckToDelete.id);
+      } else {
+        await adminAPI.deleteCultureDeck(deckToDelete.id);
+      }
+      setDeleteModalOpen(false);
+      setDeckToDelete(null);
       fetchDecks();
-    }, [fetchDecks]);
+    } catch (_err) {
+      // Error handling minimal here; toast patterns will land in a later subtask.
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
-    // Expose refresh method via ref
-    useImperativeHandle(
-      ref,
-      () => ({
-        refresh: fetchDecks,
-      }),
-      [fetchDecks]
-    );
+  useEffect(() => {
+    fetchDecks();
+  }, [fetchDecks]);
 
-    // Reset to page 1 when search or filter changes
-    useEffect(() => {
-      setPage(1);
-    }, [debouncedSearch, typeFilter]);
+  // Expose refresh method via ref
+  useImperativeHandle(
+    ref,
+    () => ({
+      refresh: fetchDecks,
+    }),
+    [fetchDecks]
+  );
 
-    const totalPages = deckList ? Math.ceil(deckList.total / pageSize) : 0;
+  // Reset to page 1 when search or filter changes
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, typeFilter]);
 
-    const handlePreviousPage = () => {
-      if (page > 1) {
-        setPage(page - 1);
-      }
-    };
+  const totalPages = deckList ? Math.ceil(deckList.total / pageSize) : 0;
 
-    const handleNextPage = () => {
-      if (page < totalPages) {
-        setPage(page + 1);
-      }
-    };
+  const handlePreviousPage = () => {
+    if (page > 1) {
+      setPage(page - 1);
+    }
+  };
 
-    const displayDecks = deckList
-      ? hideDeactivated
-        ? deckList.decks.filter((d) => d.is_active)
-        : deckList.decks
-      : [];
+  const handleNextPage = () => {
+    if (page < totalPages) {
+      setPage(page + 1);
+    }
+  };
 
-    return (
-      <Card>
-        <CardHeader>
-          <div className="flex items-start justify-between">
-            <div>
-              <CardTitle data-testid="all-decks-title">{t('sections.allDecks')}</CardTitle>
-              <CardDescription data-testid="all-decks-description">
-                {t('sections.allDecksDescription')}
-              </CardDescription>
-            </div>
-            {onCreateDeck && (
-              <Button onClick={onCreateDeck} data-testid="create-deck-button">
-                <Plus className="mr-2 h-4 w-4" />
-                {t('actions.createDeck')}
-              </Button>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent>
-          {/* Search and Filter Controls */}
-          <div className="mb-4 flex flex-col gap-4 sm:flex-row">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder={t('search.placeholder')}
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                className="pl-9"
-                data-testid="deck-search-input"
-              />
-            </div>
-            <Select
-              value={typeFilter}
-              onValueChange={(value: 'all' | 'vocabulary' | 'culture') => setTypeFilter(value)}
-            >
-              <SelectTrigger className="w-full sm:w-[180px]" data-testid="type-filter-select">
-                <SelectValue placeholder={t('filter.type')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('filter.allTypes')}</SelectItem>
-                <SelectItem value="vocabulary">{t('filter.vocabulary')}</SelectItem>
-                <SelectItem value="culture">{t('filter.culture')}</SelectItem>
-              </SelectContent>
-            </Select>
-            <div className="flex items-center gap-2">
-              <Switch
-                id="hide-deactivated"
-                checked={hideDeactivated}
-                onCheckedChange={handleHideDeactivatedChange}
-                data-testid="hide-deactivated-toggle"
-              />
-              <Label
-                htmlFor="hide-deactivated"
-                className="cursor-pointer whitespace-nowrap text-sm"
-              >
-                {t('deckList.hideDeactivated')}
-              </Label>
-            </div>
-          </div>
+  const displayDecks = deckList
+    ? hideDeactivated
+      ? deckList.decks.filter((d) => d.is_active)
+      : deckList.decks
+    : [];
 
-          {/* Error State */}
-          {error && !isLoading && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>{t('errors.loadingDecks')}</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          {/* Page-level empty state: no decks at all (unfiltered) — AC #8 */}
-          {!isLoading &&
-            !error &&
-            deckList?.total === 0 &&
-            !searchInput &&
-            typeFilter === 'all' && (
-              <div className="placeholder-box" data-testid="deck-empty-page">
-                No decks yet. Click &apos;Add deck&apos; to create your first.
-              </div>
-            )}
-
-          {/* Deck List — loading + empty states owned by DeckList */}
-          {!error && (
-            <DeckList
-              decks={displayDecks}
-              isLoading={isLoading}
-              locale={locale}
-              onOpenDrawer={onOpenDrawer}
-              onDelete={(d) => {
-                setDeckToDelete(d);
-                setDeleteModalOpen(true);
-              }}
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle data-testid="all-decks-title">{t('sections.allDecks')}</CardTitle>
+        <CardDescription data-testid="all-decks-description">
+          {t('sections.allDecksDescription')}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {/* Search and Filter Controls */}
+        <div className="mb-4 flex flex-col gap-4 sm:flex-row">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder={t('search.placeholder')}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="pl-9"
+              data-testid="deck-search-input"
             />
-          )}
+          </div>
+          <Select
+            value={typeFilter}
+            onValueChange={(value: 'all' | 'vocabulary' | 'culture') => setTypeFilter(value)}
+          >
+            <SelectTrigger className="w-full sm:w-[180px]" data-testid="type-filter-select">
+              <SelectValue placeholder={t('filter.type')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('filter.allTypes')}</SelectItem>
+              <SelectItem value="vocabulary">{t('filter.vocabulary')}</SelectItem>
+              <SelectItem value="culture">{t('filter.culture')}</SelectItem>
+            </SelectContent>
+          </Select>
+          <div className="flex items-center gap-2">
+            <Switch
+              id="hide-deactivated"
+              checked={hideDeactivated}
+              onCheckedChange={handleHideDeactivatedChange}
+              data-testid="hide-deactivated-toggle"
+            />
+            <Label htmlFor="hide-deactivated" className="cursor-pointer whitespace-nowrap text-sm">
+              {t('deckList.hideDeactivated')}
+            </Label>
+          </div>
+        </div>
 
-          {/* Pagination */}
-          {!isLoading && !error && deckList && deckList.total > 0 && (
-            <div className="mt-4 flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">
-                {t('pagination.showing', {
-                  from: (page - 1) * pageSize + 1,
-                  to: Math.min(page * pageSize, deckList.total),
-                  total: deckList.total,
-                })}
-              </p>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handlePreviousPage}
-                  disabled={page === 1}
-                  data-testid="pagination-prev"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  {t('pagination.previous')}
-                </Button>
-                <span className="text-sm text-muted-foreground">
-                  {t('pagination.pageOf', { page, totalPages })}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleNextPage}
-                  disabled={page >= totalPages}
-                  data-testid="pagination-next"
-                >
-                  {t('pagination.next')}
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          )}
+        {/* Error State */}
+        {error && !isLoading && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>{t('errors.loadingDecks')}</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
-          {/* Delete confirmation dialog — mounted here so DeckList can stay presentational */}
-          <DeckDeleteDialog
-            open={deleteModalOpen}
-            onOpenChange={setDeleteModalOpen}
-            deck={deckToDelete}
-            onConfirm={handleDeleteConfirm}
-            isDeleting={isDeleting}
+        {/* Page-level empty state: no decks at all (unfiltered) — AC #8 */}
+        {!isLoading && !error && deckList?.total === 0 && !searchInput && typeFilter === 'all' && (
+          <div className="placeholder-box" data-testid="deck-empty-page">
+            No decks yet. Click &apos;Add deck&apos; to create your first.
+          </div>
+        )}
+
+        {/* Deck List — loading + empty states owned by DeckList */}
+        {!error && (
+          <DeckList
+            decks={displayDecks}
+            isLoading={isLoading}
+            locale={locale}
+            onOpenDrawer={onOpenDrawer}
+            onDelete={(d) => {
+              setDeckToDelete(d);
+              setDeleteModalOpen(true);
+            }}
           />
-        </CardContent>
-      </Card>
-    );
-  }
-);
+        )}
+
+        {/* Pagination */}
+        {!isLoading && !error && deckList && deckList.total > 0 && (
+          <div className="mt-4 flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              {t('pagination.showing', {
+                from: (page - 1) * pageSize + 1,
+                to: Math.min(page * pageSize, deckList.total),
+                total: deckList.total,
+              })}
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePreviousPage}
+                disabled={page === 1}
+                data-testid="pagination-prev"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                {t('pagination.previous')}
+              </Button>
+              <span className="text-sm text-muted-foreground">
+                {t('pagination.pageOf', { page, totalPages })}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleNextPage}
+                disabled={page >= totalPages}
+                data-testid="pagination-next"
+              >
+                {t('pagination.next')}
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Delete confirmation dialog — mounted here so DeckList can stay presentational */}
+        <DeckDeleteDialog
+          open={deleteModalOpen}
+          onOpenChange={setDeleteModalOpen}
+          deck={deckToDelete}
+          onConfirm={handleDeleteConfirm}
+          isDeleting={isDeleting}
+        />
+      </CardContent>
+    </Card>
+  );
+});
 
 AllDecksList.displayName = 'AllDecksList';
 
 // ---------------------------------------------------------------------------
-// Page head helper — returns the minimum { title, sub } for the current tab.
-// Per-section overrides (breadcrumb, kicker, actions) land in ADMIN2-04..11.
-// titleTestId / subTestId preserve Playwright e2e selectors across all branches.
-// Exported so [INBPH-06] can unit-test the helper without mounting AdminPage.
+// Page head helper — returns full PageHeadProps for the current tab.
+// Centralised so AdminPage owns the one-and-only PageHead per view.
+// Exported so unit-tests can exercise the helper without mounting AdminPage.
 // ---------------------------------------------------------------------------
-export function pageHeadPropsFor(tab: AdminTabType, t: (key: string) => string) {
-  if (tab === 'inbox') {
-    return {
-      breadcrumb: [
-        { label: t('inbox.breadcrumb.dashboard') },
-        { label: t('inbox.breadcrumb.current') },
-      ],
-      kicker: <Kicker dot="amber">{t('inbox.kicker')}</Kicker>,
-      title: t('inbox.title'),
-      sub: t('inbox.sub'),
-      titleTestId: 'admin-title' as const,
-      subTestId: 'admin-subtitle' as const,
-    };
-  }
-  if (tab === 'dashboard') {
-    return {
-      kicker: <Kicker dot="primary">{t('dashboard.kicker')}</Kicker>,
-      title: t('dashboard.title'),
-      sub: t('dashboard.sub'),
-      titleTestId: 'admin-title' as const,
-      subTestId: 'admin-subtitle' as const,
-    };
-  }
-  // per-section overrides come in ADMIN2-04..11
-  return {
-    title: t('page.title'),
-    sub: t('page.subtitle'),
-    titleTestId: 'admin-title' as const,
-    subTestId: 'admin-subtitle' as const,
+
+export interface PageHeadHandlers {
+  onCreateDeck: () => void;
+  onNewsNew: () => void;
+  onSituationsNew: () => void;
+  onChangelogExport: () => void;
+  onChangelogNew: () => void;
+  onAnnouncementsNew: () => void;
+}
+
+export interface PageHeadCounts {
+  newsTotal: number;
+  newsAudio: number;
+  situationsTotal: number;
+  situationsDraft: number;
+  situationsReady: number;
+}
+
+export function pageHeadPropsFor(
+  tab: AdminTabType,
+  // Accept a generic translation function so tests can pass a simple mock.
+  // TFunction<'admin'> is the most precise type but tests pass (key: string) => string.
+  t: TFunction<'admin'> | ((key: string, opts?: Record<string, unknown>) => string),
+  handlers?: PageHeadHandlers,
+  counts?: PageHeadCounts
+): PageHeadProps {
+  const _handlers: PageHeadHandlers = handlers ?? {
+    onCreateDeck: () => {},
+    onNewsNew: () => {},
+    onSituationsNew: () => {},
+    onChangelogExport: () => {},
+    onChangelogNew: () => {},
+    onAnnouncementsNew: () => {},
   };
+  const _counts: PageHeadCounts = counts ?? {
+    newsTotal: 0,
+    newsAudio: 0,
+    situationsTotal: 0,
+    situationsDraft: 0,
+    situationsReady: 0,
+  };
+
+  switch (tab) {
+    case 'inbox':
+      return {
+        breadcrumb: [
+          { label: t('inbox.breadcrumb.dashboard') },
+          { label: t('inbox.breadcrumb.current') },
+        ],
+        kicker: <Kicker dot="amber">{t('inbox.kicker')}</Kicker>,
+        title: t('inbox.title'),
+        sub: t('inbox.sub'),
+        titleTestId: 'admin-title' as const,
+        subTestId: 'admin-subtitle' as const,
+      };
+
+    case 'dashboard':
+      return {
+        breadcrumb: [
+          { label: t('dashboard.breadcrumb.dashboard') },
+          { label: t('dashboard.breadcrumb.current') },
+        ],
+        kicker: <Kicker dot="primary">{t('dashboard.kicker')}</Kicker>,
+        title: t('dashboard.title'),
+        sub: t('dashboard.sub'),
+        titleTestId: 'admin-title' as const,
+        subTestId: 'admin-subtitle' as const,
+      };
+
+    case 'decks':
+      return {
+        breadcrumb: [
+          { label: t('decks.breadcrumb.dashboard') },
+          { label: t('decks.breadcrumb.current') },
+        ],
+        kicker: <Kicker dot="primary">{t('decks.kicker')}</Kicker>,
+        title: t('decks.title'),
+        sub: t('decks.sub'),
+        actions: (
+          <Button
+            variant="default"
+            onClick={_handlers.onCreateDeck}
+            data-testid="create-deck-button"
+          >
+            <Plus className="size-4" aria-hidden="true" />
+            {t('decks.actions.createDeck')}
+          </Button>
+        ),
+        titleTestId: 'admin-title' as const,
+        subTestId: 'admin-subtitle' as const,
+      };
+
+    case 'news':
+      return {
+        breadcrumb: [
+          { label: t('news.breadcrumb.dashboard') },
+          { label: t('news.breadcrumb.current') },
+        ],
+        kicker: <Kicker dot="primary">{t('news.kicker')}</Kicker>,
+        title: t('news.title'),
+        sub: (t as (key: string, opts: Record<string, unknown>) => string)('news.sub', {
+          total: _counts.newsTotal,
+          audio: _counts.newsAudio,
+          pending: _counts.newsTotal - _counts.newsAudio,
+        }),
+        actions: (
+          <TooltipProvider>
+            <div className="flex items-center gap-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    aria-disabled="true"
+                    className="btn-glass cursor-not-allowed opacity-60"
+                    onClick={(e) => e.preventDefault()}
+                  >
+                    <Rss className="size-4" aria-hidden="true" />
+                    {t('news.actions.importRss')}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>{t('comingSoon')}</TooltipContent>
+              </Tooltip>
+              <Button variant="default" onClick={_handlers.onNewsNew} data-testid="news-new-button">
+                <Plus className="size-4" aria-hidden="true" />
+                {t('news.actions.new')}
+              </Button>
+            </div>
+          </TooltipProvider>
+        ),
+        titleTestId: 'admin-title' as const,
+        subTestId: 'admin-subtitle' as const,
+      };
+
+    case 'situations':
+      return {
+        breadcrumb: [
+          { label: t('situations.breadcrumb.dashboard') },
+          { label: t('situations.breadcrumb.current') },
+        ],
+        kicker: <Kicker dot="primary">{t('situations.kicker')}</Kicker>,
+        title: t('situations.title'),
+        sub: (t as (key: string, opts: Record<string, unknown>) => string)('situations.sub', {
+          total: _counts.situationsTotal,
+          draft: _counts.situationsDraft,
+          ready: _counts.situationsReady,
+        }),
+        actions: (
+          <TooltipProvider>
+            <div className="flex items-center gap-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    disabled
+                    aria-disabled="true"
+                    data-testid="situations-generate-from-news-btn"
+                  >
+                    <Newspaper className="size-4" aria-hidden="true" />
+                    {t('situations.actions.generateFromNews')}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{t('comingSoon')}</TooltipContent>
+              </Tooltip>
+              <Button
+                variant="default"
+                onClick={_handlers.onSituationsNew}
+                data-testid="situations-new-btn"
+              >
+                <Plus className="size-4" aria-hidden="true" />
+                {t('situations.actions.newSituation')}
+              </Button>
+            </div>
+          </TooltipProvider>
+        ),
+        titleTestId: 'admin-title' as const,
+        subTestId: 'admin-subtitle' as const,
+      };
+
+    case 'exercises':
+      return {
+        breadcrumb: [
+          { label: t('exercises.breadcrumb.dashboard') },
+          { label: t('exercises.breadcrumb.current') },
+        ],
+        kicker: <Kicker dot="cyan">{t('exercises.kicker')}</Kicker>,
+        title: t('exercises.title'),
+        sub: t('exercises.sub'),
+        titleTestId: 'admin-title' as const,
+        subTestId: 'admin-subtitle' as const,
+      };
+
+    case 'errors':
+      return {
+        breadcrumb: [
+          { label: t('cardErrors.breadcrumb.dashboard') },
+          { label: t('cardErrors.breadcrumb.current') },
+        ],
+        kicker: <Kicker dot="amber">{t('cardErrors.kicker')}</Kicker>,
+        title: t('cardErrors.title'),
+        sub: t('cardErrors.sub'),
+        titleTestId: 'admin-title' as const,
+        subTestId: 'admin-subtitle' as const,
+      };
+
+    case 'feedback':
+      return {
+        breadcrumb: [
+          { label: t('feedback.breadcrumb.dashboard') },
+          { label: t('feedback.breadcrumb.current') },
+        ],
+        kicker: <Kicker dot="primary">{t('feedback.kicker')}</Kicker>,
+        title: t('feedback.title'),
+        sub: t('feedback.sub'),
+        actions: (
+          <TooltipProvider>
+            <div className="flex items-center gap-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    aria-disabled="true"
+                    onClick={(e) => e.preventDefault()}
+                    className="btn-glass cursor-not-allowed opacity-60"
+                  >
+                    <Download className="size-4" aria-hidden="true" />
+                    {t('feedback.actions.exportCsv')}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>{t('comingSoon')}</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    aria-disabled="true"
+                    onClick={(e) => e.preventDefault()}
+                    className="btn-glass cursor-not-allowed opacity-60"
+                  >
+                    <Send className="size-4" aria-hidden="true" />
+                    {t('feedback.actions.sendMassUpdate')}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>{t('comingSoon')}</TooltipContent>
+              </Tooltip>
+            </div>
+          </TooltipProvider>
+        ),
+        titleTestId: 'admin-title' as const,
+        subTestId: 'admin-subtitle' as const,
+      };
+
+    case 'changelog':
+      return {
+        breadcrumb: [
+          { label: t('changelog.breadcrumb.dashboard') },
+          { label: t('changelog.breadcrumb.current') },
+        ],
+        kicker: <Kicker dot="primary">{t('changelog.kicker')}</Kicker>,
+        title: t('changelog.title'),
+        sub: t('changelog.sub'),
+        actions: (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="btn-glass"
+              onClick={_handlers.onChangelogExport}
+              data-testid="changelog-export-button"
+            >
+              <Download className="size-4" aria-hidden="true" />
+              {t('changelog.actions.export')}
+            </button>
+            <Button
+              variant="default"
+              onClick={_handlers.onChangelogNew}
+              data-testid="changelog-new-button"
+            >
+              <Plus className="size-4" aria-hidden="true" />
+              {t('changelog.actions.newEntry')}
+            </Button>
+          </div>
+        ),
+        titleTestId: 'admin-title' as const,
+        subTestId: 'admin-subtitle' as const,
+      };
+
+    case 'announcements':
+      return {
+        breadcrumb: [
+          { label: t('announcements.breadcrumb.dashboard') },
+          { label: t('announcements.breadcrumb.current') },
+        ],
+        kicker: <Kicker dot="primary">{t('announcements.kicker')}</Kicker>,
+        title: t('announcements.title'),
+        sub: t('announcements.sub'),
+        actions: (
+          <Button
+            variant="default"
+            onClick={_handlers.onAnnouncementsNew}
+            data-testid="announcements-new-button"
+          >
+            <Plus className="size-4" aria-hidden="true" />
+            {t('announcements.actions.new')}
+          </Button>
+        ),
+        titleTestId: 'admin-title' as const,
+        subTestId: 'admin-subtitle' as const,
+      };
+
+    default: {
+      const _exhaustive: never = tab;
+      void _exhaustive;
+      return {
+        title: t('dashboard.title'),
+        sub: t('dashboard.sub'),
+        titleTestId: 'admin-title' as const,
+        subTestId: 'admin-subtitle' as const,
+      };
+    }
+  }
 }
 
 /**
@@ -504,9 +787,17 @@ const AdminPage: React.FC = () => {
   // Store selectors for tab counts (paginated — page-local counts only).
   // TODO(ADMIN2-03): wire real totals from a stats endpoint.
   const newsCount = useAdminNewsStore((s) => s.newsItems.length);
+  const newsTotal = useAdminNewsStore((s) => s.total);
+  const newsAudio = useAdminNewsStore((s) => s.audioCount);
+  const {
+    total: situationsTotal,
+    draft: situationsDraft,
+    ready: situationsReady,
+  } = useAdminSituationStore(useShallow(selectStatsTotals));
   const situationsCount = useAdminSituationStore((s) => s.situations.length);
   const cardErrorsCount = useAdminCardErrorStore((s) => s.errorList.length);
   const changelogCount = useAdminChangelogStore((s) => s.items.length);
+  const openCompose = useAdminChangelogStore((s) => s.openCompose);
   const announcementsCount = useAdminAnnouncementStore((s) => s.announcements.length);
   const feedbackCount = useAdminFeedbackStore((s) => s.feedbackList.length);
 
@@ -526,6 +817,10 @@ const AdminPage: React.FC = () => {
       { replace: true }
     );
   };
+
+  // Hoisted create-open state for tabs that previously managed it internally.
+  const [newsCreateOpen, setNewsCreateOpen] = useState(false);
+  const [situationsCreateOpen, setSituationsCreateOpen] = useState(false);
 
   // Deck create modal state
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -667,11 +962,33 @@ const AdminPage: React.FC = () => {
     setCreateModalOpen(open);
   };
 
+  // ── Centralised PageHead handlers and counts ─────────────────────────────
+  const pageHandlers: PageHeadHandlers = {
+    onCreateDeck: handleOpenCreateModal,
+    onNewsNew: () => setNewsCreateOpen(true),
+    onSituationsNew: () => setSituationsCreateOpen(true),
+    onChangelogExport: () => toast({ title: t('changelog.toast.exportComingSoon') }),
+    onChangelogNew: openCompose,
+    onAnnouncementsNew: () =>
+      setSearchParams((prev) => {
+        prev.set('compose', '1');
+        return prev;
+      }),
+  };
+
+  const pageCounts: PageHeadCounts = {
+    newsTotal,
+    newsAudio,
+    situationsTotal,
+    situationsDraft,
+    situationsReady,
+  };
+
   // Show loading skeleton while fetching
   if (isLoading) {
     return (
       <div className="space-y-6 pb-8" data-testid="admin-page">
-        <PageHead {...pageHeadPropsFor(activeTab, t)} />
+        <PageHead {...pageHeadPropsFor(activeTab, t, pageHandlers, pageCounts)} />
         <SectionTabs tabs={tabsConfig} active={activeTab} onTabChange={setActiveTab} />
         <AdminLoadingSkeleton />
       </div>
@@ -682,7 +999,7 @@ const AdminPage: React.FC = () => {
   if (error) {
     return (
       <div className="space-y-6 pb-8" data-testid="admin-page">
-        <PageHead {...pageHeadPropsFor(activeTab, t)} />
+        <PageHead {...pageHeadPropsFor(activeTab, t, pageHandlers, pageCounts)} />
         <SectionTabs tabs={tabsConfig} active={activeTab} onTabChange={setActiveTab} />
         <ErrorState message={error} onRetry={handleRetry} isRetrying={isRetrying} t={t} />
       </div>
@@ -693,7 +1010,7 @@ const AdminPage: React.FC = () => {
   if (!stats) {
     return (
       <div className="space-y-6 pb-8" data-testid="admin-page">
-        <PageHead {...pageHeadPropsFor(activeTab, t)} />
+        <PageHead {...pageHeadPropsFor(activeTab, t, pageHandlers, pageCounts)} />
         <SectionTabs tabs={tabsConfig} active={activeTab} onTabChange={setActiveTab} />
         <Card>
           <CardContent className="py-8 text-center">
@@ -706,9 +1023,7 @@ const AdminPage: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-8" data-testid="admin-page">
-      {activeTab !== 'errors' && activeTab !== 'exercises' && (
-        <PageHead {...pageHeadPropsFor(activeTab, t)} />
-      )}
+      <PageHead {...pageHeadPropsFor(activeTab, t, pageHandlers, pageCounts)} />
       <SectionTabs tabs={tabsConfig} active={activeTab} onTabChange={setActiveTab} />
 
       {/* Decks Tab Content */}
@@ -725,13 +1040,8 @@ const AdminPage: React.FC = () => {
           />
 
           {/* All Decks List with Search and Pagination */}
-          <section aria-labelledby="all-decks-heading">
-            <AllDecksList
-              ref={allDecksListRef}
-              t={t}
-              locale={locale}
-              onCreateDeck={handleOpenCreateModal}
-            />
+          <section aria-label={t('decks.title')}>
+            <AllDecksList ref={allDecksListRef} t={t} locale={locale} />
           </section>
 
           {/* Deck Drawer — URL-driven, self-controlled */}
@@ -741,48 +1051,53 @@ const AdminPage: React.FC = () => {
 
       {/* News Tab Content */}
       {activeTab === 'news' && (
-        <section aria-labelledby="news-heading">
-          <NewsTab />
+        <section aria-label={t('news.title')}>
+          <NewsTab createOpen={newsCreateOpen} onCreateOpenChange={setNewsCreateOpen} />
         </section>
       )}
 
       {/* Announcements Tab Content */}
       {activeTab === 'announcements' && (
-        <section aria-labelledby="announcements-heading">
+        <section aria-label={t('announcements.title')}>
           <AnnouncementsTab />
         </section>
       )}
 
       {/* Changelog Tab Content */}
       {activeTab === 'changelog' && (
-        <section aria-labelledby="changelog-heading">
-          <h2 id="changelog-heading" className="sr-only">
-            {t('admin:tabs.changelog')}
-          </h2>
+        <section aria-label={t('changelog.title')}>
           <ChangelogTab />
         </section>
       )}
 
       {/* Card Errors Tab Content */}
-      {activeTab === 'errors' && <CardErrorsView />}
+      {activeTab === 'errors' && (
+        <section aria-label={t('cardErrors.title')}>
+          <CardErrorsView />
+        </section>
+      )}
 
       {/* Feedback Tab Content */}
       {activeTab === 'feedback' && (
-        <section aria-labelledby="feedback-heading">
+        <section aria-label={t('feedback.title')}>
           <AdminFeedbackSection />
         </section>
       )}
 
       {activeTab === 'situations' && (
-        <section aria-labelledby="situations-heading">
-          <h2 id="situations-heading" className="sr-only">
-            {t('tabs.situations')}
-          </h2>
-          <SituationsTab />
+        <section aria-label={t('situations.title')}>
+          <SituationsTab
+            createOpen={situationsCreateOpen}
+            onCreateOpenChange={setSituationsCreateOpen}
+          />
         </section>
       )}
 
-      {activeTab === 'exercises' && <ExercisesView />}
+      {activeTab === 'exercises' && (
+        <section aria-label={t('exercises.title')}>
+          <ExercisesView />
+        </section>
+      )}
 
       {activeTab === 'dashboard' && <DashboardView stats={stats} setActiveTab={setActiveTab} />}
       {activeTab === 'inbox' && <InboxView />}

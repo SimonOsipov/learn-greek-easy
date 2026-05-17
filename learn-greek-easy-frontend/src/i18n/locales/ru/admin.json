@@ -1,8 +1,4 @@
 {
-  "page": {
-    "title": "Панель администратора",
-    "subtitle": "Управление контентом и просмотр статистики"
-  },
   "comingSoon": "Скоро",
   "deckEdit": {
     "title": "Редактировать колоду",
@@ -307,9 +303,7 @@
   },
   "shell": {
     "breadcrumbLabel": "Хлебные крошки",
-    "breadcrumb": {
-      "dashboard": "Панель"
-    },
+    "breadcrumb": {},
     "pagination": {
       "previousLabel": "Предыдущая страница",
       "nextLabel": "Следующая страница"
@@ -317,7 +311,12 @@
   },
   "announcements": {
     "title": "Объявления",
-    "kicker": "Система · Объявления",
+    "kicker": "Админ · Объявления",
+    "sub": "Отправляйте уведомления и обновления активным учащимся.",
+    "breadcrumb": {
+      "dashboard": "Админ",
+      "current": "Объявления"
+    },
     "actions": {
       "new": "Новое объявление"
     },
@@ -479,6 +478,17 @@
     }
   },
   "news": {
+    "title": "Новости",
+    "kicker": "Админ · Новости",
+    "sub": "{{total}} статей · {{audio}}/{{total}} с аудио B2+A2 · {{pending}} ожидают B1",
+    "breadcrumb": {
+      "dashboard": "Админ",
+      "current": "Новости"
+    },
+    "actions": {
+      "importRss": "Импорт RSS",
+      "new": "+ Новая статья"
+    },
     "stats": {
       "total": "Всего новостей",
       "withAudio": "С аудио"
@@ -590,6 +600,17 @@
     }
   },
   "feedback": {
+    "breadcrumb": {
+      "dashboard": "Админ",
+      "current": "Отзывы"
+    },
+    "kicker": "Админ · Отзывы",
+    "title": "Отзывы",
+    "sub": "Просматривайте, отвечайте и отслеживайте отзывы пользователей.",
+    "actions": {
+      "exportCsv": "Экспорт CSV",
+      "sendMassUpdate": "Массовая рассылка"
+    },
     "stats": {
       "total": "Всего отзывов",
       "new": "Новые",
@@ -708,14 +729,6 @@
         "feature": "Запрос функции",
         "anonymous": "Аноним"
       },
-      "pageHead": {
-        "breadcrumb": "Обратная связь",
-        "kicker": "Отзывы · Обратная связь",
-        "title": "Обратная связь пользователей",
-        "sub": "Просматривайте, отвечайте и отслеживайте обратную связь сообщества",
-        "exportCsv": "Экспорт CSV",
-        "sendMassUpdate": "Массовое обновление"
-      },
       "statCards": {
         "total": {
           "label": "Всего отзывов",
@@ -760,6 +773,13 @@
     }
   },
   "cardErrors": {
+    "breadcrumb": {
+      "dashboard": "Админ",
+      "current": "Ошибки карточек"
+    },
+    "kicker": "Админ · Ошибки карточек",
+    "title": "Ошибки карточек",
+    "sub": "Пользовательские сообщения об ошибках в словарных и культурных карточках.",
     "stats": {
       "total": "Всего отчётов",
       "pending": "На рассмотрении",
@@ -822,12 +842,6 @@
       "updateErrorMessage": "Не удалось обновить отчёт об ошибке"
     },
     "v2": {
-      "pageHead": {
-        "kicker": "Quality",
-        "title": "Card errors",
-        "breadcrumb": "Card errors",
-        "sub": "User-reported issues on word and culture cards."
-      },
       "statCards": {
         "total": {
           "label": "Total errors",
@@ -895,7 +909,11 @@
   },
   "changelog": {
     "kicker": "История изменений",
-    "subtitle": "Управляйте обновлениями продукта и публикуйте их для пользователей.",
+    "sub": "Управляйте и публикуйте обновления продукта для пользователей.",
+    "breadcrumb": {
+      "dashboard": "Админ",
+      "current": "История изменений"
+    },
     "stats": {
       "total": "Всего записей",
       "mostRecent": "Последняя запись",
@@ -1382,12 +1400,12 @@
   "situations": {
     "title": "Ситуации",
     "description": "Управление разговорными ситуациями для упражнений",
-    "pageHead": {
-      "breadcrumb": "Ситуации",
-      "kicker": "Админ · Ситуации",
-      "title": "Разговорные ситуации",
-      "subtitle": "{{total}} сценариев · {{draft}} черновик · {{ready}} готово"
+    "breadcrumb": {
+      "dashboard": "Админ",
+      "current": "Ситуации"
     },
+    "kicker": "Админ · Ситуации",
+    "sub": "{{total}} сценариев · {{draft}} черновик · {{ready}} готово",
     "stats": {
       "total": "Всего ситуаций",
       "status": {
@@ -1719,13 +1737,14 @@
     }
   },
   "exercises": {
+    "breadcrumb": {
+      "dashboard": "Админ",
+      "current": "Упражнения"
+    },
+    "kicker": "Админ · Упражнения",
+    "title": "Упражнения",
+    "sub": "Проверяйте упражнения на аудирование и чтение по всем ситуациям.",
     "v2": {
-      "pageHead": {
-        "kicker": "Content",
-        "title": "Exercises",
-        "breadcrumb": "Exercises",
-        "sub": "Approve and review listening + reading exercises across all situations."
-      },
       "modality": {
         "listening": "Listening",
         "reading": "Reading"
@@ -1751,6 +1770,16 @@
     }
   },
   "decks": {
+    "breadcrumb": {
+      "dashboard": "Админ",
+      "current": "Колоды"
+    },
+    "kicker": "Админ · Колоды",
+    "title": "Колоды",
+    "sub": "Словарные и культурные колоды — поиск, создание, управление.",
+    "actions": {
+      "createDeck": "Создать колоду"
+    },
     "drawer": {
       "tabs": {
         "words": "Слова",
@@ -1799,12 +1828,12 @@
   },
   "inbox": {
     "breadcrumb": {
-      "dashboard": "Admin",
-      "current": "Inbox"
+      "dashboard": "Админ",
+      "current": "Входящие"
     },
-    "kicker": "Needs your attention",
-    "title": "Inbox",
-    "sub": "Cross-content attention queue — feedback, drafts, audio gaps, and card errors will surface here.",
+    "kicker": "Админ · Входящие",
+    "title": "Входящие",
+    "sub": "Очередь внимания — отзывы, черновики, аудио-пробелы и ошибки карточек появятся здесь.",
     "stats": {
       "open": {
         "title": "Open items",
@@ -1840,9 +1869,13 @@
     }
   },
   "dashboard": {
-    "kicker": "Content operations",
-    "title": "Admin Dashboard",
-    "sub": "Manage content and view statistics across every learning surface.",
+    "breadcrumb": {
+      "dashboard": "Админ",
+      "current": "Панель"
+    },
+    "kicker": "Админ · Панель",
+    "title": "Панель администратора",
+    "sub": "Управление контентом и статистикой всех учебных разделов.",
     "stats": {
       "decks": {
         "title": "Decks",

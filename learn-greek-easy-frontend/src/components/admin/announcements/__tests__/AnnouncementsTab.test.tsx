@@ -227,13 +227,8 @@ describe('AnnouncementsTab', () => {
     expect(screen.getByTestId('announcements-tab')).toBeInTheDocument();
   });
 
-  it('renders PageHead with Announcements title in the DOM', () => {
-    setupStore(buildStoreState());
-    renderTab();
-    // PageHead renders one or more headings with "Announcements"; assert at least one exists
-    const headings = screen.getAllByRole('heading', { name: /Announcements/i });
-    expect(headings.length).toBeGreaterThanOrEqual(1);
-  });
+  // Note: PageHead (title H1) is now owned by AdminPage (ADMIN2-HEAD).
+  // AnnouncementsTab renders stat cards, history rows, compose/detail drawers.
 
   it('renders 4 StatCards', () => {
     setupStore(buildStoreState());
@@ -258,19 +253,9 @@ describe('AnnouncementsTab', () => {
     expect(state.fetchAnnouncements).toHaveBeenCalled();
   });
 
-  // ── New-announcement button → compose drawer ───────────────────────────────
-
-  it('clicking New announcement button opens compose drawer (testid present)', async () => {
-    const user = userEvent.setup();
-    setupStore(buildStoreState());
-    renderTab();
-
-    await user.click(screen.getByTestId('announcements-new-button'));
-
-    await waitFor(() => {
-      expect(screen.getByTestId('announcement-compose-drawer')).toBeInTheDocument();
-    });
-  });
+  // ── New-announcement button is now in AdminPage PageHead (ADMIN2-HEAD) ───────
+  // The compose drawer still opens when URL has ?compose=1.
+  // Direct button click is covered by e2e smoke tests.
 
   // ── Mount with ?compose=1 ─────────────────────────────────────────────────
 

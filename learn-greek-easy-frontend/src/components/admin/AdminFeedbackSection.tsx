@@ -13,27 +13,22 @@ import {
   Bell,
   ChevronLeft,
   ChevronRight,
-  Download,
   MessageSquare,
   RefreshCw,
   Search,
-  Send,
   ThumbsUp,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 
-import { PageHead } from '@/components/admin/shell/page-head';
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Kicker } from '@/components/ui/kicker';
 import { SegControl } from '@/components/ui/seg-control';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatCard } from '@/components/ui/stat-card';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { useAdminFeedbackStore } from '@/stores/adminFeedbackStore';
 import type { AdminFeedbackItem } from '@/types/feedback';
@@ -355,51 +350,6 @@ export const AdminFeedbackSection: React.FC = () => {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
-      {/* ── Page Head ──────────────────────────────────────────────────────── */}
-      <TooltipProvider>
-        <PageHead
-          breadcrumb={[{ label: t('page.title') }, { label: t('feedback.v2.pageHead.breadcrumb') }]}
-          kicker={<Kicker dot="primary">{t('feedback.v2.pageHead.kicker')}</Kicker>}
-          title={t('feedback.v2.pageHead.title')}
-          sub={t('feedback.v2.pageHead.sub')}
-          actions={
-            <div className="flex items-center gap-2">
-              {/* Export CSV — decorative coming soon */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    aria-disabled="true"
-                    onClick={(e) => e.preventDefault()}
-                    className="btn-glass cursor-not-allowed opacity-60"
-                  >
-                    <Download className="size-4" aria-hidden="true" />
-                    {t('feedback.v2.pageHead.exportCsv')}
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>{t('comingSoon')}</TooltipContent>
-              </Tooltip>
-
-              {/* Send mass update — decorative coming soon */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    aria-disabled="true"
-                    onClick={(e) => e.preventDefault()}
-                    className="btn-glass cursor-not-allowed opacity-60"
-                  >
-                    <Send className="size-4" aria-hidden="true" />
-                    {t('feedback.v2.pageHead.sendMassUpdate')}
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>{t('comingSoon')}</TooltipContent>
-              </Tooltip>
-            </div>
-          }
-        />
-      </TooltipProvider>
-
       {/* ── 3-up StatCard grid ─────────────────────────────────────────────── */}
       <div className="stat-grid">
         <StatCard

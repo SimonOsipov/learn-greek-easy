@@ -12,17 +12,13 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { format } from 'date-fns';
-import { Calendar, Clock, Download, FileText, Languages, Plus } from 'lucide-react';
+import { Calendar, Clock, FileText, Languages } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 
-import { PageHead } from '@/components/admin/shell/page-head';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Kicker } from '@/components/ui/kicker';
 import { SegControl, type SegOption } from '@/components/ui/seg-control';
 import { StatCard } from '@/components/ui/stat-card';
-import { toast } from '@/hooks/use-toast';
 import { useAdminChangelogStore } from '@/stores/adminChangelogStore';
 import { CHANGELOG_TAG_CONFIG, CHANGELOG_TAG_OPTIONS } from '@/types/changelog';
 import type { ChangelogEntryAdmin, ChangelogTag } from '@/types/changelog';
@@ -204,34 +200,6 @@ export function ChangelogTab() {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6" data-testid="changelog-tab">
-      {/* ── Page Head ────────────────────────────────────────────────────── */}
-      <PageHead
-        breadcrumb={[
-          { label: t('admin:shell.breadcrumb.dashboard') },
-          { label: t('admin:changelog.title') },
-        ]}
-        kicker={<Kicker dot="primary">{t('admin:changelog.kicker')}</Kicker>}
-        title={t('admin:changelog.title')}
-        sub={t('admin:changelog.subtitle')}
-        actions={
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className="btn-glass"
-              onClick={() => toast({ title: t('admin:changelog.toast.exportComingSoon') })}
-              data-testid="changelog-export-button"
-            >
-              <Download className="size-4" aria-hidden="true" />
-              {t('admin:changelog.actions.export')}
-            </button>
-            <Button variant="default" onClick={openCompose} data-testid="changelog-new-button">
-              <Plus className="size-4" aria-hidden="true" />
-              {t('admin:changelog.actions.newEntry')}
-            </Button>
-          </div>
-        }
-      />
-
       {/* ── 4-up StatCard grid ───────────────────────────────────────────── */}
       <div className="stat-grid grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard

@@ -112,14 +112,17 @@ function renderWithRouter(search = '') {
 }
 
 // Lazy import inside test so mocks are registered first
-let NewsTab: React.FC;
+let NewsTab: React.FC<{ createOpen: boolean; onCreateOpenChange: (open: boolean) => void }>;
+const mockOnCreateOpenChange = vi.fn();
 async function loadNewsTab() {
   const mod = await import('../NewsTab');
   NewsTab = mod.NewsTab;
 }
 
-function NewsTabWrapper() {
-  return NewsTab ? <NewsTab /> : null;
+function NewsTabWrapper({ createOpen = false }: { createOpen?: boolean }) {
+  return NewsTab ? (
+    <NewsTab createOpen={createOpen} onCreateOpenChange={mockOnCreateOpenChange} />
+  ) : null;
 }
 
 // ── Setup ─────────────────────────────────────────────────────────────────────
@@ -167,33 +170,31 @@ describe('NewsTab — basic rendering', () => {
   });
 });
 
-describe('NewsTab — Import RSS button (gated)', () => {
-  it('Import RSS button has aria-disabled="true"', () => {
-    renderWithRouter();
-    // Find button by its i18n text key
-    const rssBtn = screen.getByText('news.actions.importRss').closest('button');
-    expect(rssBtn).toHaveAttribute('aria-disabled', 'true');
+// Note: Import RSS and "+ New article" action buttons are now in AdminPage's
+// pageHeadPropsFor (ADMIN2-HEAD). NewsTab receives createOpen as a controlled prop.
+
+describe('NewsTab — createOpen controlled prop', () => {
+  it('renders NewsItemCreateModal when createOpen=true', () => {
+    render(
+      <MemoryRouter initialEntries={['/admin']}>
+        <Routes>
+          <Route
+            path="/admin"
+            element={
+              NewsTab ? (
+                <NewsTab createOpen={true} onCreateOpenChange={mockOnCreateOpenChange} />
+              ) : null
+            }
+          />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(screen.getByTestId('create-modal-sentinel')).toBeInTheDocument();
   });
 
-  it('Import RSS tooltip content is rendered in DOM', () => {
-    renderWithRouter();
-    // TooltipContent is rendered in the DOM for the comingSoon key
-    expect(screen.getByText('comingSoon')).toBeInTheDocument();
-  });
-});
-
-describe('NewsTab — New article button', () => {
-  it('renders "+ New article" button', () => {
-    renderWithRouter();
-    expect(screen.getByTestId('news-new-button')).toBeInTheDocument();
-  });
-
-  it('clicking "+ New article" opens NewsItemCreateModal', async () => {
-    const user = userEvent.setup();
+  it('does not render NewsItemCreateModal when createOpen=false', () => {
     renderWithRouter();
     expect(screen.queryByTestId('create-modal-sentinel')).not.toBeInTheDocument();
-    await user.click(screen.getByTestId('news-new-button'));
-    expect(screen.getByTestId('create-modal-sentinel')).toBeInTheDocument();
   });
 });
 

@@ -1,5 +1,8 @@
 /**
- * ExercisesView Component Tests (ADMIN2-11 / EXERR-02)
+ * ExercisesView Component Tests (ADMIN2-11 / EXERR-02 / ADMIN2-HEAD)
+ *
+ * Note: PageHead (H1, breadcrumb, kicker) is now owned by AdminPage.
+ * ExercisesView renders stat cards + SegControl + AdminExerciseList.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -16,11 +19,6 @@ vi.mock('@/components/admin/exercises/AdminExerciseList', () => ({
 describe('ExercisesView', () => {
   it('renders without throwing', () => {
     expect(() => render(<ExercisesView />)).not.toThrow();
-  });
-
-  it('renders the H1 with text "Exercises"', () => {
-    render(<ExercisesView />);
-    expect(screen.getByRole('heading', { level: 1, name: /Exercises/i })).toBeTruthy();
   });
 
   it('renders all four StatCard titles', () => {

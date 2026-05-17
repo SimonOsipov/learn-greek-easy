@@ -121,15 +121,19 @@ vi.mock('../SituationDrawer', () => ({
 
 // ── Lazy import (after mocks) ─────────────────────────────────────────────────
 
-let SituationsTab: React.FC;
+let SituationsTab: React.FC<{ createOpen: boolean; onCreateOpenChange: (open: boolean) => void }>;
+
+const mockOnCreateOpenChange = vi.fn();
 
 async function loadSituationsTab() {
   const mod = await import('../SituationsTab');
   SituationsTab = mod.SituationsTab;
 }
 
-function SituationsTabWrapper() {
-  return SituationsTab ? <SituationsTab /> : null;
+function SituationsTabWrapper({ createOpen = false }: { createOpen?: boolean }) {
+  return SituationsTab ? (
+    <SituationsTab createOpen={createOpen} onCreateOpenChange={mockOnCreateOpenChange} />
+  ) : null;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -176,12 +180,8 @@ describe('SituationsTab — shell composition', () => {
     expect(screen.getByTestId('situations-tab')).toBeInTheDocument();
   });
 
-  it('renders PageHead h1 with title key', () => {
-    renderWithRouter();
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
-      'situations.pageHead.title'
-    );
-  });
+  // PageHead H1 is now owned by AdminPage, not SituationsTab.
+  // The component renders stat cards, toolbar, grid, drawer stubs.
 
   it('renders SituationsToolbar', () => {
     renderWithRouter();
@@ -198,35 +198,9 @@ describe('SituationsTab — shell composition', () => {
     expect(screen.getByTestId('situation-drawer-stub')).toBeInTheDocument();
   });
 
-  it('does not show SituationCreateModal when closed', () => {
+  it('does not show SituationCreateModal when createOpen=false', () => {
     renderWithRouter();
     expect(screen.queryByTestId('situation-create-modal')).not.toBeInTheDocument();
-  });
-
-  it('"+ New situation" button is enabled', () => {
-    renderWithRouter();
-    const btn = screen.getByTestId('situations-new-btn');
-    expect(btn).not.toBeDisabled();
-  });
-
-  it('"Generate from news" button is disabled and aria-disabled', () => {
-    renderWithRouter();
-    const btn = screen.getByTestId('situations-generate-from-news-btn');
-    expect(btn).toBeDisabled();
-    expect(btn).toHaveAttribute('aria-disabled', 'true');
-  });
-});
-
-describe('SituationsTab — Coming-soon tooltip', () => {
-  it('"Generate from news" button is disabled — tooltip wiring exists', () => {
-    renderWithRouter();
-    // Button is disabled; verify it renders and has aria-disabled.
-    // Tooltip content is not in DOM until hover (Radix portal renders lazily
-    // when pointer-events are blocked by disabled). The disabled + aria-disabled
-    // assertion in "shell composition" covers AC#3.
-    const btn = screen.getByTestId('situations-generate-from-news-btn');
-    expect(btn).toBeDisabled();
-    expect(btn).toHaveAttribute('aria-disabled', 'true');
   });
 });
 
@@ -390,44 +364,32 @@ describe('SituationsTab — Ready-to-ship percent', () => {
   });
 });
 
-describe('SituationsTab — subtitle interpolation', () => {
-  it('renders PageHead sub with the subtitle i18n key', () => {
-    // 10 total: 7 ready, 3 draft — values are passed as interpolation params
-    const situations: SituationSeed[] = [
-      ...Array.from({ length: 7 }, (_, i) => ({
-        id: `r${i}`,
-        status: 'ready' as const,
-        dialog_exercises_count: 0,
-        description_exercises_count: 0,
-        picture_exercises_count: 0,
-      })),
-      ...Array.from({ length: 3 }, (_, i) => ({
-        id: `d${i}`,
-        status: 'draft' as const,
-        dialog_exercises_count: 0,
-        description_exercises_count: 0,
-        picture_exercises_count: 0,
-      })),
-    ];
-    seedStore(situations);
+// Note: PageHead (breadcrumb, kicker, title, sub) is now owned by AdminPage.
+// SituationsTab renders stat cards, toolbar, grid, drawer, and the create modal.
+// Subtitle interpolation is tested via pageHeadPropsFor.test.tsx.
 
-    renderWithRouter();
-
-    // t() mock returns the key string (params are applied but the key itself
-    // is "situations.pageHead.subtitle", not a template string containing {{}}s).
-    // Verify the subtitle element exists with the expected key content.
-    expect(screen.getByText('situations.pageHead.subtitle')).toBeInTheDocument();
-  });
-});
-
-describe('SituationsTab — "+ New situation" opens modal', () => {
-  it('clicking the button mounts SituationCreateModal', async () => {
-    const user = userEvent.setup();
-    renderWithRouter();
-
-    expect(screen.queryByTestId('situation-create-modal')).not.toBeInTheDocument();
-    await user.click(screen.getByTestId('situations-new-btn'));
+describe('SituationsTab — createOpen controlled prop', () => {
+  it('mounts SituationCreateModal when createOpen=true', () => {
+    render(
+      <MemoryRouter initialEntries={['/admin']}>
+        <Routes>
+          <Route
+            path="/admin"
+            element={
+              SituationsTab ? (
+                <SituationsTab createOpen={true} onCreateOpenChange={mockOnCreateOpenChange} />
+              ) : null
+            }
+          />
+        </Routes>
+      </MemoryRouter>
+    );
     expect(screen.getByTestId('situation-create-modal')).toBeInTheDocument();
+  });
+
+  it('does not mount SituationCreateModal when createOpen=false', () => {
+    renderWithRouter();
+    expect(screen.queryByTestId('situation-create-modal')).not.toBeInTheDocument();
   });
 });
 
