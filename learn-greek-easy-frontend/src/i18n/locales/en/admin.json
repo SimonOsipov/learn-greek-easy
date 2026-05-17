@@ -1746,7 +1746,9 @@
     "pictureMatch": {
       "anchorPictureAlt": "Anchor picture",
       "runtimeNote": "4-option grid assembled at request time. Distractors are picked from other Situations."
-    },
+    }
+  },
+  "exercises": {
     "v2": {
       "pageHead": {
         "kicker": "Content",

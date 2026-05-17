@@ -1675,7 +1675,9 @@
     "pictureMatch": {
       "anchorPictureAlt": "Опорная картинка",
       "runtimeNote": "Сетка из 4 вариантов формируется при запросе. Дистракторы выбираются из других Ситуаций."
-    },
+    }
+  },
+  "exercises": {
     "v2": {
       "pageHead": {
         "kicker": "Content",
