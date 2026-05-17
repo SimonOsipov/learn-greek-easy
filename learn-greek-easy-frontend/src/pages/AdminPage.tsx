@@ -14,7 +14,6 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 
 import {
-  AdminCardErrorSection,
   AdminFeedbackSection,
   AnnouncementsTab,
   ChangelogTab,
@@ -28,7 +27,6 @@ import {
 import { DeckDrawer } from '@/components/admin/decks/DeckDrawer';
 import { DeckList } from '@/components/admin/decks/DeckList';
 import { DeckStats } from '@/components/admin/decks/DeckStats';
-import { AdminExerciseList } from '@/components/admin/exercises';
 import { PageHead } from '@/components/admin/shell/page-head';
 import { SectionTabs, type SectionTabItem } from '@/components/admin/shell/section-tabs';
 import { TopBar } from '@/components/admin/shell/top-bar';
@@ -48,8 +46,9 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { toast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
+import CardErrorsView from '@/pages/admin/CardErrorsView';
 import DashboardView from '@/pages/admin/DashboardView';
+import ExercisesView from '@/pages/admin/ExercisesView';
 import InboxView from '@/pages/admin/InboxView';
 import { adminAPI } from '@/services/adminAPI';
 import type {
@@ -485,48 +484,6 @@ export function pageHeadPropsFor(tab: AdminTabType, t: (key: string) => string) 
   };
 }
 
-// ---------------------------------------------------------------------------
-// ExercisesPlaceholder — local 2-button sub-toggle wrapping AdminExerciseList.
-// No router change; state is ephemeral per mount.
-// ---------------------------------------------------------------------------
-function ExercisesPlaceholder() {
-  const { t } = useTranslation('admin');
-  const [subTab, setSubTab] = useState<'listening' | 'reading'>('listening');
-
-  return (
-    <div>
-      <div className="mb-4 flex gap-2">
-        <button
-          type="button"
-          className={cn(
-            'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
-            subTab === 'listening'
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-muted text-muted-foreground hover:bg-muted/80'
-          )}
-          onClick={() => setSubTab('listening')}
-        >
-          {t('tabs.exercisesListening')}
-        </button>
-        <button
-          type="button"
-          className={cn(
-            'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
-            subTab === 'reading'
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-muted text-muted-foreground hover:bg-muted/80'
-          )}
-          onClick={() => setSubTab('reading')}
-        >
-          {t('tabs.exercisesReading')}
-        </button>
-      </div>
-      {subTab === 'listening' && <AdminExerciseList modality="listening" />}
-      {subTab === 'reading' && <AdminExerciseList modality="reading" />}
-    </div>
-  );
-}
-
 /**
  * Admin Page
  *
@@ -810,14 +767,7 @@ const AdminPage: React.FC = () => {
       )}
 
       {/* Card Errors Tab Content */}
-      {activeTab === 'errors' && (
-        <section aria-labelledby="card-errors-heading">
-          <h2 id="card-errors-heading" className="sr-only">
-            {t('tabs.errors')}
-          </h2>
-          <AdminCardErrorSection />
-        </section>
-      )}
+      {activeTab === 'errors' && <CardErrorsView />}
 
       {/* Feedback Tab Content */}
       {activeTab === 'feedback' && (
@@ -835,7 +785,7 @@ const AdminPage: React.FC = () => {
         </section>
       )}
 
-      {activeTab === 'exercises' && <ExercisesPlaceholder />}
+      {activeTab === 'exercises' && <ExercisesView />}
 
       {activeTab === 'dashboard' && <DashboardView stats={stats} setActiveTab={setActiveTab} />}
       {activeTab === 'inbox' && <InboxView />}
