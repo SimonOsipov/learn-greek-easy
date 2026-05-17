@@ -383,7 +383,6 @@
 /* Custom component styles */
 @layer components {
   /* ADMIN2-02 — shell chrome (ported verbatim from design_handoff_admin_redesign) */
-  /* Deviation: .va-top gains position:sticky/top:0/z-index:40 (not in handoff source) */
   /* color:white in .brand-mark replaced with hsl(var(--primary-foreground)) per drift rules */
 
   /* ----- Icon button --------------------------------------------------------- */
@@ -475,63 +474,6 @@
     min-height: 100%;
     background: hsl(var(--bg));
   }
-  .va-top {
-    display: flex;
-    align-items: center;
-    gap: 32px;
-    padding: 14px 32px;
-    border-bottom: 1px solid hsl(var(--fg) / 0.06);
-    background: hsl(var(--bg) / 0.7);
-    backdrop-filter: blur(14px);
-    /* intentional deviation from handoff: sticky top bar */
-    position: sticky;
-    top: 0;
-    z-index: 40;
-  }
-  .va-brand {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .va-nav {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    margin-left: 8px;
-  }
-  .va-nav a,
-  .va-nav span {
-    padding: 7px 12px;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 500;
-    color: hsl(var(--fg-2));
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-  }
-  .va-nav a .caret,
-  .va-nav span .caret {
-    color: hsl(var(--fg-3));
-    font-size: 10px;
-    transform: translateY(-1px);
-  }
-  .va-nav a:hover,
-  .va-nav span:hover {
-    background: hsl(var(--fg) / 0.04);
-    color: hsl(var(--fg));
-  }
-  .va-nav a.active,
-  .va-nav span.active {
-    background: hsl(var(--primary) / 0.12);
-    color: hsl(var(--primary));
-  }
-  .va-top-right {
-    margin-left: auto;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
 
   .va-main {
     max-width: 1320px;
@@ -578,6 +520,9 @@
   .va-tab {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
+    flex: 1 1 0;
+    min-width: 0;
     gap: 8px;
     padding: 8px 14px;
     border-radius: 8px;

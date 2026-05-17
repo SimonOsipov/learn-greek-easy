@@ -51,9 +51,6 @@ vi.mock('react-i18next', () => ({
         'inbox.breadcrumb.dashboard': 'Dashboard',
         'announcements.title': 'Announcements',
         'announcements.kicker': 'Admin',
-        'announcements.v2.tab.subtitle': 'Subtitle',
-        'announcements.actions.exportCsv': 'Export CSV',
-        comingSoon: 'Coming soon',
         'announcements.actions.new': 'New announcement',
         // StatCards
         'announcements.stats.total': 'Total Announcements',

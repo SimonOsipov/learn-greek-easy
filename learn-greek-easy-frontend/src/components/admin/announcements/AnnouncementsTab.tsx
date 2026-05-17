@@ -16,7 +16,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 
-import { Download, Link, Megaphone, Plus, Users } from 'lucide-react';
+import { Link, Megaphone, Plus, Users } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 
@@ -25,7 +25,6 @@ import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
 import { Button } from '@/components/ui/button';
 import { Kicker } from '@/components/ui/kicker';
 import { StatCard } from '@/components/ui/stat-card';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAdminAnnouncementStore } from '@/stores/adminAnnouncementStore';
 
 import { AnnouncementComposeDrawer } from './AnnouncementComposeDrawer';
@@ -106,45 +105,20 @@ export const AnnouncementsTab: React.FC = () => {
         ]}
         kicker={<Kicker dot="primary">{t('announcements.kicker')}</Kicker>}
         title={t('announcements.title')}
-        sub={t('announcements.v2.tab.subtitle', {
-          avgRate: avgReadRate,
-          count: totalCount,
-        })}
         actions={
-          <TooltipProvider>
-            <div className="flex items-center gap-2">
-              {/* Export CSV — gated Coming-soon */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    aria-disabled="true"
-                    className="btn-glass cursor-not-allowed opacity-60"
-                    onClick={(e) => e.preventDefault()}
-                  >
-                    <Download className="size-4" aria-hidden="true" />
-                    {t('announcements.actions.exportCsv')}
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>{t('comingSoon')}</TooltipContent>
-              </Tooltip>
-
-              {/* New announcement — primary, fully enabled */}
-              <Button
-                variant="default"
-                onClick={() =>
-                  setSearchParams((prev) => {
-                    prev.set('compose', '1');
-                    return prev;
-                  })
-                }
-                data-testid="announcements-new-button"
-              >
-                <Plus className="size-4" aria-hidden="true" />
-                {t('announcements.actions.new')}
-              </Button>
-            </div>
-          </TooltipProvider>
+          <Button
+            variant="default"
+            onClick={() =>
+              setSearchParams((prev) => {
+                prev.set('compose', '1');
+                return prev;
+              })
+            }
+            data-testid="announcements-new-button"
+          >
+            <Plus className="size-4" aria-hidden="true" />
+            {t('announcements.actions.new')}
+          </Button>
         }
       />
 

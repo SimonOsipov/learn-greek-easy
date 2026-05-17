@@ -29,7 +29,6 @@ import { DeckList } from '@/components/admin/decks/DeckList';
 import { DeckStats } from '@/components/admin/decks/DeckStats';
 import { PageHead } from '@/components/admin/shell/page-head';
 import { SectionTabs, type SectionTabItem } from '@/components/admin/shell/section-tabs';
-import { TopBar } from '@/components/admin/shell/top-bar';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -672,7 +671,6 @@ const AdminPage: React.FC = () => {
   if (isLoading) {
     return (
       <div className="space-y-6 pb-8" data-testid="admin-page">
-        <TopBar hasNotifications={false} />
         <PageHead {...pageHeadPropsFor(activeTab, t)} />
         <SectionTabs tabs={tabsConfig} active={activeTab} onTabChange={setActiveTab} />
         <AdminLoadingSkeleton />
@@ -684,7 +682,6 @@ const AdminPage: React.FC = () => {
   if (error) {
     return (
       <div className="space-y-6 pb-8" data-testid="admin-page">
-        <TopBar hasNotifications={false} />
         <PageHead {...pageHeadPropsFor(activeTab, t)} />
         <SectionTabs tabs={tabsConfig} active={activeTab} onTabChange={setActiveTab} />
         <ErrorState message={error} onRetry={handleRetry} isRetrying={isRetrying} t={t} />
@@ -696,7 +693,6 @@ const AdminPage: React.FC = () => {
   if (!stats) {
     return (
       <div className="space-y-6 pb-8" data-testid="admin-page">
-        <TopBar hasNotifications={false} />
         <PageHead {...pageHeadPropsFor(activeTab, t)} />
         <SectionTabs tabs={tabsConfig} active={activeTab} onTabChange={setActiveTab} />
         <Card>
@@ -710,7 +706,6 @@ const AdminPage: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-8" data-testid="admin-page">
-      <TopBar hasNotifications={false} />
       {activeTab !== 'errors' && activeTab !== 'exercises' && (
         <PageHead {...pageHeadPropsFor(activeTab, t)} />
       )}
