@@ -3,6 +3,7 @@
     "title": "Панель администратора",
     "subtitle": "Управление контентом и просмотр статистики"
   },
+  "comingSoon": "Скоро",
   "deckEdit": {
     "title": "Редактировать колоду",
     "name": "Название",
@@ -310,6 +311,14 @@
       "theme": "Переключить тему",
       "language": "Переключить язык",
       "notifications": "Уведомления"
+    },
+    "breadcrumbLabel": "Хлебные крошки",
+    "breadcrumb": {
+      "dashboard": "Панель"
+    },
+    "pagination": {
+      "previousLabel": "Предыдущая страница",
+      "nextLabel": "Следующая страница"
     }
   },
   "announcements": {
@@ -397,7 +406,6 @@
       "success": "Объявление удалено"
     },
     "v2": {
-      "comingSoon": "Скоро",
       "tab": {
         "subtitle": "Средний процент прочтений {{avgRate}}% по {{count}} объявлениям"
       },
@@ -481,7 +489,6 @@
     }
   },
   "news": {
-    "comingSoon": "Скоро",
     "stats": {
       "total": "Всего новостей",
       "withAudio": "С аудио"
@@ -583,6 +590,10 @@
     "sections": {
       "newsItems": "Новости",
       "newsItemsDescription": "Управление существующими новостями"
+    },
+    "card": {
+      "editLabel": "Редактировать новость",
+      "deleteLabel": "Удалить новость"
     }
   },
   "feedback": {
@@ -653,6 +664,20 @@
       "confirm": "Удалить",
       "success": "Отзыв удалён"
     },
+    "category": {
+      "bug": "Ошибка",
+      "featureRequest": "Запрос функции"
+    },
+    "status": {
+      "new": "Новый",
+      "investigating": "На рассмотрении",
+      "planned": "Запланировано",
+      "inProgress": "В работе",
+      "responded": "С ответом",
+      "shipped": "Выпущено",
+      "wontFix": "Не будет исправлено",
+      "duplicate": "Дубликат"
+    },
     "v2": {
       "reply": {
         "status_label": "Статус",
@@ -662,7 +687,6 @@
         "save": "Сохранить и уведомить",
         "cancel": "Отмена",
         "save_draft": "Сохранить черновик",
-        "coming_soon": "Скоро будет",
         "saved": "Ответ сохранён",
         "save_error_title": "Не удалось сохранить ответ",
         "save_error_desc": "Пожалуйста, попробуйте ещё раз."
@@ -697,8 +721,7 @@
         "title": "Обратная связь пользователей",
         "sub": "Просматривайте, отвечайте и отслеживайте обратную связь сообщества",
         "exportCsv": "Экспорт CSV",
-        "sendMassUpdate": "Массовое обновление",
-        "comingSoonTooltip": "Скоро будет"
+        "sendMassUpdate": "Массовое обновление"
       },
       "statCards": {
         "total": {
@@ -878,9 +901,17 @@
     }
   },
   "changelog": {
+    "kicker": "История изменений",
+    "subtitle": "Управляйте обновлениями продукта и публикуйте их для пользователей.",
     "stats": {
       "total": "Всего записей",
-      "mostRecent": "Последняя запись"
+      "mostRecent": "Последняя запись",
+      "cadence": "Средний интервал",
+      "cadenceSub": "между записями",
+      "cadenceSubMinimal": "нужно ≥ 2 записей",
+      "missingRu": "Без перевода RU",
+      "missingRuNeed": "записей ждут перевода",
+      "missingRuDone": "все переведены"
     },
     "title": "История изменений",
     "addNew": "Добавить",
@@ -897,7 +928,11 @@
     "table": {
       "title": "Записи изменений",
       "description": "Управление записями истории изменений",
-      "empty": "Записи изменений не найдены"
+      "empty": "Записи изменений не найдены",
+      "colTitle": "Заголовок",
+      "colDate": "Дата",
+      "colTag": "Тег",
+      "colActions": "Действия"
     },
     "create": {
       "title": "Создать запись изменений",
@@ -1743,7 +1778,18 @@
     "statusDraft": "Черновик",
     "regenerateTranslations": "Перегенерировать переводы",
     "sourcePrefix": "Источник",
-    "openInNews": "Открыть в Новостях"
+    "openInNews": "Открыть в Новостях",
+    "loadingLabel": "Загрузка колод",
+    "editLabel": "Редактировать колоду",
+    "deleteLabel": "Удалить колоду",
+    "vocab": {
+      "editWordLabel": "Редактировать слово",
+      "deleteWordLabel": "Удалить слово"
+    },
+    "culture": {
+      "editQuestionLabel": "Редактировать вопрос",
+      "deleteQuestionLabel": "Удалить вопрос"
+    }
   },
   "inbox": {
     "breadcrumb": {
