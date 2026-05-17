@@ -1799,5 +1799,30 @@
       "title": "No items needing attention",
       "sub": "Aggregated inbox coming soon. New feedback, draft warnings, audio regens, and card errors will surface here automatically."
     }
+  },
+  "dashboard": {
+    "kicker": "Content operations",
+    "title": "Admin Dashboard",
+    "sub": "Manage content and view statistics across every learning surface.",
+    "stats": {
+      "decks":      { "title": "Decks",      "sub": "{{count}} cards" },
+      "news":       { "title": "News",       "sub": "Counts coming soon" },
+      "situations": { "title": "Situations", "sub": "Counts coming soon" },
+      "exercises":  { "title": "Exercises",  "sub": "Counts coming soon" }
+    },
+    "inbox": {
+      "kicker":  "Needs your attention",
+      "title":   "Today's inbox",
+      "sub":     "Aggregated inbox coming soon. We'll surface drafts, audio gaps, feedback, and card errors here.",
+      "viewAll": "View all →"
+    },
+    "activity": {
+      "title": "Recent activity",
+      "sub":   "Activity feed coming soon. Recent edits, publishes, and reviews will appear here."
+    },
+    "pipeline": {
+      "title": "Content pipeline",
+      "sub":   "Pipeline summary coming soon. Track ready vs. draft counts across decks, news, situations, and exercises."
+    }
   }
 }
