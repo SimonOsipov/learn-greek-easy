@@ -233,7 +233,7 @@ export const SituationDrawer: React.FC = () => {
                   {t('situations.drawer.regenerateScenario')}
                 </button>
               </TooltipTrigger>
-              <TooltipContent>{t('news.comingSoon')}</TooltipContent>
+              <TooltipContent>{t('comingSoon')}</TooltipContent>
             </Tooltip>
           </div>
         </SidePanel.Tabs>

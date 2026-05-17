@@ -53,7 +53,7 @@ vi.mock('react-i18next', () => ({
         'announcements.kicker': 'Admin',
         'announcements.v2.tab.subtitle': 'Subtitle',
         'announcements.actions.exportCsv': 'Export CSV',
-        'announcements.v2.comingSoon': 'Coming soon',
+        comingSoon: 'Coming soon',
         'announcements.actions.new': 'New announcement',
         // StatCards
         'announcements.stats.total': 'Total Announcements',

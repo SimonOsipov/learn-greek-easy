@@ -109,7 +109,7 @@ export const NewsTab: React.FC = () => {
                     {t('news.actions.importRss')}
                   </button>
                 </TooltipTrigger>
-                <TooltipContent>{t('news.comingSoon')}</TooltipContent>
+                <TooltipContent>{t('comingSoon')}</TooltipContent>
               </Tooltip>
 
               {/* New article — primary, fully enabled */}
@@ -147,7 +147,7 @@ export const NewsTab: React.FC = () => {
           n="—"
           icon={<RefreshCcw />}
           tone="amber"
-          footerLabel={t('news.comingSoon')}
+          footerLabel={t('comingSoon')}
         />
         <StatCard
           title={t('news.stats.countries')}

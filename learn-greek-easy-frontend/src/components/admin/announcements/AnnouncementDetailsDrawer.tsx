@@ -292,7 +292,7 @@ export function AnnouncementDetailsDrawer({
                   {t('announcements.v2.details.resendToUnread')}
                 </button>
               </TooltipTrigger>
-              <TooltipContent>{t('announcements.v2.comingSoon')}</TooltipContent>
+              <TooltipContent>{t('comingSoon')}</TooltipContent>
             </Tooltip>
 
             {/* Close — primary */}

@@ -178,7 +178,7 @@ describe('NewsTab — Import RSS button (gated)', () => {
   it('Import RSS tooltip content is rendered in DOM', () => {
     renderWithRouter();
     // TooltipContent is rendered in the DOM for the comingSoon key
-    expect(screen.getByText('news.comingSoon')).toBeInTheDocument();
+    expect(screen.getByText('comingSoon')).toBeInTheDocument();
   });
 });
 

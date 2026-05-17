@@ -152,7 +152,7 @@ export const NewsEditDrawerAudio: React.FC<Props> = ({ item }) => {
               <Play size={16} />
             </button>
           </TooltipTrigger>
-          <TooltipContent>{t('news.comingSoon')}</TooltipContent>
+          <TooltipContent>{t('comingSoon')}</TooltipContent>
         </Tooltip>
       );
     }
@@ -221,7 +221,7 @@ export const NewsEditDrawerAudio: React.FC<Props> = ({ item }) => {
                 {t('news.drawer.audio.regenerate')}
               </button>
             </TooltipTrigger>
-            <TooltipContent>{t('news.comingSoon')}</TooltipContent>
+            <TooltipContent>{t('comingSoon')}</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -234,7 +234,7 @@ export const NewsEditDrawerAudio: React.FC<Props> = ({ item }) => {
                 <Upload size={16} />
               </button>
             </TooltipTrigger>
-            <TooltipContent>{t('news.comingSoon')}</TooltipContent>
+            <TooltipContent>{t('comingSoon')}</TooltipContent>
           </Tooltip>
         </div>
       </div>

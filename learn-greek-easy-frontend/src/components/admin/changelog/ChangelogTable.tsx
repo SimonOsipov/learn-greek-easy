@@ -159,10 +159,12 @@ export function ChangelogTable({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[40%]">Title</TableHead>
-              <TableHead className="w-[20%]">Date</TableHead>
-              <TableHead className="w-[20%]">Tag</TableHead>
-              <TableHead className="w-[20%] text-right">Actions</TableHead>
+              <TableHead className="w-[40%]">{t('admin:changelog.table.colTitle')}</TableHead>
+              <TableHead className="w-[20%]">{t('admin:changelog.table.colDate')}</TableHead>
+              <TableHead className="w-[20%]">{t('admin:changelog.table.colTag')}</TableHead>
+              <TableHead className="w-[20%] text-right">
+                {t('admin:changelog.table.colActions')}
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

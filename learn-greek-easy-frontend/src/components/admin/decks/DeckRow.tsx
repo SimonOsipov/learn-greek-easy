@@ -8,6 +8,7 @@ import React from 'react';
 
 import { formatDistanceToNow } from 'date-fns';
 import { Pencil, Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -24,6 +25,7 @@ export interface DeckRowProps {
 }
 
 export function DeckRow({ deck, locale, onOpenDrawer, onDelete }: DeckRowProps) {
+  const { t } = useTranslation('admin');
   // Normalize name: MultilingualName → flat fields so getLocalizedDeckName can accept it.
   const multiName = typeof deck.name === 'object' ? deck.name : null;
   const normalizedDeck = {
@@ -112,7 +114,7 @@ export function DeckRow({ deck, locale, onOpenDrawer, onDelete }: DeckRowProps) 
           <Button
             variant="ghost"
             size="icon"
-            aria-label="Edit deck"
+            aria-label={t('decks.editLabel')}
             onClick={handleEditClick}
             className="h-8 w-8"
           >
@@ -121,7 +123,7 @@ export function DeckRow({ deck, locale, onOpenDrawer, onDelete }: DeckRowProps) 
           <Button
             variant="ghost"
             size="icon"
-            aria-label="Delete deck"
+            aria-label={t('decks.deleteLabel')}
             onClick={handleDeleteClick}
             className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
           >

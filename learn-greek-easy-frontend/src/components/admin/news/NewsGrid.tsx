@@ -3,6 +3,7 @@
 import React from 'react';
 
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 
 import { Button } from '@/components/ui/button';
@@ -16,6 +17,7 @@ export interface NewsGridProps {
 }
 
 export const NewsGrid: React.FC<NewsGridProps> = ({ onRequestDelete }) => {
+  const { t } = useTranslation('admin');
   // useShallow prevents infinite re-renders caused by selectFilteredNewsItems
   // returning a new array reference (.filter().sort()) on every call.
   const items = useAdminNewsStore(useShallow(selectFilteredNewsItems));
@@ -74,7 +76,7 @@ export const NewsGrid: React.FC<NewsGridProps> = ({ onRequestDelete }) => {
               size="sm"
               onClick={() => setPage(page - 1)}
               disabled={page <= 1}
-              aria-label="Previous page"
+              aria-label={t('shell.pagination.previousLabel')}
               data-testid="news-grid-prev"
             >
               <ChevronLeft className="h-4 w-4" />
@@ -88,7 +90,7 @@ export const NewsGrid: React.FC<NewsGridProps> = ({ onRequestDelete }) => {
               size="sm"
               onClick={() => setPage(page + 1)}
               disabled={page >= totalPages}
-              aria-label="Next page"
+              aria-label={t('shell.pagination.nextLabel')}
               data-testid="news-grid-next"
             >
               Next

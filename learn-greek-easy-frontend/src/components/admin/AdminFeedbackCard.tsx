@@ -58,16 +58,19 @@ export const AdminFeedbackCard: React.FC<AdminFeedbackCardProps> = ({
   };
 
   const handoff = BACKEND_TO_HANDOFF[feedback.status];
-  const categoryLabel = feedback.category === 'bug_incorrect_data' ? 'Bug' : 'Feature request';
+  const categoryLabel =
+    feedback.category === 'bug_incorrect_data'
+      ? t('feedback.category.bug')
+      : t('feedback.category.featureRequest');
   const statusLabel = {
-    new: 'New',
-    investigating: 'Investigating',
-    planned: 'Planned',
-    in_progress: 'In progress',
-    responded: 'Responded',
-    shipped: 'Shipped',
-    wont_fix: "Won't fix",
-    duplicate: 'Duplicate',
+    new: t('feedback.status.new'),
+    investigating: t('feedback.status.investigating'),
+    planned: t('feedback.status.planned'),
+    in_progress: t('feedback.status.inProgress'),
+    responded: t('feedback.status.responded'),
+    shipped: t('feedback.status.shipped'),
+    wont_fix: t('feedback.status.wontFix'),
+    duplicate: t('feedback.status.duplicate'),
   }[handoff];
 
   return (

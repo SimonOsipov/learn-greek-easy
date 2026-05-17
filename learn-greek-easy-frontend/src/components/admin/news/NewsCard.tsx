@@ -28,7 +28,7 @@ export interface NewsCardProps {
 }
 
 export const NewsCard: React.FC<NewsCardProps> = ({ item, onRequestDelete }) => {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation('admin');
   const [, setSearchParams] = useSearchParams();
 
   const lang = i18n.language;
@@ -133,13 +133,18 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, onRequestDelete }) => 
 
       {/* Hover-revealed actions */}
       <div className="news-actions">
-        <button type="button" className="icon-btn" aria-label="Edit" onClick={handleEdit}>
+        <button
+          type="button"
+          className="icon-btn"
+          aria-label={t('news.card.editLabel')}
+          onClick={handleEdit}
+        >
           <Edit size={15} />
         </button>
         <button
           type="button"
           className="icon-btn danger"
-          aria-label="Delete"
+          aria-label={t('news.card.deleteLabel')}
           onClick={handleDelete}
         >
           <Trash2 size={15} />

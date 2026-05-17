@@ -321,7 +321,7 @@ export function AnnouncementComposeDrawer({ open, onClose }: AnnouncementCompose
                               <span className="ann-counter">—</span>
                             </button>
                           </TooltipTrigger>
-                          <TooltipContent>{t('announcements.v2.comingSoon')}</TooltipContent>
+                          <TooltipContent>{t('comingSoon')}</TooltipContent>
                         </Tooltip>
                       ))}
                     </div>
@@ -364,7 +364,7 @@ export function AnnouncementComposeDrawer({ open, onClose }: AnnouncementCompose
                             {t('announcements.v2.compose.schedule.scheduleLater')}
                           </div>
                         </TooltipTrigger>
-                        <TooltipContent>{t('announcements.v2.comingSoon')}</TooltipContent>
+                        <TooltipContent>{t('comingSoon')}</TooltipContent>
                       </Tooltip>
                     </div>
                   </div>
@@ -441,7 +441,7 @@ export function AnnouncementComposeDrawer({ open, onClose }: AnnouncementCompose
                   {t('announcements.v2.compose.footer.saveDraft')}
                 </button>
               </TooltipTrigger>
-              <TooltipContent>{t('announcements.v2.comingSoon')}</TooltipContent>
+              <TooltipContent>{t('comingSoon')}</TooltipContent>
             </Tooltip>
 
             {/* Send now */}

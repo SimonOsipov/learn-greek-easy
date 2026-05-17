@@ -27,7 +27,7 @@ vi.mock('react-i18next', () => ({
         'feedback.v2.pageHead.sub': 'Review, respond, and track community feedback',
         'feedback.v2.pageHead.exportCsv': 'Export CSV',
         'feedback.v2.pageHead.sendMassUpdate': 'Send mass update',
-        'feedback.v2.pageHead.comingSoonTooltip': 'Coming soon',
+        comingSoon: 'Coming soon',
         // stat cards
         'feedback.v2.statCards.total.label': 'Total feedback',
         'feedback.v2.statCards.total.sub': '0 new · 0 responded',

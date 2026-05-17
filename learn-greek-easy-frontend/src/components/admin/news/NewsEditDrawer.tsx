@@ -199,7 +199,7 @@ export const NewsEditDrawer: React.FC = () => {
                   {t('news.drawer.regenerateTranslations')}
                 </button>
               </TooltipTrigger>
-              <TooltipContent>{t('news.comingSoon')}</TooltipContent>
+              <TooltipContent>{t('comingSoon')}</TooltipContent>
             </Tooltip>
           </div>
         </SidePanel.Tabs>

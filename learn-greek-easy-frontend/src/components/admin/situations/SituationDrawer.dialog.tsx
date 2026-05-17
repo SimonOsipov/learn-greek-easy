@@ -200,9 +200,7 @@ export function SituationDrawerDialog({ situation }: Props) {
                         </button>
                       </TooltipTrigger>
                       <TooltipContent>
-                        {hasTs
-                          ? t('news.comingSoon')
-                          : t('situations.drawer.dialog.timestampsMissing')}
+                        {hasTs ? t('comingSoon') : t('situations.drawer.dialog.timestampsMissing')}
                       </TooltipContent>
                     </Tooltip>
                   )}
@@ -232,7 +230,7 @@ export function SituationDrawerDialog({ situation }: Props) {
                         <RefreshCw size={14} />
                       </button>
                     </TooltipTrigger>
-                    <TooltipContent>{t('news.comingSoon')}</TooltipContent>
+                    <TooltipContent>{t('comingSoon')}</TooltipContent>
                   </Tooltip>
 
                   {/* Edit — disabled, coming soon */}
@@ -248,7 +246,7 @@ export function SituationDrawerDialog({ situation }: Props) {
                         <Pencil size={14} />
                       </button>
                     </TooltipTrigger>
-                    <TooltipContent>{t('news.comingSoon')}</TooltipContent>
+                    <TooltipContent>{t('comingSoon')}</TooltipContent>
                   </Tooltip>
                 </div>
               </div>
@@ -271,7 +269,7 @@ export function SituationDrawerDialog({ situation }: Props) {
                 + {t('situations.drawer.dialog.addLine')}
               </Button>
             </TooltipTrigger>
-            <TooltipContent>{t('news.comingSoon')}</TooltipContent>
+            <TooltipContent>{t('comingSoon')}</TooltipContent>
           </Tooltip>
         </div>
       </div>

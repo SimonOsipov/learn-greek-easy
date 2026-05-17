@@ -1,5 +1,7 @@
 import * as React from 'react';
 
+import { useTranslation } from 'react-i18next';
+
 import { cn } from '@/lib/utils';
 
 export interface PageHeadBreadcrumbItem {
@@ -51,6 +53,7 @@ export const PageHead = React.forwardRef<HTMLDivElement, PageHeadProps>(
     { breadcrumb, kicker, title, sub, actions, titleTestId, subTestId, className, ...rest },
     ref
   ) => {
+    const { t } = useTranslation('admin');
     const hasBreadcrumb = breadcrumb && breadcrumb.length > 0;
     const lastIndex = hasBreadcrumb ? breadcrumb.length - 1 : -1;
 
@@ -59,7 +62,7 @@ export const PageHead = React.forwardRef<HTMLDivElement, PageHeadProps>(
         {/* Left column */}
         <div>
           {hasBreadcrumb && (
-            <div className="va-bcrumb" aria-label="Breadcrumb">
+            <div className="va-bcrumb" aria-label={t('shell.breadcrumbLabel')}>
               {breadcrumb.map((item, i) => (
                 <React.Fragment key={i}>
                   {i === lastIndex ? (

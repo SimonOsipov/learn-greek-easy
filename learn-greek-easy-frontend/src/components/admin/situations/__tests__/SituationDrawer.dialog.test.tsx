@@ -26,7 +26,7 @@ vi.mock('react-i18next', () => ({
         'situations.drawer.dialog.timestampsMissing': 'Timestamps not generated yet',
         'situations.drawer.dialog.playAria': 'Play line',
         'situations.drawer.dialog.pauseAria': 'Pause line',
-        'news.comingSoon': 'Coming soon',
+        comingSoon: 'Coming soon',
       };
       return map[key] ?? key;
     },

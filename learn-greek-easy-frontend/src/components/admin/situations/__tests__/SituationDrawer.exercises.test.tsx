@@ -19,7 +19,7 @@ import { SituationDrawerExercises } from '../SituationDrawer.exercises';
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, unknown>) => {
-      if (key === 'news.comingSoon') return 'Coming soon';
+      if (key === 'comingSoon') return 'Coming soon';
       if (key === 'situations.drawer.exercises.source.dialog') return 'From dialog';
       if (key === 'situations.drawer.exercises.source.description') return 'From description';
       if (key === 'situations.drawer.exercises.source.picture') return 'From picture';

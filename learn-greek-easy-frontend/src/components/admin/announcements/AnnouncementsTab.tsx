@@ -126,7 +126,7 @@ export const AnnouncementsTab: React.FC = () => {
                     {t('announcements.actions.exportCsv')}
                   </button>
                 </TooltipTrigger>
-                <TooltipContent>{t('announcements.v2.comingSoon')}</TooltipContent>
+                <TooltipContent>{t('comingSoon')}</TooltipContent>
               </Tooltip>
 
               {/* New announcement — primary, fully enabled */}
