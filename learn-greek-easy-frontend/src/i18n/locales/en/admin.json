@@ -1897,7 +1897,7 @@
     },
     "kicker": "Admin · Inbox",
     "title": "Inbox",
-    "sub": "Cross-content attention queue — feedback, drafts, audio gaps, and card errors will surface here.",
+    "sub": "Cross content queue — feedback, drafts, audio gaps, and card error.",
     "stats": {
       "open": {
         "title": "Open items",

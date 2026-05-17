@@ -10,8 +10,7 @@ import { PageHead } from '@/components/admin/shell/page-head';
 const STRINGS: Record<string, string> = {
   // inbox
   'inbox.title': 'Inbox',
-  'inbox.sub':
-    'Cross-content attention queue — feedback, drafts, audio gaps, and card errors will surface here.',
+  'inbox.sub': 'Cross content queue — feedback, drafts, audio gaps, and card error.',
   'inbox.kicker': 'Admin · Inbox',
   'inbox.breadcrumb.dashboard': 'Admin',
   'inbox.breadcrumb.current': 'Inbox',
@@ -216,7 +215,7 @@ describe('pageHeadPropsFor — PageHead render integration', () => {
   it('PageHead consumes inbox props end-to-end', () => {
     const { container } = render(<PageHead {...pageHeadPropsFor('inbox', mockT)} />);
     expect(screen.getByTestId('admin-title')).toHaveTextContent('Inbox');
-    expect(screen.getByTestId('admin-subtitle')).toHaveTextContent('Cross-content attention queue');
+    expect(screen.getByTestId('admin-subtitle')).toHaveTextContent('Cross content queue');
     expect(screen.getByText('Admin · Inbox')).toBeInTheDocument();
     expect(container.querySelector('.kicker-dot[data-tone="amber"]')).not.toBeNull();
   });
