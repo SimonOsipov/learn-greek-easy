@@ -7,8 +7,6 @@
  * Renders PageHead + 4-up StatCard grid + NewsToolbar + NewsGrid +
  * NewsItemCreateModal + NewsItemDeleteDialog + NewsEditDrawer (stub).
  *
- * V1 imports (SummaryCard, NewsItemsTable, NewsItemEditModal) are dropped here.
- * V1 source files stay on disk — quarantined by NEWS-09, deleted by ADMIN2-12.
  *
  * URL deep-link plumbing: ?edit=<id> opens the edit drawer via store.
  * NEWS-06: NewsEditDrawer reads drawerItemId from store and clears ?edit= on close.
