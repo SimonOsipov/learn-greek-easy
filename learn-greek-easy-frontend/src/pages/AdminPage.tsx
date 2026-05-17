@@ -49,6 +49,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import DashboardView from '@/pages/admin/DashboardView';
 import InboxView from '@/pages/admin/InboxView';
 import { adminAPI } from '@/services/adminAPI';
 import type {
@@ -836,7 +837,7 @@ const AdminPage: React.FC = () => {
 
       {activeTab === 'exercises' && <ExercisesPlaceholder />}
 
-      {activeTab === 'dashboard' && <div data-testid="admin-dashboard-placeholder" />}
+      {activeTab === 'dashboard' && <DashboardView stats={stats} setActiveTab={setActiveTab} />}
       {activeTab === 'inbox' && <InboxView />}
 
       {/* Deck Create Modal */}
