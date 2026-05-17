@@ -1118,6 +1118,23 @@
     padding: 22px;
     margin-bottom: 28px;
   }
+
+  .dash-grid {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr;
+    gap: 24px;
+  }
+  .dash-grid > .dash-col {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  @media (max-width: 768px) {
+    .dash-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
   .attention-head {
     display: flex;
     align-items: flex-end;

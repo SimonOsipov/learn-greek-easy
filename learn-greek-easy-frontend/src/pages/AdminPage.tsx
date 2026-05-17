@@ -49,6 +49,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import DashboardView from '@/pages/admin/DashboardView';
 import InboxView from '@/pages/admin/InboxView';
 import { adminAPI } from '@/services/adminAPI';
 import type {
@@ -466,6 +467,15 @@ export function pageHeadPropsFor(tab: AdminTabType, t: (key: string) => string) 
       subTestId: 'admin-subtitle' as const,
     };
   }
+  if (tab === 'dashboard') {
+    return {
+      kicker: <Kicker dot="primary">{t('dashboard.kicker')}</Kicker>,
+      title: t('dashboard.title'),
+      sub: t('dashboard.sub'),
+      titleTestId: 'admin-title' as const,
+      subTestId: 'admin-subtitle' as const,
+    };
+  }
   // per-section overrides come in ADMIN2-04..11
   return {
     title: t('page.title'),
@@ -827,7 +837,7 @@ const AdminPage: React.FC = () => {
 
       {activeTab === 'exercises' && <ExercisesPlaceholder />}
 
-      {activeTab === 'dashboard' && <div data-testid="admin-dashboard-placeholder" />}
+      {activeTab === 'dashboard' && <DashboardView stats={stats} setActiveTab={setActiveTab} />}
       {activeTab === 'inbox' && <InboxView />}
 
       {/* Deck Create Modal */}
