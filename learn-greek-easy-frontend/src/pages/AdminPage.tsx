@@ -711,7 +711,9 @@ const AdminPage: React.FC = () => {
   return (
     <div className="space-y-6 pb-8" data-testid="admin-page">
       <TopBar hasNotifications={false} />
-      <PageHead {...pageHeadPropsFor(activeTab, t)} />
+      {activeTab !== 'errors' && activeTab !== 'exercises' && (
+        <PageHead {...pageHeadPropsFor(activeTab, t)} />
+      )}
       <SectionTabs tabs={tabsConfig} active={activeTab} onTabChange={setActiveTab} />
 
       {/* Decks Tab Content */}
