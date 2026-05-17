@@ -1386,11 +1386,34 @@
   "situations": {
     "title": "Situations",
     "description": "Manage conversation situations for practice exercises",
+    "pageHead": {
+      "breadcrumb": "Situations",
+      "kicker": "Admin · Situations",
+      "title": "Conversation situations",
+      "subtitle": "{{total}} scenarios · {{draft}} draft · {{ready}} ready"
+    },
     "stats": {
       "total": "Total Situations",
       "status": {
         "draft": "Draft",
         "ready": "Ready"
+      },
+      "totalSituations": {
+        "title": "Total situations",
+        "sub": "{{total}} scenarios"
+      },
+      "readyToShip": {
+        "title": "Ready to ship",
+        "sub": "{{percent}}% of catalog · {{ready}} / {{total}}"
+      },
+      "draftsToFinish": {
+        "title": "Drafts to finish",
+        "subPending": "{{draft}} awaiting completion",
+        "subDone": "All scenarios ready"
+      },
+      "exercisesGenerated": {
+        "title": "Exercises generated",
+        "sub": "across all sources"
       }
     },
     "search": {
@@ -1401,6 +1424,23 @@
     "filter": {
       "allLevels": "All Levels",
       "allStatuses": "All Statuses"
+    },
+    "filters": {
+      "status": {
+        "label": "Status",
+        "all": "All",
+        "draft": "Draft",
+        "ready": "Ready"
+      },
+      "search": {
+        "placeholder": "Search situations...",
+        "clear": "Clear search"
+      },
+      "sort": {
+        "newest": "Newest first",
+        "oldest": "Oldest first",
+        "draftsFirst": "Drafts first"
+      }
     },
     "columns": {
       "scenario": "Scenario",
@@ -1551,6 +1591,98 @@
     },
     "fetch": {
       "error": "Failed to load situations"
+    },
+    "completion": {
+      "dialog": "Dialog",
+      "dialogAudio": "Dialog audio",
+      "description": "Desc",
+      "descAudio": "Desc audio",
+      "picture": "Picture",
+      "dialogEx": "Dialog Ex",
+      "descEx": "Desc Ex",
+      "picEx": "Pic Ex"
+    },
+    "card": {
+      "linesCount": "{{count}} lines"
+    },
+    "grid": {
+      "noResults": "No results",
+      "empty": "No situations match these filters.",
+      "clearFilters": "Clear filters"
+    },
+    "actions": {
+      "edit": "Edit situation",
+      "delete": "Delete situation",
+      "generateFromNews": "Generate from news",
+      "newSituation": "+ New situation"
+    },
+    "drawer": {
+      "loading": "Loading…",
+      "breadcrumb": {
+        "fallback": "Situations"
+      },
+      "exercisesCount": "{{n}} exercises",
+      "regenerateScenario": "Regenerate scenario",
+      "closeAria": "Close drawer",
+      "tabs": {
+        "dialog": "Dialog · {{count}} lines",
+        "description": "Description",
+        "picture": "Picture",
+        "exercises": "Exercises · {{count}}",
+        "linkedNews": "Linked news"
+      },
+      "footer": {
+        "allChecksPassed": "All checks passed",
+        "updatedRelative": "Updated {{relative}}",
+        "cancel": "Cancel",
+        "saveAndClose": "Save & close",
+        "saving": "Saving…"
+      },
+      "save": {
+        "success": "Situation updated",
+        "error": "Failed to update situation"
+      },
+      "dialog": {
+        "addLine": "Add line",
+        "regen": "Regenerate line",
+        "edit": "Edit line",
+        "timestampsMissing": "Timestamps not generated yet",
+        "playAria": "Play line",
+        "pauseAria": "Pause line"
+      },
+      "description": {
+        "kicker": "Description",
+        "hint": "Narrative the learner reads before the dialog — generated alongside the audio.",
+        "b1Label": "Description — B1 (Greek)",
+        "a2Label": "Description — A2 (Greek)",
+        "b1Narration": "B1 narration",
+        "a2Narration": "A2 narration",
+        "generatedElevenLabs": "Generated · ElevenLabs",
+        "notGeneratedYet": "Not generated yet",
+        "regenerate": "Regenerate",
+        "playAria": "Play {{level}} narration",
+        "pauseAria": "Pause {{level}} narration"
+      },
+      "exercises": {
+        "source": {
+          "dialog": "From dialog",
+          "description": "From description",
+          "picture": "From picture"
+        },
+        "generateFrom": "Generate from {{source}}",
+        "empty": {
+          "title": "No exercises yet",
+          "cta": "Generate exercises"
+        }
+      },
+      "linkedNews": {
+        "header": "Linked news",
+        "help": "Each situation can be linked to a source news article. The link surfaces to learners as background context.",
+        "empty": "This situation is not linked to a news article.",
+        "linkCta": "Link to article",
+        "unlink": "Unlink",
+        "reDerive": "Re-derive from article"
+      }
     }
   },
   "adminExercises": {

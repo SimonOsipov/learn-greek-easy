@@ -36,6 +36,10 @@ interface AdminSituationState {
   statusFilter: SituationStatus | null;
   searchQuery: string;
   statusCounts: Record<string, number>;
+  sortMode: 'newest' | 'oldest' | 'draftsFirst';
+
+  // Drawer state
+  drawerItemId: string | null;
 
   // Actions
   fetchSituations: () => Promise<void>;
@@ -45,6 +49,9 @@ interface AdminSituationState {
   setPage: (page: number) => void;
   setStatusFilter: (status: SituationStatus | null) => void;
   setSearchQuery: (query: string) => void;
+  setSortMode: (mode: 'newest' | 'oldest' | 'draftsFirst') => void;
+  openDrawer: (id: string) => void;
+  closeDrawer: () => void;
   setSelectedSituation: (situation: SituationDetailResponse | null) => void;
   clearSelectedSituation: () => void;
   clearError: () => void;
@@ -71,6 +78,8 @@ export const useAdminSituationStore = create<AdminSituationState>()(
       statusFilter: null,
       searchQuery: '',
       statusCounts: {},
+      sortMode: 'newest' as 'newest' | 'oldest' | 'draftsFirst',
+      drawerItemId: null,
 
       fetchSituations: async () => {
         set({ isLoading: true, error: null });
@@ -150,7 +159,18 @@ export const useAdminSituationStore = create<AdminSituationState>()(
 
       setSearchQuery: (query: string) => {
         set({ searchQuery: query, page: 1 });
-        get().fetchSituations();
+      },
+
+      setSortMode: (mode) => {
+        set({ sortMode: mode, page: 1 });
+      },
+
+      openDrawer: (id: string) => {
+        set({ drawerItemId: id });
+      },
+
+      closeDrawer: () => {
+        set({ drawerItemId: null });
       },
 
       setSelectedSituation: (situation: SituationDetailResponse | null) => {
@@ -186,3 +206,53 @@ export const selectTotalPages = (state: AdminSituationState) => state.totalPages
 export const selectStatusFilter = (state: AdminSituationState) => state.statusFilter;
 export const selectSearchQuery = (state: AdminSituationState) => state.searchQuery;
 export const selectStatusCounts = (state: AdminSituationState) => state.statusCounts;
+export const selectSortMode = (state: AdminSituationState) => state.sortMode;
+export const selectDrawerItemId = (state: AdminSituationState) => state.drawerItemId;
+
+export const selectFilteredSituations = (state: AdminSituationState): SituationListItem[] => {
+  let items = state.situations;
+
+  // 1. Search (case-insensitive substring over scenario_el / scenario_en / scenario_ru)
+  if (state.searchQuery !== '') {
+    const q = state.searchQuery.toLowerCase();
+    items = items.filter(
+      (s) =>
+        s.scenario_el.toLowerCase().includes(q) ||
+        s.scenario_en.toLowerCase().includes(q) ||
+        s.scenario_ru.toLowerCase().includes(q)
+    );
+  }
+
+  // NOTE: statusFilter is NOT applied here — it is server-side via fetchSituations.
+
+  // 2. Sort (created_at is ISO string → lexical compare is correct for dates)
+  const sorted = [...items];
+  if (state.sortMode === 'newest') {
+    sorted.sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+  } else if (state.sortMode === 'oldest') {
+    sorted.sort((a, b) => (a.created_at > b.created_at ? 1 : -1));
+  } else if (state.sortMode === 'draftsFirst') {
+    // drafts before ready; within each group newest first
+    sorted.sort((a, b) => {
+      const aDraft = a.status === 'draft' ? 0 : 1;
+      const bDraft = b.status === 'draft' ? 0 : 1;
+      if (aDraft !== bDraft) return aDraft - bDraft;
+      return a.created_at < b.created_at ? 1 : -1;
+    });
+  }
+  return sorted;
+};
+
+export const selectStatsTotals = (state: AdminSituationState) => {
+  const items = state.situations;
+  let ready = 0;
+  let draft = 0;
+  let exercisesGenerated = 0;
+  for (const s of items) {
+    if (s.status === 'ready') ready += 1;
+    else if (s.status === 'draft') draft += 1;
+    exercisesGenerated +=
+      s.dialog_exercises_count + s.description_exercises_count + s.picture_exercises_count;
+  }
+  return { total: items.length, ready, draft, exercisesGenerated };
+};

@@ -135,6 +135,21 @@ Six categorical tokens used in `TenseBadge` and `MediaBadge`. Light values are s
 
 Tailwind namespace: `tense-{1..6}`. For `MediaBadge` solid badges: `bg-tense-N text-white`. For `TenseBadge` soft surfaces: `bg-tense-N/15 text-tense-N`.
 
+### Situations thumbnail palette
+
+Six decorative tones for Situations card thumbnails. Each tone = two HSL stops; canonical usage is `linear-gradient(135deg, hsl(var(--sit-thumb-<tone>-from)), hsl(var(--sit-thumb-<tone>-to)))` with white foreground glyph/text overlay.
+
+| Tone | Light `from → to` | Dark `from → to` | Family |
+|------|-------------------|------------------|--------|
+| `blue` | `221 85% 62%` → `205 88% 52%` | `221 75% 50%` → `205 80% 42%` | primary / brand blue |
+| `amber` | `38 92% 60%` → `24 90% 54%` | `38 80% 50%` → `24 78% 44%` | warning / amber-orange |
+| `violet` | `280 82% 64%` → `262 70% 56%` | `280 70% 52%` → `262 62% 46%` | accent / violet-purple |
+| `cyan` | `188 85% 56%` → `200 88% 48%` | `188 75% 46%` → `200 78% 40%` | accent-2 / sky-cyan |
+| `green` | `160 70% 48%` → `145 72% 40%` | `160 62% 40%` → `145 64% 34%` | success / emerald |
+| `red` | `0 78% 62%` → `350 75% 54%` | `0 68% 52%` → `350 66% 46%` | danger / rose |
+
+> No Tailwind utility namespace; consume via inline `style={{ background: ... }}` or a dedicated `.sit-thumb-*` class added when SIT-02 lands. Tokens have no `/alpha` consumers — only used as opaque gradient stops.
+
 ### Landing palette (greeklish.eu marketing only)
 
 Warmer / editorial. Don't mix with the glassy app palette.

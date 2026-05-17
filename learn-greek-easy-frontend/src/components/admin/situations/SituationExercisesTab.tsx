@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { FileText, Image, ListChecks, Loader2, MessageSquare } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -13,6 +13,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { adminAPI } from '@/services/adminAPI';
 import type {
+  ExerciseSourceType,
   SituationExerciseGroupResponse,
   SituationExerciseResponse,
   SituationExercisesResponse,
@@ -22,6 +23,17 @@ import { ExerciseItemPayload } from '../exercises/ExerciseItemPayload';
 
 interface SituationExercisesTabProps {
   situationId: string;
+  /** When true, hides internal source-type accordion; drawer controls source via `value`. */
+  hideSourceFilter?: boolean;
+  /** Controlled active source type (used when `hideSourceFilter` is true). */
+  value?: ExerciseSourceType;
+  /** Called when the active controlled source changes (wired by drawer sub-tab bar). */
+  onValueChange?: (v: ExerciseSourceType) => void;
+  /**
+   * Fires exactly once per `situationId` fetch with the full response.
+   * Re-fires when `situationId` changes. Does NOT fire on every re-render.
+   */
+  onDataLoaded?: (data: SituationExercisesResponse) => void;
 }
 
 const SOURCE_TYPE_ICONS: Record<string, React.ElementType> = {
@@ -126,11 +138,21 @@ function GroupAccordionItem({ group }: { group: SituationExerciseGroupResponse }
   );
 }
 
-export function SituationExercisesTab({ situationId }: SituationExercisesTabProps) {
+export function SituationExercisesTab({
+  situationId,
+  hideSourceFilter = false,
+  value,
+  onValueChange: _onValueChange,
+  onDataLoaded,
+}: SituationExercisesTabProps) {
   const { t } = useTranslation('admin');
   const [data, setData] = useState<SituationExercisesResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Track the last situationId for which we fired onDataLoaded.
+  // Not in deps — we use a ref so the callback can be unstable (e.g. setState).
+  const lastNotifiedSituationIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -141,6 +163,11 @@ export function SituationExercisesTab({ situationId }: SituationExercisesTabProp
         const result = await adminAPI.getSituationExercises(situationId);
         if (!cancelled) {
           setData(result);
+          // Fire onDataLoaded exactly once per situationId fetch.
+          if (onDataLoaded && lastNotifiedSituationIdRef.current !== situationId) {
+            lastNotifiedSituationIdRef.current = situationId;
+            onDataLoaded(result);
+          }
         }
       } catch {
         if (!cancelled) setError(t('situations.detail.exercises.error'));
@@ -151,6 +178,8 @@ export function SituationExercisesTab({ situationId }: SituationExercisesTabProp
     void fetchExercises();
     return () => {
       cancelled = true;
+      // Reset so a remount or id-change fires the callback again.
+      lastNotifiedSituationIdRef.current = null;
     };
   }, [situationId]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -173,6 +202,28 @@ export function SituationExercisesTab({ situationId }: SituationExercisesTabProp
     );
   }
 
+  // ── Controlled mode (hideSourceFilter) ──────────────────────────────────────
+  if (hideSourceFilter) {
+    if (!data) return null;
+    const activeGroup = data.groups.find((g) => g.source_type === value);
+    if (!activeGroup || activeGroup.exercises.length === 0) {
+      // Drawer owns the empty state — render nothing here.
+      return null;
+    }
+    return (
+      <Accordion type="single" collapsible className="w-full">
+        {activeGroup.exercises.map((exercise) => (
+          <ExerciseAccordionItem
+            key={exercise.id}
+            exercise={exercise}
+            sourceType={activeGroup.source_type}
+          />
+        ))}
+      </Accordion>
+    );
+  }
+
+  // ── Uncontrolled / legacy mode ───────────────────────────────────────────────
   if (data?.total_count === 0) {
     return (
       <div
