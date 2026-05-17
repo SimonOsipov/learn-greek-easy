@@ -804,6 +804,32 @@
       "updateSuccessMessage": "Отчёт об ошибке успешно обновлён",
       "updateError": "Ошибка обновления",
       "updateErrorMessage": "Не удалось обновить отчёт об ошибке"
+    },
+    "v2": {
+      "pageHead": {
+        "kicker": "Quality",
+        "title": "Card errors",
+        "breadcrumb": "Card errors",
+        "sub": "User-reported issues on word and culture cards."
+      },
+      "statCards": {
+        "total": {
+          "label": "Total errors",
+          "sub": "Counts coming soon"
+        },
+        "open": {
+          "label": "Open",
+          "sub": "Counts coming soon"
+        },
+        "resolved": {
+          "label": "Resolved",
+          "sub": "Counts coming soon"
+        },
+        "avgTimeToResolve": {
+          "label": "Avg time to resolve",
+          "sub": "Counts coming soon"
+        }
+      }
     }
   },
   "cardCreate": {
@@ -1649,6 +1675,36 @@
     "pictureMatch": {
       "anchorPictureAlt": "Опорная картинка",
       "runtimeNote": "Сетка из 4 вариантов формируется при запросе. Дистракторы выбираются из других Ситуаций."
+    },
+    "v2": {
+      "pageHead": {
+        "kicker": "Content",
+        "title": "Exercises",
+        "breadcrumb": "Exercises",
+        "sub": "Approve and review listening + reading exercises across all situations."
+      },
+      "modality": {
+        "listening": "Listening",
+        "reading": "Reading"
+      },
+      "statCards": {
+        "total": {
+          "label": "Total exercises",
+          "sub": "Counts coming soon"
+        },
+        "approved": {
+          "label": "Approved",
+          "sub": "Counts coming soon"
+        },
+        "pending": {
+          "label": "Pending review",
+          "sub": "Counts coming soon"
+        },
+        "bySource": {
+          "label": "By source",
+          "sub": "Counts coming soon"
+        }
+      }
     }
   },
   "decks": {
