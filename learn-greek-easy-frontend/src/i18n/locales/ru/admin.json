@@ -1858,7 +1858,8 @@
         "title": "Decks",
         "sub_one": "{{count}} card",
         "sub_few": "{{count}} cards",
-        "sub_many": "{{count}} cards"
+        "sub_many": "{{count}} cards",
+        "sub_other": "{{count}} cards"
       },
       "news": {
         "title": "News",
