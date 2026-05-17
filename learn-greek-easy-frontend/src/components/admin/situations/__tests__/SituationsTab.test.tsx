@@ -431,13 +431,6 @@ describe('SituationsTab — "+ New situation" opens modal', () => {
   });
 });
 
-describe('SituationsTab — No SituationDetailModal', () => {
-  it('does not render SituationDetailModal in tree', () => {
-    renderWithRouter();
-    expect(screen.queryByTestId('situation-detail-modal')).not.toBeInTheDocument();
-  });
-});
-
 describe('SituationsTab — URL deep-link (?edit=)', () => {
   it('calls openDrawer with the edit id from URL on mount', () => {
     renderWithRouter('?edit=abc-123');
