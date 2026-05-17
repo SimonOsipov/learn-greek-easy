@@ -289,8 +289,8 @@
     "news": "Новости",
     "announcements": "Объявления",
     "feedback": "Отзывы",
-    "changelog": "История изменений",
-    "cardErrors": "Ошибки карточек",
+    "changelog": "Изменения",
+    "cardErrors": "Ошибки",
     "newsComingSoon": "Скоро",
     "newsComingSoonDescription": "Вкладка Новости обновляется. Скоро появятся новые функции.",
     "situations": "Ситуации",
@@ -299,7 +299,7 @@
     "dashboard": "Панель",
     "inbox": "Входящие",
     "exercises": "Упражнения",
-    "errors": "Ошибки карточек"
+    "errors": "Ошибки"
   },
   "shell": {
     "breadcrumbLabel": "Хлебные крошки",
