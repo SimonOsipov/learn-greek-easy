@@ -7,8 +7,6 @@
  * Renders PageHead + 4-up StatCard grid + ChangelogTimeline +
  * ChangelogEditorDrawer + ChangelogDeleteDialog.
  *
- * V1 modal imports (SummaryCard, ChangelogCreateModal, ChangelogEditModal,
- * ChangelogTable) are dropped. V1 source files stay on disk — deferred.
  */
 
 import { useEffect, useRef, useState } from 'react';
