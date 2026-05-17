@@ -3,6 +3,7 @@
     "title": "Admin Dashboard",
     "subtitle": "Manage content and view statistics"
   },
+  "comingSoon": "Coming soon",
   "deckEdit": {
     "title": "Edit Deck",
     "name": "Name",
@@ -298,6 +299,14 @@
       "theme": "Toggle theme",
       "language": "Switch language",
       "notifications": "Notifications"
+    },
+    "breadcrumbLabel": "Breadcrumb",
+    "breadcrumb": {
+      "dashboard": "Dashboard"
+    },
+    "pagination": {
+      "previousLabel": "Previous page",
+      "nextLabel": "Next page"
     }
   },
   "announcements": {
@@ -385,7 +394,6 @@
       "success": "Announcement deleted"
     },
     "v2": {
-      "comingSoon": "Coming soon",
       "tab": {
         "subtitle": "Avg read rate {{avgRate}}% across {{count}} announcements"
       },
@@ -472,7 +480,6 @@
     "title": "News",
     "kicker": "Admin · News",
     "subtitle": "{{total}} articles · {{audio}}/{{total}} with B2+A2 audio · {{pending}} awaiting B1",
-    "comingSoon": "Coming soon",
     "stats": {
       "total": "Total News",
       "withAudio": "With Audio",
@@ -654,6 +661,10 @@
         "unlink": "Unlink",
         "regenerate": "Regenerate from this article"
       }
+    },
+    "card": {
+      "editLabel": "Edit",
+      "deleteLabel": "Delete"
     }
   },
   "feedback": {
@@ -724,6 +735,20 @@
       "confirm": "Delete",
       "success": "Feedback deleted"
     },
+    "category": {
+      "bug": "Bug",
+      "featureRequest": "Feature request"
+    },
+    "status": {
+      "new": "New",
+      "investigating": "Investigating",
+      "planned": "Planned",
+      "inProgress": "In progress",
+      "responded": "Responded",
+      "shipped": "Shipped",
+      "wontFix": "Won't fix",
+      "duplicate": "Duplicate"
+    },
     "v2": {
       "reply": {
         "status_label": "Status",
@@ -733,7 +758,6 @@
         "save": "Save & notify",
         "cancel": "Cancel",
         "save_draft": "Save draft",
-        "coming_soon": "Coming soon",
         "saved": "Reply saved",
         "save_error_title": "Failed to save reply",
         "save_error_desc": "Please try again."
@@ -768,8 +792,7 @@
         "title": "User feedback",
         "sub": "Review, respond, and track community feedback",
         "exportCsv": "Export CSV",
-        "sendMassUpdate": "Send mass update",
-        "comingSoonTooltip": "Coming soon"
+        "sendMassUpdate": "Send mass update"
       },
       "statCards": {
         "total": {
@@ -923,9 +946,17 @@
     }
   },
   "changelog": {
+    "kicker": "Changelog",
+    "subtitle": "Manage and publish product updates for your users.",
     "stats": {
-      "total": "Total Entries",
-      "mostRecent": "Most Recent"
+      "total": "Total entries",
+      "mostRecent": "Most recent",
+      "cadence": "Avg cadence",
+      "cadenceSub": "between entries",
+      "cadenceSubMinimal": "need ≥ 2 entries",
+      "missingRu": "Missing RU",
+      "missingRuNeed": "entries need translation",
+      "missingRuDone": "all translated"
     },
     "title": "Changelog",
     "addNew": "Add New",
@@ -942,7 +973,11 @@
     "table": {
       "title": "Changelog Entries",
       "description": "Manage app changelog entries",
-      "empty": "No changelog entries found."
+      "empty": "No changelog entries found.",
+      "colTitle": "Title",
+      "colDate": "Date",
+      "colTag": "Tag",
+      "colActions": "Actions"
     },
     "create": {
       "title": "Create Changelog Entry",
@@ -1756,7 +1791,18 @@
     "statusDraft": "Draft",
     "regenerateTranslations": "Regenerate translations",
     "sourcePrefix": "Source",
-    "openInNews": "Open in News"
+    "openInNews": "Open in News",
+    "loadingLabel": "Loading decks",
+    "editLabel": "Edit deck",
+    "deleteLabel": "Delete deck",
+    "vocab": {
+      "editWordLabel": "Edit word",
+      "deleteWordLabel": "Delete word"
+    },
+    "culture": {
+      "editQuestionLabel": "Edit question",
+      "deleteQuestionLabel": "Delete question"
+    }
   },
   "inbox": {
     "breadcrumb": {
