@@ -294,12 +294,6 @@
     "errors": "Card errors"
   },
   "shell": {
-    "topBar": {
-      "search": "Search admin",
-      "theme": "Toggle theme",
-      "language": "Switch language",
-      "notifications": "Notifications"
-    },
     "breadcrumbLabel": "Breadcrumb",
     "breadcrumb": {
       "dashboard": "Dashboard"
@@ -313,7 +307,6 @@
     "title": "Announcements",
     "kicker": "System · Announcements",
     "actions": {
-      "exportCsv": "Export CSV",
       "new": "New announcement"
     },
     "stats": {
@@ -394,9 +387,6 @@
       "success": "Announcement deleted"
     },
     "v2": {
-      "tab": {
-        "subtitle": "Avg read rate {{avgRate}}% across {{count}} announcements"
-      },
       "details": {
         "sent": "sent",
         "delivered": "Delivered",
