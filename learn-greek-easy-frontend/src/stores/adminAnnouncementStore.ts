@@ -36,7 +36,7 @@ interface AdminAnnouncementState {
   error: string | null;
 
   // Actions
-  fetchAnnouncements: () => Promise<void>;
+  fetchAnnouncements: (page?: number, pageSize?: number) => Promise<void>;
   fetchAnnouncementDetail: (id: string) => Promise<void>;
   deleteAnnouncement: (id: string) => Promise<void>;
   setPage: (page: number) => void;
@@ -66,12 +66,13 @@ export const useAdminAnnouncementStore = create<AdminAnnouncementState>()(
       /**
        * Fetch paginated announcement list from admin API
        */
-      fetchAnnouncements: async () => {
-        const { page, pageSize } = get();
+      fetchAnnouncements: async (page?: number, pageSize?: number) => {
+        const resolvedPage = page ?? get().page;
+        const resolvedPageSize = pageSize ?? get().pageSize;
         set({ isLoading: true, error: null });
 
         try {
-          const response = await adminAPI.getAnnouncements(page, pageSize);
+          const response = await adminAPI.getAnnouncements(resolvedPage, resolvedPageSize);
 
           set({
             announcements: response.items,

@@ -108,7 +108,7 @@ export function AnnouncementDetailsDrawer({
         onOpenChange={(open) => {
           if (!open) onClose();
         }}
-        size="wide"
+        size="full"
         data-testid="announcement-details-drawer"
       >
         {/* ── Close button ─────────────────────────────────────────────── */}

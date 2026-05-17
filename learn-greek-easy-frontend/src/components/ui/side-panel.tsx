@@ -1,8 +1,9 @@
 import * as React from 'react';
 
+import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
 
-import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { Sheet } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 
 // ── Context ──────────────────────────────────────────────────────────────────
@@ -26,7 +27,7 @@ function useSidePanelContext(): SidePanelContextValue {
 export type SidePanelProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  size?: 'default' | 'wide';
+  size?: 'default' | 'wide' | 'full';
   className?: string;
   children: React.ReactNode;
   'data-testid'?: string;
@@ -42,22 +43,37 @@ function SidePanel({
   children,
   'data-testid': dataTestId,
 }: SidePanelProps) {
+  const overlayClass =
+    size === 'full'
+      ? 'fixed inset-0 z-50 bg-black/50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0'
+      : 'fixed inset-0 z-50 bg-background/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0';
+
+  const contentClass = cn(
+    'fixed z-50 gap-4 bg-background shadow-lg transition ease-in-out',
+    'inset-y-0 right-0 h-full border-l',
+    'data-[state=open]:animate-in data-[state=closed]:animate-out',
+    'data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right',
+    'data-[state=closed]:duration-300 data-[state=open]:duration-500',
+    'drawer-wrap flex flex-col gap-0 p-0',
+    size === 'wide' && 'w-[95vw] !max-w-[1080px] sm:!max-w-[1080px]',
+    size === 'full' && 'h-screen w-screen !max-w-none',
+    className
+  );
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SidePanelContext.Provider value={{ onOpenChange }}>
-        <SheetContent
-          side="right"
-          data-side-panel=""
-          data-size={size}
-          data-testid={dataTestId}
-          className={cn(
-            'drawer-wrap flex flex-col gap-0 p-0',
-            size === 'wide' && 'w-[95vw] !max-w-[1080px] sm:!max-w-[1080px]',
-            className
-          )}
-        >
-          {children}
-        </SheetContent>
+        <DialogPrimitive.Portal>
+          <DialogPrimitive.Overlay className={overlayClass} />
+          <DialogPrimitive.Content
+            data-side-panel=""
+            data-size={size}
+            data-testid={dataTestId}
+            className={contentClass}
+          >
+            {children}
+          </DialogPrimitive.Content>
+        </DialogPrimitive.Portal>
       </SidePanelContext.Provider>
     </Sheet>
   );

@@ -940,6 +940,11 @@
     transition: all 0.18s;
     position: relative;
   }
+  .stat-card:hover {
+    transform: translateY(-1px);
+    border-color: hsl(var(--primary) / 0.4);
+    transition: all 0.18s;
+  }
   .stat-card.is-clickable:hover {
     border-color: hsl(var(--primary) / 0.4);
     transform: translateY(-1px);
@@ -1694,7 +1699,7 @@
   .an-rate-bar {
     flex: 1;
     max-width: 100px;
-    height: 6px;
+    height: 4px;
     border-radius: 999px;
     background: hsl(var(--fg) / 0.08);
     overflow: hidden;
@@ -1740,6 +1745,30 @@
   }
   .an-row:hover .an-row-actions {
     opacity: 1;
+  }
+
+  /* ── VA panel wrapper (DS-21) ───────────────────────────────────────────── */
+  .va-panel {
+    background: hsl(var(--bg-2));
+    border-radius: 18px;
+    overflow: hidden;
+  }
+
+  /* ── Announcements toolbar (DS-20) ─────────────────────────────────────── */
+  .an-toolbar {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding: 12px 16px;
+  }
+  .an-toolbar > :first-child {
+    flex: 1;
+    max-width: 360px;
+  }
+
+  /* ── Full-size side-panel animation speed (DS-25) ───────────────────────── */
+  [data-side-panel][data-size='full'] {
+    animation-duration: 150ms !important;
   }
 
   /* ── Compose drawer ─────────────────────────────────────────────────────── */
@@ -1885,7 +1914,7 @@
   }
   .an-preview-card {
     display: grid;
-    grid-template-columns: 40px 1fr;
+    grid-template-columns: 28px 1fr;
     gap: 12px;
     padding: 14px;
     background: hsl(var(--bg-2));
@@ -1894,9 +1923,9 @@
     box-shadow: 0 8px 24px -10px hsl(0 0% 0% / 0.3);
   }
   .an-preview-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
     background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
     display: flex;
     align-items: center;
@@ -1904,7 +1933,7 @@
     color: hsl(var(--primary-foreground));
     font-family: 'Inter Tight', sans-serif;
     font-weight: 700;
-    font-size: 16px;
+    font-size: 12px;
     letter-spacing: -0.02em;
   }
   .an-preview-body {
@@ -1919,7 +1948,7 @@
   }
   .an-preview-title {
     font-size: 14px;
-    font-weight: 700;
+    font-weight: 600;
     color: hsl(var(--fg));
     margin: 4px 0 6px;
     overflow-wrap: break-word;

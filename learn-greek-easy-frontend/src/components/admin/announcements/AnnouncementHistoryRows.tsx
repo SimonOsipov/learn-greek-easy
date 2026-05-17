@@ -47,18 +47,14 @@ function rateClass(pct: number): 'is-good' | 'is-ok' | 'is-zero' {
 }
 
 /**
- * Format a date string into a two-element tuple: [day label, time label].
- * Example: ["Jan 15", "14:32"]
+ * Format a date string into a two-element tuple: [day label, year label].
+ * Example: ["Jan 15", "2026"]
  */
 function formatDateParts(dateString: string, locale: string): [string, string] {
   const date = new Date(dateString);
   const day = date.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
-  const time = date.toLocaleTimeString(locale, {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
-  return [day, time];
+  const yearLabel = date.toLocaleDateString(locale, { year: 'numeric' });
+  return [day, yearLabel];
 }
 
 // ─── Props ───────────────────────────────────────────────────────────────────
@@ -71,6 +67,8 @@ export interface AnnouncementHistoryRowsProps {
   onPageChange: (page: number) => void;
   onOpenDetails: (id: string) => void;
   onRequestDelete: (id: string) => void;
+  searchQuery?: string;
+  onClearSearch?: () => void;
 }
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
@@ -124,6 +122,8 @@ export const AnnouncementHistoryRows: React.FC<AnnouncementHistoryRowsProps> = (
   onPageChange,
   onOpenDetails,
   onRequestDelete,
+  searchQuery,
+  onClearSearch,
 }) => {
   const { t, i18n } = useTranslation('admin');
 
@@ -137,6 +137,27 @@ export const AnnouncementHistoryRows: React.FC<AnnouncementHistoryRowsProps> = (
 
   // Empty state (not loading, no rows)
   if (!isLoading && announcements.length === 0) {
+    if (searchQuery) {
+      return (
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="mb-4 rounded-full bg-muted p-4">
+            <Megaphone className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <h3 className="mb-2 text-lg font-medium">
+            {t('announcements.toolbar.emptySearch', { query: searchQuery })}
+          </h3>
+          {onClearSearch && (
+            <button
+              type="button"
+              onClick={onClearSearch}
+              className="text-sm text-primary hover:underline"
+            >
+              {t('announcements.toolbar.clearSearch')}
+            </button>
+          )}
+        </div>
+      );
+    }
     return <EmptyState t={t} />;
   }
 
@@ -160,7 +181,7 @@ export const AnnouncementHistoryRows: React.FC<AnnouncementHistoryRowsProps> = (
         ) : (
           announcements.map((item) => {
             const pct = computeReadPct(item.read_count, item.total_recipients);
-            const [dayLabel, timeLabel] = formatDateParts(item.created_at, i18n.language);
+            const [dayLabel, yearLabel] = formatDateParts(item.created_at, i18n.language);
 
             const handleRowKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
               if (e.key === 'Enter' || e.key === ' ') {
@@ -182,7 +203,7 @@ export const AnnouncementHistoryRows: React.FC<AnnouncementHistoryRowsProps> = (
                 {/* Date */}
                 <div className="an-date">
                   <div className="an-date-d">{dayLabel}</div>
-                  <div className="an-date-t">{timeLabel}</div>
+                  <div className="an-date-t">{yearLabel}</div>
                 </div>
 
                 {/* Title + truncated message + optional link badge */}

@@ -14,7 +14,7 @@
  * Mobile responsiveness of PageHead actions is deferred to ADMIN2-12.
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import { Link, Megaphone, Users } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -27,6 +27,7 @@ import { useAdminAnnouncementStore } from '@/stores/adminAnnouncementStore';
 import { AnnouncementComposeDrawer } from './AnnouncementComposeDrawer';
 import { AnnouncementDetailsDrawer } from './AnnouncementDetailsDrawer';
 import { AnnouncementHistoryRows } from './AnnouncementHistoryRows';
+import { AnnouncementsToolbar, type SortKey } from './AnnouncementsToolbar';
 
 /**
  * AnnouncementsTab
@@ -48,7 +49,7 @@ export const AnnouncementsTab: React.FC = () => {
 
   // ── Fetch on mount ────────────────────────────────────────────────────────
   useEffect(() => {
-    fetchAnnouncements();
+    fetchAnnouncements(1, 100);
   }, [fetchAnnouncements]);
 
   // ── URL state ─────────────────────────────────────────────────────────────
@@ -76,6 +77,41 @@ export const AnnouncementsTab: React.FC = () => {
 
   // ── Local delete state ────────────────────────────────────────────────────
   const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(null);
+
+  // ── Toolbar state ─────────────────────────────────────────────────────────
+  const [query, setQuery] = useState<string>('');
+  const [sort, setSort] = useState<SortKey>('newest');
+
+  // ── Filtered + sorted announcements ──────────────────────────────────────
+  const displayedAnnouncements = useMemo(() => {
+    const q = query.toLowerCase();
+    const filtered = q
+      ? announcements.filter(
+          (a) => a.title.toLowerCase().includes(q) || a.message.toLowerCase().includes(q)
+        )
+      : announcements;
+
+    return [...filtered].sort((a, b) => {
+      switch (sort) {
+        case 'newest':
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case 'oldest':
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        case 'rateDesc': {
+          const rA = a.total_recipients > 0 ? a.read_count / a.total_recipients : 0;
+          const rB = b.total_recipients > 0 ? b.read_count / b.total_recipients : 0;
+          return rB - rA;
+        }
+        case 'rateAsc': {
+          const rA = a.total_recipients > 0 ? a.read_count / a.total_recipients : 0;
+          const rB = b.total_recipients > 0 ? b.read_count / b.total_recipients : 0;
+          return rA - rB;
+        }
+        default:
+          return 0;
+      }
+    });
+  }, [announcements, query, sort]);
 
   // ── Derived stats ─────────────────────────────────────────────────────────
   const totalCount = total;
@@ -107,7 +143,7 @@ export const AnnouncementsTab: React.FC = () => {
           title={t('announcements.stats.peopleReached')}
           n={peopleReached}
           icon={<Users />}
-          tone="cyan"
+          tone="violet"
           footerLabel={t('announcements.stats.allTime')}
         />
         <StatCard
@@ -121,26 +157,36 @@ export const AnnouncementsTab: React.FC = () => {
           title={t('announcements.stats.withLink')}
           n={withLinkCount}
           icon={<Link />}
-          tone="violet"
+          tone="cyan"
           footerLabel={t('announcements.stats.allTime')}
         />
       </div>
 
       {/* ── History rows ─────────────────────────────────────────────────── */}
-      <AnnouncementHistoryRows
-        announcements={announcements}
-        isLoading={isLoading}
-        page={page}
-        totalPages={totalPages}
-        onPageChange={(p) => setPage(p)}
-        onOpenDetails={(id) =>
-          setSearchParams((prev) => {
-            prev.set('edit', id);
-            return prev;
-          })
-        }
-        onRequestDelete={(id) => setDeleteCandidateId(id)}
-      />
+      <div className="va-panel">
+        <AnnouncementsToolbar
+          query={query}
+          onQueryChange={setQuery}
+          sort={sort}
+          onSortChange={setSort}
+        />
+        <AnnouncementHistoryRows
+          announcements={displayedAnnouncements}
+          isLoading={isLoading}
+          page={page}
+          totalPages={totalPages}
+          onPageChange={(p) => setPage(p)}
+          onOpenDetails={(id) =>
+            setSearchParams((prev) => {
+              prev.set('edit', id);
+              return prev;
+            })
+          }
+          onRequestDelete={(id) => setDeleteCandidateId(id)}
+          searchQuery={query}
+          onClearSearch={() => setQuery('')}
+        />
+      </div>
 
       {/* ── Compose drawer ───────────────────────────────────────────────── */}
       <AnnouncementComposeDrawer

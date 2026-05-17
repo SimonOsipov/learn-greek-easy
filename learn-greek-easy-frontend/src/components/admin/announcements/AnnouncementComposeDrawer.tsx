@@ -215,7 +215,7 @@ export function AnnouncementComposeDrawer({ open, onClose }: AnnouncementCompose
       <SidePanel
         open={open}
         onOpenChange={handleOpenChange}
-        size="wide"
+        size="full"
         data-testid="announcement-compose-drawer"
       >
         {/* ── Close button ─────────────────────────────────────────────── */}

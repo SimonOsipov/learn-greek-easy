@@ -463,6 +463,18 @@
         "colRate": "Rate",
         "linkAttached": "link attached"
       }
+    },
+    "toolbar": {
+      "searchPlaceholder": "Search announcements",
+      "sortLabel": "Sort",
+      "sort": {
+        "newest": "Newest first",
+        "oldest": "Oldest first",
+        "rateDesc": "Highest read rate",
+        "rateAsc": "Lowest read rate"
+      },
+      "emptySearch": "No announcements match \"{{query}}\"",
+      "clearSearch": "Clear search"
     }
   },
   "news": {
