@@ -18,7 +18,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { format } from 'date-fns';
-import { Check } from 'lucide-react';
+import { Check, Wand2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
@@ -430,37 +430,38 @@ export function ChangelogEditorDrawer({ open, onClose, entry }: ChangelogEditorD
                     />
                   </div>
 
-                  {/* Translation status pills */}
-                  <div className="cl-translation-status">
-                    <span
-                      className={cn('cl-trans-pill', enDone && 'is-done')}
-                      data-testid="changelog-trans-pill-en"
-                    >
-                      {enDone ? <Check aria-hidden="true" /> : <span aria-hidden="true">—</span>}
-                      <span className="cl-trans-l">EN</span>
-                    </span>
-                    <span
-                      className={cn('cl-trans-pill', ruDone && 'is-done')}
-                      data-testid="changelog-trans-pill-ru"
-                    >
-                      {ruDone ? <Check aria-hidden="true" /> : <span aria-hidden="true">—</span>}
-                      <span className="cl-trans-l">RU</span>
-                    </span>
-                  </div>
+                  {/* Translation status pills + auto-translate button on the same row */}
+                  <div className="cl-translation-row">
+                    <div className="cl-translation-status">
+                      <span
+                        className={cn('cl-trans-pill', enDone && 'is-done')}
+                        data-testid="changelog-trans-pill-en"
+                      >
+                        {enDone ? <Check aria-hidden="true" /> : <span aria-hidden="true">—</span>}
+                        <span className="cl-trans-l">EN</span>
+                      </span>
+                      <span
+                        className={cn('cl-trans-pill', ruDone && 'is-done')}
+                        data-testid="changelog-trans-pill-ru"
+                      >
+                        {ruDone ? <Check aria-hidden="true" /> : <span aria-hidden="true">—</span>}
+                        <span className="cl-trans-l">RU</span>
+                      </span>
+                    </div>
 
-                  {/* Auto-translate button
-                      Uses aria-disabled instead of disabled so Radix Tooltip can fire.
-                      Mirrors AnnouncementComposeDrawer's "Save draft" gated-button pattern. */}
-                  <div>
+                    {/* Auto-translate button
+                        Uses aria-disabled instead of disabled so Radix Tooltip can fire.
+                        Mirrors AnnouncementComposeDrawer's "Save draft" gated-button pattern. */}
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <button
                           type="button"
-                          className="btn-glass cursor-not-allowed opacity-60"
+                          className="btn btn-glass btn-sm cursor-not-allowed opacity-60"
                           aria-disabled="true"
                           onClick={(e) => e.preventDefault()}
                           data-testid="changelog-editor-autotranslate"
                         >
+                          <Wand2 className="size-4" aria-hidden="true" />
                           {lang === 'en' ? 'Auto-translate EN → RU' : 'Auto-translate RU → EN'}
                         </button>
                       </TooltipTrigger>
