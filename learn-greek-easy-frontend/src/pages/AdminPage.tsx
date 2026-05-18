@@ -709,7 +709,7 @@ export function pageHeadPropsFor(
           <div className="flex items-center gap-2">
             <button
               type="button"
-              className="btn-glass"
+              className="btn btn-glass"
               onClick={_handlers.onChangelogExport}
               data-testid="changelog-export-button"
             >
