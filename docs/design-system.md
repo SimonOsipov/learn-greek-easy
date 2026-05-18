@@ -260,6 +260,21 @@ Reach for these *before* composing new ones.
 | `.fb-*` family | Admin feedback re-skin chrome (card, vote rail, status grid, canned chips, thread bubbles, meta table). See `src/index.css` under `@layer components`. Token-only — no raw hex. |
 | `.cl-*` family | Admin changelog timeline + editor chrome (timeline rail/dot, month head, entry card, tag-button tones, translation pills, preview card). Tones via `data-tone` on `.cl-tag-btn` / `.cl-entry-dot`: green=`--success`, amber=`--warning`, blue=`--primary`, cyan=`--accent-2`, violet=`--accent`, red=`--danger`. Token-only; no new tokens introduced. |
 
+### Drawer header chrome
+
+`.drawer-head` is a flex row that lays out one stacked content column alongside a close button. The content column (`drawer-head-content`) composes the breadcrumb kicker, the title-row wrapper, and an optional meta-row badge strip as top-to-bottom siblings.
+
+| Class | Role |
+|---|---|
+| `.drawer-head` | Flex row, `justify-content: space-between` — lays out `[content column \| close-X]`. |
+| `.drawer-head-content` | Flex column wrapper inside `.drawer-head` — stacks breadcrumb, title-row, optional meta-row. |
+| `.drawer-breadcrumb` | Monospace kicker (JetBrains Mono 11.5px, `--fg-3`) above the title. |
+| `.drawer-head-row` | JSX grouping hook around `.drawer-title` (currently `display: block`; reserved for future title-row siblings like inline badges). |
+| `.drawer-title` | H2 typography (Inter Tight 22/700, `-0.015em`, line-height 1.25, max-width 640px). |
+| `.drawer-meta` | Optional badge row, sibling of `.drawer-head-row` inside `.drawer-head-content`. |
+
+**PR delta (ADMIN2-16 / ANDD-03):** The `.drawer-head-content` JSX wrapper is currently only applied in `AnnouncementDetailsDrawer.tsx`. The 5 other drawer consumers (`AnnouncementComposeDrawer`, `ChangelogEditorDrawer`, `DeckDrawer`, `NewsEditDrawer`, `SituationDrawer`) reference these classes but lack the wrapper; a sweep is queued as a follow-up to keep this PR's blast radius small.
+
 ---
 
 ## Component primitives (`src/components/ui/*`)
