@@ -263,9 +263,28 @@ export function ChangelogEditorDrawer({ open, onClose, entry }: ChangelogEditorD
       >
         {/* ── Header ─────────────────────────────────────────────────────── */}
         <SidePanel.Header>
-          <div className="drawer-breadcrumb">Changelog</div>
-          <div className="drawer-head-row">
-            <h2 className="drawer-title">{title}</h2>
+          <div className="drawer-head-content">
+            <div className="drawer-breadcrumb">
+              Changelog · {entry ? 'Edit entry' : 'New entry'}
+            </div>
+            <div className="drawer-head-row">
+              <h2 className="drawer-title">{title}</h2>
+            </div>
+            <div className="drawer-meta" data-testid="changelog-drawer-meta">
+              <Badge tone={TAG_TONE[form.tag]}>
+                {t(
+                  CHANGELOG_TAG_CONFIG[form.tag].labelKey.replace('changelog:', '') as Parameters<
+                    typeof t
+                  >[0]
+                )}
+              </Badge>
+              {form.version && <span className="cl-preview-v">{form.version}</span>}
+              {entry && (
+                <span className="va-dim">
+                  Posted {format(new Date(entry.created_at), 'MMM d, yyyy')}
+                </span>
+              )}
+            </div>
           </div>
           <SidePanel.CloseButton data-testid="changelog-editor-close-button" />
         </SidePanel.Header>
