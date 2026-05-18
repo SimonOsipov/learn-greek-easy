@@ -978,6 +978,96 @@ describe('ChangelogEditorDrawer', () => {
     expect(screen.getByTestId('changelog-editor-title-en')).toHaveValue('Entry B title');
   });
 
+  // ── CLLP-10: Header meta row ─────────────────────────────────────────────
+
+  it('header meta row (edit mode): testid resolves, contains cl-preview-v and Posted date', () => {
+    render(
+      <ChangelogEditorDrawer
+        open={true}
+        onClose={vi.fn()}
+        entry={makeEntry({
+          version: '1.4.2',
+          created_at: '2026-03-10T00:00:00Z',
+          updated_at: '2026-03-10T00:00:00Z',
+        })}
+      />
+    );
+
+    const meta = screen.getByTestId('changelog-drawer-meta');
+    expect(meta).toBeInTheDocument();
+    // Version chip must be present inside meta (drawer renders in Radix Portal — use document)
+    expect(
+      document.querySelector('[data-testid="changelog-drawer-meta"] .cl-preview-v')
+    ).not.toBeNull();
+    // Posted date visible
+    expect(meta).toHaveTextContent(/Posted.*2026/);
+  });
+
+  it('header meta row (compose mode): testid resolves, no Posted text, no version chip', () => {
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+
+    const meta = screen.getByTestId('changelog-drawer-meta');
+    expect(meta).toBeInTheDocument();
+    // No posted date in compose mode
+    expect(screen.queryByText(/Posted/)).toBeNull();
+    // No version chip (version is empty string by default — drawer uses document)
+    expect(
+      document.querySelector('[data-testid="changelog-drawer-meta"] .cl-preview-v')
+    ).toBeNull();
+  });
+
+  // ── CLLP-10: Drawer-tabs row structure ───────────────────────────────────
+
+  it('drawer-tabs row: exactly 2 .drawer-tab-group siblings separated by exactly one .drawer-tabs-spacer', () => {
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+
+    // Drawer renders in a Radix Portal — query from document, not container
+    const tabGroups = document.querySelectorAll('.drawer-tab-group');
+    expect(tabGroups).toHaveLength(2);
+
+    const spacers = document.querySelectorAll('.drawer-tabs-spacer');
+    expect(spacers).toHaveLength(1);
+
+    // Spacer sits between the two groups
+    expect(tabGroups[0].nextElementSibling?.classList.contains('drawer-tabs-spacer')).toBe(true);
+    expect(tabGroups[1].previousElementSibling).toBe(spacers[0]);
+  });
+
+  // ── CLLP-10: Auto-translate row structure ────────────────────────────────
+
+  it('auto-translate row: .cl-translation-row wraps status + btn; btn has btn/btn-glass/btn-sm + svg', () => {
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+
+    // Drawer renders in a Radix Portal — query from document, not container
+    const row = document.querySelector('.cl-translation-row');
+    expect(row).not.toBeNull();
+    // Status node is inside the row
+    expect(row!.querySelector('.cl-translation-status')).not.toBeNull();
+    // Button classes
+    const btn = screen.getByTestId('changelog-editor-autotranslate');
+    expect(btn.classList.contains('btn')).toBe(true);
+    expect(btn.classList.contains('btn-glass')).toBe(true);
+    expect(btn.classList.contains('btn-sm')).toBe(true);
+    // Wand2 svg icon is present
+    expect(btn.querySelector('svg')).not.toBeNull();
+    // Button is a descendant of the row
+    expect(Array.from(row!.children).some((c) => c === btn || c.contains(btn))).toBe(true);
+  });
+
+  // ── CLLP-10: A11y dialog accessible name ─────────────────────────────────
+
+  it('dialog accessible name is "Compose changelog entry" in compose mode', () => {
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+
+    expect(screen.getByRole('dialog')).toHaveAccessibleName(/Compose changelog entry/i);
+  });
+
+  it('dialog accessible name is "Edit changelog entry" in edit mode', () => {
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} entry={makeEntry()} />);
+
+    expect(screen.getByRole('dialog')).toHaveAccessibleName(/Edit changelog entry/i);
+  });
+
   // ── CLTE-06: Submit in JSON mode ──────────────────────────────────────────
 
   it('Submit in JSON mode: surfaces inline error without calling createEntry when JSON is invalid', async () => {
