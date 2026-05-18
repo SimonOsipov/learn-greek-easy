@@ -205,4 +205,37 @@ test.describe('Admin Announcements Drawer (ANND-10)', () => {
     await expect(page).not.toHaveURL(/edit=/);
     await expect(detailsDrawer).not.toBeVisible({ timeout: 3_000 });
   });
+
+  // ── 8. Search + clear ──────────────────────────────────────────────────────
+  test('ANND-E2E-08: search + clear filters announcement rows', async ({ page, request }) => {
+    // Seed so the list has the known set of 4 E2E campaigns
+    await seedAnnouncements(request);
+
+    await page.goto('/admin?tab=announcements');
+    await expect(page.getByTestId('admin-page')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('announcements-tab')).toBeVisible({ timeout: 10_000 });
+
+    // Wait for at least one row before capturing count
+    const rows = page.locator('[data-testid^="announcement-row-"]');
+    await expect(rows.first()).toBeVisible({ timeout: 10_000 });
+
+    const initialCount = await rows.count();
+    expect(initialCount).toBeGreaterThanOrEqual(4);
+
+    // Type a substring that matches exactly one seeded campaign: "E2E Test Announcement - Welcome"
+    // Filter is client-side: title.toLowerCase().includes(q)
+    await page.getByTestId('announcement-search-input').fill('Welcome');
+
+    // Only the "Welcome" campaign should remain visible
+    await expect(rows).toHaveCount(1);
+
+    // Clear the search — clear button only renders when query.length > 0
+    await page.getByTestId('announcement-search-clear').click();
+
+    // All rows should return to the initial count
+    await expect(rows).toHaveCount(initialCount);
+
+    // Input value should be cleared
+    await expect(page.getByTestId('announcement-search-input')).toHaveValue('');
+  });
 });
