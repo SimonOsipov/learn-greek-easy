@@ -350,4 +350,25 @@ describe('search empty state', () => {
 
     expect(onClearSearch).toHaveBeenCalledTimes(1);
   });
+
+  it('renders generic empty state (not the search variant) for a whitespace-only query', () => {
+    // Locks in the `searchQuery?.trim()` guard — whitespace must fall through
+    // to the zero-data EmptyState, not the search empty-state.
+    render(
+      <AnnouncementHistoryRows
+        {...defaultProps}
+        announcements={[]}
+        isLoading={false}
+        searchQuery="   "
+        onClearSearch={vi.fn()}
+      />
+    );
+
+    // The "Clear search" button is unique to the search empty-state branch.
+    expect(screen.queryByRole('button', { name: /clear search/i })).not.toBeInTheDocument();
+
+    // Generic empty-state heading should be rendered instead.
+    const heading = screen.getByRole('heading', { level: 3 });
+    expect(heading.textContent).not.toContain('   ');
+  });
 });

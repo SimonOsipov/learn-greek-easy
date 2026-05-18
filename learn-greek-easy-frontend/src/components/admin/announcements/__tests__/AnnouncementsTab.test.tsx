@@ -577,14 +577,7 @@ describe('AnnouncementsTab', () => {
       // Wait for rows to render
       await screen.findByTestId('announcement-row-a1');
 
-      await user.type(screen.getByTestId('announcement-search-input'), 'AlPhA');
-
-      // "alpha" matches a5 "Beta announcement"? No — matches nothing containing "alpha"
-      // Actually: a5 = "Beta announcement", a1 = "Welcome to Greeklish", a3 = "welcome back promo"
-      // "AlPhA" lowercased = "alpha" → no titles contain "alpha" → empty list expected
-      // Let's use "welcome" instead (matches a1 + a3 per spec)
-      // Re-clear and type the correct value
-      await user.clear(screen.getByTestId('announcement-search-input'));
+      // Mixed-case input proves the filter is case-insensitive; matches a1 + a3.
       await user.type(screen.getByTestId('announcement-search-input'), 'WeLcOmE');
 
       const ids = getRowIds();

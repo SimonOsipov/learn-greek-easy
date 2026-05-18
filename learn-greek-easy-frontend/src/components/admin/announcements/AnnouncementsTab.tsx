@@ -88,8 +88,9 @@ export const AnnouncementsTab: React.FC = () => {
 
   // ── Filtered + sorted announcements ──────────────────────────────────────
   const displayedAnnouncements = useMemo(() => {
-    const q = query.toLowerCase();
-    const filtered = q
+    const trimmed = query.trim();
+    const q = trimmed.toLowerCase();
+    const filtered = trimmed
       ? announcements.filter((a) => a.title.toLowerCase().includes(q))
       : announcements;
 

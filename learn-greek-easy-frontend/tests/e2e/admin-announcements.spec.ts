@@ -233,6 +233,7 @@ test.describe('Admin Announcements Drawer (ANND-10)', () => {
 
     // Only the "Welcome" campaign should remain visible
     await expect(rows).toHaveCount(1);
+    await expect(rows.first()).toContainText(/welcome/i);
 
     // Clear the search — clear button only renders when query.length > 0
     await page.getByTestId('announcement-search-clear').click();
