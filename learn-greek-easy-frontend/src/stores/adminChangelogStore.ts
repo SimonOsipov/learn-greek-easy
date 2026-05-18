@@ -60,7 +60,7 @@ const INITIAL_STATE = {
   items: [] as ChangelogEntryAdmin[],
   selectedEntry: null,
   page: 1,
-  pageSize: 100,
+  pageSize: 20,
   total: 0,
   totalPages: 0,
   isLoading: false,
