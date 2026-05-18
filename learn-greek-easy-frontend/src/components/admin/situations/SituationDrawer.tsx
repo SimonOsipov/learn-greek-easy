@@ -184,6 +184,7 @@ export const SituationDrawer: React.FC = () => {
         }}
         size="default"
         data-testid="situation-edit-drawer"
+        title={detail?.scenario_en ?? 'Situation details'}
       >
         <SidePanel.CloseButton
           onClick={requestClose}

@@ -159,6 +159,7 @@ export const NewsEditDrawer: React.FC = () => {
         }}
         size="default"
         data-testid="news-edit-drawer"
+        title="Edit news article"
       >
         <SidePanel.CloseButton onClick={requestClose} />
         <SidePanel.Header>

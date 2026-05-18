@@ -110,6 +110,7 @@ export function AnnouncementDetailsDrawer({
         }}
         size="full"
         data-testid="announcement-details-drawer"
+        title={announcement?.title ?? 'Announcement details'}
       >
         {/* ── Close button ─────────────────────────────────────────────── */}
         <SidePanel.CloseButton onClick={onClose} />

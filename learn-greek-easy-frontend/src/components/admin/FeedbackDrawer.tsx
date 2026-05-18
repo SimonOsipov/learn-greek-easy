@@ -467,6 +467,7 @@ export function FeedbackDrawer({
         if (!o) onClose();
       }}
       data-testid="feedback-drawer"
+      title="Feedback details"
     >
       <SidePanel.CloseButton onClick={onClose} />
 

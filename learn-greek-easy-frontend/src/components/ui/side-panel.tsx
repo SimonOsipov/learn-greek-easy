@@ -31,6 +31,10 @@ export type SidePanelProps = {
   className?: string;
   children: React.ReactNode;
   'data-testid'?: string;
+  /** Accessible name for the dialog. Required for screen readers. Rendered via sr-only <Dialog.Title>. */
+  title: string;
+  /** Optional accessible description. When provided, rendered via sr-only <Dialog.Description>. */
+  description?: string;
 };
 
 // ── Root component ────────────────────────────────────────────────────────────
@@ -42,7 +46,13 @@ function SidePanel({
   className,
   children,
   'data-testid': dataTestId,
+  title,
+  description,
 }: SidePanelProps) {
+  if (import.meta.env.DEV && !title) {
+    // eslint-disable-next-line no-console
+    console.error('[SidePanel] `title` prop is required for accessibility (screen readers).');
+  }
   const overlayClass =
     size === 'full'
       ? 'fixed inset-0 z-50 bg-black/50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0'
@@ -70,7 +80,14 @@ function SidePanel({
             data-size={size}
             data-testid={dataTestId}
             className={contentClass}
+            {...(description ? {} : { 'aria-describedby': undefined })}
           >
+            <DialogPrimitive.Title className="sr-only">{title}</DialogPrimitive.Title>
+            {description ? (
+              <DialogPrimitive.Description className="sr-only">
+                {description}
+              </DialogPrimitive.Description>
+            ) : null}
             {children}
           </DialogPrimitive.Content>
         </DialogPrimitive.Portal>
