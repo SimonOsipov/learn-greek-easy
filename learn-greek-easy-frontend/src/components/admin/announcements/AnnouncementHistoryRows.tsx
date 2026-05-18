@@ -32,7 +32,7 @@ export function truncateMessage(message: string, max: number = 80): string {
 /**
  * Compute an integer read-percentage from raw counts.
  */
-function computeReadPct(readCount: number, totalRecipients: number): number {
+export function computeReadPct(readCount: number, totalRecipients: number): number {
   if (totalRecipients === 0) return 0;
   return Math.round((readCount / totalRecipients) * 100);
 }
@@ -40,7 +40,7 @@ function computeReadPct(readCount: number, totalRecipients: number): number {
 /**
  * Return the IS class for the rate indicator based on percentage.
  */
-function rateClass(pct: number): 'is-good' | 'is-ok' | 'is-zero' {
+export function rateClass(pct: number): 'is-good' | 'is-ok' | 'is-zero' {
   if (pct >= 20) return 'is-good';
   if (pct > 0) return 'is-ok';
   return 'is-zero';
@@ -50,7 +50,7 @@ function rateClass(pct: number): 'is-good' | 'is-ok' | 'is-zero' {
  * Format a date string into a two-element tuple: [day label, year label].
  * Example: ["Jan 15", "2026"]
  */
-function formatDateParts(dateString: string, locale: string): [string, string] {
+export function formatDateParts(dateString: string, locale: string): [string, string] {
   const date = new Date(dateString);
   const day = date.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
   const yearLabel = date.toLocaleDateString(locale, { year: 'numeric' });
@@ -137,7 +137,7 @@ export const AnnouncementHistoryRows: React.FC<AnnouncementHistoryRowsProps> = (
 
   // Empty state (not loading, no rows)
   if (!isLoading && announcements.length === 0) {
-    if (searchQuery) {
+    if (searchQuery?.trim()) {
       return (
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <div className="mb-4 rounded-full bg-muted p-4">
