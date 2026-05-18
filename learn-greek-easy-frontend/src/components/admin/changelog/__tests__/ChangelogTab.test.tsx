@@ -3,7 +3,7 @@
  *
  * Covers:
  * - 4 StatCards with correct tones
- * - Each sparkline carries the right data-testid
+ * - Total + Missing RU sparklines carry the right data-testid; Most recent + Avg cadence have no sparkline
  * - Missing RU stat count math
  * - Search filter (no debounce, case-insensitive, EN+RU)
  * - Tag SegControl shows only present tags with counts
@@ -269,14 +269,14 @@ describe('ChangelogTab', () => {
       expect(screen.getByTestId('sparkline-total')).toBeInTheDocument();
     });
 
-    it('sparkline-recent is present', () => {
+    it('sparkline-recent is NOT rendered (bars omitted for single-value cards)', () => {
       renderWithRouter();
-      expect(screen.getByTestId('sparkline-recent')).toBeInTheDocument();
+      expect(screen.queryByTestId('sparkline-recent')).not.toBeInTheDocument();
     });
 
-    it('sparkline-cadence is present', () => {
+    it('sparkline-cadence is NOT rendered (bars omitted for single-value cards)', () => {
       renderWithRouter();
-      expect(screen.getByTestId('sparkline-cadence')).toBeInTheDocument();
+      expect(screen.queryByTestId('sparkline-cadence')).not.toBeInTheDocument();
     });
 
     it('sparkline-missing-ru is present', () => {
