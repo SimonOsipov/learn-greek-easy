@@ -1299,6 +1299,11 @@
   .drawer-tabs-spacer {
     flex: 1;
   }
+  .drawer-tab-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
   .drawer-tabs .btn {
     margin-left: auto;
   }
