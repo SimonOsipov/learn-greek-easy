@@ -18,7 +18,7 @@ import { SidePanel, type SidePanelProps } from '@/components/ui/side-panel';
 function renderPanel(props: Partial<SidePanelProps> = {}) {
   const onOpenChange = vi.fn();
   return render(
-    <SidePanel open={true} onOpenChange={onOpenChange} {...props}>
+    <SidePanel open={true} onOpenChange={onOpenChange} title="Test panel" {...props}>
       <SidePanel.Header>Header content</SidePanel.Header>
       <SidePanel.Body>Body content</SidePanel.Body>
       <SidePanel.Footer>Footer content</SidePanel.Footer>
@@ -69,7 +69,7 @@ describe('SidePanel', () => {
       const user = userEvent.setup();
       const onOpenChange = vi.fn();
       render(
-        <SidePanel open={true} onOpenChange={onOpenChange}>
+        <SidePanel open={true} onOpenChange={onOpenChange} title="Test panel">
           <SidePanel.CloseButton />
         </SidePanel>
       );
@@ -146,7 +146,7 @@ describe('SidePanel', () => {
       const user = userEvent.setup();
       const onOpenChange = vi.fn();
       render(
-        <SidePanel open={true} onOpenChange={onOpenChange}>
+        <SidePanel open={true} onOpenChange={onOpenChange} title="Test panel">
           <SidePanel.Body>Content</SidePanel.Body>
         </SidePanel>
       );
@@ -159,7 +159,7 @@ describe('SidePanel', () => {
     it('does not break Radix click-outside behavior (dialog remains accessible after open)', () => {
       const onOpenChange = vi.fn();
       render(
-        <SidePanel open={true} onOpenChange={onOpenChange}>
+        <SidePanel open={true} onOpenChange={onOpenChange} title="Test panel">
           <SidePanel.Body>Content</SidePanel.Body>
         </SidePanel>
       );
@@ -175,7 +175,7 @@ describe('SidePanel', () => {
   describe('chrome classes', () => {
     it('.Header renders drawer-head class', () => {
       render(
-        <SidePanel open={true} onOpenChange={vi.fn()}>
+        <SidePanel open={true} onOpenChange={vi.fn()} title="Test panel">
           <SidePanel.Header />
         </SidePanel>
       );
@@ -184,7 +184,7 @@ describe('SidePanel', () => {
 
     it('.Tabs renders drawer-tabs class', () => {
       render(
-        <SidePanel open={true} onOpenChange={vi.fn()}>
+        <SidePanel open={true} onOpenChange={vi.fn()} title="Test panel">
           <SidePanel.Tabs />
         </SidePanel>
       );
@@ -193,7 +193,7 @@ describe('SidePanel', () => {
 
     it('.Body renders drawer-body class', () => {
       render(
-        <SidePanel open={true} onOpenChange={vi.fn()}>
+        <SidePanel open={true} onOpenChange={vi.fn()} title="Test panel">
           <SidePanel.Body />
         </SidePanel>
       );
@@ -202,7 +202,7 @@ describe('SidePanel', () => {
 
     it('.Footer renders drawer-foot class', () => {
       render(
-        <SidePanel open={true} onOpenChange={vi.fn()}>
+        <SidePanel open={true} onOpenChange={vi.fn()} title="Test panel">
           <SidePanel.Footer />
         </SidePanel>
       );
@@ -214,7 +214,7 @@ describe('SidePanel', () => {
   describe('className merging', () => {
     it('.Header merges custom className', () => {
       render(
-        <SidePanel open={true} onOpenChange={vi.fn()}>
+        <SidePanel open={true} onOpenChange={vi.fn()} title="Test panel">
           <SidePanel.Header className="custom-head" />
         </SidePanel>
       );
@@ -225,7 +225,7 @@ describe('SidePanel', () => {
 
     it('.Body merges custom className', () => {
       render(
-        <SidePanel open={true} onOpenChange={vi.fn()}>
+        <SidePanel open={true} onOpenChange={vi.fn()} title="Test panel">
           <SidePanel.Body className="custom-body" />
         </SidePanel>
       );

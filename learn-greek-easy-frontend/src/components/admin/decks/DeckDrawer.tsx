@@ -171,6 +171,7 @@ export function DeckDrawer() {
         size="wide"
         data-testid="deck-drawer"
         className="w-screen max-w-none md:w-[calc(100vw-2rem)] md:max-w-none xl:w-[1080px]"
+        title={deck?.name_en ?? 'Deck details'}
       >
         <SidePanel.CloseButton />
 

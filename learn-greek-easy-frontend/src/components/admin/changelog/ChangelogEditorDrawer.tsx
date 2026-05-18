@@ -255,7 +255,12 @@ export function ChangelogEditorDrawer({ open, onClose, entry }: ChangelogEditorD
 
   return (
     <TooltipProvider>
-      <SidePanel open={open} onOpenChange={handleOpenChange} data-testid="changelog-editor-drawer">
+      <SidePanel
+        open={open}
+        onOpenChange={handleOpenChange}
+        data-testid="changelog-editor-drawer"
+        title={entry ? 'Edit changelog entry' : 'Compose changelog entry'}
+      >
         {/* ── Header ─────────────────────────────────────────────────────── */}
         <SidePanel.Header>
           <div className="drawer-breadcrumb">Changelog</div>
