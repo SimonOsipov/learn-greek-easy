@@ -52,7 +52,7 @@ export const AnnouncementsToolbar: React.FC<AnnouncementsToolbarProps> = ({
           onChange={(e) => onQueryChange(e.target.value)}
           placeholder={t('announcements.toolbar.searchPlaceholder')}
           className="pl-9 pr-8"
-          data-testid="announcements-toolbar-search"
+          data-testid="announcement-search-input"
         />
         {query.length > 0 && (
           <button
@@ -60,6 +60,7 @@ export const AnnouncementsToolbar: React.FC<AnnouncementsToolbarProps> = ({
             aria-label="Clear search"
             onClick={() => onQueryChange('')}
             className="absolute right-2 flex items-center text-muted-foreground hover:text-foreground"
+            data-testid="announcement-search-clear"
           >
             <X className="h-4 w-4" />
           </button>

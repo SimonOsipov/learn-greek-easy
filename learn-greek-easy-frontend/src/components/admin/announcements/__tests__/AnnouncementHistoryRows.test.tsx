@@ -5,7 +5,13 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 import type { AnnouncementItem } from '@/services/adminAPI';
-import { AnnouncementHistoryRows, truncateMessage } from '../AnnouncementHistoryRows';
+import {
+  AnnouncementHistoryRows,
+  computeReadPct,
+  formatDateParts,
+  rateClass,
+  truncateMessage,
+} from '../AnnouncementHistoryRows';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -255,5 +261,93 @@ describe('AnnouncementHistoryRows', () => {
   it('disables Next button on last page', () => {
     render(<AnnouncementHistoryRows {...defaultProps} page={3} totalPages={3} />);
     expect(screen.getByTestId('pagination-next')).toBeDisabled();
+  });
+});
+
+// ── rateClass unit tests ───────────────────────────────────────────────────────
+
+describe('rateClass', () => {
+  it('rateClass(0) → is-zero', () => {
+    expect(rateClass(0)).toBe('is-zero');
+  });
+
+  it('rateClass(1) → is-ok', () => {
+    expect(rateClass(1)).toBe('is-ok');
+  });
+
+  it('rateClass(19) → is-ok', () => {
+    expect(rateClass(19)).toBe('is-ok');
+  });
+
+  it('rateClass(20) → is-good', () => {
+    expect(rateClass(20)).toBe('is-good');
+  });
+
+  it('rateClass(100) → is-good', () => {
+    expect(rateClass(100)).toBe('is-good');
+  });
+});
+
+// ── formatDateParts unit tests ────────────────────────────────────────────────
+
+describe('formatDateParts', () => {
+  it("formatDateParts('2026-03-03T15:46:00Z', 'en-US') → ['Mar 3', '2026']", () => {
+    expect(formatDateParts('2026-03-03T15:46:00Z', 'en-US')).toEqual(['Mar 3', '2026']);
+  });
+});
+
+// ── computeReadPct unit tests ──────────────────────────────────────────────────
+
+describe('computeReadPct', () => {
+  it('returns 0 when totalRecipients is 0', () => {
+    expect(computeReadPct(0, 0)).toBe(0);
+  });
+
+  it('rounds to nearest integer', () => {
+    // 5/20 = 25%
+    expect(computeReadPct(5, 20)).toBe(25);
+  });
+});
+
+// ── search empty state unit tests ─────────────────────────────────────────────
+
+describe('search empty state', () => {
+  it('renders search empty-state with query and "Clear search" button when list is empty', () => {
+    const onClearSearch = vi.fn();
+    render(
+      <AnnouncementHistoryRows
+        {...defaultProps}
+        announcements={[]}
+        isLoading={false}
+        searchQuery="foo"
+        onClearSearch={onClearSearch}
+      />
+    );
+
+    // Real i18n renders: No announcements match "foo"
+    const heading = screen.getByRole('heading', { level: 3 });
+    expect(heading.textContent).toContain('foo');
+
+    const clearBtn = screen.getByRole('button', { name: /clear search/i });
+    expect(clearBtn).toBeInTheDocument();
+  });
+
+  it('clicking the Clear search button calls onClearSearch once', async () => {
+    const user = userEvent.setup();
+    const onClearSearch = vi.fn();
+    render(
+      <AnnouncementHistoryRows
+        {...defaultProps}
+        announcements={[]}
+        isLoading={false}
+        searchQuery="foo"
+        onClearSearch={onClearSearch}
+      />
+    );
+
+    const clearBtn = screen.getByRole('button', { name: /clear search/i });
+    await user.click(clearBtn);
+
+    expect(onClearSearch).toHaveBeenCalledTimes(1);
   });
 });

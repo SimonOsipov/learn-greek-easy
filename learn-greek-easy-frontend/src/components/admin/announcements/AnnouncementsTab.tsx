@@ -27,6 +27,10 @@ import { useAdminAnnouncementStore } from '@/stores/adminAnnouncementStore';
 import { AnnouncementComposeDrawer } from './AnnouncementComposeDrawer';
 import { AnnouncementDetailsDrawer } from './AnnouncementDetailsDrawer';
 import { AnnouncementHistoryRows } from './AnnouncementHistoryRows';
+import {
+  ANNOUNCEMENTS_CLIENT_FETCH_PAGE_SIZE,
+  AVG_READ_RATE_HEALTHY_THRESHOLD,
+} from './announcementsConstants';
 import { AnnouncementsToolbar, type SortKey } from './AnnouncementsToolbar';
 
 /**
@@ -49,7 +53,7 @@ export const AnnouncementsTab: React.FC = () => {
 
   // ── Fetch on mount ────────────────────────────────────────────────────────
   useEffect(() => {
-    fetchAnnouncements(1, 100);
+    fetchAnnouncements(1, ANNOUNCEMENTS_CLIENT_FETCH_PAGE_SIZE);
   }, [fetchAnnouncements]);
 
   // ── URL state ─────────────────────────────────────────────────────────────
@@ -86,9 +90,7 @@ export const AnnouncementsTab: React.FC = () => {
   const displayedAnnouncements = useMemo(() => {
     const q = query.toLowerCase();
     const filtered = q
-      ? announcements.filter(
-          (a) => a.title.toLowerCase().includes(q) || a.message.toLowerCase().includes(q)
-        )
+      ? announcements.filter((a) => a.title.toLowerCase().includes(q))
       : announcements;
 
     return [...filtered].sort((a, b) => {
@@ -125,7 +127,7 @@ export const AnnouncementsTab: React.FC = () => {
 
   const withLinkCount = announcements.filter((a) => a.link_url != null && a.link_url !== '').length;
 
-  const readRateTone = avgReadRate >= 20 ? 'green' : 'amber';
+  const readRateTone = avgReadRate >= AVG_READ_RATE_HEALTHY_THRESHOLD ? 'green' : 'amber';
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (

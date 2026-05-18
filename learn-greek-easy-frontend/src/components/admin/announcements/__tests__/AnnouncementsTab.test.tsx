@@ -136,6 +136,16 @@ vi.mock('react-i18next', () => ({
         'pagination.previous': 'Previous',
         'pagination.next': 'Next',
         'pagination.pageOf': 'Page {{page}} of {{totalPages}}',
+        // Toolbar search
+        'announcements.toolbar.searchPlaceholder': 'Search',
+        'announcements.toolbar.emptySearch': 'No results for "{{query}}"',
+        'announcements.toolbar.clearSearch': 'Clear search',
+        // Sort
+        'announcements.toolbar.sortLabel': 'Sort',
+        'announcements.toolbar.sort.newest': 'Newest',
+        'announcements.toolbar.sort.oldest': 'Oldest',
+        'announcements.toolbar.sort.rateDesc': 'Rate ↓',
+        'announcements.toolbar.sort.rateAsc': 'Rate ↑',
       };
       return map[key] || key;
     },
@@ -457,5 +467,67 @@ describe('AnnouncementsTab', () => {
 
   it.skip('axe: details drawer has no accessibility violations', async () => {
     // Requires @axe-core/react wiring — deferred to ADMIN2-12 visual coverage pass
+  });
+
+  // ── avg read rate tone ────────────────────────────────────────────────────
+
+  describe('avg read rate tone', () => {
+    /**
+     * The avg read rate StatCard gets className `tone-amber` or `tone-green`
+     * depending on whether avgReadRate >= AVG_READ_RATE_HEALTHY_THRESHOLD (20).
+     * We locate it by its unique title text, then check the parent .stat-card wrapper.
+     */
+    function getAvgReadRateCard() {
+      // The StatCard title is rendered inside .stat-label — walk up to .stat-card
+      const titleEl = screen.getByText('Avg. Read Rate');
+      return titleEl.closest('.stat-card') as HTMLElement;
+    }
+
+    it('read=2 / total=20 (10%) → avg read rate tone is amber', () => {
+      setupStore(
+        buildStoreState({
+          announcements: [
+            {
+              ...sampleAnnouncements[0],
+              read_count: 2,
+              total_recipients: 20,
+            },
+          ],
+          total: 1,
+        })
+      );
+      renderTab();
+      const card = getAvgReadRateCard();
+      expect(card).toHaveClass('tone-amber');
+      expect(card).not.toHaveClass('tone-green');
+    });
+
+    it('read=5 / total=20 (25%) → avg read rate tone is green', () => {
+      setupStore(
+        buildStoreState({
+          announcements: [
+            {
+              ...sampleAnnouncements[0],
+              read_count: 5,
+              total_recipients: 20,
+            },
+          ],
+          total: 1,
+        })
+      );
+      renderTab();
+      const card = getAvgReadRateCard();
+      expect(card).toHaveClass('tone-green');
+      expect(card).not.toHaveClass('tone-amber');
+    });
+
+    it('read=0 / total=0 → tone is amber and no NaN in DOM', () => {
+      // buildStoreState defaults announcements=[] → totalRecipients=0 → avgReadRate=0
+      setupStore(buildStoreState({ announcements: [], total: 0 }));
+      const { container } = renderTab();
+      const card = getAvgReadRateCard();
+      expect(card).toHaveClass('tone-amber');
+      expect(container.textContent).not.toContain('NaN');
+    });
   });
 });
