@@ -116,25 +116,27 @@ export function AnnouncementDetailsDrawer({
 
         {/* ── Header ───────────────────────────────────────────────────── */}
         <SidePanel.Header>
-          <div className="drawer-breadcrumb">
-            {t('announcements.history.title')}
-            {announcement ? ` · ${t('announcements.v2.details.sent')} ${sentDate}` : ''}
-          </div>
-          <div className="drawer-head-row">
-            <h2 className="drawer-title">{announcement ? announcement.title : ''}</h2>
-          </div>
-          {announcement && (
-            <div className="drawer-meta">
-              <Badge tone="green">{t('announcements.v2.details.delivered')}</Badge>
-              <Badge tone={readPct >= 20 ? 'blue' : 'gray'}>
-                {readPct}% {t('announcements.v2.details.read')}
-              </Badge>
-              <span className="drawer-bcrumb">
-                {t('announcements.v2.details.by')}{' '}
-                {announcement.creator?.display_name ?? t('announcements.history.unknownAdmin')}
-              </span>
+          <div className="drawer-head-content">
+            <div className="drawer-breadcrumb">
+              {t('announcements.history.title')}
+              {announcement ? ` · ${t('announcements.v2.details.sent')} ${sentDate}` : ''}
             </div>
-          )}
+            <div className="drawer-head-row">
+              <h2 className="drawer-title">{announcement ? announcement.title : ''}</h2>
+            </div>
+            {announcement && (
+              <div className="drawer-meta">
+                <Badge tone="green">{t('announcements.v2.details.delivered')}</Badge>
+                <Badge tone={readPct >= 20 ? 'blue' : 'gray'}>
+                  {readPct}% {t('announcements.v2.details.read')}
+                </Badge>
+                <span className="drawer-bcrumb">
+                  {t('announcements.v2.details.by')}{' '}
+                  {announcement.creator?.display_name ?? t('announcements.history.unknownAdmin')}
+                </span>
+              </div>
+            )}
+          </div>
         </SidePanel.Header>
 
         {/* ── Body ─────────────────────────────────────────────────────── */}
