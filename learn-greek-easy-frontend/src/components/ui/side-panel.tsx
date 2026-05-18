@@ -49,7 +49,8 @@ function SidePanel({
   title,
   description,
 }: SidePanelProps) {
-  if (import.meta.env.DEV && !title) {
+  const safeTitle = title.trim() || 'Panel';
+  if (import.meta.env.DEV && !title.trim()) {
     // eslint-disable-next-line no-console
     console.error('[SidePanel] `title` prop is required for accessibility (screen readers).');
   }
@@ -82,7 +83,7 @@ function SidePanel({
             className={contentClass}
             {...(description ? {} : { 'aria-describedby': undefined })}
           >
-            <DialogPrimitive.Title className="sr-only">{title}</DialogPrimitive.Title>
+            <DialogPrimitive.Title className="sr-only">{safeTitle}</DialogPrimitive.Title>
             {description ? (
               <DialogPrimitive.Description className="sr-only">
                 {description}
