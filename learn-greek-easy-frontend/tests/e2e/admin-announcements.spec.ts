@@ -215,8 +215,13 @@ test.describe('Admin Announcements Drawer (ANND-10)', () => {
     await expect(page.getByTestId('admin-page')).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId('announcements-tab')).toBeVisible({ timeout: 10_000 });
 
-    // Wait for at least one row before capturing count
-    const rows = page.locator('[data-testid^="announcement-row-"]');
+    // Wait for at least one row before capturing count.
+    // Exclude the per-row trash button (`announcement-row-trash-<id>`) which
+    // shares the `announcement-row-` prefix — without `:not(...)` each row
+    // would count twice.
+    const rows = page.locator(
+      '[data-testid^="announcement-row-"]:not([data-testid*="trash"])'
+    );
     await expect(rows.first()).toBeVisible({ timeout: 10_000 });
 
     const initialCount = await rows.count();
