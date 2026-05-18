@@ -51,7 +51,7 @@ function HeaderSlot({ entry }: HeaderSlotProps) {
     <>
       <Badge tone={TONE_BY_TAG[entry.tag]}>{t(tagConfig.labelKey)}</Badge>
       {entry.version ? (
-        <span className="cl-version-pill" data-testid="version-pill">
+        <span className="cl-preview-v" data-testid="version-pill">
           {entry.version}
         </span>
       ) : null}
