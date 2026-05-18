@@ -11,7 +11,7 @@
 
 import { useEffect } from 'react';
 
-import { ExternalLink } from 'lucide-react';
+import { Bell, ExternalLink, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -269,7 +269,7 @@ export function AnnouncementDetailsDrawer({
             {/* Delete — glass, danger text; parent owns ConfirmDialog */}
             <button
               type="button"
-              className="btn-glass"
+              className="btn btn-glass"
               style={{ color: 'hsl(var(--destructive))' }}
               onClick={() => {
                 if (announcementId) onRequestDelete(announcementId);
@@ -277,6 +277,7 @@ export function AnnouncementDetailsDrawer({
               disabled={!announcement || isLoadingDetail}
               data-testid="announcement-details-delete-button"
             >
+              <Trash2 className="size-4" aria-hidden="true" />
               {t('announcements.delete.button')}
             </button>
 
@@ -285,10 +286,12 @@ export function AnnouncementDetailsDrawer({
               <TooltipTrigger asChild>
                 <button
                   type="button"
-                  className="btn-glass cursor-not-allowed opacity-60"
+                  className="btn btn-glass cursor-not-allowed opacity-60"
+                  data-testid="announcement-details-resend-button"
                   aria-disabled="true"
                   onClick={(e) => e.preventDefault()}
                 >
+                  <Bell className="size-4" aria-hidden="true" />
                   {t('announcements.v2.details.resendToUnread')}
                 </button>
               </TooltipTrigger>
