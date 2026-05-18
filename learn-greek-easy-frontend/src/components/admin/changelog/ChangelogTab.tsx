@@ -27,8 +27,25 @@ import { ChangelogDeleteDialog } from './ChangelogDeleteDialog';
 import { ChangelogEditorDrawer } from './ChangelogEditorDrawer';
 import { ChangelogTimeline } from './ChangelogTimeline';
 
-// Placeholder sparkline bars (9-bar, conventional shape)
-const SPARKLINE_BARS = [8, 12, 6, 14, 10, 16, 9, 13, 11];
+/**
+ * Bucket entries into `weeks` weekly slots (oldest → index 0, most recent → index weeks-1).
+ * Entries outside the window are ignored. Optional predicate filters entries before counting.
+ */
+function bucketByWeek(
+  items: ChangelogEntryAdmin[],
+  weeks: number = 9,
+  predicate?: (e: ChangelogEntryAdmin) => boolean
+): number[] {
+  const buckets = Array(weeks).fill(0);
+  const now = new Date();
+  for (const item of items) {
+    if (predicate && !predicate(item)) continue;
+    const ageMs = now.getTime() - new Date(item.created_at).getTime();
+    const ageWeeks = Math.floor(ageMs / (7 * 24 * 60 * 60 * 1000));
+    if (ageWeeks >= 0 && ageWeeks < weeks) buckets[weeks - 1 - ageWeeks]++;
+  }
+  return buckets;
+}
 
 /**
  * Compute average days between consecutive entries in the last 10 (sorted desc).
@@ -172,6 +189,10 @@ export function ChangelogTab() {
 
   const missingRuCount = items.filter((e) => !e.title_ru || !e.content_ru).length;
 
+  // ── Sparkline bars (derived per card) ─────────────────────────────────────
+  const totalBars = bucketByWeek(items);
+  const missingRuBars = bucketByWeek(items, 9, (e) => !e.title_ru || !e.content_ru);
+
   // ── Filter pipeline ───────────────────────────────────────────────────────
   const filteredBySearch = items.filter(
     (e) =>
@@ -207,7 +228,7 @@ export function ChangelogTab() {
           n={total || items.length}
           icon={<FileText />}
           tone="blue"
-          bars={SPARKLINE_BARS}
+          bars={totalBars}
           barsTestId="sparkline-total"
           footerLabel={t('admin:changelog.stats.footer.allTime')}
         />
@@ -223,7 +244,6 @@ export function ChangelogTab() {
           }
           icon={<Calendar />}
           tone="violet"
-          bars={SPARKLINE_BARS}
           barsTestId="sparkline-recent"
           footerLabel={t('admin:changelog.stats.footer.lastPublished')}
         />
@@ -237,7 +257,6 @@ export function ChangelogTab() {
           }
           icon={<Clock />}
           tone="cyan"
-          bars={SPARKLINE_BARS}
           barsTestId="sparkline-cadence"
           footerLabel={t('admin:changelog.stats.footer.lastTenEntries')}
         />
@@ -251,7 +270,7 @@ export function ChangelogTab() {
           }
           icon={<Languages />}
           tone="amber"
-          bars={SPARKLINE_BARS}
+          bars={missingRuBars}
           barsTestId="sparkline-missing-ru"
           footerLabel={t('admin:changelog.stats.footer.needsAttention')}
         />
