@@ -150,6 +150,13 @@ describe('ChangelogTimeline — version pill', () => {
     expect(pill.textContent).toBe('v1.2.0');
     expect(pill.textContent).not.toBe('vv1.2.0');
   });
+
+  // ── CLLP-10: version pill uses cl-preview-v class (renamed from cl-version-pill) ──
+  it('version pill element has class cl-preview-v', () => {
+    renderTimeline([makeEntry({ id: 'v-class', version: '3.1.0' })]);
+
+    expect(screen.getByTestId('version-pill').classList.contains('cl-preview-v')).toBe(true);
+  });
 });
 
 describe('ChangelogTimeline — Missing RU badge', () => {

@@ -603,6 +603,66 @@ describe('ChangelogTab', () => {
     });
   });
 
+  // ── CLLP-10: .va-panel wrapper (AC #2) ─────────────────────────────────────
+  describe('.va-panel wrapper', () => {
+    it('.va-panel wraps both the search toolbar and the timeline', () => {
+      mockItems = [makeEntry({ id: '1' })];
+      renderWithRouter();
+
+      const panel = document.querySelector('.va-panel');
+      expect(panel).not.toBeNull();
+      expect(panel!.contains(screen.getByTestId('changelog-search-input'))).toBe(true);
+      expect(panel!.contains(screen.getByTestId('changelog-timeline-mock'))).toBe(true);
+    });
+  });
+
+  // ── CLLP-10: Sparkline bars are derived (AC #2) ─────────────────────────────
+  describe('Sparkline bars derived from data', () => {
+    it('Total entries sparkline bars are computed from items (not the legacy hardcoded shape)', () => {
+      const legacyBars = [8, 12, 6, 14, 10, 16, 9, 13, 11];
+      const now = new Date();
+      const daysAgo = (d: number) =>
+        new Date(now.getTime() - d * 24 * 60 * 60 * 1000).toISOString();
+
+      mockItems = [
+        makeEntry({ id: 'a', created_at: daysAgo(2) }),
+        makeEntry({ id: 'b', created_at: daysAgo(10) }),
+        makeEntry({ id: 'c', created_at: daysAgo(25) }),
+      ];
+      renderWithRouter();
+
+      const barsEl = screen.getByTestId('sparkline-total');
+      const barSpans = barsEl.querySelectorAll('span');
+      expect(barSpans.length).toBe(9);
+
+      // Extract rendered heights (formula: value * 1.6 + 6)
+      const renderedHeights = Array.from(barSpans).map((s) =>
+        parseFloat((s as HTMLElement).style.height)
+      );
+      const legacyHeights = legacyBars.map((h) => h * 1.6 + 6);
+
+      expect(renderedHeights).not.toEqual(legacyHeights);
+    });
+
+    it('Most recent card has no .stat-bars element', () => {
+      mockItems = [makeEntry({ id: '1' })];
+      renderWithRouter();
+
+      // sparkline-recent test id absent (already asserted above)
+      // additionally verify the second .stat-card has no .stat-bars child
+      const cards = Array.from(document.querySelectorAll('.stat-card'));
+      expect(cards[1].querySelector('.stat-bars')).toBeNull();
+    });
+
+    it('Avg cadence card has no .stat-bars element', () => {
+      mockItems = [makeEntry({ id: '1' })];
+      renderWithRouter();
+
+      const cards = Array.from(document.querySelectorAll('.stat-card'));
+      expect(cards[2].querySelector('.stat-bars')).toBeNull();
+    });
+  });
+
   // ── Deep-link race fix (Fix #3) ────────────────────────────────────────────
   // The race: when isLoading=false AND items=[] simultaneously on mount, the old
   // guard `if (isLoading && items.length === 0) return` did NOT block. The fixed
