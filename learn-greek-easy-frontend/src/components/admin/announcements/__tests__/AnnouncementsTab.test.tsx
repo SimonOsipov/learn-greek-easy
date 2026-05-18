@@ -4,7 +4,7 @@
 // Covers: render, URL-driven drawer open/close, single tab-level ConfirmDialog,
 // and URL-strip idempotency (fetchAnnouncementDetail called exactly once).
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
@@ -40,6 +40,36 @@ vi.mock('@/services/adminAPI', () => ({
 vi.mock('@/lib/errorReporting', () => ({
   reportAPIError: vi.fn(),
 }));
+
+// ── Radix Select shim ─────────────────────────────────────────────────────────
+// Radix UI's <Select> does not work in jsdom (no pointer events, no hidden native
+// <select> outside a <form>). Replace with a lightweight native <select> shim so
+// the toolbar sort tests can drive sort changes via fireEvent.change.
+// Existing tests don't interact with the Select, so this shim is transparent to them.
+vi.mock('@/components/ui/select', () => {
+  const React = require('react');
+  const Select: React.FC<{
+    value?: string;
+    onValueChange?: (v: string) => void;
+    children?: React.ReactNode;
+  }> = ({ value, onValueChange, children }) => (
+    <select
+      value={value}
+      onChange={(e) => onValueChange?.(e.target.value)}
+      data-testid="select-shim"
+    >
+      {children}
+    </select>
+  );
+  const SelectTrigger: React.FC<{ children?: React.ReactNode; [k: string]: unknown }> = () => null;
+  const SelectValue: React.FC<{ [k: string]: unknown }> = () => null;
+  const SelectContent: React.FC<{ children?: React.ReactNode }> = ({ children }) => <>{children}</>;
+  const SelectItem: React.FC<{ value: string; children?: React.ReactNode }> = ({
+    value,
+    children,
+  }) => <option value={value}>{children}</option>;
+  return { Select, SelectTrigger, SelectValue, SelectContent, SelectItem };
+});
 
 // ── i18n mock ─────────────────────────────────────────────────────────────────
 
@@ -456,6 +486,180 @@ describe('AnnouncementsTab', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Delete Announcement')).toBeInTheDocument();
+    });
+  });
+
+  // ── toolbar — search + sort (ANLP-07) ────────────────────────────────────
+
+  describe('toolbar — search + sort', () => {
+    /**
+     * Five announcements with varied titles (mixed case), created_at, and
+     * read rates. Default sort is 'newest' → order: a5, a4, a2, a3, a1.
+     * "welcome" substring (case-insensitive) matches a1 + a3 only.
+     */
+    const FIXTURE = [
+      {
+        id: 'a1',
+        title: 'Welcome to Greeklish',
+        message: 'msg',
+        link_url: null,
+        total_recipients: 100,
+        read_count: 10,
+        created_at: '2026-01-01T00:00:00Z',
+        creator: { id: 'c1', display_name: 'Admin' },
+      },
+      {
+        id: 'a2',
+        title: 'March product update',
+        message: 'msg',
+        link_url: null,
+        total_recipients: 100,
+        read_count: 90,
+        created_at: '2026-03-01T00:00:00Z',
+        creator: { id: 'c1', display_name: 'Admin' },
+      },
+      {
+        id: 'a3',
+        title: 'welcome back promo',
+        message: 'msg',
+        link_url: null,
+        total_recipients: 100,
+        read_count: 50,
+        created_at: '2026-02-01T00:00:00Z',
+        creator: { id: 'c1', display_name: 'Admin' },
+      },
+      {
+        id: 'a4',
+        title: 'Holiday schedule',
+        message: 'msg',
+        link_url: null,
+        total_recipients: 100,
+        read_count: 25,
+        created_at: '2026-04-01T00:00:00Z',
+        creator: { id: 'c1', display_name: 'Admin' },
+      },
+      {
+        id: 'a5',
+        title: 'Beta announcement',
+        message: 'msg',
+        link_url: null,
+        total_recipients: 0,
+        read_count: 0,
+        created_at: '2026-05-01T00:00:00Z',
+        creator: { id: 'c1', display_name: 'Admin' },
+      },
+    ];
+
+    /** Extract visible row ids in DOM order, excluding trash-button testids. */
+    function getRowIds() {
+      return screen
+        .getAllByTestId(/^announcement-row-/)
+        .filter((el) => !el.getAttribute('data-testid')!.startsWith('announcement-row-trash-'))
+        .map((el) => el.getAttribute('data-testid')!.replace('announcement-row-', ''));
+    }
+
+    /**
+     * Change the sort value via the Select shim's native <select>.
+     * The Radix UI Select shim (vi.mock '@/components/ui/select') renders a
+     * plain native <select data-testid="select-shim"> so fireEvent.change works.
+     */
+    function changeSort(value: 'newest' | 'oldest' | 'rateDesc' | 'rateAsc') {
+      const sel = screen.getByTestId('select-shim');
+      fireEvent.change(sel, { target: { value } });
+    }
+
+    // (a) Search filter — type substring, only matching rows remain
+    it('(a) typing in search input filters rows by title substring, case-insensitive', async () => {
+      const user = userEvent.setup();
+      setupStore(buildStoreState({ announcements: FIXTURE, total: FIXTURE.length }));
+      renderTab();
+
+      // Wait for rows to render
+      await screen.findByTestId('announcement-row-a1');
+
+      await user.type(screen.getByTestId('announcement-search-input'), 'AlPhA');
+
+      // "alpha" matches a5 "Beta announcement"? No — matches nothing containing "alpha"
+      // Actually: a5 = "Beta announcement", a1 = "Welcome to Greeklish", a3 = "welcome back promo"
+      // "AlPhA" lowercased = "alpha" → no titles contain "alpha" → empty list expected
+      // Let's use "welcome" instead (matches a1 + a3 per spec)
+      // Re-clear and type the correct value
+      await user.clear(screen.getByTestId('announcement-search-input'));
+      await user.type(screen.getByTestId('announcement-search-input'), 'WeLcOmE');
+
+      const ids = getRowIds();
+      expect(ids).toHaveLength(2);
+      expect(ids).toContain('a1');
+      expect(ids).toContain('a3');
+      expect(ids).not.toContain('a2');
+      expect(ids).not.toContain('a4');
+      expect(ids).not.toContain('a5');
+    });
+
+    // (b) Clear-X restores all rows
+    it('(b) clicking the clear-X button restores all rows', async () => {
+      const user = userEvent.setup();
+      setupStore(buildStoreState({ announcements: FIXTURE, total: FIXTURE.length }));
+      renderTab();
+
+      await screen.findByTestId('announcement-row-a1');
+
+      await user.type(screen.getByTestId('announcement-search-input'), 'WeLcOmE');
+      // Only 2 rows visible after filter
+      expect(getRowIds()).toHaveLength(2);
+
+      await user.click(screen.getByTestId('announcement-search-clear'));
+
+      // All 5 rows restored
+      expect(getRowIds()).toHaveLength(5);
+    });
+
+    // (c) Oldest first sort
+    it('(c) selecting "oldest" sort orders rows by created_at ASC', () => {
+      setupStore(buildStoreState({ announcements: FIXTURE, total: FIXTURE.length }));
+      renderTab();
+
+      changeSort('oldest');
+
+      expect(getRowIds()).toEqual(['a1', 'a3', 'a2', 'a4', 'a5']);
+    });
+
+    // (d) Highest read rate sort (rateDesc) — a5 has 0/0 → rate 0 → goes last
+    it('(d) selecting "rateDesc" orders rows by read_count/total_recipients DESC', () => {
+      setupStore(buildStoreState({ announcements: FIXTURE, total: FIXTURE.length }));
+      renderTab();
+
+      changeSort('rateDesc');
+
+      // rates: a2=90%, a3=50%, a4=25%, a1=10%, a5=0% (0 recipients → rate 0)
+      expect(getRowIds()).toEqual(['a2', 'a3', 'a4', 'a1', 'a5']);
+    });
+
+    // (e) Filter before sort — subset filtered, then sorted oldest→newest
+    it('(e) filter + sort: filtered subset is then sorted correctly', async () => {
+      const user = userEvent.setup();
+      setupStore(buildStoreState({ announcements: FIXTURE, total: FIXTURE.length }));
+      renderTab();
+
+      await screen.findByTestId('announcement-row-a1');
+
+      // Type "welcome" → matches a1 (Jan) and a3 (Feb)
+      await user.type(screen.getByTestId('announcement-search-input'), 'welcome');
+
+      // Switch to oldest-first
+      changeSort('oldest');
+
+      // a1 (2026-01-01) before a3 (2026-02-01)
+      expect(getRowIds()).toEqual(['a1', 'a3']);
+    });
+
+    // (f) Mount fetch — fetchAnnouncements called with (1, 100)
+    it('(f) on mount fetchAnnouncements is called with (1, 100)', () => {
+      const state = setupStore(buildStoreState());
+      renderTab();
+
+      expect(state.fetchAnnouncements).toHaveBeenCalledWith(1, 100);
+      expect(state.fetchAnnouncements).toHaveBeenCalledTimes(1);
     });
   });
 
