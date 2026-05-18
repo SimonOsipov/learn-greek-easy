@@ -291,54 +291,54 @@ export function ChangelogEditorDrawer({ open, onClose, entry }: ChangelogEditorD
 
         {/* ── Tabs row ───────────────────────────────────────────────────── */}
         <SidePanel.Tabs>
-          <div className="drawer-tabs-inner">
-            {/* Left: Form / JSON mode toggle */}
-            <div className="drawer-tab-group" role="tablist">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={panelMode === 'form'}
-                className={cn('drawer-tab', panelMode === 'form' && 'is-active')}
-                onClick={() => setPanelMode('form')}
-                data-testid="changelog-editor-tab-form"
-              >
-                Form
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={panelMode === 'json'}
-                className={cn('drawer-tab', panelMode === 'json' && 'is-active')}
-                onClick={() => setPanelMode('json')}
-                data-testid="changelog-editor-tab-json"
-              >
-                JSON
-              </button>
-            </div>
+          {/* Left: Form / JSON mode toggle */}
+          <div className="drawer-tab-group" role="tablist">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={panelMode === 'form'}
+              className={cn('drawer-tab', panelMode === 'form' && 'is-active')}
+              onClick={() => setPanelMode('form')}
+              data-testid="changelog-editor-tab-form"
+            >
+              Form
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={panelMode === 'json'}
+              className={cn('drawer-tab', panelMode === 'json' && 'is-active')}
+              onClick={() => setPanelMode('json')}
+              data-testid="changelog-editor-tab-json"
+            >
+              JSON
+            </button>
+          </div>
 
-            {/* Right: EN / RU language tabs */}
-            <div className="drawer-tab-group" role="tablist">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={lang === 'en'}
-                className={cn('drawer-tab', lang === 'en' && 'is-active')}
-                onClick={() => setLang('en')}
-                data-testid="changelog-editor-tab-en"
-              >
-                EN
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={lang === 'ru'}
-                className={cn('drawer-tab', lang === 'ru' && 'is-active')}
-                onClick={() => setLang('ru')}
-                data-testid="changelog-editor-tab-ru"
-              >
-                RU
-              </button>
-            </div>
+          <div className="drawer-tabs-spacer" />
+
+          {/* Right: EN / RU language tabs */}
+          <div className="drawer-tab-group" role="tablist">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={lang === 'en'}
+              className={cn('drawer-tab', lang === 'en' && 'is-active')}
+              onClick={() => setLang('en')}
+              data-testid="changelog-editor-tab-en"
+            >
+              EN
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={lang === 'ru'}
+              className={cn('drawer-tab', lang === 'ru' && 'is-active')}
+              onClick={() => setLang('ru')}
+              data-testid="changelog-editor-tab-ru"
+            >
+              RU
+            </button>
           </div>
         </SidePanel.Tabs>
 
