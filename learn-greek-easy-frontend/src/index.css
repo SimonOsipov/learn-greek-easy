@@ -2385,6 +2385,15 @@
     font-weight: 500;
   }
 
+  /* ── Changelog panel toolbar (ADMIN2 / CLLP-06) ── */
+  .cl-panel-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    padding: 18px 20px 14px;
+  }
+
   /* ── Changelog timeline wrapper + month groups (ADMIN2 / CLTE-02) ── */
   .cl-timeline {
     display: flex;

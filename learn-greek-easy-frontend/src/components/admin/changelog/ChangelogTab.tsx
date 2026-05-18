@@ -257,24 +257,25 @@ export function ChangelogTab() {
         />
       </div>
 
-      {/* ── Toolbar: search + tag filter ─────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-3">
-        <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder={t('admin:changelog.search.entriesPlaceholder')}
-          className="w-64"
-          data-testid="changelog-search-input"
-        />
-        <SegControl options={tagOptions} value={selectedTag} onChange={setSelectedTag} />
-      </div>
+      {/* ── Panel: toolbar + timeline ────────────────────────────────────── */}
+      <div className="va-panel">
+        <div className="cl-panel-toolbar">
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t('admin:changelog.search.entriesPlaceholder')}
+            className="w-64"
+            data-testid="changelog-search-input"
+          />
+          <SegControl options={tagOptions} value={selectedTag} onChange={setSelectedTag} />
+        </div>
 
-      {/* ── Timeline ─────────────────────────────────────────────────────── */}
-      <ChangelogTimeline
-        entries={filtered}
-        onEdit={(id) => openEdit(id)}
-        onDelete={(id) => setDeleteCandidate(items.find((e) => e.id === id) ?? null)}
-      />
+        <ChangelogTimeline
+          entries={filtered}
+          onEdit={(id) => openEdit(id)}
+          onDelete={(id) => setDeleteCandidate(items.find((e) => e.id === id) ?? null)}
+        />
+      </div>
 
       {/* ── Editor Drawer ────────────────────────────────────────────────── */}
       <ChangelogEditorDrawer
