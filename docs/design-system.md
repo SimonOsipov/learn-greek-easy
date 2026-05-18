@@ -46,7 +46,7 @@ All colors stored as HSL channels (`221 83% 53%`) so `hsl(var(--x) / 0.12)` work
 |---|---|---|---|
 | `--primary` | `221 83% 53%` | `221 90% 65%` | Primary action, links, focus ring |
 | `--primary-2` | `221 83% 65%` | `221 90% 75%` | Gradient highlight on primary |
-| `--accent` | `280 92% 62%` | (same) | Electric violet accent |
+| `--accent` | `262 83% 58%` | (same) | Violet accent |
 | `--accent-2` | `188 95% 50%` | (same) | Cyan accent |
 | `--accent-3` | `32 100% 60%` | (same) | Burnt orange accent |
 | `--success` | `160 84% 39%` | (same) | Confirm, completion, "Got it" |
