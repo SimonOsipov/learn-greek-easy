@@ -273,4 +273,58 @@ describe('AnnouncementDetailsDrawer', () => {
     const resendBtn = screen.getByText('Resend to unread');
     expect(resendBtn.closest('button')).toHaveAttribute('aria-disabled', 'true');
   });
+
+  // ── Header DOM structure (ANDD-03) ────────────────────────────────────────
+
+  it('renders header children inside a .drawer-head-content wrapper in DOM order', () => {
+    const state = buildStoreState({ selectedAnnouncement: makeAnnouncement() });
+    setupStore(state);
+    render(<AnnouncementDetailsDrawer {...defaultProps} />);
+
+    const wrapper = document.querySelector('.drawer-head-content');
+    expect(wrapper).not.toBeNull();
+
+    const children = Array.from(wrapper!.children);
+    expect(children).toHaveLength(3);
+    expect(children[0].classList.contains('drawer-breadcrumb')).toBe(true);
+    expect(children[1].classList.contains('drawer-head-row')).toBe(true);
+    expect(children[2].classList.contains('drawer-meta')).toBe(true);
+  });
+
+  // ── Footer button classlists + icons (ANDD-04) ────────────────────────────
+
+  it('renders Delete button with btn + btn-glass classes and Trash2 icon', () => {
+    const state = buildStoreState({ selectedAnnouncement: makeAnnouncement() });
+    setupStore(state);
+    render(<AnnouncementDetailsDrawer {...defaultProps} />);
+
+    const deleteBtn = screen.getByTestId('announcement-details-delete-button');
+    expect(deleteBtn.classList.contains('btn')).toBe(true);
+    expect(deleteBtn.classList.contains('btn-glass')).toBe(true);
+    expect(deleteBtn.querySelector('svg')).not.toBeNull(); // Trash2 lucide svg
+  });
+
+  it('Delete button accessible name matches the testid-located element', () => {
+    const state = buildStoreState({ selectedAnnouncement: makeAnnouncement() });
+    setupStore(state);
+    render(<AnnouncementDetailsDrawer {...defaultProps} />);
+
+    const byTestId = screen.getByTestId('announcement-details-delete-button');
+    const byRole = screen.getByRole('button', { name: /delete/i });
+    expect(byRole).toBe(byTestId);
+  });
+
+  it('renders Resend button with btn + btn-glass + cursor-not-allowed + opacity-60 classes, Bell icon, and aria-disabled', () => {
+    const state = buildStoreState({ selectedAnnouncement: makeAnnouncement() });
+    setupStore(state);
+    render(<AnnouncementDetailsDrawer {...defaultProps} />);
+
+    const resendBtn = screen.getByTestId('announcement-details-resend-button');
+    expect(resendBtn.classList.contains('btn')).toBe(true);
+    expect(resendBtn.classList.contains('btn-glass')).toBe(true);
+    expect(resendBtn.classList.contains('cursor-not-allowed')).toBe(true);
+    expect(resendBtn.classList.contains('opacity-60')).toBe(true);
+    expect(resendBtn.getAttribute('aria-disabled')).toBe('true');
+    expect(resendBtn.querySelector('svg')).not.toBeNull(); // Bell lucide svg
+  });
 });
