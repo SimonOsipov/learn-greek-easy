@@ -77,6 +77,21 @@ export interface ContentStatsResponse {
 }
 
 /**
+ * Admin tab badge counts from the unified stats endpoint
+ */
+export interface AdminTabCountsResponse {
+  inbox: number;
+  decks: number;
+  news: number;
+  situations: number;
+  exercises: number;
+  errors: number;
+  feedback: number;
+  changelog: number;
+  announcements: number;
+}
+
+/**
  * Unified deck item for combined listing
  */
 export interface UnifiedDeckItem {
@@ -814,6 +829,15 @@ export const adminAPI = {
   getContentStats: async (): Promise<ContentStatsResponse> => {
     return api.get<ContentStatsResponse>('/api/v1/admin/stats');
   },
+
+  /**
+   * Get unified tab badge counts for the admin tab strip
+   *
+   * Returns aggregate counts for each admin tab section.
+   * Requires superuser authentication.
+   */
+  getAdminTabCounts: async (): Promise<AdminTabCountsResponse> =>
+    api.get<AdminTabCountsResponse>('/api/v1/admin/tab-counts'),
 
   /**
    * List all decks with search and pagination
