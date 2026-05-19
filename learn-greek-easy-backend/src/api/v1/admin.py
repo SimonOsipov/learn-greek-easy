@@ -81,6 +81,7 @@ from src.schemas.admin import (
     AdminCultureQuestionsResponse,
     AdminDeckListResponse,
     AdminStatsResponse,
+    AdminTabCountsResponse,
     ArticleCheckResponse,
     DialogLineDetail,
     DialogSpeakerDetail,
@@ -156,6 +157,7 @@ from src.schemas.word_entry import (
     AdminWordEntryCreateResponse,
     WordEntryResponse,
 )
+from src.services.admin_counts_service import AdminCountsService
 from src.services.announcement_service import AnnouncementService
 from src.services.audio_generation_service import DialogInput, get_audio_generation_service
 from src.services.card_error_admin_service import CardErrorAdminService
@@ -341,6 +343,46 @@ async def get_admin_stats(
         total_culture_decks=total_culture_decks,
         total_culture_questions=total_culture_questions,
     )
+
+
+@router.get(
+    "/tab-counts",
+    response_model=AdminTabCountsResponse,
+    summary="Get admin section-tab badge counts",
+    description=(
+        "Returns true totals for each badge on the /admin section-tab strip "
+        "(inbox, decks, news, situations, exercises, errors, feedback, "
+        "changelog, announcements). Computed in a single DB round-trip via "
+        "parallel COUNT queries. Superuser only."
+    ),
+    responses={
+        200: {
+            "description": "Tab badge counts retrieved successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "inbox": 5,
+                        "decks": 8,
+                        "news": 12,
+                        "situations": 4,
+                        "exercises": 2,
+                        "errors": 3,
+                        "feedback": 17,
+                        "changelog": 36,
+                        "announcements": 8,
+                    }
+                }
+            },
+        }
+    },
+)
+async def get_admin_tab_counts(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> AdminTabCountsResponse:
+    """Return aggregate counts for the admin section-tab badges."""
+    service = AdminCountsService()
+    return await service.get_tab_counts(db)
 
 
 @router.get(
