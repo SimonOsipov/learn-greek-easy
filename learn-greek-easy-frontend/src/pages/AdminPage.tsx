@@ -70,12 +70,10 @@ import type {
   UnifiedDeckItem,
   VocabularyDeckCreatePayload,
 } from '@/services/adminAPI';
-import { useAdminAnnouncementStore } from '@/stores/adminAnnouncementStore';
-import { useAdminCardErrorStore } from '@/stores/adminCardErrorStore';
 import { useAdminChangelogStore } from '@/stores/adminChangelogStore';
-import { useAdminFeedbackStore } from '@/stores/adminFeedbackStore';
 import { useAdminNewsStore } from '@/stores/adminNewsStore';
 import { useAdminSituationStore, selectStatsTotals } from '@/stores/adminSituationStore';
+import { useAdminTabCountsStore } from '@/stores/adminTabCountsStore';
 
 import { type AdminTabType, isValidTab } from './admin/types';
 
@@ -784,9 +782,14 @@ const AdminPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isRetrying, setIsRetrying] = useState(false);
 
-  // Store selectors for tab counts (paginated — page-local counts only).
-  // TODO(ADMIN2-03): wire real totals from a stats endpoint.
-  const newsCount = useAdminNewsStore((s) => s.newsItems.length);
+  // Tab badge counts from unified endpoint.
+  const tabCounts = useAdminTabCountsStore((s) => s.counts);
+  const fetchTabCounts = useAdminTabCountsStore((s) => s.fetchCounts);
+  useEffect(() => {
+    fetchTabCounts();
+  }, [fetchTabCounts]);
+
+  // Store selectors for data used in tab content (not tab badges).
   const newsTotal = useAdminNewsStore((s) => s.total);
   const newsAudio = useAdminNewsStore((s) => s.audioCount);
   const {
@@ -794,12 +797,7 @@ const AdminPage: React.FC = () => {
     draft: situationsDraft,
     ready: situationsReady,
   } = useAdminSituationStore(useShallow(selectStatsTotals));
-  const situationsCount = useAdminSituationStore((s) => s.situations.length);
-  const cardErrorsCount = useAdminCardErrorStore((s) => s.errorList.length);
-  const changelogCount = useAdminChangelogStore((s) => s.items.length);
   const openCompose = useAdminChangelogStore((s) => s.openCompose);
-  const announcementsCount = useAdminAnnouncementStore((s) => s.announcements.length);
-  const feedbackCount = useAdminFeedbackStore((s) => s.feedbackList.length);
 
   // Top-level tab state — derived from URL (ASHELL-06).
   // URL is the single source of truth; no useState needed, no dual-effect loop.
@@ -832,19 +830,18 @@ const AdminPage: React.FC = () => {
   const locale = i18n.language;
 
   // Tab configuration for SectionTabs.
-  // Counts reflect the currently-loaded page (paginated stores).
-  // TODO(ADMIN2-03): replace with totals from a stats endpoint.
+  // Counts come from the unified /admin/tab-counts endpoint.
   const tabsConfig: SectionTabItem[] = [
     { key: 'dashboard', label: t('tabs.dashboard'), count: 0 },
-    { key: 'inbox', label: t('tabs.inbox'), count: 0, tone: 'amber' },
-    { key: 'decks', label: t('tabs.decks'), count: stats?.total_decks ?? 0 },
-    { key: 'news', label: t('tabs.news'), count: newsCount },
-    { key: 'situations', label: t('tabs.situations'), count: situationsCount },
-    { key: 'exercises', label: t('tabs.exercises'), count: 0 },
-    { key: 'errors', label: t('tabs.errors'), count: cardErrorsCount },
-    { key: 'feedback', label: t('tabs.feedback'), count: feedbackCount },
-    { key: 'changelog', label: t('tabs.changelog'), count: changelogCount },
-    { key: 'announcements', label: t('tabs.announcements'), count: announcementsCount },
+    { key: 'inbox', label: t('tabs.inbox'), count: tabCounts?.inbox ?? 0, tone: 'amber' },
+    { key: 'decks', label: t('tabs.decks'), count: tabCounts?.decks ?? 0 },
+    { key: 'news', label: t('tabs.news'), count: tabCounts?.news ?? 0 },
+    { key: 'situations', label: t('tabs.situations'), count: tabCounts?.situations ?? 0 },
+    { key: 'exercises', label: t('tabs.exercises'), count: tabCounts?.exercises ?? 0 },
+    { key: 'errors', label: t('tabs.errors'), count: tabCounts?.errors ?? 0 },
+    { key: 'feedback', label: t('tabs.feedback'), count: tabCounts?.feedback ?? 0 },
+    { key: 'changelog', label: t('tabs.changelog'), count: tabCounts?.changelog ?? 0 },
+    { key: 'announcements', label: t('tabs.announcements'), count: tabCounts?.announcements ?? 0 },
   ];
 
   const fetchStats = async () => {
