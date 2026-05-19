@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
 import { adminAPI } from '@/services/adminAPI';
+import { refetchAdminTabCounts } from '@/stores/adminTabCountsStore';
 import type {
   SituationCreatePayload,
   SituationDetailResponse,
@@ -112,6 +113,7 @@ export const useAdminSituationStore = create<AdminSituationState>()(
           await adminAPI.createSituation(payload);
           set({ isCreating: false });
           await get().fetchSituations();
+          refetchAdminTabCounts();
         } catch (err) {
           set({ isCreating: false });
           throw err;
@@ -124,6 +126,7 @@ export const useAdminSituationStore = create<AdminSituationState>()(
           await adminAPI.deleteSituation(id);
           set({ isDeleting: false });
           await get().fetchSituations();
+          refetchAdminTabCounts();
         } catch (err) {
           set({
             error: err instanceof Error ? err.message : 'Failed to delete situation',

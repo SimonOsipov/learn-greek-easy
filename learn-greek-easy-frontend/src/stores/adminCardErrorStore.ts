@@ -11,6 +11,7 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
 import { adminAPI } from '@/services/adminAPI';
+import { refetchAdminTabCounts } from '@/stores/adminTabCountsStore';
 import type {
   AdminCardErrorResponse,
   AdminCardErrorUpdateRequest,
@@ -132,6 +133,9 @@ export const useAdminCardErrorStore = create<AdminCardErrorState>()(
             selectedError: state.selectedError?.id === errorId ? updatedError : state.selectedError,
             isUpdating: false,
           }));
+          // Any status transition (review/fix/dismiss) may move a row out of PENDING,
+          // decrementing `errors` and `inbox` in the tab counts.
+          refetchAdminTabCounts();
 
           return updatedError;
         } catch (error) {

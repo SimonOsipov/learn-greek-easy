@@ -12,6 +12,7 @@ import { devtools } from 'zustand/middleware';
 
 import type { AnnouncementItem, AnnouncementDetailResponse } from '@/services/adminAPI';
 import { adminAPI } from '@/services/adminAPI';
+import { refetchAdminTabCounts } from '@/stores/adminTabCountsStore';
 
 /**
  * Admin Announcement Store State Interface
@@ -115,6 +116,7 @@ export const useAdminAnnouncementStore = create<AdminAnnouncementState>()(
             announcements: state.announcements.filter((a) => a.id !== id),
             total: state.total - 1,
           }));
+          refetchAdminTabCounts();
         } finally {
           set({ isDeleting: false });
         }
