@@ -13,6 +13,7 @@ Security layers:
 from datetime import datetime, timezone
 from time import perf_counter
 from typing import Optional
+from uuid import uuid4
 
 from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, EmailStr
@@ -27,7 +28,15 @@ from src.core.exceptions import (
 )
 from src.core.logging import get_logger
 from src.db.dependencies import get_db
-from src.db.models import NewsItem
+from src.db.models import (
+    CardErrorCardType,
+    CardErrorReport,
+    CardErrorStatus,
+    Feedback,
+    FeedbackCategory,
+    FeedbackStatus,
+    NewsItem,
+)
 from src.repositories.user import UserRepository
 from src.schemas.seed import SeedRequest, SeedResultResponse, SeedStatusResponse
 from src.services.seed_service import SeedService
@@ -940,4 +949,113 @@ async def gamification_near_threshold(
         current_value=result["current_value"],
         threshold=result["threshold"],
         reviews_truncated=result["reviews_truncated"],
+    )
+
+
+@router.post(
+    "/feedback",
+    response_model=SeedResultResponse,
+    summary="Seed a feedback item",
+    description="Create one Feedback row (status=NEW) for E2E testing. "
+    "Requires test users to be seeded first.",
+    dependencies=[Depends(verify_seed_access)],
+)
+async def seed_feedback(
+    db: AsyncSession = Depends(get_db),
+) -> SeedResultResponse:
+    """Create a single Feedback row for E2E testing.
+
+    Creates one Feedback item with status=NEW attributed to e2e_learner.
+    Requires /seed/all or /seed/users to have run first.
+
+    Returns:
+        SeedResultResponse with the created feedback id.
+    """
+    start_time = perf_counter()
+
+    user_repo = UserRepository(db)
+    learner = await user_repo.get_by_email("e2e_learner@test.com")
+
+    if not learner:
+        return SeedResultResponse(
+            success=False,
+            operation="feedback",
+            timestamp=datetime.now(timezone.utc),
+            duration_ms=(perf_counter() - start_time) * 1000,
+            results={"error": "e2e_learner@test.com not found. Run /seed/users first."},
+        )
+
+    feedback = Feedback(
+        user_id=learner.id,
+        title="E2E test feedback item",
+        description="Created by /test/seed/feedback for E2E badge regression testing.",
+        category=FeedbackCategory.FEATURE_REQUEST,
+        status=FeedbackStatus.NEW,
+    )
+    db.add(feedback)
+    await db.flush()
+    await db.commit()
+
+    duration_ms = (perf_counter() - start_time) * 1000
+    return SeedResultResponse(
+        success=True,
+        operation="feedback",
+        timestamp=datetime.now(timezone.utc),
+        duration_ms=duration_ms,
+        results={"id": str(feedback.id)},
+    )
+
+
+@router.post(
+    "/card-error",
+    response_model=SeedResultResponse,
+    summary="Seed a pending card error report",
+    description="Create one CardErrorReport row (status=PENDING) for E2E testing. "
+    "Requires test users to be seeded first.",
+    dependencies=[Depends(verify_seed_access)],
+)
+async def seed_card_error(
+    db: AsyncSession = Depends(get_db),
+) -> SeedResultResponse:
+    """Create a single CardErrorReport row for E2E testing.
+
+    Creates one CardErrorReport with status=PENDING attributed to e2e_learner.
+    Uses a random UUID for card_id (no FK constraint on that column).
+    Requires /seed/all or /seed/users to have run first.
+
+    Returns:
+        SeedResultResponse with the created report id.
+    """
+    start_time = perf_counter()
+
+    user_repo = UserRepository(db)
+    learner = await user_repo.get_by_email("e2e_learner@test.com")
+
+    if not learner:
+        return SeedResultResponse(
+            success=False,
+            operation="card-error",
+            timestamp=datetime.now(timezone.utc),
+            duration_ms=(perf_counter() - start_time) * 1000,
+            results={"error": "e2e_learner@test.com not found. Run /seed/users first."},
+        )
+
+    report = CardErrorReport(
+        user_id=learner.id,
+        card_type=CardErrorCardType.WORD,
+        card_id=uuid4(),
+        description="E2E test card error report — pending admin review.",
+        status=CardErrorStatus.PENDING,
+    )
+    db.add(report)
+    await db.flush()
+    await db.commit()
+
+    duration_ms = (perf_counter() - start_time) * 1000
+    return SeedResultResponse(
+        success=True,
+        operation="card-error",
+        timestamp=datetime.now(timezone.utc),
+        duration_ms=duration_ms,
+        results={"id": str(report.id)},
     )
