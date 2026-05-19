@@ -60,8 +60,6 @@ const STRINGS: Record<string, string> = {
   'feedback.sub': 'Review, respond, and track community feedback.',
   'feedback.breadcrumb.dashboard': 'Admin',
   'feedback.breadcrumb.current': 'Feedback',
-  'feedback.actions.exportCsv': 'Export CSV',
-  'feedback.actions.sendMassUpdate': 'Send mass update',
   // changelog
   'changelog.title': 'Changelog',
   'changelog.kicker': 'Changelog',
@@ -186,10 +184,10 @@ describe('pageHeadPropsFor — situations branch', () => {
 });
 
 describe('pageHeadPropsFor — feedback branch', () => {
-  it('returns feedback shape with actions', () => {
+  it('returns feedback shape without actions', () => {
     const r = pageHeadPropsFor('feedback', mockT);
     expect(r.title).toBe('Feedback');
-    expect(r.actions).toBeDefined();
+    expect(r.actions).toBeUndefined();
     expect(r.breadcrumb![1].label).toBe('Feedback');
   });
 });

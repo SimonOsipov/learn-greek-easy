@@ -8,6 +8,9 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 
+import { formatDistanceToNow } from 'date-fns';
+import { el } from 'date-fns/locale/el';
+import { ru } from 'date-fns/locale/ru';
 import {
   AlertCircle,
   Bell,
@@ -119,8 +122,19 @@ function matchSearch(item: AdminFeedbackItem, query: string): boolean {
  *  - Pagination footer (preserved from v1)
  */
 export const AdminFeedbackSection: React.FC = () => {
-  const { t } = useTranslation('admin');
+  const { t, i18n } = useTranslation('admin');
   const { toast } = useToast();
+
+  const getDateLocale = () => {
+    switch (i18n.language) {
+      case 'el':
+        return el;
+      case 'ru':
+        return ru;
+      default:
+        return undefined;
+    }
+  };
 
   // ── Store ─────────────────────────────────────────────────────────────────
   const {
@@ -320,6 +334,13 @@ export const AdminFeedbackSection: React.FC = () => {
   const awaitingCount = Math.max(0, feedbackList.length - respondedCount);
   const pageVotesSum = feedbackList.reduce((acc, f) => acc + (f.vote_count ?? 0), 0);
 
+  const oldestAwaitingAt = feedbackList
+    .filter((f) => !f.admin_response || f.admin_response === '')
+    .reduce<Date | undefined>((min, f) => {
+      const d = new Date(f.created_at);
+      return !min || d < min ? d : min;
+    }, undefined);
+
   // ── Filter active check ───────────────────────────────────────────────────
   const hasActiveFilters = statusSeg !== 'all' || typeSeg !== 'all' || debouncedSearch !== '';
 
@@ -362,6 +383,16 @@ export const AdminFeedbackSection: React.FC = () => {
         <StatCard
           title={t('feedback.v2.statCards.awaiting.label')}
           n={awaitingCount}
+          sub={
+            awaitingCount > 0 && oldestAwaitingAt
+              ? t('feedback.v2.statCards.awaiting.sub', {
+                  distance: formatDistanceToNow(oldestAwaitingAt, {
+                    addSuffix: true,
+                    locale: getDateLocale(),
+                  }),
+                })
+              : undefined
+          }
           icon={<Bell />}
           tone={awaitingCount > 0 ? 'amber' : 'green'}
         />

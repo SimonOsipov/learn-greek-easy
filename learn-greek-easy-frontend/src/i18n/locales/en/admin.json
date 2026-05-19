@@ -683,10 +683,6 @@
     "kicker": "Admin · Feedback",
     "title": "Feedback",
     "sub": "Review, respond, and track community feedback.",
-    "actions": {
-      "exportCsv": "Export CSV",
-      "sendMassUpdate": "Send mass update"
-    },
     "stats": {
       "total": "Total Feedback",
       "new": "New",
@@ -811,7 +807,8 @@
           "sub": "{{newCount}} new · {{respondedCount}} responded"
         },
         "awaiting": {
-          "label": "Awaiting response"
+          "label": "Awaiting response",
+          "sub": "oldest {{distance}}"
         },
         "communityVotes": {
           "label": "Community votes",

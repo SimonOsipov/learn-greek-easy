@@ -19,7 +19,6 @@ import {
   RefreshCw,
   Rss,
   Search,
-  Send,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
@@ -657,40 +656,6 @@ export function pageHeadPropsFor(
         kicker: <Kicker dot="primary">{t('feedback.kicker')}</Kicker>,
         title: t('feedback.title'),
         sub: t('feedback.sub'),
-        actions: (
-          <TooltipProvider>
-            <div className="flex items-center gap-2">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    aria-disabled="true"
-                    onClick={(e) => e.preventDefault()}
-                    className="btn-glass cursor-not-allowed opacity-60"
-                  >
-                    <Download className="size-4" aria-hidden="true" />
-                    {t('feedback.actions.exportCsv')}
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>{t('comingSoon')}</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    aria-disabled="true"
-                    onClick={(e) => e.preventDefault()}
-                    className="btn-glass cursor-not-allowed opacity-60"
-                  >
-                    <Send className="size-4" aria-hidden="true" />
-                    {t('feedback.actions.sendMassUpdate')}
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>{t('comingSoon')}</TooltipContent>
-              </Tooltip>
-            </div>
-          </TooltipProvider>
-        ),
         titleTestId: 'admin-title' as const,
         subTestId: 'admin-subtitle' as const,
       };
