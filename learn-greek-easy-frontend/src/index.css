@@ -2202,6 +2202,10 @@
     flex-direction: column;
     gap: 8px;
   }
+  .fb-card-clickable {
+    display: contents;
+    cursor: pointer;
+  }
   .fb-card-reply {
     margin-top: 8px;
     padding: 10px 12px;
