@@ -49,12 +49,12 @@ vi.mock('react-i18next', () => ({
         'feedback.v2.filters.type.all': 'All',
         'feedback.v2.filters.type.bug': 'Bug',
         'feedback.v2.filters.type.feature': 'Feature',
-        'feedback.v2.filters.type.compliment': 'Compliment',
+        'feedback.v2.filters.status.label': 'Status',
+        'feedback.v2.filters.type.label': 'Type',
         'feedback.v2.filters.search.placeholder': 'Search feedback...',
         'feedback.v2.filters.clear': 'Clear filters',
         // v2 empty states
         'feedback.v2.emptyStates.noMatch': 'No feedback matches your filters',
-        'feedback.v2.emptyStates.compliments': 'No compliments yet',
         // v2 toasts
         'feedback.v2.toasts.deepLinkNotFound': 'Feedback item not found on this page',
         // v1 keys still referenced
@@ -72,6 +72,7 @@ vi.mock('react-i18next', () => ({
         'feedback.search.placeholder': 'Search feedback...',
         'feedback.states.noFeedback': 'No feedback submitted yet',
         'feedback.states.noFilteredResults': 'No feedback matches the selected filters',
+        'feedback.deleteAction': 'Delete',
         'feedback.delete.button': 'Delete',
         'feedback.delete.title': 'Delete Feedback',
         'feedback.delete.warning': 'This will permanently delete this feedback item.',

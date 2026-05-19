@@ -743,6 +743,7 @@
       "noFeedback": "No feedback submitted yet",
       "noFilteredResults": "No feedback matches the selected filters"
     },
+    "deleteAction": "Delete",
     "delete": {
       "button": "Delete",
       "title": "Delete Feedback",
@@ -782,6 +783,37 @@
         "adminResponseLabel": "✓ Admin response"
       },
       "drawer": {
+        "tabs": { "reply": "Reply", "thread": "Thread", "meta": "Meta" },
+        "status": {
+          "new": "New",
+          "investigating": "Investigating",
+          "planned": "Planned",
+          "in_progress": "In progress",
+          "responded": "Responded",
+          "shipped": "Shipped",
+          "wont_fix": "Won't fix",
+          "duplicate": "Duplicate"
+        },
+        "quickReplies": {
+          "thanksNoted": "Thanks — noted",
+          "plannedNext": "Planned for next release",
+          "needInfo": "Need more info",
+          "alreadyShipped": "Already shipped",
+          "wontFix": "Won't fix — explain"
+        },
+        "quickRepliesGroup": "Quick replies",
+        "responseHintSuffix": " — public, learner will see this verbatim",
+        "saveNotice": "Saving will notify {{name}} in-app",
+        "theUser": "the user",
+        "footer": { "ready": "Ready", "noReplyYet": "No reply yet" },
+        "saving": "Saving…",
+        "comingSoon": "Coming soon",
+        "draftWithAi": "⚡ Draft with AI",
+        "admin": "Admin",
+        "notFound": "Feedback not found.",
+        "close": "Close",
+        "title": "Feedback details",
+        "headerPrefix": "Feedback · #",
         "thread": {
           "empty": "No reply yet — switch to the Reply tab."
         },
@@ -817,6 +849,7 @@
       },
       "filters": {
         "status": {
+          "label": "Status",
           "all": "All",
           "open": "Open",
           "new": "New",
@@ -826,10 +859,10 @@
           "wont_fix": "Won't fix"
         },
         "type": {
+          "label": "Type",
           "all": "All",
           "bug": "Bug",
-          "feature": "Feature",
-          "compliment": "Compliment"
+          "feature": "Feature"
         },
         "search": {
           "placeholder": "Search feedback..."
@@ -837,8 +870,7 @@
         "clear": "Clear filters"
       },
       "emptyStates": {
-        "noMatch": "No feedback matches your filters",
-        "compliments": "No compliments yet — backend support coming"
+        "noMatch": "No feedback matches your filters"
       },
       "toasts": {
         "deepLinkNotFound": "Feedback item not found on this page"

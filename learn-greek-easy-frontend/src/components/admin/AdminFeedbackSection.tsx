@@ -57,7 +57,7 @@ function useDebounce<T>(value: T, delay: number): T {
 // ── Seg filter types ───────────────────────────────────────────────────────────
 
 type StatusSeg = 'all' | 'open' | 'new' | 'investigating' | 'planned' | 'responded' | 'wont_fix';
-type TypeSeg = 'all' | 'bug' | 'feature' | 'compliment';
+type TypeSeg = 'all' | 'bug' | 'feature';
 
 // ── Client-side filter helpers ─────────────────────────────────────────────────
 
@@ -94,9 +94,6 @@ function applyTypeSeg(list: AdminFeedbackItem[], seg: TypeSeg): AdminFeedbackIte
       return list.filter((f) => f.category === 'bug_incorrect_data');
     case 'feature':
       return list.filter((f) => f.category === 'feature_request');
-    case 'compliment':
-      // Backend has no compliment category — always empty
-      return [];
   }
 }
 
@@ -179,7 +176,7 @@ export const AdminFeedbackSection: React.FC = () => {
 
   const [typeSeg, setTypeSeg] = useState<TypeSeg>(() => {
     const v = searchParams.get('type');
-    const valid: TypeSeg[] = ['all', 'bug', 'feature', 'compliment'];
+    const valid: TypeSeg[] = ['all', 'bug', 'feature'];
     return valid.includes(v as TypeSeg) ? (v as TypeSeg) : 'all';
   });
 
@@ -323,9 +320,6 @@ export const AdminFeedbackSection: React.FC = () => {
     ? afterType.filter((f) => matchSearch(f, debouncedSearch))
     : afterType;
 
-  // 5. Compliments placeholder branch
-  const showComplimentsPlaceholder = typeSeg === 'compliment' && visible.length === 0;
-
   // ── Page-scoped stat math ─────────────────────────────────────────────────
   const newCount = feedbackList.filter((f) => f.status === 'new').length;
   const respondedCount = feedbackList.filter(
@@ -365,7 +359,6 @@ export const AdminFeedbackSection: React.FC = () => {
     { value: 'all' as TypeSeg, label: t('feedback.v2.filters.type.all') },
     { value: 'bug' as TypeSeg, label: t('feedback.v2.filters.type.bug') },
     { value: 'feature' as TypeSeg, label: t('feedback.v2.filters.type.feature') },
-    { value: 'compliment' as TypeSeg, label: t('feedback.v2.filters.type.compliment') },
   ];
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -411,14 +404,14 @@ export const AdminFeedbackSection: React.FC = () => {
           options={STATUS_OPTIONS}
           value={statusSeg}
           onChange={setStatusSeg}
-          label={t('feedback.v2.filters.status.all')}
+          ariaLabel={t('feedback.v2.filters.status.label')}
         />
 
         <SegControl
           options={TYPE_OPTIONS}
           value={typeSeg}
           onChange={setTypeSeg}
-          label={t('feedback.v2.filters.type.all')}
+          ariaLabel={t('feedback.v2.filters.type.label')}
         />
 
         <div className="relative min-w-[200px] flex-1">
@@ -485,11 +478,7 @@ export const AdminFeedbackSection: React.FC = () => {
       {/* ── Feedback List ──────────────────────────────────────────────────── */}
       {!isLoading && !error && (
         <>
-          {showComplimentsPlaceholder ? (
-            <p className="py-8 text-center text-muted-foreground">
-              {t('feedback.v2.emptyStates.compliments')}
-            </p>
-          ) : visible.length === 0 ? (
+          {visible.length === 0 ? (
             <p className="py-8 text-center text-muted-foreground">
               {hasActiveFilters
                 ? t('feedback.v2.emptyStates.noMatch')

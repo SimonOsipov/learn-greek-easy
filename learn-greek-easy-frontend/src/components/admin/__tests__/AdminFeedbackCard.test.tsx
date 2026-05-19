@@ -26,7 +26,7 @@ vi.mock('react-i18next', () => ({
         'feedback.editResponse': 'Edit Response',
         'feedback.v2.card.openReply': opts?.title ? `Open reply for ${opts.title}` : 'Open reply',
         'feedback.v2.card.adminResponseLabel': '✓ Admin response',
-        'feedback.delete': 'Delete',
+        'feedback.deleteAction': 'Delete',
         'feedback.category.bug': 'Bug',
         'feedback.category.featureRequest': 'Feature request',
         'feedback.status.new': 'New',

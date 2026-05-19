@@ -34,6 +34,7 @@ vi.mock('react-i18next', () => ({
         'feedback.v2.statCards.communityVotes.label': 'Community votes',
         'feedback.v2.statCards.communityVotes.sub': 'upvotes on this page',
         // filters
+        'feedback.v2.filters.status.label': 'Status',
         'feedback.v2.filters.status.all': 'All',
         'feedback.v2.filters.status.open': 'Open',
         'feedback.v2.filters.status.new': 'New',
@@ -41,15 +42,14 @@ vi.mock('react-i18next', () => ({
         'feedback.v2.filters.status.planned': 'Planned',
         'feedback.v2.filters.status.responded': 'Responded',
         'feedback.v2.filters.status.wont_fix': "Won't fix",
+        'feedback.v2.filters.type.label': 'Type',
         'feedback.v2.filters.type.all': 'All',
         'feedback.v2.filters.type.bug': 'Bug',
         'feedback.v2.filters.type.feature': 'Feature',
-        'feedback.v2.filters.type.compliment': 'Compliment',
         'feedback.v2.filters.search.placeholder': 'Search feedback...',
         'feedback.v2.filters.clear': 'Clear filters',
         // empty states
         'feedback.v2.emptyStates.noMatch': 'No feedback matches your filters',
-        'feedback.v2.emptyStates.compliments': 'No compliments yet — backend support coming',
         // toasts
         'feedback.v2.toasts.deepLinkNotFound': 'Feedback item not found on this page',
         // v1 keys still referenced
@@ -270,33 +270,14 @@ describe('AdminFeedbackSection', () => {
   // ── Type SegControl ────────────────────────────────────────────────────────
 
   describe('Type SegControl', () => {
-    it('renders 4 type options (all, bug, feature, compliment)', () => {
+    it('renders 3 type options (all, bug, feature)', () => {
       buildMockState([]);
 
       renderSection();
 
       expect(screen.getByText('Bug')).toBeInTheDocument();
       expect(screen.getByText('Feature')).toBeInTheDocument();
-      expect(screen.getByText('Compliment')).toBeInTheDocument();
-    });
-
-    it('compliment type shows the "No compliments yet" placeholder', async () => {
-      const user = userEvent.setup();
-      buildMockState([makeFeedback({ category: 'feature_request' })]);
-
-      renderSection();
-
-      const complimentBtn = screen
-        .getAllByRole('button')
-        .find(
-          (btn) =>
-            btn.classList.contains('news-seg-btn') && btn.textContent?.trim() === 'Compliment'
-        );
-      await user.click(complimentBtn!);
-
-      await waitFor(() => {
-        expect(screen.getByText('No compliments yet — backend support coming')).toBeInTheDocument();
-      });
+      expect(screen.queryByText('Compliment')).not.toBeInTheDocument();
     });
   });
 

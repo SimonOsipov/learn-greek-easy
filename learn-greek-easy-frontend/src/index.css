@@ -2214,6 +2214,10 @@
     color: hsl(var(--fg-2));
     border-radius: 0 var(--radius) var(--radius) 0;
   }
+  .fb-card-reply-label {
+    display: block;
+    margin-bottom: 4px;
+  }
   .fb-card-foot {
     display: flex;
     align-items: center;

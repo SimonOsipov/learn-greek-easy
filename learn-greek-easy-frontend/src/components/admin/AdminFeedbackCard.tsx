@@ -174,7 +174,7 @@ export const AdminFeedbackCard: React.FC<AdminFeedbackCardProps> = ({
             variant="ghost"
             size="icon"
             data-testid={`delete-feedback-${feedback.id}`}
-            aria-label={t('feedback.delete')}
+            aria-label={t('feedback.deleteAction')}
             onClick={(e) => {
               e.stopPropagation();
               onDelete(feedback.id);

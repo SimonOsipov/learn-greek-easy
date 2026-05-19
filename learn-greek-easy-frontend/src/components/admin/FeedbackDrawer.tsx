@@ -53,53 +53,56 @@ export interface FeedbackDrawerProps {
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
+// Labels are i18n keys — translated at render via t(label)
 const TABS: { value: FeedbackDrawerInnerTab; label: string }[] = [
-  { value: 'reply', label: 'Reply' },
-  { value: 'thread', label: 'Thread' },
-  { value: 'meta', label: 'Meta' },
+  { value: 'reply', label: 'feedback.v2.drawer.tabs.reply' },
+  { value: 'thread', label: 'feedback.v2.drawer.tabs.thread' },
+  { value: 'meta', label: 'feedback.v2.drawer.tabs.meta' },
 ];
 
 // Tones for the .fb-status-dot CSS (data-tone attribute values defined in index.css)
 type DotTone = 'primary' | 'amber' | 'violet' | 'cyan' | 'success' | 'gray';
 
+// Labels are i18n keys — translated at render via t(s.label)
 const STATUS_PICKER: ReadonlyArray<{ key: HandoffStatus; label: string; dotTone: DotTone }> = [
-  { key: 'new', label: 'New', dotTone: 'primary' },
-  { key: 'investigating', label: 'Investigating', dotTone: 'amber' },
-  { key: 'planned', label: 'Planned', dotTone: 'violet' },
-  { key: 'in_progress', label: 'In progress', dotTone: 'cyan' },
-  { key: 'responded', label: 'Responded', dotTone: 'success' },
-  { key: 'shipped', label: 'Shipped', dotTone: 'success' },
-  { key: 'wont_fix', label: "Won't fix", dotTone: 'gray' },
-  { key: 'duplicate', label: 'Duplicate', dotTone: 'gray' },
+  { key: 'new', label: 'feedback.v2.drawer.status.new', dotTone: 'primary' },
+  { key: 'investigating', label: 'feedback.v2.drawer.status.investigating', dotTone: 'amber' },
+  { key: 'planned', label: 'feedback.v2.drawer.status.planned', dotTone: 'violet' },
+  { key: 'in_progress', label: 'feedback.v2.drawer.status.in_progress', dotTone: 'cyan' },
+  { key: 'responded', label: 'feedback.v2.drawer.status.responded', dotTone: 'success' },
+  { key: 'shipped', label: 'feedback.v2.drawer.status.shipped', dotTone: 'success' },
+  { key: 'wont_fix', label: 'feedback.v2.drawer.status.wont_fix', dotTone: 'gray' },
+  { key: 'duplicate', label: 'feedback.v2.drawer.status.duplicate', dotTone: 'gray' },
 ] as const;
 
 // STATUS_TONE is imported from ./feedbackStatusMap (single source of truth)
 
-// Derived from STATUS_PICKER — single source of truth for status display labels.
+// Derived from STATUS_PICKER — keys for status display labels (translated at render via t(...))
 const HANDOFF_LABEL = Object.fromEntries(STATUS_PICKER.map((s) => [s.key, s.label])) as Record<
   HandoffStatus,
   string
 >;
 
+// Labels are i18n keys — translated at render via t(r.label). text stays English.
 const QUICK_REPLIES: ReadonlyArray<{ label: string; text: string }> = [
   {
-    label: 'Thanks — noted',
+    label: 'feedback.v2.drawer.quickReplies.thanksNoted',
     text: "Thanks for the report! We've logged this — will update you when it's looked at.",
   },
   {
-    label: 'Planned for next release',
+    label: 'feedback.v2.drawer.quickReplies.plannedNext',
     text: "This is on the roadmap for the next minor release. We'll ping you when it ships.",
   },
   {
-    label: 'Need more info',
+    label: 'feedback.v2.drawer.quickReplies.needInfo',
     text: 'Could you share the device + OS version, and which screen this happened on? That helps us reproduce.',
   },
   {
-    label: 'Already shipped',
+    label: 'feedback.v2.drawer.quickReplies.alreadyShipped',
     text: 'Good news — this was actually shipped in the latest version. Try pulling the latest update and let us know if it works for you.',
   },
   {
-    label: "Won't fix — explain",
+    label: 'feedback.v2.drawer.quickReplies.wontFix',
     text: "Thank you for the suggestion. We won't be making this change because [reason]. Sorry for any inconvenience.",
   },
 ];
@@ -126,6 +129,7 @@ interface ReplyTabProps {
 }
 
 function ReplyTab({ feedbackId, onClose }: ReplyTabProps) {
+  const { t } = useTranslation('admin');
   const { toast } = useToast();
 
   // Grab state from store
@@ -150,7 +154,9 @@ function ReplyTab({ feedbackId, onClose }: ReplyTabProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!feedback) {
-    return <div className="p-4 text-sm text-muted-foreground">Feedback not found.</div>;
+    return (
+      <div className="p-4 text-sm text-muted-foreground">{t('feedback.v2.drawer.notFound')}</div>
+    );
   }
 
   async function handleSave(values: ReplyFormValues) {
@@ -174,11 +180,11 @@ function ReplyTab({ feedbackId, onClose }: ReplyTabProps) {
         ...(responseChanged ? { admin_response: trimmed } : {}),
       });
       onClose();
-      toast({ title: 'Reply saved' });
+      toast({ title: t('feedback.v2.reply.saved') });
     } catch (err) {
       toast({
-        title: 'Failed to save reply',
-        description: err instanceof Error ? err.message : 'Please try again.',
+        title: t('feedback.v2.reply.save_error_title'),
+        description: err instanceof Error ? err.message : t('feedback.v2.reply.save_error_desc'),
         variant: 'destructive',
       });
       // Drawer stays open — do NOT call onClose
@@ -188,7 +194,9 @@ function ReplyTab({ feedbackId, onClose }: ReplyTabProps) {
   }
 
   const footerBadgeTone: BadgeTone = responseValue.trim() ? 'green' : 'gray';
-  const footerBadgeLabel = responseValue.trim() ? 'Ready' : 'No reply yet';
+  const footerBadgeLabel = responseValue.trim()
+    ? t('feedback.v2.drawer.footer.ready')
+    : t('feedback.v2.drawer.footer.noReplyYet');
 
   return (
     <>
@@ -198,13 +206,16 @@ function ReplyTab({ feedbackId, onClose }: ReplyTabProps) {
           <p className="fb-user-card-title">{feedback.title}</p>
           {feedback.description && <p className="fb-user-card-desc">{feedback.description}</p>}
           <p className="fb-user-card-meta">
-            {feedback.author?.full_name ?? 'Anonymous'} ·{' '}
+            {feedback.author?.full_name ?? t('feedback.v2.type.anonymous')} ·{' '}
             {new Date(feedback.created_at).toLocaleDateString()}
           </p>
         </div>
 
         <form id="reply-form" onSubmit={form.handleSubmit(handleSave)} noValidate>
-          <Field label="Status" hint="What's the disposition of this request?">
+          <Field
+            label={t('feedback.v2.reply.status_label')}
+            hint={t('feedback.v2.reply.status_hint')}
+          >
             <div className="fb-status-grid">
               {STATUS_PICKER.map((s) => (
                 <button
@@ -215,18 +226,18 @@ function ReplyTab({ feedbackId, onClose }: ReplyTabProps) {
                   onClick={() => form.setValue('status', s.key, { shouldDirty: true })}
                 >
                   <span className="fb-status-dot" data-tone={s.dotTone} />
-                  {s.label}
+                  {t(s.label)}
                 </button>
               ))}
             </div>
           </Field>
 
           <Field
-            label="Admin response"
+            label={t('feedback.v2.reply.response_label')}
             hint={
               <>
                 <span data-testid="feedback-drawer-char-counter">{charCount}/500</span>
-                {' — public, learner will see this verbatim'}
+                {t('feedback.v2.drawer.responseHintSuffix')}
               </>
             }
           >
@@ -238,7 +249,11 @@ function ReplyTab({ feedbackId, onClose }: ReplyTabProps) {
             />
           </Field>
 
-          <div className="fb-canned-list" role="group" aria-label="Quick replies">
+          <div
+            className="fb-canned-list"
+            role="group"
+            aria-label={t('feedback.v2.drawer.quickRepliesGroup')}
+          >
             {QUICK_REPLIES.map((r) => (
               <button
                 key={r.label}
@@ -251,7 +266,7 @@ function ReplyTab({ feedbackId, onClose }: ReplyTabProps) {
                   })
                 }
               >
-                {r.label}
+                {t(r.label)}
               </button>
             ))}
           </div>
@@ -262,12 +277,14 @@ function ReplyTab({ feedbackId, onClose }: ReplyTabProps) {
         <div className="flex flex-1 items-center gap-2">
           <Badge tone={footerBadgeTone}>{footerBadgeLabel}</Badge>
           <span className="text-sm text-muted-foreground">
-            Saving will notify {feedback.author?.full_name ?? 'the user'} in-app
+            {t('feedback.v2.drawer.saveNotice', {
+              name: feedback.author?.full_name ?? t('feedback.v2.drawer.theUser'),
+            })}
           </span>
         </div>
         <div className="flex gap-2">
           <Button type="button" variant="ghost" onClick={onClose}>
-            Cancel
+            {t('feedback.v2.reply.cancel')}
           </Button>
 
           {/* Decorative — Coming soon */}
@@ -278,16 +295,16 @@ function ReplyTab({ feedbackId, onClose }: ReplyTabProps) {
                 aria-disabled="true"
                 className="inline-flex cursor-not-allowed items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium opacity-60 hover:bg-accent hover:text-accent-foreground"
                 onClick={(e) => e.preventDefault()}
-                title="Coming soon"
+                title={t('feedback.v2.drawer.comingSoon')}
               >
-                Save draft
+                {t('feedback.v2.reply.save_draft')}
               </button>
             </TooltipTrigger>
-            <TooltipContent>Coming soon</TooltipContent>
+            <TooltipContent>{t('feedback.v2.drawer.comingSoon')}</TooltipContent>
           </Tooltip>
 
           <Button type="submit" form="reply-form" disabled={isSubmitting}>
-            {isSubmitting ? 'Saving…' : 'Save & notify'}
+            {isSubmitting ? t('feedback.v2.drawer.saving') : t('feedback.v2.reply.save')}
           </Button>
         </div>
       </SidePanel.Footer>
@@ -319,7 +336,9 @@ function ThreadTab({ feedbackId }: ThreadTabProps) {
   const item = feedbackList.find((f) => f.id === feedbackId) ?? null;
 
   if (!item) {
-    return <div className="p-4 text-sm text-muted-foreground">Feedback not found.</div>;
+    return (
+      <div className="p-4 text-sm text-muted-foreground">{t('feedback.v2.drawer.notFound')}</div>
+    );
   }
 
   const hasAdminResponse = Boolean(item.admin_response && item.admin_response.trim());
@@ -349,8 +368,8 @@ function ThreadTab({ feedbackId }: ThreadTabProps) {
           <header className="mb-2 flex items-center gap-2">
             {/* Hardcoded per ADMIN2-05 Design Decision: backend does not track admin_response_by_user_id. */}
             <AdminAvatar initials="A" tone="primary" size="sm" />
-            <span className="text-sm font-medium">Admin</span>
-            <Badge tone="blue">Admin</Badge>
+            <span className="text-sm font-medium">{t('feedback.v2.drawer.admin')}</span>
+            <Badge tone="blue">{t('feedback.v2.drawer.admin')}</Badge>
             {item.admin_response_at ? (
               <time
                 className="ml-auto text-xs text-muted-foreground"
@@ -384,7 +403,9 @@ function MetaTab({ feedbackId }: MetaTabProps) {
   const item = feedbackList.find((f) => f.id === feedbackId) ?? null;
 
   if (!item) {
-    return <div className="p-4 text-sm text-muted-foreground">Feedback not found.</div>;
+    return (
+      <div className="p-4 text-sm text-muted-foreground">{t('feedback.v2.drawer.notFound')}</div>
+    );
   }
 
   const handoff = BACKEND_TO_HANDOFF[item.status];
@@ -430,7 +451,7 @@ function MetaTab({ feedbackId }: MetaTabProps) {
       <div className="fb-meta-row" role="listitem">
         <span className="fb-meta-l">{t('feedback.v2.drawer.meta.rows.status')}</span>
         <span className="fb-meta-v">
-          <Badge tone={STATUS_TONE[handoff]}>{HANDOFF_LABEL[handoff]}</Badge>
+          <Badge tone={STATUS_TONE[handoff]}>{t(HANDOFF_LABEL[handoff])}</Badge>
         </span>
       </div>
 
@@ -443,7 +464,7 @@ function MetaTab({ feedbackId }: MetaTabProps) {
               addSuffix: true,
               locale: getDateLocale(),
             })}{' '}
-            · Admin
+            · {t('feedback.v2.drawer.admin')}
           </span>
         </div>
       ) : null}
@@ -459,6 +480,8 @@ export function FeedbackDrawer({
   onClose,
   onInnerTabChange,
 }: FeedbackDrawerProps) {
+  const { t } = useTranslation('admin');
+
   return (
     <SidePanel
       size="default"
@@ -467,12 +490,14 @@ export function FeedbackDrawer({
         if (!o) onClose();
       }}
       data-testid="feedback-drawer"
-      title="Feedback details"
+      title={t('feedback.v2.drawer.title')}
     >
       <SidePanel.CloseButton onClick={onClose} />
 
       <SidePanel.Header>
-        <div className="text-sm text-muted-foreground">Feedback · #{feedbackId.slice(0, 8)}</div>
+        <div className="text-sm text-muted-foreground">
+          {`${t('feedback.v2.drawer.headerPrefix')}${feedbackId.slice(0, 8)}`}
+        </div>
       </SidePanel.Header>
 
       <SidePanel.Tabs>
@@ -487,7 +512,7 @@ export function FeedbackDrawer({
               onClick={() => onInnerTabChange(value)}
               data-testid={`feedback-drawer-tab-${value}`}
             >
-              {label}
+              {t(label)}
             </button>
           ))}
 
@@ -500,12 +525,12 @@ export function FeedbackDrawer({
                 aria-disabled="true"
                 className="drawer-tab cursor-not-allowed opacity-60"
                 onClick={(e) => e.preventDefault()}
-                title="Coming soon"
+                title={t('feedback.v2.drawer.comingSoon')}
               >
-                ⚡ Draft with AI
+                {t('feedback.v2.drawer.draftWithAi')}
               </button>
             </TooltipTrigger>
-            <TooltipContent>Coming soon</TooltipContent>
+            <TooltipContent>{t('feedback.v2.drawer.comingSoon')}</TooltipContent>
           </Tooltip>
         </div>
       </SidePanel.Tabs>
@@ -519,7 +544,7 @@ export function FeedbackDrawer({
           </SidePanel.Body>
           <SidePanel.Footer>
             <button type="button" onClick={onClose}>
-              Close
+              {t('feedback.v2.drawer.close')}
             </button>
           </SidePanel.Footer>
         </>
@@ -532,7 +557,7 @@ export function FeedbackDrawer({
           </SidePanel.Body>
           <SidePanel.Footer>
             <button type="button" onClick={onClose}>
-              Cancel
+              {t('feedback.v2.reply.cancel')}
             </button>
           </SidePanel.Footer>
         </>

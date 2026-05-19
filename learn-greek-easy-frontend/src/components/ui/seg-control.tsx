@@ -11,6 +11,7 @@ export type SegControlProps<T extends string = string> = {
   value: T;
   onChange: (value: T) => void;
   label?: string;
+  ariaLabel?: string;
   className?: string;
 };
 
@@ -19,12 +20,17 @@ export function SegControl<T extends string = string>({
   value,
   onChange,
   label,
+  ariaLabel,
   className,
 }: SegControlProps<T>) {
   return (
     <div className={cn('news-seg', className)}>
       {label ? <span className="news-seg-l">{label}</span> : null}
-      <div className="news-seg-btns" role={label ? 'group' : undefined} aria-label={label}>
+      <div
+        className="news-seg-btns"
+        role={label || ariaLabel ? 'group' : undefined}
+        aria-label={ariaLabel ?? label}
+      >
         {options.map((opt) => {
           const active = opt.value === value;
           return (
