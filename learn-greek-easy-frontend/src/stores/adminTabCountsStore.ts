@@ -61,3 +61,15 @@ export const selectTabCount =
   (key: keyof AdminTabCountsResponse) =>
   (s: AdminTabCountsState): number =>
     s.counts?.[key] ?? 0;
+
+// ============================================
+// Fire-and-forget refetch helper
+// ============================================
+
+/**
+ * Call from admin mutation success paths to keep tab badge counts in sync.
+ * Fire-and-forget — does not block the calling action's UX flow.
+ */
+export const refetchAdminTabCounts = (): void => {
+  void useAdminTabCountsStore.getState().fetchCounts();
+};

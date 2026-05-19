@@ -12,6 +12,7 @@ import { devtools } from 'zustand/middleware';
 
 import { adminAPI } from '@/services/adminAPI';
 import { feedbackAPI } from '@/services/feedbackAPI';
+import { refetchAdminTabCounts } from '@/stores/adminTabCountsStore';
 import type {
   AdminFeedbackItem,
   FeedbackCategory,
@@ -165,6 +166,9 @@ export const useAdminFeedbackStore = create<AdminFeedbackState>()(
               state.selectedFeedback?.id === feedbackId ? updatedFeedback : state.selectedFeedback,
             isUpdating: false,
           }));
+          // `feedback` total is unchanged by status transitions, but `inbox` changes whenever
+          // a row moves into or out of FeedbackStatus.NEW — refetch to keep the badge accurate.
+          refetchAdminTabCounts();
 
           return updatedFeedback;
         } catch (error) {
@@ -220,6 +224,7 @@ export const useAdminFeedbackStore = create<AdminFeedbackState>()(
             feedbackList: state.feedbackList.filter((f) => f.id !== id),
             total: state.total - 1,
           }));
+          refetchAdminTabCounts();
         } finally {
           set({ isDeleting: false });
         }

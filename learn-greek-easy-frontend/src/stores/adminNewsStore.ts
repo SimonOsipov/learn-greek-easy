@@ -18,6 +18,7 @@ import type {
   NewsItemUpdate,
   NewsItemWithCardResponse,
 } from '@/services/adminAPI';
+import { refetchAdminTabCounts } from '@/stores/adminTabCountsStore';
 
 /**
  * Admin News Store State Interface
@@ -137,6 +138,7 @@ export const useAdminNewsStore = create<AdminNewsState>()(
           await get().fetchNewsItems();
 
           set({ isCreating: false });
+          refetchAdminTabCounts();
           return response;
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Failed to create news item';
@@ -186,6 +188,7 @@ export const useAdminNewsStore = create<AdminNewsState>()(
             isDeleting: false,
             selectedItem: null,
           });
+          refetchAdminTabCounts();
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Failed to delete news item';
           set({ isDeleting: false, error: message });

@@ -8,6 +8,7 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
 import { changelogAPI } from '@/services/changelogAPI';
+import { refetchAdminTabCounts } from '@/stores/adminTabCountsStore';
 import type {
   ChangelogEntryAdmin,
   ChangelogCreateRequest,
@@ -120,6 +121,7 @@ export const useAdminChangelogStore = create<AdminChangelogState>()(
           set({ page: 1 });
           await get().fetchList();
           set({ isSaving: false });
+          refetchAdminTabCounts();
           return created;
         } catch (error) {
           const message =
@@ -155,6 +157,7 @@ export const useAdminChangelogStore = create<AdminChangelogState>()(
           await changelogAPI.adminDelete(id);
           await get().fetchList();
           set({ isDeleting: false, selectedEntry: null });
+          refetchAdminTabCounts();
         } catch (error) {
           const message =
             error instanceof Error ? error.message : 'Failed to delete changelog entry';

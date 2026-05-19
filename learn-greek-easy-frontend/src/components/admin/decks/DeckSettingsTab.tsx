@@ -29,6 +29,7 @@ import {
 import { cn } from '@/lib/utils';
 import { adminAPI } from '@/services/adminAPI';
 import type { UnifiedDeckItem } from '@/services/adminAPI';
+import { useAdminTabCountsStore } from '@/stores/adminTabCountsStore';
 
 import { CultureDeckEditForm } from '../CultureDeckEditForm';
 import { DeckDeleteDialog } from '../DeckDeleteDialog';
@@ -144,6 +145,7 @@ export function DeckSettingsTab({ deck, onSaved }: DeckSettingsTabProps) {
         await adminAPI.deleteCultureDeck(deck.id);
       }
       void queryClient.invalidateQueries({ queryKey: ['admin', 'decks'] });
+      void useAdminTabCountsStore.getState().fetchCounts();
       // Close drawer by stripping URL params
       setSearchParams((prev) => {
         const params = new URLSearchParams(prev);

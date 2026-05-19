@@ -262,6 +262,7 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(({ t, loc
       setDeleteModalOpen(false);
       setDeckToDelete(null);
       fetchDecks();
+      void useAdminTabCountsStore.getState().fetchCounts();
     } catch (_err) {
       // Error handling minimal here; toast patterns will land in a later subtask.
     } finally {
@@ -938,6 +939,7 @@ const AdminPage: React.FC = () => {
       setCreateModalOpen(false);
       allDecksListRef.current?.refresh();
       fetchStats(); // Refresh stats to update counts
+      void useAdminTabCountsStore.getState().fetchCounts();
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : t('errors.createFailed');
 

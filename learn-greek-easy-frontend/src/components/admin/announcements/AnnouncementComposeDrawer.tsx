@@ -31,6 +31,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { toast } from '@/hooks/use-toast';
 import { adminAPI } from '@/services/adminAPI';
 import { useAdminAnnouncementStore } from '@/stores/adminAnnouncementStore';
+import { useAdminTabCountsStore } from '@/stores/adminTabCountsStore';
 
 import { AnnouncementCreateForm, useAnnouncementCreateForm } from './AnnouncementCreateForm';
 import { AnnouncementJsonInput } from './AnnouncementJsonInput';
@@ -175,6 +176,7 @@ export function AnnouncementComposeDrawer({ open, onClose }: AnnouncementCompose
         link_url: values.linkUrl || undefined,
       });
       toast({ title: t('announcements.create.success') });
+      void useAdminTabCountsStore.getState().fetchCounts();
       await fetchAnnouncements(); // await before close — avoid stale list
       setSearchParams(
         (prev) => {
