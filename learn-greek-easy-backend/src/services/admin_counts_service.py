@@ -26,21 +26,19 @@ from src.db.models import (
 from src.schemas.admin import AdminTabCountsResponse
 
 
-async def _count_active_decks(db: AsyncSession) -> int:
-    """Return total active vocab + culture deck count.
+async def count_active_decks(db: AsyncSession) -> tuple[int, int]:
+    """Return (active_vocab_decks, active_culture_decks).
 
-    Extracted from get_admin_stats for reuse. Executes two queries and sums
-    them; kept separate so each table uses its own COUNT for correctness.
+    Single source of truth for "active deck count" across `get_admin_stats`
+    and `AdminCountsService.get_tab_counts`. Returns the two counts separately
+    so callers that need them split (e.g. `get_admin_stats`) can use the same
+    helper as callers that only need the sum.
     """
-    vocab_result = await db.execute(select(func.count(Deck.id)).where(Deck.is_active.is_(True)))
-    vocab_count = vocab_result.scalar() or 0
-
-    culture_result = await db.execute(
-        select(func.count(CultureDeck.id)).where(CultureDeck.is_active.is_(True))
+    vocab_result, culture_result = await asyncio.gather(
+        db.execute(select(func.count(Deck.id)).where(Deck.is_active.is_(True))),
+        db.execute(select(func.count(CultureDeck.id)).where(CultureDeck.is_active.is_(True))),
     )
-    culture_count = culture_result.scalar() or 0
-
-    return vocab_count + culture_count
+    return (vocab_result.scalar() or 0, culture_result.scalar() or 0)
 
 
 class AdminCountsService:
@@ -87,7 +85,8 @@ class AdminCountsService:
             _scalar(db, select(func.count(AnnouncementCampaign.id))),
         )
 
-        decks = await _count_active_decks(db)
+        vocab_decks, culture_decks = await count_active_decks(db)
+        decks = vocab_decks + culture_decks
 
         return AdminTabCountsResponse(
             inbox=new_feedback + pending_errors,

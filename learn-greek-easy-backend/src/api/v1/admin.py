@@ -157,7 +157,7 @@ from src.schemas.word_entry import (
     AdminWordEntryCreateResponse,
     WordEntryResponse,
 )
-from src.services.admin_counts_service import AdminCountsService
+from src.services.admin_counts_service import AdminCountsService, count_active_decks
 from src.services.announcement_service import AnnouncementService
 from src.services.audio_generation_service import DialogInput, get_audio_generation_service
 from src.services.card_error_admin_service import CardErrorAdminService
@@ -304,11 +304,8 @@ async def get_admin_stats(
         401: If not authenticated
         403: If authenticated but not superuser
     """
-    # Count active vocabulary decks
-    deck_count_result = await db.execute(
-        select(func.count(Deck.id)).where(Deck.is_active.is_(True))
-    )
-    total_vocabulary_decks = deck_count_result.scalar() or 0
+    # Single source of truth for active deck counts (shared with /tab-counts).
+    total_vocabulary_decks, total_culture_decks = await count_active_decks(db)
 
     # Count active word entries in active vocabulary decks
     v2_word_count_result = await db.execute(
@@ -319,12 +316,6 @@ async def get_admin_stats(
         .where(WordEntry.is_active.is_(True))
     )
     total_vocabulary_cards = v2_word_count_result.scalar() or 0
-
-    # Count active culture decks
-    culture_deck_result = await db.execute(
-        select(func.count(CultureDeck.id)).where(CultureDeck.is_active.is_(True))
-    )
-    total_culture_decks = culture_deck_result.scalar() or 0
 
     # Count approved questions in active culture decks
     culture_question_result = await db.execute(
