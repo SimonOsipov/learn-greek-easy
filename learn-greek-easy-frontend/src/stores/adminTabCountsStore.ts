@@ -23,6 +23,12 @@ interface AdminTabCountsState {
   fetchCounts: () => Promise<void>;
 }
 
+// Monotonic counter shared across all in-flight fetchCounts() invocations.
+// Each call captures the current value and only commits its result if it is
+// still the latest — protects against out-of-order responses from concurrent
+// fire-and-forget refetches overwriting newer state.
+let tabCountsFetchSeq = 0;
+
 /**
  * Admin Tab Counts store hook for components
  */
@@ -38,12 +44,15 @@ export const useAdminTabCountsStore = create<AdminTabCountsState>()(
        * Fetch unified tab badge counts from admin API
        */
       fetchCounts: async () => {
+        const fetchSeq = ++tabCountsFetchSeq;
         set({ loading: true, error: null });
 
         try {
           const counts = await adminAPI.getAdminTabCounts();
+          if (fetchSeq !== tabCountsFetchSeq) return;
           set({ counts, loading: false });
         } catch (error) {
+          if (fetchSeq !== tabCountsFetchSeq) return;
           const message = error instanceof Error ? error.message : 'Failed to load tab counts';
           set({ error: message, loading: false });
         }
