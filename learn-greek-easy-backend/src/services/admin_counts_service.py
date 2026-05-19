@@ -1,10 +1,14 @@
 """Admin tab counts service.
 
 Computes the aggregate badge counts for each /admin section tab via a single
-database round-trip using parallel COUNT queries.
-"""
+database round-trip using sequential COUNT queries on the shared AsyncSession.
 
-import asyncio
+Note: SQLAlchemy AsyncSession is not task-safe — concurrent ``db.execute(...)``
+on the same session raises ``InterfaceError: another operation is in progress``.
+Queries are issued sequentially within a single request handler; they remain
+cheap because each is an indexed ``COUNT(*)`` and total round-trip is dominated
+by a single connection acquire.
+"""
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,9 +38,9 @@ async def count_active_decks(db: AsyncSession) -> tuple[int, int]:
     so callers that need them split (e.g. `get_admin_stats`) can use the same
     helper as callers that only need the sum.
     """
-    vocab_result, culture_result = await asyncio.gather(
-        db.execute(select(func.count(Deck.id)).where(Deck.is_active.is_(True))),
-        db.execute(select(func.count(CultureDeck.id)).where(CultureDeck.is_active.is_(True))),
+    vocab_result = await db.execute(select(func.count(Deck.id)).where(Deck.is_active.is_(True)))
+    culture_result = await db.execute(
+        select(func.count(CultureDeck.id)).where(CultureDeck.is_active.is_(True))
     )
     return (vocab_result.scalar() or 0, culture_result.scalar() or 0)
 
@@ -47,10 +51,9 @@ class AdminCountsService:
     async def get_tab_counts(self, db: AsyncSession) -> AdminTabCountsResponse:
         """Return aggregate counts for the admin section-tab badges.
 
-        Runs all COUNT queries concurrently via asyncio.gather, except for
-        decks which needs two sequential queries (vocab + culture). The inbox
-        composite (new_feedback + pending_errors) is derived in Python from
-        the gathered results — no extra query.
+        Issues each COUNT sequentially on the shared AsyncSession (which is
+        not task-safe). The inbox composite (new_feedback + pending_errors) is
+        derived in Python from the two reused counts — no extra query.
 
         Args:
             db: Active async database session.
@@ -58,32 +61,21 @@ class AdminCountsService:
         Returns:
             AdminTabCountsResponse with all nine badge counts.
         """
-        (
-            new_feedback,
-            total_feedback,
-            pending_errors,
-            news,
-            situations,
-            exercises,
-            changelog,
-            announcements,
-        ) = await asyncio.gather(
-            _scalar(
-                db, select(func.count(Feedback.id)).where(Feedback.status == FeedbackStatus.NEW)
-            ),
-            _scalar(db, select(func.count(Feedback.id))),
-            _scalar(
-                db,
-                select(func.count(CardErrorReport.id)).where(
-                    CardErrorReport.status == CardErrorStatus.PENDING
-                ),
-            ),
-            _scalar(db, select(func.count(NewsItem.id))),
-            _scalar(db, select(func.count(Situation.id))),
-            _scalar(db, select(func.count(Exercise.id))),
-            _scalar(db, select(func.count(ChangelogEntry.id))),
-            _scalar(db, select(func.count(AnnouncementCampaign.id))),
+        new_feedback = await _scalar(
+            db, select(func.count(Feedback.id)).where(Feedback.status == FeedbackStatus.NEW)
         )
+        total_feedback = await _scalar(db, select(func.count(Feedback.id)))
+        pending_errors = await _scalar(
+            db,
+            select(func.count(CardErrorReport.id)).where(
+                CardErrorReport.status == CardErrorStatus.PENDING
+            ),
+        )
+        news = await _scalar(db, select(func.count(NewsItem.id)))
+        situations = await _scalar(db, select(func.count(Situation.id)))
+        exercises = await _scalar(db, select(func.count(Exercise.id)))
+        changelog = await _scalar(db, select(func.count(ChangelogEntry.id)))
+        announcements = await _scalar(db, select(func.count(AnnouncementCampaign.id)))
 
         vocab_decks, culture_decks = await count_active_decks(db)
         decks = vocab_decks + culture_decks
