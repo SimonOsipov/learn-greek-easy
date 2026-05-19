@@ -48,6 +48,42 @@ class AdminStatsResponse(BaseModel):
     )
 
 
+class AdminTabCountsResponse(BaseModel):
+    """Aggregate counts powering the badge on each /admin section tab.
+
+    Semantics:
+    - ``inbox``: new feedback + pending card errors (composite admin queue).
+    - ``feedback``: total feedback rows across all statuses.
+    - ``errors``: pending card errors only (resolved/dismissed excluded).
+    - ``decks``, ``news``, ``situations``, ``exercises``, ``changelog``,
+      ``announcements``: total row counts for their respective tables.
+
+    All counts are non-negative integers.
+    """
+
+    inbox: int = Field(
+        ...,
+        ge=0,
+        description="New feedback + pending card errors (composite admin inbox count).",
+    )
+    decks: int = Field(..., ge=0, description="Active vocab + culture deck count.")
+    news: int = Field(..., ge=0, description="Total news rows.")
+    situations: int = Field(..., ge=0, description="Total situation rows.")
+    exercises: int = Field(..., ge=0, description="Total exercise rows.")
+    errors: int = Field(
+        ...,
+        ge=0,
+        description="Pending card errors only (resolved/dismissed excluded).",
+    )
+    feedback: int = Field(
+        ...,
+        ge=0,
+        description="Total feedback rows across all statuses.",
+    )
+    changelog: int = Field(..., ge=0, description="Total changelog entry rows.")
+    announcements: int = Field(..., ge=0, description="Total announcement rows.")
+
+
 # ============================================================================
 # Admin Deck List Schemas
 # ============================================================================
