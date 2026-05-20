@@ -10,9 +10,10 @@
 import { useState } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { el } from 'date-fns/locale/el';
 import { ru } from 'date-fns/locale/ru';
+import { Trash2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
@@ -34,6 +35,7 @@ import {
   backendToHandoff,
   handoffToBackend,
   BACKEND_TO_HANDOFF,
+  CATEGORY_TONE,
   HANDOFF_STATUSES,
   STATUS_TONE,
 } from './feedbackStatusMap';
@@ -49,6 +51,7 @@ export interface FeedbackDrawerProps {
   innerTab: FeedbackDrawerInnerTab;
   onClose: () => void;
   onInnerTabChange: (tab: FeedbackDrawerInnerTab) => void;
+  onRequestDelete: (id: string) => void;
 }
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -121,15 +124,25 @@ const replyFormSchema = z.object({
 
 type ReplyFormValues = z.infer<typeof replyFormSchema>;
 
+// ── Date locale helper ─────────────────────────────────────────────────────────
+
+function getDateLocale(lang: string) {
+  if (lang === 'el') return el;
+  if (lang === 'ru') return ru;
+  return undefined;
+}
+
 // ── Reply tab form ─────────────────────────────────────────────────────────────
 
 interface ReplyTabProps {
   feedbackId: string;
   onClose: () => void;
+  onRequestDelete: (id: string) => void;
+  form: ReturnType<typeof useForm<ReplyFormValues>>;
 }
 
-function ReplyTab({ feedbackId, onClose }: ReplyTabProps) {
-  const { t } = useTranslation('admin');
+function ReplyTab({ feedbackId, onClose, onRequestDelete, form }: ReplyTabProps) {
+  const { t, i18n } = useTranslation('admin');
   const { toast } = useToast();
 
   // Grab state from store
@@ -137,15 +150,6 @@ function ReplyTab({ feedbackId, onClose }: ReplyTabProps) {
   const updateFeedback = useAdminFeedbackStore((s) => s.updateFeedback);
 
   const feedback = feedbackList.find((f) => f.id === feedbackId) ?? null;
-
-  const form = useForm<ReplyFormValues>({
-    resolver: zodResolver(replyFormSchema),
-    defaultValues: {
-      status: feedback ? backendToHandoff(feedback.status) : 'new',
-      admin_response: feedback?.admin_response ?? '',
-    },
-    mode: 'onChange',
-  });
 
   const responseValue = form.watch('admin_response');
   const charCount = responseValue.length;
@@ -207,7 +211,9 @@ function ReplyTab({ feedbackId, onClose }: ReplyTabProps) {
           {feedback.description && <p className="fb-user-card-desc">{feedback.description}</p>}
           <p className="fb-user-card-meta">
             {feedback.author?.full_name ?? t('feedback.v2.type.anonymous')} ·{' '}
-            {new Date(feedback.created_at).toLocaleDateString()}
+            {format(new Date(feedback.created_at), 'PP', {
+              locale: getDateLocale(i18n.language),
+            })}
           </p>
         </div>
 
@@ -283,6 +289,16 @@ function ReplyTab({ feedbackId, onClose }: ReplyTabProps) {
           </span>
         </div>
         <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => onRequestDelete(feedback.id)}
+            className="text-destructive"
+          >
+            <Trash2 className="size-4" aria-hidden="true" />
+            {t('feedback.delete.button')}
+          </Button>
+
           <Button type="button" variant="ghost" onClick={onClose}>
             {t('feedback.v2.reply.cancel')}
           </Button>
@@ -303,24 +319,13 @@ function ReplyTab({ feedbackId, onClose }: ReplyTabProps) {
             <TooltipContent>{t('feedback.v2.drawer.comingSoon')}</TooltipContent>
           </Tooltip>
 
-          <Button type="submit" form="reply-form" disabled={isSubmitting}>
+          <Button type="submit" form="reply-form" disabled={isSubmitting || !responseValue.trim()}>
             {isSubmitting ? t('feedback.v2.drawer.saving') : t('feedback.v2.reply.save')}
           </Button>
         </div>
       </SidePanel.Footer>
     </>
   );
-}
-
-// ── Thread tab helpers ─────────────────────────────────────────────────────────
-
-function getDateLocale() {
-  // Read language from document to avoid coupling to a hook at module scope.
-  // Full locale wiring (i18n.language) lands in FBDR-08.
-  const lang = document.documentElement.lang ?? '';
-  if (lang === 'el') return el;
-  if (lang === 'ru') return ru;
-  return undefined;
 }
 
 // ── Thread tab component ───────────────────────────────────────────────────────
@@ -330,7 +335,7 @@ interface ThreadTabProps {
 }
 
 function ThreadTab({ feedbackId }: ThreadTabProps) {
-  const { t } = useTranslation('admin');
+  const { t, i18n } = useTranslation('admin');
 
   const feedbackList = useAdminFeedbackStore((s) => s.feedbackList);
   const item = feedbackList.find((f) => f.id === feedbackId) ?? null;
@@ -355,7 +360,7 @@ function ThreadTab({ feedbackId }: ThreadTabProps) {
           <time className="ml-auto text-xs text-muted-foreground" dateTime={item.created_at}>
             {formatDistanceToNow(new Date(item.created_at), {
               addSuffix: true,
-              locale: getDateLocale(),
+              locale: getDateLocale(i18n.language),
             })}
           </time>
         </header>
@@ -377,7 +382,7 @@ function ThreadTab({ feedbackId }: ThreadTabProps) {
               >
                 {formatDistanceToNow(new Date(item.admin_response_at), {
                   addSuffix: true,
-                  locale: getDateLocale(),
+                  locale: getDateLocale(i18n.language),
                 })}
               </time>
             ) : null}
@@ -398,7 +403,7 @@ interface MetaTabProps {
 }
 
 function MetaTab({ feedbackId }: MetaTabProps) {
-  const { t } = useTranslation('admin');
+  const { t, i18n } = useTranslation('admin');
   const feedbackList = useAdminFeedbackStore((s) => s.feedbackList);
   const item = feedbackList.find((f) => f.id === feedbackId) ?? null;
 
@@ -434,10 +439,12 @@ function MetaTab({ feedbackId }: MetaTabProps) {
       <div className="fb-meta-row" role="listitem">
         <span className="fb-meta-l">{t('feedback.v2.drawer.meta.rows.submitted')}</span>
         <span className="fb-meta-v">
+          {format(new Date(item.created_at), 'PP', { locale: getDateLocale(i18n.language) })} (
           {formatDistanceToNow(new Date(item.created_at), {
             addSuffix: true,
-            locale: getDateLocale(),
+            locale: getDateLocale(i18n.language),
           })}
+          )
         </span>
       </div>
 
@@ -446,6 +453,8 @@ function MetaTab({ feedbackId }: MetaTabProps) {
         <span className="fb-meta-l">{t('feedback.v2.drawer.meta.rows.likes')}</span>
         <span className="fb-meta-v">{item.vote_count}</span>
       </div>
+
+      {/* TODO(feedback-device): show once Feedback.device is on the model */}
 
       {/* Row 5: Status — Badge via tone API */}
       <div className="fb-meta-row" role="listitem">
@@ -462,7 +471,7 @@ function MetaTab({ feedbackId }: MetaTabProps) {
           <span className="fb-meta-v">
             {formatDistanceToNow(new Date(item.admin_response_at ?? item.created_at), {
               addSuffix: true,
-              locale: getDateLocale(),
+              locale: getDateLocale(i18n.language),
             })}{' '}
             · {t('feedback.v2.drawer.admin')}
           </span>
@@ -479,12 +488,27 @@ export function FeedbackDrawer({
   innerTab,
   onClose,
   onInnerTabChange,
+  onRequestDelete,
 }: FeedbackDrawerProps) {
-  const { t } = useTranslation('admin');
+  const { t, i18n } = useTranslation('admin');
+
+  const feedback = useAdminFeedbackStore((s) => s.feedbackList.find((f) => f.id === feedbackId));
+
+  // Hoist useForm here so the header badge reads live form state (not stale feedback.status)
+  const form = useForm<ReplyFormValues>({
+    resolver: zodResolver(replyFormSchema),
+    defaultValues: {
+      status: feedback ? backendToHandoff(feedback.status) : 'new',
+      admin_response: feedback?.admin_response ?? '',
+    },
+    mode: 'onChange',
+  });
+
+  const selectedStatus = form.watch('status');
 
   return (
     <SidePanel
-      size="default"
+      size="full"
       open
       onOpenChange={(o) => {
         if (!o) onClose();
@@ -495,9 +519,33 @@ export function FeedbackDrawer({
       <SidePanel.CloseButton onClick={onClose} />
 
       <SidePanel.Header>
-        <div className="text-sm text-muted-foreground">
-          {`${t('feedback.v2.drawer.headerPrefix')}${feedbackId.slice(0, 8)}`}
-        </div>
+        {feedback ? (
+          <div className="drawer-head-content">
+            <div className="drawer-bcrumb">
+              {t('feedback.v2.drawer.headerPrefix')}
+              {feedback.id} ·{' '}
+              {format(new Date(feedback.created_at), 'PP', {
+                locale: getDateLocale(i18n.language),
+              })}
+            </div>
+            <h2 className="drawer-h">{feedback.title}</h2>
+            <div className="drawer-meta">
+              <Badge tone={CATEGORY_TONE[feedback.category]}>
+                {feedback.category === 'bug_incorrect_data'
+                  ? t('feedback.v2.type.bug')
+                  : t('feedback.v2.type.feature')}
+              </Badge>
+              <Badge tone={STATUS_TONE[selectedStatus]}>{t(HANDOFF_LABEL[selectedStatus])}</Badge>
+              <span className="text-xs text-muted-foreground">
+                {t('feedback.v2.drawer.likes', { count: feedback.vote_count })}
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div className="text-sm text-muted-foreground">
+            {`${t('feedback.v2.drawer.headerPrefix')}${feedbackId}`}
+          </div>
+        )}
       </SidePanel.Header>
 
       <SidePanel.Tabs>
@@ -535,7 +583,14 @@ export function FeedbackDrawer({
         </div>
       </SidePanel.Tabs>
 
-      {innerTab === 'reply' && <ReplyTab feedbackId={feedbackId} onClose={onClose} />}
+      {innerTab === 'reply' && (
+        <ReplyTab
+          feedbackId={feedbackId}
+          onClose={onClose}
+          onRequestDelete={onRequestDelete}
+          form={form}
+        />
+      )}
 
       {innerTab === 'thread' && (
         <>

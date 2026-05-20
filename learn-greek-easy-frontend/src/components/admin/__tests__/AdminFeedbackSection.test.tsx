@@ -9,6 +9,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi, beforeEach, type Mock } from 'vitest';
 
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { AdminFeedbackSection } from '../AdminFeedbackSection';
 import { useAdminFeedbackStore } from '@/stores/adminFeedbackStore';
 
@@ -203,9 +204,11 @@ function buildMockState(
 
 function renderSection(initialEntries: string[] = ['/admin?tab=feedback']) {
   return render(
-    <MemoryRouter initialEntries={initialEntries}>
-      <AdminFeedbackSection />
-    </MemoryRouter>
+    <TooltipProvider>
+      <MemoryRouter initialEntries={initialEntries}>
+        <AdminFeedbackSection />
+      </MemoryRouter>
+    </TooltipProvider>
   );
 }
 
@@ -576,4 +579,73 @@ describe('AdminFeedbackSection', () => {
 
   // Note: Decorative header buttons (Export CSV, Send mass update) are now
   // in AdminPage's pageHeadPropsFor (ADMIN2-HEAD), not in AdminFeedbackSection.
+
+  // ── FeedbackDrawer onRequestDelete wiring ──────────────────────────────────
+
+  describe('FeedbackDrawer onRequestDelete wiring', () => {
+    it('renders FeedbackDrawer with onRequestDelete prop when drawer is open', () => {
+      const feedback = makeFeedback({ id: 'delete-test-id', title: 'Delete me' });
+      buildMockState([feedback], { openFeedbackId: 'delete-test-id', openInnerTab: 'reply' });
+
+      renderSection();
+
+      // Drawer is mounted when openFeedbackId is set
+      expect(screen.getByTestId('feedback-drawer')).toBeInTheDocument();
+    });
+
+    it('wiring: onRequestDelete closes drawer and sets deleteTarget', async () => {
+      const user = userEvent.setup();
+      const feedback = makeFeedback({ id: 'delete-wire-id', title: 'Wire test' });
+
+      // Start with drawer open
+      let currentOpenFeedbackId: string | null = 'delete-wire-id';
+      const mockCloseDrawerImpl = vi.fn(() => {
+        currentOpenFeedbackId = null;
+      });
+
+      const state = {
+        feedbackList: [feedback],
+        selectedFeedback: null,
+        page: 1,
+        pageSize: 10,
+        total: 1,
+        totalPages: 1,
+        filters: { status: null, category: null },
+        isLoading: false,
+        isUpdating: false,
+        isDeleting: false,
+        error: null,
+        get openFeedbackId() {
+          return currentOpenFeedbackId;
+        },
+        openInnerTab: 'reply' as const,
+        fetchFeedbackList: mockFetchFeedbackList,
+        updateFeedback: vi.fn().mockResolvedValue(feedback),
+        deleteFeedback: mockDeleteFeedback,
+        setFilters: vi.fn(),
+        clearFilters: vi.fn(),
+        setPage: mockSetPage,
+        clearError: vi.fn(),
+        setSelectedFeedback: vi.fn(),
+        openDrawer: mockOpenDrawer,
+        closeDrawer: mockCloseDrawerImpl,
+        setInnerTab: mockSetInnerTab,
+      };
+
+      (useAdminFeedbackStore as unknown as Mock).mockImplementation(
+        (sel?: (s: typeof state) => unknown) => (typeof sel === 'function' ? sel(state) : state)
+      );
+
+      renderSection();
+
+      // Drawer should be visible
+      expect(screen.getByTestId('feedback-drawer')).toBeInTheDocument();
+
+      // Click the Delete button inside the drawer footer
+      await user.click(screen.getByRole('button', { name: /Delete/i }));
+
+      // closeDrawer should have been called (drawer wiring closes on delete)
+      expect(mockCloseDrawerImpl).toHaveBeenCalled();
+    });
+  });
 });

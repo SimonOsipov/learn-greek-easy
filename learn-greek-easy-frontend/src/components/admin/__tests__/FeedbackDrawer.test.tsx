@@ -19,6 +19,11 @@ import type { AdminFeedbackItem } from '@/types/feedback';
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, unknown>) => {
+      // Handle plural-aware likes key
+      if (key === 'feedback.v2.drawer.likes') {
+        const count = opts?.count as number | undefined;
+        return `${count ?? 0} like${(count ?? 0) === 1 ? '' : 's'}`;
+      }
       const map: Record<string, string> = {
         'feedback.anonymousUser': 'Anonymous User',
         'feedback.respond': 'Respond',
@@ -83,6 +88,8 @@ vi.mock('react-i18next', () => ({
         'feedback.v2.type.anonymous': 'Anonymous',
         'feedback.v2.card.openReply': opts?.title ? `Open reply for ${opts.title}` : 'Open reply',
         'feedback.v2.card.adminResponseLabel': 'Admin response',
+        // delete
+        'feedback.delete.button': 'Delete',
       };
       return map[key] ?? key;
     },
@@ -151,7 +158,8 @@ function renderDrawer(
   feedbackId: string,
   innerTab: 'reply' | 'thread' | 'meta' = 'reply',
   onClose = vi.fn(),
-  onInnerTabChange = vi.fn()
+  onInnerTabChange = vi.fn(),
+  onRequestDelete = vi.fn()
 ) {
   return render(
     <TooltipProvider>
@@ -160,6 +168,7 @@ function renderDrawer(
         innerTab={innerTab}
         onClose={onClose}
         onInnerTabChange={onInnerTabChange}
+        onRequestDelete={onRequestDelete}
       />
     </TooltipProvider>
   );
@@ -181,19 +190,17 @@ describe('FeedbackDrawer', () => {
 
       renderDrawer(feedback.id, 'reply');
 
-      // User card shows title
-      expect(screen.getByText('Dark mode please')).toBeInTheDocument();
-      // Status picker: 8 buttons
-      const statusGrid = screen.getByRole('group', { hidden: true });
-      // All 8 status labels
-      expect(screen.getByText('New')).toBeInTheDocument();
-      expect(screen.getByText('Investigating')).toBeInTheDocument();
-      expect(screen.getByText('Planned')).toBeInTheDocument();
-      expect(screen.getByText('In progress')).toBeInTheDocument();
-      expect(screen.getByText('Responded')).toBeInTheDocument();
-      expect(screen.getByText('Shipped')).toBeInTheDocument();
-      expect(screen.getByText("Won't fix")).toBeInTheDocument();
-      expect(screen.getByText('Duplicate')).toBeInTheDocument();
+      // User card shows title (also appears in enriched header h2, so use getAllByText)
+      expect(screen.getAllByText('Dark mode please').length).toBeGreaterThanOrEqual(1);
+      // All 8 status labels (some appear in both head badge and status picker — use getAllByText)
+      expect(screen.getAllByText('New').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('Investigating').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('Planned').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('In progress').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('Responded').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('Shipped').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText("Won't fix").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('Duplicate').length).toBeGreaterThanOrEqual(1);
       // Textarea
       expect(screen.getByRole('textbox')).toBeInTheDocument();
       // 5 canned chips
@@ -637,8 +644,8 @@ describe('FeedbackDrawer', () => {
       renderDrawer(feedback.id, 'meta');
 
       expect(screen.getByText('Status')).toBeInTheDocument();
-      // The 'Planned' Badge should be visible
-      expect(screen.getByText('Planned')).toBeInTheDocument();
+      // The 'Planned' Badge should be visible (may also appear in the enriched head)
+      expect(screen.getAllByText('Planned').length).toBeGreaterThanOrEqual(1);
     });
 
     it('has no Device row', () => {
@@ -648,6 +655,76 @@ describe('FeedbackDrawer', () => {
       renderDrawer(feedback.id, 'meta');
 
       expect(screen.queryByText('Device')).not.toBeInTheDocument();
+    });
+  });
+
+  // ── Save & notify guard ────────────────────────────────────────────────────
+
+  describe('Save & notify guard', () => {
+    it('Save & notify is disabled when textarea is empty', () => {
+      const feedback = makeFeedback({ admin_response: null });
+      mockStoreWith(feedback);
+
+      renderDrawer(feedback.id, 'reply');
+
+      const saveBtn = screen.getByRole('button', { name: 'Save & notify' });
+      expect(saveBtn).toBeDisabled();
+    });
+
+    it('Save & notify becomes enabled after typing in the textarea', async () => {
+      const user = userEvent.setup();
+      const feedback = makeFeedback({ admin_response: null });
+      mockStoreWith(feedback);
+
+      renderDrawer(feedback.id, 'reply');
+
+      const saveBtn = screen.getByRole('button', { name: 'Save & notify' });
+      expect(saveBtn).toBeDisabled();
+
+      const textarea = screen.getByRole('textbox');
+      await user.type(textarea, 'Some text');
+
+      expect(saveBtn).not.toBeDisabled();
+    });
+
+    it('Save & notify remains disabled when textarea contains only whitespace', async () => {
+      const user = userEvent.setup();
+      const feedback = makeFeedback({ admin_response: null });
+      mockStoreWith(feedback);
+
+      renderDrawer(feedback.id, 'reply');
+
+      const textarea = screen.getByRole('textbox');
+      await user.type(textarea, '   ');
+
+      const saveBtn = screen.getByRole('button', { name: 'Save & notify' });
+      expect(saveBtn).toBeDisabled();
+    });
+  });
+
+  // ── Delete button ──────────────────────────────────────────────────────────
+
+  describe('Delete button in reply footer', () => {
+    it('renders a Delete button in the reply tab footer', () => {
+      const feedback = makeFeedback();
+      mockStoreWith(feedback);
+
+      renderDrawer(feedback.id, 'reply');
+
+      expect(screen.getByRole('button', { name: /Delete/i })).toBeInTheDocument();
+    });
+
+    it('clicking Delete calls onRequestDelete with the feedback id', async () => {
+      const user = userEvent.setup();
+      const feedback = makeFeedback();
+      mockStoreWith(feedback);
+
+      const onRequestDelete = vi.fn();
+      renderDrawer(feedback.id, 'reply', vi.fn(), vi.fn(), onRequestDelete);
+
+      await user.click(screen.getByRole('button', { name: /Delete/i }));
+
+      expect(onRequestDelete).toHaveBeenCalledWith(feedback.id);
     });
   });
 });

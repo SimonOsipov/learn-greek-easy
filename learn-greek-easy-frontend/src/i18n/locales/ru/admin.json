@@ -750,6 +750,10 @@
         "close": "Закрыть",
         "title": "Детали отзыва",
         "headerPrefix": "Отзыв · #",
+        "likes_one": "{{count}} лайк",
+        "likes_few": "{{count}} лайка",
+        "likes_many": "{{count}} лайков",
+        "likes_other": "{{count}} лайков",
         "thread": {
           "empty": "Ответа ещё нет — перейдите на вкладку «Ответить»."
         },

@@ -555,6 +555,13 @@ export const AdminFeedbackSection: React.FC = () => {
           innerTab={openInnerTab}
           onClose={closeDrawer}
           onInnerTabChange={setInnerTab}
+          onRequestDelete={(id) => {
+            const item = feedbackList.find((f) => f.id === id);
+            if (item) {
+              setDeleteTarget(item);
+              closeDrawer();
+            }
+          }}
         />
       )}
 
