@@ -870,7 +870,10 @@
         "clear": "Clear filters"
       },
       "emptyStates": {
-        "noMatch": "No feedback matches your filters"
+        "noMatchHeading": "No feedback matches your filters",
+        "noMatchBody": "Try widening the status or type filter.",
+        "noFeedbackHeading": "No feedback yet",
+        "noFeedbackBody": "Feedback from users will appear here as it comes in."
       },
       "toasts": {
         "deepLinkNotFound": "Feedback item not found on this page"

@@ -49,7 +49,11 @@ vi.mock('react-i18next', () => ({
         'feedback.v2.filters.search.placeholder': 'Search feedback...',
         'feedback.v2.filters.clear': 'Clear filters',
         // empty states
-        'feedback.v2.emptyStates.noMatch': 'No feedback matches your filters',
+        'feedback.v2.emptyStates.noMatchHeading': 'No feedback matches your filters',
+        'feedback.v2.emptyStates.noMatchBody': 'Try widening the status or type filter.',
+        'feedback.v2.emptyStates.noFeedbackHeading': 'No feedback yet',
+        'feedback.v2.emptyStates.noFeedbackBody':
+          'Feedback from users will appear here as it comes in.',
         // toasts
         'feedback.v2.toasts.deepLinkNotFound': 'Feedback item not found on this page',
         // v1 keys still referenced

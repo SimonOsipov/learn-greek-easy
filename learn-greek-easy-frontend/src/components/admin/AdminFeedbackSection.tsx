@@ -479,11 +479,19 @@ export const AdminFeedbackSection: React.FC = () => {
       {!isLoading && !error && (
         <>
           {visible.length === 0 ? (
-            <p className="py-8 text-center text-muted-foreground">
-              {hasActiveFilters
-                ? t('feedback.v2.emptyStates.noMatch')
-                : t('feedback.states.noFeedback')}
-            </p>
+            <div className="placeholder-box flex-col gap-3 py-12" data-testid="feedback-empty">
+              <Search className="h-10 w-10 text-muted-foreground" aria-hidden />
+              <h3 className="text-base font-semibold">
+                {hasActiveFilters
+                  ? t('feedback.v2.emptyStates.noMatchHeading')
+                  : t('feedback.v2.emptyStates.noFeedbackHeading')}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {hasActiveFilters
+                  ? t('feedback.v2.emptyStates.noMatchBody')
+                  : t('feedback.v2.emptyStates.noFeedbackBody')}
+              </p>
+            </div>
           ) : (
             <div className="space-y-4">
               {visible.map((feedback) => (
