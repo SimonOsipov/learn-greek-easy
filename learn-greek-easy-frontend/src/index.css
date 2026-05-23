@@ -1639,6 +1639,14 @@
     margin-left: auto;
   }
 
+  /* SidePanel size="half": ~50vw clamped to 560–720px. Named class avoids
+     arbitrary Tailwind values per the design-system drift rule. */
+  .drawer-size-half {
+    width: 50vw;
+    min-width: 560px;
+    max-width: 720px;
+  }
+
   /* ==========================================================================
      ANND-01 — Announcements drawer (ADMIN2-04) CSS foundation
      Ported from design_handoff_admin_redesign/prototype.css (announcements section)

@@ -302,13 +302,13 @@ describe('AnnouncementDetailsDrawer', () => {
   // ── SidePanel primitive consumption (ADMIN2-20) ───────────────────────────
 
   describe('SidePanel primitive consumption', () => {
-    it('mounts SidePanel with size="half" — dialog content has class w-[50vw]', () => {
+    it('mounts SidePanel with size="half" — dialog content has class drawer-size-half', () => {
       const ann = makeAnnouncement();
       setupStore(buildStoreState({ selectedAnnouncement: ann }));
       render(<AnnouncementDetailsDrawer {...defaultProps} />);
       const dialog = document.querySelector('[role="dialog"]');
       expect(dialog).not.toBeNull();
-      expect(dialog!.className).toContain('w-[50vw]');
+      expect(dialog!.className).toContain('drawer-size-half');
     });
 
     it('Close button has class drawer-close-right when position="right"', () => {

@@ -131,23 +131,24 @@ describe('SidePanel', () => {
 
   // AC — size="half" variant (ADMIN2-20)
   describe('size="half"', () => {
-    it('applies w-[50vw] class to SheetContent when size="half"', () => {
+    it('applies drawer-size-half class to SheetContent when size="half"', () => {
       renderPanel({ size: 'half' });
       const dialog = screen.getByRole('dialog');
-      expect(dialog.className).toContain('w-[50vw]');
+      expect(dialog.className).toContain('drawer-size-half');
     });
 
-    it('applies min-w-[560px] and max-w-[720px] clamps when size="half"', () => {
-      renderPanel({ size: 'half' });
-      const dialog = screen.getByRole('dialog');
-      expect(dialog.className).toContain('min-w-[560px]');
-      expect(dialog.className).toContain('max-w-[720px]');
+    it('index.css defines .drawer-size-half with 50vw width and 560/720 clamps', () => {
+      const css = readFileSync(resolve(__dirname, '../../../index.css'), 'utf8');
+      expect(css).toContain('.drawer-size-half');
+      expect(css).toContain('width: 50vw');
+      expect(css).toContain('min-width: 560px');
+      expect(css).toContain('max-width: 720px');
     });
 
-    it('does not apply half classes when size is default', () => {
+    it('does not apply drawer-size-half when size is default', () => {
       renderPanel({ size: 'default' });
       const dialog = screen.getByRole('dialog');
-      expect(dialog.className).not.toContain('w-[50vw]');
+      expect(dialog.className).not.toContain('drawer-size-half');
     });
   });
 
