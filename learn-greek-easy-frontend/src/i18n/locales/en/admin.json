@@ -375,7 +375,6 @@
       "statistics": "Statistics",
       "sent": "Sent to",
       "read": "Read by",
-      "readProgress": "Read Progress",
       "close": "Close"
     },
     "delete": {
@@ -399,7 +398,6 @@
         "readBy": "Read by",
         "unread": "unread",
         "clickThrough": "Click-through",
-        "readProgress": "Read progress",
         "readTimeline": "Read timeline",
         "announcementLabel": "Announcement",
         "resendToUnread": "Resend to unread"

@@ -387,7 +387,6 @@
       "statistics": "Статистика",
       "sent": "Отправлено",
       "read": "Прочитано",
-      "readProgress": "Прогресс прочтения",
       "close": "Закрыть"
     },
     "delete": {
@@ -411,7 +410,6 @@
         "readBy": "Прочитано",
         "unread": "непрочитано",
         "clickThrough": "Переходы",
-        "readProgress": "Прогресс прочтения",
         "readTimeline": "Хронология прочтения",
         "announcementLabel": "Объявление",
         "resendToUnread": "Отправить непрочитавшим"

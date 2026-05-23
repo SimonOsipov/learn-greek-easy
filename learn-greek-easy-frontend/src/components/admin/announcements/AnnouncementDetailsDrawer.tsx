@@ -222,17 +222,6 @@ export function AnnouncementDetailsDrawer({
                   </div>
                 </div>
 
-                {/* 4. Read progress */}
-                <div className="an-progress-row">
-                  <div className="an-progress-l">
-                    <span>{t('announcements.v2.details.readProgress')}</span>
-                    <span className="an-progress-n">{readPct}%</span>
-                  </div>
-                  <div className="an-progress-bar">
-                    <span style={{ width: `${readPct}%` }} />
-                  </div>
-                </div>
-
                 {/* 5. Read timeline placeholder */}
                 <div style={{ marginBottom: '18px' }}>
                   <div className="an-detail-l">{t('announcements.v2.details.readTimeline')}</div>
