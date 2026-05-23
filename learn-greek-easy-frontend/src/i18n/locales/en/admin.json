@@ -310,14 +310,11 @@
     },
     "stats": {
       "total": "Total Announcements",
-      "avgRead": "Avg. Read Rate",
       "avgReadRate": "Avg read rate",
       "allTime": "All time",
       "acrossAll": "Across all announcements"
     },
     "create": {
-      "title": "Create Announcement",
-      "description": "Send a notification to all active users",
       "titleLabel": "Title",
       "titlePlaceholder": "Enter announcement title",
       "messageLabel": "Message",
@@ -329,8 +326,6 @@
       "preview": "Preview",
       "success": "Announcement sent successfully",
       "error": "Failed to send announcement",
-      "modeForm": "Form",
-      "modeJson": "JSON",
       "jsonHint": "Paste a JSON object with title, message, and optional link_url.",
       "jsonPlaceholder": "{\n  \"title\": \"Your announcement title\",\n  \"message\": \"Your announcement message\",\n  \"link_url\": \"https://example.com (optional)\"\n}",
       "switchModeConfirmTitle": "Switch mode?",
@@ -342,43 +337,24 @@
       "jsonMessageTooLong": "Message must be 500 characters or less.",
       "jsonInvalidUrl": "Link URL must be a valid URL.",
       "jsonUrlTooLong": "Link URL must be 500 characters or less.",
-      "button": "Create Announcement",
       "formTab": "Form",
       "jsonTab": "JSON",
       "unsavedTitle": "Discard changes?",
       "unsavedDescription": "You have unsaved input. Closing will discard your changes."
     },
-    "preview": {
-      "title": "Preview Announcement",
-      "description": "Review before sending to all users",
-      "warningTitle": "This action cannot be undone",
-      "warningMessage": "Once sent, this announcement will create notifications for all active users.",
-      "cancel": "Edit",
-      "send": "Send to All Users",
-      "sending": "Sending..."
-    },
     "history": {
       "title": "Announcement History",
-      "description": "View all past announcements and their statistics",
       "empty": "No announcements yet",
-      "emptyHint": "Create your first announcement above",
-      "viewDetail": "View Details"
+      "emptyHint": "Create your first announcement above"
     },
     "detail": {
-      "title": "Announcement Details",
-      "message": "Message",
-      "link": "Link URL",
-      "statistics": "Statistics",
-      "sent": "Sent to",
-      "read": "Read by",
       "close": "Close"
     },
     "delete": {
       "button": "Delete",
       "title": "Delete Announcement",
       "warning": "This will permanently delete the announcement. Already-sent notifications will NOT be recalled.",
-      "confirm": "Delete",
-      "success": "Announcement deleted"
+      "confirm": "Delete"
     },
     "v2": {
       "details": {
