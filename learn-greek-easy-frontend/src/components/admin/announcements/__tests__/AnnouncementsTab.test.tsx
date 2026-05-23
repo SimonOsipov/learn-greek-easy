@@ -84,9 +84,7 @@ vi.mock('react-i18next', () => ({
         'announcements.actions.new': 'New announcement',
         // StatCards
         'announcements.stats.total': 'Total Announcements',
-        'announcements.stats.peopleReached': 'People Reached',
         'announcements.stats.avgReadRate': 'Avg. Read Rate',
-        'announcements.stats.withLink': 'With Link',
         'announcements.stats.allTime': 'All time',
         'announcements.stats.acrossAll': 'Across all',
         // HistoryRows
@@ -143,16 +141,9 @@ vi.mock('react-i18next', () => ({
         'announcements.v2.details.recipients': 'recipients',
         'announcements.v2.details.readBy': 'Read by',
         'announcements.v2.details.unread': 'unread',
-        'announcements.v2.details.clickThrough': 'Click-through',
-        'announcements.v2.details.readProgress': 'Read progress',
-        'announcements.v2.details.readTimeline': 'Read timeline',
         'announcements.v2.details.announcementLabel': 'Announcement',
         'announcements.v2.details.delivered': 'Delivered',
         'announcements.v2.details.read': 'Read',
-        'announcements.v2.details.resendToUnread': 'Resend to unread',
-        'announcements.v2.timeline.comingSoonCaption': 'Detailed timeline coming soon',
-        'announcements.v2.ctr.trackingComingSoon': 'tracking coming soon',
-        'announcements.v2.ctr.noLink': 'no link',
         'announcements.detail.close': 'Close',
         // Delete dialog
         'announcements.delete.title': 'Delete Announcement',
