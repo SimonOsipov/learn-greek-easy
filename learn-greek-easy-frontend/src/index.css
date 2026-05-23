@@ -2107,35 +2107,6 @@
     color: hsl(var(--fg-3));
   }
 
-  /* ── Gradient progress bar ──────────────────────────────────────────────── */
-  .an-progress-row {
-    margin-bottom: 18px;
-  }
-  .an-progress-l {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 6px;
-    font-size: 12.5px;
-    font-weight: 600;
-  }
-  .an-progress-n {
-    font-family: 'JetBrains Mono', monospace;
-    color: hsl(var(--primary));
-  }
-  .an-progress-bar {
-    height: 10px;
-    border-radius: 999px;
-    background: hsl(var(--fg) / 0.08);
-    overflow: hidden;
-  }
-  .an-progress-bar span {
-    display: block;
-    height: 100%;
-    background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--accent)));
-    border-radius: 999px;
-    transition: width 0.3s;
-  }
-
   /* ── Read-timeline mini-chart ───────────────────────────────────────────── */
   .an-timeline {
     display: grid;
