@@ -410,7 +410,6 @@
         "readBy": "Прочитано",
         "unread": "непрочитано",
         "clickThrough": "Переходы",
-        "readTimeline": "Хронология прочтения",
         "announcementLabel": "Объявление",
         "resendToUnread": "Отправить непрочитавшим"
       },
@@ -427,9 +426,6 @@
           "channelLabel": "Канал",
           "channelValue": "В приложении"
         }
-      },
-      "timeline": {
-        "comingSoonCaption": "Детальная хронология появится позже"
       },
       "ctr": {
         "trackingComingSoon": "отслеживание скоро",
