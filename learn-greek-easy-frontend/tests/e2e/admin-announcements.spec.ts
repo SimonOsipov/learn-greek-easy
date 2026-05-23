@@ -265,9 +265,7 @@ test.describe('Admin Announcements Drawer (ANND-10)', () => {
     await expect(detailsDrawer).toBeVisible({ timeout: 5_000 });
 
     // Assert drawer width is between 40–60% of the runtime viewport
-    const dialog = page.locator('[role="dialog"]').first();
-    await expect(dialog).toBeVisible();
-    const box = await dialog.boundingBox();
+    const box = await detailsDrawer.boundingBox();
     expect(box).not.toBeNull();
     const viewport = page.viewportSize();
     expect(viewport).not.toBeNull();
@@ -329,8 +327,8 @@ test.describe('Admin Announcements Drawer (ANND-10)', () => {
     await expect(tab.getByText(/Всего объявлений|Total Announcements/i)).toBeVisible({ timeout: 5_000 });
     await expect(tab.getByText(/Средний процент прочтений|Avg read rate/i)).toBeVisible({ timeout: 5_000 });
 
-    // The removed stat cards must NOT be present
-    await expect(tab.getByText('People Reached')).toHaveCount(0);
-    await expect(tab.getByText('With Link')).toHaveCount(0);
+    // The removed stat cards must NOT be present (locale-agnostic)
+    await expect(tab.getByText(/People Reached|Охват пользователей/i)).toHaveCount(0);
+    await expect(tab.getByText(/With Link|Со ссылкой/i)).toHaveCount(0);
   });
 });
