@@ -264,12 +264,14 @@ test.describe('Admin Announcements Drawer (ANND-10)', () => {
     const detailsDrawer = page.getByTestId('announcement-details-drawer');
     await expect(detailsDrawer).toBeVisible({ timeout: 5_000 });
 
-    // Assert drawer width is between 40–60% of the 1280px viewport
+    // Assert drawer width is between 40–60% of the runtime viewport
     const dialog = page.locator('[role="dialog"]').first();
     await expect(dialog).toBeVisible();
     const box = await dialog.boundingBox();
     expect(box).not.toBeNull();
-    const widthFraction = box!.width / 1280;
+    const viewport = page.viewportSize();
+    expect(viewport).not.toBeNull();
+    const widthFraction = box!.width / viewport!.width;
     expect(widthFraction).toBeGreaterThanOrEqual(0.4);
     expect(widthFraction).toBeLessThanOrEqual(0.6);
 
@@ -301,14 +303,14 @@ test.describe('Admin Announcements Drawer (ANND-10)', () => {
     // Wait for announcement body to load (message block appears when loaded)
     await expect(detailsDrawer.locator('.an-detail-msg')).toBeVisible({ timeout: 10_000 });
 
-    // Removed sections must be absent
-    await expect(page.locator('.an-progress-row')).toHaveCount(0);
-    await expect(page.locator('.an-timeline')).toHaveCount(0);
-    await expect(page.locator('.drawer-bcrumb')).toHaveCount(0);
-    await expect(page.getByTestId('announcement-details-resend-button')).toHaveCount(0);
+    // Removed sections must be absent (scoped to the details drawer)
+    await expect(detailsDrawer.locator('.an-progress-row')).toHaveCount(0);
+    await expect(detailsDrawer.locator('.an-timeline')).toHaveCount(0);
+    await expect(detailsDrawer.locator('.drawer-bcrumb')).toHaveCount(0);
+    await expect(detailsDrawer.getByTestId('announcement-details-resend-button')).toHaveCount(0);
 
     // Exactly 2 reach stat tiles
-    await expect(page.locator('.an-stat')).toHaveCount(2);
+    await expect(detailsDrawer.locator('.an-stat')).toHaveCount(2);
   });
 
   // ── 11. List page renders exactly 2 StatCards ──────────────────────────────
@@ -317,14 +319,18 @@ test.describe('Admin Announcements Drawer (ANND-10)', () => {
   }) => {
     await page.goto('/admin?tab=announcements');
     await expect(page.getByTestId('admin-page')).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByTestId('announcements-tab')).toBeVisible({ timeout: 10_000 });
+    const tab = page.getByTestId('announcements-tab');
+    await expect(tab).toBeVisible({ timeout: 10_000 });
+
+    // Exactly 2 StatCards rendered inside the announcements tab
+    await expect(tab.locator('.stat-card')).toHaveCount(2);
 
     // The 2 remaining stat card headings should be present (locale-agnostic match)
-    await expect(page.getByText(/Всего объявлений|Total Announcements/i)).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByText(/Средний процент прочтений|Avg read rate/i)).toBeVisible({ timeout: 5_000 });
+    await expect(tab.getByText(/Всего объявлений|Total Announcements/i)).toBeVisible({ timeout: 5_000 });
+    await expect(tab.getByText(/Средний процент прочтений|Avg read rate/i)).toBeVisible({ timeout: 5_000 });
 
     // The removed stat cards must NOT be present
-    await expect(page.getByText('People Reached')).toHaveCount(0);
-    await expect(page.getByText('With Link')).toHaveCount(0);
+    await expect(tab.getByText('People Reached')).toHaveCount(0);
+    await expect(tab.getByText('With Link')).toHaveCount(0);
   });
 });

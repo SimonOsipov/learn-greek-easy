@@ -67,7 +67,7 @@ function SidePanel({
     'data-[state=closed]:duration-300 data-[state=open]:duration-500',
     'drawer-wrap flex flex-col gap-0 p-0',
     size === 'wide' && 'w-[95vw] !max-w-[1080px] sm:!max-w-[1080px]',
-    size === 'half' && 'w-[50vw] min-w-[560px] max-w-[720px]',
+    size === 'half' && 'drawer-size-half',
     size === 'full' && 'h-screen w-screen !max-w-none',
     className
   );
