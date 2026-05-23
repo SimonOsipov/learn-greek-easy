@@ -206,17 +206,6 @@ export function AnnouncementDetailsDrawer({
                         {t('announcements.v2.details.unread')}
                       </div>
                     </div>
-
-                    {/* Click-through */}
-                    <div className="an-stat">
-                      <div className="an-stat-l">{t('announcements.v2.details.clickThrough')}</div>
-                      <div className="an-stat-n">—</div>
-                      <div className="an-stat-sub">
-                        {announcement.link_url
-                          ? t('announcements.v2.ctr.trackingComingSoon')
-                          : t('announcements.v2.ctr.noLink')}
-                      </div>
-                    </div>
                   </div>
                 </div>
               </>
