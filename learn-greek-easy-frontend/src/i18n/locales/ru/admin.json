@@ -1021,7 +1021,14 @@
       "fieldTitle": "Заголовок ({{lang}})",
       "fieldContent": "Содержание ({{lang}})",
       "titlePlaceholder": "Краткий, понятный заголовок",
-      "contentPlaceholder": "Поддерживается Markdown. Что изменилось, почему и как это влияет на пользователей."
+      "contentPlaceholder": "Поддерживается Markdown. Что изменилось, почему и как это влияет на пользователей.",
+      "needsEnHelper": "Добавьте заголовок и содержание на EN, чтобы сохранить.",
+      "metaId": "ID",
+      "metaCreated": "Создано",
+      "metaUpdated": "Обновлено",
+      "idCopied": "ID записи скопирован",
+      "metaIdCopyAria": "Скопировать ID записи",
+      "metaLinkCopyAria": "Скопировать ссылку на запись"
     }
   },
   "vocabularyCard": {

@@ -2557,6 +2557,25 @@
     font-size: 11px;
   }
 
+  /* ── Changelog drawer header metadata strip (ADMIN2-21 / CLTT-17) ── */
+  .cl-drawer-id-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 11.5px;
+    margin-top: 4px;
+  }
+  .cl-drawer-id-row button {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: inherit;
+    padding: 2px;
+  }
+  .cl-drawer-id-row button:hover {
+    color: hsl(var(--fg));
+  }
+
   /* ── News Card Surface ──────────────────────────────────── */
   .news-grid {
     display: grid;
