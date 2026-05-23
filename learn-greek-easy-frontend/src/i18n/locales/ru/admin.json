@@ -927,14 +927,10 @@
       "cadence": "Средний интервал",
       "cadenceSub": "между записями",
       "cadenceSubMinimal": "нужно ≥ 2 записей",
-      "missingRu": "Без перевода RU",
-      "missingRuNeed": "записей ждут перевода",
-      "missingRuDone": "все переведены",
       "footer": {
         "allTime": "за всё время",
         "lastPublished": "последняя публикация",
-        "lastTenEntries": "последние 10 записей",
-        "needsAttention": "требует внимания"
+        "lastTenEntries": "последние 10 записей"
       }
     },
     "title": "История изменений",
@@ -950,6 +946,9 @@
       "allTags": "Все теги",
       "tagPlaceholder": "Фильтр по тегу",
       "all": "Все"
+    },
+    "timeline": {
+      "missingRuBadge": "Без RU"
     },
     "table": {
       "title": "Записи изменений",
@@ -1000,11 +999,9 @@
       "deleted": "Запись успешно удалена",
       "createError": "Не удалось создать запись",
       "updateError": "Не удалось обновить запись",
-      "deleteError": "Не удалось удалить запись",
-      "exportComingSoon": "Экспорт в Markdown скоро"
+      "deleteError": "Не удалось удалить запись"
     },
     "actions": {
-      "export": "Экспорт в Markdown",
       "newEntry": "Новая запись"
     }
   },
