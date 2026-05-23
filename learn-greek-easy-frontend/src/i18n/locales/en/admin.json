@@ -1083,7 +1083,14 @@
       "fieldTitle": "Title ({{lang}})",
       "fieldContent": "Content ({{lang}})",
       "titlePlaceholder": "Short, descriptive title",
-      "contentPlaceholder": "Markdown supported. What changed, why, and any user impact."
+      "contentPlaceholder": "Markdown supported. What changed, why, and any user impact.",
+      "needsEnHelper": "Add EN title and content to enable saving.",
+      "metaId": "ID",
+      "metaCreated": "Created",
+      "metaUpdated": "Updated",
+      "idCopied": "Entry ID copied",
+      "metaIdCopyAria": "Copy entry ID",
+      "metaLinkCopyAria": "Copy link to entry"
     }
   },
   "vocabularyCard": {

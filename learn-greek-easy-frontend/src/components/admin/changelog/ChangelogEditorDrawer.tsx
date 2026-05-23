@@ -17,7 +17,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { Check, Wand2 } from 'lucide-react';
+import { Copy, Link as LinkIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
@@ -25,7 +25,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { SidePanel } from '@/components/ui/side-panel';
 import { Textarea } from '@/components/ui/textarea';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from '@/hooks/use-toast';
 import { renderInlineMarkdown } from '@/lib/markdown-inline';
 import { cn } from '@/lib/utils';
@@ -201,13 +200,8 @@ export function ChangelogEditorDrawer({ open, onClose, entry }: ChangelogEditorD
   const setTitle = (v: string) => setForm((f) => ({ ...f, [titleKey]: v }));
   const setContent = (v: string) => setForm((f) => ({ ...f, [contentKey]: v }));
 
-  // ── Translation status pills (form) ──────────────────────────────────────
-  const enDone = !!form.title_en.trim() && !!form.content_en.trim();
-  const ruDone = !!form.title_ru.trim() && !!form.content_ru.trim();
-
-  // ── Footer badge logic ────────────────────────────────────────────────────
+  // ── Footer logic ──────────────────────────────────────────────────────────
   const enReady = !!form.title_en.trim() && !!form.content_en.trim();
-  const ruMissing = enReady && !(form.title_ru.trim() && form.content_ru.trim());
 
   // ── Submit handler ────────────────────────────────────────────────────────
   const handleSubmit = async () => {
@@ -262,346 +256,332 @@ export function ChangelogEditorDrawer({ open, onClose, entry }: ChangelogEditorD
     : t('admin:changelog.actions.newEntry');
 
   return (
-    <TooltipProvider>
-      <SidePanel
-        open={open}
-        onOpenChange={handleOpenChange}
-        data-testid="changelog-editor-drawer"
-        title={
-          entry
-            ? t('admin:changelog.editor.ariaTitleEdit')
-            : t('admin:changelog.editor.ariaTitleNew')
-        }
-        size="half"
-      >
-        {/* ── Header ─────────────────────────────────────────────────────── */}
-        <SidePanel.Header>
-          <div className="drawer-head-content">
-            <div className="drawer-head-row">
-              <h2 className="drawer-title">{title}</h2>
-            </div>
-            <div className="drawer-meta" data-testid="changelog-drawer-meta">
-              <Badge tone={TAG_TONE[form.tag]}>
-                {t(CHANGELOG_TAG_CONFIG[form.tag].labelKey as Parameters<typeof t>[0])}
-              </Badge>
-              {form.version && <span className="cl-preview-v">{form.version}</span>}
-              {entry && (
-                <span className="va-dim">
-                  {t('admin:changelog.editor.posted', { date: formatDate(entry.created_at) })}
+    <SidePanel
+      open={open}
+      onOpenChange={handleOpenChange}
+      data-testid="changelog-editor-drawer"
+      title={
+        entry ? t('admin:changelog.editor.ariaTitleEdit') : t('admin:changelog.editor.ariaTitleNew')
+      }
+      size="half"
+    >
+      {/* ── Header ─────────────────────────────────────────────────────── */}
+      <SidePanel.Header>
+        <div className="drawer-head-content">
+          <div className="drawer-head-row">
+            <h2 className="drawer-title">{title}</h2>
+          </div>
+          <div className="drawer-meta" data-testid="changelog-drawer-meta">
+            <Badge tone={TAG_TONE[form.tag]}>
+              {t(CHANGELOG_TAG_CONFIG[form.tag].labelKey as Parameters<typeof t>[0])}
+            </Badge>
+            {form.version && <span className="cl-preview-v">{form.version}</span>}
+            {entry && (
+              <span className="va-dim">
+                {t('admin:changelog.editor.posted', { date: formatDate(entry.created_at) })}
+              </span>
+            )}
+          </div>
+          {entry && (
+            <div
+              className="cl-drawer-id-row va-dim font-mono"
+              data-testid="changelog-editor-meta-row"
+            >
+              <span>
+                {t('admin:changelog.editor.metaId')}:&nbsp;
+                <code>{entry.id.slice(0, 8)}…</code>
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(entry.id);
+                  toast({ title: t('admin:changelog.editor.idCopied') });
+                }}
+                data-testid="changelog-editor-copy-id"
+                aria-label={t('admin:changelog.editor.metaIdCopyAria')}
+              >
+                <Copy className="size-3.5" aria-hidden="true" />
+              </button>
+              <span>
+                {t('admin:changelog.editor.metaCreated')}:&nbsp;
+                {formatDate(entry.created_at)}
+              </span>
+              {entry.updated_at !== entry.created_at && (
+                <span>
+                  {t('admin:changelog.editor.metaUpdated')}:&nbsp;
+                  {formatDate(entry.updated_at)}
                 </span>
               )}
+              <button
+                type="button"
+                onClick={() => {
+                  const url = `${window.location.origin}/admin?tab=changelog&edit=${entry.id}&lang=${lang}`;
+                  navigator.clipboard.writeText(url);
+                  toast({
+                    title: t('changelog:linkCopied'),
+                    description: t('changelog:linkCopiedMessage'),
+                  });
+                }}
+                data-testid="changelog-editor-copy-link"
+                aria-label={t('admin:changelog.editor.metaLinkCopyAria')}
+              >
+                <LinkIcon className="size-3.5" aria-hidden="true" />
+              </button>
             </div>
-          </div>
-          <SidePanel.CloseButton data-testid="changelog-editor-close-button" position="right" />
-        </SidePanel.Header>
+          )}
+        </div>
+        <SidePanel.CloseButton data-testid="changelog-editor-close-button" position="right" />
+      </SidePanel.Header>
 
-        {/* ── Tabs row ───────────────────────────────────────────────────── */}
-        <SidePanel.Tabs>
-          {/* Left: Form / JSON mode toggle */}
-          <div className="drawer-tab-group" role="tablist">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={panelMode === 'form'}
-              className={cn('drawer-tab', panelMode === 'form' && 'is-active')}
-              onClick={() => setPanelMode('form')}
-              data-testid="changelog-editor-tab-form"
-            >
-              {t('admin:changelog.editor.tabForm')}
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={panelMode === 'json'}
-              className={cn('drawer-tab', panelMode === 'json' && 'is-active')}
-              onClick={() => setPanelMode('json')}
-              data-testid="changelog-editor-tab-json"
-            >
-              {t('admin:changelog.editor.tabJson')}
-            </button>
-          </div>
+      {/* ── Tabs row ───────────────────────────────────────────────────── */}
+      <SidePanel.Tabs>
+        {/* Left: Form / JSON mode toggle */}
+        <div className="drawer-tab-group" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={panelMode === 'form'}
+            className={cn('drawer-tab', panelMode === 'form' && 'is-active')}
+            onClick={() => setPanelMode('form')}
+            data-testid="changelog-editor-tab-form"
+          >
+            {t('admin:changelog.editor.tabForm')}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={panelMode === 'json'}
+            className={cn('drawer-tab', panelMode === 'json' && 'is-active')}
+            onClick={() => setPanelMode('json')}
+            data-testid="changelog-editor-tab-json"
+          >
+            {t('admin:changelog.editor.tabJson')}
+          </button>
+        </div>
 
-          <div className="drawer-tabs-spacer" />
+        <div className="drawer-tabs-spacer" />
 
-          {/* Right: EN / RU language tabs */}
-          <div className="drawer-tab-group" role="tablist">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={lang === 'en'}
-              className={cn('drawer-tab', lang === 'en' && 'is-active')}
-              onClick={() => setLang('en')}
-              data-testid="changelog-editor-tab-en"
-            >
-              EN
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={lang === 'ru'}
-              className={cn('drawer-tab', lang === 'ru' && 'is-active')}
-              onClick={() => setLang('ru')}
-              data-testid="changelog-editor-tab-ru"
-            >
-              RU
-            </button>
-          </div>
-        </SidePanel.Tabs>
+        {/* Right: EN / RU language tabs */}
+        <div className="drawer-tab-group" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={lang === 'en'}
+            className={cn('drawer-tab', lang === 'en' && 'is-active')}
+            onClick={() => setLang('en')}
+            data-testid="changelog-editor-tab-en"
+          >
+            EN
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={lang === 'ru'}
+            className={cn('drawer-tab', lang === 'ru' && 'is-active')}
+            onClick={() => setLang('ru')}
+            data-testid="changelog-editor-tab-ru"
+          >
+            RU
+          </button>
+        </div>
+      </SidePanel.Tabs>
 
-        {/* ── Body ───────────────────────────────────────────────────────── */}
-        <SidePanel.Body>
-          <div data-testid="changelog-drawer-body" className="cl-edit-body">
-            {panelMode === 'json' ? (
-              /* ── JSON mode ──────────────────────────────────────────── */
-              <div className="cl-json-body">
-                {/* Inline validation error region (above textarea) */}
-                {!validation.valid && (
-                  <div
-                    className="cl-json-error"
-                    data-testid="changelog-editor-json-error"
-                    role="alert"
-                  >
-                    <span>
-                      {validation.error.messageKey}
-                      {validation.error.fields && validation.error.fields.length > 0 && (
-                        <span> — {validation.error.fields.join(', ')}</span>
-                      )}
-                    </span>
-                  </div>
-                )}
-                <textarea
-                  className="cl-json-textarea font-mono"
-                  rows={20}
-                  value={jsonText}
-                  onChange={(e) => setJsonText(e.target.value)}
-                  data-testid="changelog-editor-json-textarea"
-                  spellCheck={false}
-                />
-              </div>
-            ) : (
-              /* ── Form mode ──────────────────────────────────────────── */
-              <div className="cl-edit-grid">
-                {/* ── Left column: Form ─────────────────────────────────── */}
-                <div className="cl-edit-form">
-                  {/* Tag picker */}
-                  <div>
-                    <div className="cl-tag-grid">
-                      {CHANGELOG_TAG_OPTIONS.map((tag) => (
-                        <button
-                          key={tag}
-                          type="button"
-                          className={cn('cl-tag-btn', form.tag === tag && 'is-active')}
-                          data-tone={TAG_TONE[tag]}
-                          onClick={() => setForm((f) => ({ ...f, tag }))}
-                          data-testid={`changelog-editor-tag-${tag}`}
-                        >
-                          <span className="cl-tag-dot" aria-hidden="true" />
-                          {t(CHANGELOG_TAG_CONFIG[tag].labelKey as Parameters<typeof t>[0])}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Version input */}
-                  <div>
-                    <label htmlFor="changelog-version" className="mb-1 block text-sm font-medium">
-                      {t('admin:changelog.editor.fieldVersion')}
-                    </label>
-                    <Input
-                      id="changelog-version"
-                      value={form.version}
-                      onChange={(e) => setForm((f) => ({ ...f, version: e.target.value }))}
-                      placeholder={t('admin:changelog.editor.versionPlaceholder')}
-                      data-testid="changelog-editor-version"
-                    />
-                  </div>
-
-                  {/* Title input (language-bound) */}
-                  <div>
-                    <label
-                      htmlFor={`changelog-editor-title-${lang}`}
-                      className="mb-1 block text-sm font-medium"
-                    >
-                      {t('admin:changelog.editor.fieldTitle', { lang: lang.toUpperCase() })}
-                    </label>
-                    <Input
-                      id={`changelog-editor-title-${lang}`}
-                      value={titleValue}
-                      onChange={(e) => setTitle(e.target.value)}
-                      placeholder={t('admin:changelog.editor.titlePlaceholder')}
-                      data-testid={`changelog-editor-title-${lang}`}
-                    />
-                  </div>
-
-                  {/* Content textarea (language-bound) */}
-                  <div>
-                    <label
-                      htmlFor={`changelog-editor-content-${lang}`}
-                      className="mb-1 block text-sm font-medium"
-                    >
-                      {t('admin:changelog.editor.fieldContent', { lang: lang.toUpperCase() })}
-                    </label>
-                    <Textarea
-                      id={`changelog-editor-content-${lang}`}
-                      rows={8}
-                      value={contentValue}
-                      onChange={(e) => setContent(e.target.value)}
-                      placeholder={t('admin:changelog.editor.contentPlaceholder')}
-                      data-testid={`changelog-editor-content-${lang}`}
-                    />
-                  </div>
-
-                  {/* Translation status pills + auto-translate button on the same row */}
-                  <div className="cl-translation-row">
-                    <div className="cl-translation-status">
-                      <span
-                        className={cn('cl-trans-pill', enDone && 'is-done')}
-                        data-testid="changelog-trans-pill-en"
+      {/* ── Body ───────────────────────────────────────────────────────── */}
+      <SidePanel.Body>
+        <div data-testid="changelog-drawer-body" className="cl-edit-body">
+          {panelMode === 'json' ? (
+            /* ── JSON mode ──────────────────────────────────────────── */
+            <div className="cl-json-body">
+              {/* Inline validation error region (above textarea) */}
+              {!validation.valid && (
+                <div
+                  className="cl-json-error"
+                  data-testid="changelog-editor-json-error"
+                  role="alert"
+                >
+                  <span>
+                    {validation.error.messageKey}
+                    {validation.error.fields && validation.error.fields.length > 0 && (
+                      <span> — {validation.error.fields.join(', ')}</span>
+                    )}
+                  </span>
+                </div>
+              )}
+              <textarea
+                className="cl-json-textarea font-mono"
+                rows={20}
+                value={jsonText}
+                onChange={(e) => setJsonText(e.target.value)}
+                data-testid="changelog-editor-json-textarea"
+                spellCheck={false}
+              />
+            </div>
+          ) : (
+            /* ── Form mode ──────────────────────────────────────────── */
+            <div className="cl-edit-grid">
+              {/* ── Left column: Form ─────────────────────────────────── */}
+              <div className="cl-edit-form">
+                {/* Tag picker */}
+                <div>
+                  <div className="cl-tag-grid">
+                    {CHANGELOG_TAG_OPTIONS.map((tag) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        className={cn('cl-tag-btn', form.tag === tag && 'is-active')}
+                        data-tone={TAG_TONE[tag]}
+                        onClick={() => setForm((f) => ({ ...f, tag }))}
+                        data-testid={`changelog-editor-tag-${tag}`}
                       >
-                        {enDone ? <Check aria-hidden="true" /> : <span aria-hidden="true">—</span>}
-                        <span className="cl-trans-l">EN</span>
-                      </span>
-                      <span
-                        className={cn('cl-trans-pill', ruDone && 'is-done')}
-                        data-testid="changelog-trans-pill-ru"
-                      >
-                        {ruDone ? <Check aria-hidden="true" /> : <span aria-hidden="true">—</span>}
-                        <span className="cl-trans-l">RU</span>
-                      </span>
-                    </div>
-
-                    {/* Auto-translate button
-                        Uses aria-disabled instead of disabled so Radix Tooltip can fire.
-                        Mirrors AnnouncementComposeDrawer's "Save draft" gated-button pattern. */}
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          className="btn btn-glass btn-sm cursor-not-allowed opacity-60"
-                          aria-disabled="true"
-                          onClick={(e) => e.preventDefault()}
-                          data-testid="changelog-editor-autotranslate"
-                        >
-                          <Wand2 className="size-4" aria-hidden="true" />
-                          {lang === 'en' ? 'Auto-translate EN → RU' : 'Auto-translate RU → EN'}
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        Coming soon — auto-translate will be wired to OpenRouter in a follow-up.
-                      </TooltipContent>
-                    </Tooltip>
+                        <span className="cl-tag-dot" aria-hidden="true" />
+                        {t(CHANGELOG_TAG_CONFIG[tag].labelKey as Parameters<typeof t>[0])}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
-                {/* ── Right column: Preview (CLTE-05) ──────────────────── */}
-                {panelMode === 'form' && (
-                  <aside className="cl-preview" data-testid="changelog-drawer-preview">
-                    <div className="cl-preview-l">
-                      {t('admin:changelog.editor.previewLabel', { lang: lang.toUpperCase() })}
-                    </div>
-                    <div className="cl-preview-card">
-                      <div className="cl-preview-head">
-                        <Badge tone={TAG_TONE[form.tag]}>
-                          {t(CHANGELOG_TAG_CONFIG[form.tag].labelKey as Parameters<typeof t>[0])}
-                        </Badge>
-                        {form.version && (
-                          <span className="cl-preview-v" data-testid="changelog-preview-version">
-                            {form.version}
-                          </span>
-                        )}
-                      </div>
-                      <h3 className="cl-preview-title" data-testid="changelog-preview-title">
-                        {titleValue || (lang === 'en' ? 'Your headline' : 'Ваш заголовок')}
-                      </h3>
-                      <p className="cl-preview-body" data-testid="changelog-preview-body">
-                        {contentValue ? (
-                          renderInlineMarkdown(contentValue)
-                        ) : (
-                          <span className="va-dim">
-                            {lang === 'en'
-                              ? 'Body text will appear here as you type.'
-                              : 'Текст появится здесь по мере набора.'}
-                          </span>
-                        )}
-                      </p>
-                      <div className="cl-preview-foot va-dim" data-testid="changelog-preview-foot">
-                        {entry
-                          ? t('admin:changelog.editor.posted', {
-                              date: formatDate(entry.created_at),
-                            })
-                          : t('admin:changelog.editor.previewFootNew')}
-                      </div>
-                    </div>
-                  </aside>
-                )}
+                {/* Version input */}
+                <div>
+                  <label htmlFor="changelog-version" className="mb-1 block text-sm font-medium">
+                    {t('admin:changelog.editor.fieldVersion')}
+                  </label>
+                  <Input
+                    id="changelog-version"
+                    value={form.version}
+                    onChange={(e) => setForm((f) => ({ ...f, version: e.target.value }))}
+                    placeholder={t('admin:changelog.editor.versionPlaceholder')}
+                    data-testid="changelog-editor-version"
+                  />
+                </div>
+
+                {/* Title input (language-bound) */}
+                <div>
+                  <label
+                    htmlFor={`changelog-editor-title-${lang}`}
+                    className="mb-1 block text-sm font-medium"
+                  >
+                    {t('admin:changelog.editor.fieldTitle', { lang: lang.toUpperCase() })}
+                  </label>
+                  <Input
+                    id={`changelog-editor-title-${lang}`}
+                    value={titleValue}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder={t('admin:changelog.editor.titlePlaceholder')}
+                    data-testid={`changelog-editor-title-${lang}`}
+                  />
+                </div>
+
+                {/* Content textarea (language-bound) */}
+                <div>
+                  <label
+                    htmlFor={`changelog-editor-content-${lang}`}
+                    className="mb-1 block text-sm font-medium"
+                  >
+                    {t('admin:changelog.editor.fieldContent', { lang: lang.toUpperCase() })}
+                  </label>
+                  <Textarea
+                    id={`changelog-editor-content-${lang}`}
+                    rows={8}
+                    value={contentValue}
+                    onChange={(e) => setContent(e.target.value)}
+                    placeholder={t('admin:changelog.editor.contentPlaceholder')}
+                    data-testid={`changelog-editor-content-${lang}`}
+                  />
+                </div>
               </div>
+
+              {/* ── Right column: Preview (CLTE-05) ──────────────────── */}
+              {panelMode === 'form' && (
+                <aside className="cl-preview" data-testid="changelog-drawer-preview">
+                  <div className="cl-preview-l">
+                    {t('admin:changelog.editor.previewLabel', { lang: lang.toUpperCase() })}
+                  </div>
+                  <div className="cl-preview-card">
+                    <div className="cl-preview-head">
+                      <Badge tone={TAG_TONE[form.tag]}>
+                        {t(CHANGELOG_TAG_CONFIG[form.tag].labelKey as Parameters<typeof t>[0])}
+                      </Badge>
+                      {form.version && (
+                        <span className="cl-preview-v" data-testid="changelog-preview-version">
+                          {form.version}
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="cl-preview-title" data-testid="changelog-preview-title">
+                      {titleValue || (lang === 'en' ? 'Your headline' : 'Ваш заголовок')}
+                    </h3>
+                    <p className="cl-preview-body" data-testid="changelog-preview-body">
+                      {contentValue ? (
+                        renderInlineMarkdown(contentValue)
+                      ) : (
+                        <span className="va-dim">
+                          {lang === 'en'
+                            ? 'Body text will appear here as you type.'
+                            : 'Текст появится здесь по мере набора.'}
+                        </span>
+                      )}
+                    </p>
+                    <div className="cl-preview-foot va-dim" data-testid="changelog-preview-foot">
+                      {entry
+                        ? t('admin:changelog.editor.posted', {
+                            date: formatDate(entry.created_at),
+                          })
+                        : t('admin:changelog.editor.previewFootNew')}
+                    </div>
+                  </div>
+                </aside>
+              )}
+            </div>
+          )}
+        </div>
+      </SidePanel.Body>
+
+      {/* ── Footer ─────────────────────────────────────────────────────── */}
+      <SidePanel.Footer>
+        {!enReady && (
+          <p className="va-dim cl-footer-helper-text" data-testid="changelog-editor-needs-en">
+            {t('admin:changelog.editor.needsEnHelper')}
+          </p>
+        )}
+        <div data-testid="changelog-drawer-footer" className="cl-drawer-footer">
+          <div className="drawer-foot-left">
+            {entry && (
+              <Button
+                variant="destructive"
+                onClick={() => setDeleteDialogOpen(true)}
+                data-testid="changelog-editor-footer-delete"
+              >
+                {t('admin:changelog.delete.confirm')}
+              </Button>
             )}
           </div>
-        </SidePanel.Body>
-
-        {/* ── Footer ─────────────────────────────────────────────────────── */}
-        <SidePanel.Footer>
-          <div data-testid="changelog-drawer-footer" className="cl-drawer-footer">
-            {/* Left: translation-status badges */}
-            <div className="cl-footer-badges">
-              {enReady ? (
-                <Badge tone="green" data-testid="changelog-editor-badge-ready">
-                  Ready
-                </Badge>
-              ) : (
-                <Badge tone="gray" data-testid="changelog-editor-badge-needs-en">
-                  Needs EN title + content
-                </Badge>
-              )}
-              {ruMissing && (
-                <Badge tone="amber" data-testid="changelog-editor-badge-needs-ru">
-                  Missing RU translation
-                </Badge>
-              )}
-            </div>
-
-            {/* Right: buttons + inline submit error */}
-            <div className="cl-footer-actions">
-              {/* Inline submit error */}
-              {submitError && (
-                <p
-                  className="cl-submit-error"
-                  data-testid="changelog-editor-submit-error"
-                  role="alert"
-                >
-                  {submitError}
-                </p>
-              )}
-
-              <Button
-                variant="ghost"
-                onClick={onClose}
-                data-testid="changelog-editor-footer-cancel"
+          <div className="drawer-foot-right">
+            {submitError && (
+              <p
+                className="cl-submit-error"
+                data-testid="changelog-editor-submit-error"
+                role="alert"
               >
-                {t('admin:changelog.edit.cancel')}
-              </Button>
-
-              {entry && (
-                <Button
-                  variant="destructive"
-                  onClick={() => setDeleteDialogOpen(true)}
-                  data-testid="changelog-editor-footer-delete"
-                >
-                  {t('admin:changelog.delete.confirm')}
-                </Button>
-              )}
-
-              <Button
-                onClick={handleSubmit}
-                disabled={!enReady || isSaving}
-                data-testid="changelog-editor-footer-submit"
-              >
-                {entry ? t('admin:changelog.edit.save') : t('admin:changelog.editor.publish')}
-              </Button>
-            </div>
+                {submitError}
+              </p>
+            )}
+            <Button
+              variant="outline"
+              onClick={onClose}
+              data-testid="changelog-editor-footer-cancel"
+            >
+              {t('admin:changelog.edit.cancel')}
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={!enReady || isSaving}
+              data-testid="changelog-editor-footer-submit"
+            >
+              {entry ? t('admin:changelog.edit.save') : t('admin:changelog.editor.publish')}
+            </Button>
           </div>
-        </SidePanel.Footer>
-      </SidePanel>
+        </div>
+      </SidePanel.Footer>
 
       {/* Delete confirmation dialog */}
       <ChangelogDeleteDialog
@@ -609,6 +589,6 @@ export function ChangelogEditorDrawer({ open, onClose, entry }: ChangelogEditorD
         onOpenChange={setDeleteDialogOpen}
         entry={entry ?? null}
       />
-    </TooltipProvider>
+    </SidePanel>
   );
 }
