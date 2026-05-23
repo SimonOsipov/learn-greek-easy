@@ -197,8 +197,9 @@ export const AdminFeedbackSection: React.FC = () => {
 
     const editId = searchParams.get('edit');
     const innerRaw = searchParams.get('inner');
+    // 'thread' was removed — fall back to 'reply' gracefully
     const innerTab: FeedbackDrawerInnerTab | null =
-      innerRaw === 'reply' || innerRaw === 'thread' || innerRaw === 'meta' ? innerRaw : null;
+      innerRaw === 'reply' || innerRaw === 'meta' ? innerRaw : null;
 
     // Branch A: ?inner without ?edit → silent ignore
     if (!editId && innerRaw) {

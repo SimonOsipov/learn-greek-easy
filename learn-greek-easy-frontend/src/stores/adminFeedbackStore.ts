@@ -39,7 +39,7 @@ const DEFAULT_FILTERS: AdminFeedbackFilters = {
 /**
  * Tab options inside the feedback drawer
  */
-export type FeedbackDrawerInnerTab = 'reply' | 'thread' | 'meta';
+export type FeedbackDrawerInnerTab = 'reply' | 'meta';
 
 /**
  * Snapshot type for rollback

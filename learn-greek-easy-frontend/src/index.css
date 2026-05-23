@@ -2280,64 +2280,6 @@
     background: hsl(var(--fg-3));
   }
 
-  /* Canned-reply chips */
-  .fb-canned-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-  .fb-canned-btn {
-    padding: 6px 10px;
-    border-radius: 9999px;
-    background: hsl(var(--bg-2));
-    border: 1px solid hsl(var(--line));
-    color: hsl(var(--fg-2));
-    font-size: 12px;
-    font-weight: 500;
-    cursor: pointer;
-    transition:
-      background-color 150ms,
-      color 150ms,
-      border-color 150ms;
-  }
-  .fb-canned-btn:hover {
-    background: hsl(var(--primary) / 0.08);
-    color: hsl(var(--primary));
-    border-color: hsl(var(--primary) / 0.4);
-  }
-  .fb-canned-btn:focus-visible {
-    outline: 2px solid hsl(var(--ring));
-    outline-offset: 2px;
-  }
-
-  /* Thread bubbles */
-  .fb-thread-bubble--user,
-  .fb-thread-bubble--admin {
-    padding: 12px 14px;
-    border-radius: var(--radius);
-    max-width: 92%;
-  }
-  .fb-thread-bubble--user {
-    background: hsl(var(--muted));
-    color: hsl(var(--fg));
-    border: 1px solid hsl(var(--line));
-    align-self: flex-start;
-  }
-  .fb-thread-bubble--admin {
-    background: hsl(var(--primary) / 0.08);
-    color: hsl(var(--fg));
-    border: 1px solid hsl(var(--primary) / 0.25);
-    align-self: flex-end;
-  }
-  .fb-thread-empty {
-    padding: 24px;
-    text-align: center;
-    color: hsl(var(--fg-3));
-    font-size: 13px;
-    border: 1px dashed hsl(var(--line));
-    border-radius: var(--radius);
-  }
-
   /* Meta table */
   .fb-meta-table {
     display: flex;

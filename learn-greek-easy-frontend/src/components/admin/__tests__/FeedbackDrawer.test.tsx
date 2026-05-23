@@ -1,8 +1,8 @@
 // src/components/admin/__tests__/FeedbackDrawer.test.tsx
 //
 // Vitest + RTL unit tests for FeedbackDrawer (FBDR-10).
-// Covers: Reply tab form, status picker, char counter, canned chips,
-// save success/error, decorative buttons, Thread tab, Meta tab.
+// Covers: Reply tab form, status picker, char counter,
+// save success/error, meta tab, mid-flight submit guard.
 
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -35,11 +35,8 @@ vi.mock('react-i18next', () => ({
         'feedback.v2.drawer.meta.rows.likes': 'Likes',
         'feedback.v2.drawer.meta.rows.status': 'Status',
         'feedback.v2.drawer.meta.rows.responded': 'Responded',
-        // drawer thread
-        'feedback.v2.drawer.thread.empty': 'No admin response yet.',
         // drawer tabs
         'feedback.v2.drawer.tabs.reply': 'Reply',
-        'feedback.v2.drawer.tabs.thread': 'Thread',
         'feedback.v2.drawer.tabs.meta': 'Meta',
         // drawer status
         'feedback.v2.drawer.status.new': 'New',
@@ -50,13 +47,6 @@ vi.mock('react-i18next', () => ({
         'feedback.v2.drawer.status.shipped': 'Shipped',
         'feedback.v2.drawer.status.wont_fix': "Won't fix",
         'feedback.v2.drawer.status.duplicate': 'Duplicate',
-        // drawer quick replies
-        'feedback.v2.drawer.quickReplies.thanksNoted': 'Thanks — noted',
-        'feedback.v2.drawer.quickReplies.plannedNext': 'Planned for next release',
-        'feedback.v2.drawer.quickReplies.needInfo': 'Need more info',
-        'feedback.v2.drawer.quickReplies.alreadyShipped': 'Already shipped',
-        'feedback.v2.drawer.quickReplies.wontFix': "Won't fix — explain",
-        'feedback.v2.drawer.quickRepliesGroup': 'Quick replies',
         'feedback.v2.drawer.responseHintSuffix': ' — public, learner will see this verbatim',
         'feedback.v2.drawer.saveNotice': opts?.name
           ? `Saving will notify ${opts.name} in-app`
@@ -65,7 +55,6 @@ vi.mock('react-i18next', () => ({
         'feedback.v2.drawer.footer.ready': 'Ready',
         'feedback.v2.drawer.footer.noReplyYet': 'No reply yet',
         'feedback.v2.drawer.saving': 'Saving…',
-        'feedback.v2.drawer.comingSoon': 'Coming soon',
         'feedback.v2.drawer.admin': 'Admin',
         'feedback.v2.drawer.notFound': 'Feedback not found.',
         'feedback.v2.drawer.close': 'Close',
@@ -77,7 +66,6 @@ vi.mock('react-i18next', () => ({
         'feedback.v2.reply.response_label': 'Admin response',
         'feedback.v2.reply.save': 'Save & notify',
         'feedback.v2.reply.cancel': 'Cancel',
-        'feedback.v2.reply.save_draft': 'Save draft',
         'feedback.v2.reply.saved': 'Reply saved',
         'feedback.v2.reply.save_error_title': 'Failed to save reply',
         'feedback.v2.reply.save_error_desc': 'Please try again.',
@@ -155,7 +143,7 @@ function mockStoreWith(feedback: AdminFeedbackItem) {
 
 function renderDrawer(
   feedbackId: string,
-  innerTab: 'reply' | 'thread' | 'meta' = 'reply',
+  innerTab: 'reply' | 'meta' = 'reply',
   onClose = vi.fn(),
   onInnerTabChange = vi.fn(),
   onRequestDelete = vi.fn()
@@ -183,7 +171,7 @@ describe('FeedbackDrawer', () => {
   // ── Reply tab — form structure ─────────────────────────────────────────────
 
   describe('Reply tab — form structure', () => {
-    it('renders user message card, status picker, response textarea, and canned chips', () => {
+    it('renders user message card, status picker, and response textarea', () => {
       const feedback = makeFeedback();
       mockStoreWith(feedback);
 
@@ -202,12 +190,8 @@ describe('FeedbackDrawer', () => {
       expect(screen.getAllByText('Duplicate').length).toBeGreaterThanOrEqual(1);
       // Textarea
       expect(screen.getByRole('textbox')).toBeInTheDocument();
-      // 5 canned chips
-      expect(screen.getByText('Thanks — noted')).toBeInTheDocument();
-      expect(screen.getByText('Planned for next release')).toBeInTheDocument();
-      expect(screen.getByText('Need more info')).toBeInTheDocument();
-      expect(screen.getByText('Already shipped')).toBeInTheDocument();
-      expect(screen.getByText("Won't fix — explain")).toBeInTheDocument();
+      // No canned chips
+      expect(screen.queryByText('Thanks — noted')).not.toBeInTheDocument();
     });
 
     it('Save & notify button is present in the form footer', () => {
@@ -314,53 +298,6 @@ describe('FeedbackDrawer', () => {
 
       const textarea = screen.getByRole('textbox');
       expect(textarea).toHaveAttribute('maxlength', '500');
-    });
-  });
-
-  // ── Canned-reply chips ─────────────────────────────────────────────────────
-
-  describe('Canned-reply chips', () => {
-    it('clicking a chip fills textarea with the canned text verbatim', async () => {
-      const user = userEvent.setup();
-      const feedback = makeFeedback({ admin_response: null });
-      mockStoreWith(feedback);
-
-      renderDrawer(feedback.id, 'reply');
-
-      await user.click(screen.getByText('Thanks — noted'));
-
-      const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
-      expect(textarea.value).toContain("We've logged this");
-    });
-
-    it('clicking a chip overwrites an existing draft (replace, not append)', async () => {
-      const user = userEvent.setup();
-      const feedback = makeFeedback({ admin_response: 'Old draft text' });
-      mockStoreWith(feedback);
-
-      renderDrawer(feedback.id, 'reply');
-
-      await user.click(screen.getByText('Need more info'));
-
-      const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
-      expect(textarea.value).not.toContain('Old draft text');
-      expect(textarea.value).toContain('device + OS version');
-    });
-
-    it('clicking different chips swaps the textarea content each time', async () => {
-      const user = userEvent.setup();
-      const feedback = makeFeedback({ admin_response: null });
-      mockStoreWith(feedback);
-
-      renderDrawer(feedback.id, 'reply');
-
-      await user.click(screen.getByText('Thanks — noted'));
-      const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
-      const first = textarea.value;
-
-      await user.click(screen.getByText('Already shipped'));
-      expect(textarea.value).not.toBe(first);
-      expect(textarea.value).toContain('latest version');
     });
   });
 
@@ -486,91 +423,40 @@ describe('FeedbackDrawer', () => {
     });
   });
 
-  // ── Decorative buttons ─────────────────────────────────────────────────────
+  // ── Save & notify — mid-flight double-submit guard ────────────────────────
 
-  describe('Decorative buttons (Save draft)', () => {
-    it('Save draft button has aria-disabled="true"', () => {
-      const feedback = makeFeedback();
-      mockStoreWith(feedback);
-
-      renderDrawer(feedback.id, 'reply');
-
-      const saveDraftBtn = screen.getByRole('button', { name: 'Save draft' });
-      expect(saveDraftBtn).toHaveAttribute('aria-disabled', 'true');
-    });
-
-    it('clicking Save draft does not fire updateFeedback', async () => {
+  describe('Save & notify — mid-flight double-submit guard', () => {
+    it('disables Save & notify while submit is in-flight and does not call updateFeedback twice', async () => {
       const user = userEvent.setup();
-      const feedback = makeFeedback();
+      const feedback = makeFeedback({ status: 'new', admin_response: null });
+
+      // Never-resolving promise simulates an in-flight request
+      let resolveInFlight!: () => void;
+      const inFlight = new Promise<void>((res) => {
+        resolveInFlight = res;
+      });
+      mockUpdateFeedback.mockReturnValueOnce(inFlight);
       mockStoreWith(feedback);
 
       renderDrawer(feedback.id, 'reply');
 
-      await user.click(screen.getByRole('button', { name: 'Save draft' }));
+      const textarea = screen.getByRole('textbox');
+      await user.type(textarea, 'First click');
 
-      expect(mockUpdateFeedback).not.toHaveBeenCalled();
-    });
-  });
+      const saveBtn = screen.getByRole('button', { name: 'Save & notify' });
+      expect(saveBtn).not.toBeDisabled();
 
-  // ── Thread tab ─────────────────────────────────────────────────────────────
+      await user.click(saveBtn);
 
-  describe('Thread tab', () => {
-    function mockStoreForThread(feedback: AdminFeedbackItem) {
-      const mockState = {
-        feedbackList: [feedback],
-        openFeedbackId: feedback.id,
-        openInnerTab: 'thread' as const,
-        updateFeedback: mockUpdateFeedback,
-        closeDrawer: mockCloseDrawer,
-      };
-      (useAdminFeedbackStore as unknown as Mock).mockImplementation(
-        (sel?: (s: typeof mockState) => unknown) =>
-          typeof sel === 'function' ? sel(mockState) : mockState
-      );
-    }
+      // Button should now be disabled while in-flight
+      expect(saveBtn).toBeDisabled();
 
-    it('renders user bubble always', () => {
-      const feedback = makeFeedback({ admin_response: null });
-      mockStoreForThread(feedback);
+      // Attempting a second click should not call updateFeedback again
+      await user.click(saveBtn);
+      expect(mockUpdateFeedback).toHaveBeenCalledTimes(1);
 
-      renderDrawer(feedback.id, 'thread');
-
-      // User bubble contains the description
-      expect(screen.getByText('It would be great to have a dark mode option.')).toBeInTheDocument();
-    });
-
-    it('does not render admin bubble when admin_response is null', () => {
-      const feedback = makeFeedback({ admin_response: null });
-      mockStoreForThread(feedback);
-
-      renderDrawer(feedback.id, 'thread');
-
-      // Admin bubble has class fb-thread-bubble--admin — should not exist
-      const adminBubbles = document.querySelectorAll('.fb-thread-bubble--admin');
-      expect(adminBubbles).toHaveLength(0);
-    });
-
-    it('renders admin bubble when admin_response is present', () => {
-      const feedback = makeFeedback({
-        admin_response: 'We fixed this!',
-        admin_response_at: '2026-02-01T12:00:00Z',
-      });
-      mockStoreForThread(feedback);
-
-      renderDrawer(feedback.id, 'thread');
-
-      const adminBubbles = document.querySelectorAll('.fb-thread-bubble--admin');
-      expect(adminBubbles).toHaveLength(1);
-      expect(adminBubbles[0].textContent).toContain('We fixed this!');
-    });
-
-    it('renders empty-state copy when admin_response is null', () => {
-      const feedback = makeFeedback({ admin_response: null });
-      mockStoreForThread(feedback);
-
-      renderDrawer(feedback.id, 'thread');
-
-      expect(screen.getByText('No admin response yet.')).toBeInTheDocument();
+      // Cleanup — resolve so any pending async state settles
+      resolveInFlight();
     });
   });
 

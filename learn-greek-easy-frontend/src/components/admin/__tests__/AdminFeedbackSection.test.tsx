@@ -159,8 +159,10 @@ function buildMockState(
   feedbackList: AdminFeedbackItem[],
   overrides: Partial<{
     openFeedbackId: string | null;
-    openInnerTab: 'reply' | 'thread' | 'meta';
+    openInnerTab: 'reply' | 'meta';
     isLoading: boolean;
+    isError: boolean;
+    error: string | null;
     total: number;
     totalPages: number;
     page: number;
@@ -177,7 +179,7 @@ function buildMockState(
     isLoading: overrides.isLoading ?? false,
     isUpdating: false,
     isDeleting: false,
-    error: null,
+    error: overrides.error ?? null,
     openFeedbackId: overrides.openFeedbackId ?? null,
     openInnerTab: overrides.openInnerTab ?? ('reply' as const),
     fetchFeedbackList: mockFetchFeedbackList,
@@ -573,6 +575,18 @@ describe('AdminFeedbackSection', () => {
       });
       expect(mockToast).not.toHaveBeenCalled();
     });
+
+    it('?inner=thread (removed tab) falls back to reply tab gracefully', async () => {
+      buildMockState([makeDeepLinkFeedback()]);
+
+      renderSection([`/admin?tab=feedback&edit=${VALID_ID}&inner=thread`]);
+
+      // 'thread' is no longer a valid inner tab — falls back to 'reply'
+      await waitFor(() => {
+        expect(mockOpenDrawer).toHaveBeenCalledWith(VALID_ID, 'reply');
+      });
+      expect(mockToast).not.toHaveBeenCalled();
+    });
   });
 
   // ── Decorative "Coming soon" buttons ───────────────────────────────────────
@@ -646,6 +660,30 @@ describe('AdminFeedbackSection', () => {
 
       // closeDrawer should have been called (drawer wiring closes on delete)
       expect(mockCloseDrawerImpl).toHaveBeenCalled();
+    });
+  });
+
+  // ── Empty & error states ───────────────────────────────────────────────────
+
+  describe('Empty & error states', () => {
+    it('shows empty-state UI when feedback list is empty and no filters are active', () => {
+      buildMockState([], { total: 0 });
+
+      renderSection();
+
+      // Component renders a placeholder-box with heading when visible.length === 0 and no filters
+      expect(screen.getByTestId('feedback-empty')).toBeInTheDocument();
+      expect(screen.getByText('No feedback yet')).toBeInTheDocument();
+    });
+
+    it('shows error UI with Retry button when store has an error', () => {
+      buildMockState([], { error: 'Failed to load feedback', isLoading: false });
+
+      renderSection();
+
+      // Alert renders the error title + Retry button
+      expect(screen.getByText('Error Loading Feedback')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
     });
   });
 });

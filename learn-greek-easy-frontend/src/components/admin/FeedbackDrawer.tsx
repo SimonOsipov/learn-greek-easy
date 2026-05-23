@@ -3,7 +3,6 @@
 // Shell component for the ADMIN2-05 Feedback Drawer.
 // Inner tab content is implemented in subsequent subtasks:
 //   FBDR-04 → Reply tab (this file)
-//   FBDR-05 → Thread tab
 //   FBDR-06 → Meta tab
 // URL deep-link wiring (useSearchParams) is implemented in FBDR-09.
 
@@ -18,16 +17,13 @@ import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 
-import { AdminAvatar } from '@/components/ui/admin-avatar';
 import { Badge } from '@/components/ui/badge';
 import type { BadgeTone } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { SidePanel } from '@/components/ui/side-panel';
 import { Textarea } from '@/components/ui/textarea';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
-import { initialsOf } from '@/lib/userUtils';
 import { cn } from '@/lib/utils';
 import { useAdminFeedbackStore } from '@/stores/adminFeedbackStore';
 
@@ -44,7 +40,7 @@ import type { HandoffStatus } from './feedbackStatusMap';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-export type FeedbackDrawerInnerTab = 'reply' | 'thread' | 'meta';
+export type FeedbackDrawerInnerTab = 'reply' | 'meta';
 
 export interface FeedbackDrawerProps {
   feedbackId: string;
@@ -59,7 +55,6 @@ export interface FeedbackDrawerProps {
 // Labels are i18n keys — translated at render via t(label)
 const TABS: { value: FeedbackDrawerInnerTab; label: string }[] = [
   { value: 'reply', label: 'feedback.v2.drawer.tabs.reply' },
-  { value: 'thread', label: 'feedback.v2.drawer.tabs.thread' },
   { value: 'meta', label: 'feedback.v2.drawer.tabs.meta' },
 ];
 
@@ -85,30 +80,6 @@ const HANDOFF_LABEL = Object.fromEntries(STATUS_PICKER.map((s) => [s.key, s.labe
   HandoffStatus,
   string
 >;
-
-// Labels are i18n keys — translated at render via t(r.label). text stays English.
-const QUICK_REPLIES: ReadonlyArray<{ label: string; text: string }> = [
-  {
-    label: 'feedback.v2.drawer.quickReplies.thanksNoted',
-    text: "Thanks for the report! We've logged this — will update you when it's looked at.",
-  },
-  {
-    label: 'feedback.v2.drawer.quickReplies.plannedNext',
-    text: "This is on the roadmap for the next minor release. We'll ping you when it ships.",
-  },
-  {
-    label: 'feedback.v2.drawer.quickReplies.needInfo',
-    text: 'Could you share the device + OS version, and which screen this happened on? That helps us reproduce.',
-  },
-  {
-    label: 'feedback.v2.drawer.quickReplies.alreadyShipped',
-    text: 'Good news — this was actually shipped in the latest version. Try pulling the latest update and let us know if it works for you.',
-  },
-  {
-    label: 'feedback.v2.drawer.quickReplies.wontFix',
-    text: "Thank you for the suggestion. We won't be making this change because [reason]. Sorry for any inconvenience.",
-  },
-];
 
 // ── Zod schema ─────────────────────────────────────────────────────────────────
 
@@ -254,28 +225,6 @@ function ReplyTab({ feedbackId, onClose, onRequestDelete, form }: ReplyTabProps)
               {...form.register('admin_response')}
             />
           </Field>
-
-          <div
-            className="fb-canned-list"
-            role="group"
-            aria-label={t('feedback.v2.drawer.quickRepliesGroup')}
-          >
-            {QUICK_REPLIES.map((r) => (
-              <button
-                key={r.label}
-                type="button"
-                className="fb-canned-btn"
-                onClick={() =>
-                  form.setValue('admin_response', r.text, {
-                    shouldDirty: true,
-                    shouldValidate: true,
-                  })
-                }
-              >
-                {t(r.label)}
-              </button>
-            ))}
-          </div>
         </form>
       </SidePanel.Body>
 
@@ -303,96 +252,12 @@ function ReplyTab({ feedbackId, onClose, onRequestDelete, form }: ReplyTabProps)
             {t('feedback.v2.reply.cancel')}
           </Button>
 
-          {/* Decorative — Coming soon */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                aria-disabled="true"
-                className="inline-flex cursor-not-allowed items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium opacity-60 hover:bg-accent hover:text-accent-foreground"
-                onClick={(e) => e.preventDefault()}
-                title={t('feedback.v2.drawer.comingSoon')}
-              >
-                {t('feedback.v2.reply.save_draft')}
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>{t('feedback.v2.drawer.comingSoon')}</TooltipContent>
-          </Tooltip>
-
           <Button type="submit" form="reply-form" disabled={isSubmitting || !responseValue.trim()}>
             {isSubmitting ? t('feedback.v2.drawer.saving') : t('feedback.v2.reply.save')}
           </Button>
         </div>
       </SidePanel.Footer>
     </>
-  );
-}
-
-// ── Thread tab component ───────────────────────────────────────────────────────
-
-interface ThreadTabProps {
-  feedbackId: string;
-}
-
-function ThreadTab({ feedbackId }: ThreadTabProps) {
-  const { t, i18n } = useTranslation('admin');
-
-  const feedbackList = useAdminFeedbackStore((s) => s.feedbackList);
-  const item = feedbackList.find((f) => f.id === feedbackId) ?? null;
-
-  if (!item) {
-    return (
-      <div className="p-4 text-sm text-muted-foreground">{t('feedback.v2.drawer.notFound')}</div>
-    );
-  }
-
-  const hasAdminResponse = Boolean(item.admin_response && item.admin_response.trim());
-
-  return (
-    <div className="flex flex-col gap-4 p-4">
-      {/* User bubble — always rendered */}
-      <article className="fb-thread-bubble fb-thread-bubble--user">
-        <header className="mb-2 flex items-center gap-2">
-          <AdminAvatar initials={initialsOf(item.author?.full_name)} size="sm" />
-          <span className="text-sm font-medium">
-            {item.author?.full_name || t('feedback.anonymousUser')}
-          </span>
-          <time className="ml-auto text-xs text-muted-foreground" dateTime={item.created_at}>
-            {formatDistanceToNow(new Date(item.created_at), {
-              addSuffix: true,
-              locale: getDateLocale(i18n.language),
-            })}
-          </time>
-        </header>
-        <p className="text-sm">{item.description}</p>
-      </article>
-
-      {/* Admin bubble — only when admin_response is present */}
-      {hasAdminResponse ? (
-        <article className="fb-thread-bubble fb-thread-bubble--admin">
-          <header className="mb-2 flex items-center gap-2">
-            {/* Hardcoded per ADMIN2-05 Design Decision: backend does not track admin_response_by_user_id. */}
-            <AdminAvatar initials="A" tone="primary" size="sm" />
-            <span className="text-sm font-medium">{t('feedback.v2.drawer.admin')}</span>
-            <Badge tone="blue">{t('feedback.v2.drawer.admin')}</Badge>
-            {item.admin_response_at ? (
-              <time
-                className="ml-auto text-xs text-muted-foreground"
-                dateTime={item.admin_response_at}
-              >
-                {formatDistanceToNow(new Date(item.admin_response_at), {
-                  addSuffix: true,
-                  locale: getDateLocale(i18n.language),
-                })}
-              </time>
-            ) : null}
-          </header>
-          <p className="text-sm">{item.admin_response}</p>
-        </article>
-      ) : (
-        <div className="fb-thread-empty">{t('feedback.v2.drawer.thread.empty')}</div>
-      )}
-    </div>
   );
 }
 
@@ -573,19 +438,6 @@ export function FeedbackDrawer({
           onRequestDelete={onRequestDelete}
           form={form}
         />
-      )}
-
-      {innerTab === 'thread' && (
-        <>
-          <SidePanel.Body data-testid="drawer-tab-thread">
-            <ThreadTab feedbackId={feedbackId} />
-          </SidePanel.Body>
-          <SidePanel.Footer>
-            <button type="button" onClick={onClose}>
-              {t('feedback.v2.drawer.close')}
-            </button>
-          </SidePanel.Footer>
-        </>
       )}
 
       {innerTab === 'meta' && (
