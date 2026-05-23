@@ -409,8 +409,7 @@
         "recipients": "получателей",
         "readBy": "Прочитано",
         "unread": "непрочитано",
-        "announcementLabel": "Объявление",
-        "resendToUnread": "Отправить непрочитавшим"
+        "announcementLabel": "Объявление"
       },
       "preview": {
         "label": "Предпросмотр уведомления",

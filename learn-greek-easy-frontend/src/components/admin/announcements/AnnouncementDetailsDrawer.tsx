@@ -11,7 +11,7 @@
 
 import { useEffect } from 'react';
 
-import { Bell, ExternalLink, Trash2 } from 'lucide-react';
+import { ExternalLink, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -19,7 +19,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/ui/side-panel';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { useAdminAnnouncementStore } from '@/stores/adminAnnouncementStore';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -240,23 +240,6 @@ export function AnnouncementDetailsDrawer({
               <Trash2 className="size-4" aria-hidden="true" />
               {t('announcements.delete.button')}
             </button>
-
-            {/* Resend to unread — gated Coming-soon */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  className="btn btn-glass cursor-not-allowed opacity-60"
-                  data-testid="announcement-details-resend-button"
-                  aria-disabled="true"
-                  onClick={(e) => e.preventDefault()}
-                >
-                  <Bell className="size-4" aria-hidden="true" />
-                  {t('announcements.v2.details.resendToUnread')}
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>{t('comingSoon')}</TooltipContent>
-            </Tooltip>
 
             {/* Close — primary */}
             <Button
