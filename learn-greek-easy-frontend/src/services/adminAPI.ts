@@ -445,14 +445,6 @@ export interface AnnouncementCreateResponse {
 }
 
 /**
- * Brief creator information for announcement items
- */
-export interface AnnouncementCreator {
-  id: string;
-  display_name: string | null;
-}
-
-/**
  * Announcement item in list response
  */
 export interface AnnouncementItem {
@@ -463,7 +455,6 @@ export interface AnnouncementItem {
   total_recipients: number;
   read_count: number;
   created_at: string;
-  creator: AnnouncementCreator | null;
 }
 
 /**
