@@ -397,8 +397,7 @@
         "recipients": "recipients",
         "readBy": "Read by",
         "unread": "unread",
-        "announcementLabel": "Announcement",
-        "resendToUnread": "Resend to unread"
+        "announcementLabel": "Announcement"
       },
       "preview": {
         "label": "Notification preview",
