@@ -1003,6 +1003,25 @@
     },
     "actions": {
       "newEntry": "Новая запись"
+    },
+    "editor": {
+      "ariaTitleEdit": "Редактировать запись",
+      "ariaTitleNew": "Создать запись",
+      "editEntry": "Редактировать запись",
+      "posted": "Опубликовано {{date}}",
+      "tabForm": "Форма",
+      "tabJson": "JSON",
+      "publish": "Опубликовать",
+      "toastJsonDiscarded": "Изменения JSON отменены",
+      "errorUnknown": "Неизвестная ошибка",
+      "versionPlaceholder": "v. 0.12.0",
+      "previewLabel": "Превью ({{lang}})",
+      "previewFootNew": "Сегодня",
+      "fieldVersion": "Версия (необязательно)",
+      "fieldTitle": "Заголовок ({{lang}})",
+      "fieldContent": "Содержание ({{lang}})",
+      "titlePlaceholder": "Краткий, понятный заголовок",
+      "contentPlaceholder": "Поддерживается Markdown. Что изменилось, почему и как это влияет на пользователей."
     }
   },
   "vocabularyCard": {
