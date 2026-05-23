@@ -111,6 +111,77 @@ test.describe('Admin Changelog Timeline — ADMIN2-21 extension (CLTT-E2E-01..07
     expect(exportCount).toBe(0);
   });
 
+  test('CLTT-E2E-01: list renders ALL entries (KPI total === .cl-entry count)', async ({
+    page,
+  }) => {
+    await navigateToAdminTab(page, 'changelog');
+    await expect(page.getByTestId('changelog-tab')).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('.cl-entry').first()).toBeVisible({ timeout: 10_000 });
+
+    // KPI total lives in the first StatCard's .stat-n (the "Total" card)
+    const totalText = await page.locator('.stat-card').first().locator('.stat-n').textContent();
+    const kpiTotal = parseInt((totalText || '0').replace(/\D/g, ''), 10);
+    expect(kpiTotal).toBeGreaterThan(0);
+
+    // Rendered row count must match the KPI total. If the backend rejects the
+    // store's pageSize (the prod bug fixed in PR #505), the list would be empty
+    // and this assertion would fail — that's the regression guard.
+    const renderedCount = await page.locator('.cl-entry').count();
+    expect(renderedCount).toBe(kpiTotal);
+  });
+
+  test('CLTT-E2E-03: row content matches active UI locale (EN → title_en, RU → title_ru)', async ({
+    page,
+  }) => {
+    // Set UI to EN, capture first-row title
+    await page.goto('https://greeklish.eu/');
+    await page.evaluate(() => localStorage.setItem('i18nextLng', 'en'));
+    await navigateToAdminTab(page, 'changelog');
+    await expect(page.getByTestId('changelog-tab')).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('.cl-entry').first()).toBeVisible({ timeout: 10_000 });
+
+    const titleEn =
+      (await page.locator('.cl-entry').first().locator('.cl-entry-title').textContent()) || '';
+    expect(titleEn.trim()).not.toBe('');
+
+    // Switch to RU, reload, capture same row's title
+    await page.evaluate(() => localStorage.setItem('i18nextLng', 'ru'));
+    await page.reload();
+    await expect(page.getByTestId('changelog-tab')).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('.cl-entry').first()).toBeVisible({ timeout: 10_000 });
+
+    const titleRu =
+      (await page.locator('.cl-entry').first().locator('.cl-entry-title').textContent()) || '';
+    expect(titleRu.trim()).not.toBe('');
+
+    // Same seeded entry should render a DIFFERENT title in RU vs EN
+    expect(titleRu.trim()).not.toBe(titleEn.trim());
+
+    // Cleanup
+    await page.evaluate(() => localStorage.removeItem('i18nextLng'));
+  });
+
+  test('CLTT-E2E-08: admin changelog list API returns 200 (regression for pageSize cap bug)', async ({
+    page,
+  }) => {
+    // Watch the admin list endpoint specifically — frontend asks for pageSize=500.
+    // Backend caps must accept this (PR #505 raised them from 100 → 1000).
+    const listResponsePromise = page.waitForResponse(
+      (r) => /\/api\/v1\/admin\/changelog(\?|$)/.test(r.url()) && r.request().method() === 'GET',
+      { timeout: 20_000 }
+    );
+
+    await navigateToAdminTab(page, 'changelog');
+    const listResponse = await listResponsePromise;
+
+    // Was 422 in prod before the hotfix
+    expect(listResponse.status()).toBe(200);
+
+    const url = new URL(listResponse.url());
+    const pageSize = parseInt(url.searchParams.get('page_size') || '0', 10);
+    expect(pageSize).toBeGreaterThan(100);
+  });
+
   test('CLTT-E2E-04: deep-link first navigation opens drawer without F5', async ({ page }) => {
     // Navigate directly to the changelog tab — then open compose drawer to get a known URL pattern
     await navigateToAdminTab(page, 'changelog');

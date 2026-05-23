@@ -2387,6 +2387,21 @@
     grid-template-columns: minmax(0, 1fr);
     gap: 24px;
   }
+  /* Footer row inside <SidePanel.Footer>. .drawer-foot's space-between only
+     applies to its direct children; nest one level deeper for the Delete |
+     Cancel + Save split. When the helper text is present, .drawer-foot
+     switches to column so the helper sits above the button row. */
+  .cl-drawer-footer {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+  }
+  .drawer-foot:has(> .cl-footer-helper-text) {
+    flex-direction: column;
+    align-items: stretch;
+  }
   .cl-edit-form {
     display: flex;
     flex-direction: column;
