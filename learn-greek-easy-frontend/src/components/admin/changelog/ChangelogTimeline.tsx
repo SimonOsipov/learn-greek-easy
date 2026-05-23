@@ -58,7 +58,7 @@ function HeaderSlot({ entry }: HeaderSlotProps) {
       <span className="cl-posted-date">{postedDate}</span>
       {isMissingRu ? (
         <Badge tone="amber" data-testid="missing-ru-badge">
-          Missing RU
+          {t('admin:changelog.timeline.missingRuBadge')}
         </Badge>
       ) : null}
     </>
@@ -113,6 +113,9 @@ export function ChangelogTimeline({
   onEdit,
   onDelete,
 }: ChangelogTimelineProps): React.JSX.Element {
+  const { i18n } = useTranslation(['admin']);
+  const isRu = i18n.language.startsWith('ru');
+
   // Sort desc by created_at (ISO strings are lexicographically sortable)
   const sorted = [...entries].sort((a, b) => b.created_at.localeCompare(a.created_at));
 
@@ -138,18 +141,26 @@ export function ChangelogTimeline({
             <span className="cl-month-label">{monthLabel}</span>
             <span className="cl-month-line" />
           </div>
-          {monthEntries.map((entry) => (
-            <TimelineEntry
-              key={entry.id}
-              tone={TONE_BY_TAG[entry.tag]}
-              title={entry.title_en}
-              subtitle={entry.title_ru || undefined}
-              body={truncate(entry.content_en, 240)}
-              header={<HeaderSlot entry={entry} />}
-              actions={<ActionsSlot entry={entry} onEdit={onEdit} onDelete={onDelete} />}
-              onClick={() => onEdit(entry.id)}
-            />
-          ))}
+          {monthEntries.map((entry) => {
+            const title = isRu
+              ? entry.title_ru || `[EN] ${entry.title_en}`
+              : entry.title_en || `[RU] ${entry.title_ru}`;
+            const body = isRu
+              ? entry.content_ru || entry.content_en
+              : entry.content_en || entry.content_ru;
+            return (
+              <TimelineEntry
+                key={entry.id}
+                tone={TONE_BY_TAG[entry.tag]}
+                title={title}
+                subtitle={undefined}
+                body={truncate(body, 240)}
+                header={<HeaderSlot entry={entry} />}
+                actions={<ActionsSlot entry={entry} onEdit={onEdit} onDelete={onDelete} />}
+                onClick={() => onEdit(entry.id)}
+              />
+            );
+          })}
         </section>
       ))}
     </div>

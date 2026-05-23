@@ -13,7 +13,6 @@ import {
   AlertCircle,
   ChevronLeft,
   ChevronRight,
-  Download,
   Newspaper,
   Plus,
   RefreshCw,
@@ -448,7 +447,6 @@ export interface PageHeadHandlers {
   onCreateDeck: () => void;
   onNewsNew: () => void;
   onSituationsNew: () => void;
-  onChangelogExport: () => void;
   onChangelogNew: () => void;
   onAnnouncementsNew: () => void;
 }
@@ -473,7 +471,6 @@ export function pageHeadPropsFor(
     onCreateDeck: () => {},
     onNewsNew: () => {},
     onSituationsNew: () => {},
-    onChangelogExport: () => {},
     onChangelogNew: () => {},
     onAnnouncementsNew: () => {},
   };
@@ -670,25 +667,14 @@ export function pageHeadPropsFor(
         title: t('changelog.title'),
         sub: t('changelog.sub'),
         actions: (
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className="btn btn-glass"
-              onClick={_handlers.onChangelogExport}
-              data-testid="changelog-export-button"
-            >
-              <Download className="size-4" aria-hidden="true" />
-              {t('changelog.actions.export')}
-            </button>
-            <Button
-              variant="default"
-              onClick={_handlers.onChangelogNew}
-              data-testid="changelog-new-button"
-            >
-              <Plus className="size-4" aria-hidden="true" />
-              {t('changelog.actions.newEntry')}
-            </Button>
-          </div>
+          <Button
+            variant="default"
+            onClick={_handlers.onChangelogNew}
+            data-testid="changelog-new-button"
+          >
+            <Plus className="size-4" aria-hidden="true" />
+            {t('changelog.actions.newEntry')}
+          </Button>
         ),
         titleTestId: 'admin-title' as const,
         subTestId: 'admin-subtitle' as const,
@@ -931,7 +917,6 @@ const AdminPage: React.FC = () => {
     onCreateDeck: handleOpenCreateModal,
     onNewsNew: () => setNewsCreateOpen(true),
     onSituationsNew: () => setSituationsCreateOpen(true),
-    onChangelogExport: () => toast({ title: t('changelog.toast.exportComingSoon') }),
     onChangelogNew: openCompose,
     onAnnouncementsNew: () =>
       setSearchParams((prev) => {

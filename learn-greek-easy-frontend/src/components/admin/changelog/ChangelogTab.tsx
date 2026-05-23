@@ -12,7 +12,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { format } from 'date-fns';
-import { Calendar, Clock, FileText, Languages } from 'lucide-react';
+import { Calendar, Clock, FileText } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 
@@ -26,26 +26,6 @@ import type { ChangelogEntryAdmin, ChangelogTag } from '@/types/changelog';
 import { ChangelogDeleteDialog } from './ChangelogDeleteDialog';
 import { ChangelogEditorDrawer } from './ChangelogEditorDrawer';
 import { ChangelogTimeline } from './ChangelogTimeline';
-
-/**
- * Bucket entries into `weeks` weekly slots (oldest → index 0, most recent → index weeks-1).
- * Entries outside the window are ignored. Optional predicate filters entries before counting.
- */
-function bucketByWeek(
-  items: ChangelogEntryAdmin[],
-  weeks: number = 9,
-  predicate?: (e: ChangelogEntryAdmin) => boolean
-): number[] {
-  const buckets = Array(weeks).fill(0);
-  const now = new Date();
-  for (const item of items) {
-    if (predicate && !predicate(item)) continue;
-    const ageMs = now.getTime() - new Date(item.created_at).getTime();
-    const ageWeeks = Math.floor(ageMs / (7 * 24 * 60 * 60 * 1000));
-    if (ageWeeks >= 0 && ageWeeks < weeks) buckets[weeks - 1 - ageWeeks]++;
-  }
-  return buckets;
-}
 
 /**
  * Compute average days between consecutive entries in the last 10 (sorted desc).
@@ -89,16 +69,6 @@ export function ChangelogTab() {
   useEffect(() => {
     fetchList();
   }, [fetchList]);
-
-  // ── One-shot console.warn for ≥ 100 entries ───────────────────────────────
-  const warnedRef = useRef(false);
-  useEffect(() => {
-    if (items.length >= 100 && !warnedRef.current) {
-      // eslint-disable-next-line no-console
-      console.warn('[Changelog] List response returned ≥ 100 entries — consider pagination');
-      warnedRef.current = true;
-    }
-  }, [items.length]);
 
   // ── Local state ───────────────────────────────────────────────────────────
   const [search, setSearch] = useState('');
@@ -169,6 +139,7 @@ export function ChangelogTab() {
         { replace: true }
       );
     } else if (mode === null) {
+      if (!appliedDeepLinkRef.current) return; // wait for Effect 1 to apply/skip
       setSearchParams(
         (prev) => {
           prev.delete('edit');
@@ -186,12 +157,6 @@ export function ChangelogTab() {
   const mostRecent = sortedDesc[0] ?? null;
 
   const cadenceDays = computeAvgCadenceDays(items);
-
-  const missingRuCount = items.filter((e) => !e.title_ru || !e.content_ru).length;
-
-  // ── Sparkline bars (derived per card) ─────────────────────────────────────
-  const totalBars = bucketByWeek(items);
-  const missingRuBars = bucketByWeek(items, 9, (e) => !e.title_ru || !e.content_ru);
 
   // ── Filter pipeline ───────────────────────────────────────────────────────
   const filteredBySearch = items.filter(
@@ -222,14 +187,12 @@ export function ChangelogTab() {
   return (
     <div className="space-y-6" data-testid="changelog-tab">
       {/* ── 4-up StatCard grid ───────────────────────────────────────────── */}
-      <div className="stat-grid grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="stat-grid grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard
           title={t('admin:changelog.stats.total')}
           n={total || items.length}
           icon={<FileText />}
           tone="blue"
-          bars={totalBars}
-          barsTestId="sparkline-total"
           footerLabel={t('admin:changelog.stats.footer.allTime')}
         />
         <StatCard
@@ -259,20 +222,6 @@ export function ChangelogTab() {
           tone="cyan"
           barsTestId="sparkline-cadence"
           footerLabel={t('admin:changelog.stats.footer.lastTenEntries')}
-        />
-        <StatCard
-          title={t('admin:changelog.stats.missingRu')}
-          n={missingRuCount}
-          sub={
-            missingRuCount > 0
-              ? t('admin:changelog.stats.missingRuNeed')
-              : t('admin:changelog.stats.missingRuDone')
-          }
-          icon={<Languages />}
-          tone="amber"
-          bars={missingRuBars}
-          barsTestId="sparkline-missing-ru"
-          footerLabel={t('admin:changelog.stats.footer.needsAttention')}
         />
       </div>
 

@@ -989,14 +989,10 @@
       "cadence": "Avg cadence",
       "cadenceSub": "between entries",
       "cadenceSubMinimal": "need ≥ 2 entries",
-      "missingRu": "Missing RU",
-      "missingRuNeed": "entries need translation",
-      "missingRuDone": "all translated",
       "footer": {
         "allTime": "all-time",
         "lastPublished": "last published",
-        "lastTenEntries": "last 10 entries",
-        "needsAttention": "needs attention"
+        "lastTenEntries": "last 10 entries"
       }
     },
     "title": "Changelog",
@@ -1012,6 +1008,9 @@
       "allTags": "All Tags",
       "tagPlaceholder": "Filter by tag",
       "all": "All"
+    },
+    "timeline": {
+      "missingRuBadge": "Missing RU"
     },
     "table": {
       "title": "Changelog Entries",
@@ -1062,11 +1061,9 @@
       "deleted": "Changelog entry deleted successfully",
       "createError": "Failed to create changelog entry",
       "updateError": "Failed to update changelog entry",
-      "deleteError": "Failed to delete changelog entry",
-      "exportComingSoon": "Markdown export coming soon"
+      "deleteError": "Failed to delete changelog entry"
     },
     "actions": {
-      "export": "Export markdown",
       "newEntry": "New entry"
     }
   },
