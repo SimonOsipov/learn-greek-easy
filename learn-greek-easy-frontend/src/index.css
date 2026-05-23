@@ -1630,6 +1630,15 @@
     display: none;
   }
 
+  /* SidePanel.CloseButton modifier: flip the close X to the right edge of .drawer-head.
+     .drawer-head is flex with justify-content: space-between; the default CloseButton
+     renders first (left edge). `order: 1` + `margin-left: auto` push it to the right
+     while keeping the title at the start of the flex row. */
+  .drawer-close-right {
+    order: 1;
+    margin-left: auto;
+  }
+
   /* ==========================================================================
      ANND-01 — Announcements drawer (ADMIN2-04) CSS foundation
      Ported from design_handoff_admin_redesign/prototype.css (announcements section)

@@ -129,6 +129,60 @@ describe('SidePanel', () => {
     });
   });
 
+  // AC — size="half" variant (ADMIN2-20)
+  describe('size="half"', () => {
+    it('applies w-[50vw] class to SheetContent when size="half"', () => {
+      renderPanel({ size: 'half' });
+      const dialog = screen.getByRole('dialog');
+      expect(dialog.className).toContain('w-[50vw]');
+    });
+
+    it('applies min-w-[560px] and max-w-[720px] clamps when size="half"', () => {
+      renderPanel({ size: 'half' });
+      const dialog = screen.getByRole('dialog');
+      expect(dialog.className).toContain('min-w-[560px]');
+      expect(dialog.className).toContain('max-w-[720px]');
+    });
+
+    it('does not apply half classes when size is default', () => {
+      renderPanel({ size: 'default' });
+      const dialog = screen.getByRole('dialog');
+      expect(dialog.className).not.toContain('w-[50vw]');
+    });
+  });
+
+  // AC — CloseButton position prop (ADMIN2-20)
+  describe('CloseButton position prop', () => {
+    it('adds drawer-close-right class when position="right"', () => {
+      render(
+        <SidePanel open={true} onOpenChange={vi.fn()} title="Test panel">
+          <SidePanel.CloseButton position="right" />
+        </SidePanel>
+      );
+      const btn = document.querySelector('button[aria-label="Close"].drawer-close') as HTMLElement;
+      expect(btn).not.toBeNull();
+      expect(btn.className).toContain('drawer-close-right');
+    });
+
+    it('does not add drawer-close-right class by default', () => {
+      renderPanel();
+      const btn = document.querySelector('button[aria-label="Close"].drawer-close') as HTMLElement;
+      expect(btn).not.toBeNull();
+      expect(btn.className).not.toContain('drawer-close-right');
+    });
+
+    it('does not add drawer-close-right class when position="left"', () => {
+      render(
+        <SidePanel open={true} onOpenChange={vi.fn()} title="Test panel">
+          <SidePanel.CloseButton position="left" />
+        </SidePanel>
+      );
+      const btn = document.querySelector('button[aria-label="Close"].drawer-close') as HTMLElement;
+      expect(btn).not.toBeNull();
+      expect(btn.className).not.toContain('drawer-close-right');
+    });
+  });
+
   // AC #6 — Built-in close button hidden via CSS rule in index.css
   // jsdom does not process CSS files, so we assert the rule exists in the source.
   describe('shadcn built-in close button override', () => {

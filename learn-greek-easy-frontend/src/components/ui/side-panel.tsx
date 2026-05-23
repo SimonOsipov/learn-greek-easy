@@ -27,7 +27,7 @@ function useSidePanelContext(): SidePanelContextValue {
 export type SidePanelProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  size?: 'default' | 'wide' | 'full';
+  size?: 'default' | 'wide' | 'half' | 'full';
   className?: string;
   children: React.ReactNode;
   'data-testid'?: string;
@@ -67,6 +67,7 @@ function SidePanel({
     'data-[state=closed]:duration-300 data-[state=open]:duration-500',
     'drawer-wrap flex flex-col gap-0 p-0',
     size === 'wide' && 'w-[95vw] !max-w-[1080px] sm:!max-w-[1080px]',
+    size === 'half' && 'w-[50vw] min-w-[560px] max-w-[720px]',
     size === 'full' && 'h-screen w-screen !max-w-none',
     className
   );
@@ -131,14 +132,18 @@ function Footer({ className, children, ...props }: React.HTMLAttributes<HTMLDivE
   );
 }
 
-function CloseButton({ className, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
+type CloseButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  position?: 'left' | 'right';
+};
+
+function CloseButton({ className, position = 'left', ...props }: CloseButtonProps) {
   const { onOpenChange } = useSidePanelContext();
   return (
     <button
       type="button"
       aria-label="Close"
       onClick={() => onOpenChange(false)}
-      className={cn('drawer-close', className)}
+      className={cn('drawer-close', position === 'right' && 'drawer-close-right', className)}
       {...props}
     >
       <X className="size-4" aria-hidden="true" />
