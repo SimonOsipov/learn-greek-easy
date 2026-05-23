@@ -51,15 +51,6 @@ class AnnouncementCreate(BaseModel):
         return v
 
 
-class CreatorBriefResponse(BaseModel):
-    """Brief creator information for announcement items."""
-
-    model_config = ConfigDict(from_attributes=True)
-
-    id: UUID
-    display_name: Optional[str] = None
-
-
 class AnnouncementResponse(BaseModel):
     """Schema for announcement response (list item)."""
 
@@ -76,8 +67,6 @@ class AnnouncementResponse(BaseModel):
 
 class AnnouncementWithCreatorResponse(AnnouncementResponse):
     """Schema for announcement with creator info."""
-
-    creator: Optional[CreatorBriefResponse] = None
 
 
 class AnnouncementDetailResponse(AnnouncementWithCreatorResponse):

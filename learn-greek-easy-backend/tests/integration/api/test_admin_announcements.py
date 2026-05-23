@@ -321,14 +321,14 @@ class TestListAnnouncementsEndpoint:
         assert len(data["items"]) == 2
 
     @pytest.mark.asyncio
-    async def test_list_includes_creator(
+    async def test_list_item_shape(
         self,
         client: AsyncClient,
         superuser_auth_headers: dict,
         test_superuser,
         db_session: AsyncSession,
     ):
-        """Test that list includes creator information."""
+        """Test that list items have the expected shape (no creator field)."""
         await AnnouncementCampaignFactory.create(
             session=db_session,
             created_by=test_superuser.id,
@@ -346,9 +346,8 @@ class TestListAnnouncementsEndpoint:
         assert len(data["items"]) == 1
 
         item = data["items"][0]
-        assert "creator" in item
-        assert item["creator"]["id"] == str(test_superuser.id)
-        assert item["creator"]["display_name"] == test_superuser.full_name
+        assert "creator" not in item
+        assert item["title"] == "Announcement with Creator"
 
 
 class TestGetAnnouncementEndpoint:
@@ -437,9 +436,8 @@ class TestGetAnnouncementEndpoint:
         assert data["link_url"] is not None
         assert "total_recipients" in data
         assert "read_count" in data
-        assert "read_percentage" in data
         assert "created_at" in data
-        assert "creator" in data
+        assert "creator" not in data
 
     @pytest.mark.asyncio
     async def test_get_read_percentage_calculation(

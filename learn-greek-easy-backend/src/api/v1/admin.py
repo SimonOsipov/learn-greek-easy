@@ -113,7 +113,6 @@ from src.schemas.announcement import (
     AnnouncementDetailResponse,
     AnnouncementListResponse,
     AnnouncementWithCreatorResponse,
-    CreatorBriefResponse,
 )
 from src.schemas.card_error import (
     AdminCardErrorReportListResponse,
@@ -1489,10 +1488,6 @@ async def create_announcement(
                                 "total_recipients": 150,
                                 "read_count": 75,
                                 "created_at": "2024-01-15T10:30:00Z",
-                                "creator": {
-                                    "id": "660e8400-e29b-41d4-a716-446655440000",
-                                    "display_name": "Admin User",
-                                },
                             }
                         ],
                     }
@@ -1527,7 +1522,7 @@ async def list_announcements(
     service = AnnouncementService(db)
     campaigns, total = await service.get_campaign_list(page=page, page_size=page_size)
 
-    # Convert to response schema with creator info
+    # Convert to response schema
     items = [
         AnnouncementWithCreatorResponse(
             id=campaign.id,
@@ -1537,14 +1532,6 @@ async def list_announcements(
             total_recipients=campaign.total_recipients,
             read_count=campaign.read_count,
             created_at=campaign.created_at,
-            creator=(
-                CreatorBriefResponse(
-                    id=campaign.creator.id,
-                    display_name=campaign.creator.full_name,
-                )
-                if campaign.creator
-                else None
-            ),
         )
         for campaign in campaigns
     ]
@@ -1575,10 +1562,6 @@ async def list_announcements(
                         "total_recipients": 150,
                         "read_count": 75,
                         "created_at": "2024-01-15T10:30:00Z",
-                        "creator": {
-                            "id": "660e8400-e29b-41d4-a716-446655440000",
-                            "display_name": "Admin User",
-                        },
                     }
                 }
             },
@@ -1632,14 +1615,6 @@ async def get_announcement(
         total_recipients=campaign.total_recipients,
         read_count=campaign.read_count,
         created_at=campaign.created_at,
-        creator=(
-            CreatorBriefResponse(
-                id=campaign.creator.id,
-                display_name=campaign.creator.full_name,
-            )
-            if campaign.creator
-            else None
-        ),
     )
 
 
