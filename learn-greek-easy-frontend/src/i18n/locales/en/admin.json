@@ -650,8 +650,6 @@
     "sectionTitle": "User Feedback",
     "sectionDescription": "Review and respond to user feedback and bug reports",
     "anonymousUser": "Anonymous User",
-    "respond": "Respond",
-    "editResponse": "Edit Response",
     "adminResponseLabel": "Admin Response",
     "filters": {
       "statusPlaceholder": "Filter by status",

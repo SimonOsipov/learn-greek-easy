@@ -3,7 +3,7 @@
  *
  * Covers the golden path of the FeedbackDrawer introduced in ADMIN2-05:
  *   1. Navigate to /admin?tab=feedback
- *   2. Open drawer from a feedback card's Reply button
+ *   2. Open drawer by clicking a feedback card
  *   3. Switch between Reply / Meta inner tabs (URL syncs to ?inner=)
  *   4. Type a response with live char counter
  *   5. Save & notify — drawer closes, success toast appears, list refetches
@@ -45,8 +45,8 @@ test.describe('Admin Feedback Drawer (FBDR-11)', () => {
     const firstCard = page.locator('[data-testid="admin-feedback-card"]').first();
     await expect(firstCard).toBeVisible({ timeout: 10_000 });
 
-    // AC #2 — click the Respond button on the first card → drawer opens
-    await firstCard.getByTestId('admin-feedback-respond-button').click();
+    // AC #2 — click the card → drawer opens
+    await firstCard.click();
 
     const drawer = page.getByTestId('feedback-drawer');
     await expect(drawer).toBeVisible({ timeout: 5_000 });
@@ -93,7 +93,7 @@ test.describe('Admin Feedback Drawer (FBDR-11)', () => {
     await expect(firstCard).toBeVisible({ timeout: 10_000 });
 
     // Open the drawer
-    await firstCard.getByTestId('admin-feedback-respond-button').click();
+    await firstCard.click();
     const drawer = page.getByTestId('feedback-drawer');
     await expect(drawer).toBeVisible({ timeout: 5_000 });
 
@@ -122,7 +122,7 @@ test.describe('Admin Feedback Drawer (FBDR-11)', () => {
     const firstCard = page.locator('[data-testid="admin-feedback-card"]').first();
     await expect(firstCard).toBeVisible({ timeout: 10_000 });
 
-    await firstCard.getByTestId('admin-feedback-respond-button').click();
+    await firstCard.click();
     const drawer = page.getByTestId('feedback-drawer');
     await expect(drawer).toBeVisible({ timeout: 5_000 });
 

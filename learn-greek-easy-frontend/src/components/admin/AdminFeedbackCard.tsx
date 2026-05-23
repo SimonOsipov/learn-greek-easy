@@ -150,25 +150,12 @@ export const AdminFeedbackCard: React.FC<AdminFeedbackCardProps> = ({
 
       {/* Right actions — absolute positioned sibling, stops propagation to avoid
           double-firing the clickable wrapper's onRespond. */}
-      <div
-        className="fb-card-actions"
-        onClick={(e) => e.stopPropagation()}
-        style={{ position: 'absolute', top: '12px', right: '12px' }}
-      >
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          data-testid="admin-feedback-respond-button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onRespond(feedback.id);
-          }}
+      {onDelete ? (
+        <div
+          className="fb-card-actions"
+          onClick={(e) => e.stopPropagation()}
+          style={{ position: 'absolute', top: '12px', right: '12px' }}
         >
-          {feedback.admin_response ? t('feedback.editResponse') : t('feedback.respond')}
-        </Button>
-
-        {onDelete ? (
           <Button
             type="button"
             variant="ghost"
@@ -182,8 +169,8 @@ export const AdminFeedbackCard: React.FC<AdminFeedbackCardProps> = ({
           >
             <Trash2 className="h-4 w-4" />
           </Button>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
     </article>
   );
 };

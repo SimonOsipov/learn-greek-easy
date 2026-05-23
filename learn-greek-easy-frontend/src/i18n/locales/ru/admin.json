@@ -586,8 +586,6 @@
     "sectionTitle": "Отзывы пользователей",
     "sectionDescription": "Просматривайте и отвечайте на отзывы и сообщения об ошибках от пользователей",
     "anonymousUser": "Анонимный пользователь",
-    "respond": "Ответить",
-    "editResponse": "Редактировать ответ",
     "adminResponseLabel": "Ответ администратора",
     "filters": {
       "statusPlaceholder": "Фильтр по статусу",

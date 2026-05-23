@@ -22,8 +22,6 @@ vi.mock('react-i18next', () => ({
     t: (key: string, opts?: Record<string, unknown>) => {
       const map: Record<string, string> = {
         'feedback.anonymousUser': 'Anonymous User',
-        'feedback.respond': 'Respond',
-        'feedback.editResponse': 'Edit Response',
         'feedback.v2.card.openReply': opts?.title ? `Open reply for ${opts.title}` : 'Open reply',
         'feedback.v2.card.adminResponseLabel': '✓ Admin response',
         'feedback.deleteAction': 'Delete',
@@ -173,20 +171,6 @@ describe('AdminFeedbackCard (HN-style re-skin)', () => {
 
       expect(onRespond).toHaveBeenCalledOnce();
       expect(onRespond).toHaveBeenCalledWith('click-test-id');
-    });
-
-    it('fires onRespond(item.id) when Reply button is clicked (not double-fired)', async () => {
-      const user = userEvent.setup();
-      const onRespond = vi.fn();
-      const feedback = makeFeedback({ id: 'reply-btn-id', admin_response: null });
-
-      render(<AdminFeedbackCard feedback={feedback} onRespond={onRespond} />);
-
-      await user.click(screen.getByTestId('admin-feedback-respond-button'));
-
-      // onRespond must fire exactly once — Reply button stops propagation
-      expect(onRespond).toHaveBeenCalledOnce();
-      expect(onRespond).toHaveBeenCalledWith('reply-btn-id');
     });
 
     it('passes id (string), not the whole feedback object, to onRespond', async () => {
