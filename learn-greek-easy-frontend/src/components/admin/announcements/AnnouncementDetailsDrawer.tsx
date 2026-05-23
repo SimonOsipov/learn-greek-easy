@@ -131,10 +131,6 @@ export function AnnouncementDetailsDrawer({
                 <Badge tone={readPct >= 20 ? 'blue' : 'gray'}>
                   {readPct}% {t('announcements.v2.details.read')}
                 </Badge>
-                <span className="drawer-bcrumb">
-                  {t('announcements.v2.details.by')}{' '}
-                  {announcement.creator?.display_name ?? t('announcements.history.unknownAdmin')}
-                </span>
               </div>
             )}
           </div>

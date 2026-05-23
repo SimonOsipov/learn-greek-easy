@@ -149,12 +149,10 @@ vi.mock('react-i18next', () => ({
         'announcements.v2.details.announcementLabel': 'Announcement',
         'announcements.v2.details.delivered': 'Delivered',
         'announcements.v2.details.read': 'Read',
-        'announcements.v2.details.by': 'by',
         'announcements.v2.details.resendToUnread': 'Resend to unread',
         'announcements.v2.timeline.comingSoonCaption': 'Detailed timeline coming soon',
         'announcements.v2.ctr.trackingComingSoon': 'tracking coming soon',
         'announcements.v2.ctr.noLink': 'no link',
-        'announcements.history.unknownAdmin': 'Unknown Admin',
         'announcements.detail.close': 'Close',
         // Delete dialog
         'announcements.delete.title': 'Delete Announcement',
@@ -196,7 +194,6 @@ const sampleAnnouncements = [
     total_recipients: 100,
     read_count: 25,
     created_at: '2026-02-01T10:00:00Z',
-    creator: { id: 'creator-1', display_name: 'Admin' },
   },
 ];
 

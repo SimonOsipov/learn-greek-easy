@@ -364,8 +364,6 @@
       "description": "View all past announcements and their statistics",
       "empty": "No announcements yet",
       "emptyHint": "Create your first announcement above",
-      "by": "by",
-      "unknownAdmin": "Unknown Admin",
       "viewDetail": "View Details"
     },
     "detail": {
@@ -389,7 +387,6 @@
         "sent": "sent",
         "delivered": "Delivered",
         "read": "read",
-        "by": "by",
         "message": "Message",
         "linkUrl": "Link URL",
         "reach": "Reach",
