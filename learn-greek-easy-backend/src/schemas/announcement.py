@@ -83,8 +83,6 @@ class AnnouncementWithCreatorResponse(AnnouncementResponse):
 class AnnouncementDetailResponse(AnnouncementWithCreatorResponse):
     """Schema for announcement detail with computed stats."""
 
-    read_percentage: float = Field(default=0.0, ge=0.0, le=100.0)
-
 
 class AnnouncementListResponse(BaseModel):
     """Schema for paginated announcement list."""

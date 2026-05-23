@@ -1574,7 +1574,6 @@ async def list_announcements(
                         "link_url": "https://example.com/features",
                         "total_recipients": 150,
                         "read_count": 75,
-                        "read_percentage": 50.0,
                         "created_at": "2024-01-15T10:30:00Z",
                         "creator": {
                             "id": "660e8400-e29b-41d4-a716-446655440000",
@@ -1625,12 +1624,6 @@ async def get_announcement(
             detail=f"Announcement with ID '{announcement_id}' not found",
         )
 
-    # Calculate read percentage
-    read_percentage = service.calculate_read_percentage(
-        total_recipients=campaign.total_recipients,
-        read_count=campaign.read_count,
-    )
-
     return AnnouncementDetailResponse(
         id=campaign.id,
         title=campaign.title,
@@ -1638,7 +1631,6 @@ async def get_announcement(
         link_url=campaign.link_url,
         total_recipients=campaign.total_recipients,
         read_count=campaign.read_count,
-        read_percentage=read_percentage,
         created_at=campaign.created_at,
         creator=(
             CreatorBriefResponse(

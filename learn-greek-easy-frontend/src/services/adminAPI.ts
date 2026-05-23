@@ -479,9 +479,7 @@ export interface AnnouncementListResponse {
 /**
  * Announcement detail response with computed stats
  */
-export interface AnnouncementDetailResponse extends AnnouncementItem {
-  read_percentage: number;
-}
+export type AnnouncementDetailResponse = AnnouncementItem;
 
 // ============================================
 // News Item Types
