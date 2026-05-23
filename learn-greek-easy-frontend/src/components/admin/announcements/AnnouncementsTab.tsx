@@ -16,7 +16,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
-import { Link, Megaphone, Users } from 'lucide-react';
+import { Megaphone } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 
@@ -119,22 +119,18 @@ export const AnnouncementsTab: React.FC = () => {
   // ── Derived stats ─────────────────────────────────────────────────────────
   const totalCount = total;
 
-  const peopleReached = announcements.reduce((sum, a) => sum + (a.total_recipients ?? 0), 0);
-
   const totalReadCount = announcements.reduce((sum, a) => sum + (a.read_count ?? 0), 0);
   const totalRecipients = announcements.reduce((sum, a) => sum + (a.total_recipients ?? 0), 0);
   const avgReadRate =
     totalRecipients > 0 ? Math.round((totalReadCount / totalRecipients) * 100) : 0;
-
-  const withLinkCount = announcements.filter((a) => a.link_url != null && a.link_url !== '').length;
 
   const readRateTone = avgReadRate >= AVG_READ_RATE_HEALTHY_THRESHOLD ? 'green' : 'amber';
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6" data-testid="announcements-tab">
-      {/* ── 4-up StatCard grid ───────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* ── 2-up StatCard grid ───────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <StatCard
           title={t('announcements.stats.total')}
           n={totalCount}
@@ -143,25 +139,11 @@ export const AnnouncementsTab: React.FC = () => {
           footerLabel={t('announcements.stats.allTime')}
         />
         <StatCard
-          title={t('announcements.stats.peopleReached')}
-          n={peopleReached}
-          icon={<Users />}
-          tone="violet"
-          footerLabel={t('announcements.stats.allTime')}
-        />
-        <StatCard
           title={t('announcements.stats.avgReadRate')}
           n={`${avgReadRate}%`}
           icon={<Megaphone />}
           tone={readRateTone}
           footerLabel={t('announcements.stats.acrossAll')}
-        />
-        <StatCard
-          title={t('announcements.stats.withLink')}
-          n={withLinkCount}
-          icon={<Link />}
-          tone="cyan"
-          footerLabel={t('announcements.stats.allTime')}
         />
       </div>
 

@@ -311,9 +311,7 @@
     "stats": {
       "total": "Total Announcements",
       "avgRead": "Avg. Read Rate",
-      "peopleReached": "People reached",
       "avgReadRate": "Avg read rate",
-      "withLink": "With link",
       "allTime": "All time",
       "acrossAll": "Across all announcements"
     },
