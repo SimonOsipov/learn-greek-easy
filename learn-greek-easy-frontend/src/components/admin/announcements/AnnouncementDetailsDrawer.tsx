@@ -108,12 +108,12 @@ export function AnnouncementDetailsDrawer({
         onOpenChange={(open) => {
           if (!open) onClose();
         }}
-        size="full"
+        size="half"
         data-testid="announcement-details-drawer"
         title={announcement?.title ?? 'Announcement details'}
       >
         {/* ── Close button ─────────────────────────────────────────────── */}
-        <SidePanel.CloseButton onClick={onClose} />
+        <SidePanel.CloseButton position="right" onClick={onClose} />
 
         {/* ── Header ───────────────────────────────────────────────────── */}
         <SidePanel.Header>
