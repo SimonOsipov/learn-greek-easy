@@ -17,7 +17,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { format } from 'date-fns';
 import { Check, Wand2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -73,7 +72,14 @@ function toInitialForm(entry?: ChangelogEntryAdmin) {
 }
 
 export function ChangelogEditorDrawer({ open, onClose, entry }: ChangelogEditorDrawerProps) {
-  const { t } = useTranslation('changelog');
+  const { t, i18n } = useTranslation(['admin', 'changelog']);
+
+  const formatDate = (iso: string) =>
+    new Date(iso).toLocaleDateString(i18n.language, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
 
   // ── Store: tab state (lifted by CLTE-03) ──────────────────────────────────
   const lang = useAdminChangelogStore(selectAdminChangelogLang);
@@ -177,7 +183,7 @@ export function ChangelogEditorDrawer({ open, onClose, entry }: ChangelogEditorD
         });
       } else {
         // Invalid JSON: discard changes, fire toast (AC #3)
-        toast({ title: 'Your JSON changes were discarded' });
+        toast({ title: t('admin:changelog.editor.toastJsonDiscarded') });
         // Form state is left untouched. On next entry to JSON mode,
         // the form→json branch above will re-seed from current form state.
       }
@@ -213,7 +219,7 @@ export function ChangelogEditorDrawer({ open, onClose, entry }: ChangelogEditorD
       const r = validateChangelogJson(jsonText);
       if (!r.valid) {
         const fieldList = r.error.fields ? `: ${r.error.fields.join(', ')}` : '';
-        setSubmitError(`Invalid JSON${fieldList}`);
+        setSubmitError(t('admin:changelog.create.validationError') + fieldList);
         return;
       }
       payload = r.data;
@@ -231,15 +237,15 @@ export function ChangelogEditorDrawer({ open, onClose, entry }: ChangelogEditorD
     try {
       if (entry) {
         await updateEntry(entry.id, payload);
-        toast({ title: 'Entry updated' });
+        toast({ title: t('admin:changelog.toast.updated') });
       } else {
         await createEntry(payload);
-        toast({ title: 'Entry published' });
+        toast({ title: t('admin:changelog.toast.created') });
       }
       onClose();
     } catch (e) {
       // Do NOT toast on failure (AC #8). Keep drawer open.
-      setSubmitError(e instanceof Error ? e.message : 'Unknown error');
+      setSubmitError(e instanceof Error ? e.message : t('admin:changelog.editor.errorUnknown'));
     }
   };
 
@@ -251,7 +257,9 @@ export function ChangelogEditorDrawer({ open, onClose, entry }: ChangelogEditorD
     [onClose]
   );
 
-  const title = entry ? 'Edit entry' : 'New entry';
+  const title = entry
+    ? t('admin:changelog.editor.editEntry')
+    : t('admin:changelog.actions.newEntry');
 
   return (
     <TooltipProvider>
@@ -259,34 +267,32 @@ export function ChangelogEditorDrawer({ open, onClose, entry }: ChangelogEditorD
         open={open}
         onOpenChange={handleOpenChange}
         data-testid="changelog-editor-drawer"
-        title={entry ? 'Edit changelog entry' : 'Compose changelog entry'}
+        title={
+          entry
+            ? t('admin:changelog.editor.ariaTitleEdit')
+            : t('admin:changelog.editor.ariaTitleNew')
+        }
+        size="half"
       >
         {/* ── Header ─────────────────────────────────────────────────────── */}
         <SidePanel.Header>
           <div className="drawer-head-content">
-            <div className="drawer-breadcrumb">
-              Changelog · {entry ? 'Edit entry' : 'New entry'}
-            </div>
             <div className="drawer-head-row">
               <h2 className="drawer-title">{title}</h2>
             </div>
             <div className="drawer-meta" data-testid="changelog-drawer-meta">
               <Badge tone={TAG_TONE[form.tag]}>
-                {t(
-                  CHANGELOG_TAG_CONFIG[form.tag].labelKey.replace('changelog:', '') as Parameters<
-                    typeof t
-                  >[0]
-                )}
+                {t(CHANGELOG_TAG_CONFIG[form.tag].labelKey as Parameters<typeof t>[0])}
               </Badge>
               {form.version && <span className="cl-preview-v">{form.version}</span>}
               {entry && (
                 <span className="va-dim">
-                  Posted {format(new Date(entry.created_at), 'MMM d, yyyy')}
+                  {t('admin:changelog.editor.posted', { date: formatDate(entry.created_at) })}
                 </span>
               )}
             </div>
           </div>
-          <SidePanel.CloseButton data-testid="changelog-editor-close-button" />
+          <SidePanel.CloseButton data-testid="changelog-editor-close-button" position="right" />
         </SidePanel.Header>
 
         {/* ── Tabs row ───────────────────────────────────────────────────── */}
@@ -301,7 +307,7 @@ export function ChangelogEditorDrawer({ open, onClose, entry }: ChangelogEditorD
               onClick={() => setPanelMode('form')}
               data-testid="changelog-editor-tab-form"
             >
-              Form
+              {t('admin:changelog.editor.tabForm')}
             </button>
             <button
               type="button"
@@ -311,7 +317,7 @@ export function ChangelogEditorDrawer({ open, onClose, entry }: ChangelogEditorD
               onClick={() => setPanelMode('json')}
               data-testid="changelog-editor-tab-json"
             >
-              JSON
+              {t('admin:changelog.editor.tabJson')}
             </button>
           </div>
 
@@ -390,12 +396,7 @@ export function ChangelogEditorDrawer({ open, onClose, entry }: ChangelogEditorD
                           data-testid={`changelog-editor-tag-${tag}`}
                         >
                           <span className="cl-tag-dot" aria-hidden="true" />
-                          {t(
-                            CHANGELOG_TAG_CONFIG[tag].labelKey.replace(
-                              'changelog:',
-                              ''
-                            ) as Parameters<typeof t>[0]
-                          )}
+                          {t(CHANGELOG_TAG_CONFIG[tag].labelKey as Parameters<typeof t>[0])}
                         </button>
                       ))}
                     </div>
@@ -403,29 +404,49 @@ export function ChangelogEditorDrawer({ open, onClose, entry }: ChangelogEditorD
 
                   {/* Version input */}
                   <div>
+                    <label htmlFor="changelog-version" className="mb-1 block text-sm font-medium">
+                      {t('admin:changelog.editor.fieldVersion')}
+                    </label>
                     <Input
+                      id="changelog-version"
                       value={form.version}
                       onChange={(e) => setForm((f) => ({ ...f, version: e.target.value }))}
-                      placeholder="v. 0.12.0"
+                      placeholder={t('admin:changelog.editor.versionPlaceholder')}
                       data-testid="changelog-editor-version"
                     />
                   </div>
 
                   {/* Title input (language-bound) */}
                   <div>
+                    <label
+                      htmlFor={`changelog-editor-title-${lang}`}
+                      className="mb-1 block text-sm font-medium"
+                    >
+                      {t('admin:changelog.editor.fieldTitle', { lang: lang.toUpperCase() })}
+                    </label>
                     <Input
+                      id={`changelog-editor-title-${lang}`}
                       value={titleValue}
                       onChange={(e) => setTitle(e.target.value)}
+                      placeholder={t('admin:changelog.editor.titlePlaceholder')}
                       data-testid={`changelog-editor-title-${lang}`}
                     />
                   </div>
 
                   {/* Content textarea (language-bound) */}
                   <div>
+                    <label
+                      htmlFor={`changelog-editor-content-${lang}`}
+                      className="mb-1 block text-sm font-medium"
+                    >
+                      {t('admin:changelog.editor.fieldContent', { lang: lang.toUpperCase() })}
+                    </label>
                     <Textarea
+                      id={`changelog-editor-content-${lang}`}
                       rows={8}
                       value={contentValue}
                       onChange={(e) => setContent(e.target.value)}
+                      placeholder={t('admin:changelog.editor.contentPlaceholder')}
                       data-testid={`changelog-editor-content-${lang}`}
                     />
                   </div>
@@ -475,16 +496,13 @@ export function ChangelogEditorDrawer({ open, onClose, entry }: ChangelogEditorD
                 {/* ── Right column: Preview (CLTE-05) ──────────────────── */}
                 {panelMode === 'form' && (
                   <aside className="cl-preview" data-testid="changelog-drawer-preview">
-                    <div className="cl-preview-l">Preview ({lang.toUpperCase()})</div>
+                    <div className="cl-preview-l">
+                      {t('admin:changelog.editor.previewLabel', { lang: lang.toUpperCase() })}
+                    </div>
                     <div className="cl-preview-card">
                       <div className="cl-preview-head">
                         <Badge tone={TAG_TONE[form.tag]}>
-                          {t(
-                            CHANGELOG_TAG_CONFIG[form.tag].labelKey.replace(
-                              'changelog:',
-                              ''
-                            ) as Parameters<typeof t>[0]
-                          )}
+                          {t(CHANGELOG_TAG_CONFIG[form.tag].labelKey as Parameters<typeof t>[0])}
                         </Badge>
                         {form.version && (
                           <span className="cl-preview-v" data-testid="changelog-preview-version">
@@ -508,8 +526,10 @@ export function ChangelogEditorDrawer({ open, onClose, entry }: ChangelogEditorD
                       </p>
                       <div className="cl-preview-foot va-dim" data-testid="changelog-preview-foot">
                         {entry
-                          ? `Posted ${format(new Date(entry.created_at), 'MMM d, yyyy')}`
-                          : 'Today'}
+                          ? t('admin:changelog.editor.posted', {
+                              date: formatDate(entry.created_at),
+                            })
+                          : t('admin:changelog.editor.previewFootNew')}
                       </div>
                     </div>
                   </aside>
@@ -558,7 +578,7 @@ export function ChangelogEditorDrawer({ open, onClose, entry }: ChangelogEditorD
                 onClick={onClose}
                 data-testid="changelog-editor-footer-cancel"
               >
-                Cancel
+                {t('admin:changelog.edit.cancel')}
               </Button>
 
               {entry && (
@@ -567,7 +587,7 @@ export function ChangelogEditorDrawer({ open, onClose, entry }: ChangelogEditorD
                   onClick={() => setDeleteDialogOpen(true)}
                   data-testid="changelog-editor-footer-delete"
                 >
-                  Delete
+                  {t('admin:changelog.delete.confirm')}
                 </Button>
               )}
 
@@ -576,7 +596,7 @@ export function ChangelogEditorDrawer({ open, onClose, entry }: ChangelogEditorD
                 disabled={!enReady || isSaving}
                 data-testid="changelog-editor-footer-submit"
               >
-                {entry ? 'Save changes' : 'Publish entry'}
+                {entry ? t('admin:changelog.edit.save') : t('admin:changelog.editor.publish')}
               </Button>
             </div>
           </div>

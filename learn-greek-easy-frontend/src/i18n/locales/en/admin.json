@@ -1065,6 +1065,25 @@
     },
     "actions": {
       "newEntry": "New entry"
+    },
+    "editor": {
+      "ariaTitleEdit": "Edit changelog entry",
+      "ariaTitleNew": "Compose changelog entry",
+      "editEntry": "Edit entry",
+      "posted": "Posted {{date}}",
+      "tabForm": "Form",
+      "tabJson": "JSON",
+      "publish": "Publish entry",
+      "toastJsonDiscarded": "Your JSON changes were discarded",
+      "errorUnknown": "Unknown error",
+      "versionPlaceholder": "v. 0.12.0",
+      "previewLabel": "Preview ({{lang}})",
+      "previewFootNew": "Today",
+      "fieldVersion": "Version (optional)",
+      "fieldTitle": "Title ({{lang}})",
+      "fieldContent": "Content ({{lang}})",
+      "titlePlaceholder": "Short, descriptive title",
+      "contentPlaceholder": "Markdown supported. What changed, why, and any user impact."
     }
   },
   "vocabularyCard": {
