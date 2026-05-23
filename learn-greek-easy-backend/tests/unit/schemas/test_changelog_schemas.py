@@ -552,8 +552,8 @@ class TestChangelogAdminListResponse:
         assert response.total == 0
         assert len(response.items) == 0
 
-    def test_page_size_validation_same_as_public(self):
-        """Test page_size has same constraints as public list (ge=1, le=50)."""
+    def test_page_size_validation(self):
+        """Test page_size constraints: ge=1, le=1000 (admin loads all rows in one fetch)."""
         # Invalid: 0
         with pytest.raises(ValidationError):
             ChangelogAdminListResponse(
@@ -563,23 +563,23 @@ class TestChangelogAdminListResponse:
                 items=[],
             )
 
-        # Invalid: 51
+        # Invalid: 1001
         with pytest.raises(ValidationError):
             ChangelogAdminListResponse(
                 total=0,
                 page=1,
-                page_size=51,
+                page_size=1001,
                 items=[],
             )
 
-        # Valid: 50
+        # Valid: 1000
         response = ChangelogAdminListResponse(
             total=0,
             page=1,
-            page_size=50,
+            page_size=1000,
             items=[],
         )
-        assert response.page_size == 50
+        assert response.page_size == 1000
 
     def test_page_validation(self):
         """Test page must be >= 1."""

@@ -90,5 +90,5 @@ class ChangelogAdminListResponse(BaseModel):
 
     total: int = Field(..., ge=0)
     page: int = Field(..., ge=1)
-    page_size: int = Field(..., ge=1, le=50)
+    page_size: int = Field(..., ge=1, le=1000)
     items: list[ChangelogEntryAdminResponse]
