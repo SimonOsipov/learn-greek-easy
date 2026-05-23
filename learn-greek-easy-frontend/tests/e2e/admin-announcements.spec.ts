@@ -319,9 +319,9 @@ test.describe('Admin Announcements Drawer (ANND-10)', () => {
     await expect(page.getByTestId('admin-page')).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId('announcements-tab')).toBeVisible({ timeout: 10_000 });
 
-    // The 2 remaining stat card headings should be present
-    await expect(page.getByText('Всего объявлений').or(page.getByText('Total Announcements'))).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByText('Средний процент прочтений').or(page.getByText('Avg. Read Rate'))).toBeVisible({ timeout: 5_000 });
+    // The 2 remaining stat card headings should be present (locale-agnostic match)
+    await expect(page.getByText(/Всего объявлений|Total Announcements/i)).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText(/Средний процент прочтений|Avg read rate/i)).toBeVisible({ timeout: 5_000 });
 
     // The removed stat cards must NOT be present
     await expect(page.getByText('People Reached')).toHaveCount(0);
