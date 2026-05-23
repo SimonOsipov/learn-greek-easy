@@ -17,7 +17,6 @@ from src.schemas.announcement import (
     AnnouncementListResponse,
     AnnouncementResponse,
     AnnouncementWithCreatorResponse,
-    CreatorBriefResponse,
 )
 
 
@@ -181,29 +180,6 @@ class TestAnnouncementCreate:
         assert announcement.link_url is None
 
 
-class TestCreatorBriefResponse:
-    """Test CreatorBriefResponse schema."""
-
-    def test_valid_creator_response(self):
-        """Test valid creator brief response."""
-        creator_id = uuid4()
-        creator = CreatorBriefResponse(
-            id=creator_id,
-            display_name="Admin User",
-        )
-        assert creator.id == creator_id
-        assert creator.display_name == "Admin User"
-
-    def test_creator_without_display_name(self):
-        """Test creator without display_name."""
-        creator_id = uuid4()
-        creator = CreatorBriefResponse(
-            id=creator_id,
-        )
-        assert creator.id == creator_id
-        assert creator.display_name is None
-
-
 class TestAnnouncementResponse:
     """Test AnnouncementResponse schema."""
 
@@ -254,25 +230,8 @@ class TestAnnouncementResponse:
 class TestAnnouncementWithCreatorResponse:
     """Test AnnouncementWithCreatorResponse schema."""
 
-    def test_with_creator(self):
-        """Test announcement with creator info."""
-        now = datetime.now()
-        creator_id = uuid4()
-        response = AnnouncementWithCreatorResponse(
-            id=uuid4(),
-            title="Test",
-            message="Test message",
-            created_at=now,
-            creator=CreatorBriefResponse(
-                id=creator_id,
-                display_name="Admin",
-            ),
-        )
-        assert response.creator is not None
-        assert response.creator.display_name == "Admin"
-
-    def test_without_creator(self):
-        """Test announcement without creator (deleted user)."""
+    def test_valid_response(self):
+        """Test announcement with creator response."""
         now = datetime.now()
         response = AnnouncementWithCreatorResponse(
             id=uuid4(),
@@ -280,7 +239,8 @@ class TestAnnouncementWithCreatorResponse:
             message="Test message",
             created_at=now,
         )
-        assert response.creator is None
+        assert response.title == "Test"
+        assert response.message == "Test message"
 
 
 class TestAnnouncementDetailResponse:

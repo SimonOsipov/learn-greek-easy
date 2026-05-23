@@ -8,7 +8,6 @@ from src.schemas.announcement import (
     AnnouncementListResponse,
     AnnouncementResponse,
     AnnouncementWithCreatorResponse,
-    CreatorBriefResponse,
 )
 
 # Card schemas
@@ -209,7 +208,6 @@ __all__ = [
     "AnnouncementListResponse",
     "AnnouncementResponse",
     "AnnouncementWithCreatorResponse",
-    "CreatorBriefResponse",
     # User
     "UserUpdate",
     "UserResponse",

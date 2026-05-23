@@ -4,7 +4,6 @@ from uuid import UUID
 
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from src.db.models import AnnouncementCampaign, Notification, NotificationType
 from src.repositories.base import BaseRepository
@@ -22,10 +21,9 @@ class AnnouncementCampaignRepository(BaseRepository[AnnouncementCampaign]):
         skip: int = 0,
         limit: int = 20,
     ) -> list[AnnouncementCampaign]:
-        """List announcements with creator loaded, ordered by created_at DESC."""
+        """List announcements ordered by created_at DESC."""
         query = (
             select(AnnouncementCampaign)
-            .options(selectinload(AnnouncementCampaign.creator))
             .order_by(desc(AnnouncementCampaign.created_at))
             .offset(skip)
             .limit(limit)
@@ -34,12 +32,8 @@ class AnnouncementCampaignRepository(BaseRepository[AnnouncementCampaign]):
         return list(result.scalars().all())
 
     async def get_with_creator(self, campaign_id: UUID) -> AnnouncementCampaign | None:
-        """Get announcement by ID with creator loaded."""
-        query = (
-            select(AnnouncementCampaign)
-            .options(selectinload(AnnouncementCampaign.creator))
-            .where(AnnouncementCampaign.id == campaign_id)
-        )
+        """Get announcement by ID."""
+        query = select(AnnouncementCampaign).where(AnnouncementCampaign.id == campaign_id)
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
 
