@@ -409,7 +409,6 @@
         "recipients": "получателей",
         "readBy": "Прочитано",
         "unread": "непрочитано",
-        "clickThrough": "Переходы",
         "announcementLabel": "Объявление",
         "resendToUnread": "Отправить непрочитавшим"
       },
@@ -426,10 +425,6 @@
           "channelLabel": "Канал",
           "channelValue": "В приложении"
         }
-      },
-      "ctr": {
-        "trackingComingSoon": "отслеживание скоро",
-        "noLink": "ссылка не указана"
       },
       "compose": {
         "breadcrumb": "Объявления · Новое",

@@ -397,7 +397,6 @@
         "recipients": "recipients",
         "readBy": "Read by",
         "unread": "unread",
-        "clickThrough": "Click-through",
         "announcementLabel": "Announcement",
         "resendToUnread": "Resend to unread"
       },
@@ -414,10 +413,6 @@
           "channelLabel": "Channel",
           "channelValue": "In-app"
         }
-      },
-      "ctr": {
-        "trackingComingSoon": "tracking coming soon",
-        "noLink": "no link"
       },
       "compose": {
         "breadcrumb": "Announcements · New",
