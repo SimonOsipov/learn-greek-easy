@@ -27,9 +27,6 @@
  * Auth: admin storageState (STORAGE_STATE.ADMIN from playwright.config).
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
-
 import { test, expect } from '@playwright/test';
 
 import { STORAGE_STATE } from '../../playwright.config';
@@ -169,45 +166,25 @@ test.describe('Admin Changelog Timeline — ADMIN2-21 extension (CLTT-E2E-01..07
   });
 
   test('CLTT-E2E-06: drawer chrome shows RU title when UI locale is RU', async ({ page }) => {
-    // Read expected RU string from the translation file
-    const ruAdminPath = path.join(
-      __dirname,
-      '../../src/i18n/locales/ru/admin.json'
-    );
-    let expectedRuEditEntry = 'Редактировать запись'; // fallback hardcoded
-    try {
-      const ruAdmin = JSON.parse(fs.readFileSync(ruAdminPath, 'utf-8'));
-      expectedRuEditEntry = ruAdmin?.changelog?.editor?.editEntry ?? expectedRuEditEntry;
-    } catch {
-      // file read failed — use fallback
-    }
+    // Expected RU values match ru/admin.json (kept in sync at PR time)
+    const ruNewEntry = 'Новая запись';
 
-    // Navigate to changelog and open edit on first entry (if any exist)
     await navigateToAdminTab(page, 'changelog');
     await expect(page.getByTestId('changelog-tab')).toBeVisible({ timeout: 15_000 });
 
-    // Switch UI to RU by setting i18next language via localStorage
+    // Switch UI to RU
     await page.evaluate(() => {
       localStorage.setItem('i18nextLng', 'ru');
     });
     await page.reload();
     await expect(page.getByTestId('changelog-tab')).toBeVisible({ timeout: 15_000 });
 
-    // Open compose drawer (which always works without needing an existing entry)
+    // Open compose drawer
     await page.getByRole('button', { name: /новая запись|new entry/i }).click();
     const drawer = page.getByTestId('changelog-editor-drawer');
     await expect(drawer).toBeVisible({ timeout: 5_000 });
 
-    // Find the drawer title H2 — should contain the RU "New entry" value or "Compose" equivalent
-    // Since compose mode uses actions.newEntry in RU = "Новая запись"
-    const ruNewEntry = (() => {
-      try {
-        const ruAdmin = JSON.parse(fs.readFileSync(ruAdminPath, 'utf-8'));
-        return ruAdmin?.changelog?.actions?.newEntry ?? 'Новая запись';
-      } catch {
-        return 'Новая запись';
-      }
-    })();
+    // Compose mode title sourced from admin:changelog.actions.newEntry
     const drawerTitle = drawer.locator('.drawer-title');
     await expect(drawerTitle).toHaveText(ruNewEntry, { timeout: 5_000 });
 
