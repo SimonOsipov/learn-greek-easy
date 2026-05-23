@@ -1630,6 +1630,33 @@
     display: none;
   }
 
+  /* SidePanel.CloseButton base: positions the X as an absolute 32×32 button in the
+     top-right corner of the drawer panel. Applies to ALL admin drawers. */
+  .drawer-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius);
+    background: transparent;
+    border: 1px solid transparent;
+    color: hsl(var(--fg-2));
+    cursor: pointer;
+    z-index: 1;
+  }
+  .drawer-close:hover {
+    background: hsl(var(--fg) / 0.06);
+    color: hsl(var(--fg));
+  }
+  .drawer-close:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
   /* SidePanel.CloseButton modifier: flip the close X to the right edge of .drawer-head.
      .drawer-head is flex with justify-content: space-between; the default CloseButton
      renders first (left edge). `order: 1` + `margin-left: auto` push it to the right

@@ -508,7 +508,7 @@ export function FeedbackDrawer({
 
   return (
     <SidePanel
-      size="full"
+      size="half"
       open
       onOpenChange={(o) => {
         if (!o) onClose();
@@ -516,7 +516,7 @@ export function FeedbackDrawer({
       data-testid="feedback-drawer"
       title={t('feedback.v2.drawer.title')}
     >
-      <SidePanel.CloseButton onClick={onClose} />
+      <SidePanel.CloseButton position="right" onClick={onClose} />
 
       <SidePanel.Header>
         {feedback ? (
@@ -563,23 +563,6 @@ export function FeedbackDrawer({
               {t(label)}
             </button>
           ))}
-
-          {/* Decorative — Draft with AI (Coming soon) */}
-          <div className="drawer-tabs-spacer" />
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                aria-disabled="true"
-                className="drawer-tab cursor-not-allowed opacity-60"
-                onClick={(e) => e.preventDefault()}
-                title={t('feedback.v2.drawer.comingSoon')}
-              >
-                {t('feedback.v2.drawer.draftWithAi')}
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>{t('feedback.v2.drawer.comingSoon')}</TooltipContent>
-          </Tooltip>
         </div>
       </SidePanel.Tabs>
 

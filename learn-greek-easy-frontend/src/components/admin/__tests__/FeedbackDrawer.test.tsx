@@ -66,7 +66,6 @@ vi.mock('react-i18next', () => ({
         'feedback.v2.drawer.footer.noReplyYet': 'No reply yet',
         'feedback.v2.drawer.saving': 'Saving…',
         'feedback.v2.drawer.comingSoon': 'Coming soon',
-        'feedback.v2.drawer.draftWithAi': '⚡ Draft with AI',
         'feedback.v2.drawer.admin': 'Admin',
         'feedback.v2.drawer.notFound': 'Feedback not found.',
         'feedback.v2.drawer.close': 'Close',
@@ -489,7 +488,7 @@ describe('FeedbackDrawer', () => {
 
   // ── Decorative buttons ─────────────────────────────────────────────────────
 
-  describe('Decorative buttons (Save draft, Draft with AI)', () => {
+  describe('Decorative buttons (Save draft)', () => {
     it('Save draft button has aria-disabled="true"', () => {
       const feedback = makeFeedback();
       mockStoreWith(feedback);
@@ -500,16 +499,6 @@ describe('FeedbackDrawer', () => {
       expect(saveDraftBtn).toHaveAttribute('aria-disabled', 'true');
     });
 
-    it('Draft with AI button has aria-disabled="true"', () => {
-      const feedback = makeFeedback();
-      mockStoreWith(feedback);
-
-      renderDrawer(feedback.id, 'reply');
-
-      const draftAiBtn = screen.getByRole('button', { name: /Draft with AI/i });
-      expect(draftAiBtn).toHaveAttribute('aria-disabled', 'true');
-    });
-
     it('clicking Save draft does not fire updateFeedback', async () => {
       const user = userEvent.setup();
       const feedback = makeFeedback();
@@ -518,18 +507,6 @@ describe('FeedbackDrawer', () => {
       renderDrawer(feedback.id, 'reply');
 
       await user.click(screen.getByRole('button', { name: 'Save draft' }));
-
-      expect(mockUpdateFeedback).not.toHaveBeenCalled();
-    });
-
-    it('clicking Draft with AI does not fire updateFeedback', async () => {
-      const user = userEvent.setup();
-      const feedback = makeFeedback();
-      mockStoreWith(feedback);
-
-      renderDrawer(feedback.id, 'reply');
-
-      await user.click(screen.getByRole('button', { name: /Draft with AI/i }));
 
       expect(mockUpdateFeedback).not.toHaveBeenCalled();
     });
