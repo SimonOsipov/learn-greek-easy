@@ -96,7 +96,9 @@ export function AnnouncementDetailsDrawer({
 
   // Derived display values
   const announcement = selectedAnnouncement;
-  const readPct = announcement ? Math.round(announcement.read_percentage) : 0;
+  const readPct = announcement
+    ? Math.round((announcement.read_count / Math.max(announcement.total_recipients, 1)) * 100)
+    : 0;
   const sentDate = announcement ? formatSentDate(announcement.created_at, i18n.language) : '';
   const footerDate = announcement ? formatSentDate(announcement.created_at, i18n.language) : '';
 

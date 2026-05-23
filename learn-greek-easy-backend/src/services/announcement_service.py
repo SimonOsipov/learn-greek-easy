@@ -120,10 +120,3 @@ class AnnouncementService:
             "Announcement campaign deleted",
             extra={"campaign_id": str(campaign_id)},
         )
-
-    @staticmethod
-    def calculate_read_percentage(total_recipients: int, read_count: int) -> float:
-        """Calculate read percentage for campaign stats."""
-        if total_recipients == 0:
-            return 0.0
-        return round((read_count / total_recipients) * 100, 1)
