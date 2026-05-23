@@ -32,8 +32,6 @@ export interface AnnouncementDetailsDrawerProps {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const TIMELINE_LABELS = ['0–1h', '1–6h', '6–24h', '1–7d', '7+d'] as const;
-
 function formatSentDate(dateString: string, locale: string): string {
   const date = new Date(dateString);
   return date.toLocaleDateString(locale, {
@@ -219,27 +217,6 @@ export function AnnouncementDetailsDrawer({
                           : t('announcements.v2.ctr.noLink')}
                       </div>
                     </div>
-                  </div>
-                </div>
-
-                {/* 5. Read timeline placeholder */}
-                <div style={{ marginBottom: '18px' }}>
-                  <div className="an-detail-l">{t('announcements.v2.details.readTimeline')}</div>
-                  <p
-                    style={{ fontSize: '12px', marginBottom: '10px' }}
-                    className="text-muted-foreground"
-                  >
-                    {t('announcements.v2.timeline.comingSoonCaption')}
-                  </p>
-                  <div className="an-timeline" aria-hidden="true">
-                    {TIMELINE_LABELS.map((label) => (
-                      <div key={label} className="an-timeline-bar">
-                        <div className="an-timeline-bar-track">
-                          <span style={{ height: '0px' }} />
-                        </div>
-                        <span className="an-timeline-bar-l">{label}</span>
-                      </div>
-                    ))}
                   </div>
                 </div>
               </>

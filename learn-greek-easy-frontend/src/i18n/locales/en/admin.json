@@ -398,7 +398,6 @@
         "readBy": "Read by",
         "unread": "unread",
         "clickThrough": "Click-through",
-        "readTimeline": "Read timeline",
         "announcementLabel": "Announcement",
         "resendToUnread": "Resend to unread"
       },
@@ -415,9 +414,6 @@
           "channelLabel": "Channel",
           "channelValue": "In-app"
         }
-      },
-      "timeline": {
-        "comingSoonCaption": "Detailed timeline coming soon"
       },
       "ctr": {
         "trackingComingSoon": "tracking coming soon",

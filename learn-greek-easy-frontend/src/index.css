@@ -2107,49 +2107,6 @@
     color: hsl(var(--fg-3));
   }
 
-  /* ── Read-timeline mini-chart ───────────────────────────────────────────── */
-  .an-timeline {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 8px;
-    padding: 14px 12px 10px;
-    background: hsl(var(--bg-2));
-    border: 1px solid hsl(var(--fg) / 0.06);
-    border-radius: 12px;
-  }
-  .an-timeline-bar {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    font-size: 11px;
-  }
-  .an-timeline-bar-track {
-    width: 100%;
-    height: 60px;
-    position: relative;
-    display: flex;
-    align-items: flex-end;
-    background: hsl(var(--fg) / 0.04);
-    border-radius: 6px;
-    overflow: hidden;
-  }
-  .an-timeline-bar-track span {
-    display: block;
-    width: 100%;
-    background: linear-gradient(180deg, hsl(var(--primary) / 0.4), hsl(var(--primary)));
-    min-height: 2px;
-  }
-  .an-timeline-bar-l {
-    color: hsl(var(--fg-3));
-    font-size: 10.5px;
-  }
-  .an-timeline-bar-v {
-    font-family: 'JetBrains Mono', monospace;
-    font-weight: 600;
-    font-size: 11px;
-  }
-
   /* ─── Feedback Drawer (.fb-*) ─── */
 
   /* Card chrome */
