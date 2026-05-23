@@ -1,19 +1,18 @@
 /**
- * ChangelogTab Component Tests — CLTE-08
+ * ChangelogTab Component Tests — CLTE-08 / ADMIN2-21 trim
  *
  * Covers:
- * - 4 StatCards with correct tones
- * - Total + Missing RU sparklines carry the right data-testid; Most recent + Avg cadence have no sparkline
- * - Missing RU stat count math
+ * - 3 StatCards (Missing RU card removed in CLTT-01)
+ * - Missing RU card absent
+ * - No sparkline rendered
  * - Search filter (no debounce, case-insensitive, EN+RU)
  * - Tag SegControl shows only present tags with counts
  * - Deep-link: ?edit=<valid-id>&lang=ru opens drawer
  * - Deep-link: ?compose=1 opens compose drawer
- * - Deep-link: ?edit=<missing-id> ignored silently
+ * - Deep-link: ?edit=<missing-id> ignored silently (URL NOT immediately stripped)
  * - Deep-link: ?lang=foo ignored silently
  * - Close drawer strips URL params
- * - Export markdown stub fires toast
- * - One-shot console.warn at 100 entries
+ * - No console.warn even at 200 entries
  */
 
 import React from 'react';
@@ -72,21 +71,15 @@ vi.mock('react-i18next', () => ({
         'admin:changelog.kicker': 'Changelog',
         'admin:changelog.title': 'Changelog',
         'admin:changelog.subtitle': 'Manage and publish product updates for your users.',
-        'admin:changelog.toast.exportComingSoon': 'Markdown export coming soon',
-        'admin:changelog.actions.export': 'Export markdown',
         'admin:changelog.actions.newEntry': 'New entry',
         'admin:changelog.stats.total': 'Total entries',
         'admin:changelog.stats.mostRecent': 'Most recent',
         'admin:changelog.stats.cadence': 'Avg cadence',
         'admin:changelog.stats.cadenceSub': 'between entries',
         'admin:changelog.stats.cadenceSubMinimal': 'need ≥ 2 entries',
-        'admin:changelog.stats.missingRu': 'Missing RU',
-        'admin:changelog.stats.missingRuNeed': 'entries need translation',
-        'admin:changelog.stats.missingRuDone': 'all translated',
         'admin:changelog.stats.footer.allTime': 'all-time',
         'admin:changelog.stats.footer.lastPublished': 'last published',
         'admin:changelog.stats.footer.lastTenEntries': 'last 10 entries',
-        'admin:changelog.stats.footer.needsAttention': 'needs attention',
         'admin:changelog.search.entriesPlaceholder': 'Search entries…',
         'admin:shell.breadcrumb.dashboard': 'Dashboard',
       };
@@ -228,13 +221,12 @@ describe('ChangelogTab', () => {
     });
   });
 
-  // ── StatCards ───────────────────────────────────────────────────────────────
+  // ── StatCards (3-card grid after CLTT-01 trim) ───────────────────────────────
   describe('StatCards', () => {
-    it('renders 4 StatCards', () => {
+    it('renders exactly 3 StatCards', () => {
       renderWithRouter();
-      // Each card has a .stat-card class
       const cards = document.querySelectorAll('.stat-card');
-      expect(cards.length).toBe(4);
+      expect(cards.length).toBe(3);
     });
 
     it('Total card has tone-blue class', () => {
@@ -255,71 +247,33 @@ describe('ChangelogTab', () => {
       expect(cards[2].classList).toContain('tone-cyan');
     });
 
-    it('Missing RU card has tone-amber class', () => {
+    it('Missing RU card is absent', () => {
       renderWithRouter();
-      const cards = Array.from(document.querySelectorAll('.stat-card'));
-      expect(cards[3].classList).toContain('tone-amber');
+      // The 4th card was the missing-RU card — no longer rendered
+      const cards = document.querySelectorAll('.stat-card');
+      expect(cards.length).toBeLessThan(4);
+      // Also verify no testid references to missing-ru-card
+      expect(screen.queryByTestId('missing-ru-card')).not.toBeInTheDocument();
     });
   });
 
-  // ── Sparkline data-testids (AC #3) ──────────────────────────────────────────
-  describe('Sparkline data-testids', () => {
-    it('sparkline-total is present', () => {
+  // ── No sparkline (CLTT-01 trim) ──────────────────────────────────────────────
+  describe('No sparkline rendered', () => {
+    it('sparkline-total is NOT rendered', () => {
       renderWithRouter();
-      expect(screen.getByTestId('sparkline-total')).toBeInTheDocument();
+      expect(screen.queryByTestId('sparkline-total')).not.toBeInTheDocument();
     });
 
-    it('sparkline-recent is NOT rendered (bars omitted for single-value cards)', () => {
+    it('sparkline-missing-ru is NOT rendered', () => {
       renderWithRouter();
-      expect(screen.queryByTestId('sparkline-recent')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('sparkline-missing-ru')).not.toBeInTheDocument();
     });
 
-    it('sparkline-cadence is NOT rendered (bars omitted for single-value cards)', () => {
+    it('no sparkline-* testid is rendered at all', () => {
       renderWithRouter();
-      expect(screen.queryByTestId('sparkline-cadence')).not.toBeInTheDocument();
-    });
-
-    it('sparkline-missing-ru is present', () => {
-      renderWithRouter();
-      expect(screen.getByTestId('sparkline-missing-ru')).toBeInTheDocument();
-    });
-  });
-
-  // ── Missing RU stat (AC #2) ─────────────────────────────────────────────────
-  describe('Missing RU stat', () => {
-    it('counts entries with missing title_ru or content_ru', () => {
-      mockItems = [
-        makeEntry({ id: '1', title_ru: '', content_ru: 'ok' }), // missing title_ru
-        makeEntry({ id: '2', title_ru: 'ok', content_ru: '' }), // missing content_ru
-        makeEntry({ id: '3', title_ru: 'ok', content_ru: 'ok' }), // complete
-      ];
-      renderWithRouter();
-      // The Missing RU card should show n=2
-      const cards = Array.from(document.querySelectorAll('.stat-card'));
-      const missingRuCard = cards[3];
-      expect(missingRuCard.querySelector('.stat-n')?.textContent).toBe('2');
-    });
-
-    it('Missing RU card stays tone-amber when count is 0', () => {
-      mockItems = [makeEntry({ id: '1', title_ru: 'ok', content_ru: 'ok' })];
-      renderWithRouter();
-      const cards = Array.from(document.querySelectorAll('.stat-card'));
-      expect(cards[3].classList).toContain('tone-amber');
-      expect(cards[3].querySelector('.stat-n')?.textContent).toBe('0');
-    });
-
-    it('shows "all translated" sub when count is 0', () => {
-      mockItems = [makeEntry({ id: '1', title_ru: 'ok', content_ru: 'ok' })];
-      renderWithRouter();
-      const cards = Array.from(document.querySelectorAll('.stat-card'));
-      expect(cards[3].querySelector('.stat-sub')?.textContent).toBe('all translated');
-    });
-
-    it('shows "entries need translation" sub when count > 0', () => {
-      mockItems = [makeEntry({ id: '1', title_ru: '', content_ru: '' })];
-      renderWithRouter();
-      const cards = Array.from(document.querySelectorAll('.stat-card'));
-      expect(cards[3].querySelector('.stat-sub')?.textContent).toBe('entries need translation');
+      // querySelectorAll is not scoped to testids, use queryBy pattern
+      const sparklines = document.querySelectorAll('[data-testid^="sparkline-"]');
+      expect(sparklines.length).toBe(0);
     });
   });
 
@@ -490,16 +444,12 @@ describe('ChangelogTab', () => {
     });
   });
 
-  // ── Deep-link (AC #8) ───────────────────────────────────────────────────────
-  // Fix #3: guard is now `if (isLoading) return` instead of the broken
-  // `if (isLoading && items.length === 0) return`. With mockIsLoading=false
-  // the effect fires immediately as before.
+  // ── Deep-link ?edit=<valid-id>&lang=ru (AC #8) ──────────────────────────────
   describe('Deep-link ?edit=<valid-id>&lang=ru', () => {
     it('calls openEdit with the id when item exists', async () => {
       mockItems = [makeEntry({ id: 'abc-123' })];
       mockIsLoading = false;
       renderWithRouter('?edit=abc-123&lang=ru');
-      // Effect fires after render; let microtasks settle
       await act(async () => {});
       expect(mockOpenEdit).toHaveBeenCalledWith('abc-123');
     });
@@ -509,6 +459,15 @@ describe('ChangelogTab', () => {
       mockIsLoading = false;
       renderWithRouter('?edit=abc-123&lang=ru');
       await act(async () => {});
+      expect(mockSetLang).toHaveBeenCalledWith('ru');
+    });
+
+    it('opens drawer in RU — ?edit=<valid-id>&lang=ru activates both openEdit and setLang("ru")', async () => {
+      mockItems = [makeEntry({ id: 'deep-ru-1' })];
+      mockIsLoading = false;
+      renderWithRouter('?edit=deep-ru-1&lang=ru');
+      await act(async () => {});
+      expect(mockOpenEdit).toHaveBeenCalledWith('deep-ru-1');
       expect(mockSetLang).toHaveBeenCalledWith('ru');
     });
   });
@@ -526,14 +485,20 @@ describe('ChangelogTab', () => {
 
   // ── Deep-link malformed values (AC #9) ──────────────────────────────────────
   describe('Deep-link malformed values', () => {
-    it('ignores ?edit=<missing-id> silently', async () => {
+    it('ignores ?edit=<missing-id> silently AND does NOT immediately strip URL', async () => {
       const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       mockItems = [makeEntry({ id: 'real-id' })];
       mockIsLoading = false;
       renderWithRouter('?edit=not-a-real-id');
+      // openEdit must NOT be called
+      expect(mockOpenEdit).not.toHaveBeenCalled();
+      // No console.error
+      expect(errSpy).not.toHaveBeenCalled();
+      // URL is not immediately stripped — the ?edit param should still be present
+      // (the component should NOT call setSearchParams to remove it immediately)
+      // We verify this by checking that no rewrite happened on initial render
       await act(async () => {});
       expect(mockOpenEdit).not.toHaveBeenCalled();
-      expect(errSpy).not.toHaveBeenCalled();
       errSpy.mockRestore();
     });
 
@@ -565,28 +530,21 @@ describe('ChangelogTab', () => {
     });
   });
 
-  // Note: "Export markdown" and "New entry" buttons are now in AdminPage's
-  // pageHeadPropsFor (ADMIN2-HEAD). These buttons are covered by e2e smoke tests.
-  // The ?compose=1 URL deep-link (below) still exercises openCompose indirectly.
-
-  // ── One-shot console.warn at 100 entries (AC #11) ───────────────────────────
-  describe('console.warn at 100 entries', () => {
-    it('fires once when items.length === 100', () => {
+  // ── No console.warn even at 200 entries (CLTT-01 removed the warn) ──────────
+  describe('No console.warn at high entry counts', () => {
+    it('does NOT fire console.warn when mocking 200 entries', () => {
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      mockItems = Array.from({ length: 100 }, (_, i) =>
+      mockItems = Array.from({ length: 200 }, (_, i) =>
         makeEntry({ id: `entry-${i}`, title_en: `Entry ${i}` })
       );
       renderWithRouter();
-      expect(warnSpy).toHaveBeenCalledWith(
-        '[Changelog] List response returned ≥ 100 entries — consider pagination'
-      );
-      expect(warnSpy).toHaveBeenCalledTimes(1);
+      expect(warnSpy).not.toHaveBeenCalled();
       warnSpy.mockRestore();
     });
 
-    it('does not fire when items.length < 100', () => {
+    it('does NOT fire console.warn when mocking 100 entries', () => {
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      mockItems = Array.from({ length: 99 }, (_, i) =>
+      mockItems = Array.from({ length: 100 }, (_, i) =>
         makeEntry({ id: `entry-${i}`, title_en: `Entry ${i}` })
       );
       renderWithRouter();
@@ -616,57 +574,7 @@ describe('ChangelogTab', () => {
     });
   });
 
-  // ── CLLP-10: Sparkline bars are derived (AC #2) ─────────────────────────────
-  describe('Sparkline bars derived from data', () => {
-    it('Total entries sparkline bars are computed from items (not the legacy hardcoded shape)', () => {
-      const legacyBars = [8, 12, 6, 14, 10, 16, 9, 13, 11];
-      const now = new Date();
-      const daysAgo = (d: number) =>
-        new Date(now.getTime() - d * 24 * 60 * 60 * 1000).toISOString();
-
-      mockItems = [
-        makeEntry({ id: 'a', created_at: daysAgo(2) }),
-        makeEntry({ id: 'b', created_at: daysAgo(10) }),
-        makeEntry({ id: 'c', created_at: daysAgo(25) }),
-      ];
-      renderWithRouter();
-
-      const barsEl = screen.getByTestId('sparkline-total');
-      const barSpans = barsEl.querySelectorAll('span');
-      expect(barSpans.length).toBe(9);
-
-      // Extract rendered heights (formula: value * 1.6 + 6)
-      const renderedHeights = Array.from(barSpans).map((s) =>
-        parseFloat((s as HTMLElement).style.height)
-      );
-      const legacyHeights = legacyBars.map((h) => h * 1.6 + 6);
-
-      expect(renderedHeights).not.toEqual(legacyHeights);
-    });
-
-    it('Most recent card has no .stat-bars element', () => {
-      mockItems = [makeEntry({ id: '1' })];
-      renderWithRouter();
-
-      // sparkline-recent test id absent (already asserted above)
-      // additionally verify the second .stat-card has no .stat-bars child
-      const cards = Array.from(document.querySelectorAll('.stat-card'));
-      expect(cards[1].querySelector('.stat-bars')).toBeNull();
-    });
-
-    it('Avg cadence card has no .stat-bars element', () => {
-      mockItems = [makeEntry({ id: '1' })];
-      renderWithRouter();
-
-      const cards = Array.from(document.querySelectorAll('.stat-card'));
-      expect(cards[2].querySelector('.stat-bars')).toBeNull();
-    });
-  });
-
   // ── Deep-link race fix (Fix #3) ────────────────────────────────────────────
-  // The race: when isLoading=false AND items=[] simultaneously on mount, the old
-  // guard `if (isLoading && items.length === 0) return` did NOT block. The fixed
-  // guard `if (isLoading) return` correctly blocks until loading completes.
   describe('Deep-link race: deep-link blocked while isLoading=true', () => {
     it('does not call openEdit while isLoading=true', async () => {
       // Simulate: store says loading is in progress

@@ -63,9 +63,9 @@ describe('adminChangelogStore — drawer state + pageSize (CLTE-03)', () => {
       expect(panelMode).toBe('form');
     });
 
-    it('should have pageSize defaulting to 20', () => {
+    it('should have pageSize defaulting to 500 (CLTT-01: no client pagination)', () => {
       const { pageSize } = useAdminChangelogStore.getState();
-      expect(pageSize).toBe(20);
+      expect(pageSize).toBe(500);
     });
   });
 
@@ -392,12 +392,12 @@ describe('adminChangelogStore — drawer state + pageSize (CLTE-03)', () => {
       expect(state.panelMode).toBe('form');
     });
 
-    it('should preserve pageSize at 20 after reset', () => {
+    it('should preserve pageSize at 500 after reset (CLTT-01: no client pagination)', () => {
       act(() => {
         useAdminChangelogStore.getState().reset();
       });
 
-      expect(useAdminChangelogStore.getState().pageSize).toBe(20);
+      expect(useAdminChangelogStore.getState().pageSize).toBe(500);
     });
   });
 });
