@@ -244,4 +244,87 @@ test.describe('Admin Announcements Drawer (ANND-10)', () => {
     // Input value should be cleared
     await expect(page.getByTestId('announcement-search-input')).toHaveValue('');
   });
+
+  // ── 9. Drawer half-width + close button position ───────────────────────────
+  test('ANND-E2E-09: details drawer mounts at half width and close button is top-right', async ({
+    page,
+    request,
+  }) => {
+    await seedAnnouncements(request);
+
+    await page.goto('/admin?tab=announcements');
+    await expect(page.getByTestId('admin-page')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('announcements-tab')).toBeVisible({ timeout: 10_000 });
+
+    // Open the details drawer by clicking the first row
+    const firstRow = page.locator('[data-testid^="announcement-row-"]').first();
+    await expect(firstRow).toBeVisible({ timeout: 10_000 });
+    await firstRow.locator('.an-title-col').click();
+
+    const detailsDrawer = page.getByTestId('announcement-details-drawer');
+    await expect(detailsDrawer).toBeVisible({ timeout: 5_000 });
+
+    // Assert drawer width is between 40–60% of the 1280px viewport
+    const dialog = page.locator('[role="dialog"]').first();
+    await expect(dialog).toBeVisible();
+    const box = await dialog.boundingBox();
+    expect(box).not.toBeNull();
+    const widthFraction = box!.width / 1280;
+    expect(widthFraction).toBeGreaterThanOrEqual(0.4);
+    expect(widthFraction).toBeLessThanOrEqual(0.6);
+
+    // Close button should have drawer-close-right class (top-right positioning)
+    const closeBtn = page.locator('button.drawer-close').first();
+    await expect(closeBtn).toBeVisible();
+    await expect(closeBtn).toHaveClass(/drawer-close-right/);
+  });
+
+  // ── 10. Drawer removed sections absent ─────────────────────────────────────
+  test('ANND-E2E-10: details drawer does not render removed sections', async ({
+    page,
+    request,
+  }) => {
+    await seedAnnouncements(request);
+
+    await page.goto('/admin?tab=announcements');
+    await expect(page.getByTestId('admin-page')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('announcements-tab')).toBeVisible({ timeout: 10_000 });
+
+    // Open details drawer
+    const firstRow = page.locator('[data-testid^="announcement-row-"]').first();
+    await expect(firstRow).toBeVisible({ timeout: 10_000 });
+    await firstRow.locator('.an-title-col').click();
+
+    const detailsDrawer = page.getByTestId('announcement-details-drawer');
+    await expect(detailsDrawer).toBeVisible({ timeout: 5_000 });
+
+    // Wait for announcement body to load (message block appears when loaded)
+    await expect(detailsDrawer.locator('.an-detail-msg')).toBeVisible({ timeout: 10_000 });
+
+    // Removed sections must be absent
+    await expect(page.locator('.an-progress-row')).toHaveCount(0);
+    await expect(page.locator('.an-timeline')).toHaveCount(0);
+    await expect(page.locator('.drawer-bcrumb')).toHaveCount(0);
+    await expect(page.getByTestId('announcement-details-resend-button')).toHaveCount(0);
+
+    // Exactly 2 reach stat tiles
+    await expect(page.locator('.an-stat')).toHaveCount(2);
+  });
+
+  // ── 11. List page renders exactly 2 StatCards ──────────────────────────────
+  test('ANND-E2E-11: list page renders exactly 2 StatCards (Total + Avg Read Rate)', async ({
+    page,
+  }) => {
+    await page.goto('/admin?tab=announcements');
+    await expect(page.getByTestId('admin-page')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('announcements-tab')).toBeVisible({ timeout: 10_000 });
+
+    // The 2 remaining stat card headings should be present
+    await expect(page.getByText('Всего объявлений').or(page.getByText('Total Announcements'))).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText('Средний процент прочтений').or(page.getByText('Avg. Read Rate'))).toBeVisible({ timeout: 5_000 });
+
+    // The removed stat cards must NOT be present
+    await expect(page.getByText('People Reached')).toHaveCount(0);
+    await expect(page.getByText('With Link')).toHaveCount(0);
+  });
 });

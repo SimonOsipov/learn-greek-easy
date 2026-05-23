@@ -267,15 +267,15 @@ describe('AnnouncementsTab', () => {
   // Note: PageHead (title H1) is now owned by AdminPage (ADMIN2-HEAD).
   // AnnouncementsTab renders stat cards, history rows, compose/detail drawers.
 
-  it('renders 4 StatCards', () => {
+  it('renders 2 StatCards', () => {
     setupStore(buildStoreState());
     renderTab();
-    // StatCards use data-testid="stat-card" or unique text content —
-    // check for the 4 known stat titles
+    // Only 2 stat cards remain after ADMIN2-20: Total Announcements + Avg. Read Rate
     expect(screen.getByText('Total Announcements')).toBeInTheDocument();
-    expect(screen.getByText('People Reached')).toBeInTheDocument();
     expect(screen.getByText('Avg. Read Rate')).toBeInTheDocument();
-    expect(screen.getByText('With Link')).toBeInTheDocument();
+    // People Reached and With Link were removed
+    expect(screen.queryByText('People Reached')).not.toBeInTheDocument();
+    expect(screen.queryByText('With Link')).not.toBeInTheDocument();
   });
 
   it('renders AnnouncementHistoryRows (empty state text visible)', () => {
