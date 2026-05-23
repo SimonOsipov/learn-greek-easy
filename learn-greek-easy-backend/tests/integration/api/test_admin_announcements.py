@@ -349,6 +349,34 @@ class TestListAnnouncementsEndpoint:
         assert "creator" not in item
         assert item["title"] == "Announcement with Creator"
 
+    @pytest.mark.asyncio
+    async def test_list_items_omit_creator(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        test_superuser,
+        db_session: AsyncSession,
+    ):
+        """Test that all list items omit creator field."""
+        for i in range(3):
+            await AnnouncementCampaignFactory.create(
+                session=db_session,
+                created_by=test_superuser.id,
+                title=f"Omit Creator Test {i}",
+                message="Test message",
+            )
+
+        response = await client.get(
+            "/api/v1/admin/announcements",
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["items"]) == 3
+        for item in data["items"]:
+            assert "creator" not in item
+
 
 class TestGetAnnouncementEndpoint:
     """Integration tests for GET /api/v1/admin/announcements/{id} endpoint."""
@@ -440,72 +468,19 @@ class TestGetAnnouncementEndpoint:
         assert "creator" not in data
 
     @pytest.mark.asyncio
-    async def test_get_read_percentage_calculation(
-        self,
-        client: AsyncClient,
-        superuser_auth_headers: dict,
-        test_superuser,
-        test_user,
-        db_session: AsyncSession,
-    ):
-        """Test that read percentage is calculated correctly from notifications."""
-        from datetime import datetime, timezone
-
-        from src.db.models import Notification, NotificationType
-
-        # Create campaign with known total_recipients
-        campaign = await AnnouncementCampaignFactory.create(
-            session=db_session,
-            created_by=test_superuser.id,
-            title="Stats Test",
-            message="Testing stats",
-            total_recipients=4,
-            read_count=0,  # Will be refreshed from notifications
-        )
-
-        # Create 4 notifications, 1 read and 3 unread
-        for i in range(4):
-            is_read = i == 0  # Only first is read
-            notification = Notification(
-                user_id=test_user.id,  # Same user for simplicity
-                type=NotificationType.ADMIN_ANNOUNCEMENT,
-                title=campaign.title,
-                message=campaign.message,
-                icon="megaphone",
-                extra_data={"campaign_id": str(campaign.id)},
-                read=is_read,
-                read_at=datetime.now(timezone.utc) if is_read else None,
-            )
-            db_session.add(notification)
-        await db_session.flush()
-
-        response = await client.get(
-            f"/api/v1/admin/announcements/{campaign.id}",
-            headers=superuser_auth_headers,
-        )
-
-        assert response.status_code == 200
-        data = response.json()
-        # With 1/4 read, percentage should be 25.0
-        assert data["read_percentage"] == 25.0
-        assert data["total_recipients"] == 4
-        assert data["read_count"] == 1
-
-    @pytest.mark.asyncio
-    async def test_get_zero_recipients_percentage(
+    async def test_get_response_omits_creator_and_read_percentage(
         self,
         client: AsyncClient,
         superuser_auth_headers: dict,
         test_superuser,
         db_session: AsyncSession,
     ):
-        """Test that zero recipients results in 0% read rate."""
+        """Test that detail response does not include creator or read_percentage fields."""
         campaign = await AnnouncementCampaignFactory.create(
             session=db_session,
             created_by=test_superuser.id,
-            title="Zero Recipients",
-            message="No recipients yet",
-            # Default: total_recipients=0, read_count=0
+            title="Slim Response Test",
+            message="Checking omitted fields",
         )
 
         response = await client.get(
@@ -514,7 +489,6 @@ class TestGetAnnouncementEndpoint:
         )
 
         assert response.status_code == 200
-        data = response.json()
-        assert data["read_percentage"] == 0.0
-        assert data["total_recipients"] == 0
-        assert data["read_count"] == 0
+        body = response.json()
+        assert "creator" not in body
+        assert "read_percentage" not in body

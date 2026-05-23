@@ -246,8 +246,8 @@ class TestAnnouncementWithCreatorResponse:
 class TestAnnouncementDetailResponse:
     """Test AnnouncementDetailResponse schema."""
 
-    def test_with_read_percentage(self):
-        """Test announcement detail with read percentage."""
+    def test_valid_detail_response(self):
+        """Test announcement detail response with base fields (no read_percentage or creator)."""
         now = datetime.now()
         response = AnnouncementDetailResponse(
             id=uuid4(),
@@ -256,44 +256,14 @@ class TestAnnouncementDetailResponse:
             total_recipients=100,
             read_count=25,
             created_at=now,
-            read_percentage=25.0,
         )
-        assert response.read_percentage == 25.0
-
-    def test_read_percentage_bounds(self):
-        """Test read_percentage within valid bounds."""
-        now = datetime.now()
-        # Test 0%
-        response_zero = AnnouncementDetailResponse(
-            id=uuid4(),
-            title="Test",
-            message="Test message",
-            created_at=now,
-            read_percentage=0.0,
+        assert response.total_recipients == 100
+        assert response.read_count == 25
+        assert (
+            not hasattr(response, "read_percentage")
+            or response.model_fields.get("read_percentage") is None
         )
-        assert response_zero.read_percentage == 0.0
-
-        # Test 100%
-        response_full = AnnouncementDetailResponse(
-            id=uuid4(),
-            title="Test",
-            message="Test message",
-            created_at=now,
-            read_percentage=100.0,
-        )
-        assert response_full.read_percentage == 100.0
-
-    def test_read_percentage_out_of_bounds_rejected(self):
-        """Test read_percentage over 100 is rejected."""
-        now = datetime.now()
-        with pytest.raises(ValidationError):
-            AnnouncementDetailResponse(
-                id=uuid4(),
-                title="Test",
-                message="Test message",
-                created_at=now,
-                read_percentage=101.0,
-            )
+        assert not hasattr(response, "creator") or response.model_fields.get("creator") is None
 
 
 class TestAnnouncementListResponse:

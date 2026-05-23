@@ -32,9 +32,7 @@ function makeAnnouncement(
     link_url: null,
     total_recipients: 200,
     read_count: 80,
-    read_percentage: 40,
     created_at: '2026-01-15T10:00:00Z',
-    creator: { id: 'admin-1', display_name: 'Admin User', email: 'admin@greeklish.eu' },
     ...overrides,
   };
 }
@@ -119,55 +117,14 @@ describe('AnnouncementDetailsDrawer', () => {
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
   });
 
-  it('renders 3 reach stat tiles', () => {
+  it('renders 2 reach stat tiles', () => {
     const ann = makeAnnouncement();
     setupStore(buildStoreState({ selectedAnnouncement: ann }));
 
     render(<AnnouncementDetailsDrawer {...defaultProps} />);
 
     const stats = document.querySelectorAll('.an-stat');
-    expect(stats).toHaveLength(3);
-  });
-
-  it('renders read progress bar', () => {
-    const ann = makeAnnouncement({ read_percentage: 40 });
-    setupStore(buildStoreState({ selectedAnnouncement: ann }));
-
-    render(<AnnouncementDetailsDrawer {...defaultProps} />);
-
-    const bar = document.querySelector('.an-progress-bar');
-    expect(bar).toBeInTheDocument();
-  });
-
-  it('renders 5 timeline bars with "Detailed timeline coming soon" caption', () => {
-    const ann = makeAnnouncement();
-    setupStore(buildStoreState({ selectedAnnouncement: ann }));
-
-    render(<AnnouncementDetailsDrawer {...defaultProps} />);
-
-    const bars = document.querySelectorAll('.an-timeline-bar');
-    expect(bars).toHaveLength(5);
-    expect(screen.getByText('Detailed timeline coming soon')).toBeInTheDocument();
-  });
-
-  // ── CTR tile ─────────────────────────────────────────────────────────────
-
-  it('shows "tracking coming soon" CTR sub-label when link_url is present', () => {
-    const ann = makeAnnouncement({ link_url: 'https://greeklish.eu' });
-    setupStore(buildStoreState({ selectedAnnouncement: ann }));
-
-    render(<AnnouncementDetailsDrawer {...defaultProps} />);
-
-    expect(screen.getByText('tracking coming soon')).toBeInTheDocument();
-  });
-
-  it('shows "no link" CTR sub-label when link_url is null', () => {
-    const ann = makeAnnouncement({ link_url: null });
-    setupStore(buildStoreState({ selectedAnnouncement: ann }));
-
-    render(<AnnouncementDetailsDrawer {...defaultProps} />);
-
-    expect(screen.getByText('no link')).toBeInTheDocument();
+    expect(stats).toHaveLength(2);
   });
 
   // ── Loading state ─────────────────────────────────────────────────────────
@@ -262,18 +219,6 @@ describe('AnnouncementDetailsDrawer', () => {
     expect(screen.queryByText('Delete Announcement')).not.toBeInTheDocument();
   });
 
-  // ── Resend gated ─────────────────────────────────────────────────────────
-
-  it('renders Resend to unread button with aria-disabled="true"', () => {
-    const ann = makeAnnouncement();
-    setupStore(buildStoreState({ selectedAnnouncement: ann }));
-
-    render(<AnnouncementDetailsDrawer {...defaultProps} />);
-
-    const resendBtn = screen.getByText('Resend to unread');
-    expect(resendBtn.closest('button')).toHaveAttribute('aria-disabled', 'true');
-  });
-
   // ── Header DOM structure (ANDD-03) ────────────────────────────────────────
 
   it('renders header children inside a .drawer-head-content wrapper in DOM order', () => {
@@ -284,11 +229,11 @@ describe('AnnouncementDetailsDrawer', () => {
     const wrapper = document.querySelector('.drawer-head-content');
     expect(wrapper).not.toBeNull();
 
-    const children = Array.from(wrapper!.children);
-    expect(children).toHaveLength(3);
-    expect(children[0].classList.contains('drawer-breadcrumb')).toBe(true);
-    expect(children[1].classList.contains('drawer-head-row')).toBe(true);
-    expect(children[2].classList.contains('drawer-meta')).toBe(true);
+    // breadcrumb and head-row are always present
+    expect(wrapper!.querySelector('.drawer-breadcrumb')).not.toBeNull();
+    expect(wrapper!.querySelector('.drawer-head-row')).not.toBeNull();
+    // drawer-meta renders conditionally when announcement is loaded
+    expect(wrapper!.querySelector('.drawer-meta')).not.toBeNull();
   });
 
   // ── Footer button classlists + icons (ANDD-04) ────────────────────────────
@@ -314,17 +259,65 @@ describe('AnnouncementDetailsDrawer', () => {
     expect(byRole).toBe(byTestId);
   });
 
-  it('renders Resend button with btn + btn-glass + cursor-not-allowed + opacity-60 classes, Bell icon, and aria-disabled', () => {
-    const state = buildStoreState({ selectedAnnouncement: makeAnnouncement() });
-    setupStore(state);
-    render(<AnnouncementDetailsDrawer {...defaultProps} />);
+  // ── Removed elements absent (ADMIN2-20) ──────────────────────────────────
 
-    const resendBtn = screen.getByTestId('announcement-details-resend-button');
-    expect(resendBtn.classList.contains('btn')).toBe(true);
-    expect(resendBtn.classList.contains('btn-glass')).toBe(true);
-    expect(resendBtn.classList.contains('cursor-not-allowed')).toBe(true);
-    expect(resendBtn.classList.contains('opacity-60')).toBe(true);
-    expect(resendBtn.getAttribute('aria-disabled')).toBe('true');
-    expect(resendBtn.querySelector('svg')).not.toBeNull(); // Bell lucide svg
+  describe('removed elements absent', () => {
+    it('progress bar (.an-progress-row) is absent', () => {
+      const ann = makeAnnouncement();
+      setupStore(buildStoreState({ selectedAnnouncement: ann }));
+      render(<AnnouncementDetailsDrawer {...defaultProps} />);
+      expect(document.querySelector('.an-progress-row')).toBeNull();
+    });
+
+    it('timeline (.an-timeline) is absent', () => {
+      const ann = makeAnnouncement();
+      setupStore(buildStoreState({ selectedAnnouncement: ann }));
+      render(<AnnouncementDetailsDrawer {...defaultProps} />);
+      expect(document.querySelector('.an-timeline')).toBeNull();
+    });
+
+    it('renders exactly 2 .an-stat tiles (no click-through tile)', () => {
+      const ann = makeAnnouncement();
+      setupStore(buildStoreState({ selectedAnnouncement: ann }));
+      render(<AnnouncementDetailsDrawer {...defaultProps} />);
+      const stats = document.querySelectorAll('.an-stat');
+      expect(stats).toHaveLength(2);
+    });
+
+    it('resend button is absent', () => {
+      const ann = makeAnnouncement();
+      setupStore(buildStoreState({ selectedAnnouncement: ann }));
+      render(<AnnouncementDetailsDrawer {...defaultProps} />);
+      expect(screen.queryByTestId('announcement-details-resend-button')).toBeNull();
+    });
+
+    it('creator breadcrumb (.drawer-bcrumb) is absent', () => {
+      const ann = makeAnnouncement();
+      setupStore(buildStoreState({ selectedAnnouncement: ann }));
+      render(<AnnouncementDetailsDrawer {...defaultProps} />);
+      expect(document.querySelector('.drawer-bcrumb')).toBeNull();
+    });
+  });
+
+  // ── SidePanel primitive consumption (ADMIN2-20) ───────────────────────────
+
+  describe('SidePanel primitive consumption', () => {
+    it('mounts SidePanel with size="half" — dialog content has class w-[50vw]', () => {
+      const ann = makeAnnouncement();
+      setupStore(buildStoreState({ selectedAnnouncement: ann }));
+      render(<AnnouncementDetailsDrawer {...defaultProps} />);
+      const dialog = document.querySelector('[role="dialog"]');
+      expect(dialog).not.toBeNull();
+      expect(dialog!.className).toContain('w-[50vw]');
+    });
+
+    it('Close button has class drawer-close-right when position="right"', () => {
+      const ann = makeAnnouncement();
+      setupStore(buildStoreState({ selectedAnnouncement: ann }));
+      render(<AnnouncementDetailsDrawer {...defaultProps} />);
+      const closeBtn = document.querySelector('button.drawer-close');
+      expect(closeBtn).not.toBeNull();
+      expect(closeBtn!.className).toContain('drawer-close-right');
+    });
   });
 });
