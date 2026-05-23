@@ -66,7 +66,6 @@ const STRINGS: Record<string, string> = {
   'changelog.sub': 'Manage and publish product updates for your users.',
   'changelog.breadcrumb.dashboard': 'Admin',
   'changelog.breadcrumb.current': 'Changelog',
-  'changelog.actions.export': 'Export markdown',
   'changelog.actions.newEntry': 'New entry',
   // announcements
   'announcements.title': 'Announcements',

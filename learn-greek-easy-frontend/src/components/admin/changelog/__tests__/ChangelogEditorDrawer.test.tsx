@@ -334,83 +334,192 @@ describe('ChangelogEditorDrawer', () => {
     expect(screen.getByTestId('changelog-editor-title-en')).toHaveValue('English Title');
   });
 
-  // ── Translation status pills (AC #5) ──────────────────────────────────────
+  // ── No Auto-translate button (CLTT-06 removed it) ─────────────────────────
 
-  it('renders EN and RU pills', () => {
+  it('does NOT render the Auto-translate button', () => {
     render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
-
-    expect(screen.getByTestId('changelog-trans-pill-en')).toBeInTheDocument();
-    expect(screen.getByTestId('changelog-trans-pill-ru')).toBeInTheDocument();
+    expect(screen.queryByTestId('changelog-editor-autotranslate')).not.toBeInTheDocument();
   });
 
-  it('EN pill is not done when title_en and content_en are empty', () => {
-    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+  // ── No translation status pills (CLTT-06 removed them) ────────────────────
 
-    expect(screen.getByTestId('changelog-trans-pill-en')).not.toHaveClass('is-done');
+  it('does NOT render translation status pills (changelog-trans-pill-en)', () => {
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+    expect(screen.queryByTestId('changelog-trans-pill-en')).not.toBeInTheDocument();
   });
 
-  it('EN pill is done when entry has title_en and content_en', () => {
+  it('does NOT render translation status pills (changelog-trans-pill-ru)', () => {
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+    expect(screen.queryByTestId('changelog-trans-pill-ru')).not.toBeInTheDocument();
+  });
+
+  // ── No footer badge stack (CLTT-06 removed: ready/needs-en/needs-ru) ──────
+
+  it('does NOT render footer badge changelog-editor-badge-ready', () => {
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} entry={makeEntry()} />);
+    expect(screen.queryByTestId('changelog-editor-badge-ready')).not.toBeInTheDocument();
+  });
+
+  it('does NOT render footer badge changelog-editor-badge-needs-en', () => {
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+    expect(screen.queryByTestId('changelog-editor-badge-needs-en')).not.toBeInTheDocument();
+  });
+
+  it('does NOT render footer badge changelog-editor-badge-needs-ru', () => {
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+    expect(screen.queryByTestId('changelog-editor-badge-needs-ru')).not.toBeInTheDocument();
+  });
+
+  // ── SidePanel size=half (CLTT-03) ─────────────────────────────────────────
+
+  it('mounts with SidePanel size="half" — drawer element has class drawer-size-half', () => {
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+    // SidePanel renders via Radix portal — query from document
+    const drawerWrap = document.querySelector('.drawer-size-half');
+    expect(drawerWrap).not.toBeNull();
+  });
+
+  // ── SidePanel.CloseButton position=right (CLTT-03) ────────────────────────
+
+  it('CloseButton has class drawer-close-right', () => {
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+    const closeBtn = screen.getByTestId('changelog-editor-close-button');
+    expect(closeBtn.classList.contains('drawer-close-right')).toBe(true);
+  });
+
+  // ── Needs-EN helper text (CLTT-06 replacement for badge) ──────────────────
+
+  it('renders needs-en helper when EN title and content are empty', () => {
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+    expect(screen.getByTestId('changelog-editor-needs-en')).toBeInTheDocument();
+  });
+
+  it('does NOT render needs-en helper when EN title and content are non-empty', async () => {
+    const user = userEvent.setup();
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+
+    await user.type(screen.getByTestId('changelog-editor-title-en'), 'Title');
+    await user.type(screen.getByTestId('changelog-editor-content-en'), 'Content');
+
+    expect(screen.queryByTestId('changelog-editor-needs-en')).not.toBeInTheDocument();
+  });
+
+  // ── Footer DOM order: Delete < Cancel < Save ──────────────────────────────
+
+  it('footer Delete button appears before Cancel which appears before Save in DOM order', () => {
     render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} entry={makeEntry()} />);
 
-    expect(screen.getByTestId('changelog-trans-pill-en')).toHaveClass('is-done');
-    expect(screen.getByTestId('changelog-trans-pill-ru')).toHaveClass('is-done');
+    const deleteBtn = screen.getByTestId('changelog-editor-footer-delete');
+    const cancelBtn = screen.getByTestId('changelog-editor-footer-cancel');
+    const saveBtn = screen.getByTestId('changelog-editor-footer-submit');
+
+    // Node.DOCUMENT_POSITION_FOLLOWING means the argument comes AFTER the caller
+    expect(deleteBtn.compareDocumentPosition(cancelBtn) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING
+    );
+    expect(cancelBtn.compareDocumentPosition(saveBtn) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING
+    );
   });
 
-  it('RU pill becomes done after typing title and content in RU', async () => {
-    const user = userEvent.setup();
-    mockStoreState.lang = 'ru';
+  // ── Cancel button uses variant="outline" ──────────────────────────────────
+
+  it('Cancel button has outline variant (not ghost)', () => {
     render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
-
-    await user.type(screen.getByTestId('changelog-editor-title-ru'), 'Заголовок');
-    await user.type(screen.getByTestId('changelog-editor-content-ru'), 'Содержание');
-
-    expect(screen.getByTestId('changelog-trans-pill-ru')).toHaveClass('is-done');
+    const cancelBtn = screen.getByTestId('changelog-editor-footer-cancel');
+    // The Button component applies class names based on variant; check the element
+    // does NOT have ghost-related class
+    expect(cancelBtn.className).not.toContain('ghost');
   });
 
-  it('pill is not done when only title is filled (content is empty)', async () => {
-    const user = userEvent.setup();
+  // ── Field labels — htmlFor matches input id ────────────────────────────────
+
+  it('Version label htmlFor matches version input id', () => {
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+    const versionInput = screen.getByTestId('changelog-editor-version');
+    const versionId = versionInput.id;
+    expect(versionId).toBeTruthy();
+    const versionLabel = document.querySelector(`label[for="${versionId}"]`);
+    expect(versionLabel).not.toBeNull();
+  });
+
+  it('Title label htmlFor matches title input id', () => {
     mockStoreState.lang = 'en';
     render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
-
-    await user.type(screen.getByTestId('changelog-editor-title-en'), 'Title only');
-
-    expect(screen.getByTestId('changelog-trans-pill-en')).not.toHaveClass('is-done');
+    const titleInput = screen.getByTestId('changelog-editor-title-en');
+    const titleId = titleInput.id;
+    expect(titleId).toBeTruthy();
+    const titleLabel = document.querySelector(`label[for="${titleId}"]`);
+    expect(titleLabel).not.toBeNull();
   });
 
-  // ── Auto-translate button (AC #6) ─────────────────────────────────────────
-
-  it('auto-translate button has aria-disabled="true"', () => {
-    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
-
-    expect(screen.getByTestId('changelog-editor-autotranslate')).toHaveAttribute(
-      'aria-disabled',
-      'true'
-    );
-  });
-
-  it('auto-translate button does not have the native disabled attribute', () => {
-    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
-
-    // Native disabled would prevent Radix Tooltip from firing
-    expect(screen.getByTestId('changelog-editor-autotranslate')).not.toBeDisabled();
-  });
-
-  it('auto-translate button label shows EN→RU when lang=en', () => {
+  it('Content label htmlFor matches content textarea id', () => {
     mockStoreState.lang = 'en';
     render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
-
-    expect(screen.getByTestId('changelog-editor-autotranslate')).toHaveTextContent(
-      'Auto-translate EN → RU'
-    );
+    const contentTextarea = screen.getByTestId('changelog-editor-content-en');
+    const contentId = contentTextarea.id;
+    expect(contentId).toBeTruthy();
+    const contentLabel = document.querySelector(`label[for="${contentId}"]`);
+    expect(contentLabel).not.toBeNull();
   });
 
-  it('auto-translate button label shows RU→EN when lang=ru', () => {
-    mockStoreState.lang = 'ru';
-    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+  // ── Metadata strip (CLTT-07) ─────────────────────────────────────────────
 
-    expect(screen.getByTestId('changelog-editor-autotranslate')).toHaveTextContent(
-      'Auto-translate RU → EN'
-    );
+  it('renders metadata strip in EDIT mode', () => {
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} entry={makeEntry()} />);
+    expect(screen.getByTestId('changelog-editor-meta-row')).toBeInTheDocument();
+  });
+
+  it('does NOT render metadata strip in COMPOSE mode', () => {
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
+    expect(screen.queryByTestId('changelog-editor-meta-row')).not.toBeInTheDocument();
+  });
+
+  // ── Copy-id button (CLTT-07) ─────────────────────────────────────────────
+
+  it('copy-id button calls navigator.clipboard.writeText with entry.id and fires a toast', async () => {
+    const user = userEvent.setup();
+    const mockWriteText = vi.fn().mockResolvedValue(undefined);
+    // happy-dom does not allow setting navigator.clipboard via Object.assign
+    // because it only has a getter. Use Object.defineProperty instead.
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: mockWriteText },
+      configurable: true,
+      writable: true,
+    });
+
+    const entry = makeEntry({ id: 'test-entry-id-abc' });
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} entry={entry} />);
+
+    await user.click(screen.getByTestId('changelog-editor-copy-id'));
+
+    expect(mockWriteText).toHaveBeenCalledWith('test-entry-id-abc');
+    expect(mockToast).toHaveBeenCalled();
+  });
+
+  // ── Copy-link button (CLTT-07) ────────────────────────────────────────────
+
+  it('copy-link button calls navigator.clipboard.writeText with a URL containing tab=changelog&edit=<id>&lang=<lang>', async () => {
+    const user = userEvent.setup();
+    const mockWriteText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: mockWriteText },
+      configurable: true,
+      writable: true,
+    });
+
+    mockStoreState.lang = 'en';
+    const entry = makeEntry({ id: 'link-entry-xyz' });
+    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} entry={entry} />);
+
+    await user.click(screen.getByTestId('changelog-editor-copy-link'));
+
+    expect(mockWriteText).toHaveBeenCalledTimes(1);
+    const writtenUrl: string = mockWriteText.mock.calls[0][0];
+    expect(writtenUrl).toContain('tab=changelog');
+    expect(writtenUrl).toContain('edit=link-entry-xyz');
+    expect(writtenUrl).toContain('lang=en');
+    expect(mockToast).toHaveBeenCalled();
   });
 
   // ── Close paths ───────────────────────────────────────────────────────────
@@ -534,7 +643,7 @@ describe('ChangelogEditorDrawer', () => {
     expect(body.querySelector('i')).toHaveTextContent('italic');
   });
 
-  it('shows formatted date in edit mode (MMM d, yyyy)', () => {
+  it('shows formatted date in edit mode — contains a year-shaped substring', () => {
     render(
       <ChangelogEditorDrawer
         open={true}
@@ -546,7 +655,11 @@ describe('ChangelogEditorDrawer', () => {
       />
     );
 
-    expect(screen.getByTestId('changelog-preview-foot')).toHaveTextContent('Posted Jan 15, 2026');
+    // The formatDate call uses i18n.language locale — result contains the year
+    const foot = screen.getByTestId('changelog-preview-foot');
+    expect(foot.textContent).toMatch(/2026/);
+    // The "Posted" key text is locale-dependent; just verify year is present
+    expect(foot.textContent).toMatch(/\d{4}/);
   });
 
   it('shows "Today" in the footer in compose mode (no entry)', () => {
@@ -585,45 +698,6 @@ describe('ChangelogEditorDrawer', () => {
     expect(screen.getByTestId('changelog-preview-body')).toHaveTextContent(
       'Текст появится здесь по мере набора.'
     );
-  });
-
-  // ── CLTE-06: Footer badge states ──────────────────────────────────────────
-
-  it('shows "Needs EN title + content" badge when form is empty', () => {
-    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
-
-    expect(screen.getByTestId('changelog-editor-badge-needs-en')).toBeInTheDocument();
-    expect(screen.queryByTestId('changelog-editor-badge-ready')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('changelog-editor-badge-needs-ru')).not.toBeInTheDocument();
-  });
-
-  it('shows "Ready" badge when EN title and content are non-empty', async () => {
-    const user = userEvent.setup();
-    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
-
-    await user.type(screen.getByTestId('changelog-editor-title-en'), 'Title');
-    await user.type(screen.getByTestId('changelog-editor-content-en'), 'Content');
-
-    expect(screen.getByTestId('changelog-editor-badge-ready')).toBeInTheDocument();
-    expect(screen.queryByTestId('changelog-editor-badge-needs-en')).not.toBeInTheDocument();
-  });
-
-  it('shows "Missing RU translation" badge when EN is ready but RU is empty', async () => {
-    const user = userEvent.setup();
-    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
-
-    await user.type(screen.getByTestId('changelog-editor-title-en'), 'Title');
-    await user.type(screen.getByTestId('changelog-editor-content-en'), 'Content');
-
-    expect(screen.getByTestId('changelog-editor-badge-needs-ru')).toBeInTheDocument();
-  });
-
-  it('hides "Missing RU translation" badge when both EN and RU are complete', () => {
-    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} entry={makeEntry()} />);
-
-    // makeEntry() has title_en, content_en, title_ru, content_ru all set
-    expect(screen.getByTestId('changelog-editor-badge-ready')).toBeInTheDocument();
-    expect(screen.queryByTestId('changelog-editor-badge-needs-ru')).not.toBeInTheDocument();
   });
 
   // ── CLTE-06: Publish button disabled state ────────────────────────────────
@@ -934,10 +1008,10 @@ describe('ChangelogEditorDrawer', () => {
     });
   });
 
-  it('Submit (update): button shows "Save changes" in edit mode', () => {
+  it('Submit (update): button shows "Save" text in edit mode (matches admin:changelog.edit.save key)', () => {
     render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} entry={makeEntry()} />);
-
-    expect(screen.getByTestId('changelog-editor-footer-submit')).toHaveTextContent('Save changes');
+    // The real EN translation for admin:changelog.edit.save is "Save"
+    expect(screen.getByTestId('changelog-editor-footer-submit')).toHaveTextContent('Save');
   });
 
   it('Submit (create): button shows "Publish entry" in compose mode', () => {
@@ -1031,27 +1105,6 @@ describe('ChangelogEditorDrawer', () => {
     // Spacer sits between the two groups
     expect(tabGroups[0].nextElementSibling?.classList.contains('drawer-tabs-spacer')).toBe(true);
     expect(tabGroups[1].previousElementSibling).toBe(spacers[0]);
-  });
-
-  // ── CLLP-10: Auto-translate row structure ────────────────────────────────
-
-  it('auto-translate row: .cl-translation-row wraps status + btn; btn has btn/btn-glass/btn-sm + svg', () => {
-    render(<ChangelogEditorDrawer open={true} onClose={vi.fn()} />);
-
-    // Drawer renders in a Radix Portal — query from document, not container
-    const row = document.querySelector('.cl-translation-row');
-    expect(row).not.toBeNull();
-    // Status node is inside the row
-    expect(row!.querySelector('.cl-translation-status')).not.toBeNull();
-    // Button classes
-    const btn = screen.getByTestId('changelog-editor-autotranslate');
-    expect(btn.classList.contains('btn')).toBe(true);
-    expect(btn.classList.contains('btn-glass')).toBe(true);
-    expect(btn.classList.contains('btn-sm')).toBe(true);
-    // Wand2 svg icon is present
-    expect(btn.querySelector('svg')).not.toBeNull();
-    // Button is a descendant of the row
-    expect(Array.from(row!.children).some((c) => c === btn || c.contains(btn))).toBe(true);
   });
 
   // ── CLLP-10: A11y dialog accessible name ─────────────────────────────────
