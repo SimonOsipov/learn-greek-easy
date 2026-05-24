@@ -75,9 +75,9 @@ describe('CardErrorDrawer status badge i18n (CER-24)', () => {
         <CardErrorDrawer open onOpenChange={vi.fn()} report={report} onUpdate={vi.fn()} />
       );
 
-      // CardErrorStatusBadge always renders with data-testid="card-error-status-badge"
-      const badge = screen.getByTestId('card-error-status-badge');
-      expect(badge).toHaveTextContent(expectedLabel);
+      // CER-37 added a second status badge in the footer; the header badge is first.
+      const badges = screen.getAllByTestId('card-error-status-badge');
+      expect(badges[0]).toHaveTextContent(expectedLabel);
     });
   });
 });
