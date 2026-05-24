@@ -213,9 +213,7 @@ describe('FeedbackDrawer', () => {
 
       renderDrawer(feedback.id, 'reply');
 
-      const statusBtns = screen
-        .getAllByRole('button')
-        .filter((btn) => btn.classList.contains('fb-status-btn'));
+      const statusBtns = screen.getAllByRole('radio');
       expect(statusBtns).toHaveLength(8);
     });
 
@@ -226,9 +224,7 @@ describe('FeedbackDrawer', () => {
 
       renderDrawer(feedback.id, 'reply');
 
-      const statusBtns = screen
-        .getAllByRole('button')
-        .filter((btn) => btn.classList.contains('fb-status-btn'));
+      const statusBtns = screen.getAllByRole('radio');
       const newBtn = statusBtns.find((btn) => btn.textContent?.includes('New'));
       expect(newBtn).toHaveClass('is-active');
     });
@@ -240,9 +236,7 @@ describe('FeedbackDrawer', () => {
 
       renderDrawer(feedback.id, 'reply');
 
-      const statusBtns = screen
-        .getAllByRole('button')
-        .filter((btn) => btn.classList.contains('fb-status-btn'));
+      const statusBtns = screen.getAllByRole('radio');
       const plannedBtn = statusBtns.find((btn) => btn.textContent?.includes('Planned'));
       const newBtn = statusBtns.find((btn) => btn.textContent?.includes('New'));
 
@@ -322,9 +316,7 @@ describe('FeedbackDrawer', () => {
       await user.type(textarea, 'Great suggestion!');
 
       // Also change status to 'responded' (maps to 'under_review')
-      const statusBtns = screen
-        .getAllByRole('button')
-        .filter((btn) => btn.classList.contains('fb-status-btn'));
+      const statusBtns = screen.getAllByRole('radio');
       const respondedBtn = statusBtns.find((btn) => btn.textContent?.includes('Responded'))!;
       await user.click(respondedBtn);
 

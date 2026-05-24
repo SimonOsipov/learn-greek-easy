@@ -2219,14 +2219,14 @@
     font-variant-numeric: tabular-nums;
   }
 
-  /* Status picker grid */
-  .fb-status-grid {
+  /* Status picker grid (renamed fb-status-grid → admin-status-grid, CER-48) */
+  .admin-status-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 8px;
   }
   .fb-status-tile,
-  .fb-status-btn {
+  .admin-status-btn {
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -2242,41 +2242,41 @@
       border-color 150ms cubic-bezier(0.4, 0, 0.2, 1),
       background-color 150ms cubic-bezier(0.4, 0, 0.2, 1);
   }
-  .fb-status-btn:hover {
+  .admin-status-btn:hover {
     border-color: hsl(var(--line-2));
     background: hsl(var(--bg-2));
   }
-  .fb-status-btn.is-active {
+  .admin-status-btn.is-active {
     border-color: hsl(var(--primary));
     background: hsl(var(--primary) / 0.08);
     color: hsl(var(--primary));
   }
-  .fb-status-btn:focus-visible {
+  .admin-status-btn:focus-visible {
     outline: 2px solid hsl(var(--ring));
     outline-offset: 2px;
   }
-  .fb-status-dot {
+  .admin-status-dot {
     width: 8px;
     height: 8px;
     border-radius: 9999px;
     flex-shrink: 0;
   }
-  .fb-status-dot[data-tone='primary'] {
+  .admin-status-dot[data-tone='primary'] {
     background: hsl(var(--primary));
   }
-  .fb-status-dot[data-tone='amber'] {
+  .admin-status-dot[data-tone='amber'] {
     background: hsl(var(--warning));
   }
-  .fb-status-dot[data-tone='violet'] {
+  .admin-status-dot[data-tone='violet'] {
     background: hsl(var(--accent));
   }
-  .fb-status-dot[data-tone='cyan'] {
+  .admin-status-dot[data-tone='cyan'] {
     background: hsl(var(--practice-accent));
   }
-  .fb-status-dot[data-tone='success'] {
+  .admin-status-dot[data-tone='success'] {
     background: hsl(var(--success));
   }
-  .fb-status-dot[data-tone='gray'] {
+  .admin-status-dot[data-tone='gray'] {
     background: hsl(var(--fg-3));
   }
 
