@@ -676,7 +676,10 @@
         "adminResponseLabel": "✓ Ответ администратора"
       },
       "drawer": {
-        "tabs": { "reply": "Ответ", "meta": "Мета" },
+        "tabs": {
+          "reply": "Ответ",
+          "meta": "Мета"
+        },
         "status": {
           "new": "Новый",
           "investigating": "На рассмотрении",
@@ -690,7 +693,10 @@
         "responseHintSuffix": " — публично, пользователь увидит это дословно",
         "saveNotice": "Сохранение уведомит {{name}} в приложении",
         "theUser": "пользователя",
-        "footer": { "ready": "Готово", "noReplyYet": "Ответа пока нет" },
+        "footer": {
+          "ready": "Готово",
+          "noReplyYet": "Ответа пока нет"
+        },
         "saving": "Сохранение…",
         "admin": "Админ",
         "notFound": "Отзыв не найден.",
@@ -840,7 +846,7 @@
         "fixed": "Исправлены",
         "open": "Открыты",
         "pending": "Ожидают",
-        "reviewed": "Проверены"
+        "reviewed": "На проверке"
       },
       "statusPlaceholder": "Фильтр по статусу",
       "type": {
@@ -959,7 +965,7 @@
     },
     "title": "Ошибки карточек",
     "toolbar": {
-      "searchPlaceholder": "Поиск по карточке, отправителю или заметке…"
+      "searchPlaceholder": "Поиск по автору, тексту карточки, колоде…"
     }
   },
   "cardCreate": {

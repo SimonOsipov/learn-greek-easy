@@ -740,7 +740,10 @@
         "adminResponseLabel": "✓ Admin response"
       },
       "drawer": {
-        "tabs": { "reply": "Reply", "meta": "Meta" },
+        "tabs": {
+          "reply": "Reply",
+          "meta": "Meta"
+        },
         "status": {
           "new": "New",
           "investigating": "Investigating",
@@ -754,7 +757,10 @@
         "responseHintSuffix": " — public, learner will see this verbatim",
         "saveNotice": "Saving will notify {{name}} in-app",
         "theUser": "the user",
-        "footer": { "ready": "Ready", "noReplyYet": "No reply yet" },
+        "footer": {
+          "ready": "Ready",
+          "noReplyYet": "No reply yet"
+        },
         "saving": "Saving…",
         "admin": "Admin",
         "notFound": "Feedback not found.",
@@ -902,7 +908,7 @@
         "fixed": "Fixed",
         "open": "Open",
         "pending": "Pending",
-        "reviewed": "Reviewed"
+        "reviewed": "In review"
       },
       "statusPlaceholder": "Filter by status",
       "type": {
@@ -1021,7 +1027,7 @@
     },
     "title": "Card errors",
     "toolbar": {
-      "searchPlaceholder": "Search by card, reporter, or note…"
+      "searchPlaceholder": "Search by reporter, card text, deck…"
     }
   },
   "cardCreate": {
