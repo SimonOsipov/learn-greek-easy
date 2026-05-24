@@ -2307,6 +2307,41 @@
     font-weight: 500;
   }
 
+  /* Thread compact primitive (CER-50) */
+  .admin-thread {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .admin-thread-compact {
+    gap: 0;
+  }
+  .admin-thread-msg {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-rows: auto auto;
+    column-gap: 0.625rem;
+    row-gap: 0.25rem;
+    align-items: start;
+  }
+  .admin-thread-msg > :first-child {
+    grid-row: 1 / span 2;
+  }
+  .admin-thread-meta {
+    font-size: 0.8125rem;
+    color: hsl(var(--muted-foreground));
+    display: flex;
+    gap: 0.375rem;
+    align-items: baseline;
+  }
+  .admin-thread-text {
+    color: hsl(var(--foreground));
+    font-size: 0.875rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
   /* ── Changelog panel toolbar (ADMIN2 / CLLP-06) ── */
   .cl-panel-toolbar {
     display: flex;
