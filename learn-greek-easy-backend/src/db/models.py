@@ -293,6 +293,7 @@ class ExerciseType(str, enum.Enum):
     SELECT_CORRECT_ANSWER = "select_correct_answer"
     SELECT_PICTURE_FROM_DESCRIPTION = "select_picture_from_description"
     SELECT_DESCRIPTION_FROM_PICTURE = "select_description_from_picture"
+    WORD_ORDER = "word_order"
 
 
 class ExerciseSourceType(str, enum.Enum):
@@ -301,12 +302,14 @@ class ExerciseSourceType(str, enum.Enum):
     DESCRIPTION = "description"
     DIALOG = "dialog"
     PICTURE = "picture"
+    WORD_ORDER = "word_order"
 
 
 class ExerciseStatus(str, enum.Enum):
     """Approval status of a dialog exercise."""
 
     DRAFT = "draft"
+    PENDING = "pending"
     APPROVED = "approved"
 
 
@@ -2673,6 +2676,12 @@ class DescriptionExercise(Base, TimestampMixin):
         ),
         nullable=False,
     )
+    question_el: Mapped[str | None] = mapped_column(
+        Text, nullable=True, comment="Greek question prompt for this exercise"
+    )
+    question_en: Mapped[str | None] = mapped_column(
+        Text, nullable=True, comment="English question prompt for this exercise"
+    )
 
     # Relationships
     description: Mapped["SituationDescription"] = relationship(
@@ -2789,6 +2798,12 @@ class PictureExercise(Base, TimestampMixin):
         nullable=False,
         server_default=text("'draft'"),
     )
+    question_el: Mapped[str | None] = mapped_column(
+        Text, nullable=True, comment="Greek question prompt for this exercise"
+    )
+    question_en: Mapped[str | None] = mapped_column(
+        Text, nullable=True, comment="English question prompt for this exercise"
+    )
 
     # Relationships
     picture: Mapped["SituationPicture"] = relationship(back_populates="exercises", lazy="raise")
@@ -2832,6 +2847,101 @@ class PictureExerciseItem(Base):
         return f"<PictureExerciseItem id={self.id} index={self.item_index}>"
 
 
+class WordOrderExercise(Base, TimestampMixin):
+    """Exercise requiring the learner to reorder shuffled words into a correct Greek sentence.
+
+    Attached to a SituationDescription (text-based source) because word-order tasks
+    derive from a narrative/descriptive source, not from a picture or dialog.
+    This mirrors the DescriptionExercise pattern.
+    """
+
+    __tablename__ = "word_order_exercises"
+    __table_args__ = (
+        UniqueConstraint(
+            "description_id",
+            "exercise_type",
+            name="uq_word_order_exercise_desc_type",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.uuid_generate_v4())
+    description_id: Mapped[UUID] = mapped_column(
+        ForeignKey("situation_descriptions.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    exercise_type: Mapped[ExerciseType] = mapped_column(
+        SAEnum(
+            ExerciseType,
+            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+            name="exercisetype",
+            create_type=False,
+        ),
+        nullable=False,
+        server_default=text("'word_order'"),
+    )
+    status: Mapped[ExerciseStatus] = mapped_column(
+        SAEnum(
+            ExerciseStatus,
+            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+            name="exercisestatus",
+            create_type=False,
+        ),
+        nullable=False,
+        server_default=text("'draft'"),
+    )
+    question_el: Mapped[str | None] = mapped_column(
+        Text, nullable=True, comment="Greek question prompt for this exercise"
+    )
+    question_en: Mapped[str | None] = mapped_column(
+        Text, nullable=True, comment="English question prompt for this exercise"
+    )
+
+    # Relationships
+    description: Mapped["SituationDescription"] = relationship(lazy="raise")
+    items: Mapped[List["WordOrderExerciseItem"]] = relationship(
+        back_populates="exercise",
+        lazy="raise",
+        cascade="all, delete-orphan",
+        order_by="WordOrderExerciseItem.item_index",
+    )
+    exercise: Mapped["Exercise | None"] = relationship(
+        back_populates="word_order_exercise", uselist=False, lazy="raise"
+    )
+
+    def __repr__(self) -> str:
+        return f"<WordOrderExercise id={self.id} status={self.status}>"
+
+
+class WordOrderExerciseItem(Base):
+    """Individual item within a word-order exercise. NO TimestampMixin — only created_at.
+
+    payload shape: {"words": ["word1", "word2", ...], "correct_order": [2, 0, 1, ...], "answer_el": "correct sentence"}
+    """
+
+    __tablename__ = "word_order_exercise_items"
+    __table_args__ = (
+        UniqueConstraint(
+            "word_order_exercise_id", "item_index", name="uq_word_order_exercise_item_index"
+        ),
+        CheckConstraint("item_index >= 0", name="ck_word_order_exercise_item_index_non_negative"),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.uuid_generate_v4())
+    word_order_exercise_id: Mapped[UUID] = mapped_column(
+        ForeignKey("word_order_exercises.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    item_index: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    payload: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    # Relationships
+    exercise: Mapped["WordOrderExercise"] = relationship(back_populates="items", lazy="raise")
+
+    def __repr__(self) -> str:
+        return f"<WordOrderExerciseItem id={self.id} index={self.item_index}>"
+
+
 class Exercise(Base, TimestampMixin):
     """Unified exercise record linking to exactly one source exercise."""
 
@@ -2840,7 +2950,8 @@ class Exercise(Base, TimestampMixin):
         CheckConstraint(
             "(description_exercise_id IS NOT NULL)::int"
             " + (dialog_exercise_id IS NOT NULL)::int"
-            " + (picture_exercise_id IS NOT NULL)::int = 1",
+            " + (picture_exercise_id IS NOT NULL)::int"
+            " + (word_order_exercise_id IS NOT NULL)::int = 1",
             name="ck_exercises_exactly_one_source",
         ),
         Index(
@@ -2860,6 +2971,12 @@ class Exercise(Base, TimestampMixin):
             "picture_exercise_id",
             unique=True,
             postgresql_where=text("picture_exercise_id IS NOT NULL"),
+        ),
+        Index(
+            "uq_exercises_word_order_exercise_id",
+            "word_order_exercise_id",
+            unique=True,
+            postgresql_where=text("word_order_exercise_id IS NOT NULL"),
         ),
     )
 
@@ -2883,6 +3000,9 @@ class Exercise(Base, TimestampMixin):
     picture_exercise_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("picture_exercises.id", ondelete="CASCADE"), nullable=True, index=True
     )
+    word_order_exercise_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("word_order_exercises.id", ondelete="CASCADE"), nullable=True, index=True
+    )
 
     # Relationships
     description_exercise: Mapped["DescriptionExercise | None"] = relationship(
@@ -2892,6 +3012,9 @@ class Exercise(Base, TimestampMixin):
         back_populates="exercise", lazy="raise"
     )
     picture_exercise: Mapped["PictureExercise | None"] = relationship(
+        back_populates="exercise", lazy="raise"
+    )
+    word_order_exercise: Mapped["WordOrderExercise | None"] = relationship(
         back_populates="exercise", lazy="raise"
     )
     records: Mapped[List["ExerciseRecord"]] = relationship(
@@ -3129,6 +3252,12 @@ class DialogExercise(Base, TimestampMixin):
         ),
         nullable=False,
         server_default=text("'draft'"),
+    )
+    question_el: Mapped[str | None] = mapped_column(
+        Text, nullable=True, comment="Greek question prompt for this exercise"
+    )
+    question_en: Mapped[str | None] = mapped_column(
+        Text, nullable=True, comment="English question prompt for this exercise"
     )
 
     dialog: Mapped["ListeningDialog"] = relationship(back_populates="exercises", lazy="raise")

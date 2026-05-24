@@ -226,6 +226,14 @@ class AdminExerciseListItem(BaseModel):
     anchor_description_text: str | None = None
     item_count: int
     items: list[SituationExerciseItemResponse]
+    # EXR-54: per-exercise question prompts (nullable; populated when set on the exercise)
+    question_el: str | None = None
+    question_en: str | None = None
+    # EXR-50: correct index from first item payload (MC exercises)
+    correct_idx: int | None = None
+    # EXR-53: word-order exercise fields from first item payload
+    correct_order: list[int] | None = None
+    answer_el: str | None = None
 
 
 class AdminExerciseListResponse(BaseModel):

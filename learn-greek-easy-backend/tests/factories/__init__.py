@@ -139,6 +139,12 @@ from tests.factories.situation_picture import (
     SituationPictureFactory,
 )
 
+# Word Order Exercise factories
+from tests.factories.word_order_exercise import (
+    WordOrderExerciseFactory,
+    WordOrderExerciseItemFactory,
+)
+
 # XP & Achievements factories
 from tests.factories.xp_achievements import (
     XP_PER_LEVEL,
@@ -212,6 +218,9 @@ __all__ = [
     "SM2_INTERVALS",
     "XP_PER_LEVEL",
     "XP_REASONS",
+    # Word Order Exercises
+    "WordOrderExerciseFactory",
+    "WordOrderExerciseItemFactory",
     # Providers
     "GreekProvider",
 ]
