@@ -10,21 +10,21 @@ const pills: Pill[] = [
 ];
 
 describe('CannedReplyPills', () => {
-  it('calls onSelect with the pill body string when clicked', async () => {
+  it('calls onSelect with the pill body and key when clicked', async () => {
     const onSelect = vi.fn();
     render(<CannedReplyPills pills={pills} onSelect={onSelect} />);
     await userEvent.click(screen.getByRole('button', { name: 'Thanks' }));
     expect(onSelect).toHaveBeenCalledTimes(1);
-    expect(onSelect).toHaveBeenCalledWith('Thanks for reporting this.');
+    expect(onSelect).toHaveBeenCalledWith('Thanks for reporting this.', 'thanks');
   });
 
-  it('emits each body independently on successive clicks (stateless, no concatenation)', async () => {
+  it('emits each body and key independently on successive clicks (stateless, no concatenation)', async () => {
     const onSelect = vi.fn();
     render(<CannedReplyPills pills={pills} onSelect={onSelect} />);
     await userEvent.click(screen.getByRole('button', { name: 'Thanks' }));
     await userEvent.click(screen.getByRole('button', { name: 'Fixed' }));
-    expect(onSelect).toHaveBeenNthCalledWith(1, 'Thanks for reporting this.');
-    expect(onSelect).toHaveBeenNthCalledWith(2, 'This is now fixed in production.');
+    expect(onSelect).toHaveBeenNthCalledWith(1, 'Thanks for reporting this.', 'thanks');
+    expect(onSelect).toHaveBeenNthCalledWith(2, 'This is now fixed in production.', 'fixed');
   });
 
   it('renders the default label "Quick responses" when none supplied', () => {

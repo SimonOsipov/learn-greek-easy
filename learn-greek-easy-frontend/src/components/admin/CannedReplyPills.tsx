@@ -15,7 +15,8 @@ export type Pill = {
 
 export type CannedReplyPillsProps = {
   pills: Pill[];
-  onSelect: (body: string) => void;
+  /** Called with (body, key) when a pill is clicked */
+  onSelect: (body: string, key: string) => void;
   label?: string;
 };
 
@@ -32,7 +33,7 @@ const CannedReplyPills: FC<CannedReplyPillsProps> = ({
           key={p.key}
           type="button"
           className="admin-canned-pill"
-          onClick={() => onSelect(p.body)}
+          onClick={() => onSelect(p.body, p.key)}
         >
           {p.label}
         </button>
