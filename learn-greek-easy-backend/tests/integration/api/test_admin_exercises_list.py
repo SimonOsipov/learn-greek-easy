@@ -1,11 +1,13 @@
 """Integration tests for GET /api/v1/admin/exercises endpoint."""
 
-from unittest.mock import MagicMock, patch
+from datetime import datetime, timezone
+from unittest.mock import MagicMock, call, patch
 
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.api.v1.admin import ADMIN_AUDIO_PRESIGN_TTL_SECONDS
 from src.db.models import DeckLevel, ExerciseModality, ExerciseStatus, ExerciseType
 from tests.factories import (
     DescriptionExerciseFactory,
@@ -296,7 +298,9 @@ class TestAdminExercisesList:
         assert data["total"] == 1
         assert data["items"][0]["source_type"] == "dialog"
         assert data["items"][0]["audio_url"] == "https://s3.example.com/test/audio.mp3"
-        mock_s3_service.generate_presigned_url.assert_called_with("test/audio.mp3")
+        mock_s3_service.generate_presigned_url.assert_called_with(
+            "test/audio.mp3", expiry_seconds=ADMIN_AUDIO_PRESIGN_TTL_SECONDS
+        )
 
     @pytest.mark.asyncio
     async def test_reading_text_for_description(
@@ -621,3 +625,212 @@ class TestAdminExercisesList:
         assert data["total"] == 1
         assert data["items"][0]["source_type"] == "description"
         assert data["items"][0]["audio_level"] == "A2"
+
+    # -----------------------------------------------------------------------
+    # EXR-58: lazy presigning (only page rows get presigned URLs)
+    # -----------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_presigning_lazy(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+    ):
+        """Presigning should only happen for the page returned, not all matching rows."""
+        mock_s3_service.generate_presigned_url.return_value = "https://s3.example.com/audio.mp3"
+
+        # Create 30 dialog exercises (each has a potential audio URL to presign).
+        for _ in range(30):
+            sit = await SituationFactory.create()
+            dialog = await ListeningDialogFactory.create(situation_id=sit.id)
+            dialog.audio_s3_key = "test/audio.mp3"
+            await db_session.flush()
+            await DialogExerciseFactory.create(dialog_id=dialog.id)
+
+        response = await client.get(
+            BASE_URL,
+            params={"modality": "listening", "page": 1, "page_size": 10},
+            headers=superuser_auth_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 30
+        assert len(data["items"]) == 10
+        # At most 10 presign calls — one per page row (some rows may have no key → 0 calls).
+        assert mock_s3_service.generate_presigned_url.call_count <= 10
+
+    # -----------------------------------------------------------------------
+    # EXR-59: sort param
+    # -----------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_sort_oldest_pending(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+    ):
+        """Default sort: PENDING first, then DRAFT, then APPROVED; ties broken by created_at ASC."""
+        t0 = datetime(2024, 1, 1, tzinfo=timezone.utc)
+        t1 = datetime(2024, 6, 1, tzinfo=timezone.utc)
+        t2 = datetime(2025, 1, 1, tzinfo=timezone.utc)
+
+        desc_approved = await SituationDescriptionFactory.create()
+        ex_approved = await DescriptionExerciseFactory.create(
+            description_id=desc_approved.id,
+            modality=ExerciseModality.LISTENING,
+            status=ExerciseStatus.APPROVED,
+        )
+        ex_approved.created_at = t2
+        await db_session.flush()
+
+        desc_draft = await SituationDescriptionFactory.create()
+        ex_draft = await DescriptionExerciseFactory.create(
+            description_id=desc_draft.id,
+            modality=ExerciseModality.LISTENING,
+            status=ExerciseStatus.DRAFT,
+        )
+        ex_draft.created_at = t1
+        await db_session.flush()
+
+        desc_pending = await SituationDescriptionFactory.create()
+        ex_pending = await DescriptionExerciseFactory.create(
+            description_id=desc_pending.id,
+            modality=ExerciseModality.LISTENING,
+            status=ExerciseStatus.PENDING,
+        )
+        ex_pending.created_at = t0
+        await db_session.flush()
+
+        response = await client.get(
+            BASE_URL,
+            params={"modality": "listening", "sort": "oldest_pending"},
+            headers=superuser_auth_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 3
+        statuses = [item["status"] for item in data["items"]]
+        assert statuses == ["pending", "draft", "approved"]
+
+    @pytest.mark.asyncio
+    async def test_sort_newest(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+    ):
+        """Sort newest: most recently created exercise first."""
+        t_old = datetime(2024, 1, 1, tzinfo=timezone.utc)
+        t_mid = datetime(2024, 6, 1, tzinfo=timezone.utc)
+        t_new = datetime(2025, 1, 1, tzinfo=timezone.utc)
+
+        desc1 = await SituationDescriptionFactory.create()
+        ex1 = await DescriptionExerciseFactory.create(
+            description_id=desc1.id, modality=ExerciseModality.LISTENING
+        )
+        ex1.created_at = t_old
+        await db_session.flush()
+
+        desc2 = await SituationDescriptionFactory.create()
+        ex2 = await DescriptionExerciseFactory.create(
+            description_id=desc2.id, modality=ExerciseModality.LISTENING
+        )
+        ex2.created_at = t_new
+        await db_session.flush()
+
+        desc3 = await SituationDescriptionFactory.create()
+        ex3 = await DescriptionExerciseFactory.create(
+            description_id=desc3.id, modality=ExerciseModality.LISTENING
+        )
+        ex3.created_at = t_mid
+        await db_session.flush()
+
+        response = await client.get(
+            BASE_URL,
+            params={"modality": "listening", "sort": "newest"},
+            headers=superuser_auth_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 3
+        ids = [item["id"] for item in data["items"]]
+        assert ids == [str(ex2.id), str(ex3.id), str(ex1.id)]
+
+    @pytest.mark.asyncio
+    async def test_sort_title(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        mock_s3_service: MagicMock,
+    ):
+        """Sort title: alphabetically by scenario_el (case-insensitive) ASC."""
+        sit_z = await SituationFactory.create(scenario_el="Ζωολογικός", scenario_en="Zoo")
+        sit_a = await SituationFactory.create(scenario_el="Αεροδρόμιο", scenario_en="Airport")
+        sit_m = await SituationFactory.create(scenario_el="Μουσείο", scenario_en="Museum")
+
+        desc_z = await SituationDescriptionFactory.create(situation_id=sit_z.id)
+        await DescriptionExerciseFactory.create(
+            description_id=desc_z.id, modality=ExerciseModality.LISTENING
+        )
+        desc_a = await SituationDescriptionFactory.create(situation_id=sit_a.id)
+        await DescriptionExerciseFactory.create(
+            description_id=desc_a.id, modality=ExerciseModality.LISTENING
+        )
+        desc_m = await SituationDescriptionFactory.create(situation_id=sit_m.id)
+        await DescriptionExerciseFactory.create(
+            description_id=desc_m.id, modality=ExerciseModality.LISTENING
+        )
+
+        response = await client.get(
+            BASE_URL,
+            params={"modality": "listening", "sort": "title"},
+            headers=superuser_auth_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 3
+        titles = [item["situation_title_el"] for item in data["items"]]
+        assert titles == sorted(titles, key=str.casefold)
+
+    # -----------------------------------------------------------------------
+    # EXR-62: extended admin TTL
+    # -----------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_admin_audio_url_uses_extended_ttl(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+    ):
+        """Audio presign calls must use ADMIN_AUDIO_PRESIGN_TTL_SECONDS (7200), not the default."""
+        mock_s3_service.generate_presigned_url.return_value = "https://s3.example.com/audio.mp3"
+
+        sit = await SituationFactory.create()
+        dialog = await ListeningDialogFactory.create(situation_id=sit.id)
+        dialog.audio_s3_key = "admin/test-audio.mp3"
+        await db_session.flush()
+        await DialogExerciseFactory.create(dialog_id=dialog.id)
+
+        response = await client.get(
+            BASE_URL,
+            params={"modality": "listening"},
+            headers=superuser_auth_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+
+        # At least one call must have used the admin TTL.
+        admin_ttl_calls = [
+            c
+            for c in mock_s3_service.generate_presigned_url.call_args_list
+            if c == call("admin/test-audio.mp3", expiry_seconds=ADMIN_AUDIO_PRESIGN_TTL_SECONDS)
+        ]
+        assert len(admin_ttl_calls) >= 1
