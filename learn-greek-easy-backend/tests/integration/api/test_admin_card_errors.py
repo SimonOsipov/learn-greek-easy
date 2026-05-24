@@ -195,6 +195,26 @@ class TestAdminListCardErrorsEndpoint:
         assert len(data["items"]) == 2
         assert data["total"] >= 5
 
+    @pytest.mark.asyncio
+    async def test_list_card_errors_page_size_1000_accepted(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+    ):
+        """page_size=1000 must return 200 (cap raised to support stat-tile fetch in CardErrorsView).
+
+        Regression guard: backend previously validated le=100 and returned 422.
+        Reference: commit 44fb5250 (analogous fix for changelog endpoint).
+        """
+        response = await client.get(
+            "/api/v1/admin/card-errors?page_size=1000",
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["page_size"] == 1000
+
 
 # =============================================================================
 # Admin Get Card Error Endpoint Tests
