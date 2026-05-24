@@ -20,10 +20,11 @@ describe('CardErrorsView', () => {
 
   it('renders all four StatCard titles', () => {
     render(<CardErrorsView />);
-    expect(screen.getByText('Total errors')).toBeTruthy();
-    expect(screen.getByText('Open')).toBeTruthy();
-    expect(screen.getByText('Resolved')).toBeTruthy();
-    expect(screen.getByText('Avg time to resolve')).toBeTruthy();
+    // Updated in CER-52: CardErrorsView now uses cardErrors.stats.* keys
+    expect(screen.getByText('Total reports')).toBeTruthy();
+    expect(screen.getByText('Awaiting review')).toBeTruthy();
+    expect(screen.getByText('Fixed')).toBeTruthy();
+    expect(screen.getByText('Median time to fix')).toBeTruthy();
   });
 
   it('renders "—" for all four StatCard n values', () => {
