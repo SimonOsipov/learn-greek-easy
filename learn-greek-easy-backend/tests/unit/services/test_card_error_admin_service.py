@@ -4,6 +4,8 @@ Tests cover:
 - get_list_for_admin: Paginated list with filters and PENDING-first sorting
 - get_report_for_admin: Single report retrieval
 - update_report_for_admin: Update with resolution tracking
+- delete_report_for_admin: Hard delete (CER-45)
+- resolver brief in response (CER-44)
 
 All tests use mocked dependencies for isolation.
 """
@@ -614,3 +616,93 @@ class TestUpdateReportForAdminLogging:
             assert extra["admin_user_id"] == str(admin_id)
             assert extra["new_status"] == "DISMISSED"
             assert extra["has_admin_notes"] is True
+
+
+# =============================================================================
+# Test delete_report_for_admin — CER-45
+# =============================================================================
+
+
+@pytest.mark.unit
+class TestDeleteReportForAdmin:
+    """Tests for delete_report_for_admin (CER-45)."""
+
+    @pytest.mark.asyncio
+    async def test_delete_report_for_admin_happy_path(self, service, mock_repo, mock_report):
+        """Calls repo.delete with the fetched report and returns None."""
+        # Arrange
+        mock_repo.get_with_relations.return_value = mock_report
+        mock_repo.delete = AsyncMock(return_value=None)
+
+        # Act
+        with patch("src.services.card_error_admin_service.logger"):
+            result = await service.delete_report_for_admin(mock_report.id)
+
+        # Assert
+        assert result is None
+        mock_repo.get_with_relations.assert_awaited_once_with(mock_report.id)
+        mock_repo.delete.assert_awaited_once_with(mock_report)
+
+    @pytest.mark.asyncio
+    async def test_delete_report_for_admin_not_found(self, service, mock_repo):
+        """Raises NotFoundException when report not found; repo.delete never called."""
+        # Arrange
+        mock_repo.get_with_relations.return_value = None
+        mock_repo.delete = AsyncMock()
+        fake_id = uuid4()
+
+        # Act & Assert
+        with pytest.raises(NotFoundException) as exc_info:
+            await service.delete_report_for_admin(fake_id)
+
+        assert "CardErrorReport" in str(exc_info.value.detail)
+        mock_repo.delete.assert_not_awaited()
+
+
+# =============================================================================
+# Test resolver brief (CER-44) — service returns report with resolver loaded
+# =============================================================================
+
+
+@pytest.mark.unit
+class TestResolverBriefOnReport:
+    """Tests confirming get_report_for_admin returns report with resolver populated.
+
+    The service itself is a thin pass-through; the resolver relation is loaded
+    by the repo. These tests verify that the service returns the object as-is so
+    the route layer can build ReporterBriefResponse from report.resolver.
+    """
+
+    @pytest.mark.asyncio
+    async def test_get_report_includes_resolver_when_fixed(
+        self, service, mock_repo, mock_report, mock_admin_user
+    ):
+        """Returns report with resolver set when status is FIXED."""
+        # Arrange — attach a resolver
+        mock_report.status = CardErrorStatus.FIXED
+        mock_report.resolved_by = mock_admin_user.id
+        mock_report.resolver = mock_admin_user
+        mock_repo.get_with_relations.return_value = mock_report
+
+        # Act
+        result = await service.get_report_for_admin(mock_report.id)
+
+        # Assert — service passes resolver through unchanged
+        assert result.resolver is not None
+        assert result.resolver.id == mock_admin_user.id
+        assert result.resolver.full_name == mock_admin_user.full_name
+
+    @pytest.mark.asyncio
+    async def test_get_report_resolver_null_when_pending(self, service, mock_repo, mock_report):
+        """Returns report with resolver=None when status is PENDING."""
+        # Arrange
+        mock_report.status = CardErrorStatus.PENDING
+        mock_report.resolved_by = None
+        mock_report.resolver = None
+        mock_repo.get_with_relations.return_value = mock_report
+
+        # Act
+        result = await service.get_report_for_admin(mock_report.id)
+
+        # Assert
+        assert result.resolver is None

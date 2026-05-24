@@ -15,6 +15,46 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from src.db.models import CardErrorCardType, CardErrorStatus
 
 # ============================================================================
+# Card and Deck Snapshot Schemas (CER-43)
+# ============================================================================
+
+
+class CardErrorCardSnapshot(BaseModel):
+    """Polymorphic card content snapshot for an admin error report.
+
+    All fields are optional. WORD reports populate the word-* fields
+    (word, gender, translation_en, translation_ru, ipa, article, plural).
+    CULTURE reports populate the question-* fields (question_en, question_el,
+    options, correct_index, level). Both sets are null when the underlying
+    card has been hard-deleted.
+    """
+
+    # WORD variant (from WordEntry model)
+    word: Optional[str] = None  # WordEntry.lemma
+    article: Optional[str] = None  # from grammar_data, if present
+    gender: Optional[str] = None  # WordEntry.gender
+    translation_en: Optional[str] = None  # WordEntry.translation_en
+    translation_ru: Optional[str] = None  # WordEntry.translation_ru
+    plural: Optional[str] = None  # from grammar_data, if present
+    ipa: Optional[str] = None  # WordEntry.pronunciation
+
+    # CULTURE variant (from CultureQuestion model)
+    question_en: Optional[str] = None  # CultureQuestion.question_text['en']
+    question_el: Optional[str] = None  # CultureQuestion.question_text['el']
+    options: Optional[list[str]] = None  # English option texts [a, b, c?, d?]
+    correct_index: Optional[int] = None  # correct_option - 1 (0-indexed)
+    level: Optional[str] = None  # deck level, if available
+
+
+class CardErrorDeckSnapshot(BaseModel):
+    """Deck context snapshot for an admin error report."""
+
+    id: UUID
+    name: str  # Deck name_en (vocab) or CultureDeck name_en (culture)
+    level: Optional[str] = None  # DeckLevel value, if applicable
+
+
+# ============================================================================
 # Reporter Schema (Brief User Info)
 # ============================================================================
 
@@ -126,6 +166,11 @@ class AdminCardErrorReportResponse(BaseModel):
     resolved_by: Optional[UUID] = None
     resolved_at: Optional[datetime] = None
     reporter: ReporterBriefResponse
+    # CER-44: resolver brief (populated when resolved_by is set)
+    resolver: Optional[ReporterBriefResponse] = None
+    # CER-43: polymorphic card content + deck context
+    card: Optional[CardErrorCardSnapshot] = None
+    deck: Optional[CardErrorDeckSnapshot] = None
     created_at: datetime
     updated_at: datetime
 

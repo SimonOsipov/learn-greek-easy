@@ -4,14 +4,17 @@ This module tests the admin card error endpoints:
 - GET /api/v1/admin/card-errors - List all card error reports for admin
 - GET /api/v1/admin/card-errors/{id} - Get single card error report
 - PATCH /api/v1/admin/card-errors/{id} - Update card error report
+- DELETE /api/v1/admin/card-errors/{id} - Hard-delete card error report (CER-45)
 
 Tests cover:
 - Authentication requirements (401 without auth)
 - Authorization (403 for non-superusers)
-- Success cases (200/404)
+- Success cases (200/204/404)
 - Validation errors (422)
 - Sorting, filtering, and pagination
 - Resolution tracking logic
+- Resolver brief in response (CER-44)
+- card/deck keys present in response (CER-43 additive check)
 """
 
 from uuid import uuid4
@@ -531,3 +534,161 @@ class TestAdminCardErrorResponseStructure:
         # Check reporter fields
         assert "id" in item["reporter"]
         assert "full_name" in item["reporter"]
+
+        # CER-43: card and deck keys present (null for orphan card_ids from factory)
+        assert "card" in item
+        assert "deck" in item
+
+        # CER-44: resolver key present
+        assert "resolver" in item
+
+
+# =============================================================================
+# DELETE /api/v1/admin/card-errors/{id} Tests (CER-45)
+# =============================================================================
+
+
+class TestAdminDeleteCardErrorEndpoint:
+    """Test suite for DELETE /api/v1/admin/card-errors/{id} endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_delete_card_error_as_superuser(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+    ):
+        """Superuser can delete a report — 204 returned, row gone from DB."""
+        from sqlalchemy import select
+
+        from src.db.models import CardErrorReport
+
+        user = await UserFactory.create()
+        report = await CardErrorReportFactory.create(user_id=user.id)
+        report_id = report.id
+
+        response = await client.delete(
+            f"/api/v1/admin/card-errors/{report_id}",
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 204
+        assert response.content == b""
+
+        # Verify the row is gone
+        result = await db_session.execute(
+            select(CardErrorReport).where(CardErrorReport.id == report_id)
+        )
+        assert result.scalar_one_or_none() is None
+
+    @pytest.mark.asyncio
+    async def test_delete_card_error_non_admin_forbidden(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        db_session: AsyncSession,
+    ):
+        """Non-superuser gets 403 and report remains in DB."""
+        from sqlalchemy import select
+
+        from src.db.models import CardErrorReport
+
+        user = await UserFactory.create()
+        report = await CardErrorReportFactory.create(user_id=user.id)
+        report_id = report.id
+
+        response = await client.delete(
+            f"/api/v1/admin/card-errors/{report_id}",
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 403
+
+        # Row must still exist
+        result = await db_session.execute(
+            select(CardErrorReport).where(CardErrorReport.id == report_id)
+        )
+        assert result.scalar_one_or_none() is not None
+
+    @pytest.mark.asyncio
+    async def test_delete_card_error_missing_id_returns_404(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+    ):
+        """Deleting a non-existent report returns 404."""
+        fake_id = uuid4()
+        response = await client.delete(
+            f"/api/v1/admin/card-errors/{fake_id}",
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_delete_card_error_unauthenticated(
+        self,
+        client: AsyncClient,
+    ):
+        """Unauthenticated request returns 401."""
+        fake_id = uuid4()
+        response = await client.delete(f"/api/v1/admin/card-errors/{fake_id}")
+        assert response.status_code == 401
+
+
+# =============================================================================
+# Resolver Brief (CER-44) Integration Tests
+# =============================================================================
+
+
+class TestResolverBriefInResponse:
+    """Test resolver brief is populated correctly in the admin response."""
+
+    @pytest.mark.asyncio
+    async def test_get_admin_report_includes_resolver_brief(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+    ):
+        """Resolved report includes resolver brief with id and full_name."""
+        user = await UserFactory.create()
+        admin = await UserFactory.create(admin=True)
+        report = await CardErrorReportFactory.create(
+            user_id=user.id,
+            fixed=True,
+            resolved_by=admin.id,
+        )
+
+        response = await client.get(
+            f"/api/v1/admin/card-errors/{report.id}",
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "resolver" in data
+        resolver = data["resolver"]
+        assert resolver is not None
+        assert resolver["id"] == str(admin.id)
+        assert "full_name" in resolver
+
+    @pytest.mark.asyncio
+    async def test_get_admin_report_resolver_null_when_pending(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+    ):
+        """Pending report has resolver: null."""
+        user = await UserFactory.create()
+        report = await CardErrorReportFactory.create(user_id=user.id)
+
+        response = await client.get(
+            f"/api/v1/admin/card-errors/{report.id}",
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["resolver"] is None
