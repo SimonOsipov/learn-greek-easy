@@ -16,7 +16,7 @@ from typing import Any, Literal, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, UploadFile, status
-from sqlalchemy import Select, delete, func, or_, select, text, update
+from sqlalchemy import Row, Select, delete, func, or_, select, text, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -4885,17 +4885,35 @@ def _apply_exercise_search_filter(
     return stmt
 
 
+# EXR-62: admin routes use a longer presigned URL TTL so audio links
+# remain valid for a full review session without a refresh endpoint.
+# Default non-admin TTL (settings.s3_presigned_url_expiry = 3600) is unchanged.
+ADMIN_AUDIO_PRESIGN_TTL_SECONDS = 7200
+
+# Raw row types returned by the query helpers (presigning deferred to outer loop).
+_DescriptionRow = Row[tuple[DescriptionExercise, SituationDescription, Situation]]
+_DialogRow = Row[tuple[DialogExercise, ListeningDialog, Situation]]
+_PictureRow = Row[tuple[PictureExercise, SituationPicture, Situation, SituationDescription]]
+_WordOrderRow = Row[tuple[WordOrderExercise, SituationDescription, Situation]]
+
+# EXR-59: status rank used by the default "oldest_pending" sort.
+_EXERCISE_STATUS_RANK = {
+    ExerciseStatus.PENDING: 0,
+    ExerciseStatus.DRAFT: 1,
+    ExerciseStatus.APPROVED: 2,
+}
+
+
 async def _query_description_exercises(
     db: AsyncSession,
-    s3: S3Service,
     modality: ExerciseModality,
     exercise_type: ExerciseType | None,
     status: ExerciseStatus | None,
     search: str | None,
     source: ExerciseSourceType | None = None,
     level: DeckLevel | None = None,
-) -> list[AdminExerciseListItem]:
-    """Query description exercises filtered by modality.
+) -> list[_DescriptionRow]:
+    """Return raw description exercise rows (no presigning).
 
     Short-circuits to an empty list when source is set to a non-DESCRIPTION value,
     since description exercises are only relevant for the DESCRIPTION source.
@@ -4920,57 +4938,62 @@ async def _query_description_exercises(
         stmt = stmt.where(DescriptionExercise.audio_level == level)
     stmt = _apply_exercise_search_filter(stmt, search, exercise_cls=DescriptionExercise)
 
-    rows = (await db.execute(stmt)).all()
-    items: list[AdminExerciseListItem] = []
-    for ex, description, situation in rows:
-        audio_url = None
-        reading_text = None
-        if modality == ExerciseModality.LISTENING:
-            s3_key = (
-                description.audio_a2_s3_key
-                if ex.audio_level == DeckLevel.A2
-                else description.audio_s3_key
-            )
-            if s3_key:
-                audio_url = s3.generate_presigned_url(s3_key)
-        elif modality == ExerciseModality.READING:
-            reading_text = (
-                description.text_el_a2
-                if ex.audio_level == DeckLevel.A2 and description.text_el_a2
-                else description.text_el
-            )
-        first_item_payload = ex.items[0].payload if ex.items else {}
-        items.append(
-            AdminExerciseListItem(
-                id=ex.id,
-                exercise_type=ex.exercise_type,
-                status=ex.status,
-                source_type=ExerciseSourceType.DESCRIPTION,
-                modality=modality,
-                audio_level=ex.audio_level,
-                situation_id=situation.id,
-                situation_title_el=situation.scenario_el,
-                situation_title_en=situation.scenario_en,
-                audio_url=audio_url,
-                reading_text=reading_text,
-                item_count=len(ex.items),
-                items=[SituationExerciseItemResponse.model_validate(item) for item in ex.items],
-                question_el=ex.question_el,
-                question_en=ex.question_en,
-                correct_idx=first_item_payload.get("correct_idx"),
-            )
+    return list((await db.execute(stmt)).all())
+
+
+def _build_description_item(
+    row: _DescriptionRow,
+    modality: ExerciseModality,
+    s3: S3Service,
+) -> AdminExerciseListItem:
+    """Map a raw description row to AdminExerciseListItem, presigning as needed."""
+    ex, description, situation = row
+    audio_url = None
+    reading_text = None
+    if modality == ExerciseModality.LISTENING:
+        s3_key = (
+            description.audio_a2_s3_key
+            if ex.audio_level == DeckLevel.A2
+            else description.audio_s3_key
         )
-    return items
+        if s3_key:
+            audio_url = s3.generate_presigned_url(
+                s3_key, expiry_seconds=ADMIN_AUDIO_PRESIGN_TTL_SECONDS
+            )
+    elif modality == ExerciseModality.READING:
+        reading_text = (
+            description.text_el_a2
+            if ex.audio_level == DeckLevel.A2 and description.text_el_a2
+            else description.text_el
+        )
+    first_item_payload = ex.items[0].payload if ex.items else {}
+    return AdminExerciseListItem(
+        id=ex.id,
+        exercise_type=ex.exercise_type,
+        status=ex.status,
+        source_type=ExerciseSourceType.DESCRIPTION,
+        modality=modality,
+        audio_level=ex.audio_level,
+        situation_id=situation.id,
+        situation_title_el=situation.scenario_el,
+        situation_title_en=situation.scenario_en,
+        audio_url=audio_url,
+        reading_text=reading_text,
+        item_count=len(ex.items),
+        items=[SituationExerciseItemResponse.model_validate(item) for item in ex.items],
+        question_el=ex.question_el,
+        question_en=ex.question_en,
+        correct_idx=first_item_payload.get("correct_idx"),
+    )
 
 
 async def _query_dialog_exercises(
     db: AsyncSession,
-    s3: S3Service,
     exercise_type: ExerciseType | None,
     status: ExerciseStatus | None,
     search: str | None,
-) -> list[AdminExerciseListItem]:
-    """Query dialog exercises (always listening modality, no level)."""
+) -> list[_DialogRow]:
+    """Return raw dialog exercise rows (no presigning; always listening, no level)."""
     dialog_stmt = (
         select(DialogExercise, ListeningDialog, Situation)
         .join(ListeningDialog, DialogExercise.dialog_id == ListeningDialog.id)
@@ -4983,41 +5006,50 @@ async def _query_dialog_exercises(
         dialog_stmt = dialog_stmt.where(DialogExercise.status == status)
     dialog_stmt = _apply_exercise_search_filter(dialog_stmt, search, exercise_cls=DialogExercise)
 
-    items: list[AdminExerciseListItem] = []
-    for ex, dialog, situation in (await db.execute(dialog_stmt)).all():
-        audio_url = s3.generate_presigned_url(dialog.audio_s3_key) if dialog.audio_s3_key else None
-        first_item_payload = ex.items[0].payload if ex.items else {}
-        items.append(
-            AdminExerciseListItem(
-                id=ex.id,
-                exercise_type=ex.exercise_type,
-                status=ex.status,
-                source_type=ExerciseSourceType.DIALOG,
-                modality=ExerciseModality.LISTENING,
-                audio_level=None,
-                situation_id=situation.id,
-                situation_title_el=situation.scenario_el,
-                situation_title_en=situation.scenario_en,
-                audio_url=audio_url,
-                reading_text=None,
-                item_count=len(ex.items),
-                items=[SituationExerciseItemResponse.model_validate(item) for item in ex.items],
-                question_el=ex.question_el,
-                question_en=ex.question_en,
-                correct_idx=first_item_payload.get("correct_idx"),
-            )
+    return list((await db.execute(dialog_stmt)).all())
+
+
+def _build_dialog_item(row: _DialogRow, s3: S3Service) -> AdminExerciseListItem:
+    """Map a raw dialog row to AdminExerciseListItem, presigning the audio URL."""
+    ex, dialog, situation = row
+    audio_url = (
+        s3.generate_presigned_url(
+            dialog.audio_s3_key, expiry_seconds=ADMIN_AUDIO_PRESIGN_TTL_SECONDS
         )
-    return items
+        if dialog.audio_s3_key
+        else None
+    )
+    first_item_payload = ex.items[0].payload if ex.items else {}
+    return AdminExerciseListItem(
+        id=ex.id,
+        exercise_type=ex.exercise_type,
+        status=ex.status,
+        source_type=ExerciseSourceType.DIALOG,
+        modality=ExerciseModality.LISTENING,
+        audio_level=None,
+        situation_id=situation.id,
+        situation_title_el=situation.scenario_el,
+        situation_title_en=situation.scenario_en,
+        audio_url=audio_url,
+        reading_text=None,
+        item_count=len(ex.items),
+        items=[SituationExerciseItemResponse.model_validate(item) for item in ex.items],
+        question_el=ex.question_el,
+        question_en=ex.question_en,
+        correct_idx=first_item_payload.get("correct_idx"),
+    )
 
 
 async def _query_picture_exercises(
     db: AsyncSession,
-    s3: S3Service,
     exercise_type: ExerciseType | None,
     status: ExerciseStatus | None,
     search: str | None,
-) -> list[AdminExerciseListItem]:
-    """Query picture exercises — outer-join to SituationDescription for anchor text/URL."""
+) -> list[_PictureRow]:
+    """Return raw picture exercise rows (no presigning).
+
+    Outer-joins to SituationDescription for anchor text; that column may be None.
+    """
     pic_stmt = (
         select(PictureExercise, SituationPicture, Situation, SituationDescription)
         .join(SituationPicture, PictureExercise.picture_id == SituationPicture.id)
@@ -5031,36 +5063,41 @@ async def _query_picture_exercises(
         pic_stmt = pic_stmt.where(PictureExercise.status == status)
     pic_stmt = _apply_exercise_search_filter(pic_stmt, search, exercise_cls=PictureExercise)
 
-    items: list[AdminExerciseListItem] = []
-    for ex, picture, situation, description in (await db.execute(pic_stmt)).all():
-        anchor_picture_url = (
-            s3.generate_presigned_url(picture.image_s3_key) if picture.image_s3_key else None
+    return list((await db.execute(pic_stmt)).all())
+
+
+def _build_picture_item(row: _PictureRow, s3: S3Service) -> AdminExerciseListItem:
+    """Map a raw picture row to AdminExerciseListItem, presigning the image URL."""
+    ex, picture, situation, description = row
+    anchor_picture_url = (
+        s3.generate_presigned_url(
+            picture.image_s3_key, expiry_seconds=ADMIN_AUDIO_PRESIGN_TTL_SECONDS
         )
-        anchor_description_text = description.text_el if description is not None else None
-        first_item_payload = ex.items[0].payload if ex.items else {}
-        items.append(
-            AdminExerciseListItem(
-                id=ex.id,
-                exercise_type=ex.exercise_type,
-                status=ex.status,
-                source_type=ExerciseSourceType.PICTURE,
-                modality=ExerciseModality.LISTENING,
-                audio_level=None,
-                situation_id=situation.id,
-                situation_title_el=situation.scenario_el,
-                situation_title_en=situation.scenario_en,
-                audio_url=None,
-                reading_text=None,
-                anchor_picture_url=anchor_picture_url,
-                anchor_description_text=anchor_description_text,
-                item_count=len(ex.items),
-                items=[SituationExerciseItemResponse.model_validate(item) for item in ex.items],
-                question_el=ex.question_el,
-                question_en=ex.question_en,
-                correct_idx=first_item_payload.get("correct_idx"),
-            )
-        )
-    return items
+        if picture.image_s3_key
+        else None
+    )
+    anchor_description_text = description.text_el if description is not None else None
+    first_item_payload = ex.items[0].payload if ex.items else {}
+    return AdminExerciseListItem(
+        id=ex.id,
+        exercise_type=ex.exercise_type,
+        status=ex.status,
+        source_type=ExerciseSourceType.PICTURE,
+        modality=ExerciseModality.LISTENING,
+        audio_level=None,
+        situation_id=situation.id,
+        situation_title_el=situation.scenario_el,
+        situation_title_en=situation.scenario_en,
+        audio_url=None,
+        reading_text=None,
+        anchor_picture_url=anchor_picture_url,
+        anchor_description_text=anchor_description_text,
+        item_count=len(ex.items),
+        items=[SituationExerciseItemResponse.model_validate(item) for item in ex.items],
+        question_el=ex.question_el,
+        question_en=ex.question_en,
+        correct_idx=first_item_payload.get("correct_idx"),
+    )
 
 
 async def _query_word_order_exercises(
@@ -5068,8 +5105,8 @@ async def _query_word_order_exercises(
     exercise_type: ExerciseType | None,
     status: ExerciseStatus | None,
     search: str | None,
-) -> list[AdminExerciseListItem]:
-    """Query word-order exercises (attached to SituationDescription; no level column)."""
+) -> list[_WordOrderRow]:
+    """Return raw word-order exercise rows (no presigning; attached to SituationDescription)."""
     wo_stmt = (
         select(WordOrderExercise, SituationDescription, Situation)
         .join(SituationDescription, WordOrderExercise.description_id == SituationDescription.id)
@@ -5082,73 +5119,105 @@ async def _query_word_order_exercises(
         wo_stmt = wo_stmt.where(WordOrderExercise.status == status)
     wo_stmt = _apply_exercise_search_filter(wo_stmt, search, exercise_cls=WordOrderExercise)
 
-    items: list[AdminExerciseListItem] = []
-    for ex, description, situation in (await db.execute(wo_stmt)).all():
-        first_item_payload = ex.items[0].payload if ex.items else {}
-        items.append(
-            AdminExerciseListItem(
-                id=ex.id,
-                exercise_type=ex.exercise_type,
-                status=ex.status,
-                source_type=ExerciseSourceType.WORD_ORDER,
-                modality=ExerciseModality.LISTENING,
-                audio_level=None,
-                situation_id=situation.id,
-                situation_title_el=situation.scenario_el,
-                situation_title_en=situation.scenario_en,
-                audio_url=None,
-                reading_text=None,
-                item_count=len(ex.items),
-                items=[SituationExerciseItemResponse.model_validate(item) for item in ex.items],
-                question_el=ex.question_el,
-                question_en=ex.question_en,
-                correct_order=first_item_payload.get("correct_order"),
-                answer_el=first_item_payload.get("answer_el"),
-            )
-        )
-    return items
+    return list((await db.execute(wo_stmt)).all())
 
 
-async def _query_listening_exercises(
+def _build_word_order_item(row: _WordOrderRow) -> AdminExerciseListItem:
+    """Map a raw word-order row to AdminExerciseListItem (no presigning needed)."""
+    ex, description, situation = row
+    first_item_payload = ex.items[0].payload if ex.items else {}
+    return AdminExerciseListItem(
+        id=ex.id,
+        exercise_type=ex.exercise_type,
+        status=ex.status,
+        source_type=ExerciseSourceType.WORD_ORDER,
+        modality=ExerciseModality.LISTENING,
+        audio_level=None,
+        situation_id=situation.id,
+        situation_title_el=situation.scenario_el,
+        situation_title_en=situation.scenario_en,
+        audio_url=None,
+        reading_text=None,
+        item_count=len(ex.items),
+        items=[SituationExerciseItemResponse.model_validate(item) for item in ex.items],
+        question_el=ex.question_el,
+        question_en=ex.question_en,
+        correct_order=first_item_payload.get("correct_order"),
+        answer_el=first_item_payload.get("answer_el"),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Raw-row union type used by the outer route before presigning.
+# ---------------------------------------------------------------------------
+
+_AnyRawRow = _DescriptionRow | _DialogRow | _PictureRow | _WordOrderRow
+
+
+async def _collect_listening_rows(
     db: AsyncSession,
-    s3: S3Service,
     exercise_type: ExerciseType | None,
     status: ExerciseStatus | None,
     search: str | None,
-    source: ExerciseSourceType | None = None,
-    level: DeckLevel | None = None,
-) -> list[AdminExerciseListItem]:
-    """Orchestrate dialog, picture, and word-order exercise queries (always listening modality).
+    source: ExerciseSourceType | None,
+    level: DeckLevel | None,
+) -> tuple[list[_DialogRow], list[_PictureRow], list[_WordOrderRow]]:
+    """Gather the three listening-only raw row lists, applying source+level guards.
 
     EXR-51: source filter limits to one sibling table. Level filter skips tables with no
     audio_level column (dialog, picture, word_order).
     """
-    items: list[AdminExerciseListItem] = []
+    dialog_rows: list[_DialogRow] = []
+    picture_rows: list[_PictureRow] = []
+    word_order_rows: list[_WordOrderRow] = []
 
     # Dialog: no audio_level — skip when level is set
     if (source is None or source == ExerciseSourceType.DIALOG) and level is None:
-        items.extend(await _query_dialog_exercises(db, s3, exercise_type, status, search))
+        dialog_rows = await _query_dialog_exercises(db, exercise_type, status, search)
 
     # Picture: no audio_level — skip when level is set
     if (source is None or source == ExerciseSourceType.PICTURE) and level is None:
-        items.extend(await _query_picture_exercises(db, s3, exercise_type, status, search))
+        picture_rows = await _query_picture_exercises(db, exercise_type, status, search)
 
     # Word-order: no audio_level — skip when level is set
     if (source is None or source == ExerciseSourceType.WORD_ORDER) and level is None:
-        items.extend(await _query_word_order_exercises(db, exercise_type, status, search))
+        word_order_rows = await _query_word_order_exercises(db, exercise_type, status, search)
 
-    return items
-
-
-_SOURCE_TYPE_ORDER = {
-    ExerciseSourceType.DESCRIPTION: 0,
-    ExerciseSourceType.DIALOG: 1,
-    ExerciseSourceType.PICTURE: 2,
-    ExerciseSourceType.WORD_ORDER: 3,
-}
+    return dialog_rows, picture_rows, word_order_rows
 
 
-@router.get("/exercises", response_model=AdminExerciseListResponse)
+def _raw_row_sort_key_oldest_pending(row: _AnyRawRow) -> tuple:
+    """Sort key: PENDING first, then oldest created_at, then id (stable)."""
+    ex = row[0]
+    return (
+        _EXERCISE_STATUS_RANK.get(ex.status, 99),
+        ex.created_at,
+        str(ex.id),
+    )
+
+
+def _raw_row_sort_key_newest(row: _AnyRawRow) -> tuple:
+    """Sort key: newest created_at first, then id (stable)."""
+    ex = row[0]
+    return (-ex.created_at.timestamp(), str(ex.id))
+
+
+def _raw_row_sort_key_title(row: _AnyRawRow) -> tuple:
+    """Sort key: situation title ASC (case-folded for locale stability), then id."""
+    situation = row[2]  # Situation is always at index 2 across all raw tuple types
+    return (situation.scenario_el.casefold(), str(row[0].id))
+
+
+@router.get(
+    "/exercises",
+    response_model=AdminExerciseListResponse,
+    summary="List admin exercises",
+    description=(
+        "Return a paginated list of all exercises across sources, filtered by modality. "
+        "Default sort is `oldest_pending` (PENDING first, then oldest). "
+        "Available sort values: `oldest_pending | newest | title`."
+    ),
+)
 async def list_admin_exercises(
     modality: ExerciseModality = Query(...),
     page: int = Query(default=1, ge=1),
@@ -5158,33 +5227,64 @@ async def list_admin_exercises(
     search: str | None = Query(default=None),
     source: ExerciseSourceType | None = Query(default=None),
     level: DeckLevel | None = Query(default=None),
+    sort: Literal["oldest_pending", "newest", "title"] = Query(default="oldest_pending"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_superuser),
 ) -> AdminExerciseListResponse:
     s3 = get_s3_service()
 
-    all_items = await _query_description_exercises(
-        db, s3, modality, exercise_type, status, search, source=source, level=level
+    # --- EXR-58: collect raw rows (no presigning yet) ---
+    desc_rows: list[_DescriptionRow] = await _query_description_exercises(
+        db, modality, exercise_type, status, search, source=source, level=level
     )
+
+    dialog_rows: list[_DialogRow] = []
+    picture_rows: list[_PictureRow] = []
+    word_order_rows: list[_WordOrderRow] = []
 
     if modality == ExerciseModality.LISTENING:
-        all_items.extend(
-            await _query_listening_exercises(
-                db, s3, exercise_type, status, search, source=source, level=level
-            )
+        dialog_rows, picture_rows, word_order_rows = await _collect_listening_rows(
+            db, exercise_type, status, search, source, level
         )
 
-    all_items.sort(
-        key=lambda item: (
-            item.situation_title_el,
-            _SOURCE_TYPE_ORDER.get(item.source_type, 99),
-            item.exercise_type.value,
-        )
-    )
+    # EXR-58: total is the sum of SQL-level row counts (no Python materialisation of all rows).
+    total = len(desc_rows) + len(dialog_rows) + len(picture_rows) + len(word_order_rows)
 
-    total = len(all_items)
+    # EXR-59: combine and sort before slicing.
+    all_raw: list[_AnyRawRow] = [
+        *desc_rows,
+        *dialog_rows,
+        *picture_rows,
+        *word_order_rows,
+    ]
+
+    if sort == "oldest_pending":
+        all_raw.sort(key=_raw_row_sort_key_oldest_pending)
+    elif sort == "newest":
+        all_raw.sort(key=_raw_row_sort_key_newest)
+    else:  # "title"
+        all_raw.sort(key=_raw_row_sort_key_title)
+
+    # Slice to the requested page.
     offset = (page - 1) * page_size
-    page_items = all_items[offset : offset + page_size]
+    page_raw = all_raw[offset : offset + page_size]
+
+    # EXR-58 + EXR-62: presign only the page rows, using admin TTL.
+    desc_set = {id(r) for r in desc_rows}
+    dialog_set = {id(r) for r in dialog_rows}
+    picture_set = {id(r) for r in picture_rows}
+
+    page_items: list[AdminExerciseListItem] = []
+    for raw in page_raw:
+        rid = id(raw)
+        if rid in desc_set:
+            page_items.append(_build_description_item(raw, modality, s3))  # type: ignore[arg-type]
+        elif rid in dialog_set:
+            page_items.append(_build_dialog_item(raw, s3))  # type: ignore[arg-type]
+        elif rid in picture_set:
+            page_items.append(_build_picture_item(raw, s3))  # type: ignore[arg-type]
+        else:
+            page_items.append(_build_word_order_item(raw))  # type: ignore[arg-type]
 
     return AdminExerciseListResponse(
         items=page_items,
