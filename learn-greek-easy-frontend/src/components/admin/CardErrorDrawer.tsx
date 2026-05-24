@@ -1,7 +1,7 @@
 // src/components/admin/CardErrorDrawer.tsx
 //
 // Drawer for viewing and updating individual card error reports.
-// Replaces AdminCardErrorDetailModal (CER-20) — Dialog → SidePanel size="full".
+// Replaces AdminCardErrorDetailModal (CER-20) — Dialog → SidePanel size="half".
 // Header chrome:  breadcrumb (CER-21), H2 constant literal (CER-22), meta row (CER-23)
 // Tab system:     Review / The card / Meta (CER-25), null stub panels
 // Tabs-row actions: Copy card ID + Open in deck placeholder (CER-26)
@@ -198,7 +198,7 @@ function formatRelative(ts: string): string {
 /**
  * CardErrorDrawer
  *
- * Full-screen right-slide SidePanel drawer for card error reports.
+ * Half-screen right-slide SidePanel drawer for card error reports.
  * Replaces the old AdminCardErrorDetailModal (centered Dialog).
  *
  * Structure:
@@ -433,7 +433,7 @@ export const CardErrorDrawer: React.FC<CardErrorDrawerProps> = ({
     <SidePanel
       open={open}
       onOpenChange={onOpenChange}
-      size="full"
+      size="half"
       title={t('cardErrors.drawer.title')}
       data-testid="card-error-drawer"
     >
