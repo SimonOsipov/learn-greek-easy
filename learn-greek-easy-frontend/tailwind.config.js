@@ -132,7 +132,7 @@ export default {
   			],
   			display: ['"Inter Tight"', 'Inter', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'sans-serif'],
   			serif: ['"Noto Serif"', 'Georgia', '"Times New Roman"', 'Times', 'serif'],
-  			mono: ['ui-monospace', 'SFMono-Regular', '"SF Mono"', 'Menlo', 'Consolas', 'monospace'],
+  			mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', '"SF Mono"', 'Menlo', 'Consolas', 'monospace'],
   			// Back-compat aliases — keep until per-surface reskins migrate call sites
   			'practice-serif': ['"Noto Serif"', 'Georgia', '"Times New Roman"', 'Times', 'serif'],
   			'practice-mono': ['ui-monospace', 'SFMono-Regular', '"SF Mono"', 'Menlo', 'Consolas', 'monospace']
