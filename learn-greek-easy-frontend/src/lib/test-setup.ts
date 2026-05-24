@@ -28,9 +28,24 @@ import enProfile from '@/i18n/locales/en/profile.json';
 import enReview from '@/i18n/locales/en/review.json';
 import enSettings from '@/i18n/locales/en/settings.json';
 import enStatistics from '@/i18n/locales/en/statistics.json';
+import ruAchievements from '@/i18n/locales/ru/achievements.json';
+import ruAdmin from '@/i18n/locales/ru/admin.json';
+import ruAuth from '@/i18n/locales/ru/auth.json';
+import ruChangelog from '@/i18n/locales/ru/changelog.json';
+import ruCommon from '@/i18n/locales/ru/common.json';
+import ruCulture from '@/i18n/locales/ru/culture.json';
+import ruDeck from '@/i18n/locales/ru/deck.json';
+import ruFeedback from '@/i18n/locales/ru/feedback.json';
+import ruProfile from '@/i18n/locales/ru/profile.json';
+import ruReview from '@/i18n/locales/ru/review.json';
+import ruSettings from '@/i18n/locales/ru/settings.json';
+import ruStatistics from '@/i18n/locales/ru/statistics.json';
 import log from '@/lib/logger';
 
-// Initialize i18n for tests with English translations
+// Initialize i18n for tests with English and Russian translations.
+// RU resources must be registered here so that i18n.changeLanguage('ru') in
+// locale-switching tests resolves to the actual RU strings rather than falling
+// back to EN (which happens when the language bundle is absent).
 i18n.use(initReactI18next).init({
   resources: {
     en: {
@@ -46,6 +61,20 @@ i18n.use(initReactI18next).init({
       feedback: enFeedback,
       culture: enCulture,
       admin: enAdmin,
+    },
+    ru: {
+      common: ruCommon,
+      achievements: ruAchievements,
+      auth: ruAuth,
+      changelog: ruChangelog,
+      deck: ruDeck,
+      review: ruReview,
+      settings: ruSettings,
+      profile: ruProfile,
+      statistics: ruStatistics,
+      feedback: ruFeedback,
+      culture: ruCulture,
+      admin: ruAdmin,
     },
   },
   lng: 'en', // Force English for tests
@@ -216,8 +245,13 @@ vi.mock('posthog-js/react', () => ({
 }));
 
 // Cleanup after each test (remove rendered components)
-afterEach(() => {
+afterEach(async () => {
   cleanup();
+  // Reset i18n language to English so locale-switching tests don't leak state
+  // into subsequent test files.
+  if (i18n.language !== 'en') {
+    await i18n.changeLanguage('en');
+  }
   // Clear localStorage and sessionStorage after each test
   if (typeof localStorage !== 'undefined') {
     localStorage.clear();
