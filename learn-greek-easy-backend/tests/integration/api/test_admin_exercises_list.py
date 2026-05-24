@@ -8,13 +8,14 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.v1.admin import ADMIN_AUDIO_PRESIGN_TTL_SECONDS
-from src.db.models import DeckLevel, ExerciseModality, ExerciseStatus, ExerciseType
+from src.db.models import DeckLevel, ExerciseModality, ExerciseStatus, ExerciseType, PictureStatus
 from tests.factories import (
     DescriptionExerciseFactory,
     DescriptionExerciseItemFactory,
     DialogExerciseFactory,
     ListeningDialogFactory,
     PictureExerciseFactory,
+    PictureExerciseItemFactory,
     SituationDescriptionFactory,
     SituationFactory,
     SituationPictureFactory,
@@ -834,3 +835,88 @@ class TestAdminExercisesList:
             if c == call("admin/test-audio.mp3", expiry_seconds=ADMIN_AUDIO_PRESIGN_TTL_SECONDS)
         ]
         assert len(admin_ttl_calls) >= 1
+
+    # -----------------------------------------------------------------------
+    # EXR-61: per-source payload completeness
+    # -----------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_payload_per_source_completeness(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        mock_s3_service: MagicMock,
+        db_session: AsyncSession,
+    ):
+        """EXR-61: each source type surfaces its relevant fields in the response.
+
+        EXR-61 Audit summary (PictureExerciseItem):
+        - PictureExerciseItem has NO per-item image_s3_key column.
+        - The parent SituationPicture has a single image_s3_key (anchor picture).
+        - PictureExerciseItem.payload carries option text dicts, NOT per-option image URLs.
+        - anchor_picture_url + items[] payload is sufficient for the 4-option grid.
+        - No new schema fields are needed for EXR-33's 4-option grid.
+        """
+        mock_s3_service.generate_presigned_url.return_value = "https://s3.example.com/presigned"
+
+        # Description (listening) — should have items[]
+        sit_desc = await SituationFactory.create()
+        desc = await SituationDescriptionFactory.create(situation_id=sit_desc.id)
+        desc_ex = await DescriptionExerciseFactory.create(
+            description_id=desc.id, modality=ExerciseModality.LISTENING
+        )
+        await DescriptionExerciseItemFactory.create(description_exercise_id=desc_ex.id)
+
+        # Dialog — should have audio_url populated when audio_s3_key is set
+        sit_dialog = await SituationFactory.create()
+        dialog = await ListeningDialogFactory.create(situation_id=sit_dialog.id)
+        dialog.audio_s3_key = "dialogs/test.mp3"
+        await db_session.flush()
+        await DialogExerciseFactory.create(dialog_id=dialog.id)
+
+        # Picture — should have anchor_picture_url + items[] when image_s3_key is set
+        sit_pic = await SituationFactory.create()
+        picture = await SituationPictureFactory.create(
+            situation_id=sit_pic.id,
+            image_s3_key="pictures/test.jpg",
+            status=PictureStatus.GENERATED,
+        )
+        pic_ex = await PictureExerciseFactory.create(picture_id=picture.id)
+        await PictureExerciseItemFactory.create(picture_exercise_id=pic_ex.id)
+
+        # Word-order — should have correct_order + answer_el
+        sit_wo = await SituationFactory.create()
+        wo_desc = await SituationDescriptionFactory.create(situation_id=sit_wo.id)
+        wo_ex = await WordOrderExerciseFactory.create(description_id=wo_desc.id)
+        await WordOrderExerciseItemFactory.create(word_order_exercise_id=wo_ex.id)
+
+        response = await client.get(
+            BASE_URL,
+            params={"modality": "listening"},
+            headers=superuser_auth_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 4
+
+        items_by_source = {item["source_type"]: item for item in data["items"]}
+
+        # Description: items array populated
+        desc_item = items_by_source["description"]
+        assert len(desc_item["items"]) == 1
+        assert "payload" in desc_item["items"][0]
+
+        # Dialog: audio_url populated (s3 key present)
+        dialog_item = items_by_source["dialog"]
+        assert dialog_item["audio_url"] is not None
+
+        # Picture: anchor_picture_url populated + items array populated
+        pic_item = items_by_source["picture"]
+        assert pic_item["anchor_picture_url"] is not None
+        assert len(pic_item["items"]) == 1
+        assert "payload" in pic_item["items"][0]
+
+        # Word-order: correct_order + answer_el populated from first item payload
+        wo_item = items_by_source["word_order"]
+        assert wo_item["correct_order"] == [2, 1, 0, 4, 3]
+        assert wo_item["answer_el"] == "ο Γιάννης πάει στο σχολείο"
