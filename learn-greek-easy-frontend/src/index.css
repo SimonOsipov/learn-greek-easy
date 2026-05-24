@@ -2342,6 +2342,41 @@
     word-break: break-word;
   }
 
+  /* Canned reply pills (CER-51) */
+  .admin-canned {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .admin-canned-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: hsl(var(--muted-foreground));
+  }
+  .admin-canned-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .admin-canned-pill {
+    padding: 4px 10px;
+    border-radius: 9999px;
+    border: 1px solid hsl(var(--border));
+    background: hsl(var(--muted) / 0.4);
+    color: hsl(var(--fg));
+    font-size: 12px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 120ms ease;
+  }
+  .admin-canned-pill:hover {
+    background: hsl(var(--muted) / 0.7);
+  }
+  .admin-canned-pill:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
   /* ── Changelog panel toolbar (ADMIN2 / CLLP-06) ── */
   .cl-panel-toolbar {
     display: flex;
