@@ -879,9 +879,10 @@
           "confirm": "Delete",
           "title": "Delete this report?"
         },
-        "notifyCaption": "Reporter will be notified by email.",
-        "resolvedCaption": "This report is resolved.",
-        "save": "Save"
+        "deleteSuccess": "Report deleted",
+        "notifyCaption": "Saving will notify {{name}} in-app",
+        "resolvedCaption": "Resolved {{rel}} · by {{by}}",
+        "save": "Save response"
       },
       "tabs": {
         "meta": "Meta",
@@ -922,9 +923,11 @@
     "meta": {
       "cardId": "Card ID",
       "deck": "Deck",
+      "deckMissing": "—",
       "reported": "Reported",
       "reporter": "Reporter",
       "resolved": "Resolved",
+      "resolvedBy": "by {{name}}",
       "status": "Status",
       "type": "Type"
     },
@@ -1027,10 +1030,11 @@
     },
     "sub": "User-reported issues with deck cards — review, respond, and fix.",
     "theCard": {
-      "copied": "Copied",
+      "copied": "Copied!",
       "copy": "Copy",
       "cardIdLabel": "Card ID",
-      "openInDeck": "Open in deck"
+      "openInDeck": "Open in {{deck}}",
+      "openInDeckFallback": "Open in deck"
     },
     "title": "Card errors",
     "toolbar": {

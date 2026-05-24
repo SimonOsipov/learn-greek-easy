@@ -15,16 +15,43 @@
 //   CER-32  Canned reply pills
 //   CER-33  Resolved banner (green-tinted, shield icon, resolver attribution)
 //
+// The card + Meta + Footer batch 8 (CER-34..CER-39):
+//   CER-34  The card tab: full-size CardPreview (non-compact)
+//   CER-35  The card tab: Card-ID row (UUID, Copy, Open in deck)
+//   CER-36  Meta tab: two-column key/value grid via MetaTable
+//   CER-37  Drawer footer: status mirror + dim notify/resolved caption
+//   CER-38  Drawer footer: Delete destructive action (AlertDialog)
+//   CER-39  Footer primary CTA label sentence-case fix
+//
 // TODO(CER-20-followup): bespoke 40px slide via dwSlide keyframe per design spec
 
 import React, { useEffect, useRef, useState } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { BookOpen, Globe, Loader2, ShieldCheck } from 'lucide-react';
+import {
+  BookOpen,
+  Check,
+  Copy,
+  ExternalLink,
+  Globe,
+  Loader2,
+  ShieldCheck,
+  Trash,
+} from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { Separator } from '@/components/ui/separator';
@@ -32,11 +59,13 @@ import { SidePanel } from '@/components/ui/side-panel';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { adminAPI } from '@/services/adminAPI';
+import { useAdminCardErrorStore } from '@/stores/adminCardErrorStore';
 import type { AdminCardErrorResponse, AdminCardErrorUpdateRequest } from '@/types/cardError';
 
 import CannedReplyPills from './CannedReplyPills';
 import { CardErrorStatusBadge } from './CardErrorStatusBadge';
 import { CardPreview } from './CardPreview';
+import { MetaTable } from './MetaTable';
 import { StatusGrid } from './StatusGrid';
 import { Thread } from './Thread';
 
@@ -140,6 +169,20 @@ function formatResolvedDate(dateString: string, locale: string): string {
   });
 }
 
+/**
+ * Simple relative time formatter (mirrors Thread.tsx convention).
+ */
+function formatRelative(ts: string): string {
+  const diff = Date.now() - new Date(ts).getTime();
+  const m = Math.floor(diff / 60_000);
+  if (m < 1) return 'just now';
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  return `${d}d ago`;
+}
+
 // ============================================
 // Main Component
 // ============================================
@@ -166,6 +209,11 @@ export const CardErrorDrawer: React.FC<CardErrorDrawerProps> = ({
   const { toast } = useToast();
   const [isUpdating, setIsUpdating] = useState(false);
 
+  // ── Delete state (CER-38) ───────────────────────────────────────────────────
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const deleteError = useAdminCardErrorStore((s) => s.deleteError);
+
   // ── Tab state (CER-25) ──────────────────────────────────────────────────────
   const [tab, setTab] = useState<DrawerTab>(DEFAULT_TAB);
 
@@ -174,20 +222,26 @@ export const CardErrorDrawer: React.FC<CardErrorDrawerProps> = ({
     if (open) setTab(DEFAULT_TAB);
   }, [open, report?.id]);
 
-  // ── Copy card ID state (CER-26) ─────────────────────────────────────────────
+  // ── Copy card ID state (CER-26, tabs-row header) ───────────────────────────
   const [copied, setCopied] = useState(false);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Cleanup timer on unmount
+  // ── Copy card ID state (CER-35, The card tab row) ──────────────────────────
+  const [tabCopied, setTabCopied] = useState(false);
+  const tabCopyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup timers on unmount
   useEffect(() => {
     return () => {
       if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+      if (tabCopyTimerRef.current) clearTimeout(tabCopyTimerRef.current);
     };
   }, []);
 
   // Reset copied state when the card changes
   useEffect(() => {
     setCopied(false);
+    setTabCopied(false);
   }, [report?.card_id]);
 
   // ── Form ────────────────────────────────────────────────────────────────────
@@ -274,6 +328,41 @@ export const CardErrorDrawer: React.FC<CardErrorDrawerProps> = ({
   const handleOpenInDeck = () => {
     // Placeholder — re-uses the existing drawer open state until the deck-editor route ships.
     // TODO(CER-OOS): navigate to deck editor
+  };
+
+  // ── The card tab: copy card ID handler (CER-35) ──────────────────────────────
+  const handleTabCopyCardId = async () => {
+    if (!report) return;
+    try {
+      await navigator.clipboard.writeText(report.card_id);
+      setTabCopied(true);
+      if (tabCopyTimerRef.current) clearTimeout(tabCopyTimerRef.current);
+      tabCopyTimerRef.current = setTimeout(() => setTabCopied(false), 1500);
+    } catch {
+      // swallow — clipboard denied; button won't flip
+    }
+  };
+
+  // ── Delete handler (CER-38) ──────────────────────────────────────────────────
+  const handleDeleteConfirm = async () => {
+    if (!report) return;
+    setIsDeleting(true);
+    try {
+      await deleteError(report.id);
+      setDeleteConfirmOpen(false);
+      onOpenChange(false);
+      toast({ title: t('cardErrors.drawer.foot.deleteSuccess') });
+    } catch (error) {
+      setDeleteConfirmOpen(false);
+      toast({
+        title: t('cardErrors.detail.updateError'),
+        description:
+          error instanceof Error ? error.message : t('cardErrors.detail.updateErrorMessage'),
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   if (!report) return null;
@@ -532,22 +621,144 @@ export const CardErrorDrawer: React.FC<CardErrorDrawerProps> = ({
 
         {tab === 'theCard' && (
           <div data-testid="drawer-tab-theCard">
-            {/* The card tab body — Batch 8 */}
-            {null}
+            {/* ── CER-35: Card-ID row ── */}
+            <div className="ce-id-row">
+              <div className="ce-id-l">
+                <span className="ce-id-kicker">{t('cardErrors.theCard.cardIdLabel')}</span>
+                <code className="ce-id">{report.card_id}</code>
+              </div>
+              <div className="ce-id-actions">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleTabCopyCardId}
+                  disabled={!report.card_id}
+                  data-testid="the-card-copy-button"
+                >
+                  {tabCopied ? (
+                    <>
+                      <Check className="mr-1.5 h-3.5 w-3.5" />
+                      {t('cardErrors.theCard.copied')}
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="mr-1.5 h-3.5 w-3.5" />
+                      {t('cardErrors.theCard.copy')}
+                    </>
+                  )}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleOpenInDeck}
+                  data-testid="the-card-open-deck-button"
+                >
+                  <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+                  {report.deck?.name?.trim()
+                    ? t('cardErrors.theCard.openInDeck', { deck: report.deck.name })
+                    : t('cardErrors.theCard.openInDeckFallback')}
+                </Button>
+              </div>
+            </div>
+
+            {/* ── CER-34: Full-size CardPreview (non-compact) ── */}
+            <CardPreview card={report.card} cardType={report.card_type} />
           </div>
         )}
 
         {tab === 'meta' && (
           <div data-testid="drawer-tab-meta">
-            {/* Meta tab body — Batch 8 */}
-            {null}
+            {/* ── CER-36: Meta key/value grid via MetaTable ── */}
+            <MetaTable
+              ariaLabel={t('cardErrors.drawer.tabs.meta')}
+              rows={[
+                {
+                  label: t('cardErrors.meta.reporter'),
+                  value: report.reporter?.full_name?.trim() || t('cardErrors.anonymousUser'),
+                },
+                {
+                  label: t('cardErrors.meta.type'),
+                  value: (
+                    <span className="badge b-gray">
+                      {t(`cardErrors.cardTypes.${report.card_type.toLowerCase()}`)}
+                    </span>
+                  ),
+                },
+                {
+                  label: t('cardErrors.meta.deck'),
+                  value: report.deck?.name?.trim() ?? t('cardErrors.meta.deckMissing'),
+                },
+                {
+                  label: t('cardErrors.meta.cardId'),
+                  value: <span className="admin-meta-mono">{report.card_id}</span>,
+                },
+                {
+                  label: t('cardErrors.meta.reported'),
+                  value: `${new Date(report.created_at).toLocaleDateString(i18n.language, { year: 'numeric', month: 'short', day: 'numeric' })} (${formatRelative(report.created_at)})`,
+                },
+                {
+                  label: t('cardErrors.meta.status'),
+                  value: <CardErrorStatusBadge status={liveStatus} />,
+                },
+                ...(report.resolved_at
+                  ? [
+                      {
+                        label: t('cardErrors.meta.resolved'),
+                        value: [
+                          new Date(report.resolved_at).toLocaleDateString(i18n.language, {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                          }),
+                          report.resolver?.full_name?.trim()
+                            ? t('cardErrors.meta.resolvedBy', { name: report.resolver.full_name })
+                            : null,
+                        ]
+                          .filter(Boolean)
+                          .join(' '),
+                      },
+                    ]
+                  : []),
+              ]}
+            />
           </div>
         )}
       </SidePanel.Body>
 
       {/* ── Footer ── */}
       <SidePanel.Footer>
-        <div className="flex w-full justify-end gap-2">
+        <div className="drawer-foot-left">
+          {/* ── CER-37: Live status mirror + dim caption ── */}
+          <CardErrorStatusBadge status={liveStatus} />
+          <p className="text-xs text-muted-foreground" data-testid="foot-caption">
+            {report.resolved_at
+              ? t('cardErrors.drawer.foot.resolvedCaption', {
+                  rel: formatRelative(report.resolved_at),
+                  by: report.resolver?.full_name?.trim() ?? '',
+                })
+              : t('cardErrors.drawer.foot.notifyCaption', {
+                  name: report.reporter?.full_name?.trim() ?? '',
+                })}
+          </p>
+        </div>
+
+        <div className="drawer-foot-right">
+          {/* ── CER-38: Delete destructive action ── */}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setDeleteConfirmOpen(true)}
+            disabled={isDeleting || isUpdating}
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+            aria-label={t('cardErrors.drawer.foot.delete')}
+            data-testid="delete-button"
+          >
+            <Trash className="h-4 w-4" />
+          </Button>
+
           <Button
             type="button"
             variant="outline"
@@ -575,6 +786,41 @@ export const CardErrorDrawer: React.FC<CardErrorDrawerProps> = ({
           </Button>
         </div>
       </SidePanel.Footer>
+
+      {/* ── CER-38: Delete confirmation AlertDialog ── */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('cardErrors.drawer.foot.deleteConfirm.title')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('cardErrors.drawer.foot.deleteConfirm.body')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>
+              {t('cardErrors.drawer.foot.deleteConfirm.cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleDeleteConfirm();
+              }}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="delete-confirm-button"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {t('cardErrors.drawer.foot.deleteConfirm.confirm')}
+                </>
+              ) : (
+                t('cardErrors.drawer.foot.deleteConfirm.confirm')
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </SidePanel>
   );
 };
