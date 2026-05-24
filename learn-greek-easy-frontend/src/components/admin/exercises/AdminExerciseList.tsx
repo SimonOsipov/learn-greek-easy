@@ -93,7 +93,7 @@ export function AdminExerciseList({ modality }: AdminExerciseListProps) {
           setTotal(result.total);
         }
       } catch {
-        if (!cancelled) setError(t('adminExercises.error'));
+        if (!cancelled) setError(t('exercises.errorBanner.title'));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -116,17 +116,17 @@ export function AdminExerciseList({ modality }: AdminExerciseListProps) {
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             className="pl-8 pr-8"
-            placeholder={t('adminExercises.filters.searchPlaceholder')}
+            placeholder={t('exercises.search.placeholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             data-testid="admin-exercises-search"
-            aria-label={t('adminExercises.filters.searchPlaceholder')}
+            aria-label={t('exercises.search.placeholder')}
           />
           {searchQuery && (
             <button
               className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground"
               onClick={() => setSearchQuery('')}
-              aria-label={t('adminExercises.clearSearch')}
+              aria-label={t('exercises.search.clearAriaLabel')}
             >
               <X className="h-4 w-4" />
             </button>
@@ -140,15 +140,15 @@ export function AdminExerciseList({ modality }: AdminExerciseListProps) {
           <SelectTrigger
             className="w-[200px]"
             data-testid="admin-exercises-type-filter"
-            aria-label={t('adminExercises.filters.exerciseType')}
+            aria-label={t('exercises.filters.type.label')}
           >
-            <SelectValue placeholder={t('adminExercises.filters.exerciseType')} />
+            <SelectValue placeholder={t('exercises.filters.type.label')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">{t('adminExercises.filters.exerciseType')}</SelectItem>
+            <SelectItem value="all">{t('exercises.filters.type.label')}</SelectItem>
             {EXERCISE_TYPES.map((type) => (
               <SelectItem key={type} value={type}>
-                {t(`adminExercises.exerciseTypes.${type}`)}
+                {t(`exercises.types.${type}`)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -161,14 +161,14 @@ export function AdminExerciseList({ modality }: AdminExerciseListProps) {
           <SelectTrigger
             className="w-[140px]"
             data-testid="admin-exercises-status-filter"
-            aria-label={t('adminExercises.filters.status')}
+            aria-label={t('exercises.filters.status.label')}
           >
-            <SelectValue placeholder={t('adminExercises.filters.status')} />
+            <SelectValue placeholder={t('exercises.filters.status.label')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">{t('adminExercises.filters.status')}</SelectItem>
-            <SelectItem value="draft">{t('adminExercises.statuses.draft')}</SelectItem>
-            <SelectItem value="approved">{t('adminExercises.statuses.approved')}</SelectItem>
+            <SelectItem value="all">{t('exercises.filters.status.label')}</SelectItem>
+            <SelectItem value="draft">{t('exercises.statuses.draft')}</SelectItem>
+            <SelectItem value="approved">{t('exercises.statuses.approved')}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -201,7 +201,7 @@ export function AdminExerciseList({ modality }: AdminExerciseListProps) {
                 setRetryCount((c) => c + 1);
               }}
             >
-              {t('adminExercises.retry')}
+              {t('exercises.errorBanner.retry')}
             </button>
           </AlertDescription>
         </Alert>
@@ -218,7 +218,7 @@ export function AdminExerciseList({ modality }: AdminExerciseListProps) {
           ) : (
             <BookOpen className="h-10 w-10 opacity-40" />
           )}
-          <p className="text-sm">{t(`adminExercises.empty.${modality}`)}</p>
+          <p className="text-sm">{t(`exercises.empty.${modality}`)}</p>
         </div>
       )}
 
@@ -247,10 +247,10 @@ export function AdminExerciseList({ modality }: AdminExerciseListProps) {
                     <div className="flex shrink-0 flex-wrap items-center gap-1.5">
                       <Badge variant="outline" className="flex items-center gap-1">
                         <Icon className="h-3 w-3" />
-                        {t(`adminExercises.sourceTypes.${exercise.source_type}`)}
+                        {t(`exercises.filters.source.${exercise.source_type}`)}
                       </Badge>
                       <Badge variant="outline">
-                        {t(`adminExercises.exerciseTypes.${exercise.exercise_type}`)}
+                        {t(`exercises.types.${exercise.exercise_type}`)}
                       </Badge>
                       <Badge
                         variant={exercise.status === 'approved' ? 'default' : 'secondary'}
@@ -260,13 +260,13 @@ export function AdminExerciseList({ modality }: AdminExerciseListProps) {
                             : undefined
                         }
                       >
-                        {t(`adminExercises.statuses.${exercise.status}`)}
+                        {t(`exercises.statuses.${exercise.status}`)}
                       </Badge>
                       {exercise.source_type === 'description' && exercise.audio_level && (
                         <Badge variant="outline">{exercise.audio_level}</Badge>
                       )}
                       <Badge variant="secondary">
-                        {t('adminExercises.itemCount', { count: exercise.item_count })}
+                        {t('exercises.row.itemCount', { count: exercise.item_count })}
                       </Badge>
                     </div>
                   </div>
@@ -304,7 +304,7 @@ export function AdminExerciseList({ modality }: AdminExerciseListProps) {
       {total > 0 && !loading && (
         <div className="flex items-center justify-between" data-testid="admin-exercises-pagination">
           <p className="text-sm text-muted-foreground">
-            {t('adminExercises.showing', { from, to, total })}
+            {t('exercises.pager.showing', { from, to, total })}
           </p>
           <div className="flex items-center gap-2">
             <Button
