@@ -1,10 +1,7 @@
 // src/components/admin/index.ts
 
 export { AdminCardErrorCard } from './AdminCardErrorCard';
-export {
-  AdminCardErrorDetailModal,
-  type AdminCardErrorDetailModalProps,
-} from './AdminCardErrorDetailModal';
+export { CardErrorDrawer, type CardErrorDrawerProps } from './CardErrorDrawer';
 export { AdminCardErrorSection } from './AdminCardErrorSection';
 export { AdminFeedbackCard } from './AdminFeedbackCard';
 export { AdminFeedbackResponseDialog } from './AdminFeedbackResponseDialog';
