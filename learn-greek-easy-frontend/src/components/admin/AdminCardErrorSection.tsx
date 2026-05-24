@@ -1,9 +1,10 @@
 // src/components/admin/AdminCardErrorSection.tsx
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import { AlertCircle, ChevronLeft, ChevronRight, RefreshCw, Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -81,10 +82,69 @@ export const AdminCardErrorSection: React.FC = () => {
   // Local type seg — drives store filter
   const typeSeg: TypeSeg = (filters.cardType as TypeSeg) ?? 'all';
 
+  // ── URL state (CER-60) ────────────────────────────────────────────────────
+  const [searchParams, setSearchParams] = useSearchParams();
+  // Guard: only hydrate from URL once after the first fetch settles
+  const didHydrateFromUrlRef = useRef(false);
+
   // Fetch on mount
   useEffect(() => {
     fetchErrorList();
   }, [fetchErrorList]);
+
+  // ── CER-60 Effect A: URL → state (deep-link in, runs once after list loads) ──
+  useEffect(() => {
+    if (didHydrateFromUrlRef.current) return;
+    if (isLoading) return; // wait for first fetch to settle
+
+    const editId = searchParams.get('edit');
+    if (!editId) {
+      didHydrateFromUrlRef.current = true;
+      return;
+    }
+
+    const found = errorList.find((r) => r.id === editId);
+    if (found) {
+      setSelectedError(found);
+      setIsResponseDialogOpen(true);
+    } else {
+      // Not found — clear the stale param silently (no toast per CER-60 AC#6)
+      setSearchParams(
+        (prev) => {
+          prev.delete('edit');
+          return prev;
+        },
+        { replace: true }
+      );
+    }
+    didHydrateFromUrlRef.current = true;
+  }, [isLoading, errorList, searchParams, setSelectedError, setSearchParams]);
+
+  // ── CER-60 Effect B: state → URL (sync out on every drawer state change) ──
+  useEffect(() => {
+    if (!didHydrateFromUrlRef.current) return; // skip before hydration
+
+    if (isResponseDialogOpen && selectedError) {
+      setSearchParams(
+        (prev) => {
+          if (prev.get('edit') !== selectedError.id) {
+            prev.set('edit', selectedError.id);
+          }
+          return prev;
+        },
+        { replace: true }
+      );
+    } else if (!isResponseDialogOpen) {
+      setSearchParams(
+        (prev) => {
+          if (!prev.has('edit')) return prev;
+          prev.delete('edit');
+          return prev;
+        },
+        { replace: true }
+      );
+    }
+  }, [isResponseDialogOpen, selectedError, setSearchParams]);
 
   const handleStatusFilterChange = (value: CardErrorStatusFilter | 'all') => {
     if (value === 'all') {
@@ -254,13 +314,27 @@ export const AdminCardErrorSection: React.FC = () => {
           {!isLoading && !error && (
             <>
               {filteredErrors.length === 0 ? (
-                <p className="py-8 text-center text-muted-foreground">
-                  {debouncedSearch
-                    ? t('cardErrors.search.noResults')
-                    : hasActiveFilters
-                      ? t('cardErrors.states.noFilteredResults')
-                      : t('cardErrors.states.noErrors')}
-                </p>
+                debouncedSearch ? (
+                  <p className="py-8 text-center text-muted-foreground">
+                    {t('cardErrors.search.noResults')}
+                  </p>
+                ) : hasActiveFilters ? (
+                  /* CER-40: Filter empty state — Search icon + H3 + body */
+                  <div
+                    className="flex flex-col items-center justify-center gap-2 py-12 text-center"
+                    data-testid="card-errors-filter-empty-state"
+                  >
+                    <Search className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
+                    <h3 className="text-base font-semibold text-foreground">
+                      {t('cardErrors.empty.title')}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">{t('cardErrors.empty.body')}</p>
+                  </div>
+                ) : (
+                  <p className="py-8 text-center text-muted-foreground">
+                    {t('cardErrors.states.noErrors')}
+                  </p>
+                )
               ) : (
                 <>
                   {debouncedSearch && (
