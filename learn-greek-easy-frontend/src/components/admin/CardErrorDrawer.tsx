@@ -6,33 +6,27 @@
 // Tab system:     Review / The card / Meta (CER-25), null stub panels
 // Tabs-row actions: Copy card ID + Open in deck placeholder (CER-26)
 //
+// Review tab batch 7 (CER-27..CER-33):
+//   CER-27  Thread chrome around report description
+//   CER-28  CardPreview compact snapshot
+//   CER-29  StatusGrid replaces native Select
+//   CER-30  Notes hint with reporter visibility warning
+//   CER-31  Notes placeholder updated
+//   CER-32  Canned reply pills
+//   CER-33  Resolved banner (green-tinted, shield icon, resolver attribution)
+//
 // TODO(CER-20-followup): bespoke 40px slide via dwSlide keyframe per design spec
 
 import React, { useEffect, useRef, useState } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { BookOpen, Globe, Loader2 } from 'lucide-react';
+import { BookOpen, Globe, Loader2, ShieldCheck } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { Separator } from '@/components/ui/separator';
 import { SidePanel } from '@/components/ui/side-panel';
 import { Textarea } from '@/components/ui/textarea';
@@ -40,7 +34,13 @@ import { useToast } from '@/hooks/use-toast';
 import { adminAPI } from '@/services/adminAPI';
 import type { AdminCardErrorResponse, AdminCardErrorUpdateRequest } from '@/types/cardError';
 
+import CannedReplyPills from './CannedReplyPills';
 import { CardErrorStatusBadge } from './CardErrorStatusBadge';
+import { CardPreview } from './CardPreview';
+import { StatusGrid } from './StatusGrid';
+import { Thread } from './Thread';
+
+import type { StatusOption } from './StatusGrid';
 
 // ============================================
 // Types
@@ -61,6 +61,27 @@ export interface CardErrorDrawerProps {
 
 type DrawerTab = 'review' | 'theCard' | 'meta';
 const DEFAULT_TAB: DrawerTab = 'review';
+
+// ── Status options for StatusGrid (CER-29) ───────────────────────────────────
+
+type CEStatus = 'PENDING' | 'REVIEWED' | 'FIXED' | 'DISMISSED';
+
+const CE_STATUS_OPTIONS: StatusOption<CEStatus>[] = [
+  { key: 'PENDING', label: '', dotTone: 'amber' },
+  { key: 'REVIEWED', label: '', dotTone: 'primary' },
+  { key: 'FIXED', label: '', dotTone: 'success' },
+  { key: 'DISMISSED', label: '', dotTone: 'gray' },
+];
+
+// ── Canned reply keys (CER-32) ────────────────────────────────────────────────
+
+const QUICK_REPLY_KEYS = [
+  'confirmedFixed',
+  'needMoreInfo',
+  'reRecordAudio',
+  'notAnError',
+  'duplicate',
+] as const;
 
 // ============================================
 // Form Schema
@@ -106,6 +127,17 @@ function formatBreadcrumbParts(dateString: string, locale: string): { date: stri
     minute: '2-digit',
   });
   return { date, time };
+}
+
+/**
+ * Format a resolved_at timestamp to a short absolute date.
+ */
+function formatResolvedDate(dateString: string, locale: string): string {
+  return new Date(dateString).toLocaleDateString(locale, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
 }
 
 // ============================================
@@ -177,8 +209,9 @@ export const CardErrorDrawer: React.FC<CardErrorDrawerProps> = ({
     }
   }, [open, report, form]);
 
-  // Watch live status for the meta row badge (CER-23)
+  // Watch live status and notes for badges + counters
   const liveStatus = form.watch('status');
+  const liveNotes = form.watch('admin_notes') ?? '';
 
   // ── Submit ──────────────────────────────────────────────────────────────────
   const onSubmit = async (data: UpdateFormData) => {
@@ -251,6 +284,23 @@ export const CardErrorDrawer: React.FC<CardErrorDrawerProps> = ({
     report.created_at,
     i18n.language
   );
+
+  // ── Status options with localized labels (CER-29) ────────────────────────────
+  const statusOptions: StatusOption<CEStatus>[] = CE_STATUS_OPTIONS.map((opt) => ({
+    ...opt,
+    label: t(`cardErrors.reply.status.${opt.key.toLowerCase()}`),
+  }));
+
+  // ── Canned reply pills (CER-32) ───────────────────────────────────────────────
+  const cannedPills = QUICK_REPLY_KEYS.map((key) => ({
+    key,
+    label: t(`cardErrors.reply.quick.${key}.label`),
+    body: t(`cardErrors.reply.quick.${key}.body`),
+  }));
+
+  // ── Resolved banner (CER-33) ──────────────────────────────────────────────────
+  const resolverName =
+    report.resolver?.full_name?.trim() || t('cardErrors.reply.resolvedBanner.fallbackName');
 
   return (
     <SidePanel
@@ -361,28 +411,53 @@ export const CardErrorDrawer: React.FC<CardErrorDrawerProps> = ({
         </div>
       </SidePanel.Tabs>
 
-      {/* ── Tab body panels (CER-25) — null stubs, filled by Batches 7-8 ── */}
+      {/* ── Tab body panels (CER-25) ── */}
       <SidePanel.Body>
         {tab === 'review' && (
           <div data-testid="drawer-tab-review">
-            {/* Review tab body — CER-27..CER-31 */}
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                {/* User Description */}
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-muted-foreground">
-                    {t('cardErrors.detail.userDescription')}
-                  </label>
-                  <Card>
-                    <CardContent className="p-4">
-                      <p className="whitespace-pre-wrap text-sm" data-testid="error-description">
-                        {report.description}
-                      </p>
-                    </CardContent>
-                  </Card>
-                </div>
+                {/* ── CER-33: Resolved banner (top of review tab when resolved) ── */}
+                {report.resolved_at && (
+                  <div
+                    className="ce-resolved"
+                    role="status"
+                    aria-live="polite"
+                    data-testid="resolved-banner"
+                  >
+                    <ShieldCheck className="ce-resolved__icon" size={18} aria-hidden="true" />
+                    <div className="ce-resolved__text">
+                      <span className="ce-resolved__title">
+                        {t('cardErrors.reply.resolvedBanner.title', {
+                          date: formatResolvedDate(report.resolved_at, i18n.language),
+                        })}
+                      </span>
+                      <span className="ce-resolved__by">
+                        {t('cardErrors.reply.resolvedBanner.by', { name: resolverName })}
+                      </span>
+                    </div>
+                  </div>
+                )}
 
-                {/* Admin Actions */}
+                {/* ── CER-27: Thread chrome around report description ── */}
+                <Thread compact>
+                  <Thread.Message
+                    author={{
+                      name:
+                        report.reporter?.full_name?.trim() || t('cardErrors.detail.anonymousUser'),
+                    }}
+                    timestamp={report.created_at}
+                  >
+                    <span className="whitespace-pre-wrap" data-testid="error-description">
+                      {report.description}
+                    </span>
+                  </Thread.Message>
+                </Thread>
+
+                {/* ── CER-28: Card preview snapshot ── */}
+                <CardPreview card={report.card} cardType={report.card_type} compact />
+
+                {/* Admin Actions separator */}
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
                     <Separator />
@@ -394,74 +469,62 @@ export const CardErrorDrawer: React.FC<CardErrorDrawerProps> = ({
                   </div>
                 </div>
 
-                {/* Status Select */}
+                {/* ── CER-29: Status grid replaces native Select ── */}
                 <FormField
                   control={form.control}
                   name="status"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('cardErrors.detail.statusLabel')}</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger data-testid="status-select">
-                            <SelectValue placeholder={t('cardErrors.detail.selectStatus')} />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {(['PENDING', 'REVIEWED', 'FIXED', 'DISMISSED'] as const).map(
-                            (status) => (
-                              <SelectItem key={status} value={status}>
-                                {t(`cardErrors.statuses.${status.toLowerCase()}`)}
-                              </SelectItem>
-                            )
-                          )}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
+                    <div>
+                      <p className="mb-2 text-sm font-medium">
+                        {t('cardErrors.reply.status.label')}
+                      </p>
+                      <StatusGrid<CEStatus>
+                        options={statusOptions}
+                        value={field.value as CEStatus}
+                        onChange={field.onChange}
+                      />
+                    </div>
                   )}
                 />
 
-                {/* Admin Notes */}
+                {/* ── CER-32: Canned reply pills ── */}
+                <CannedReplyPills
+                  label={t('cardErrors.reply.quick.heading')}
+                  pills={cannedPills}
+                  onSelect={(body) => form.setValue('admin_notes', body)}
+                />
+
+                {/* ── CER-30 + CER-31: Admin notes with hint and updated placeholder ── */}
                 <FormField
                   control={form.control}
                   name="admin_notes"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t('cardErrors.detail.adminNotesLabel')}</FormLabel>
+                      {/* CER-30: label */}
+                      <label
+                        htmlFor="admin-notes-textarea"
+                        className="mb-1 block text-sm font-medium"
+                      >
+                        {t('cardErrors.reply.notes.label')}
+                      </label>
                       <FormControl>
                         <Textarea
-                          placeholder={t('cardErrors.detail.adminNotesPlaceholder')}
+                          id="admin-notes-textarea"
+                          placeholder={t('cardErrors.reply.notes.placeholder')}
                           className="min-h-[100px] resize-none"
                           maxLength={1000}
                           data-testid="admin-notes-textarea"
                           {...field}
                         />
                       </FormControl>
-                      <div className="flex justify-between text-xs text-muted-foreground">
+                      {/* CER-30: hint with live count + reporter visibility warning */}
+                      <div className="mt-1 flex justify-between text-xs text-muted-foreground">
                         <FormMessage />
-                        <span>{field.value?.length ?? 0}/1000</span>
+                        <span>{t('cardErrors.reply.notes.hint', { count: liveNotes.length })}</span>
                       </div>
                     </FormItem>
                   )}
                 />
-
-                {/* Resolution Info (if resolved) */}
-                {report.resolved_at && (
-                  <div className="rounded-md bg-muted/50 p-3 text-sm text-muted-foreground">
-                    <p>
-                      {t('cardErrors.detail.resolvedAt', {
-                        date: new Date(report.resolved_at).toLocaleDateString(i18n.language, {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        }),
-                      })}
-                    </p>
-                  </div>
-                )}
               </form>
             </Form>
           </div>
@@ -469,14 +532,14 @@ export const CardErrorDrawer: React.FC<CardErrorDrawerProps> = ({
 
         {tab === 'theCard' && (
           <div data-testid="drawer-tab-theCard">
-            {/* The card tab body — CER-32..CER-35 */}
+            {/* The card tab body — Batch 8 */}
             {null}
           </div>
         )}
 
         {tab === 'meta' && (
           <div data-testid="drawer-tab-meta">
-            {/* Meta tab body — CER-36..CER-37 */}
+            {/* Meta tab body — Batch 8 */}
             {null}
           </div>
         )}

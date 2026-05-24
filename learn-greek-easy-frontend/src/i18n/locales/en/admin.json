@@ -930,48 +930,55 @@
     },
     "preview": {
       "culture": {
-        "kicker": "Culture card"
+        "kicker": "Culture question · preview"
       },
-      "markedCorrect": "Marked correct",
+      "markedCorrect": "marked correct",
+      "unavailable": "Card content unavailable",
       "word": {
-        "kicker": "Word card"
+        "kicker": "Word card · preview"
       }
     },
     "reply": {
       "notes": {
-        "hint": "Visible to admins only.",
-        "label": "Internal notes",
-        "placeholder": "Add context for other admins…"
+        "hint": "{{count}}/1000 — internal · also shown to the reporter when resolved",
+        "label": "Admin notes",
+        "placeholder": "What did you find? What changed?"
       },
       "quick": {
         "confirmedFixed": {
-          "body": "Thanks for the report — the card has been updated.",
-          "label": "Confirmed fixed"
+          "body": "Confirmed — fixed in the deck. Marking this report as resolved.",
+          "label": "Confirmed & fixed"
         },
         "duplicate": {
-          "body": "We've already received this report — closing as duplicate.",
+          "body": "Duplicate of an earlier report — closing this one. The fix will ship in the next batch.",
           "label": "Duplicate"
         },
+        "heading": "Quick responses",
         "needMoreInfo": {
-          "body": "Could you share more detail about what looked off?",
+          "body": "Thanks for the report. Could you share which level (A2 / B1 / B2) you were practicing at when this came up? That helps narrow it down.",
           "label": "Need more info"
         },
         "notAnError": {
-          "body": "This card is correct as designed — closing as not an error.",
+          "body": "After checking, this is the correct form. Closing without changes — please reach out via Feedback if you'd like a more detailed explanation.",
           "label": "Not an error"
         },
         "reRecordAudio": {
-          "body": "Audio has been re-recorded and pushed to your deck.",
+          "body": "Re-recorded with native speaker and re-uploaded. Will roll out in the next release.",
           "label": "Re-record audio"
         }
       },
       "resolvedBanner": {
-        "by": "by",
-        "title": "Resolved"
+        "by": "by {{name}}",
+        "fallbackName": "Admin",
+        "title": "Resolved {{date}}"
       },
       "status": {
+        "dismissed": "Dismissed",
+        "fixed": "Fixed",
         "hint": "How should this report be resolved?",
-        "label": "Set status"
+        "label": "Set status",
+        "pending": "Pending",
+        "reviewed": "Reviewed"
       }
     },
     "respond": "Respond",
