@@ -1,5 +1,23 @@
 import { Page } from '@playwright/test';
 
+// ── E2E seed helpers for Card Errors (CER-56) ─────────────────────────────────
+
+/**
+ * Seed the canonical batch of 4 card error reports for E2E testing.
+ * Creates: WORD-PENDING, CULTURE-PENDING, WORD-FIXED, WORD-DISMISSED.
+ * Returns IDs in that stable order.
+ * Requires TEST_SEED_ENABLED=true on the backend.
+ */
+export async function seedAdminCardErrorsBatch(page: Page): Promise<{ ids: string[] }> {
+  const response = await page.request.post('/api/v1/test/seed/card-errors');
+  if (!response.ok()) {
+    throw new Error(
+      `seedAdminCardErrorsBatch failed: ${response.status()} ${await response.text()}`
+    );
+  }
+  return response.json();
+}
+
 /**
  * Tab keys accepted by the new admin shell URL pattern (?tab=<key>).
  * Maps 1:1 to AdminTabType in src/pages/admin/types.ts.
