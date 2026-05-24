@@ -3150,6 +3150,35 @@
   }
 }
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   Card Errors admin list — row-level utilities (CER-14, CER-15, CER-16, CER-19)
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* CER-14: Truncated card-ID stub — mono, dimmed, title-tooltip hint */
+.ce-card-id-dim {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.75rem;
+  color: hsl(var(--fg-3));
+  letter-spacing: 0.01em;
+  cursor: help;
+  user-select: all;
+}
+
+/* CER-19: Relative timestamp in list-card head row — mono for numeric feel */
+.ce-card-when {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+/* CER-13: Inline card peek — one-line preview between head and description */
+.ce-card-preview {
+  margin-bottom: 4px;
+}
+
+/* CER-16: Warning-tinted border on open rows (pending | reviewed) */
+[data-testid='admin-card-error-card'][data-state='open'] {
+  border-color: hsl(var(--warning) / 0.35);
+}
+
 /* Theme transition animation */
 html.theme-transition,
 html.theme-transition *,
