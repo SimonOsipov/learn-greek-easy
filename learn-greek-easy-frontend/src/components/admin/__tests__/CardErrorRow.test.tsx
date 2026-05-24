@@ -44,8 +44,8 @@ function makeRow(overrides: Partial<AdminCardErrorResponse> = {}): AdminCardErro
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('AdminCardErrorCard (CER-53)', () => {
-  // AC #1: renders deck chip, card peek, ID stub, dual action buttons
-  it('renders deck chip, card peek, ID stub, and dual action buttons for PENDING row', () => {
+  // AC #1: renders deck chip, card peek, ID stub, respond action
+  it('renders deck chip, card peek, ID stub, and respond button for PENDING row', () => {
     const row = makeRow();
     renderWithProviders(<AdminCardErrorCard errorReport={row} onRespond={vi.fn()} />);
 
@@ -62,9 +62,8 @@ describe('AdminCardErrorCard (CER-53)', () => {
     // card_id is 'card-uuid-001', first 8 chars = 'card-uui'
     expect(screen.getByTitle(row.card_id)).toHaveTextContent('card-uui');
 
-    // Two action buttons (respond + open card)
+    // Respond action button
     expect(screen.getByTestId('card-error-respond-button')).toBeInTheDocument();
-    expect(screen.getByTestId('card-error-open-card-button')).toBeInTheDocument();
   });
 
   // AC #2a: body click invokes drawer-open handler
@@ -90,10 +89,6 @@ describe('AdminCardErrorCard (CER-53)', () => {
     // The button itself calls onRespond, but the container should not receive an
     // extra propagated event. We get exactly 1 call (from the button handler),
     // not 2 (button + propagated to card root).
-    expect(onRespond).toHaveBeenCalledTimes(1);
-
-    onRespond.mockClear();
-    fireEvent.click(screen.getByTestId('card-error-open-card-button'));
     expect(onRespond).toHaveBeenCalledTimes(1);
   });
 

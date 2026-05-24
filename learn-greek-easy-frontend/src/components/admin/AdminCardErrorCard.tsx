@@ -5,7 +5,7 @@ import React from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { el } from 'date-fns/locale/el';
 import { ru } from 'date-fns/locale/ru';
-import { BookOpen, Check, ExternalLink, Globe, MessageSquare, Pencil, User } from 'lucide-react';
+import { BookOpen, Check, Globe, MessageSquare, Pencil, User } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
@@ -120,7 +120,7 @@ interface AdminCardErrorCardProps {
  * - CER-14: Truncated card-ID stub in foot row
  * - CER-15: Inline admin-notes block
  * - CER-16: Warning-tinted border for open rows (data-state="open")
- * - CER-17: Open card ghost action + Respond ↔ Edit response toggle
+ * - CER-17: Respond ↔ Edit response toggle
  * - CER-18: Clickable row body (role=button, Enter/Space, stopPropagation)
  * - CER-19: Mono font on relative timestamp
  */
@@ -165,13 +165,6 @@ export const AdminCardErrorCard: React.FC<AdminCardErrorCardProps> = ({
   // CER-17: respond / edit response
   const handleRespond = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onRespond(errorReport);
-  };
-
-  // CER-17: Open card — currently reuses drawer opener; TODO deep-link to deck editor
-  const handleOpenCard = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    // TODO(CER-OOS): deep-link to deck editor route — for now reuse drawer.
     onRespond(errorReport);
   };
 
@@ -242,16 +235,6 @@ export const AdminCardErrorCard: React.FC<AdminCardErrorCardProps> = ({
                 <MessageSquare className="mr-2 h-4 w-4" />
               )}
               {hasResponse ? t('cardErrors.row.editResponse') : t('cardErrors.row.respond')}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleOpenCard}
-              data-testid="card-error-open-card-button"
-              aria-label={t('cardErrors.row.openCard')}
-            >
-              <ExternalLink className="mr-2 h-4 w-4" />
-              {t('cardErrors.row.openCard')}
             </Button>
           </div>
         </div>
