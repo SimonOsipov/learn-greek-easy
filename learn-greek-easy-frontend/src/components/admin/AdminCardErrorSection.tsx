@@ -16,7 +16,7 @@ import { useAdminCardErrorStore } from '@/stores/adminCardErrorStore';
 import type { AdminCardErrorResponse, CardType } from '@/types/cardError';
 
 import { AdminCardErrorCard } from './AdminCardErrorCard';
-import { AdminCardErrorDetailModal } from './AdminCardErrorDetailModal';
+import { CardErrorDrawer } from './CardErrorDrawer';
 
 // ── Type aliases for filter segs ───────────────────────────────────────────────
 
@@ -325,8 +325,8 @@ export const AdminCardErrorSection: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Detail Modal */}
-      <AdminCardErrorDetailModal
+      {/* Detail Drawer */}
+      <CardErrorDrawer
         open={isResponseDialogOpen}
         onOpenChange={handleResponseDialogClose}
         report={selectedError}
