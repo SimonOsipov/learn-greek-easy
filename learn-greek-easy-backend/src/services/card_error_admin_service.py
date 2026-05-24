@@ -165,3 +165,24 @@ class CardErrorAdminService:
 
         # 6. Return refreshed report with relations
         return await self.repo.get_with_relations(report_id)  # type: ignore[return-value]
+
+    async def delete_report_for_admin(self, report_id: UUID) -> None:
+        """Hard-delete a card error report (admin action, CER-45).
+
+        The row is permanently removed from card_error_reports. Caller is
+        responsible for committing the session after this method returns.
+
+        Args:
+            report_id: UUID of the report to delete
+
+        Raises:
+            NotFoundException: If report with given ID does not exist
+        """
+        report = await self.repo.get_with_relations(report_id)
+        if report is None:
+            raise NotFoundException(resource="CardErrorReport")
+        await self.repo.delete(report)
+        logger.info(
+            "Card error report deleted by admin",
+            extra={"report_id": str(report_id)},
+        )

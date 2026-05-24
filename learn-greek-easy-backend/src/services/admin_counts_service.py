@@ -10,7 +10,7 @@ cheap because each is an indexed ``COUNT(*)`` and total round-trip is dominated
 by a single connection acquire.
 """
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import Executable
 
@@ -65,10 +65,16 @@ class AdminCountsService:
             db, select(func.count(Feedback.id)).where(Feedback.status == FeedbackStatus.NEW)
         )
         total_feedback = await _scalar(db, select(func.count(Feedback.id)))
-        pending_errors = await _scalar(
+        # Badge semantic: "open" errors = PENDING ∪ REVIEWED.
+        # Matches the `Open` meta-filter in the toolbar (CER-09) — REVIEWED
+        # reports still need admin action (status flip to FIXED/DISMISSED).
+        open_errors = await _scalar(
             db,
             select(func.count(CardErrorReport.id)).where(
-                CardErrorReport.status == CardErrorStatus.PENDING
+                or_(
+                    CardErrorReport.status == CardErrorStatus.PENDING,
+                    CardErrorReport.status == CardErrorStatus.REVIEWED,
+                )
             ),
         )
         news = await _scalar(db, select(func.count(NewsItem.id)))
@@ -81,12 +87,12 @@ class AdminCountsService:
         decks = vocab_decks + culture_decks
 
         return AdminTabCountsResponse(
-            inbox=new_feedback + pending_errors,
+            inbox=new_feedback + open_errors,
             decks=decks,
             news=news,
             situations=situations,
             exercises=exercises,
-            errors=pending_errors,
+            errors=open_errors,
             feedback=total_feedback,
             changelog=changelog,
             announcements=announcements,

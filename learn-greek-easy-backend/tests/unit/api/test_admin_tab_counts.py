@@ -59,11 +59,16 @@ class TestAdminTabCounts:
             status=FeedbackStatus.COMPLETED,
         )
 
-        # 2 card error reports: one PENDING, one FIXED
+        # 3 card error reports: one PENDING, one REVIEWED, one FIXED
         await CardErrorReportFactory.create(
             session=db_session,
             user_id=test_superuser.id,
             status=CardErrorStatus.PENDING,
+        )
+        await CardErrorReportFactory.create(
+            session=db_session,
+            user_id=test_superuser.id,
+            status=CardErrorStatus.REVIEWED,
         )
         await CardErrorReportFactory.create(
             session=db_session,
@@ -81,12 +86,12 @@ class TestAdminTabCounts:
         assert response.status_code == 200
         data = response.json()
 
-        # inbox = 1 new feedback + 1 pending error = 2
-        assert data["inbox"] == 2
+        # inbox = 1 new feedback + 2 open errors (PENDING + REVIEWED) = 3
+        assert data["inbox"] == 3
         # feedback = total rows = 2
         assert data["feedback"] == 2
-        # errors = pending only = 1
-        assert data["errors"] == 1
+        # errors = open errors (PENDING ∪ REVIEWED) = 2; FIXED is excluded
+        assert data["errors"] == 2
         # announcements = 2
         assert data["announcements"] == 2
         # changelog = 1

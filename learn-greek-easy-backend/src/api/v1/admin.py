@@ -41,6 +41,7 @@ from src.db.dependencies import get_db
 from src.db.models import (
     AudioStatus,
     CardErrorCardType,
+    CardErrorReport,
     CardErrorStatus,
     CardRecord,
     CultureDeck,
@@ -118,6 +119,8 @@ from src.schemas.card_error import (
     AdminCardErrorReportListResponse,
     AdminCardErrorReportResponse,
     AdminCardErrorReportUpdate,
+    CardErrorCardSnapshot,
+    CardErrorDeckSnapshot,
     ReporterBriefResponse,
 )
 from src.schemas.changelog import (
@@ -1740,6 +1743,99 @@ async def admin_delete_changelog(
 # ============================================================================
 
 
+def _build_card_error_response(item: "CardErrorReport") -> AdminCardErrorReportResponse:
+    """Build AdminCardErrorReportResponse from a hydrated CardErrorReport.
+
+    Reads the transient ``_card_obj`` attribute set by the repository's
+    ``_hydrate_cards_and_decks`` method (CER-43) and builds optional card
+    and deck snapshots. Also builds the resolver brief (CER-44).
+    """
+    from src.db.models import CultureQuestion, WordEntry
+
+    # --- Reporter ---
+    reporter = (
+        ReporterBriefResponse(id=item.user.id, full_name=item.user.full_name)
+        if item.user
+        else ReporterBriefResponse(id=item.user_id, full_name=None)
+    )
+
+    # --- Resolver brief (CER-44) ---
+    resolver_brief: Optional[ReporterBriefResponse] = None
+    if item.resolver is not None:
+        resolver_brief = ReporterBriefResponse(
+            id=item.resolver.id, full_name=item.resolver.full_name
+        )
+
+    # --- Card + Deck snapshots (CER-43) ---
+    card_snap: Optional[CardErrorCardSnapshot] = None
+    deck_snap: Optional[CardErrorDeckSnapshot] = None
+
+    card_obj = getattr(item, "_card_obj", None)
+    if card_obj is not None:
+        if isinstance(card_obj, WordEntry):
+            # Extract article and plural from grammar_data if available
+            grammar = card_obj.grammar_data or {}
+            card_snap = CardErrorCardSnapshot(
+                word=card_obj.lemma,
+                gender=card_obj.gender,
+                translation_en=card_obj.translation_en,
+                translation_ru=card_obj.translation_ru,
+                ipa=card_obj.pronunciation,
+                article=grammar.get("article"),
+                plural=grammar.get("plural"),
+            )
+            # Use first deck from the many-to-many relationship
+            decks = getattr(card_obj, "decks", []) or []
+            if decks:
+                first_deck = decks[0]
+                deck_snap = CardErrorDeckSnapshot(
+                    id=first_deck.id,
+                    name=first_deck.name_en,
+                    level=first_deck.level.value if first_deck.level else None,
+                )
+        elif isinstance(card_obj, CultureQuestion):
+            q_text = card_obj.question_text or {}
+            # Collect option texts (English)
+            raw_options = [
+                card_obj.option_a,
+                card_obj.option_b,
+                card_obj.option_c,
+                card_obj.option_d,
+            ]
+            options_en = [opt.get("en", "") for opt in raw_options if opt is not None]
+            card_snap = CardErrorCardSnapshot(
+                question_en=q_text.get("en"),
+                question_el=q_text.get("el"),
+                options=options_en if options_en else None,
+                correct_index=card_obj.correct_option - 1,  # 0-indexed
+            )
+            culture_deck = getattr(card_obj, "deck", None)
+            if culture_deck is not None:
+                deck_snap = CardErrorDeckSnapshot(
+                    id=culture_deck.id,
+                    name=culture_deck.name_en,
+                    level=None,  # CultureDeck has no level field
+                )
+
+    return AdminCardErrorReportResponse(
+        id=item.id,
+        card_id=item.card_id,
+        card_type=item.card_type,
+        user_id=item.user_id,
+        description=item.description,
+        status=item.status,
+        admin_notes=item.admin_notes,
+        resolved_by=item.resolved_by,
+        resolved_at=item.resolved_at,
+        reporter=reporter,
+        resolver=resolver_brief,
+        card=card_snap,
+        deck=deck_snap,
+        created_at=item.created_at,
+        updated_at=item.updated_at,
+    )
+
+
 @router.get(
     "/card-errors",
     response_model=AdminCardErrorReportListResponse,
@@ -1816,31 +1912,7 @@ async def list_card_errors(
         page_size=page_size,
     )
 
-    # Convert to response schema with null-safe reporter mapping
-    response_items = [
-        AdminCardErrorReportResponse(
-            id=item.id,
-            card_id=item.card_id,
-            card_type=item.card_type,
-            user_id=item.user_id,
-            description=item.description,
-            status=item.status,
-            admin_notes=item.admin_notes,
-            resolved_by=item.resolved_by,
-            resolved_at=item.resolved_at,
-            reporter=(
-                ReporterBriefResponse(
-                    id=item.user.id,
-                    full_name=item.user.full_name,
-                )
-                if item.user
-                else ReporterBriefResponse(id=item.user_id, full_name=None)
-            ),
-            created_at=item.created_at,
-            updated_at=item.updated_at,
-        )
-        for item in items
-    ]
+    response_items = [_build_card_error_response(item) for item in items]
 
     return AdminCardErrorReportListResponse(
         total=total,
@@ -1905,29 +1977,7 @@ async def get_card_error(
     """
     service = CardErrorAdminService(db)
     report = await service.get_report_for_admin(report_id)
-
-    # Map to response with null-safe reporter
-    return AdminCardErrorReportResponse(
-        id=report.id,
-        card_id=report.card_id,
-        card_type=report.card_type,
-        user_id=report.user_id,
-        description=report.description,
-        status=report.status,
-        admin_notes=report.admin_notes,
-        resolved_by=report.resolved_by,
-        resolved_at=report.resolved_at,
-        reporter=(
-            ReporterBriefResponse(
-                id=report.user.id,
-                full_name=report.user.full_name,
-            )
-            if report.user
-            else ReporterBriefResponse(id=report.user_id, full_name=None)
-        ),
-        created_at=report.created_at,
-        updated_at=report.updated_at,
-    )
+    return _build_card_error_response(report)
 
 
 @router.patch(
@@ -2009,28 +2059,43 @@ async def update_card_error(
     # Commit the transaction
     await db.commit()
 
-    # Map to response with null-safe reporter
-    return AdminCardErrorReportResponse(
-        id=report.id,
-        card_id=report.card_id,
-        card_type=report.card_type,
-        user_id=report.user_id,
-        description=report.description,
-        status=report.status,
-        admin_notes=report.admin_notes,
-        resolved_by=report.resolved_by,
-        resolved_at=report.resolved_at,
-        reporter=(
-            ReporterBriefResponse(
-                id=report.user.id,
-                full_name=report.user.full_name,
-            )
-            if report.user
-            else ReporterBriefResponse(id=report.user_id, full_name=None)
-        ),
-        created_at=report.created_at,
-        updated_at=report.updated_at,
-    )
+    return _build_card_error_response(report)
+
+
+@router.delete(
+    "/card-errors/{report_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete card error report",
+    description="Permanently (hard) delete a card error report. Requires superuser privileges.",
+    responses={
+        204: {"description": "Report deleted successfully"},
+        404: {"description": "Report not found"},
+    },
+)
+async def delete_card_error(
+    report_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> None:
+    """Hard-delete a card error report (admin only).
+
+    The row is permanently removed from card_error_reports. No soft-delete
+    column exists and none is added (Q6 resolution). Returns 204 on success,
+    404 if the report does not exist.
+
+    Args:
+        report_id: UUID of the error report to delete
+        db: Database session (injected)
+        current_user: Authenticated superuser (injected)
+
+    Raises:
+        401: If not authenticated
+        403: If authenticated but not superuser
+        404: If report not found
+    """
+    service = CardErrorAdminService(db)
+    await service.delete_report_for_admin(report_id)
+    await db.commit()
 
 
 # ============================================================================

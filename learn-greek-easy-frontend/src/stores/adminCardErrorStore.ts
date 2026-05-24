@@ -65,6 +65,7 @@ interface AdminCardErrorState {
     errorId: string,
     data: AdminCardErrorUpdateRequest
   ) => Promise<AdminCardErrorResponse>;
+  deleteError: (id: string) => Promise<void>;
   setFilters: (filters: Partial<AdminCardErrorFilters>) => void;
   clearFilters: () => void;
   setPage: (page: number) => void;
@@ -143,6 +144,19 @@ export const useAdminCardErrorStore = create<AdminCardErrorState>()(
           set({ isUpdating: false, error: message });
           throw error;
         }
+      },
+
+      /**
+       * Hard-delete a card error report (CER-45).
+       * Pessimistic: list is only updated after a successful API response.
+       */
+      deleteError: async (id: string) => {
+        await adminAPI.deleteCardError(id);
+        set((state) => ({
+          errorList: state.errorList.filter((e) => e.id !== id),
+          selectedError: state.selectedError?.id === id ? null : state.selectedError,
+        }));
+        refetchAdminTabCounts();
       },
 
       /**

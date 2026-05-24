@@ -1566,6 +1566,19 @@ export const adminAPI = {
     return api.patch<AdminCardErrorResponse>(`/api/v1/admin/card-errors/${id}`, data);
   },
 
+  /**
+   * Hard-delete a card error report (CER-45)
+   *
+   * Permanently removes the report row. Returns void on success (204).
+   * Requires superuser authentication.
+   *
+   * @param id - UUID of the card error report to delete
+   * @throws 404 if report not found
+   */
+  deleteCardError: async (id: string): Promise<void> => {
+    return api.delete<void>(`/api/v1/admin/card-errors/${id}`);
+  },
+
   generateWordEntry: async (word: string, deckId: string): Promise<GenerateWordEntryResponse> =>
     api.post<GenerateWordEntryResponse>('/api/v1/admin/word-entries/generate', {
       word,

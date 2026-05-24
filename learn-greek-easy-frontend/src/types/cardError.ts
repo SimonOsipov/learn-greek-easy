@@ -164,6 +164,39 @@ export interface ReporterBrief {
 }
 
 /**
+ * Polymorphic card content snapshot (CER-43).
+ * WORD reports populate word-* fields; CULTURE reports populate question-* fields.
+ * Both are null when the underlying card has been hard-deleted.
+ * Matches backend CardErrorCardSnapshot schema.
+ */
+export interface CardErrorCardSnapshot {
+  // WORD variant
+  word?: string | null;
+  article?: string | null;
+  gender?: string | null;
+  translation_en?: string | null;
+  translation_ru?: string | null;
+  plural?: string | null;
+  ipa?: string | null;
+  // CULTURE variant
+  question_en?: string | null;
+  question_el?: string | null;
+  options?: string[] | null;
+  correct_index?: number | null;
+  level?: string | null;
+}
+
+/**
+ * Deck context snapshot (CER-43).
+ * Matches backend CardErrorDeckSnapshot schema.
+ */
+export interface CardErrorDeckSnapshot {
+  id: string;
+  name: string;
+  level?: string | null;
+}
+
+/**
  * Admin card error report response with full details.
  * Includes user_id, resolved_by, and reporter info not shown to regular users.
  * Matches backend AdminCardErrorReportResponse schema.
@@ -189,6 +222,12 @@ export interface AdminCardErrorResponse {
   resolved_at: string | null;
   /** Brief info about the reporter */
   reporter: ReporterBrief;
+  /** Brief info about the resolver — null when unresolved (CER-44) */
+  resolver: ReporterBrief | null;
+  /** Polymorphic card content snapshot — null when card was deleted (CER-43) */
+  card: CardErrorCardSnapshot | null;
+  /** Deck context snapshot — null when card/deck was deleted (CER-43) */
+  deck: CardErrorDeckSnapshot | null;
   /** ISO 8601 timestamp when report was created */
   created_at: string;
   /** ISO 8601 timestamp when report was last updated */
