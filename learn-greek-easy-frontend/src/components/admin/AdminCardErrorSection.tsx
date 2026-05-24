@@ -9,31 +9,20 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { SegControl } from '@/components/ui/seg-control';
 import { Skeleton } from '@/components/ui/skeleton';
+import type { CardErrorStatusFilter } from '@/stores/adminCardErrorStore';
 import { useAdminCardErrorStore } from '@/stores/adminCardErrorStore';
-import type { AdminCardErrorResponse, CardErrorStatus, CardType } from '@/types/cardError';
+import type { AdminCardErrorResponse, CardType } from '@/types/cardError';
 
 import { AdminCardErrorCard } from './AdminCardErrorCard';
 import { AdminCardErrorDetailModal } from './AdminCardErrorDetailModal';
 
-const CARD_ERROR_STATUSES: { value: CardErrorStatus; label: string }[] = [
-  { value: 'PENDING', label: 'pending' },
-  { value: 'REVIEWED', label: 'reviewed' },
-  { value: 'FIXED', label: 'fixed' },
-  { value: 'DISMISSED', label: 'dismissed' },
-];
+// ── Type aliases for filter segs ───────────────────────────────────────────────
 
-const CARD_TYPES: { value: CardType; label: string }[] = [
-  { value: 'WORD', label: 'word' },
-  { value: 'CULTURE', label: 'culture' },
-];
+type TypeSeg = 'all' | 'WORD' | 'CULTURE';
+
+// ── useDebounce ────────────────────────────────────────────────────────────────
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -46,11 +35,24 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
+// ── Client-side status filter for 'open' meta-key ─────────────────────────────
+
+function applyStatusFilter(
+  list: AdminCardErrorResponse[],
+  filter: CardErrorStatusFilter
+): AdminCardErrorResponse[] {
+  if (!filter || filter === null) return list;
+  if (filter === 'open') {
+    return list.filter((e) => e.status === 'PENDING' || e.status === 'REVIEWED');
+  }
+  return list.filter((e) => e.status === filter);
+}
+
 /**
  * Admin Card Error Section Component
  *
  * Displays a paginated list of all card error reports for admin management.
- * Includes filtering by status and card type.
+ * Includes filtering by status (segmented chips with 'open' meta-key) and card type.
  */
 export const AdminCardErrorSection: React.FC = () => {
   const { t } = useTranslation('admin');
@@ -76,20 +78,23 @@ export const AdminCardErrorSection: React.FC = () => {
   const debouncedSearch = useDebounce(searchInput, 300);
   const pageSize = 10;
 
+  // Local type seg — drives store filter
+  const typeSeg: TypeSeg = (filters.cardType as TypeSeg) ?? 'all';
+
   // Fetch on mount
   useEffect(() => {
     fetchErrorList();
   }, [fetchErrorList]);
 
-  const handleStatusFilterChange = (value: string) => {
+  const handleStatusFilterChange = (value: CardErrorStatusFilter | 'all') => {
     if (value === 'all') {
       setFilters({ status: null });
     } else {
-      setFilters({ status: value as CardErrorStatus });
+      setFilters({ status: value as CardErrorStatusFilter });
     }
   };
 
-  const handleCardTypeFilterChange = (value: string) => {
+  const handleCardTypeFilterChange = (value: TypeSeg) => {
     if (value === 'all') {
       setFilters({ cardType: null });
     } else {
@@ -122,11 +127,16 @@ export const AdminCardErrorSection: React.FC = () => {
     }
   };
 
+  const statusSeg: CardErrorStatusFilter | 'all' = filters.status ?? 'all';
+
   const hasActiveFilters =
     filters.status !== null || filters.cardType !== null || debouncedSearch !== '';
 
+  // Apply client-side open filter (when status === 'open', backend returned all rows)
+  const afterStatusFilter = applyStatusFilter(errorList, filters.status);
+
   const filteredErrors = debouncedSearch
-    ? errorList.filter((item) => {
+    ? afterStatusFilter.filter((item) => {
         const desc = item.description?.toLowerCase() ?? '';
         const name = item.reporter?.full_name?.toLowerCase() ?? '';
         return (
@@ -134,7 +144,24 @@ export const AdminCardErrorSection: React.FC = () => {
           name.includes(debouncedSearch.toLowerCase())
         );
       })
-    : errorList;
+    : afterStatusFilter;
+
+  // ── Seg options ─────────────────────────────────────────────────────────────
+
+  const STATUS_OPTIONS = [
+    { value: 'all' as const, label: t('cardErrors.filters.status.all') },
+    { value: 'open' as const, label: t('cardErrors.filters.status.open') },
+    { value: 'PENDING' as const, label: t('cardErrors.filters.status.pending') },
+    { value: 'REVIEWED' as const, label: t('cardErrors.filters.status.reviewed') },
+    { value: 'FIXED' as const, label: t('cardErrors.filters.status.fixed') },
+    { value: 'DISMISSED' as const, label: t('cardErrors.filters.status.dismissed') },
+  ];
+
+  const TYPE_OPTIONS = [
+    { value: 'all' as TypeSeg, label: t('cardErrors.filters.type.all') },
+    { value: 'WORD' as TypeSeg, label: t('cardErrors.filters.type.words') },
+    { value: 'CULTURE' as TypeSeg, label: t('cardErrors.filters.type.culture') },
+  ];
 
   return (
     <div className="space-y-6">
@@ -147,45 +174,32 @@ export const AdminCardErrorSection: React.FC = () => {
         </CardHeader>
         <CardContent>
           {/* Filters */}
-          <div className="mb-4 flex flex-col gap-4 sm:flex-row">
-            <div className="relative flex-1">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+            <SegControl
+              options={STATUS_OPTIONS}
+              value={statusSeg}
+              onChange={handleStatusFilterChange}
+              ariaLabel={t('cardErrors.filters.statusPlaceholder')}
+            />
+
+            <SegControl
+              options={TYPE_OPTIONS}
+              value={typeSeg}
+              onChange={handleCardTypeFilterChange}
+              ariaLabel={t('cardErrors.filters.typePlaceholder')}
+            />
+
+            <div className="relative min-w-[200px] flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="text"
-                placeholder={t('cardErrors.search.placeholder')}
+                placeholder={t('cardErrors.toolbar.searchPlaceholder')}
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 className="pl-9"
                 data-testid="card-error-search-input"
               />
             </div>
-            <Select value={filters.status || 'all'} onValueChange={handleStatusFilterChange}>
-              <SelectTrigger className="w-full sm:w-[180px]" data-testid="card-error-status-filter">
-                <SelectValue placeholder={t('cardErrors.filters.statusPlaceholder')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('cardErrors.filters.allStatuses')}</SelectItem>
-                {CARD_ERROR_STATUSES.map((status) => (
-                  <SelectItem key={status.value} value={status.value}>
-                    {t(`cardErrors.statuses.${status.label}`)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={filters.cardType || 'all'} onValueChange={handleCardTypeFilterChange}>
-              <SelectTrigger className="w-full sm:w-[180px]" data-testid="card-error-type-filter">
-                <SelectValue placeholder={t('cardErrors.filters.typePlaceholder')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('cardErrors.filters.allTypes')}</SelectItem>
-                {CARD_TYPES.map((type) => (
-                  <SelectItem key={type.value} value={type.value}>
-                    {t(`cardErrors.cardTypes.${type.label}`)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
 
             {hasActiveFilters && (
               <Button
