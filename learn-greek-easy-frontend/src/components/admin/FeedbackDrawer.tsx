@@ -34,6 +34,7 @@ import {
   HANDOFF_STATUSES,
   STATUS_TONE,
 } from './feedbackStatusMap';
+import { MetaTable } from './MetaTable';
 import { StatusGrid } from './StatusGrid';
 
 import type { HandoffStatus } from './feedbackStatusMap';
@@ -271,70 +272,56 @@ function MetaTab({ feedbackId }: MetaTabProps) {
 
   const handoff = BACKEND_TO_HANDOFF[item.status];
 
-  return (
-    <div className="fb-meta-table" role="list" aria-label="Feedback metadata">
-      {/* Row 1: User */}
-      <div className="fb-meta-row" role="listitem">
-        <span className="fb-meta-l">{t('feedback.v2.drawer.meta.rows.user')}</span>
-        <span className="fb-meta-v">
-          {item.author?.full_name || t('feedback.v2.type.anonymous')}
-        </span>
-      </div>
-
-      {/* Row 2: Type */}
-      <div className="fb-meta-row" role="listitem">
-        <span className="fb-meta-l">{t('feedback.v2.drawer.meta.rows.type')}</span>
-        <span className="fb-meta-v">
-          {item.category === 'bug_incorrect_data'
-            ? t('feedback.v2.type.bug')
-            : t('feedback.v2.type.feature')}
-        </span>
-      </div>
-
-      {/* Row 3: Submitted */}
-      <div className="fb-meta-row" role="listitem">
-        <span className="fb-meta-l">{t('feedback.v2.drawer.meta.rows.submitted')}</span>
-        <span className="fb-meta-v">
+  const metaRows = [
+    {
+      label: t('feedback.v2.drawer.meta.rows.user'),
+      value: item.author?.full_name || t('feedback.v2.type.anonymous'),
+    },
+    {
+      label: t('feedback.v2.drawer.meta.rows.type'),
+      value:
+        item.category === 'bug_incorrect_data'
+          ? t('feedback.v2.type.bug')
+          : t('feedback.v2.type.feature'),
+    },
+    {
+      label: t('feedback.v2.drawer.meta.rows.submitted'),
+      value: (
+        <>
           {format(new Date(item.created_at), 'PP', { locale: getDateLocale(i18n.language) })} (
           {formatDistanceToNow(new Date(item.created_at), {
             addSuffix: true,
             locale: getDateLocale(i18n.language),
           })}
           )
-        </span>
-      </div>
+        </>
+      ),
+    },
+    // TODO(feedback-device): add device row once Feedback.device is on the model
+    { label: t('feedback.v2.drawer.meta.rows.likes'), value: item.vote_count },
+    {
+      label: t('feedback.v2.drawer.meta.rows.status'),
+      value: <Badge tone={STATUS_TONE[handoff]}>{t(HANDOFF_LABEL[handoff])}</Badge>,
+    },
+    ...(item.admin_response
+      ? [
+          {
+            label: t('feedback.v2.drawer.meta.rows.responded'),
+            value: (
+              <>
+                {formatDistanceToNow(new Date(item.admin_response_at ?? item.created_at), {
+                  addSuffix: true,
+                  locale: getDateLocale(i18n.language),
+                })}{' '}
+                · {t('feedback.v2.drawer.admin')}
+              </>
+            ),
+          },
+        ]
+      : []),
+  ];
 
-      {/* Row 4: Likes */}
-      <div className="fb-meta-row" role="listitem">
-        <span className="fb-meta-l">{t('feedback.v2.drawer.meta.rows.likes')}</span>
-        <span className="fb-meta-v">{item.vote_count}</span>
-      </div>
-
-      {/* TODO(feedback-device): show once Feedback.device is on the model */}
-
-      {/* Row 5: Status — Badge via tone API */}
-      <div className="fb-meta-row" role="listitem">
-        <span className="fb-meta-l">{t('feedback.v2.drawer.meta.rows.status')}</span>
-        <span className="fb-meta-v">
-          <Badge tone={STATUS_TONE[handoff]}>{t(HANDOFF_LABEL[handoff])}</Badge>
-        </span>
-      </div>
-
-      {/* Row 6 (conditional): Responded — only when admin_response is present */}
-      {item.admin_response ? (
-        <div className="fb-meta-row" role="listitem">
-          <span className="fb-meta-l">{t('feedback.v2.drawer.meta.rows.responded')}</span>
-          <span className="fb-meta-v">
-            {formatDistanceToNow(new Date(item.admin_response_at ?? item.created_at), {
-              addSuffix: true,
-              locale: getDateLocale(i18n.language),
-            })}{' '}
-            · {t('feedback.v2.drawer.admin')}
-          </span>
-        </div>
-      ) : null}
-    </div>
-  );
+  return <MetaTable rows={metaRows} ariaLabel="Feedback metadata" />;
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────

@@ -475,7 +475,7 @@ describe('FeedbackDrawer', () => {
 
       renderDrawer(feedback.id, 'meta');
 
-      const rows = document.querySelectorAll('.fb-meta-row');
+      const rows = document.querySelectorAll('.admin-meta-row');
       expect(rows).toHaveLength(5);
     });
 
@@ -488,7 +488,7 @@ describe('FeedbackDrawer', () => {
 
       renderDrawer(feedback.id, 'meta');
 
-      const rows = document.querySelectorAll('.fb-meta-row');
+      const rows = document.querySelectorAll('.admin-meta-row');
       expect(rows).toHaveLength(6);
     });
 
