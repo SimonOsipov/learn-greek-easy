@@ -20,10 +20,16 @@ import type {
 } from '@/types/cardError';
 
 /**
+ * Status filter value: a concrete status, the 'open' meta-key (pending | reviewed),
+ * or null (all).
+ */
+export type CardErrorStatusFilter = CardErrorStatus | 'open' | null;
+
+/**
  * Admin Card Error filters state
  */
 interface AdminCardErrorFilters {
-  status: CardErrorStatus | null;
+  status: CardErrorStatusFilter;
   cardType: CardType | null;
 }
 
@@ -66,7 +72,9 @@ interface AdminCardErrorState {
     data: AdminCardErrorUpdateRequest
   ) => Promise<AdminCardErrorResponse>;
   deleteError: (id: string) => Promise<void>;
-  setFilters: (filters: Partial<AdminCardErrorFilters>) => void;
+  setFilters: (
+    filters: Partial<{ status: CardErrorStatusFilter; cardType: CardType | null }>
+  ) => void;
   clearFilters: () => void;
   setPage: (page: number) => void;
   clearError: () => void;
@@ -99,10 +107,18 @@ export const useAdminCardErrorStore = create<AdminCardErrorState>()(
         set({ isLoading: true, error: null });
 
         try {
+          // 'open' meta-key = pending | reviewed — backend doesn't support multi-status,
+          // so we fetch without a status filter and filter client-side in the section.
+          // TODO(CER-OOS): extend backend to accept ?status=pending&status=reviewed.
+          const apiStatus =
+            filters.status === null || filters.status === 'open'
+              ? undefined
+              : (filters.status as CardErrorStatus);
+
           const response = await adminAPI.listCardErrors({
             page,
             page_size: pageSize,
-            status: filters.status ?? undefined,
+            status: apiStatus,
             card_type: filters.cardType ?? undefined,
           });
 
@@ -162,7 +178,9 @@ export const useAdminCardErrorStore = create<AdminCardErrorState>()(
       /**
        * Update filters and automatically re-fetch errors
        */
-      setFilters: (newFilters: Partial<AdminCardErrorFilters>) => {
+      setFilters: (
+        newFilters: Partial<{ status: CardErrorStatusFilter; cardType: CardType | null }>
+      ) => {
         set((state) => ({
           filters: { ...state.filters, ...newFilters },
           page: 1, // Reset to first page on filter change
@@ -210,6 +228,7 @@ export const selectCardErrorIsLoading = (state: AdminCardErrorState) => state.is
 export const selectCardErrorIsUpdating = (state: AdminCardErrorState) => state.isUpdating;
 export const selectCardErrorError = (state: AdminCardErrorState) => state.error;
 export const selectCardErrorFilters = (state: AdminCardErrorState) => state.filters;
+
 export const selectCardErrorPagination = (state: AdminCardErrorState) => ({
   page: state.page,
   pageSize: state.pageSize,
