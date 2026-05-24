@@ -23,6 +23,13 @@
 //   CER-38  Drawer footer: Delete destructive action (AlertDialog)
 //   CER-39  Footer primary CTA label sentence-case fix
 //
+// Analytics batch 11 (CER-59):
+//   admin_card_error_opened        — on drawer open
+//   admin_card_error_status_changed — on status select change (pre-save)
+//   admin_card_error_canned_reply_used — on canned pill click
+//   admin_card_error_saved         — on successful PATCH
+//   admin_card_error_deleted       — on successful DELETE
+//
 // TODO(CER-20-followup): bespoke 40px slide via dwSlide keyframe per design spec
 
 import React, { useEffect, useRef, useState } from 'react';
@@ -58,6 +65,7 @@ import { Separator } from '@/components/ui/separator';
 import { SidePanel } from '@/components/ui/side-panel';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { track } from '@/lib/analytics/track';
 import { adminAPI } from '@/services/adminAPI';
 import { useAdminCardErrorStore } from '@/stores/adminCardErrorStore';
 import type { AdminCardErrorResponse, AdminCardErrorUpdateRequest } from '@/types/cardError';
@@ -222,6 +230,23 @@ export const CardErrorDrawer: React.FC<CardErrorDrawerProps> = ({
     if (open) setTab(DEFAULT_TAB);
   }, [open, report?.id]);
 
+  // ── CER-59: fire admin_card_error_opened when drawer becomes visible ────────
+  useEffect(() => {
+    if (open && report) {
+      cannedUsedRef.current = false;
+      track('admin_card_error_opened', {
+        report_id: report.id,
+        card_type: report.card_type,
+        status: report.status,
+        has_admin_notes: Boolean(report.admin_notes?.trim()),
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, report?.id]);
+
+  // ── Analytics ref: tracks whether a canned reply was used in this session (CER-59) ──
+  const cannedUsedRef = useRef(false);
+
   // ── Copy card ID state (CER-26, tabs-row header) ───────────────────────────
   const [copied, setCopied] = useState(false);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -292,6 +317,14 @@ export const CardErrorDrawer: React.FC<CardErrorDrawerProps> = ({
 
       const updatedReport = await adminAPI.updateCardError(report.id, updateData);
 
+      // CER-59: track successful save
+      track('admin_card_error_saved', {
+        report_id: report.id,
+        final_status: data.status,
+        notes_length: data.admin_notes?.trim().length ?? 0,
+        used_canned_reply: cannedUsedRef.current,
+      });
+
       toast({
         title: t('cardErrors.detail.updateSuccess'),
         description: t('cardErrors.detail.updateSuccessMessage'),
@@ -349,6 +382,11 @@ export const CardErrorDrawer: React.FC<CardErrorDrawerProps> = ({
     setIsDeleting(true);
     try {
       await deleteError(report.id);
+      // CER-59: track successful delete
+      track('admin_card_error_deleted', {
+        report_id: report.id,
+        status_at_delete: report.status,
+      });
       setDeleteConfirmOpen(false);
       onOpenChange(false);
       toast({ title: t('cardErrors.drawer.foot.deleteSuccess') });
@@ -570,7 +608,17 @@ export const CardErrorDrawer: React.FC<CardErrorDrawerProps> = ({
                       <StatusGrid<CEStatus>
                         options={statusOptions}
                         value={field.value as CEStatus}
-                        onChange={field.onChange}
+                        onChange={(next) => {
+                          // CER-59: track status change (pre-save)
+                          if (report && next !== field.value) {
+                            track('admin_card_error_status_changed', {
+                              report_id: report.id,
+                              from_status: field.value,
+                              to_status: next,
+                            });
+                          }
+                          field.onChange(next);
+                        }}
                       />
                     </div>
                   )}
@@ -580,7 +628,17 @@ export const CardErrorDrawer: React.FC<CardErrorDrawerProps> = ({
                 <CannedReplyPills
                   label={t('cardErrors.reply.quick.heading')}
                   pills={cannedPills}
-                  onSelect={(body) => form.setValue('admin_notes', body)}
+                  onSelect={(body, key) => {
+                    // CER-59: track canned reply usage
+                    if (report) {
+                      cannedUsedRef.current = true;
+                      track('admin_card_error_canned_reply_used', {
+                        report_id: report.id,
+                        pill_key: key,
+                      });
+                    }
+                    form.setValue('admin_notes', body);
+                  }}
                 />
 
                 {/* ── CER-30 + CER-31: Admin notes with hint and updated placeholder ── */}

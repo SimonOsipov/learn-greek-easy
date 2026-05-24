@@ -129,3 +129,57 @@ Fired each time a user submits an answer during an exercise practice session.
 - `modality` (string) — audio I/O channel: `'listening'`, `'reading'`, or `'all'`. **Separate from `exercise_type`** — modality describes the audio presentation channel, not the task format.
 - `is_correct` (boolean) — whether the user's answer was correct.
 - `response_time_ms` (number) — milliseconds from exercise render to answer submission.
+
+## Admin Card Error Events (CER-59)
+
+> **Note:** These admin-only events are an exception to the "DO NOT create events for admin panel actions" rule. They are scoped to the `admin_card_error_` prefix and are used to track admin review workflows.
+
+### `admin_card_error_opened`
+
+Fired when the CardErrorDrawer opens for a specific report.
+
+**Properties:**
+
+- `report_id` (string) — UUID of the card error report.
+- `card_type` (string) — `'WORD'` or `'CULTURE'`.
+- `status` (string) — current status at time of opening: `'PENDING'`, `'REVIEWED'`, `'FIXED'`, or `'DISMISSED'`.
+- `has_admin_notes` (boolean) — whether the report already has admin notes.
+
+### `admin_card_error_status_changed`
+
+Fired when the admin selects a new status in the StatusGrid (pre-save, on change).
+
+**Properties:**
+
+- `report_id` (string) — UUID of the card error report.
+- `from_status` (string) — status before the change.
+- `to_status` (string) — status after the change.
+
+### `admin_card_error_canned_reply_used`
+
+Fired when the admin clicks a canned reply pill to populate the admin notes textarea.
+
+**Properties:**
+
+- `report_id` (string) — UUID of the card error report.
+- `pill_key` (string) — key of the canned reply pill (e.g. `'confirmedFixed'`, `'needMoreInfo'`).
+
+### `admin_card_error_saved`
+
+Fired after a successful PATCH (status/notes update).
+
+**Properties:**
+
+- `report_id` (string) — UUID of the card error report.
+- `final_status` (string) — status value sent in the PATCH.
+- `notes_length` (number) — character count of admin notes (trimmed).
+- `used_canned_reply` (boolean) — whether a canned reply pill was used in this session before saving.
+
+### `admin_card_error_deleted`
+
+Fired after a successful DELETE of a card error report.
+
+**Properties:**
+
+- `report_id` (string) — UUID of the card error report.
+- `status_at_delete` (string) — the report's status at the time of deletion.
