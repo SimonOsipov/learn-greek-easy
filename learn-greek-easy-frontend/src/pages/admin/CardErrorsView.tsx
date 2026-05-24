@@ -11,30 +11,30 @@ export default function CardErrorsView() {
     <div>
       <section className="stat-grid">
         <StatCard
-          title={t('cardErrors.v2.statCards.total.label')}
+          title={t('cardErrors.stats.totalReports.label')}
           n="—"
-          sub={t('cardErrors.v2.statCards.total.sub')}
+          sub={t('cardErrors.stats.totalReports.subline')}
           tone="cyan"
           icon={<AlertTriangle />}
         />
         <StatCard
-          title={t('cardErrors.v2.statCards.open.label')}
+          title={t('cardErrors.stats.awaitingReview.label')}
           n="—"
-          sub={t('cardErrors.v2.statCards.open.sub')}
+          sub={t('cardErrors.stats.awaitingReview.subline')}
           tone="amber"
           icon={<Clock />}
         />
         <StatCard
-          title={t('cardErrors.v2.statCards.resolved.label')}
+          title={t('cardErrors.stats.fixedAllTime.label')}
           n="—"
-          sub={t('cardErrors.v2.statCards.resolved.sub')}
+          sub={t('cardErrors.stats.fixedAllTime.subline')}
           tone="green"
           icon={<CheckCircle />}
         />
         <StatCard
-          title={t('cardErrors.v2.statCards.avgTimeToResolve.label')}
+          title={t('cardErrors.stats.medianTimeToFix.label')}
           n="—"
-          sub={t('cardErrors.v2.statCards.avgTimeToResolve.sub')}
+          sub={t('cardErrors.stats.medianTimeToFix.subline')}
           tone="violet"
           icon={<Gauge />}
         />

@@ -826,93 +826,200 @@
     }
   },
   "cardErrors": {
+    "adminNotesLabel": "Admin Notes",
+    "anonymousUser": "Anonymous User",
     "breadcrumb": {
-      "dashboard": "Admin",
+      "dashboard": "Dashboard",
       "current": "Card errors"
     },
-    "kicker": "Admin · Card errors",
-    "title": "Card errors",
-    "sub": "User-reported issues on word and culture cards.",
-    "stats": {
-      "total": "Total Reports",
-      "pending": "Pending",
-      "fixed": "Fixed"
-    },
-    "sectionTitle": "Card Error Reports",
-    "sectionDescription": "Review and respond to card error reports from users",
-    "anonymousUser": "Anonymous User",
-    "respond": "Respond",
-    "editResponse": "Edit Response",
-    "adminNotesLabel": "Admin Notes",
-    "statuses": {
-      "pending": "Pending",
-      "reviewed": "Reviewed",
-      "fixed": "Fixed",
-      "dismissed": "Dismissed"
-    },
     "cardTypes": {
-      "word": "Word Entry",
-      "culture": "Culture Question"
+      "culture": "Culture Question",
+      "word": "Word Entry"
     },
-    "filters": {
-      "statusPlaceholder": "Filter by status",
-      "typePlaceholder": "Filter by card type",
-      "allStatuses": "All Statuses",
-      "allTypes": "All Types",
-      "clear": "Clear Filters"
+    "detail": {
+      "adminActions": "Admin Actions",
+      "adminNotesLabel": "Admin Notes",
+      "adminNotesPlaceholder": "Add notes about the resolution...",
+      "anonymousUser": "Anonymous User",
+      "cardIdCopied": "Card ID Copied",
+      "cardIdCopiedMessage": "Card ID has been copied to clipboard",
+      "copyCardId": "Copy Card ID",
+      "reportedBy": "Reported by",
+      "reportedOn": "Reported on {{date}}",
+      "resolvedAt": "Resolved on {{date}}",
+      "selectStatus": "Select status",
+      "statusLabel": "Status",
+      "title": "Error Report Details",
+      "updateError": "Update Failed",
+      "updateErrorMessage": "Failed to update the error report",
+      "updateSuccess": "Report Updated",
+      "updateSuccessMessage": "The error report has been updated successfully",
+      "userDescription": "User Description",
+      "viewCard": "View Card"
     },
-    "search": {
-      "placeholder": "Search reports...",
-      "filteredCount": "{{filtered}} of {{total}} reports",
-      "noResults": "No reports match your search"
+    "drawer": {
+      "actions": {
+        "copied": "Copied",
+        "copyCardId": "Copy card ID",
+        "openInDeck": "Open in deck"
+      },
+      "breadcrumb": "Card errors / Report",
+      "foot": {
+        "delete": "Delete report",
+        "deleteConfirm": {
+          "body": "This cannot be undone. The reporter will not be notified.",
+          "cancel": "Cancel",
+          "confirm": "Delete",
+          "title": "Delete this report?"
+        },
+        "notifyCaption": "Reporter will be notified by email.",
+        "resolvedCaption": "This report is resolved.",
+        "save": "Save"
+      },
+      "tabs": {
+        "meta": "Meta",
+        "review": "Review",
+        "theCard": "The card"
+      },
+      "title": "Card error report"
+    },
+    "editResponse": "Edit Response",
+    "empty": {
+      "body": "Adjust filters or wait for new reports to come in.",
+      "title": "No reports match these filters"
     },
     "errors": {
       "loadingTitle": "Error Loading Reports"
     },
+    "filters": {
+      "allStatuses": "All Statuses",
+      "allTypes": "All Types",
+      "clear": "Clear Filters",
+      "status": {
+        "all": "All",
+        "dismissed": "Dismissed",
+        "fixed": "Fixed",
+        "open": "Open",
+        "pending": "Pending",
+        "reviewed": "Reviewed"
+      },
+      "statusPlaceholder": "Filter by status",
+      "type": {
+        "all": "All types",
+        "culture": "Culture",
+        "words": "Words"
+      },
+      "typePlaceholder": "Filter by card type"
+    },
+    "kicker": "Quality control",
+    "meta": {
+      "cardId": "Card ID",
+      "deck": "Deck",
+      "reported": "Reported",
+      "reporter": "Reporter",
+      "resolved": "Resolved",
+      "status": "Status",
+      "type": "Type"
+    },
+    "preview": {
+      "culture": {
+        "kicker": "Culture card"
+      },
+      "markedCorrect": "Marked correct",
+      "word": {
+        "kicker": "Word card"
+      }
+    },
+    "reply": {
+      "notes": {
+        "hint": "Visible to admins only.",
+        "label": "Internal notes",
+        "placeholder": "Add context for other admins…"
+      },
+      "quick": {
+        "confirmedFixed": {
+          "body": "Thanks for the report — the card has been updated.",
+          "label": "Confirmed fixed"
+        },
+        "duplicate": {
+          "body": "We've already received this report — closing as duplicate.",
+          "label": "Duplicate"
+        },
+        "needMoreInfo": {
+          "body": "Could you share more detail about what looked off?",
+          "label": "Need more info"
+        },
+        "notAnError": {
+          "body": "This card is correct as designed — closing as not an error.",
+          "label": "Not an error"
+        },
+        "reRecordAudio": {
+          "body": "Audio has been re-recorded and pushed to your deck.",
+          "label": "Re-record audio"
+        }
+      },
+      "resolvedBanner": {
+        "by": "by",
+        "title": "Resolved"
+      },
+      "status": {
+        "hint": "How should this report be resolved?",
+        "label": "Set status"
+      }
+    },
+    "respond": "Respond",
+    "row": {
+      "editResponse": "Edit response",
+      "inDeck": "in deck",
+      "openCard": "Open card",
+      "respond": "Respond"
+    },
+    "search": {
+      "filteredCount": "{{filtered}} of {{total}} reports",
+      "noResults": "No reports match your search",
+      "placeholder": "Search reports..."
+    },
+    "sectionDescription": "Review and respond to card error reports from users",
+    "sectionTitle": "Card Error Reports",
     "states": {
       "noErrors": "No error reports submitted yet",
       "noFilteredResults": "No reports match the selected filters"
     },
-    "detail": {
-      "title": "Error Report Details",
-      "reportedOn": "Reported on {{date}}",
-      "reportedBy": "Reported by",
-      "anonymousUser": "Anonymous User",
-      "userDescription": "User Description",
-      "viewCard": "View Card",
-      "copyCardId": "Copy Card ID",
-      "cardIdCopied": "Card ID Copied",
-      "cardIdCopiedMessage": "Card ID has been copied to clipboard",
-      "adminActions": "Admin Actions",
-      "statusLabel": "Status",
-      "selectStatus": "Select status",
-      "adminNotesLabel": "Admin Notes",
-      "adminNotesPlaceholder": "Add notes about the resolution...",
-      "resolvedAt": "Resolved on {{date}}",
-      "updateSuccess": "Report Updated",
-      "updateSuccessMessage": "The error report has been updated successfully",
-      "updateError": "Update Failed",
-      "updateErrorMessage": "Failed to update the error report"
+    "statuses": {
+      "dismissed": "Dismissed",
+      "fixed": "Fixed",
+      "pending": "Pending",
+      "reviewed": "Reviewed"
     },
-    "v2": {
-      "statCards": {
-        "total": {
-          "label": "Total errors",
-          "sub": "Counts coming soon"
-        },
-        "open": {
-          "label": "Open",
-          "sub": "Counts coming soon"
-        },
-        "resolved": {
-          "label": "Resolved",
-          "sub": "Counts coming soon"
-        },
-        "avgTimeToResolve": {
-          "label": "Avg time to resolve",
-          "sub": "Counts coming soon"
-        }
+    "stats": {
+      "awaitingReview": {
+        "label": "Awaiting review",
+        "subline": "Needs triage"
+      },
+      "fixedAllTime": {
+        "label": "Fixed",
+        "subline": "All time"
+      },
+      "footerWindow": "Last 30 days",
+      "medianTimeToFix": {
+        "label": "Median time to fix",
+        "subline": "Last 30 days"
+      },
+      "totalReports": {
+        "label": "Total reports",
+        "subline": "All time"
       }
+    },
+    "sub": "User-reported issues with deck cards — review, respond, and fix.",
+    "theCard": {
+      "copied": "Copied",
+      "copy": "Copy",
+      "cardIdLabel": "Card ID",
+      "openInDeck": "Open in deck"
+    },
+    "title": "Card errors",
+    "toolbar": {
+      "searchPlaceholder": "Search by card, reporter, or note…"
     }
   },
   "cardCreate": {

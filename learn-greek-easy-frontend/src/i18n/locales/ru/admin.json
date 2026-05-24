@@ -764,93 +764,200 @@
     }
   },
   "cardErrors": {
+    "adminNotesLabel": "Заметки администратора",
+    "anonymousUser": "Анонимный пользователь",
     "breadcrumb": {
-      "dashboard": "Админ",
+      "dashboard": "Панель",
       "current": "Ошибки карточек"
     },
-    "kicker": "Админ · Ошибки карточек",
-    "title": "Ошибки карточек",
-    "sub": "Пользовательские сообщения об ошибках в словарных и культурных карточках.",
-    "stats": {
-      "total": "Всего отчётов",
-      "pending": "На рассмотрении",
-      "fixed": "Исправлено"
-    },
-    "sectionTitle": "Отчёты об ошибках в карточках",
-    "sectionDescription": "Просмотр и ответы на отчёты пользователей об ошибках в карточках",
-    "anonymousUser": "Анонимный пользователь",
-    "respond": "Ответить",
-    "editResponse": "Изменить ответ",
-    "adminNotesLabel": "Заметки администратора",
-    "statuses": {
-      "pending": "В ожидании",
-      "reviewed": "Рассмотрено",
-      "fixed": "Исправлено",
-      "dismissed": "Отклонено"
-    },
     "cardTypes": {
-      "word": "Словарная запись",
-      "culture": "Вопрос о культуре"
+      "culture": "Вопрос о культуре",
+      "word": "Словарная запись"
     },
-    "filters": {
-      "statusPlaceholder": "Фильтр по статусу",
-      "typePlaceholder": "Фильтр по типу карточки",
-      "allStatuses": "Все статусы",
-      "allTypes": "Все типы",
-      "clear": "Очистить фильтры"
+    "detail": {
+      "adminActions": "Действия администратора",
+      "adminNotesLabel": "Заметки администратора",
+      "adminNotesPlaceholder": "Добавьте заметки о разрешении...",
+      "anonymousUser": "Анонимный пользователь",
+      "cardIdCopied": "ID карточки скопирован",
+      "cardIdCopiedMessage": "ID карточки скопирован в буфер обмена",
+      "copyCardId": "Скопировать ID карточки",
+      "reportedBy": "Сообщил",
+      "reportedOn": "Сообщено {{date}}",
+      "resolvedAt": "Разрешено {{date}}",
+      "selectStatus": "Выберите статус",
+      "statusLabel": "Статус",
+      "title": "Детали отчёта об ошибке",
+      "updateError": "Ошибка обновления",
+      "updateErrorMessage": "Не удалось обновить отчёт об ошибке",
+      "updateSuccess": "Отчёт обновлён",
+      "updateSuccessMessage": "Отчёт об ошибке успешно обновлён",
+      "userDescription": "Описание пользователя",
+      "viewCard": "Просмотреть карточку"
     },
-    "search": {
-      "placeholder": "Поиск отчётов...",
-      "filteredCount": "{{filtered}} из {{total}} отчётов",
-      "noResults": "Отчёты не найдены"
+    "drawer": {
+      "actions": {
+        "copied": "Скопировано",
+        "copyCardId": "Скопировать ID карточки",
+        "openInDeck": "Открыть в колоде"
+      },
+      "breadcrumb": "Ошибки карточек / Отчёт",
+      "foot": {
+        "delete": "Удалить отчёт",
+        "deleteConfirm": {
+          "body": "Это действие нельзя отменить. Отправитель не будет уведомлён.",
+          "cancel": "Отмена",
+          "confirm": "Удалить",
+          "title": "Удалить этот отчёт?"
+        },
+        "notifyCaption": "Отправитель получит уведомление по email.",
+        "resolvedCaption": "Этот отчёт решён.",
+        "save": "Сохранить"
+      },
+      "tabs": {
+        "meta": "Метаданные",
+        "review": "Проверка",
+        "theCard": "Карточка"
+      },
+      "title": "Отчёт об ошибке карточки"
+    },
+    "editResponse": "Изменить ответ",
+    "empty": {
+      "body": "Измените фильтры или дождитесь новых отчётов.",
+      "title": "Нет отчётов, соответствующих фильтрам"
     },
     "errors": {
       "loadingTitle": "Ошибка загрузки отчётов"
     },
+    "filters": {
+      "allStatuses": "Все статусы",
+      "allTypes": "Все типы",
+      "clear": "Очистить фильтры",
+      "status": {
+        "all": "Все",
+        "dismissed": "Отклонены",
+        "fixed": "Исправлены",
+        "open": "Открыты",
+        "pending": "Ожидают",
+        "reviewed": "Проверены"
+      },
+      "statusPlaceholder": "Фильтр по статусу",
+      "type": {
+        "all": "Все типы",
+        "culture": "Культура",
+        "words": "Слова"
+      },
+      "typePlaceholder": "Фильтр по типу карточки"
+    },
+    "kicker": "Контроль качества",
+    "meta": {
+      "cardId": "ID карточки",
+      "deck": "Колода",
+      "reported": "Сообщено",
+      "reporter": "Отправитель",
+      "resolved": "Решено",
+      "status": "Статус",
+      "type": "Тип"
+    },
+    "preview": {
+      "culture": {
+        "kicker": "Карточка культуры"
+      },
+      "markedCorrect": "Помечено верным",
+      "word": {
+        "kicker": "Словарная карточка"
+      }
+    },
+    "reply": {
+      "notes": {
+        "hint": "Видно только администраторам.",
+        "label": "Внутренние заметки",
+        "placeholder": "Добавьте контекст для других администраторов…"
+      },
+      "quick": {
+        "confirmedFixed": {
+          "body": "Спасибо за отчёт — карточка обновлена.",
+          "label": "Подтверждено: исправлено"
+        },
+        "duplicate": {
+          "body": "Мы уже получили этот отчёт — закрываем как дубликат.",
+          "label": "Дубликат"
+        },
+        "needMoreInfo": {
+          "body": "Не могли бы вы уточнить, что показалось неверным?",
+          "label": "Нужно больше информации"
+        },
+        "notAnError": {
+          "body": "Эта карточка корректна — закрываем как не ошибку.",
+          "label": "Не ошибка"
+        },
+        "reRecordAudio": {
+          "body": "Аудио перезаписано и отправлено в вашу колоду.",
+          "label": "Перезаписать аудио"
+        }
+      },
+      "resolvedBanner": {
+        "by": "от",
+        "title": "Решено"
+      },
+      "status": {
+        "hint": "Как следует решить этот отчёт?",
+        "label": "Установить статус"
+      }
+    },
+    "respond": "Ответить",
+    "row": {
+      "editResponse": "Изменить ответ",
+      "inDeck": "в колоде",
+      "openCard": "Открыть карточку",
+      "respond": "Ответить"
+    },
+    "search": {
+      "filteredCount": "{{filtered}} из {{total}} отчётов",
+      "noResults": "Отчёты не найдены",
+      "placeholder": "Поиск отчётов..."
+    },
+    "sectionDescription": "Просмотр и ответы на отчёты пользователей об ошибках в карточках",
+    "sectionTitle": "Отчёты об ошибках в карточках",
     "states": {
       "noErrors": "Отчёты об ошибках ещё не поступали",
       "noFilteredResults": "Нет отчётов, соответствующих выбранным фильтрам"
     },
-    "detail": {
-      "title": "Детали отчёта об ошибке",
-      "reportedOn": "Сообщено {{date}}",
-      "reportedBy": "Сообщил",
-      "anonymousUser": "Анонимный пользователь",
-      "userDescription": "Описание пользователя",
-      "viewCard": "Просмотреть карточку",
-      "copyCardId": "Скопировать ID карточки",
-      "cardIdCopied": "ID карточки скопирован",
-      "cardIdCopiedMessage": "ID карточки скопирован в буфер обмена",
-      "adminActions": "Действия администратора",
-      "statusLabel": "Статус",
-      "selectStatus": "Выберите статус",
-      "adminNotesLabel": "Заметки администратора",
-      "adminNotesPlaceholder": "Добавьте заметки о разрешении...",
-      "resolvedAt": "Разрешено {{date}}",
-      "updateSuccess": "Отчёт обновлён",
-      "updateSuccessMessage": "Отчёт об ошибке успешно обновлён",
-      "updateError": "Ошибка обновления",
-      "updateErrorMessage": "Не удалось обновить отчёт об ошибке"
+    "statuses": {
+      "dismissed": "Отклонено",
+      "fixed": "Исправлено",
+      "pending": "В ожидании",
+      "reviewed": "Рассмотрено"
     },
-    "v2": {
-      "statCards": {
-        "total": {
-          "label": "Total errors",
-          "sub": "Counts coming soon"
-        },
-        "open": {
-          "label": "Open",
-          "sub": "Counts coming soon"
-        },
-        "resolved": {
-          "label": "Resolved",
-          "sub": "Counts coming soon"
-        },
-        "avgTimeToResolve": {
-          "label": "Avg time to resolve",
-          "sub": "Counts coming soon"
-        }
+    "stats": {
+      "awaitingReview": {
+        "label": "Ожидают проверки",
+        "subline": "Требуют разбора"
+      },
+      "fixedAllTime": {
+        "label": "Исправлено",
+        "subline": "За всё время"
+      },
+      "footerWindow": "Последние 30 дней",
+      "medianTimeToFix": {
+        "label": "Медианное время исправления",
+        "subline": "За последние 30 дней"
+      },
+      "totalReports": {
+        "label": "Всего отчётов",
+        "subline": "За всё время"
       }
+    },
+    "sub": "Пользовательские сообщения об ошибках в карточках — проверяйте, отвечайте и исправляйте.",
+    "theCard": {
+      "copied": "Скопировано",
+      "copy": "Скопировать",
+      "cardIdLabel": "ID карточки",
+      "openInDeck": "Открыть в колоде"
+    },
+    "title": "Ошибки карточек",
+    "toolbar": {
+      "searchPlaceholder": "Поиск по карточке, отправителю или заметке…"
     }
   },
   "cardCreate": {
