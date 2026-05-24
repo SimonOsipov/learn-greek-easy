@@ -72,6 +72,7 @@ from src.db.models import (
     UserXP,
     WiktionaryMorphology,
     WordEntry,
+    WordOrderExercise,
 )
 from src.db.session import get_session_factory
 from src.repositories.deck import DeckRepository
@@ -4862,15 +4863,25 @@ async def get_situation_exercises(
     return SituationExercisesResponse(groups=groups, total_count=total)
 
 
-def _apply_exercise_search_filter(stmt: Select, search: str | None) -> Select:
-    """Apply situation title search filter to an exercise query that joins Situation."""
+def _apply_exercise_search_filter(
+    stmt: Select,
+    search: str | None,
+    exercise_cls: Any = None,
+) -> Select:
+    """Apply situation title and (optionally) question-text search filter.
+
+    exercise_cls — if provided and it has question_el/question_en columns,
+    those are included as OR conditions alongside the situation scenario fields.
+    """
     if search:
-        stmt = stmt.where(
-            or_(
-                Situation.scenario_el.ilike(f"%{search}%"),
-                Situation.scenario_en.ilike(f"%{search}%"),
-            )
-        )
+        conditions = [
+            Situation.scenario_el.ilike(f"%{search}%"),
+            Situation.scenario_en.ilike(f"%{search}%"),
+        ]
+        if exercise_cls is not None and hasattr(exercise_cls, "question_el"):
+            conditions.append(exercise_cls.question_el.ilike(f"%{search}%"))
+            conditions.append(exercise_cls.question_en.ilike(f"%{search}%"))
+        stmt = stmt.where(or_(*conditions))
     return stmt
 
 
@@ -4881,8 +4892,18 @@ async def _query_description_exercises(
     exercise_type: ExerciseType | None,
     status: ExerciseStatus | None,
     search: str | None,
+    source: ExerciseSourceType | None = None,
+    level: DeckLevel | None = None,
 ) -> list[AdminExerciseListItem]:
-    """Query description exercises filtered by modality."""
+    """Query description exercises filtered by modality.
+
+    Short-circuits to an empty list when source is set to a non-DESCRIPTION value,
+    since description exercises are only relevant for the DESCRIPTION source.
+    """
+    # EXR-51: source filter — description query is irrelevant for other sources
+    if source is not None and source != ExerciseSourceType.DESCRIPTION:
+        return []
+
     stmt = (
         select(DescriptionExercise, SituationDescription, Situation)
         .join(SituationDescription, DescriptionExercise.description_id == SituationDescription.id)
@@ -4894,7 +4915,10 @@ async def _query_description_exercises(
         stmt = stmt.where(DescriptionExercise.exercise_type == exercise_type)
     if status is not None:
         stmt = stmt.where(DescriptionExercise.status == status)
-    stmt = _apply_exercise_search_filter(stmt, search)
+    # EXR-51: level filter — description exercises have audio_level
+    if level is not None:
+        stmt = stmt.where(DescriptionExercise.audio_level == level)
+    stmt = _apply_exercise_search_filter(stmt, search, exercise_cls=DescriptionExercise)
 
     rows = (await db.execute(stmt)).all()
     items: list[AdminExerciseListItem] = []
@@ -4915,6 +4939,7 @@ async def _query_description_exercises(
                 if ex.audio_level == DeckLevel.A2 and description.text_el_a2
                 else description.text_el
             )
+        first_item_payload = ex.items[0].payload if ex.items else {}
         items.append(
             AdminExerciseListItem(
                 id=ex.id,
@@ -4930,22 +4955,22 @@ async def _query_description_exercises(
                 reading_text=reading_text,
                 item_count=len(ex.items),
                 items=[SituationExerciseItemResponse.model_validate(item) for item in ex.items],
+                question_el=ex.question_el,
+                question_en=ex.question_en,
+                correct_idx=first_item_payload.get("correct_idx"),
             )
         )
     return items
 
 
-async def _query_listening_exercises(
+async def _query_dialog_exercises(
     db: AsyncSession,
     s3: S3Service,
     exercise_type: ExerciseType | None,
     status: ExerciseStatus | None,
     search: str | None,
 ) -> list[AdminExerciseListItem]:
-    """Query dialog and picture exercises (always listening modality)."""
-    items: list[AdminExerciseListItem] = []
-
-    # Dialog exercises
+    """Query dialog exercises (always listening modality, no level)."""
     dialog_stmt = (
         select(DialogExercise, ListeningDialog, Situation)
         .join(ListeningDialog, DialogExercise.dialog_id == ListeningDialog.id)
@@ -4956,12 +4981,12 @@ async def _query_listening_exercises(
         dialog_stmt = dialog_stmt.where(DialogExercise.exercise_type == exercise_type)
     if status is not None:
         dialog_stmt = dialog_stmt.where(DialogExercise.status == status)
-    dialog_stmt = _apply_exercise_search_filter(dialog_stmt, search)
+    dialog_stmt = _apply_exercise_search_filter(dialog_stmt, search, exercise_cls=DialogExercise)
 
+    items: list[AdminExerciseListItem] = []
     for ex, dialog, situation in (await db.execute(dialog_stmt)).all():
-        audio_url = None
-        if dialog.audio_s3_key:
-            audio_url = s3.generate_presigned_url(dialog.audio_s3_key)
+        audio_url = s3.generate_presigned_url(dialog.audio_s3_key) if dialog.audio_s3_key else None
+        first_item_payload = ex.items[0].payload if ex.items else {}
         items.append(
             AdminExerciseListItem(
                 id=ex.id,
@@ -4977,10 +5002,22 @@ async def _query_listening_exercises(
                 reading_text=None,
                 item_count=len(ex.items),
                 items=[SituationExerciseItemResponse.model_validate(item) for item in ex.items],
+                question_el=ex.question_el,
+                question_en=ex.question_en,
+                correct_idx=first_item_payload.get("correct_idx"),
             )
         )
+    return items
 
-    # Picture exercises — outer-join to SituationDescription to surface anchor text/URL
+
+async def _query_picture_exercises(
+    db: AsyncSession,
+    s3: S3Service,
+    exercise_type: ExerciseType | None,
+    status: ExerciseStatus | None,
+    search: str | None,
+) -> list[AdminExerciseListItem]:
+    """Query picture exercises — outer-join to SituationDescription for anchor text/URL."""
     pic_stmt = (
         select(PictureExercise, SituationPicture, Situation, SituationDescription)
         .join(SituationPicture, PictureExercise.picture_id == SituationPicture.id)
@@ -4992,13 +5029,15 @@ async def _query_listening_exercises(
         pic_stmt = pic_stmt.where(PictureExercise.exercise_type == exercise_type)
     if status is not None:
         pic_stmt = pic_stmt.where(PictureExercise.status == status)
-    pic_stmt = _apply_exercise_search_filter(pic_stmt, search)
+    pic_stmt = _apply_exercise_search_filter(pic_stmt, search, exercise_cls=PictureExercise)
 
+    items: list[AdminExerciseListItem] = []
     for ex, picture, situation, description in (await db.execute(pic_stmt)).all():
         anchor_picture_url = (
             s3.generate_presigned_url(picture.image_s3_key) if picture.image_s3_key else None
         )
         anchor_description_text = description.text_el if description is not None else None
+        first_item_payload = ex.items[0].payload if ex.items else {}
         items.append(
             AdminExerciseListItem(
                 id=ex.id,
@@ -5016,8 +5055,88 @@ async def _query_listening_exercises(
                 anchor_description_text=anchor_description_text,
                 item_count=len(ex.items),
                 items=[SituationExerciseItemResponse.model_validate(item) for item in ex.items],
+                question_el=ex.question_el,
+                question_en=ex.question_en,
+                correct_idx=first_item_payload.get("correct_idx"),
             )
         )
+    return items
+
+
+async def _query_word_order_exercises(
+    db: AsyncSession,
+    exercise_type: ExerciseType | None,
+    status: ExerciseStatus | None,
+    search: str | None,
+) -> list[AdminExerciseListItem]:
+    """Query word-order exercises (attached to SituationDescription; no level column)."""
+    wo_stmt = (
+        select(WordOrderExercise, SituationDescription, Situation)
+        .join(SituationDescription, WordOrderExercise.description_id == SituationDescription.id)
+        .join(Situation, SituationDescription.situation_id == Situation.id)
+        .options(selectinload(WordOrderExercise.items))
+    )
+    if exercise_type is not None:
+        wo_stmt = wo_stmt.where(WordOrderExercise.exercise_type == exercise_type)
+    if status is not None:
+        wo_stmt = wo_stmt.where(WordOrderExercise.status == status)
+    wo_stmt = _apply_exercise_search_filter(wo_stmt, search, exercise_cls=WordOrderExercise)
+
+    items: list[AdminExerciseListItem] = []
+    for ex, description, situation in (await db.execute(wo_stmt)).all():
+        first_item_payload = ex.items[0].payload if ex.items else {}
+        items.append(
+            AdminExerciseListItem(
+                id=ex.id,
+                exercise_type=ex.exercise_type,
+                status=ex.status,
+                source_type=ExerciseSourceType.WORD_ORDER,
+                modality=ExerciseModality.LISTENING,
+                audio_level=None,
+                situation_id=situation.id,
+                situation_title_el=situation.scenario_el,
+                situation_title_en=situation.scenario_en,
+                audio_url=None,
+                reading_text=None,
+                item_count=len(ex.items),
+                items=[SituationExerciseItemResponse.model_validate(item) for item in ex.items],
+                question_el=ex.question_el,
+                question_en=ex.question_en,
+                correct_order=first_item_payload.get("correct_order"),
+                answer_el=first_item_payload.get("answer_el"),
+            )
+        )
+    return items
+
+
+async def _query_listening_exercises(
+    db: AsyncSession,
+    s3: S3Service,
+    exercise_type: ExerciseType | None,
+    status: ExerciseStatus | None,
+    search: str | None,
+    source: ExerciseSourceType | None = None,
+    level: DeckLevel | None = None,
+) -> list[AdminExerciseListItem]:
+    """Orchestrate dialog, picture, and word-order exercise queries (always listening modality).
+
+    EXR-51: source filter limits to one sibling table. Level filter skips tables with no
+    audio_level column (dialog, picture, word_order).
+    """
+    items: list[AdminExerciseListItem] = []
+
+    # Dialog: no audio_level — skip when level is set
+    if (source is None or source == ExerciseSourceType.DIALOG) and level is None:
+        items.extend(await _query_dialog_exercises(db, s3, exercise_type, status, search))
+
+    # Picture: no audio_level — skip when level is set
+    if (source is None or source == ExerciseSourceType.PICTURE) and level is None:
+        items.extend(await _query_picture_exercises(db, s3, exercise_type, status, search))
+
+    # Word-order: no audio_level — skip when level is set
+    if (source is None or source == ExerciseSourceType.WORD_ORDER) and level is None:
+        items.extend(await _query_word_order_exercises(db, exercise_type, status, search))
+
     return items
 
 
@@ -5025,6 +5144,7 @@ _SOURCE_TYPE_ORDER = {
     ExerciseSourceType.DESCRIPTION: 0,
     ExerciseSourceType.DIALOG: 1,
     ExerciseSourceType.PICTURE: 2,
+    ExerciseSourceType.WORD_ORDER: 3,
 }
 
 
@@ -5036,15 +5156,23 @@ async def list_admin_exercises(
     exercise_type: ExerciseType | None = Query(default=None),
     status: ExerciseStatus | None = Query(default=None),
     search: str | None = Query(default=None),
+    source: ExerciseSourceType | None = Query(default=None),
+    level: DeckLevel | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_superuser),
 ) -> AdminExerciseListResponse:
     s3 = get_s3_service()
 
-    all_items = await _query_description_exercises(db, s3, modality, exercise_type, status, search)
+    all_items = await _query_description_exercises(
+        db, s3, modality, exercise_type, status, search, source=source, level=level
+    )
 
     if modality == ExerciseModality.LISTENING:
-        all_items.extend(await _query_listening_exercises(db, s3, exercise_type, status, search))
+        all_items.extend(
+            await _query_listening_exercises(
+                db, s3, exercise_type, status, search, source=source, level=level
+            )
+        )
 
     all_items.sort(
         key=lambda item: (

@@ -6,7 +6,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import ExerciseModality, ExerciseStatus, ExerciseType
+from src.db.models import DeckLevel, ExerciseModality, ExerciseStatus, ExerciseType
 from tests.factories import (
     DescriptionExerciseFactory,
     DescriptionExerciseItemFactory,
@@ -16,6 +16,8 @@ from tests.factories import (
     SituationDescriptionFactory,
     SituationFactory,
     SituationPictureFactory,
+    WordOrderExerciseFactory,
+    WordOrderExerciseItemFactory,
 )
 
 BASE_URL = "/api/v1/admin/exercises"
@@ -366,3 +368,256 @@ class TestAdminExercisesList:
         data = response.json()
         assert data["success"] is False
         assert data["error"]["code"] == "FORBIDDEN"
+
+    # -----------------------------------------------------------------------
+    # EXR-57: PENDING status
+    # -----------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_status_filter_pending(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        mock_s3_service: MagicMock,
+    ):
+        desc = await SituationDescriptionFactory.create()
+        await DescriptionExerciseFactory.create(
+            description_id=desc.id,
+            modality=ExerciseModality.LISTENING,
+            status=ExerciseStatus.PENDING,
+        )
+        # Another exercise with DRAFT status — should not appear
+        desc2 = await SituationDescriptionFactory.create()
+        await DescriptionExerciseFactory.create(
+            description_id=desc2.id,
+            modality=ExerciseModality.LISTENING,
+            status=ExerciseStatus.DRAFT,
+        )
+
+        response = await client.get(
+            BASE_URL,
+            params={"modality": "listening", "status": "pending"},
+            headers=superuser_auth_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        assert data["items"][0]["status"] == "pending"
+
+    # -----------------------------------------------------------------------
+    # EXR-53: word_order exercise type
+    # -----------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_word_order_exercise_appears_in_listening(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        mock_s3_service: MagicMock,
+    ):
+        desc = await SituationDescriptionFactory.create()
+        wo_exercise = await WordOrderExerciseFactory.create(description_id=desc.id)
+        await WordOrderExerciseItemFactory.create(word_order_exercise_id=wo_exercise.id)
+
+        response = await client.get(
+            BASE_URL,
+            params={"modality": "listening"},
+            headers=superuser_auth_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        item = data["items"][0]
+        assert item["exercise_type"] == "word_order"
+        assert item["source_type"] == "word_order"
+        assert item["correct_order"] == [2, 1, 0, 4, 3]
+        assert item["answer_el"] == "ο Γιάννης πάει στο σχολείο"
+
+    # -----------------------------------------------------------------------
+    # EXR-50: payload fields
+    # -----------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_search_matches_question_text(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        mock_s3_service: MagicMock,
+        db_session: AsyncSession,
+    ):
+        # Exercise with unique question_en text
+        desc = await SituationDescriptionFactory.create()
+        exercise = await DescriptionExerciseFactory.create(
+            description_id=desc.id,
+            modality=ExerciseModality.LISTENING,
+        )
+        exercise.question_en = "Unique banana test phrase"
+        await db_session.flush()
+
+        # Another exercise without that question text — must not appear
+        desc2 = await SituationDescriptionFactory.create()
+        await DescriptionExerciseFactory.create(
+            description_id=desc2.id,
+            modality=ExerciseModality.LISTENING,
+        )
+
+        response = await client.get(
+            BASE_URL,
+            params={"modality": "listening", "search": "banana"},
+            headers=superuser_auth_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        assert data["items"][0]["question_en"] == "Unique banana test phrase"
+
+    @pytest.mark.asyncio
+    async def test_payload_includes_all_design_fields(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        mock_s3_service: MagicMock,
+    ):
+        desc = await SituationDescriptionFactory.create()
+        exercise = await DescriptionExerciseFactory.create(
+            description_id=desc.id,
+            modality=ExerciseModality.LISTENING,
+        )
+        await DescriptionExerciseItemFactory.create(description_exercise_id=exercise.id)
+
+        response = await client.get(
+            BASE_URL,
+            params={"modality": "listening"},
+            headers=superuser_auth_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        item = data["items"][0]
+
+        required_keys = {
+            "id",
+            "exercise_type",
+            "status",
+            "source_type",
+            "modality",
+            "audio_level",
+            "situation_id",
+            "situation_title_el",
+            "situation_title_en",
+            "audio_url",
+            "item_count",
+            "items",
+            "question_el",
+            "question_en",
+            "correct_idx",
+        }
+        for key in required_keys:
+            assert key in item, f"Missing key in response: {key}"
+
+    # -----------------------------------------------------------------------
+    # EXR-51: source + level filters
+    # -----------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_source_filter(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        mock_s3_service: MagicMock,
+    ):
+        # Description exercise
+        desc = await SituationDescriptionFactory.create()
+        await DescriptionExerciseFactory.create(
+            description_id=desc.id, modality=ExerciseModality.LISTENING
+        )
+
+        # Dialog exercise
+        await DialogExerciseFactory.create()
+
+        # Filter to only description source
+        response = await client.get(
+            BASE_URL,
+            params={"modality": "listening", "source": "description"},
+            headers=superuser_auth_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        assert data["items"][0]["source_type"] == "description"
+
+        # Filter to only dialog source
+        response = await client.get(
+            BASE_URL,
+            params={"modality": "listening", "source": "dialog"},
+            headers=superuser_auth_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        assert data["items"][0]["source_type"] == "dialog"
+
+    @pytest.mark.asyncio
+    async def test_level_filter(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        mock_s3_service: MagicMock,
+    ):
+        desc = await SituationDescriptionFactory.create()
+        await DescriptionExerciseFactory.create(
+            description_id=desc.id,
+            modality=ExerciseModality.LISTENING,
+            audio_level=DeckLevel.A2,
+        )
+        desc2 = await SituationDescriptionFactory.create()
+        await DescriptionExerciseFactory.create(
+            description_id=desc2.id,
+            modality=ExerciseModality.LISTENING,
+            audio_level=DeckLevel.B2,
+        )
+
+        response = await client.get(
+            BASE_URL,
+            params={"modality": "listening", "level": "A2"},
+            headers=superuser_auth_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        assert data["items"][0]["audio_level"] == "A2"
+
+    @pytest.mark.asyncio
+    async def test_source_and_level_combine(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        mock_s3_service: MagicMock,
+    ):
+        # Description A2 — should appear
+        desc_a2 = await SituationDescriptionFactory.create()
+        await DescriptionExerciseFactory.create(
+            description_id=desc_a2.id,
+            modality=ExerciseModality.LISTENING,
+            audio_level=DeckLevel.A2,
+        )
+        # Description B2 — should NOT appear
+        desc_b2 = await SituationDescriptionFactory.create()
+        await DescriptionExerciseFactory.create(
+            description_id=desc_b2.id,
+            modality=ExerciseModality.LISTENING,
+            audio_level=DeckLevel.B2,
+        )
+        # Dialog — should NOT appear (source filter excludes it)
+        await DialogExerciseFactory.create()
+
+        response = await client.get(
+            BASE_URL,
+            params={"modality": "listening", "source": "description", "level": "A2"},
+            headers=superuser_auth_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        assert data["items"][0]["source_type"] == "description"
+        assert data["items"][0]["audio_level"] == "A2"
