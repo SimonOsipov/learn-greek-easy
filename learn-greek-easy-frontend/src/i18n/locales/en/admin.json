@@ -995,20 +995,21 @@
     "stats": {
       "awaitingReview": {
         "label": "Awaiting review",
-        "subline": "Needs triage"
+        "subline": "oldest {{age}} ago · {{K}} culture · {{W}} words"
       },
       "fixedAllTime": {
-        "label": "Fixed",
-        "subline": "All time"
+        "label": "Fixed all-time",
+        "subline": "{{D}} dismissed as not-an-error"
       },
       "footerWindow": "Last 30 days",
       "medianTimeToFix": {
-        "label": "Median time to fix",
-        "subline": "Last 30 days"
+        "label": "Median time-to-fix",
+        "subline_withDelta": "down from {{prev}} days · last 30 days",
+        "subline_window": "last 30 days"
       },
       "totalReports": {
         "label": "Total reports",
-        "subline": "All time"
+        "subline": "across {{N}} decks · all-time"
       }
     },
     "sub": "User-reported issues with deck cards — review, respond, and fix.",
