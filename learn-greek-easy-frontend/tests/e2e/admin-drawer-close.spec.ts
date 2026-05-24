@@ -94,7 +94,9 @@ test.describe('Admin Drawer Close-X regression', () => {
       return;
     }
 
-    await firstCard.getByTestId('admin-feedback-respond-button').click();
+    // The card body (`.fb-card-clickable`) is the drawer-opener after refactor
+    // db066af1 / 7de2c1de stripped the explicit Respond button.
+    await firstCard.locator('.fb-card-clickable').click();
     const drawer = page.getByTestId('feedback-drawer');
     await expect(drawer).toBeVisible({ timeout: 5_000 });
 
