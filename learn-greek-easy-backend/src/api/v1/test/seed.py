@@ -15,7 +15,7 @@ from time import perf_counter
 from typing import Optional
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Body, Depends, Header, HTTPException
 from pydantic import BaseModel, EmailStr
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -1009,17 +1009,24 @@ async def seed_feedback(
 @router.post(
     "/card-error",
     response_model=SeedResultResponse,
-    summary="Seed a pending card error report",
-    description="Create one CardErrorReport row (status=PENDING) for E2E testing. "
+    summary="Seed a card error report",
+    description="Create one CardErrorReport row for E2E testing. "
+    "Accepts optional card_type (default WORD) and status (default PENDING) body params. "
+    "When status is FIXED/REVIEWED/DISMISSED, stamps resolved_at and resolved_by. "
     "Requires test users to be seeded first.",
     dependencies=[Depends(verify_seed_access)],
 )
 async def seed_card_error(
+    card_type: CardErrorCardType = Body(CardErrorCardType.WORD),
+    status: CardErrorStatus = Body(CardErrorStatus.PENDING),
+    description: str = Body("E2E test card error report — pending admin review."),
     db: AsyncSession = Depends(get_db),
 ) -> SeedResultResponse:
     """Create a single CardErrorReport row for E2E testing.
 
-    Creates one CardErrorReport with status=PENDING attributed to e2e_learner.
+    Creates one CardErrorReport attributed to e2e_learner.
+    When status is FIXED, REVIEWED, or DISMISSED, stamps resolved_at = now()
+    and resolved_by = e2e_admin.id so the resolved banner and Meta tab have data.
     Uses a random UUID for card_id (no FK constraint on that column).
     Requires /seed/all or /seed/users to have run first.
 
@@ -1040,12 +1047,23 @@ async def seed_card_error(
             results={"error": "e2e_learner@test.com not found. Run /seed/users first."},
         )
 
+    resolved_at = None
+    resolved_by = None
+    terminal_statuses = {CardErrorStatus.FIXED, CardErrorStatus.REVIEWED, CardErrorStatus.DISMISSED}
+    if status in terminal_statuses:
+        admin = await user_repo.get_by_email("e2e_admin@test.com")
+        if admin:
+            resolved_at = datetime.now(timezone.utc)
+            resolved_by = admin.id
+
     report = CardErrorReport(
         user_id=learner.id,
-        card_type=CardErrorCardType.WORD,
+        card_type=card_type,
         card_id=uuid4(),
-        description="E2E test card error report — pending admin review.",
-        status=CardErrorStatus.PENDING,
+        description=description,
+        status=status,
+        resolved_at=resolved_at,
+        resolved_by=resolved_by,
     )
     db.add(report)
     await db.flush()
@@ -1057,5 +1075,68 @@ async def seed_card_error(
         operation="card-error",
         timestamp=datetime.now(timezone.utc),
         duration_ms=duration_ms,
-        results={"id": str(report.id)},
+        results={"id": str(report.id), "card_type": card_type.value, "status": status.value},
     )
+
+
+@router.post(
+    "/card-errors",
+    summary="Seed canonical batch of 4 card error reports",
+    description="Creates 4 canonical CardErrorReport rows in one call: "
+    "WORD-PENDING, CULTURE-PENDING, WORD-FIXED, WORD-DISMISSED. "
+    "Returns their IDs in stable order. Gated on TEST_SEED_ENABLED. "
+    "Requires test users to be seeded first.",
+    dependencies=[Depends(verify_seed_access)],
+)
+async def seed_card_errors_batch(
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Create 4 canonical CardErrorReport rows in one call.
+
+    Canonical order (stable for E2E spec assertions):
+      1. WORD   + PENDING   — open, no resolver
+      2. CULTURE + PENDING  — open, no resolver
+      3. WORD   + FIXED     — resolved, resolver = e2e_admin
+      4. WORD   + DISMISSED — resolved, resolver = e2e_admin
+
+    Returns:
+        {"ids": [str, str, str, str]} in the order above.
+    """
+    user_repo = UserRepository(db)
+    learner = await user_repo.get_by_email("e2e_learner@test.com")
+    admin = await user_repo.get_by_email("e2e_admin@test.com")
+
+    if not learner or not admin:
+        return {
+            "ids": [],
+            "error": "e2e_learner or e2e_admin not found. Run /seed/users first.",
+        }
+
+    now = datetime.now(timezone.utc)
+
+    specs = [
+        (CardErrorCardType.WORD, CardErrorStatus.PENDING, None, None),
+        (CardErrorCardType.CULTURE, CardErrorStatus.PENDING, None, None),
+        (CardErrorCardType.WORD, CardErrorStatus.FIXED, now, admin.id),
+        (CardErrorCardType.WORD, CardErrorStatus.DISMISSED, now, admin.id),
+    ]
+
+    rows = [
+        CardErrorReport(
+            user_id=learner.id,
+            card_type=ct,
+            card_id=uuid4(),
+            description=f"E2E batch {ct.value}/{st.value}",
+            status=st,
+            resolved_at=resolved_at,
+            resolved_by=resolved_by,
+        )
+        for ct, st, resolved_at, resolved_by in specs
+    ]
+    db.add_all(rows)
+    await db.flush()
+    await db.commit()
+    for r in rows:
+        await db.refresh(r)
+
+    return {"ids": [str(r.id) for r in rows]}

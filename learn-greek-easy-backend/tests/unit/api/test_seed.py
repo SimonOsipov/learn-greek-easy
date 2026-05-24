@@ -612,3 +612,211 @@ class TestHeaderValidation:
 
                 # Verify the secret was validated
                 mock_settings.validate_seed_secret.assert_called_with("my-secret")
+
+
+# ============================================================================
+# POST /test/seed/card-error Tests (CER-56)
+# ============================================================================
+
+
+class TestSeedCardErrorEndpoint:
+    """Tests for POST /test/seed/card-error (CER-56)."""
+
+    def _settings_patch(self):
+        """Common settings patch for enabled, non-production seed."""
+        from unittest.mock import patch
+
+        return patch(
+            "src.api.v1.test.seed.settings",
+            **{
+                "is_production": False,
+                "test_seed_enabled": True,
+                "seed_requires_secret": False,
+            },
+        )
+
+    def test_defaults_create_word_pending(self, client: TestClient):
+        """POST with empty body should create WORD + PENDING report."""
+        from unittest.mock import AsyncMock, MagicMock, patch
+        from uuid import uuid4
+
+        learner_id = uuid4()
+        mock_learner = MagicMock()
+        mock_learner.id = learner_id
+
+        mock_report = MagicMock()
+        mock_report.id = uuid4()
+
+        with patch("src.api.v1.test.seed.settings") as mock_settings:
+            mock_settings.is_production = False
+            mock_settings.test_seed_enabled = True
+            mock_settings.seed_requires_secret = False
+
+            with patch("src.api.v1.test.seed.UserRepository") as mock_repo_class:
+                mock_repo = AsyncMock()
+                mock_repo.get_by_email.return_value = mock_learner
+                mock_repo_class.return_value = mock_repo
+
+                # Patch db
+                mock_db = AsyncMock()
+                mock_db.flush = AsyncMock()
+                mock_db.commit = AsyncMock()
+
+                # Simulate report creation by patching CardErrorReport
+                with patch("src.api.v1.test.seed.CardErrorReport") as mock_report_class:
+                    created_report = MagicMock()
+                    created_report.id = uuid4()
+                    mock_report_class.return_value = created_report
+
+                    response = client.post("/test/seed/card-error")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["operation"] == "card-error"
+
+    def test_returns_403_when_disabled(self, client: TestClient):
+        """Should return 403 when TEST_SEED_ENABLED is false."""
+        with patch("src.api.v1.test.seed.settings") as mock_settings:
+            mock_settings.is_production = False
+            mock_settings.test_seed_enabled = False
+
+            response = client.post("/test/seed/card-error")
+        assert response.status_code == 403
+
+    def test_returns_403_in_production(self, client: TestClient):
+        """Should return 403 in production."""
+        with patch("src.api.v1.test.seed.settings") as mock_settings:
+            mock_settings.is_production = True
+
+            response = client.post("/test/seed/card-error")
+        assert response.status_code == 403
+
+    def test_culture_pending_accepted(self, client: TestClient):
+        """POST with card_type=CULTURE + status=PENDING should succeed."""
+        from unittest.mock import AsyncMock, MagicMock, patch
+        from uuid import uuid4
+
+        learner_id = uuid4()
+        mock_learner = MagicMock()
+        mock_learner.id = learner_id
+
+        with patch("src.api.v1.test.seed.settings") as mock_settings:
+            mock_settings.is_production = False
+            mock_settings.test_seed_enabled = True
+            mock_settings.seed_requires_secret = False
+
+            with patch("src.api.v1.test.seed.UserRepository") as mock_repo_class:
+                mock_repo = AsyncMock()
+                mock_repo.get_by_email.return_value = mock_learner
+                mock_repo_class.return_value = mock_repo
+
+                with patch("src.api.v1.test.seed.CardErrorReport") as mock_report_class:
+                    created = MagicMock()
+                    created.id = uuid4()
+                    mock_report_class.return_value = created
+
+                    response = client.post(
+                        "/test/seed/card-error",
+                        json={"card_type": "CULTURE", "status": "PENDING"},
+                    )
+
+        assert response.status_code == 200
+        assert response.json()["success"] is True
+
+    def test_fixed_stamps_resolved_fields(self, client: TestClient):
+        """POST status=FIXED should cause resolved_at + resolved_by to be set."""
+        from unittest.mock import AsyncMock, MagicMock, patch
+        from uuid import uuid4
+
+        learner_id = uuid4()
+        admin_id = uuid4()
+        mock_learner = MagicMock()
+        mock_learner.id = learner_id
+        mock_admin = MagicMock()
+        mock_admin.id = admin_id
+
+        with patch("src.api.v1.test.seed.settings") as mock_settings:
+            mock_settings.is_production = False
+            mock_settings.test_seed_enabled = True
+            mock_settings.seed_requires_secret = False
+
+            with patch("src.api.v1.test.seed.UserRepository") as mock_repo_class:
+                mock_repo = AsyncMock()
+                # get_by_email called for learner then admin
+                mock_repo.get_by_email.side_effect = [mock_learner, mock_admin]
+                mock_repo_class.return_value = mock_repo
+
+                with patch("src.api.v1.test.seed.CardErrorReport") as mock_report_class:
+                    created = MagicMock()
+                    created.id = uuid4()
+                    mock_report_class.return_value = created
+
+                    response = client.post(
+                        "/test/seed/card-error",
+                        json={"status": "FIXED"},
+                    )
+
+        assert response.status_code == 200
+        # Verify CardErrorReport was constructed with resolved fields
+        call_kwargs = mock_report_class.call_args.kwargs
+        assert call_kwargs.get("resolved_at") is not None
+        assert call_kwargs.get("resolved_by") == admin_id
+
+
+# ============================================================================
+# POST /test/seed/card-errors Tests (CER-56 batch endpoint)
+# ============================================================================
+
+
+class TestSeedCardErrorsBatchEndpoint:
+    """Tests for POST /test/seed/card-errors (CER-56)."""
+
+    def test_returns_403_when_disabled(self, client: TestClient):
+        """Should return 403 when TEST_SEED_ENABLED is false."""
+        with patch("src.api.v1.test.seed.settings") as mock_settings:
+            mock_settings.is_production = False
+            mock_settings.test_seed_enabled = False
+
+            response = client.post("/test/seed/card-errors")
+        assert response.status_code == 403
+
+    def test_returns_403_in_production(self, client: TestClient):
+        """Should return 403 in production."""
+        with patch("src.api.v1.test.seed.settings") as mock_settings:
+            mock_settings.is_production = True
+
+            response = client.post("/test/seed/card-errors")
+        assert response.status_code == 403
+
+    def test_creates_four_canonical_rows(self, client: TestClient):
+        """Should create 4 canonical rows and return their IDs."""
+        from unittest.mock import AsyncMock, MagicMock, patch
+        from uuid import uuid4
+
+        mock_learner = MagicMock(id=uuid4())
+        mock_admin = MagicMock(id=uuid4())
+        report_ids = [uuid4() for _ in range(4)]
+
+        def make_report(**kwargs):
+            m = MagicMock()
+            m.id = report_ids.pop(0) if report_ids else uuid4()
+            return m
+
+        with patch("src.api.v1.test.seed.settings") as mock_settings:
+            mock_settings.is_production = False
+            mock_settings.test_seed_enabled = True
+            mock_settings.seed_requires_secret = False
+
+            with patch("src.api.v1.test.seed.UserRepository") as mock_repo_class:
+                mock_repo = AsyncMock()
+                mock_repo.get_by_email.side_effect = [mock_learner, mock_admin]
+                mock_repo_class.return_value = mock_repo
+
+                with patch("src.api.v1.test.seed.CardErrorReport", side_effect=make_report):
+                    response = client.post("/test/seed/card-errors")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "ids" in data
+        assert len(data["ids"]) == 4
