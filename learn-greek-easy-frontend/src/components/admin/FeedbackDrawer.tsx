@@ -24,7 +24,6 @@ import { Field } from '@/components/ui/field';
 import { SidePanel } from '@/components/ui/side-panel';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
 import { useAdminFeedbackStore } from '@/stores/adminFeedbackStore';
 
 import {
@@ -35,6 +34,7 @@ import {
   HANDOFF_STATUSES,
   STATUS_TONE,
 } from './feedbackStatusMap';
+import { StatusGrid } from './StatusGrid';
 
 import type { HandoffStatus } from './feedbackStatusMap';
 
@@ -58,7 +58,7 @@ const TABS: { value: FeedbackDrawerInnerTab; label: string }[] = [
   { value: 'meta', label: 'feedback.v2.drawer.tabs.meta' },
 ];
 
-// Tones for the .fb-status-dot CSS (data-tone attribute values defined in index.css)
+// Tones for the .admin-status-dot CSS (data-tone attribute values defined in index.css)
 type DotTone = 'primary' | 'amber' | 'violet' | 'cyan' | 'success' | 'gray';
 
 // Labels are i18n keys — translated at render via t(s.label)
@@ -193,20 +193,11 @@ function ReplyTab({ feedbackId, onClose, onRequestDelete, form }: ReplyTabProps)
             label={t('feedback.v2.reply.status_label')}
             hint={t('feedback.v2.reply.status_hint')}
           >
-            <div className="fb-status-grid">
-              {STATUS_PICKER.map((s) => (
-                <button
-                  key={s.key}
-                  type="button"
-                  className={cn('fb-status-btn', { 'is-active': selectedStatus === s.key })}
-                  aria-pressed={selectedStatus === s.key}
-                  onClick={() => form.setValue('status', s.key, { shouldDirty: true })}
-                >
-                  <span className="fb-status-dot" data-tone={s.dotTone} />
-                  {t(s.label)}
-                </button>
-              ))}
-            </div>
+            <StatusGrid
+              options={STATUS_PICKER.map((s) => ({ ...s, label: t(s.label) }))}
+              value={selectedStatus}
+              onChange={(next) => form.setValue('status', next, { shouldDirty: true })}
+            />
           </Field>
 
           <Field
