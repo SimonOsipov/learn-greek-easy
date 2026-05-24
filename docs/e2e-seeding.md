@@ -195,6 +195,45 @@ Idempotent: existing users have subscription fields updated, new users get `User
 | `e2e_cancelled@test.com` | PREMIUM | ACTIVE | QUARTERLY | Yes | — | — | NOW+15d | NOW-75d |
 | `e2e_past_due@test.com` | PREMIUM | PAST_DUE | MONTHLY | No | — | — | NOW+5d | NOW-30d |
 
+## Admin Exercises Seed (EXR-56)
+
+**File:** `learn-greek-easy-backend/tests/factories/admin_exercises_seed.py`
+
+**Function:** `seed_admin_exercises(db: AsyncSession) -> dict[str, int]`
+
+A factory function (not an API endpoint) that creates ~13 exercise rows covering all filter axes shown in the admin exercises design tab.
+
+### Axes covered
+
+| Axis | Values present |
+|------|---------------|
+| `exercise_type` | select_correct_answer, fill_gaps, select_heard, true_false, select_picture_from_description, select_description_from_picture, word_order |
+| `status` | draft, pending, approved (at least one of each across all sources) |
+| `source` | description (5 rows), dialog (3 rows), picture (2 rows), word_order (3 rows) |
+| `audio_level` | A2, B1 (description exercises only; dialog/picture/word_order have no level) |
+| `audio = null` | 1 description row (no `audio_s3_key`) + 1 dialog row (no `audio_s3_key`) |
+
+### Usage
+
+Call directly from a test or conftest that has a live `AsyncSession`:
+
+```python
+from tests.factories.admin_exercises_seed import seed_admin_exercises
+
+async def test_something(db_session):
+    counts = await seed_admin_exercises(db_session)
+    # counts = {"total": 13, "description": 5, "dialog": 3, "picture": 2, "word_order": 3}
+```
+
+### Entry point (not yet wired)
+
+No endpoint exists yet at `/api/v1/test/seed/admin-exercises`. To add one, create a new
+`@router.post("/admin-exercises", ...)` handler in `src/api/v1/test/seed.py` that calls
+`seed_admin_exercises(db)` and returns a `SeedResultResponse`. The function is exported and
+ready; the caller hook is the only missing piece.
+
+---
+
 ## CLI Usage
 
 ```bash

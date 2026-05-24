@@ -920,3 +920,536 @@ class TestAdminExercisesList:
         wo_item = items_by_source["word_order"]
         assert wo_item["correct_order"] == [2, 1, 0, 4, 3]
         assert wo_item["answer_el"] == "ο Γιάννης πάει στο σχολείο"
+
+
+# ===========================================================================
+# EXR-64: parametrized filter matrix tests
+# ===========================================================================
+
+
+@pytest.mark.integration
+class TestAdminExercisesFilterMatrix:
+    """Parametrized tests covering every filter axis and combinations.
+
+    Each test seeds the minimum rows needed to verify that the filter returns
+    exactly the expected subset.  Tests are isolated via the per-test DB
+    transaction rollback provided by the integration test conftest.
+    """
+
+    # -----------------------------------------------------------------------
+    # 1. Single-axis parametrized tests
+    # -----------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "exercise_type",
+        [
+            ExerciseType.SELECT_CORRECT_ANSWER,
+            ExerciseType.FILL_GAPS,
+            ExerciseType.SELECT_HEARD,
+            ExerciseType.TRUE_FALSE,
+            ExerciseType.SELECT_PICTURE_FROM_DESCRIPTION,
+            ExerciseType.SELECT_DESCRIPTION_FROM_PICTURE,
+            ExerciseType.WORD_ORDER,
+        ],
+    )
+    async def test_exercise_type_filter_single_axis(
+        self,
+        exercise_type: ExerciseType,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        mock_s3_service: MagicMock,
+    ):
+        """Each exercise_type filter returns exactly the matching row."""
+        # WORD_ORDER and PICTURE types use different source tables.
+        if exercise_type == ExerciseType.WORD_ORDER:
+            desc_a = await SituationDescriptionFactory.create()
+            await WordOrderExerciseFactory.create(description_id=desc_a.id)
+            desc_b = await SituationDescriptionFactory.create()
+            await DescriptionExerciseFactory.create(
+                description_id=desc_b.id,
+                modality=ExerciseModality.LISTENING,
+                exercise_type=ExerciseType.SELECT_CORRECT_ANSWER,
+            )
+        elif exercise_type in (
+            ExerciseType.SELECT_PICTURE_FROM_DESCRIPTION,
+            ExerciseType.SELECT_DESCRIPTION_FROM_PICTURE,
+        ):
+            await PictureExerciseFactory.create(exercise_type=exercise_type)
+            # Second row: different type on another picture
+            other_type = (
+                ExerciseType.SELECT_DESCRIPTION_FROM_PICTURE
+                if exercise_type == ExerciseType.SELECT_PICTURE_FROM_DESCRIPTION
+                else ExerciseType.SELECT_PICTURE_FROM_DESCRIPTION
+            )
+            # Use a description exercise as the "other" row so we don't violate
+            # the unique constraint on (picture_id, exercise_type).
+            desc_other = await SituationDescriptionFactory.create()
+            await DescriptionExerciseFactory.create(
+                description_id=desc_other.id,
+                modality=ExerciseModality.LISTENING,
+                exercise_type=ExerciseType.SELECT_CORRECT_ANSWER,
+            )
+            _ = other_type  # used only for documentation
+        else:
+            # Description exercises — two rows differing only on exercise_type
+            desc_a = await SituationDescriptionFactory.create()
+            await DescriptionExerciseFactory.create(
+                description_id=desc_a.id,
+                modality=ExerciseModality.LISTENING,
+                exercise_type=exercise_type,
+            )
+            desc_b = await SituationDescriptionFactory.create()
+            # Use the next type in the list so it's always different
+            other_type = (
+                ExerciseType.FILL_GAPS
+                if exercise_type != ExerciseType.FILL_GAPS
+                else ExerciseType.SELECT_HEARD
+            )
+            await DescriptionExerciseFactory.create(
+                description_id=desc_b.id,
+                modality=ExerciseModality.LISTENING,
+                exercise_type=other_type,
+            )
+
+        response = await client.get(
+            BASE_URL,
+            params={"modality": "listening", "exercise_type": exercise_type.value},
+            headers=superuser_auth_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        assert data["items"][0]["exercise_type"] == exercise_type.value
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "status",
+        [ExerciseStatus.DRAFT, ExerciseStatus.PENDING, ExerciseStatus.APPROVED],
+    )
+    async def test_status_filter_single_axis(
+        self,
+        status: ExerciseStatus,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        mock_s3_service: MagicMock,
+    ):
+        """Each status filter returns exactly the matching row."""
+        other_status = (
+            ExerciseStatus.APPROVED if status == ExerciseStatus.DRAFT else ExerciseStatus.DRAFT
+        )
+        desc_a = await SituationDescriptionFactory.create()
+        await DescriptionExerciseFactory.create(
+            description_id=desc_a.id,
+            modality=ExerciseModality.LISTENING,
+            status=status,
+        )
+        desc_b = await SituationDescriptionFactory.create()
+        await DescriptionExerciseFactory.create(
+            description_id=desc_b.id,
+            modality=ExerciseModality.LISTENING,
+            status=other_status,
+        )
+
+        response = await client.get(
+            BASE_URL,
+            params={"modality": "listening", "status": status.value},
+            headers=superuser_auth_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        assert data["items"][0]["status"] == status.value
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "source,factory_fn_name",
+        [
+            ("description", "description"),
+            ("dialog", "dialog"),
+            ("picture", "picture"),
+        ],
+    )
+    async def test_source_filter_single_axis(
+        self,
+        source: str,
+        factory_fn_name: str,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        mock_s3_service: MagicMock,
+    ):
+        """Each source filter returns only the matching source row."""
+        # Seed one row for the target source and one for a different source.
+        if source == "description":
+            desc_match = await SituationDescriptionFactory.create()
+            await DescriptionExerciseFactory.create(
+                description_id=desc_match.id, modality=ExerciseModality.LISTENING
+            )
+            await DialogExerciseFactory.create()
+        elif source == "dialog":
+            await DialogExerciseFactory.create()
+            desc_other = await SituationDescriptionFactory.create()
+            await DescriptionExerciseFactory.create(
+                description_id=desc_other.id, modality=ExerciseModality.LISTENING
+            )
+        else:  # picture
+            await PictureExerciseFactory.create()
+            desc_other = await SituationDescriptionFactory.create()
+            await DescriptionExerciseFactory.create(
+                description_id=desc_other.id, modality=ExerciseModality.LISTENING
+            )
+
+        response = await client.get(
+            BASE_URL,
+            params={"modality": "listening", "source": source},
+            headers=superuser_auth_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        assert data["items"][0]["source_type"] == source
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "level",
+        [DeckLevel.A2, DeckLevel.B1],
+    )
+    async def test_level_filter_single_axis(
+        self,
+        level: DeckLevel,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        mock_s3_service: MagicMock,
+    ):
+        """Level filter returns only description exercises at the matching level."""
+        other_level = DeckLevel.B2 if level != DeckLevel.B2 else DeckLevel.A2
+        desc_a = await SituationDescriptionFactory.create()
+        await DescriptionExerciseFactory.create(
+            description_id=desc_a.id,
+            modality=ExerciseModality.LISTENING,
+            audio_level=level,
+        )
+        desc_b = await SituationDescriptionFactory.create()
+        await DescriptionExerciseFactory.create(
+            description_id=desc_b.id,
+            modality=ExerciseModality.LISTENING,
+            audio_level=other_level,
+        )
+
+        response = await client.get(
+            BASE_URL,
+            params={"modality": "listening", "level": level.value},
+            headers=superuser_auth_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        assert data["items"][0]["audio_level"] == level.value
+
+    # -----------------------------------------------------------------------
+    # 2. AND-combination: four axes at once
+    # -----------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_and_combination_four_axes(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        mock_s3_service: MagicMock,
+    ):
+        """Filter on source+level+status+exercise_type simultaneously returns 1 row."""
+        # Target: dialog, B1 (level skipped for dialog), approved, true_false
+        # Seed 4 description rows each differing on one axis so none of them match all four.
+        # Plus one dialog row that matches all four axes.
+        sit_target = await SituationFactory.create()
+        dialog_target = await ListeningDialogFactory.create(situation_id=sit_target.id)
+        await DialogExerciseFactory.create(
+            dialog_id=dialog_target.id,
+            exercise_type=ExerciseType.TRUE_FALSE,
+            status=ExerciseStatus.APPROVED,
+        )
+
+        # Distractor 1: dialog but wrong type
+        sit_d1 = await SituationFactory.create()
+        dialog_d1 = await ListeningDialogFactory.create(situation_id=sit_d1.id)
+        await DialogExerciseFactory.create(
+            dialog_id=dialog_d1.id,
+            exercise_type=ExerciseType.FILL_GAPS,
+            status=ExerciseStatus.APPROVED,
+        )
+
+        # Distractor 2: dialog + true_false but wrong status
+        sit_d2 = await SituationFactory.create()
+        dialog_d2 = await ListeningDialogFactory.create(situation_id=sit_d2.id)
+        await DialogExerciseFactory.create(
+            dialog_id=dialog_d2.id,
+            exercise_type=ExerciseType.TRUE_FALSE,
+            status=ExerciseStatus.DRAFT,
+        )
+
+        # Distractor 3: description (wrong source) + true_false + approved
+        desc_d3 = await SituationDescriptionFactory.create()
+        await DescriptionExerciseFactory.create(
+            description_id=desc_d3.id,
+            modality=ExerciseModality.LISTENING,
+            exercise_type=ExerciseType.TRUE_FALSE,
+            status=ExerciseStatus.APPROVED,
+        )
+
+        response = await client.get(
+            BASE_URL,
+            params={
+                "modality": "listening",
+                "source": "dialog",
+                "status": "approved",
+                "exercise_type": "true_false",
+            },
+            headers=superuser_auth_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        item = data["items"][0]
+        assert item["source_type"] == "dialog"
+        assert item["exercise_type"] == "true_false"
+        assert item["status"] == "approved"
+
+    # -----------------------------------------------------------------------
+    # 3. Search + filter combined
+    # -----------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_search_and_filter_combined(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        mock_s3_service: MagicMock,
+    ):
+        """Both rows match the search query but only one matches the status filter."""
+        sit_a = await SituationFactory.create(
+            scenario_el="Βιβλιοθήκη", scenario_en="Library search test"
+        )
+        desc_a = await SituationDescriptionFactory.create(situation_id=sit_a.id)
+        await DescriptionExerciseFactory.create(
+            description_id=desc_a.id,
+            modality=ExerciseModality.LISTENING,
+            status=ExerciseStatus.APPROVED,
+        )
+
+        sit_b = await SituationFactory.create(
+            scenario_el="Βιβλιοθήκη 2", scenario_en="Library search test 2"
+        )
+        desc_b = await SituationDescriptionFactory.create(situation_id=sit_b.id)
+        await DescriptionExerciseFactory.create(
+            description_id=desc_b.id,
+            modality=ExerciseModality.LISTENING,
+            status=ExerciseStatus.DRAFT,
+        )
+
+        response = await client.get(
+            BASE_URL,
+            params={
+                "modality": "listening",
+                "search": "Library search test",
+                "status": "approved",
+            },
+            headers=superuser_auth_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        assert data["items"][0]["status"] == "approved"
+
+    # -----------------------------------------------------------------------
+    # 4. Pagination boundary: 25 rows, page 2 of page_size 20 → 5 rows
+    # -----------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_pagination_boundary_page2(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        mock_s3_service: MagicMock,
+    ):
+        """Page 2 of a 25-row set with page_size=20 returns exactly 5 rows and total=25."""
+        for _ in range(25):
+            sit = await SituationFactory.create()
+            desc = await SituationDescriptionFactory.create(situation_id=sit.id)
+            await DescriptionExerciseFactory.create(
+                description_id=desc.id, modality=ExerciseModality.LISTENING
+            )
+
+        response = await client.get(
+            BASE_URL,
+            params={"modality": "listening", "page": 2, "page_size": 20},
+            headers=superuser_auth_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 25
+        assert len(data["items"]) == 5
+        assert data["page"] == 2
+        assert data["page_size"] == 20
+
+    # -----------------------------------------------------------------------
+    # 5. Total-count consistency: filtered total ≤ unfiltered total
+    # -----------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_total_count_consistency(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        mock_s3_service: MagicMock,
+    ):
+        """Filtered total (status=approved) ≤ unfiltered total and equals seeded count."""
+        # Seed 3 approved + 2 draft description exercises
+        for _ in range(3):
+            sit = await SituationFactory.create()
+            desc = await SituationDescriptionFactory.create(situation_id=sit.id)
+            await DescriptionExerciseFactory.create(
+                description_id=desc.id,
+                modality=ExerciseModality.LISTENING,
+                status=ExerciseStatus.APPROVED,
+            )
+        for _ in range(2):
+            sit = await SituationFactory.create()
+            desc = await SituationDescriptionFactory.create(situation_id=sit.id)
+            await DescriptionExerciseFactory.create(
+                description_id=desc.id,
+                modality=ExerciseModality.LISTENING,
+                status=ExerciseStatus.DRAFT,
+            )
+
+        unfiltered = await client.get(
+            BASE_URL, params={"modality": "listening"}, headers=superuser_auth_headers
+        )
+        filtered = await client.get(
+            BASE_URL,
+            params={"modality": "listening", "status": "approved"},
+            headers=superuser_auth_headers,
+        )
+
+        assert unfiltered.status_code == 200
+        assert filtered.status_code == 200
+        unfiltered_total = unfiltered.json()["total"]
+        filtered_total = filtered.json()["total"]
+
+        assert filtered_total <= unfiltered_total
+        assert filtered_total == 3  # exactly the 3 approved rows seeded above
+
+    # -----------------------------------------------------------------------
+    # 6. Payload shape per source
+    # -----------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_payload_shape_description(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        mock_s3_service: MagicMock,
+    ):
+        """Description source: question_el, items list present."""
+        desc = await SituationDescriptionFactory.create()
+        ex = await DescriptionExerciseFactory.create(
+            description_id=desc.id, modality=ExerciseModality.LISTENING
+        )
+        await DescriptionExerciseItemFactory.create(description_exercise_id=ex.id)
+
+        response = await client.get(
+            BASE_URL,
+            params={"modality": "listening", "source": "description"},
+            headers=superuser_auth_headers,
+        )
+        assert response.status_code == 200
+        item = response.json()["items"][0]
+        assert item["source_type"] == "description"
+        # question fields (may be None if not set, but key must be present)
+        assert "question_el" in item
+        assert "question_en" in item
+        # items array is required
+        assert "items" in item
+        assert isinstance(item["items"], list)
+
+    @pytest.mark.asyncio
+    async def test_payload_shape_dialog(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        mock_s3_service: MagicMock,
+        db_session: AsyncSession,
+    ):
+        """Dialog source: audio_url present when audio_s3_key is set."""
+        mock_s3_service.generate_presigned_url.return_value = "https://s3.test/dialog.mp3"
+
+        sit = await SituationFactory.create()
+        dialog = await ListeningDialogFactory.create(situation_id=sit.id)
+        dialog.audio_s3_key = "dialogs/payload-shape-test.mp3"
+        await db_session.flush()
+        await DialogExerciseFactory.create(dialog_id=dialog.id)
+
+        response = await client.get(
+            BASE_URL,
+            params={"modality": "listening", "source": "dialog"},
+            headers=superuser_auth_headers,
+        )
+        assert response.status_code == 200
+        item = response.json()["items"][0]
+        assert item["source_type"] == "dialog"
+        assert item["audio_url"] == "https://s3.test/dialog.mp3"
+        assert "items" in item
+
+    @pytest.mark.asyncio
+    async def test_payload_shape_picture(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        mock_s3_service: MagicMock,
+        db_session: AsyncSession,
+    ):
+        """Picture source: anchor_picture_url present when image_s3_key is set."""
+        mock_s3_service.generate_presigned_url.return_value = "https://s3.test/picture.jpg"
+
+        sit = await SituationFactory.create()
+        picture = await SituationPictureFactory.create(
+            situation_id=sit.id,
+            image_s3_key="pictures/payload-shape-test.jpg",
+            status=PictureStatus.GENERATED,
+        )
+        ex = await PictureExerciseFactory.create(picture_id=picture.id)
+        await PictureExerciseItemFactory.create(picture_exercise_id=ex.id)
+
+        response = await client.get(
+            BASE_URL,
+            params={"modality": "listening", "source": "picture"},
+            headers=superuser_auth_headers,
+        )
+        assert response.status_code == 200
+        item = response.json()["items"][0]
+        assert item["source_type"] == "picture"
+        assert item["anchor_picture_url"] == "https://s3.test/picture.jpg"
+        assert "items" in item
+
+    @pytest.mark.asyncio
+    async def test_payload_shape_word_order(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        mock_s3_service: MagicMock,
+    ):
+        """Word-order source: correct_order and answer_el present from first item payload."""
+        desc = await SituationDescriptionFactory.create()
+        wo_ex = await WordOrderExerciseFactory.create(description_id=desc.id)
+        await WordOrderExerciseItemFactory.create(word_order_exercise_id=wo_ex.id)
+
+        response = await client.get(
+            BASE_URL,
+            params={"modality": "listening", "source": "word_order"},
+            headers=superuser_auth_headers,
+        )
+        assert response.status_code == 200
+        item = response.json()["items"][0]
+        assert item["source_type"] == "word_order"
+        assert item["exercise_type"] == "word_order"
+        assert item["correct_order"] is not None
+        assert item["answer_el"] is not None
