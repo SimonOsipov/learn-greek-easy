@@ -2,7 +2,8 @@
  * ExercisesView Component Tests (ADMIN2-11 / EXERR-02 / ADMIN2-HEAD)
  *
  * Note: PageHead (H1, breadcrumb, kicker) is now owned by AdminPage.
- * ExercisesView renders stat cards + SegControl + AdminExerciseList.
+ * ExercisesView renders stat cards + SegControl + AdminExercisesSection.
+ * Updated in EXR-74/EXR-00b to reflect new i18n keys and component name.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -10,9 +11,9 @@ import userEvent from '@testing-library/user-event';
 
 import ExercisesView from '../ExercisesView';
 
-vi.mock('@/components/admin/exercises/AdminExerciseList', () => ({
-  AdminExerciseList: (props: { modality: string }) => (
-    <div data-testid="admin-exercise-list" data-modality={props.modality} />
+vi.mock('@/components/admin/exercises/AdminExercisesSection', () => ({
+  AdminExercisesSection: (props: { modality: string }) => (
+    <div data-testid="admin-exercises-section" data-modality={props.modality} />
   ),
 }));
 
@@ -25,8 +26,8 @@ describe('ExercisesView', () => {
     render(<ExercisesView />);
     expect(screen.getByText('Total exercises')).toBeTruthy();
     expect(screen.getByText('Approved')).toBeTruthy();
-    expect(screen.getByText('Pending review')).toBeTruthy();
-    expect(screen.getByText('By source')).toBeTruthy();
+    expect(screen.getByText('Awaiting review')).toBeTruthy();
+    expect(screen.getByText('With audio')).toBeTruthy();
   });
 
   it('renders "—" for all four StatCard n values', () => {
@@ -38,7 +39,7 @@ describe('ExercisesView', () => {
     render(<ExercisesView />);
     expect(screen.getByRole('button', { name: /Listening/i })).toBeTruthy();
     expect(screen.getByRole('button', { name: /Reading/i })).toBeTruthy();
-    expect(screen.getByTestId('admin-exercise-list').getAttribute('data-modality')).toBe(
+    expect(screen.getByTestId('admin-exercises-section').getAttribute('data-modality')).toBe(
       'listening'
     );
   });
@@ -49,6 +50,8 @@ describe('ExercisesView', () => {
 
     await user.click(screen.getByRole('button', { name: /Reading/i }));
 
-    expect(screen.getByTestId('admin-exercise-list').getAttribute('data-modality')).toBe('reading');
+    expect(screen.getByTestId('admin-exercises-section').getAttribute('data-modality')).toBe(
+      'reading'
+    );
   });
 });

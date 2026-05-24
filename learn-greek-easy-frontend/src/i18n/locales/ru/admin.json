@@ -1838,43 +1838,6 @@
       }
     }
   },
-  "adminExercises": {
-    "filters": {
-      "exerciseType": "Тип упражнения",
-      "status": "Статус",
-      "searchPlaceholder": "Поиск по названию ситуации..."
-    },
-    "exerciseTypes": {
-      "select_correct_answer": "Выбрать правильный ответ",
-      "fill_gaps": "Заполнить пропуски",
-      "select_heard": "Выбрать услышанное",
-      "true_false": "Правда или ложь",
-      "select_picture_from_description": "Выберите картинку по описанию",
-      "select_description_from_picture": "Выберите описание по картинке"
-    },
-    "sourceTypes": {
-      "description": "Описание",
-      "dialog": "Диалог",
-      "picture": "Картинка"
-    },
-    "statuses": {
-      "draft": "Черновик",
-      "approved": "Одобрено"
-    },
-    "empty": {
-      "listening": "Упражнения на аудирование не найдены",
-      "reading": "Упражнения на чтение не найдены"
-    },
-    "error": "Не удалось загрузить упражнения. Нажмите для повтора.",
-    "retry": "Повторить",
-    "clearSearch": "Очистить поиск",
-    "itemCount": "{{count}} элементов",
-    "showing": "Показаны {{from}}–{{to}} из {{total}}",
-    "pictureMatch": {
-      "anchorPictureAlt": "Опорная картинка",
-      "runtimeNote": "Сетка из 4 вариантов формируется при запросе. Дистракторы выбираются из других Ситуаций."
-    }
-  },
   "exercises": {
     "breadcrumb": {
       "dashboard": "Админ",
@@ -1883,30 +1846,71 @@
     "kicker": "Админ · Упражнения",
     "title": "Упражнения",
     "sub": "Проверяйте упражнения на аудирование и чтение по всем ситуациям.",
-    "v2": {
-      "modality": {
-        "listening": "Listening",
-        "reading": "Reading"
-      },
-      "statCards": {
-        "total": {
-          "label": "Total exercises",
-          "sub": "Counts coming soon"
-        },
-        "approved": {
-          "label": "Approved",
-          "sub": "Counts coming soon"
-        },
-        "pending": {
-          "label": "Pending review",
-          "sub": "Counts coming soon"
-        },
-        "bySource": {
-          "label": "By source",
-          "sub": "Counts coming soon"
-        }
-      }
-    }
+    "actions": {
+      "generateBatch": "Generate batch",
+      "newExercise": "New exercise"
+    },
+    "stats": {
+      "total": { "label": "Total exercises", "subline": "across {{typeCount}} exercise types" },
+      "approved": { "label": "Approved", "subline": "{{pct}}% of catalog · ready to ship" },
+      "awaitingReview": { "label": "Awaiting review", "subline": "{{draftCount}} also still in draft" },
+      "withAudio": { "label": "With audio", "subline": "{{missingCount}} missing audio" }
+    },
+    "filters": {
+      "source": { "label": "Source", "all": "All", "description": "Description", "dialog": "Dialog", "picture": "Picture" },
+      "type": { "label": "Type", "all": "All" },
+      "level": { "label": "Level", "all": "All", "a1": "A1", "a2": "A2", "b1": "B1", "b2": "B2", "c1": "C1", "c2": "C2" },
+      "status": { "label": "Status", "all": "All" }
+    },
+    "modality": { "listening": "Listening", "reading": "Reading" },
+    "search": { "placeholder": "Search Greek prompt or correct answer", "clearAriaLabel": "Clear search" },
+    "types": {
+      "select_correct_answer": "Multiple choice",
+      "fill_gaps": "Fill in the blank",
+      "select_heard": "What you heard",
+      "true_false": "True or false",
+      "select_picture_from_description": "Pick the picture",
+      "select_description_from_picture": "Describe the picture",
+      "picture_match": "Picture match",
+      "word_order": "Word order"
+    },
+    "statuses": { "draft": "Draft", "approved": "Approved", "pending": "Pending" },
+    "row": {
+      "itemCount_one": "{{count}} item",
+      "itemCount_few": "{{count}} items",
+      "itemCount_many": "{{count}} items",
+      "itemCount_other": "{{count}} items",
+      "editButton": "Edit exercise",
+      "regenerateButton": "Regenerate",
+      "regenerateConfirmTitle": "Regenerate this exercise?",
+      "regenerateConfirmBody": "Auto-generation will replace the current questions and options. This cannot be undone.",
+      "correctAnswer": "Correct answer"
+    },
+    "wordOrder": {
+      "dragLabel": "Reorder the words",
+      "correctOrder": "Correct order",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "movedTo": "Moved to position {{position}}"
+    },
+    "audio": { "playLabel": "Play audio", "pauseLabel": "Pause audio", "unavailable": "Audio unavailable" },
+    "picture": { "optionAlt": "Picture option {{position}}", "noDistractor": "Distractor unavailable" },
+    "payloadError": { "malformed": "This exercise's data is incomplete or malformed." },
+    "empty": {
+      "heading": "No exercises match these filters",
+      "hint": "Try clearing a filter or widening the search.",
+      "clearFiltersButton": "Clear filters",
+      "firstRunHeading": "No exercises yet",
+      "listening": "No listening exercises yet",
+      "reading": "No reading exercises yet"
+    },
+    "pager": {
+      "showing": "Showing {{from}}–{{to}} of {{total}}",
+      "previous": "Previous",
+      "next": "Next",
+      "pageOf": "Page {{page}} of {{totalPages}}"
+    },
+    "errorBanner": { "title": "Couldn't load exercises", "retry": "Retry" }
   },
   "decks": {
     "breadcrumb": {
