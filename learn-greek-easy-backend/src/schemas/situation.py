@@ -241,3 +241,17 @@ class AdminExerciseListResponse(BaseModel):
     total: int
     page: int
     page_size: int
+
+
+class GenerateBatchRequest(BaseModel):
+    """Request body for the generate-batch endpoint."""
+
+    modality: ExerciseModality
+    count: int = Field(default=5, ge=1, le=20)
+
+
+class GenerateBatchResponse(BaseModel):
+    """Response body for the generate-batch endpoint."""
+
+    scheduled: int
+    exercise_ids: list[UUID]

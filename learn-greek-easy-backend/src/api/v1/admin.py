@@ -15,7 +15,16 @@ from datetime import datetime, timezone
 from typing import Any, Literal, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, UploadFile, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    Header,
+    HTTPException,
+    Query,
+    UploadFile,
+    status,
+)
 from sqlalchemy import Row, Select, delete, func, or_, select, text, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -54,6 +63,7 @@ from src.db.models import (
     DialogLine,
     DialogSpeaker,
     DialogStatus,
+    Exercise,
     ExerciseItem,
     ExerciseModality,
     ExerciseSourceType,
@@ -142,6 +152,8 @@ from src.schemas.nlp import GeneratedNounData, NormalizedLemma, VerificationSumm
 from src.schemas.situation import (
     AdminExerciseListItem,
     AdminExerciseListResponse,
+    GenerateBatchRequest,
+    GenerateBatchResponse,
     PictureNested,
     PictureUpdate,
     SituationCreate,
@@ -5292,6 +5304,284 @@ async def list_admin_exercises(
         page=page,
         page_size=page_size,
     )
+
+
+# ============================================================================
+# EXR-55 + EXR-60: Regenerate exercise endpoint
+# ============================================================================
+
+# EXR-60: in-process idempotency cache for regenerate.
+# Maps (exercise_id, idempotency_key) -> (cached_at, AdminExerciseListItem).
+# Note: in-process only; single-replica OK for admin routes.
+# Multi-replica would require Redis. Deferred.
+_REGENERATE_IDEMPOTENCY_CACHE: dict[tuple[UUID, str], tuple[datetime, "AdminExerciseListItem"]] = {}
+_REGENERATE_IDEMPOTENCY_TTL_SECONDS = 60
+
+# Union of all sibling exercise types for type annotations.
+_SiblingExercise = DescriptionExercise | DialogExercise | PictureExercise | WordOrderExercise
+
+
+async def _resolve_exercise_by_id(
+    db: AsyncSession,
+    exercise_id: UUID,
+) -> tuple[_SiblingExercise, ExerciseSourceType]:
+    """Look up a sibling exercise row by the Exercise.id (supertable PK).
+
+    Returns (sibling_obj, source_type) or raises HTTP 404 if not found.
+    """
+    # Resolve via the Exercise supertable to find source_type and FK.
+    exercise_row = await db.scalar(select(Exercise).where(Exercise.id == exercise_id))
+    if exercise_row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Exercise {exercise_id} not found",
+        )
+
+    source_type = exercise_row.source_type
+
+    if source_type == ExerciseSourceType.DESCRIPTION:
+        sibling = await db.scalar(
+            select(DescriptionExercise)
+            .where(DescriptionExercise.id == exercise_row.description_exercise_id)
+            .options(selectinload(DescriptionExercise.items))
+        )
+    elif source_type == ExerciseSourceType.DIALOG:
+        sibling = await db.scalar(
+            select(DialogExercise)
+            .where(DialogExercise.id == exercise_row.dialog_exercise_id)
+            .options(selectinload(DialogExercise.items))
+        )
+    elif source_type == ExerciseSourceType.PICTURE:
+        sibling = await db.scalar(
+            select(PictureExercise)
+            .where(PictureExercise.id == exercise_row.picture_exercise_id)
+            .options(selectinload(PictureExercise.items))
+        )
+    else:  # WORD_ORDER
+        sibling = await db.scalar(
+            select(WordOrderExercise)
+            .where(WordOrderExercise.id == exercise_row.word_order_exercise_id)
+            .options(selectinload(WordOrderExercise.items))
+        )
+
+    if sibling is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Exercise {exercise_id} sibling row not found",
+        )
+
+    return sibling, source_type
+
+
+async def _regenerate_exercise(
+    db: AsyncSession,
+    sibling: _SiblingExercise,
+    source_type: ExerciseSourceType,
+) -> None:
+    """Stub regenerate implementation.
+
+    EXR-60: in-place UPDATE preserves id for frontend optimistic updates.
+    TODO: call generator pipeline (deferred to a follow-up story).
+
+    For now, bumps updated_at to demonstrate the round-trip.
+    EXR-60: row-level lock prevents concurrent regenerate of same exercise
+    (SELECT ... FOR UPDATE is applied by the caller before invoking this).
+    """
+    now = datetime.now(timezone.utc)
+    if source_type == ExerciseSourceType.DESCRIPTION:
+        await db.execute(
+            update(DescriptionExercise)
+            .where(DescriptionExercise.id == sibling.id)
+            .values(updated_at=now)
+        )
+    elif source_type == ExerciseSourceType.DIALOG:
+        await db.execute(
+            update(DialogExercise).where(DialogExercise.id == sibling.id).values(updated_at=now)
+        )
+    elif source_type == ExerciseSourceType.PICTURE:
+        await db.execute(
+            update(PictureExercise).where(PictureExercise.id == sibling.id).values(updated_at=now)
+        )
+    else:  # WORD_ORDER
+        await db.execute(
+            update(WordOrderExercise)
+            .where(WordOrderExercise.id == sibling.id)
+            .values(updated_at=now)
+        )
+
+
+async def _build_regenerated_item(
+    db: AsyncSession,
+    sibling: _SiblingExercise,
+    source_type: ExerciseSourceType,
+    s3: S3Service,
+) -> AdminExerciseListItem:
+    """Re-query the sibling + joined tables and build the response item.
+
+    Reuses the same _build_*_item helpers used by the list endpoint.
+    """
+    if source_type == ExerciseSourceType.DESCRIPTION:
+        desc_row: _DescriptionRow = (
+            await db.execute(
+                select(DescriptionExercise, SituationDescription, Situation)
+                .join(
+                    SituationDescription,
+                    DescriptionExercise.description_id == SituationDescription.id,
+                )
+                .join(Situation, SituationDescription.situation_id == Situation.id)
+                .options(selectinload(DescriptionExercise.items))
+                .where(DescriptionExercise.id == sibling.id)
+            )
+        ).one()
+        ex: DescriptionExercise = desc_row[0]
+        modality = ex.modality
+        return _build_description_item(desc_row, modality, s3)
+
+    elif source_type == ExerciseSourceType.DIALOG:
+        dialog_row: _DialogRow = (
+            await db.execute(
+                select(DialogExercise, ListeningDialog, Situation)
+                .join(ListeningDialog, DialogExercise.dialog_id == ListeningDialog.id)
+                .join(Situation, ListeningDialog.situation_id == Situation.id)
+                .options(selectinload(DialogExercise.items))
+                .where(DialogExercise.id == sibling.id)
+            )
+        ).one()
+        return _build_dialog_item(dialog_row, s3)
+
+    elif source_type == ExerciseSourceType.PICTURE:
+        pic_row: _PictureRow = (
+            await db.execute(
+                select(PictureExercise, SituationPicture, Situation, SituationDescription)
+                .join(SituationPicture, PictureExercise.picture_id == SituationPicture.id)
+                .join(Situation, SituationPicture.situation_id == Situation.id)
+                .outerjoin(SituationDescription, SituationDescription.situation_id == Situation.id)
+                .options(selectinload(PictureExercise.items))
+                .where(PictureExercise.id == sibling.id)
+            )
+        ).one()
+        return _build_picture_item(pic_row, s3)
+
+    else:  # WORD_ORDER
+        wo_row: _WordOrderRow = (
+            await db.execute(
+                select(WordOrderExercise, SituationDescription, Situation)
+                .join(
+                    SituationDescription,
+                    WordOrderExercise.description_id == SituationDescription.id,
+                )
+                .join(Situation, SituationDescription.situation_id == Situation.id)
+                .options(selectinload(WordOrderExercise.items))
+                .where(WordOrderExercise.id == sibling.id)
+            )
+        ).one()
+        return _build_word_order_item(wo_row)
+
+
+@router.post(
+    "/exercises/{exercise_id}/regenerate",
+    response_model=AdminExerciseListItem,
+    summary="Regenerate a single exercise",
+    description=(
+        "Triggers regeneration of an exercise's content in-place. "
+        "The row id is preserved (EXR-60). Supports idempotency via "
+        "Idempotency-Key header (60 s in-process cache)."
+    ),
+    responses={
+        200: {"description": "Regenerated exercise item."},
+        404: {"description": "Exercise not found."},
+    },
+)
+async def regenerate_exercise(
+    exercise_id: UUID,
+    idempotency_key: str | None = Header(None, alias="Idempotency-Key"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> AdminExerciseListItem:
+    # EXR-60: check idempotency cache before any DB work
+    if idempotency_key is not None:
+        cache_key = (exercise_id, idempotency_key)
+        cached = _REGENERATE_IDEMPOTENCY_CACHE.get(cache_key)
+        if cached is not None:
+            cached_at, cached_item = cached
+            age = (datetime.now(timezone.utc) - cached_at).total_seconds()
+            if age < _REGENERATE_IDEMPOTENCY_TTL_SECONDS:
+                logger.bind(
+                    admin_user_id=str(current_user.id),
+                    exercise_id=str(exercise_id),
+                ).info("admin_exercise_regenerate_idempotency_hit")
+                return cached_item
+
+    # Resolve sibling (404 if not found)
+    sibling, source_type = await _resolve_exercise_by_id(db, exercise_id)
+
+    # EXR-60: row-level lock prevents concurrent regenerate of same exercise.
+    # Re-fetch the sibling with FOR UPDATE inside the same transaction.
+    if source_type == ExerciseSourceType.DESCRIPTION:
+        await db.execute(
+            select(DescriptionExercise)
+            .where(DescriptionExercise.id == sibling.id)
+            .with_for_update()
+        )
+    elif source_type == ExerciseSourceType.DIALOG:
+        await db.execute(
+            select(DialogExercise).where(DialogExercise.id == sibling.id).with_for_update()
+        )
+    elif source_type == ExerciseSourceType.PICTURE:
+        await db.execute(
+            select(PictureExercise).where(PictureExercise.id == sibling.id).with_for_update()
+        )
+    else:  # WORD_ORDER
+        await db.execute(
+            select(WordOrderExercise).where(WordOrderExercise.id == sibling.id).with_for_update()
+        )
+
+    # Run the stub regenerate (bumps updated_at; generator pipeline deferred)
+    await _regenerate_exercise(db, sibling, source_type)
+    await db.commit()
+
+    # Re-query and build the response item using existing helpers
+    s3 = get_s3_service()
+    result = await _build_regenerated_item(db, sibling, source_type, s3)
+
+    # EXR-60: store result in idempotency cache
+    if idempotency_key is not None:
+        _REGENERATE_IDEMPOTENCY_CACHE[(exercise_id, idempotency_key)] = (
+            datetime.now(timezone.utc),
+            result,
+        )
+
+    # EXR-60: audit log — no Greek/English content, no PII
+    logger.bind(
+        admin_user_id=str(current_user.id),
+        exercise_id=str(exercise_id),
+        exercise_type=sibling.exercise_type.value,
+        source_type=source_type.value,
+    ).info("admin_exercise_regenerate")
+
+    return result
+
+
+@router.post(
+    "/exercises/generate-batch",
+    response_model=GenerateBatchResponse,
+    summary="Schedule batch exercise generation",
+    description=(
+        "Schedules bulk generation of exercises for a given modality. "
+        "Stub implementation — returns scheduled=0 and empty exercise_ids. "
+        "TODO: integrate with generator pipeline (deferred to a follow-up story)."
+    ),
+    responses={
+        200: {"description": "Batch scheduled (stub: scheduled=0)."},
+    },
+)
+async def generate_batch_exercises(
+    body: GenerateBatchRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> GenerateBatchResponse:
+    # TODO: call generator pipeline (deferred to a follow-up story)
+    return GenerateBatchResponse(scheduled=0, exercise_ids=[])
 
 
 # ============================================================================
