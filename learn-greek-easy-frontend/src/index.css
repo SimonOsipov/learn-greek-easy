@@ -2280,29 +2280,29 @@
     background: hsl(var(--fg-3));
   }
 
-  /* Meta table */
-  .fb-meta-table {
+  /* Meta table (renamed fb-meta-* → admin-meta-*, CER-49) */
+  .admin-meta-table {
     display: flex;
     flex-direction: column;
     border: 1px solid hsl(var(--line));
     border-radius: var(--radius);
     overflow: hidden;
   }
-  .fb-meta-row {
+  .admin-meta-row {
     display: grid;
     grid-template-columns: 140px 1fr;
     padding: 10px 14px;
     border-bottom: 1px solid hsl(var(--line));
     font-size: 13px;
   }
-  .fb-meta-row:last-child {
+  .admin-meta-row:last-child {
     border-bottom: 0;
   }
-  .fb-meta-l {
+  .admin-meta-l {
     color: hsl(var(--fg-3));
     font-weight: 500;
   }
-  .fb-meta-v {
+  .admin-meta-v {
     color: hsl(var(--fg));
     font-weight: 500;
   }
