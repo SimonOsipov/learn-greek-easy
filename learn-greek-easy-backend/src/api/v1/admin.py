@@ -1879,7 +1879,7 @@ async def list_card_errors(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_superuser),
     page: int = Query(1, ge=1, description="Page number"),
-    page_size: int = Query(20, ge=1, le=100, description="Items per page"),
+    page_size: int = Query(20, ge=1, le=1000, description="Items per page"),
     status_filter: Optional[CardErrorStatus] = Query(
         None, alias="status", description="Filter by status"
     ),
@@ -1893,7 +1893,7 @@ async def list_card_errors(
         db: Database session (injected)
         current_user: Authenticated superuser (injected)
         page: Page number (1-indexed)
-        page_size: Number of items per page (max 100)
+        page_size: Number of items per page (max 1000)
         status_filter: Optional filter by report status
         card_type: Optional filter by card type (WORD or CULTURE)
 
