@@ -2446,6 +2446,7 @@
     font-size: 24px;
     font-weight: 600;
     line-height: 1.1;
+    font-family: 'Noto Serif', Georgia, serif;
   }
   .ce-ipa {
     font-size: 13px;
@@ -2488,6 +2489,7 @@
     font-size: 14px;
     color: hsl(var(--muted-foreground));
     margin: 0 0 12px;
+    font-family: 'Noto Serif', Georgia, serif;
   }
   .ce-opts {
     list-style: none;
