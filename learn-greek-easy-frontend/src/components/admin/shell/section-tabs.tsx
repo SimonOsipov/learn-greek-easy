@@ -8,6 +8,8 @@ export interface SectionTabItem {
   label: React.ReactNode;
   count: number;
   tone?: 'amber' | 'default';
+  /** Optional tooltip / title text for the tab button. */
+  hint?: string;
 }
 
 export interface SectionTabsProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -20,7 +22,7 @@ export const SectionTabs = React.forwardRef<HTMLDivElement, SectionTabsProps>(
   ({ tabs, active, onTabChange, className, ...rest }, ref) => {
     return (
       <div ref={ref} role="tablist" className={cn('va-tabs', className)} {...rest}>
-        {tabs.map(({ key, label, count, tone = 'default' }) => {
+        {tabs.map(({ key, label, count, tone = 'default', hint }) => {
           const isActive = key === active;
           const showAttn = tone === 'amber' && count > 0;
           return (
@@ -31,6 +33,7 @@ export const SectionTabs = React.forwardRef<HTMLDivElement, SectionTabsProps>(
               aria-selected={isActive}
               className={cn('va-tab', isActive && 'is-active')}
               onClick={() => onTabChange(key)}
+              title={hint}
             >
               <span>{label}</span>
               <span className={cn('va-tab-n', `tone-${tone}`, showAttn && 'is-attn')}>{count}</span>

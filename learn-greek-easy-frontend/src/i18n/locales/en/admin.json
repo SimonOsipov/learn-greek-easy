@@ -287,7 +287,8 @@
     "dashboard": "Dashboard",
     "inbox": "Inbox",
     "exercises": "Exercises",
-    "errors": "Card errors"
+    "errors": "Card errors",
+    "errorsHint": "Open reports (pending + reviewed)"
   },
   "shell": {
     "breadcrumbLabel": "Breadcrumb",

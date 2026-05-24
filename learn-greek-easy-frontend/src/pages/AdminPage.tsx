@@ -790,7 +790,12 @@ const AdminPage: React.FC = () => {
     { key: 'news', label: t('tabs.news'), count: tabCounts?.news ?? 0 },
     { key: 'situations', label: t('tabs.situations'), count: tabCounts?.situations ?? 0 },
     { key: 'exercises', label: t('tabs.exercises'), count: tabCounts?.exercises ?? 0 },
-    { key: 'errors', label: t('tabs.errors'), count: tabCounts?.errors ?? 0 },
+    {
+      key: 'errors',
+      label: t('tabs.errors'),
+      count: tabCounts?.errors ?? 0,
+      hint: t('tabs.errorsHint'),
+    },
     { key: 'feedback', label: t('tabs.feedback'), count: tabCounts?.feedback ?? 0 },
     { key: 'changelog', label: t('tabs.changelog'), count: tabCounts?.changelog ?? 0 },
     { key: 'announcements', label: t('tabs.announcements'), count: tabCounts?.announcements ?? 0 },
