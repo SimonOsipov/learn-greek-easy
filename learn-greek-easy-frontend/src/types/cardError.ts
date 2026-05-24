@@ -75,10 +75,10 @@ export interface CardErrorResponse {
 
 /**
  * Status display configuration for UI badges.
- * Follows pattern from feedback.ts STATUS_CONFIG.
+ * Label is intentionally omitted — use the shared CardErrorStatusBadge
+ * component which reads the label from i18n via useTranslation().
  */
 export interface CardErrorStatusConfig {
-  label: string;
   badgeClass: string;
 }
 
@@ -87,19 +87,15 @@ export interface CardErrorStatusConfig {
  */
 export const CARD_ERROR_STATUS_CONFIG: Record<CardErrorStatus, CardErrorStatusConfig> = {
   PENDING: {
-    label: 'Pending',
     badgeClass: 'badge b-amber',
   },
   REVIEWED: {
-    label: 'Reviewed',
     badgeClass: 'badge b-blue',
   },
   FIXED: {
-    label: 'Fixed',
     badgeClass: 'badge b-green',
   },
   DISMISSED: {
-    label: 'Dismissed',
     badgeClass: 'badge b-gray',
   },
 };

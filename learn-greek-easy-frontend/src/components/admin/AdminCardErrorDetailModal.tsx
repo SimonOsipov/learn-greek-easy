@@ -37,14 +37,10 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
 import { adminAPI } from '@/services/adminAPI';
-import type {
-  AdminCardErrorResponse,
-  AdminCardErrorUpdateRequest,
-  CardErrorStatus,
-} from '@/types/cardError';
-import { CARD_ERROR_STATUS_CONFIG } from '@/types/cardError';
+import type { AdminCardErrorResponse, AdminCardErrorUpdateRequest } from '@/types/cardError';
+
+import { CardErrorStatusBadge } from './CardErrorStatusBadge';
 
 // ============================================
 // Types
@@ -92,19 +88,6 @@ const formatDate = (dateString: string, locale: string): string => {
     hour: '2-digit',
     minute: '2-digit',
   });
-};
-
-// ============================================
-// Status Badge Component
-// ============================================
-
-interface CardErrorStatusBadgeProps {
-  status: CardErrorStatus;
-}
-
-const CardErrorStatusBadge: React.FC<CardErrorStatusBadgeProps> = ({ status }) => {
-  const config = CARD_ERROR_STATUS_CONFIG[status];
-  return <Badge className={cn(config.badgeClass)}>{config.label}</Badge>;
 };
 
 // ============================================
