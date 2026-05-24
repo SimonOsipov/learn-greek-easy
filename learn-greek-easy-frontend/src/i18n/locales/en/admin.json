@@ -870,7 +870,7 @@
         "copyCardId": "Copy card ID",
         "openInDeck": "Open in deck"
       },
-      "breadcrumb": "Card errors / Report",
+      "breadcrumb": "Card errors · #{{id}} · reported {{date}} · {{time}}",
       "foot": {
         "delete": "Delete report",
         "deleteConfirm": {
@@ -888,7 +888,7 @@
         "review": "Review",
         "theCard": "The card"
       },
-      "title": "Card error report"
+      "title": "Error report"
     },
     "editResponse": "Edit Response",
     "empty": {
