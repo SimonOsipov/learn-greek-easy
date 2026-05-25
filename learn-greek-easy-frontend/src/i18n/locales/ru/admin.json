@@ -1893,7 +1893,7 @@
       "moveDown": "Move down",
       "movedTo": "Moved to position {{position}}"
     },
-    "audio": { "playLabel": "Play audio", "pauseLabel": "Pause audio", "unavailable": "Audio unavailable" },
+    "audio": { "playLabel": "Воспроизвести аудио", "pauseLabel": "Пауза", "unavailable": "Аудио недоступно" },
     "picture": { "optionAlt": "Picture option {{position}}", "noDistractor": "Distractor unavailable" },
     "payloadError": { "malformed": "This exercise's data is incomplete or malformed." },
     "empty": {
