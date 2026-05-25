@@ -17,20 +17,13 @@ vi.mock('@/components/admin/exercises/AdminExercisesSection', () => ({
   ),
 }));
 
-vi.mock('@/services/adminAPI', () => ({
-  adminAPI: {
-    generateExerciseBatch: vi.fn().mockResolvedValue({ scheduled: 0, exercise_ids: [] }),
-  },
-}));
-
 describe('ExercisesView', () => {
   it('renders without throwing', () => {
     expect(() => render(<ExercisesView />)).not.toThrow();
   });
 
-  it('renders the Generate batch and New exercise action buttons', () => {
+  it('renders the New exercise action button', () => {
     render(<ExercisesView />);
-    expect(screen.getByRole('button', { name: /generate batch/i })).toBeTruthy();
     expect(screen.getByRole('button', { name: /new exercise/i })).toBeTruthy();
   });
 

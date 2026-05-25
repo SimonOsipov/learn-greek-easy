@@ -1909,7 +1909,6 @@
     "title": "Exercises",
     "sub": "Approve and review listening + reading exercises across all situations.",
     "actions": {
-      "generateBatch": "Generate batch",
       "newExercise": "New exercise"
     },
     "stats": {

@@ -18,7 +18,6 @@
  *   - EXR-77: pagination controls appear when total > page size
  *   - EXR-77: error banner with Retry appears on network failure (mocked)
  *   - EXR-77: first-run empty state renders when zero exercises exist
- *   - EXR-77: Generate batch button click triggers spinner on button
  *   - EXR-77: audio play button toggles to pause state
  *
  * Auth: admin storageState (STORAGE_STATE.ADMIN).
@@ -48,15 +47,12 @@ test.describe('Admin Exercises Tab — smoke (EXR-71)', () => {
 
   // ── EXR-E2E-02: Page-head action buttons ───────────────────────────────────
 
-  test('EXR-E2E-02: page-head action buttons (Generate batch + New exercise) render', async ({
+  test('EXR-E2E-02: page-head action button (New exercise) renders', async ({
     page,
   }) => {
     // Page-head TEXT (breadcrumb/kicker/h1) is explicitly excluded per stakeholder —
     // see ADMIN2-23 story Out of Scope. The action-bar container (EXR-00c) holds
-    // two CTAs that are the canonical proof the exercises view mounted.
-    await expect(
-      page.getByRole('button', { name: /generate batch|сгенерировать пакет/i })
-    ).toBeVisible();
+    // the New exercise CTA that is the canonical proof the exercises view mounted.
     await expect(
       page.getByRole('button', { name: /new exercise|новое упражнение/i })
     ).toBeVisible();
