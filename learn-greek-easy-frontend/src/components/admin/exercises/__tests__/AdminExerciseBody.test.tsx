@@ -195,6 +195,41 @@ describe('AdminExerciseBody', () => {
     expect(screen.getByText('Correct order')).toBeTruthy();
   });
 
+  it('Word Order: clicking Move down on second chip reorders chips (EXR-76)', () => {
+    // 3 chips: ['Α', 'Β', 'Γ']
+    // Click Move down on chip 0 ('Α') → new order should be ['Β', 'Α', 'Γ']
+    const exercise = makeBase({
+      exercise_type: 'word_order',
+      question_el: 'Σειρά:',
+      items: [
+        {
+          item_index: 0,
+          payload: {
+            words: ['Α', 'Β', 'Γ'],
+            correct_order: [0, 1, 2],
+            answer_el: 'Α Β Γ',
+          },
+        },
+      ],
+    });
+    render(<AdminExerciseBody exercise={exercise} />);
+
+    // Get all chip texts before reorder
+    const chipsBefore = screen.getAllByRole('button', { name: 'Move down' });
+    // Click move-down on first chip (index 0)
+    fireEvent.click(chipsBefore[0]);
+
+    // After reorder, 'Β' should come before 'Α' in rendered order
+    // The chips are rendered in a flex container; we check DOM text order
+    const chips = document.querySelectorAll('[lang="el"]');
+    // The question_el is also [lang="el"]; skip first (question), get chip texts
+    const chipTexts = Array.from(chips)
+      .map((el) => el.textContent)
+      .filter((t) => ['Α', 'Β', 'Γ'].includes(t ?? ''));
+    expect(chipTexts[0]).toBe('Β');
+    expect(chipTexts[1]).toBe('Α');
+  });
+
   it('renders Picture Variant A with ImageOff fallback for options with no image_url', () => {
     const exercise = makeBase({
       exercise_type: 'select_picture_from_description',

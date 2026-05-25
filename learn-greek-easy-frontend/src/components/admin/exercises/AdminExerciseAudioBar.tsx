@@ -1,4 +1,4 @@
-// EXR-20 + EXR-21 + EXR-22 + EXR-35 + EXR-36 + EXR-37
+// EXR-20 + EXR-21 + EXR-22 + EXR-35 + EXR-36 + EXR-37 + EXR-73
 // Audio bar with 54-bar waveform, real progress, edge states,
 // single-audio policy (module scope), and keyboard/a11y.
 
@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import { AlertCircle, Loader2, Pause, Play } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { track } from '@/lib/analytics/track';
 import { cn } from '@/lib/utils';
 
 // EXR-36: module-scoped ref — one audio element playing at a time across all rows.
@@ -14,9 +15,12 @@ let currentAudioRef: HTMLAudioElement | null = null;
 
 interface Props {
   src?: string | null;
+  /** EXR-73: exercise identity for analytics tracking */
+  exerciseId?: string;
+  exerciseType?: string;
 }
 
-export function AdminExerciseAudioBar({ src }: Props) {
+export function AdminExerciseAudioBar({ src, exerciseId, exerciseType }: Props) {
   const { t } = useTranslation('admin');
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -24,6 +28,8 @@ export function AdminExerciseAudioBar({ src }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const [pct, setPct] = useState(0);
+  // EXR-73: track only the first play per component mount (session-scoped)
+  const hasTrackedPlay = useRef(false);
 
   // EXR-22 + EXR-35 + EXR-36: wire up audio element events
   useEffect(() => {
@@ -34,6 +40,15 @@ export function AdminExerciseAudioBar({ src }: Props) {
       setPlaying(true);
       setLoading(false);
       setError(false);
+      // EXR-73: fire once per mount (first play only)
+      if (!hasTrackedPlay.current) {
+        hasTrackedPlay.current = true;
+        track('admin_exercise_audio_played', {
+          exercise_id: exerciseId,
+          exercise_type: exerciseType,
+          audio_present: true,
+        });
+      }
     };
     const onPause = () => {
       setPlaying(false);

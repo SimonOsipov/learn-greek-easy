@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Input } from '@/components/ui/input';
 import { SegControl } from '@/components/ui/seg-control';
+import { track } from '@/lib/analytics/track';
 import {
   useAdminExercisesStore,
   type ExerciseTypeFilter,
@@ -82,7 +83,11 @@ export function AdminExercisesToolbar({ modality: _modality }: AdminExercisesToo
               v === 'all' ? t('exercises.filters.source.all') : t(`exercises.filters.source.${v}`),
           }))}
           value={source}
-          onChange={setSource}
+          onChange={(v) => {
+            setSource(v);
+            // EXR-73: track filter change
+            track('admin_exercise_filter_changed', { axis: 'source', value: v });
+          }}
           ariaLabel={t('exercises.filters.source.label')}
           className="flex-col items-start sm:flex-row sm:items-center"
         />
@@ -94,7 +99,10 @@ export function AdminExercisesToolbar({ modality: _modality }: AdminExercisesToo
             label: v === 'all' ? t('exercises.filters.type.all') : t(`exercises.types.${v}`),
           }))}
           value={type}
-          onChange={setType}
+          onChange={(v) => {
+            setType(v);
+            track('admin_exercise_filter_changed', { axis: 'type', value: v });
+          }}
           ariaLabel={t('exercises.filters.type.label')}
           className="flex-col items-start sm:flex-row sm:items-center"
         />
@@ -109,7 +117,10 @@ export function AdminExercisesToolbar({ modality: _modality }: AdminExercisesToo
                 : t(`exercises.filters.level.${v.toLowerCase()}`),
           }))}
           value={level}
-          onChange={setLevel}
+          onChange={(v) => {
+            setLevel(v);
+            track('admin_exercise_filter_changed', { axis: 'level', value: v });
+          }}
           ariaLabel={t('exercises.filters.level.label')}
           className="flex-col items-start sm:flex-row sm:items-center"
         />
@@ -121,7 +132,10 @@ export function AdminExercisesToolbar({ modality: _modality }: AdminExercisesToo
             label: v === 'all' ? t('exercises.filters.status.all') : t(`exercises.statuses.${v}`),
           }))}
           value={status}
-          onChange={setStatus}
+          onChange={(v) => {
+            setStatus(v);
+            track('admin_exercise_filter_changed', { axis: 'status', value: v });
+          }}
           ariaLabel={t('exercises.filters.status.label')}
           className="flex-col items-start sm:flex-row sm:items-center"
         />

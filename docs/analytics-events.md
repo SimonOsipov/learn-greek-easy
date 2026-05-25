@@ -183,3 +183,67 @@ Fired after a successful DELETE of a card error report.
 
 - `report_id` (string) — UUID of the card error report.
 - `status_at_delete` (string) — the report's status at the time of deletion.
+
+## Admin Exercise Events (EXR-73 + EXR-81)
+
+> **Note:** These admin-only events are an exception to the "DO NOT create events for admin panel actions" rule. They are scoped to the `admin_exercise_` prefix and are used to track admin review workflows, particularly the cost-bearing regenerate action.
+
+> Operational notes: see [admin-exercises-review-flow.md](./admin-exercises-review-flow.md).
+
+### `admin_exercise_opened`
+
+Fired when an exercise row transitions from collapsed to expanded (first open per interaction, not on re-open after collapse).
+
+**Properties:**
+
+- `exercise_id` (string) — UUID of the exercise.
+- `exercise_type` (string) — exercise type (e.g. `select_correct_answer`, `word_order`).
+- `status` (string) — current status: `draft`, `pending`, or `approved`.
+- `source` (string) — source type: `description`, `dialog`, or `picture`.
+- `level` (string | null) — CEFR level if set (e.g. `A2`, `B1`), otherwise `null`.
+
+### `admin_exercise_regenerated`
+
+Fired after a **successful** POST to the regenerate endpoint. This is the primary cost-bearing event (OpenRouter call).
+
+**Properties:**
+
+- `exercise_id` (string) — UUID of the exercise.
+- `exercise_type` (string) — exercise type.
+
+### `admin_exercise_filter_changed`
+
+Fired when the admin changes any SegControl filter axis. One event per change.
+
+**Properties:**
+
+- `axis` (string) — which filter changed: `source`, `type`, `level`, or `status`.
+- `value` (string) — new filter value (e.g. `all`, `description`, `A2`, `approved`).
+
+### `admin_exercise_batch_generate_clicked`
+
+Fired on each click of the "Generate batch" button, before the API call.
+
+**Properties:**
+
+- `endpoint_available` (boolean) — always `true` at call site; reserved for future feature-flag gating.
+
+### `admin_exercise_audio_played`
+
+Fired on the **first** play event per component mount (session-scoped; does not re-fire on pause/resume).
+
+**Properties:**
+
+- `exercise_id` (string) — UUID of the exercise.
+- `exercise_type` (string) — exercise type.
+- `audio_present` (boolean) — always `true` at call site (component only mounts when `src` is non-null).
+
+### `admin_exercise_option_clicked`
+
+Fired when the admin clicks an MCQ option button (select_correct_answer / select_heard variants).
+
+**Properties:**
+
+- `exercise_id` (string) — UUID of the exercise.
+- `option_index` (number) — zero-based index of the clicked option.
+- `was_correct` (boolean) — whether the clicked option is the correct answer.

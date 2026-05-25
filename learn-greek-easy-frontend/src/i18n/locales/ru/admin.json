@@ -1860,7 +1860,7 @@
         "subline": "{{pct}}% каталога · готово к публикации"
       },
       "awaitingReview": {
-        "label": "Ждут проверки",
+        "label": "Ожидают проверки",
         "subline": "{{count}} ещё в черновиках"
       },
       "withAudio": {
@@ -1943,7 +1943,7 @@
     },
     "picture": {
       "optionAlt": "Вариант картинки {{position}}",
-      "noDistractor": "Дистрактор недоступен"
+      "noDistractor": "Вариант недоступен"
     },
     "payloadError": {
       "malformed": "Данные упражнения неполные или повреждены."
