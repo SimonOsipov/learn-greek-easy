@@ -9,7 +9,7 @@ import { track } from '@/lib/analytics/track';
 import { cn } from '@/lib/utils';
 import { adminAPI } from '@/services/adminAPI';
 import { useAdminExercisesStore } from '@/stores/adminExercisesStore';
-import type { AdminExerciseListItem } from '@/types/situation';
+import type { AdminExerciseListItem, AdminExerciseStatsResponse } from '@/types/situation';
 
 import { AdminExerciseBody } from './AdminExerciseBody';
 import { AdminExerciseRow } from './AdminExerciseRow';
@@ -76,6 +76,10 @@ export function AdminExercisesSection({ modality, refreshKey = 0 }: AdminExercis
   // EXR-34: bump to refetch after a successful single-exercise regenerate
   const [innerRefreshKey, setInnerRefreshKey] = useState(0);
   const [openIds, setOpenIds] = useState<Set<string>>(new Set());
+
+  // EXR2-24: catalog-wide stats (not affected by page changes — AC #2)
+  const [stats, setStats] = useState<AdminExerciseStatsResponse | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
 
   // EXR-39: auto-open first row on first non-empty fetch (once per mount)
   // Local state — no Zustand store needed; open state is section-scoped.
@@ -148,6 +152,36 @@ export function AdminExercisesSection({ modality, refreshKey = 0 }: AdminExercis
     innerRefreshKey,
   ]);
 
+  // EXR2-24: fetch catalog-wide stats — deps exclude `page` and `pageSize` so stats
+  // remain stable while the user paginates (AC #2).
+  useEffect(() => {
+    let cancelled = false;
+    const fetchStats = async () => {
+      setStatsLoading(true);
+      try {
+        const result = await adminAPI.getExerciseStats({
+          modality,
+          exercise_type: type !== 'all' ? type : undefined,
+          status: status !== 'all' ? status : undefined,
+          source: source !== 'all' ? source : undefined,
+          level: level !== 'all' ? level : undefined,
+          search: qDebounced || undefined,
+        });
+        if (!cancelled) {
+          setStats(result);
+        }
+      } catch {
+        // Stats fetch failure is non-critical; leave previous value in place
+      } finally {
+        if (!cancelled) setStatsLoading(false);
+      }
+    };
+    void fetchStats();
+    return () => {
+      cancelled = true;
+    };
+  }, [modality, type, status, source, level, qDebounced, retryCount, refreshKey, innerRefreshKey]);
+
   // EXR-39: auto-open first row on first non-empty fetch
   useEffect(() => {
     if (hasAutoOpened.current) return;
@@ -169,8 +203,8 @@ export function AdminExercisesSection({ modality, refreshKey = 0 }: AdminExercis
 
   return (
     <div className="space-y-4" data-testid="admin-exercises-list">
-      {/* EXR-79: while loading, pass empty array so StatCards render in their n=0 state */}
-      <AdminExercisesStats items={loading ? [] : exercises} total={loading ? 0 : total} />
+      {/* EXR2-24: pass catalog-wide stats; stats don't change when paginating (AC #2) */}
+      <AdminExercisesStats stats={stats} loading={statsLoading} />
 
       {/* Filter bar */}
       <AdminExercisesToolbar modality={modality} />

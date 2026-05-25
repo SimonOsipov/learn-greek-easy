@@ -243,6 +243,21 @@ class AdminExerciseListResponse(BaseModel):
     page_size: int
 
 
+class AdminExerciseStatsResponse(BaseModel):
+    """Catalog-wide exercise counts returned by GET /admin/exercises/stats.
+
+    Invariant: with_audio + missing_audio == total.
+    """
+
+    total: int
+    approved: int
+    pending: int
+    draft: int
+    with_audio: int
+    missing_audio: int
+    distinct_types: int
+
+
 class GenerateBatchRequest(BaseModel):
     """Request body for the generate-batch endpoint."""
 
