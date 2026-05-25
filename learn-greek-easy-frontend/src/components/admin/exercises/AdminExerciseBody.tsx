@@ -19,11 +19,33 @@
 
 import { useEffect, useState } from 'react';
 
-import { AlertTriangle, Check, ChevronDown, ChevronUp, ImageOff, Minus } from 'lucide-react';
+import {
+  AlertTriangle,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  ImageOff,
+  Loader2,
+  Minus,
+  Pencil,
+  RefreshCw,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
 import { Kicker } from '@/components/ui/kicker';
+import { SidePanel } from '@/components/ui/side-panel';
 import { cn } from '@/lib/utils';
+import { adminAPI } from '@/services/adminAPI';
 import type { AdminExerciseListItem, SituationExerciseItemResponse } from '@/types/situation';
 
 import { AdminExerciseAudioBar } from './AdminExerciseAudioBar';
@@ -35,14 +57,16 @@ import { elText } from './ExerciseItemPayload';
 
 interface AdminExerciseBodyProps {
   exercise: AdminExerciseListItem;
+  onRegenerated?: () => void;
 }
 
-export function AdminExerciseBody({ exercise }: AdminExerciseBodyProps) {
+export function AdminExerciseBody({ exercise, onRegenerated }: AdminExerciseBodyProps) {
   return (
     <div className="px-4 pb-4">
       <AdminExerciseAudioBar src={exercise.audio_url} />
       <BodyHeader exercise={exercise} />
       <BodyVariant exercise={exercise} />
+      <BodyFooter exercise={exercise} onRegenerated={onRegenerated} />
     </div>
   );
 }
@@ -63,6 +87,103 @@ function BodyHeader({ exercise }: { exercise: AdminExerciseListItem }) {
         {level && ` · ${level}`}
       </Kicker>
       <QuestionText exercise={exercise} />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// BodyFooter — EXR-34
+// Edit drawer stub + Regenerate confirm dialog + #xN identifier
+// ---------------------------------------------------------------------------
+
+function BodyFooter({
+  exercise,
+  onRegenerated,
+}: {
+  exercise: AdminExerciseListItem;
+  onRegenerated?: () => void;
+}) {
+  const { t } = useTranslation('admin');
+  const [editOpen, setEditOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
+  const [regenError, setRegenError] = useState<string | null>(null);
+
+  const handleRegenerate = async () => {
+    setRegenerating(true);
+    setRegenError(null);
+    try {
+      await adminAPI.regenerateExercise(exercise.id);
+      setConfirmOpen(false);
+      onRegenerated?.();
+    } catch (err) {
+      setRegenError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setRegenerating(false);
+    }
+  };
+
+  return (
+    <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
+      <div className="flex items-center gap-2">
+        <Button variant="ghost" size="sm" onClick={() => setEditOpen(true)}>
+          <Pencil className="me-1.5 size-3.5" aria-hidden />
+          {t('exercises.row.editButton')}
+        </Button>
+        <Button variant="ghost" size="sm" onClick={() => setConfirmOpen(true)}>
+          <RefreshCw className="me-1.5 size-3.5" aria-hidden />
+          {t('exercises.row.regenerateButton')}
+        </Button>
+      </div>
+      {/* EXR-44: Latin #x identifier stays Latin in both locales (OQ #9 resolved) */}
+      <span className="font-mono text-[11px] text-fg3">#x{exercise.id.slice(0, 8)}</span>
+
+      {/* Edit drawer stub */}
+      <SidePanel
+        size="default"
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        title={t('exercises.row.editButton')}
+      >
+        <SidePanel.CloseButton position="right" />
+        <SidePanel.Body>
+          <p className="text-sm text-fg3">Drawer body coming soon.</p>
+        </SidePanel.Body>
+      </SidePanel>
+
+      {/* Regenerate confirm — we control close timing to keep dialog open on error */}
+      <AlertDialog
+        open={confirmOpen}
+        onOpenChange={(open) => {
+          // Block closing while the request is in-flight
+          if (!open && regenerating) return;
+          setConfirmOpen(open);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('exercises.row.regenerateConfirmTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('exercises.row.regenerateConfirmBody')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {regenError && <p className="text-sm text-destructive">{regenError}</p>}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={regenerating}>Cancel</AlertDialogCancel>
+            {/*
+             * Use a plain Button instead of AlertDialogAction so we can control
+             * when the dialog closes (only on success, not automatically on click).
+             */}
+            <Button onClick={handleRegenerate} disabled={regenerating}>
+              {regenerating ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden />
+              ) : (
+                t('exercises.row.regenerateButton')
+              )}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 /**
- * AdminExerciseBody unit tests (EXR-23..33 + EXR-40..44)
+ * AdminExerciseBody unit tests (EXR-23..33 + EXR-40..44 + EXR-34)
  *
  * Covers:
  * - MCQ variant: 4 buttons with A/B/C/D marks, correct answer has check icon
@@ -10,12 +10,23 @@
  * - Picture variant A: imageless options → ImageOff fallback shown (EXR-40)
  * - PayloadErrorBanner: renders when options array is empty
  * - Picture variant: 2 options → 2 "Distractor unavailable" placeholder cards (EXR-41)
+ * - BodyFooter (EXR-34): Regenerate opens AlertDialog with correct title
+ * - BodyFooter (EXR-34): Confirm calls adminAPI.regenerateExercise with exercise id
+ * - BodyFooter (EXR-34): API rejection shows error message
+ * - BodyFooter (EXR-34): #x{id.slice(0,8)} identifier renders
  */
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
 import { AdminExerciseBody } from '../AdminExerciseBody';
 import type { AdminExerciseListItem } from '@/types/situation';
+
+// Mock adminAPI so footer tests don't hit the network
+vi.mock('@/services/adminAPI', () => ({
+  adminAPI: {
+    regenerateExercise: vi.fn(),
+  },
+}));
 
 // ---------------------------------------------------------------------------
 // Factory helpers
@@ -270,5 +281,124 @@ describe('AdminExerciseBody', () => {
     expect(noDistractorCards).toHaveLength(2);
 
     warnSpy.mockRestore();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// BodyFooter tests — EXR-34
+// ---------------------------------------------------------------------------
+
+import { adminAPI } from '@/services/adminAPI';
+
+describe('BodyFooter (EXR-34)', () => {
+  function makeExerciseWithId(id = 'abcd1234-5678-0000-0000-000000000000'): AdminExerciseListItem {
+    return makeBase({
+      id,
+      exercise_type: 'select_correct_answer',
+      question_el: 'Ερώτηση;',
+      correct_idx: 0,
+      items: [
+        {
+          item_index: 0,
+          payload: {
+            options: ['Α', 'Β', 'Γ', 'Δ'],
+            correct_idx: 0,
+          },
+        },
+      ],
+    });
+  }
+
+  /** Helper: open the regenerate dialog by clicking the footer button. */
+  function openRegenDialog() {
+    // The footer has a ghost "Regenerate" button (with RefreshCw icon text).
+    // getAllByRole returns all matches; we click the first one (footer trigger).
+    const allRegenBtns = screen.getAllByRole('button', { name: /Regenerate/i });
+    fireEvent.click(allRegenBtns[0]);
+  }
+
+  /** Helper: get the confirm button inside the open dialog (the last "Regenerate" button). */
+  function getConfirmBtn() {
+    const all = screen.getAllByRole('button', { name: /Regenerate/i });
+    return all[all.length - 1];
+  }
+
+  it('clicking Regenerate opens AlertDialog with the confirm title text', async () => {
+    render(<AdminExerciseBody exercise={makeExerciseWithId()} />);
+
+    openRegenDialog();
+
+    // AlertDialog title should be visible
+    await waitFor(() => {
+      expect(screen.getByText('Regenerate this exercise?')).toBeTruthy();
+    });
+  });
+
+  it('confirming regenerate calls adminAPI.regenerateExercise with the exercise id', async () => {
+    const mockRegen = vi.mocked(adminAPI.regenerateExercise);
+    mockRegen.mockResolvedValueOnce({} as AdminExerciseListItem);
+
+    const exerciseId = 'abcd1234-5678-0000-0000-000000000000';
+    render(<AdminExerciseBody exercise={makeExerciseWithId(exerciseId)} />);
+
+    openRegenDialog();
+
+    await waitFor(() => {
+      expect(screen.getByText('Regenerate this exercise?')).toBeTruthy();
+    });
+
+    // Click the confirm button inside the dialog
+    fireEvent.click(getConfirmBtn());
+
+    await waitFor(() => {
+      expect(mockRegen).toHaveBeenCalledWith(exerciseId);
+    });
+  });
+
+  it('when API call rejects, the error message is rendered', async () => {
+    const mockRegen = vi.mocked(adminAPI.regenerateExercise);
+    mockRegen.mockRejectedValueOnce(new Error('Server error'));
+
+    render(<AdminExerciseBody exercise={makeExerciseWithId()} />);
+
+    openRegenDialog();
+
+    await waitFor(() => {
+      expect(screen.getByText('Regenerate this exercise?')).toBeTruthy();
+    });
+
+    fireEvent.click(getConfirmBtn());
+
+    await waitFor(() => {
+      expect(screen.getByText('Server error')).toBeTruthy();
+    });
+  });
+
+  it('renders #x{id.slice(0,8)} identifier in the footer', () => {
+    const id = 'abcd1234-5678-0000-0000-000000000000';
+    render(<AdminExerciseBody exercise={makeExerciseWithId(id)} />);
+
+    // Expected: #xabcd1234 (first 8 chars of the id)
+    expect(screen.getByText('#xabcd1234')).toBeTruthy();
+  });
+
+  it('calls onRegenerated callback after a successful regenerate', async () => {
+    const mockRegen = vi.mocked(adminAPI.regenerateExercise);
+    mockRegen.mockResolvedValueOnce({} as AdminExerciseListItem);
+    const onRegenerated = vi.fn();
+
+    render(<AdminExerciseBody exercise={makeExerciseWithId()} onRegenerated={onRegenerated} />);
+
+    openRegenDialog();
+
+    await waitFor(() => {
+      expect(screen.getByText('Regenerate this exercise?')).toBeTruthy();
+    });
+
+    fireEvent.click(getConfirmBtn());
+
+    await waitFor(() => {
+      expect(onRegenerated).toHaveBeenCalledOnce();
+    });
   });
 });

@@ -28,6 +28,7 @@ import type {
   AdminFeedbackUpdateRequest,
 } from '@/types/feedback';
 import type {
+  AdminExerciseListItem,
   AdminExerciseListParams,
   AdminExerciseListResponse,
   PictureNested,
@@ -1690,6 +1691,13 @@ export const adminAPI = {
       '/api/v1/admin/exercises/generate-batch',
       body
     ),
+
+  /**
+   * Regenerate a single exercise via AI.
+   * POST /api/v1/admin/exercises/{id}/regenerate
+   */
+  regenerateExercise: (exerciseId: string): Promise<AdminExerciseListItem> =>
+    api.post<AdminExerciseListItem>(`/api/v1/admin/exercises/${exerciseId}/regenerate`, {}),
 
   getExercises: async (params: AdminExerciseListParams): Promise<AdminExerciseListResponse> => {
     const queryString = buildQueryString({
