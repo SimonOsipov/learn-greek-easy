@@ -446,7 +446,8 @@
         "rateAsc": "Низкий процент прочтений"
       },
       "emptySearch": "Объявления по запросу «{{query}}» не найдены",
-      "clearSearch": "Очистить поиск"
+      "clearSearch": "Очистить поиск",
+      "searchClearAriaLabel": "Очистить поиск"
     }
   },
   "news": {
