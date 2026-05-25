@@ -1035,7 +1035,8 @@
     },
     "title": "Card errors",
     "toolbar": {
-      "searchPlaceholder": "Search by reporter, card text, deck…"
+      "searchPlaceholder": "Search by reporter, card text, deck…",
+      "searchClearAriaLabel": "Clear search"
     }
   },
   "cardCreate": {

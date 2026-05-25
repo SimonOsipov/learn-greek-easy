@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 
-import { AlertCircle, ChevronLeft, ChevronRight, RefreshCw, Search } from 'lucide-react';
+import { AlertCircle, ChevronLeft, ChevronRight, RefreshCw, Search, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 
@@ -227,6 +227,31 @@ export const AdminCardErrorSection: React.FC = () => {
     <div className="space-y-6" data-testid="admin-card-error-section">
       {/* Filters */}
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+        <div className="relative min-w-[240px] flex-1 sm:max-w-md">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder={t('cardErrors.toolbar.searchPlaceholder')}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') setSearchInput('');
+            }}
+            className="pl-8 pr-8"
+            data-testid="card-error-search-input"
+          />
+          {searchInput && (
+            <button
+              type="button"
+              className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground"
+              onClick={() => setSearchInput('')}
+              aria-label={t('cardErrors.toolbar.searchClearAriaLabel')}
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+
         <SegControl
           options={STATUS_OPTIONS}
           value={statusSeg}
@@ -240,18 +265,6 @@ export const AdminCardErrorSection: React.FC = () => {
           onChange={handleCardTypeFilterChange}
           ariaLabel={t('cardErrors.filters.typePlaceholder')}
         />
-
-        <div className="relative min-w-[200px] flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder={t('cardErrors.toolbar.searchPlaceholder')}
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            className="pl-9"
-            data-testid="card-error-search-input"
-          />
-        </div>
 
         {hasActiveFilters && (
           <Button

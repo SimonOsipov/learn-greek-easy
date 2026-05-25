@@ -973,7 +973,8 @@
     },
     "title": "Ошибки карточек",
     "toolbar": {
-      "searchPlaceholder": "Поиск по автору, тексту карточки, колоде…"
+      "searchPlaceholder": "Поиск по автору, тексту карточки, колоде…",
+      "searchClearAriaLabel": "Очистить поиск"
     }
   },
   "cardCreate": {
