@@ -65,8 +65,6 @@ vi.mock('react-i18next', () => ({
         'feedback.stats.total': 'Total Feedback',
         'feedback.stats.new': 'New',
         'feedback.stats.responded': 'Responded',
-        'feedback.sectionTitle': 'User Feedback',
-        'feedback.sectionDescription': 'Review and respond to user feedback',
         'feedback.anonymousUser': 'Anonymous User',
         'feedback.respond': 'Respond',
         'feedback.editResponse': 'Edit Response',
