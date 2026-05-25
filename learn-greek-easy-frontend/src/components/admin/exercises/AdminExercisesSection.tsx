@@ -20,7 +20,7 @@ import { AdminExercisesToolbar } from './AdminExercisesToolbar';
 
 interface AdminExercisesSectionProps {
   modality: 'listening' | 'reading';
-  /** Increment to trigger a refetch (e.g., after generate-batch). */
+  /** Increment to trigger a refetch. */
   refreshKey?: number;
 }
 

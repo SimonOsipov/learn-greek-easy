@@ -220,14 +220,6 @@ Fired when the admin changes any SegControl filter axis. One event per change.
 - `axis` (string) — which filter changed: `source`, `type`, `level`, or `status`.
 - `value` (string) — new filter value (e.g. `all`, `description`, `A2`, `approved`).
 
-### `admin_exercise_batch_generate_clicked`
-
-Fired on each click of the "Generate batch" button, before the API call.
-
-**Properties:**
-
-- `endpoint_available` (boolean) — always `true` at call site; reserved for future feature-flag gating.
-
 ### `admin_exercise_audio_played`
 
 Fired on the **first** play event per component mount (session-scoped; does not re-fire on pause/resume).
