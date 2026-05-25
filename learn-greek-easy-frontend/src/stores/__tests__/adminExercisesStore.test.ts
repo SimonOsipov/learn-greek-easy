@@ -137,6 +137,22 @@ describe('adminExercisesStore — drawer actions (EXR2-24-05)', () => {
   });
 });
 
+describe('adminExercisesStore — setModality (EXR2-24-08)', () => {
+  it('setModality updates modality and resets page to 1', () => {
+    useAdminExercisesStore.getState().setPage(3);
+    useAdminExercisesStore.getState().setModality('reading');
+    const state = useAdminExercisesStore.getState();
+    expect(state.modality).toBe('reading');
+    expect(state.page).toBe(1);
+  });
+
+  it('setModality back to listening updates state', () => {
+    useAdminExercisesStore.getState().setModality('reading');
+    useAdminExercisesStore.getState().setModality('listening');
+    expect(useAdminExercisesStore.getState().modality).toBe('listening');
+  });
+});
+
 describe('adminExercisesStore — hydrateFromURL', () => {
   it('parses valid params into store state', () => {
     const params = new URLSearchParams({
@@ -175,6 +191,24 @@ describe('adminExercisesStore — hydrateFromURL', () => {
     expect(state.type).toBe('all');
     expect(state.level).toBe('all');
     expect(state.status).toBe('all');
+  });
+
+  it('reads modality=reading from URL params', () => {
+    const params = new URLSearchParams({ modality: 'reading' });
+    useAdminExercisesStore.getState().hydrateFromURL(params);
+    expect(useAdminExercisesStore.getState().modality).toBe('reading');
+  });
+
+  it('falls back to "listening" when modality param is missing', () => {
+    const params = new URLSearchParams({});
+    useAdminExercisesStore.getState().hydrateFromURL(params);
+    expect(useAdminExercisesStore.getState().modality).toBe('listening');
+  });
+
+  it('falls back to "listening" when modality param is invalid', () => {
+    const params = new URLSearchParams({ modality: 'invalid' });
+    useAdminExercisesStore.getState().hydrateFromURL(params);
+    expect(useAdminExercisesStore.getState().modality).toBe('listening');
   });
 
   it('does NOT touch drawer state (mode / openEntryId remain null after hydration)', () => {

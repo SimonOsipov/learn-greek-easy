@@ -8,6 +8,7 @@ import {
   useAdminExercisesStore,
   type ExerciseTypeFilter,
   type LevelFilter,
+  type Modality,
   type SourceFilter,
   type StatusFilter,
 } from '@/stores/adminExercisesStore';
@@ -27,27 +28,40 @@ const LEVEL_OPTIONS: LevelFilter[] = ['all', 'A2', 'B1'];
 
 const STATUS_OPTIONS: StatusFilter[] = ['all', 'draft', 'pending', 'approved'];
 
-interface AdminExercisesToolbarProps {
-  /** modality stays a prop — driven by page-level toggle */
-  modality: 'listening' | 'reading';
-}
-
-export function AdminExercisesToolbar({ modality: _modality }: AdminExercisesToolbarProps) {
+export function AdminExercisesToolbar() {
   const { t } = useTranslation('admin');
 
   const source = useAdminExercisesStore((s) => s.source);
   const type = useAdminExercisesStore((s) => s.type);
   const level = useAdminExercisesStore((s) => s.level);
   const status = useAdminExercisesStore((s) => s.status);
+  const modality = useAdminExercisesStore((s) => s.modality);
   const q = useAdminExercisesStore((s) => s.q);
   const setSource = useAdminExercisesStore((s) => s.setSource);
   const setType = useAdminExercisesStore((s) => s.setType);
   const setLevel = useAdminExercisesStore((s) => s.setLevel);
   const setStatus = useAdminExercisesStore((s) => s.setStatus);
+  const setModality = useAdminExercisesStore((s) => s.setModality);
   const setQ = useAdminExercisesStore((s) => s.setQ);
 
   return (
     <div className="flex flex-col gap-3">
+      {/* Row 0: Modality */}
+      <div data-testid="exercises-toolbar-row-modality">
+        <SegControl
+          options={[
+            { value: 'listening', label: t('exercises.modality.listening') },
+            { value: 'reading', label: t('exercises.modality.reading') },
+          ]}
+          value={modality}
+          onChange={(v) => {
+            setModality(v as Modality);
+            track('admin_exercise_filter_changed', { axis: 'modality', value: v });
+          }}
+          ariaLabel={t('exercises.modality.ariaLabel')}
+        />
+      </div>
+
       {/* Row 1: Search · Source · Type */}
       <div className="flex flex-wrap items-center gap-3" data-testid="exercises-toolbar-row-1">
         <div className="relative min-w-[240px] flex-1 sm:max-w-md">
