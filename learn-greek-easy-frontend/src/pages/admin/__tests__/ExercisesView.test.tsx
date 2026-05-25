@@ -7,7 +7,7 @@
  * AdminExercisesSection is mocked — stat tiles are tested in AdminExercisesStats.test.tsx.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 
 import { useAdminExercisesStore } from '@/stores/adminExercisesStore';
 import ExercisesView from '../ExercisesView';
@@ -43,8 +43,9 @@ describe('ExercisesView', () => {
     const { container } = render(<ExercisesView />);
     const section = container.querySelector('[data-testid="admin-exercises-section"]');
     expect(section).toBeTruthy();
-    // No modality data attribute — prop was removed
-    expect(section!.getAttribute('data-modality')).toBeNull();
+    // data-modality assertion removed: the mock renders a plain <div> that never
+    // receives data attributes, so asserting toBeNull() was always vacuously true.
+    // The TypeScript build (tsc -b) enforces that no modality prop exists on the component.
   });
 
   it('SidePanel is closed when store mode is null', () => {
@@ -55,10 +56,10 @@ describe('ExercisesView', () => {
 
   it('SidePanel opens when store openCompose() is called', () => {
     render(<ExercisesView />);
-    // Trigger open via store action
-    useAdminExercisesStore.getState().openCompose();
-    // Re-render is synchronous for Zustand in tests
-    render(<ExercisesView />);
+    // Trigger open via store action — wrap in act() so React flushes the state update.
+    act(() => {
+      useAdminExercisesStore.getState().openCompose();
+    });
     expect(screen.getAllByText('Drawer body coming soon.').length).toBeGreaterThan(0);
   });
 
