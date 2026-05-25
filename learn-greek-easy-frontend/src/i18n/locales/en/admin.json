@@ -1919,7 +1919,8 @@
       },
       "approved": { "label": "Approved", "subline": "{{pct}}% of catalog · ready to ship" },
       "awaitingReview": { "label": "Awaiting review", "subline": "{{count}} also still in draft" },
-      "withAudio": { "label": "With audio", "subline": "{{count}} missing audio" }
+      "withAudio": { "label": "With audio", "subline": "{{count}} missing audio" },
+      "footer": { "catalogTotal": "Catalog total" }
     },
     "filters": {
       "source": { "label": "Source", "all": "All", "description": "Description", "dialog": "Dialog", "picture": "Picture" },

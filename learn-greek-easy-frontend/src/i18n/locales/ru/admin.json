@@ -1868,7 +1868,8 @@
       "withAudio": {
         "label": "С аудио",
         "subline": "{{count}} без аудио"
-      }
+      },
+      "footer": { "catalogTotal": "Всего по каталогу" }
     },
     "filters": {
       "source": {

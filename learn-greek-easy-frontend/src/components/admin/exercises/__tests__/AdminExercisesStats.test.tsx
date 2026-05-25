@@ -105,4 +105,19 @@ describe('AdminExercisesStats', () => {
     const barsDivs = container.querySelectorAll('.stat-bars');
     expect(barsDivs).toHaveLength(0);
   });
+
+  it('shows "Catalog total" footer on all four tiles and never "Last 30 days" (EXR2-24-03)', () => {
+    render(<AdminExercisesStats stats={null} loading={false} />);
+    // All four tiles should show the catalog-total footer label
+    const footerLabels = screen.getAllByText('Catalog total');
+    expect(footerLabels).toHaveLength(4);
+    // The misleading default should not appear anywhere
+    expect(screen.queryByText('Last 30 days')).toBeNull();
+  });
+
+  it('shows "Catalog total" footer even in loading state (EXR2-24-03)', () => {
+    render(<AdminExercisesStats stats={null} loading={true} />);
+    expect(screen.getAllByText('Catalog total')).toHaveLength(4);
+    expect(screen.queryByText('Last 30 days')).toBeNull();
+  });
 });
