@@ -76,7 +76,6 @@ export function AdminExercisesToolbar({ modality: _modality }: AdminExercisesToo
       {/* Source · Type · Level · Status */}
       <div className="flex flex-wrap gap-3">
         <SegControl
-          label={t('exercises.filters.source.label')}
           options={SOURCE_OPTIONS.map((v) => ({
             value: v,
             label:
@@ -93,7 +92,6 @@ export function AdminExercisesToolbar({ modality: _modality }: AdminExercisesToo
         />
 
         <SegControl
-          label={t('exercises.filters.type.label')}
           options={TYPE_OPTIONS.map((v) => ({
             value: v,
             label: v === 'all' ? t('exercises.filters.type.all') : t(`exercises.types.${v}`),
@@ -108,7 +106,6 @@ export function AdminExercisesToolbar({ modality: _modality }: AdminExercisesToo
         />
 
         <SegControl
-          label={t('exercises.filters.level.label')}
           options={LEVEL_OPTIONS.map((v) => ({
             value: v,
             label:
@@ -126,7 +123,6 @@ export function AdminExercisesToolbar({ modality: _modality }: AdminExercisesToo
         />
 
         <SegControl
-          label={t('exercises.filters.status.label')}
           options={STATUS_OPTIONS.map((v) => ({
             value: v,
             label: v === 'all' ? t('exercises.filters.status.all') : t(`exercises.statuses.${v}`),
