@@ -396,11 +396,13 @@ describe('CultureQuestionDetail', () => {
 
     renderDetail();
 
+    // The status badge is present during the loading state too (defaults to Draft
+    // when question is undefined). Wait for the *content* to flip to Ready after
+    // the mocked query resolves — under slow CI runners the prior pattern
+    // (waitFor existence + sync content assertion) raced the React Query update.
     await waitFor(() => {
-      expect(screen.getByTestId('culture-question-detail-status')).toBeInTheDocument();
+      expect(screen.getByTestId('culture-question-detail-status')).toHaveTextContent('Ready');
     });
-
-    expect(screen.getByTestId('culture-question-detail-status')).toHaveTextContent('Ready');
   });
 
   // ── AC #7: Drawer Tabs + footer-primary hidden while detail is pushed ─────────
