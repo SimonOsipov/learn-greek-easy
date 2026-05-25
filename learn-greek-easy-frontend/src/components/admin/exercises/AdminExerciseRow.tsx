@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react';
+
 import { ChevronDown, FileText, Image as PictureIcon, MessageCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -29,6 +31,19 @@ export function AdminExerciseRow({ exercise, isOpen, onToggle, rowBodyId }: Admi
   const { t } = useTranslation('admin');
   const SourceIcon = SOURCE_ICONS[exercise.source_type] ?? FileText;
   const sourceTone = SOURCE_TONES[exercise.source_type] ?? 'blue';
+
+  // EXR-38: return focus to chevron on collapse (keyboard a11y).
+  // On expand, we leave focus where it was — auto-focusing into the body would
+  // disorient mouse users and is not required for keyboard accessibility.
+  const chevronRef = useRef<HTMLButtonElement | null>(null);
+  const wasOpen = useRef(isOpen);
+
+  useEffect(() => {
+    if (wasOpen.current && !isOpen && chevronRef.current) {
+      chevronRef.current.focus();
+    }
+    wasOpen.current = isOpen;
+  }, [isOpen]);
 
   return (
     <div className="flex w-full items-center gap-2 px-4 py-4">
@@ -67,6 +82,7 @@ export function AdminExerciseRow({ exercise, isOpen, onToggle, rowBodyId }: Admi
 
       {/* Chevron toggle button */}
       <button
+        ref={chevronRef}
         type="button"
         onClick={onToggle}
         aria-expanded={isOpen}

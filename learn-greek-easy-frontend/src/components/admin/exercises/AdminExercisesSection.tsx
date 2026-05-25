@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
@@ -10,7 +10,6 @@ import { adminAPI } from '@/services/adminAPI';
 import { useAdminExercisesStore } from '@/stores/adminExercisesStore';
 import type { AdminExerciseListItem } from '@/types/situation';
 
-import { AdminExerciseAudioBar } from './AdminExerciseAudioBar';
 import { AdminExerciseBody } from './AdminExerciseBody';
 import { AdminExerciseRow } from './AdminExerciseRow';
 import { AdminExercisesEmptyState } from './AdminExercisesEmptyState';
@@ -60,7 +59,13 @@ export function AdminExercisesSection({ modality, refreshKey = 0 }: AdminExercis
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  // EXR-34: bump to refetch after a successful single-exercise regenerate
+  const [innerRefreshKey, setInnerRefreshKey] = useState(0);
   const [openIds, setOpenIds] = useState<Set<string>>(new Set());
+
+  // EXR-39: auto-open first row on first non-empty fetch (once per mount)
+  // Local state — no Zustand store needed; open state is section-scoped.
+  const hasAutoOpened = useRef(false);
 
   const toggle = (id: string) =>
     setOpenIds((prev) => {
@@ -100,7 +105,30 @@ export function AdminExercisesSection({ modality, refreshKey = 0 }: AdminExercis
     return () => {
       cancelled = true;
     };
-  }, [modality, page, pageSize, type, status, source, level, qDebounced, retryCount, refreshKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [
+    modality,
+    page,
+    pageSize,
+    type,
+    status,
+    source,
+    level,
+    qDebounced,
+    retryCount,
+    refreshKey,
+    innerRefreshKey,
+  ]);
+
+  // EXR-39: auto-open first row on first non-empty fetch
+  useEffect(() => {
+    if (hasAutoOpened.current) return;
+    if (!exercises || exercises.length === 0) return;
+    setOpenIds((prev) => {
+      if (prev.size > 0) return prev; // user already opened something manually
+      return new Set([exercises[0].id]);
+    });
+    hasAutoOpened.current = true;
+  }, [exercises]);
 
   const totalPages = Math.ceil(total / pageSize);
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
@@ -172,12 +200,23 @@ export function AdminExercisesSection({ modality, refreshKey = 0 }: AdminExercis
                   onToggle={() => toggle(exercise.id)}
                   rowBodyId={rowBodyId}
                 />
-                {isOpen && (
-                  <div id={rowBodyId}>
-                    <AdminExerciseAudioBar src={exercise.audio_url ?? undefined} />
-                    <AdminExerciseBody exercise={exercise} />
+                {/* EXR-38: grid-template-rows animation for smooth expand/collapse */}
+                <div
+                  id={rowBodyId}
+                  className={cn(
+                    'duration-[180ms] grid transition-[grid-template-rows] ease-out motion-reduce:transition-none',
+                    isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+                  )}
+                >
+                  <div className="overflow-hidden">
+                    {isOpen && (
+                      <AdminExerciseBody
+                        exercise={exercise}
+                        onRegenerated={() => setInnerRefreshKey((k) => k + 1)}
+                      />
+                    )}
                   </div>
-                )}
+                </div>
               </div>
             );
           })}
