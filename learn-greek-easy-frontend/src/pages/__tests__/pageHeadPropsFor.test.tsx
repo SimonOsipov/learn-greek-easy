@@ -132,10 +132,11 @@ describe('pageHeadPropsFor — dashboard branch', () => {
 });
 
 describe('pageHeadPropsFor — exercises branch', () => {
-  it('returns exercises shape without actions', () => {
+  it('returns exercises shape with New exercise action', () => {
     const r = pageHeadPropsFor('exercises', mockT);
     expect(r.title).toBe('Exercises');
-    expect(r.actions).toBeUndefined();
+    expect(r.actions).toBeDefined();
+    expect(React.isValidElement(r.actions)).toBe(true);
     expect(r.breadcrumb![1].label).toBe('Exercises');
     expect(React.isValidElement(r.kicker)).toBe(true);
     const kickerEl = r.kicker as React.ReactElement;
