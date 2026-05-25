@@ -20,6 +20,7 @@ import {
   RefreshCw,
   Search,
   ThumbsUp,
+  X,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
@@ -401,6 +402,31 @@ export const AdminFeedbackSection: React.FC = () => {
 
       {/* ── Filters row ────────────────────────────────────────────────────── */}
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+        <div className="relative min-w-[240px] flex-1 sm:max-w-md">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder={t('feedback.v2.filters.search.placeholder')}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') setSearchInput('');
+            }}
+            className="pl-8 pr-8"
+            data-testid="feedback-search-input"
+          />
+          {searchInput && (
+            <button
+              type="button"
+              className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground"
+              onClick={() => setSearchInput('')}
+              aria-label={t('feedback.v2.filters.search.clearAriaLabel')}
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+
         <SegControl
           options={STATUS_OPTIONS}
           value={statusSeg}
@@ -414,18 +440,6 @@ export const AdminFeedbackSection: React.FC = () => {
           onChange={setTypeSeg}
           ariaLabel={t('feedback.v2.filters.type.label')}
         />
-
-        <div className="relative min-w-[200px] flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder={t('feedback.v2.filters.search.placeholder')}
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            className="pl-9"
-            data-testid="feedback-search-input"
-          />
-        </div>
 
         {hasActiveFilters && (
           <Button
