@@ -1847,14 +1847,14 @@
     "title": "Упражнения",
     "sub": "Проверяйте упражнения на аудирование и чтение по всем ситуациям.",
     "actions": {
-      "generateBatch": "Generate batch",
-      "newExercise": "New exercise"
+      "generateBatch": "Сгенерировать пакет",
+      "newExercise": "Новое упражнение"
     },
     "stats": {
-      "total": { "label": "Total exercises", "subline": "across {{typeCount}} exercise types" },
-      "approved": { "label": "Approved", "subline": "{{pct}}% of catalog · ready to ship" },
-      "awaitingReview": { "label": "Awaiting review", "subline": "{{draftCount}} also still in draft" },
-      "withAudio": { "label": "With audio", "subline": "{{missingCount}} missing audio" }
+      "total": { "label": "Всего упражнений", "subline": "в {{count}} типах упражнений" },
+      "approved": { "label": "Одобрено", "subline": "{{pct}}% каталога · готово к публикации" },
+      "awaitingReview": { "label": "Ждут проверки", "subline": "{{count}} ещё в черновиках" },
+      "withAudio": { "label": "С аудио", "subline": "{{count}} без аудио" }
     },
     "filters": {
       "source": { "label": "Source", "all": "All", "description": "Description", "dialog": "Dialog", "picture": "Picture" },

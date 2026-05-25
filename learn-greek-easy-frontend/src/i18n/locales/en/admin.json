@@ -1913,10 +1913,10 @@
       "newExercise": "New exercise"
     },
     "stats": {
-      "total": { "label": "Total exercises", "subline": "across {{typeCount}} exercise types" },
+      "total": { "label": "Total exercises", "subline": "across {{count}} exercise types" },
       "approved": { "label": "Approved", "subline": "{{pct}}% of catalog · ready to ship" },
-      "awaitingReview": { "label": "Awaiting review", "subline": "{{draftCount}} also still in draft" },
-      "withAudio": { "label": "With audio", "subline": "{{missingCount}} missing audio" }
+      "awaitingReview": { "label": "Awaiting review", "subline": "{{count}} also still in draft" },
+      "withAudio": { "label": "With audio", "subline": "{{count}} missing audio" }
     },
     "filters": {
       "source": { "label": "Source", "all": "All", "description": "Description", "dialog": "Dialog", "picture": "Picture" },

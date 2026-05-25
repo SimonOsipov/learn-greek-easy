@@ -19,9 +19,11 @@ import { AdminExercisesToolbar } from './AdminExercisesToolbar';
 
 interface AdminExercisesSectionProps {
   modality: 'listening' | 'reading';
+  /** Increment to trigger a refetch (e.g., after generate-batch). */
+  refreshKey?: number;
 }
 
-export function AdminExercisesSection({ modality }: AdminExercisesSectionProps) {
+export function AdminExercisesSection({ modality, refreshKey = 0 }: AdminExercisesSectionProps) {
   const { t } = useTranslation('admin');
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -97,7 +99,7 @@ export function AdminExercisesSection({ modality }: AdminExercisesSectionProps) 
     return () => {
       cancelled = true;
     };
-  }, [modality, page, pageSize, type, status, source, level, qDebounced, retryCount]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [modality, page, pageSize, type, status, source, level, qDebounced, retryCount, refreshKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const totalPages = Math.ceil(total / pageSize);
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
@@ -105,7 +107,7 @@ export function AdminExercisesSection({ modality }: AdminExercisesSectionProps) 
 
   return (
     <div className="space-y-4" data-testid="admin-exercises-list">
-      <AdminExercisesStats modality={modality} />
+      <AdminExercisesStats items={exercises} total={total} />
 
       {/* Filter bar */}
       <AdminExercisesToolbar modality={modality} />
