@@ -46,15 +46,20 @@ test.describe('Admin Exercises Tab — smoke (EXR-71)', () => {
     await expect(page.getByTestId('admin-exercises-list')).toBeVisible();
   });
 
-  // ── EXR-E2E-02: Page heading ───────────────────────────────────────────────
+  // ── EXR-E2E-02: Page-head action buttons ───────────────────────────────────
 
-  test('EXR-E2E-02: page has an "Exercises" heading', async ({ page }) => {
-    // The admin page-head h1 text — may be EN or RU depending on locale
-    const heading = page.locator('h1');
-    await expect(heading).toBeVisible();
-    // Heading text is either "Exercises" (EN) or "Упражнения" (RU)
-    const text = await heading.textContent();
-    expect(text).toMatch(/exercises|упражнения/i);
+  test('EXR-E2E-02: page-head action buttons (Generate batch + New exercise) render', async ({
+    page,
+  }) => {
+    // Page-head TEXT (breadcrumb/kicker/h1) is explicitly excluded per stakeholder —
+    // see ADMIN2-23 story Out of Scope. The action-bar container (EXR-00c) holds
+    // two CTAs that are the canonical proof the exercises view mounted.
+    await expect(
+      page.getByRole('button', { name: /generate batch|сгенерировать пакет/i })
+    ).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: /new exercise|новое упражнение/i })
+    ).toBeVisible();
   });
 
   // ── EXR-E2E-03: Filter bars visible ───────────────────────────────────────

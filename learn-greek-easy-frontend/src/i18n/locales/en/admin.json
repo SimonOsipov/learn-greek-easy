@@ -1940,6 +1940,8 @@
     "row": {
       "itemCount_one": "{{count}} item",
       "itemCount_other": "{{count}} items",
+      "expandAriaLabel": "Expand exercise",
+      "collapseAriaLabel": "Collapse exercise",
       "editButton": "Edit exercise",
       "regenerateButton": "Regenerate",
       "regenerateConfirmTitle": "Regenerate this exercise?",
