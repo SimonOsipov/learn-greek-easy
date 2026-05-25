@@ -168,6 +168,9 @@ test.describe('ADMIN2-24 polish', () => {
 
     // Navigate to page 2.
     await nextButton.click();
+    // Assert the URL advanced to page=2 before checking stat invariance;
+    // this ensures a no-op click (broken pagination) doesn't cause a false pass.
+    await expect(page).toHaveURL(/[?&]page=2/, { timeout: 10_000 });
     // Wait for the list to re-render on page 2.
     await expect(page.getByTestId('admin-exercises-list')).toBeVisible({ timeout: 10_000 });
 

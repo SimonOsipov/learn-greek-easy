@@ -173,7 +173,9 @@ export function AdminExercisesSection({ refreshKey = 0 }: AdminExercisesSectionP
           setStats(result);
         }
       } catch {
-        // Stats fetch failure is non-critical; leave previous value in place
+        // Stats fetch failure is non-critical; clear stale data so cards don't
+        // show counts from a previous filter/modality combination.
+        if (!cancelled) setStats(null);
       } finally {
         if (!cancelled) setStatsLoading(false);
       }
