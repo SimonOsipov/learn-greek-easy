@@ -38,6 +38,10 @@ interface AdminExercisesState {
   qDebounced: string;
   page: number;
 
+  // Drawer state (local UI only — NOT URL-synced)
+  mode: 'compose' | 'edit' | null;
+  openEntryId: string | null;
+
   setSource: (v: SourceFilter) => void;
   setType: (v: ExerciseTypeFilter) => void;
   setLevel: (v: LevelFilter) => void;
@@ -46,6 +50,9 @@ interface AdminExercisesState {
   setPage: (v: number) => void;
   resetFilters: () => void;
   hydrateFromURL: (params: URLSearchParams) => void;
+  openCompose: () => void;
+  openEdit: (id: string) => void;
+  closeDrawer: () => void;
 }
 
 // ── Allowed value sets for URL hydration ──────────────────────────────────────
@@ -68,6 +75,10 @@ const VALID_TYPES: ExerciseTypeFilter[] = [
 
 export const useAdminExercisesStore = create<AdminExercisesState>()((set) => ({
   ...DEFAULTS,
+
+  // Drawer state initial values
+  mode: null,
+  openEntryId: null,
 
   setSource: (v) => {
     set({ source: v, page: 1 });
@@ -107,6 +118,10 @@ export const useAdminExercisesStore = create<AdminExercisesState>()((set) => ({
     }
     set({ ...DEFAULTS });
   },
+
+  openCompose: () => set({ mode: 'compose', openEntryId: null }),
+  openEdit: (id) => set({ mode: 'edit', openEntryId: id }),
+  closeDrawer: () => set({ mode: null, openEntryId: null }),
 
   hydrateFromURL: (params) => {
     const rawSource = params.get('source') ?? 'all';

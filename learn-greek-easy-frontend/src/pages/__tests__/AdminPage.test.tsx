@@ -15,7 +15,7 @@
 import React from 'react';
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, within, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { I18nextProvider } from 'react-i18next';
 
@@ -92,6 +92,40 @@ vi.mock('@/stores/adminSituationStore', () => ({
     ready: 0,
     exercisesGenerated: 0,
   }),
+}));
+
+// ---------------------------------------------------------------------------
+// Mock: adminExercisesStore (AdminPage now imports it for openExerciseCompose)
+// ---------------------------------------------------------------------------
+
+const mockOpenCompose = vi.fn();
+
+vi.mock('@/stores/adminExercisesStore', () => ({
+  useAdminExercisesStore: (selector?: (s: unknown) => unknown) => {
+    const state = {
+      source: 'all',
+      type: 'all',
+      level: 'all',
+      status: 'all',
+      q: '',
+      qDebounced: '',
+      page: 1,
+      mode: null,
+      openEntryId: null,
+      openCompose: mockOpenCompose,
+      openEdit: vi.fn(),
+      closeDrawer: vi.fn(),
+      setSource: vi.fn(),
+      setType: vi.fn(),
+      setLevel: vi.fn(),
+      setStatus: vi.fn(),
+      setQ: vi.fn(),
+      setPage: vi.fn(),
+      resetFilters: vi.fn(),
+      hydrateFromURL: vi.fn(),
+    };
+    return selector ? selector(state) : state;
+  },
 }));
 
 vi.mock('@/stores/adminChangelogStore', () => ({
@@ -174,8 +208,13 @@ vi.mock('@/hooks/use-toast', () => ({
   toast: vi.fn(),
 }));
 
+// Mock AdminExercisesSection to avoid real network calls when exercises tab renders
+vi.mock('@/components/admin/exercises/AdminExercisesSection', () => ({
+  AdminExercisesSection: () => <div data-testid="admin-exercises-section" />,
+}));
+
 // ---------------------------------------------------------------------------
-// Render helper — MemoryRouter at /admin?tab=changelog (mirrors the repro)
+// Render helpers
 // ---------------------------------------------------------------------------
 
 function renderAdminPage() {
@@ -190,9 +229,55 @@ function renderAdminPage() {
   );
 }
 
+function renderAdminPageAtTab(tab: string) {
+  return render(
+    <I18nextProvider i18n={i18n}>
+      <MemoryRouter initialEntries={[`/admin?tab=${tab}`]}>
+        <Routes>
+          <Route path="/admin" element={<AdminPage />} />
+        </Routes>
+      </MemoryRouter>
+    </I18nextProvider>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
+
+describe('AdminPage — exercises tab PageHead action (EXR2-24-05 / AC #6)', () => {
+  beforeEach(() => {
+    fetchCounts.mockClear();
+    mockOpenCompose.mockClear();
+    mockState = {
+      counts: {
+        inbox: 3,
+        decks: 99,
+        news: 5,
+        situations: 4,
+        exercises: 2,
+        errors: 7,
+        feedback: 12,
+        changelog: 36,
+        announcements: 21,
+      },
+      loading: false,
+      error: null,
+      fetchCounts,
+    };
+  });
+
+  it('renders exercise-new-button in the PageHead when tab=exercises', () => {
+    renderAdminPageAtTab('exercises');
+    expect(screen.getByTestId('exercise-new-button')).toBeTruthy();
+  });
+
+  it('clicking exercise-new-button calls openCompose from adminExercisesStore', () => {
+    renderAdminPageAtTab('exercises');
+    fireEvent.click(screen.getByTestId('exercise-new-button'));
+    expect(mockOpenCompose).toHaveBeenCalledTimes(1);
+  });
+});
 
 describe('AdminPage — tab badge counts (ATBC-09)', () => {
   beforeEach(() => {

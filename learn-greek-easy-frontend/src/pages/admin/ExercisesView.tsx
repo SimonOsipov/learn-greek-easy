@@ -1,32 +1,25 @@
 import { useState } from 'react';
 
-import { Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { AdminExercisesSection } from '@/components/admin/exercises/AdminExercisesSection';
-import { Button } from '@/components/ui/button';
 import { SegControl } from '@/components/ui/seg-control';
 import { SidePanel } from '@/components/ui/side-panel';
+import { useAdminExercisesStore } from '@/stores/adminExercisesStore';
 
 export default function ExercisesView() {
   const { t } = useTranslation('admin');
   const [modality, setModality] = useState<'listening' | 'reading'>('listening');
 
-  // New exercise drawer state
-  const [newExerciseOpen, setNewExerciseOpen] = useState(false);
-
   // Refresh trigger for AdminExercisesSection
   const [refreshKey] = useState(0);
 
+  // Drawer state from store (replaces local newExerciseOpen)
+  const drawerOpen = useAdminExercisesStore((s) => s.mode === 'compose');
+  const closeDrawer = useAdminExercisesStore((s) => s.closeDrawer);
+
   return (
     <div>
-      <div className="va-page-actions-only mb-4 flex justify-end gap-2">
-        <Button variant="default" size="sm" onClick={() => setNewExerciseOpen(true)}>
-          <Plus className="size-4" aria-hidden />
-          {t('exercises.actions.newExercise')}
-        </Button>
-      </div>
-
       <SegControl
         options={[
           { value: 'listening', label: t('exercises.modality.listening') },
@@ -39,8 +32,10 @@ export default function ExercisesView() {
       <AdminExercisesSection modality={modality} refreshKey={refreshKey} />
 
       <SidePanel
-        open={newExerciseOpen}
-        onOpenChange={setNewExerciseOpen}
+        open={drawerOpen}
+        onOpenChange={(open) => {
+          if (!open) closeDrawer();
+        }}
         size="half"
         title={t('exercises.actions.newExercise')}
       >
