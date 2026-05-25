@@ -43,23 +43,26 @@ export const AnnouncementsToolbar: React.FC<AnnouncementsToolbarProps> = ({
   const { t } = useTranslation('admin');
 
   return (
-    <div className="an-toolbar">
+    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
       {/* Search input with prefix icon and clear button */}
-      <div className="relative flex items-center">
-        <Search className="pointer-events-none absolute left-3 h-4 w-4 text-muted-foreground" />
+      <div className="relative min-w-[240px] flex-1 sm:max-w-md">
+        <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
         <Input
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') onQueryChange('');
+          }}
           placeholder={t('announcements.toolbar.searchPlaceholder')}
-          className="pl-9 pr-8"
+          className="pl-8 pr-8"
           data-testid="announcement-search-input"
         />
         {query.length > 0 && (
           <button
             type="button"
-            aria-label="Clear search"
+            aria-label={t('announcements.toolbar.searchClearAriaLabel')}
             onClick={() => onQueryChange('')}
-            className="absolute right-2 flex items-center text-muted-foreground hover:text-foreground"
+            className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground"
             data-testid="announcement-search-clear"
           >
             <X className="h-4 w-4" />

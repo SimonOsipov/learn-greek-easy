@@ -434,7 +434,8 @@
         "rateAsc": "Lowest read rate"
       },
       "emptySearch": "No announcements match \"{{query}}\"",
-      "clearSearch": "Clear search"
+      "clearSearch": "Clear search",
+      "searchClearAriaLabel": "Clear search"
     }
   },
   "news": {
