@@ -8,7 +8,7 @@ import { useSearchParams } from 'react-router-dom';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { SegControl } from '@/components/ui/seg-control';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -224,180 +224,170 @@ export const AdminCardErrorSection: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-6">
-      <Card data-testid="admin-card-error-section">
-        <CardHeader>
-          <CardTitle data-testid="admin-card-error-title">{t('cardErrors.sectionTitle')}</CardTitle>
-          <CardDescription data-testid="admin-card-error-description">
-            {t('cardErrors.sectionDescription')}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {/* Filters */}
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-            <SegControl
-              options={STATUS_OPTIONS}
-              value={statusSeg}
-              onChange={handleStatusFilterChange}
-              ariaLabel={t('cardErrors.filters.statusPlaceholder')}
-            />
+    <div className="space-y-6" data-testid="admin-card-error-section">
+      {/* Filters */}
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+        <SegControl
+          options={STATUS_OPTIONS}
+          value={statusSeg}
+          onChange={handleStatusFilterChange}
+          ariaLabel={t('cardErrors.filters.statusPlaceholder')}
+        />
 
-            <SegControl
-              options={TYPE_OPTIONS}
-              value={typeSeg}
-              onChange={handleCardTypeFilterChange}
-              ariaLabel={t('cardErrors.filters.typePlaceholder')}
-            />
+        <SegControl
+          options={TYPE_OPTIONS}
+          value={typeSeg}
+          onChange={handleCardTypeFilterChange}
+          ariaLabel={t('cardErrors.filters.typePlaceholder')}
+        />
 
-            <div className="relative min-w-[200px] flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder={t('cardErrors.toolbar.searchPlaceholder')}
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                className="pl-9"
-                data-testid="card-error-search-input"
-              />
-            </div>
+        <div className="relative min-w-[200px] flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder={t('cardErrors.toolbar.searchPlaceholder')}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            className="pl-9"
+            data-testid="card-error-search-input"
+          />
+        </div>
 
-            {hasActiveFilters && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={clearFilters}
-                data-testid="clear-card-error-filters-button"
-              >
-                {t('cardErrors.filters.clear')}
-              </Button>
-            )}
-          </div>
+        {hasActiveFilters && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={clearFilters}
+            data-testid="clear-card-error-filters-button"
+          >
+            {t('cardErrors.filters.clear')}
+          </Button>
+        )}
+      </div>
 
-          {/* Loading State */}
-          {isLoading && (
-            <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <Card key={i}>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-2">
-                        <Skeleton className="h-5 w-48" />
-                        <Skeleton className="h-4 w-32" />
-                      </div>
-                      <Skeleton className="h-9 w-24" />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <Skeleton className="h-16 w-full" />
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-
-          {/* Error State */}
-          {error && !isLoading && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>{t('cardErrors.errors.loadingTitle')}</AlertTitle>
-              <AlertDescription className="mt-2">
-                <p className="mb-3">{error}</p>
-                <Button variant="outline" size="sm" onClick={() => fetchErrorList()}>
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  {t('actions.retry')}
-                </Button>
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {/* Error List */}
-          {!isLoading && !error && (
-            <>
-              {filteredErrors.length === 0 ? (
-                debouncedSearch ? (
-                  <p className="py-8 text-center text-muted-foreground">
-                    {t('cardErrors.search.noResults')}
-                  </p>
-                ) : hasActiveFilters ? (
-                  /* CER-40: Filter empty state — Search icon + H3 + body */
-                  <div
-                    className="flex flex-col items-center justify-center gap-2 py-12 text-center"
-                    data-testid="card-errors-filter-empty-state"
-                  >
-                    <Search className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
-                    <h3 className="text-base font-semibold text-foreground">
-                      {t('cardErrors.empty.title')}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">{t('cardErrors.empty.body')}</p>
+      {/* Loading State */}
+      {isLoading && (
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <Card key={i}>
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-2">
+                    <Skeleton className="h-5 w-48" />
+                    <Skeleton className="h-4 w-32" />
                   </div>
-                ) : (
-                  <p className="py-8 text-center text-muted-foreground">
-                    {t('cardErrors.states.noErrors')}
-                  </p>
-                )
-              ) : (
-                <>
-                  {debouncedSearch && (
-                    <p className="mb-3 text-sm text-muted-foreground">
-                      {t('cardErrors.search.filteredCount', {
-                        filtered: filteredErrors.length,
-                        total: errorList.length,
-                      })}
-                    </p>
-                  )}
-                  <div className="space-y-4">
-                    {filteredErrors.map((errorReport) => (
-                      <AdminCardErrorCard
-                        key={errorReport.id}
-                        errorReport={errorReport}
-                        onRespond={handleRespond}
-                      />
-                    ))}
-                  </div>
-                </>
-              )}
-
-              {/* Pagination */}
-              {total > 0 && (
-                <div className="mt-4 flex items-center justify-between">
-                  <p className="text-sm text-muted-foreground">
-                    {t('pagination.showing', {
-                      from: (page - 1) * pageSize + 1,
-                      to: Math.min(page * pageSize, total),
-                      total,
-                    })}
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handlePreviousPage}
-                      disabled={page === 1}
-                      data-testid="card-error-pagination-prev"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                      {t('pagination.previous')}
-                    </Button>
-                    <span className="text-sm text-muted-foreground">
-                      {t('pagination.pageOf', { page, totalPages })}
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleNextPage}
-                      disabled={page >= totalPages}
-                      data-testid="card-error-pagination-next"
-                    >
-                      {t('pagination.next')}
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  <Skeleton className="h-9 w-24" />
                 </div>
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-16 w-full" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && !isLoading && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>{t('cardErrors.errors.loadingTitle')}</AlertTitle>
+          <AlertDescription className="mt-2">
+            <p className="mb-3">{error}</p>
+            <Button variant="outline" size="sm" onClick={() => fetchErrorList()}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              {t('actions.retry')}
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Error List */}
+      {!isLoading && !error && (
+        <>
+          {filteredErrors.length === 0 ? (
+            debouncedSearch ? (
+              <p className="py-8 text-center text-muted-foreground">
+                {t('cardErrors.search.noResults')}
+              </p>
+            ) : hasActiveFilters ? (
+              /* CER-40: Filter empty state — Search icon + H3 + body */
+              <div
+                className="flex flex-col items-center justify-center gap-2 py-12 text-center"
+                data-testid="card-errors-filter-empty-state"
+              >
+                <Search className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
+                <h3 className="text-base font-semibold text-foreground">
+                  {t('cardErrors.empty.title')}
+                </h3>
+                <p className="text-sm text-muted-foreground">{t('cardErrors.empty.body')}</p>
+              </div>
+            ) : (
+              <p className="py-8 text-center text-muted-foreground">
+                {t('cardErrors.states.noErrors')}
+              </p>
+            )
+          ) : (
+            <>
+              {debouncedSearch && (
+                <p className="mb-3 text-sm text-muted-foreground">
+                  {t('cardErrors.search.filteredCount', {
+                    filtered: filteredErrors.length,
+                    total: errorList.length,
+                  })}
+                </p>
               )}
+              <div className="space-y-4">
+                {filteredErrors.map((errorReport) => (
+                  <AdminCardErrorCard
+                    key={errorReport.id}
+                    errorReport={errorReport}
+                    onRespond={handleRespond}
+                  />
+                ))}
+              </div>
             </>
           )}
-        </CardContent>
-      </Card>
+
+          {/* Pagination */}
+          {total > 0 && (
+            <div className="mt-4 flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                {t('pagination.showing', {
+                  from: (page - 1) * pageSize + 1,
+                  to: Math.min(page * pageSize, total),
+                  total,
+                })}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePreviousPage}
+                  disabled={page === 1}
+                  data-testid="card-error-pagination-prev"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  {t('pagination.previous')}
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  {t('pagination.pageOf', { page, totalPages })}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleNextPage}
+                  disabled={page >= totalPages}
+                  data-testid="card-error-pagination-next"
+                >
+                  {t('pagination.next')}
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
 
       {/* Detail Drawer */}
       <CardErrorDrawer
