@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 
 interface AdminExercisesPagerProps {
   page: number;
-  setPage: React.Dispatch<React.SetStateAction<number>>;
+  setPage: (page: number) => void;
   totalPages: number;
   showingFrom: number;
   showingTo: number;
@@ -30,8 +30,10 @@ export function AdminExercisesPager({
         <Button
           variant="outline"
           size="sm"
-          onClick={() => setPage((p) => Math.max(1, p - 1))}
+          onClick={() => setPage(Math.max(1, page - 1))}
           disabled={page === 1}
+          aria-disabled={page === 1}
+          tabIndex={page === 1 ? -1 : 0}
         >
           {t('pagination.previous')}
         </Button>
@@ -41,8 +43,10 @@ export function AdminExercisesPager({
         <Button
           variant="outline"
           size="sm"
-          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+          onClick={() => setPage(Math.min(totalPages, page + 1))}
           disabled={page >= totalPages}
+          aria-disabled={page >= totalPages}
+          tabIndex={page >= totalPages ? -1 : 0}
         >
           {t('pagination.next')}
         </Button>

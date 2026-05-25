@@ -273,5 +273,7 @@ export interface AdminExerciseListParams {
   page_size?: number;
   exercise_type?: string;
   status?: string;
+  source?: string;
+  level?: string;
   search?: string;
 }

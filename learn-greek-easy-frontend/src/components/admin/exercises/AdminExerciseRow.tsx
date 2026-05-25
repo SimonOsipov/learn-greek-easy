@@ -23,7 +23,7 @@ export function AdminExerciseRow({ exercise, isOpen, onToggle }: AdminExerciseRo
   return (
     <button
       type="button"
-      className="flex w-full items-center gap-2 px-4 py-4 text-left hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      className="flex w-full items-center gap-2 px-4 py-4 text-left hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
       onClick={onToggle}
       aria-expanded={isOpen}
       data-testid={`admin-exercise-item-${exercise.id}`}

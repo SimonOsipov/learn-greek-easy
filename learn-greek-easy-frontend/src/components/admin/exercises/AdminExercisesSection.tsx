@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { adminAPI } from '@/services/adminAPI';
+import { useAdminExercisesStore } from '@/stores/adminExercisesStore';
 import type { AdminExerciseListItem } from '@/types/situation';
 
 import { AdminExerciseAudioBar } from './AdminExerciseAudioBar';
@@ -21,17 +23,39 @@ interface AdminExercisesSectionProps {
 
 export function AdminExercisesSection({ modality }: AdminExercisesSectionProps) {
   const { t } = useTranslation('admin');
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Hydrate store from URL on mount (once only)
+  useEffect(() => {
+    useAdminExercisesStore.getState().hydrateFromURL(searchParams);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Read filter state from store
+  const source = useAdminExercisesStore((s) => s.source);
+  const type = useAdminExercisesStore((s) => s.type);
+  const level = useAdminExercisesStore((s) => s.level);
+  const status = useAdminExercisesStore((s) => s.status);
+  const qDebounced = useAdminExercisesStore((s) => s.qDebounced);
+  const page = useAdminExercisesStore((s) => s.page);
+  const setPage = useAdminExercisesStore((s) => s.setPage);
+
+  // Sync store → URL (replace so back button doesn't step through every filter change)
+  useEffect(() => {
+    const next = new URLSearchParams();
+    if (source !== 'all') next.set('source', source);
+    if (type !== 'all') next.set('type', type);
+    if (level !== 'all') next.set('level', level);
+    if (status !== 'all') next.set('status', status);
+    if (qDebounced) next.set('q', qDebounced);
+    if (page !== 1) next.set('page', String(page));
+    setSearchParams(next, { replace: true });
+  }, [source, type, level, status, qDebounced, page, setSearchParams]);
 
   const [exercises, setExercises] = useState<AdminExerciseListItem[]>([]);
   const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [pageSize] = useState(20);
+  const pageSize = 20;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [exerciseTypeFilter, setExerciseTypeFilter] = useState<string | undefined>();
-  const [statusFilter, setStatusFilter] = useState<string | undefined>();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [retryCount, setRetryCount] = useState(0);
   const [openIds, setOpenIds] = useState<Set<string>>(new Set());
 
@@ -42,20 +66,7 @@ export function AdminExercisesSection({ modality }: AdminExercisesSectionProps) 
       return next;
     });
 
-  // Debounce search 300ms
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(searchQuery);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
-
-  // Reset page when filters change
-  useEffect(() => {
-    setPage(1);
-  }, [exerciseTypeFilter, statusFilter, debouncedSearch]);
-
-  // Fetch exercises
+  // Fetch exercises whenever filters or page changes
   useEffect(() => {
     let cancelled = false;
     const fetchExercises = async () => {
@@ -66,9 +77,11 @@ export function AdminExercisesSection({ modality }: AdminExercisesSectionProps) 
           modality,
           page,
           page_size: pageSize,
-          exercise_type: exerciseTypeFilter,
-          status: statusFilter,
-          search: debouncedSearch || undefined,
+          exercise_type: type !== 'all' ? type : undefined,
+          status: status !== 'all' ? status : undefined,
+          source: source !== 'all' ? source : undefined,
+          level: level !== 'all' ? level : undefined,
+          search: qDebounced || undefined,
         });
         if (!cancelled) {
           setExercises(result.items);
@@ -84,7 +97,7 @@ export function AdminExercisesSection({ modality }: AdminExercisesSectionProps) 
     return () => {
       cancelled = true;
     };
-  }, [modality, page, pageSize, exerciseTypeFilter, statusFilter, debouncedSearch, retryCount]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [modality, page, pageSize, type, status, source, level, qDebounced, retryCount]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const totalPages = Math.ceil(total / pageSize);
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
@@ -95,15 +108,7 @@ export function AdminExercisesSection({ modality }: AdminExercisesSectionProps) 
       <AdminExercisesStats modality={modality} />
 
       {/* Filter bar */}
-      <AdminExercisesToolbar
-        search={searchQuery}
-        setSearch={setSearchQuery}
-        type={exerciseTypeFilter}
-        setType={setExerciseTypeFilter}
-        status={statusFilter}
-        setStatus={setStatusFilter}
-        clearSearch={() => setSearchQuery('')}
-      />
+      <AdminExercisesToolbar modality={modality} />
 
       {/* Loading state */}
       {loading && (
