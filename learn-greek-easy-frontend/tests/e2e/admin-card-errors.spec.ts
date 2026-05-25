@@ -50,8 +50,8 @@ test.describe('Admin Card Errors (CER-57)', () => {
 
   // ── CER-E2E-01: Tab navigation ──────────────────────────────────────────────
 
-  test('CER-E2E-01: Errors tab renders section with title', async ({ page }) => {
-    await expect(page.getByTestId('admin-card-error-title')).toBeVisible();
+  test('CER-E2E-01: Errors tab renders section', async ({ page }) => {
+    await expect(page.getByTestId('admin-card-error-section')).toBeVisible();
   });
 
   // ── CER-E2E-02: Card row anatomy ───────────────────────────────────────────

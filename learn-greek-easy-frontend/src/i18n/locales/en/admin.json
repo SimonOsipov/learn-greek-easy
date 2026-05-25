@@ -995,8 +995,6 @@
       "noResults": "No reports match your search",
       "placeholder": "Search reports..."
     },
-    "sectionDescription": "Review and respond to card error reports from users",
-    "sectionTitle": "Card Error Reports",
     "states": {
       "noErrors": "No error reports submitted yet",
       "noFilteredResults": "No reports match the selected filters"
