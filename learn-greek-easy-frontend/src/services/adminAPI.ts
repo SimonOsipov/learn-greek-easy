@@ -1682,6 +1682,8 @@ export const adminAPI = {
       page_size: params.page_size,
       exercise_type: params.exercise_type,
       status: params.status,
+      source: params.source,
+      level: params.level,
       search: params.search,
     });
     return api.get<AdminExerciseListResponse>(`/api/v1/admin/exercises${queryString}`);
