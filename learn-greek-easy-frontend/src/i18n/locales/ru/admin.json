@@ -1049,7 +1049,8 @@
       "placeholder": "Поиск изменений...",
       "filteredCount": "{{filtered}} из {{total}} записей",
       "noResults": "Записи изменений не найдены",
-      "entriesPlaceholder": "Поиск записей…"
+      "entriesPlaceholder": "Поиск записей…",
+      "clearAriaLabel": "Очистить поиск"
     },
     "filter": {
       "allTags": "Все теги",
