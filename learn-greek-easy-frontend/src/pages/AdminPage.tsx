@@ -69,6 +69,7 @@ import type {
   VocabularyDeckCreatePayload,
 } from '@/services/adminAPI';
 import { useAdminChangelogStore } from '@/stores/adminChangelogStore';
+import { useAdminExercisesStore } from '@/stores/adminExercisesStore';
 import { useAdminNewsStore } from '@/stores/adminNewsStore';
 import { useAdminSituationStore, selectStatsTotals } from '@/stores/adminSituationStore';
 import { useAdminTabCountsStore } from '@/stores/adminTabCountsStore';
@@ -449,6 +450,7 @@ export interface PageHeadHandlers {
   onSituationsNew: () => void;
   onChangelogNew: () => void;
   onAnnouncementsNew: () => void;
+  onExerciseNew: () => void;
 }
 
 export interface PageHeadCounts {
@@ -473,6 +475,7 @@ export function pageHeadPropsFor(
     onSituationsNew: () => {},
     onChangelogNew: () => {},
     onAnnouncementsNew: () => {},
+    onExerciseNew: () => {},
   };
   const _counts: PageHeadCounts = counts ?? {
     newsTotal: 0,
@@ -627,6 +630,16 @@ export function pageHeadPropsFor(
         kicker: <Kicker dot="cyan">{t('exercises.kicker')}</Kicker>,
         title: t('exercises.title'),
         sub: t('exercises.sub'),
+        actions: (
+          <Button
+            variant="default"
+            onClick={_handlers.onExerciseNew}
+            data-testid="exercise-new-button"
+          >
+            <Plus className="size-4" aria-hidden="true" />
+            {t('exercises.actions.newExercise')}
+          </Button>
+        ),
         titleTestId: 'admin-title' as const,
         subTestId: 'admin-subtitle' as const,
       };
@@ -750,6 +763,7 @@ const AdminPage: React.FC = () => {
     ready: situationsReady,
   } = useAdminSituationStore(useShallow(selectStatsTotals));
   const openCompose = useAdminChangelogStore((s) => s.openCompose);
+  const openExerciseCompose = useAdminExercisesStore((s) => s.openCompose);
 
   // Top-level tab state — derived from URL (ASHELL-06).
   // URL is the single source of truth; no useState needed, no dual-effect loop.
@@ -928,6 +942,7 @@ const AdminPage: React.FC = () => {
         prev.set('compose', '1');
         return prev;
       }),
+    onExerciseNew: openExerciseCompose,
   };
 
   const pageCounts: PageHeadCounts = {

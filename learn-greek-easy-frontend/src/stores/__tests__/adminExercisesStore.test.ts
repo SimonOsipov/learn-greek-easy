@@ -18,6 +18,7 @@ import { useAdminExercisesStore } from '../adminExercisesStore';
 // Isolate state between tests
 beforeEach(() => {
   useAdminExercisesStore.getState().resetFilters();
+  useAdminExercisesStore.getState().closeDrawer();
 });
 
 describe('adminExercisesStore — resetFilters', () => {
@@ -112,6 +113,30 @@ describe('adminExercisesStore — setQ debounce', () => {
   });
 });
 
+describe('adminExercisesStore — drawer actions (EXR2-24-05)', () => {
+  it('openCompose sets mode to "compose" and clears openEntryId', () => {
+    useAdminExercisesStore.getState().openCompose();
+    const state = useAdminExercisesStore.getState();
+    expect(state.mode).toBe('compose');
+    expect(state.openEntryId).toBeNull();
+  });
+
+  it('openEdit sets mode to "edit" and stores the id', () => {
+    useAdminExercisesStore.getState().openEdit('abc');
+    const state = useAdminExercisesStore.getState();
+    expect(state.mode).toBe('edit');
+    expect(state.openEntryId).toBe('abc');
+  });
+
+  it('closeDrawer resets mode and openEntryId to null', () => {
+    useAdminExercisesStore.getState().openCompose();
+    useAdminExercisesStore.getState().closeDrawer();
+    const state = useAdminExercisesStore.getState();
+    expect(state.mode).toBeNull();
+    expect(state.openEntryId).toBeNull();
+  });
+});
+
 describe('adminExercisesStore — hydrateFromURL', () => {
   it('parses valid params into store state', () => {
     const params = new URLSearchParams({
@@ -150,5 +175,15 @@ describe('adminExercisesStore — hydrateFromURL', () => {
     expect(state.type).toBe('all');
     expect(state.level).toBe('all');
     expect(state.status).toBe('all');
+  });
+
+  it('does NOT touch drawer state (mode / openEntryId remain null after hydration)', () => {
+    // Pre-condition: drawer is closed (ensured by beforeEach)
+    const params = new URLSearchParams({ source: 'dialog', q: 'test' });
+    useAdminExercisesStore.getState().hydrateFromURL(params);
+
+    const state = useAdminExercisesStore.getState();
+    expect(state.mode).toBeNull();
+    expect(state.openEntryId).toBeNull();
   });
 });
