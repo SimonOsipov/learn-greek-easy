@@ -259,6 +259,16 @@ export interface AdminExerciseListItem {
   anchor_description_text: string | null;
   item_count: number;
   items: SituationExerciseItemResponse[];
+  /** Per-exercise question prompt (Greek), populated from exercise model field */
+  question_el?: string | null;
+  /** Per-exercise question prompt (English), populated from exercise model field */
+  question_en?: string | null;
+  /** Correct answer index from first item payload (MCQ exercises) */
+  correct_idx?: number | null;
+  /** Correct word ordering (word_order exercises) */
+  correct_order?: number[] | null;
+  /** Full correct sentence (word_order exercises) */
+  answer_el?: string | null;
 }
 
 export interface AdminExerciseListResponse {
