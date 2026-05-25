@@ -31,6 +31,7 @@ import type {
   AdminExerciseListItem,
   AdminExerciseListParams,
   AdminExerciseListResponse,
+  AdminExerciseStatsResponse,
   PictureNested,
   PictureUpdatePayload,
   SituationCreatePayload,
@@ -1711,6 +1712,25 @@ export const adminAPI = {
       search: params.search,
     });
     return api.get<AdminExerciseListResponse>(`/api/v1/admin/exercises${queryString}`);
+  },
+
+  /** GET /api/v1/admin/exercises/stats — catalog-wide counts (EXR2-24-01).
+   *
+   * Uses the same filter params as getExercises but omits page/page_size.
+   * Stat values do NOT change when the user paginates — only filter changes trigger a refetch.
+   */
+  getExerciseStats: async (
+    params: Omit<AdminExerciseListParams, 'page' | 'page_size'>
+  ): Promise<AdminExerciseStatsResponse> => {
+    const queryString = buildQueryString({
+      modality: params.modality,
+      exercise_type: params.exercise_type,
+      status: params.status,
+      source: params.source,
+      level: params.level,
+      search: params.search,
+    });
+    return api.get<AdminExerciseStatsResponse>(`/api/v1/admin/exercises/stats${queryString}`);
   },
 };
 

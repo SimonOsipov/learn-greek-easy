@@ -288,3 +288,14 @@ export interface AdminExerciseListParams {
   level?: string;
   search?: string;
 }
+
+/** Catalog-wide stats returned by GET /admin/exercises/stats (EXR2-24-01). */
+export interface AdminExerciseStatsResponse {
+  total: number;
+  approved: number;
+  pending: number;
+  draft: number;
+  with_audio: number;
+  missing_audio: number;
+  distinct_types: number;
+}

@@ -152,6 +152,7 @@ from src.schemas.nlp import GeneratedNounData, NormalizedLemma, VerificationSumm
 from src.schemas.situation import (
     AdminExerciseListItem,
     AdminExerciseListResponse,
+    AdminExerciseStatsResponse,
     GenerateBatchRequest,
     GenerateBatchResponse,
     PictureNested,
@@ -5198,6 +5199,193 @@ async def _collect_listening_rows(
     return dialog_rows, picture_rows, word_order_rows
 
 
+# ---------------------------------------------------------------------------
+# EXR2-24: catalog-wide count helpers (DO NOT merge with _query_* helpers).
+# ---------------------------------------------------------------------------
+
+_ExerciseCountBucket = dict  # keys: total, approved, pending, draft, with_audio, types: set
+
+
+def _empty_count_bucket() -> _ExerciseCountBucket:
+    return {"total": 0, "approved": 0, "pending": 0, "draft": 0, "with_audio": 0, "types": set()}
+
+
+def _accumulate_status(bucket: _ExerciseCountBucket, status: ExerciseStatus) -> None:
+    """Increment the matching status counter in a count bucket."""
+    if status == ExerciseStatus.APPROVED:
+        bucket["approved"] += 1
+    elif status == ExerciseStatus.PENDING:
+        bucket["pending"] += 1
+    elif status == ExerciseStatus.DRAFT:
+        bucket["draft"] += 1
+
+
+def _description_has_audio(
+    modality: ExerciseModality,
+    audio_level: DeckLevel,
+    audio_s3: str | None,
+    audio_a2: str | None,
+) -> bool:
+    """Return True if this description row counts as having audio for the given modality."""
+    if modality != ExerciseModality.LISTENING:
+        return False
+    return audio_a2 is not None if audio_level == DeckLevel.A2 else audio_s3 is not None
+
+
+async def _count_description_exercises(
+    db: AsyncSession,
+    modality: ExerciseModality,
+    exercise_type: ExerciseType | None,
+    status: ExerciseStatus | None,
+    search: str | None,
+    source: ExerciseSourceType | None = None,
+    level: DeckLevel | None = None,
+) -> _ExerciseCountBucket:
+    """Return catalog-wide counts for description exercises.
+
+    Mirrors the source short-circuit from _query_description_exercises:
+    returns zeros immediately when source is set to a non-DESCRIPTION value.
+
+    with_audio counts only for LISTENING modality:
+      - audio_level A2 → audio_a2_s3_key IS NOT NULL
+      - else (B1)      → audio_s3_key IS NOT NULL
+    """
+    bucket = _empty_count_bucket()
+
+    # Mirror source short-circuit from _query_description_exercises (admin.py:4934)
+    if source is not None and source != ExerciseSourceType.DESCRIPTION:
+        return bucket
+
+    stmt = (
+        select(
+            DescriptionExercise.status,
+            DescriptionExercise.exercise_type,
+            DescriptionExercise.audio_level,
+            SituationDescription.audio_s3_key,
+            SituationDescription.audio_a2_s3_key,
+        )
+        .join(SituationDescription, DescriptionExercise.description_id == SituationDescription.id)
+        .join(Situation, SituationDescription.situation_id == Situation.id)
+        .where(DescriptionExercise.modality == modality)
+    )
+    if exercise_type is not None:
+        stmt = stmt.where(DescriptionExercise.exercise_type == exercise_type)
+    if status is not None:
+        stmt = stmt.where(DescriptionExercise.status == status)
+    if level is not None:
+        stmt = stmt.where(DescriptionExercise.audio_level == level)
+    stmt = _apply_exercise_search_filter(stmt, search, exercise_cls=DescriptionExercise)
+
+    rows = (await db.execute(stmt)).all()
+    for row in rows:
+        row_status, row_type, row_audio_level, row_audio_s3, row_audio_a2 = row
+        bucket["total"] += 1
+        bucket["types"].add(row_type)
+        _accumulate_status(bucket, row_status)
+        if _description_has_audio(modality, row_audio_level, row_audio_s3, row_audio_a2):
+            bucket["with_audio"] += 1
+
+    return bucket
+
+
+async def _count_dialog_exercises(
+    db: AsyncSession,
+    exercise_type: ExerciseType | None,
+    status: ExerciseStatus | None,
+    search: str | None,
+) -> _ExerciseCountBucket:
+    """Return catalog-wide counts for dialog exercises (always LISTENING, no level)."""
+    bucket = _empty_count_bucket()
+
+    stmt = (
+        select(
+            DialogExercise.status,
+            DialogExercise.exercise_type,
+            ListeningDialog.audio_s3_key,
+        )
+        .join(ListeningDialog, DialogExercise.dialog_id == ListeningDialog.id)
+        .join(Situation, ListeningDialog.situation_id == Situation.id)
+    )
+    if exercise_type is not None:
+        stmt = stmt.where(DialogExercise.exercise_type == exercise_type)
+    if status is not None:
+        stmt = stmt.where(DialogExercise.status == status)
+    stmt = _apply_exercise_search_filter(stmt, search, exercise_cls=DialogExercise)
+
+    rows = (await db.execute(stmt)).all()
+    for row in rows:
+        row_status, row_type, row_audio_s3 = row
+        bucket["total"] += 1
+        bucket["types"].add(row_type)
+        _accumulate_status(bucket, row_status)
+        if row_audio_s3 is not None:
+            bucket["with_audio"] += 1
+
+    return bucket
+
+
+async def _count_picture_exercises(
+    db: AsyncSession,
+    exercise_type: ExerciseType | None,
+    status: ExerciseStatus | None,
+    search: str | None,
+) -> _ExerciseCountBucket:
+    """Return catalog-wide counts for picture exercises (no audio; with_audio always 0)."""
+    bucket = _empty_count_bucket()
+
+    stmt = (
+        select(PictureExercise.status, PictureExercise.exercise_type)
+        .join(SituationPicture, PictureExercise.picture_id == SituationPicture.id)
+        .join(Situation, SituationPicture.situation_id == Situation.id)
+    )
+    if exercise_type is not None:
+        stmt = stmt.where(PictureExercise.exercise_type == exercise_type)
+    if status is not None:
+        stmt = stmt.where(PictureExercise.status == status)
+    stmt = _apply_exercise_search_filter(stmt, search, exercise_cls=PictureExercise)
+
+    rows = (await db.execute(stmt)).all()
+    for row in rows:
+        row_status, row_type = row
+        bucket["total"] += 1
+        bucket["types"].add(row_type)
+        _accumulate_status(bucket, row_status)
+        # with_audio stays 0 — picture exercises have no audio
+
+    return bucket
+
+
+async def _count_word_order_exercises(
+    db: AsyncSession,
+    exercise_type: ExerciseType | None,
+    status: ExerciseStatus | None,
+    search: str | None,
+) -> _ExerciseCountBucket:
+    """Return catalog-wide counts for word-order exercises (no audio; with_audio always 0)."""
+    bucket = _empty_count_bucket()
+
+    stmt = (
+        select(WordOrderExercise.status, WordOrderExercise.exercise_type)
+        .join(SituationDescription, WordOrderExercise.description_id == SituationDescription.id)
+        .join(Situation, SituationDescription.situation_id == Situation.id)
+    )
+    if exercise_type is not None:
+        stmt = stmt.where(WordOrderExercise.exercise_type == exercise_type)
+    if status is not None:
+        stmt = stmt.where(WordOrderExercise.status == status)
+    stmt = _apply_exercise_search_filter(stmt, search, exercise_cls=WordOrderExercise)
+
+    rows = (await db.execute(stmt)).all()
+    for row in rows:
+        row_status, row_type = row
+        bucket["total"] += 1
+        bucket["types"].add(row_type)
+        _accumulate_status(bucket, row_status)
+        # with_audio stays 0 — word-order exercises have no audio
+
+    return bucket
+
+
 def _raw_row_sort_key_oldest_pending(row: _AnyRawRow) -> tuple:
     """Sort key: PENDING first, then oldest created_at, then id (stable)."""
     ex = row[0]
@@ -5218,6 +5406,66 @@ def _raw_row_sort_key_title(row: _AnyRawRow) -> tuple:
     """Sort key: situation title ASC (case-folded for locale stability), then id."""
     situation = row[2]  # Situation is always at index 2 across all raw tuple types
     return (situation.scenario_el.casefold(), str(row[0].id))
+
+
+@router.get(
+    "/exercises/stats",
+    response_model=AdminExerciseStatsResponse,
+    summary="Get catalog-wide exercise stats",
+    description=(
+        "Return catalog-wide counts for exercises filtered by modality and optional filters. "
+        "Unlike the list endpoint, stats are NOT paginated and cover the full catalog. "
+        "Invariant: with_audio + missing_audio == total."
+    ),
+)
+async def get_admin_exercises_stats(
+    modality: ExerciseModality = Query(...),
+    exercise_type: ExerciseType | None = Query(default=None),
+    status: ExerciseStatus | None = Query(default=None),
+    search: str | None = Query(default=None),
+    source: ExerciseSourceType | None = Query(default=None),
+    level: DeckLevel | None = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> AdminExerciseStatsResponse:
+    # Description exercises: apply source + level guards (mirrors _query_description_exercises)
+    desc = await _count_description_exercises(
+        db, modality, exercise_type, status, search, source=source, level=level
+    )
+
+    # Non-description sources: only for LISTENING modality, with same short-circuits as
+    # _collect_listening_rows (admin.py:5186-5196)
+    dialog = _empty_count_bucket()
+    picture = _empty_count_bucket()
+    word_order = _empty_count_bucket()
+
+    if modality == ExerciseModality.LISTENING:
+        if (source is None or source == ExerciseSourceType.DIALOG) and level is None:
+            dialog = await _count_dialog_exercises(db, exercise_type, status, search)
+        if (source is None or source == ExerciseSourceType.PICTURE) and level is None:
+            picture = await _count_picture_exercises(db, exercise_type, status, search)
+        if (source is None or source == ExerciseSourceType.WORD_ORDER) and level is None:
+            word_order = await _count_word_order_exercises(db, exercise_type, status, search)
+
+    all_buckets = (desc, dialog, picture, word_order)
+    total = sum(b["total"] for b in all_buckets)
+    approved = sum(b["approved"] for b in all_buckets)
+    pending = sum(b["pending"] for b in all_buckets)
+    draft = sum(b["draft"] for b in all_buckets)
+    # with_audio: description (per-level) + dialog; picture + word_order always contribute 0
+    with_audio = desc["with_audio"] + dialog["with_audio"]
+    # distinct_types: Python set union across all buckets (cheap — enum cardinality ~8)
+    all_types: set = desc["types"] | dialog["types"] | picture["types"] | word_order["types"]
+
+    return AdminExerciseStatsResponse(
+        total=total,
+        approved=approved,
+        pending=pending,
+        draft=draft,
+        with_audio=with_audio,
+        missing_audio=total - with_audio,
+        distinct_types=len(all_types),
+    )
 
 
 @router.get(
