@@ -1851,19 +1851,58 @@
       "newExercise": "Новое упражнение"
     },
     "stats": {
-      "total": { "label": "Всего упражнений", "subline": "в {{count}} типах упражнений" },
-      "approved": { "label": "Одобрено", "subline": "{{pct}}% каталога · готово к публикации" },
-      "awaitingReview": { "label": "Ждут проверки", "subline": "{{count}} ещё в черновиках" },
-      "withAudio": { "label": "С аудио", "subline": "{{count}} без аудио" }
+      "total": {
+        "label": "Всего упражнений",
+        "subline": "в {{count}} типах упражнений"
+      },
+      "approved": {
+        "label": "Одобрено",
+        "subline": "{{pct}}% каталога · готово к публикации"
+      },
+      "awaitingReview": {
+        "label": "Ждут проверки",
+        "subline": "{{count}} ещё в черновиках"
+      },
+      "withAudio": {
+        "label": "С аудио",
+        "subline": "{{count}} без аудио"
+      }
     },
     "filters": {
-      "source": { "label": "Источник", "all": "Все", "description": "Описание", "dialog": "Диалог", "picture": "Картинка" },
-      "type": { "label": "Тип", "all": "Все" },
-      "level": { "label": "Уровень", "all": "Все", "a1": "A1", "a2": "A2", "b1": "B1", "b2": "B2", "c1": "C1", "c2": "C2" },
-      "status": { "label": "Статус", "all": "Все" }
+      "source": {
+        "label": "Источник",
+        "all": "Все",
+        "description": "Описание",
+        "dialog": "Диалог",
+        "picture": "Картинка"
+      },
+      "type": {
+        "label": "Тип",
+        "all": "Все"
+      },
+      "level": {
+        "label": "Уровень",
+        "all": "Все",
+        "a1": "A1",
+        "a2": "A2",
+        "b1": "B1",
+        "b2": "B2",
+        "c1": "C1",
+        "c2": "C2"
+      },
+      "status": {
+        "label": "Статус",
+        "all": "Все"
+      }
     },
-    "modality": { "listening": "Аудирование", "reading": "Чтение" },
-    "search": { "placeholder": "Поиск по названию или вопросу…", "clearAriaLabel": "Очистить поиск" },
+    "modality": {
+      "listening": "Аудирование",
+      "reading": "Чтение"
+    },
+    "search": {
+      "placeholder": "Поиск по названию или вопросу…",
+      "clearAriaLabel": "Очистить поиск"
+    },
     "types": {
       "select_correct_answer": "Выбор ответа",
       "fill_gaps": "Заполни пропуск",
@@ -1874,7 +1913,11 @@
       "picture_match": "Совмести картинки",
       "word_order": "Порядок слов"
     },
-    "statuses": { "draft": "Черновик", "approved": "Одобрено", "pending": "На проверке" },
+    "statuses": {
+      "draft": "Черновик",
+      "approved": "Одобрено",
+      "pending": "На проверке"
+    },
     "row": {
       "itemCount_one": "{{count}} элемент",
       "itemCount_few": "{{count}} элемента",
@@ -1884,18 +1927,27 @@
       "regenerateButton": "Regenerate",
       "regenerateConfirmTitle": "Regenerate this exercise?",
       "regenerateConfirmBody": "Auto-generation will replace the current questions and options. This cannot be undone.",
-      "correctAnswer": "Correct answer"
+      "correctAnswer": "Правильный ответ"
     },
     "wordOrder": {
-      "dragLabel": "Reorder the words",
-      "correctOrder": "Correct order",
-      "moveUp": "Move up",
-      "moveDown": "Move down",
-      "movedTo": "Moved to position {{position}}"
+      "dragLabel": "Переставьте слова",
+      "correctOrder": "Правильный порядок",
+      "moveUp": "Вверх",
+      "moveDown": "Вниз",
+      "movedTo": "Перемещено на позицию {{position}}"
     },
-    "audio": { "playLabel": "Воспроизвести аудио", "pauseLabel": "Пауза", "unavailable": "Аудио недоступно" },
-    "picture": { "optionAlt": "Picture option {{position}}", "noDistractor": "Distractor unavailable" },
-    "payloadError": { "malformed": "This exercise's data is incomplete or malformed." },
+    "audio": {
+      "playLabel": "Воспроизвести аудио",
+      "pauseLabel": "Пауза",
+      "unavailable": "Аудио недоступно"
+    },
+    "picture": {
+      "optionAlt": "Вариант картинки {{position}}",
+      "noDistractor": "Дистрактор недоступен"
+    },
+    "payloadError": {
+      "malformed": "Данные упражнения неполные или повреждены."
+    },
     "empty": {
       "heading": "Нет упражнений по этим фильтрам",
       "hint": "Попробуйте расширить фильтр источника, типа, уровня или статуса.",
@@ -1910,7 +1962,10 @@
       "next": "Дальше ›",
       "pageOf": "Страница {{page}} из {{totalPages}}"
     },
-    "errorBanner": { "title": "Не удалось загрузить упражнения", "retry": "Повторить" }
+    "errorBanner": {
+      "title": "Не удалось загрузить упражнения",
+      "retry": "Повторить"
+    }
   },
   "decks": {
     "breadcrumb": {
