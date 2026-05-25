@@ -12,7 +12,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { format } from 'date-fns';
-import { Calendar, Clock, FileText } from 'lucide-react';
+import { Calendar, Clock, FileText, Search, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 
@@ -227,14 +227,30 @@ export function ChangelogTab() {
 
       {/* ── Panel: toolbar + timeline ────────────────────────────────────── */}
       <div className="va-panel">
-        <div className="cl-panel-toolbar">
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={t('admin:changelog.search.entriesPlaceholder')}
-            className="w-64"
-            data-testid="changelog-search-input"
-          />
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+          <div className="relative min-w-[240px] flex-1 sm:max-w-md">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') setSearch('');
+              }}
+              placeholder={t('admin:changelog.search.entriesPlaceholder')}
+              className="pl-8 pr-8"
+              data-testid="changelog-search-input"
+            />
+            {search && (
+              <button
+                type="button"
+                aria-label={t('admin:changelog.search.clearAriaLabel')}
+                onClick={() => setSearch('')}
+                className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
           <SegControl options={tagOptions} value={selectedTag} onChange={setSelectedTag} />
         </div>
 

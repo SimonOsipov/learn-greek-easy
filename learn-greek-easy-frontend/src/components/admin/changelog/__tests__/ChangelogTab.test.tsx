@@ -81,6 +81,7 @@ vi.mock('react-i18next', () => ({
         'admin:changelog.stats.footer.lastPublished': 'last published',
         'admin:changelog.stats.footer.lastTenEntries': 'last 10 entries',
         'admin:changelog.search.entriesPlaceholder': 'Search entries…',
+        'admin:changelog.search.clearAriaLabel': 'Clear search',
         'admin:shell.breadcrumb.dashboard': 'Dashboard',
       };
       return map[key] ?? key;
@@ -558,6 +559,86 @@ describe('ChangelogTab', () => {
     it('calls fetchList on mount', () => {
       renderWithRouter();
       expect(mockFetchList).toHaveBeenCalled();
+    });
+  });
+
+  // ── Tag SegControl count-badge format (TBR2-25-04) ──────────────────────────
+  describe('Tag SegControl count-badge format', () => {
+    it('renders All option button with numeric count suffix', () => {
+      mockItems = [
+        makeEntry({ id: '1', tag: 'new_feature' }),
+        makeEntry({ id: '2', tag: 'bug_fix' }),
+        makeEntry({ id: '3', tag: 'new_feature' }),
+      ];
+      renderWithRouter();
+      // "All" button should have a .cl-tag-n span with the total count
+      const allBtn = screen.getByText('All').closest('button');
+      expect(allBtn).toBeInTheDocument();
+      expect(allBtn?.querySelector('.cl-tag-n')?.textContent).toMatch(/^\d+$/);
+    });
+  });
+
+  // ── Clear-X button (TBR2-25-04) ─────────────────────────────────────────────
+  describe('Clear-X button', () => {
+    beforeEach(() => {
+      mockItems = [
+        makeEntry({ id: '1', title_en: 'Hello world' }),
+        makeEntry({ id: '2', title_en: 'Bug fix' }),
+      ];
+    });
+
+    it('shows clear-X button when search is non-empty', async () => {
+      const user = userEvent.setup();
+      renderWithRouter();
+      const input = screen.getByTestId('changelog-search-input');
+      await user.type(input, 'hello');
+      expect(screen.getByRole('button', { name: 'Clear search' })).toBeInTheDocument();
+    });
+
+    it('does not show clear-X button when search is empty', () => {
+      renderWithRouter();
+      expect(screen.queryByRole('button', { name: 'Clear search' })).not.toBeInTheDocument();
+    });
+
+    it('clicking clear-X clears the search and restores all entries', async () => {
+      const user = userEvent.setup();
+      renderWithRouter();
+      const input = screen.getByTestId('changelog-search-input');
+      await user.type(input, 'hello');
+      // Only 1 entry visible
+      expect(screen.getByTestId('changelog-timeline-mock').getAttribute('data-entry-count')).toBe(
+        '1'
+      );
+      await user.click(screen.getByRole('button', { name: 'Clear search' }));
+      // All entries restored
+      expect(screen.getByTestId('changelog-timeline-mock').getAttribute('data-entry-count')).toBe(
+        '2'
+      );
+      expect(screen.queryByRole('button', { name: 'Clear search' })).not.toBeInTheDocument();
+    });
+  });
+
+  // ── ESC-to-clear (TBR2-25-04) ───────────────────────────────────────────────
+  describe('ESC-to-clear', () => {
+    beforeEach(() => {
+      mockItems = [
+        makeEntry({ id: '1', title_en: 'Hello world' }),
+        makeEntry({ id: '2', title_en: 'Bug fix' }),
+      ];
+    });
+
+    it('pressing Escape on the input clears the search', async () => {
+      const user = userEvent.setup();
+      renderWithRouter();
+      const input = screen.getByTestId('changelog-search-input');
+      await user.type(input, 'hello');
+      expect(screen.getByTestId('changelog-timeline-mock').getAttribute('data-entry-count')).toBe(
+        '1'
+      );
+      await user.keyboard('{Escape}');
+      expect(screen.getByTestId('changelog-timeline-mock').getAttribute('data-entry-count')).toBe(
+        '2'
+      );
     });
   });
 

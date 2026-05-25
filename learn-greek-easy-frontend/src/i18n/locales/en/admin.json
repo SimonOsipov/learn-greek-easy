@@ -1111,7 +1111,8 @@
       "placeholder": "Search changelog...",
       "filteredCount": "{{filtered}} of {{total}} entries",
       "noResults": "No changelog entries match your search",
-      "entriesPlaceholder": "Search entries…"
+      "entriesPlaceholder": "Search entries…",
+      "clearAriaLabel": "Clear search"
     },
     "filter": {
       "allTags": "All Tags",
