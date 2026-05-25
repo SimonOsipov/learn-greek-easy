@@ -87,6 +87,9 @@ export function AdminExerciseRow({ exercise, isOpen, onToggle, rowBodyId }: Admi
         onClick={onToggle}
         aria-expanded={isOpen}
         aria-controls={rowBodyId}
+        aria-label={
+          isOpen ? t('exercises.row.collapseAriaLabel') : t('exercises.row.expandAriaLabel')
+        }
         data-testid={`admin-exercise-item-${exercise.id}`}
         className={cn(
           'ml-2 inline-flex h-[26px] w-[26px] items-center justify-center rounded-md border transition-colors',

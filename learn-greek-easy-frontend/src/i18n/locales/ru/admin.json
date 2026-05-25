@@ -1923,6 +1923,8 @@
       "itemCount_few": "{{count}} элемента",
       "itemCount_many": "{{count}} элементов",
       "itemCount_other": "{{count}} элементов",
+      "expandAriaLabel": "Развернуть упражнение",
+      "collapseAriaLabel": "Свернуть упражнение",
       "editButton": "Редактировать упражнение",
       "regenerateButton": "Перегенерировать",
       "regenerateConfirmTitle": "Перегенерировать упражнение?",
