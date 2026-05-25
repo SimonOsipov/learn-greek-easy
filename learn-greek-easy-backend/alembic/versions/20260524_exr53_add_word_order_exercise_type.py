@@ -31,11 +31,13 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # 1. Extend exercisetype enum
-    op.execute("ALTER TYPE exercisetype ADD VALUE IF NOT EXISTS 'word_order'")
-
-    # 2. Extend exercisesourcetype enum (needed for exercises.source_type)
-    op.execute("ALTER TYPE exercisesourcetype ADD VALUE IF NOT EXISTS 'word_order'")
+    # 1+2. Extend exercisetype + exercisesourcetype enums in an autocommit_block.
+    # Postgres forbids USING a newly-added enum value in the same transaction it
+    # was added in (UnsafeNewEnumValueUsage). The autocommit_block commits the
+    # ALTER TYPE statements before the CREATE TABLE below references 'word_order'.
+    with op.get_context().autocommit_block():
+        op.execute("ALTER TYPE exercisetype ADD VALUE IF NOT EXISTS 'word_order'")
+        op.execute("ALTER TYPE exercisesourcetype ADD VALUE IF NOT EXISTS 'word_order'")
 
     # 3. Create word_order_exercises table
     op.create_table(
