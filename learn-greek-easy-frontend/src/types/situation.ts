@@ -206,9 +206,10 @@ export type ExerciseType =
   | 'true_false'
   | 'select_correct_answer'
   | 'select_picture_from_description'
-  | 'select_description_from_picture';
-export type ExerciseStatus = 'draft' | 'approved';
-export type DeckLevel = 'A1' | 'A2' | 'B1' | 'B2';
+  | 'select_description_from_picture'
+  | 'word_order';
+export type ExerciseStatus = 'draft' | 'approved' | 'pending';
+export type DeckLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
 export type ExerciseModality = 'listening' | 'reading';
 
 export interface SituationExerciseItemResponse {
