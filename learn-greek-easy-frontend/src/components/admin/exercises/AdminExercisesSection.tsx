@@ -19,12 +19,11 @@ import { AdminExercisesStats } from './AdminExercisesStats';
 import { AdminExercisesToolbar } from './AdminExercisesToolbar';
 
 interface AdminExercisesSectionProps {
-  modality: 'listening' | 'reading';
   /** Increment to trigger a refetch. */
   refreshKey?: number;
 }
 
-export function AdminExercisesSection({ modality, refreshKey = 0 }: AdminExercisesSectionProps) {
+export function AdminExercisesSection({ refreshKey = 0 }: AdminExercisesSectionProps) {
   const { t } = useTranslation('admin');
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -38,6 +37,7 @@ export function AdminExercisesSection({ modality, refreshKey = 0 }: AdminExercis
   const type = useAdminExercisesStore((s) => s.type);
   const level = useAdminExercisesStore((s) => s.level);
   const status = useAdminExercisesStore((s) => s.status);
+  const modality = useAdminExercisesStore((s) => s.modality);
   const qDebounced = useAdminExercisesStore((s) => s.qDebounced);
   const page = useAdminExercisesStore((s) => s.page);
   const setPage = useAdminExercisesStore((s) => s.setPage);
@@ -57,6 +57,8 @@ export function AdminExercisesSection({ modality, refreshKey = 0 }: AdminExercis
         else next.delete('level');
         if (status !== 'all') next.set('status', status);
         else next.delete('status');
+        if (modality !== 'listening') next.set('modality', modality);
+        else next.delete('modality');
         if (qDebounced) next.set('q', qDebounced);
         else next.delete('q');
         if (page !== 1) next.set('page', String(page));
@@ -65,7 +67,7 @@ export function AdminExercisesSection({ modality, refreshKey = 0 }: AdminExercis
       },
       { replace: true }
     );
-  }, [source, type, level, status, qDebounced, page, setSearchParams]);
+  }, [source, type, level, status, modality, qDebounced, page, setSearchParams]);
 
   const [exercises, setExercises] = useState<AdminExerciseListItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -207,7 +209,7 @@ export function AdminExercisesSection({ modality, refreshKey = 0 }: AdminExercis
       <AdminExercisesStats stats={stats} loading={statsLoading} />
 
       {/* Filter bar */}
-      <AdminExercisesToolbar modality={modality} />
+      <AdminExercisesToolbar />
 
       {/* Loading state */}
       {loading && (

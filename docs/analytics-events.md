@@ -217,7 +217,7 @@ Fired when the admin changes any SegControl filter axis. One event per change.
 
 **Properties:**
 
-- `axis` (string) — which filter changed: `source`, `type`, `level`, or `status`.
+- `axis` (string) — which filter changed: `source`, `type`, `level`, `status`, or `modality`.
 - `value` (string) — new filter value (e.g. `all`, `description`, `A2`, `approved`).
 
 ### `admin_exercise_audio_played`

@@ -2,8 +2,8 @@
  * ExercisesView Component Tests
  *
  * The action button (New exercise) has moved to the PageHead.actions slot in AdminPage.
- * This file tests the page-level chrome that remains in ExercisesView: SegControl,
- * section mount, and drawer open/close driven by the store (not local state).
+ * The modality SegControl has moved into AdminExercisesToolbar (EXR2-24-08).
+ * This file tests: section mount and drawer open/close driven by the store (not local state).
  * AdminExercisesSection is mocked — stat tiles are tested in AdminExercisesStats.test.tsx.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -13,9 +13,7 @@ import { useAdminExercisesStore } from '@/stores/adminExercisesStore';
 import ExercisesView from '../ExercisesView';
 
 vi.mock('@/components/admin/exercises/AdminExercisesSection', () => ({
-  AdminExercisesSection: (props: { modality: string }) => (
-    <div data-testid="admin-exercises-section" data-modality={props.modality} />
-  ),
+  AdminExercisesSection: () => <div data-testid="admin-exercises-section" />,
 }));
 
 // Reset store drawer state before each test
@@ -33,13 +31,20 @@ describe('ExercisesView', () => {
     expect(container.querySelector('.va-page-actions-only')).toBeNull();
   });
 
-  it('renders both modality options and defaults to "listening"', () => {
+  it('does NOT render a modality SegControl in ExercisesView (moved to toolbar)', () => {
     render(<ExercisesView />);
-    expect(screen.getByRole('button', { name: /Listening/i })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /Reading/i })).toBeTruthy();
-    expect(screen.getByTestId('admin-exercises-section').getAttribute('data-modality')).toBe(
-      'listening'
-    );
+    // The modality SegControl is now inside AdminExercisesToolbar (mocked away here).
+    // No Listening/Reading buttons should appear directly in ExercisesView.
+    expect(screen.queryByRole('button', { name: /Listening/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Reading/i })).toBeNull();
+  });
+
+  it('renders the AdminExercisesSection without a modality prop', () => {
+    const { container } = render(<ExercisesView />);
+    const section = container.querySelector('[data-testid="admin-exercises-section"]');
+    expect(section).toBeTruthy();
+    // No modality data attribute — prop was removed
+    expect(section!.getAttribute('data-modality')).toBeNull();
   });
 
   it('SidePanel is closed when store mode is null', () => {

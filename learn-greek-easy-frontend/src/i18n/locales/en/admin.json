@@ -1928,7 +1928,7 @@
       "level": { "label": "Level", "all": "All", "a1": "A1", "a2": "A2", "b1": "B1", "b2": "B2", "c1": "C1", "c2": "C2" },
       "status": { "label": "Status", "all": "All" }
     },
-    "modality": { "listening": "Listening", "reading": "Reading" },
+    "modality": { "listening": "Listening", "reading": "Reading", "ariaLabel": "Modality" },
     "search": { "placeholder": "Search by source title or question…", "clearAriaLabel": "Clear search" },
     "types": {
       "select_correct_answer": "Select correct answer",

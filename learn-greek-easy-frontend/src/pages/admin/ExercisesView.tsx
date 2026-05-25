@@ -3,13 +3,11 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { AdminExercisesSection } from '@/components/admin/exercises/AdminExercisesSection';
-import { SegControl } from '@/components/ui/seg-control';
 import { SidePanel } from '@/components/ui/side-panel';
 import { useAdminExercisesStore } from '@/stores/adminExercisesStore';
 
 export default function ExercisesView() {
   const { t } = useTranslation('admin');
-  const [modality, setModality] = useState<'listening' | 'reading'>('listening');
 
   // Refresh trigger for AdminExercisesSection
   const [refreshKey] = useState(0);
@@ -20,16 +18,7 @@ export default function ExercisesView() {
 
   return (
     <div>
-      <SegControl
-        options={[
-          { value: 'listening', label: t('exercises.modality.listening') },
-          { value: 'reading', label: t('exercises.modality.reading') },
-        ]}
-        value={modality}
-        onChange={setModality}
-      />
-
-      <AdminExercisesSection modality={modality} refreshKey={refreshKey} />
+      <AdminExercisesSection refreshKey={refreshKey} />
 
       <SidePanel
         open={drawerOpen}

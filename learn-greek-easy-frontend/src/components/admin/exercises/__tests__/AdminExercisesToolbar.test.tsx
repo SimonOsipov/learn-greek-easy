@@ -1,15 +1,17 @@
 /**
- * AdminExercisesToolbar Component Tests — EXR2-24-06 / EXR2-24-07
+ * AdminExercisesToolbar Component Tests — EXR2-24-06 / EXR2-24-07 / EXR2-24-08
  *
  * Covers:
  * 1. news-seg-l span is absent (no label prop passed to SegControl)
  * 2. Each SegControl group retains role="group" + aria-label via ariaLabel prop
- * 3. All four groups' options render (at least one option per group visible)
+ * 3. All filter groups' options render (at least one option per group visible)
  * 4. Two-row layout: row-1 = search + Source + Type; row-2 = Level + Status
+ * 5. Modality SegControl renders as first row, before row-1 (EXR2-24-08)
+ * 6. Toggling Reading emits admin_exercise_filter_changed with axis:'modality' (EXR2-24-08)
  */
 
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 
 import { AdminExercisesToolbar } from '../AdminExercisesToolbar';
 
@@ -21,8 +23,9 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
+const mockTrack = vi.fn();
 vi.mock('@/lib/analytics/track', () => ({
-  track: vi.fn(),
+  track: (...args: unknown[]) => mockTrack(...args),
 }));
 
 vi.mock('@/stores/adminExercisesStore', () => ({
@@ -36,65 +39,86 @@ function makeStoreState() {
     type: 'all' as const,
     level: 'all' as const,
     status: 'all' as const,
+    modality: 'listening' as const,
     q: '',
     setSource: vi.fn(),
     setType: vi.fn(),
     setLevel: vi.fn(),
     setStatus: vi.fn(),
+    setModality: vi.fn(),
     setQ: vi.fn(),
   };
 }
+
+beforeEach(() => {
+  mockTrack.mockClear();
+});
 
 // ── Tests ──────────────────────────────────────────────────────────────────────
 
 describe('AdminExercisesToolbar — no group labels rendered', () => {
   it('does not render any news-seg-l span', () => {
-    const { container } = render(<AdminExercisesToolbar modality="listening" />);
+    const { container } = render(<AdminExercisesToolbar />);
     const labels = container.querySelectorAll('.news-seg-l');
     expect(labels).toHaveLength(0);
   });
 });
 
 describe('AdminExercisesToolbar — ARIA group affordance', () => {
+  it('renders role="group" for Modality filter with correct aria-label', () => {
+    render(<AdminExercisesToolbar />);
+    expect(screen.getByRole('group', { name: 'exercises.modality.ariaLabel' })).toBeTruthy();
+  });
+
   it('renders role="group" for Source filter with correct aria-label', () => {
-    render(<AdminExercisesToolbar modality="listening" />);
+    render(<AdminExercisesToolbar />);
     expect(screen.getByRole('group', { name: 'exercises.filters.source.label' })).toBeTruthy();
   });
 
   it('renders role="group" for Type filter with correct aria-label', () => {
-    render(<AdminExercisesToolbar modality="listening" />);
+    render(<AdminExercisesToolbar />);
     expect(screen.getByRole('group', { name: 'exercises.filters.type.label' })).toBeTruthy();
   });
 
   it('renders role="group" for Level filter with correct aria-label', () => {
-    render(<AdminExercisesToolbar modality="listening" />);
+    render(<AdminExercisesToolbar />);
     expect(screen.getByRole('group', { name: 'exercises.filters.level.label' })).toBeTruthy();
   });
 
   it('renders role="group" for Status filter with correct aria-label', () => {
-    render(<AdminExercisesToolbar modality="listening" />);
+    render(<AdminExercisesToolbar />);
     expect(screen.getByRole('group', { name: 'exercises.filters.status.label' })).toBeTruthy();
   });
 });
 
 describe('AdminExercisesToolbar — filter options render', () => {
+  it('renders Modality "Listening" option', () => {
+    render(<AdminExercisesToolbar />);
+    expect(screen.getByText('exercises.modality.listening')).toBeTruthy();
+  });
+
+  it('renders Modality "Reading" option', () => {
+    render(<AdminExercisesToolbar />);
+    expect(screen.getByText('exercises.modality.reading')).toBeTruthy();
+  });
+
   it('renders Source "all" option', () => {
-    render(<AdminExercisesToolbar modality="listening" />);
+    render(<AdminExercisesToolbar />);
     expect(screen.getByText('exercises.filters.source.all')).toBeTruthy();
   });
 
   it('renders Type "all" option', () => {
-    render(<AdminExercisesToolbar modality="listening" />);
+    render(<AdminExercisesToolbar />);
     expect(screen.getByText('exercises.filters.type.all')).toBeTruthy();
   });
 
   it('renders Level "all" option', () => {
-    render(<AdminExercisesToolbar modality="listening" />);
+    render(<AdminExercisesToolbar />);
     expect(screen.getByText('exercises.filters.level.all')).toBeTruthy();
   });
 
   it('renders Status "all" option', () => {
-    render(<AdminExercisesToolbar modality="listening" />);
+    render(<AdminExercisesToolbar />);
     expect(screen.getByText('exercises.filters.status.all')).toBeTruthy();
   });
 });
@@ -103,7 +127,7 @@ describe('AdminExercisesToolbar — filter options render', () => {
 
 describe('AdminExercisesToolbar — two-row layout', () => {
   it('renders two distinct row containers', () => {
-    const { container } = render(<AdminExercisesToolbar modality="listening" />);
+    const { container } = render(<AdminExercisesToolbar />);
     const row1 = container.querySelector('[data-testid="exercises-toolbar-row-1"]');
     const row2 = container.querySelector('[data-testid="exercises-toolbar-row-2"]');
     expect(row1).toBeTruthy();
@@ -111,15 +135,14 @@ describe('AdminExercisesToolbar — two-row layout', () => {
   });
 
   it('row 1 contains the search input', () => {
-    const { container } = render(<AdminExercisesToolbar modality="listening" />);
+    const { container } = render(<AdminExercisesToolbar />);
     const row1 = container.querySelector('[data-testid="exercises-toolbar-row-1"]');
     expect(row1!.querySelector('[data-testid="admin-exercises-search"]')).toBeTruthy();
   });
 
   it('row 1 contains Source and Type SegControl groups', () => {
-    const { container } = render(<AdminExercisesToolbar modality="listening" />);
+    const { container } = render(<AdminExercisesToolbar />);
     const row1 = container.querySelector('[data-testid="exercises-toolbar-row-1"]')!;
-    // getByRole scoped to row1 element
     const groups = Array.from(row1.querySelectorAll('[role="group"]')).map((el) =>
       el.getAttribute('aria-label')
     );
@@ -131,7 +154,7 @@ describe('AdminExercisesToolbar — two-row layout', () => {
   });
 
   it('row 2 contains Level and Status SegControl groups', () => {
-    const { container } = render(<AdminExercisesToolbar modality="listening" />);
+    const { container } = render(<AdminExercisesToolbar />);
     const row2 = container.querySelector('[data-testid="exercises-toolbar-row-2"]')!;
     const groups = Array.from(row2.querySelectorAll('[role="group"]')).map((el) =>
       el.getAttribute('aria-label')
@@ -141,5 +164,42 @@ describe('AdminExercisesToolbar — two-row layout', () => {
     // Source and Type must NOT be in row 2
     expect(groups).not.toContain('exercises.filters.source.label');
     expect(groups).not.toContain('exercises.filters.type.label');
+  });
+});
+
+// ── EXR2-24-08: Modality row ───────────────────────────────────────────────────
+
+describe('AdminExercisesToolbar — modality row (EXR2-24-08)', () => {
+  it('renders a dedicated modality row container', () => {
+    const { container } = render(<AdminExercisesToolbar />);
+    expect(container.querySelector('[data-testid="exercises-toolbar-row-modality"]')).toBeTruthy();
+  });
+
+  it('modality row appears before row-1 in DOM order', () => {
+    const { container } = render(<AdminExercisesToolbar />);
+    const outer = container.querySelector('.flex.flex-col.gap-3')!;
+    const children = Array.from(outer.children);
+    const modalityIdx = children.findIndex(
+      (el) => el.getAttribute('data-testid') === 'exercises-toolbar-row-modality'
+    );
+    const row1Idx = children.findIndex(
+      (el) => el.getAttribute('data-testid') === 'exercises-toolbar-row-1'
+    );
+    expect(modalityIdx).toBeGreaterThanOrEqual(0);
+    expect(modalityIdx).toBeLessThan(row1Idx);
+  });
+
+  it('clicking Reading option emits admin_exercise_filter_changed with axis:modality', () => {
+    const { container } = render(<AdminExercisesToolbar />);
+    const modalityRow = container.querySelector('[data-testid="exercises-toolbar-row-modality"]')!;
+    const readingButton = Array.from(modalityRow.querySelectorAll('button')).find((btn) =>
+      btn.textContent?.includes('exercises.modality.reading')
+    );
+    expect(readingButton).toBeTruthy();
+    fireEvent.click(readingButton!);
+    expect(mockTrack).toHaveBeenCalledWith('admin_exercise_filter_changed', {
+      axis: 'modality',
+      value: 'reading',
+    });
   });
 });

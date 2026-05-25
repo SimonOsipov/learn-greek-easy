@@ -10,6 +10,7 @@ export type SourceFilter = 'all' | 'description' | 'dialog' | 'picture';
 export type ExerciseTypeFilter = 'all' | ExerciseType;
 export type LevelFilter = 'all' | 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
 export type StatusFilter = 'all' | 'approved' | 'pending' | 'draft';
+export type Modality = 'listening' | 'reading';
 
 // ── Default state ──────────────────────────────────────────────────────────────
 
@@ -18,6 +19,7 @@ const DEFAULTS = {
   type: 'all' as ExerciseTypeFilter,
   level: 'all' as LevelFilter,
   status: 'all' as StatusFilter,
+  modality: 'listening' as Modality,
   q: '',
   qDebounced: '',
   page: 1,
@@ -34,6 +36,7 @@ interface AdminExercisesState {
   type: ExerciseTypeFilter;
   level: LevelFilter;
   status: StatusFilter;
+  modality: Modality;
   q: string;
   qDebounced: string;
   page: number;
@@ -46,6 +49,7 @@ interface AdminExercisesState {
   setType: (v: ExerciseTypeFilter) => void;
   setLevel: (v: LevelFilter) => void;
   setStatus: (v: StatusFilter) => void;
+  setModality: (v: Modality) => void;
   setQ: (v: string) => void;
   setPage: (v: number) => void;
   resetFilters: () => void;
@@ -60,6 +64,7 @@ interface AdminExercisesState {
 const VALID_SOURCES: SourceFilter[] = ['all', 'description', 'dialog', 'picture'];
 const VALID_LEVELS: LevelFilter[] = ['all', 'A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
 const VALID_STATUSES: StatusFilter[] = ['all', 'approved', 'pending', 'draft'];
+const VALID_MODALITIES: Modality[] = ['listening', 'reading'];
 const VALID_TYPES: ExerciseTypeFilter[] = [
   'all',
   'fill_gaps',
@@ -94,6 +99,10 @@ export const useAdminExercisesStore = create<AdminExercisesState>()((set) => ({
 
   setStatus: (v) => {
     set({ status: v, page: 1 });
+  },
+
+  setModality: (v) => {
+    set({ modality: v, page: 1 });
   },
 
   setQ: (v) => {
@@ -144,11 +153,16 @@ export const useAdminExercisesStore = create<AdminExercisesState>()((set) => ({
       ? (rawStatus as StatusFilter)
       : 'all';
 
+    const rawModality = params.get('modality') ?? 'listening';
+    const modality: Modality = VALID_MODALITIES.includes(rawModality as Modality)
+      ? (rawModality as Modality)
+      : 'listening';
+
     const q = params.get('q') ?? '';
 
     const rawPage = Number(params.get('page'));
     const page = !isNaN(rawPage) && rawPage >= 1 ? rawPage : 1;
 
-    set({ source, type, level, status, q, qDebounced: q, page });
+    set({ source, type, level, status, modality, q, qDebounced: q, page });
   },
 }));

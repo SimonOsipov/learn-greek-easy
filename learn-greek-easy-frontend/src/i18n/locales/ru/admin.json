@@ -1900,7 +1900,8 @@
     },
     "modality": {
       "listening": "Аудирование",
-      "reading": "Чтение"
+      "reading": "Чтение",
+      "ariaLabel": "Модальность"
     },
     "search": {
       "placeholder": "Поиск по названию или вопросу…",

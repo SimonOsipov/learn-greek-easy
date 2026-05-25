@@ -60,13 +60,34 @@ test.describe('Admin Exercises Tab — smoke (EXR-71)', () => {
 
   // ── EXR-E2E-03: Filter bars visible ───────────────────────────────────────
 
-  test('EXR-E2E-03: all 4 SegControl filter bars are visible', async ({ page }) => {
+  test('EXR-E2E-03: all 5 SegControl filter bars are visible (incl. modality)', async ({ page }) => {
     await expect(page.getByTestId('admin-exercises-search')).toBeVisible();
     // Each SegControl renders with an aria-label matching the filter label
+    await expect(page.getByRole('group', { name: /modality|модальность/i })).toBeVisible();
     await expect(page.getByRole('group', { name: /source|источник/i })).toBeVisible();
     await expect(page.getByRole('group', { name: /type|тип/i })).toBeVisible();
     await expect(page.getByRole('group', { name: /level|уровень/i })).toBeVisible();
     await expect(page.getByRole('group', { name: /status|статус/i })).toBeVisible();
+  });
+
+  // ── EXR-E2E-03b: Modality URL round-trip ──────────────────────────────────
+
+  test('EXR-E2E-03b: toggle Reading → URL has modality=reading → reload keeps Reading active', async ({ page }) => {
+    // Click the Reading button in the modality SegControl
+    const modalityGroup = page.getByRole('group', { name: /modality|модальность/i });
+    await modalityGroup.getByRole('button', { name: /reading|чтение/i }).click();
+
+    // URL should now contain modality=reading
+    await expect(page).toHaveURL(/modality=reading/);
+
+    // Reload the page and verify the SegControl is still on Reading
+    await page.reload();
+    await expect(page.getByTestId('admin-exercises-list')).toBeVisible({ timeout: 15_000 });
+
+    const readingButton = page
+      .getByRole('group', { name: /modality|модальность/i })
+      .getByRole('button', { name: /reading|чтение/i });
+    await expect(readingButton).toHaveAttribute('aria-pressed', 'true');
   });
 
   // ── EXR-E2E-04: At least one exercise row ─────────────────────────────────
