@@ -42,16 +42,29 @@ export function AdminExercisesSection({ modality, refreshKey = 0 }: AdminExercis
   const page = useAdminExercisesStore((s) => s.page);
   const setPage = useAdminExercisesStore((s) => s.setPage);
 
-  // Sync store → URL (replace so back button doesn't step through every filter change)
+  // Sync store → URL (replace so back button doesn't step through every filter change).
+  // CRITICAL: use the functional setSearchParams form so existing params (e.g. `?tab=exercises`
+  // owned by the admin shell) survive — wiping them unmounts this section entirely.
   useEffect(() => {
-    const next = new URLSearchParams();
-    if (source !== 'all') next.set('source', source);
-    if (type !== 'all') next.set('type', type);
-    if (level !== 'all') next.set('level', level);
-    if (status !== 'all') next.set('status', status);
-    if (qDebounced) next.set('q', qDebounced);
-    if (page !== 1) next.set('page', String(page));
-    setSearchParams(next, { replace: true });
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (source !== 'all') next.set('source', source);
+        else next.delete('source');
+        if (type !== 'all') next.set('type', type);
+        else next.delete('type');
+        if (level !== 'all') next.set('level', level);
+        else next.delete('level');
+        if (status !== 'all') next.set('status', status);
+        else next.delete('status');
+        if (qDebounced) next.set('q', qDebounced);
+        else next.delete('q');
+        if (page !== 1) next.set('page', String(page));
+        else next.delete('page');
+        return next;
+      },
+      { replace: true }
+    );
   }, [source, type, level, status, qDebounced, page, setSearchParams]);
 
   const [exercises, setExercises] = useState<AdminExerciseListItem[]>([]);
