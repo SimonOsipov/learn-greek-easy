@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 
 import type { AdminExerciseListItem } from '@/types/situation';
 
+import { AdminExerciseAudioBar } from './AdminExerciseAudioBar';
 import { ExerciseItemPayload } from './ExerciseItemPayload';
 
 interface AdminExerciseBodyProps {
@@ -13,6 +14,7 @@ export function AdminExerciseBody({ exercise }: AdminExerciseBodyProps) {
 
   return (
     <div className="px-4 pb-4">
+      <AdminExerciseAudioBar src={exercise.audio_url} />
       {exercise.items.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           {t('situations.detail.exercises.empty.noExercisesInGroup')}
