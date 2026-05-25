@@ -44,6 +44,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Kicker } from '@/components/ui/kicker';
 import { SidePanel } from '@/components/ui/side-panel';
+import { track } from '@/lib/analytics/track';
 import { cn } from '@/lib/utils';
 import { adminAPI } from '@/services/adminAPI';
 import type { AdminExerciseListItem, SituationExerciseItemResponse } from '@/types/situation';
@@ -63,7 +64,12 @@ interface AdminExerciseBodyProps {
 export function AdminExerciseBody({ exercise, onRegenerated }: AdminExerciseBodyProps) {
   return (
     <div className="px-4 pb-4">
-      <AdminExerciseAudioBar src={exercise.audio_url} />
+      {/* EXR-73: pass exercise identity for audio analytics */}
+      <AdminExerciseAudioBar
+        src={exercise.audio_url}
+        exerciseId={exercise.id}
+        exerciseType={exercise.exercise_type}
+      />
       <BodyHeader exercise={exercise} />
       <BodyVariant exercise={exercise} />
       <BodyFooter exercise={exercise} onRegenerated={onRegenerated} />
@@ -114,6 +120,11 @@ function BodyFooter({
     setRegenError(null);
     try {
       await adminAPI.regenerateExercise(exercise.id);
+      // EXR-73: track after successful regenerate (cost-bearing event)
+      track('admin_exercise_regenerated', {
+        exercise_id: exercise.id,
+        exercise_type: exercise.exercise_type,
+      });
       setConfirmOpen(false);
       onRegenerated?.();
     } catch (err) {
@@ -295,7 +306,15 @@ function McqVariant({
             type="button"
             role="radio"
             aria-checked={isPicked}
-            onClick={() => setPicked(i)}
+            onClick={() => {
+              setPicked(i);
+              // EXR-73: track option click
+              track('admin_exercise_option_clicked', {
+                exercise_id: exercise.id,
+                option_index: i,
+                was_correct: isCorrect,
+              });
+            }}
             className={cn(
               'flex items-center gap-3 rounded-lg border p-3 text-start transition-colors',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',

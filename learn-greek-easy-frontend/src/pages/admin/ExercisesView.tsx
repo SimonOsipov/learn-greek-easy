@@ -7,6 +7,7 @@ import { AdminExercisesSection } from '@/components/admin/exercises/AdminExercis
 import { Button } from '@/components/ui/button';
 import { SegControl } from '@/components/ui/seg-control';
 import { SidePanel } from '@/components/ui/side-panel';
+import { track } from '@/lib/analytics/track';
 import { adminAPI } from '@/services/adminAPI';
 
 export default function ExercisesView() {
@@ -42,7 +43,11 @@ export default function ExercisesView() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => void handleGenerateBatch()}
+          onClick={() => {
+            // EXR-73: track batch generate click before API call
+            track('admin_exercise_batch_generate_clicked', { endpoint_available: true });
+            void handleGenerateBatch();
+          }}
           disabled={generating}
         >
           <Wand2 className="size-4" aria-hidden />

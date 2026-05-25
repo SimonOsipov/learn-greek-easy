@@ -6,19 +6,20 @@ import { useAdminExercisesStore } from '@/stores/adminExercisesStore';
 
 interface AdminExercisesEmptyStateProps {
   modality: 'listening' | 'reading';
+  /** EXR-79: true when any filter/search is active (passed from section, avoids re-reading store) */
+  hasActiveFilters: boolean;
 }
 
-export function AdminExercisesEmptyState({ modality: _modality }: AdminExercisesEmptyStateProps) {
+export function AdminExercisesEmptyState({
+  modality: _modality,
+  hasActiveFilters,
+}: AdminExercisesEmptyStateProps) {
   const { t } = useTranslation('admin');
 
-  const source = useAdminExercisesStore((s) => s.source);
-  const type = useAdminExercisesStore((s) => s.type);
-  const level = useAdminExercisesStore((s) => s.level);
-  const status = useAdminExercisesStore((s) => s.status);
-  const qDebounced = useAdminExercisesStore((s) => s.qDebounced);
-
-  const hasActiveFilters =
-    source !== 'all' || type !== 'all' || level !== 'all' || status !== 'all' || qDebounced !== '';
+  // EXR-79: first-run state = no filters active AND nothing returned (true zero exercises)
+  const heading = hasActiveFilters
+    ? t('exercises.empty.heading')
+    : t('exercises.empty.firstRunHeading');
 
   return (
     <div
@@ -26,7 +27,7 @@ export function AdminExercisesEmptyState({ modality: _modality }: AdminExercises
       data-testid="admin-exercises-empty"
     >
       <Search className="text-fg-3 mb-3 size-10" aria-hidden />
-      <p className="text-sm font-medium">{t('exercises.empty.heading')}</p>
+      <p className="text-sm font-medium">{heading}</p>
       <p className="text-sm">{t('exercises.empty.hint')}</p>
       {hasActiveFilters && (
         <Button

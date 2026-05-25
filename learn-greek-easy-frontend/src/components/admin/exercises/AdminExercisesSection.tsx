@@ -5,6 +5,7 @@ import { useSearchParams } from 'react-router-dom';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
+import { track } from '@/lib/analytics/track';
 import { cn } from '@/lib/utils';
 import { adminAPI } from '@/services/adminAPI';
 import { useAdminExercisesStore } from '@/stores/adminExercisesStore';
@@ -70,7 +71,22 @@ export function AdminExercisesSection({ modality, refreshKey = 0 }: AdminExercis
   const toggle = (id: string) =>
     setOpenIds((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        // EXR-73: track row open (closed → open transition only)
+        const exercise = exercises.find((e) => e.id === id);
+        if (exercise) {
+          track('admin_exercise_opened', {
+            exercise_id: exercise.id,
+            exercise_type: exercise.exercise_type,
+            status: exercise.status,
+            source: exercise.source_type,
+            level: exercise.audio_level,
+          });
+        }
+        next.add(id);
+      }
       return next;
     });
 
@@ -134,9 +150,14 @@ export function AdminExercisesSection({ modality, refreshKey = 0 }: AdminExercis
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const to = Math.min(page * pageSize, total);
 
+  // EXR-79: hasActiveFilters — drives first-run vs filter-excluded empty state
+  const hasActiveFilters =
+    source !== 'all' || type !== 'all' || level !== 'all' || status !== 'all' || qDebounced !== '';
+
   return (
     <div className="space-y-4" data-testid="admin-exercises-list">
-      <AdminExercisesStats items={exercises} total={total} />
+      {/* EXR-79: while loading, pass empty array so StatCards render in their n=0 state */}
+      <AdminExercisesStats items={loading ? [] : exercises} total={loading ? 0 : total} />
 
       {/* Filter bar */}
       <AdminExercisesToolbar modality={modality} />
@@ -175,9 +196,9 @@ export function AdminExercisesSection({ modality, refreshKey = 0 }: AdminExercis
         </Alert>
       )}
 
-      {/* Empty state */}
+      {/* Empty state — EXR-79: distinguish first-run from filter-excluded */}
       {!loading && !error && exercises.length === 0 && (
-        <AdminExercisesEmptyState modality={modality} />
+        <AdminExercisesEmptyState modality={modality} hasActiveFilters={hasActiveFilters} />
       )}
 
       {/* Exercise list */}
