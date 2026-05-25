@@ -169,6 +169,28 @@ class SelectDescriptionFromPicturePayload(_PictureMatchBase):
         return self
 
 
+class WordOrderPayload(BaseModel):
+    """Reorder shuffled Greek words into the correct sentence.
+
+    `words` is the original (correct) sequence; `correct_order` indexes back
+    into `words` for the canonical answer; `answer_el` is the assembled
+    Greek sentence (editor reveal). Per OQ #5: chips render static; reorder
+    via arrow buttons (no @dnd-kit).
+    """
+
+    words: list[str] = Field(min_length=2, max_length=20)
+    correct_order: list[int] = Field(min_length=2, max_length=20)
+    answer_el: str = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _orders_align(self) -> "WordOrderPayload":
+        if len(self.words) != len(self.correct_order):
+            raise ValueError("words and correct_order must have equal length")
+        if sorted(self.correct_order) != list(range(len(self.words))):
+            raise ValueError("correct_order must be a permutation of range(len(words))")
+        return self
+
+
 PAYLOAD_SCHEMA_MAP: dict[ExerciseType, type[BaseModel]] = {
     ExerciseType.FILL_GAPS: FillGapsPayload,
     ExerciseType.SELECT_HEARD: SelectHeardPayload,
@@ -176,6 +198,7 @@ PAYLOAD_SCHEMA_MAP: dict[ExerciseType, type[BaseModel]] = {
     ExerciseType.SELECT_CORRECT_ANSWER: SelectCorrectAnswerPayload,
     ExerciseType.SELECT_PICTURE_FROM_DESCRIPTION: SelectPictureFromDescriptionPayload,
     ExerciseType.SELECT_DESCRIPTION_FROM_PICTURE: SelectDescriptionFromPicturePayload,
+    ExerciseType.WORD_ORDER: WordOrderPayload,
 }
 
 
