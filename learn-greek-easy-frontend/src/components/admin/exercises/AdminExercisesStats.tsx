@@ -32,6 +32,7 @@ export function AdminExercisesStats({ stats, loading }: Props) {
 
   // bars={[]} hides the .stat-bars row entirely (no created_at on exercise rows)
   const bars: number[] = [];
+  const footerLabel = t('exercises.stats.footer.catalogTotal');
 
   return (
     <section className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -42,6 +43,7 @@ export function AdminExercisesStats({ stats, loading }: Props) {
         tone="blue"
         bars={bars}
         sub={t('exercises.stats.total.subline', { count: distinctTypeCount })}
+        footerLabel={footerLabel}
       />
       <StatCard
         title={t('exercises.stats.approved.label')}
@@ -50,6 +52,7 @@ export function AdminExercisesStats({ stats, loading }: Props) {
         tone="green"
         bars={bars}
         sub={t('exercises.stats.approved.subline', { pct })}
+        footerLabel={footerLabel}
       />
       <StatCard
         title={t('exercises.stats.awaitingReview.label')}
@@ -58,6 +61,7 @@ export function AdminExercisesStats({ stats, loading }: Props) {
         tone="amber"
         bars={bars}
         sub={t('exercises.stats.awaitingReview.subline', { count: draftCount })}
+        footerLabel={footerLabel}
       />
       <StatCard
         title={t('exercises.stats.withAudio.label')}
@@ -66,6 +70,7 @@ export function AdminExercisesStats({ stats, loading }: Props) {
         tone="violet"
         bars={bars}
         sub={t('exercises.stats.withAudio.subline', { count: missingAudioCount })}
+        footerLabel={footerLabel}
       />
     </section>
   );
