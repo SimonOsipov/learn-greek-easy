@@ -165,32 +165,35 @@ class TestRegenerateExercise:
     ):
         """EXR-60: audit log is emitted with admin_exercise_regenerate event.
 
-        Verifies the structured fields are present and no Greek text from the exercise
-        content leaks into the log message.
+        Loguru doesn't propagate to stdlib `logging` by default, so we attach a
+        loguru handler that writes into a list captured here. Verifies the structured
+        fields are present and no Greek text from the exercise content leaks into the
+        log message.
         """
-        import logging
+        from loguru import logger
 
-        sit = await SituationFactory.create()
-        desc = await SituationDescriptionFactory.create(situation_id=sit.id)
-        sibling = await DescriptionExerciseFactory.create(description_id=desc.id)
-        exercise = await ExerciseFactory.create(
-            description_exercise_id=sibling.id,
-            source_type=ExerciseSourceType.DESCRIPTION,
-        )
+        captured: list[str] = []
+        handler_id = logger.add(captured.append, format="{message} {extra}", level="INFO")
+        try:
+            sit = await SituationFactory.create()
+            desc = await SituationDescriptionFactory.create(situation_id=sit.id)
+            sibling = await DescriptionExerciseFactory.create(description_id=desc.id)
+            exercise = await ExerciseFactory.create(
+                description_exercise_id=sibling.id,
+                source_type=ExerciseSourceType.DESCRIPTION,
+            )
 
-        url = REGENERATE_URL.format(exercise_id=str(exercise.id))
-        with caplog.at_level(logging.INFO, logger="src.api.v1.admin"):
+            url = REGENERATE_URL.format(exercise_id=str(exercise.id))
             response = await client.post(url, headers=superuser_auth_headers)
+            assert response.status_code == 200
+        finally:
+            logger.remove(handler_id)
 
-        assert response.status_code == 200
-
-        # Find the audit log record
-        audit_records = [r for r in caplog.records if "admin_exercise_regenerate" in r.getMessage()]
+        audit_records = [m for m in captured if "admin_exercise_regenerate" in m]
         assert len(audit_records) >= 1, "Expected admin_exercise_regenerate log record"
 
-        log_message = audit_records[0].getMessage()
+        log_message = audit_records[0]
         # Must NOT contain Greek text from exercise content
-        # The description factory uses Greek text in text_el; confirm it's not in the log
         assert "Ελληνική" not in log_message
         assert "σενάριο" not in log_message
 
