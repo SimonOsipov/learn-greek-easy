@@ -1853,7 +1853,10 @@
     "stats": {
       "total": {
         "label": "Всего упражнений",
-        "subline": "в {{count}} типах упражнений"
+        "subline_one": "в 1 типе упражнений",
+        "subline_few": "в {{count}} типах упражнений",
+        "subline_many": "в {{count}} типах упражнений",
+        "subline_other": "в {{count}} типах упражнений"
       },
       "approved": {
         "label": "Одобрено",

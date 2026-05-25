@@ -82,6 +82,24 @@ describe('AdminExercisesStats', () => {
     expect(() => render(<AdminExercisesStats stats={stats} loading={false} />)).not.toThrow();
   });
 
+  it('renders singular subline when distinct_types is 1 (EXR2-24-02)', () => {
+    const stats = makeStats({ total: 5, distinct_types: 1 });
+    render(<AdminExercisesStats stats={stats} loading={false} />);
+    expect(screen.getByText('across 1 exercise type')).toBeTruthy();
+  });
+
+  it('renders plural subline when distinct_types is 2 (EXR2-24-02)', () => {
+    const stats = makeStats({ total: 10, distinct_types: 2 });
+    render(<AdminExercisesStats stats={stats} loading={false} />);
+    expect(screen.getByText('across 2 exercise types')).toBeTruthy();
+  });
+
+  it('renders plural subline when distinct_types is 0 (EXR2-24-02)', () => {
+    const stats = makeStats({ total: 0, distinct_types: 0 });
+    render(<AdminExercisesStats stats={stats} loading={false} />);
+    expect(screen.getByText('across 0 exercise types')).toBeTruthy();
+  });
+
   it('hides the bars row (EXR-19f)', () => {
     const { container } = render(<AdminExercisesStats stats={null} loading={false} />);
     const barsDivs = container.querySelectorAll('.stat-bars');
