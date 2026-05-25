@@ -1913,7 +1913,11 @@
       "newExercise": "New exercise"
     },
     "stats": {
-      "total": { "label": "Total exercises", "subline": "across {{count}} exercise types" },
+      "total": {
+        "label": "Total exercises",
+        "subline_one": "across 1 exercise type",
+        "subline_other": "across {{count}} exercise types"
+      },
       "approved": { "label": "Approved", "subline": "{{pct}}% of catalog · ready to ship" },
       "awaitingReview": { "label": "Awaiting review", "subline": "{{count}} also still in draft" },
       "withAudio": { "label": "With audio", "subline": "{{count}} missing audio" }
