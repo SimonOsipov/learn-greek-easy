@@ -1857,29 +1857,29 @@
       "withAudio": { "label": "С аудио", "subline": "{{count}} без аудио" }
     },
     "filters": {
-      "source": { "label": "Source", "all": "All", "description": "Description", "dialog": "Dialog", "picture": "Picture" },
-      "type": { "label": "Type", "all": "All" },
-      "level": { "label": "Level", "all": "All", "a1": "A1", "a2": "A2", "b1": "B1", "b2": "B2", "c1": "C1", "c2": "C2" },
-      "status": { "label": "Status", "all": "All" }
+      "source": { "label": "Источник", "all": "Все", "description": "Описание", "dialog": "Диалог", "picture": "Картинка" },
+      "type": { "label": "Тип", "all": "Все" },
+      "level": { "label": "Уровень", "all": "Все", "a1": "A1", "a2": "A2", "b1": "B1", "b2": "B2", "c1": "C1", "c2": "C2" },
+      "status": { "label": "Статус", "all": "Все" }
     },
-    "modality": { "listening": "Listening", "reading": "Reading" },
-    "search": { "placeholder": "Search Greek prompt or correct answer", "clearAriaLabel": "Clear search" },
+    "modality": { "listening": "Аудирование", "reading": "Чтение" },
+    "search": { "placeholder": "Поиск по названию или вопросу…", "clearAriaLabel": "Очистить поиск" },
     "types": {
-      "select_correct_answer": "Multiple choice",
-      "fill_gaps": "Fill in the blank",
-      "select_heard": "What you heard",
-      "true_false": "True or false",
-      "select_picture_from_description": "Pick the picture",
-      "select_description_from_picture": "Describe the picture",
-      "picture_match": "Picture match",
-      "word_order": "Word order"
+      "select_correct_answer": "Выбор ответа",
+      "fill_gaps": "Заполни пропуск",
+      "select_heard": "Что слышишь",
+      "true_false": "Верно / неверно",
+      "select_picture_from_description": "Выбери картинку",
+      "select_description_from_picture": "Опиши картинку",
+      "picture_match": "Совмести картинки",
+      "word_order": "Порядок слов"
     },
-    "statuses": { "draft": "Draft", "approved": "Approved", "pending": "Pending" },
+    "statuses": { "draft": "Черновик", "approved": "Одобрено", "pending": "На проверке" },
     "row": {
-      "itemCount_one": "{{count}} item",
-      "itemCount_few": "{{count}} items",
-      "itemCount_many": "{{count}} items",
-      "itemCount_other": "{{count}} items",
+      "itemCount_one": "{{count}} элемент",
+      "itemCount_few": "{{count}} элемента",
+      "itemCount_many": "{{count}} элементов",
+      "itemCount_other": "{{count}} элементов",
       "editButton": "Edit exercise",
       "regenerateButton": "Regenerate",
       "regenerateConfirmTitle": "Regenerate this exercise?",
@@ -1897,20 +1897,20 @@
     "picture": { "optionAlt": "Picture option {{position}}", "noDistractor": "Distractor unavailable" },
     "payloadError": { "malformed": "This exercise's data is incomplete or malformed." },
     "empty": {
-      "heading": "No exercises match these filters",
-      "hint": "Try clearing a filter or widening the search.",
-      "clearFiltersButton": "Clear filters",
-      "firstRunHeading": "No exercises yet",
-      "listening": "No listening exercises yet",
-      "reading": "No reading exercises yet"
+      "heading": "Нет упражнений по этим фильтрам",
+      "hint": "Попробуйте расширить фильтр источника, типа, уровня или статуса.",
+      "clearFiltersButton": "Сбросить фильтры",
+      "firstRunHeading": "Упражнений пока нет",
+      "listening": "Упражнений на аудирование пока нет",
+      "reading": "Упражнений на чтение пока нет"
     },
     "pager": {
-      "showing": "Showing {{from}}–{{to}} of {{total}}",
-      "previous": "Previous",
-      "next": "Next",
-      "pageOf": "Page {{page}} of {{totalPages}}"
+      "showing": "Показано {{from}}–{{to}} из {{total}}",
+      "previous": "‹ Назад",
+      "next": "Дальше ›",
+      "pageOf": "Страница {{page}} из {{totalPages}}"
     },
-    "errorBanner": { "title": "Couldn't load exercises", "retry": "Retry" }
+    "errorBanner": { "title": "Не удалось загрузить упражнения", "retry": "Повторить" }
   },
   "decks": {
     "breadcrumb": {
