@@ -48,33 +48,32 @@ export function AdminExercisesToolbar({ modality: _modality }: AdminExercisesToo
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Search */}
-      <div className="relative flex-1 sm:max-w-xs">
-        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-        <Input
-          className="pl-8 pr-8"
-          placeholder={t('exercises.search.placeholder')}
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') setQ('');
-          }}
-          data-testid="admin-exercises-search"
-          aria-label={t('exercises.search.placeholder')}
-        />
-        {q && (
-          <button
-            className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground"
-            onClick={() => setQ('')}
-            aria-label={t('exercises.search.clearAriaLabel')}
-          >
-            <X className="h-4 w-4" />
-          </button>
-        )}
-      </div>
+      {/* Row 1: Search · Source · Type */}
+      <div className="flex flex-wrap items-center gap-3" data-testid="exercises-toolbar-row-1">
+        <div className="relative min-w-[240px] flex-1 sm:max-w-md">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            className="pl-8 pr-8"
+            placeholder={t('exercises.search.placeholder')}
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') setQ('');
+            }}
+            data-testid="admin-exercises-search"
+            aria-label={t('exercises.search.placeholder')}
+          />
+          {q && (
+            <button
+              className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground"
+              onClick={() => setQ('')}
+              aria-label={t('exercises.search.clearAriaLabel')}
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
 
-      {/* Source · Type · Level · Status */}
-      <div className="flex flex-wrap gap-3">
         <SegControl
           options={SOURCE_OPTIONS.map((v) => ({
             value: v,
@@ -104,7 +103,10 @@ export function AdminExercisesToolbar({ modality: _modality }: AdminExercisesToo
           ariaLabel={t('exercises.filters.type.label')}
           className="flex-col items-start sm:flex-row sm:items-center"
         />
+      </div>
 
+      {/* Row 2: Level · Status */}
+      <div className="flex flex-wrap items-center gap-3" data-testid="exercises-toolbar-row-2">
         <SegControl
           options={LEVEL_OPTIONS.map((v) => ({
             value: v,
