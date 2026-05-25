@@ -99,3 +99,115 @@ test.describe('Admin Exercises Tab — smoke (EXR-71)', () => {
     await expect(rows.first()).toBeVisible({ timeout: 10_000 });
   });
 });
+
+// ── ADMIN2-24 polish — dedicated E2E coverage ─────────────────────────────────
+//
+// These three tests exercise the union of:
+//   EXR2-24-01 (catalog-wide stats endpoint)
+//   EXR2-24-05 (page-head CTA + drawer store)
+//   EXR2-24-08 (modality URL round-trip)
+//
+// Auth: admin storageState (shared with the smoke suite above).
+// Seeding: the preview environment is expected to have exercises already.
+
+test.describe('ADMIN2-24 polish', () => {
+  test.beforeEach(async ({ page }) => {
+    await navigateToAdminTab(page, 'exercises');
+    await expect(page.getByTestId('admin-exercises-list')).toBeVisible({ timeout: 15_000 });
+  });
+
+  // ── EXR2-24-E2E-01: page-head CTA opens the SidePanel ────────────────────
+
+  test('EXR2-24-E2E-01: page-head New exercise button opens the side panel', async ({
+    page,
+  }) => {
+    // The PageHead actions slot renders exercise-new-button which triggers
+    // the store's openCompose() → ExercisesView SidePanel becomes visible.
+    await page.getByTestId('exercise-new-button').click();
+
+    // The SidePanel renders an sr-only <Dialog.Title> with the i18n value
+    // "New exercise" (exercises.actions.newExercise). It also renders a
+    // visible .drawer-title span with the same text (ExercisesView.tsx:33).
+    await expect(
+      page.locator('.drawer-title', { hasText: /new exercise|новое упражнение/i })
+    ).toBeVisible({ timeout: 5_000 });
+  });
+
+  // ── EXR2-24-E2E-02: catalog-wide stats survive pagination ─────────────────
+  //
+  // NOTE: This test requires at least 2 pages of exercises (> pageSize, typically 20).
+  // If only 1 page exists the test is skipped with a diagnostic comment so CI
+  // surfaces the skip rather than a spurious failure.
+
+  test('EXR2-24-E2E-02: stats unchanged across pagination', async ({ page }) => {
+    // Capture the stat card n-values from page 1.
+    // StatCard renders its KPI number in .stat-n; the "Total exercises" card
+    // is the first card (tone=blue), "Approved" is the second (tone=green).
+    const statN = (tone: string) =>
+      page.locator(`.stat-card.tone-${tone} .stat-n`).first();
+
+    const totalText1 = await statN('blue').innerText();
+    const approvedText1 = await statN('green').innerText();
+
+    // Check whether the "Next ›" button is enabled — if not, there is only
+    // one page and we cannot test pagination. Skip gracefully.
+    const nextButton = page.getByTestId('admin-exercises-pagination').getByRole('button', {
+      name: /next/i,
+    });
+    const isDisabled = await nextButton.getAttribute('aria-disabled');
+    if (isDisabled === 'true') {
+      // Less than a full second page of exercises — seeding required in CI.
+      // eslint-disable-next-line no-console
+      console.warn(
+        '[EXR2-24-E2E-02] Skipped: fewer than one full page of exercises. ' +
+          'Seed the preview DB with 20+ exercises to activate this assertion.'
+      );
+      test.skip();
+      return;
+    }
+
+    // Navigate to page 2.
+    await nextButton.click();
+    // Wait for the list to re-render on page 2.
+    await expect(page.getByTestId('admin-exercises-list')).toBeVisible({ timeout: 10_000 });
+
+    // Stats must be identical — they are catalog-wide (not paged).
+    const totalText2 = await statN('blue').innerText();
+    const approvedText2 = await statN('green').innerText();
+
+    expect(totalText2).toBe(totalText1);
+    expect(approvedText2).toBe(approvedText1);
+  });
+
+  // ── EXR2-24-E2E-03: modality persists to URL and survives reload ──────────
+  //
+  // Equivalent coverage already exists in the smoke suite above as
+  // "EXR-E2E-03b: toggle Reading → URL has modality=reading → reload keeps
+  // Reading active". That test is the canonical URL round-trip assertion for
+  // the modality SegControl. This entry is a named alias pointing to the same
+  // behaviour so that EXR2-24-E2E-03 traceability is satisfied without
+  // duplicating the assertion logic.
+  //
+  // If the smoke suite's EXR-E2E-03b test is removed or renamed, add the full
+  // modality URL round-trip assertion here (see EXR-E2E-03b source above for
+  // the implementation).
+  test('EXR2-24-E2E-03: modality SegControl toggle persists in URL searchParams.modality and survives reload', async ({
+    page,
+  }) => {
+    // Click the Reading button in the modality SegControl.
+    const modalityGroup = page.getByRole('group', { name: /modality|модальность/i });
+    await modalityGroup.getByRole('button', { name: /reading|чтение/i }).click();
+
+    // URL must contain modality=reading.
+    await expect(page).toHaveURL(/modality=reading/);
+
+    // After reload the SegControl must still show Reading as selected.
+    await page.reload();
+    await expect(page.getByTestId('admin-exercises-list')).toBeVisible({ timeout: 15_000 });
+
+    const readingButton = page
+      .getByRole('group', { name: /modality|модальность/i })
+      .getByRole('button', { name: /reading|чтение/i });
+    await expect(readingButton).toHaveAttribute('aria-pressed', 'true');
+  });
+});
