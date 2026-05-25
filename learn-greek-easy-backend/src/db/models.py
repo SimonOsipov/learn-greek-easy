@@ -2866,7 +2866,10 @@ class WordOrderExercise(Base, TimestampMixin):
 
     id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.uuid_generate_v4())
     description_id: Mapped[UUID] = mapped_column(
-        ForeignKey("situation_descriptions.id", ondelete="CASCADE"), index=True, nullable=False
+        ForeignKey("situation_descriptions.id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+        comment="FK to situation_descriptions — word-order derives from narrative text",
     )
     exercise_type: Mapped[ExerciseType] = mapped_column(
         SAEnum(
@@ -2930,7 +2933,11 @@ class WordOrderExerciseItem(Base):
         ForeignKey("word_order_exercises.id", ondelete="CASCADE"), index=True, nullable=False
     )
     item_index: Mapped[int] = mapped_column(SmallInteger, nullable=False)
-    payload: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    payload: Mapped[dict] = mapped_column(
+        JSONB,
+        nullable=False,
+        comment='Shape: {"words": [...], "correct_order": [...], "answer_el": "..."}',
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

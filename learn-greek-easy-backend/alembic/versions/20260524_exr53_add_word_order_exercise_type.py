@@ -99,12 +99,14 @@ def upgrade() -> None:
             sa.DateTime(timezone=True),
             server_default=sa.text("now()"),
             nullable=False,
+            comment="Timestamp when record was created",
         ),
         sa.Column(
             "updated_at",
             sa.DateTime(timezone=True),
             server_default=sa.text("now()"),
             nullable=False,
+            comment="Timestamp when record was last updated",
         ),
         sa.ForeignKeyConstraint(
             ["description_id"],
