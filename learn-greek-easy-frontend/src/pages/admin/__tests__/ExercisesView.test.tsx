@@ -1,9 +1,9 @@
 /**
- * ExercisesView Component Tests (ADMIN2-11 / EXERR-02 / ADMIN2-HEAD)
+ * ExercisesView Component Tests
  *
- * Note: PageHead (H1, breadcrumb, kicker) is now owned by AdminPage.
- * ExercisesView renders stat cards + SegControl + AdminExercisesSection.
- * Updated in EXR-74/EXR-00b to reflect new i18n keys and component name.
+ * StatCards have moved into AdminExercisesStats (inside AdminExercisesSection).
+ * This file tests the page-level chrome: action buttons, SegControl, and section mount.
+ * AdminExercisesSection is mocked — stat tiles are tested in AdminExercisesStats.test.tsx.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -17,22 +17,21 @@ vi.mock('@/components/admin/exercises/AdminExercisesSection', () => ({
   ),
 }));
 
+vi.mock('@/services/adminAPI', () => ({
+  adminAPI: {
+    generateExerciseBatch: vi.fn().mockResolvedValue({ scheduled: 0, exercise_ids: [] }),
+  },
+}));
+
 describe('ExercisesView', () => {
   it('renders without throwing', () => {
     expect(() => render(<ExercisesView />)).not.toThrow();
   });
 
-  it('renders all four StatCard titles', () => {
+  it('renders the Generate batch and New exercise action buttons', () => {
     render(<ExercisesView />);
-    expect(screen.getByText('Total exercises')).toBeTruthy();
-    expect(screen.getByText('Approved')).toBeTruthy();
-    expect(screen.getByText('Awaiting review')).toBeTruthy();
-    expect(screen.getByText('With audio')).toBeTruthy();
-  });
-
-  it('renders "—" for all four StatCard n values', () => {
-    render(<ExercisesView />);
-    expect(screen.getAllByText('—')).toHaveLength(4);
+    expect(screen.getByRole('button', { name: /generate batch/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /new exercise/i })).toBeTruthy();
   });
 
   it('renders both modality options and defaults to "listening"', () => {

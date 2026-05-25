@@ -1675,6 +1675,22 @@ export const adminAPI = {
     return api.patch<PictureNested>(`/api/v1/admin/situations/${situationId}/picture`, data);
   },
 
+  /**
+   * Trigger batch AI generation of exercises
+   *
+   * Schedules a batch of exercises for the given modality.
+   * Returns the count of scheduled exercises and their IDs.
+   * Requires superuser authentication.
+   */
+  generateExerciseBatch: async (body: {
+    modality: 'listening' | 'reading';
+    count?: number;
+  }): Promise<{ scheduled: number; exercise_ids: string[] }> =>
+    api.post<{ scheduled: number; exercise_ids: string[] }>(
+      '/api/v1/admin/exercises/generate-batch',
+      body
+    ),
+
   getExercises: async (params: AdminExerciseListParams): Promise<AdminExerciseListResponse> => {
     const queryString = buildQueryString({
       modality: params.modality,

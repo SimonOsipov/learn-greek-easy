@@ -1,52 +1,67 @@
 import { useState } from 'react';
 
-import { CheckCircle, Clock, Flag, Layers } from 'lucide-react';
+import { Plus, Wand2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { AdminExercisesSection } from '@/components/admin/exercises/AdminExercisesSection';
+import { Button } from '@/components/ui/button';
 import { SegControl } from '@/components/ui/seg-control';
-import { StatCard } from '@/components/ui/stat-card';
+import { SidePanel } from '@/components/ui/side-panel';
+import { adminAPI } from '@/services/adminAPI';
 
 export default function ExercisesView() {
   const { t } = useTranslation('admin');
   const [modality, setModality] = useState<'listening' | 'reading'>('listening');
 
+  // Generate batch state
+  const [generating, setGenerating] = useState(false);
+  const [batchError, setBatchError] = useState<string | null>(null);
+
+  // New exercise drawer state
+  const [newExerciseOpen, setNewExerciseOpen] = useState(false);
+
+  // Refresh trigger for AdminExercisesSection
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  async function handleGenerateBatch() {
+    setGenerating(true);
+    setBatchError(null);
+    try {
+      await adminAPI.generateExerciseBatch({ modality, count: 5 });
+      setRefreshKey((k) => k + 1);
+    } catch {
+      setBatchError(t('exercises.errorBanner.title'));
+    } finally {
+      setGenerating(false);
+    }
+  }
+
   return (
     <div>
       <div className="va-page-actions-only mb-4 flex justify-end gap-2">
-        {/* EXR-01: Generate batch button */}
-        {/* EXR-02: New exercise button */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => void handleGenerateBatch()}
+          disabled={generating}
+        >
+          <Wand2 className="size-4" aria-hidden />
+          {t('exercises.actions.generateBatch')}
+        </Button>
+        <Button variant="default" size="sm" onClick={() => setNewExerciseOpen(true)}>
+          <Plus className="size-4" aria-hidden />
+          {t('exercises.actions.newExercise')}
+        </Button>
       </div>
-      <section className="stat-grid">
-        <StatCard
-          title={t('exercises.stats.total.label')}
-          n="—"
-          sub={t('exercises.stats.total.subline', { typeCount: '—' })}
-          tone="cyan"
-          icon={<Flag />}
-        />
-        <StatCard
-          title={t('exercises.stats.approved.label')}
-          n="—"
-          sub={t('exercises.stats.approved.subline', { pct: '—' })}
-          tone="green"
-          icon={<CheckCircle />}
-        />
-        <StatCard
-          title={t('exercises.stats.awaitingReview.label')}
-          n="—"
-          sub={t('exercises.stats.awaitingReview.subline', { draftCount: '—' })}
-          tone="amber"
-          icon={<Clock />}
-        />
-        <StatCard
-          title={t('exercises.stats.withAudio.label')}
-          n="—"
-          sub={t('exercises.stats.withAudio.subline', { missingCount: '—' })}
-          tone="violet"
-          icon={<Layers />}
-        />
-      </section>
+
+      {batchError && (
+        <div
+          role="alert"
+          className="mb-4 rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+        >
+          {batchError}
+        </div>
+      )}
 
       <SegControl
         options={[
@@ -57,7 +72,22 @@ export default function ExercisesView() {
         onChange={setModality}
       />
 
-      <AdminExercisesSection modality={modality} />
+      <AdminExercisesSection modality={modality} refreshKey={refreshKey} />
+
+      <SidePanel
+        open={newExerciseOpen}
+        onOpenChange={setNewExerciseOpen}
+        size="half"
+        title={t('exercises.actions.newExercise')}
+      >
+        <SidePanel.Header>
+          <SidePanel.CloseButton />
+          <span className="drawer-title">{t('exercises.actions.newExercise')}</span>
+        </SidePanel.Header>
+        <SidePanel.Body>
+          <p>Drawer body coming soon.</p>
+        </SidePanel.Body>
+      </SidePanel>
     </div>
   );
 }
