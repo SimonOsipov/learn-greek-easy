@@ -61,6 +61,7 @@ const VALID_TYPES: ExerciseTypeFilter[] = [
   'select_correct_answer',
   'select_picture_from_description',
   'select_description_from_picture',
+  'word_order',
 ];
 
 // ── Store ─────────────────────────────────────────────────────────────────────

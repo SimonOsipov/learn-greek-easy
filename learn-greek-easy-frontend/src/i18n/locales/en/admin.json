@@ -1925,12 +1925,12 @@
       "status": { "label": "Status", "all": "All" }
     },
     "modality": { "listening": "Listening", "reading": "Reading" },
-    "search": { "placeholder": "Search Greek prompt or correct answer", "clearAriaLabel": "Clear search" },
+    "search": { "placeholder": "Search by source title or question…", "clearAriaLabel": "Clear search" },
     "types": {
-      "select_correct_answer": "Multiple choice",
+      "select_correct_answer": "Select correct answer",
       "fill_gaps": "Fill in the blank",
       "select_heard": "What you heard",
-      "true_false": "True or false",
+      "true_false": "True / false",
       "select_picture_from_description": "Pick the picture",
       "select_description_from_picture": "Describe the picture",
       "picture_match": "Picture match",
@@ -1957,8 +1957,8 @@
     "picture": { "optionAlt": "Picture option {{position}}", "noDistractor": "Distractor unavailable" },
     "payloadError": { "malformed": "This exercise's data is incomplete or malformed." },
     "empty": {
-      "heading": "No exercises match these filters",
-      "hint": "Try clearing a filter or widening the search.",
+      "heading": "No exercises match your filters",
+      "hint": "Try widening the source, type, level or status filter.",
       "clearFiltersButton": "Clear filters",
       "firstRunHeading": "No exercises yet",
       "listening": "No listening exercises yet",
@@ -1966,8 +1966,8 @@
     },
     "pager": {
       "showing": "Showing {{from}}–{{to}} of {{total}}",
-      "previous": "Previous",
-      "next": "Next",
+      "previous": "‹ Previous",
+      "next": "Next ›",
       "pageOf": "Page {{page}} of {{totalPages}}"
     },
     "errorBanner": { "title": "Couldn't load exercises", "retry": "Retry" }

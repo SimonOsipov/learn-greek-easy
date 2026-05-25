@@ -1,4 +1,4 @@
-import { BookOpen, Headphones } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,7 @@ interface AdminExercisesEmptyStateProps {
   modality: 'listening' | 'reading';
 }
 
-export function AdminExercisesEmptyState({ modality }: AdminExercisesEmptyStateProps) {
+export function AdminExercisesEmptyState({ modality: _modality }: AdminExercisesEmptyStateProps) {
   const { t } = useTranslation('admin');
 
   const source = useAdminExercisesStore((s) => s.source);
@@ -25,12 +25,9 @@ export function AdminExercisesEmptyState({ modality }: AdminExercisesEmptyStateP
       className="flex flex-col items-center gap-3 py-12 text-center text-muted-foreground"
       data-testid="admin-exercises-empty"
     >
-      {modality === 'listening' ? (
-        <Headphones className="h-10 w-10 opacity-40" />
-      ) : (
-        <BookOpen className="h-10 w-10 opacity-40" />
-      )}
-      <p className="text-sm">{t(`exercises.empty.${modality}`)}</p>
+      <Search className="text-fg-3 mb-3 size-10" aria-hidden />
+      <p className="text-sm font-medium">{t('exercises.empty.heading')}</p>
+      <p className="text-sm">{t('exercises.empty.hint')}</p>
       {hasActiveFilters && (
         <Button
           variant="ghost"

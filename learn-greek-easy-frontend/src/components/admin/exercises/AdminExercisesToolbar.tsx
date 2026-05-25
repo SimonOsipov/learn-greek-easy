@@ -11,14 +11,13 @@ import {
   type StatusFilter,
 } from '@/stores/adminExercisesStore';
 
-// Types surfaced in the Type strip (picture variants surface via Source=Picture;
-// word_order not yet in the ExerciseType union — add when backend ships it)
 const TYPE_OPTIONS: ExerciseTypeFilter[] = [
   'all',
   'select_correct_answer',
   'fill_gaps',
   'true_false',
   'select_heard',
+  'word_order',
 ];
 
 const SOURCE_OPTIONS: SourceFilter[] = ['all', 'description', 'dialog', 'picture'];
@@ -85,6 +84,7 @@ export function AdminExercisesToolbar({ modality: _modality }: AdminExercisesToo
           value={source}
           onChange={setSource}
           ariaLabel={t('exercises.filters.source.label')}
+          className="flex-col items-start sm:flex-row sm:items-center"
         />
 
         <SegControl
@@ -96,6 +96,7 @@ export function AdminExercisesToolbar({ modality: _modality }: AdminExercisesToo
           value={type}
           onChange={setType}
           ariaLabel={t('exercises.filters.type.label')}
+          className="flex-col items-start sm:flex-row sm:items-center"
         />
 
         <SegControl
@@ -110,6 +111,7 @@ export function AdminExercisesToolbar({ modality: _modality }: AdminExercisesToo
           value={level}
           onChange={setLevel}
           ariaLabel={t('exercises.filters.level.label')}
+          className="flex-col items-start sm:flex-row sm:items-center"
         />
 
         <SegControl
@@ -121,6 +123,7 @@ export function AdminExercisesToolbar({ modality: _modality }: AdminExercisesToo
           value={status}
           onChange={setStatus}
           ariaLabel={t('exercises.filters.status.label')}
+          className="flex-col items-start sm:flex-row sm:items-center"
         />
       </div>
     </div>

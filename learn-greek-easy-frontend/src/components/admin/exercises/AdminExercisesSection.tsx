@@ -5,6 +5,7 @@ import { useSearchParams } from 'react-router-dom';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 import { adminAPI } from '@/services/adminAPI';
 import { useAdminExercisesStore } from '@/stores/adminExercisesStore';
 import type { AdminExerciseListItem } from '@/types/situation';
@@ -154,21 +155,32 @@ export function AdminExercisesSection({ modality, refreshKey = 0 }: AdminExercis
       {/* Exercise list */}
       {!loading && !error && exercises.length > 0 && (
         <div className="w-full space-y-1">
-          {exercises.map((exercise) => (
-            <div className="rounded-lg border" key={exercise.id}>
-              <AdminExerciseRow
-                exercise={exercise}
-                isOpen={openIds.has(exercise.id)}
-                onToggle={() => toggle(exercise.id)}
-              />
-              {openIds.has(exercise.id) && (
-                <>
-                  <AdminExerciseAudioBar src={exercise.audio_url ?? undefined} />
-                  <AdminExerciseBody exercise={exercise} />
-                </>
-              )}
-            </div>
-          ))}
+          {exercises.map((exercise) => {
+            const isOpen = openIds.has(exercise.id);
+            const rowBodyId = `exercise-row-body-${exercise.id}`;
+            return (
+              <div
+                key={exercise.id}
+                className={cn(
+                  'rounded-lg border transition-colors',
+                  isOpen ? 'border-primary/50' : 'border-border hover:border-primary/35'
+                )}
+              >
+                <AdminExerciseRow
+                  exercise={exercise}
+                  isOpen={isOpen}
+                  onToggle={() => toggle(exercise.id)}
+                  rowBodyId={rowBodyId}
+                />
+                {isOpen && (
+                  <div id={rowBodyId}>
+                    <AdminExerciseAudioBar src={exercise.audio_url ?? undefined} />
+                    <AdminExerciseBody exercise={exercise} />
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 

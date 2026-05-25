@@ -23,7 +23,8 @@ export function AdminExercisesPager({
 
   return (
     <div className="flex items-center justify-between" data-testid="admin-exercises-pagination">
-      <p className="text-sm text-muted-foreground">
+      {/* Hidden on mobile (< 640px), visible at sm+ */}
+      <p className="hidden text-sm text-muted-foreground sm:block">
         {t('exercises.pager.showing', { from: showingFrom, to: showingTo, total })}
       </p>
       <div className="flex items-center gap-2">
@@ -35,10 +36,10 @@ export function AdminExercisesPager({
           aria-disabled={page === 1}
           tabIndex={page === 1 ? -1 : 0}
         >
-          {t('pagination.previous')}
+          {t('exercises.pager.previous')}
         </Button>
         <span className="text-sm text-muted-foreground">
-          {t('pagination.pageOf', { page, totalPages })}
+          {t('exercises.pager.pageOf', { page, totalPages })}
         </span>
         <Button
           variant="outline"
@@ -48,7 +49,7 @@ export function AdminExercisesPager({
           aria-disabled={page >= totalPages}
           tabIndex={page >= totalPages ? -1 : 0}
         >
-          {t('pagination.next')}
+          {t('exercises.pager.next')}
         </Button>
       </div>
     </div>
