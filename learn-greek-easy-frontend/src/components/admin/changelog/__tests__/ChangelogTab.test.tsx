@@ -642,16 +642,18 @@ describe('ChangelogTab', () => {
     });
   });
 
-  // ── CLLP-10: .va-panel wrapper (AC #2) ─────────────────────────────────────
+  // ── .va-panel wrapper ──────────────────────────────────────────────────────
+  // Toolbar lives outside .va-panel so it sits on page canvas (matches
+  // Exercises tab styling and avoids the rounded-corner clip on the search input).
   describe('.va-panel wrapper', () => {
-    it('.va-panel wraps both the search toolbar and the timeline', () => {
+    it('.va-panel wraps the timeline but NOT the search toolbar', () => {
       mockItems = [makeEntry({ id: '1' })];
       renderWithRouter();
 
       const panel = document.querySelector('.va-panel');
       expect(panel).not.toBeNull();
-      expect(panel!.contains(screen.getByTestId('changelog-search-input'))).toBe(true);
       expect(panel!.contains(screen.getByTestId('changelog-timeline-mock'))).toBe(true);
+      expect(panel!.contains(screen.getByTestId('changelog-search-input'))).toBe(false);
     });
   });
 

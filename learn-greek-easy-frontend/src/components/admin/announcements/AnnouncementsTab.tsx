@@ -147,14 +147,16 @@ export const AnnouncementsTab: React.FC = () => {
         />
       </div>
 
+      {/* ── Toolbar (sits on page canvas, no panel background) ──────────── */}
+      <AnnouncementsToolbar
+        query={query}
+        onQueryChange={setQuery}
+        sort={sort}
+        onSortChange={setSort}
+      />
+
       {/* ── History rows ─────────────────────────────────────────────────── */}
       <div className="va-panel">
-        <AnnouncementsToolbar
-          query={query}
-          onQueryChange={setQuery}
-          sort={sort}
-          onSortChange={setSort}
-        />
         <AnnouncementHistoryRows
           announcements={displayedAnnouncements}
           isLoading={isLoading}

@@ -46,22 +46,6 @@ export function AdminExercisesToolbar() {
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Row 0: Modality */}
-      <div data-testid="exercises-toolbar-row-modality">
-        <SegControl
-          options={[
-            { value: 'listening', label: t('exercises.modality.listening') },
-            { value: 'reading', label: t('exercises.modality.reading') },
-          ]}
-          value={modality}
-          onChange={(v) => {
-            setModality(v as Modality);
-            track('admin_exercise_filter_changed', { axis: 'modality', value: v });
-          }}
-          ariaLabel={t('exercises.modality.ariaLabel')}
-        />
-      </div>
-
       {/* Row 1: Search · Source · Type */}
       <div className="flex flex-wrap items-center gap-3" data-testid="exercises-toolbar-row-1">
         <div className="relative min-w-[240px] flex-1 sm:max-w-md">
@@ -119,7 +103,7 @@ export function AdminExercisesToolbar() {
         />
       </div>
 
-      {/* Row 2: Level · Status */}
+      {/* Row 2: Level · Status · Modality */}
       <div className="flex flex-wrap items-center gap-3" data-testid="exercises-toolbar-row-2">
         <SegControl
           options={LEVEL_OPTIONS.map((v) => ({
@@ -151,6 +135,21 @@ export function AdminExercisesToolbar() {
           ariaLabel={t('exercises.filters.status.label')}
           className="flex-col items-start sm:flex-row sm:items-center"
         />
+
+        <div data-testid="exercises-toolbar-row-modality">
+          <SegControl
+            options={[
+              { value: 'listening', label: t('exercises.modality.listening') },
+              { value: 'reading', label: t('exercises.modality.reading') },
+            ]}
+            value={modality}
+            onChange={(v) => {
+              setModality(v as Modality);
+              track('admin_exercise_filter_changed', { axis: 'modality', value: v });
+            }}
+            ariaLabel={t('exercises.modality.ariaLabel')}
+          />
+        </div>
       </div>
     </div>
   );

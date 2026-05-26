@@ -170,23 +170,16 @@ describe('AdminExercisesToolbar — two-row layout', () => {
 // ── EXR2-24-08: Modality row ───────────────────────────────────────────────────
 
 describe('AdminExercisesToolbar — modality row (EXR2-24-08)', () => {
-  it('renders a dedicated modality row container', () => {
+  it('renders a dedicated modality container', () => {
     const { container } = render(<AdminExercisesToolbar />);
     expect(container.querySelector('[data-testid="exercises-toolbar-row-modality"]')).toBeTruthy();
   });
 
-  it('modality row appears before row-1 in DOM order', () => {
+  it('modality control sits inside row-2 (after Level/Status)', () => {
     const { container } = render(<AdminExercisesToolbar />);
-    const outer = container.querySelector('.flex.flex-col.gap-3')!;
-    const children = Array.from(outer.children);
-    const modalityIdx = children.findIndex(
-      (el) => el.getAttribute('data-testid') === 'exercises-toolbar-row-modality'
-    );
-    const row1Idx = children.findIndex(
-      (el) => el.getAttribute('data-testid') === 'exercises-toolbar-row-1'
-    );
-    expect(modalityIdx).toBeGreaterThanOrEqual(0);
-    expect(modalityIdx).toBeLessThan(row1Idx);
+    const row2 = container.querySelector('[data-testid="exercises-toolbar-row-2"]')!;
+    const modality = row2.querySelector('[data-testid="exercises-toolbar-row-modality"]');
+    expect(modality).toBeTruthy();
   });
 
   it('clicking Reading option emits admin_exercise_filter_changed with axis:modality', () => {
