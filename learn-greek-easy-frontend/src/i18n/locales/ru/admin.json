@@ -1553,21 +1553,25 @@
       },
       "totalSituations": {
         "title": "Всего ситуаций",
-        "sub": "{{total}} сценариев"
+        "sub": "{{total}} сценариев",
+        "subRelative": "+{{n}} за этот месяц"
       },
       "readyToShip": {
         "title": "Готово к выпуску",
-        "sub": "{{percent}}% каталога · {{ready}} / {{total}}"
+        "sub": "{{percent}}% каталога · {{ready}} / {{total}}",
+        "subView": "{{pct}}% каталога · {{visible}} в виде"
       },
       "draftsToFinish": {
         "title": "Черновики",
         "subPending": "{{draft}} ожидают завершения",
-        "subDone": "Все сценарии готовы"
+        "subDone": "Все сценарии готовы",
+        "subOldest": "Старейший {{date}}"
       },
       "exercisesGenerated": {
         "title": "Упражнений создано",
-        "sub": "по всем источникам"
-      }
+        "sub": "по всем ситуациям"
+      },
+      "footerCatalog": "Итого по каталогу"
     },
     "search": {
       "placeholder": "Поиск ситуаций...",

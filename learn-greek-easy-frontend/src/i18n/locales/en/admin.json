@@ -1615,21 +1615,25 @@
       },
       "totalSituations": {
         "title": "Total situations",
-        "sub": "{{total}} scenarios"
+        "sub": "{{total}} scenarios",
+        "subRelative": "+{{n}} this month"
       },
       "readyToShip": {
         "title": "Ready to ship",
-        "sub": "{{percent}}% of catalog · {{ready}} / {{total}}"
+        "sub": "{{percent}}% of catalog · {{ready}} / {{total}}",
+        "subView": "{{pct}}% of catalog · {{visible}} in view"
       },
       "draftsToFinish": {
         "title": "Drafts to finish",
         "subPending": "{{draft}} awaiting completion",
-        "subDone": "All scenarios ready"
+        "subDone": "All scenarios ready",
+        "subOldest": "Oldest {{date}}"
       },
       "exercisesGenerated": {
         "title": "Exercises generated",
-        "sub": "across all sources"
-      }
+        "sub": "across all situations"
+      },
+      "footerCatalog": "Catalog total"
     },
     "search": {
       "placeholder": "Search situations...",

@@ -63,9 +63,11 @@ const mockCloseDrawer = vi.fn();
 type StoreSituation = {
   id: string;
   status: string;
+  created_at: string;
   dialog_exercises_count: number;
   description_exercises_count: number;
   picture_exercises_count: number;
+  levels: string[];
 };
 
 const storeState = {
@@ -90,14 +92,31 @@ vi.mock('@/stores/adminSituationStore', () => ({
     let ready = 0;
     let draft = 0;
     let exercisesGenerated = 0;
+    let totalLast30d = 0;
+    let oldestDraftDate: string | null = null;
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     for (const sit of s.situations) {
       if (sit.status === 'ready') ready += 1;
-      else if (sit.status === 'draft') draft += 1;
+      else if (sit.status === 'draft') {
+        draft += 1;
+        if (oldestDraftDate === null || sit.created_at < oldestDraftDate) {
+          oldestDraftDate = sit.created_at;
+        }
+      }
       exercisesGenerated +=
         sit.dialog_exercises_count + sit.description_exercises_count + sit.picture_exercises_count;
+      if (new Date(sit.created_at) >= thirtyDaysAgo) totalLast30d += 1;
     }
-    return { total: s.situations.length, ready, draft, exercisesGenerated };
+    return {
+      total: s.situations.length,
+      ready,
+      draft,
+      exercisesGenerated,
+      totalLast30d,
+      oldestDraftDate,
+    };
   },
+  selectFilteredSituations: (s: typeof storeState) => s.situations,
 }));
 
 // ── Child component stubs ─────────────────────────────────────────────────────
@@ -141,13 +160,19 @@ function SituationsTabWrapper({ createOpen = false }: { createOpen?: boolean }) 
 type SituationSeed = {
   id: string;
   status: 'draft' | 'ready';
+  created_at?: string;
   dialog_exercises_count: number;
   description_exercises_count: number;
   picture_exercises_count: number;
+  levels?: string[];
 };
 
 function seedStore(situations: SituationSeed[]) {
-  storeState.situations = situations;
+  storeState.situations = situations.map((s) => ({
+    ...s,
+    created_at: s.created_at ?? '2024-01-01T00:00:00Z',
+    levels: s.levels ?? [],
+  }));
   storeState.total = situations.length;
 }
 
@@ -298,11 +323,12 @@ describe('SituationsTab — Drafts tone flip', () => {
     expect(greenCard?.textContent).toContain('situations.stats.draftsToFinish.subDone');
   });
 
-  it('draft>0 → amber tone and subPending text with count', () => {
+  it('draft>0 → amber tone and subOldest text (with date from created_at)', () => {
     seedStore([
       {
         id: '1',
         status: 'draft',
+        created_at: '2024-03-15T00:00:00Z',
         dialog_exercises_count: 0,
         description_exercises_count: 0,
         picture_exercises_count: 0,
@@ -310,6 +336,7 @@ describe('SituationsTab — Drafts tone flip', () => {
       {
         id: '2',
         status: 'draft',
+        created_at: '2024-06-01T00:00:00Z',
         dialog_exercises_count: 0,
         description_exercises_count: 0,
         picture_exercises_count: 0,
@@ -321,8 +348,8 @@ describe('SituationsTab — Drafts tone flip', () => {
     const cards = document.querySelectorAll('.stat-card');
     const amberCard = Array.from(cards).find((c) => c.className.includes('tone-amber'));
     expect(amberCard).toBeDefined();
-    // t() mock replaces {{draft}} with actual value "2"
-    expect(amberCard?.textContent).toContain('2');
+    // subOldest key is rendered (t() mock returns key with {{date}} substituted in real code)
+    expect(amberCard?.textContent).toContain('situations.stats.draftsToFinish.subOldest');
   });
 });
 

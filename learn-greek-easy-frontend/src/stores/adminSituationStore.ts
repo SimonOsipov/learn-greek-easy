@@ -265,11 +265,22 @@ export const selectStatsTotals = (state: AdminSituationState) => {
   let ready = 0;
   let draft = 0;
   let exercisesGenerated = 0;
+  // totalLast30d: computed client-side from loaded page (best-effort; full accuracy would need a
+  // dedicated backend stats endpoint — TODO: add /admin/situations/stats if high accuracy needed).
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  let totalLast30d = 0;
+  let oldestDraftDate: string | null = null;
   for (const s of items) {
     if (s.status === 'ready') ready += 1;
-    else if (s.status === 'draft') draft += 1;
+    else if (s.status === 'draft') {
+      draft += 1;
+      if (oldestDraftDate === null || s.created_at < oldestDraftDate) {
+        oldestDraftDate = s.created_at;
+      }
+    }
     exercisesGenerated +=
       s.dialog_exercises_count + s.description_exercises_count + s.picture_exercises_count;
+    if (new Date(s.created_at) >= thirtyDaysAgo) totalLast30d += 1;
   }
-  return { total: items.length, ready, draft, exercisesGenerated };
+  return { total: items.length, ready, draft, exercisesGenerated, totalLast30d, oldestDraftDate };
 };
