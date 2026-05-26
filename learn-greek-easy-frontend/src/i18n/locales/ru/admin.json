@@ -1803,11 +1803,16 @@
         "linkedNews": "Связанные новости"
       },
       "footer": {
-        "allChecksPassed": "Все проверки пройдены",
-        "updatedRelative": "Обновлено {{relative}}",
         "cancel": "Отмена",
         "saveAndClose": "Сохранить и закрыть",
-        "saving": "Сохранение…"
+        "saving": "Сохранение…",
+        "markAsReady": "Пометить как готово",
+        "publishChanges": "Опубликовать изменения",
+        "statusReady": "Готово к публикации",
+        "statusDraft": "Черновик — не виден ученикам",
+        "autoSavedRelative": "Автосохранение · {{relative}}",
+        "publishGuardFailed": "Невозможно опубликовать: отсутствует {{fields}}",
+        "publishSuccess": "Ситуация помечена как готовая"
       },
       "save": {
         "success": "Ситуация обновлена",

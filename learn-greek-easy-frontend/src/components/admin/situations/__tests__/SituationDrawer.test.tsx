@@ -15,14 +15,20 @@ vi.mock('@/hooks/use-toast', () => ({
   toast: vi.fn(),
 }));
 
+vi.mock('@/lib/analytics', () => ({
+  track: vi.fn(),
+}));
+
 const mockUpdateSituation = vi.fn();
 const mockUpdateSituationDescription = vi.fn();
 const mockUpdateSituationPicture = vi.fn();
+const mockUpdateSituationStatus = vi.fn();
 vi.mock('@/services/adminAPI', () => ({
   adminAPI: {
     updateSituation: (...args: unknown[]) => mockUpdateSituation(...args),
     updateSituationDescription: (...args: unknown[]) => mockUpdateSituationDescription(...args),
     updateSituationPicture: (...args: unknown[]) => mockUpdateSituationPicture(...args),
+    updateSituationStatus: (...args: unknown[]) => mockUpdateSituationStatus(...args),
   },
 }));
 
@@ -162,6 +168,7 @@ beforeEach(async () => {
   mockFetchSituations.mockResolvedValue(undefined);
   mockUpdateSituationDescription.mockResolvedValue(undefined);
   mockUpdateSituationPicture.mockResolvedValue({ id: 'pic-1' });
+  mockUpdateSituationStatus.mockResolvedValue({ id: 'sit-1', status: 'ready' });
   await loadDrawer();
 });
 
@@ -412,15 +419,22 @@ describe('SituationDrawer — footer', () => {
     storeState.situations = [makeListItem()];
   });
 
-  it('renders All checks passed badge', () => {
+  it('renders draft status pill with amber badge when status is draft', () => {
     renderDrawer();
-    expect(screen.getByText('All checks passed')).toBeInTheDocument();
+    expect(screen.getByTestId('situation-drawer-status-pill')).toBeInTheDocument();
+    expect(screen.getByText('Draft — not visible to learners')).toBeInTheDocument();
   });
 
-  it('renders updated relative time', () => {
+  it('renders ready status pill with green badge when status is ready', () => {
+    storeState.selectedSituation = makeDetail({ status: 'ready' });
     renderDrawer();
-    // The relative time rendering uses formatDistanceToNow
-    const updatedText = screen.getByText(/Updated/);
+    expect(screen.getByTestId('situation-drawer-status-pill')).toBeInTheDocument();
+    expect(screen.getByText('Ready to ship')).toBeInTheDocument();
+  });
+
+  it('renders auto-saved relative time', () => {
+    renderDrawer();
+    const updatedText = screen.getByText(/Auto-saved/);
     expect(updatedText).toBeInTheDocument();
   });
 
@@ -432,6 +446,58 @@ describe('SituationDrawer — footer', () => {
   it('renders Save & close button', () => {
     renderDrawer();
     expect(screen.getByTestId('situation-drawer-save')).toBeInTheDocument();
+  });
+
+  it('renders Mark as Ready button when status is draft', () => {
+    renderDrawer();
+    expect(screen.getByTestId('situation-drawer-publish')).toBeInTheDocument();
+    expect(screen.getByTestId('situation-drawer-publish').textContent).toContain('Mark as Ready');
+  });
+
+  it('renders Publish changes button when status is ready', () => {
+    storeState.selectedSituation = makeDetail({ status: 'ready' });
+    renderDrawer();
+    expect(screen.getByTestId('situation-drawer-publish').textContent).toContain('Publish changes');
+  });
+
+  it('calls updateSituationStatus with ready when Mark as Ready is clicked', async () => {
+    const user = userEvent.setup();
+    storeState.selectedSituation = makeDetail({ status: 'draft' });
+    renderDrawer();
+
+    await user.click(screen.getByTestId('situation-drawer-publish'));
+
+    await waitFor(() => {
+      expect(mockUpdateSituationStatus).toHaveBeenCalledWith('sit-1', 'ready');
+    });
+  });
+
+  it('shows destructive toast listing missing fields on 409 STATUS_GUARD_FAILED', async () => {
+    const { toast: mockToast } = await import('@/hooks/use-toast');
+    const user = userEvent.setup();
+    storeState.selectedSituation = makeDetail({ status: 'draft' });
+
+    const { APIRequestError } = await import('@/services/api');
+    mockUpdateSituationStatus.mockRejectedValueOnce(
+      new APIRequestError({
+        status: 409,
+        statusText: 'Conflict',
+        message: 'Status guard failed',
+        detail: { missing: ['description', 'dialog lines'] } as unknown as string,
+      })
+    );
+
+    renderDrawer();
+    await user.click(screen.getByTestId('situation-drawer-publish'));
+
+    await waitFor(() => {
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          variant: 'destructive',
+          title: expect.stringContaining('description'),
+        })
+      );
+    });
   });
 });
 

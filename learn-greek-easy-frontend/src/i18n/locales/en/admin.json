@@ -1865,11 +1865,16 @@
         "linkedNews": "Linked news"
       },
       "footer": {
-        "allChecksPassed": "All checks passed",
-        "updatedRelative": "Updated {{relative}}",
         "cancel": "Cancel",
         "saveAndClose": "Save & close",
-        "saving": "Saving…"
+        "saving": "Saving…",
+        "markAsReady": "Mark as Ready",
+        "publishChanges": "Publish changes",
+        "statusReady": "Ready to ship",
+        "statusDraft": "Draft — not visible to learners",
+        "autoSavedRelative": "Auto-saved · {{relative}}",
+        "publishGuardFailed": "Cannot publish: missing {{fields}}",
+        "publishSuccess": "Situation marked as ready"
       },
       "save": {
         "success": "Situation updated",

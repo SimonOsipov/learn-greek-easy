@@ -198,7 +198,7 @@ async function request<T>(
       // Handle other errors (non-retryable)
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        const detail = errorData.error?.details || errorData.detail;
+        const detail = errorData.error?.details || errorData.error?.detail || errorData.detail;
         const message =
           errorData.error?.message ||
           errorData.detail ||

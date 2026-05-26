@@ -1703,6 +1703,31 @@ export const adminAPI = {
   },
 
   /**
+   * Update situation publish status (SAR2-26-04).
+   * PATCH /api/v1/admin/situations/{id}/status
+   * Returns the updated SituationDetailResponse.
+   * Throws APIRequestError with status 409 and error.detail.missing[] on guard failure.
+   */
+  updateSituationStatus: async (
+    id: string,
+    status: SituationStatus
+  ): Promise<SituationDetailResponse> => {
+    return api.patch<SituationDetailResponse>(`/api/v1/admin/situations/${id}/status`, { status });
+  },
+
+  /**
+   * Generate exercises for a situation from a given source (SAR2-26-21).
+   * POST /api/v1/admin/situations/{id}/exercises/generate
+   * Endpoint not yet implemented — wired for future use.
+   */
+  generateSituationExercises: async (
+    id: string,
+    source: 'dialog' | 'description' | 'picture'
+  ): Promise<void> => {
+    await api.post<void>(`/api/v1/admin/situations/${id}/exercises/generate`, { source });
+  },
+
+  /**
    * Trigger batch AI generation of exercises
    *
    * Schedules a batch of exercises for the given modality.

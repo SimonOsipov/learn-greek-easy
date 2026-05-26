@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 
 import { formatDistanceToNow } from 'date-fns';
+import { Check, Pencil } from 'lucide-react';
 import { FormProvider, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
@@ -12,7 +13,9 @@ import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/ui/side-panel';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from '@/hooks/use-toast';
+import { track } from '@/lib/analytics';
 import { adminAPI } from '@/services/adminAPI';
+import { APIRequestError } from '@/services/api';
 import { useAdminSituationStore } from '@/stores/adminSituationStore';
 import type {
   DescriptionUpdatePayload,
@@ -107,6 +110,7 @@ export const SituationDrawer: React.FC = () => {
   const [activeTab, setActiveTab] = useState<SituationDrawerTab>('dialog');
   const [dirtyDialogOpen, setDirtyDialogOpen] = useState<null | 'close' | 'cancel'>(null);
   const [pictureTrioError, setPictureTrioError] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
 
   const form = useForm<SituationDrawerFormData>({
     mode: 'onBlur',
@@ -231,6 +235,48 @@ export const SituationDrawer: React.FC = () => {
     setDirtyDialogOpen(null);
     closeAndClearUrl();
   }, [closeAndClearUrl]);
+
+  const handlePublish = useCallback(async () => {
+    if (!selectedSituation) return;
+    setIsPublishing(true);
+    try {
+      // If the form is dirty, save first.
+      if (form.formState.isDirty) {
+        await handleSave();
+        // handleSave closes the drawer on success; if it returned early (validation error) abort.
+        if (form.formState.isDirty) {
+          setIsPublishing(false);
+          return;
+        }
+      }
+      const fromStatus = selectedSituation.status;
+      const startedAt = new Date(selectedSituation.created_at).getTime();
+      await adminAPI.updateSituationStatus(selectedSituation.id, 'ready');
+      track('admin_situation_published', {
+        situation_id: selectedSituation.id,
+        from_status: fromStatus,
+        to_status: 'ready',
+        time_in_draft_seconds: Math.round((Date.now() - startedAt) / 1000),
+      });
+      toast({ title: t('situations.drawer.footer.publishSuccess') });
+      await fetchSituations();
+      closeAndClearUrl();
+    } catch (e) {
+      if (e instanceof APIRequestError && e.status === 409) {
+        const detail = e.detail as { missing?: string[] } | undefined;
+        const fields = detail?.missing?.join(', ') ?? '';
+        toast({
+          title: t('situations.drawer.footer.publishGuardFailed', { fields }),
+          variant: 'destructive',
+        });
+      } else {
+        const msg = e instanceof Error ? e.message : 'Unknown error';
+        toast({ title: msg, variant: 'destructive' });
+      }
+    } finally {
+      setIsPublishing(false);
+    }
+  }, [selectedSituation, form.formState.isDirty, handleSave, t, fetchSituations, closeAndClearUrl]);
 
   // Early return: unmount fully clears local state.
   if (!drawerItemId) return null;
@@ -362,10 +408,20 @@ export const SituationDrawer: React.FC = () => {
         <SidePanel.Footer>
           <div className="flex w-full items-center justify-between">
             <div className="flex items-center gap-2 text-sm">
-              <Badge tone="green">{t('situations.drawer.footer.allChecksPassed')}</Badge>
+              {status === 'ready' ? (
+                <Badge tone="green" data-testid="situation-drawer-status-pill">
+                  <Check className="mr-1 h-3 w-3" />
+                  {t('situations.drawer.footer.statusReady')}
+                </Badge>
+              ) : (
+                <Badge tone="amber" data-testid="situation-drawer-status-pill">
+                  <Pencil className="mr-1 h-3 w-3" />
+                  {t('situations.drawer.footer.statusDraft')}
+                </Badge>
+              )}
               {updatedAt && (
                 <span className="text-muted-foreground">
-                  {t('situations.drawer.footer.updatedRelative', {
+                  {t('situations.drawer.footer.autoSavedRelative', {
                     relative: formatDistanceToNow(new Date(updatedAt), { addSuffix: true }),
                   })}
                 </span>
@@ -386,6 +442,17 @@ export const SituationDrawer: React.FC = () => {
                 {form.formState.isSubmitting
                   ? t('situations.drawer.footer.saving')
                   : t('situations.drawer.footer.saveAndClose')}
+              </Button>
+              <Button
+                variant="default"
+                onClick={() => void handlePublish()}
+                disabled={isPublishing || form.formState.isSubmitting}
+                data-testid="situation-drawer-publish"
+              >
+                <Check className="mr-2 h-4 w-4" />
+                {status === 'ready'
+                  ? t('situations.drawer.footer.publishChanges')
+                  : t('situations.drawer.footer.markAsReady')}
               </Button>
             </div>
           </div>
